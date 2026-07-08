@@ -34,7 +34,7 @@ describe('media generation dependency kind registry', () => {
         dependencyKind: 'first-frame',
         assetSelector: 'shot-video-input',
         missingInputBehavior: 'plan-generation',
-        generationPurpose: 'shot.first-frame',
+        generationPurpose: 'image.create',
       });
     expect(requireMediaGenerationDependencyKindDefinition('manual-attachment'))
       .toMatchObject({

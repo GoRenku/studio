@@ -80,6 +80,7 @@ export type * from './media-generation-target.js';
 export type * from './media-generation-cost.js';
 export type * from './media-generation-dependency.js';
 export type * from './media-generation-lifecycle.js';
+export type * from './image-create-media-generation.js';
 export type * from './image-edit-media-generation.js';
 export type * from './lookbook-media-generation.js';
 export type * from './cast-media-generation.js';
@@ -92,11 +93,13 @@ export {
   REFERENCE_IMAGE_MEDIA_PURPOSE,
 } from './assets.js';
 export {
+  SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
   sceneShotVideoTakeDirectionHasPromptFields,
   sceneShotVideoTakeDirectionHasShotProjectionFields,
   sceneShotVideoTakeDirectionHasState,
 } from './shot-video-take.js';
 export {
+  IMAGE_CREATE_GENERATION_PURPOSE,
   IMAGE_EDIT_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
@@ -107,10 +110,6 @@ export {
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from './media-generation-purpose.js';
 export type {
@@ -213,6 +212,7 @@ export type {
   ShotVideoTakeAgentProposal,
   ShotVideoTakeDependencyDraft,
   ShotVideoTakeDependencyKind,
+  ShotVideoTakeImageInputImportKind,
   ShotVideoTakeInputKind,
   ShotVideoTakeInputSubjectKind,
   ShotVideoTakeInputModeId,

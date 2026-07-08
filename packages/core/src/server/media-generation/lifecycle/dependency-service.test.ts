@@ -104,7 +104,7 @@ describe('media generation lifecycle dependency service', () => {
     mockedPlanInventory.mockImplementationOnce(async (input) => {
       await input.resolveSelection(slot as never);
       await input.declareDependencies({
-        purpose: 'shot.first-frame',
+        purpose: 'image.create',
         lineId: 'dependency:first-frame',
         slot: slot as never,
       });

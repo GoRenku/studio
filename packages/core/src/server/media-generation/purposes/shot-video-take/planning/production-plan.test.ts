@@ -22,10 +22,23 @@ describe('shot video take preflight and validation', () => {
     return templateProject;
   }
 
-  it('estimates a first-frame take when saved duration is numeric but provider expects a string enum', async () => {
-    const { ids, written } = await useTemplate(
+  it('normalizes numeric duration for a first-frame take with planned reference dependencies', async () => {
+    const { written, lookbookId } = await useTemplate(
       createActiveLookbookShotVideoTakeProject()
     );
+    if (!lookbookId) {
+      throw new Error('Expected active lookbook template to include a lookbook.');
+    }
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/lookbook-sheet.png',
+      'lookbook sheet'
+    );
+    await projectData.importLookbookSheetMedia({
+      homeDir,
+      lookbookId,
+      sourceProjectRelativePath: 'generated/media/lookbook-sheet.png',
+      title: 'Lookbook Sheet',
+    });
 
     const estimate = await projectData.estimateShotVideoTakeProduction({
       homeDir,
@@ -42,7 +55,6 @@ describe('shot video take preflight and validation', () => {
           basedOnShotIds: ['shot_001'],
           dependencyDrafts: [
             {
-              purpose: 'shot.first-frame',
               dependencyKind: 'first-frame',
               outputInputKind: 'first-frame',
               referenceMode: 'movie-lookbook',
@@ -65,9 +77,9 @@ describe('shot video take preflight and validation', () => {
         expect.objectContaining({
           kind: 'dependency-generation',
           dependencyKind: 'first-frame',
+          materializationState: 'invalid-generation-draft',
           pricing: expect.objectContaining({
-            state: 'priced',
-            estimatedUsd: 0.005,
+            state: 'unpriced',
           }),
         }),
         expect.objectContaining({
@@ -81,7 +93,7 @@ describe('shot video take preflight and validation', () => {
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
         expect.objectContaining({
-          kind: 'dependency-generation',
+          kind: 'reused-asset',
           dependencyKind: 'lookbook-sheet',
           pricing: expect.objectContaining({ state: 'priced' }),
         }),
@@ -92,7 +104,13 @@ describe('shot video take preflight and validation', () => {
       ])
     );
     expect(estimate.plan?.request.routeSettings.duration).toBe('9');
-    expect(estimate.issues).toEqual([]);
+    expect(estimate.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'CORE_SHOT_VIDEO_INPUT_REFERENCE_FILE_MISSING',
+        }),
+      ])
+    );
   });
 
   it('rejects null input policies instead of treating them as omitted', async () => {
@@ -166,7 +184,6 @@ describe('shot video take preflight and validation', () => {
           basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
           dependencyDrafts: [
             {
-              purpose: 'shot.first-frame',
               dependencyKind: 'first-frame',
               outputInputKind: 'first-frame',
               referenceMode: 'movie-lookbook',
@@ -188,7 +205,7 @@ describe('shot video take preflight and validation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: 'dependency-generation',
-          purpose: 'shot.first-frame',
+          purpose: 'image.create',
         }),
         expect.objectContaining({
           kind: 'final-video-generation',

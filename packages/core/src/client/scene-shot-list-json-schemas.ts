@@ -114,13 +114,6 @@ const SHOT_VIDEO_TAKE_DEPENDENCY_KINDS = [
   'source-video-extract',
 ] as const;
 
-const SHOT_VIDEO_TAKE_INPUT_PURPOSES = [
-  'shot.first-frame',
-  'shot.last-frame',
-  'shot.reference-image',
-  'shot.video-prompt-sheet',
-] as const;
-
 const SHOT_VIDEO_TAKE_INPUT_MODELS = [
   'fal-ai/openai/gpt-image-2',
   'fal-ai/nano-banana-2',
@@ -663,9 +656,8 @@ function shotVideoTakeProductionSchemaProperties(): Record<string, unknown> {
           dependencyDrafts: {
             type: 'array',
             items: objectWith(
-              ['purpose', 'dependencyKind', 'outputInputKind', 'referenceMode', 'prompt'],
+              ['dependencyKind', 'outputInputKind', 'referenceMode', 'prompt'],
               {
-                purpose: enumValue(SHOT_VIDEO_TAKE_INPUT_PURPOSES),
                 dependencyKind: enumValue(SHOT_VIDEO_TAKE_DEPENDENCY_KINDS),
                 outputInputKind: enumValue(SHOT_VIDEO_TAKE_INPUT_KINDS),
                 modelChoice: enumValue(SHOT_VIDEO_TAKE_INPUT_MODELS),

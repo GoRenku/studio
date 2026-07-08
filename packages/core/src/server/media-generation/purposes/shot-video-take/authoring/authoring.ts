@@ -486,7 +486,7 @@ function buildShotVideoInputReferenceReport(input: {
       const bundle = resolveShotVideoInputReferenceBundle({
         session: input.session,
         context: input.context,
-        purpose: 'shot.first-frame',
+        inputKind: 'first-frame',
         referenceMode,
       });
       return {
@@ -832,7 +832,7 @@ function missingDependencyBlockers(
         dependency.mediaKind === 'audio' ? 'casting-director' : 'media-producer',
       ...(dependency.purpose
         ? {
-            recommendedCommand: `renku generation context --purpose ${dependency.purpose} --target take:${preflight.take.takeId} --json`,
+            recommendedCommand: `renku generation context --purpose ${dependency.purpose} --target project --json`,
           }
         : {}),
     }));

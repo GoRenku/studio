@@ -57,6 +57,7 @@ export interface MediaCommandFlags {
   shotList?: string;
   shots?: string;
   take?: string;
+  kind?: string;
   selection?: string;
   replaceSelected?: boolean;
 }
@@ -143,20 +144,8 @@ const MEDIA_IMPORT_PURPOSE_HANDLERS = [
     run: importSceneStoryboardSheet,
   },
   {
-    purpose: 'shot.first-frame',
-    run: importShotFirstFrame,
-  },
-  {
-    purpose: 'shot.last-frame',
-    run: importShotLastFrame,
-  },
-  {
-    purpose: 'shot.reference-image',
-    run: importShotReferenceImage,
-  },
-  {
-    purpose: 'shot.video-prompt-sheet',
-    run: importShotVideoPromptSheet,
+    purpose: 'shot.input',
+    run: importShotInput,
   },
   {
     purpose: 'shot.video-take',
@@ -354,36 +343,10 @@ function parseSingleShot(value: string | undefined): string {
   return shots[0]!;
 }
 
-async function importShotFirstFrame(
+async function importShotInput(
   input: MediaImportPurposeHandlerInput
 ): Promise<ShotVideoTakeInputMediaImportReport> {
-  return importShotInputMedia(input, (shotInput) =>
-    input.runtime.projectDataService.importShotFirstFrame(shotInput)
-  );
-}
-
-async function importShotLastFrame(
-  input: MediaImportPurposeHandlerInput
-): Promise<ShotVideoTakeInputMediaImportReport> {
-  return importShotInputMedia(input, (shotInput) =>
-    input.runtime.projectDataService.importShotLastFrame(shotInput)
-  );
-}
-
-async function importShotReferenceImage(
-  input: MediaImportPurposeHandlerInput
-): Promise<ShotVideoTakeInputMediaImportReport> {
-  return importShotInputMedia(input, (shotInput) =>
-    input.runtime.projectDataService.importShotReferenceImage(shotInput)
-  );
-}
-
-async function importShotVideoPromptSheet(
-  input: MediaImportPurposeHandlerInput
-): Promise<ShotVideoTakeInputMediaImportReport> {
-  return importShotInputMedia(input, (shotInput) =>
-    input.runtime.projectDataService.importShotVideoPromptSheet(shotInput)
-  );
+  return importShotInputMedia(input);
 }
 
 async function importShotVideoTake(
@@ -434,19 +397,15 @@ function isShotVideoTakeMediaImportReport(
 }
 
 async function importShotInputMedia(
-  input: MediaImportPurposeHandlerInput,
-  importMedia: (
-    shotInput: Parameters<
-      CliCommandRuntime['projectDataService']['importShotFirstFrame']
-    >[0]
-  ) => Promise<ShotVideoTakeInputMediaImportReport>
+  input: MediaImportPurposeHandlerInput
 ): Promise<ShotVideoTakeInputMediaImportReport> {
   const singleFile = await readSingleFileImport(input.flags);
   const target = await resolveShotMediaTarget(input);
-  return importMedia({
+  return input.runtime.projectDataService.importShotInputMedia({
     ...mediaImportProjectInput(input.runtime),
     sceneId: target.sceneId,
     takeId: target.takeId,
+    inputKind: parseShotInputKind(input.flags.kind),
     sourceProjectRelativePath: singleFile.sourceProjectRelativePath,
     title: input.flags.title,
     receipt: singleFile.receipt,
@@ -555,6 +514,24 @@ function unsupportedMediaPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported media import purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose reference.image, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.video-prompt-sheet, or --purpose shot.video-take.',
+      'Use --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose reference.image, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose shot.input, or --purpose shot.video-take.',
+  });
+}
+
+function parseShotInputKind(value: string | undefined) {
+  const kind = requiredFlag(value, '--kind');
+  if (
+    kind === 'first-frame' ||
+    kind === 'last-frame' ||
+    kind === 'reference-image' ||
+    kind === 'video-prompt-sheet'
+  ) {
+    return kind;
+  }
+  throw new StructuredError({
+    code: 'CLI149',
+    message: `Unsupported shot input kind: ${kind}.`,
+    suggestion:
+      'Use --kind first-frame, --kind last-frame, --kind reference-image, or --kind video-prompt-sheet with --purpose shot.input.',
   });
 }

@@ -1,11 +1,7 @@
-import {
-  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-} from '../../../../../client/index.js';
 import type {
   PreparedMediaGeneration,
   ShotVideoTakeOutputGenerationSpec,
   ShotVideoTakeProductionContext,
-  ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeOutputGenerationInput,
 } from '../../../../../client/index.js';
 import {
@@ -16,21 +12,17 @@ import type {
   ShotVideoRoute,
 } from '@gorenku/studio-engines';
 import {
-  providerModel,
-  supportedShotInputParameterNames,
-} from '../shared/purpose-config.js';
-import {
   finalInputMatchesRouteSlot,
   requireShotVideoTakeRoute,
 } from '../shared/route-settings.js';
-import type {
-  ShotVideoInputReferenceBundle,
-  ShotVideoInputResolvedReference,
-} from '../planning/shot-input-references.js';
 
 
 
 export type GenerationMode = PreparedMediaGeneration['generation']['policy']['mode'];
+
+function logicalInputUrl(projectRelativePath: string): string {
+  return `renku-input://${encodeURI(projectRelativePath)}`;
+}
 
 
 
@@ -850,177 +842,16 @@ function validateSeedanceAudioReferences(
 
 
 
-function logicalInputUrl(projectRelativePath: string): string {
-  return `renku-input://${encodeURI(projectRelativePath)}`;
-}
-
-
-
-export function buildShotVideoTakeInputProviderPayload(input: {
-  spec: ShotVideoTakeInputGenerationSpec;
-  context: ShotVideoTakeProductionContext;
-  references: ShotVideoInputReferenceBundle;
-}): ShotVideoTakeProviderPlan {
-  const { spec, references } = input;
-  const referenceImages = shotInputReferenceImages(references);
-  const referenceModel = shotInputReferenceProviderModel(spec.modelChoice);
-  const routeKind =
-    referenceImages.length > 0 ? 'reference-to-image' : 'text-to-image';
-  validateShotInputParameterValues(spec, routeKind);
-  validateShotInputReferenceRoute({
-    spec,
-    model: referenceModel,
-    referenceImages,
-  });
-  const payload = {
-    prompt:
-      referenceImages.length > 0
-        ? shotInputReferencePrompt(spec.prompt, references)
-        : spec.prompt,
-    ...spec.parameterValues,
-    ...(referenceImages.length > 0
-      ? {
-          image_urls: referenceImages.map((reference) =>
-            logicalInputUrl(reference.projectRelativePath)
-          ),
-        }
-      : {}),
-    sync_mode: false,
-  };
-  return {
-    provider: 'fal-ai',
-    model: referenceImages.length > 0 ? referenceModel : providerModel(spec.modelChoice),
-    mode: referenceImages.length > 0 ? 'reference-to-image' : 'text-to-image',
-    outputCount: 1,
-    payload,
-    inputFiles: referenceImages.map((reference) => ({
-      field: 'image_urls',
-      projectRelativePath: reference.projectRelativePath,
-      mediaKind: 'image',
-      asArray: true,
-      required: reference.required,
-    })),
-  };
-}
-
-function validateShotInputParameterValues(
-  spec: ShotVideoTakeInputGenerationSpec,
-  routeKind: 'text-to-image' | 'reference-to-image'
-): void {
-  const supported = supportedShotInputParameterNames(spec.modelChoice, routeKind);
-  const unsupportedFields = Object.keys(spec.parameterValues).filter(
-    (field) => !supported.has(field)
-  );
-  if (unsupportedFields.length === 0) {
-    return;
-  }
-  throw new ProjectDataError(
-    'CORE_SHOT_VIDEO_INPUT_PARAMETERS_UNSUPPORTED',
-    `Shot input model ${spec.modelChoice} does not support these ${routeKind} parameters: ${unsupportedFields.join(', ')}.`,
-    {
-      suggestion:
-        'Use parameters from the selected shot input model report before generating this dependency.',
-    }
-  );
-}
-
-function shotInputReferenceImages(
-  references: ShotVideoInputReferenceBundle
-): ShotVideoInputResolvedReference[] {
-  return [
-    ...(references.styleReference ? [references.styleReference] : []),
-    ...references.continuityReferences,
-  ];
-}
-
-function shotInputReferenceProviderModel(
-  modelChoice: ShotVideoTakeInputGenerationSpec['modelChoice']
-): string {
-  if (modelChoice === 'fal-ai/openai/gpt-image-2') {
-    return 'openai/gpt-image-2/edit';
-  }
-  if (modelChoice === 'fal-ai/nano-banana-2') {
-    return 'nano-banana-2/edit';
-  }
-  return 'xai/grok-imagine-image/edit';
-}
-
-function validateShotInputReferenceRoute(input: {
-  spec: ShotVideoTakeInputGenerationSpec;
-  model: string;
-  referenceImages: ShotVideoInputResolvedReference[];
-}): void {
-  if (input.referenceImages.length === 0) {
-    return;
-  }
-  const maxReferenceImages =
-    input.model === 'xai/grok-imagine-image/edit' ? 3 : null;
-  if (
-    maxReferenceImages !== null &&
-    input.referenceImages.length > maxReferenceImages
-  ) {
-    throw new ProjectDataError(
-      'CORE_SHOT_VIDEO_INPUT_REFERENCE_LIMIT_EXCEEDED',
-      `Shot input model ${input.model} supports at most ${maxReferenceImages} reference images, but ${input.referenceImages.length} were resolved.`,
-      {
-        suggestion:
-          'Use GPT Image 2 or Nano Banana 2 for this shot input image, or reduce selected continuity references before using Grok Imagine.',
-      }
-    );
-  }
-  if (input.model !== 'xai/grok-imagine-image/edit') {
-    return;
-  }
-  const unsupportedFields = Object.keys(input.spec.parameterValues).filter(
-    (field) => !['num_images', 'output_format'].includes(field)
-  );
-  if (unsupportedFields.length > 0) {
-    throw new ProjectDataError(
-      'CORE_SHOT_VIDEO_INPUT_REFERENCE_MODE_UNSUPPORTED',
-      `Grok Imagine reference-conditioned shot input images do not support these parameters: ${unsupportedFields.join(', ')}.`,
-      {
-        suggestion:
-          'Use GPT Image 2 or Nano Banana 2, or remove unsupported settings before using Grok Imagine with reference images.',
-      }
-    );
-  }
-}
-
-function shotInputReferencePrompt(
-  prompt: string,
-  references: ShotVideoInputReferenceBundle
-): string {
-  const referenceLines = shotInputReferenceImages(references).map(
-    (reference, index) =>
-      `${index + 1}. ${reference.label} (${reference.role}): use as ${
-        reference.role === 'movie-lookbook-sheet' ||
-        reference.role === 'storyboard-lookbook-sheet'
-          ? 'the primary style reference'
-          : 'a continuity reference'
-      }.`
-  );
-  return [
-    prompt,
-    '',
-    'Reference-conditioning instructions:',
-    ...references.promptNotes,
-    'Attached reference images, in provider order:',
-    ...referenceLines,
-  ].join('\n');
-}
-
-
-
 export function toGenerationRequest(
   plan: ShotVideoTakeProviderPlan,
-  spec: ShotVideoTakeInputGenerationSpec | ShotVideoTakeOutputGenerationSpec
+  spec: ShotVideoTakeOutputGenerationSpec
 ): PreparedMediaGeneration['generation'] {
   const { prompt, ...parameters } = plan.payload;
   return {
     policy: {
       provider: plan.provider,
       model: plan.model,
-      mediaKind: spec.purpose === SHOT_VIDEO_TAKE_GENERATION_PURPOSE ? 'video' : 'image',
+      mediaKind: 'video',
       mode: plan.mode,
       outputCount: plan.outputCount,
     },
@@ -1085,9 +916,7 @@ export function mapRouteInputSlot(
 
 
 
-export function outputName(spec: ShotVideoTakeInputGenerationSpec | ShotVideoTakeOutputGenerationSpec): string {
+export function outputName(spec: ShotVideoTakeOutputGenerationSpec): string {
   const base = spec.title?.trim() || spec.prompt.slice(0, 40) || 'shot-video-take';
-  return `${base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'shot-video-take'}${
-    spec.purpose === SHOT_VIDEO_TAKE_GENERATION_PURPOSE ? '.mp4' : '.png'
-  }`;
+  return `${base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'shot-video-take'}.mp4`;
 }

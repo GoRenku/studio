@@ -4,9 +4,10 @@ PRAGMA user_version = 32;--> statement-breakpoint
 -- Shot input dependency drafts now declare the lookbook reference source used
 -- while generating first frames, last frames, reference images, and video
 -- prompt sheets. Existing development databases may contain drafts authored
--- before that required field existed. This one-way rewrite applies the current
--- default, Movie Lookbook conditioning, only to draft objects missing
--- referenceMode.
+-- before that required field existed, and may also contain retired
+-- purpose-specific generation names inside the draft object. This one-way
+-- rewrite applies the current default, Movie Lookbook conditioning, and strips
+-- the retired generation purpose field from the destination-owned draft.
 UPDATE `scene_shot_video_take`
 SET `state_json` = json_set(
 	`state_json`,
@@ -23,11 +24,11 @@ SET `state_json` = json_set(
 								'$.referenceMode'
 							) IS NULL THEN
 								json_set(
-									json(`dependency_draft`.`value`),
+									json_remove(json(`dependency_draft`.`value`), '$.purpose'),
 									'$.referenceMode',
 									'movie-lookbook'
 								)
-							ELSE json(`dependency_draft`.`value`)
+							ELSE json_remove(json(`dependency_draft`.`value`), '$.purpose')
 						END AS `draft_json`
 					FROM json_each(
 						`scene_shot_video_take`.`state_json`,
@@ -43,15 +44,7 @@ SET `state_json` = json_set(
 WHERE json_type(
 	`state_json`,
 	'$.production.agentProposal.dependencyDrafts'
-) = 'array'
-AND EXISTS (
-	SELECT 1
-	FROM json_each(
-		`state_json`,
-		'$.production.agentProposal.dependencyDrafts'
-	) AS `dependency_draft`
-	WHERE json_type(`dependency_draft`.`value`, '$.referenceMode') IS NULL
-);--> statement-breakpoint
+) = 'array';--> statement-breakpoint
 -- Prepared inputs are take-video generation inputs. Development data may still
 -- contain the previous multi-shot storyboard input kind. That artifact is the
 -- current video prompt sheet, so preserve its asset/file ids while rewriting
@@ -106,7 +99,7 @@ SET `input_kind` = 'video-prompt-sheet'
 WHERE `input_kind` = 'multi-shot-storyboard-sheet';--> statement-breakpoint
 UPDATE `asset`
 SET
-	`type` = 'shot.video-prompt-sheet',
+	`type` = 'shot.input',
 	`title` = CASE
 		WHEN `title` = 'Shot multi-shot storyboard sheet' THEN
 			'Shot video prompt sheet'

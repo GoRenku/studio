@@ -1,16 +1,19 @@
 import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import type { MediaGenerationPurpose } from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
+import type { ProjectRelativePath } from './project.js';
+import type { ImageCreateGenerationSpec, ImageCreateModelChoice } from './image-create-media-generation.js';
 import type { ImageEditGenerationSpec, ImageEditModelChoice } from './image-edit-media-generation.js';
 import type { LookbookImageGenerationSpec, LookbookImageModelChoice, LookbookSheetGenerationSpec, LookbookSheetModelChoice } from './lookbook-media-generation.js';
 import type { CastCharacterSheetGenerationSpec, CastCharacterSheetModelChoice, CastProfileGenerationSpec, CastProfileModelChoice, CastVoiceSampleGenerationSpec, CastVoiceSampleModelChoice } from './cast-media-generation.js';
 import type { LocationEnvironmentSheetGenerationSpec, LocationEnvironmentSheetModelChoice, LocationHeroGenerationSpec, LocationHeroModelChoice } from './location-media-generation.js';
 import type { SceneDialogueAudioGenerationSpec, SceneDialogueAudioModelChoice } from './scene-audio-generation.js';
 import type { SceneStoryboardSheetGenerationSpec, SceneStoryboardSheetModelChoice } from './scene-storyboard-media-generation.js';
-import type { ShotVideoTakeOutputGenerationSpec, ShotVideoTakeInputGenerationSpec, ShotVideoTakeInputModelChoice } from './shot-video-take.js';
+import type { ShotVideoTakeOutputGenerationSpec } from './shot-video-take.js';
 import type { ShotVideoTakeModelChoice } from './scene-shot-list.js';
 
 export type MediaGenerationSpec =
+  | ImageCreateGenerationSpec
   | ImageEditGenerationSpec
   | LookbookImageGenerationSpec
   | LookbookSheetGenerationSpec
@@ -21,7 +24,6 @@ export type MediaGenerationSpec =
   | LocationEnvironmentSheetGenerationSpec
   | LocationHeroGenerationSpec
   | SceneStoryboardSheetGenerationSpec
-  | ShotVideoTakeInputGenerationSpec
   | ShotVideoTakeOutputGenerationSpec;
 
 export interface MediaGenerationSpecRecord {
@@ -38,8 +40,8 @@ export interface MediaGenerationSpecRecord {
     | LocationEnvironmentSheetModelChoice
     | LocationHeroModelChoice
     | SceneStoryboardSheetModelChoice
-    | ShotVideoTakeInputModelChoice
     | ShotVideoTakeModelChoice
+    | ImageCreateModelChoice
     | ImageEditModelChoice;
   title: string;
   spec: MediaGenerationSpec;
@@ -62,8 +64,8 @@ export interface MediaGenerationRun {
     | LocationEnvironmentSheetModelChoice
     | LocationHeroModelChoice
     | SceneStoryboardSheetModelChoice
-    | ShotVideoTakeInputModelChoice
     | ShotVideoTakeModelChoice
+    | ImageCreateModelChoice
     | ImageEditModelChoice;
   provider: 'fal-ai' | 'elevenlabs';
   model: string;
@@ -82,6 +84,13 @@ export interface MediaGenerationRun {
 export interface MediaGenerationEstimateReport {
   spec: MediaGenerationSpecRecord;
   estimate: GenerationCostEstimate;
+}
+
+export interface GenerationReferenceFileInput {
+  projectRelativePath: ProjectRelativePath;
+  mediaKind: 'image' | 'audio' | 'video';
+  role: string;
+  label?: string;
 }
 
 export interface PreparedMediaGeneration {

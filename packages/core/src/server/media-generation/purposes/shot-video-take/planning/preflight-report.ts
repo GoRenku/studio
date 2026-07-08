@@ -1,4 +1,5 @@
 import {
+  IMAGE_CREATE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../../../client/index.js';
 import type {
@@ -84,7 +85,7 @@ export async function previewShotVideoTakeProductionForContext(input: {
   const finalDraft = context.take.state.production.agentProposal?.finalPromptDraft;
   const prompts = [
     ...context.take.state.production.agentProposal?.dependencyDrafts.map((draft) => ({
-      purpose: draft.purpose,
+      purpose: IMAGE_CREATE_GENERATION_PURPOSE,
       prompt: draft.prompt,
       title: draft.title,
     })) ?? [],

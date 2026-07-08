@@ -4,12 +4,9 @@ import type {
 } from '../../../client/index.js';
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
+  IMAGE_CREATE_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -21,7 +18,7 @@ const DEPENDENCY_KIND_DEFINITIONS = [
     cardinality: 'one',
     assetSelector: 'shot-video-input',
     missingInputBehavior: 'plan-generation',
-    generationPurpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
+    generationPurpose: IMAGE_CREATE_GENERATION_PURPOSE,
   },
   {
     dependencyKind: 'last-frame',
@@ -29,7 +26,7 @@ const DEPENDENCY_KIND_DEFINITIONS = [
     cardinality: 'one',
     assetSelector: 'shot-video-input',
     missingInputBehavior: 'plan-generation',
-    generationPurpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
+    generationPurpose: IMAGE_CREATE_GENERATION_PURPOSE,
   },
   {
     dependencyKind: 'reference-image',
@@ -37,7 +34,7 @@ const DEPENDENCY_KIND_DEFINITIONS = [
     cardinality: 'one',
     assetSelector: 'shot-video-input',
     missingInputBehavior: 'plan-generation',
-    generationPurpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+    generationPurpose: IMAGE_CREATE_GENERATION_PURPOSE,
   },
   {
     dependencyKind: 'video-prompt-sheet',
@@ -45,7 +42,7 @@ const DEPENDENCY_KIND_DEFINITIONS = [
     cardinality: 'one',
     assetSelector: 'shot-video-input',
     missingInputBehavior: 'plan-generation',
-    generationPurpose: SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
+    generationPurpose: IMAGE_CREATE_GENERATION_PURPOSE,
   },
   {
     dependencyKind: 'reference-audio',

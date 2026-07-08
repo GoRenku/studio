@@ -27,13 +27,15 @@ describe('shot video take preflight and validation', () => {
     const otherTake = otherTakeReport.overview.take;
     await shotVideoTakeProject.writeProjectFile('generated/media/group-two-a.png', 'first frame a');
     await shotVideoTakeProject.writeProjectFile('generated/media/group-two-b.png', 'first frame b');
-    const selected = await projectData.importShotFirstFrame({
+    const selected = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/group-two-a.png',
       selection: 'select',
     });
-    const unselected = await projectData.importShotFirstFrame({
+    const unselected = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: otherTake.takeId,
       sourceProjectRelativePath: 'generated/media/group-two-b.png',
@@ -69,7 +71,8 @@ describe('shot video take preflight and validation', () => {
       'generated/media/unselected-first-frame.png',
       'first frame'
     );
-    const imported = await projectData.importShotFirstFrame({
+    const imported = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/unselected-first-frame.png',
@@ -103,7 +106,8 @@ describe('shot video take preflight and validation', () => {
       'generated/media/selected-first-frame.png',
       'first frame'
     );
-    const imported = await projectData.importShotFirstFrame({
+    const imported = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/selected-first-frame.png',
@@ -147,7 +151,8 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const sourcePath = 'generated/media/delete-first-frame.png';
     await shotVideoTakeProject.writeProjectFile(sourcePath, 'first frame');
-    const imported = await projectData.importShotFirstFrame({
+    const imported = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: sourcePath,
@@ -186,7 +191,8 @@ describe('shot video take preflight and validation', () => {
       'generated/media/file-serving-first-frame.png',
       'first frame'
     );
-    const imported = await projectData.importShotFirstFrame({
+    const imported = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/file-serving-first-frame.png',
@@ -221,7 +227,8 @@ describe('shot video take preflight and validation', () => {
       'generated/media/shot-one-first-frame.png',
       'shot one first frame'
     );
-    const imported = await projectData.importShotFirstFrame({
+    const imported = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: take.takeId,
       sourceProjectRelativePath: 'generated/media/shot-one-first-frame.png',
@@ -263,13 +270,15 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     await shotVideoTakeProject.writeProjectFile('generated/media/reference-a.png', 'reference a');
     await shotVideoTakeProject.writeProjectFile('generated/media/reference-b.png', 'reference b');
-    const selected = await projectData.importShotReferenceImage({
+    const selected = await projectData.importShotInputMedia({
+      inputKind: 'reference-image',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/reference-a.png',
       selection: 'select',
     });
-    const unselected = await projectData.importShotReferenceImage({
+    const unselected = await projectData.importShotInputMedia({
+      inputKind: 'reference-image',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/reference-b.png',
@@ -302,13 +311,15 @@ describe('shot video take preflight and validation', () => {
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     await shotVideoTakeProject.writeProjectFile('generated/media/restore-reference-a.png', 'reference a');
     await shotVideoTakeProject.writeProjectFile('generated/media/restore-reference-b.png', 'reference b');
-    const selected = await projectData.importShotReferenceImage({
+    const selected = await projectData.importShotInputMedia({
+      inputKind: 'reference-image',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/restore-reference-a.png',
       selection: 'select',
     });
-    const promoted = await projectData.importShotReferenceImage({
+    const promoted = await projectData.importShotInputMedia({
+      inputKind: 'reference-image',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/restore-reference-b.png',

@@ -1617,27 +1617,32 @@ async function createMatrixProjectSetup(
     'source video'
   );
 
-  const firstFrame = await projectData.importShotFirstFrame({
+  const firstFrame = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
     homeDir,
     takeId: singleTake.takeId,
     sourceProjectRelativePath: 'generated/media/first-frame.png',
   });
-  const lastFrame = await projectData.importShotLastFrame({
+  const lastFrame = await projectData.importShotInputMedia({
+      inputKind: 'last-frame',
     homeDir,
     takeId: singleTake.takeId,
     sourceProjectRelativePath: 'generated/media/last-frame.png',
   });
-  const multiShotFirstFrame = await projectData.importShotFirstFrame({
+  const multiShotFirstFrame = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
     homeDir,
     takeId: multiTake.takeId,
     sourceProjectRelativePath: 'generated/media/multi-shot-first-frame.png',
   });
-  const multiShotLastFrame = await projectData.importShotLastFrame({
+  const multiShotLastFrame = await projectData.importShotInputMedia({
+      inputKind: 'last-frame',
     homeDir,
     takeId: multiTake.takeId,
     sourceProjectRelativePath: 'generated/media/multi-shot-last-frame.png',
   });
-  const videoPromptSheet = await projectData.importShotVideoPromptSheet({
+  const videoPromptSheet = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
     homeDir,
     takeId: multiTake.takeId,
     sourceProjectRelativePath: 'generated/media/video-prompt-sheet.png',
@@ -1820,7 +1825,6 @@ function dependencyDraftsForCase(
     input.inputModeId === 'first-last-frame'
   ) {
     drafts.push({
-      purpose: 'shot.first-frame',
       dependencyKind: 'first-frame',
       outputInputKind: 'first-frame',
       referenceMode: 'movie-lookbook',
@@ -1830,7 +1834,6 @@ function dependencyDraftsForCase(
   }
   if (input.inputModeId === 'first-last-frame') {
     drafts.push({
-      purpose: 'shot.last-frame',
       dependencyKind: 'last-frame',
       outputInputKind: 'last-frame',
       referenceMode: 'movie-lookbook',
@@ -1840,7 +1843,6 @@ function dependencyDraftsForCase(
   }
   if (requiresVideoPromptSheet(input)) {
     drafts.push({
-      purpose: 'shot.video-prompt-sheet',
       dependencyKind: 'video-prompt-sheet',
       outputInputKind: 'video-prompt-sheet',
       referenceMode: 'movie-lookbook',

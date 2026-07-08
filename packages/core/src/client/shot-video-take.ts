@@ -3,12 +3,14 @@ import type { AgentMediaReport } from './agent-media.js';
 import type { Asset } from './assets.js';
 import type { ProjectRelativePath } from './project.js';
 import type { SceneSetting } from './screenplay.js';
-import type { SceneShot, ShotVideoTakePromptDraft, ShotVideoTakeDependencyKind, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, SceneShotVideoTakeProductionState, ShotSizeId, SubjectFramingId, CameraAngleId, ShotLensSpecs, ShotMovementId, MoveDirectionId, MoveTrackId, RigId } from './scene-shot-list.js';
+import type { SceneShot, ShotVideoTakePromptDraft, ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind, ShotVideoTakeInputModeId, ShotVideoTakeShotGroupMode, ShotVideoTakeModelChoice, ShotVideoTakeParameterValues, SceneShotVideoTakeProductionState, ShotSizeId, SubjectFramingId, CameraAngleId, ShotLensSpecs, ShotMovementId, MoveDirectionId, MoveTrackId, RigId } from './scene-shot-list.js';
 import type { MediaGenerationDependencyKind, MediaGenerationDependencyInventory, MediaGenerationDependencyPricing, MediaGenerationPlanLine } from './media-generation-dependency.js';
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
 import type { SceneShotVideoTakeTarget } from './media-generation-target.js';
 import type { RecoverableMutationReport } from './trash.js';
-import { SHOT_FIRST_FRAME_GENERATION_PURPOSE, SHOT_LAST_FRAME_GENERATION_PURPOSE, SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE, SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from './media-generation-purpose.js';
+import { IMAGE_CREATE_GENERATION_PURPOSE, SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from './media-generation-purpose.js';
+
+export const SHOT_INPUT_MEDIA_IMPORT_PURPOSE = 'shot.input' as const;
 
 export type ShotVideoTakeInputModelChoice =
   | 'fal-ai/openai/gpt-image-2'
@@ -26,12 +28,6 @@ export type VideoPromptSheetVisualStyleId =
 export type VideoPromptSheetNotationModeId =
   | 'none'
   | 'motion-annotation';
-
-export type ShotVideoTakeInputGenerationPurpose =
-  | typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE
-  | typeof SHOT_LAST_FRAME_GENERATION_PURPOSE
-  | typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
-  | typeof SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE;
 
 export interface ShotVideoTakeProjectContext {
   id?: string;
@@ -617,21 +613,6 @@ export interface SceneShotVideoTakeEditContext {
   resourceKeys: string[];
 }
 
-export interface ShotVideoTakeInputGenerationSpec {
-  purpose: ShotVideoTakeInputGenerationPurpose;
-  target: SceneShotVideoTakeTarget;
-  planId?: string;
-  dependencyKind: ShotVideoTakeDependencyKind;
-  outputInputKind: ShotVideoTakeInputKind;
-  modelChoice: ShotVideoTakeInputModelChoice;
-  referenceMode: ShotVideoInputReferenceMode;
-  promptSheetVisualStyleId?: VideoPromptSheetVisualStyleId;
-  promptSheetNotationModeId?: VideoPromptSheetNotationModeId;
-  prompt: string;
-  parameterValues: ShotVideoTakeParameterValues;
-  title?: string;
-}
-
 export interface ShotVideoTakeOutputGenerationInput {
   kind: ShotVideoTakeInputKind;
   assetId: string;
@@ -737,13 +718,6 @@ export interface ShotVideoTakeInputModelChoiceReport {
   parameters: ShotVideoTakeParameterReport[];
 }
 
-export interface ShotVideoTakeInputModelListReport {
-  purpose: ShotVideoTakeInputGenerationPurpose;
-  target: SceneShotVideoTakeTarget;
-  defaultModelChoice: ShotVideoTakeInputModelChoice;
-  models: ShotVideoTakeInputModelChoiceReport[];
-}
-
 export interface ShotVideoTakePreflightInput extends ShotVideoTakeOutputGenerationInput {
   subjectKind: ShotVideoTakeInputSubjectKind;
   subjectId: string;
@@ -762,7 +736,7 @@ export interface ShotVideoTakePreflightDependency {
 }
 
 export interface ShotVideoTakePreflightPrompt {
-  purpose: ShotVideoTakeInputGenerationPurpose | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
+  purpose: typeof IMAGE_CREATE_GENERATION_PURPOSE | typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE;
   prompt: string;
   negativePrompt?: string;
   title?: string;
@@ -1063,7 +1037,7 @@ export interface ShotVideoTakeInputMediaImportReport {
     projectFolder?: string;
   };
   changes?: Array<{ type: string; [key: string]: string }>;
-  purpose: ShotVideoTakeInputGenerationPurpose;
+  purpose: typeof SHOT_INPUT_MEDIA_IMPORT_PURPOSE;
   target: SceneShotVideoTakeTarget;
   imported: Asset;
   mediaInput: SceneShotVideoTakeMediaInput;

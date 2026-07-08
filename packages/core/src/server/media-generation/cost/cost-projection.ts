@@ -10,6 +10,7 @@ import type {
   CastCharacterSheetGenerationSpec,
   CastProfileGenerationSpec,
   CastVoiceSampleGenerationSpec,
+  ImageCreateGenerationSpec,
   ImageEditGenerationSpec,
   LocationEnvironmentSheetGenerationSpec,
   LocationHeroGenerationSpec,
@@ -21,10 +22,10 @@ import type {
   MediaGenerationSpecRecord,
   SceneDialogueAudioGenerationSpec,
   SceneStoryboardSheetGenerationSpec,
-  ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeOutputGenerationSpec,
 } from '../../../client/index.js';
 import {
+  IMAGE_CREATE_GENERATION_PURPOSE,
   IMAGE_EDIT_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
@@ -35,10 +36,6 @@ import {
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -70,6 +67,8 @@ export function buildPurposeCostProjection(
   spec: MediaGenerationSpec
 ): Omit<MediaGenerationCostProjection, 'estimate'> {
   switch (spec.purpose) {
+    case IMAGE_CREATE_GENERATION_PURPOSE:
+      return imageCreateCostProjection(spec as ImageCreateGenerationSpec);
     case IMAGE_EDIT_GENERATION_PURPOSE:
       return imageEditCostProjection(spec as ImageEditGenerationSpec);
     case LOOKBOOK_IMAGE_GENERATION_PURPOSE:
@@ -125,11 +124,6 @@ export function buildPurposeCostProjection(
         detail:
           (spec as SceneStoryboardSheetGenerationSpec).detail ?? 'standard',
       });
-    case SHOT_FIRST_FRAME_GENERATION_PURPOSE:
-    case SHOT_LAST_FRAME_GENERATION_PURPOSE:
-    case SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE:
-    case SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE:
-      return shotInputCostProjection(spec as ShotVideoTakeInputGenerationSpec);
     case SHOT_VIDEO_TAKE_GENERATION_PURPOSE:
       return shotVideoTakeCostProjection(
         spec as ShotVideoTakeOutputGenerationSpec
@@ -192,23 +186,47 @@ function imageCostProjection(input: {
   return { priceKey, pricingInputs };
 }
 
-function shotInputCostProjection(
-  spec: ShotVideoTakeInputGenerationSpec
+function imageCreateCostProjection(
+  spec: ImageCreateGenerationSpec
 ): Omit<MediaGenerationCostProjection, 'estimate'> {
-  const priceKey = imagePriceKey(spec.modelChoice);
-  const pricingInputs: GenerationPricingInputs = { outputCount: 1 };
-  if (priceKey.model === 'openai/gpt-image-2') {
-    pricingInputs.imageSize =
-      imageSizeFromParameter(spec.parameterValues.image_size) ??
-      { width: 1024, height: 768 };
-    pricingInputs.quality =
-      stringFromParameter(spec.parameterValues.quality) ?? 'low';
+  const priceKey = imagePriceKey(imageCreatePriceModelChoice(spec));
+  const pricingInputs: GenerationPricingInputs = {
+    outputCount: numberFromParameter(spec.parameterValues.num_images) ?? 1,
+    ...(spec.mode === 'reference-to-image'
+      ? {
+          inputImageCount:
+            spec.referenceImages.length + (spec.referenceFiles?.length ?? 0),
+        }
+      : {}),
+  };
+  if (priceKey.model === 'openai/gpt-image-2' || priceKey.model === 'openai/gpt-image-2/edit') {
+    pricingInputs.imageSize = imageSizeFromParameter(
+      spec.parameterValues.image_size
+    );
+    pricingInputs.quality = stringFromParameter(spec.parameterValues.quality);
   }
-  if (priceKey.model === 'nano-banana-2') {
-    pricingInputs.resolution =
-      stringFromParameter(spec.parameterValues.resolution) ?? '1K';
+  if (priceKey.model === 'nano-banana-2' || priceKey.model === 'nano-banana-2/edit') {
+    pricingInputs.resolution = stringFromParameter(
+      spec.parameterValues.resolution
+    );
   }
   return { priceKey, pricingInputs };
+}
+
+function imageCreatePriceModelChoice(spec: ImageCreateGenerationSpec): string {
+  if (spec.mode === 'text-to-image') {
+    return spec.modelChoice;
+  }
+  if (spec.modelChoice === 'fal-ai/openai/gpt-image-2') {
+    return 'fal-ai/openai/gpt-image-2/edit';
+  }
+  if (spec.modelChoice === 'fal-ai/nano-banana-2') {
+    return 'fal-ai/nano-banana-2/edit';
+  }
+  if (spec.modelChoice === 'fal-ai/xai/grok-imagine-image') {
+    return 'fal-ai/xai/grok-imagine-image/edit';
+  }
+  return spec.modelChoice;
 }
 
 function imageEditCostProjection(

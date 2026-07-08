@@ -568,28 +568,23 @@ function generationPreviewFixture(): GenerationPreviewRequest {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
-    purpose: 'shot.video-prompt-sheet',
+    purpose: 'image.create',
     project: {
       id: 'project_test0001',
       name: 'constantinople',
       title: 'Preparation of the Siege',
     },
     target: {
-      kind: 'sceneShotVideoTake',
-      id: 'take_test0001',
-      sceneId: 'scene_test0001',
-      takeId: 'take_test0001',
-      shotIds: ['shot_test0001'],
+      kind: 'project',
+      id: 'project_test0001',
     },
-    title: 'Choreography prompt sheet',
+    title: 'Choreography reference image',
     model: {
       provider: 'fal-ai',
       modelId: 'fal-ai/openai/gpt-image-2',
       mediaKind: 'image',
       executionPath: 'renku-managed',
     },
-    promptSheetVisualStyleId: 'handdrawn-storyboard',
-    promptSheetNotationModeId: 'motion-annotation',
     finalPrompt: {
       text: 'Create a motion annotated video prompt image.',
     },

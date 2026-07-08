@@ -70,6 +70,12 @@ Use the focused documents below for current direction.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
   attaches them as assets.
+- Durable generated and imported asset files live under the folder for the
+  domain object that owns them. Current asset paths must not start with
+  `generated/`; temporary agent/debug files belong under top-level `tmp/`;
+  user scratch references under `research/` must not be registered as asset
+  files. Generation specs may still name a `research/` file as a one-off
+  reference input when the file is not reusable project state.
 - Location Sheets are durable image assets attached to Locations with role
   `environment_sheet`. Each sheet has one `primary` image file and a concise
   persisted description. A Location can have many Location Sheets. A Shot
@@ -162,6 +168,11 @@ direction is superseded by ADR 0017.
   Defines the `ProjectRelativePath` contract and how paths are validated and
   resolved.
 
+- `docs/architecture/project-asset-storage-conventions.md`
+  Defines the current owner-folder placement rules for durable assets,
+  `tmp/`, `research/`, Storyboards, Shot Video Take media, and image edit
+  version suffixes.
+
 - `docs/architecture/reference/visual-language.md`
   Defines Inspiration Analysis, Lookbooks, source Inspiration relationships,
   and Lookbook image placement.
@@ -194,6 +205,7 @@ Implementation planning for this storage update is split across:
 - `plans/active/0007-production-asset-materialization.md`
 - `plans/active/0008-create-from-narrative-starter.md`
 - `plans/active/0009-studio-text-asset-editing.md`
+- `plans/active/0125-project-asset-storage-conventions-and-urban-basilica-migration.md`
 
 ## Exploration
 

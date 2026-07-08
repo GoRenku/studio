@@ -1,12 +1,9 @@
 import {
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
+  SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../../../client/index.js';
 import type {
-  ShotVideoTakeInputGenerationPurpose,
+  ShotVideoTakeImageInputImportKind,
   ShotVideoTakeInputMediaImportReport,
   ShotVideoTakeMediaImportReport,
 } from '../../../../../client/index.js';
@@ -46,6 +43,9 @@ import type {
   ImportShotVideoTakeMediaInput,
 } from '../../../../project-data-service-contracts.js';
 import {
+  ProjectDataError,
+} from '../../../../project-data-error.js';
+import {
   discardTrashObject,
 } from '../../../../trash/trash-lifecycle-service.js';
 import {
@@ -62,9 +62,6 @@ import {
   withShotProjectSession,
 } from '../shared/project-session.js';
 import {
-  PURPOSE_CONFIG,
-} from '../shared/purpose-config.js';
-import {
   shotVideoTakeResourceKeys,
 } from '../shared/resource-keys.js';
 import {
@@ -78,22 +75,21 @@ import {
 
 
 export async function importShotInputMedia(
-  input: ImportShotVideoTakeInputMediaInput,
-  purpose: ShotVideoTakeInputGenerationPurpose
+  input: ImportShotVideoTakeInputMediaInput
 ): Promise<ShotVideoTakeInputMediaImportReport> {
+  const inputKind = requireShotInputMediaImportKind(input.inputKind);
   return withShotProjectSession(input, async ({ session, projectFolder, project }) => {
     const now = new Date().toISOString();
     const screenplay = requireScreenplayDocument(session);
     const sourcePrepared = prepareSceneShotVideoTakeInSession({ session, input });
     assertEditableSceneShotVideoTake(sourcePrepared.take);
-    const config = PURPOSE_CONFIG[purpose];
     const imported = await importGeneratedFile({
       session,
       projectFolder,
       sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title ?? config.title,
+      title: input.title ?? shotInputTitle(inputKind),
       mediaKind: 'image',
-      assetType: purpose,
+      assetType: SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
       origin: input.receipt ? 'generated' : 'imported',
       idGenerator: input.idGenerator,
       now,
@@ -107,7 +103,7 @@ export async function importShotInputMedia(
     });
     const prepared = iteration.prepared;
     const subject =
-      config.outputInputKind === 'video-prompt-sheet'
+      inputKind === 'video-prompt-sheet'
         ? {
             subjectKind: 'take' as const,
             subjectId: prepared.take.takeId,
@@ -124,7 +120,7 @@ export async function importShotInputMedia(
         }).find(
           (candidate) =>
             candidate.selected &&
-            candidate.kind === config.outputInputKind &&
+            candidate.kind === inputKind &&
             candidate.subjectKind === subject.subjectKind &&
             candidate.subjectId === subject.subjectId
         )
@@ -133,7 +129,7 @@ export async function importShotInputMedia(
       id: imported.nextId('scene_shot_video_take_media_input'),
       sceneId: prepared.sceneId,
       takeId: prepared.take.takeId,
-      inputKind: config.outputInputKind,
+      inputKind,
       ...subject,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
@@ -182,7 +178,7 @@ export async function importShotInputMedia(
             ]
           : []),
       ],
-      purpose,
+      purpose: SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
       target: prepared.target,
       imported: imported.asset,
       mediaInput: relationship,
@@ -199,23 +195,6 @@ export async function importShotInputMedia(
     };
   });
 }
-
-
-
-export const importShotFirstFrame = (input: ImportShotVideoTakeInputMediaInput) =>
-  importShotInputMedia(input, SHOT_FIRST_FRAME_GENERATION_PURPOSE);
-
-
-export const importShotLastFrame = (input: ImportShotVideoTakeInputMediaInput) =>
-  importShotInputMedia(input, SHOT_LAST_FRAME_GENERATION_PURPOSE);
-
-
-export const importShotReferenceImage = (input: ImportShotVideoTakeInputMediaInput) =>
-  importShotInputMedia(input, SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE);
-
-
-export const importShotVideoPromptSheet = (input: ImportShotVideoTakeInputMediaInput) =>
-  importShotInputMedia(input, SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE);
 
 
 
@@ -294,6 +273,36 @@ export async function importShotVideoTake(
   });
 }
 
+
+function requireShotInputMediaImportKind(
+  inputKind: unknown
+): ShotVideoTakeImageInputImportKind {
+  if (
+    inputKind === 'first-frame' ||
+    inputKind === 'last-frame' ||
+    inputKind === 'reference-image' ||
+    inputKind === 'video-prompt-sheet'
+  ) {
+    return inputKind;
+  }
+  throw new ProjectDataError(
+    'CORE_SHOT_INPUT_IMPORT_KIND_UNSUPPORTED',
+    `Shot input media import does not support input kind: ${String(inputKind)}.`
+  );
+}
+
+function shotInputTitle(inputKind: ShotVideoTakeImageInputImportKind): string {
+  if (inputKind === 'first-frame') {
+    return 'Shot first frame';
+  }
+  if (inputKind === 'last-frame') {
+    return 'Shot last frame';
+  }
+  if (inputKind === 'video-prompt-sheet') {
+    return 'Shot video prompt sheet';
+  }
+  return 'Shot reference image';
+}
 
 
 export async function importGeneratedFile(input: {

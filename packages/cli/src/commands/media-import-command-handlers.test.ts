@@ -24,7 +24,7 @@ describe('media import command handlers', () => {
       takeId: 'take_test0001',
       sceneId: 'scene_test0001',
     });
-    const importShotVideoPromptSheet = vi.fn().mockResolvedValue({
+    const importShotInputMedia = vi.fn().mockResolvedValue({
       project: { name: 'constantinople' },
       resourceKeys: ['scene-shot-video-take:take_test0001'],
     });
@@ -32,7 +32,8 @@ describe('media import command handlers', () => {
     await expect(
       mediaImportCommandHandler.run({
         flags: {
-          purpose: 'shot.video-prompt-sheet',
+          purpose: 'shot.input',
+          kind: 'video-prompt-sheet',
           target: 'take:take_test0001',
           source: 'generated/media/prompt-sheet.png',
           selection: 'select',
@@ -42,7 +43,7 @@ describe('media import command handlers', () => {
           homeDir,
           projectDataService: {
             readSceneShotVideoTake,
-            importShotVideoPromptSheet,
+            importShotInputMedia,
           },
         }),
       } as never),
@@ -55,11 +56,12 @@ describe('media import command handlers', () => {
       homeDir,
       takeId: 'take_test0001',
     });
-    expect(importShotVideoPromptSheet).toHaveBeenCalledWith({
+    expect(importShotInputMedia).toHaveBeenCalledWith({
       projectName: 'constantinople',
       homeDir,
       sceneId: 'scene_test0001',
       takeId: 'take_test0001',
+      inputKind: 'video-prompt-sheet',
       sourceProjectRelativePath: 'generated/media/prompt-sheet.png',
       title: undefined,
       receipt: undefined,
@@ -72,7 +74,8 @@ describe('media import command handlers', () => {
     await expect(
       mediaImportCommandHandler.run({
         flags: {
-          purpose: 'shot.video-prompt-sheet',
+          purpose: 'shot.input',
+          kind: 'video-prompt-sheet',
           target: 'take:take_test0001',
           take: 'take_test0002',
           source: 'generated/media/prompt-sheet.png',
@@ -81,7 +84,7 @@ describe('media import command handlers', () => {
           homeDir,
           projectDataService: {
             readSceneShotVideoTake: vi.fn(),
-            importShotVideoPromptSheet: vi.fn(),
+            importShotInputMedia: vi.fn(),
           },
         }),
       } as never),

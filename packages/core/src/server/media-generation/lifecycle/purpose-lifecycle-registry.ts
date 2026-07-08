@@ -1,5 +1,8 @@
 import type {
   AgentMediaReport,
+  ImageCreateGenerationContext,
+  ImageCreateGenerationSpec,
+  ImageCreateModelListReport,
   ImageEditGenerationContext,
   ImageEditGenerationSpec,
   ImageEditModelListReport,
@@ -49,13 +52,12 @@ import type {
   SceneDialogueAudioModelListReport,
   ShotVideoTakeProductionContext,
   ShotVideoTakeOutputGenerationSpec,
-  ShotVideoTakeInputGenerationSpec,
   ShotVideoTakeInputMediaImportReport,
   ShotVideoTakeMediaImportReport,
-  ShotVideoTakeInputModelListReport,
   ShotVideoTakeModelListReport,
 } from '../../../client/index.js';
 import {
+  IMAGE_CREATE_GENERATION_PURPOSE,
   IMAGE_EDIT_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
@@ -66,10 +68,7 @@ import {
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+  SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -83,7 +82,6 @@ import type {
   CreateLookbookSheetGenerationSpecInput,
   CreateSceneStoryboardSheetGenerationSpecInput,
   CreateShotVideoTakeOutputGenerationSpecInput,
-  CreateShotVideoTakeInputGenerationSpecInput,
   ImportCastMediaInput,
   ImportLocationEnvironmentSheetMediaInput,
   ImportLocationHeroMediaInput,
@@ -107,7 +105,6 @@ import type {
   UpdateLookbookSheetGenerationSpecInput,
   UpdateSceneStoryboardSheetGenerationSpecInput,
   UpdateShotVideoTakeOutputGenerationSpecInput,
-  UpdateShotVideoTakeInputGenerationSpecInput,
   ValidateCastCharacterSheetGenerationSpecInput,
   ValidateCastProfileGenerationSpecInput,
   ValidateCastVoiceSampleGenerationSpecInput,
@@ -117,9 +114,9 @@ import type {
   ValidateSceneStoryboardSheetGenerationSpecInput,
   ValidateSceneDialogueAudioGenerationSpecInput,
   ValidateShotVideoTakeOutputGenerationSpecInput,
-  ValidateShotVideoTakeInputGenerationSpecInput,
 } from '../../project-data-service-contracts.js';
 import * as characterSheet from '../purposes/cast-character-sheet.js';
+import * as imageCreate from '../purposes/image-create.js';
 import * as imageEdit from '../purposes/image-edit.js';
 import * as castProfile from '../purposes/cast-profile.js';
 import * as castVoiceSample from '../purposes/cast-voice-sample.js';
@@ -131,20 +128,19 @@ import * as sceneStoryboardSheet from '../purposes/scene-storyboard-sheet.js';
 import * as sceneDialogueAudio from '../purposes/scene-dialogue-audio.js';
 import { buildMediaGenerationCostProjection } from '../cost/cost-projection.js';
 import { buildShotVideoTakeContext } from '../purposes/shot-video-take/authoring/context.js';
-import { listShotVideoTakeModels, listShotInputModels } from '../purposes/shot-video-take/specs/model-list.js';
-import { validateShotFirstFrameSpec, validateShotLastFrameSpec, validateShotReferenceImageSpec, validateShotVideoPromptSheetSpec, createShotFirstFrameSpec, createShotLastFrameSpec, createShotReferenceImageSpec, createShotVideoPromptSheetSpec, updateShotFirstFrameSpec, updateShotLastFrameSpec, updateShotReferenceImageSpec, updateShotVideoPromptSheetSpec, listShotFirstFrameSpecs, listShotLastFrameSpecs, listShotReferenceImageSpecs, listShotVideoPromptSheetSpecs, prepareShotFirstFrameSpec, prepareShotLastFrameSpec, prepareShotReferenceImageSpec, prepareShotVideoPromptSheetSpec, buildShotInputGenerationPreview, prepareShotInputDraftSpec } from '../purposes/shot-video-take/specs/input-specs.js';
+import { listShotVideoTakeModels } from '../purposes/shot-video-take/specs/model-list.js';
 import { buildShotInputDependencyDraftSpec } from '../purposes/shot-video-take/planning/dependency-draft-specs.js';
-import { declareShotVideoInputDependencies } from '../purposes/shot-video-take/planning/shot-input-dependencies.js';
 import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, buildShotVideoTakeGenerationPreview, prepareShotVideoTakeDraftSpec } from '../purposes/shot-video-take/specs/final-specs.js';
-import { runShotFirstFrameSpec, runShotLastFrameSpec, runShotReferenceImageSpec, runShotVideoPromptSheetSpec, runShotVideoTakeSpec } from '../purposes/shot-video-take/runs/generation-runs.js';
+import { runShotVideoTakeSpec } from '../purposes/shot-video-take/runs/generation-runs.js';
 import { declareShotVideoTakeDependencies } from '../purposes/shot-video-take/planning/dependency-inventory.js';
-import { importShotFirstFrame, importShotLastFrame, importShotReferenceImage, importShotVideoPromptSheet, importShotVideoTake } from '../purposes/shot-video-take/imports/media-imports.js';
+import { importShotInputMedia, importShotVideoTake } from '../purposes/shot-video-take/imports/media-imports.js';
 import type {
   MediaGenerationDependencyDraftPlan,
   MediaGenerationDependencyDraftSpecInput,
 } from '../dependencies/dependency-draft-specs.js';
 
 export type MediaGenerationContextReport =
+  | ImageCreateGenerationContext
   | ImageEditGenerationContext
   | LookbookImageGenerationContext
   | LookbookSheetGenerationContext
@@ -161,6 +157,7 @@ export type AgentAwareMediaGenerationContextReport =
   MediaGenerationContextReport & { agentMedia?: AgentMediaReport };
 
 export type MediaGenerationModelListReport =
+  | ImageCreateModelListReport
   | ImageEditModelListReport
   | LookbookImageModelListReport
   | LookbookSheetModelListReport
@@ -171,7 +168,6 @@ export type MediaGenerationModelListReport =
   | LocationEnvironmentSheetModelListReport
   | LocationHeroModelListReport
   | SceneStoryboardSheetModelListReport
-  | ShotVideoTakeInputModelListReport
   | ShotVideoTakeModelListReport;
 
 export type AgentAwareMediaGenerationModelListReport =
@@ -268,6 +264,48 @@ export interface MediaGenerationPurposeDefinition {
 }
 
 const DEFINITIONS = [
+  {
+    purpose: IMAGE_CREATE_GENERATION_PURPOSE,
+    mediaKind: 'image',
+    targetKind: 'project',
+    buildCostProjection: buildMediaGenerationCostProjection,
+    buildContext: (input) =>
+      imageCreate.buildImageCreateContext(toProjectInput(input)),
+    listModels: (input) =>
+      imageCreate.listImageCreateModels(toProjectInput(input)),
+    validateSpec: (input) =>
+      imageCreate.validateImageCreateSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ImageCreateGenerationSpec,
+      }),
+    createSpec: (input) =>
+      imageCreate.createImageCreateSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ImageCreateGenerationSpec,
+        idGenerator: input.idGenerator,
+      }),
+    updateSpec: (input) =>
+      imageCreate.updateImageCreateSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        specId: input.specId,
+        spec: input.spec as ImageCreateGenerationSpec,
+      }),
+    listSpecs: (input) =>
+      imageCreate.listImageCreateSpecs(toProjectInput(input)),
+    prepareSpec: imageCreate.prepareImageCreateSpec,
+    buildPreview: imageCreate.buildImageCreateGenerationPreview,
+    prepareDraftSpec: (input) =>
+      imageCreate.prepareImageCreateDraftSpec({
+        projectName: input.projectName,
+        homeDir: input.homeDir,
+        spec: input.spec as ImageCreateGenerationSpec,
+      }),
+    planDependencyDraft: buildShotInputDependencyDraftSpec,
+    runSpec: imageCreate.runImageCreateSpec,
+  },
   {
     purpose: IMAGE_EDIT_GENERATION_PURPOSE,
     mediaKind: 'image',
@@ -687,127 +725,6 @@ const DEFINITIONS = [
     runSpec: sceneStoryboardSheet.runSceneStoryboardSheetSpec,
   },
   {
-    purpose: SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-    mediaKind: 'image',
-    targetKind: 'sceneShotVideoTake',
-    buildCostProjection: buildMediaGenerationCostProjection,
-    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
-    listModels: (input) =>
-      listShotInputModels(
-        toShotInput(input),
-        SHOT_FIRST_FRAME_GENERATION_PURPOSE
-      ),
-    validateSpec: (input) =>
-      validateShotFirstFrameSpec(toShotInputSpecValidation(input)),
-    createSpec: (input) =>
-      createShotFirstFrameSpec(toShotInputSpecCreation(input)),
-    updateSpec: (input) =>
-      updateShotFirstFrameSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) => listShotFirstFrameSpecs(toShotInput(input)),
-    prepareSpec: prepareShotFirstFrameSpec,
-    buildPreview: buildShotInputGenerationPreview,
-    prepareDraftSpec: (input) =>
-      prepareShotInputDraftSpec({
-        projectName: input.projectName,
-        homeDir: input.homeDir,
-        spec: input.spec as ShotVideoTakeInputGenerationSpec,
-      }),
-    declareDependencies: declareShotVideoInputDependencies,
-    planDependencyDraft: buildShotInputDependencyDraftSpec,
-    runSpec: runShotFirstFrameSpec,
-  },
-  {
-    purpose: SHOT_LAST_FRAME_GENERATION_PURPOSE,
-    mediaKind: 'image',
-    targetKind: 'sceneShotVideoTake',
-    buildCostProjection: buildMediaGenerationCostProjection,
-    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
-    listModels: (input) =>
-      listShotInputModels(
-        toShotInput(input),
-        SHOT_LAST_FRAME_GENERATION_PURPOSE
-      ),
-    validateSpec: (input) =>
-      validateShotLastFrameSpec(toShotInputSpecValidation(input)),
-    createSpec: (input) =>
-      createShotLastFrameSpec(toShotInputSpecCreation(input)),
-    updateSpec: (input) =>
-      updateShotLastFrameSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) => listShotLastFrameSpecs(toShotInput(input)),
-    prepareSpec: prepareShotLastFrameSpec,
-    buildPreview: buildShotInputGenerationPreview,
-    prepareDraftSpec: (input) =>
-      prepareShotInputDraftSpec({
-        projectName: input.projectName,
-        homeDir: input.homeDir,
-        spec: input.spec as ShotVideoTakeInputGenerationSpec,
-      }),
-    declareDependencies: declareShotVideoInputDependencies,
-    planDependencyDraft: buildShotInputDependencyDraftSpec,
-    runSpec: runShotLastFrameSpec,
-  },
-  {
-    purpose: SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-    mediaKind: 'image',
-    targetKind: 'sceneShotVideoTake',
-    buildCostProjection: buildMediaGenerationCostProjection,
-    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
-    listModels: (input) =>
-      listShotInputModels(
-        toShotInput(input),
-        SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE
-      ),
-    validateSpec: (input) =>
-      validateShotReferenceImageSpec(toShotInputSpecValidation(input)),
-    createSpec: (input) =>
-      createShotReferenceImageSpec(toShotInputSpecCreation(input)),
-    updateSpec: (input) =>
-      updateShotReferenceImageSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) => listShotReferenceImageSpecs(toShotInput(input)),
-    prepareSpec: prepareShotReferenceImageSpec,
-    buildPreview: buildShotInputGenerationPreview,
-    prepareDraftSpec: (input) =>
-      prepareShotInputDraftSpec({
-        projectName: input.projectName,
-        homeDir: input.homeDir,
-        spec: input.spec as ShotVideoTakeInputGenerationSpec,
-      }),
-    declareDependencies: declareShotVideoInputDependencies,
-    planDependencyDraft: buildShotInputDependencyDraftSpec,
-    runSpec: runShotReferenceImageSpec,
-  },
-  {
-    purpose: SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
-    mediaKind: 'image',
-    targetKind: 'sceneShotVideoTake',
-    buildCostProjection: buildMediaGenerationCostProjection,
-    buildContext: (input) => buildShotVideoTakeContext(toShotInput(input)),
-    listModels: (input) =>
-      listShotInputModels(
-        toShotInput(input),
-        SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE
-      ),
-    validateSpec: (input) =>
-      validateShotVideoPromptSheetSpec(toShotInputSpecValidation(input)),
-    createSpec: (input) =>
-      createShotVideoPromptSheetSpec(toShotInputSpecCreation(input)),
-    updateSpec: (input) =>
-      updateShotVideoPromptSheetSpec(toShotInputSpecUpdate(input)),
-    listSpecs: (input) =>
-      listShotVideoPromptSheetSpecs(toShotInput(input)),
-    prepareSpec: prepareShotVideoPromptSheetSpec,
-    buildPreview: buildShotInputGenerationPreview,
-    prepareDraftSpec: (input) =>
-      prepareShotInputDraftSpec({
-        projectName: input.projectName,
-        homeDir: input.homeDir,
-        spec: input.spec as ShotVideoTakeInputGenerationSpec,
-      }),
-    declareDependencies: declareShotVideoInputDependencies,
-    planDependencyDraft: buildShotInputDependencyDraftSpec,
-    runSpec: runShotVideoPromptSheetSpec,
-  },
-  {
     purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
     mediaKind: 'video',
     targetKind: 'sceneShotVideoTake',
@@ -906,6 +823,17 @@ function toAssetInput(
   return { projectName: input.projectName, homeDir: input.homeDir, assetId: target.id };
 }
 
+function toProjectInput(
+  input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
+): imageCreate.ImageCreateTargetInput {
+  const target = requireTargetKind(input, 'project');
+  return {
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    ...(target.id ? { projectId: target.id } : {}),
+  };
+}
+
 function toCastInput(
   input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
 ): CastMediaGenerationContextInput {
@@ -962,34 +890,6 @@ function toShotModelInput(input: MediaGenerationPurposeContextInput): ShotVideoT
   };
 }
 
-function toShotInputSpecValidation(
-  input: ValidateMediaGenerationSpecInput
-): ValidateShotVideoTakeInputGenerationSpecInput {
-  return {
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    spec: input.spec as ShotVideoTakeInputGenerationSpec,
-  };
-}
-
-function toShotInputSpecCreation(
-  input: CreateMediaGenerationSpecInput
-): CreateShotVideoTakeInputGenerationSpecInput {
-  return {
-    ...toShotInputSpecValidation(input),
-    idGenerator: input.idGenerator,
-  };
-}
-
-function toShotInputSpecUpdate(
-  input: UpdateMediaGenerationSpecInput
-): UpdateShotVideoTakeInputGenerationSpecInput {
-  return {
-    ...toShotInputSpecValidation(input),
-    specId: input.specId,
-  };
-}
-
 function requireShotListId(
   input: MediaGenerationPurposeContextInput | ListMediaGenerationSpecsInput
 ): string {
@@ -1010,10 +910,7 @@ export async function importMediaGenerationByPurpose(input:
   | ({ purpose: typeof LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE } & ImportLocationEnvironmentSheetMediaInput)
   | ({ purpose: typeof LOCATION_HERO_GENERATION_PURPOSE } & ImportLocationHeroMediaInput)
   | ({ purpose: typeof SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE } & ImportSceneStoryboardImagesMediaInput)
-  | ({ purpose: typeof SHOT_FIRST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
-  | ({ purpose: typeof SHOT_LAST_FRAME_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
-  | ({ purpose: typeof SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
-  | ({ purpose: typeof SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE } & ImportShotVideoTakeInputMediaInput)
+  | ({ purpose: typeof SHOT_INPUT_MEDIA_IMPORT_PURPOSE } & ImportShotVideoTakeInputMediaInput)
   | ({ purpose: typeof SHOT_VIDEO_TAKE_GENERATION_PURPOSE } & ImportShotVideoTakeMediaInput)
 ): Promise<MediaGenerationImportReport> {
   switch (input.purpose) {
@@ -1031,14 +928,8 @@ export async function importMediaGenerationByPurpose(input:
       return locationHero.importLocationHeroMedia(input);
     case SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE:
       return sceneStoryboardSheet.importSceneStoryboardImagesMedia(input);
-    case SHOT_FIRST_FRAME_GENERATION_PURPOSE:
-      return importShotFirstFrame(input);
-    case SHOT_LAST_FRAME_GENERATION_PURPOSE:
-      return importShotLastFrame(input);
-    case SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE:
-      return importShotReferenceImage(input);
-    case SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE:
-      return importShotVideoPromptSheet(input);
+    case SHOT_INPUT_MEDIA_IMPORT_PURPOSE:
+      return importShotInputMedia(input);
     case SHOT_VIDEO_TAKE_GENERATION_PURPOSE:
       return importShotVideoTake(input);
     default:

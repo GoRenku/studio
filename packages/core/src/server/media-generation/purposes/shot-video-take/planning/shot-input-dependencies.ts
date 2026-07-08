@@ -1,8 +1,7 @@
 import type {
   MediaGenerationDependencySlot,
-  ShotVideoTakeInputGenerationSpec,
   ShotVideoInputReferenceMode,
-  ShotVideoTakeInputGenerationPurpose,
+  ShotVideoTakeInputKind,
   ShotVideoTakeProductionContext,
 } from '../../../../../client/index.js';
 import {
@@ -55,13 +54,15 @@ export async function declareShotVideoInputDependencies(
     );
   }
   const target = input.target;
-  const spec = input.request.spec as ShotVideoTakeInputGenerationSpec | undefined;
+  const spec = input.request.spec as { referenceMode?: ShotVideoInputReferenceMode; outputInputKind?: ShotVideoTakeInputKind } | undefined;
   if (!spec?.referenceMode) {
     throw new ProjectDataError(
       'CORE_SHOT_VIDEO_INPUT_REFERENCE_MODE_REQUIRED',
       'Shot input dependency declarations require referenceMode.'
     );
   }
+  const referenceMode = spec.referenceMode;
+  const inputKind = spec.outputInputKind ?? 'reference-image';
   return withShotProjectSession(input, ({ session, projectFolder, project }) => {
     const prepared = prepareSceneShotVideoTakeInSession({
       session,
@@ -81,8 +82,8 @@ export async function declareShotVideoInputDependencies(
     return declareShotVideoInputReferenceDependencies({
       session,
       context,
-      purpose: spec.purpose,
-      referenceMode: spec.referenceMode,
+      inputKind,
+      referenceMode,
     });
   });
 }
@@ -90,7 +91,7 @@ export async function declareShotVideoInputDependencies(
 export function declareShotVideoInputReferenceDependencies(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
-  purpose: ShotVideoTakeInputGenerationPurpose;
+  inputKind: ShotVideoTakeInputKind;
   referenceMode: ShotVideoInputReferenceMode;
 }): MediaGenerationDependencySlot[] {
   return [
@@ -102,7 +103,7 @@ export function declareShotVideoInputReferenceDependencies(input: {
 function shotVideoInputStyleDependency(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
-  purpose: ShotVideoTakeInputGenerationPurpose;
+  inputKind: ShotVideoTakeInputKind;
   referenceMode: ShotVideoInputReferenceMode;
 }): MediaGenerationDependencySlot[] {
   const reason =

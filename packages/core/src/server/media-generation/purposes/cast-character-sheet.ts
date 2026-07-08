@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import type {
   Asset,
   CastCharacterSheetGenerationContext,
@@ -9,11 +11,13 @@ import type {
   CastCharacterSheetModelListReport,
   CastImageModelChoiceReport,
   CastMediaImportReport,
+  GenerationReferenceFileInput,
   GenerationPreviewRequest,
   MediaGenerationDependencySlot,
   MediaGenerationRunReport,
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
+  ProjectRelativePath,
 } from '../../../client/index.js';
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
@@ -36,6 +40,10 @@ import {
 } from '../../entity-ids.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import {
+  normalizeProjectRelativePath,
+  resolveProjectRelativePath,
+} from '../../files/project-relative-paths.js';
 import { studioResourceKeysForAssetTarget } from '../../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from '../cost/cost-projection.js';
@@ -96,6 +104,13 @@ interface CastCharacterSheetReferenceContext {
   selectedAssets: Asset[];
   characterSheetTakes: Asset[];
   referenceImageAssets: Asset[];
+}
+
+interface CastCharacterSheetProviderReference {
+  referenceRole: string;
+  label: string;
+  projectRelativePath: ProjectRelativePath;
+  mediaKind: 'image';
 }
 
 export interface CastCharacterSheetProjectInput extends RenkuConfigPathOptions {
@@ -410,7 +425,12 @@ export async function buildCastCharacterSheetGenerationPreview(
     })),
     providerTokenOrder: referenceOptions
       .filter((reference) => reference.included)
-      .map((reference) => reference.dependencyId),
+      .map((reference) => reference.dependencyId)
+      .concat(
+        (specRecord.spec.referenceFiles ?? []).map(
+          (referenceFile) => referenceFile.projectRelativePath
+        )
+      ),
     payload: plan.payload,
   });
 }
@@ -664,12 +684,15 @@ async function normalizeSpec(input: {
   assertModelChoice(input.spec.modelChoice);
   const controls = normalizeCastImageSpecControls(input.spec, 'project');
   const referenceSelections = normalizeReferenceSelections(input.spec.referenceSelections);
+  const referenceFiles = normalizeReferenceFiles(input.spec.referenceFiles);
   const normalized: CastCharacterSheetGenerationSpec = {
     ...controls,
     ...(referenceSelections ? { referenceSelections } : {}),
+    ...(referenceFiles ? { referenceFiles } : {}),
   };
-  await withCastProjectSession(input, ({ session }) => {
+  await withCastProjectSession(input, async ({ session, projectFolder }) => {
     requireCastMemberForContext(session, normalized.target.id);
+    await validateReferenceFiles(projectFolder, referenceFiles);
   });
   return normalized;
 }
@@ -677,7 +700,7 @@ async function normalizeSpec(input: {
 function buildGptImage2Payload(
   spec: CastCharacterSheetGenerationSpec,
   context: CastCharacterSheetGenerationContext,
-  references: CastCharacterSheetReferenceOption[]
+  references: CastCharacterSheetProviderReference[]
 ): CastProviderPlan {
   const takeCount = requireTakeCount(spec, 4);
   if (spec.seed !== null && spec.seed !== undefined) {
@@ -720,7 +743,7 @@ function buildGptImage2Payload(
 function buildNanoBanana2Payload(
   spec: CastCharacterSheetGenerationSpec,
   context: CastCharacterSheetGenerationContext,
-  references: CastCharacterSheetReferenceOption[]
+  references: CastCharacterSheetProviderReference[]
 ): CastProviderPlan {
   const takeCount = requireTakeCount(spec, 4);
   if (references.length > 0) {
@@ -768,7 +791,7 @@ function buildNanoBanana2Payload(
 function buildGrokImaginePayload(
   spec: CastCharacterSheetGenerationSpec,
   context: CastCharacterSheetGenerationContext,
-  references: CastCharacterSheetReferenceOption[]
+  references: CastCharacterSheetProviderReference[]
 ): CastProviderPlan {
   const takeCount = requireTakeCount(spec, 4);
   if (spec.seed !== null && spec.seed !== undefined) {
@@ -814,7 +837,7 @@ function buildGrokImaginePayload(
 }
 
 function requireGrokImagineReferenceCount(
-  references: CastCharacterSheetReferenceOption[]
+  references: CastCharacterSheetProviderReference[]
 ): void {
   if (references.length <= GROK_IMAGINE_MAX_REFERENCE_IMAGES) {
     return;
@@ -842,11 +865,15 @@ function mapGrokImagineResolution(detail: CastImageDetail): '1k' | '2k' {
 function includedCastCharacterSheetReferences(
   spec: CastCharacterSheetGenerationSpec,
   context: CastCharacterSheetGenerationContext
-): CastCharacterSheetReferenceOption[] {
-  return resolveCastCharacterSheetReferenceOptions({
+): CastCharacterSheetProviderReference[] {
+  const assetReferences = resolveCastCharacterSheetReferenceOptions({
     context,
     referenceSelections: spec.referenceSelections,
   }).filter((reference) => reference.included);
+  return [
+    ...assetReferences,
+    ...referenceFileProviderReferences(spec.referenceFiles ?? []),
+  ];
 }
 
 export function resolveCastCharacterSheetReferenceOptions(input: {
@@ -990,8 +1017,19 @@ function findCastReferenceAsset(
   );
 }
 
+function referenceFileProviderReferences(
+  referenceFiles: GenerationReferenceFileInput[]
+): CastCharacterSheetProviderReference[] {
+  return referenceFiles.map((referenceFile) => ({
+    referenceRole: referenceFile.role,
+    label: referenceFile.label ?? referenceFile.role,
+    projectRelativePath: referenceFile.projectRelativePath,
+    mediaKind: 'image',
+  }));
+}
+
 function referenceInputFiles(
-  references: CastCharacterSheetReferenceOption[]
+  references: CastCharacterSheetProviderReference[]
 ): CastProviderPlan['inputFiles'] {
   return references.map((reference) => ({
     field: 'image_urls',
@@ -1003,11 +1041,129 @@ function referenceInputFiles(
 }
 
 function referenceLogicalInputs(
-  references: CastCharacterSheetReferenceOption[]
+  references: CastCharacterSheetProviderReference[]
 ): string[] {
   return references.map(
     (reference) => `renku-input://${encodeURI(reference.projectRelativePath)}`
   );
+}
+
+function normalizeReferenceFiles(
+  value: CastCharacterSheetGenerationSpec['referenceFiles']
+): GenerationReferenceFileInput[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new ProjectDataError(
+      'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_INVALID',
+      'Cast character sheet referenceFiles must be an array.'
+    );
+  }
+  const normalized = value.map((referenceFile, index) => {
+    if (!referenceFile || typeof referenceFile !== 'object' || Array.isArray(referenceFile)) {
+      throw new ProjectDataError(
+        'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_INVALID',
+        `Cast character sheet referenceFiles[${index}] must be an object.`
+      );
+    }
+    const candidate = referenceFile as {
+      projectRelativePath?: unknown;
+      mediaKind?: unknown;
+      role?: unknown;
+      label?: unknown;
+    };
+    if (candidate.mediaKind !== 'image') {
+      throw new ProjectDataError(
+        'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_UNSUPPORTED',
+        `Cast character sheet referenceFiles[${index}] must use mediaKind "image". Received: ${String(candidate.mediaKind)}.`
+      );
+    }
+    const role = typeof candidate.role === 'string' ? candidate.role.trim() : '';
+    if (!role) {
+      throw new ProjectDataError(
+        'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_INVALID',
+        `Cast character sheet referenceFiles[${index}].role must be a non-empty string.`
+      );
+    }
+    if (typeof candidate.projectRelativePath !== 'string') {
+      throw new ProjectDataError(
+        'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_INVALID',
+        `Cast character sheet referenceFiles[${index}].projectRelativePath must be a string.`
+      );
+    }
+    const projectRelativePath = normalizeProjectRelativePath(
+      candidate.projectRelativePath
+    );
+    if (
+      candidate.label !== undefined &&
+      typeof candidate.label !== 'string'
+    ) {
+      throw new ProjectDataError(
+        'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_INVALID',
+        `Cast character sheet referenceFiles[${index}].label must be a string when provided.`
+      );
+    }
+    const label =
+      typeof candidate.label === 'string' ? candidate.label.trim() : undefined;
+    return {
+      projectRelativePath,
+      mediaKind: 'image' as const,
+      role,
+      ...(label ? { label } : {}),
+    };
+  });
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+async function validateReferenceFiles(
+  projectFolder: string,
+  referenceFiles: GenerationReferenceFileInput[] | undefined
+): Promise<void> {
+  for (const referenceFile of referenceFiles ?? []) {
+    const absolutePath = resolveProjectRelativePath(
+      projectFolder,
+      referenceFile.projectRelativePath
+    );
+    assertResolvedPathInsideProject(projectFolder, absolutePath);
+    await statExistingReferenceFile(absolutePath, referenceFile.projectRelativePath);
+  }
+}
+
+async function statExistingReferenceFile(
+  absolutePath: string,
+  projectRelativePath: ProjectRelativePath
+): Promise<void> {
+  try {
+    const stats = await fs.stat(absolutePath);
+    if (!stats.isFile()) {
+      throw new ProjectDataError(
+        'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_NOT_FILE',
+        `Cast character sheet reference file must be a file: ${projectRelativePath}.`
+      );
+    }
+  } catch (error) {
+    if (error instanceof ProjectDataError) {
+      throw error;
+    }
+    throw new ProjectDataError(
+      'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_MISSING',
+      `Cast character sheet reference file was not found: ${projectRelativePath}.`
+    );
+  }
+}
+
+function assertResolvedPathInsideProject(
+  projectFolder: string,
+  resolvedPath: string
+): void {
+  const relativePath = path.relative(projectFolder, resolvedPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new ProjectDataError(
+      'CORE_CAST_CHARACTER_SHEET_REFERENCE_FILE_OUTSIDE_PROJECT',
+      `Cast character sheet reference file must stay inside the project folder: ${resolvedPath}.`
+    );
+  }
 }
 
 function normalizeReferenceSelections(

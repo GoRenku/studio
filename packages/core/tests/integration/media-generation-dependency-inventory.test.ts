@@ -8,6 +8,7 @@ import type {
   CastProfileGenerationSpec,
   LookbookSheetGenerationSpec,
   SceneShotListDocument,
+  ShotVideoTakeInputMediaImportReport,
   ShotVideoTakeOutputGenerationSpec,
   ShotVideoTakePreparedInput,
 } from '../../src/client/index.js';
@@ -28,8 +29,6 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../../src/server/testing/project-data-fixtures.js';
-
-type ProjectDataService = ReturnType<typeof createProjectDataService>;
 
 describe('media generation dependency inventory estimates integration', () => {
   let homeDir: string;
@@ -285,7 +284,6 @@ describe('media generation dependency inventory estimates integration', () => {
           basedOnShotIds: ['shot_001'],
           dependencyDrafts: [
             {
-              purpose: 'shot.first-frame',
               dependencyKind: 'first-frame',
               outputInputKind: 'first-frame',
               referenceMode: 'movie-lookbook',
@@ -364,21 +362,23 @@ describe('media generation dependency inventory estimates integration', () => {
           caption: 'First frame',
           status: 'needed',
           pricing: expect.objectContaining({
-            state: 'priced',
-            estimatedUsd: 0.005,
+            state: 'unpriced',
+            estimatedUsd: null,
+            reason: 'Shot video input references could not be resolved.',
+            overrideRequired: true,
           }),
         }),
       ])
     );
     expect(preflight.inputPlanItems).toHaveLength(4);
     expect(preflight.plan?.estimate).toMatchObject({
-      state: 'complete',
-      pricedLineCount: 5,
-      unpricedLineCount: 0,
+      state: 'partial',
+      pricedLineCount: 4,
+      unpricedLineCount: 1,
       missingLineCount: 0,
-      requiresPriceOverride: false,
+      requiresPriceOverride: true,
     });
-    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7508, 6);
+    expect(preflight.plan?.estimate.estimatedTotalUsd).toBeCloseTo(3.7458, 6);
   });
 
   it('blocks generated shot dependencies when the agent has not authored a dependency draft', async () => {
@@ -436,7 +436,7 @@ describe('media generation dependency inventory estimates integration', () => {
         state: 'missing-input',
         reason: 'Author a concrete dependency draft before generating this shot input.',
       },
-      purpose: 'shot.first-frame',
+      purpose: 'image.create',
       pricing: {
         state: 'priced',
         estimatedUsd: 0.005,
@@ -556,14 +556,16 @@ describe('media generation dependency inventory estimates integration', () => {
       'generated/media/generic-last-frame.png',
       'last frame'
     );
-    const firstFrame = await projectData.importShotFirstFrame({
+    const firstFrame = await projectData.importShotInputMedia({
       homeDir,
       takeId: take.takeId,
+      inputKind: 'first-frame',
       sourceProjectRelativePath: 'generated/media/generic-first-frame.png',
     });
-    const lastFrame = await projectData.importShotLastFrame({
+    const lastFrame = await projectData.importShotInputMedia({
       homeDir,
       takeId: take.takeId,
+      inputKind: 'last-frame',
       sourceProjectRelativePath: 'generated/media/generic-last-frame.png',
     });
     const spec: ShotVideoTakeOutputGenerationSpec = {
@@ -690,14 +692,16 @@ describe('media generation dependency inventory estimates integration', () => {
       'generated/media/reused-last-frame.png',
       'last frame'
     );
-    const firstFrame = await projectData.importShotFirstFrame({
+    const firstFrame = await projectData.importShotInputMedia({
       homeDir,
       takeId: take.takeId,
+      inputKind: 'first-frame',
       sourceProjectRelativePath: 'generated/media/reused-first-frame.png',
     });
-    const lastFrame = await projectData.importShotLastFrame({
+    const lastFrame = await projectData.importShotInputMedia({
       homeDir,
       takeId: take.takeId,
+      inputKind: 'last-frame',
       sourceProjectRelativePath: 'generated/media/reused-last-frame.png',
     });
 
@@ -1588,9 +1592,7 @@ async function writeLocationSheetImportFile(
 }
 
 function generationInputFromAvailable(
-  input: NonNullable<
-    Awaited<ReturnType<ProjectDataService['importShotFirstFrame']>>
-  >['mediaInput']
+  input: ShotVideoTakeInputMediaImportReport['mediaInput']
 ): ShotVideoTakeOutputGenerationSpec['inputs'][number] {
   return {
     kind: input.kind,
@@ -1605,9 +1607,7 @@ function generationInputFromAvailable(
 }
 
 function preparedInputFromAvailable(
-  input: NonNullable<
-    Awaited<ReturnType<ProjectDataService['importShotFirstFrame']>>
-  >['mediaInput']
+  input: ShotVideoTakeInputMediaImportReport['mediaInput']
 ): ShotVideoTakePreparedInput {
   return {
     kind: input.kind,

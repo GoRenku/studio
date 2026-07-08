@@ -377,7 +377,8 @@ async function buildShotVideoTakeTemplate(input: {
   if (input.importedFirstFrame) {
     const firstFramePath = 'generated/media/template-first-frame.png';
     await project.writeProjectFile(firstFramePath, 'template first frame');
-    await projectData.importShotFirstFrame({
+    await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: firstFramePath,
@@ -387,7 +388,8 @@ async function buildShotVideoTakeTemplate(input: {
   if (input.finalized) {
     const promptSheetPath = 'generated/media/template-prompt-sheet.png';
     await project.writeProjectFile(promptSheetPath, 'template prompt sheet');
-    await projectData.importShotVideoPromptSheet({
+    await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: promptSheetPath,

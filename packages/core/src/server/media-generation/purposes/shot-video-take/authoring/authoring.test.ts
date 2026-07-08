@@ -4,20 +4,17 @@ import {
   createOneShotVideoTakeProject,
   createThreeShotVideoTakeProject,
   createTwoShotVideoTakeProject,
-  type ShotVideoTakeTestProject,
   type ShotVideoTakeTemplateProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
 
 describe('Shot Video Take authoring documents', () => {
-  let shotVideoTakeProject: ShotVideoTakeTestProject;
   let homeDir: string;
-  let projectData: ShotVideoTakeTestProject['projectData'];
+  let projectData: ShotVideoTakeTemplateProject['projectData'];
 
   async function useTemplate(
     template: Promise<ShotVideoTakeTemplateProject>
   ): Promise<ShotVideoTakeTemplateProject> {
     const templateProject = await template;
-    shotVideoTakeProject = templateProject;
     homeDir = templateProject.homeDir;
     projectData = templateProject.projectData;
     return templateProject;

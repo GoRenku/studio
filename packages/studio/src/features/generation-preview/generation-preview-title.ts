@@ -9,10 +9,7 @@ const GENERATION_PREVIEW_TITLES = {
   'location.environment-sheet': 'Location Environment Sheet Generation Preview',
   'location.hero': 'Location Hero Generation Preview',
   'scene.storyboard-sheet': 'Scene Storyboard Sheet Generation Preview',
-  'shot.first-frame': 'Shot First Frame Generation Preview',
-  'shot.last-frame': 'Shot Last Frame Generation Preview',
-  'shot.reference-image': 'Shot Reference Image Generation Preview',
-  'shot.video-prompt-sheet': 'Shot Prompt Sheet Generation Preview',
+  'image.create': 'Image Create Generation Preview',
   'shot.video-take': 'Shot Video Generation Preview',
 } satisfies Record<GenerationPreviewPurpose, string>;
 

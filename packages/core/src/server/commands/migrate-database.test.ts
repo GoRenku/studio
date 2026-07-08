@@ -1161,8 +1161,10 @@ describe('migrate database command', () => {
         )
         .get('take_missing_reference_mode') as { stateJson: string };
 
-      expect(parseSceneShotVideoTakeState({ value: repaired.stateJson }))
-        .toMatchObject({
+      const repairedState = parseSceneShotVideoTakeState({
+        value: repaired.stateJson,
+      });
+      expect(repairedState).toMatchObject({
           production: {
             preparedInputs: [
               {
@@ -1182,6 +1184,11 @@ describe('migrate database command', () => {
           },
         });
       expect(
+        repairedState.production.agentProposal?.dependencyDrafts.some(
+          (draft) => 'purpose' in draft
+        )
+      ).toBe(false);
+      expect(
         sqlite
           .prepare(
             `select input_kind as inputKind
@@ -1199,7 +1206,7 @@ describe('migrate database command', () => {
           )
           .get('asset_storyboard_sheet')
       ).toEqual({
-        type: 'shot.video-prompt-sheet',
+        type: 'shot.input',
         title: 'Shot video prompt sheet',
       });
 
@@ -2615,6 +2622,182 @@ describe('migrate database command', () => {
           )
           .get()
       ).toEqual({ discardedAt: null, discardOperationId: null });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('cleans retired shot input generation data after the generic image create migration', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        pragma user_version = 36;
+
+        create table scene_shot_video_take (
+          id text primary key not null,
+          state_json text not null
+        );
+        create table media_generation_spec (
+          id text primary key not null,
+          purpose text not null
+        );
+        create table media_generation_run (
+          id text primary key not null,
+          spec_id text not null,
+          purpose text not null
+        );
+        create table scene_shot_video_take_media_input (
+          id text primary key not null,
+          media_generation_run_id text
+        );
+        create table scene_shot_video_take_video (
+          take_id text primary key not null,
+          media_generation_run_id text
+        );
+      `);
+
+      sqlite
+        .prepare(
+          `insert into scene_shot_video_take (id, state_json)
+           values (?, ?)`
+        )
+        .run(
+          'take_with_retired_dependency_draft_fields',
+          JSON.stringify({
+            version: 2,
+            structure: {
+              mode: 'continuous',
+              sharedDirection: {
+                referenceSelections: {
+                  dependencyInclusions: {},
+                  selectedCharacterSheetAssetIds: {},
+                  selectedLocationSheetAssetIds: {},
+                  selectedLookbookSheetIds: [],
+                  selectedDialogueAudioTakeIds: {},
+                },
+              },
+            },
+            production: {
+              agentProposal: {
+                basedOnInputModeId: 'first-frame',
+                basedOnModelChoice: 'fal-ai/bytedance/seedance-2.0',
+                dependencyDrafts: [
+                  {
+                    purpose: 'shot.first-frame',
+                    dependencyKind: 'first-frame',
+                    outputInputKind: 'first-frame',
+                    modelChoice: 'fal-ai/openai/gpt-image-2',
+                    prompt: 'Create the first frame.',
+                  },
+                  {
+                    purpose: 'shot.reference-image',
+                    dependencyKind: 'reference-image',
+                    outputInputKind: 'reference-image',
+                    modelChoice: 'fal-ai/nano-banana-2',
+                    referenceMode: 'storyboard-lookbook',
+                    prompt: 'Create the texture reference.',
+                    title: 'Texture reference',
+                  },
+                ],
+              },
+            },
+          })
+        );
+
+      sqlite.exec(`
+        insert into media_generation_spec (id, purpose) values
+          ('spec_retired_first_frame', 'shot.first-frame'),
+          ('spec_retired_video_prompt_sheet', 'shot.video-prompt-sheet'),
+          ('spec_current_image_create', 'image.create');
+        insert into media_generation_run (id, spec_id, purpose) values
+          ('run_retired_first_frame', 'spec_retired_first_frame', 'shot.first-frame'),
+          ('run_retired_video_prompt_sheet', 'spec_retired_video_prompt_sheet', 'shot.video-prompt-sheet'),
+          ('run_current_image_create', 'spec_current_image_create', 'image.create');
+        insert into scene_shot_video_take_media_input (id, media_generation_run_id) values
+          ('input_retired_run', 'run_retired_first_frame'),
+          ('input_current_run', 'run_current_image_create');
+        insert into scene_shot_video_take_video (take_id, media_generation_run_id) values
+          ('take_video_retired_run', 'run_retired_video_prompt_sheet'),
+          ('take_video_current_run', 'run_current_image_create');
+      `);
+
+      const migrationSql = await fs.readFile(
+        path.join(
+          process.cwd(),
+          'drizzle',
+          '0047_shot_video_take_retired_input_cleanup.sql'
+        ),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(37);
+      const repaired = sqlite
+        .prepare(
+          `select state_json as stateJson
+           from scene_shot_video_take
+           where id = ?`
+        )
+        .get('take_with_retired_dependency_draft_fields') as {
+        stateJson: string;
+      };
+      const repairedState = parseSceneShotVideoTakeState({
+        value: repaired.stateJson,
+      });
+      expect(repairedState.production.agentProposal?.dependencyDrafts).toEqual([
+        expect.objectContaining({
+          dependencyKind: 'first-frame',
+          outputInputKind: 'first-frame',
+          referenceMode: 'movie-lookbook',
+        }),
+        expect.objectContaining({
+          dependencyKind: 'reference-image',
+          outputInputKind: 'reference-image',
+          referenceMode: 'storyboard-lookbook',
+        }),
+      ]);
+      expect(
+        repairedState.production.agentProposal?.dependencyDrafts.some(
+          (draft) => 'purpose' in draft
+        )
+      ).toBe(false);
+      expect(
+        sqlite
+          .prepare(
+            `select id, media_generation_run_id as mediaGenerationRunId
+             from scene_shot_video_take_media_input
+             order by id`
+          )
+          .all()
+      ).toEqual([
+        {
+          id: 'input_current_run',
+          mediaGenerationRunId: 'run_current_image_create',
+        },
+        { id: 'input_retired_run', mediaGenerationRunId: null },
+      ]);
+      expect(
+        sqlite
+          .prepare(
+            `select take_id as takeId,
+                    media_generation_run_id as mediaGenerationRunId
+             from scene_shot_video_take_video
+             order by take_id`
+          )
+          .all()
+      ).toEqual([
+        {
+          takeId: 'take_video_current_run',
+          mediaGenerationRunId: 'run_current_image_create',
+        },
+        { takeId: 'take_video_retired_run', mediaGenerationRunId: null },
+      ]);
+      expect(
+        sqlite.prepare(`select id from media_generation_spec order by id`).all()
+      ).toEqual([{ id: 'spec_current_image_create' }]);
+      expect(
+        sqlite.prepare(`select id from media_generation_run order by id`).all()
+      ).toEqual([{ id: 'run_current_image_create' }]);
     } finally {
       sqlite.close();
     }

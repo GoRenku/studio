@@ -59,11 +59,11 @@ import type {
   ResolvedShotDialogueAudioReference,
 } from './dialogue-audio-references.js';
 import {
+  IMAGE_CREATE_GENERATION_PURPOSE,
+} from '../../../../../client/index.js';
+import {
   requireShotVideoTakeRoute,
 } from '../shared/route-settings.js';
-import {
-  isShotInputPurpose,
-} from '../shared/purpose-config.js';
 import {
   filterPreparedInputsByReferenceInclusions,
   generationReferenceInclusionForDependencyId,
@@ -209,7 +209,7 @@ export async function buildShotVideoTakeDependencyInventory(input: {
         : { state: 'missing', asset: null, diagnostics: [] };
     },
     declareDependencies: async ({ purpose }) =>
-      isShotInputPurpose(purpose)
+      purpose === IMAGE_CREATE_GENERATION_PURPOSE
         ? shotVideoTakeReferenceDependencySlotsForContext({
             session: input.session,
             context: input.context,

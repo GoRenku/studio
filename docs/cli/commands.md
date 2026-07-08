@@ -1396,6 +1396,7 @@ Create, estimate, and run persisted media generation specs.
 Current implemented purposes:
 
 ```text
+image.create
 image.edit
 lookbook.image
 lookbook.sheet
@@ -1404,10 +1405,6 @@ cast.profile
 cast.voice-sample
 location.environment-sheet
 scene.storyboard-sheet
-shot.first-frame
-shot.last-frame
-shot.reference-image
-shot.video-prompt-sheet
 shot.video-take
 ```
 
@@ -1415,6 +1412,7 @@ Current target formats:
 
 ```text
 asset:<asset-id>
+project
 lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
@@ -1428,8 +1426,10 @@ Read context and available model choices:
 
 ```bash
 renku generation context --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation context --purpose image.create --target project --json
 renku generation context --purpose image.edit --target asset:<asset-id> --json
 renku generation model list --purpose lookbook.image --target lookbook:<lookbook-id> --json
+renku generation model list --purpose image.create --target project --json
 renku generation model list --purpose image.edit --target asset:<asset-id> --json
 renku generation context --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation model list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
@@ -1443,16 +1443,6 @@ renku generation context --purpose location.environment-sheet --target location:
 renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
-renku generation context --purpose shot.first-frame --target scene:<scene-id> --take <take-id> --json
-renku generation model list --purpose shot.first-frame --target scene:<scene-id> --take <take-id> --json
-renku generation context --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
-renku generation model list --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
-renku generation context --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
-renku generation model list --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
-renku generation context --purpose shot.video-prompt-sheet --target scene:<scene-id> --take <take-id> --json
-renku generation model list --purpose shot.video-prompt-sheet --target scene:<scene-id> --take <take-id> --json
-renku generation context --purpose shot.video-prompt-sheet --target take:<take-id> --json
-renku generation model list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku take authoring context --take <take-id> --json
 renku take authoring context --take <take-id> --selected-shot <shot-id> --json
 renku generation model list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --intent <input-mode-id> --json
@@ -1498,16 +1488,12 @@ renku generation spec validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
+renku generation spec list --purpose image.create --target project --json
 renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-id> --json
 renku generation spec list --purpose image.edit --target asset:<asset-id> --json
 renku generation spec list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
 renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
-renku generation spec list --purpose shot.first-frame --target scene:<scene-id> --take <take-id> --json
-renku generation spec list --purpose shot.last-frame --target scene:<scene-id> --take <take-id> --json
-renku generation spec list --purpose shot.reference-image --target scene:<scene-id> --take <take-id> --json
-renku generation spec list --purpose shot.video-prompt-sheet --target scene:<scene-id> --take <take-id> --json
-renku generation spec list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku generation spec list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
 ```
 
@@ -1520,6 +1506,11 @@ renku generation run --spec <spec-id> --approve-unpriced-cost --json
 renku generation run --spec <spec-id> --simulate --json
 renku generation run show --run <run-id> --json
 ```
+
+`image.create` creates project-scoped generated image files from text or image
+references. It does not attach those files to Cast, Location, Lookbook, Scene,
+or Shot Video Take state. Use the destination-owned import command after
+inspecting the generated file.
 
 `image.edit` edits one registered image asset and creates generated output
 files plus a Media Generation Run receipt. It does not attach or replace media
@@ -1535,7 +1526,7 @@ renku generation spec create --file image-edit-spec.json --json
 renku generation estimate --spec <spec-id> --json
 renku generation run --spec <spec-id> --approval-token <approval-token> --json
 renku generation run show --run <run-id> --json
-renku media import --purpose shot.video-prompt-sheet --target take:<take-id> --source <edited-output-project-relative-path> --receipt image-edit-run.json --selection select --replace-selected --json
+renku media import --purpose shot.input --kind video-prompt-sheet --target take:<take-id> --source <edited-output-project-relative-path> --receipt image-edit-run.json --selection select --replace-selected --json
 ```
 
 Lookbook Image spec shape:
@@ -1624,21 +1615,13 @@ Behavior:
   one image per selected shot, and imports only the cropped shot images after
   scene-shot-designer has supplied the Scene Shot List.
 - Shot first frames, last frames, ad hoc reference images, and video prompt
-  sheets are generated as shot video take inputs. Their specs must
-  use authored prompts and must include `referenceMode`. Use
-  `referenceMode: "movie-lookbook"` by default so Core attaches the selected
-  Movie Lookbook sheet as the primary style reference and selected Location
-  Sheets and Character Sheets as continuity references. Use
-  `referenceMode: "storyboard-lookbook"` only when the user explicitly asks for
-  storyboard, hand-drawn, sketch, animatic, or Storyboard Lookbook aesthetics
-  for that generated shot input image. `shot.reference-image` also requires a
-  title that names the reference intent.
-- `shot.video-prompt-sheet` is a take-owned planning sheet with one readable
-  panel per ordered take shot. It must be derived from `take authoring context`
-  and inspected before import; do not treat it as a scene storyboard sheet,
-  moodboard, poster, or generic concept collage. A panelled layout does not
-  imply Storyboard Lookbook style; the default prompt-sheet visual source is
-  still the selected Movie Lookbook.
+  sheets are created through `image.create` specs and then attached with
+  `renku media import --purpose shot.input --kind <input-kind>`. Their Shot
+  Video Take role is an import destination/input kind, not a generation
+  purpose.
+- `video-prompt-sheet` is a take-owned planning sheet. It must be derived from
+  `take authoring context` and inspected before import; do not treat it as a
+  scene storyboard sheet, moodboard, poster, or generic concept collage.
 - The Studio shot References tab displays imported/generated `first-frame`,
   `last-frame`, `reference-image`, and `video-prompt-sheet` inputs
   relevant to the selected shot or production group.
@@ -1660,10 +1643,7 @@ cast.character-sheet
 cast.profile
 location.environment-sheet
 scene.storyboard-sheet
-shot.first-frame
-shot.last-frame
-shot.reference-image
-shot.video-prompt-sheet
+shot.input
 shot.video-take
 ```
 
@@ -1783,7 +1763,8 @@ Shot media import:
 
 ```bash
 renku media import \
-  --purpose shot.first-frame \
+  --purpose shot.input \
+  --kind first-frame \
   --target scene:<scene-id> \
   --take <take-id> \
   --source <project-relative-path> \
@@ -1792,7 +1773,8 @@ renku media import \
   --json
 
 renku media import \
-  --purpose shot.reference-image \
+  --purpose shot.input \
+  --kind reference-image \
   --target scene:<scene-id> \
   --take <take-id> \
   --source <project-relative-path> \
@@ -1802,7 +1784,8 @@ renku media import \
   --json
 
 renku media import \
-  --purpose shot.video-prompt-sheet \
+  --purpose shot.input \
+  --kind video-prompt-sheet \
   --target take:<take-id> \
   --source <project-relative-path> \
   --title <group-sheet-title> \
@@ -1856,8 +1839,9 @@ Options:
 - `--purpose`: required media purpose. Current supported values are
   `lookbook.image`, `lookbook.sheet`, `cast.character-sheet`, `cast.profile`,
   `location.environment-sheet`, `location.hero`, `scene.storyboard-sheet`,
-  `shot.first-frame`, `shot.last-frame`, `shot.reference-image`,
-  `shot.video-prompt-sheet`, and `shot.video-take`.
+  `shot.input`, and `shot.video-take`.
+- `--kind`: required with `--purpose shot.input`. Supported values are
+  `first-frame`, `last-frame`, `reference-image`, and `video-prompt-sheet`.
 - `--target`: required target. Current supported shapes are
   `lookbook:<lookbook-id>`, `cast:<cast-member-id>`,
   `location:<location-id>`, `scene:<scene-id>`, and `take:<take-id>` for

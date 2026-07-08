@@ -7,6 +7,7 @@ import type {
 } from '../../../client/index.js';
 import {
   IMAGE_EDIT_GENERATION_PURPOSE,
+  IMAGE_CREATE_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
@@ -16,10 +17,6 @@ import {
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 } from '../../../client/index.js';
 import { mediaGenerationRuns, mediaGenerationSpecs } from '../../schema/index.js';
@@ -112,7 +109,7 @@ export function listMediaGenerationSpecs(
   session: DatabaseSession,
   input: {
     purpose: MediaGenerationPurpose;
-    targetKind: 'asset' | 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotVideoTake';
+    targetKind: 'project' | 'asset' | 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotVideoTake';
     targetId: string;
   }
 ): MediaGenerationSpecRecord[] {
@@ -251,6 +248,7 @@ function assertMediaGenerationPurpose(
   if (
     purpose !== LOOKBOOK_IMAGE_GENERATION_PURPOSE &&
     purpose !== IMAGE_EDIT_GENERATION_PURPOSE &&
+    purpose !== IMAGE_CREATE_GENERATION_PURPOSE &&
     purpose !== LOOKBOOK_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
     purpose !== CAST_PROFILE_GENERATION_PURPOSE &&
@@ -259,10 +257,6 @@ function assertMediaGenerationPurpose(
     purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE &&
     purpose !== LOCATION_HERO_GENERATION_PURPOSE &&
     purpose !== SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE &&
-    purpose !== SHOT_FIRST_FRAME_GENERATION_PURPOSE &&
-    purpose !== SHOT_LAST_FRAME_GENERATION_PURPOSE &&
-    purpose !== SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE &&
-    purpose !== SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE &&
     purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE
   ) {
     throw new ProjectDataError(

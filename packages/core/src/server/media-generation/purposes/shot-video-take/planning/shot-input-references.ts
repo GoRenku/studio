@@ -8,7 +8,7 @@ import type {
   MediaGenerationDependencySlot,
   ProjectRelativePath,
   ShotVideoInputReferenceMode,
-  ShotVideoTakeInputGenerationPurpose,
+  ShotVideoTakeInputKind,
   ShotVideoTakeProductionContext,
 } from '../../../../../client/index.js';
 import {
@@ -34,7 +34,7 @@ import {
 } from './shot-input-dependencies.js';
 
 export interface ShotVideoInputReferenceBundle {
-  purpose: ShotVideoTakeInputGenerationPurpose;
+  inputKind: ShotVideoTakeInputKind;
   referenceMode: ShotVideoInputReferenceMode;
   styleReference: ShotVideoInputResolvedReference | null;
   continuityReferences: ShotVideoInputResolvedReference[];
@@ -59,7 +59,7 @@ export interface ShotVideoInputResolvedReference {
 export function resolveShotVideoInputReferenceBundle(input: {
   session: DatabaseSession;
   context: ShotVideoTakeProductionContext;
-  purpose: ShotVideoTakeInputGenerationPurpose;
+  inputKind: ShotVideoTakeInputKind;
   referenceMode: ShotVideoInputReferenceMode;
 }): ShotVideoInputReferenceBundle {
   const preflightIssues = validateReferenceModeAvailability(input);
@@ -115,7 +115,7 @@ export function resolveShotVideoInputReferenceBundle(input: {
     (reference) => reference !== styleReference
   );
   return {
-    purpose: input.purpose,
+    inputKind: input.inputKind,
     referenceMode: input.referenceMode,
     styleReference,
     continuityReferences,

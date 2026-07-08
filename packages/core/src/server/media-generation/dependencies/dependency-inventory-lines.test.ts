@@ -104,8 +104,8 @@ describe('media generation dependency inventory lines', () => {
           generationDraft: {
             state: 'authored',
             draftGenerationSpec: {
-              purpose: 'shot.first-frame',
-              spec: { purpose: 'shot.first-frame' },
+              purpose: 'image.create',
+              spec: { purpose: 'image.create' },
             } as never,
           },
         }),
@@ -143,8 +143,8 @@ describe('media generation dependency inventory lines', () => {
         state: 'planned',
         materializationState: 'generatable',
         draftGenerationSpec: {
-          purpose: 'shot.first-frame',
-          spec: { purpose: 'shot.first-frame' },
+          purpose: 'image.create',
+          spec: { purpose: 'image.create' },
         },
       }),
       expect.objectContaining({

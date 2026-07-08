@@ -99,7 +99,7 @@ Examples:
 | `cast.profile` | model, prompt, Config from provider payload | Validate Cast Member ownership, call the Cast Profile provider payload builder, and resolve selected/source cast image references. |
 | `location.hero` | model, prompt, Config from provider payload | Validate Location ownership, call the Location Hero provider payload builder, and include the selected Location Sheet asset as a reference. |
 | `scene.storyboard-sheet` | model, prompt, Config from provider payload | Validate Scene/Shot List context, call the Scene Storyboard Sheet provider payload builder, and resolve selected Lookbook sheet references without inspecting sheet contents. |
-| `shot.first-frame` and related shot input image purposes | model, prompt, Config from provider payload | Validate Shot Video Take context, call the shot input provider payload builder, and resolve the shot input reference bundle. |
+| `image.create` | model, prompt, Config from provider payload | Validate the project target, prepare text-to-image or reference-to-image payloads, and include only explicitly selected image references. Shot Video Take input roles are handled by dependency planning and later `shot.input` imports, not preview-purpose bindings. |
 
 A purpose binding should be small and explicit:
 

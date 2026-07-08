@@ -1,8 +1,10 @@
 import {
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
+  IMAGE_CREATE_GENERATION_PURPOSE,
 } from '../../../../../client/index.js';
 import type {
   DraftMediaGenerationSpec,
+  ImageCreateGenerationSpec,
+  ImageCreateReferenceImage,
   ShotVideoTakeProductionContext,
   SceneShotVideoTakeProductionState,
 } from '../../../../../client/index.js';
@@ -14,18 +16,19 @@ import type {
   MediaGenerationDependencyDraftPlan,
 } from '../../../dependencies/dependency-draft-specs.js';
 import {
-  PURPOSE_CONFIG,
   defaultShotInputParameterValues,
-  dependencyKindForPurpose,
-  shotInputPurposeForDependencyKind,
 } from '../shared/purpose-config.js';
 import {
   estimateMissingShotInputDependency,
   estimateOnlyShotInputPrompt,
 } from '../../../cost/shot-input-dependency-estimates.js';
 import {
-  promptSheetMetadataForShotInputSpec,
-} from '../specs/prompt-sheet-metadata.js';
+  resolveShotVideoInputReferenceBundle,
+  type ShotVideoInputReferenceBundle,
+} from './shot-input-references.js';
+import {
+  withShotProjectSession,
+} from '../shared/project-session.js';
 
 
 
@@ -45,32 +48,28 @@ export async function buildShotInputDependencyDraftSpec(
     );
   }
   const request = input.request as unknown as ShotVideoTakeDependencyRequest;
-  const purpose = shotInputPurposeForDependencyKind(input.dependencyKind);
-  const outputInputKind = PURPOSE_CONFIG[purpose].outputInputKind;
+  const outputInputKind = shotInputKindForDependencyKind(input.dependencyKind);
   const draft =
     request.context.take.state.production.agentProposal?.dependencyDrafts.find(
-      (candidate) =>
-        candidate.purpose === purpose &&
-        candidate.outputInputKind === outputInputKind
+      (candidate) => candidate.outputInputKind === outputInputKind
     );
   if (!isAuthoredShotDependencyDraft(draft)) {
     const modelChoice = request.context.defaults.imageDependencyModelChoice;
-    const pricingSpec = {
-      purpose,
-      spec: {
-        purpose,
-        target: input.dependencyTarget,
-        dependencyKind: dependencyKindForPurpose(purpose),
-        outputInputKind,
+    const pricingImageCreateSpec = imageCreateSpec({
+      context: request.context,
+      mode: 'text-to-image',
+      modelChoice,
+      prompt: estimateOnlyShotInputPrompt(input.label),
+      referenceImages: [],
+      parameterValues: defaultShotInputParameterValues(
         modelChoice,
-        referenceMode: 'movie-lookbook',
-        prompt: estimateOnlyShotInputPrompt(input.label),
-        parameterValues: defaultShotInputParameterValues(
-          modelChoice,
-          'reference-to-image'
-        ),
-        title: input.label,
-      },
+        'reference-to-image'
+      ),
+      title: input.label,
+    });
+    const pricingSpec = {
+      purpose: IMAGE_CREATE_GENERATION_PURPOSE,
+      spec: pricingImageCreateSpec,
     } satisfies DraftMediaGenerationSpec;
     const priced = await estimateMissingShotInputDependency({
       projectName: input.projectName,
@@ -87,22 +86,26 @@ export async function buildShotInputDependencyDraftSpec(
   }
   const modelChoice =
     draft.modelChoice ?? request.context.defaults.imageDependencyModelChoice;
+  const references = await resolveShotInputReferenceImages({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    context: request.context,
+    inputKind: outputInputKind,
+    referenceMode: draft.referenceMode,
+  });
   return {
-    purpose,
-    spec: {
-      purpose,
-      target: input.dependencyTarget,
-      dependencyKind: dependencyKindForPurpose(purpose),
-      outputInputKind,
+    purpose: IMAGE_CREATE_GENERATION_PURPOSE,
+    spec: imageCreateSpec({
+      context: request.context,
+      mode: 'reference-to-image',
       modelChoice,
-      referenceMode: draft.referenceMode,
-      ...promptSheetMetadataForShotInputSpec(draft),
       prompt: draft.prompt,
+      referenceImages: references,
       parameterValues:
         draft.parameterValues ??
         defaultShotInputParameterValues(modelChoice, 'reference-to-image'),
       title: draft.title ?? input.label,
-    },
+    }),
     materializationState: 'generatable',
   };
 }
@@ -127,10 +130,88 @@ export function isAuthoredShotDependencyDraft(
     return false;
   }
   if (
-    draft.purpose === SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE &&
+    draft.outputInputKind === 'reference-image' &&
     !draft.title?.trim()
   ) {
     return false;
   }
   return true;
+}
+
+function shotInputKindForDependencyKind(
+  dependencyKind: MediaGenerationDependencyDraftSpecInput['dependencyKind']
+): 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet' {
+  if (
+    dependencyKind === 'first-frame' ||
+    dependencyKind === 'last-frame' ||
+    dependencyKind === 'reference-image' ||
+    dependencyKind === 'video-prompt-sheet'
+  ) {
+    return dependencyKind;
+  }
+  throw new ProjectDataError(
+    'CORE_MEDIA_DEPENDENCY_INVALID_DRAFT_SPEC',
+    `Unsupported shot input dependency kind: ${dependencyKind}.`
+  );
+}
+
+function imageCreateSpec(input: {
+  context: ShotVideoTakeProductionContext;
+  mode: ImageCreateGenerationSpec['mode'];
+  modelChoice: ImageCreateGenerationSpec['modelChoice'];
+  prompt: string;
+  referenceImages: ImageCreateReferenceImage[];
+  parameterValues: ImageCreateGenerationSpec['parameterValues'];
+  title: string;
+}): ImageCreateGenerationSpec {
+  const projectId = input.context.project.id;
+  if (!projectId) {
+    throw new ProjectDataError(
+      'CORE_IMAGE_CREATE_PROJECT_TARGET_MISSING',
+      'Shot input image dependency drafts require a resolved project id.'
+    );
+  }
+  return {
+    purpose: IMAGE_CREATE_GENERATION_PURPOSE,
+    target: { kind: 'project', id: projectId },
+    mode: input.mode,
+    modelChoice: input.modelChoice,
+    prompt: input.prompt,
+    referenceImages: input.referenceImages,
+    parameterValues: input.parameterValues,
+    title: input.title,
+  };
+}
+
+async function resolveShotInputReferenceImages(input: {
+  projectName?: string;
+  homeDir?: string;
+  context: ShotVideoTakeProductionContext;
+  inputKind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet';
+  referenceMode: NonNullable<
+    NonNullable<SceneShotVideoTakeProductionState['agentProposal']>['dependencyDrafts'][number]['referenceMode']
+  >;
+}): Promise<ImageCreateReferenceImage[]> {
+  return withShotProjectSession(input, ({ session }) => {
+    const bundle = resolveShotVideoInputReferenceBundle({
+      session,
+      context: input.context,
+      inputKind: input.inputKind,
+      referenceMode: input.referenceMode,
+    });
+    return referenceImagesFromBundle(bundle);
+  });
+}
+
+function referenceImagesFromBundle(
+  bundle: ShotVideoInputReferenceBundle
+): ImageCreateReferenceImage[] {
+  return [
+    ...(bundle.styleReference ? [bundle.styleReference] : []),
+    ...bundle.continuityReferences,
+  ].map((reference) => ({
+    assetId: reference.assetId,
+    assetFileId: reference.assetFileId,
+    role: reference.role,
+  }));
 }

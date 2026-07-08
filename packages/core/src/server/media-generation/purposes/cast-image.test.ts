@@ -326,7 +326,7 @@ describe('Cast image import', () => {
     });
   });
 
-  it('imports generic reference images for character sheet generation without requiring a Lookbook', async () => {
+  it('uses one-off research reference files for character sheet generation without creating assets', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-cast-reference-image-test-'));
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);
@@ -349,63 +349,43 @@ describe('Cast image import', () => {
     });
     await fs.writeFile(path.join(created.projectPath, helmetSource), 'helmet bytes');
 
-    const imported = await projectData.importReferenceImageMedia({
-      projectName: 'constantinople',
-      homeDir,
-      target: { kind: 'castMember', castMemberId: castMember!.id },
-      sourceProjectRelativePath: helmetSource,
-      title: 'Helmet reference',
-      referenceName: 'battlefield-helmet',
-      referencePurpose: 'Ottoman helmet construction reference',
-    });
-    expect(imported).toMatchObject({
-      purpose: 'reference.image',
-      imported: {
-        type: 'reference_image',
-        role: 'reference',
-        referenceName: 'battlefield-helmet',
-        purpose: 'Ottoman helmet construction reference',
-        files: [
-          {
-            role: 'primary',
-            projectRelativePath: helmetSource,
-          },
-        ],
-      },
-      resourceKeys: expect.arrayContaining([
-        `assets:castMember:${castMember!.id}`,
-      ]),
-    });
-
     const context = await projectData.buildCastCharacterSheetContext({
       projectName: 'constantinople',
       homeDir,
       castMemberId: castMember!.id,
     });
     expect(context.activeLookbook).toBeNull();
-    const referenceOption = context.referenceOptions.find(
-      (option) => option.assetId === imported.imported.assetId
-    );
-    expect(referenceOption).toMatchObject({
-      dependencyKind: 'cast-reference-image',
-      referenceRole: 'cast-reference-image',
-      label: 'battlefield-helmet',
-      defaultIncluded: false,
-      included: false,
-      projectRelativePath: helmetSource,
+    expect(context.referenceImageAssets).toEqual([]);
+
+    const spec = characterSheetSpec({
+      target: { kind: 'castMember', id: castMember!.id },
+      referenceFiles: [
+        {
+          projectRelativePath: helmetSource as ProjectRelativePath,
+          mediaKind: 'image',
+          role: 'accessory-reference',
+          label: 'Helmet reference',
+        },
+      ],
+    });
+    const validation = await projectData.validateCastCharacterSheetSpec({
+      projectName: 'constantinople',
+      homeDir,
+      spec,
+    });
+    expect(validation.spec.referenceFiles).toEqual([
+      {
+        projectRelativePath: helmetSource,
+        mediaKind: 'image',
+        role: 'accessory-reference',
+        label: 'Helmet reference',
+      },
+    ]);
+    expect(validation.providerPayload).toMatchObject({
+      image_urls: ['renku-input://research/helmet.png'],
     });
 
-    const payloadPlan = buildCastCharacterSheetProviderPayload(
-      characterSheetSpec({
-        target: { kind: 'castMember', id: castMember!.id },
-        referenceSelections: {
-          dependencyInclusions: {
-            [referenceOption!.dependencyId]: 'include',
-          },
-        },
-      }),
-      context
-    );
+    const payloadPlan = buildCastCharacterSheetProviderPayload(spec, context);
     expect(payloadPlan).toMatchObject({
       mode: 'reference-to-image',
       inputFiles: [

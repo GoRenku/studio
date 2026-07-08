@@ -220,6 +220,13 @@ every required provider input resolves to a real project asset.
 A generated file still does not become project metadata until an explicit media
 import succeeds.
 
+Generated output roots and import destinations follow
+`project-asset-storage-conventions.md`. Core chooses the purpose-specific
+output folder, and current durable asset paths must not use `generated/media/`.
+Temporary agent/debug specs, receipts, and QA files belong under top-level
+`tmp/`, while temporary Scene Storyboard source sheets live under the scene's
+`storyboards/<sequence>/<scene>/tmp/` folder.
+
 Location Sheets are full-image production reference boards. Core asks the
 selected image model for one Location Sheet, and import stores one image asset
 with one `primary` file plus a concise persisted description. Location Sheets
@@ -240,6 +247,7 @@ reference.
 - `reference/media-generation.md`
 - `reference/studio-skills.md`
 - `generation-preview-purpose-bindings.md`
+- `project-asset-storage-conventions.md`
 - `visual-language.md`
 - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`

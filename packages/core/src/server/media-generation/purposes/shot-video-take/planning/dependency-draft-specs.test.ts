@@ -1,8 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type {
   SceneShotVideoTakeTarget,
   ShotVideoTakeProductionContext,
 } from '../../../../../client/index.js';
+
+vi.mock('../shared/project-session.js', () => ({
+  withShotProjectSession: vi.fn((_input, fn) =>
+    fn({ session: { kind: 'session' }, projectFolder: '/project' } as never)
+  ),
+}));
+
+vi.mock('./shot-input-references.js', () => ({
+  resolveShotVideoInputReferenceBundle: vi.fn(() => ({
+    inputKind: 'first-frame',
+    referenceMode: 'movie-lookbook',
+    styleReference: {
+      role: 'movie-lookbook-sheet',
+      assetId: 'asset_lookbook_sheet',
+      assetFileId: 'asset_file_lookbook_sheet',
+    },
+    continuityReferences: [],
+    promptNotes: [],
+  })),
+}));
+
 import { buildShotInputDependencyDraftSpec } from './dependency-draft-specs.js';
 
 describe('shot video take dependency draft specs', () => {
@@ -39,7 +60,6 @@ describe('shot video take dependency draft specs', () => {
         request: {
           kind: 'shot-video-take',
           context: testContext(target, {
-            purpose: 'shot.first-frame',
             dependencyKind: 'first-frame',
             outputInputKind: 'first-frame',
             referenceMode: 'movie-lookbook',
@@ -53,17 +73,19 @@ describe('shot video take dependency draft specs', () => {
         reason: 'Required by selected route.',
       })
     ).resolves.toMatchObject({
-      purpose: 'shot.first-frame',
+      purpose: 'image.create',
       materializationState: 'generatable',
       spec: {
-        referenceMode: 'movie-lookbook',
+        purpose: 'image.create',
+        target: { kind: 'project', id: 'project_a' },
+        mode: 'reference-to-image',
         prompt: 'A precise first frame prompt.',
         title: 'Authored first frame',
       },
     });
   });
 
-  it('preserves prompt-sheet metadata for authored video prompt sheet drafts', async () => {
+  it('materializes authored video prompt sheet drafts as generic image create specs', async () => {
     const target = testTarget();
 
     await expect(
@@ -73,7 +95,6 @@ describe('shot video take dependency draft specs', () => {
         request: {
           kind: 'shot-video-take',
           context: testContext(target, {
-            purpose: 'shot.video-prompt-sheet',
             dependencyKind: 'video-prompt-sheet',
             outputInputKind: 'video-prompt-sheet',
             referenceMode: 'storyboard-lookbook',
@@ -89,12 +110,12 @@ describe('shot video take dependency draft specs', () => {
         reason: 'Required by selected route.',
       })
     ).resolves.toMatchObject({
-      purpose: 'shot.video-prompt-sheet',
+      purpose: 'image.create',
       materializationState: 'generatable',
       spec: {
-        promptSheetVisualStyleId: 'handdrawn-storyboard',
-        promptSheetNotationModeId: 'motion-annotation',
-        referenceMode: 'storyboard-lookbook',
+        purpose: 'image.create',
+        target: { kind: 'project', id: 'project_a' },
+        mode: 'reference-to-image',
         prompt: 'A precise video prompt sheet draft.',
         title: 'Authored video prompt sheet',
       },
@@ -133,7 +154,6 @@ describe('shot video take dependency draft specs', () => {
         request: {
           kind: 'shot-video-take',
           context: testContext(target, {
-            purpose: 'shot.first-frame',
             dependencyKind: 'first-frame',
             outputInputKind: 'first-frame',
             referenceMode: 'movie-lookbook',
@@ -149,7 +169,7 @@ describe('shot video take dependency draft specs', () => {
         reason: 'Required by selected route.',
       })
     ).resolves.toMatchObject({
-      purpose: 'shot.first-frame',
+      purpose: 'image.create',
       materializationState: 'generatable',
       spec: expect.not.objectContaining({
         promptSheetVisualStyleId: expect.anything(),

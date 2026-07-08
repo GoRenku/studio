@@ -504,13 +504,15 @@ describe('shot video take preflight and validation', () => {
     const { written } = await useTemplate(createOneShotVideoTakeProject());
     await shotVideoTakeProject.writeProjectFile('generated/media/first-frame-a.png', 'first frame a');
     await shotVideoTakeProject.writeProjectFile('generated/media/first-frame-b.png', 'first frame b');
-    const selected = await projectData.importShotFirstFrame({
+    const selected = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/first-frame-a.png',
       selection: 'select',
     });
-    await projectData.importShotFirstFrame({
+    await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/first-frame-b.png',

@@ -87,10 +87,10 @@ operational companions that teach agents how to use those contracts.
   changes, compares validation/apply `prior` and `current` snapshots, and
   re-reads persisted authoring context before final generation so prompt
   assumptions match the final Studio-reviewed state.
-- For `shot.video-prompt-sheet`, authors an opaque prompt-sheet spec with
-  `promptSheetVisualStyleId`, `promptSheetNotationModeId`, logical references,
-  and a detailed prompt, then defaults to GPT-Image-2 unless the user selects a
-  different model.
+- For Shot Video Take first frames, last frames, reference images, and video
+  prompt sheets, authors generic `image.create` specs from the take authoring
+  context, then imports finished files with `renku media import --purpose
+  shot.input --kind <input-kind>`.
 - Shows the Generation Preview Dialog with `renku generation preview show
   --file <media-generation-spec-json>` for transient specs or `--spec
   <media-generation-spec-id>` for saved specs before generating prompt-sheet

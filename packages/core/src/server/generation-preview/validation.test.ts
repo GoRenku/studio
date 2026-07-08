@@ -5,13 +5,12 @@ import {
 } from './validation.js';
 
 describe('generation preview validation', () => {
-  it('accepts a valid motion annotation prompt-sheet preview', () => {
+  it('accepts a valid image create preview', () => {
     expect(validateGenerationPreviewRequest(previewFixture())).toMatchObject({
       kind: 'generationPreview',
       previewId: 'generation_preview_test',
-      purpose: 'shot.video-prompt-sheet',
-      promptSheetVisualStyleId: 'cinematic-realistic',
-      promptSheetNotationModeId: 'motion-annotation',
+      purpose: 'image.create',
+      target: { kind: 'project', id: 'project_test0001' },
     });
   });
 
@@ -23,46 +22,7 @@ describe('generation preview validation', () => {
     ['location.environment-sheet', { kind: 'location', id: 'loc_basilica' }],
     ['location.hero', { kind: 'location', id: 'loc_basilica' }],
     ['scene.storyboard-sheet', { kind: 'scene', id: 'scene_opening' }],
-    [
-      'shot.first-frame',
-      {
-        kind: 'sceneShotVideoTake',
-        id: 'take_test0001',
-        sceneId: 'scene_test0001',
-        takeId: 'take_test0001',
-        shotIds: ['shot_test0001'],
-      },
-    ],
-    [
-      'shot.last-frame',
-      {
-        kind: 'sceneShotVideoTake',
-        id: 'take_test0001',
-        sceneId: 'scene_test0001',
-        takeId: 'take_test0001',
-        shotIds: ['shot_test0001'],
-      },
-    ],
-    [
-      'shot.reference-image',
-      {
-        kind: 'sceneShotVideoTake',
-        id: 'take_test0001',
-        sceneId: 'scene_test0001',
-        takeId: 'take_test0001',
-        shotIds: ['shot_test0001'],
-      },
-    ],
-    [
-      'shot.video-prompt-sheet',
-      {
-        kind: 'sceneShotVideoTake',
-        id: 'take_test0001',
-        sceneId: 'scene_test0001',
-        takeId: 'take_test0001',
-        shotIds: ['shot_test0001'],
-      },
-    ],
+    ['image.create', { kind: 'project', id: 'project_test0001' }],
     [
       'shot.video-take',
       {
@@ -78,12 +38,6 @@ describe('generation preview validation', () => {
       ...previewFixture(),
       purpose,
       target,
-      ...(purpose === 'shot.video-prompt-sheet'
-        ? {}
-        : {
-            promptSheetVisualStyleId: undefined,
-            promptSheetNotationModeId: undefined,
-          }),
     };
 
     expect(() => validateGenerationPreviewRequest(preview)).not.toThrow();
@@ -112,6 +66,20 @@ describe('generation preview validation', () => {
     expect(() => validateGenerationPreviewRequest(preview)).not.toThrow();
   });
 
+  it('rejects prompt-sheet metadata in saved generation previews', () => {
+    const preview = {
+      ...previewFixture(),
+      promptSheetVisualStyleId: 'cinematic-realistic',
+      promptSheetNotationModeId: 'motion-annotation',
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+      })
+    );
+  });
+
   it('rejects browser URLs in logical preview request references', () => {
     const preview = previewFixture();
     const referenceWithPath = {
@@ -128,8 +96,17 @@ describe('generation preview validation', () => {
   });
 
   it('rejects previews without target shot ids', () => {
-    const preview = previewFixture();
-    preview.target.shotIds = [];
+    const preview = {
+      ...previewFixture(),
+      purpose: 'shot.video-take',
+      target: {
+        kind: 'sceneShotVideoTake',
+        id: 'take_test0001',
+        sceneId: 'scene_test0001',
+        takeId: 'take_test0001',
+        shotIds: [],
+      },
+    };
 
     expect(() => validateGenerationPreviewRequest(preview)).toThrow(
       expect.objectContaining({
@@ -245,8 +222,6 @@ describe('generation preview validation', () => {
         id: 'cast_mehmed',
         castMemberId: 'cast_mehmed',
       },
-      promptSheetVisualStyleId: undefined,
-      promptSheetNotationModeId: undefined,
       references: [
         {
           kind: 'audio',
@@ -306,28 +281,23 @@ function previewFixture() {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
-    purpose: 'shot.video-prompt-sheet',
+    purpose: 'image.create',
     project: {
       id: 'project_test0001',
       name: 'constantinople',
     },
     target: {
-      kind: 'sceneShotVideoTake',
-      id: 'take_test0001',
-      sceneId: 'scene_test0001',
-      takeId: 'take_test0001',
-      shotIds: ['shot_test0001'],
+      kind: 'project',
+      id: 'project_test0001',
     },
-    title: 'Motion preview',
+    title: 'Image create preview',
     model: {
       provider: 'fal-ai',
       modelId: 'fal-ai/openai/gpt-image-2',
       mediaKind: 'image',
     },
-    promptSheetVisualStyleId: 'cinematic-realistic',
-    promptSheetNotationModeId: 'motion-annotation',
     finalPrompt: {
-      text: 'Create an annotated video prompt image.',
+      text: 'Create a production reference image.',
     },
     references: [
       {

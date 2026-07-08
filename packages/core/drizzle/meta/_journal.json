@@ -330,6 +330,13 @@
       "when": 1782998982939,
       "tag": "0046_shot_video_take_relationship_repair",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1783511076121,
+      "tag": "0047_shot_video_take_retired_input_cleanup",
+      "breakpoints": true
     }
   ]
 }

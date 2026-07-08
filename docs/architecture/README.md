@@ -57,6 +57,9 @@ Use this page as the map:
 - `reference/project-files-and-assets.md` explains assets, files, takes, selects, and
   production exports.
 - `reference/project-relative-paths.md` defines the stored path contract.
+- `project-asset-storage-conventions.md` defines the accepted owner-folder
+  convention for durable assets, `tmp/`, `research/`, Storyboards, and
+  Shot Video Take media.
 - `reference/recoverable-discard-and-trash.md` defines recoverable discard,
   restore conflicts, Empty Trash blockers, and replacement-flow audit results.
 - `reference/visual-language.md` defines current Inspiration Analysis,
@@ -92,6 +95,10 @@ Use this page as the map:
   - `../decisions/0039-use-uniform-shot-video-take-sheet-reference-selection.md`
     for singular per-direction Character Sheet and Location Sheet selections
     with asset-scoped selected dependency ids.
+  - `project-asset-storage-conventions.md`
+    for current filesystem placement rules that supersede older
+    `generated/media/`, nested Location Environment Sheet, and
+    `screenplay/storyboards/` guidance.
 
 ## Studio App, Server, Routes, And Coordination
 

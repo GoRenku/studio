@@ -24,12 +24,15 @@ Decision history:
 - `../../decisions/0042-use-purpose-cost-projections-for-generation-estimates.md`
 - `../../decisions/0043-use-single-generation-approval-tokens.md`
 - `../../decisions/0045-use-generation-preview-purpose-bindings.md`
+- `../../decisions/0046-use-generic-image-create-generation-purpose.md`
+- `../project-asset-storage-conventions.md`
 
 ## Current Purposes
 
 The implemented media generation purposes are:
 
 ```text
+image.create
 image.edit
 lookbook.image
 lookbook.sheet
@@ -40,10 +43,6 @@ location.environment-sheet
 location.hero
 scene.dialogue-audio
 scene.storyboard-sheet
-shot.first-frame
-shot.last-frame
-shot.reference-image
-shot.video-prompt-sheet
 shot.video-take
 ```
 
@@ -51,6 +50,7 @@ Target formats:
 
 ```text
 asset:<asset-id>
+project
 lookbook:<lookbook-id>
 cast:<cast-member-id>
 location:<location-id>
@@ -63,6 +63,11 @@ take:<take-id>
 Core contract target shapes:
 
 ```ts
+{
+  kind: "project";
+  id: string;
+}
+
 {
   kind: "asset";
   id: string;
@@ -102,6 +107,7 @@ Core contract target shapes:
 Current CLI surface:
 
 ```bash
+renku generation context --purpose image.create --target project --json
 renku generation context --purpose lookbook.image --target lookbook:<id> --json
 renku generation context --purpose image.edit --target asset:<asset-id> --json
 renku generation context --purpose lookbook.sheet --target lookbook:<id> --json
@@ -113,14 +119,10 @@ renku generation context --purpose location.hero --target location:<id> --json
 renku generation context --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation context --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
 renku take create --scene <scene-id> --shot-list <shot-list-id> --shots <shot-id[,shot-id...]> --json
-renku generation context --purpose shot.first-frame --target scene:<id> --take <take-id> --json
-renku generation context --purpose shot.last-frame --target scene:<id> --take <take-id> --json
-renku generation context --purpose shot.reference-image --target scene:<id> --take <take-id> --json
-renku generation context --purpose shot.video-prompt-sheet --target scene:<id> --take <take-id> --json
-renku generation context --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku take authoring context --take <take-id> --json
 renku take authoring context --take <take-id> --selected-shot <shot-id> --json
 
+renku generation model list --purpose image.create --target project --json
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
 renku generation model list --purpose image.edit --target asset:<asset-id> --json
 renku generation model list --purpose lookbook.sheet --target lookbook:<id> --json
@@ -131,11 +133,6 @@ renku generation model list --purpose location.environment-sheet --target locati
 renku generation model list --purpose location.hero --target location:<id> --json
 renku generation model list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation model list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
-renku generation model list --purpose shot.first-frame --target scene:<id> --take <take-id> --json
-renku generation model list --purpose shot.last-frame --target scene:<id> --take <take-id> --json
-renku generation model list --purpose shot.reference-image --target scene:<id> --take <take-id> --json
-renku generation model list --purpose shot.video-prompt-sheet --target scene:<id> --take <take-id> --json
-renku generation model list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku generation model list --purpose shot.video-take --target scene:<id> --take <take-id> --intent <input-mode-id> --json
 
 renku take authoring validate --file <scene-shot-video-take-authoring-json> --json
@@ -151,6 +148,7 @@ renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
 
+renku generation spec list --purpose image.create --target project --json
 renku generation spec list --purpose lookbook.image --target lookbook:<id> --json
 renku generation spec list --purpose image.edit --target asset:<asset-id> --json
 renku generation spec list --purpose lookbook.sheet --target lookbook:<id> --json
@@ -160,11 +158,6 @@ renku generation spec list --purpose location.environment-sheet --target locatio
 renku generation spec list --purpose location.hero --target location:<id> --json
 renku generation spec list --purpose scene.dialogue-audio --target scene:<scene-id>:dialogue:<dialogue-id> --json
 renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> --shot-list <shot-list-id> --json
-renku generation spec list --purpose shot.first-frame --target scene:<id> --take <take-id> --json
-renku generation spec list --purpose shot.last-frame --target scene:<id> --take <take-id> --json
-renku generation spec list --purpose shot.reference-image --target scene:<id> --take <take-id> --json
-renku generation spec list --purpose shot.video-prompt-sheet --target scene:<id> --take <take-id> --json
-renku generation spec list --purpose shot.video-prompt-sheet --target take:<take-id> --json
 renku generation spec list --purpose shot.video-take --target scene:<id> --take <take-id> --json
 
 renku generation estimate --spec <spec-id> --json
@@ -174,12 +167,18 @@ renku generation run --spec <spec-id> --simulate --json
 renku generation run show --run <run-id> --json
 ```
 
+`image.create` is a generic Renku-managed image creation purpose. It targets
+the current project with `--target project` and supports text-to-image and
+reference-to-image specs. It creates generated files and Media Generation Run
+records only. Domain attachment remains purpose-specific through imports such
+as `renku media import --purpose shot.input --kind first-frame`.
+
 `image.edit` is a generic Renku-managed image edit purpose. Its source is a
 registered project image asset addressed as `asset:<asset-id>`, never a local
 path. The spec may include `sourceAssetFileId` only when the asset has multiple
 active image files. It produces generated files and Media Generation Run
 records only; destination attachment remains purpose-specific through commands
-such as `renku media import --purpose shot.video-prompt-sheet --replace-selected`.
+such as `renku media import --purpose shot.input --kind video-prompt-sheet --replace-selected`.
 Agents must use `generation run show --run <run-id> --json` to recover a real
 receipt instead of fabricating one.
 
@@ -217,18 +216,14 @@ another active take. The ownership decision is
 `../shot-video-take-owned-media.md`.
 
 Core never synthesizes generic shot-video dependency prompts. First-frame,
-last-frame, ad hoc reference-image, and video prompt sheet dependency
-lines use `missing-input` before the user or agent authors concrete
-`agentProposal.dependencyDrafts[]` entries. Shot input specs and dependency
-drafts must set `referenceMode`. The default is `movie-lookbook`, which uses
-the selected Movie Lookbook sheet as the primary style reference and selected
-Location Sheets and Character Sheets as continuity references. The explicit
-`storyboard-lookbook` mode is opt-in only when the user asks for storyboard,
-hand-drawn, sketch, animatic, or Storyboard Lookbook aesthetics for that shot
-input image. Missing-input lines are not runnable generation specs, but they
-can still be priced when the purpose, model, and route pricing facts are known.
-`shot.reference-image` specs also require a title that names the reference
-intent shown in Studio.
+last-frame, ad hoc reference-image, and video prompt sheet dependency lines use
+`missing-input` before the user or agent authors concrete
+`agentProposal.dependencyDrafts[]` entries. Authored shot input dependency
+drafts materialize into generic `image.create` specs with project targets.
+Their Shot Video Take destination is preserved as dependency/input kind, not
+as a generation purpose. Missing-input lines are not runnable generation specs,
+but they can still be priced when the purpose, model, and route pricing facts
+are known.
 
 ## Cost Estimates
 
@@ -296,28 +291,16 @@ they are not the source of pricing truth. Readiness can be blocked while cost is
 priced; for example, an unauthored first-frame dependency can show
 `generationDraft.state: "missing-input"` and `pricing.state: "priced"`.
 
-`shot.video-prompt-sheet` is a take-owned AI-video planning sheet for an
-existing Shot Video Take. It is grounded in `renku take authoring context`, but
-the generated sheet image is opaque to Studio. Core validates the generation
-envelope and the selected logical references; it does not validate panel count,
-panel numbers, panel ids, captions, annotation keys, source-shot coverage, or
-visual conformity to prompt-sheet metadata.
+`video-prompt-sheet` is a take-owned AI-video planning input for an existing
+Shot Video Take. It is grounded in `renku take authoring context`, but the
+generated sheet image is opaque to Studio. Core validates the `image.create`
+generation envelope, the selected logical references, and the later
+`shot.input --kind video-prompt-sheet` import. It does not validate panel
+count, panel numbers, panel ids, captions, annotation keys, source-shot
+coverage, or visual conformity to prompt-sheet strategies.
 
-Prompt-sheet specs default to `modelChoice: "fal-ai/openai/gpt-image-2"` and
-must include two orthogonal metadata fields:
-
-- `promptSheetVisualStyleId`: `cinematic-realistic` or
-  `handdrawn-storyboard`;
-- `promptSheetNotationModeId`: `none` or `motion-annotation`.
-
-Motion annotation is a notation mode, not a visual style. It can combine with
-either cinematic-realistic or hand-drawn prompt sheets. Agents may still write
-prompts that ask for panels, arrows, timing maps, captions, diagrams, or any
-other sheet strategy, but those choices remain agent/user-owned prompt content
-instead of Studio runtime schema.
-
-Agents must show a Generation Preview Dialog before generating
-`shot.video-prompt-sheet` images and before final `shot.video-take` runs:
+Agents must show a Generation Preview Dialog before generating `image.create`
+shot input images and before final `shot.video-take` runs:
 
 ```bash
 renku generation preview show --file <media-generation-spec-json> --json
@@ -366,11 +349,10 @@ order, raw provider payload JSON, role cells, token cells, reference counts, or
 an empty Issues success state. Those lower-level fields may remain available in
 the preview contract for CLI, agent, and developer workflows.
 
-When an agent authors `shot.video-prompt-sheet` as a dependency draft for a
-Shot Video Take, the runnable draft spec must carry through both
-`promptSheetVisualStyleId` and `promptSheetNotationModeId`. Missing dependency
-draft placeholders remain non-runnable; they may be costed, but they must not
-invent prompt-sheet metadata just to satisfy prepare/generate readiness.
+When an agent authors a `video-prompt-sheet` dependency draft for a Shot Video
+Take, the runnable draft spec is `image.create`. Missing dependency draft
+placeholders remain non-runnable; they may be costed, but they must not invent
+creative artifact metadata just to satisfy prepare/generate readiness.
 
 Image-generation context and model-list reports include `agentMedia`. The
 report exposes the configured image-generation default execution path and, for
@@ -1042,14 +1024,14 @@ attaches it to the cast member with role `profile`, and stores the file under
 For Location Sheets, import registers one image asset with type
 `location_environment_sheet`, attaches it to the location with role
 `environment_sheet`, stores the image under
-`locations/<handle>/environment-sheets/<sheet-slug>/`, records one `primary`
+`locations/<handle>/environment-sheets/` as a flat file, records one `primary`
 asset file, and persists the required description as the asset summary.
 
 ```bash
 renku media import \
   --purpose location.environment-sheet \
   --target location:<location-id> \
-  --source generated/media/sea-walls-sheet.png \
+  --source <project-relative-path> \
   --title <title> \
   --summary <one-line-summary> \
   --receipt <generation-run-json> \
@@ -1065,7 +1047,7 @@ image for the Location. Generated hero imports must pass the source sheet:
 renku media import \
   --purpose location.hero \
   --target location:<location-id> \
-  --source generated/media/sea-walls-hero.png \
+  --source <project-relative-path> \
   --source-sheet <location-sheet-asset-id> \
   --title <title> \
   --summary <one-line-summary> \
@@ -1111,10 +1093,9 @@ across ElevenLabs TTS workflows. Kling video voice control uses selected
 dialogue audio through transient shot-video preparation instead of a durable
 Cast Voice registration.
 
-Single-file imports expect a project-relative source path. Location Environment
-Sheet imports expect JSON files whose entries are project-relative paths.
-Scene Storyboard Sheet imports expect a JSON file that lists cropped per-shot
-image files from the temporary sheet.
+Single-file imports expect a project-relative source path. Scene Storyboard
+Sheet imports expect a JSON file that lists cropped per-shot image files from
+the temporary sheet.
 
 ```bash
 renku media import \
@@ -1135,13 +1116,13 @@ Scene Storyboard Sheet import file:
   "shots": [
     {
       "shotId": "shot_001",
-      "source": "generated/media/storyboards/control-room-shot-001.png",
+      "source": "<project-relative-path>",
       "title": "Shot 1",
       "sourcePurpose": "scene.storyboard-sheet"
     },
     {
       "shotId": "shot_002",
-      "source": "generated/media/storyboards/control-room-shot-002.png"
+      "source": "<project-relative-path>"
     }
   ]
 }
@@ -1149,10 +1130,11 @@ Scene Storyboard Sheet import file:
 
 For Scene Storyboard Sheets, import registers one `scene_storyboard_image` asset
 per shot, attaches each image to the Scene with role `storyboard_image`, stores
-the files under `screenplay/storyboards/<scene-label>/<import-title>/`, and
-writes direct `scene_shot_storyboard_image` rows keyed by `scene_id`,
-`shot_list_id`, and `shot_id`. The temporary composite sheet is not imported as
-an asset.
+the files under
+`storyboards/<sequence-label>/<scene-label>/<NN>-Iteration>/`, and writes direct
+`scene_shot_storyboard_image` rows keyed by `scene_id`, `shot_list_id`, and
+`shot_id`. The temporary composite sheet is not imported as an asset and lives
+under `storyboards/<sequence-label>/<scene-label>/tmp/` while it is useful.
 
 Shot video take input imports accept either the scene plus `--take` target
 shape or the take shorthand. The shorthand resolves the take through core and
@@ -1160,17 +1142,19 @@ fills the owning scene id before import.
 
 ```bash
 renku media import \
-  --purpose shot.video-prompt-sheet \
+  --purpose shot.input \
+  --kind video-prompt-sheet \
   --target take:<take-id> \
-  --source generated/media/take-video-prompt-sheet.png \
+  --source <project-relative-path> \
   --title <group-sheet-title> \
   --selection select \
   --json
 ```
 
-When the source image was created outside Renku, stage it under the project
-`generated/media/` directory first, then import that project-relative path
-without a receipt. Core import remains the only attachment path.
+When the source image was created outside Renku, keep it under `research/` or
+`tmp/` until import. Core import copies it into the owning destination folder
+before registering the asset file. Core import remains the only attachment
+path.
 
 `--replace-selected` is available for shot-video take input imports. It imports
 and selects the new prepared input, then discards the previously selected input

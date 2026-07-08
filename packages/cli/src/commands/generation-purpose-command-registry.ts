@@ -14,6 +14,7 @@ import { requiredFlag } from './structured-command.js';
 
 export const SUPPORTED_GENERATION_PURPOSES = [
   'lookbook.image',
+  'image.create',
   'image.edit',
   'lookbook.sheet',
   'cast.character-sheet',
@@ -23,10 +24,6 @@ export const SUPPORTED_GENERATION_PURPOSES = [
   'location.hero',
   'scene.storyboard-sheet',
   'scene.dialogue-audio',
-  'shot.first-frame',
-  'shot.last-frame',
-  'shot.reference-image',
-  'shot.video-prompt-sheet',
   'shot.video-take',
 ] as const satisfies readonly MediaGenerationPurpose[];
 
@@ -52,8 +49,8 @@ export function parseGenerationTarget(input: {
       id: parseLookbookTarget(input.target, 'Lookbook generation'),
     };
   }
-  if (purpose === 'image.edit') {
-    return parseAssetGenerationTarget(input.target);
+  if (isGenericImageGenerationPurpose(purpose)) {
+    return parseGenericImageGenerationTarget(purpose, input.target);
   }
   if (isCastGenerationPurpose(purpose)) {
     return {
@@ -96,8 +93,34 @@ export function unsupportedGenerationPurpose(purpose: string): StructuredError {
     code: 'CLI024',
     message: `Unsupported generation purpose: ${purpose}.`,
     suggestion:
-      'Use --purpose image.edit, --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose scene.dialogue-audio, --purpose shot.first-frame, --purpose shot.last-frame, --purpose shot.reference-image, --purpose shot.video-prompt-sheet, or --purpose shot.video-take.',
+      'Use --purpose image.create, --purpose image.edit, --purpose lookbook.image, --purpose lookbook.sheet, --purpose cast.character-sheet, --purpose cast.profile, --purpose cast.voice-sample, --purpose location.environment-sheet, --purpose location.hero, --purpose scene.storyboard-sheet, --purpose scene.dialogue-audio, or --purpose shot.video-take.',
   });
+}
+
+function isGenericImageGenerationPurpose(
+  purpose: MediaGenerationPurpose
+): purpose is 'image.create' | 'image.edit' {
+  return purpose === 'image.create' || purpose === 'image.edit';
+}
+
+function parseGenericImageGenerationTarget(
+  purpose: 'image.create' | 'image.edit',
+  target: string
+): MediaGenerationRequestTarget {
+  return purpose === 'image.create'
+    ? parseProjectGenerationTarget(target)
+    : parseAssetGenerationTarget(target);
+}
+
+function parseProjectGenerationTarget(target: string): MediaGenerationRequestTarget {
+  if (target !== 'project') {
+    throw new StructuredError({
+      code: 'CLI148',
+      message: `Image create generation target must use project. Received: ${target}.`,
+      suggestion: 'Use --target project for --purpose image.create.',
+    });
+  }
+  return { kind: 'project' };
 }
 
 function parseAssetGenerationTarget(target: string): MediaGenerationRequestTarget {

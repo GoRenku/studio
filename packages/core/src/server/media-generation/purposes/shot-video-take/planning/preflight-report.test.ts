@@ -188,7 +188,7 @@ describe('shot video take preflight and validation', () => {
         expect.objectContaining({
           kind: 'missing-video-prompt-sheet',
           recommendedSpecialist: 'media-producer',
-          recommendedCommand: `renku generation context --purpose shot.video-prompt-sheet --target take:${written.take.takeId} --json`,
+          recommendedCommand: 'renku generation context --purpose image.create --target project --json',
         }),
       ]),
     });

@@ -8,6 +8,16 @@ export interface AssetMediaGenerationTarget {
   id: string;
 }
 
+export interface ProjectMediaGenerationTarget {
+  kind: 'project';
+  id: string;
+}
+
+export interface ProjectMediaGenerationRequestTarget {
+  kind: 'project';
+  id?: string;
+}
+
 export interface CastMediaGenerationTarget {
   kind: 'castMember';
   id: string;
@@ -45,6 +55,7 @@ export interface SceneShotVideoTakeRequestTarget {
 }
 
 export type MediaGenerationTarget =
+  | ProjectMediaGenerationTarget
   | AssetMediaGenerationTarget
   | LookbookImageGenerationTarget
   | CastMediaGenerationTarget
@@ -54,6 +65,7 @@ export type MediaGenerationTarget =
   | SceneShotVideoTakeTarget;
 
 export type MediaGenerationRequestTarget =
+  | ProjectMediaGenerationRequestTarget
   | AssetMediaGenerationTarget
   | LookbookImageGenerationTarget
   | CastMediaGenerationTarget

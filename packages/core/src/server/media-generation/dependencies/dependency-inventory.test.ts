@@ -32,9 +32,9 @@ describe('media generation dependency inventory planner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedPlanDependencyDraft.mockResolvedValue({
-      purpose: 'shot.first-frame',
+      purpose: 'image.create',
       spec: {
-        purpose: 'shot.first-frame',
+        purpose: 'image.create',
         target: takeTarget,
       } as never,
       materializationState: 'generatable',
@@ -152,7 +152,7 @@ describe('media generation dependency inventory planner', () => {
 
     expect(mockedPlanDependencyDraft).toHaveBeenCalledWith(
       expect.objectContaining({
-        purpose: 'shot.first-frame',
+        purpose: 'image.create',
       })
     );
     expect(result.dependencyInventory.dependencies.map((line) => line.id))

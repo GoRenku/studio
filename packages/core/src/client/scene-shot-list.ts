@@ -123,6 +123,12 @@ export type ShotVideoTakeInputKind =
   | 'source-video'
   | 'audio';
 
+export type ShotVideoTakeImageInputImportKind =
+  | 'first-frame'
+  | 'last-frame'
+  | 'reference-image'
+  | 'video-prompt-sheet';
+
 export type ShotVideoTakeInputSubjectKind =
   | 'asset'
   | 'cast-member'
@@ -197,7 +203,6 @@ export interface ShotVideoTakeAgentProposal {
 }
 
 export interface ShotVideoTakeDependencyDraft {
-  purpose: import('./shot-video-take.js').ShotVideoTakeInputGenerationPurpose;
   dependencyKind: ShotVideoTakeDependencyKind;
   outputInputKind: ShotVideoTakeInputKind;
   modelChoice?: import('./shot-video-take.js').ShotVideoTakeInputModelChoice;

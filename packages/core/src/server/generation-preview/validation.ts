@@ -2,16 +2,13 @@ import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-dia
 import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
+  IMAGE_CREATE_GENERATION_PURPOSE,
   IMAGE_EDIT_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOCATION_HERO_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type GenerationPreviewRequest,
   type GenerationPreviewRequestReference,
@@ -119,6 +116,7 @@ const GENERATION_PREVIEW_CONFIGURATION_PRESENTATIONS = new Set([
 
 const SUPPORTED_GENERATION_PREVIEW_PURPOSES = new Set<string>([
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
+  IMAGE_CREATE_GENERATION_PURPOSE,
   IMAGE_EDIT_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
@@ -126,10 +124,6 @@ const SUPPORTED_GENERATION_PREVIEW_PURPOSES = new Set<string>([
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOCATION_HERO_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 ]);
 
@@ -222,11 +216,7 @@ function validateGenerationPreviewEnvelope(
     );
   }
 
-  if (preview.purpose === SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE) {
-    validatePromptSheetMetadata(preview, options.context, issues);
-  } else {
-    validatePromptSheetMetadataAbsent(preview, options.context, issues);
-  }
+  validatePromptSheetMetadataAbsent(preview, options.context, issues);
 
   if (issues.length > 0) {
     throwPreviewError(issues);
@@ -276,31 +266,6 @@ function validateObjectKeys(
   }
 }
 
-function validatePromptSheetMetadata(
-  preview: Record<string, unknown>,
-  context: string,
-  issues: DiagnosticIssue[]
-): void {
-  if (!isVideoPromptSheetVisualStyleId(preview.promptSheetVisualStyleId)) {
-    issues.push(
-      createDiagnosticError(
-        'CORE_GENERATION_PREVIEW_PROMPT_SHEET_VISUAL_STYLE_INVALID',
-        'Generation preview promptSheetVisualStyleId must be cinematic-realistic or handdrawn-storyboard.',
-        { path: ['promptSheetVisualStyleId'], context }
-      )
-    );
-  }
-  if (!isVideoPromptSheetNotationModeId(preview.promptSheetNotationModeId)) {
-    issues.push(
-      createDiagnosticError(
-        'CORE_GENERATION_PREVIEW_PROMPT_SHEET_NOTATION_MODE_INVALID',
-        'Generation preview promptSheetNotationModeId must be none or motion-annotation.',
-        { path: ['promptSheetNotationModeId'], context }
-      )
-    );
-  }
-}
-
 function validatePromptSheetMetadataAbsent(
   preview: Record<string, unknown>,
   context: string,
@@ -310,7 +275,7 @@ function validatePromptSheetMetadataAbsent(
     issues.push(
       createDiagnosticError(
         'CORE_GENERATION_PREVIEW_PROMPT_SHEET_VISUAL_STYLE_FORBIDDEN',
-        'Generation preview promptSheetVisualStyleId is only valid for shot.video-prompt-sheet previews.',
+        'Generation preview promptSheetVisualStyleId is not valid for saved generation previews.',
         { path: ['promptSheetVisualStyleId'], context }
       )
     );
@@ -319,7 +284,7 @@ function validatePromptSheetMetadataAbsent(
     issues.push(
       createDiagnosticError(
         'CORE_GENERATION_PREVIEW_PROMPT_SHEET_NOTATION_MODE_FORBIDDEN',
-        'Generation preview promptSheetNotationModeId is only valid for shot.video-prompt-sheet previews.',
+        'Generation preview promptSheetNotationModeId is not valid for saved generation previews.',
         { path: ['promptSheetNotationModeId'], context }
       )
     );
@@ -380,9 +345,11 @@ function validateTarget(
     validateCastMemberTarget(target, context, issues);
     return;
   }
-  if (
-    purpose === IMAGE_EDIT_GENERATION_PURPOSE
-  ) {
+  if (purpose === IMAGE_CREATE_GENERATION_PURPOSE) {
+    validateSimpleIdTarget(target, 'project', context, issues);
+    return;
+  }
+  if (purpose === IMAGE_EDIT_GENERATION_PURPOSE) {
     validateSimpleIdTarget(target, 'asset', context, issues);
     return;
   }
@@ -409,7 +376,7 @@ function validateTarget(
 
 function validateSimpleIdTarget(
   target: Record<string, unknown>,
-  kind: 'asset' | 'lookbook' | 'location' | 'scene',
+  kind: 'project' | 'asset' | 'lookbook' | 'location' | 'scene',
   context: string,
   issues: DiagnosticIssue[]
 ): void {
@@ -1162,14 +1129,6 @@ function validateNoLeakedPath(
   for (const [key, nested] of Object.entries(record)) {
     validateNoLeakedPath(nested, [...path, key], context, issues);
   }
-}
-
-function isVideoPromptSheetVisualStyleId(value: unknown): boolean {
-  return value === 'cinematic-realistic' || value === 'handdrawn-storyboard';
-}
-
-function isVideoPromptSheetNotationModeId(value: unknown): boolean {
-  return value === 'none' || value === 'motion-annotation';
 }
 
 function leaksLocalOrProviderPath(value: string): boolean {

@@ -338,7 +338,8 @@ describe('scene shot video takes', () => {
       'generated/media/first-production-prompt-sheet.png',
       'first production prompt sheet'
     );
-    await projectData.importShotVideoPromptSheet({
+    await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: sourceTakeId,
       sourceProjectRelativePath: 'generated/media/first-production-prompt-sheet.png',
@@ -460,7 +461,8 @@ describe('scene shot video takes', () => {
       'generated/media/deep-copy-prompt-sheet.png',
       'prompt sheet bytes'
     );
-    await projectData.importShotVideoPromptSheet({
+    await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: sourceTakeId,
       sourceProjectRelativePath: 'generated/media/deep-copy-prompt-sheet.png',
@@ -567,7 +569,8 @@ describe('scene shot video takes', () => {
       'generated/media/prepared-only-first-frame.png',
       'prepared-only first frame bytes'
     );
-    const firstFrame = await projectData.importShotFirstFrame({
+    const firstFrame = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: sourceTakeId,
       sourceProjectRelativePath: 'generated/media/prepared-only-first-frame.png',
@@ -656,13 +659,15 @@ describe('scene shot video takes', () => {
       'generated/media/rollback-first-frame.png',
       'rollback first frame bytes'
     );
-    const promptSheet = await projectData.importShotVideoPromptSheet({
+    const promptSheet = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: sourceTakeId,
       sourceProjectRelativePath: 'generated/media/rollback-prompt-sheet.png',
       title: 'Rollback prompt sheet',
     });
-    const firstFrame = await projectData.importShotFirstFrame({
+    const firstFrame = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: sourceTakeId,
       sourceProjectRelativePath: 'generated/media/rollback-first-frame.png',
@@ -736,7 +741,8 @@ describe('scene shot video takes', () => {
       'generated/media/repair-prompt-sheet.png',
       'repair prompt sheet bytes'
     );
-    await projectData.importShotVideoPromptSheet({
+    await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: sourceTakeId,
       sourceProjectRelativePath: 'generated/media/repair-prompt-sheet.png',
@@ -894,19 +900,22 @@ describe('scene shot video takes', () => {
       'unselected prompt sheet'
     );
 
-    const selected = await projectData.importShotVideoPromptSheet({
+    const selected = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId,
       sourceProjectRelativePath: 'generated/media/selected-prompt-sheet.png',
       title: 'Selected prompt sheet',
     });
-    const sharedOwner = await projectData.importShotVideoPromptSheet({
+    const sharedOwner = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: otherTakeId,
       sourceProjectRelativePath: 'generated/media/shared-prompt-sheet.png',
       title: 'Shared prompt sheet',
     });
-    const unselected = await projectData.importShotVideoPromptSheet({
+    const unselected = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId,
       sourceProjectRelativePath: 'generated/media/unselected-prompt-sheet.png',
@@ -992,21 +1001,24 @@ describe('scene shot video takes', () => {
       'prepared-only unselected prompt sheet'
     );
 
-    const selected = await projectData.importShotVideoPromptSheet({
+    const selected = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId,
       sourceProjectRelativePath:
         'generated/media/prepared-only-selected-prompt-sheet.png',
       title: 'Prepared-only selected prompt sheet',
     });
-    const sharedOwner = await projectData.importShotVideoPromptSheet({
+    const sharedOwner = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: otherTakeId,
       sourceProjectRelativePath:
         'generated/media/prepared-only-shared-prompt-sheet.png',
       title: 'Prepared-only shared prompt sheet',
     });
-    const unselected = await projectData.importShotVideoPromptSheet({
+    const unselected = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId,
       sourceProjectRelativePath:
@@ -1116,19 +1128,22 @@ describe('scene shot video takes', () => {
       'discarded prompt sheet'
     );
 
-    await projectData.importShotVideoPromptSheet({
+    await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId,
       sourceProjectRelativePath: 'generated/media/delete-selected-prompt-sheet.png',
       title: 'Selected prompt sheet',
     });
-    const activeOwner = await projectData.importShotVideoPromptSheet({
+    const activeOwner = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: otherTakeId,
       sourceProjectRelativePath: 'generated/media/delete-shared-prompt-sheet.png',
       title: 'Active shared prompt sheet',
     });
-    const discarded = await projectData.importShotVideoPromptSheet({
+    const discarded = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId,
       sourceProjectRelativePath: 'generated/media/delete-discarded-prompt-sheet.png',
@@ -1313,13 +1328,15 @@ describe('scene shot video takes', () => {
       'input that will point at the scene asset'
     );
 
-    const takeOwnedInput = await projectData.importShotVideoPromptSheet({
+    const takeOwnedInput = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: takeOwnedPath,
       title: 'Take-owned prompt sheet',
     });
-    const sceneReferenceInput = await projectData.importShotVideoPromptSheet({
+    const sceneReferenceInput = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: replacedInputPath,

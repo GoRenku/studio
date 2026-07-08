@@ -3,6 +3,7 @@ import {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
   CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
+  IMAGE_CREATE_GENERATION_PURPOSE,
   IMAGE_EDIT_GENERATION_PURPOSE,
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOCATION_HERO_GENERATION_PURPOSE,
@@ -10,10 +11,6 @@ import {
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
   type MediaGenerationPurpose,
 } from '../../src/client/index.js';
@@ -24,6 +21,7 @@ import {
 import { listMediaGenerationDependencyKindDefinitions } from '../../src/server/media-generation/dependencies/dependency-kind-registry.js';
 
 const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
+  IMAGE_CREATE_GENERATION_PURPOSE,
   IMAGE_EDIT_GENERATION_PURPOSE,
   LOOKBOOK_IMAGE_GENERATION_PURPOSE,
   LOOKBOOK_SHEET_GENERATION_PURPOSE,
@@ -34,10 +32,6 @@ const REGISTERED_PURPOSES: MediaGenerationPurpose[] = [
   LOCATION_HERO_GENERATION_PURPOSE,
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-  SHOT_FIRST_FRAME_GENERATION_PURPOSE,
-  SHOT_LAST_FRAME_GENERATION_PURPOSE,
-  SHOT_REFERENCE_IMAGE_GENERATION_PURPOSE,
-  SHOT_VIDEO_PROMPT_SHEET_GENERATION_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
 ];
 
@@ -61,6 +55,7 @@ describe('media generation purpose registry contract', () => {
       { purpose: 'cast.character-sheet', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.profile', mediaKind: 'image', targetKind: 'castMember' },
       { purpose: 'cast.voice-sample', mediaKind: 'audio', targetKind: 'castMember' },
+      { purpose: 'image.create', mediaKind: 'image', targetKind: 'project' },
       { purpose: 'image.edit', mediaKind: 'image', targetKind: 'asset' },
       { purpose: 'location.environment-sheet', mediaKind: 'image', targetKind: 'location' },
       { purpose: 'location.hero', mediaKind: 'image', targetKind: 'location' },
@@ -68,26 +63,6 @@ describe('media generation purpose registry contract', () => {
       { purpose: 'lookbook.sheet', mediaKind: 'image', targetKind: 'lookbook' },
       { purpose: 'scene.dialogue-audio', mediaKind: 'audio', targetKind: 'sceneDialogue' },
       { purpose: 'scene.storyboard-sheet', mediaKind: 'image', targetKind: 'scene' },
-      {
-        purpose: 'shot.first-frame',
-        mediaKind: 'image',
-        targetKind: 'sceneShotVideoTake',
-      },
-      {
-        purpose: 'shot.last-frame',
-        mediaKind: 'image',
-        targetKind: 'sceneShotVideoTake',
-      },
-      {
-        purpose: 'shot.reference-image',
-        mediaKind: 'image',
-        targetKind: 'sceneShotVideoTake',
-      },
-      {
-        purpose: 'shot.video-prompt-sheet',
-        mediaKind: 'image',
-        targetKind: 'sceneShotVideoTake',
-      },
       {
         purpose: 'shot.video-take',
         mediaKind: 'video',
@@ -129,7 +104,7 @@ describe('media generation purpose registry contract', () => {
         cardinality: 'one',
         assetSelector: 'shot-video-input',
         missingInputBehavior: 'plan-generation',
-        generationPurpose: 'shot.first-frame',
+        generationPurpose: 'image.create',
       },
       {
         dependencyKind: 'last-frame',
@@ -137,7 +112,7 @@ describe('media generation purpose registry contract', () => {
         cardinality: 'one',
         assetSelector: 'shot-video-input',
         missingInputBehavior: 'plan-generation',
-        generationPurpose: 'shot.last-frame',
+        generationPurpose: 'image.create',
       },
       {
         dependencyKind: 'reference-image',
@@ -145,7 +120,7 @@ describe('media generation purpose registry contract', () => {
         cardinality: 'one',
         assetSelector: 'shot-video-input',
         missingInputBehavior: 'plan-generation',
-        generationPurpose: 'shot.reference-image',
+        generationPurpose: 'image.create',
       },
       {
         dependencyKind: 'video-prompt-sheet',
@@ -153,7 +128,7 @@ describe('media generation purpose registry contract', () => {
         cardinality: 'one',
         assetSelector: 'shot-video-input',
         missingInputBehavior: 'plan-generation',
-        generationPurpose: 'shot.video-prompt-sheet',
+        generationPurpose: 'image.create',
       },
       {
         dependencyKind: 'reference-audio',

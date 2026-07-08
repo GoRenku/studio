@@ -18,6 +18,7 @@ Decision history:
 - `../../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../../decisions/0036-use-unsliced-location-sheets.md`
+- `../project-asset-storage-conventions.md`
 
 ## Asset Vocabulary
 
@@ -84,6 +85,25 @@ location with the `hero` role. It uses asset type `location_hero` and one
 primary image file. The current selected hero image drives overview and detail
 display only; it is not a hidden default shot reference.
 
+A **Scene Storyboard Image** is an image asset attached to a Scene and a
+specific shot in a Scene Shot List. Durable storyboard images are stored under
+top-level `storyboards/<sequence-slug>/<scene-slug>/<NN>-Iteration>/`.
+Temporary storyboard sheets generated for slicing or review live under that
+scene storyboard folder's `tmp/` subfolder and are not assets.
+
+A **Shot Video Take-owned media file** is a generated or imported input or
+output whose lifecycle belongs to one Shot Video Take. Current examples include
+video prompt sheets, first frames, last frames, ad hoc reference images,
+take-owned dialogue audio, and final generated take videos. These files are
+stored under top-level
+`shots/<sequence-slug>/<scene-slug>/<take-slug>-<take-number>/`.
+
+The **Research folder** is user-owned scratch space for external references.
+Files in `research/` are not asset files. A generation spec may reference a
+`research/` file as a one-off input when the file is only evidence for that
+generation. When a research file becomes a durable project asset, Core copies
+it into the relevant owner folder and registers that destination path.
+
 ## Working Assets Versus Production Assets
 
 Working assets are for development and iteration.
@@ -119,7 +139,13 @@ at the project root. There is no `working-assets/` root and no
 <project>/
   .renku/
     project.sqlite
-    tmp/
+
+  tmp/
+    specs/
+    receipts/
+    operations/
+    qa/
+    scratch/
 
   screenplay/
     acts/
@@ -137,6 +163,19 @@ at the project root. There is no `working-assets/` root and no
   visual-language/
     inspiration/
     lookbook/
+
+  storyboards/
+    <sequence-slug>/
+      <scene-slug>/
+        tmp/
+        00-Iteration/
+
+  shots/
+    <sequence-slug>/
+      <scene-slug>/
+        <take-slug>-01/
+
+  research/
 
   shotlist/
 
@@ -168,8 +207,9 @@ Folder responsibilities:
   files may have entered the project as custom local files, generated voice
   sample outputs, or existing ElevenLabs provider samples fetched during
   `renku cast voice attach`.
-- `locations/<handle>/environment-sheets/<sheet-slug>/` contains imported or
-  generated Location Sheets as one full primary image file per sheet.
+- `locations/<handle>/environment-sheets/` contains imported or generated
+  Location Sheets as flat image files. Do not create one subfolder per
+  environment sheet.
 - `locations/<handle>/heroes/<hero-slug>/` contains imported or generated
   Location Hero Images as one primary image file per hero.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
@@ -177,12 +217,27 @@ Folder responsibilities:
   registers one.
 - `visual-language/lookbook/` contains imported or generated Lookbook image
   assets.
+- `storyboards/<sequence-slug>/<scene-slug>/` contains durable storyboard
+  image iteration folders and a scene-local `tmp/` folder for temporary
+  storyboard sheets.
+- `shots/<sequence-slug>/<scene-slug>/<take-slug>-<take-number>/` contains
+  take-owned shot-video production inputs and generated take videos.
+- `research/` contains user-owned scratch references. Renku may read these
+  files when instructed, and generation specs may use them as one-off reference
+  inputs. Renku must not register them as SQLite asset files.
+- `tmp/` contains generated JSON snapshots, receipts, operation files, QA
+  pictures, and other non-durable agent/debug files.
 - `shotlist/` contains shot planning files and shot-owned assets.
 - `production-assets/` contains clean post-production handoff files.
 
 Project creation may create only the folders needed by the current project
 contents. Feature writers and production export create additional parent folders
 when they write files.
+
+Current runtime code must not create `generated/` as a project asset or
+temporary output folder. Historical plans and old development data may still
+mention `generated/media/`; the current decision is
+`../project-asset-storage-conventions.md`.
 
 ## Production Asset Hierarchy
 

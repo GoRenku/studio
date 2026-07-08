@@ -68,6 +68,7 @@ Current examples include:
 - `first-frame` inputs;
 - `last-frame` inputs;
 - `reference-image` inputs created for shot-video production;
+- generated dialogue audio when it is take-owned shot production media;
 - final `shot.video-take` video media.
 
 Take-owned media can be discarded with its owning take only when no other active
@@ -127,6 +128,16 @@ asset/files for every owner except one retained original owner, updates input
 rows and prepared input state, and returns a structured report of changed input,
 take, asset, and asset file ids.
 
+Project file paths for take-owned media are governed by
+`project-asset-storage-conventions.md`. The current path shape is:
+
+```text
+shots/<sequence-slug>/<scene-slug>/<take-slug>-<take-number>/
+```
+
+Older references to `generated/media/scene-shot-video-takes/<take-id>/` are
+superseded by that decision.
+
 ## Implementation Guidance
 
 The implementation plan is
@@ -138,3 +149,4 @@ Relevant current architecture references:
 - `reference/media-generation.md`
 - `reference/recoverable-discard-and-trash.md`
 - `shot-video-take-structure-modes.md`
+- `project-asset-storage-conventions.md`

@@ -7,6 +7,7 @@ import type { ProjectRelativePath } from './project.js';
 import type { SceneSetting } from './screenplay.js';
 import type { Lookbook, LookbookImage } from './visual-language.js';
 import type { CastMediaGenerationTarget } from './media-generation-target.js';
+import type { GenerationReferenceFileInput } from './media-generation-lifecycle.js';
 import type { LookbookImageDetail, LookbookImageFrame, LookbookImageOutputFormat } from './lookbook-media-generation.js';
 import { CAST_CHARACTER_SHEET_GENERATION_PURPOSE, CAST_PROFILE_GENERATION_PURPOSE, CAST_VOICE_SAMPLE_GENERATION_PURPOSE } from './media-generation-purpose.js';
 
@@ -182,6 +183,7 @@ export interface CastCharacterSheetGenerationSpec {
   modelChoice: CastCharacterSheetModelChoice;
   prompt: string;
   referenceSelections?: CastCharacterSheetReferenceSelections;
+  referenceFiles?: GenerationReferenceFileInput[];
   takeCount?: number;
   seed?: number | null;
   imageFrame?: CastImageFrame;

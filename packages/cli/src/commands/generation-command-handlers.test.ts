@@ -67,7 +67,7 @@ describe('generationCommandHandlers', () => {
     await expect(
       handler.run({
         flags: {
-          purpose: 'shot.video-prompt-sheet',
+          purpose: 'shot.video-take',
           target: 'take:take_test0001',
         },
         runtime: {
@@ -83,13 +83,44 @@ describe('generationCommandHandlers', () => {
       takeId: 'take_test0001',
     });
     expect(buildMediaGenerationContext).toHaveBeenCalledWith({
-      purpose: 'shot.video-prompt-sheet',
+      purpose: 'shot.video-take',
       target: {
         kind: 'sceneShotVideoTake',
         id: 'take_test0001',
         sceneId: 'scene_test0001',
         takeId: 'take_test0001',
       },
+      shotIds: undefined,
+      shotListId: undefined,
+    });
+  });
+
+  it('parses image.create project targets for generation context', async () => {
+    const handler = generationCommandHandlers.find(
+      (candidate) => candidate.path.join(' ') === 'context',
+    );
+    if (!handler) {
+      throw new Error('Expected context handler.');
+    }
+    const buildMediaGenerationContext = vi.fn().mockResolvedValue({ ok: true });
+
+    await expect(
+      handler.run({
+        flags: {
+          purpose: 'image.create',
+          target: 'project',
+        },
+        runtime: {
+          projectDataService: {
+            buildMediaGenerationContext,
+          },
+        },
+      } as never),
+    ).resolves.toEqual({ ok: true });
+
+    expect(buildMediaGenerationContext).toHaveBeenCalledWith({
+      purpose: 'image.create',
+      target: { kind: 'project' },
       shotIds: undefined,
       shotListId: undefined,
     });
@@ -241,7 +272,7 @@ describe('generationCommandHandlers', () => {
     ).resolves.toEqual({
       valid: true,
       previewId: 'generation_preview_test',
-      purpose: 'shot.video-prompt-sheet',
+      purpose: 'image.create',
       project: {
         id: 'project_test0001',
         name: 'constantinople',
@@ -306,7 +337,7 @@ describe('generationCommandHandlers', () => {
     ).resolves.toMatchObject({
       valid: true,
       previewId: 'generation_preview_test',
-      purpose: 'shot.video-prompt-sheet',
+      purpose: 'image.create',
     });
 
     expect(buildMediaGenerationPreview).toHaveBeenCalledWith({
@@ -453,22 +484,21 @@ async function writeJsonFile(
 
 function draftSpecFixture() {
   return {
-    purpose: 'shot.video-prompt-sheet',
+    purpose: 'image.create',
     target: {
-      kind: 'sceneShotVideoTake',
-      id: 'take_test0001',
-      sceneId: 'scene_test0001',
-      takeId: 'take_test0001',
-      shotIds: ['shot_test0001'],
+      kind: 'project',
+      id: 'project_test0001',
     },
+    mode: 'text-to-image',
     modelChoice: 'fal-ai/openai/gpt-image-2',
-    prompt: 'Create a motion annotated video prompt image.',
-    promptSheetVisualStyleId: 'handdrawn-storyboard',
-    promptSheetNotationModeId: 'motion-annotation',
+    prompt: 'Create a production reference image.',
+    referenceImages: [],
     parameterValues: {
-      image_size: '1024x768',
+      image_size: { width: 1024, height: 768 },
+      quality: 'high',
+      output_format: 'png',
+      num_images: 1,
     },
-    referenceMode: 'none',
   };
 }
 
@@ -476,28 +506,23 @@ function previewFixture() {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
-    purpose: 'shot.video-prompt-sheet',
+    purpose: 'image.create',
     project: {
       id: 'project_test0001',
       name: 'constantinople',
     },
     target: {
-      kind: 'sceneShotVideoTake',
-      id: 'take_test0001',
-      sceneId: 'scene_test0001',
-      takeId: 'take_test0001',
-      shotIds: ['shot_test0001'],
+      kind: 'project',
+      id: 'project_test0001',
     },
-    title: 'Choreography prompt sheet',
+    title: 'Image create preview',
     model: {
       provider: 'fal-ai',
       modelId: 'fal-ai/openai/gpt-image-2',
       mediaKind: 'image',
     },
-    promptSheetVisualStyleId: 'handdrawn-storyboard',
-    promptSheetNotationModeId: 'motion-annotation',
     finalPrompt: {
-      text: 'Create a motion annotated video prompt image.',
+      text: 'Create a production reference image.',
     },
     references: [
       {

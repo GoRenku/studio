@@ -31,7 +31,8 @@ describe('shot video take media imports', () => {
     const sourceProjectRelativePath = 'generated/media/first-frame.png';
     await shotVideoTakeProject.writeProjectFile(sourceProjectRelativePath, 'first frame');
 
-    const report = await projectData.importShotFirstFrame({
+    const report = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath,
@@ -40,7 +41,7 @@ describe('shot video take media imports', () => {
 
     expect(report).toMatchObject({
       valid: true,
-      purpose: 'shot.first-frame',
+      purpose: 'shot.input',
       imported: {
         title: 'Imported first frame',
         mediaKind: 'image',
@@ -63,6 +64,30 @@ describe('shot video take media imports', () => {
     );
   });
 
+  it('rejects non-image shot input import kinds before writing media input rows', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+
+    await expect(
+      projectData.importShotInputMedia({
+        inputKind: 'audio' as never,
+        homeDir,
+        takeId: written.take.takeId,
+        sourceProjectRelativePath: 'generated/media/dialogue.mp3',
+        title: 'Dialogue reference',
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_SHOT_INPUT_IMPORT_KIND_UNSUPPORTED',
+    });
+
+    await expect(
+      projectData.listShotVideoTakeInputs({
+        homeDir,
+        takeId: written.take.takeId,
+      })
+    ).resolves.toMatchObject({ inputs: [] });
+  });
+
   it('replaces a selected prompt sheet with a simulated image edit run receipt', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 2);
@@ -72,7 +97,8 @@ describe('shot video take media imports', () => {
       'video prompt sheet'
     );
 
-    const selectedPromptSheet = await projectData.importShotVideoPromptSheet({
+    const selectedPromptSheet = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath,
@@ -105,7 +131,8 @@ describe('shot video take media imports', () => {
     });
     const editedOutput = firstProjectRelativeOutputPath(imageEditRun.run.outputs);
 
-    const correctedPromptSheet = await projectData.importShotVideoPromptSheet({
+    const correctedPromptSheet = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: editedOutput,
@@ -259,7 +286,8 @@ describe('shot video take media imports', () => {
       'regenerated video take'
     );
 
-    const promptSheet = await projectData.importShotVideoPromptSheet({
+    const promptSheet = await projectData.importShotInputMedia({
+      inputKind: 'video-prompt-sheet',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/video-prompt-sheet.png',
@@ -332,7 +360,8 @@ describe('shot video take media imports', () => {
       'generated/media/final-take.mp4',
       'final video'
     );
-    const mediaInputReport = await projectData.importShotFirstFrame({
+    const mediaInputReport = await projectData.importShotInputMedia({
+      inputKind: 'first-frame',
       homeDir,
       takeId: written.take.takeId,
       sourceProjectRelativePath: 'generated/media/first-frame.png',

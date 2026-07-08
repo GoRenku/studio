@@ -18,8 +18,8 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-prompt-sheet',
-        title: 'Prompt Sheet A',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
         providerPreview: {
           provider: 'fal-ai',
           model: 'fal-ai/openai/gpt-image-2',
@@ -33,10 +33,10 @@ describe('GenerationPreviewDialogHost', () => {
     );
 
     expect(
-      await screen.findByText('Shot Prompt Sheet Generation Preview')
+      await screen.findByText('Image Create Generation Preview')
     ).toBeTruthy();
-    expect(screen.getByText('Create a motion annotated video prompt image.')).toBeTruthy();
-    expect(screen.queryByText('Prompt Sheet A')).toBeNull();
+    expect(screen.getByText('Create a production reference image.')).toBeTruthy();
+    expect(screen.queryByText('Image Create Preview')).toBeNull();
     expect(screen.queryByText('Preparation of the Siege')).toBeNull();
     expect(screen.queryByText('Opening council')).toBeNull();
     expect(screen.queryByText('Take 1')).toBeNull();
@@ -72,12 +72,12 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-prompt-sheet',
-        title: 'Prompt Sheet Preview',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
       })
     );
     expect(
-      await screen.findByText('Shot Prompt Sheet Generation Preview')
+      await screen.findByText('Image Create Generation Preview')
     ).toBeTruthy();
 
     await dispatchPreview(
@@ -94,8 +94,8 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-prompt-sheet',
-        title: 'Prompt Sheet A',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
         referenceLabel: 'Storyboard Lookbook Sheet',
       })
     );
@@ -139,8 +139,8 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-prompt-sheet',
-        title: 'Prompt Sheet A',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
         estimate: {
           state: 'estimated',
           estimatedCostUsd: 0.12,
@@ -333,10 +333,8 @@ function previewFixture(input: {
       executionPath: 'renku-managed',
       route: 'image-to-image',
     },
-    promptSheetVisualStyleId: 'handdrawn-storyboard',
-    promptSheetNotationModeId: 'motion-annotation',
     finalPrompt: {
-      text: 'Create a motion annotated video prompt image.',
+      text: 'Create a production reference image.',
     },
     references: [
       {

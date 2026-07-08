@@ -2917,28 +2917,25 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const shotInputModelListExitCode = await runRenkuCli(
+    const imageCreateModelListExitCode = await runRenkuCli(
       [
         'generation',
         'model',
         'list',
         '--purpose',
-        'shot.first-frame',
+        'image.create',
         '--target',
-        `scene:${sceneId}`,
-        '--take',
-        take.takeId,
+        'project',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(shotInputModelListExitCode).toBe(0);
-    const shotInputModels = JSON.parse(stdout.join('\n'));
-    expect(shotInputModels).toMatchObject({
-      purpose: 'shot.first-frame',
-      defaultModelChoice: 'fal-ai/openai/gpt-image-2',
+    expect(imageCreateModelListExitCode).toBe(0);
+    const imageCreateModels = JSON.parse(stdout.join('\n'));
+    expect(imageCreateModels).toMatchObject({
+      purpose: 'image.create',
       target: {
-        takeId: take.takeId,
+        kind: 'project',
       },
       models: expect.arrayContaining([
         expect.objectContaining({ modelChoice: 'fal-ai/openai/gpt-image-2' }),
@@ -2947,26 +2944,32 @@ describe('renku CLI', () => {
       ]),
     });
     expect(
-      shotInputModels.models.some(
+      imageCreateModels.models.some(
         (model: { modelChoice: string }) =>
           model.modelChoice === 'fal-ai/bytedance/seedance-2.0'
       )
     ).toBe(false);
 
-    const shotFirstFrameSpecPath = path.join(homeDir, 'shot-first-frame-spec.json');
+    const imageCreateSpecPath = path.join(homeDir, 'image-create-reference-spec.json');
     await fs.writeFile(
-      shotFirstFrameSpecPath,
+      imageCreateSpecPath,
       JSON.stringify(
         {
-          purpose: 'shot.first-frame',
-          target: shotInputModels.target,
-          dependencyKind: 'first-frame',
-          outputInputKind: 'first-frame',
-          modelChoice: shotInputModels.defaultModelChoice,
-          referenceMode: 'storyboard-lookbook',
+          purpose: 'image.create',
+          target: imageCreateModels.target,
+          mode: 'reference-to-image',
+          modelChoice: 'fal-ai/openai/gpt-image-2',
           prompt: 'A still first frame for Urban studying the bronze.',
-          parameterValues: shotInputModels.models[0].defaultParameterValues,
-          title: 'Foundry first frame',
+          referenceImages: [
+            {
+              assetId: 'asset_missing_reference',
+              assetFileId: 'asset_file_missing_reference',
+              role: 'storyboard-lookbook-sheet',
+            },
+          ],
+          parameterValues:
+            imageCreateModels.models[0].defaultParameterValues.referenceToImage,
+          title: 'Foundry reference frame',
         },
         null,
         2
@@ -2976,23 +2979,18 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const shotFirstFrameValidateExitCode = await runRenkuCli(
-      ['generation', 'spec', 'validate', '--file', shotFirstFrameSpecPath, '--json'],
+    const imageCreateValidateExitCode = await runRenkuCli(
+      ['generation', 'spec', 'validate', '--file', imageCreateSpecPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(shotFirstFrameValidateExitCode).toBe(1);
-    const shotFirstFrameValidationOutput =
+    expect(imageCreateValidateExitCode).toBe(1);
+    const imageCreateValidationOutput =
       stdout.join('\n').trim() || stderr.join('\n').trim();
-    expect(JSON.parse(shotFirstFrameValidationOutput)).toMatchObject({
+    expect(JSON.parse(imageCreateValidationOutput)).toMatchObject({
       valid: false,
       error: {
-        code: 'CORE_SHOT_VIDEO_INPUT_REFERENCE_FILE_MISSING',
+        code: 'CORE_IMAGE_CREATE_REFERENCE_ASSET_MISSING',
       },
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          code: 'CORE_SHOT_VIDEO_INPUT_REFERENCE_FILE_MISSING',
-        }),
-      ]),
     });
 
     const specPath = path.join(homeDir, 'scene-storyboard-spec.json');

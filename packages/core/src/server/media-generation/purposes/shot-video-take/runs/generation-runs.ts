@@ -17,9 +17,6 @@ import {
   prepareShotVideoTakeSpec,
 } from '../specs/final-specs.js';
 import {
-  estimateMediaGenerationSpecRecordCost,
-} from '../../../cost/cost-projection.js';
-import {
   estimateMediaGenerationSpec,
 } from '../../../lifecycle/spec-estimates.js';
 import {
@@ -31,10 +28,6 @@ import {
 import {
   resolveShotGenerationOutputPaths,
 } from '../provider/generation-output-paths.js';
-import {
-  assertShotInputSpec,
-  prepareShotInputSpec,
-} from '../specs/input-specs.js';
 import {
   withShotProjectSession,
 } from '../shared/project-session.js';
@@ -57,66 +50,6 @@ import {
 import {
   readShotSpec,
 } from '../specs/spec-records.js';
-
-
-
-export async function runShotInputSpec(
-  input: RunMediaGenerationSpecInput
-): Promise<MediaGenerationRunReport> {
-  const prepared = await prepareShotInputSpec(input);
-  const spec = prepared.spec.spec;
-  assertShotInputSpec(spec);
-  const context = await buildShotVideoTakeContext({
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    takeId: spec.target.takeId,
-  });
-  assertEditableSceneShotVideoTake(context.take);
-  const { runGeneration } = await import('@gorenku/studio-engines');
-  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
-  const mode = input.simulate ? 'simulated' : 'live';
-  const costApproval = requireMediaGenerationCostApproval({
-    mode,
-    purpose: prepared.spec.purpose,
-    estimate,
-    approval: parseMediaGenerationRunCostApproval({
-      approvalToken: input.approvalToken,
-      approveUnpricedCost: input.approveUnpricedCost,
-    }),
-  });
-  const outputPaths = await resolveShotGenerationOutputPaths(input);
-  const result = await runGeneration({
-    ...prepared.generation,
-    mode,
-    outputRoot: outputPaths.absoluteRoot,
-    outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
-  });
-  return recordShotGenerationRun({
-    ...input,
-    provider: prepared.generation.policy.provider,
-    model: prepared.generation.policy.model,
-    providerPayload: prepared.providerPayload,
-    estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
-    approvalToken: mediaGenerationRunApprovalToken(costApproval),
-    simulated: Boolean(input.simulate),
-    status: input.simulate ? 'simulated' : 'completed',
-    outputs: result.outputs,
-    diagnostics: result.diagnostics ?? {},
-  });
-}
-
-
-
-export const runShotFirstFrameSpec = runShotInputSpec;
-
-
-export const runShotLastFrameSpec = runShotInputSpec;
-
-
-export const runShotReferenceImageSpec = runShotInputSpec;
-
-
-export const runShotVideoPromptSheetSpec = runShotInputSpec;
 
 
 
