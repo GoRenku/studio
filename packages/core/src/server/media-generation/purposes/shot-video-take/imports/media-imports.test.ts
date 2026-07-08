@@ -353,6 +353,44 @@ describe('shot video take media imports', () => {
     ]);
   });
 
+  it('validates a replacement video source before creating a regenerated take', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    await shotVideoTakeProject.writeProjectFile(
+      'generated/media/existing-final-take.mp4',
+      'existing final video'
+    );
+    await projectData.importShotVideoTake({
+      homeDir,
+      takeId: written.take.takeId,
+      sourceProjectRelativePath: 'generated/media/existing-final-take.mp4',
+      title: 'Existing final take',
+    });
+    const before = await projectData.listSceneShotVideoTakes({
+      homeDir,
+      sceneId: ids.sceneId,
+    });
+
+    await expect(
+      projectData.importShotVideoTake({
+        homeDir,
+        takeId: written.take.takeId,
+        sourceProjectRelativePath: 'generated/media/missing-final-take.mp4',
+        title: 'Missing final take',
+      })
+    ).rejects.toMatchObject({
+      code: 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND',
+    });
+
+    const after = await projectData.listSceneShotVideoTakes({
+      homeDir,
+      sceneId: ids.sceneId,
+    });
+    expect(after.takes.map((take) => take.take.takeId)).toEqual(
+      before.takes.map((take) => take.take.takeId)
+    );
+  });
+
   it('rejects deleting assets retained by take media inputs and videos', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);

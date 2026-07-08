@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
@@ -22,7 +21,6 @@ import {
   LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
   LOCATION_HERO_GENERATION_PURPOSE,
 } from '../../../client/index.js';
-import { insertAssetFileRecord } from '../../database/access/asset-files.js';
 import { insertAssetRecord } from '../../database/access/assets.js';
 import {
   insertAssetRelationshipRecord,
@@ -63,7 +61,6 @@ import {
 } from '../../entity-ids.js';
 import {
   LOCATIONS_ROOT,
-  allocateProjectRelativeVersionedFilePath,
 } from '../../files/asset-paths.js';
 import {
   joinProjectRelativePath,
@@ -71,6 +68,7 @@ import {
   resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
+import { persistProjectAssetFile } from '../../project-asset-files/index.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
 import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
@@ -546,20 +544,11 @@ export async function importLocationHeroMedia(
     await validateImportSourceFile(projectFolder, sourceProjectRelativePath);
     const description = requiredTrimmed(input.description, 'Location hero description');
     const now = new Date().toISOString();
-    const destinationProjectRelativePath = await allocateLocationHeroPath({
-      projectFolder,
-      locationHandle: location.handle,
-      extension: extensionForSource(sourceProjectRelativePath),
-    });
-    const importedFile = await copyLocationHeroFile({
-      projectFolder,
-      sourceProjectRelativePath,
-      destinationProjectRelativePath,
-    });
     const imported = await insertImportedLocationHero({
       session,
+      projectFolder,
       locationId: input.locationId,
-      file: importedFile,
+      sourceProjectRelativePath,
       title: input.title,
       description,
       origin: input.receipt ? 'generated' : inferImportOrigin(sourceProjectRelativePath),
@@ -584,7 +573,12 @@ export async function importLocationHeroMedia(
       target: { kind: 'location', id: input.locationId },
       imported: asset,
       sourceLocationSheetAssetId: input.sourceLocationSheetAssetId,
-      files: [{ role: 'primary', projectRelativePath: importedFile.projectRelativePath }],
+      files: [
+        {
+          role: 'primary',
+          projectRelativePath: asset.files[0]?.projectRelativePath,
+        },
+      ],
       resourceKeys,
     };
   });
@@ -1198,47 +1192,11 @@ async function validateImportSourceFile(
   }
 }
 
-async function copyLocationHeroFile(input: {
-  projectFolder: string;
-  sourceProjectRelativePath: ProjectRelativePath;
-  destinationProjectRelativePath: ProjectRelativePath;
-}): Promise<{
-  projectRelativePath: ProjectRelativePath;
-  mimeType: string;
-  sizeBytes: number;
-  contentHash: string;
-}> {
-  const sourcePath = resolveProjectRelativePath(
-    input.projectFolder,
-    input.sourceProjectRelativePath
-  );
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    input.destinationProjectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
-  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-  if (sourcePath !== destinationPath) {
-    await fs.copyFile(sourcePath, destinationPath);
-  }
-  const stats = await statExistingFile(destinationPath);
-  return {
-    projectRelativePath: input.destinationProjectRelativePath,
-    mimeType: mimeTypeForPath(input.destinationProjectRelativePath),
-    sizeBytes: stats.size,
-    contentHash: await hashFile(destinationPath),
-  };
-}
-
 async function insertImportedLocationHero(input: {
   session: DatabaseSession;
+  projectFolder: string;
   locationId: string;
-  file: {
-    projectRelativePath: ProjectRelativePath;
-    mimeType: string;
-    sizeBytes: number;
-    contentHash: string;
-  };
+  sourceProjectRelativePath: ProjectRelativePath;
   title?: string;
   description: string;
   origin: string;
@@ -1247,28 +1205,17 @@ async function insertImportedLocationHero(input: {
 }) {
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const assetId = ids('asset');
+  const assetFileId = ids('asset_file');
   input.session.db.transaction((tx) => {
     const txSession = { ...input.session, db: tx };
     insertAssetRecord(txSession, {
       id: assetId,
       type: 'location_hero',
       mediaKind: 'image',
-      title: input.title?.trim() || path.parse(input.file.projectRelativePath).name,
+      title: input.title?.trim() || path.parse(input.sourceProjectRelativePath).name,
       oneLineSummary: input.description,
       origin: input.origin,
       availability: 'ready',
-      createdAt: input.now,
-      updatedAt: input.now,
-    });
-    insertAssetFileRecord(txSession, {
-      id: ids('asset_file'),
-      assetId,
-      role: 'primary',
-      projectRelativePath: input.file.projectRelativePath,
-      mediaKind: 'image',
-      mimeType: input.file.mimeType,
-      sizeBytes: input.file.sizeBytes,
-      contentHash: input.file.contentHash,
       createdAt: input.now,
       updatedAt: input.now,
     });
@@ -1307,21 +1254,22 @@ async function insertImportedLocationHero(input: {
       updatedAt: input.now,
     });
   });
-  return { assetId };
-}
-
-async function allocateLocationHeroPath(input: {
-  projectFolder: string;
-  locationHandle: string;
-  extension: string;
-}): Promise<ProjectRelativePath> {
-  const parent = joinProjectRelativePath(LOCATIONS_ROOT, input.locationHandle, 'heroes');
-  return allocateProjectRelativeVersionedFilePath({
+  await persistProjectAssetFile({
+    session: input.session,
     projectFolder: input.projectFolder,
-    parent,
-    baseName: 'hero',
-    extension: input.extension,
+    assetId,
+    assetFileId,
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    destination: {
+      kind: 'location.hero',
+      locationId: input.locationId,
+      heroName: 'hero',
+    },
+    fileRole: 'primary',
+    mediaKind: 'image',
+    now: input.now,
   });
+  return { assetId };
 }
 
 function sourceInputFiles(
@@ -1489,11 +1437,6 @@ async function statExistingFile(absolutePath: string): Promise<{ size: number }>
       `Media import source file does not exist: ${absolutePath}.`
     );
   }
-}
-
-async function hashFile(absolutePath: string): Promise<string> {
-  const buffer = await fs.readFile(absolutePath);
-  return `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
 }
 
 async function loadGenerationEngines() {

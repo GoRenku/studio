@@ -173,6 +173,10 @@ describe('image.edit media generation purpose', () => {
     const { prompt, ...expectedParameters } = prepared.providerPayload;
     expect(prepared.generation.request.prompt).toBe(prompt);
     expect(prepared.generation.request.parameters).toEqual(expectedParameters);
+    expect(prepared.generation.request.outputNames).toEqual([
+      'source-image-v01.webp',
+      'source-image-v02.webp',
+    ]);
   });
 
   it('fails when the source asset has multiple image files and no sourceAssetFileId', async () => {

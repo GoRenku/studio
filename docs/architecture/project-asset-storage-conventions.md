@@ -219,7 +219,10 @@ not a database asset.
 
 ## Ownership Boundary
 
-Core owns path allocation.
+Core owns path allocation through the server-internal
+`packages/core/src/server/project-asset-files/` module. Domain and purpose
+modules say which asset owner they are creating media for; they must not choose
+the durable filesystem folder themselves.
 
 `packages/core` owns:
 
@@ -231,6 +234,19 @@ Core owns path allocation.
 - validation that durable asset files are not registered under `research/`;
 - take-owned media copy behavior;
 - storyboard iteration allocation.
+
+Purpose modules remain responsible for product semantics such as creating the
+`asset` row, attaching the asset to a Cast Member, Location, Lookbook, Scene,
+Shot, or Take, and changing selection state. The project asset-file module owns
+the durable file destination and the `asset_file.project_relative_path` write.
+Its durable destination contract is owner-aware, for example
+`cast.characterSheet`, `location.hero`, `scene.storyboardShot`, or
+`shotVideoTake.media`; it must not accept arbitrary caller-provided destination
+folders.
+
+Temporary files use a separate explicit contract and must not create
+`asset_file` rows. `research/` files may be source/reference inputs, but the
+registered durable asset file must be copied into the owner folder first.
 
 `packages/engines` persists provider outputs only into the output root supplied
 by Core.

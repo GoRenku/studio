@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   LookbookImageDetail,
@@ -16,7 +14,6 @@ import type {
   MediaGenerationSpecRecord,
 } from '../../../client/index.js';
 import { LOOKBOOK_IMAGE_GENERATION_PURPOSE } from '../../../client/index.js';
-import { insertAssetFileRecord } from '../../database/access/asset-files.js';
 import { insertAssetRecord } from '../../database/access/assets.js';
 import {
   insertMediaGenerationRun,
@@ -45,10 +42,7 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
-import {
-  normalizeProjectRelativePath,
-  resolveProjectRelativePath,
-} from '../../files/project-relative-paths.js';
+import { persistProjectAssetFile } from '../../project-asset-files/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { readLookbookResource } from '../../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
@@ -75,8 +69,6 @@ import {
   assertLookbookSectionsForType,
 } from '../../visual-language-json/validator.js';
 import {
-  allocateProjectRelativeFilePath,
-  assertResolvedPathInsideProject,
   LOOKBOOK_ROOT,
 } from '../../visual-language-paths.js';
 
@@ -1072,80 +1064,38 @@ async function importLookbookImageFile(input: {
   idGenerator?: ProjectIdGenerator;
   now: string;
 }) {
-  const sourceProjectRelativePath = normalizeProjectRelativePath(
-    input.sourceProjectRelativePath
-  );
-  const sourcePath = resolveProjectRelativePath(
-    input.projectFolder,
-    sourceProjectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, sourcePath);
-  const stats = await statExistingFile(sourcePath);
-  const contentHash = await hashFile(sourcePath);
-  const destinationProjectRelativePath = await allocateProjectRelativeFilePath({
-    projectFolder: input.projectFolder,
-    parent: LOOKBOOK_ROOT,
-    fileName: path.basename(sourceProjectRelativePath),
-  });
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    destinationProjectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
-  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-  if (sourcePath !== destinationPath) {
-    await fs.copyFile(sourcePath, destinationPath);
-  }
-
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const assetId = ids('asset');
+  const assetFileId = ids('asset_file');
+  const titleHint = input.title?.trim() || path.parse(input.sourceProjectRelativePath).name;
   insertAssetRecord(input.session, {
     id: assetId,
     type: 'lookbook_image',
     mediaKind: 'image',
-    title:
-      input.title?.trim() ||
-      path.parse(destinationProjectRelativePath).name,
+    title: titleHint,
     oneLineSummary: input.oneLineSummary?.trim() || undefined,
     origin: input.origin,
     availability: 'ready',
     createdAt: input.now,
     updatedAt: input.now,
   });
-  insertAssetFileRecord(input.session, {
-    id: ids('asset_file'),
+  await persistProjectAssetFile({
+    session: input.session,
+    projectFolder: input.projectFolder,
     assetId,
-    role: 'source',
-    projectRelativePath: destinationProjectRelativePath,
+    assetFileId,
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    destination: {
+      kind: 'visualLanguage.lookbookImage',
+      titleHint,
+    },
+    fileRole: 'source',
     mediaKind: 'image',
-    sizeBytes: stats.size,
-    contentHash,
-    createdAt: input.now,
-    updatedAt: input.now,
+    now: input.now,
   });
 
   return {
     assetId,
     nextId: ids,
   };
-}
-
-async function statExistingFile(absolutePath: string): Promise<{ size: number }> {
-  try {
-    const stats = await fs.stat(absolutePath);
-    if (!stats.isFile()) {
-      throw new Error('not a regular file');
-    }
-    return { size: stats.size };
-  } catch {
-    throw new ProjectDataError(
-      'PROJECT_DATA245',
-      `Media import source file does not exist: ${absolutePath}.`
-    );
-  }
-}
-
-async function hashFile(absolutePath: string): Promise<string> {
-  const buffer = await fs.readFile(absolutePath);
-  return `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
 }

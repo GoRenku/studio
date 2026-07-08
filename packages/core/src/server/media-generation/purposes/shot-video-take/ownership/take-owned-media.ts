@@ -1,14 +1,11 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
 import type {
+  MediaKind,
   ProjectRelativePath,
   ShotVideoTakeInputKind,
 } from '../../../../../client/index.js';
 import {
   readAssetFileRecord,
   readAssetFileRecordIncludingDiscarded,
-  insertAssetFileRecord,
 } from '../../../../database/access/asset-files.js';
 import {
   readAssetOwnerTargets,
@@ -24,15 +21,12 @@ import type {
   EntityIdPrefix,
 } from '../../../../entity-ids.js';
 import {
-  joinProjectRelativePath,
-  resolveProjectRelativePath,
-} from '../../../../files/project-relative-paths.js';
-import {
   ProjectDataError,
 } from '../../../../project-data-error.js';
 import {
-  assertResolvedPathInsideProject,
-} from '../shared/project-media-files.js';
+  copyTakeOwnedProjectAssetFileSync,
+  removeCopiedProjectAssetFileSync,
+} from '../../../../project-asset-files/index.js';
 
 const TAKE_OWNED_INPUT_KINDS = new Set<ShotVideoTakeInputKind>([
   'video-prompt-sheet',
@@ -106,172 +100,51 @@ export function copyTakeOwnedMediaAssetFile(input: {
     );
   }
 
-  const sourcePath = resolveProjectRelativePath(
-    input.projectFolder,
-    sourceFile.projectRelativePath as ProjectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, sourcePath);
-  const sourceStats = statActiveTakeOwnedMediaFile(sourcePath);
-
   const assetId = input.nextId('asset');
   const assetFileId = input.nextId('asset_file');
-  const projectRelativePath = copiedTakeOwnedMediaProjectPath({
-    projectFolder: input.projectFolder,
-    targetTakeFolder: input.targetTakeFolder,
-    inputKind: input.inputKind,
-    sourceProjectRelativePath: sourceFile.projectRelativePath,
+  insertAssetRecord(input.session, {
+    id: assetId,
+    type: sourceAsset.type,
+    mediaKind: sourceAsset.mediaKind,
+    title: sourceAsset.title,
+    oneLineSummary: sourceAsset.oneLineSummary ?? undefined,
+    origin: sourceAsset.origin,
+    availability: sourceAsset.availability,
+    createdAt: input.now,
+    updatedAt: input.now,
   });
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    projectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
-  const destinationExistedBeforeCopy = fs.existsSync(destinationPath);
+  const copiedFile = copyTakeOwnedProjectAssetFileSync({
+    session: input.session,
+    projectFolder: input.projectFolder,
+    sourceAssetId: input.sourceAssetId,
+    sourceAssetFileId: input.sourceAssetFileId,
+    targetAssetId: assetId,
+    targetAssetFileId: assetFileId,
+    targetTakeId: input.targetTakeId,
+    role: input.inputKind,
+    fileRole: sourceFile.role,
+    mediaKind: sourceFile.mediaKind as MediaKind,
+    mimeType: sourceFile.mimeType ?? undefined,
+    width: sourceFile.width ?? undefined,
+    height: sourceFile.height ?? undefined,
+    durationSeconds: sourceFile.durationSeconds ?? undefined,
+    allowDiscardedSource: input.allowDiscardedSource,
+    now: input.now,
+  });
 
-  try {
-    fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
-    if (sourcePath !== destinationPath) {
-      fs.copyFileSync(sourcePath, destinationPath, fs.constants.COPYFILE_EXCL);
-    }
-
-    const destinationStats = statActiveTakeOwnedMediaFile(destinationPath);
-    if (sourceStats.size !== destinationStats.size) {
-      throw new ProjectDataError(
-        'PROJECT_DATA438',
-        'Copied take-owned media size does not match the source file.',
-        {
-          suggestion:
-            'Retry the take iteration after confirming the source media file is stable on disk.',
-        }
-      );
-    }
-    const contentHash = hashFileSync(destinationPath);
-
-    insertAssetRecord(input.session, {
-      id: assetId,
-      type: sourceAsset.type,
-      mediaKind: sourceAsset.mediaKind,
-      title: sourceAsset.title,
-      oneLineSummary: sourceAsset.oneLineSummary ?? undefined,
-      origin: sourceAsset.origin,
-      availability: sourceAsset.availability,
-      createdAt: input.now,
-      updatedAt: input.now,
-    });
-    insertAssetFileRecord(input.session, {
-      id: assetFileId,
-      assetId,
-      role: sourceFile.role,
-      projectRelativePath,
-      mimeType: sourceFile.mimeType ?? undefined,
-      mediaKind: sourceFile.mediaKind,
-      sizeBytes: destinationStats.size,
-      contentHash,
-      width: sourceFile.width ?? undefined,
-      height: sourceFile.height ?? undefined,
-      durationSeconds: sourceFile.durationSeconds ?? undefined,
-      createdAt: input.now,
-      updatedAt: input.now,
-    });
-
-    return {
-      assetId,
-      assetFileId,
-      projectRelativePath,
-    };
-  } catch (error) {
-    if (!destinationExistedBeforeCopy && sourcePath !== destinationPath) {
-      try {
-        removeCopiedTakeOwnedMediaAssetFile({
-          projectFolder: input.projectFolder,
-          projectRelativePath,
-        });
-      } catch {
-        // Preserve the original copy failure for callers.
-      }
-    }
-    throw error;
-  }
+  return {
+    assetId,
+    assetFileId,
+    projectRelativePath: copiedFile.projectRelativePath as ProjectRelativePath,
+  };
 }
 
 export function removeCopiedTakeOwnedMediaAssetFile(input: {
   projectFolder: string;
   projectRelativePath: ProjectRelativePath;
 }): void {
-  if (!isCopiedTakeOwnedMediaProjectPath(input.projectRelativePath)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA441',
-      `Refusing to remove a non-iteration take-owned media file: ${input.projectRelativePath}.`
-    );
-  }
-  const filePath = resolveProjectRelativePath(
+  removeCopiedProjectAssetFileSync(
     input.projectFolder,
     input.projectRelativePath
   );
-  assertResolvedPathInsideProject(input.projectFolder, filePath);
-  fs.rmSync(filePath, { force: true });
-}
-
-function copiedTakeOwnedMediaProjectPath(input: {
-  projectFolder: string;
-  targetTakeFolder: ProjectRelativePath;
-  inputKind: ShotVideoTakeInputKind;
-  sourceProjectRelativePath: string;
-}): ProjectRelativePath {
-  return allocateCopiedTakeOwnedMediaProjectPath(input);
-}
-
-function allocateCopiedTakeOwnedMediaProjectPath(input: {
-  projectFolder: string;
-  targetTakeFolder: ProjectRelativePath;
-  inputKind: ShotVideoTakeInputKind;
-  sourceProjectRelativePath: string;
-}): ProjectRelativePath {
-  const extension = path.extname(input.sourceProjectRelativePath) || '.png';
-  for (let index = 0; index < 1000; index += 1) {
-    const candidate = joinProjectRelativePath(
-      input.targetTakeFolder,
-      index === 0
-        ? `${input.inputKind}${extension}`
-        : `${input.inputKind}-${String(index + 1).padStart(2, '0')}${extension}`
-    );
-    if (!fs.existsSync(resolveProjectRelativePath(input.projectFolder, candidate))) {
-      return candidate;
-    }
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA442',
-    `Could not allocate a copied take-owned media path for ${input.inputKind}.`
-  );
-}
-
-function isCopiedTakeOwnedMediaProjectPath(
-  projectRelativePath: ProjectRelativePath
-): boolean {
-  return projectRelativePath.startsWith('shots/');
-}
-
-function statActiveTakeOwnedMediaFile(filePath: string): fs.Stats {
-  try {
-    const stats = fs.statSync(filePath);
-    if (!stats.isFile()) {
-      throw new Error('not a file');
-    }
-    return stats;
-  } catch {
-    throw new ProjectDataError(
-      'PROJECT_DATA439',
-      `Shot video take-owned media file was not found on disk: ${filePath}.`,
-      {
-        suggestion:
-          'Repair or reimport the take-owned media before creating a take iteration.',
-      }
-    );
-  }
-}
-
-function hashFileSync(filePath: string): string {
-  const hash = crypto.createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
-  return hash.digest('hex');
 }

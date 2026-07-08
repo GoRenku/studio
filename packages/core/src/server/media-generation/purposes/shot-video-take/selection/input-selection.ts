@@ -446,11 +446,11 @@ function inputForIterationSelection(input: {
   const ids = createUniqueIdAllocator(
     input.input.idGenerator ?? createRandomIdGenerator()
   );
-  const screenplay = requireScreenplayDocument(input.session);
   const targetTakeFolder = resolveShotVideoTakeFolder({
     session: input.session,
-    screenplay,
+    projectFolder: input.projectFolder,
     take: input.iteration.take,
+    now: input.now,
   });
   const copiedAsset = isShotVideoTakeOwnedMediaAsset(input.session, {
     inputKind: input.sourceInput.kind,

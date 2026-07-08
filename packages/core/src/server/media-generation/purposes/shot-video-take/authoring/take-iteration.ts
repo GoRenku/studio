@@ -133,8 +133,9 @@ export function continueSceneShotVideoTakeIteration(input: {
           targetTakeId: targetTake.takeId,
           targetTakeFolder: resolveShotVideoTakeFolder({
             session: transactionSession,
-            screenplay: input.screenplay,
+            projectFolder: input.projectFolder,
             take: targetTake,
+            now: input.now,
           }),
           now: input.now,
           nextId: ids,

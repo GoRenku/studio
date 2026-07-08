@@ -1,4 +1,3 @@
-import path from 'node:path';
 import type {
   Asset,
   AssetFile,
@@ -39,13 +38,11 @@ import {
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
 import {
-  allocateProjectRelativeVersionedFilePath,
-  extensionForMediaSource,
-  kebabCasePathSegment,
-} from '../../files/asset-paths.js';
-import {
   normalizeProjectRelativePath,
 } from '../../files/project-relative-paths.js';
+import {
+  allocateImageEditOutputNames,
+} from '../../project-asset-files/index.js';
 import {
   providerPreviewPromptText,
 } from '../../generation-preview/provider-preview-prompt.js';
@@ -382,7 +379,7 @@ async function prepareImageEditProviderPlan(input: {
       assetId: input.spec.target.id,
       sourceAssetFileId: input.spec.sourceAssetFileId,
     });
-    return buildProviderPayload(input.spec, selectedFile, projectFolder);
+    return buildProviderPayload(input.spec, selectedFile, projectFolder, session);
   });
 }
 
@@ -488,7 +485,8 @@ function selectSourceImageFile(
 async function buildProviderPayload(
   spec: ImageEditGenerationSpec,
   sourceFile: AssetFile,
-  projectFolder: string
+  projectFolder: string,
+  session: DatabaseSession
 ): Promise<ImageEditProviderPlan> {
   const sourcePath = sourceFile.projectRelativePath;
   const inputFiles: ImageEditProviderPlan['inputFiles'] = [
@@ -506,9 +504,11 @@ async function buildProviderPayload(
     sync_mode: false,
   };
   const outputCount = outputCountFromParameters(spec.parameterValues);
-  const outputNames = await imageEditOutputNames({
+  const outputNames = await allocateImageEditOutputNames({
+    session,
     projectFolder,
-    sourceProjectRelativePath: sourceFile.projectRelativePath,
+    sourceAssetId: spec.target.id,
+    sourceAssetFileId: sourceFile.id,
     outputFormat: String(spec.parameterValues.output_format ?? 'png'),
     outputCount,
   });
@@ -723,33 +723,6 @@ function isImageSize(value: unknown): value is { width: number; height: number }
 
 function outputCountFromParameters(parameterValues: Record<string, unknown>): number {
   return Number(parameterValues.num_images ?? 1);
-}
-
-async function imageEditOutputNames(input: {
-  projectFolder: string;
-  sourceProjectRelativePath: ProjectRelativePath;
-  outputFormat: string;
-  outputCount: number;
-}): Promise<string[]> {
-  const parsed = path.parse(input.sourceProjectRelativePath);
-  const parent = parsed.dir as ProjectRelativePath;
-  const requestedExtension =
-    input.outputFormat === 'jpeg' ? '.jpg' : `.${input.outputFormat || 'png'}`;
-  const extension = requestedExtension || extensionForMediaSource(input.sourceProjectRelativePath);
-  const names: string[] = [];
-  for (let index = 0; index < input.outputCount; index += 1) {
-    const candidate = await allocateProjectRelativeVersionedFilePath({
-      projectFolder: input.projectFolder,
-      parent,
-      baseName:
-        input.outputCount === 1
-          ? kebabCasePathSegment(parsed.name, 'image')
-          : `${kebabCasePathSegment(parsed.name, 'image')}-${String(index + 1).padStart(2, '0')}`,
-      extension,
-    });
-    names.push(path.basename(candidate));
-  }
-  return names;
 }
 
 function imageEditPreviewReferences(

@@ -3,7 +3,6 @@ import type {
 } from '../../../../renku-config.js';
 import path from 'node:path';
 import {
-  requireScreenplayDocument,
   withShotProjectSession,
 } from '../shared/project-session.js';
 import type {
@@ -20,11 +19,11 @@ export async function resolveShotGenerationOutputPaths(
   context: { take: SceneShotVideoTake }
 ) {
   return withShotProjectSession(input, ({ session, projectFolder }) => {
-    const screenplay = requireScreenplayDocument(session);
     const projectRelativeRoot = resolveShotVideoTakeFolder({
       session,
-      screenplay,
+      projectFolder,
       take: context.take,
+      now: new Date().toISOString(),
     });
     return {
       absoluteRoot: path.join(projectFolder, projectRelativeRoot),

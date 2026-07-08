@@ -62,8 +62,9 @@ export async function repairShotVideoTakeOwnedMedia(
           targetTakeId: row.takeId,
           targetTakeFolder: resolveShotVideoTakeFolder({
             session,
-            screenplay,
+            projectFolder,
             take: targetTake,
+            now,
           }),
           inputKind: row.inputKind,
           allowDiscardedSource:

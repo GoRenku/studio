@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   Asset,
@@ -16,7 +14,6 @@ import type {
   MediaGenerationSpec,
   PreparedMediaGeneration,
 } from '../../../client/index.js';
-import { insertAssetFileRecord } from '../../database/access/asset-files.js';
 import { insertAssetRecord } from '../../database/access/assets.js';
 import {
   insertAssetRelationshipRecord,
@@ -44,12 +41,14 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
-import { CAST_ROOT } from '../../files/asset-paths.js';
 import {
-  joinProjectRelativePath,
-  normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
+import {
+  resolveProjectAssetGenerationOutput,
+  persistProjectAssetFile,
+  type ProjectAssetFileDestination,
+} from '../../project-asset-files/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../../studio-coordination/resource-keys.js';
@@ -531,24 +530,25 @@ export function toGenerationRequest(
 }
 
 export async function resolveCastGenerationOutputPaths(input: CastImageProjectInput) {
-  return withCastProjectSession(input, ({ session, projectFolder }) => {
+  return withCastProjectSession(input, async ({ session, projectFolder }) => {
     const specId = 'specId' in input && typeof input.specId === 'string' ? input.specId : '';
     const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
-    const target = specRecord?.spec && typeof specRecord.spec === 'object'
-      ? (specRecord.spec as { target?: { id?: unknown } }).target
-      : undefined;
-    const castMemberId = typeof target?.id === 'string' ? target.id : '';
-    const castMember = castMemberId
-      ? requireCastMemberForContext(session, castMemberId)
-      : null;
-    const projectRelativeRoot = joinProjectRelativePath(
-      CAST_ROOT,
-      castMember?.handle ?? 'cast',
-      specRecord?.purpose === 'cast.profile' ? 'profiles' : 'character-sheets'
-    );
+    if (!specRecord) {
+      throw new ProjectDataError(
+        'PROJECT_DATA288',
+        'Cast generation output paths require a media generation spec id.'
+      );
+    }
+    const placement = await resolveProjectAssetGenerationOutput({
+      session,
+      projectFolder,
+      specRecord,
+      outputCount: 1,
+    });
     return {
-      absoluteRoot: path.join(projectFolder, projectRelativeRoot),
-      projectRelativeRoot,
+      absoluteRoot: placement.absoluteRoot,
+      projectRelativeRoot: placement.projectRelativeRoot,
+      outputNames: placement.outputNames,
       projectFolder,
     };
   });
@@ -564,7 +564,7 @@ export async function importCastImageMedia(
     const imported = await importCastImageFile({
       session,
       projectFolder,
-      castMemberHandle: castMember.handle,
+      castMemberId: castMember.id,
       config,
       sourceProjectRelativePath: input.sourceProjectRelativePath,
       title: input.title,
@@ -692,7 +692,7 @@ function requireProjectRecord(session: DatabaseSession): ProjectRecord {
 async function importCastImageFile(input: {
   session: DatabaseSession;
   projectFolder: string;
-  castMemberHandle: string;
+  castMemberId: string;
   config: CastImportPurposeConfig;
   sourceProjectRelativePath: string;
   title?: string;
@@ -701,57 +701,36 @@ async function importCastImageFile(input: {
   idGenerator?: ProjectIdGenerator;
   now: string;
 }) {
-  const sourceProjectRelativePath = normalizeProjectRelativePath(
-    input.sourceProjectRelativePath
-  );
-  const sourcePath = resolveProjectRelativePath(
-    input.projectFolder,
-    sourceProjectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, sourcePath);
-  const stats = await statExistingFile(sourcePath);
-  const contentHash = await hashFile(sourcePath);
-  const destinationProjectRelativePath = await allocateCastImageFilePath({
-    projectFolder: input.projectFolder,
-    castMemberHandle: input.castMemberHandle,
-    folderName: input.config.folderName,
-    fileName: path.basename(sourceProjectRelativePath),
-  });
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    destinationProjectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
-  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-  if (sourcePath !== destinationPath) {
-    await fs.copyFile(sourcePath, destinationPath);
-  }
-
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const assetId = ids('asset');
+  const assetFileId = ids('asset_file');
+  const destination = castImageDestination({
+    ...input,
+    title: input.title ?? path.parse(input.sourceProjectRelativePath).name,
+  });
   insertAssetRecord(input.session, {
     id: assetId,
     type: input.config.assetType,
     mediaKind: 'image',
     title:
       input.title?.trim() ||
-      path.parse(destinationProjectRelativePath).name,
+      path.parse(input.sourceProjectRelativePath).name,
     oneLineSummary: input.oneLineSummary?.trim() || undefined,
     origin: input.origin,
     availability: 'ready',
     createdAt: input.now,
     updatedAt: input.now,
   });
-  insertAssetFileRecord(input.session, {
-    id: ids('asset_file'),
+  await persistProjectAssetFile({
+    session: input.session,
+    projectFolder: input.projectFolder,
     assetId,
-    role: 'primary',
-    projectRelativePath: destinationProjectRelativePath,
+    assetFileId,
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    destination,
+    fileRole: 'primary',
     mediaKind: 'image',
-    sizeBytes: stats.size,
-    contentHash,
-    createdAt: input.now,
-    updatedAt: input.now,
+    now: input.now,
   });
   return {
     assetId,
@@ -759,66 +738,21 @@ async function importCastImageFile(input: {
   };
 }
 
-async function allocateCastImageFilePath(input: {
-  projectFolder: string;
-  castMemberHandle: string;
-  folderName: string;
-  fileName: string;
-}) {
-  const parent = joinProjectRelativePath(
-    CAST_ROOT,
-    input.castMemberHandle,
-    input.folderName
-  );
-  const parsed = path.parse(input.fileName);
-  const base = parsed.name || 'image';
-  const extension = parsed.ext || '.png';
-  for (let index = 0; index < 1000; index += 1) {
-    const candidate = joinProjectRelativePath(
-      parent,
-      index === 0 ? `${base}${extension}` : `${base}-${index + 1}${extension}`
-    );
-    try {
-      await fs.access(resolveProjectRelativePath(input.projectFolder, candidate));
-    } catch {
-      return candidate;
-    }
+function castImageDestination(input: {
+  castMemberId: string;
+  config: CastImportPurposeConfig;
+  title?: string;
+}): ProjectAssetFileDestination {
+  if (input.config.folderName === 'profiles') {
+    return {
+      kind: 'cast.profile',
+      castMemberId: input.castMemberId,
+      titleHint: input.title,
+    };
   }
-  throw new ProjectDataError(
-    'PROJECT_DATA288',
-    `Could not allocate a unique cast image path for ${input.fileName}.`
-  );
-}
-
-function assertResolvedPathInsideProject(
-  projectFolder: string,
-  absolutePath: string
-): void {
-  const relative = path.relative(projectFolder, absolutePath);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA245',
-      `Media import source file must be inside the project folder: ${absolutePath}.`
-    );
-  }
-}
-
-async function statExistingFile(absolutePath: string): Promise<{ size: number }> {
-  try {
-    const stats = await fs.stat(absolutePath);
-    if (!stats.isFile()) {
-      throw new Error('not a regular file');
-    }
-    return { size: stats.size };
-  } catch {
-    throw new ProjectDataError(
-      'PROJECT_DATA245',
-      `Media import source file does not exist: ${absolutePath}.`
-    );
-  }
-}
-
-async function hashFile(absolutePath: string): Promise<string> {
-  const buffer = await fs.readFile(absolutePath);
-  return `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
+  return {
+    kind: 'cast.characterSheet',
+    castMemberId: input.castMemberId,
+    titleHint: input.title,
+  };
 }

@@ -103,6 +103,7 @@ export const sceneShotVideoTakes = sqliteTable(
       (): AnySQLiteColumn => sceneShotVideoTakes.id,
       { onDelete: 'set null' }
     ),
+    mediaFolderProjectRelativePath: text('media_folder_project_relative_path'),
     historySnapshot: text('history_snapshot_json').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
