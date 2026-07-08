@@ -16,6 +16,7 @@ import {
   deleteAssetFileRecordsForAsset,
   insertAssetFileRecord,
 } from '../../database/access/asset-files.js';
+import { createTestAssetFixture } from '../../testing/asset-fixture-helpers.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import {
   createCommandBuiltSampleMovieProject,
@@ -484,7 +485,7 @@ async function registerSourceImage(
   const absolutePath = path.join(fixture.created.projectPath, projectRelativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, 'image bytes');
-  return fixture.projectData.registerAsset({
+  return createTestAssetFixture({
     projectName: 'constantinople',
     homeDir: fixture.homeDir,
     target: { kind: 'project' },
@@ -504,7 +505,7 @@ async function registerSourceAudio(
   const absolutePath = path.join(fixture.created.projectPath, projectRelativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, 'audio bytes');
-  return fixture.projectData.registerAsset({
+  return createTestAssetFixture({
     projectName: 'constantinople',
     homeDir: fixture.homeDir,
     target: { kind: 'project' },

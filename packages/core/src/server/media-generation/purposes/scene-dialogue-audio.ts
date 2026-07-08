@@ -1,6 +1,3 @@
-import fs from 'node:fs/promises';
-import { constants as fsConstants } from 'node:fs';
-import path from 'node:path';
 import type {
   MediaGenerationSpecRecord,
   PreparedMediaGeneration,
@@ -13,7 +10,6 @@ import type {
   SceneDialogueAudioVoiceSettings,
 } from '../../../client/index.js';
 import { SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE } from '../../../client/index.js';
-import { insertAssetFileRecord } from '../../database/access/asset-files.js';
 import {
   assetRelationshipIdPrefix,
   insertAssetRelationshipRecord,
@@ -74,6 +70,12 @@ import {
   estimateSceneDialogueAudioPricingOnly,
 } from '../lifecycle/scene-dialogue-audio-estimates.js';
 import { discardTrashObject } from '../../trash/trash-lifecycle-service.js';
+import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  persistProjectAssetFileSync,
+  rollbackProjectAssetFileWriteSetSync,
+} from '../../project-asset-files/index.js';
 
 export interface SceneDialogueAudioTargetInput extends RenkuConfigPathOptions {
   projectName?: string;
@@ -361,95 +363,103 @@ export async function generateSceneDialogueAudioTake(
       const ids = createUniqueIdAllocator(
         input.idGenerator ?? createRandomIdGenerator(),
       );
-      const takeId = ids('scene_dialogue_audio_take');
-      const persistedAudioPath = await persistDialogueAudioTakeFile({
-        projectFolder,
-        sourceProjectRelativePath: output.projectRelativePath,
-        dialogueId: input.dialogueId,
-        takeId,
-        outputFormat: normalized.spec.outputFormat,
-      });
-      const fileStats = await fs.stat(
-        path.join(projectFolder, persistedAudioPath),
-      );
-      const audioRecord = upsertSceneDialogueAudioRecord(session, {
-        id: ids('scene_dialogue_audio'),
-        sceneId: input.sceneId,
-        dialogueId: input.dialogueId,
-        castMemberId: normalized.castMemberId,
-        castVoiceId: normalized.castVoice.id,
-        modelChoice: normalized.spec.modelChoice,
-        plainText: normalized.spec.plainText,
-        v3Text: normalized.spec.v3Text,
-        voiceSettings: normalized.voiceSettings,
-        outputFormat:
-          normalized.spec.outputFormat ??
-          DEFAULT_SCENE_DIALOGUE_AUDIO_OUTPUT_FORMAT,
-        languageCode: normalized.spec.languageCode ?? null,
-        now,
-      });
-      const assetId = ids('asset');
-      const assetFileId = ids('asset_file');
-      const target = { kind: 'scene' as const, sceneId: input.sceneId };
-      insertAssetRecord(session, {
-        id: assetId,
-        type: 'audio',
-        mediaKind: 'audio',
-        title: 'Dialogue audio take',
-        origin: 'generated',
-        availability: 'ready',
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertAssetFileRecord(session, {
-        id: assetFileId,
-        assetId,
-        role: 'audio',
-        projectRelativePath: persistedAudioPath,
-        mimeType:
-          output.mimeType ??
-          mimeTypeForOutputFormat(normalized.spec.outputFormat),
-        mediaKind: 'audio',
-        sizeBytes: fileStats.size,
-        createdAt: now,
-        updatedAt: now,
-      });
-      insertAssetRelationshipRecord(session, target, {
-        relationshipId: ids(assetRelationshipIdPrefix(target)),
-        assetId,
-        localeId: null,
-        role: 'dialogue_audio',
-        referenceName: null,
-        purpose: null,
-        sortOrder: nextAssetRelationshipSortOrder(session, {
-          target,
-          role: 'dialogue_audio',
-          localeId: null,
-        }),
-        now,
-      });
-      insertSceneDialogueAudioTakeRecord(session, {
-        id: takeId,
-        sceneDialogueAudioId: audioRecord.id,
-        assetId,
-        assetFileId,
-        mediaGenerationRunId: runReport.run.id,
-        modelChoice: normalized.spec.modelChoice,
-        castVoiceId: normalized.castVoice.id,
-        castVoiceName: normalized.castVoice.name,
-        provider: 'elevenlabs',
-        providerVoiceId: normalized.castVoice.externalVoiceId.trim(),
-        providerTextSnapshot: normalized.providerText,
-        plainTextSnapshot: normalized.spec.plainText,
-        v3TextSnapshot: normalized.spec.v3Text,
-        textTreatment: normalized.textTreatment,
-        voiceSettingsSnapshot: normalized.voiceSettings,
-        outputFormat:
-          normalized.spec.outputFormat ??
-          DEFAULT_SCENE_DIALOGUE_AUDIO_OUTPUT_FORMAT,
-        languageCode: normalized.spec.languageCode ?? null,
-        now,
-      });
+      const writeSet = createProjectAssetFileWriteSet({ projectFolder });
+      try {
+        session.db.transaction((tx) => {
+          const txSession = { ...session, db: tx };
+          const takeId = ids('scene_dialogue_audio_take');
+          const audioRecord = upsertSceneDialogueAudioRecord(txSession, {
+            id: ids('scene_dialogue_audio'),
+            sceneId: input.sceneId,
+            dialogueId: input.dialogueId,
+            castMemberId: normalized.castMemberId,
+            castVoiceId: normalized.castVoice.id,
+            modelChoice: normalized.spec.modelChoice,
+            plainText: normalized.spec.plainText,
+            v3Text: normalized.spec.v3Text,
+            voiceSettings: normalized.voiceSettings,
+            outputFormat:
+              normalized.spec.outputFormat ??
+              DEFAULT_SCENE_DIALOGUE_AUDIO_OUTPUT_FORMAT,
+            languageCode: normalized.spec.languageCode ?? null,
+            now,
+          });
+          const assetId = ids('asset');
+          const assetFileId = ids('asset_file');
+          const target = { kind: 'scene' as const, sceneId: input.sceneId };
+          insertAssetRecord(txSession, {
+            id: assetId,
+            type: 'audio',
+            mediaKind: 'audio',
+            title: 'Dialogue audio take',
+            origin: 'generated',
+            availability: 'ready',
+            createdAt: now,
+            updatedAt: now,
+          });
+          persistProjectAssetFileSync({
+            session: txSession,
+            projectFolder,
+            writeSet,
+            assetId,
+            assetFileId,
+            sourceProjectRelativePath: output.projectRelativePath,
+            destination: {
+              kind: 'scene.dialogueAudio',
+              sceneId: input.sceneId,
+              dialogueId: input.dialogueId,
+              sceneDialogueAudioId: audioRecord.id,
+              dialogueAudioTakeId: takeId,
+            },
+            fileRole: 'audio',
+            mediaKind: 'audio',
+            mimeType:
+              output.mimeType ??
+              mimeTypeForOutputFormat(normalized.spec.outputFormat),
+            now,
+          });
+          insertAssetRelationshipRecord(txSession, target, {
+            relationshipId: ids(assetRelationshipIdPrefix(target)),
+            assetId,
+            localeId: null,
+            role: 'dialogue_audio',
+            referenceName: null,
+            purpose: null,
+            sortOrder: nextAssetRelationshipSortOrder(txSession, {
+              target,
+              role: 'dialogue_audio',
+              localeId: null,
+            }),
+            now,
+          });
+          insertSceneDialogueAudioTakeRecord(txSession, {
+            id: takeId,
+            sceneDialogueAudioId: audioRecord.id,
+            assetId,
+            assetFileId,
+            mediaGenerationRunId: runReport.run.id,
+            modelChoice: normalized.spec.modelChoice,
+            castVoiceId: normalized.castVoice.id,
+            castVoiceName: normalized.castVoice.name,
+            provider: 'elevenlabs',
+            providerVoiceId: normalized.castVoice.externalVoiceId.trim(),
+            providerTextSnapshot: normalized.providerText,
+            plainTextSnapshot: normalized.spec.plainText,
+            v3TextSnapshot: normalized.spec.v3Text,
+            textTreatment: normalized.textTreatment,
+            voiceSettingsSnapshot: normalized.voiceSettings,
+            outputFormat:
+              normalized.spec.outputFormat ??
+              DEFAULT_SCENE_DIALOGUE_AUDIO_OUTPUT_FORMAT,
+            languageCode: normalized.spec.languageCode ?? null,
+            now,
+          });
+        });
+        commitProjectAssetFileWriteSet(writeSet);
+      } catch (error) {
+        rollbackProjectAssetFileWriteSetSync(writeSet);
+        throw error;
+      }
     },
   );
   return mutationReport(input);
@@ -702,7 +712,7 @@ function prepared(
       },
       request: {
         parameters: providerPayload,
-        outputNames: [outputName(normalized.spec)],
+        outputNames: [outputName()],
       },
     },
   };
@@ -1018,57 +1028,8 @@ function titleForSpec(spec: SceneDialogueAudioGenerationSpec): string {
   return spec.title ?? `Scene dialogue ${spec.target.dialogueId}`;
 }
 
-function outputName(spec: SceneDialogueAudioGenerationSpec): string {
-  return `${spec.target.dialogueId}.${extensionForOutputFormat(
-    spec.outputFormat ?? DEFAULT_SCENE_DIALOGUE_AUDIO_OUTPUT_FORMAT,
-  )}`;
-}
-
-async function persistDialogueAudioTakeFile(input: {
-  projectFolder: string;
-  sourceProjectRelativePath: ProjectRelativePath;
-  dialogueId: string;
-  takeId: string;
-  outputFormat: string | undefined;
-}): Promise<ProjectRelativePath> {
-  const extension = extensionForOutputFormat(
-    input.outputFormat ?? DEFAULT_SCENE_DIALOGUE_AUDIO_OUTPUT_FORMAT,
-  );
-  const fileName = `${slugify(input.dialogueId)}-${input.takeId}.${extension}`;
-  const projectRelativePath =
-    `scene-dialogue-audio/${fileName}` as ProjectRelativePath;
-  const sourcePath = path.join(
-    input.projectFolder,
-    input.sourceProjectRelativePath,
-  );
-  const targetPath = path.join(input.projectFolder, projectRelativePath);
-  try {
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.copyFile(sourcePath, targetPath, fsConstants.COPYFILE_EXCL);
-    await fs.unlink(sourcePath);
-  } catch (error) {
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      error.code === 'EEXIST'
-    ) {
-      throw new ProjectDataError(
-        'PROJECT_DATA386',
-        `Scene Dialogue Audio take file already exists: ${projectRelativePath}.`,
-      );
-    }
-    throw error;
-  }
-  return projectRelativePath;
-}
-
-function slugify(input: string): string {
-  const slug = input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return slug || 'dialogue';
+function outputName(): string {
+  return 'dialogue-audio.mp3';
 }
 
 function extensionForOutputFormat(outputFormat: string): string {

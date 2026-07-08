@@ -10,6 +10,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 
 describe('change asset selection command', () => {
   let homeDir: string;
@@ -52,7 +53,7 @@ describe('change asset selection command', () => {
       recursive: true,
     });
     await fs.writeFile(path.join(created.projectPath, assetPath), 'audio bytes');
-    const registered = await projectData.registerAsset({
+    const registered = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: 'scene_test0001' },
@@ -89,7 +90,7 @@ describe('change asset selection command', () => {
       recursive: true,
     });
     await fs.writeFile(path.join(created.projectPath, assetPath), 'reference');
-    const registered = await projectData.registerAsset({
+    const registered = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'project' },
@@ -124,7 +125,7 @@ describe('change asset selection command', () => {
       recursive: true,
     });
     await fs.writeFile(path.join(created.projectPath, assetPath), 'audio bytes');
-    const registered = await projectData.registerAsset({
+    const registered = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: 'scene_test0001' },

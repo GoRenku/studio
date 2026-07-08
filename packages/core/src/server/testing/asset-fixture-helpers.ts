@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Asset, RegisterAssetInput } from '../../client/index.js';
+import type { Asset, AssetTarget, ProjectRelativePath } from '../../client/index.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
@@ -20,10 +20,25 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 
-export async function registerAsset(
-  input: RegisterAssetInput & RenkuConfigPathOptions
+export interface TestAssetFixtureInput extends RenkuConfigPathOptions {
+  projectName: string;
+  target: AssetTarget;
+  locale?: { localeId?: string | null };
+  type: string;
+  mediaKind: string;
+  title: string;
+  oneLineSummary?: string | null;
+  projectRelativePath: ProjectRelativePath;
+  fileRole: string;
+  role: string;
+  referenceName?: string | null;
+  purpose?: string | null;
+}
+
+export async function createTestAssetFixture(
+  input: TestAssetFixtureInput
 ): Promise<Asset> {
-  const normalizedInput = normalizeRegisterAssetInput(input);
+  const normalizedInput = normalizeTestAssetFixtureInput(input);
   const { projectFolder, session } = await openProjectSession(normalizedInput);
   try {
     assertAssetRelationshipTargetExists(session, normalizedInput.target);
@@ -83,31 +98,29 @@ export async function registerAsset(
       });
     });
 
-    return readAssetOrThrow(session, normalizedInput.target, assetId);
+    const asset = readAssetRelationship(session, {
+      target: normalizedInput.target,
+      assetId,
+    });
+    if (!asset) {
+      throw new ProjectDataError(
+        'PROJECT_DATA078',
+        `Asset ${assetId} is not attached to the requested target.`
+      );
+    }
+    return asset;
   } finally {
     session.close();
   }
 }
 
-function readAssetOrThrow(
-  session: Parameters<typeof readAssetRelationship>[0],
-  target: RegisterAssetInput['target'],
-  assetId: string
-): Asset {
-  const asset = readAssetRelationship(session, { target, assetId });
-  if (!asset) {
-    throw assetNotAttached(assetId);
-  }
-  return asset;
-}
-
-function normalizeRegisterAssetInput(
-  input: RegisterAssetInput & RenkuConfigPathOptions
-): RegisterAssetInput & RenkuConfigPathOptions {
+function normalizeTestAssetFixtureInput(
+  input: TestAssetFixtureInput
+): TestAssetFixtureInput {
   return {
     ...input,
     type: requiredTrimmed(input.type, 'type'),
-    mediaKind: normalizeMediaKind(input.mediaKind),
+    mediaKind: requiredTrimmed(input.mediaKind, 'mediaKind'),
     title: requiredTrimmed(input.title, 'title'),
     oneLineSummary: optionalTrimmed(input.oneLineSummary),
     projectRelativePath: normalizeProjectRelativePath(input.projectRelativePath),
@@ -116,26 +129,6 @@ function normalizeRegisterAssetInput(
     referenceName: optionalTrimmed(input.referenceName),
     purpose: optionalTrimmed(input.purpose),
   };
-}
-
-function normalizeMediaKind(input: string): string {
-  const mediaKind = requiredTrimmed(input, 'mediaKind');
-  const allowed = new Set([
-    'text',
-    'image',
-    'audio',
-    'video',
-    'json',
-    'folder',
-    'other',
-  ]);
-  if (!allowed.has(mediaKind)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA082',
-      `Unsupported media kind: ${mediaKind}.`
-    );
-  }
-  return mediaKind;
 }
 
 function requiredTrimmed(input: string, fieldName: string): string {
@@ -161,7 +154,7 @@ async function statExistingFile(absolutePath: string): Promise<{ size: number }>
   } catch {
     throw new ProjectDataError(
       'PROJECT_DATA080',
-      `Asset file does not exist: ${absolutePath}.`
+      `Asset fixture file does not exist: ${absolutePath}.`
     );
   }
 }
@@ -174,14 +167,7 @@ function assertResolvedPathInsideProject(
   if (relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new ProjectDataError(
       'PROJECT_DATA079',
-      `Asset file must be inside the project folder: ${absolutePath}.`
+      `Asset fixture file must be inside the project folder: ${absolutePath}.`
     );
   }
-}
-
-function assetNotAttached(assetId: string): ProjectDataError {
-  return new ProjectDataError(
-    'PROJECT_DATA078',
-    `Asset ${assetId} is not attached to the requested target.`
-  );
 }

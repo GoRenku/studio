@@ -71,6 +71,17 @@ export function resolveScreenplayDocumentIds(input: {
     });
   });
 
+  document.acts.forEach((act) =>
+    act.sequences.forEach((sequence) =>
+      sequence.scenes.forEach((scene) => {
+        const existingScene = scene.id
+          ? findSceneById(input.existing, scene.id)
+          : null;
+        assignDialogueOrderKeys(scene, existingScene);
+      })
+    )
+  );
+
   if (issues.length > 0) {
     throwValidation(issues);
   }
@@ -164,6 +175,84 @@ export function resolveScreenplayDocumentIds(input: {
   }
 
   return { document, generatedIds, warnings };
+}
+
+function assignDialogueOrderKeys(scene: Scene, existingScene: Scene | null): void {
+  const existingKeyByDialogueId = new Map<string, string>();
+  existingScene?.blocks.forEach((block) => {
+    if (block.type === 'dialogue' && block.dialogueOrderKey) {
+      existingKeyByDialogueId.set(block.dialogueId, block.dialogueOrderKey);
+    }
+  });
+
+  scene.blocks.forEach((block, index) => {
+    if (block.type !== 'dialogue') {
+      return;
+    }
+    const existingKey = existingKeyByDialogueId.get(block.dialogueId);
+    if (existingKey) {
+      block.dialogueOrderKey = existingKey;
+      return;
+    }
+    if (block.dialogueOrderKey) {
+      return;
+    }
+    const previousKey = nearestDialogueOrderKey(scene.blocks, index, -1);
+    const nextKey = nearestDialogueOrderKey(scene.blocks, index, 1);
+    block.dialogueOrderKey = allocateDialogueOrderKey(previousKey, nextKey, index);
+  });
+}
+
+function nearestDialogueOrderKey(
+  blocks: Block[],
+  startIndex: number,
+  direction: -1 | 1
+): string | null {
+  for (
+    let index = startIndex + direction;
+    index >= 0 && index < blocks.length;
+    index += direction
+  ) {
+    const block = blocks[index];
+    if (block?.type === 'dialogue' && block.dialogueOrderKey) {
+      return block.dialogueOrderKey;
+    }
+  }
+  return null;
+}
+
+function allocateDialogueOrderKey(
+  previousKey: string | null,
+  nextKey: string | null,
+  blockIndex: number
+): string {
+  const previous = previousKey ? Number.parseInt(previousKey, 10) : null;
+  const next = nextKey ? Number.parseInt(nextKey, 10) : null;
+  if (previous !== null && next !== null && next - previous > 1) {
+    return String(Math.floor((previous + next) / 2)).padStart(4, '0');
+  }
+  if (previous === null && next !== null && next > 1) {
+    return String(Math.floor(next / 2)).padStart(4, '0');
+  }
+  if (previous !== null) {
+    return String(previous + 100).padStart(4, '0');
+  }
+  return String((blockIndex + 1) * 100).padStart(4, '0');
+}
+
+function findSceneById(
+  document: ScreenplayDocument | null | undefined,
+  sceneId: string
+): Scene | null {
+  for (const act of document?.acts ?? []) {
+    for (const sequence of act.sequences) {
+      const scene = sequence.scenes.find((candidate) => candidate.id === sceneId);
+      if (scene) {
+        return scene;
+      }
+    }
+  }
+  return null;
 }
 
 function validateDurableIds(

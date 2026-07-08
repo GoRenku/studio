@@ -76,7 +76,7 @@ describe('Cast Voice commands', () => {
         purpose: 'calm strategic baseline',
         files: [
           expect.objectContaining({
-            projectRelativePath: 'cast/mehmed-ii/voice-samples/normal.mp3',
+            projectRelativePath: 'cast/mehmed-ii/voice-samples/normal-voice.mp3',
             mediaKind: 'audio',
           }),
         ],
@@ -124,7 +124,7 @@ describe('Cast Voice commands', () => {
     });
     expect(removed.recovery?.trashItemIds).toHaveLength(1);
     await expect(
-      fs.access(path.join(projectPath, 'cast/mehmed-ii/voice-samples/normal.mp3'))
+      fs.access(path.join(projectPath, 'cast/mehmed-ii/voice-samples/normal-voice.mp3'))
     ).resolves.toBeUndefined();
     await expect(
       projectData.listCastVoices({

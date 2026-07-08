@@ -62,14 +62,24 @@ export type ShotVideoTakeMediaRole = ShotVideoTakeInputKind | 'video';
 export type ProjectAssetFileDestination =
   | { kind: 'cast.characterSheet'; castMemberId: string; titleHint?: string }
   | { kind: 'cast.profile'; castMemberId: string; titleHint?: string }
-  | { kind: 'cast.voiceSample'; castMemberId: string; castVoiceId: string }
+  | {
+      kind: 'cast.voiceSample';
+      castMemberId: string;
+      castVoiceId: string;
+      referenceName: string;
+    }
   | { kind: 'location.environmentSheet'; locationId: string; titleHint?: string }
   | { kind: 'location.hero'; locationId: string; heroName?: string }
   | { kind: 'visualLanguage.lookbookImage'; titleHint?: string }
   | { kind: 'visualLanguage.lookbookSheet'; titleHint?: string }
-  | { kind: 'scene.storyboardShot'; sceneId: string; shotOrdinal: number }
   | { kind: 'shotVideoTake.media'; takeId: string; role: ShotVideoTakeMediaRole }
-  | { kind: 'scene.dialogueAudio'; sceneId: string; dialogueId: string }
+  | {
+      kind: 'scene.dialogueAudio';
+      sceneId: string;
+      dialogueId: string;
+      sceneDialogueAudioId: string;
+      dialogueAudioTakeId: string;
+    }
   | { kind: 'image.editOutput'; sourceAssetId: string; sourceAssetFileId?: string };
 
 export type ProjectTemporaryFileDestination =
@@ -101,6 +111,77 @@ export interface PersistProjectAssetFileInput {
   height?: number;
   durationSeconds?: number;
   now: string;
+}
+
+export interface ProjectAssetFileWriteSet {
+  readonly projectFolder: string;
+  readonly createdProjectRelativePaths: readonly ProjectRelativePath[];
+  readonly committed: boolean;
+  recordCreatedFile(projectRelativePath: ProjectRelativePath): void;
+  markCommitted(): void;
+}
+
+class ProjectAssetFileWriteSetState implements ProjectAssetFileWriteSet {
+  readonly #createdProjectRelativePaths: ProjectRelativePath[] = [];
+  #committed = false;
+
+  constructor(readonly projectFolder: string) {}
+
+  get createdProjectRelativePaths(): readonly ProjectRelativePath[] {
+    return this.#createdProjectRelativePaths;
+  }
+
+  get committed(): boolean {
+    return this.#committed;
+  }
+
+  recordCreatedFile(projectRelativePath: ProjectRelativePath): void {
+    if (this.#committed) {
+      throw new ProjectDataError(
+        'PROJECT_ASSET_FILE_WRITE_SET_COMMITTED',
+        'Project asset file write set is already committed.'
+      );
+    }
+    this.#createdProjectRelativePaths.push(projectRelativePath);
+  }
+
+  markCommitted(): void {
+    this.#committed = true;
+  }
+}
+
+export function createProjectAssetFileWriteSet(input: {
+  projectFolder: string;
+}): ProjectAssetFileWriteSet {
+  return new ProjectAssetFileWriteSetState(input.projectFolder);
+}
+
+export function commitProjectAssetFileWriteSet(
+  writeSet: ProjectAssetFileWriteSet
+): void {
+  writeSet.markCommitted();
+}
+
+export async function rollbackProjectAssetFileWriteSet(
+  writeSet: ProjectAssetFileWriteSet
+): Promise<void> {
+  if (writeSet.committed) {
+    return;
+  }
+  for (const projectRelativePath of [...writeSet.createdProjectRelativePaths].reverse()) {
+    await removeCopiedProjectAssetFile(writeSet.projectFolder, projectRelativePath);
+  }
+}
+
+export function rollbackProjectAssetFileWriteSetSync(
+  writeSet: ProjectAssetFileWriteSet
+): void {
+  if (writeSet.committed) {
+    return;
+  }
+  for (const projectRelativePath of [...writeSet.createdProjectRelativePaths].reverse()) {
+    removeCopiedProjectAssetFileSync(writeSet.projectFolder, projectRelativePath);
+  }
 }
 
 export interface ProjectAssetGenerationOutputPlacement {
@@ -138,7 +219,7 @@ export async function validateProjectReferenceFileInput(input: {
 }
 
 export async function persistProjectAssetFile(
-  input: PersistProjectAssetFileInput
+  input: PersistProjectAssetFileInput & { writeSet?: ProjectAssetFileWriteSet }
 ): Promise<AssetFileRecord> {
   const source = await validateProjectReferenceFileInput({
     projectFolder: input.projectFolder,
@@ -166,6 +247,7 @@ export async function persistProjectAssetFile(
     if (source.absolutePath !== destinationPath) {
       await fs.copyFile(source.absolutePath, destinationPath);
       copied = true;
+      input.writeSet?.recordCreatedFile(destination);
     }
     const stats = await statProjectFile(destinationPath, {
       code: 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND',
@@ -203,6 +285,145 @@ export async function persistProjectAssetFile(
     }
     throw error;
   }
+}
+
+export function persistProjectAssetFileSync(
+  input: PersistProjectAssetFileInput & { writeSet?: ProjectAssetFileWriteSet }
+): AssetFileRecord {
+  const sourceProjectRelativePath = normalizeProjectRelativePath(
+    input.sourceProjectRelativePath
+  );
+  const sourcePath = resolveProjectRelativePath(
+    input.projectFolder,
+    sourceProjectRelativePath
+  );
+  assertResolvedPathInsideProject(input.projectFolder, sourcePath);
+  statProjectFileSync(sourcePath, {
+    code: 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND',
+    message: `Project reference file was not found: ${sourceProjectRelativePath}.`,
+  });
+  const destination = resolveDurableDestinationFileSync({
+    session: input.session,
+    projectFolder: input.projectFolder,
+    destination: input.destination,
+    sourceProjectRelativePath,
+    mediaKind: input.mediaKind,
+    now: input.now,
+  });
+  return persistProjectAssetFileAtDestinationSync({
+    session: input.session,
+    projectFolder: input.projectFolder,
+    assetId: input.assetId,
+    assetFileId: input.assetFileId,
+    fileRole: input.fileRole,
+    mediaKind: input.mediaKind,
+    sourcePath,
+    sourceProjectRelativePath,
+    destinationProjectRelativePath: destination,
+    mimeType: input.mimeType,
+    width: input.width,
+    height: input.height,
+    durationSeconds: input.durationSeconds,
+    now: input.now,
+    writeSet: input.writeSet,
+  });
+}
+
+export async function writeProjectTemporaryFile(input: {
+  projectFolder: string;
+  destination: ProjectTemporaryFileDestination;
+  fileNameHint: string;
+  contents: Uint8Array;
+}): Promise<{
+  projectRelativePath: ProjectRelativePath;
+  absolutePath: string;
+}> {
+  const root = await resolveTemporaryFileRoot({
+    projectFolder: input.projectFolder,
+    destination: input.destination,
+  });
+  const fileName = kebabCasePathSegment(
+    path.parse(input.fileNameHint).name,
+    'temporary-file'
+  );
+  const extension = path.extname(input.fileNameHint) || '.bin';
+  const projectRelativePath = await allocateProjectRelativeFilePath({
+    projectFolder: input.projectFolder,
+    parent: root,
+    baseName: fileName,
+    extension,
+  });
+  const absolutePath = resolveProjectRelativePath(
+    input.projectFolder,
+    projectRelativePath
+  );
+  assertResolvedPathInsideProject(input.projectFolder, absolutePath);
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  await fs.writeFile(absolutePath, input.contents);
+  return { projectRelativePath, absolutePath };
+}
+
+export function persistSceneStoryboardShotFilesSync(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  writeSet?: ProjectAssetFileWriteSet;
+  sceneId: string;
+  files: Array<{
+    assetId: string;
+    assetFileId: string;
+    shotId: string;
+    shotOrdinal: number;
+    sourceProjectRelativePath: ProjectRelativePath;
+  }>;
+  now: string;
+}): Array<{
+  shotId: string;
+  assetFile: AssetFileRecord;
+}> {
+  const hierarchy = requireSceneHierarchy(input.session, input.sceneId);
+  const iterationFolder = allocateProjectRelativeFolderPathSync({
+    projectFolder: input.projectFolder,
+    parent: joinProjectRelativePath(
+      STORYBOARDS_ROOT,
+      kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
+      kebabCasePathSegment(hierarchy.sceneTitle, 'scene')
+    ),
+    baseName: `${String(nextStoryboardIterationNumber(input.projectFolder, input.session, input.sceneId)).padStart(2, '0')}-iteration`,
+  });
+  return input.files.map((file) => {
+    const sourceProjectRelativePath = normalizeProjectRelativePath(
+      file.sourceProjectRelativePath
+    );
+    const destination = joinProjectRelativePath(
+      iterationFolder,
+      `shot-${String(file.shotOrdinal).padStart(2, '0')}${extensionForMediaSource(sourceProjectRelativePath)}`
+    );
+    const sourcePath = resolveProjectRelativePath(
+      input.projectFolder,
+      sourceProjectRelativePath
+    );
+    assertResolvedPathInsideProject(input.projectFolder, sourcePath);
+    statProjectFileSync(sourcePath, {
+      code: 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND',
+      message: `Storyboard source file was not found: ${sourceProjectRelativePath}.`,
+    });
+    return {
+      shotId: file.shotId,
+      assetFile: persistProjectAssetFileAtDestinationSync({
+        session: input.session,
+        projectFolder: input.projectFolder,
+        assetId: file.assetId,
+        assetFileId: file.assetFileId,
+        sourceProjectRelativePath,
+        sourcePath,
+        destinationProjectRelativePath: destination,
+        fileRole: 'storyboard_image',
+        mediaKind: 'image',
+        now: input.now,
+        writeSet: input.writeSet,
+      }),
+    };
+  });
 }
 
 export async function resolveProjectAssetGenerationOutput(input: {
@@ -397,6 +618,7 @@ export async function copyTakeOwnedProjectAssetFile(input: {
 export function copyTakeOwnedProjectAssetFileSync(input: {
   session: DatabaseSession;
   projectFolder: string;
+  writeSet?: ProjectAssetFileWriteSet;
   sourceAssetId: string;
   sourceAssetFileId: string;
   targetAssetId: string;
@@ -462,6 +684,7 @@ export function copyTakeOwnedProjectAssetFileSync(input: {
     if (sourcePath !== destinationPath) {
       fsSync.copyFileSync(sourcePath, destinationPath, fsSync.constants.COPYFILE_EXCL);
       copied = true;
+      input.writeSet?.recordCreatedFile(destination);
     }
     const stats = statProjectFileSync(destinationPath, {
       code: 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND',
@@ -554,6 +777,15 @@ async function resolveDurableDestinationFile(input: {
   now: string;
 }): Promise<ProjectRelativePath> {
   const root = await durableDestinationRoot(input);
+  if (input.destination.kind === 'scene.dialogueAudio') {
+    return allocateSceneDialogueAudioFilePath({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      root,
+      destination: input.destination,
+      sourceProjectRelativePath: input.sourceProjectRelativePath,
+    });
+  }
   const allocation = durableDestinationAllocation(input.destination, {
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     mediaKind: input.mediaKind,
@@ -584,6 +816,15 @@ function resolveDurableDestinationFileSync(input: {
   now: string;
 }): ProjectRelativePath {
   const root = durableDestinationRootSync(input);
+  if (input.destination.kind === 'scene.dialogueAudio') {
+    return allocateSceneDialogueAudioFilePathSync({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      root,
+      destination: input.destination,
+      sourceProjectRelativePath: input.sourceProjectRelativePath,
+    });
+  }
   const allocation = durableDestinationAllocation(input.destination, {
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     mediaKind: input.mediaKind,
@@ -649,18 +890,6 @@ async function durableDestinationRoot(input: {
     case 'visualLanguage.lookbookImage':
     case 'visualLanguage.lookbookSheet':
       return joinProjectRelativePath(VISUAL_LANGUAGE_ROOT, 'lookbook');
-    case 'scene.storyboardShot': {
-      const hierarchy = requireSceneHierarchy(
-        input.session,
-        input.destination.sceneId
-      );
-      return joinProjectRelativePath(
-        STORYBOARDS_ROOT,
-        kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
-        kebabCasePathSegment(hierarchy.sceneTitle, 'scene'),
-        `${String(input.destination.shotOrdinal).padStart(2, '0')}-iteration`
-      );
-    }
     case 'shotVideoTake.media':
       return resolveShotVideoTakeMediaFolder({
         session: input.session,
@@ -671,11 +900,9 @@ async function durableDestinationRoot(input: {
     case 'scene.dialogueAudio': {
       const hierarchy = requireSceneHierarchy(input.session, input.destination.sceneId);
       return joinProjectRelativePath(
-        STORYBOARDS_ROOT,
+        'audio',
         kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
-        kebabCasePathSegment(hierarchy.sceneTitle, 'scene'),
-        'dialogue-audio',
-        kebabCasePathSegment(input.destination.dialogueId, 'dialogue')
+        kebabCasePathSegment(hierarchy.sceneTitle, 'scene')
       );
     }
     case 'image.editOutput': {
@@ -694,23 +921,74 @@ function durableDestinationRootSync(input: {
   sourceProjectRelativePath?: ProjectRelativePath;
   now: string;
 }): ProjectRelativePath {
-  if (input.destination.kind === 'shotVideoTake.media') {
-    return resolveShotVideoTakeMediaFolderSync({
-      session: input.session,
-      projectFolder: input.projectFolder,
-      takeId: input.destination.takeId,
-      now: input.now,
-    });
+  switch (input.destination.kind) {
+    case 'cast.characterSheet': {
+      const castMember = requireCastMember(
+        input.session,
+        input.destination.castMemberId
+      );
+      return joinProjectRelativePath(CAST_ROOT, castMember.handle, 'character-sheets');
+    }
+    case 'cast.profile': {
+      const castMember = requireCastMember(
+        input.session,
+        input.destination.castMemberId
+      );
+      return joinProjectRelativePath(CAST_ROOT, castMember.handle, 'profiles');
+    }
+    case 'cast.voiceSample': {
+      const castMember = requireCastMember(
+        input.session,
+        input.destination.castMemberId
+      );
+      return joinProjectRelativePath(CAST_ROOT, castMember.handle, 'voice-samples');
+    }
+    case 'location.environmentSheet': {
+      const location = requireLocation(input.session, input.destination.locationId);
+      return joinProjectRelativePath(
+        LOCATIONS_ROOT,
+        location.handle,
+        'environment-sheets'
+      );
+    }
+    case 'location.hero': {
+      const location = requireLocation(input.session, input.destination.locationId);
+      return joinProjectRelativePath(LOCATIONS_ROOT, location.handle, 'heroes');
+    }
+    case 'visualLanguage.lookbookImage':
+    case 'visualLanguage.lookbookSheet':
+      return joinProjectRelativePath(VISUAL_LANGUAGE_ROOT, 'lookbook');
+    case 'scene.dialogueAudio': {
+      const hierarchy = requireSceneHierarchy(input.session, input.destination.sceneId);
+      return joinProjectRelativePath(
+        'audio',
+        kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
+        kebabCasePathSegment(hierarchy.sceneTitle, 'scene')
+      );
+    }
+    case 'image.editOutput': {
+      const source = imageEditSourceFile(input.session, input.destination);
+      return path.parse(source.projectRelativePath).dir as ProjectRelativePath;
+    }
+    case 'shotVideoTake.media':
+      return resolveShotVideoTakeMediaFolderSync({
+        session: input.session,
+        projectFolder: input.projectFolder,
+        takeId: input.destination.takeId,
+        now: input.now,
+      });
+    default:
+      return assertNever(input.destination);
   }
-  throw new ProjectDataError(
-    'PROJECT_ASSET_FILE_SYNC_DESTINATION_UNSUPPORTED',
-    `Synchronous project asset persistence only supports take-owned media. Received: ${input.destination.kind}.`
-  );
 }
 
 function durableDestinationAllocation(
   destination: ProjectAssetFileDestination,
-  input: { sourceProjectRelativePath: ProjectRelativePath; mediaKind: MediaKind }
+  input: {
+    sourceProjectRelativePath: ProjectRelativePath;
+    mediaKind: MediaKind;
+    outputFormatHint?: string;
+  }
 ): {
   baseName: string;
   extension: string;
@@ -732,7 +1010,11 @@ function durableDestinationAllocation(
         versioned: true,
       };
     case 'cast.voiceSample':
-      return { baseName: 'voice-sample', extension, versioned: true };
+      return {
+        baseName: destination.referenceName,
+        extension: input.outputFormatHint ?? extension,
+        versioned: true,
+      };
     case 'location.environmentSheet':
       return {
         baseName: destination.titleHint ?? 'environment-sheet',
@@ -757,12 +1039,6 @@ function durableDestinationAllocation(
         extension,
         versioned: false,
       };
-    case 'scene.storyboardShot':
-      return {
-        baseName: `shot-${String(destination.shotOrdinal).padStart(2, '0')}`,
-        extension,
-        versioned: false,
-      };
     case 'shotVideoTake.media':
       return {
         baseName: shotVideoTakeMediaBaseName(destination.role),
@@ -770,7 +1046,11 @@ function durableDestinationAllocation(
         versioned: false,
       };
     case 'scene.dialogueAudio':
-      return { baseName: 'dialogue-audio', extension, versioned: false };
+      return {
+        baseName: 'dialogue-audio',
+        extension,
+        versioned: false,
+      };
     case 'image.editOutput':
       return {
         baseName: path.parse(input.sourceProjectRelativePath).name,
@@ -810,6 +1090,7 @@ async function generationDestination(input: {
           kind: 'cast.voiceSample',
           castMemberId: targetId(spec),
           castVoiceId: targetId(spec),
+          referenceName: requiredSpecString(spec, 'referenceName'),
         },
       };
     case LOOKBOOK_IMAGE_GENERATION_PURPOSE:
@@ -912,6 +1193,7 @@ async function durableOutputNames(input: {
       input.specRecord
     ),
     mediaKind: mediaKindForPurpose(input.specRecord.purpose),
+    outputFormatHint: durableGenerationOutputFormatHint(input.specRecord),
   });
   const names = allocation.versioned
     ? await allocateProjectRelativeVersionedFileNames({
@@ -930,6 +1212,188 @@ async function durableOutputNames(input: {
         count: input.outputCount,
       });
   return names;
+}
+
+function persistProjectAssetFileAtDestinationSync(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  assetId: string;
+  assetFileId: string;
+  fileRole: string;
+  mediaKind: MediaKind;
+  sourceProjectRelativePath: ProjectRelativePath;
+  sourcePath: string;
+  destinationProjectRelativePath: ProjectRelativePath;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+  now: string;
+  writeSet?: ProjectAssetFileWriteSet;
+}): AssetFileRecord {
+  assertDurableProjectAssetFilePath(input.destinationProjectRelativePath);
+  const destinationPath = resolveProjectRelativePath(
+    input.projectFolder,
+    input.destinationProjectRelativePath
+  );
+  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
+  let copied = false;
+  try {
+    fsSync.mkdirSync(path.dirname(destinationPath), { recursive: true });
+    if (input.sourcePath !== destinationPath) {
+      fsSync.copyFileSync(input.sourcePath, destinationPath, fsSync.constants.COPYFILE_EXCL);
+      copied = true;
+      input.writeSet?.recordCreatedFile(input.destinationProjectRelativePath);
+    }
+    const stats = statProjectFileSync(destinationPath, {
+      code: 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND',
+      message: `Persisted project asset file was not found: ${input.destinationProjectRelativePath}.`,
+    });
+    insertAssetFileRecord(input.session, {
+      id: input.assetFileId,
+      assetId: input.assetId,
+      role: input.fileRole,
+      projectRelativePath: input.destinationProjectRelativePath,
+      mimeType: input.mimeType ?? mimeTypeForProjectPath(input.destinationProjectRelativePath, input.mediaKind),
+      mediaKind: input.mediaKind,
+      sizeBytes: stats.size,
+      contentHash: hashFileSync(destinationPath),
+      width: input.width,
+      height: input.height,
+      durationSeconds: input.durationSeconds,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
+    const row = readAssetFileRecord(input.session, {
+      assetId: input.assetId,
+      assetFileId: input.assetFileId,
+    });
+    if (!row) {
+      throw new ProjectDataError(
+        'PROJECT_ASSET_FILE_INSERT_FAILED',
+        `Project asset file record was not inserted: ${input.assetFileId}.`
+      );
+    }
+    return row;
+  } catch (error) {
+    if (copied && !input.writeSet) {
+      removeCopiedProjectAssetFileSync(
+        input.projectFolder,
+        input.destinationProjectRelativePath
+      );
+    }
+    throw error;
+  }
+}
+
+function allocateSceneDialogueAudioFilePath(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  root: ProjectRelativePath;
+  destination: Extract<ProjectAssetFileDestination, { kind: 'scene.dialogueAudio' }>;
+  sourceProjectRelativePath: ProjectRelativePath;
+}): ProjectRelativePath {
+  return allocateSceneDialogueAudioFilePathSync(input);
+}
+
+function allocateSceneDialogueAudioFilePathSync(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  root: ProjectRelativePath;
+  destination: Extract<ProjectAssetFileDestination, { kind: 'scene.dialogueAudio' }>;
+  sourceProjectRelativePath: ProjectRelativePath;
+}): ProjectRelativePath {
+  const basePrefix = sceneDialogueAudioBasePrefix(input.session, input.destination);
+  const extension = extensionForMediaSource(input.sourceProjectRelativePath);
+  for (let index = 0; index < 100; index += 1) {
+    const candidate = joinProjectRelativePath(
+      input.root,
+      `${basePrefix}-${String(index).padStart(2, '0')}${extension}`
+    );
+    if (!projectPathExistsSync(input.projectFolder, candidate)) {
+      return candidate;
+    }
+  }
+  throw new ProjectDataError(
+    'PROJECT_ASSET_FILE_NAME_ALLOCATION_FAILED',
+    `Could not allocate a dialogue audio file name for ${basePrefix}${extension}.`
+  );
+}
+
+function sceneDialogueAudioBasePrefix(
+  session: DatabaseSession,
+  destination: Extract<ProjectAssetFileDestination, { kind: 'scene.dialogueAudio' }>
+): string {
+  const screenplay = readScreenplayDocumentFromSession(session);
+  if (!screenplay) {
+    throw new ProjectDataError(
+      'PROJECT_ASSET_FILE_OWNER_MISSING',
+      'Scene Dialogue Audio storage requires a screenplay.'
+    );
+  }
+  for (const act of screenplay.acts) {
+    for (const sequence of act.sequences) {
+      for (const scene of sequence.scenes) {
+        if (scene.id !== destination.sceneId) {
+          continue;
+        }
+        const block = scene.blocks.find(
+          (candidate) =>
+            candidate.type === 'dialogue' &&
+            candidate.dialogueId === destination.dialogueId
+        );
+        if (!block || block.type !== 'dialogue') {
+          throw new ProjectDataError(
+            'PROJECT_ASSET_FILE_OWNER_MISSING',
+            `Dialogue block was not found for project asset file destination: ${destination.dialogueId}.`
+          );
+        }
+        if (!block.dialogueOrderKey) {
+          throw new ProjectDataError(
+            'PROJECT_ASSET_FILE_DIALOGUE_ORDER_KEY_MISSING',
+            `Dialogue block is missing a stable dialogueOrderKey: ${destination.dialogueId}.`
+          );
+        }
+        const castMember = block.castMemberId
+          ? screenplay.cast.find((candidate) => candidate.id === block.castMemberId)
+          : null;
+        return `${block.dialogueOrderKey}-${kebabCasePathSegment(
+          castMember?.handle || castMember?.name || 'dialogue',
+          'dialogue'
+        )}`;
+      }
+    }
+  }
+  throw new ProjectDataError(
+    'PROJECT_ASSET_FILE_OWNER_MISSING',
+    `Scene was not found for project asset file destination: ${destination.sceneId}.`
+  );
+}
+
+function nextStoryboardIterationNumber(
+  projectFolder: string,
+  session: DatabaseSession,
+  sceneId: string
+): number {
+  const hierarchy = requireSceneHierarchy(session, sceneId);
+  const parent = joinProjectRelativePath(
+    STORYBOARDS_ROOT,
+    kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
+    kebabCasePathSegment(hierarchy.sceneTitle, 'scene')
+  );
+  for (let index = 0; index < 1000; index += 1) {
+    const candidate = joinProjectRelativePath(
+      parent,
+      `${String(index).padStart(2, '0')}-iteration`
+    );
+    if (!projectPathExistsSync(projectFolder, candidate)) {
+      return index;
+    }
+  }
+  throw new ProjectDataError(
+    'PROJECT_ASSET_FILE_FOLDER_ALLOCATION_FAILED',
+    'Could not allocate a storyboard iteration folder.'
+  );
 }
 
 function temporaryOutputNames(input: {
@@ -983,6 +1447,28 @@ function mediaKindForPurpose(purpose: MediaGenerationPurpose): MediaKind {
     return 'video';
   }
   return 'image';
+}
+
+function durableGenerationOutputFormatHint(
+  specRecord: MediaGenerationSpecRecord
+): string | undefined {
+  if (specRecord.purpose !== CAST_VOICE_SAMPLE_GENERATION_PURPOSE) {
+    return undefined;
+  }
+  const spec = specRecord.spec as { outputFormat?: unknown };
+  return extensionForAudioOutputFormat(
+    typeof spec.outputFormat === 'string' ? spec.outputFormat : undefined
+  );
+}
+
+function extensionForAudioOutputFormat(outputFormat: string | undefined): string {
+  if (outputFormat?.startsWith('pcm_')) {
+    return '.wav';
+  }
+  if (outputFormat?.startsWith('mp3_')) {
+    return '.mp3';
+  }
+  return '.mp3';
 }
 
 function imageEditSourceFile(
@@ -1481,6 +1967,20 @@ function targetId(spec: Record<string, unknown>): string {
     );
   }
   return target.id;
+}
+
+function requiredSpecString(
+  spec: Record<string, unknown>,
+  fieldName: string
+): string {
+  const value = spec[fieldName];
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new ProjectDataError(
+      'PROJECT_ASSET_FILE_SPEC_FIELD_REQUIRED',
+      `Media generation asset-file placement requires spec.${fieldName}.`
+    );
+  }
+  return value.trim();
 }
 
 function assertNever(value: never): never {

@@ -862,7 +862,7 @@ export function toGenerationRequest(
         : {}),
       ...(plan.pricingInputCounts ? { pricingInputCounts: plan.pricingInputCounts } : {}),
       parameters,
-      outputNames: [outputName(spec)],
+      outputNames: [outputName()],
     },
   };
 }
@@ -916,7 +916,6 @@ export function mapRouteInputSlot(
 
 
 
-export function outputName(spec: ShotVideoTakeOutputGenerationSpec): string {
-  const base = spec.title?.trim() || spec.prompt.slice(0, 40) || 'shot-video-take';
-  return `${base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'shot-video-take'}.mp4`;
+export function outputName(): string {
+  return 'video.mp4';
 }

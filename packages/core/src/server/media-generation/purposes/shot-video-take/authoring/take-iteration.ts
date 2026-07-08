@@ -40,8 +40,13 @@ import {
 import {
   copyTakeOwnedMediaAssetFile,
   isShotVideoTakeOwnedMediaAsset,
-  removeCopiedTakeOwnedMediaAssetFile,
 } from '../ownership/take-owned-media.js';
+import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  rollbackProjectAssetFileWriteSetSync,
+  type ProjectAssetFileWriteSet,
+} from '../../../../project-asset-files/index.js';
 import {
   resolveShotVideoTakeFolder,
 } from '../shared/take-media-paths.js';
@@ -103,9 +108,11 @@ export function continueSceneShotVideoTakeIteration(input: {
     state: sourcePrepared.take.state,
     targetTakeId,
   });
-  const copiedOwnedMediaPaths: ProjectRelativePath[] = [];
+  const writeSet = createProjectAssetFileWriteSet({
+    projectFolder: input.projectFolder,
+  });
   try {
-    return input.session.db.transaction((tx) => {
+    const iteration = input.session.db.transaction((tx) => {
       const transactionSession = {
         ...input.session,
         db: tx as DatabaseSession['db'],
@@ -137,11 +144,9 @@ export function continueSceneShotVideoTakeIteration(input: {
             take: targetTake,
             now: input.now,
           }),
+          writeSet,
           now: input.now,
           nextId: ids,
-          onCopiedOwnedMediaFile: (copy) => {
-            copiedOwnedMediaPaths.push(copy.projectRelativePath);
-          },
         }
       );
       updateSceneShotVideoTakeProductionRecord(transactionSession, {
@@ -183,11 +188,10 @@ export function continueSceneShotVideoTakeIteration(input: {
         ],
       };
     });
+    commitProjectAssetFileWriteSet(writeSet);
+    return iteration;
   } catch (error) {
-    removeCopiedOwnedMediaFiles({
-      projectFolder: input.projectFolder,
-      projectRelativePaths: copiedOwnedMediaPaths,
-    });
+    rollbackProjectAssetFileWriteSetSync(writeSet);
     throw error;
   }
 }
@@ -203,9 +207,9 @@ function copyShotVideoTakeInputRecordsForIteration(
     targetSceneId: string;
     targetTakeId: string;
     targetTakeFolder: ProjectRelativePath;
+    writeSet: ProjectAssetFileWriteSet;
     now: string;
     nextId: (prefix: EntityIdPrefix) => string;
-    onCopiedOwnedMediaFile: (copy: { projectRelativePath: ProjectRelativePath }) => void;
   }
 ): CopiedShotVideoTakeInputRecord[] {
   const preparedInputs = preparedInputsForOwnedMediaCopy({
@@ -239,11 +243,11 @@ function copyShotVideoTakeInputRecordsForIteration(
           sourceAssetFileId: mediaInput.assetFileId,
           targetTakeId: input.targetTakeId,
           targetTakeFolder: input.targetTakeFolder,
+          writeSet: input.writeSet,
           inputKind: mediaInput.kind,
           now: input.now,
           nextId: input.nextId,
         });
-        input.onCopiedOwnedMediaFile(copiedOwnedMedia);
         copiedAsset = copiedOwnedMedia;
       } else {
         copiedAsset = {
@@ -350,22 +354,6 @@ function preparedInputSubjectMatchesInput(input: {
     );
   }
   return input.preparedInput.subjectId === input.mediaInput.subjectId;
-}
-
-function removeCopiedOwnedMediaFiles(input: {
-  projectFolder: string;
-  projectRelativePaths: ProjectRelativePath[];
-}): void {
-  for (const projectRelativePath of input.projectRelativePaths) {
-    try {
-      removeCopiedTakeOwnedMediaAssetFile({
-        projectFolder: input.projectFolder,
-        projectRelativePath,
-      });
-    } catch {
-      // Preserve the original iteration failure for callers.
-    }
-  }
 }
 
 export function contextWithIterationResourceKeys(

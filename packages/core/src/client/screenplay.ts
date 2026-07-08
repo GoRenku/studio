@@ -108,6 +108,7 @@ export interface ActionBlock {
 
 export interface DialogueBlock {
   dialogueId: string;
+  dialogueOrderKey?: string;
   type: 'dialogue';
   castMemberReference?: Reference;
   castMemberId?: string;

@@ -6,6 +6,7 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
+import { createTestAssetFixture } from '../../../../testing/asset-fixture-helpers.js';
 import {
   createDeterministicIdGenerator,
   type ProjectRelativePath,
@@ -719,7 +720,7 @@ describe('scene shot video takes', () => {
           customPromptNote: 'Trigger a failed iteration copy.',
         },
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA439' });
+    ).rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND' });
 
     const takeIdsAfter = (
       await projectData.listSceneShotVideoTakes({
@@ -1343,7 +1344,7 @@ describe('scene shot video takes', () => {
       title: 'Scene reference input',
       selection: 'take',
     });
-    const sceneOwnedAsset = await projectData.registerAsset({
+    const sceneOwnedAsset = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: ids.sceneId },

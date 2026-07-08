@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -25,9 +24,6 @@ import type {
   CastVoiceValidationReport,
 } from '../../client/index.js';
 import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
-import {
-  insertAssetFileRecord,
-} from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
   insertAssetRelationshipRecord,
@@ -58,9 +54,7 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../entity-ids.js';
-import { CAST_ROOT } from '../files/asset-paths.js';
 import {
-  joinProjectRelativePath,
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
@@ -68,6 +62,13 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
+import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  persistProjectAssetFileSync,
+  rollbackProjectAssetFileWriteSetSync,
+  writeProjectTemporaryFile,
+} from '../project-asset-files/index.js';
 
 const DIRECT_ELEVENLABS_TTS_MODELS = new Set([
   'eleven_v3',
@@ -439,14 +440,13 @@ interface ValidatedCastVoiceAttachment {
 }
 
 interface PreparedCastVoiceSample {
-  destinationProjectRelativePath: string;
+  sourceProjectRelativePath: string;
   mimeType: string;
-  sizeBytes: number;
   durationSeconds?: number;
-  contentHash: string;
   origin: 'imported' | 'generated' | 'elevenlabs_sample';
   sampleSource: CastVoiceSampleSource;
   sampleRetrieval?: CastVoiceAttachmentReport['sampleRetrieval'];
+  temporarySource?: boolean;
 }
 
 async function validateAttachmentDocument(input: {
@@ -558,29 +558,14 @@ async function prepareFileCastVoiceAttachment(input: {
   if (!fileSample) {
     throw new ProjectDataError('PROJECT_DATA344', 'Cast Voice file sample is required.');
   }
-  const destinationProjectRelativePath = await allocateCastVoiceSamplePath({
-    projectFolder: input.projectFolder,
-    castMemberHandle: input.validated.castMember.handle,
-    sourceProjectRelativePath: fileSample.sourceProjectRelativePath,
-  });
   const sourcePath = resolveProjectRelativePath(
     input.projectFolder,
     fileSample.sourceProjectRelativePath as never
   );
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    destinationProjectRelativePath as never
-  );
-  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-  if (sourcePath !== destinationPath) {
-    await fs.copyFile(sourcePath, destinationPath);
-  }
   return {
-    destinationProjectRelativePath,
+    sourceProjectRelativePath: fileSample.sourceProjectRelativePath,
     mimeType: fileSample.mimeType,
-    sizeBytes: fileSample.sizeBytes,
-    durationSeconds: await probeMediaDurationSeconds(destinationPath),
-    contentHash: await hashFile(destinationPath),
+    durationSeconds: await probeMediaDurationSeconds(sourcePath),
     origin: fileSample.receipt ? 'generated' : 'imported',
     sampleSource: fileSample.receipt
       ? { kind: 'generated_sample' }
@@ -595,17 +580,12 @@ async function prepareElevenLabsVoiceSampleAttachment(input: {
 }): Promise<PreparedCastVoiceSample> {
   const fetcher = input.elevenLabsVoiceSampleFetcher ?? fetchElevenLabsVoiceSampleAudio;
   const fetched = await fetcher({ voiceId: input.validated.voiceId });
-  const destinationProjectRelativePath = await allocateCastVoiceSamplePath({
+  const temporaryFile = await writeProjectTemporaryFile({
     projectFolder: input.projectFolder,
-    castMemberHandle: input.validated.castMember.handle,
-    sourceProjectRelativePath: `${input.validated.name}.mp3`,
+    destination: { kind: 'generation.media', purpose: 'cast.voice-sample' },
+    fileNameHint: `${input.validated.name}.mp3`,
+    contents: fetched.audioBytes,
   });
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    destinationProjectRelativePath
-  );
-  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-  await fs.writeFile(destinationPath, fetched.audioBytes);
   const sampleRetrieval = {
     provider: 'elevenlabs' as const,
     voiceId: fetched.voiceId,
@@ -616,11 +596,9 @@ async function prepareElevenLabsVoiceSampleAttachment(input: {
     apiBaseUrl: fetched.apiBaseUrl,
   };
   return {
-    destinationProjectRelativePath,
+    sourceProjectRelativePath: temporaryFile.projectRelativePath,
     mimeType: 'audio/mpeg',
-    sizeBytes: fetched.audioBytes.length,
-    durationSeconds: await probeMediaDurationSeconds(destinationPath),
-    contentHash: hashBuffer(fetched.audioBytes),
+    durationSeconds: await probeMediaDurationSeconds(temporaryFile.absolutePath),
     origin: 'elevenlabs_sample',
     sampleSource: {
       kind: 'elevenlabs_voice_sample',
@@ -629,6 +607,7 @@ async function prepareElevenLabsVoiceSampleAttachment(input: {
       apiBaseUrl: fetched.apiBaseUrl,
     },
     sampleRetrieval,
+    temporarySource: true,
   };
 }
 
@@ -652,6 +631,9 @@ async function insertCastVoiceWithSampleAsset(input: {
   const assetFileId = ids('asset_file');
   const relationshipId = ids('cast_asset');
   const voiceId = ids('cast_voice');
+  const writeSet = createProjectAssetFileWriteSet({
+    projectFolder: input.projectFolder,
+  });
   try {
     input.session.db.transaction((tx) => {
       const txSession = { ...input.session, db: tx };
@@ -665,18 +647,24 @@ async function insertCastVoiceWithSampleAsset(input: {
         createdAt: now,
         updatedAt: now,
       });
-      insertAssetFileRecord(txSession, {
-        id: assetFileId,
+      persistProjectAssetFileSync({
+        session: txSession,
+        projectFolder: input.projectFolder,
+        writeSet,
         assetId,
-        role: 'primary',
-        projectRelativePath: input.prepared.destinationProjectRelativePath,
-        mimeType: input.prepared.mimeType,
+        assetFileId,
+        sourceProjectRelativePath: input.prepared.sourceProjectRelativePath,
+        destination: {
+          kind: 'cast.voiceSample',
+          castMemberId: input.validated.castMember.id,
+          castVoiceId: voiceId,
+          referenceName: input.validated.name,
+        },
+        fileRole: 'primary',
         mediaKind: 'audio',
-        sizeBytes: input.prepared.sizeBytes,
+        mimeType: input.prepared.mimeType,
         durationSeconds: input.prepared.durationSeconds,
-        contentHash: input.prepared.contentHash,
-        createdAt: now,
-        updatedAt: now,
+        now,
       });
       insertAssetRelationshipRecord(txSession, target, {
         relationshipId,
@@ -724,15 +712,19 @@ async function insertCastVoiceWithSampleAsset(input: {
         updatedAt: now,
       });
     });
+    commitProjectAssetFileWriteSet(writeSet);
   } catch (error) {
+    rollbackProjectAssetFileWriteSetSync(writeSet);
+    throw error;
+  }
+  if (input.prepared.temporarySource) {
     await fs.rm(
       resolveProjectRelativePath(
         input.projectFolder,
-        input.prepared.destinationProjectRelativePath as never
+        input.prepared.sourceProjectRelativePath as never
       ),
       { force: true }
     );
-    throw error;
   }
   return { voiceId, target };
 }
@@ -1054,36 +1046,6 @@ function mimeTypeForAudioPath(projectRelativePath: string): string {
   return mimeType;
 }
 
-async function allocateCastVoiceSamplePath(input: {
-  projectFolder: string;
-  castMemberHandle: string;
-  sourceProjectRelativePath: string;
-}) {
-  const parent = joinProjectRelativePath(
-    CAST_ROOT,
-    input.castMemberHandle,
-    'voice-samples'
-  );
-  const parsed = path.parse(input.sourceProjectRelativePath);
-  const base = parsed.name || 'voice-sample';
-  const extension = parsed.ext || '.mp3';
-  for (let index = 0; index < 1000; index += 1) {
-    const candidate = joinProjectRelativePath(
-      parent,
-      index === 0 ? `${base}${extension}` : `${base}-${index + 1}${extension}`
-    );
-    try {
-      await fs.access(resolveProjectRelativePath(input.projectFolder, candidate));
-    } catch {
-      return candidate;
-    }
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA348',
-    `Could not allocate a unique Cast Voice sample path for ${input.sourceProjectRelativePath}.`
-  );
-}
-
 async function statExistingFile(absolutePath: string): Promise<{ size: number }> {
   try {
     const stats = await fs.stat(absolutePath);
@@ -1112,11 +1074,6 @@ function assertResolvedPathInsideProject(
   }
 }
 
-async function hashFile(absolutePath: string): Promise<string> {
-  const buffer = await fs.readFile(absolutePath);
-  return hashBuffer(buffer);
-}
-
 async function probeMediaDurationSeconds(
   absolutePath: string
 ): Promise<number | undefined> {
@@ -1135,10 +1092,6 @@ async function probeMediaDurationSeconds(
   } catch {
     return undefined;
   }
-}
-
-function hashBuffer(buffer: Buffer): string {
-  return `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
 }
 
 async function withCastVoiceProjectSession<T>(

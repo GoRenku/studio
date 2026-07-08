@@ -13,6 +13,7 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
+import { createTestAssetFixture } from '../../../../testing/asset-fixture-helpers.js';
 
 describe('shot video take media imports', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -443,7 +444,7 @@ describe('shot video take media imports', () => {
     await shotVideoTakeProject.writeProjectFile(inputPath, 'first frame');
     await shotVideoTakeProject.writeProjectFile(outputPath, 'final video');
 
-    const inputAsset = await projectData.registerAsset({
+    const inputAsset = await createTestAssetFixture({
       homeDir,
       projectName: 'constantinople',
       target: { kind: 'scene', sceneId: ids.sceneId },
@@ -454,7 +455,7 @@ describe('shot video take media imports', () => {
       fileRole: 'primary',
       role: 'reference',
     });
-    const outputAsset = await projectData.registerAsset({
+    const outputAsset = await createTestAssetFixture({
       homeDir,
       projectName: 'constantinople',
       target: { kind: 'scene', sceneId: ids.sceneId },

@@ -7,6 +7,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 
 describe('project information resource', () => {
   let homeDir: string;
@@ -163,7 +164,7 @@ describe('project information resource', () => {
       recursive: true,
     });
     await fs.writeFile(path.join(created.projectPath, assetPath), 'image bytes');
-    await projectData.registerAsset({
+    await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'project' },

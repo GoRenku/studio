@@ -155,7 +155,6 @@ import type {
   ProductionExportInput,
   ProductionExportSummary,
   ReferenceImageMediaImportReport,
-  RegisterAssetInput,
   UpdateAssetReferenceInput,
   SceneNavigationRow,
   SequenceNavigationRow,
@@ -272,7 +271,6 @@ export interface ProjectDataService {
   resolveShotVideoTakeVideoFile(
     input: ResolveShotVideoTakeVideoFileInput
   ): Promise<ResolvedShotVideoTakeVideoFile>;
-  registerAsset(input: RegisterAssetInput & RenkuConfigPathOptions): Promise<Asset>;
   importReferenceImageMedia(input: ImportReferenceImageMediaInput): Promise<ReferenceImageMediaImportReport>;
   updateAssetReference(input: UpdateAssetReferenceInput & RenkuConfigPathOptions): Promise<Asset>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;

@@ -243,7 +243,7 @@ const allowedFields: Record<string, Set<string>> = {
   sequence: new Set(['id', 'key', 'title', 'purpose', 'scenes']),
   scene: new Set(['id', 'key', 'title', 'setting', 'storyFunction', 'blocks']),
   setting: new Set(['interiorExterior', 'timeOfDay', 'locationReferences', 'locationIds']),
-  block: new Set(['type', 'text', 'render', 'dialogueId', 'castMemberReference', 'castMemberId', 'extension', 'parenthetical', 'lines', 'castMemberReferences', 'locationReferences', 'castMemberIds', 'locationIds']),
+  block: new Set(['type', 'text', 'render', 'dialogueId', 'dialogueOrderKey', 'castMemberReference', 'castMemberId', 'extension', 'parenthetical', 'lines', 'castMemberReferences', 'locationReferences', 'castMemberIds', 'locationIds']),
   ref: new Set(['id', 'key']),
   operation: new Set(['operation', 'screenplay', 'act', 'actId', 'sequence', 'sequenceId', 'fromActId', 'toActId', 'scene', 'sceneId', 'fromSequenceId', 'toSequenceId', 'placement']),
   placement: new Set(['beforeId', 'afterId', 'position']),

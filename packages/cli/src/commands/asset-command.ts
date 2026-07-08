@@ -9,7 +9,6 @@ import {
   studioResourceKeysForAssetTarget,
   type Asset,
   type AssetTarget,
-  type ProjectRelativePath,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 import {
@@ -45,9 +44,6 @@ export async function runAssetCommand(
   options: RunAssetCommandOptions
 ): Promise<number> {
   const [subcommand, assetId] = options.input;
-  if (subcommand === 'register') {
-    return await registerAsset(options);
-  }
   if (subcommand === 'reference-update') {
     return await updateAssetReference(options, assetId);
   }
@@ -70,50 +66,16 @@ export async function runAssetCommand(
   throw new StructuredError({
     code: 'CLI040',
     message:
-      'Unknown asset command. Usage: renku asset register|reference-update|list|select|select-update|select-remove|selects ...',
+      'Unknown asset command. Usage: renku asset reference-update|list|select|select-update|select-remove|selects ...',
     issues: [
       createDiagnosticError(
         'CLI040',
         'Unknown asset command.',
         { path: ['asset'], context: 'renku CLI arguments' },
-        'Use renku asset register, reference-update, list, select, select-update, select-remove, or selects.'
+        'Use renku asset reference-update, list, select, select-update, select-remove, or selects.'
       ),
     ],
   });
-}
-
-async function registerAsset(options: RunAssetCommandOptions): Promise<number> {
-  const projectName = requiredFlag(options, 'project');
-  const target = readTarget(options);
-  const projectData = createProjectDataService();
-  const eventProject = await readAssetEventProject(
-    projectData,
-    projectName,
-    options.homeDir
-  );
-  const asset = await projectData.registerAsset({
-    projectName,
-    target,
-    locale: readLocale(options),
-    type: requiredFlag(options, 'type'),
-    mediaKind: requiredFlag(options, 'mediaKind'),
-    title: requiredFlag(options, 'title'),
-    oneLineSummary: options.flags.summary,
-    referenceName: options.flags.referenceName,
-    purpose: options.flags.referencePurpose,
-    projectRelativePath: requiredFlag(options, 'file') as ProjectRelativePath,
-    fileRole: requiredFlag(options, 'fileRole'),
-    role: requiredFlag(options, 'role'),
-    homeDir: options.homeDir,
-  });
-  const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendStudioResourceChangedEvent({
-    runtime: cliRuntime(options, projectData),
-    report: { project: eventProject, resourceKeys },
-    command: 'asset register',
-  });
-  writeAssetResult(options, asset, `Registered asset: ${asset.assetId}`, resourceKeys);
-  return 0;
 }
 
 async function updateAssetReference(

@@ -6,7 +6,6 @@ import { Hono } from 'hono';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type {
   SceneShotListDocument,
-  ProjectRelativePath,
   SceneShotVideoTakeMediaInput,
   ShotVideoTakeDependencyDraft,
   SceneShotVideoTakeProductionState,
@@ -1656,19 +1655,12 @@ async function createMatrixProjectSetup(
   if (!referenceFile) {
     throw new Error('Expected imported reference image to have a primary file.');
   }
-  const sourceVideo = await projectData.registerAsset({
-    projectName: 'constantinople',
+  const sourceVideo = await projectData.importShotVideoTake({
     homeDir,
-    target: { kind: 'scene', sceneId: ids.sceneId },
-    type: 'shot_source_video',
-    mediaKind: 'video',
-    title: 'Source video reference',
-    projectRelativePath: 'generated/media/source-video.mp4' as ProjectRelativePath,
-    fileRole: 'primary',
-    role: 'shot_source_video',
+    takeId: singleTake.takeId,
+    sourceProjectRelativePath: 'generated/media/source-video.mp4',
   });
-  const sourceVideoFile = sourceVideo.files[0];
-  if (!sourceVideoFile) {
+  if (!sourceVideo.video.assetFileId) {
     throw new Error('Expected registered source video to have a primary file.');
   }
   const context = await projectData.buildShotVideoTakeContext({
@@ -1719,10 +1711,10 @@ async function createMatrixProjectSetup(
       referenceBundle,
       sourceVideo: {
         kind: 'source-video',
-        assetId: sourceVideo.assetId,
-        assetFileId: sourceVideoFile.id,
+        assetId: sourceVideo.imported.assetId,
+        assetFileId: sourceVideo.video.assetFileId,
         subjectKind: 'asset',
-        subjectId: sourceVideo.assetId,
+        subjectId: sourceVideo.imported.assetId,
       },
     },
   };

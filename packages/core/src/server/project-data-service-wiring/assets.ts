@@ -5,7 +5,6 @@ import {
 } from '../commands/change-asset-selection.js';
 import { discardAsset } from '../commands/discard-asset.js';
 import { importReferenceImageMedia } from '../commands/import-reference-image-media.js';
-import { registerAsset } from '../commands/register-asset.js';
 import { restoreAsset } from '../commands/restore-asset.js';
 import { updateAssetReference } from '../commands/update-asset-reference.js';
 import { exportProductionAssets } from '../production-export/export-production-assets.js';
@@ -23,7 +22,6 @@ export function createAssetServiceWiring(): Pick<
   | 'listAssetPage'
   | 'resolveProjectAssetFile'
   | 'resolveProjectAssetFileById'
-  | 'registerAsset'
   | 'importReferenceImageMedia'
   | 'updateAssetReference'
   | 'listAssets'
@@ -39,7 +37,6 @@ export function createAssetServiceWiring(): Pick<
     listAssetPage,
     resolveProjectAssetFile,
     resolveProjectAssetFileById,
-    registerAsset,
     importReferenceImageMedia,
     updateAssetReference,
     listAssets,

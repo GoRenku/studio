@@ -15,6 +15,7 @@ import {
   createCommandBuiltSampleMovieProject,
   writeConfig,
 } from '../../testing/project-data-fixtures.js';
+import { createTestAssetFixture } from '../../testing/asset-fixture-helpers.js';
 import { buildPurposeCostProjection } from '../cost/cost-projection.js';
 
 describe('image.create media generation purpose', () => {
@@ -474,7 +475,7 @@ async function registerReferenceImage(
   const absolutePath = path.join(fixture.created.projectPath, projectRelativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, 'image bytes');
-  return fixture.projectData.registerAsset({
+  return createTestAssetFixture({
     projectName: 'constantinople',
     homeDir: fixture.homeDir,
     target: { kind: 'project' },

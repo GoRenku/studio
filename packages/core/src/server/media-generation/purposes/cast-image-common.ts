@@ -45,9 +45,13 @@ import {
   resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
 import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  persistProjectAssetFileSync,
   resolveProjectAssetGenerationOutput,
-  persistProjectAssetFile,
+  rollbackProjectAssetFileWriteSetSync,
   type ProjectAssetFileDestination,
+  type ProjectAssetFileWriteSet,
 } from '../../project-asset-files/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
@@ -561,34 +565,46 @@ export async function importCastImageMedia(
   return withCastProjectSession(input, async ({ session, projectFolder, project }) => {
     const castMember = requireCastMemberForContext(session, input.castMemberId);
     const now = new Date().toISOString();
-    const imported = await importCastImageFile({
-      session,
-      projectFolder,
-      castMemberId: castMember.id,
-      config,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title,
-      oneLineSummary: input.oneLineSummary,
-      idGenerator: input.idGenerator,
-      now,
-      origin: input.receipt ? 'generated' : 'imported',
-    });
     const target = { kind: 'castMember' as const, castMemberId: input.castMemberId };
-    const relationshipId = imported.nextId('cast_asset');
-    insertAssetRelationshipRecord(session, target, {
-      relationshipId,
-      assetId: imported.assetId,
-      localeId: null,
-      role: config.assetRole,
-      referenceName: input.referenceName?.trim() || null,
-      purpose: input.referencePurpose?.trim() || null,
-      sortOrder: nextAssetRelationshipSortOrder(session, {
-        target,
-        role: config.assetRole,
-        localeId: null,
-      }),
-      now,
-    });
+    const writeSet = createProjectAssetFileWriteSet({ projectFolder });
+    let imported: ReturnType<typeof importCastImageFile>;
+    try {
+      imported = session.db.transaction((tx) => {
+        const txSession = { ...session, db: tx };
+        const importedAsset = importCastImageFile({
+          session: txSession,
+          projectFolder,
+          writeSet,
+          castMemberId: castMember.id,
+          config,
+          sourceProjectRelativePath: input.sourceProjectRelativePath,
+          title: input.title,
+          oneLineSummary: input.oneLineSummary,
+          idGenerator: input.idGenerator,
+          now,
+          origin: input.receipt ? 'generated' : 'imported',
+        });
+        insertAssetRelationshipRecord(txSession, target, {
+          relationshipId: importedAsset.nextId('cast_asset'),
+          assetId: importedAsset.assetId,
+          localeId: null,
+          role: config.assetRole,
+          referenceName: input.referenceName?.trim() || null,
+          purpose: input.referencePurpose?.trim() || null,
+          sortOrder: nextAssetRelationshipSortOrder(txSession, {
+            target,
+            role: config.assetRole,
+            localeId: null,
+          }),
+          now,
+        });
+        return importedAsset;
+      });
+      commitProjectAssetFileWriteSet(writeSet);
+    } catch (error) {
+      rollbackProjectAssetFileWriteSetSync(writeSet);
+      throw error;
+    }
     const asset = readAssetRelationship(session, {
       target,
       assetId: imported.assetId,
@@ -689,9 +705,10 @@ function requireProjectRecord(session: DatabaseSession): ProjectRecord {
   return project;
 }
 
-async function importCastImageFile(input: {
+function importCastImageFile(input: {
   session: DatabaseSession;
   projectFolder: string;
+  writeSet: ProjectAssetFileWriteSet;
   castMemberId: string;
   config: CastImportPurposeConfig;
   sourceProjectRelativePath: string;
@@ -721,9 +738,10 @@ async function importCastImageFile(input: {
     createdAt: input.now,
     updatedAt: input.now,
   });
-  await persistProjectAssetFile({
+  persistProjectAssetFileSync({
     session: input.session,
     projectFolder: input.projectFolder,
+    writeSet: input.writeSet,
     assetId,
     assetFileId,
     sourceProjectRelativePath: input.sourceProjectRelativePath,

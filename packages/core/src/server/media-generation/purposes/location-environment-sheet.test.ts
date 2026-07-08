@@ -17,6 +17,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../../testing/project-data-fixtures.js';
+import { createTestAssetFixture } from '../../testing/asset-fixture-helpers.js';
 import { buildLocationEnvironmentSheetProviderPayload } from './location-environment-sheet.js';
 
 describe('Location environment sheet provider payload mapping', () => {
@@ -258,7 +259,7 @@ describe('Location environment sheet import', () => {
       path.join(fixture.created.projectPath, referencePath),
       'reference image bytes'
     );
-    const reference = await fixture.projectData.registerAsset({
+    const reference = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir: fixture.homeDir,
       target: { kind: 'location', locationId: fixture.location.id },

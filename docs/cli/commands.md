@@ -1913,50 +1913,6 @@ Behavior:
   sections the image visibly demonstrates. Do not blindly copy
   `focusSections` into `--sections`.
 
-## `renku asset register`
-
-Register a project asset.
-
-```bash
-renku asset register \
-  --project <project-name> \
-  --target <target> \
-  --type <type> \
-  --media-kind <media-kind> \
-  --role <role> \
-  --file-role <file-role> \
-  --file <project-relative-path> \
-  --title <title> \
-  --json
-```
-
-Options:
-
-- `--project`: required project name.
-- `--target`: required asset target.
-- `--type`: required asset type.
-- `--media-kind`: required media kind.
-- `--role`: required relationship role.
-- `--file-role`: required asset file role.
-- `--file`: required project-relative file path.
-- `--title`: required asset title.
-- `--summary`: optional one-line asset summary.
-- `--locale`: optional locale id.
-
-Target syntax:
-
-- `project`
-- `visual-language:<id>`
-- `cast:<id>`
-- `location:<id>`
-- `sequence:<id>`
-- `scene:<id>`
-
-Behavior:
-
-- Registers the asset and appends Studio resource-changed events for affected
-  surfaces when possible.
-
 ## `renku asset list`
 
 List assets for a target.

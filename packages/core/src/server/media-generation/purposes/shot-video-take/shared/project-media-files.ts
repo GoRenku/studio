@@ -4,7 +4,6 @@ import type {
 import {
   ProjectDataError,
 } from '../../../../project-data-error.js';
-import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -18,14 +17,6 @@ export async function statExistingFile(filePath: string): Promise<{ size: number
   } catch {
     throw new ProjectDataError('PROJECT_DATA382', `Shot video take import source file was not found: ${filePath}.`);
   }
-}
-
-
-
-export async function hashFile(filePath: string): Promise<string> {
-  const hash = crypto.createHash('sha256');
-  hash.update(await fs.readFile(filePath));
-  return hash.digest('hex');
 }
 
 

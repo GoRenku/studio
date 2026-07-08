@@ -538,7 +538,6 @@ export type {
   ProjectRelativePath,
   ProjectShell,
   ProjectShellNavigation,
-  RegisterAssetInput,
   UpdateAssetReferenceInput,
   Scene,
   SceneDesignResource,

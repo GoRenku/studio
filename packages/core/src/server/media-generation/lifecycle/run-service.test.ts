@@ -119,8 +119,15 @@ describe('media generation lifecycle run service', () => {
         policy: {
           provider: 'fal-ai',
           model: 'nano-banana-2',
+          mediaKind: 'image',
+          mode: 'text-to-image',
+          outputCount: 1,
         },
-        request: { prompt: 'Reference image' },
+        request: {
+          prompt: 'Reference image',
+          parameters: {},
+          outputNames: ['reference-image.png'],
+        },
       },
       providerPayload: { prompt: 'Reference image' },
     } as never);
@@ -142,10 +149,10 @@ describe('media generation lifecycle run service', () => {
     );
     expect(mockedRunGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
-        policy: {
+        policy: expect.objectContaining({
           provider: 'fal-ai',
           model: 'nano-banana-2',
-        },
+        }),
         outputRoot: '/project/visual-language/lookbook',
         outputProjectRelativeRoot: 'visual-language/lookbook',
         inputRoot: '/project',
@@ -167,5 +174,47 @@ describe('media generation lifecycle run service', () => {
       id: 'media_generation_run_test',
       status: 'simulated',
     });
+  });
+
+  it('rejects shared prepared generations without an output count', async () => {
+    mockedReadSpec.mockResolvedValueOnce({
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+      spec: { purpose: 'lookbook.image' },
+    } as never);
+    mockedPrepareSpec.mockResolvedValueOnce({
+      spec: {
+        id: 'spec-a',
+        purpose: 'lookbook.image',
+        spec: { purpose: 'lookbook.image' },
+      },
+      generation: {
+        policy: {
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          mediaKind: 'image',
+          mode: 'text-to-image',
+        },
+        request: {
+          prompt: 'Reference image',
+          parameters: {},
+          outputNames: ['reference-image.png'],
+        },
+      },
+      providerPayload: { prompt: 'Reference image' },
+    } as never);
+
+    await expect(
+      runMediaGenerationSpec({
+        specId: 'spec-a',
+        simulate: true,
+        approvalToken: 'token',
+      } as never)
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_GENERATION_OUTPUT_COUNT_INVALID',
+    });
+
+    expect(mockedRunGeneration).not.toHaveBeenCalled();
+    expect(mockedInsertRun).not.toHaveBeenCalled();
   });
 });

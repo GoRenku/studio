@@ -67,6 +67,10 @@ export const screenplayBlockSchema = {
       anyOf: [{ required: ['castMemberReference'] }, { required: ['castMemberId'] }],
       properties: {
         dialogueId: stringId(),
+        dialogueOrderKey: {
+          type: 'string',
+          pattern: '^[0-9]{4}$',
+        },
         type: { const: 'dialogue' },
         castMemberReference: ref(),
         castMemberId: stringId(),

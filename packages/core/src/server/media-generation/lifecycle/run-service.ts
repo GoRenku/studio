@@ -4,6 +4,7 @@ import {
 } from '../../../client/index.js';
 import type {
   MediaGenerationSpecRecord,
+  PreparedMediaGeneration,
   MediaGenerationRunReport,
 } from '../../../client/index.js';
 import {
@@ -60,7 +61,12 @@ export async function runMediaGenerationSpec(
       approveUnpricedCost: input.approveUnpricedCost,
     }),
   });
-  const outputPaths = await resolveSharedGenerationOutputPaths(input, specRecord);
+  const outputCount = requirePreparedGenerationOutputCount(prepared);
+  const outputPaths = await resolveSharedGenerationOutputPaths(
+    input,
+    specRecord,
+    outputCount
+  );
   const result = await runGeneration({
     ...prepared.generation,
     request: {
@@ -113,13 +119,10 @@ export async function readMediaGenerationRun(
 
 async function resolveSharedGenerationOutputPaths(
   input: RenkuConfigPathOptions,
-  specRecord: MediaGenerationSpecRecord
+  specRecord: MediaGenerationSpecRecord,
+  outputCount: number
 ) {
   return withMediaGenerationProjectSession(input, async ({ session, projectFolder }) => {
-    const outputCount = Number(
-      (specRecord.spec as { parameterValues?: { num_images?: unknown } })
-        .parameterValues?.num_images ?? 1
-    );
     const placement = await resolveProjectAssetGenerationOutput({
       session,
       projectFolder,
@@ -133,4 +136,21 @@ async function resolveSharedGenerationOutputPaths(
       projectFolder,
     };
   });
+}
+
+function requirePreparedGenerationOutputCount(
+  prepared: PreparedMediaGeneration
+): number {
+  const outputCount = prepared.generation.policy.outputCount;
+  if (!Number.isInteger(outputCount) || outputCount < 1) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_OUTPUT_COUNT_INVALID',
+      'Prepared media generation policy must include a positive outputCount.',
+      {
+        suggestion:
+          'Fix the owning media generation purpose prepareSpec implementation to declare its output count.',
+      }
+    );
+  }
+  return outputCount;
 }

@@ -41,7 +41,14 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
-import { persistProjectAssetFile } from '../../project-asset-files/index.js';
+import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  persistProjectAssetFileSync,
+  resolveProjectAssetGenerationOutput,
+  rollbackProjectAssetFileWriteSetSync,
+  type ProjectAssetFileWriteSet,
+} from '../../project-asset-files/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { readLookbookResource } from '../../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
@@ -63,9 +70,6 @@ import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
 } from '../dependencies/dependency-draft-specs.js';
-import {
-  LOOKBOOK_ROOT,
-} from '../../visual-language-paths.js';
 
 const PROJECT_ASPECT_RATIOS = new Set(['1:1', '3:4', '4:3', '16:9', '9:16', '21:9']);
 const OUTPUT_FORMATS = new Set(['png', 'jpeg', 'webp']);
@@ -389,6 +393,10 @@ export async function runLookbookSheetSpec(
   const outputPaths = await resolveLookbookSheetGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
+    request: {
+      ...prepared.generation.request,
+      outputNames: outputPaths.outputNames,
+    },
     mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
@@ -448,24 +456,37 @@ export async function importLookbookSheetMedia(
   return withProjectSession(input, async ({ session, projectFolder, project }) => {
     requireLookbookRecordById(session, input.lookbookId);
     const now = new Date().toISOString();
-    const imported = await importLookbookSheetFile({
-      session,
-      projectFolder,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title,
-      oneLineSummary: input.oneLineSummary,
-      idGenerator: input.idGenerator,
-      now,
-      origin: input.receipt ? 'generated' : 'imported',
-    });
-    const sheetId = imported.nextId('lookbook_sheet');
-    insertLookbookSheetRecord(session, {
-      id: sheetId,
-      lookbookId: input.lookbookId,
-      assetId: imported.assetId,
-      sortOrder: nextLookbookSheetSortOrder(session, input.lookbookId),
-      now,
-    });
+    const writeSet = createProjectAssetFileWriteSet({ projectFolder });
+    let sheetId: string;
+    try {
+      sheetId = session.db.transaction((tx) => {
+        const txSession = { ...session, db: tx };
+        const imported = importLookbookSheetFile({
+          session: txSession,
+          projectFolder,
+          writeSet,
+          sourceProjectRelativePath: input.sourceProjectRelativePath,
+          title: input.title,
+          oneLineSummary: input.oneLineSummary,
+          idGenerator: input.idGenerator,
+          now,
+          origin: input.receipt ? 'generated' : 'imported',
+        });
+        const importedSheetId = imported.nextId('lookbook_sheet');
+        insertLookbookSheetRecord(txSession, {
+          id: importedSheetId,
+          lookbookId: input.lookbookId,
+          assetId: imported.assetId,
+          sortOrder: nextLookbookSheetSortOrder(txSession, input.lookbookId),
+          now,
+        });
+        return importedSheetId;
+      });
+      commitProjectAssetFileWriteSet(writeSet);
+    } catch (error) {
+      rollbackProjectAssetFileWriteSetSync(writeSet);
+      throw error;
+    }
     const sheet = readLookbookSheet(session, sheetId);
     if (!sheet) {
       throw new ProjectDataError(
@@ -962,12 +983,28 @@ async function readProjectInformationForInput(input: LookbookSheetProjectInput) 
   );
 }
 
-export async function resolveLookbookSheetGenerationOutputPaths(input: LookbookSheetProjectInput) {
-  return withProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = LOOKBOOK_ROOT;
+export async function resolveLookbookSheetGenerationOutputPaths(
+  input: LookbookSheetProjectInput & { specId?: string }
+) {
+  return withProjectSession(input, async ({ session, projectFolder }) => {
+    const specId = input.specId ?? '';
+    const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
+    if (!specRecord) {
+      throw new ProjectDataError(
+        'PROJECT_ASSET_FILE_GENERATION_SPEC_REQUIRED',
+        'Lookbook Sheet output placement requires a media generation spec.'
+      );
+    }
+    const placement = await resolveProjectAssetGenerationOutput({
+      session,
+      projectFolder,
+      specRecord,
+      outputCount: 1,
+    });
     return {
-      absoluteRoot: path.join(projectFolder, projectRelativeRoot),
-      projectRelativeRoot,
+      absoluteRoot: placement.absoluteRoot,
+      projectRelativeRoot: placement.projectRelativeRoot,
+      outputNames: placement.outputNames,
     };
   });
 }
@@ -1022,9 +1059,10 @@ function toProjectReport(
   };
 }
 
-async function importLookbookSheetFile(input: {
+function importLookbookSheetFile(input: {
   session: DatabaseSession;
   projectFolder: string;
+  writeSet: ProjectAssetFileWriteSet;
   sourceProjectRelativePath: string;
   title?: string;
   oneLineSummary?: string;
@@ -1047,9 +1085,10 @@ async function importLookbookSheetFile(input: {
     createdAt: input.now,
     updatedAt: input.now,
   });
-  await persistProjectAssetFile({
+  persistProjectAssetFileSync({
     session: input.session,
     projectFolder: input.projectFolder,
+    writeSet: input.writeSet,
     assetId,
     assetFileId,
     sourceProjectRelativePath: input.sourceProjectRelativePath,

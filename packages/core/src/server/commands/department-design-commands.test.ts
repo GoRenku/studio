@@ -15,6 +15,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 
 describe('department design commands', () => {
   let homeDir: string;
@@ -190,7 +191,7 @@ describe('department design commands', () => {
     const castMemberId = castReport.generatedIds?.[0]?.id as string;
     const assetPath = path.join(created.projectPath, 'ada-reference.txt');
     await fs.writeFile(assetPath, 'Ada visual reference.', 'utf8');
-    await projectData.registerAsset({
+    await createTestAssetFixture({
       homeDir,
       projectName: 'blank-movie',
       target: { kind: 'castMember', castMemberId },
@@ -260,7 +261,7 @@ describe('department design commands', () => {
     const locationId = locationReport.generatedIds?.[0]?.id as string;
     const assetPath = path.join(created.projectPath, 'workshop-reference.txt');
     await fs.writeFile(assetPath, 'Workshop visual reference.', 'utf8');
-    await projectData.registerAsset({
+    await createTestAssetFixture({
       homeDir,
       projectName: 'blank-movie',
       target: { kind: 'location', locationId },

@@ -58,15 +58,17 @@ import {
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
 import {
-  LOCATIONS_ROOT,
-} from '../../files/asset-paths.js';
-import {
-  joinProjectRelativePath,
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import { persistProjectAssetFile } from '../../project-asset-files/index.js';
+import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  persistProjectAssetFileSync,
+  resolveProjectAssetGenerationOutput,
+  rollbackProjectAssetFileWriteSetSync,
+} from '../../project-asset-files/index.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
 import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
@@ -440,6 +442,10 @@ export async function runLocationEnvironmentSheetSpec(
   const outputPaths = await resolveLocationGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
+    request: {
+      ...prepared.generation.request,
+      outputNames: outputPaths.outputNames,
+    },
     mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
@@ -494,7 +500,7 @@ export async function importLocationEnvironmentSheetMedia(
   input: ImportLocationEnvironmentSheetMediaInput
 ): Promise<LocationEnvironmentSheetMediaImportReport> {
   return withLocationProjectSession(input, async ({ session, projectFolder, project }) => {
-    const location = requireLocationForContext(session, input.locationId);
+    requireLocationForContext(session, input.locationId);
     const sourceProjectRelativePath = normalizeProjectRelativePath(
       input.sourceProjectRelativePath
     );
@@ -1077,24 +1083,27 @@ function assertLocationEnvironmentSheetSpec(
 }
 
 async function resolveLocationGenerationOutputPaths(
-  input: LocationEnvironmentSheetProjectInput
+  input: LocationEnvironmentSheetProjectInput & { specId?: string }
 ) {
-  return withLocationProjectSession(input, ({ session, projectFolder }) => {
-    const specId = 'specId' in input && typeof input.specId === 'string' ? input.specId : '';
+  return withLocationProjectSession(input, async ({ session, projectFolder }) => {
+    const specId = input.specId ?? '';
     const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
-    const target = specRecord?.spec && typeof specRecord.spec === 'object'
-      ? (specRecord.spec as { target?: { id?: unknown } }).target
-      : undefined;
-    const locationId = typeof target?.id === 'string' ? target.id : '';
-    const location = locationId ? requireLocationForContext(session, locationId) : null;
-    const projectRelativeRoot = joinProjectRelativePath(
-      LOCATIONS_ROOT,
-      location?.handle ?? 'location',
-      'environment-sheets'
-    );
+    if (!specRecord) {
+      throw new ProjectDataError(
+        'PROJECT_ASSET_FILE_GENERATION_SPEC_REQUIRED',
+        'Location Environment Sheet output placement requires a media generation spec.'
+      );
+    }
+    const placement = await resolveProjectAssetGenerationOutput({
+      session,
+      projectFolder,
+      specRecord,
+      outputCount: 1,
+    });
     return {
-      absoluteRoot: path.join(projectFolder, projectRelativeRoot),
-      projectRelativeRoot,
+      absoluteRoot: placement.absoluteRoot,
+      projectRelativeRoot: placement.projectRelativeRoot,
+      outputNames: placement.outputNames,
       projectFolder,
     };
   });
@@ -1112,7 +1121,7 @@ async function validateImportSourceFile(
   }
 }
 
-async function insertImportedLocationEnvironmentSheet(input: {
+function insertImportedLocationEnvironmentSheet(input: {
   session: DatabaseSession;
   projectFolder: string;
   locationId: string;
@@ -1126,45 +1135,58 @@ async function insertImportedLocationEnvironmentSheet(input: {
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const assetId = ids('asset');
   const assetFileId = ids('asset_file');
-  insertAssetRecord(input.session, {
-    id: assetId,
-    type: 'location_environment_sheet',
-    mediaKind: 'image',
-    title: input.title?.trim() || path.parse(input.sourceProjectRelativePath).name,
-    oneLineSummary: input.description,
-    origin: input.origin,
-    availability: 'ready',
-    createdAt: input.now,
-    updatedAt: input.now,
-  });
-  await persistProjectAssetFile({
-    session: input.session,
+  const writeSet = createProjectAssetFileWriteSet({
     projectFolder: input.projectFolder,
-    assetId,
-    assetFileId,
-    sourceProjectRelativePath: input.sourceProjectRelativePath,
-    destination: {
-      kind: 'location.environmentSheet',
-      locationId: input.locationId,
-      titleHint: input.title ?? path.parse(input.sourceProjectRelativePath).name,
-    },
-    fileRole: 'primary',
-    mediaKind: 'image',
-    now: input.now,
   });
-  const target = { kind: 'location' as const, locationId: input.locationId };
-  insertAssetRelationshipRecord(input.session, target, {
-    relationshipId: ids('location_asset'),
-    assetId,
-    localeId: null,
-    role: 'environment_sheet',
-    sortOrder: nextAssetRelationshipSortOrder(input.session, {
-      target,
-      role: 'environment_sheet',
-      localeId: null,
-    }),
-    now: input.now,
-  });
+  try {
+    input.session.db.transaction((tx) => {
+      const txSession = { ...input.session, db: tx };
+      insertAssetRecord(txSession, {
+        id: assetId,
+        type: 'location_environment_sheet',
+        mediaKind: 'image',
+        title: input.title?.trim() || path.parse(input.sourceProjectRelativePath).name,
+        oneLineSummary: input.description,
+        origin: input.origin,
+        availability: 'ready',
+        createdAt: input.now,
+        updatedAt: input.now,
+      });
+      persistProjectAssetFileSync({
+        session: txSession,
+        projectFolder: input.projectFolder,
+        writeSet,
+        assetId,
+        assetFileId,
+        sourceProjectRelativePath: input.sourceProjectRelativePath,
+        destination: {
+          kind: 'location.environmentSheet',
+          locationId: input.locationId,
+          titleHint: input.title ?? path.parse(input.sourceProjectRelativePath).name,
+        },
+        fileRole: 'primary',
+        mediaKind: 'image',
+        now: input.now,
+      });
+      const target = { kind: 'location' as const, locationId: input.locationId };
+      insertAssetRelationshipRecord(txSession, target, {
+        relationshipId: ids('location_asset'),
+        assetId,
+        localeId: null,
+        role: 'environment_sheet',
+        sortOrder: nextAssetRelationshipSortOrder(txSession, {
+          target,
+          role: 'environment_sheet',
+          localeId: null,
+        }),
+        now: input.now,
+      });
+    });
+    commitProjectAssetFileWriteSet(writeSet);
+  } catch (error) {
+    rollbackProjectAssetFileWriteSetSync(writeSet);
+    throw error;
+  }
   return { assetId };
 }
 
@@ -1199,34 +1221,9 @@ function extensionForOutputFormat(format: LocationEnvironmentSheetOutputFormat):
   return format === 'jpeg' ? '.jpg' : `.${format}`;
 }
 
-function extensionForSource(filePath: string): string {
-  const extension = path.extname(filePath).toLowerCase();
-  if (extension === '.jpeg') {
-    return '.jpg';
-  }
-  if (extension === '.jpg' || extension === '.png' || extension === '.webp') {
-    return extension;
-  }
-  throw unsupportedImportImagePath(filePath);
-}
-
 function isImagePath(filePath: string): boolean {
   const extension = path.extname(filePath).toLowerCase();
   return extension === '.png' || extension === '.jpg' || extension === '.jpeg' || extension === '.webp';
-}
-
-function mimeTypeForPath(filePath: string): string {
-  const extension = path.extname(filePath).toLowerCase();
-  if (extension === '.png') {
-    return 'image/png';
-  }
-  if (extension === '.jpg' || extension === '.jpeg') {
-    return 'image/jpeg';
-  }
-  if (extension === '.webp') {
-    return 'image/webp';
-  }
-  throw unsupportedImportImagePath(filePath);
 }
 
 function unsupportedImportImagePath(filePath: string): ProjectDataError {

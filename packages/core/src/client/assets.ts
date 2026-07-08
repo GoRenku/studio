@@ -13,21 +13,6 @@ export interface AssetLocaleContext {
   localeId?: string | null;
 }
 
-export interface RegisterAssetInput {
-  projectName: string;
-  target: AssetTarget;
-  locale?: AssetLocaleContext;
-  type: string;
-  mediaKind: string;
-  title: string;
-  oneLineSummary?: string | null;
-  projectRelativePath: ProjectRelativePath;
-  fileRole: string;
-  role: string;
-  referenceName?: string | null;
-  purpose?: string | null;
-}
-
 export interface UpdateAssetReferenceInput {
   projectName: string;
   target: AssetTarget;

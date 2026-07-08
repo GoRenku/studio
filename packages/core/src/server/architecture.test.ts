@@ -701,6 +701,74 @@ describe('core server architecture', () => {
       ].join(' ')
     ).toEqual([]);
   });
+
+  it('keeps command modules away from low-level asset file accessors', async () => {
+    const files = (await listTypeScriptFiles(path.join(projectSourceRoot, 'commands')))
+      .filter((file) => !file.endsWith('.test.ts'));
+    const assetFileAccessPath = path.join(
+      projectSourceRoot,
+      'database',
+      'access',
+      'asset-files.ts'
+    );
+    const offenders: Array<{ file: string; importSource: string }> = [];
+
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      for (const importSource of extractImportSources(source)) {
+        const resolvedImportPath = await resolveImportSourcePath(file, importSource);
+        if (resolvedImportPath === assetFileAccessPath) {
+          offenders.push({
+            file: path.relative(projectSourceRoot, file),
+            importSource,
+          });
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Durable asset-file row writes belong to server/project-asset-files.',
+        'Command modules should express owner intent through the storage module instead of importing low-level asset-file accessors.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
+  it('keeps durable filesystem copy operations inside project asset file storage', async () => {
+    const roots = [
+      path.join(projectSourceRoot, 'commands'),
+      path.join(projectSourceRoot, 'media-generation'),
+    ];
+    const files = (await Promise.all(roots.map(listTypeScriptFiles)))
+      .flat()
+      .filter((file) => !file.endsWith('.test.ts'));
+    const offenders: Array<{ file: string; line: number; pattern: string }> = [];
+
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      for (const forbiddenPattern of [
+        { label: 'fs.copyFile', pattern: /\bfs\s*\.\s*copyFile\s*\(/ },
+        { label: 'copyFileSync', pattern: /\bcopyFileSync\s*\(/ },
+      ]) {
+        findPatternLines(source, forbiddenPattern.pattern).forEach((line) => {
+          offenders.push({
+            file: path.relative(projectSourceRoot, file),
+            line,
+            pattern: forbiddenPattern.label,
+          });
+        });
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Durable file copy materialization belongs in server/project-asset-files.',
+        'Purpose and command modules may validate or read source files, but should not copy durable asset bytes themselves.',
+      ].join(' ')
+    ).toEqual([]);
+  });
 });
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {

@@ -26,6 +26,7 @@ import {
 import {
   copyTakeOwnedProjectAssetFileSync,
   removeCopiedProjectAssetFileSync,
+  type ProjectAssetFileWriteSet,
 } from '../../../../project-asset-files/index.js';
 
 const TAKE_OWNED_INPUT_KINDS = new Set<ShotVideoTakeInputKind>([
@@ -60,6 +61,7 @@ export interface CopiedTakeOwnedMediaAssetFile {
 export function copyTakeOwnedMediaAssetFile(input: {
   session: DatabaseSession;
   projectFolder: string;
+  writeSet?: ProjectAssetFileWriteSet;
   sourceAssetId: string;
   sourceAssetFileId: string;
   targetTakeId: string;
@@ -116,6 +118,7 @@ export function copyTakeOwnedMediaAssetFile(input: {
   const copiedFile = copyTakeOwnedProjectAssetFileSync({
     session: input.session,
     projectFolder: input.projectFolder,
+    writeSet: input.writeSet,
     sourceAssetId: input.sourceAssetId,
     sourceAssetFileId: input.sourceAssetFileId,
     targetAssetId: assetId,

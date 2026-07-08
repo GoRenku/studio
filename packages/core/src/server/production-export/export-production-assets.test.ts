@@ -11,6 +11,7 @@ import {
   readAssetFileMetadata,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 
 describe('export production assets', () => {
   let homeDir: string;
@@ -69,7 +70,7 @@ describe('export production assets', () => {
       'WEBVTT\n\n00:00.000 --> 00:01.000\nMerhaba\n'
     );
 
-    const narration = await projectData.registerAsset({
+    const narration = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: 'scene_test0001' },
@@ -80,7 +81,7 @@ describe('export production assets', () => {
       fileRole: 'primary',
       role: 'narration',
     });
-    const sequenceVideo = await projectData.registerAsset({
+    const sequenceVideo = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'sequence', sequenceId: 'sequence_test0001' },
@@ -91,7 +92,7 @@ describe('export production assets', () => {
       fileRole: 'primary',
       role: 'video',
     });
-    const sceneTitleCard = await projectData.registerAsset({
+    const sceneTitleCard = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: 'scene_test0001' },
@@ -102,7 +103,7 @@ describe('export production assets', () => {
       fileRole: 'primary',
       role: 'title-card',
     });
-    const helperSheet = await projectData.registerAsset({
+    const helperSheet = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'castMember', castMemberId: 'cast_test0002' },
@@ -113,7 +114,7 @@ describe('export production assets', () => {
       fileRole: 'primary',
       role: 'character_sheet',
     });
-    const subtitles = await projectData.registerAsset({
+    const subtitles = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: 'scene_test0001' },
@@ -270,7 +271,7 @@ describe('export production assets', () => {
     });
     await fs.writeFile(path.join(created.projectPath, narrationPath), 'audio bytes');
 
-    const narration = await projectData.registerAsset({
+    const narration = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: 'scene_test0001' },

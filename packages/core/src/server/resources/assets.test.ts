@@ -10,6 +10,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 
 describe('asset resources', () => {
   let homeDir: string;
@@ -33,7 +34,7 @@ describe('asset resources', () => {
     });
     await fs.writeFile(path.join(created.projectPath, assetPath), 'audio bytes');
 
-    const registered = await projectData.registerAsset({
+    const registered = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'scene', sceneId: 'scene_test0001' },

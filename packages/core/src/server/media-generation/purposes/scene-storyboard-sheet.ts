@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
@@ -20,7 +19,6 @@ import type {
 import {
   SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
 } from '../../../client/index.js';
-import { insertAssetFileRecord } from '../../database/access/asset-files.js';
 import { insertAssetRecord } from '../../database/access/assets.js';
 import {
   insertAssetRelationshipRecord,
@@ -59,14 +57,18 @@ import {
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
 import {
-  allocateStoryboardIterationFolder,
   storyboardTemporarySheetRoot,
 } from '../../files/asset-paths.js';
 import {
-  joinProjectRelativePath,
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
+import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  persistSceneStoryboardShotFilesSync,
+  rollbackProjectAssetFileWriteSetSync,
+} from '../../project-asset-files/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
 import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
@@ -522,25 +524,13 @@ export async function importSceneStoryboardImagesMedia(
       normalized.shots.map((shot) => shot.source)
     );
     const now = new Date().toISOString();
-    const hierarchy = requireSceneHierarchy(screenplay, input.sceneId);
-    const destinationFolder = await allocateSceneStoryboardFolder({
-      projectFolder,
-      sequenceTitle: hierarchy.sequence.title ?? hierarchy.sequence.id ?? 'sequence',
-      sceneTitle: hierarchy.scene.title ?? hierarchy.scene.id ?? 'scene',
-    });
-    const copied = await copySceneStoryboardImageFiles({
-      projectFolder,
-      document: normalized,
-      destinationFolder,
-      shotList,
-    });
     const imported = await insertImportedSceneStoryboardImages({
       session,
+      projectFolder,
       sceneId: input.sceneId,
       shotListId: input.shotListId,
-      destinationFolder,
       shotList,
-      files: copied,
+      document: normalized,
       title: input.title ?? normalized.title,
       origin: inferImportOrigin(normalized.shots.map((shot) => shot.source)),
       idGenerator: input.idGenerator,
@@ -566,9 +556,9 @@ export async function importSceneStoryboardImagesMedia(
       shotListId: input.shotListId,
       storyboardImageIds: imported.storyboardImageIds,
       imported: imported.assets,
-      files: copied.map((file) => ({
-        role: file.role,
-        ...(file.shotId ? { shotId: file.shotId } : {}),
+      files: imported.files.map((file) => ({
+        role: 'storyboard_image',
+        shotId: file.shotId,
         projectRelativePath: file.projectRelativePath,
       })),
       resourceKeys: sceneShotListResourceKeys({
@@ -1404,101 +1394,33 @@ async function validateImportSourceFiles(
   }
 }
 
-async function copySceneStoryboardImageFiles(input: {
-  projectFolder: string;
-  document: ReturnType<typeof normalizeImportDocument>;
-  destinationFolder: ProjectRelativePath;
-  shotList: ReturnType<typeof readSceneShotListDocument>;
-}): Promise<
-  Array<{
-    role: 'storyboard_image';
-    shotId?: string;
-    projectRelativePath: ProjectRelativePath;
-    mimeType: string;
-    sizeBytes: number;
-    contentHash: string;
-  }>
-> {
-  const copied = [];
-  const shotPositions = new Map(
-    input.shotList.shots.map((shot, index) => [shot.shotId, index + 1])
-  );
-  for (const shot of input.document.shots) {
-    const position = shotPositions.get(shot.shotId);
-    if (!position) {
-      throw new ProjectDataError(
-        'PROJECT_DATA337',
-        `Storyboard image import is missing a shot-list position for shot id: ${shot.shotId}.`
-      );
-    }
-    copied.push(
-      await copyStoryboardFile({
-        projectFolder: input.projectFolder,
-        source: shot.source,
-        destination: joinProjectRelativePath(
-          input.destinationFolder,
-          `shot-${String(position).padStart(2, '0')}${extensionForSource(shot.source)}`
-        ),
-        role: 'storyboard_image',
-        shotId: shot.shotId,
-      })
-    );
-  }
-  return copied;
-}
-
-async function copyStoryboardFile(input: {
-  projectFolder: string;
-  source: ProjectRelativePath;
-  destination: ProjectRelativePath;
-  role: 'storyboard_image';
-  shotId?: string;
-}) {
-  const sourcePath = resolveProjectRelativePath(input.projectFolder, input.source);
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    input.destination
-  );
-  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
-  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-  if (sourcePath !== destinationPath) {
-    await fs.copyFile(sourcePath, destinationPath);
-  }
-  const stats = await statExistingFile(destinationPath);
-  return {
-    role: input.role,
-    ...(input.shotId ? { shotId: input.shotId } : {}),
-    projectRelativePath: input.destination,
-    mimeType: mimeTypeForPath(input.destination),
-    sizeBytes: stats.size,
-    contentHash: await hashFile(destinationPath),
-  };
-}
-
 async function insertImportedSceneStoryboardImages(input: {
   session: DatabaseSession;
+  projectFolder: string;
   sceneId: string;
   shotListId: string;
-  destinationFolder: ProjectRelativePath;
   shotList: ReturnType<typeof readSceneShotListDocument>;
-  files: Awaited<ReturnType<typeof copySceneStoryboardImageFiles>>;
+  document: ReturnType<typeof normalizeImportDocument>;
   title?: string;
   origin: string;
   idGenerator?: ProjectIdGenerator;
   now: string;
-}): Promise<{ storyboardImageIds: string[]; assets: Asset[] }> {
+}): Promise<{
+  storyboardImageIds: string[];
+  assets: Asset[];
+  files: Array<{ shotId: string; projectRelativePath: ProjectRelativePath }>;
+}> {
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const storyboardImageIds: string[] = [];
   const assets: Asset[] = [];
-  input.session.db.transaction((tx) => {
+  const files: Array<{ shotId: string; projectRelativePath: ProjectRelativePath }> = [];
+  const writeSet = createProjectAssetFileWriteSet({
+    projectFolder: input.projectFolder,
+  });
+  try {
+    input.session.db.transaction((tx) => {
     const txSession = { ...input.session, db: tx };
-    for (const file of input.files) {
-      if (!file.shotId) {
-        throw new ProjectDataError(
-          'PROJECT_DATA340',
-          'Storyboard image file is missing its shot id.'
-        );
-      }
+    const pending = input.document.shots.map((file) => {
       const shot = input.shotList.shots.find(
         (candidate) => candidate.shotId === file.shotId
       );
@@ -1510,9 +1432,7 @@ async function insertImportedSceneStoryboardImages(input: {
       }
       const assetId = ids('asset');
       const assetFileId = ids('asset_file');
-      const relationshipId = ids('scene_asset');
-      const title =
-        input.title?.trim() || shot.title || path.basename(file.projectRelativePath);
+      const title = input.title?.trim() || shot.title || 'Storyboard image';
       insertAssetRecord(txSession, {
         id: assetId,
         type: 'scene_storyboard_image',
@@ -1523,27 +1443,55 @@ async function insertImportedSceneStoryboardImages(input: {
         createdAt: input.now,
         updatedAt: input.now,
       });
-      insertAssetFileRecord(txSession, {
-        id: assetFileId,
+      return {
+        shot,
+        title,
         assetId,
-        role: 'storyboard_image',
-        projectRelativePath: file.projectRelativePath,
-        mediaKind: 'image',
-        mimeType: file.mimeType,
-        sizeBytes: file.sizeBytes,
-        contentHash: file.contentHash,
-        createdAt: input.now,
-        updatedAt: input.now,
-      });
+        assetFileId,
+        relationshipId: ids('scene_asset'),
+        storyboardImageId: ids('scene_shot_storyboard_image'),
+        sourceProjectRelativePath: file.source,
+        shotOrdinal: input.shotList.shots.findIndex(
+          (candidate) => candidate.shotId === file.shotId
+        ) + 1,
+      };
+    });
+    const persisted = persistSceneStoryboardShotFilesSync({
+      session: txSession,
+      projectFolder: input.projectFolder,
+      writeSet,
+      sceneId: input.sceneId,
+      files: pending.map((file) => ({
+        assetId: file.assetId,
+        assetFileId: file.assetFileId,
+        shotId: file.shot.shotId,
+        shotOrdinal: file.shotOrdinal,
+        sourceProjectRelativePath: file.sourceProjectRelativePath,
+      })),
+      now: input.now,
+    });
+    const persistedByShotId = new Map(
+      persisted.map((file) => [file.shotId, file.assetFile])
+    );
+    for (const pendingFile of pending) {
+      const assetFile = persistedByShotId.get(pendingFile.shot.shotId);
+      if (!assetFile) {
+        throw new ProjectDataError(
+          'PROJECT_ASSET_FILE_INSERT_FAILED',
+          `Storyboard image asset file was not inserted: ${pendingFile.assetFileId}.`
+        );
+      }
+      const title =
+        pendingFile.title || path.basename(assetFile.projectRelativePath);
       const storyboardImage = insertSceneShotStoryboardImageRecord(txSession, {
-        id: ids('scene_shot_storyboard_image'),
+        id: pendingFile.storyboardImageId,
         sceneId: input.sceneId,
         shotListId: input.shotListId,
-        assetId,
-        shotId: file.shotId,
-        assetFileId,
+        assetId: pendingFile.assetId,
+        shotId: pendingFile.shot.shotId,
+        assetFileId: pendingFile.assetFileId,
         sourcePurpose: SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
-        shotContentFingerprint: shotContentFingerprint(shot),
+        shotContentFingerprint: shotContentFingerprint(pendingFile.shot),
         now: input.now,
       });
       storyboardImageIds.push(storyboardImage.id);
@@ -1554,16 +1502,16 @@ async function insertImportedSceneStoryboardImages(input: {
         localeId: null,
       });
       insertAssetRelationshipRecord(txSession, target, {
-        relationshipId,
-        assetId,
+        relationshipId: pendingFile.relationshipId,
+        assetId: pendingFile.assetId,
         localeId: null,
         role: 'storyboard_image',
         sortOrder,
         now: input.now,
       });
       assets.push({
-        assetId,
-        relationshipId,
+        assetId: pendingFile.assetId,
+        relationshipId: pendingFile.relationshipId,
         target,
         localeId: null,
         type: 'scene_storyboard_image',
@@ -1579,13 +1527,13 @@ async function insertImportedSceneStoryboardImages(input: {
         sortOrder,
         files: [
           {
-            id: assetFileId,
+            id: pendingFile.assetFileId,
             role: 'storyboard_image',
-            projectRelativePath: file.projectRelativePath,
+            projectRelativePath: assetFile.projectRelativePath as ProjectRelativePath,
             mediaKind: 'image',
-            mimeType: file.mimeType,
-            sizeBytes: file.sizeBytes,
-            contentHash: file.contentHash,
+            mimeType: assetFile.mimeType,
+            sizeBytes: assetFile.sizeBytes,
+            contentHash: assetFile.contentHash,
             width: null,
             height: null,
             durationSeconds: null,
@@ -1594,17 +1542,18 @@ async function insertImportedSceneStoryboardImages(input: {
         createdAt: input.now,
         updatedAt: input.now,
       });
+      files.push({
+        shotId: pendingFile.shot.shotId,
+        projectRelativePath: assetFile.projectRelativePath as ProjectRelativePath,
+      });
     }
-  });
-  return { storyboardImageIds, assets };
-}
-
-async function allocateSceneStoryboardFolder(input: {
-  projectFolder: string;
-  sequenceTitle: string;
-  sceneTitle: string;
-}): Promise<ProjectRelativePath> {
-  return allocateStoryboardIterationFolder(input);
+    });
+    commitProjectAssetFileWriteSet(writeSet);
+  } catch (error) {
+    rollbackProjectAssetFileWriteSetSync(writeSet);
+    throw error;
+  }
+  return { storyboardImageIds, assets, files };
 }
 
 function titleForSpec(
@@ -1620,26 +1569,10 @@ function extensionForOutputFormat(
   return outputFormat === 'jpeg' ? '.jpg' : `.${outputFormat}`;
 }
 
-function extensionForSource(source: ProjectRelativePath): string {
-  const extension = path.extname(source).toLowerCase();
-  return extension || '.png';
-}
-
 function isImagePath(filePath: ProjectRelativePath): boolean {
   return ['.png', '.jpg', '.jpeg', '.webp'].includes(
     path.extname(filePath).toLowerCase()
   );
-}
-
-function mimeTypeForPath(filePath: ProjectRelativePath): string {
-  const extension = path.extname(filePath).toLowerCase();
-  if (extension === '.jpg' || extension === '.jpeg') {
-    return 'image/jpeg';
-  }
-  if (extension === '.webp') {
-    return 'image/webp';
-  }
-  return 'image/png';
 }
 
 async function statExistingFile(filePath: string): Promise<{
@@ -1658,12 +1591,6 @@ async function statExistingFile(filePath: string): Promise<{
       `Storyboard sheet import source file was not found: ${filePath}.`
     );
   }
-}
-
-async function hashFile(filePath: string): Promise<string> {
-  const hash = crypto.createHash('sha256');
-  hash.update(await fs.readFile(filePath));
-  return hash.digest('hex');
 }
 
 function assertResolvedPathInsideProject(

@@ -15,7 +15,6 @@ export type {
   AssetSelection,
   AssetTarget,
   ReferenceImageMediaImportReport,
-  RegisterAssetInput,
   UpdateAssetReferenceInput,
 } from './assets.js';
 export type {

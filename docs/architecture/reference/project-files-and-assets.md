@@ -107,12 +107,25 @@ it into the relevant owner folder and registers that destination path.
 Durable asset-file persistence is centralized in
 `packages/core/src/server/project-asset-files/`. Runtime callers should pass a
 source project-relative path and an owner-aware destination such as a Cast
-Character Sheet, Location Hero, Lookbook Sheet, Scene Storyboard Shot, Shot
-Video Take media file, Scene Dialogue Audio take, or Image Edit output. Callers
-must not precompute durable destination folders or insert `asset_file` rows for
-new durable media directly. Temporary project files use the module's temporary
-destination contract and never become SQLite asset files unless a domain import
-command later materializes them into an owner folder.
+Character Sheet, Cast Voice Sample, Location Environment Sheet, Location Hero,
+Lookbook Image, Lookbook Sheet, Shot Video Take media file, Scene Dialogue
+Audio take, or Image Edit output. Scene Storyboard imports use a batch
+storage API so one import writes one shared iteration folder for all imported
+shot files. Callers must not precompute durable destination folders or insert
+`asset_file` rows for new durable media directly. Temporary project files use
+the module's temporary destination contract and never become SQLite asset files
+unless a domain import command later materializes them into an owner folder.
+
+Scene-owned Dialogue Audio paths use:
+
+```text
+audio/<sequence-name>/<scene-name>/<dialogue-order-key>-<character-name>-<take-number>.<ext>
+```
+
+The dialogue order key is persisted on the screenplay dialogue block and is not
+recomputed from the current array index. Shot Video Take-owned copies of
+dialogue audio use the take-owned `shots/<sequence>/<scene>/<take-folder>/`
+hierarchy only after a take workflow materializes the audio as take media.
 
 ## Working Assets Versus Production Assets
 

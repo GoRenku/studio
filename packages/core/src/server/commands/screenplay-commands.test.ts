@@ -310,6 +310,58 @@ describe('screenplay JSON commands', () => {
     });
   });
 
+  it('preserves dialogue order keys during scene revisions', async () => {
+    await createBlankProject();
+    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
+
+    const current = await projectData.readScreenplay({ homeDir });
+    const scene = current.screenplay?.acts[0]?.sequences[0]?.scenes[0];
+    const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
+    if (!scene?.id || dialogue?.type !== 'dialogue' || !dialogue.dialogueOrderKey) {
+      throw new Error('Expected a seeded dialogue block with a dialogue order key.');
+    }
+
+    const reviseReport = await projectData.reviseScreenplayScene({
+      homeDir,
+      sceneId: scene.id,
+      document: {
+        kind: 'screenplaySceneRevision',
+        scene: {
+          ...scene,
+          blocks: [
+            ...scene.blocks,
+            {
+              type: 'action',
+              text: 'The metal answers with a low groan.',
+            },
+          ],
+        },
+      },
+    });
+
+    expect(reviseReport.warnings).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'PROJECT_DATA214',
+          location: expect.objectContaining({
+            path: expect.arrayContaining(['dialogueOrderKey']),
+          }),
+        }),
+      ])
+    );
+
+    const revised = await projectData.readScreenplay({ homeDir });
+    const revisedDialogue =
+      revised.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.blocks.find(
+        (block) => block.type === 'dialogue'
+      );
+    expect(revisedDialogue).toMatchObject({
+      type: 'dialogue',
+      dialogueOrderKey: dialogue.dialogueOrderKey,
+    });
+  });
+
   it('honors placement and warns when duplicate relationship refs are normalized', async () => {
     await createBlankProject();
     await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });

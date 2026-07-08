@@ -7,6 +7,7 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../testing/shot-video-take-fixtures.js';
+import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 import {
   buildGenerationPreviewSubject,
   resolveGenerationPreviewReferenceFiles,
@@ -150,7 +151,7 @@ async function registerPreviewAsset(input: {
     input.projectRelativePath as ProjectRelativePath;
 
   await input.project.writeProjectFile(input.projectRelativePath, input.mediaKind);
-  return input.project.projectData.registerAsset({
+  return createTestAssetFixture({
     homeDir: input.project.homeDir,
     projectName: 'constantinople',
     target: { kind: 'project' },

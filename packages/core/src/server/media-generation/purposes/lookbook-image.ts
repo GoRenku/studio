@@ -42,7 +42,14 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
-import { persistProjectAssetFile } from '../../project-asset-files/index.js';
+import {
+  commitProjectAssetFileWriteSet,
+  createProjectAssetFileWriteSet,
+  persistProjectAssetFileSync,
+  resolveProjectAssetGenerationOutput,
+  rollbackProjectAssetFileWriteSetSync,
+  type ProjectAssetFileWriteSet,
+} from '../../project-asset-files/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { readLookbookResource } from '../../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
@@ -68,9 +75,6 @@ import {
 import {
   assertLookbookSectionsForType,
 } from '../../visual-language-json/validator.js';
-import {
-  LOOKBOOK_ROOT,
-} from '../../visual-language-paths.js';
 
 const PROJECT_ASPECT_RATIOS = new Set(['1:1', '3:4', '4:3', '16:9', '9:16', '21:9']);
 const OUTPUT_FORMATS = new Set(['png', 'jpeg', 'webp']);
@@ -353,6 +357,10 @@ export async function runLookbookImageSpec(
   const outputPaths = await resolveLookbookImageGenerationOutputPaths(input);
   const result = await runGeneration({
     ...prepared.generation,
+    request: {
+      ...prepared.generation.request,
+      outputNames: outputPaths.outputNames,
+    },
     mode,
     outputRoot: outputPaths.absoluteRoot,
     outputProjectRelativeRoot: outputPaths.projectRelativeRoot,
@@ -421,36 +429,49 @@ export async function importLookbookImageMedia(
       lookbookId: input.lookbookId,
       placements,
     });
-    const imported = await importLookbookImageFile({
-      session,
-      projectFolder,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title,
-      oneLineSummary: input.oneLineSummary,
-      idGenerator: input.idGenerator,
-      now,
-      origin: input.receipt ? 'generated' : 'imported',
-    });
-    const imageId = imported.nextId('lookbook_image');
-    insertLookbookImageRecord(session, {
-      id: imageId,
-      lookbookId: input.lookbookId,
-      assetId: imported.assetId,
-      sortOrder: nextLookbookImageSortOrder(session, input.lookbookId),
-      now,
-    });
-    replaceSingleLookbookImagePlacementSlots(session, {
-      lookbookId: input.lookbookId,
-      imageId,
-      placements,
-      now,
-    });
-    setLookbookImageSectionRecords(session, {
-      imageId,
-      placements,
-      nextId: () => imported.nextId('lookbook_image_section'),
-      now,
-    });
+    const writeSet = createProjectAssetFileWriteSet({ projectFolder });
+    let imageId: string;
+    try {
+      imageId = session.db.transaction((tx) => {
+        const txSession = { ...session, db: tx };
+        const imported = importLookbookImageFile({
+          session: txSession,
+          projectFolder,
+          writeSet,
+          sourceProjectRelativePath: input.sourceProjectRelativePath,
+          title: input.title,
+          oneLineSummary: input.oneLineSummary,
+          idGenerator: input.idGenerator,
+          now,
+          origin: input.receipt ? 'generated' : 'imported',
+        });
+        const importedImageId = imported.nextId('lookbook_image');
+        insertLookbookImageRecord(txSession, {
+          id: importedImageId,
+          lookbookId: input.lookbookId,
+          assetId: imported.assetId,
+          sortOrder: nextLookbookImageSortOrder(txSession, input.lookbookId),
+          now,
+        });
+        replaceSingleLookbookImagePlacementSlots(txSession, {
+          lookbookId: input.lookbookId,
+          imageId: importedImageId,
+          placements,
+          now,
+        });
+        setLookbookImageSectionRecords(txSession, {
+          imageId: importedImageId,
+          placements,
+          nextId: () => imported.nextId('lookbook_image_section'),
+          now,
+        });
+        return importedImageId;
+      });
+      commitProjectAssetFileWriteSet(writeSet);
+    } catch (error) {
+      rollbackProjectAssetFileWriteSetSync(writeSet);
+      throw error;
+    }
     const image = readLookbookImage(session, imageId);
     if (!image) {
       throw new ProjectDataError(
@@ -994,12 +1015,28 @@ async function readProjectInformationForInput(input: LookbookImageProjectInput) 
   );
 }
 
-export async function resolveLookbookImageGenerationOutputPaths(input: LookbookImageProjectInput) {
-  return withProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = LOOKBOOK_ROOT;
+export async function resolveLookbookImageGenerationOutputPaths(
+  input: LookbookImageProjectInput & { specId?: string }
+) {
+  return withProjectSession(input, async ({ session, projectFolder }) => {
+    const specId = input.specId ?? '';
+    const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
+    if (!specRecord) {
+      throw new ProjectDataError(
+        'PROJECT_ASSET_FILE_GENERATION_SPEC_REQUIRED',
+        'Lookbook Image output placement requires a media generation spec.'
+      );
+    }
+    const placement = await resolveProjectAssetGenerationOutput({
+      session,
+      projectFolder,
+      specRecord,
+      outputCount: 1,
+    });
     return {
-      absoluteRoot: path.join(projectFolder, projectRelativeRoot),
-      projectRelativeRoot,
+      absoluteRoot: placement.absoluteRoot,
+      projectRelativeRoot: placement.projectRelativeRoot,
+      outputNames: placement.outputNames,
     };
   });
 }
@@ -1054,9 +1091,10 @@ function toProjectReport(
   };
 }
 
-async function importLookbookImageFile(input: {
+function importLookbookImageFile(input: {
   session: DatabaseSession;
   projectFolder: string;
+  writeSet: ProjectAssetFileWriteSet;
   sourceProjectRelativePath: string;
   title?: string;
   oneLineSummary?: string;
@@ -1079,9 +1117,10 @@ async function importLookbookImageFile(input: {
     createdAt: input.now,
     updatedAt: input.now,
   });
-  await persistProjectAssetFile({
+  persistProjectAssetFileSync({
     session: input.session,
     projectFolder: input.projectFolder,
+    writeSet: input.writeSet,
     assetId,
     assetFileId,
     sourceProjectRelativePath: input.sourceProjectRelativePath,

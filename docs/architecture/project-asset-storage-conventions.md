@@ -136,6 +136,23 @@ Temporary generated storyboard sheets live beside the scene's storyboard work:
 storyboards/<sequence-name>/<scene-name>/tmp/<sheet-slug>.<ext>
 ```
 
+Scene-owned Dialogue Audio stays under a short `audio/` root:
+
+```text
+audio/<sequence-name>/<scene-name>/<dialogue-order-key>-<character-name>-<take-number>.<ext>
+```
+
+Dialogue order keys are stable four-digit values assigned to screenplay
+dialogue blocks, normally spaced as `0100`, `0200`, and `0300`. Insertions use
+midpoint values such as `0050` or `0150` when possible. Existing dialogue order
+keys must not be recomputed merely because dialogue text, speaker, setup,
+generation, insertion, or deletion changes the current scene array position.
+
+The take number is the next unused zero-based two-digit suffix for that
+dialogue filename prefix. Scene-owned Dialogue Audio must not be stored under
+`storyboards/`, and it moves under a Shot Video Take folder only after a take
+workflow materializes it as take-owned media.
+
 Shot Video Take-owned media lives under:
 
 ```text
@@ -234,15 +251,19 @@ the durable filesystem folder themselves.
 - validation that durable asset files are not registered under `research/`;
 - take-owned media copy behavior;
 - storyboard iteration allocation.
+- write-set cleanup for copied files when a later database relationship or
+  selection write fails.
 
 Purpose modules remain responsible for product semantics such as creating the
 `asset` row, attaching the asset to a Cast Member, Location, Lookbook, Scene,
 Shot, or Take, and changing selection state. The project asset-file module owns
 the durable file destination and the `asset_file.project_relative_path` write.
 Its durable destination contract is owner-aware, for example
-`cast.characterSheet`, `location.hero`, `scene.storyboardShot`, or
-`shotVideoTake.media`; it must not accept arbitrary caller-provided destination
-folders.
+`cast.characterSheet`, `cast.voiceSample`, `location.hero`,
+`visualLanguage.lookbookSheet`, `scene.dialogueAudio`, `shotVideoTake.media`,
+or `image.editOutput`. Scene Storyboard imports use a batch storage API so all
+shots in one import share one iteration folder. The module must not accept
+arbitrary caller-provided destination folders.
 
 Temporary files use a separate explicit contract and must not create
 `asset_file` rows. `research/` files may be source/reference inputs, but the
