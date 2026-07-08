@@ -29,6 +29,9 @@ import {
   copyTakeOwnedMediaAssetFile,
   isShotVideoTakeOwnedMediaAsset,
 } from './take-owned-media.js';
+import {
+  resolveShotVideoTakeFolder,
+} from '../shared/take-media-paths.js';
 
 interface ActiveTakeOwnedInputRow extends ActiveShotVideoTakeInputAssetRecord {
   inputKind: ShotVideoTakeInputKind;
@@ -47,12 +50,21 @@ export async function repairShotVideoTakeOwnedMedia(
     const repairedInputs: ShotVideoTakeOwnedMediaRepairReport['repairedInputs'] = [];
 
     for (const row of inputRowsToRepair(rows)) {
+        const targetTake = requireSceneShotVideoTake(session, {
+          takeId: row.takeId,
+          screenplay,
+        });
         const copied = copyTakeOwnedMediaAssetFile({
           session,
           projectFolder,
           sourceAssetId: row.assetId,
           sourceAssetFileId: row.assetFileId,
           targetTakeId: row.takeId,
+          targetTakeFolder: resolveShotVideoTakeFolder({
+            session,
+            screenplay,
+            take: targetTake,
+          }),
           inputKind: row.inputKind,
           allowDiscardedSource:
             Boolean(row.assetDiscardedAt) || Boolean(row.assetFileDiscardedAt),
@@ -65,21 +77,17 @@ export async function repairShotVideoTakeOwnedMedia(
           assetFileId: copied.assetFileId,
           now,
         });
-        const take = requireSceneShotVideoTake(session, {
-          takeId: row.takeId,
-          screenplay,
-        });
         const preparedInputs = repairedPreparedInputs({
-          preparedInputs: take.state.production.preparedInputs,
+          preparedInputs: targetTake.state.production.preparedInputs,
           row,
           assetId: copied.assetId,
           assetFileId: copied.assetFileId,
         });
-        if (preparedInputs !== take.state.production.preparedInputs) {
+        if (preparedInputs !== targetTake.state.production.preparedInputs) {
           updateSceneShotVideoTakeProductionRecord(session, {
             takeId: row.takeId,
             production: {
-              ...take.state.production,
+              ...targetTake.state.production,
               preparedInputs,
             },
             screenplay,

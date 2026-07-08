@@ -132,7 +132,7 @@ Project file paths for take-owned media are governed by
 `project-asset-storage-conventions.md`. The current path shape is:
 
 ```text
-shots/<sequence-slug>/<scene-slug>/<take-slug>-<take-number>/
+shots/<sequence-name>/<scene-name>/<take-name>-<nn>/
 ```
 
 Older references to `generated/media/scene-shot-video-takes/<take-id>/` are

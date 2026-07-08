@@ -77,7 +77,7 @@ describe('Scene Dialogue Audio generation', () => {
     expect(audio?.takes[0]?.assetFileId).toEqual(expect.any(String));
     await expect(
       fs.readdir(
-        path.join(projectPath, 'generated/media/scene-dialogue-audio'),
+        path.join(projectPath, 'scene-dialogue-audio'),
       ),
     ).resolves.toHaveLength(1);
   });
@@ -115,7 +115,7 @@ describe('Scene Dialogue Audio generation', () => {
     const audio = secondReport.context.audioByDialogueId[dialogueId];
     expect(audio?.takes).toHaveLength(2);
     const generatedFiles = await fs.readdir(
-      path.join(projectPath, 'generated/media/scene-dialogue-audio'),
+      path.join(projectPath, 'scene-dialogue-audio'),
     );
     expect(generatedFiles).toHaveLength(2);
     expect(new Set(generatedFiles).size).toBe(2);

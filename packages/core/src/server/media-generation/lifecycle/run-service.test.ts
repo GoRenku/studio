@@ -146,8 +146,8 @@ describe('media generation lifecycle run service', () => {
           provider: 'fal-ai',
           model: 'nano-banana-2',
         },
-        outputRoot: '/project/generated/media',
-        outputProjectRelativeRoot: 'generated/media',
+        outputRoot: '/project/visual-language/lookbook',
+        outputProjectRelativeRoot: 'visual-language/lookbook',
         inputRoot: '/project',
       })
     );

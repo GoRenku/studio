@@ -1004,7 +1004,7 @@ async function readProjectInformationForInput(input: LookbookImageProjectInput) 
 
 export async function resolveLookbookImageGenerationOutputPaths(input: LookbookImageProjectInput) {
   return withProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = 'generated/media';
+    const projectRelativeRoot = LOOKBOOK_ROOT;
     return {
       absoluteRoot: path.join(projectFolder, projectRelativeRoot),
       projectRelativeRoot,

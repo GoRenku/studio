@@ -1719,7 +1719,7 @@ Location Environment Sheet import:
 renku media import \
   --purpose location.environment-sheet \
   --target location:<location-id> \
-  --source generated/media/sea-walls-sheet.png \
+  --source tmp/media/sea-walls-sheet.png \
   --title <title> \
   --summary <one-line-summary> \
   --receipt <generation-run-json> \
@@ -1732,7 +1732,7 @@ Location Hero Image import:
 renku media import \
   --purpose location.hero \
   --target location:<location-id> \
-  --source generated/media/sea-walls-hero.png \
+  --source tmp/media/sea-walls-hero.png \
   --source-sheet <location-sheet-asset-id> \
   --title <title> \
   --summary <one-line-summary> \
@@ -1822,13 +1822,13 @@ storyboard sheet. It does not include the composite sheet file:
   "shots": [
     {
       "shotId": "shot_001",
-      "source": "generated/media/storyboards/control-room-shot-001.png",
+      "source": "tmp/media/storyboards/control-room-shot-001.png",
       "title": "Shot 1",
       "sourcePurpose": "scene.storyboard-sheet"
     },
     {
       "shotId": "shot_002",
-      "source": "generated/media/storyboards/control-room-shot-002.png"
+      "source": "tmp/media/storyboards/control-room-shot-002.png"
     }
   ]
 }
@@ -1887,15 +1887,15 @@ Behavior:
 - For Lookbook Sheets, import registers a Lookbook sheet asset, stores it under
   `visual-language/lookbook/`, and appends Studio resource refresh events.
 - For Location Sheets, import registers one image asset, copies one `primary`
-  image file under `locations/<handle>/environment-sheets/<sheet-slug>/`, and
+  image file under `locations/<handle>/environment-sheets/` as a flat file, and
   stores the required summary as the asset description shown in Studio.
 - For Location Hero Images, import registers one `location_hero` image asset,
-  copies one `primary` image file under `locations/<handle>/heroes/<hero-slug>/`,
+  copies one `primary` image file under `locations/<handle>/heroes/`,
   validates the `--source-sheet` Location Sheet when supplied, and selects the
   newest hero image for overview/detail display.
 - For Scene Storyboard Sheets, import registers one `scene_storyboard_image`
   asset per shot, copies only cropped shot images under
-  `screenplay/storyboards/<scene-label>/<import-title>/`, attaches each image to
+  `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`, attaches each image to
   the Scene with role `storyboard_image`, and writes direct
   `scene_shot_storyboard_image` rows keyed by scene, shot list, and shot id. The
   temporary composite sheet is not copied into the project asset graph.
@@ -1904,7 +1904,7 @@ Behavior:
   where the previous selected prepared input should be removed rather than kept
   as an alternative.
 - Files created outside Renku must be staged under the project first, usually
-  below `generated/media/`, then imported with the normal project-relative
+  below `tmp/media/`, then imported with the normal project-relative
   `--source` path. Omit `--receipt` for non-Renku generation sources.
 - `studio notify-refresh` appends only a Studio resource refresh notification.
   It is not a project-data mutation and should not be used to compensate for a

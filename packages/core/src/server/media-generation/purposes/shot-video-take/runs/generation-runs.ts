@@ -77,7 +77,7 @@ export async function runShotVideoTakeSpec(
     estimate: combinedEstimate.estimate,
     approval,
   });
-  const outputPaths = await resolveShotGenerationOutputPaths(input);
+  const outputPaths = await resolveShotGenerationOutputPaths(input, context);
   const transientVoiceDiagnostics = await prepareKlingTransientVoicePayload({
     commandInput: input,
     spec: prepared.spec.spec,

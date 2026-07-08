@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type {
   Asset,
   AssetFile,
@@ -37,6 +38,11 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
+import {
+  allocateProjectRelativeVersionedFilePath,
+  extensionForMediaSource,
+  kebabCasePathSegment,
+} from '../../files/asset-paths.js';
 import {
   normalizeProjectRelativePath,
 } from '../../files/project-relative-paths.js';
@@ -82,6 +88,7 @@ interface ImageEditProviderPlan {
   inputFiles: NonNullable<PreparedMediaGeneration['generation']['request']['inputFiles']>;
   sourceAssetFileId: string;
   outputCount: number;
+  outputNames: string[];
 }
 
 interface ImageEditSourceAsset {
@@ -369,13 +376,13 @@ async function prepareImageEditProviderPlan(input: {
   homeDir?: string;
   spec: ImageEditGenerationSpec;
 }): Promise<ImageEditProviderPlan> {
-  return withMediaGenerationProjectSession(input, ({ session }) => {
+  return withMediaGenerationProjectSession(input, async ({ session, projectFolder }) => {
     const source = loadImageEditSourceAsset(session, input.spec.target.id);
     const selectedFile = requireSelectedImageEditSourceFile(source, {
       assetId: input.spec.target.id,
       sourceAssetFileId: input.spec.sourceAssetFileId,
     });
-    return buildProviderPayload(input.spec, selectedFile);
+    return buildProviderPayload(input.spec, selectedFile, projectFolder);
   });
 }
 
@@ -478,10 +485,11 @@ function selectSourceImageFile(
   return imageFiles[0]!;
 }
 
-function buildProviderPayload(
+async function buildProviderPayload(
   spec: ImageEditGenerationSpec,
-  sourceFile: AssetFile
-): ImageEditProviderPlan {
+  sourceFile: AssetFile,
+  projectFolder: string
+): Promise<ImageEditProviderPlan> {
   const sourcePath = sourceFile.projectRelativePath;
   const inputFiles: ImageEditProviderPlan['inputFiles'] = [
     {
@@ -498,6 +506,12 @@ function buildProviderPayload(
     sync_mode: false,
   };
   const outputCount = outputCountFromParameters(spec.parameterValues);
+  const outputNames = await imageEditOutputNames({
+    projectFolder,
+    sourceProjectRelativePath: sourceFile.projectRelativePath,
+    outputFormat: String(spec.parameterValues.output_format ?? 'png'),
+    outputCount,
+  });
   switch (spec.modelChoice) {
     case 'fal-ai/openai/gpt-image-2/edit':
       return {
@@ -507,6 +521,7 @@ function buildProviderPayload(
         outputCount,
         inputFiles,
         sourceAssetFileId: sourceFile.id,
+        outputNames,
         payload: {
           ...basePayload,
           ...spec.parameterValues,
@@ -521,6 +536,7 @@ function buildProviderPayload(
         outputCount,
         inputFiles,
         sourceAssetFileId: sourceFile.id,
+        outputNames,
         payload: {
           ...basePayload,
           safety_tolerance: '4',
@@ -538,6 +554,7 @@ function buildProviderPayload(
         outputCount,
         inputFiles,
         sourceAssetFileId: sourceFile.id,
+        outputNames,
         payload: {
           ...basePayload,
           ...spec.parameterValues,
@@ -570,7 +587,7 @@ function toGenerationRequest(
       inputFiles: plan.inputFiles,
       pricingInputCounts: { image: 1 },
       parameters,
-      outputNames: outputNames(spec, plan.outputCount),
+      outputNames: plan.outputNames,
     },
   };
 }
@@ -708,17 +725,31 @@ function outputCountFromParameters(parameterValues: Record<string, unknown>): nu
   return Number(parameterValues.num_images ?? 1);
 }
 
-function outputNames(
-  spec: ImageEditGenerationSpec,
-  outputCount: number
-): string[] {
-  const format = String(spec.parameterValues.output_format ?? 'png');
-  const extension = format === 'jpeg' ? 'jpg' : format;
-  return Array.from({ length: outputCount }, (_value, index) =>
-    outputCount === 1
-      ? `image-edit-${spec.target.id}.${extension}`
-      : `image-edit-${spec.target.id}-${index + 1}.${extension}`
-  );
+async function imageEditOutputNames(input: {
+  projectFolder: string;
+  sourceProjectRelativePath: ProjectRelativePath;
+  outputFormat: string;
+  outputCount: number;
+}): Promise<string[]> {
+  const parsed = path.parse(input.sourceProjectRelativePath);
+  const parent = parsed.dir as ProjectRelativePath;
+  const requestedExtension =
+    input.outputFormat === 'jpeg' ? '.jpg' : `.${input.outputFormat || 'png'}`;
+  const extension = requestedExtension || extensionForMediaSource(input.sourceProjectRelativePath);
+  const names: string[] = [];
+  for (let index = 0; index < input.outputCount; index += 1) {
+    const candidate = await allocateProjectRelativeVersionedFilePath({
+      projectFolder: input.projectFolder,
+      parent,
+      baseName:
+        input.outputCount === 1
+          ? kebabCasePathSegment(parsed.name, 'image')
+          : `${kebabCasePathSegment(parsed.name, 'image')}-${String(index + 1).padStart(2, '0')}`,
+      extension,
+    });
+    names.push(path.basename(candidate));
+  }
+  return names;
 }
 
 function imageEditPreviewReferences(

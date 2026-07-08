@@ -1,6 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { assetFiles } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import { ProjectDataError } from '../../project-data-error.js';
 
 export type AssetFileRecord = typeof assetFiles.$inferSelect;
 
@@ -24,7 +25,23 @@ export function insertAssetFileRecord(
   session: DatabaseSession,
   record: InsertAssetFileRecord
 ): void {
+  assertDurableAssetFilePath(record.projectRelativePath);
   session.db.insert(assetFiles).values(record).run();
+}
+
+function assertDurableAssetFilePath(projectRelativePath: string): void {
+  if (projectRelativePath === 'generated' || projectRelativePath.startsWith('generated/')) {
+    throw new ProjectDataError(
+      'PROJECT_DATA445',
+      `Durable asset files must not be registered under generated/: ${projectRelativePath}.`
+    );
+  }
+  if (projectRelativePath === 'research' || projectRelativePath.startsWith('research/')) {
+    throw new ProjectDataError(
+      'PROJECT_DATA446',
+      `Durable asset files must not be registered under research/: ${projectRelativePath}.`
+    );
+  }
 }
 
 export function listAssetFileRecords(session: DatabaseSession): AssetFileRecord[] {

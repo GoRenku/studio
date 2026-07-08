@@ -87,7 +87,7 @@ display only; it is not a hidden default shot reference.
 
 A **Scene Storyboard Image** is an image asset attached to a Scene and a
 specific shot in a Scene Shot List. Durable storyboard images are stored under
-top-level `storyboards/<sequence-slug>/<scene-slug>/<NN>-Iteration>/`.
+top-level `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`.
 Temporary storyboard sheets generated for slicing or review live under that
 scene storyboard folder's `tmp/` subfolder and are not assets.
 
@@ -96,7 +96,7 @@ output whose lifecycle belongs to one Shot Video Take. Current examples include
 video prompt sheets, first frames, last frames, ad hoc reference images,
 take-owned dialogue audio, and final generated take videos. These files are
 stored under top-level
-`shots/<sequence-slug>/<scene-slug>/<take-slug>-<take-number>/`.
+`shots/<sequence-name>/<scene-name>/<take-name>-<nn>/`.
 
 The **Research folder** is user-owned scratch space for external references.
 Files in `research/` are not asset files. A generation spec may reference a
@@ -165,14 +165,14 @@ at the project root. There is no `working-assets/` root and no
     lookbook/
 
   storyboards/
-    <sequence-slug>/
-      <scene-slug>/
+    <sequence-name>/
+      <scene-name>/
         tmp/
-        00-Iteration/
+        00-iteration/
 
   shots/
-    <sequence-slug>/
-      <scene-slug>/
+    <sequence-name>/
+      <scene-name>/
         <take-slug>-01/
 
   research/
@@ -210,17 +210,18 @@ Folder responsibilities:
 - `locations/<handle>/environment-sheets/` contains imported or generated
   Location Sheets as flat image files. Do not create one subfolder per
   environment sheet.
-- `locations/<handle>/heroes/<hero-slug>/` contains imported or generated
-  Location Hero Images as one primary image file per hero.
+- `locations/<handle>/heroes/` contains imported or generated Location Hero
+  Images as flat files, such as `hero.png` and `hero-v01.png`. Do not create
+  one subfolder per hero image.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
   those folders are not per-image assets unless a future command explicitly
   registers one.
 - `visual-language/lookbook/` contains imported or generated Lookbook image
   assets.
-- `storyboards/<sequence-slug>/<scene-slug>/` contains durable storyboard
+- `storyboards/<sequence-name>/<scene-name>/` contains durable storyboard
   image iteration folders and a scene-local `tmp/` folder for temporary
   storyboard sheets.
-- `shots/<sequence-slug>/<scene-slug>/<take-slug>-<take-number>/` contains
+- `shots/<sequence-name>/<scene-name>/<take-name>-<nn>/` contains
   take-owned shot-video production inputs and generated take videos.
 - `research/` contains user-owned scratch references. Renku may read these
   files when instructed, and generation specs may use them as one-off reference

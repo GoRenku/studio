@@ -250,7 +250,7 @@ describe('Location environment sheet import', () => {
   it('deduplicates selected reference image files in generation context', async () => {
     const fixture = await createConfiguredProject();
 
-    const referencePath = 'generated/media/council-reference.png';
+    const referencePath = 'locations/council-chamber/environment-sheets/council-reference.png';
     await fs.mkdir(path.dirname(path.join(fixture.created.projectPath, referencePath)), {
       recursive: true,
     });

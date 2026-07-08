@@ -32,6 +32,7 @@ import {
   toLookbook,
 } from '../../database/access/lookbook.js';
 import { listLookbookImages, readLookbookImage } from '../../database/access/lookbook-images.js';
+import { requireMediaGenerationSpec } from '../../database/access/media-generation.js';
 import { readProjectInformationResourceFromDatabase } from '../../database/access/project-information.js';
 import { readProjectRecord, type ProjectRecord } from '../../database/access/project.js';
 import { readScreenplayDocumentFromSession } from '../../database/access/screenplay-resource.js';
@@ -530,8 +531,21 @@ export function toGenerationRequest(
 }
 
 export async function resolveCastGenerationOutputPaths(input: CastImageProjectInput) {
-  return withCastProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = 'generated/media';
+  return withCastProjectSession(input, ({ session, projectFolder }) => {
+    const specId = 'specId' in input && typeof input.specId === 'string' ? input.specId : '';
+    const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
+    const target = specRecord?.spec && typeof specRecord.spec === 'object'
+      ? (specRecord.spec as { target?: { id?: unknown } }).target
+      : undefined;
+    const castMemberId = typeof target?.id === 'string' ? target.id : '';
+    const castMember = castMemberId
+      ? requireCastMemberForContext(session, castMemberId)
+      : null;
+    const projectRelativeRoot = joinProjectRelativePath(
+      CAST_ROOT,
+      castMember?.handle ?? 'cast',
+      specRecord?.purpose === 'cast.profile' ? 'profiles' : 'character-sheets'
+    );
     return {
       absoluteRoot: path.join(projectFolder, projectRelativeRoot),
       projectRelativeRoot,

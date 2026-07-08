@@ -37,7 +37,7 @@ describe('image.edit media generation purpose', () => {
       code: 'CORE_IMAGE_EDIT_SOURCE_ASSET_MISSING',
     });
 
-    const source = await registerSourceImage(fixture, 'generated/media/source.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source.png');
     await markAssetDiscarded(fixture, source.assetId);
 
     await expect(
@@ -55,7 +55,7 @@ describe('image.edit media generation purpose', () => {
     const fixture = await createFixture();
     const audioSource = await registerSourceAudio(
       fixture,
-      'generated/media/source.wav'
+      'visual-language/lookbook/source.wav'
     );
 
     await expect(
@@ -71,7 +71,7 @@ describe('image.edit media generation purpose', () => {
 
   it('prepares an image-edit request with a logical source URL and preview source reference', async () => {
     const fixture = await createFixture();
-    const source = await registerSourceImage(fixture, 'generated/media/source.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source.png');
     const spec = imageEditSpec(source.assetId);
 
     const validation = await fixture.projectData.validateMediaGenerationSpec({
@@ -81,7 +81,7 @@ describe('image.edit media generation purpose', () => {
     });
     expect(validation.providerPayload).toMatchObject({
       prompt: 'Preserve everything except the requested correction.',
-      image_urls: ['renku-input://generated/media/source.png'],
+      image_urls: ['renku-input://visual-language/lookbook/source.png'],
       image_size: { width: 1024, height: 768 },
       quality: 'high',
       output_format: 'png',
@@ -105,7 +105,7 @@ describe('image.edit media generation purpose', () => {
         inputFiles: [
           {
             field: 'image_urls',
-            projectRelativePath: 'generated/media/source.png',
+            projectRelativePath: 'visual-language/lookbook/source.png',
             mediaKind: 'image',
             asArray: true,
             required: true,
@@ -142,7 +142,7 @@ describe('image.edit media generation purpose', () => {
     const fixture = await createFixture();
     const source = await registerSourceImage(
       fixture,
-      'generated/media/source image.png'
+      'visual-language/lookbook/source image.png'
     );
     const spec = imageEditSpec(source.assetId, {
       modelChoice: 'fal-ai/nano-banana-2/edit',
@@ -161,7 +161,7 @@ describe('image.edit media generation purpose', () => {
 
     expect(prepared.providerPayload).toMatchObject({
       prompt: 'Preserve everything except the requested correction.',
-      image_urls: ['renku-input://generated/media/source%20image.png'],
+      image_urls: ['renku-input://visual-language/lookbook/source%20image.png'],
       sync_mode: false,
       safety_tolerance: '4',
       limit_generations: true,
@@ -177,7 +177,7 @@ describe('image.edit media generation purpose', () => {
 
   it('fails when the source asset has multiple image files and no sourceAssetFileId', async () => {
     const fixture = await createFixture();
-    const source = await registerSourceImage(fixture, 'generated/media/source-a.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source-a.png');
     await insertSecondImageFile(fixture, source.assetId);
 
     await expect(
@@ -193,7 +193,7 @@ describe('image.edit media generation purpose', () => {
 
   it('reports ambiguous source image file choices in context', async () => {
     const fixture = await createFixture();
-    const source = await registerSourceImage(fixture, 'generated/media/source-a.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source-a.png');
     await insertSecondImageFile(fixture, source.assetId);
 
     const context = await fixture.projectData.buildMediaGenerationContext({
@@ -213,12 +213,12 @@ describe('image.edit media generation purpose', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: source.files[0]?.id,
-          projectRelativePath: 'generated/media/source-a.png',
+          projectRelativePath: 'visual-language/lookbook/source-a.png',
           mediaKind: 'image',
         }),
         expect.objectContaining({
           id: 'asset_file_second_source',
-          projectRelativePath: 'generated/media/source-b.png',
+          projectRelativePath: 'visual-language/lookbook/source-b.png',
           mediaKind: 'image',
         }),
       ])
@@ -227,14 +227,14 @@ describe('image.edit media generation purpose', () => {
 
   it('fails when sourceAssetFileId does not identify an active image file on the source asset', async () => {
     const fixture = await createFixture();
-    const source = await registerSourceImage(fixture, 'generated/media/source.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source.png');
     const otherSource = await registerSourceImage(
       fixture,
-      'generated/media/other-source.png'
+      'visual-language/lookbook/other-source.png'
     );
     const audioSource = await registerSourceAudio(
       fixture,
-      'generated/media/source.wav'
+      'visual-language/lookbook/source.wav'
     );
     const discardedFileId = source.files[0]?.id;
     if (!discardedFileId) {
@@ -284,7 +284,7 @@ describe('image.edit media generation purpose', () => {
 
   it('fails when unsupported provider parameters are supplied', async () => {
     const fixture = await createFixture();
-    const source = await registerSourceImage(fixture, 'generated/media/source.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source.png');
 
     await expect(
       fixture.projectData.validateMediaGenerationSpec({
@@ -305,7 +305,7 @@ describe('image.edit media generation purpose', () => {
 
   it('fails when the model choice is unsupported or the prompt is empty', async () => {
     const fixture = await createFixture();
-    const source = await registerSourceImage(fixture, 'generated/media/source.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source.png');
 
     await expect(
       fixture.projectData.validateMediaGenerationSpec({
@@ -410,7 +410,7 @@ describe('image.edit media generation purpose', () => {
 
   it('prices and simulates image edit runs, then reads the run receipt back', async () => {
     const fixture = await createFixture();
-    const source = await registerSourceImage(fixture, 'generated/media/source.png');
+    const source = await registerSourceImage(fixture, 'visual-language/lookbook/source.png');
     const specRecord = await fixture.projectData.createMediaGenerationSpec({
       projectName: 'constantinople',
       homeDir: fixture.homeDir,
@@ -447,7 +447,7 @@ describe('image.edit media generation purpose', () => {
       simulated: true,
       status: 'simulated',
       providerPayload: {
-        image_urls: ['renku-input://generated/media/source.png'],
+        image_urls: ['renku-input://visual-language/lookbook/source.png'],
       },
     });
 
@@ -517,7 +517,7 @@ async function insertSecondImageFile(
   fixture: Awaited<ReturnType<typeof createFixture>>,
   assetId: string
 ) {
-  const projectRelativePath = 'generated/media/source-b.png';
+  const projectRelativePath = 'visual-language/lookbook/source-b.png';
   const absolutePath = path.join(fixture.created.projectPath, projectRelativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
   await fs.writeFile(absolutePath, 'image bytes');

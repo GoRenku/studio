@@ -111,7 +111,7 @@ describe('Location hero generation and import', () => {
 
     const heroFile = report.importReport.imported.files[0]!;
     expect(heroFile.projectRelativePath).toMatch(
-      /^locations\/council-chamber\/heroes\/.+\/hero\.png$/
+      /^locations\/council-chamber\/heroes\/hero(?:-v\d{2})?\.png$/
     );
     await expect(
       fs.access(path.join(fixture.created.projectPath, heroFile.projectRelativePath))
@@ -382,7 +382,7 @@ async function createConfiguredProject() {
 async function importSourceSheet(
   fixture: Awaited<ReturnType<typeof createConfiguredProject>>
 ) {
-  const folder = 'generated/media/location-sheets';
+  const folder = 'locations/council-chamber/environment-sheets/tmp';
   await fs.mkdir(path.join(fixture.created.projectPath, folder), { recursive: true });
   const sourceProjectRelativePath =
     `${folder}/council-chamber-source.png` as ProjectRelativePath;
@@ -403,7 +403,7 @@ async function importSourceSheet(
 async function insertMultiFileSourceSheet(
   fixture: Awaited<ReturnType<typeof createConfiguredProject>>
 ) {
-  const folder = 'generated/media/location-sheets/multi-file-source';
+  const folder = 'locations/council-chamber/environment-sheets/multi-file-source';
   const compositeProjectRelativePath =
     `${folder}/composite.png` as ProjectRelativePath;
   const primaryProjectRelativePath = `${folder}/primary.png` as ProjectRelativePath;

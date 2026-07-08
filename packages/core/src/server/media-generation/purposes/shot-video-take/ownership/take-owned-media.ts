@@ -40,11 +40,6 @@ const TAKE_OWNED_INPUT_KINDS = new Set<ShotVideoTakeInputKind>([
   'last-frame',
   'reference-image',
 ]);
-const TAKE_OWNED_MEDIA_COPY_ROOT = joinProjectRelativePath(
-  'generated',
-  'media',
-  'scene-shot-video-takes'
-);
 
 export function isShotVideoTakeOwnedMediaInputKind(
   kind: string
@@ -74,6 +69,7 @@ export function copyTakeOwnedMediaAssetFile(input: {
   sourceAssetId: string;
   sourceAssetFileId: string;
   targetTakeId: string;
+  targetTakeFolder: ProjectRelativePath;
   inputKind: ShotVideoTakeInputKind;
   allowDiscardedSource?: boolean;
   now: string;
@@ -120,9 +116,9 @@ export function copyTakeOwnedMediaAssetFile(input: {
   const assetId = input.nextId('asset');
   const assetFileId = input.nextId('asset_file');
   const projectRelativePath = copiedTakeOwnedMediaProjectPath({
-    takeId: input.targetTakeId,
+    projectFolder: input.projectFolder,
+    targetTakeFolder: input.targetTakeFolder,
     inputKind: input.inputKind,
-    assetFileId,
     sourceProjectRelativePath: sourceFile.projectRelativePath,
   });
   const destinationPath = resolveProjectRelativePath(
@@ -217,24 +213,42 @@ export function removeCopiedTakeOwnedMediaAssetFile(input: {
 }
 
 function copiedTakeOwnedMediaProjectPath(input: {
-  takeId: string;
+  projectFolder: string;
+  targetTakeFolder: ProjectRelativePath;
   inputKind: ShotVideoTakeInputKind;
-  assetFileId: string;
   sourceProjectRelativePath: string;
 }): ProjectRelativePath {
-  return joinProjectRelativePath(
-    'generated',
-    'media',
-    'scene-shot-video-takes',
-    input.takeId,
-    `${input.inputKind}-${input.assetFileId}${path.extname(input.sourceProjectRelativePath)}`
+  return allocateCopiedTakeOwnedMediaProjectPath(input);
+}
+
+function allocateCopiedTakeOwnedMediaProjectPath(input: {
+  projectFolder: string;
+  targetTakeFolder: ProjectRelativePath;
+  inputKind: ShotVideoTakeInputKind;
+  sourceProjectRelativePath: string;
+}): ProjectRelativePath {
+  const extension = path.extname(input.sourceProjectRelativePath) || '.png';
+  for (let index = 0; index < 1000; index += 1) {
+    const candidate = joinProjectRelativePath(
+      input.targetTakeFolder,
+      index === 0
+        ? `${input.inputKind}${extension}`
+        : `${input.inputKind}-${String(index + 1).padStart(2, '0')}${extension}`
+    );
+    if (!fs.existsSync(resolveProjectRelativePath(input.projectFolder, candidate))) {
+      return candidate;
+    }
+  }
+  throw new ProjectDataError(
+    'PROJECT_DATA442',
+    `Could not allocate a copied take-owned media path for ${input.inputKind}.`
   );
 }
 
 function isCopiedTakeOwnedMediaProjectPath(
   projectRelativePath: ProjectRelativePath
 ): boolean {
-  return projectRelativePath.startsWith(`${TAKE_OWNED_MEDIA_COPY_ROOT}/`);
+  return projectRelativePath.startsWith('shots/');
 }
 
 function statActiveTakeOwnedMediaFile(filePath: string): fs.Stats {

@@ -49,7 +49,9 @@ describe('shot video take media imports', () => {
       mediaInput: {
         kind: 'first-frame',
         selected: true,
-        projectRelativePath: sourceProjectRelativePath,
+        projectRelativePath: expect.stringMatching(
+          /^shots\/the-young-sultan-s-obsession\/a-throne-facing-an-ancient-city\/take-for-shot-001-01\/first-frame\.png$/
+        ),
         shotIds: ['shot_001'],
       },
     });
@@ -58,7 +60,9 @@ describe('shot video take media imports', () => {
         expect.objectContaining({
           role: 'primary',
           mediaKind: 'image',
-          projectRelativePath: sourceProjectRelativePath,
+          projectRelativePath: expect.stringMatching(
+            /^shots\/the-young-sultan-s-obsession\/a-throne-facing-an-ancient-city\/take-for-shot-001-01\/first-frame\.png$/
+          ),
         }),
       ])
     );
@@ -199,14 +203,14 @@ describe('shot video take media imports', () => {
       take: {
         takeId: written.take.takeId,
         video: {
-          projectRelativePath: sourceProjectRelativePath,
+          projectRelativePath: expect.stringMatching(/^shots\/.+\/video\.mp4$/),
           mimeType: 'video/mp4',
         },
       },
       createdRegeneratedTake: false,
       video: {
         takeId: written.take.takeId,
-        projectRelativePath: sourceProjectRelativePath,
+        projectRelativePath: expect.stringMatching(/^shots\/.+\/video\.mp4$/),
         mimeType: 'video/mp4',
       },
     });
@@ -216,7 +220,7 @@ describe('shot video take media imports', () => {
           role: 'primary',
           mediaKind: 'video',
           mimeType: 'video/mp4',
-          projectRelativePath: sourceProjectRelativePath,
+          projectRelativePath: expect.stringMatching(/^shots\/.+\/video\.mp4$/),
         }),
       ])
     );
@@ -254,11 +258,11 @@ describe('shot video take media imports', () => {
     expect(secondReport.take.shotIds).toEqual(written.take.shotIds);
     expect(secondReport.take.video).toMatchObject({
       takeId: secondReport.take.takeId,
-      projectRelativePath: 'generated/media/second-final-take.mp4',
+      projectRelativePath: expect.stringMatching(/^shots\/.+\/second-final-take-02\/video\.mp4$/),
     });
     expect(firstReport.take.video).toMatchObject({
       takeId: written.take.takeId,
-      projectRelativePath: 'generated/media/first-final-take.mp4',
+      projectRelativePath: expect.stringMatching(/^shots\/.+\/take-for-shot-001-01\/video\.mp4$/),
     });
 
     const sourceTake = await projectData.readSceneShotVideoTake({
@@ -266,7 +270,7 @@ describe('shot video take media imports', () => {
       takeId: written.take.takeId,
     });
     expect(sourceTake.video).toMatchObject({
-      projectRelativePath: 'generated/media/first-final-take.mp4',
+      projectRelativePath: expect.stringMatching(/^shots\/.+\/take-for-shot-001-01\/video\.mp4$/),
     });
   });
 
@@ -332,8 +336,8 @@ describe('shot video take media imports', () => {
     expect(regeneratedInputs.inputs[0]?.assetFileId).not.toBe(
       promptSheet.mediaInput.assetFileId
     );
-    expect(regeneratedInputs.inputs[0]?.projectRelativePath).toContain(
-      `generated/media/scene-shot-video-takes/${regenerated.take.takeId}/`
+    expect(regeneratedInputs.inputs[0]?.projectRelativePath).toMatch(
+      /^shots\/.+\/regenerated-video-take-02\/video-prompt-sheet\.png$/
     );
     const sourceInputs = await projectData.listShotVideoTakeInputs({
       homeDir,
@@ -396,8 +400,8 @@ describe('shot video take media imports', () => {
   it('ignores take media references after the owning take is discarded', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
-    const inputPath = 'generated/media/attached-first-frame.png';
-    const outputPath = 'generated/media/attached-final-take.mp4';
+    const inputPath = 'shots/the-young-sultan-s-obsession/a-throne-facing-an-ancient-city/attached-first-frame-01/first-frame.png';
+    const outputPath = 'shots/the-young-sultan-s-obsession/a-throne-facing-an-ancient-city/attached-final-take-01/video.mp4';
     await shotVideoTakeProject.writeProjectFile(inputPath, 'first frame');
     await shotVideoTakeProject.writeProjectFile(outputPath, 'final video');
 

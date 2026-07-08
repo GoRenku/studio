@@ -63,20 +63,20 @@ cast/<cast-handle>/profiles/
 cast/<cast-handle>/voice-samples/
 
 locations/<location-handle>/environment-sheets/
-locations/<location-handle>/heroes/<hero-slug>/
+locations/<location-handle>/heroes/
 
 visual-language/lookbook/
 
-storyboards/<sequence-slug>/<scene-slug>/
+storyboards/<sequence-name>/<scene-name>/
 
-shots/<sequence-slug>/<scene-slug>/<take-folder>/
+shots/<sequence-name>/<scene-name>/<take-name>-<nn>/
 ```
 
 Temporary project files use:
 
 ```text
 tmp/
-storyboards/<sequence-slug>/<scene-slug>/tmp/
+storyboards/<sequence-name>/<scene-name>/tmp/
 ```
 
 User scratch references use:
@@ -99,16 +99,19 @@ Location Environment Sheets are flat files under `environment-sheets/`:
 
 ```text
 locations/<location-handle>/environment-sheets/<sheet-slug>.<ext>
-locations/<location-handle>/environment-sheets/<sheet-slug>-01.<ext>
+locations/<location-handle>/environment-sheets/<sheet-slug>-v01.<ext>
 ```
 
 Renku Studio must not create one folder per Location Environment Sheet.
 
-Location Hero Images keep the existing hero folder shape:
+Location Hero Images are flat files under `heroes/`:
 
 ```text
-locations/<location-handle>/heroes/<hero-slug>/hero.<ext>
+locations/<location-handle>/heroes/hero.<ext>
+locations/<location-handle>/heroes/hero-v01.<ext>
 ```
+
+Renku Studio must not create one folder per Location Hero Image.
 
 Lookbook images and sheets stay under:
 
@@ -119,7 +122,7 @@ visual-language/lookbook/<asset-slug>.<ext>
 Scene Storyboard images are top-level project assets, not screenplay files:
 
 ```text
-storyboards/<sequence-slug>/<scene-slug>/<NN>-Iteration/shot-<NN>.<ext>
+storyboards/<sequence-name>/<scene-name>/<nn>-iteration/shot-<nn>.<ext>
 ```
 
 The storyboard iteration number starts at `00` and is zero-padded so normal
@@ -130,16 +133,17 @@ snapshot of every current storyboard image for the scene.
 Temporary generated storyboard sheets live beside the scene's storyboard work:
 
 ```text
-storyboards/<sequence-slug>/<scene-slug>/tmp/<sheet-slug>.<ext>
+storyboards/<sequence-name>/<scene-name>/tmp/<sheet-slug>.<ext>
 ```
 
 Shot Video Take-owned media lives under:
 
 ```text
-shots/<sequence-slug>/<scene-slug>/<take-slug>-<take-number>/
+shots/<sequence-name>/<scene-name>/<take-name>-<nn>/
 ```
 
-The take number is two digits and scene-local. Example:
+The take number is two digits and scene-local. Folder and file names use
+kebab-case. Example:
 
 ```text
 shots/the-sound-that-opens-stone/bombardment/city-smoke-before-the-wall-01/

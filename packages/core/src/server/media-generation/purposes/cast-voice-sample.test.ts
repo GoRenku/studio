@@ -117,7 +117,7 @@ describe('Cast Voice sample generation', () => {
         outputs: [
           {
             mimeType: 'audio/mp3',
-            projectRelativePath: 'generated/media/normal-voice.mp3',
+            projectRelativePath: 'cast/mehmed-ii/voice-samples/normal-voice.mp3',
           },
         ],
       },

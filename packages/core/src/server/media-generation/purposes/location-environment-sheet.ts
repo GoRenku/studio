@@ -59,7 +59,11 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
-import { LOCATIONS_ROOT } from '../../files/asset-paths.js';
+import {
+  LOCATIONS_ROOT,
+  allocateProjectRelativeVersionedFilePath,
+  kebabCasePathSegment,
+} from '../../files/asset-paths.js';
 import {
   joinProjectRelativePath,
   normalizeProjectRelativePath,
@@ -503,20 +507,20 @@ export async function importLocationEnvironmentSheetMedia(
       'Location Sheet description'
     );
     const now = new Date().toISOString();
-    const destinationFolder = await allocateLocationEnvironmentSheetFolder({
+    const destinationProjectRelativePath = await allocateLocationEnvironmentSheetPath({
       projectFolder,
       locationHandle: location.handle,
       title: input.title ?? path.parse(sourceProjectRelativePath).name,
+      extension: extensionForSource(sourceProjectRelativePath),
     });
     const importedFile = await copyLocationEnvironmentSheetFile({
       projectFolder,
       sourceProjectRelativePath,
-      destinationFolder,
+      destinationProjectRelativePath,
     });
     const imported = await insertImportedLocationEnvironmentSheet({
       session,
       locationId: input.locationId,
-      destinationFolder,
       file: importedFile,
       title: input.title,
       description,
@@ -1088,8 +1092,19 @@ function assertLocationEnvironmentSheetSpec(
 async function resolveLocationGenerationOutputPaths(
   input: LocationEnvironmentSheetProjectInput
 ) {
-  return withLocationProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = 'generated/media';
+  return withLocationProjectSession(input, ({ session, projectFolder }) => {
+    const specId = 'specId' in input && typeof input.specId === 'string' ? input.specId : '';
+    const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
+    const target = specRecord?.spec && typeof specRecord.spec === 'object'
+      ? (specRecord.spec as { target?: { id?: unknown } }).target
+      : undefined;
+    const locationId = typeof target?.id === 'string' ? target.id : '';
+    const location = locationId ? requireLocationForContext(session, locationId) : null;
+    const projectRelativeRoot = joinProjectRelativePath(
+      LOCATIONS_ROOT,
+      location?.handle ?? 'location',
+      'environment-sheets'
+    );
     return {
       absoluteRoot: path.join(projectFolder, projectRelativeRoot),
       projectRelativeRoot,
@@ -1113,7 +1128,7 @@ async function validateImportSourceFile(
 async function copyLocationEnvironmentSheetFile(input: {
   projectFolder: string;
   sourceProjectRelativePath: ProjectRelativePath;
-  destinationFolder: ProjectRelativePath;
+  destinationProjectRelativePath: ProjectRelativePath;
 }): Promise<{
   projectRelativePath: ProjectRelativePath;
   mimeType: string;
@@ -1124,13 +1139,9 @@ async function copyLocationEnvironmentSheetFile(input: {
     input.projectFolder,
     input.sourceProjectRelativePath
   );
-  const destinationProjectRelativePath = joinProjectRelativePath(
-    input.destinationFolder,
-    `sheet${extensionForSource(input.sourceProjectRelativePath)}`
-  );
   const destinationPath = resolveProjectRelativePath(
     input.projectFolder,
-    destinationProjectRelativePath
+    input.destinationProjectRelativePath
   );
   assertResolvedPathInsideProject(input.projectFolder, destinationPath);
   await fs.mkdir(path.dirname(destinationPath), { recursive: true });
@@ -1139,8 +1150,8 @@ async function copyLocationEnvironmentSheetFile(input: {
   }
   const stats = await statExistingFile(destinationPath);
   return {
-    projectRelativePath: destinationProjectRelativePath,
-    mimeType: mimeTypeForPath(destinationProjectRelativePath),
+    projectRelativePath: input.destinationProjectRelativePath,
+    mimeType: mimeTypeForPath(input.destinationProjectRelativePath),
     sizeBytes: stats.size,
     contentHash: await hashFile(destinationPath),
   };
@@ -1149,7 +1160,6 @@ async function copyLocationEnvironmentSheetFile(input: {
 async function insertImportedLocationEnvironmentSheet(input: {
   session: DatabaseSession;
   locationId: string;
-  destinationFolder: ProjectRelativePath;
   file: {
     projectRelativePath: ProjectRelativePath;
     mimeType: string;
@@ -1170,7 +1180,7 @@ async function insertImportedLocationEnvironmentSheet(input: {
       id: assetId,
       type: 'location_environment_sheet',
       mediaKind: 'image',
-      title: input.title?.trim() || path.basename(input.destinationFolder),
+      title: input.title?.trim() || path.parse(input.file.projectRelativePath).name,
       oneLineSummary: input.description,
       origin: input.origin,
       availability: 'ready',
@@ -1206,38 +1216,27 @@ async function insertImportedLocationEnvironmentSheet(input: {
   return { assetId };
 }
 
-async function allocateLocationEnvironmentSheetFolder(input: {
+async function allocateLocationEnvironmentSheetPath(input: {
   projectFolder: string;
   locationHandle: string;
   title: string;
+  extension: string;
 }): Promise<ProjectRelativePath> {
   const parent = joinProjectRelativePath(
     LOCATIONS_ROOT,
     input.locationHandle,
     'environment-sheets'
   );
-  const base = slugify(input.title) || 'environment-sheet';
-  for (let index = 0; index < 1000; index += 1) {
-    const candidate = joinProjectRelativePath(
-      parent,
-      index === 0 ? base : `${base}-${index + 1}`
-    );
-    try {
-      await fs.access(resolveProjectRelativePath(input.projectFolder, candidate));
-    } catch {
-      return candidate;
-    }
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA315',
-    `Could not allocate a unique location environment sheet folder for ${input.title}.`
-  );
+  return allocateProjectRelativeVersionedFilePath({
+    projectFolder: input.projectFolder,
+    parent,
+    baseName: kebabCasePathSegment(input.title, 'environment-sheet'),
+    extension: input.extension,
+  });
 }
 
 function inferImportOrigin(sourceProjectRelativePath: ProjectRelativePath): string {
-  return sourceProjectRelativePath.startsWith('generated/media/')
-    ? 'generated'
-    : 'imported';
+  return sourceProjectRelativePath.startsWith('tmp/media/') ? 'generated' : 'imported';
 }
 
 function titleForSpec(

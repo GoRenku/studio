@@ -433,9 +433,9 @@ describe('scene shot video takes', () => {
       sceneId: ids.sceneId,
       takeId: sourceTakeId,
     });
-    expect(sourceTake.video).toMatchObject({
-      projectRelativePath: 'generated/media/first-production-take.mp4',
-    });
+    expect(sourceTake.video?.projectRelativePath).toMatch(
+      /^shots\/.+\/take-for-shot-001-01\/video\.mp4$/
+    );
     expect(sourceTake.state.production.customPromptNote).toBe(
       'First finished-video settings.'
     );
@@ -521,8 +521,8 @@ describe('scene shot video takes', () => {
     expect(copiedInput.projectRelativePath).not.toBe(
       sourceInputBefore.projectRelativePath
     );
-    expect(copiedInput.projectRelativePath).toContain(
-      `generated/media/scene-shot-video-takes/${continued.take.takeId}/`
+    expect(copiedInput.projectRelativePath).toMatch(
+      /^shots\/.+\/take-for-shot-001-iteration-02\/video-prompt-sheet\.png$/
     );
     await expect(
       shotVideoTakeProject.projectFileExists(copiedInput.projectRelativePath)
@@ -624,8 +624,8 @@ describe('scene shot video takes', () => {
 
     expect(copiedInput.selected).toBe(false);
     expect(copiedInput.assetFileId).not.toBe(firstFrame.mediaInput.assetFileId);
-    expect(copiedInput.projectRelativePath).toContain(
-      `generated/media/scene-shot-video-takes/${continued.take.takeId}/`
+    expect(copiedInput.projectRelativePath).toMatch(
+      /^shots\/.+\/take-for-shot-001-iteration-02\/first-frame\.png$/
     );
     expect(continued.take.state.production.preparedInputs).toEqual([
       expect.objectContaining({
@@ -1263,9 +1263,9 @@ describe('scene shot video takes', () => {
       sceneId: ids.sceneId,
       takeId: sourceTakeId,
     });
-    expect(sourceTake.video).toMatchObject({
-      projectRelativePath: 'generated/media/first-composition-take.mp4',
-    });
+    expect(sourceTake.video?.projectRelativePath).toMatch(
+      /^shots\/.+\/take-for-shot-001-01\/video\.mp4$/
+    );
     expect(
       sourceTake.state.structure.mode === 'continuous'
         ? sourceTake.state.structure.sharedDirection.composition
@@ -1312,7 +1312,7 @@ describe('scene shot video takes', () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const takeOwnedPath = 'generated/media/take-trash-owned-prompt-sheet.png';
-    const sceneOwnedPath = 'generated/media/take-trash-scene-reference.png';
+    const sceneOwnedPath = 'storyboards/the-young-sultan-s-obsession/a-throne-facing-an-ancient-city/00-iteration/take-trash-scene-reference.png';
     const replacedInputPath = 'generated/media/take-trash-replaced-input.png';
 
     await shotVideoTakeProject.writeProjectFile(

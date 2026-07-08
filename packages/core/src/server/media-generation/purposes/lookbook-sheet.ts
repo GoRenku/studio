@@ -972,7 +972,7 @@ async function readProjectInformationForInput(input: LookbookSheetProjectInput) 
 
 export async function resolveLookbookSheetGenerationOutputPaths(input: LookbookSheetProjectInput) {
   return withProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = 'generated/media';
+    const projectRelativeRoot = LOOKBOOK_ROOT;
     return {
       absoluteRoot: path.join(projectFolder, projectRelativeRoot),
       projectRelativeRoot,

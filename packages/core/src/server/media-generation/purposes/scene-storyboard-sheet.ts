@@ -59,6 +59,10 @@ import {
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
 import {
+  allocateStoryboardIterationFolder,
+  storyboardTemporarySheetRoot,
+} from '../../files/asset-paths.js';
+import {
   joinProjectRelativePath,
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
@@ -518,14 +522,11 @@ export async function importSceneStoryboardImagesMedia(
       normalized.shots.map((shot) => shot.source)
     );
     const now = new Date().toISOString();
+    const hierarchy = requireSceneHierarchy(screenplay, input.sceneId);
     const destinationFolder = await allocateSceneStoryboardFolder({
       projectFolder,
-      sceneTitle: requireSceneHierarchy(screenplay, input.sceneId).scene.title,
-      title:
-        input.title ??
-        normalized.title ??
-        normalized.shots[0]?.title ??
-        'Scene storyboard images',
+      sequenceTitle: hierarchy.sequence.title ?? hierarchy.sequence.id ?? 'sequence',
+      sceneTitle: hierarchy.scene.title ?? hierarchy.scene.id ?? 'scene',
     });
     const copied = await copySceneStoryboardImageFiles({
       projectFolder,
@@ -1295,8 +1296,31 @@ function orientationForFrame(frame: string): string {
 async function resolveSceneGenerationOutputPaths(
   input: RenkuConfigPathOptions & { projectName?: string }
 ) {
-  return withSceneProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = 'generated/media';
+  return withSceneProjectSession(input, ({ session, projectFolder }) => {
+    const screenplay = requireScreenplayDocument(session);
+    const specId = 'specId' in input && typeof input.specId === 'string' ? input.specId : '';
+    const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
+    const sceneId =
+      specRecord?.spec &&
+      typeof specRecord.spec === 'object' &&
+      'target' in specRecord.spec &&
+      typeof specRecord.spec.target === 'object' &&
+      specRecord.spec.target &&
+      'id' in specRecord.spec.target &&
+      typeof specRecord.spec.target.id === 'string'
+        ? specRecord.spec.target.id
+        : '';
+    if (!sceneId) {
+      throw new ProjectDataError(
+        'PROJECT_DATA342',
+        'Scene storyboard sheet output root requires a scene target.'
+      );
+    }
+    const hierarchy = requireSceneHierarchy(screenplay, sceneId);
+    const projectRelativeRoot = storyboardTemporarySheetRoot({
+      sequenceTitle: hierarchy.sequence.title ?? hierarchy.sequence.id ?? 'sequence',
+      sceneTitle: hierarchy.scene.title ?? hierarchy.scene.id ?? 'scene',
+    });
     return {
       absoluteRoot: path.join(projectFolder, projectRelativeRoot),
       projectRelativeRoot,
@@ -1577,30 +1601,10 @@ async function insertImportedSceneStoryboardImages(input: {
 
 async function allocateSceneStoryboardFolder(input: {
   projectFolder: string;
+  sequenceTitle: string;
   sceneTitle: string;
-  title: string;
 }): Promise<ProjectRelativePath> {
-  const parent = joinProjectRelativePath(
-    'screenplay',
-    'storyboards',
-    slugify(input.sceneTitle) || 'scene'
-  );
-  const base = slugify(input.title) || 'storyboard-sheet';
-  for (let index = 0; index < 1000; index += 1) {
-    const candidate = joinProjectRelativePath(
-      parent,
-      index === 0 ? base : `${base}-${index + 1}`
-    );
-    try {
-      await fs.access(resolveProjectRelativePath(input.projectFolder, candidate));
-    } catch {
-      return candidate;
-    }
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA341',
-    `Could not allocate a storyboard folder for ${input.title}.`
-  );
+  return allocateStoryboardIterationFolder(input);
 }
 
 function titleForSpec(
@@ -1676,9 +1680,7 @@ function assertResolvedPathInsideProject(
 }
 
 function inferImportOrigin(files: ProjectRelativePath[]): string {
-  return files.some((file) => file.startsWith('generated/media/'))
-    ? 'generated'
-    : 'imported';
+  return files.some((file) => file.startsWith('tmp/media/')) ? 'generated' : 'imported';
 }
 
 function slugify(value: string): string {

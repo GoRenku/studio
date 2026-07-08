@@ -208,7 +208,7 @@ describe('shot video take preflight and validation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           kind: 'first-frame',
-          projectRelativePath: 'generated/media/template-first-frame.png',
+          projectRelativePath: expect.stringMatching(/^shots\/.+\/first-frame\.png$/),
         }),
       ])
     );

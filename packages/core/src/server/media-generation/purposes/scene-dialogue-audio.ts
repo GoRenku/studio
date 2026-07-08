@@ -1036,7 +1036,7 @@ async function persistDialogueAudioTakeFile(input: {
   );
   const fileName = `${slugify(input.dialogueId)}-${input.takeId}.${extension}`;
   const projectRelativePath =
-    `generated/media/scene-dialogue-audio/${fileName}` as ProjectRelativePath;
+    `scene-dialogue-audio/${fileName}` as ProjectRelativePath;
   const sourcePath = path.join(
     input.projectFolder,
     input.sourceProjectRelativePath,

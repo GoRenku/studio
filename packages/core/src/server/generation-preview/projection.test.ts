@@ -22,7 +22,7 @@ describe('generation preview projection', () => {
   it('resolves logical preview references to active project asset files', async () => {
     const asset = await registerPreviewAsset({
       project,
-      projectRelativePath: 'generated/media/style-reference.png',
+      projectRelativePath: 'visual-language/lookbook/style-reference.png',
       mediaKind: 'image',
     });
 
@@ -47,7 +47,7 @@ describe('generation preview projection', () => {
         assetId: asset.assetId,
         assetFileId: asset.files[0]!.id,
         mediaKind: 'image',
-        projectRelativePath: 'generated/media/style-reference.png',
+        projectRelativePath: 'visual-language/lookbook/style-reference.png',
       },
     ]);
   });
@@ -55,7 +55,7 @@ describe('generation preview projection', () => {
   it('rejects missing preview reference files with structured diagnostics', async () => {
     const asset = await registerPreviewAsset({
       project,
-      projectRelativePath: 'generated/media/style-reference.png',
+      projectRelativePath: 'visual-language/lookbook/style-reference.png',
       mediaKind: 'image',
     });
 
@@ -88,7 +88,7 @@ describe('generation preview projection', () => {
   it('rejects preview reference media kind mismatches', async () => {
     const asset = await registerPreviewAsset({
       project,
-      projectRelativePath: 'generated/media/style-reference.png',
+      projectRelativePath: 'visual-language/lookbook/style-reference.png',
       mediaKind: 'image',
     });
 

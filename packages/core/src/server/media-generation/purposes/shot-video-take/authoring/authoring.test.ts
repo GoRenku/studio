@@ -318,9 +318,9 @@ describe('Shot Video Take authoring documents', () => {
       homeDir,
       takeId: sourceTakeId,
     });
-    expect(sourceTake.video).toMatchObject({
-      projectRelativePath: 'generated/media/template-final-take.mp4',
-    });
+    expect(sourceTake.video?.projectRelativePath).toMatch(
+      /^shots\/.+\/take-for-shot-001-shot-002-01\/video\.mp4$/
+    );
     expect(sourceTake.shotIds).toEqual(['shot_001', 'shot_002']);
   });
 

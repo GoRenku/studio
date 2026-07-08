@@ -76,7 +76,7 @@ describe('image.create media generation purpose', () => {
     const context = await imageCreateContext(fixture);
     const reference = await registerReferenceImage(
       fixture,
-      'generated/media/source.png'
+      'visual-language/lookbook/source.png'
     );
     const referenceFile = reference.files[0];
     if (!referenceFile) {
@@ -108,7 +108,7 @@ describe('image.create media generation purpose', () => {
     });
     expect(prepared.providerPayload).toMatchObject({
       prompt: 'Create a new production reference image.',
-      image_urls: ['renku-input://generated/media/source.png'],
+      image_urls: ['renku-input://visual-language/lookbook/source.png'],
       aspect_ratio: '16:9',
       resolution: '1K',
       output_format: 'png',
@@ -130,7 +130,7 @@ describe('image.create media generation purpose', () => {
         inputFiles: [
           {
             field: 'image_urls',
-            projectRelativePath: 'generated/media/source.png',
+            projectRelativePath: 'visual-language/lookbook/source.png',
             mediaKind: 'image',
             asArray: true,
             required: true,
@@ -291,7 +291,7 @@ describe('image.create media generation purpose', () => {
       Array.from({ length: 4 }, (_value, index) =>
         registerReferenceImage(
           fixture,
-          `generated/media/grok-reference-${index + 1}.png`
+          `visual-language/lookbook/grok-reference-${index + 1}.png`
         )
       )
     );
@@ -352,7 +352,7 @@ describe('image.create media generation purpose', () => {
     const context = await imageCreateContext(fixture);
     const reference = await registerReferenceImage(
       fixture,
-      'generated/media/cost-reference.png'
+      'visual-language/lookbook/cost-reference.png'
     );
     const referenceFile = reference.files[0];
     if (!referenceFile) {

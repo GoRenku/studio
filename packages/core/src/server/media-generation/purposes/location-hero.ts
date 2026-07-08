@@ -61,7 +61,10 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
-import { LOCATIONS_ROOT } from '../../files/asset-paths.js';
+import {
+  LOCATIONS_ROOT,
+  allocateProjectRelativeVersionedFilePath,
+} from '../../files/asset-paths.js';
 import {
   joinProjectRelativePath,
   normalizeProjectRelativePath,
@@ -543,20 +546,19 @@ export async function importLocationHeroMedia(
     await validateImportSourceFile(projectFolder, sourceProjectRelativePath);
     const description = requiredTrimmed(input.description, 'Location hero description');
     const now = new Date().toISOString();
-    const destinationFolder = await allocateLocationHeroFolder({
+    const destinationProjectRelativePath = await allocateLocationHeroPath({
       projectFolder,
       locationHandle: location.handle,
-      title: input.title ?? path.parse(sourceProjectRelativePath).name,
+      extension: extensionForSource(sourceProjectRelativePath),
     });
     const importedFile = await copyLocationHeroFile({
       projectFolder,
       sourceProjectRelativePath,
-      destinationFolder,
+      destinationProjectRelativePath,
     });
     const imported = await insertImportedLocationHero({
       session,
       locationId: input.locationId,
-      destinationFolder,
       file: importedFile,
       title: input.title,
       description,
@@ -1163,8 +1165,19 @@ function assertLocationHeroSpec(
 }
 
 async function resolveLocationGenerationOutputPaths(input: LocationHeroProjectInput) {
-  return withLocationProjectSession(input, ({ projectFolder }) => {
-    const projectRelativeRoot = 'generated/media';
+  return withLocationProjectSession(input, ({ session, projectFolder }) => {
+    const specId = 'specId' in input && typeof input.specId === 'string' ? input.specId : '';
+    const specRecord = specId ? requireMediaGenerationSpec(session, specId) : null;
+    const target = specRecord?.spec && typeof specRecord.spec === 'object'
+      ? (specRecord.spec as { target?: { id?: unknown } }).target
+      : undefined;
+    const locationId = typeof target?.id === 'string' ? target.id : '';
+    const location = locationId ? requireLocationForContext(session, locationId) : null;
+    const projectRelativeRoot = joinProjectRelativePath(
+      LOCATIONS_ROOT,
+      location?.handle ?? 'location',
+      'heroes'
+    );
     return {
       absoluteRoot: path.join(projectFolder, projectRelativeRoot),
       projectRelativeRoot,
@@ -1188,7 +1201,7 @@ async function validateImportSourceFile(
 async function copyLocationHeroFile(input: {
   projectFolder: string;
   sourceProjectRelativePath: ProjectRelativePath;
-  destinationFolder: ProjectRelativePath;
+  destinationProjectRelativePath: ProjectRelativePath;
 }): Promise<{
   projectRelativePath: ProjectRelativePath;
   mimeType: string;
@@ -1199,13 +1212,9 @@ async function copyLocationHeroFile(input: {
     input.projectFolder,
     input.sourceProjectRelativePath
   );
-  const destinationProjectRelativePath = joinProjectRelativePath(
-    input.destinationFolder,
-    `hero${extensionForSource(input.sourceProjectRelativePath)}`
-  );
   const destinationPath = resolveProjectRelativePath(
     input.projectFolder,
-    destinationProjectRelativePath
+    input.destinationProjectRelativePath
   );
   assertResolvedPathInsideProject(input.projectFolder, destinationPath);
   await fs.mkdir(path.dirname(destinationPath), { recursive: true });
@@ -1214,8 +1223,8 @@ async function copyLocationHeroFile(input: {
   }
   const stats = await statExistingFile(destinationPath);
   return {
-    projectRelativePath: destinationProjectRelativePath,
-    mimeType: mimeTypeForPath(destinationProjectRelativePath),
+    projectRelativePath: input.destinationProjectRelativePath,
+    mimeType: mimeTypeForPath(input.destinationProjectRelativePath),
     sizeBytes: stats.size,
     contentHash: await hashFile(destinationPath),
   };
@@ -1224,7 +1233,6 @@ async function copyLocationHeroFile(input: {
 async function insertImportedLocationHero(input: {
   session: DatabaseSession;
   locationId: string;
-  destinationFolder: ProjectRelativePath;
   file: {
     projectRelativePath: ProjectRelativePath;
     mimeType: string;
@@ -1245,7 +1253,7 @@ async function insertImportedLocationHero(input: {
       id: assetId,
       type: 'location_hero',
       mediaKind: 'image',
-      title: input.title?.trim() || path.basename(input.destinationFolder),
+      title: input.title?.trim() || path.parse(input.file.projectRelativePath).name,
       oneLineSummary: input.description,
       origin: input.origin,
       availability: 'ready',
@@ -1302,28 +1310,18 @@ async function insertImportedLocationHero(input: {
   return { assetId };
 }
 
-async function allocateLocationHeroFolder(input: {
+async function allocateLocationHeroPath(input: {
   projectFolder: string;
   locationHandle: string;
-  title: string;
+  extension: string;
 }): Promise<ProjectRelativePath> {
   const parent = joinProjectRelativePath(LOCATIONS_ROOT, input.locationHandle, 'heroes');
-  const base = slugify(input.title) || 'hero';
-  for (let index = 0; index < 1000; index += 1) {
-    const candidate = joinProjectRelativePath(
-      parent,
-      index === 0 ? base : `${base}-${index + 1}`
-    );
-    try {
-      await fs.access(resolveProjectRelativePath(input.projectFolder, candidate));
-    } catch {
-      return candidate;
-    }
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA315',
-    `Could not allocate a unique location hero folder for ${input.title}.`
-  );
+  return allocateProjectRelativeVersionedFilePath({
+    projectFolder: input.projectFolder,
+    parent,
+    baseName: 'hero',
+    extension: input.extension,
+  });
 }
 
 function sourceInputFiles(
@@ -1345,9 +1343,7 @@ function sourceLogicalInput(sourcePath: string): string[] {
 }
 
 function inferImportOrigin(sourceProjectRelativePath: ProjectRelativePath): string {
-  return sourceProjectRelativePath.startsWith('generated/media/')
-    ? 'generated'
-    : 'imported';
+  return sourceProjectRelativePath.startsWith('tmp/media/') ? 'generated' : 'imported';
 }
 
 function titleForSpec(spec: LocationHeroGenerationSpec, fallback: string): string {

@@ -68,6 +68,9 @@ import {
 import {
   requireScreenplayDocument,
 } from '../shared/project-session.js';
+import {
+  resolveShotVideoTakeFolder,
+} from '../shared/take-media-paths.js';
 import { discardTrashObject } from '../../../../trash/trash-lifecycle-service.js';
 
 
@@ -443,6 +446,12 @@ function inputForIterationSelection(input: {
   const ids = createUniqueIdAllocator(
     input.input.idGenerator ?? createRandomIdGenerator()
   );
+  const screenplay = requireScreenplayDocument(input.session);
+  const targetTakeFolder = resolveShotVideoTakeFolder({
+    session: input.session,
+    screenplay,
+    take: input.iteration.take,
+  });
   const copiedAsset = isShotVideoTakeOwnedMediaAsset(input.session, {
     inputKind: input.sourceInput.kind,
     assetId: input.sourceInput.assetId,
@@ -453,6 +462,7 @@ function inputForIterationSelection(input: {
         sourceAssetId: input.sourceInput.assetId,
         sourceAssetFileId: input.sourceInput.assetFileId,
         targetTakeId: input.iteration.take.takeId,
+        targetTakeFolder,
         inputKind: input.sourceInput.kind,
         now: input.now,
         nextId: ids,

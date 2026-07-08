@@ -43,6 +43,9 @@ import {
   removeCopiedTakeOwnedMediaAssetFile,
 } from '../ownership/take-owned-media.js';
 import {
+  resolveShotVideoTakeFolder,
+} from '../shared/take-media-paths.js';
+import {
   assertEditableSceneShotVideoTake,
   type PreparedSceneShotVideoTake,
   prepareSceneShotVideoTakeInSession,
@@ -128,6 +131,11 @@ export function continueSceneShotVideoTakeIteration(input: {
           productionForOwnedMediaCopy: input.productionForOwnedMediaCopy,
           targetSceneId: targetTake.sceneId,
           targetTakeId: targetTake.takeId,
+          targetTakeFolder: resolveShotVideoTakeFolder({
+            session: transactionSession,
+            screenplay: input.screenplay,
+            take: targetTake,
+          }),
           now: input.now,
           nextId: ids,
           onCopiedOwnedMediaFile: (copy) => {
@@ -193,6 +201,7 @@ function copyShotVideoTakeInputRecordsForIteration(
     productionForOwnedMediaCopy?: SceneShotVideoTakeProductionState;
     targetSceneId: string;
     targetTakeId: string;
+    targetTakeFolder: ProjectRelativePath;
     now: string;
     nextId: (prefix: EntityIdPrefix) => string;
     onCopiedOwnedMediaFile: (copy: { projectRelativePath: ProjectRelativePath }) => void;
@@ -228,6 +237,7 @@ function copyShotVideoTakeInputRecordsForIteration(
           sourceAssetId: mediaInput.assetId,
           sourceAssetFileId: mediaInput.assetFileId,
           targetTakeId: input.targetTakeId,
+          targetTakeFolder: input.targetTakeFolder,
           inputKind: mediaInput.kind,
           now: input.now,
           nextId: input.nextId,

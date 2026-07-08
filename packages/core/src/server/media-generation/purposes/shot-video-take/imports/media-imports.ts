@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
   SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
@@ -6,6 +8,7 @@ import type {
   ShotVideoTakeImageInputImportKind,
   ShotVideoTakeInputMediaImportReport,
   ShotVideoTakeMediaImportReport,
+  ProjectRelativePath,
 } from '../../../../../client/index.js';
 import {
   insertAssetFileRecord,
@@ -38,6 +41,10 @@ import {
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../../../../files/project-relative-paths.js';
+import {
+  allocateProjectRelativeFilePath,
+  extensionForMediaSource,
+} from '../../../../files/asset-paths.js';
 import type {
   ImportShotVideoTakeInputMediaInput,
   ImportShotVideoTakeMediaInput,
@@ -72,6 +79,9 @@ import {
 import {
   continueSceneShotVideoTakeIteration,
 } from '../authoring/take-iteration.js';
+import {
+  resolveShotVideoTakeFolder,
+} from '../shared/take-media-paths.js';
 
 
 export async function importShotInputMedia(
@@ -83,17 +93,6 @@ export async function importShotInputMedia(
     const screenplay = requireScreenplayDocument(session);
     const sourcePrepared = prepareSceneShotVideoTakeInSession({ session, input });
     assertEditableSceneShotVideoTake(sourcePrepared.take);
-    const imported = await importGeneratedFile({
-      session,
-      projectFolder,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title ?? shotInputTitle(inputKind),
-      mediaKind: 'image',
-      assetType: SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
-      origin: input.receipt ? 'generated' : 'imported',
-      idGenerator: input.idGenerator,
-      now,
-    });
     const iteration = continueSceneShotVideoTakeIteration({
       session,
       projectFolder,
@@ -102,6 +101,23 @@ export async function importShotInputMedia(
       now,
     });
     const prepared = iteration.prepared;
+    const imported = await importGeneratedFile({
+      session,
+      projectFolder,
+      destinationFolder: resolveShotVideoTakeFolder({
+        session,
+        screenplay,
+        take: prepared.take,
+      }),
+      sourceProjectRelativePath: input.sourceProjectRelativePath,
+      title: input.title ?? shotInputTitle(inputKind),
+      mediaKind: 'image',
+      assetType: SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
+      fileBaseName: shotInputFileBaseName(inputKind),
+      origin: input.receipt ? 'generated' : 'imported',
+      idGenerator: input.idGenerator,
+      now,
+    });
     const subject =
       inputKind === 'video-prompt-sheet'
         ? {
@@ -206,17 +222,6 @@ export async function importShotVideoTake(
     const screenplay = requireScreenplayDocument(session);
     const sourcePrepared = prepareSceneShotVideoTakeInSession({ session, input });
     assertEditableSceneShotVideoTake(sourcePrepared.take);
-    const imported = await importGeneratedFile({
-      session,
-      projectFolder,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      title: input.title ?? 'Shot video take',
-      mediaKind: 'video',
-      assetType: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      origin: input.receipt ? 'generated' : 'imported',
-      idGenerator: input.idGenerator,
-      now,
-    });
     const iteration = continueSceneShotVideoTakeIteration({
       session,
       projectFolder,
@@ -226,6 +231,23 @@ export async function importShotVideoTake(
       title: input.title ?? `${sourcePrepared.take.title} regeneration`,
     });
     const targetTake = iteration.take;
+    const imported = await importGeneratedFile({
+      session,
+      projectFolder,
+      destinationFolder: resolveShotVideoTakeFolder({
+        session,
+        screenplay,
+        take: targetTake,
+      }),
+      sourceProjectRelativePath: input.sourceProjectRelativePath,
+      title: input.title ?? 'Shot video take',
+      mediaKind: 'video',
+      assetType: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
+      fileBaseName: 'video',
+      origin: input.receipt ? 'generated' : 'imported',
+      idGenerator: input.idGenerator,
+      now,
+    });
     const video = insertShotVideoTakeVideoRecord(session, {
       takeId: targetTake.takeId,
       assetId: imported.assetId,
@@ -304,14 +326,20 @@ function shotInputTitle(inputKind: ShotVideoTakeImageInputImportKind): string {
   return 'Shot reference image';
 }
 
+function shotInputFileBaseName(inputKind: ShotVideoTakeImageInputImportKind): string {
+  return inputKind === 'reference-image' ? 'reference-image' : inputKind;
+}
+
 
 export async function importGeneratedFile(input: {
   session: DatabaseSession;
   projectFolder: string;
+  destinationFolder: ProjectRelativePath;
   sourceProjectRelativePath: string;
   title: string;
   mediaKind: 'image' | 'video';
   assetType: string;
+  fileBaseName: string;
   origin: string;
   idGenerator?: ProjectIdGenerator;
   now: string;
@@ -319,7 +347,24 @@ export async function importGeneratedFile(input: {
   const sourceProjectRelativePath = normalizeProjectRelativePath(input.sourceProjectRelativePath);
   const sourcePath = resolveProjectRelativePath(input.projectFolder, sourceProjectRelativePath);
   assertResolvedPathInsideProject(input.projectFolder, sourcePath);
-  const stats = await statExistingFile(sourcePath);
+  await statExistingFile(sourcePath);
+  const destinationProjectRelativePath = await allocateProjectRelativeFilePath({
+    projectFolder: input.projectFolder,
+    parent: input.destinationFolder,
+    baseName: input.fileBaseName,
+    extension: extensionForMediaSource(sourceProjectRelativePath),
+  });
+  const destinationPath = resolveProjectRelativePath(
+    input.projectFolder,
+    destinationProjectRelativePath
+  );
+  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
+  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+  if (sourcePath !== destinationPath) {
+    await fs.copyFile(sourcePath, destinationPath);
+  }
+  const destinationStats = await statExistingFile(destinationPath);
+  const contentHash = await hashFile(destinationPath);
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const assetId = ids('asset');
   const assetFileId = ids('asset_file');
@@ -337,11 +382,11 @@ export async function importGeneratedFile(input: {
     id: assetFileId,
     assetId,
     role: 'primary',
-    projectRelativePath: sourceProjectRelativePath,
-    mimeType: mimeTypeForPath(sourceProjectRelativePath, input.mediaKind),
+    projectRelativePath: destinationProjectRelativePath,
+    mimeType: mimeTypeForPath(destinationProjectRelativePath, input.mediaKind),
     mediaKind: input.mediaKind,
-    sizeBytes: stats.size,
-    contentHash: await hashFile(sourcePath),
+    sizeBytes: destinationStats.size,
+    contentHash,
     createdAt: input.now,
     updatedAt: input.now,
   });
@@ -372,11 +417,11 @@ export async function importGeneratedFile(input: {
         {
           id: assetFileId,
           role: 'primary',
-          projectRelativePath: sourceProjectRelativePath,
-          mimeType: mimeTypeForPath(sourceProjectRelativePath, input.mediaKind),
+          projectRelativePath: destinationProjectRelativePath,
+          mimeType: mimeTypeForPath(destinationProjectRelativePath, input.mediaKind),
           mediaKind: input.mediaKind,
-          sizeBytes: stats.size,
-          contentHash: await hashFile(sourcePath),
+          sizeBytes: destinationStats.size,
+          contentHash,
           width: null,
           height: null,
           durationSeconds: null,
