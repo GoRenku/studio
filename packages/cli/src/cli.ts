@@ -646,6 +646,7 @@ export async function runRenkuCli(
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
             take: cli.flags.take,
+            kind: cli.flags.kind,
             selection: cli.flags.selection,
             replaceSelected: cli.flags.replaceSelected,
           },
