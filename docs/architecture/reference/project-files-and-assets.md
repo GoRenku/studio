@@ -105,16 +105,21 @@ generation. When a research file becomes a durable project asset, Core copies
 it into the relevant owner folder and registers that destination path.
 
 Durable asset-file persistence is centralized in
-`packages/core/src/server/project-asset-files/`. Runtime callers should pass a
-source project-relative path and an owner-aware destination such as a Cast
-Character Sheet, Cast Voice Sample, Location Environment Sheet, Location Hero,
-Lookbook Image, Lookbook Sheet, Shot Video Take media file, Scene Dialogue
-Audio take, or Image Edit output. Scene Storyboard imports use a batch
-storage API so one import writes one shared iteration folder for all imported
-shot files. Callers must not precompute durable destination folders or insert
-`asset_file` rows for new durable media directly. Temporary project files use
-the module's temporary destination contract and never become SQLite asset files
-unless a domain import command later materializes them into an owner folder.
+`packages/core/src/server/project-asset-files/`. Runtime callers import public
+APIs from `packages/core/src/server/project-asset-files/index.ts`, pass a source
+project-relative path and an owner-aware destination such as a Cast Character
+Sheet, Cast Voice Sample, Location Environment Sheet, Location Hero, Lookbook
+Image, Lookbook Sheet, Shot Video Take media file, Scene Dialogue Audio take, or
+Image Edit output. The destination and generation-output submodules are private
+implementation details that own path allocation by domain family and purpose
+family.
+
+Scene Storyboard imports use a batch storage API so one import writes one shared
+iteration folder for all imported shot files. Callers must not precompute
+durable destination folders or insert `asset_file` rows for new durable media
+directly. Temporary project files use the module's temporary destination
+contract and never become SQLite asset files unless a domain import command
+later materializes them into an owner folder.
 
 Scene-owned Dialogue Audio paths use:
 

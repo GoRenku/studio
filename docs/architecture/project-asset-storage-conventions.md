@@ -250,7 +250,7 @@ the durable filesystem folder themselves.
 - validation that new durable asset paths do not start with `generated/`;
 - validation that durable asset files are not registered under `research/`;
 - take-owned media copy behavior;
-- storyboard iteration allocation.
+- storyboard iteration allocation;
 - write-set cleanup for copied files when a later database relationship or
   selection write fails.
 
@@ -274,6 +274,27 @@ by Core.
 
 CLI handlers, Studio server routes, Studio React components, and agents must
 not build durable destination paths themselves.
+
+### Implementation Shape
+
+`packages/core/src/server/project-asset-files/index.ts` is the public import
+surface for callers. It is intentionally a thin entrypoint that re-exports
+storage contracts, persistence commands, temporary-file helpers, generation
+output placement, and the few destination-owned public helpers.
+
+Implementation remains centralized in the storage module but is split by role:
+
+- `persistence.ts` owns durable materialization and `asset_file` insertion;
+- `temporary-files.ts` owns temporary writes and temporary root resolution;
+- `file-operations.ts`, `path-allocation.ts`, and `path-guards.ts` own generic
+  filesystem and path safety mechanics;
+- `owner-lookups.ts` owns read-only owner lookup helpers;
+- `destinations/*` owns durable path allocation for one destination family per
+  file;
+- `generation-output/*` owns purpose-family output placement intent.
+
+Callers outside `project-asset-files/` must import from `index.ts`, not from the
+private destination, persistence, or generation-output modules.
 
 ## Superseded Guidance
 

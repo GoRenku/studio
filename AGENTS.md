@@ -301,6 +301,12 @@ unless the user explicitly asks for dependency installation.
   deliberately in the plan. Do not defer interface-level naming with phrases
   such as "names can be refined during implementation"; only low-level local
   variable or private helper naming may be left to implementation.
+- Use `plans/PLAN_TEMPLATE.md` for new active implementation plans. Any plan
+  that changes production code must include an Architecture Shape Gate before
+  implementation begins. That gate must name the intended module/file layout,
+  public entrypoints, internal ownership split, dispatcher or registry shape,
+  and explicit stop conditions for preventing god files, broad switchboards,
+  catch-all helpers, and monolithic owning-layer implementations.
 - Every active implementation plan must include a detailed, comprehensive
   completion checklist near the end of the document, similar in depth to
   `plans/active/0042-shot-video-take-generation-plan-architecture.md`. Group
@@ -308,6 +314,10 @@ unless the user explicitly asks for dependency installation.
   UI/CLI/agent surfaces when relevant, validation/tests, documentation/ADR work,
   and final verification. The checklist should be specific enough that a reviewer
   can track implementation progress without rereading the full plan.
+  The checklist must include final architecture-shape verification: inspect the
+  diff, inspect large or heavily modified files, confirm `index.ts` files remain
+  thin entrypoints unless explicitly planned otherwise, and confirm no checklist
+  item was satisfied by accepting unreviewable code structure.
 
 ## Very Important: Fail Fast With Structured Errors
 

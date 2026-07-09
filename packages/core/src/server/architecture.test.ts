@@ -769,6 +769,161 @@ describe('core server architecture', () => {
       ].join(' ')
     ).toEqual([]);
   });
+
+  it('keeps project asset file public entrypoint thin', async () => {
+    const entrypoint = path.join(
+      projectSourceRoot,
+      'project-asset-files',
+      'index.ts'
+    );
+    const source = await fs.readFile(entrypoint, 'utf8');
+    const significantLines = source
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('//'));
+    const reExportSources = [...source.matchAll(/from ['"]([^'"]+)['"]/g)].map(
+      (match) => match[1]!
+    );
+    const nonEntrypointLines = significantLines.filter(
+      (line) =>
+        !line.startsWith('export ') &&
+        !line.startsWith('}') &&
+        !/^[A-Za-z0-9_,\s]+$/.test(line)
+    );
+
+    expect(reExportSources.length).toBeGreaterThan(0);
+    expect(reExportSources.every((importSource) => importSource.startsWith('./'))).toBe(true);
+    expect(nonEntrypointLines).toEqual([]);
+    expect(source).not.toMatch(/\b(?:async\s+)?function\s+\w+/);
+    expect(source).not.toMatch(/\bclass\s+\w+/);
+    expect(source).not.toMatch(/^\s*import\s/m);
+  });
+
+  it('keeps project asset file internals private to the storage module', async () => {
+    const files = (await Promise.all([
+      listTypeScriptFiles(path.join(repoRoot, 'packages', 'core', 'src')),
+      listTypeScriptFiles(path.join(repoRoot, 'packages', 'cli', 'src')),
+      listTypeScriptFiles(path.join(repoRoot, 'packages', 'studio', 'src')),
+    ])).flat();
+    const projectAssetFilesRoot = path.join(
+      projectSourceRoot,
+      'project-asset-files'
+    );
+    const publicEntrypoint = path.join(projectAssetFilesRoot, 'index.ts');
+    const offenders: Array<{ file: string; importSource: string }> = [];
+
+    for (const file of files) {
+      if (file.startsWith(projectAssetFilesRoot)) {
+        continue;
+      }
+      const source = await fs.readFile(file, 'utf8');
+      for (const importSource of extractImportSources(source)) {
+        const resolvedImportPath = await resolveImportSourcePath(file, importSource);
+        if (
+          resolvedImportPath?.startsWith(projectAssetFilesRoot) &&
+          resolvedImportPath !== publicEntrypoint
+        ) {
+          offenders.push({
+            file: path.relative(repoRoot, file),
+            importSource,
+          });
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'Project asset file storage exposes public APIs through project-asset-files/index.ts.',
+        'Destination, generation-output, persistence, and helper modules are private implementation details.',
+      ].join(' ')
+    ).toEqual([]);
+  });
+
+  it('keeps project asset file module roles separated', async () => {
+    const storageRoot = path.join(projectSourceRoot, 'project-asset-files');
+    const roleChecks = [
+      {
+        root: path.join(storageRoot, 'destinations'),
+        forbiddenImports: ['node:fs', 'node:fs/promises', 'node:crypto'],
+        forbiddenImportFragments: ['database/access/asset-files'],
+        reason:
+          'destination modules allocate owner paths and must not copy files or insert asset-file rows',
+      },
+      {
+        root: path.join(storageRoot, 'generation-output'),
+        forbiddenImports: ['node:fs', 'node:fs/promises', 'node:crypto'],
+        forbiddenImportFragments: ['database/access/asset-files'],
+        reason:
+          'generation-output modules decide placement intent and must not materialize files or insert asset-file rows',
+      },
+      {
+        root: path.join(storageRoot, 'file-operations.ts'),
+        forbiddenImportFragments: ['database/access'],
+        reason:
+          'filesystem helpers must stay independent from database access',
+      },
+    ];
+    const offenders: Array<{
+      file: string;
+      importSource: string;
+      reason: string;
+    }> = [];
+
+    for (const check of roleChecks) {
+      const files = check.root.endsWith('.ts')
+        ? [check.root]
+        : await listTypeScriptFiles(check.root);
+      for (const file of files) {
+        const source = await fs.readFile(file, 'utf8');
+        for (const importSource of extractImportSources(source)) {
+          if (
+            check.forbiddenImports?.includes(importSource) ||
+            check.forbiddenImportFragments.some((fragment) =>
+              importSource.includes(fragment)
+            )
+          ) {
+            offenders.push({
+              file: path.relative(projectSourceRoot, file),
+              importSource,
+              reason: check.reason,
+            });
+          }
+        }
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('keeps project asset file implementation files reviewable', async () => {
+    const files = await listTypeScriptFiles(
+      path.join(projectSourceRoot, 'project-asset-files')
+    );
+    const offenders: Array<{ file: string; lineCount: number }> = [];
+
+    for (const file of files) {
+      if (file.endsWith('.test.ts')) {
+        continue;
+      }
+      const source = await fs.readFile(file, 'utf8');
+      const lineCount = source.split('\n').length;
+      if (lineCount > 400) {
+        offenders.push({
+          file: path.relative(projectSourceRoot, file),
+          lineCount,
+        });
+      }
+    }
+
+    expect(
+      offenders,
+      [
+        'The project-asset-files module was split to avoid another unreviewable implementation file.',
+        'Keep each storage role focused instead of moving the old monolith into a new file.',
+      ].join(' ')
+    ).toEqual([]);
+  });
 });
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {
