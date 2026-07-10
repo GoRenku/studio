@@ -505,7 +505,7 @@ export interface ProjectDataService {
   prepareDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   buildMediaGenerationPreview(input: BuildMediaGenerationPreviewInput): Promise<GenerationPreviewRequest>;
   buildDraftMediaGenerationPreview(input: BuildDraftMediaGenerationPreviewInput): Promise<GenerationPreviewRequest>;
-  updateCastCharacterSheetReferenceInclusion(input: UpdateCastCharacterSheetReferenceInclusionInput): Promise<GenerationPreviewRequest>;
+  updateGenerationPreviewSpec(input: UpdateGenerationPreviewSpecInput): Promise<GenerationPreviewRequest>;
   estimateMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
@@ -1257,10 +1257,19 @@ export interface BuildMediaGenerationPreviewInput
 export interface BuildDraftMediaGenerationPreviewInput
   extends ValidateMediaGenerationSpecInput {}
 
-export interface UpdateCastCharacterSheetReferenceInclusionInput
-  extends ReadMediaGenerationSpecInput {
+export interface GenerationPreviewPromptUpdate {
+  authoredText: string;
+  negativeText?: string | null;
+}
+
+export interface GenerationPreviewReferenceSelectionUpdate {
   dependencyId: string;
-  inclusion: 'include' | 'exclude' | null;
+  selected: boolean;
+}
+
+export interface UpdateGenerationPreviewSpecInput extends ReadMediaGenerationSpecInput {
+  prompt: GenerationPreviewPromptUpdate;
+  referenceSelections: GenerationPreviewReferenceSelectionUpdate[];
 }
 
 export interface RunMediaGenerationSpecInput

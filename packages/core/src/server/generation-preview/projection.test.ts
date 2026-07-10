@@ -194,7 +194,8 @@ function previewRequestBase(): GenerationPreviewRequest {
       mediaKind: 'image' as const,
     },
     finalPrompt: {
-      text: 'Create a production reference image.',
+      authoredText: 'Create a production reference image.',
+      providerText: 'Create a production reference image.',
     },
     references: [],
     configuration: { sections: [] },

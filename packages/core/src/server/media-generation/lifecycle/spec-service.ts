@@ -9,9 +9,8 @@ import type {
   BuildDraftMediaGenerationPreviewInput,
   BuildMediaGenerationPreviewInput,
   ReadMediaGenerationSpecInput,
-  UpdateCastCharacterSheetReferenceInclusionInput,
+  UpdateGenerationPreviewSpecInput,
 } from '../../project-data-service-contracts.js';
-import { ProjectDataError } from '../../project-data-error.js';
 import {
   type CreateMediaGenerationSpecInput,
   type ListMediaGenerationSpecsInput,
@@ -22,8 +21,11 @@ import {
 } from './purpose-lifecycle-registry.js';
 import { assertRootDependenciesResolved } from './dependency-service.js';
 import { withMediaGenerationProjectSession } from './project-session.js';
-import { updateCastCharacterSheetReferenceInclusion as updateCastCharacterSheetReferenceInclusionForSpec } from '../purposes/cast-character-sheet.js';
 import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
+import {
+  buildGenerationPreviewFromSpecRecord,
+  updateGenerationPreviewSpec as updateSavedGenerationPreviewSpec,
+} from './preview-spec-update.js';
 
 export async function validateMediaGenerationSpec(
   input: ValidateMediaGenerationSpecInput
@@ -106,28 +108,8 @@ export async function buildDraftMediaGenerationPreview(
   });
 }
 
-async function buildGenerationPreviewFromSpecRecord(input: {
-  projectName?: string;
-  homeDir?: string;
-  specRecord: MediaGenerationSpecRecord;
-}): Promise<GenerationPreviewRequest> {
-  const { specRecord } = input;
-  const definition = requireMediaGenerationPurposeDefinition(specRecord.purpose);
-  if (definition.buildPreview) {
-    return definition.buildPreview(input);
-  }
-  throw new ProjectDataError(
-    'CORE_MEDIA_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
-    `Generation preview is not supported for purpose: ${specRecord.purpose}.`,
-    {
-      suggestion:
-        'Use a previewable media generation purpose or add a Core preview builder before showing this spec in Studio.',
-    }
-  );
-}
-
-export async function updateCastCharacterSheetReferenceInclusion(
-  input: UpdateCastCharacterSheetReferenceInclusionInput
+export async function updateGenerationPreviewSpec(
+  input: UpdateGenerationPreviewSpecInput
 ): Promise<GenerationPreviewRequest> {
-  return updateCastCharacterSheetReferenceInclusionForSpec(input);
+  return updateSavedGenerationPreviewSpec(input);
 }

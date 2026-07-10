@@ -1,20 +1,30 @@
 import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
-export async function updateCastCharacterSheetPreviewReference(input: {
+export interface UpdateStudioGenerationPreviewSpecInput {
   projectName: string;
   specId: string;
-  dependencyId: string;
-  inclusion: 'include' | 'exclude' | null;
-}): Promise<StudioGenerationPreview> {
+  prompt: {
+    authoredText: string;
+    negativeText?: string | null;
+  };
+  referenceSelections: Array<{
+    dependencyId: string;
+    selected: boolean;
+  }>;
+}
+
+export async function updateGenerationPreviewSpec(
+  input: UpdateStudioGenerationPreviewSpecInput,
+): Promise<StudioGenerationPreview> {
   const response = await fetch(
-    `/studio-api/projects/${encodeURIComponent(input.projectName)}/generation-previews/specs/${encodeURIComponent(input.specId)}/reference-inclusion`,
+    `/studio-api/projects/${encodeURIComponent(input.projectName)}/generation-previews/specs/${encodeURIComponent(input.specId)}`,
     {
       method: 'PATCH',
       headers: jsonHeaders(),
       body: JSON.stringify({
-        dependencyId: input.dependencyId,
-        inclusion: input.inclusion,
+        prompt: input.prompt,
+        referenceSelections: input.referenceSelections,
       }),
     }
   );

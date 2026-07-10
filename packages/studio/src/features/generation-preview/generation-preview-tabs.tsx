@@ -11,24 +11,33 @@ import { GenerationPreviewConfigPanel } from './generation-preview-config-panel'
 import { GenerationPreviewDiagnosticsBanner } from './generation-preview-diagnostics-banner';
 import { GenerationPreviewPromptPanel } from './generation-preview-prompt-panel';
 import { GenerationPreviewReferenceGrid } from './generation-preview-reference-grid';
+import type { GenerationPreviewDraft } from './generation-preview-draft';
 
 export type GenerationPreviewTab = 'prompt' | 'references' | 'config';
 
 interface GenerationPreviewTabsProps {
   preview: StudioGenerationPreview;
+  draft: GenerationPreviewDraft;
+  editorRevision: number;
   tab: GenerationPreviewTab;
   updateError: string | null;
-  updatingDependencyId: string | null;
+  updating: boolean;
   onTabChange: (tab: GenerationPreviewTab) => void;
+  onAuthoredTextChange: (value: string) => void;
+  onNegativeTextChange: (value: string) => void;
   onReferenceToggle: (reference: StudioGenerationPreviewReference) => void;
 }
 
 export function GenerationPreviewTabs({
   preview,
+  draft,
+  editorRevision,
   tab,
   updateError,
-  updatingDependencyId,
+  updating,
   onTabChange,
+  onAuthoredTextChange,
+  onNegativeTextChange,
   onReferenceToggle,
 }: GenerationPreviewTabsProps) {
   return (
@@ -47,8 +56,18 @@ export function GenerationPreviewTabs({
           </Alert>
         ) : null}
         <GenerationPreviewDiagnosticsBanner diagnostics={preview.diagnostics} />
-        <LineTabsContent value='prompt' className='mt-0 min-h-0 overflow-auto'>
-          <GenerationPreviewPromptPanel preview={preview} />
+        <LineTabsContent
+          value='prompt'
+          className='mt-0 min-h-0 overflow-hidden'
+        >
+          <GenerationPreviewPromptPanel
+            authoredText={draft.promptDraft.authoredText}
+            negativeText={draft.promptDraft.negativeText}
+            editorRevision={editorRevision}
+            readOnly={!preview.generationSpecId || updating}
+            onAuthoredTextChange={onAuthoredTextChange}
+            onNegativeTextChange={onNegativeTextChange}
+          />
         </LineTabsContent>
         <LineTabsContent
           value='references'
@@ -56,7 +75,8 @@ export function GenerationPreviewTabs({
         >
           <GenerationPreviewReferenceGrid
             preview={preview}
-            updatingDependencyId={updatingDependencyId}
+            draft={draft}
+            updating={updating}
             onReferenceToggle={onReferenceToggle}
           />
         </LineTabsContent>

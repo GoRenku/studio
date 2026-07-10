@@ -84,7 +84,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'deleteShotVideoTakeInput'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
-  | 'updateCastCharacterSheetReferenceInclusion'
+  | 'updateGenerationPreviewSpec'
   | 'updateProjectInformation'
   | 'resolveCoverImage'
   | 'listAssets'

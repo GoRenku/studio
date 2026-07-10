@@ -74,6 +74,12 @@ const GENERATION_PREVIEW_REFERENCE_SELECTION_CONTROL_KEYS = new Set([
   'inclusionOverride',
 ]);
 
+const GENERATION_PREVIEW_PROMPT_KEYS = new Set([
+  'authoredText',
+  'providerText',
+  'negativeText',
+]);
+
 const GENERATION_PREVIEW_CONFIGURATION_KEYS = new Set(['sections']);
 
 const GENERATION_PREVIEW_CONFIGURATION_SECTION_KEYS = new Set([
@@ -485,7 +491,42 @@ function validatePrompt(
     );
     return;
   }
-  requireNonEmptyString(prompt, 'text', ['finalPrompt', 'text'], context, issues);
+  validateObjectKeys(
+    prompt,
+    GENERATION_PREVIEW_PROMPT_KEYS,
+    ['finalPrompt'],
+    context,
+    issues,
+    'CORE_GENERATION_PREVIEW_PROMPT_FIELD_UNSUPPORTED',
+  );
+  if (typeof prompt.authoredText !== 'string') {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_AUTHORED_PROMPT_INVALID',
+        'Generation preview finalPrompt.authoredText must be a string.',
+        { path: ['finalPrompt', 'authoredText'], context },
+      ),
+    );
+  }
+  requireNonEmptyString(
+    prompt,
+    'providerText',
+    ['finalPrompt', 'providerText'],
+    context,
+    issues,
+  );
+  if (
+    prompt.negativeText !== undefined &&
+    typeof prompt.negativeText !== 'string'
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'CORE_GENERATION_PREVIEW_NEGATIVE_PROMPT_INVALID',
+        'Generation preview finalPrompt.negativeText must be a string when provided.',
+        { path: ['finalPrompt', 'negativeText'], context },
+      ),
+    );
+  }
 }
 
 function validateReferences(

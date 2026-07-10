@@ -1,5 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {
+  createDiagnosticError,
+  type DiagnosticIssue,
+} from '@gorenku/studio-diagnostics';
 import type {
   Asset,
   CastCharacterSheetGenerationContext,
@@ -62,7 +66,10 @@ import {
   castCharacterSheetDependencySlot,
   castReferenceImageDependencySlot,
 } from '../dependencies/dependency-slot-definitions.js';
-import type { MediaGenerationDependencyDeclarationInput } from '../lifecycle/purpose-lifecycle-registry.js';
+import type {
+  ApplyGenerationPreviewReferenceSelectionsInput,
+  MediaGenerationDependencyDeclarationInput,
+} from '../lifecycle/purpose-lifecycle-registry.js';
 import {
   buildScreenplayContext,
   buildTimePeriodContext,
@@ -129,11 +136,6 @@ export interface CastCharacterSheetSpecIdInput extends CastCharacterSheetProject
 
 export interface UpdateCastCharacterSheetSpecInput extends CastCharacterSheetSpecIdInput {
   spec: CastCharacterSheetGenerationSpec;
-}
-
-export interface UpdateCastCharacterSheetReferenceInclusionInput extends CastCharacterSheetSpecIdInput {
-  dependencyId: string;
-  inclusion: 'include' | 'exclude' | null;
 }
 
 export interface RunCastCharacterSheetSpecInput extends CastCharacterSheetSpecIdInput {
@@ -397,7 +399,8 @@ export async function buildCastCharacterSheetGenerationPreview(
     provider: plan.provider,
     providerModel: plan.model,
     mode: plan.mode,
-    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    authoredPrompt: specRecord.spec.prompt,
+    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: referenceOptions.map((reference) => ({
       kind: 'image' as const,
       role: reference.referenceRole,
@@ -430,10 +433,10 @@ export async function buildCastCharacterSheetGenerationPreview(
   });
 }
 
-export async function updateCastCharacterSheetReferenceInclusion(
-  input: UpdateCastCharacterSheetReferenceInclusionInput
-): Promise<GenerationPreviewRequest> {
-  const specRecord = await readCastCharacterSheetSpec(input);
+export async function applyCastCharacterSheetPreviewReferenceSelections(
+  input: ApplyGenerationPreviewReferenceSelectionsInput,
+): Promise<CastCharacterSheetGenerationSpec> {
+  const { specRecord } = input;
   assertCharacterSheetSpec(specRecord.spec);
   const context = await buildCastCharacterSheetContext({
     projectName: input.projectName,
@@ -444,48 +447,84 @@ export async function updateCastCharacterSheetReferenceInclusion(
     context,
     referenceSelections: specRecord.spec.referenceSelections,
   });
-  if (!referenceOptions.some((option) => option.dependencyId === input.dependencyId)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA294',
-      `Cast character sheet reference dependency was not found: ${input.dependencyId}.`,
-      {
-        suggestion:
+  return applyCastCharacterSheetReferenceSelectionUpdates({
+    spec: specRecord.spec,
+    referenceOptions,
+    referenceSelections: input.referenceSelections,
+  });
+}
+
+export function applyCastCharacterSheetReferenceSelectionUpdates(input: {
+  spec: CastCharacterSheetGenerationSpec;
+  referenceOptions: CastCharacterSheetReferenceOption[];
+  referenceSelections: ApplyGenerationPreviewReferenceSelectionsInput['referenceSelections'];
+}): CastCharacterSheetGenerationSpec {
+  const referenceOptionByDependencyId = new Map(
+    input.referenceOptions.map((option) => [option.dependencyId, option]),
+  );
+  const issues: DiagnosticIssue[] = [];
+  input.referenceSelections.forEach((selection, index) => {
+    const option = referenceOptionByDependencyId.get(selection.dependencyId);
+    if (!option) {
+      issues.push(
+        createDiagnosticError(
+          'CORE_CAST_CHARACTER_SHEET_PREVIEW_REFERENCE_UNKNOWN',
+          `Cast character sheet reference dependency was not found: ${selection.dependencyId}.`,
+          {
+            path: ['referenceSelections', String(index), 'dependencyId'],
+            context: 'generation preview update',
+          },
           'Refresh the generation preview and choose one of the displayed reference dependencies.',
-      }
+        ),
+      );
+      return;
+    }
+    if (option.required && !selection.selected) {
+      issues.push(
+        createDiagnosticError(
+          'CORE_CAST_CHARACTER_SHEET_PREVIEW_REFERENCE_REQUIRED',
+          `Required cast character sheet reference cannot be deselected: ${selection.dependencyId}.`,
+          {
+            path: ['referenceSelections', String(index), 'selected'],
+            context: 'generation preview update',
+          },
+        ),
+      );
+    }
+  });
+  if (issues.length > 0) {
+    throw new ProjectDataError(
+      'CORE_CAST_CHARACTER_SHEET_PREVIEW_REFERENCE_SELECTION_INVALID',
+      'Cast character sheet preview reference selections are invalid.',
+      {
+        issues,
+        suggestion:
+          'Refresh the generation preview and update only editable optional references.',
+      },
     );
   }
   const nextInclusions = {
-    ...(specRecord.spec.referenceSelections?.dependencyInclusions ?? {}),
+    ...(input.spec.referenceSelections?.dependencyInclusions ?? {}),
   };
-  if (input.inclusion === null) {
-    delete nextInclusions[input.dependencyId];
-  } else {
-    nextInclusions[input.dependencyId] = input.inclusion;
+  for (const selection of input.referenceSelections) {
+    const option = referenceOptionByDependencyId.get(selection.dependencyId)!;
+    if (selection.selected === option.defaultIncluded) {
+      delete nextInclusions[selection.dependencyId];
+    } else {
+      nextInclusions[selection.dependencyId] = selection.selected
+        ? 'include'
+        : 'exclude';
+    }
   }
-  const nextReferenceSelections =
-    Object.keys(nextInclusions).length > 0
-      ? { dependencyInclusions: nextInclusions }
-      : undefined;
-  const nextSpec = {
-    ...specRecord.spec,
-    ...(nextReferenceSelections
-      ? { referenceSelections: nextReferenceSelections }
-      : {}),
-  };
-  if (!nextReferenceSelections) {
-    delete (nextSpec as { referenceSelections?: unknown }).referenceSelections;
+  if (Object.keys(nextInclusions).length > 0) {
+    return {
+      ...input.spec,
+      referenceSelections: { dependencyInclusions: nextInclusions },
+    };
   }
-  const updatedSpecRecord = await updateCastCharacterSheetSpec({
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    specId: input.specId,
-    spec: nextSpec,
-  });
-  return buildCastCharacterSheetGenerationPreview({
-    projectName: input.projectName,
-    homeDir: input.homeDir,
-    specRecord: updatedSpecRecord,
-  });
+  const nextSpec = { ...input.spec };
+  delete nextSpec.referenceSelections;
+  return nextSpec;
 }
 
 export async function prepareCastCharacterSheetSpec(

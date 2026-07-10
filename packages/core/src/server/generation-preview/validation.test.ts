@@ -60,10 +60,40 @@ describe('generation preview validation', () => {
 
   it('does not parse prompt text for panel structure', () => {
     const preview = previewFixture();
-    preview.finalPrompt.text =
+    preview.finalPrompt.authoredText =
       'Create a single uncaptioned abstract timing wash with no panels and no shot labels.';
 
     expect(() => validateGenerationPreviewRequest(preview)).not.toThrow();
+  });
+
+  it('accepts an empty authored prompt when the provider preview text is present', () => {
+    const preview = previewFixture();
+    preview.finalPrompt.authoredText = '';
+    preview.finalPrompt.providerText =
+      'Shot 1: The provider-facing multi-prompt remains populated.';
+
+    expect(() => validateGenerationPreviewRequest(preview)).not.toThrow();
+  });
+
+  it('rejects retired preview prompt field names', () => {
+    const preview = previewFixture() as unknown as {
+      finalPrompt: Record<string, unknown>;
+    };
+    preview.finalPrompt = {
+      text: 'Retired prompt field.',
+      providerText: 'Provider prompt.',
+    };
+
+    expect(() => validateGenerationPreviewRequest(preview)).toThrow(
+      expect.objectContaining({
+        code: 'CORE_GENERATION_PREVIEW_INVALID',
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'CORE_GENERATION_PREVIEW_PROMPT_FIELD_UNSUPPORTED',
+          }),
+        ]),
+      }),
+    );
   });
 
   it('rejects prompt-sheet metadata in saved generation previews', () => {
@@ -297,7 +327,8 @@ function previewFixture() {
       mediaKind: 'image',
     },
     finalPrompt: {
-      text: 'Create a production reference image.',
+      authoredText: 'Create a production reference image.',
+      providerText: 'Create a production reference image.',
     },
     references: [
       {

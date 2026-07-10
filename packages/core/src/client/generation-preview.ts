@@ -76,8 +76,9 @@ export interface GenerationPreviewModel {
 }
 
 export interface GenerationPreviewPrompt {
-  text: string;
-  negativePrompt?: string;
+  authoredText: string;
+  providerText: string;
+  negativeText?: string;
 }
 
 export type GenerationPreviewRequestReference =

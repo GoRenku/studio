@@ -586,7 +586,8 @@ function generationPreviewFixture(): GenerationPreviewRequest {
       executionPath: 'renku-managed',
     },
     finalPrompt: {
-      text: 'Create a motion annotated video prompt image.',
+      authoredText: 'Create a motion annotated video prompt image.',
+      providerText: 'Create a motion annotated video prompt image.',
     },
     references: [
       {

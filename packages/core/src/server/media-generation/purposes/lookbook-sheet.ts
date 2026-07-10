@@ -300,7 +300,8 @@ export async function buildLookbookSheetGenerationPreview(
     provider: plan.provider,
     providerModel: plan.model,
     mode: 'text-to-image',
-    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    authoredPrompt: specRecord.spec.prompt,
+    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: [],
     payload: plan.payload,
   });

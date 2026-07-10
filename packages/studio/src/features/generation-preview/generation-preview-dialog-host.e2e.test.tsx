@@ -191,7 +191,7 @@ describe('GenerationPreviewDialogHost', () => {
     expect(screen.queryByText('No Issues')).toBeNull();
   });
 
-  it('updates editable reference inclusion and keeps later previews reopenable', async () => {
+  it('updates prompt and reference drafts together without closing the dialog', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -201,6 +201,7 @@ describe('GenerationPreviewDialogHost', () => {
           referenceLabel: 'Storyboard Lookbook Sheet',
           selected: false,
           editableReference: true,
+          authoredText: 'Updated production prompt.\nSecond line.',
         }),
       }),
     });
@@ -218,6 +219,14 @@ describe('GenerationPreviewDialogHost', () => {
       })
     );
 
+    fireEvent.input(
+      await screen.findByRole('textbox', { name: 'Generation prompt' }),
+      {
+        target: { value: 'Updated production prompt.\nSecond line.' },
+      },
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+
     await act(async () => {
       selectTab('References');
     });
@@ -226,24 +235,35 @@ describe('GenerationPreviewDialogHost', () => {
         name: 'Exclude Storyboard Lookbook Sheet',
       })
     );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole('button', {
+        name: 'Include Storyboard Lookbook Sheet',
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        '/studio-api/projects/constantinople/generation-previews/specs/generation_spec_test/reference-inclusion',
+        '/studio-api/projects/constantinople/generation-previews/specs/generation_spec_test',
         expect.objectContaining({
           method: 'PATCH',
           body: JSON.stringify({
-            dependencyId: 'dependency_style',
-            inclusion: 'exclude',
+            prompt: {
+              authoredText: 'Updated production prompt.\nSecond line.',
+            },
+            referenceSelections: [
+              { dependencyId: 'dependency_style', selected: false },
+            ],
           }),
         })
       );
     });
+    expect(screen.getByText('Character Sheet Generation Preview')).toBeTruthy();
     expect(
-      await screen.findByRole('button', {
-        name: 'Include Storyboard Lookbook Sheet',
-      })
-    ).toBeTruthy();
+      screen.getByRole('button', { name: 'Update' }).hasAttribute('disabled'),
+    ).toBe(true);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Close' }).at(-1)!);
     await waitFor(() => {
@@ -261,6 +281,153 @@ describe('GenerationPreviewDialogHost', () => {
     );
     expect(await screen.findByText('Shot Video Generation Preview')).toBeTruthy();
     expect(screen.getByText('Reopened Storyboard Lookbook Sheet')).toBeTruthy();
+  });
+
+  it('keeps the dialog open and shows structured update errors', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => ({
+        error: { code: 'CORE_TEST', message: 'Preview update failed.' },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'cast.character-sheet',
+        title: 'Character Sheet Preview',
+        editableReference: true,
+      }),
+    );
+    fireEvent.input(
+      await screen.findByRole('textbox', { name: 'Generation prompt' }),
+      { target: { value: 'A failing update.' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    expect(await screen.findByText('Preview Update Failed')).toBeTruthy();
+    expect(screen.getByText('CORE_TEST: Preview update failed.')).toBeTruthy();
+    expect(screen.getByText('Character Sheet Generation Preview')).toBeTruthy();
+  });
+
+  it('keeps unsaved and required-reference previews non-editable', async () => {
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'image.create',
+        title: 'Draft Preview',
+      }),
+    );
+    expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
+    expect(
+      screen
+        .getByRole('textbox', { name: 'Generation prompt' })
+        .hasAttribute('readonly'),
+    ).toBe(true);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'cast.character-sheet',
+        title: 'Required Reference Preview',
+        editableReference: true,
+        requiredReference: true,
+      }),
+    );
+    await act(async () => {
+      selectTab('References');
+    });
+    expect(screen.getByText('Storyboard Lookbook Sheet')).toBeTruthy();
+    expect(
+      screen.queryByRole('button', {
+        name: 'Exclude Storyboard Lookbook Sheet',
+      }),
+    ).toBeNull();
+  });
+
+  it('shows a model-supported negative prompt in a smaller editor', async () => {
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-take',
+        title: 'Video Take Preview',
+        saved: true,
+        negativeText: 'No camera shake.',
+      })
+    );
+
+    const promptPanel = screen
+      .getByRole('textbox', { name: 'Generation prompt' })
+      .closest('[role="tabpanel"]')
+      ?.firstElementChild;
+    expect(promptPanel?.className).toContain(
+      'grid-rows-[minmax(0,3fr)_minmax(0,1fr)]'
+    );
+    expect(
+      (screen.getByRole('textbox', {
+        name: 'Negative generation prompt',
+      }) as HTMLTextAreaElement).value
+    ).toBe('No camera shake.');
+  });
+
+  it('does not let a superseded update response replace a newer preview', async () => {
+    let resolveFetch!: (response: Response) => void;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-take',
+        title: 'First Video Take Preview',
+        saved: true,
+        authoredText: 'First preview prompt.',
+      })
+    );
+    fireEvent.input(
+      screen.getByRole('textbox', { name: 'Generation prompt' }),
+      { target: { value: 'Pending update prompt.' } }
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'shot.video-take',
+        title: 'Newer Video Take Preview',
+        saved: true,
+        authoredText: 'Newer preview prompt.',
+      })
+    );
+    await act(async () => {
+      resolveFetch({
+        ok: true,
+        json: async () => ({
+          preview: previewFixture({
+            purpose: 'shot.video-take',
+            title: 'Stale Video Take Preview',
+            saved: true,
+            authoredText: 'Stale response prompt.',
+          }),
+        }),
+      } as Response);
+    });
+
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('textbox', {
+          name: 'Generation prompt',
+        }) as HTMLTextAreaElement).value
+      ).toBe('Newer preview prompt.');
+    });
   });
 });
 
@@ -295,6 +462,10 @@ function previewFixture(input: {
   referenceLabel?: string;
   selected?: boolean;
   editableReference?: boolean;
+  requiredReference?: boolean;
+  saved?: boolean;
+  authoredText?: string;
+  negativeText?: string;
   providerPreview?: StudioGenerationPreview['providerPreview'];
   diagnostics?: StudioGenerationPreview['diagnostics'];
   estimate?: StudioGenerationPreview['estimate'];
@@ -302,7 +473,7 @@ function previewFixture(input: {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
-    generationSpecId: input.editableReference
+    generationSpecId: input.saved || input.editableReference
       ? 'generation_spec_test'
       : undefined,
     purpose: input.purpose,
@@ -334,7 +505,13 @@ function previewFixture(input: {
       route: 'image-to-image',
     },
     finalPrompt: {
-      text: 'Create a production reference image.',
+      authoredText:
+        input.authoredText ?? 'Create a production reference image.',
+      providerText:
+        input.authoredText ?? 'Create a production reference image.',
+      ...(input.negativeText !== undefined
+        ? { negativeText: input.negativeText }
+        : {}),
     },
     references: [
       {
@@ -349,7 +526,7 @@ function previewFixture(input: {
         selectionControl: input.editableReference
           ? {
               dependencyId: 'dependency_style',
-              required: false,
+              required: input.requiredReference ?? false,
               defaultIncluded: true,
               inclusionOverride: null,
               editable: true,

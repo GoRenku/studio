@@ -376,7 +376,8 @@ export async function buildSceneStoryboardSheetGenerationPreview(
     provider: plan.provider,
     providerModel: plan.model,
     mode: plan.mode,
-    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    authoredPrompt: specRecord.spec.prompt,
+    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: sceneStoryboardPreviewReferences(context),
     payload: plan.payload,
   });

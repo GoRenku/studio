@@ -63,4 +63,26 @@ describe('media generation lifecycle purpose registry', () => {
         .toBe(definition.buildPreview);
     }
   });
+
+  it('registers purpose-owned reference updates only where the purpose supports them', () => {
+    expect(
+      requireMediaGenerationPurposeDefinition('cast.character-sheet')
+        .applyPreviewReferenceSelections,
+    ).toEqual(expect.any(Function));
+    expect(
+      requireMediaGenerationPurposeDefinition('lookbook.image')
+        .applyPreviewReferenceSelections,
+    ).toBeUndefined();
+  });
+
+  it('registers model-schema negative prompt support only for shot video takes', () => {
+    expect(
+      requireMediaGenerationPurposeDefinition('shot.video-take')
+        .supportsPreviewNegativePrompt
+    ).toEqual(expect.any(Function));
+    expect(
+      requireMediaGenerationPurposeDefinition('lookbook.image')
+        .supportsPreviewNegativePrompt
+    ).toBeUndefined();
+  });
 });

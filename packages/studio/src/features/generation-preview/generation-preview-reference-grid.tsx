@@ -2,17 +2,21 @@ import type {
   StudioGenerationPreview,
   StudioGenerationPreviewReference,
 } from '@gorenku/studio-core/client';
+import type { GenerationPreviewDraft } from './generation-preview-draft';
+import { generationPreviewReferenceSelected } from './generation-preview-draft';
 import { GenerationPreviewReferenceCard } from './generation-preview-reference-card';
 
 interface GenerationPreviewReferenceGridProps {
   preview: StudioGenerationPreview;
-  updatingDependencyId: string | null;
+  draft: GenerationPreviewDraft;
+  updating: boolean;
   onReferenceToggle: (reference: StudioGenerationPreviewReference) => void;
 }
 
 export function GenerationPreviewReferenceGrid({
   preview,
-  updatingDependencyId,
+  draft,
+  updating,
   onReferenceToggle,
 }: GenerationPreviewReferenceGridProps) {
   if (!preview.references.length) {
@@ -29,10 +33,9 @@ export function GenerationPreviewReferenceGrid({
         <GenerationPreviewReferenceCard
           key={`${reference.kind}:${reference.assetId}:${reference.assetFileId}:${index}`}
           reference={reference}
+          selected={generationPreviewReferenceSelected(reference, draft)}
           canEdit={Boolean(preview.generationSpecId)}
-          updating={
-            updatingDependencyId === reference.selectionControl?.dependencyId
-          }
+          updating={updating}
           onToggle={onReferenceToggle}
         />
       ))}

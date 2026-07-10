@@ -495,7 +495,8 @@ function previewFixture() {
       mediaKind: 'image',
     },
     finalPrompt: {
-      text: 'Create a production reference image.',
+      authoredText: 'Create a production reference image.',
+      providerText: 'Create a production reference image.',
     },
     references: [
       {

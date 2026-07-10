@@ -322,7 +322,8 @@ export async function buildCastProfileGenerationPreview(
     provider: plan.provider,
     providerModel: plan.model,
     mode: plan.mode,
-    prompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+    authoredPrompt: specRecord.spec.prompt,
+    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: castProfilePreviewReferences(specRecord.spec, context),
     payload: plan.payload,
   });

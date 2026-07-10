@@ -147,7 +147,7 @@ describe('shot video take preflight and validation', () => {
     );
   });
 
-  it('shows provider multi_prompt text in saved final video previews', async () => {
+  it('shows provider multi_prompt text and edits a model-supported negative prompt', async () => {
     const ids = await shotVideoTakeProject.sampleIds();
     const written = await shotVideoTakeProject.writeShotList(ids, 1);
     const context = await projectData.buildShotVideoTakeContext({
@@ -177,16 +177,67 @@ describe('shot video take preflight and validation', () => {
       specId: spec.id,
     });
 
-    expect(preview.finalPrompt.text).toBe(
+    expect(preview.finalPrompt.providerText).toBe(
       [
         'Shot 1 (duration: 3): Urban studies the cannon mold before speaking.',
         'Shot 2 (duration: 2): The chamber answers with a restrained slow push.',
       ].join('\n\n')
     );
+    expect(preview.finalPrompt.negativeText).toBe('');
     expect(preview.providerPreview?.payload).toMatchObject({
       prompt: null,
       multi_prompt: multiPrompt,
     });
+
+    const withNegativePrompt = await projectData.updateGenerationPreviewSpec({
+      homeDir,
+      specId: spec.id,
+      prompt: {
+        authoredText: '',
+        negativeText: 'No camera shake.',
+      },
+      referenceSelections: [],
+    });
+    expect(withNegativePrompt.finalPrompt.negativeText).toBe('No camera shake.');
+
+    const clearedNegativePrompt = await projectData.updateGenerationPreviewSpec({
+      homeDir,
+      specId: spec.id,
+      prompt: {
+        authoredText: '',
+        negativeText: null,
+      },
+      referenceSelections: [],
+    });
+    expect(clearedNegativePrompt.finalPrompt.negativeText).toBe('');
+  });
+
+  it('omits the negative prompt when the selected model schema has no field for it', async () => {
+    const ids = await shotVideoTakeProject.sampleIds();
+    const written = await shotVideoTakeProject.writeShotList(ids, 1);
+    const context = await projectData.buildShotVideoTakeContext({
+      homeDir,
+      takeId: written.take.takeId,
+    });
+    const spec = await projectData.createShotVideoTakeSpec({
+      homeDir,
+      spec: {
+        purpose: 'shot.video-take',
+        target: context.target,
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        prompt: 'One continuous video take.',
+        parameterValues: {},
+        inputs: [],
+      },
+    });
+
+    const preview = await projectData.buildMediaGenerationPreview({
+      homeDir,
+      specId: spec.id,
+    });
+
+    expect(preview.finalPrompt).not.toHaveProperty('negativeText');
   });
 
   it('projects route prompt tokens in saved final video previews', async () => {

@@ -80,6 +80,19 @@ construction. Final `shot.video-take` previews use shot-video route metadata
 because they target video models with route-specific parameters and media input
 slots.
 
+Saved previews expose prompt text as two deliberate values:
+`finalPrompt.authoredText` is the exact persisted prompt that Studio may edit,
+while `finalPrompt.providerText` is the provider-facing preview after any
+accepted app-owned transform. `finalPrompt.negativeText` is present only when
+the selected provider model schema exposes a negative-prompt field; it remains
+present as an empty editable string when the saved spec has no negative prompt
+yet. Studio updates a saved preview through the focused Core
+`updateGenerationPreviewSpec` lifecycle service. That service updates the
+authored prompt, delegates editable reference selections to the owning purpose,
+persists through the purpose's existing `updateSpec` contract, and rebuilds the
+preview. Purpose-specific reference storage never belongs in the Studio route
+or browser draft model.
+
 Browser-safe media generation contracts are split by ownership under
 `packages/core/src/client`. Shared purpose, target, dependency, and lifecycle
 contracts live in `media-generation-purpose.ts`,

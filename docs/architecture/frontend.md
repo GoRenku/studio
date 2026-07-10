@@ -32,7 +32,9 @@ Reusable frontend behavior belongs to the layer that owns its meaning.
 
 Domain-neutral design-system behavior belongs in `src/ui`. Examples include
 buttons, dialogs, tabs, tooltips, image preview dialogs, image-card grids,
-overlay image cards, and image selection controls.
+overlay image cards, image selection controls, and the token-themed
+`SyntaxTextEditor` wrapper for embedded Markdown or JSON editing. Feature code
+must consume that wrapper instead of importing `prism-react-editor` directly.
 
 Product-specific composition belongs in `src/features`. A Cast component can
 prepare Cast data, choose which asset role to show, and pass Cast-specific

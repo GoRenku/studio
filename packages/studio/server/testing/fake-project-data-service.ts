@@ -84,7 +84,7 @@ export function fakeProjectDataService(): NonNullable<
         absolutePath: '/tmp/renku/constantinople/cast/reference.png',
       };
     },
-    async updateCastCharacterSheetReferenceInclusion() {
+    async updateGenerationPreviewSpec() {
       return generationPreviewRequest();
     },
     async resolveShotVideoTakeInputFile(input) {
@@ -1734,7 +1734,10 @@ function generationPreviewRequest(): GenerationPreviewRequest {
       mediaKind: 'image',
       executionPath: 'renku-managed',
     },
-    finalPrompt: { text: 'Create a lean character sheet.' },
+    finalPrompt: {
+      authoredText: 'Create a lean character sheet.',
+      providerText: 'Create a lean character sheet.',
+    },
     references: [
       {
         kind: 'image',

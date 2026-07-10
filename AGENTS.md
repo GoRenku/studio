@@ -85,9 +85,14 @@ the API or import itself is the architecture boundary being protected.
 
 ## Top Instruction: AI Artifacts And Prompts Are Opaque
 
-Do not validate, parse, score, repair, or otherwise try to understand the
-creative contents of AI prompts, generated media, reference media, or sheet-like
-artifacts in Studio runtime code.
+Do not validate, semantically parse, score, repair, embellish, rewrite, or
+otherwise try to understand the creative contents of AI prompts, generated
+media, reference media, or sheet-like artifacts in Studio runtime code.
+
+Presentation-only tokenization is allowed when it preserves the exact authored
+value. For example, an editor may tokenize Markdown for syntax highlighting,
+provided those tokens are used only to style the text and never to validate,
+change, interpret, or make decisions from its creative contents.
 
 This is a hard architecture rule. The accepted decision is
 `docs/decisions/0041-keep-ai-artifacts-and-prompts-opaque.md`, and the current
@@ -168,6 +173,33 @@ that the user or current data model actually supplies.
 
 If a visual surface does not have useful text to show, keep the surface quiet
 and let the image, controls, and surrounding section title carry the interface.
+
+## Top Instruction: Preserve Existing Formatting
+
+Do not reformat existing files as part of an unrelated change. Format-only
+churn is a defect even when tests, typechecks, and lint pass.
+
+The default behavior must be:
+
+- preserve each file's existing quote style, indentation, line wrapping,
+  import layout, trailing-comma style, and other local formatting;
+- make narrow edits with `apply_patch` instead of rewriting complete files for
+  small changes;
+- use only the repository-owned Prettier configuration when formatting is
+  explicitly required;
+- never run Prettier, ESLint `--fix`, or another formatter across touched files
+  merely because those files were edited;
+- never use formatter defaults when the repository does not provide an
+  accepted formatter configuration;
+- inspect `git diff --stat` and the complete diff before completion;
+- stop and remove formatting churn when a small behavioral change produces
+  widespread quote, whitespace, import-layout, or line-wrapping changes.
+
+Running `prettier --write`, `eslint --fix`, or an equivalent full-file rewrite
+requires either an explicit user request to format the affected files or a
+repository task whose accepted scope is formatting. A formatter configuration
+reduces accidental style changes; it does not authorize unrelated full-file
+formatting.
 
 ## Top Instruction: Desktop-First Verification
 

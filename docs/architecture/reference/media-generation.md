@@ -317,11 +317,12 @@ history; if Studio is closed, the command fails instead of creating an offline
 backlog. References in the generated preview must be logical project references
 (`assetId`, `assetFileId`, role,
 provider token), never local absolute paths or provider upload URLs. Subsequent
-feedback should revise the same `previewId` so the open dialog updates in
-place.
+feedback should revise the same saved spec so the open dialog can replace its
+current snapshot in place.
 
 The visible Studio dialog is a user review surface, not a provider debug view.
-It should show the final prompt as readable prose, resolved reference media,
+It should show the saved authored prompt in the embedded Markdown editor,
+resolved reference media,
 configuration rows that Core includes in `preview.configuration.sections`,
 estimate information when present, and Core diagnostics only when diagnostics
 exist. The configuration object is a Core-authored, sectioned review
@@ -330,6 +331,18 @@ spec, the effective provider plan and payload, model-list capability reports,
 and the provider schema descriptor exposed by Engines. Studio renders the rows
 it receives and must not import provider schemas, inspect raw provider payload
 JSON, or infer model-specific field support in React.
+
+For a saved preview with a `generationSpecId`, prompt edits and editable
+reference selections remain local until the user chooses `Update`. Studio then
+persists both changes through one Core-owned update and replaces the open
+snapshot with the rebuilt preview. Draft previews remain review-only.
+
+When the selected provider model input schema exposes `negative_prompt`, the
+Prompt tab shows the authored prompt and negative prompt together in a 75/25
+vertical split. Core exposes an empty `negativeText` for a supporting model when
+the saved spec has no negative prompt yet, so the user may add, clear, and
+re-add it. Models without that schema property do not reserve negative-prompt
+space. Studio must not infer this capability locally.
 
 Configuration rows distinguish effective Renku values from provider schema
 defaults. A row may carry the exact value Renku will send, or a provider default
@@ -537,11 +550,9 @@ selected Movie Lookbook. The context includes:
 
 Character sheet generation should create a full reusable design reference for
 the character. It should account for the story, the character, the period, and
-the selected movie visual language. The best current model choices are:
-
-- `fal-ai/openai/gpt-image-2`
-- `fal-ai/nano-banana-2`
-- `fal-ai/xai/grok-imagine-image`
+the selected movie visual language. The default current Renku-managed image
+model is `fal-ai/openai/gpt-image-2`; supported alternatives should be used only
+when explicitly selected.
 
 ## Cast Profile Context
 
@@ -698,7 +709,7 @@ The generation spec is persisted before estimate or execution.
 {
   "purpose": "lookbook.image",
   "target": { "kind": "lookbook", "id": "lookbook_abc" },
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A horror hallway showing the Lookbook palette under dread lighting.",
   "focusSections": ["palette", "lighting"],
   "takeCount": 1,
@@ -759,7 +770,7 @@ model cannot execute it. For example, some models reject `21:9` or seeds.
 {
   "purpose": "cast.character-sheet",
   "target": { "kind": "castMember", "id": "cast_ada" },
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A full character sheet for Ada, a determined investigator in late 1970s New York...",
   "takeCount": 1,
   "seed": null,
@@ -778,7 +789,7 @@ Text-to-image profile spec:
 {
   "purpose": "cast.profile",
   "target": { "kind": "castMember", "id": "cast_ada" },
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A square profile portrait of Ada...",
   "takeCount": 1,
   "seed": null,
@@ -795,7 +806,7 @@ Edit profile spec:
 {
   "purpose": "cast.profile",
   "target": { "kind": "castMember", "id": "cast_ada" },
-  "modelChoice": "fal-ai/nano-banana-2/edit",
+  "modelChoice": "fal-ai/openai/gpt-image-2/edit",
   "sourceAssetId": "asset_character_sheet",
   "prompt": "Create a square profile portrait derived from the attached character sheet...",
   "takeCount": 1,
@@ -817,7 +828,7 @@ the cast member with the `character_sheet` role.
 {
   "purpose": "location.environment-sheet",
   "target": { "kind": "location", "id": "location_sea_walls" },
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A full-image Location Sheet for the Constantinople sea walls...",
   "description": "Sea-wall material, gate, tower, field, and city-edge reference for shot planning.",
   "takeCount": 1,
@@ -864,7 +875,7 @@ Location-specific reference board the production needs.
   "purpose": "location.hero",
   "target": { "kind": "location", "id": "location_sea_walls" },
   "sourceLocationSheetAssetId": "asset_sea_walls_sheet",
-  "modelChoice": "fal-ai/nano-banana-2/edit",
+  "modelChoice": "fal-ai/openai/gpt-image-2/edit",
   "prompt": "Create a wide representative hero image for the sea walls from the supplied Location Sheet...",
   "description": "Wide visual identity image grounded in the sea-wall Location Sheet.",
   "takeCount": 1,
@@ -888,7 +899,7 @@ as hidden shot-generation defaults.
   "target": { "kind": "scene", "id": "scene_control_room" },
   "shotListId": "scene_shot_list_control_room_v1",
   "shotIds": ["shot_001", "shot_002", "shot_003", "shot_004"],
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A complete charcoal pencil storyboard sheet laid out as a clean grid...",
   "takeCount": 1,
   "seed": null,

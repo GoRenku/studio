@@ -16,13 +16,13 @@ export interface CreateGenerationPreviewRouteOptions {
 
 type GenerationPreviewRouteProjectData = Pick<
   ProjectDataService,
-  'updateCastCharacterSheetReferenceInclusion'
+  'updateGenerationPreviewSpec'
 >;
 
 type StudioGenerationPreviewProjection = (input: {
   projectName: string;
   preview: Awaited<
-    ReturnType<ProjectDataService['updateCastCharacterSheetReferenceInclusion']>
+    ReturnType<ProjectDataService['updateGenerationPreviewSpec']>
   >;
 }) => Promise<StudioGenerationPreview>;
 
@@ -35,18 +35,18 @@ export function createGenerationPreviewRoute(
   const projectGenerationPreview =
     options.generationPreviewProjection ?? buildStudioGenerationPreview;
   return new Hono().patch(
-    '/generation-previews/specs/:specId/reference-inclusion',
+    '/generation-previews/specs/:specId',
     options.requireToken,
     async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const specId = c.req.param('specId') as string;
-        const body = readReferenceInclusionBody(await c.req.json());
-        const preview = await projectData.updateCastCharacterSheetReferenceInclusion({
+        const body = readGenerationPreviewUpdateBody(await c.req.json());
+        const preview = await projectData.updateGenerationPreviewSpec({
           projectName,
           specId,
-          dependencyId: body.dependencyId,
-          inclusion: body.inclusion,
+          prompt: body.prompt,
+          referenceSelections: body.referenceSelections,
         });
         return c.json({
           preview: await projectGenerationPreview({
@@ -61,27 +61,76 @@ export function createGenerationPreviewRoute(
   );
 }
 
-function readReferenceInclusionBody(value: unknown): {
-  dependencyId: string;
-  inclusion: 'include' | 'exclude' | null;
+function readGenerationPreviewUpdateBody(value: unknown): {
+  prompt: { authoredText: string; negativeText?: string | null };
+  referenceSelections: Array<{ dependencyId: string; selected: boolean }>;
 } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw requestError('Request body must be an object.');
   }
   const body = value as Record<string, unknown>;
-  if (typeof body.dependencyId !== 'string' || !body.dependencyId.trim()) {
-    throw requestError('Request body dependencyId must be a non-empty string.');
+  if (
+    !body.prompt ||
+    typeof body.prompt !== 'object' ||
+    Array.isArray(body.prompt)
+  ) {
+    throw requestError('Request body prompt must be an object.');
+  }
+  const prompt = body.prompt as Record<string, unknown>;
+  if (typeof prompt.authoredText !== 'string') {
+    throw requestError('Request body prompt.authoredText must be a string.');
   }
   if (
-    body.inclusion !== 'include' &&
-    body.inclusion !== 'exclude' &&
-    body.inclusion !== null
+    prompt.negativeText !== undefined &&
+    prompt.negativeText !== null &&
+    typeof prompt.negativeText !== 'string'
   ) {
-    throw requestError('Request body inclusion must be include, exclude, or null.');
+    throw requestError(
+      'Request body prompt.negativeText must be a string or null when provided.',
+    );
+  }
+  if (!Array.isArray(body.referenceSelections)) {
+    throw requestError('Request body referenceSelections must be an array.');
   }
   return {
-    dependencyId: body.dependencyId,
-    inclusion: body.inclusion,
+    prompt: {
+      authoredText: prompt.authoredText,
+      ...(prompt.negativeText !== undefined
+        ? { negativeText: prompt.negativeText as string | null }
+        : {}),
+    },
+    referenceSelections: body.referenceSelections.map((selection, index) =>
+      readReferenceSelection(selection, index),
+    ),
+  };
+}
+
+function readReferenceSelection(
+  value: unknown,
+  index: number,
+): { dependencyId: string; selected: boolean } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw requestError(
+      `Request body referenceSelections[${index}] must be an object.`,
+    );
+  }
+  const selection = value as Record<string, unknown>;
+  if (
+    typeof selection.dependencyId !== 'string' ||
+    !selection.dependencyId.trim()
+  ) {
+    throw requestError(
+      `Request body referenceSelections[${index}].dependencyId must be a non-empty string.`,
+    );
+  }
+  if (typeof selection.selected !== 'boolean') {
+    throw requestError(
+      `Request body referenceSelections[${index}].selected must be a boolean.`,
+    );
+  }
+  return {
+    dependencyId: selection.dependencyId,
+    selected: selection.selected,
   };
 }
 

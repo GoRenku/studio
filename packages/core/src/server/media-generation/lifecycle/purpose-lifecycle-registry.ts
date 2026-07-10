@@ -90,6 +90,7 @@ import type {
   ImportSceneStoryboardImagesMediaInput,
   ImportShotVideoTakeInputMediaInput,
   ImportShotVideoTakeMediaInput,
+  GenerationPreviewReferenceSelectionUpdate,
   LocationMediaGenerationContextInput,
   ReadLookbookImageGenerationContextInput,
   ReadMediaGenerationSpecInput,
@@ -130,7 +131,7 @@ import { buildMediaGenerationCostProjection } from '../cost/cost-projection.js';
 import { buildShotVideoTakeContext } from '../purposes/shot-video-take/authoring/context.js';
 import { listShotVideoTakeModels } from '../purposes/shot-video-take/specs/model-list.js';
 import { buildShotInputDependencyDraftSpec } from '../purposes/shot-video-take/planning/dependency-draft-specs.js';
-import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, buildShotVideoTakeGenerationPreview, prepareShotVideoTakeDraftSpec } from '../purposes/shot-video-take/specs/final-specs.js';
+import { validateShotVideoTakeSpec, createShotVideoTakeSpec, updateShotVideoTakeSpec, listShotVideoTakeSpecs, prepareShotVideoTakeSpec, buildShotVideoTakeGenerationPreview, shotVideoTakeSpecSupportsNegativePrompt, prepareShotVideoTakeDraftSpec } from '../purposes/shot-video-take/specs/final-specs.js';
 import { runShotVideoTakeSpec } from '../purposes/shot-video-take/runs/generation-runs.js';
 import { declareShotVideoTakeDependencies } from '../purposes/shot-video-take/planning/dependency-inventory.js';
 import { importShotInputMedia, importShotVideoTake } from '../purposes/shot-video-take/imports/media-imports.js';
@@ -236,6 +237,13 @@ export interface MediaGenerationPreviewBuildInput {
   specRecord: MediaGenerationSpecRecord;
 }
 
+export interface ApplyGenerationPreviewReferenceSelectionsInput {
+  projectName?: string;
+  homeDir?: string;
+  specRecord: MediaGenerationSpecRecord;
+  referenceSelections: GenerationPreviewReferenceSelectionUpdate[];
+}
+
 export interface MediaGenerationPurposeDefinition {
   purpose: MediaGenerationPurpose;
   mediaKind: MediaKind;
@@ -254,6 +262,12 @@ export interface MediaGenerationPurposeDefinition {
   prepareSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   buildPreview?(input: MediaGenerationPreviewBuildInput): Promise<GenerationPreviewRequest>;
+  supportsPreviewNegativePrompt?(
+    input: MediaGenerationPreviewBuildInput
+  ): Promise<boolean>;
+  applyPreviewReferenceSelections?(
+    input: ApplyGenerationPreviewReferenceSelectionsInput
+  ): Promise<MediaGenerationSpec>;
   declareDependencies?(
     input: MediaGenerationDependencyDeclarationInput
   ): Promise<MediaGenerationDependencySlot[]>;
@@ -455,6 +469,8 @@ const DEFINITIONS = [
     listSpecs: (input) => characterSheet.listCastCharacterSheetSpecs(toCastInput(input)),
     prepareSpec: characterSheet.prepareCastCharacterSheetSpec,
     buildPreview: characterSheet.buildCastCharacterSheetGenerationPreview,
+    applyPreviewReferenceSelections:
+      characterSheet.applyCastCharacterSheetPreviewReferenceSelections,
     prepareDraftSpec: (input) =>
       characterSheet.prepareCastCharacterSheetDraftSpec({
         projectName: input.projectName,
@@ -754,6 +770,7 @@ const DEFINITIONS = [
     listSpecs: (input) => listShotVideoTakeSpecs(toShotInput(input)),
     prepareSpec: prepareShotVideoTakeSpec,
     buildPreview: buildShotVideoTakeGenerationPreview,
+    supportsPreviewNegativePrompt: shotVideoTakeSpecSupportsNegativePrompt,
     prepareDraftSpec: (input) =>
       prepareShotVideoTakeDraftSpec({
         projectName: input.projectName,

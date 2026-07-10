@@ -27,21 +27,30 @@ function createMountedGenerationPreviewRoute(
 }
 
 describe('generation preview Hono route', () => {
-  it('updates a cast character sheet reference inclusion through ProjectDataService', async () => {
-    const updateCastCharacterSheetReferenceInclusion = vi.fn(
-      fakeProjectDataService().updateCastCharacterSheetReferenceInclusion
+  it('updates a saved generation preview spec through ProjectDataService', async () => {
+    const updateGenerationPreviewSpec = vi.fn(
+      fakeProjectDataService().updateGenerationPreviewSpec,
     );
     const app = createMountedGenerationPreviewRoute({
-      updateCastCharacterSheetReferenceInclusion,
+      updateGenerationPreviewSpec,
     });
 
     const response = await app.request(
-      '/constantinople/generation-previews/specs/media_generation_spec_test/reference-inclusion',
+      '/constantinople/generation-previews/specs/media_generation_spec_test',
       {
         method: 'PATCH',
         body: JSON.stringify({
-          dependencyId: 'cast-character-sheet:cast_narrator:asset_cast_reference',
-          inclusion: 'exclude',
+          prompt: {
+            authoredText: 'Updated character sheet prompt.',
+            negativeText: null,
+          },
+          referenceSelections: [
+            {
+              dependencyId:
+                'cast-character-sheet:cast_narrator:asset_cast_reference',
+              selected: false,
+            },
+          ],
         }),
       }
     );
@@ -62,11 +71,42 @@ describe('generation preview Hono route', () => {
         ],
       },
     });
-    expect(updateCastCharacterSheetReferenceInclusion).toHaveBeenCalledWith({
+    expect(updateGenerationPreviewSpec).toHaveBeenCalledWith({
       projectName: 'constantinople',
       specId: 'media_generation_spec_test',
-      dependencyId: 'cast-character-sheet:cast_narrator:asset_cast_reference',
-      inclusion: 'exclude',
+      prompt: {
+        authoredText: 'Updated character sheet prompt.',
+        negativeText: null,
+      },
+      referenceSelections: [
+        {
+          dependencyId:
+            'cast-character-sheet:cast_narrator:asset_cast_reference',
+          selected: false,
+        },
+      ],
+    });
+  });
+
+  it('returns a structured request error for malformed update envelopes', async () => {
+    const app = createMountedGenerationPreviewRoute();
+
+    const response = await app.request(
+      '/constantinople/generation-previews/specs/media_generation_spec_test',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          prompt: { authoredText: 'Updated prompt.' },
+          referenceSelections: [
+            { dependencyId: 'dependency_test', selected: 'yes' },
+          ],
+        }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'STUDIO_SERVER083' },
     });
   });
 });

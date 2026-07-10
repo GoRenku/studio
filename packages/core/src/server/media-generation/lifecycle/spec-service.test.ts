@@ -29,6 +29,7 @@ import {
   prepareMediaGenerationSpec,
   readMediaGenerationSpec,
   updateMediaGenerationSpec,
+  updateGenerationPreviewSpec,
   validateMediaGenerationSpec,
 } from './spec-service.js';
 
@@ -236,6 +237,84 @@ describe('media generation lifecycle spec service', () => {
       buildMediaGenerationPreview({ specId: 'spec-a' })
     ).rejects.toMatchObject({
       code: 'CORE_MEDIA_GENERATION_PREVIEW_PURPOSE_UNSUPPORTED',
+    });
+  });
+
+  it('updates authored prompt text through the purpose and rebuilds the saved preview', async () => {
+    const specRecord = {
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+      spec: {
+        purpose: 'lookbook.image',
+        target: { kind: 'lookbook', id: 'lookbook-a' },
+        prompt: 'Original prompt.',
+      },
+    };
+    const updateSpec = vi.fn(async (input) => ({
+      ...specRecord,
+      spec: input.spec,
+    }));
+    const buildPreview = vi.fn(async (input) => ({
+      kind: 'generationPreview',
+      previewId: `generation-preview:${input.specRecord.id}`,
+      finalPrompt: {
+        authoredText: input.specRecord.spec.prompt,
+        providerText: input.specRecord.spec.prompt,
+      },
+    }));
+    mockedRequireSpec.mockReturnValueOnce(specRecord as never);
+    mockedRequireDefinition.mockReturnValueOnce({
+      updateSpec,
+      buildPreview,
+    } as never);
+
+    await expect(
+      updateGenerationPreviewSpec({
+        specId: 'spec-a',
+        prompt: { authoredText: 'Updated opaque prompt.\nSecond line.' },
+        referenceSelections: [],
+      }),
+    ).resolves.toMatchObject({
+      finalPrompt: {
+        authoredText: 'Updated opaque prompt.\nSecond line.',
+      },
+    });
+    expect(updateSpec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        specId: 'spec-a',
+        spec: expect.objectContaining({
+          prompt: 'Updated opaque prompt.\nSecond line.',
+        }),
+      }),
+    );
+    expect(buildPreview).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects reference updates when the purpose has no owning update hook', async () => {
+    mockedRequireSpec.mockReturnValueOnce({
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+      spec: {
+        purpose: 'lookbook.image',
+        target: { kind: 'lookbook', id: 'lookbook-a' },
+        prompt: 'Original prompt.',
+      },
+    } as never);
+    mockedRequireDefinition.mockReturnValueOnce({
+      updateSpec: vi.fn(),
+      buildPreview: vi.fn(),
+    } as never);
+
+    await expect(
+      updateGenerationPreviewSpec({
+        specId: 'spec-a',
+        prompt: { authoredText: 'Updated prompt.' },
+        referenceSelections: [
+          { dependencyId: 'dependency-a', selected: false },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_GENERATION_PREVIEW_REFERENCE_UPDATE_UNSUPPORTED',
     });
   });
 });

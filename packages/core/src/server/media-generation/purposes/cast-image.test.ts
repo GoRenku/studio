@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type {
   CastCharacterSheetGenerationContext,
+  CastCharacterSheetReferenceOption,
   CastCharacterSheetGenerationSpec,
   CastProfileGenerationContext,
   CastProfileGenerationSpec,
@@ -15,7 +16,10 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../../testing/project-data-fixtures.js';
-import { buildCastCharacterSheetProviderPayload } from './cast-character-sheet.js';
+import {
+  applyCastCharacterSheetReferenceSelectionUpdates,
+  buildCastCharacterSheetProviderPayload,
+} from './cast-character-sheet.js';
 import { buildCastProfileProviderPayload } from './cast-profile.js';
 
 describe('Cast image provider payload mapping', () => {
@@ -186,6 +190,95 @@ describe('Cast image provider payload mapping', () => {
       expect.objectContaining({
         code: 'PROJECT_DATA293',
       })
+    );
+  });
+});
+
+describe('Cast character sheet preview reference selections', () => {
+  it('stores only inclusion overrides that differ from the purpose defaults', () => {
+    const defaultIncluded = referenceOption({
+      dependencyId: 'dependency_default_included',
+      defaultIncluded: true,
+      included: true,
+    });
+    const defaultExcluded = referenceOption({
+      dependencyId: 'dependency_default_excluded',
+      defaultIncluded: false,
+      included: false,
+    });
+
+    expect(
+      applyCastCharacterSheetReferenceSelectionUpdates({
+        spec: characterSheetSpec(),
+        referenceOptions: [defaultIncluded, defaultExcluded],
+        referenceSelections: [
+          { dependencyId: defaultIncluded.dependencyId, selected: false },
+          { dependencyId: defaultExcluded.dependencyId, selected: true },
+        ],
+      }),
+    ).toMatchObject({
+      referenceSelections: {
+        dependencyInclusions: {
+          dependency_default_included: 'exclude',
+          dependency_default_excluded: 'include',
+        },
+      },
+    });
+  });
+
+  it('removes stored overrides when selections return to their defaults', () => {
+    const option = referenceOption({
+      dependencyId: 'dependency_default_included',
+      defaultIncluded: true,
+      included: false,
+      inclusionOverride: 'exclude',
+    });
+    const nextSpec = applyCastCharacterSheetReferenceSelectionUpdates({
+      spec: characterSheetSpec({
+        referenceSelections: {
+          dependencyInclusions: {
+            dependency_default_included: 'exclude',
+          },
+        },
+      }),
+      referenceOptions: [option],
+      referenceSelections: [
+        { dependencyId: option.dependencyId, selected: true },
+      ],
+    });
+
+    expect(nextSpec).not.toHaveProperty('referenceSelections');
+  });
+
+  it('collects unknown dependencies and required deselection failures', () => {
+    const required = referenceOption({
+      dependencyId: 'dependency_required',
+      required: true,
+      defaultIncluded: true,
+      included: true,
+    });
+
+    expect(() =>
+      applyCastCharacterSheetReferenceSelectionUpdates({
+        spec: characterSheetSpec(),
+        referenceOptions: [required],
+        referenceSelections: [
+          { dependencyId: 'dependency_unknown', selected: true },
+          { dependencyId: required.dependencyId, selected: false },
+        ],
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'CORE_CAST_CHARACTER_SHEET_PREVIEW_REFERENCE_SELECTION_INVALID',
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'CORE_CAST_CHARACTER_SHEET_PREVIEW_REFERENCE_UNKNOWN',
+          }),
+          expect.objectContaining({
+            code: 'CORE_CAST_CHARACTER_SHEET_PREVIEW_REFERENCE_REQUIRED',
+          }),
+        ]),
+      }),
     );
   });
 });
@@ -673,6 +766,27 @@ function characterSheetSpec(
     imageFrame: '16:9',
     detail: 'standard',
     outputFormat: 'png',
+    ...overrides,
+  };
+}
+
+function referenceOption(
+  overrides: Partial<CastCharacterSheetReferenceOption> = {},
+): CastCharacterSheetReferenceOption {
+  return {
+    dependencyId: 'dependency_character_sheet',
+    dependencyKind: 'cast-character-sheet',
+    referenceRole: 'character-sheet-continuity',
+    label: 'Character sheet',
+    assetId: 'asset_character_sheet',
+    assetFileId: 'asset_file_character_sheet',
+    projectRelativePath:
+      'cast/ada/character-sheets/ada-sheet.png' as ProjectRelativePath,
+    mediaKind: 'image',
+    required: false,
+    defaultIncluded: true,
+    inclusionOverride: null,
+    included: true,
     ...overrides,
   };
 }

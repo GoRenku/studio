@@ -206,6 +206,13 @@ provider payload preview, because its purpose is local review of the exact
 generator-bound handoff. The preview must not encode prompt-sheet internals such
 as panels, captions, annotation keys, or shot-coverage checks.
 
+The prompt contract separates persisted `finalPrompt.authoredText` from
+provider-facing `finalPrompt.providerText`. Editing a saved preview does not
+mutate the coordination event. The browser sends the authored prompt and final
+editable reference selections to the saved-preview update endpoint; Core
+persists the media generation spec and rebuilds a fresh preview for the still
+open dialog. Draft previews without a `generationSpecId` remain read-only.
+
 It must not be consumed by project data services, used to reconstruct generation
 history, or stored as a substitute for media generation specs, estimates, runs,
 receipts, assets, or take metadata. The Studio server appends the event only

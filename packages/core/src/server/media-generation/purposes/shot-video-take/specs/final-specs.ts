@@ -45,7 +45,10 @@ import {
   toGenerationRequest,
   type ShotVideoTakeProviderPlan,
 } from '../provider/provider-payloads.js';
-import type { ShotVideoRoute } from '@gorenku/studio-engines';
+import {
+  describeGenerationModelInputs,
+  type ShotVideoRoute,
+} from '@gorenku/studio-engines';
 import { buildShotVideoTakePreviewConfiguration } from '../../../../generation-preview/configuration/shot-video-configuration.js';
 import { providerPreviewPromptText } from '../../../../generation-preview/provider-preview-prompt.js';
 import {
@@ -173,6 +176,7 @@ export async function buildShotVideoTakeGenerationPreview(
     context.shotGroupMode
   );
   const plan = buildShotVideoTakeProviderPayload(specRecord.spec, context);
+  const supportsNegativePrompt = await providerModelSupportsNegativePrompt(plan);
   const providerTokenByInput = shotVideoTakeProviderTokenByInput({
     route,
     inputFiles: plan.inputFiles,
@@ -201,9 +205,10 @@ export async function buildShotVideoTakeGenerationPreview(
       mediaKind: 'video',
     },
     finalPrompt: {
-      text: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
-      ...(specRecord.spec.negativePrompt
-        ? { negativePrompt: specRecord.spec.negativePrompt }
+      authoredText: specRecord.spec.prompt,
+      providerText: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
+      ...(supportsNegativePrompt
+        ? { negativeText: specRecord.spec.negativePrompt ?? '' }
         : {}),
     },
     references: shotVideoTakePreviewReferences(
@@ -228,6 +233,33 @@ export async function buildShotVideoTakeGenerationPreview(
     },
     diagnostics: [],
   };
+}
+
+export async function shotVideoTakeSpecSupportsNegativePrompt(input: {
+  projectName?: string;
+  homeDir?: string;
+  specRecord: MediaGenerationSpecRecord;
+}): Promise<boolean> {
+  const { specRecord } = input;
+  assertShotVideoTakeSpec(specRecord.spec);
+  const context = await buildShotVideoTakeContext({
+    projectName: input.projectName,
+    homeDir: input.homeDir,
+    takeId: specRecord.spec.target.takeId,
+  });
+  validateFinalSpecAgainstContext(specRecord.spec, context);
+  const plan = buildShotVideoTakeProviderPayload(specRecord.spec, context);
+  return providerModelSupportsNegativePrompt(plan);
+}
+
+async function providerModelSupportsNegativePrompt(
+  plan: ShotVideoTakeProviderPlan
+): Promise<boolean> {
+  const descriptor = await describeGenerationModelInputs({
+    provider: plan.provider,
+    model: plan.model,
+  });
+  return descriptor?.fields.some((field) => field.name === 'negative_prompt') ?? false;
 }
 
 

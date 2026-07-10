@@ -33,11 +33,6 @@ const routeForbiddenPatterns: ForbiddenSourcePattern[] = [
     reason: 'routes must not assemble durable take state patches',
   },
   {
-    label: 'durable reference-selection map',
-    pattern: /\breferenceSelections\b/,
-    reason: 'routes must not inspect durable take reference-selection maps',
-  },
-  {
     label: 'durable take direction map',
     pattern: /\bdirectionsByShotId\b/,
     reason: 'routes must not inspect durable take direction maps',
@@ -55,12 +50,6 @@ const httpForbiddenPatterns: ForbiddenSourcePattern[] = [
     pattern: /\bstatePatch\b/,
     reason:
       'HTTP helpers may parse request fields but must not build durable state patches',
-  },
-  {
-    label: 'durable reference-selection map',
-    pattern: /\breferenceSelections\b/,
-    reason:
-      'HTTP helpers may parse request fields but must not assemble durable reference-selection maps',
   },
 ];
 
@@ -110,7 +99,7 @@ describe('Studio server architecture', () => {
       findings,
       [
         'HTTP helpers may mention request field names while translating JSON into typed command input.',
-        'They must not assemble referenceSelections, construct statePatch payloads, or call project-data mutation methods.',
+        'They must not construct statePatch payloads or call project-data mutation methods.',
         'Durable take-state mutation must be owned by focused core commands added during 0077.',
       ].join(' ')
     ).toEqual([]);

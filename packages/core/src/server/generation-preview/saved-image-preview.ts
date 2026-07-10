@@ -21,7 +21,8 @@ export interface BuildSavedImageGenerationPreviewInput {
   provider: string;
   providerModel: string;
   mode: 'text-to-image' | 'reference-to-image' | 'image-edit';
-  prompt: string;
+  authoredPrompt: string;
+  providerPrompt: string;
   references: GenerationPreviewRequestReference[];
   payload: Record<string, unknown>;
   providerTokenOrder?: string[];
@@ -57,7 +58,10 @@ export async function buildSavedImageGenerationPreview(
     ...(input.promptSheetNotationModeId
       ? { promptSheetNotationModeId: input.promptSheetNotationModeId }
       : {}),
-    finalPrompt: { text: input.prompt },
+    finalPrompt: {
+      authoredText: input.authoredPrompt,
+      providerText: input.providerPrompt,
+    },
     references: input.references,
     configuration: await buildImagePreviewConfiguration({
       provider: input.provider,

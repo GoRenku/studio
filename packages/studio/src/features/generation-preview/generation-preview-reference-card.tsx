@@ -6,6 +6,7 @@ import { VideoPreview } from '@/ui/video-preview';
 
 interface GenerationPreviewReferenceCardProps {
   reference: StudioGenerationPreviewReference;
+  selected: boolean;
   canEdit: boolean;
   updating: boolean;
   onToggle: (reference: StudioGenerationPreviewReference) => void;
@@ -13,11 +14,11 @@ interface GenerationPreviewReferenceCardProps {
 
 export function GenerationPreviewReferenceCard({
   reference,
+  selected,
   canEdit,
   updating,
   onToggle,
 }: GenerationPreviewReferenceCardProps) {
-  const selected = reference.selected || reference.selectionControl?.required === true;
   const canToggle =
     canEdit &&
     Boolean(reference.selectionControl?.editable) &&

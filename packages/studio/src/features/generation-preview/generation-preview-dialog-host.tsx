@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type {
   StudioGenerationPreview,
   StudioGenerationPreviewReference,
 } from '@gorenku/studio-core/client';
-import { updateCastCharacterSheetPreviewReference } from '@/services/studio-generation-preview-api';
+import { updateGenerationPreviewSpec } from '@/services/studio-generation-preview-api';
 import { GenerationPreviewDialog } from './generation-preview-dialog';
+import {
+  buildGenerationPreviewUpdateRequest,
+  createGenerationPreviewDraft,
+  generationPreviewDraftIsDirty,
+  generationPreviewReferenceSelected,
+  type GenerationPreviewDraft,
+} from './generation-preview-draft';
 
 interface GenerationPreviewEventDetail {
   projectName: string;
@@ -23,10 +30,11 @@ interface GenerationPreviewDialogState {
 export function GenerationPreviewDialogHost() {
   const [state, setState] = useState<GenerationPreviewDialogState | null>(null);
   const [open, setOpen] = useState(false);
-  const [updatingDependencyId, setUpdatingDependencyId] = useState<string | null>(
-    null
-  );
+  const [draft, setDraft] = useState<GenerationPreviewDraft | null>(null);
+  const [editorRevision, setEditorRevision] = useState(0);
+  const [updatePending, setUpdatePending] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const updateRequestRevision = useRef(0);
 
   useEffect(() => {
     const handlePreview = (event: Event) => {
@@ -34,12 +42,16 @@ export function GenerationPreviewDialogHost() {
       if (!detail?.preview) {
         return;
       }
+      updateRequestRevision.current += 1;
       setState({
         projectName: detail.projectName,
         preview: detail.preview,
         eventId: detail.eventId,
         createdAt: detail.createdAt,
       });
+      setDraft(createGenerationPreviewDraft(detail.preview));
+      setEditorRevision((revision) => revision + 1);
+      setUpdatePending(false);
       setUpdateError(null);
       setOpen(true);
     };
@@ -51,23 +63,53 @@ export function GenerationPreviewDialogHost() {
       );
   }, []);
 
-  const handleReferenceToggle = async (
-    reference: StudioGenerationPreviewReference
+  const handleReferenceToggle = (
+    reference: StudioGenerationPreviewReference,
   ) => {
     const control = reference.selectionControl;
-    if (!state || !state.preview.generationSpecId || !control?.editable) {
+    if (
+      !state ||
+      !draft ||
+      !state.preview.generationSpecId ||
+      !control?.editable ||
+      control.required ||
+      updatePending
+    ) {
       return;
     }
-    const inclusion = reference.selected ? 'exclude' : 'include';
-    setUpdatingDependencyId(control.dependencyId);
+    const selected = generationPreviewReferenceSelected(reference, draft);
+    setDraft((current) =>
+      current
+        ? {
+            ...current,
+            referenceSelectionDraftByDependencyId: {
+              ...current.referenceSelectionDraftByDependencyId,
+              [control.dependencyId]: !selected,
+            },
+          }
+        : current,
+    );
+    setUpdateError(null);
+  };
+
+  const handleUpdate = async () => {
+    if (!state?.preview.generationSpecId || !draft || updatePending) {
+      return;
+    }
+    const request = buildGenerationPreviewUpdateRequest(state.preview, draft);
+    const requestRevision = updateRequestRevision.current + 1;
+    updateRequestRevision.current = requestRevision;
+    setUpdatePending(true);
     setUpdateError(null);
     try {
-      const nextPreview = await updateCastCharacterSheetPreviewReference({
+      const nextPreview = await updateGenerationPreviewSpec({
         projectName: state.projectName,
         specId: state.preview.generationSpecId,
-        dependencyId: control.dependencyId,
-        inclusion,
+        ...request,
       });
+      if (updateRequestRevision.current !== requestRevision) {
+        return;
+      }
       setState((current) =>
         current
           ? {
@@ -77,10 +119,16 @@ export function GenerationPreviewDialogHost() {
             }
           : current
       );
+      setDraft(createGenerationPreviewDraft(nextPreview));
+      setEditorRevision((revision) => revision + 1);
     } catch (error) {
-      setUpdateError(error instanceof Error ? error.message : String(error));
+      if (updateRequestRevision.current === requestRevision) {
+        setUpdateError(error instanceof Error ? error.message : String(error));
+      }
     } finally {
-      setUpdatingDependencyId(null);
+      if (updateRequestRevision.current === requestRevision) {
+        setUpdatePending(false);
+      }
     }
   };
 
@@ -88,10 +136,40 @@ export function GenerationPreviewDialogHost() {
     <GenerationPreviewDialog
       open={open && Boolean(state?.preview)}
       preview={state?.preview ?? null}
+      draft={draft}
+      editorRevision={editorRevision}
+      updatePending={updatePending}
+      updateDirty={
+        state && draft
+          ? generationPreviewDraftIsDirty(state.preview, draft)
+          : false
+      }
       updateError={updateError}
-      updatingDependencyId={updatingDependencyId}
       onOpenChange={setOpen}
+      onAuthoredTextChange={(authoredText) => {
+        setDraft((current) =>
+          current
+            ? {
+                ...current,
+                promptDraft: { ...current.promptDraft, authoredText },
+              }
+            : current,
+        );
+        setUpdateError(null);
+      }}
+      onNegativeTextChange={(negativeText) => {
+        setDraft((current) =>
+          current
+            ? {
+                ...current,
+                promptDraft: { ...current.promptDraft, negativeText },
+              }
+            : current,
+        );
+        setUpdateError(null);
+      }}
       onReferenceToggle={handleReferenceToggle}
+      onUpdate={handleUpdate}
     />
   );
 }

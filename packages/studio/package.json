@@ -40,6 +40,7 @@
     "clsx": "^2.1.1",
     "hono": "^4.12.17",
     "lucide-react": "^0.556.0",
+    "prism-react-editor": "^3.2.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

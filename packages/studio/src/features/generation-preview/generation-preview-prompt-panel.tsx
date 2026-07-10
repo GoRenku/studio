@@ -1,29 +1,57 @@
-import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
+import { SyntaxTextEditor } from '@/ui/syntax-text-editor';
+import { cn } from '@/lib/utils';
 
 interface GenerationPreviewPromptPanelProps {
-  preview: StudioGenerationPreview;
+  authoredText: string;
+  negativeText?: string;
+  editorRevision: number;
+  readOnly: boolean;
+  onAuthoredTextChange: (value: string) => void;
+  onNegativeTextChange: (value: string) => void;
 }
 
 export function GenerationPreviewPromptPanel({
-  preview,
+  authoredText,
+  negativeText,
+  editorRevision,
+  readOnly,
+  onAuthoredTextChange,
+  onNegativeTextChange,
 }: GenerationPreviewPromptPanelProps) {
   return (
-    <div className='flex min-h-0 flex-col gap-4'>
-      <section className='flex flex-col gap-2 rounded-md border border-border/50 bg-card/40 p-4'>
-        <p className='whitespace-pre-wrap text-sm leading-6 text-foreground'>
-          {preview.finalPrompt.text}
-        </p>
-      </section>
-      {preview.finalPrompt.negativePrompt ? (
-        <section className='flex flex-col gap-2'>
+    <div
+      className={cn(
+        'grid h-full min-h-0 gap-4',
+        negativeText === undefined
+          ? 'grid-rows-[minmax(0,1fr)]'
+          : 'grid-rows-[minmax(0,3fr)_minmax(0,1fr)]'
+      )}
+    >
+      <SyntaxTextEditor
+        key={`authored-prompt:${editorRevision}`}
+        value={authoredText}
+        onValueChange={onAuthoredTextChange}
+        language='markdown'
+        readOnly={readOnly}
+        wordWrap
+        ariaLabel='Generation prompt'
+        className='min-h-0'
+      />
+      {negativeText !== undefined ? (
+        <section className='flex min-h-0 flex-col gap-2'>
           <h2 className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
             Negative Prompt
           </h2>
-          <div className='rounded-md border border-border/50 bg-card/40 p-4'>
-            <p className='whitespace-pre-wrap text-sm leading-6 text-foreground'>
-              {preview.finalPrompt.negativePrompt}
-            </p>
-          </div>
+          <SyntaxTextEditor
+            key={`negative-prompt:${editorRevision}`}
+            value={negativeText}
+            onValueChange={onNegativeTextChange}
+            language='markdown'
+            readOnly={readOnly}
+            wordWrap
+            ariaLabel='Negative generation prompt'
+            className='min-h-0 flex-1'
+          />
         </section>
       ) : null}
     </div>

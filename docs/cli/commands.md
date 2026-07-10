@@ -1534,7 +1534,7 @@ Lookbook Image spec shape:
 {
   "purpose": "lookbook.image",
   "target": { "kind": "lookbook", "id": "lookbook_abc" },
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A horror hallway showing the Lookbook palette under dread lighting.",
   "focusSections": ["palette", "lighting"],
   "takeCount": 1,
@@ -1557,7 +1557,7 @@ Location Environment Sheet spec shape:
 {
   "purpose": "location.environment-sheet",
   "target": { "kind": "location", "id": "location_sea_walls" },
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A flexible Location Sheet for the sea walls location, combining siege-facing field scale, wall material, gate depth, and city-edge context...",
   "takeCount": 1,
   "seed": null,
@@ -1577,7 +1577,7 @@ Scene Storyboard Sheet spec shape:
   "target": { "kind": "scene", "id": "scene_control_room" },
   "shotListId": "scene_shot_list_control_room_v1",
   "shotIds": ["shot_001", "shot_002", "shot_003", "shot_004"],
-  "modelChoice": "fal-ai/nano-banana-2",
+  "modelChoice": "fal-ai/openai/gpt-image-2",
   "prompt": "A complete charcoal pencil storyboard sheet laid out as a clean grid...",
   "takeCount": 1,
   "seed": null,

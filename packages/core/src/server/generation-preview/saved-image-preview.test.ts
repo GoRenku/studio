@@ -34,7 +34,8 @@ describe('saved image generation preview projection', () => {
       provider: 'fal-ai',
       providerModel: 'openai/gpt-image-2',
       mode: 'text-to-image',
-      prompt: spec.prompt,
+      authoredPrompt: spec.prompt,
+      providerPrompt: spec.prompt,
       references: [],
       payload: {
         prompt: spec.prompt,
@@ -52,6 +53,10 @@ describe('saved image generation preview projection', () => {
     expect(preview.generationSpecId).toBe(
       'draft:lookbook.image:lookbook:lookbook_test'
     );
+    expect(preview.finalPrompt).toEqual({
+      authoredText: spec.prompt,
+      providerText: spec.prompt,
+    });
     expect(preview.configuration.sections.map((section) => section.key)).toEqual([
       'model',
       'model-inputs',
