@@ -37,14 +37,24 @@ describe('media generation lifecycle spec estimates', () => {
     };
     mockedRequireSpec.mockReturnValueOnce(specRecord as never);
     mockedEstimateRecord.mockResolvedValueOnce({
-      estimate: { state: 'priced', estimatedCostUsd: 0.2 },
+      estimate: {
+        state: 'priced',
+        estimatedCostUsd: 0.2,
+      },
     } as never);
 
-    await expect(
-      estimateMediaGenerationSpec({ specId: 'spec-a', homeDir: '/home' } as never)
-    ).resolves.toEqual({
-      estimate: { state: 'priced', estimatedCostUsd: 0.2 },
+    const report = await estimateMediaGenerationSpec({
+      specId: 'spec-a',
+      homeDir: '/home',
+    } as never);
+
+    expect(report).toMatchObject({
+      estimate: {
+        state: 'priced',
+        estimatedCostUsd: 0.2,
+      },
     });
+    expect(approvalArtifactKeys(report.estimate)).toEqual([]);
 
     expect(mockedRequireSpec).toHaveBeenCalledWith(
       { kind: 'session' },
@@ -56,3 +66,10 @@ describe('media generation lifecycle spec estimates', () => {
     });
   });
 });
+
+function approvalArtifactKeys(value: unknown): string[] {
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+  return Object.keys(value).filter((key) => /approval/i.test(key));
+}

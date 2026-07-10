@@ -1,6 +1,6 @@
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import type {
   DraftMediaGenerationSpec,
+  MediaGenerationCostEstimate,
   MediaGenerationDependencyPricing,
 } from '../../../client/index.js';
 import {
@@ -16,7 +16,7 @@ export async function estimateMissingShotInputDependency(input: {
   draftGenerationSpec: DraftMediaGenerationSpec;
 }): Promise<{
   pricing: MediaGenerationDependencyPricing;
-  estimate: GenerationCostEstimate | null;
+  estimate: MediaGenerationCostEstimate | null;
 }> {
   const estimateReport = await estimateDraftMediaGenerationSpec({
     projectName: input.projectName,

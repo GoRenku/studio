@@ -137,7 +137,7 @@ Allowed validation includes:
 - accepted app-owned generation transform fields, such as
   `scene.storyboard-sheet` sheet/frame settings;
 - provider input count and media-kind limits;
-- cost estimate and approval-token integrity;
+- cost estimate and live provider approval integrity;
 - generation receipt/provenance;
 - prompt field presence and non-empty string checks where a provider route
   requires a prompt;

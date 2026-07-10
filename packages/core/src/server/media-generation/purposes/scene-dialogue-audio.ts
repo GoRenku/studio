@@ -103,9 +103,8 @@ export interface GenerateSceneDialogueAudioTakeInput extends RenkuConfigPathOpti
   sceneId: string;
   dialogueId: string;
   setup: Partial<SceneDialogueAudioGenerationSpec>;
-  approvalToken?: string;
   simulate?: boolean;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -350,9 +349,8 @@ export async function generateSceneDialogueAudioTake(
     projectName: input.projectName,
     homeDir: input.homeDir,
     specId: specRecord.id,
-    approvalToken: input.approvalToken,
     simulate: input.simulate,
-    approveUnpricedCost: input.approveUnpricedCost,
+    approveLiveProviderRun: input.approveLiveProviderRun,
     idGenerator: input.idGenerator,
   });
   const output = firstAudioOutput(runReport.run.outputs);

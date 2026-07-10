@@ -134,7 +134,7 @@ Skills must not:
 - use obsolete command aliases;
 - register Inspiration folder images as assets;
 - store absolute paths in authored JSON documents;
-- run paid generation without an estimate and approval token;
+- run paid generation without estimate review and explicit live provider approval;
 - override user-selected generation controls.
 - store generated storyboard image paths inside Scene Shot List JSON;
 - add analog shooting logistics such as setup minutes, crew assignments, or

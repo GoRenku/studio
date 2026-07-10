@@ -344,6 +344,13 @@
       "when": 1783518235386,
       "tag": "0048_shot_video_take_media_folder",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "6",
+      "when": 1783613422690,
+      "tag": "0049_drop_media_generation_run_approval_token",
+      "breakpoints": true
     }
   ]
 }

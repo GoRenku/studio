@@ -112,10 +112,6 @@ export function useSceneDialogueAudio(input: {
     specSignature: string;
     estimate: SceneDialogueAudioEstimateState;
   }>({ specSignature: '', estimate: idleEstimate });
-  const [approval, setApproval] = useState<{
-    specSignature: string;
-    token: string;
-  } | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
 
   const selectedModel = useMemo(
@@ -166,8 +162,7 @@ export function useSceneDialogueAudio(input: {
     : estimateState.specSignature === specSignature
       ? estimateState.estimate
       : idleEstimate;
-  const approvalToken =
-    approval?.specSignature === specSignature ? approval.token : null;
+  const canGenerateCurrentEstimate = estimate.state === 'ready';
 
   const autosave = useDebouncedAutosave({
     value: spec,
@@ -265,11 +260,6 @@ export function useSceneDialogueAudio(input: {
         if (cancelled) {
           return;
         }
-        setApproval(
-          report.estimate.state === 'priced'
-            ? { specSignature, token: report.estimate.costApprovalToken }
-            : null
-        );
         setEstimateState({
           specSignature,
           estimate: {
@@ -286,7 +276,6 @@ export function useSceneDialogueAudio(input: {
         if (cancelled) {
           return;
         }
-        setApproval(null);
         setEstimateState({
           specSignature,
           estimate: {
@@ -319,7 +308,7 @@ export function useSceneDialogueAudio(input: {
     if (actionBusy) {
       return;
     }
-    if (!approvalToken) {
+    if (!canGenerateCurrentEstimate) {
       throw new Error('Wait for the current estimate before generating audio.');
     }
     setActionBusy(true);
@@ -328,19 +317,18 @@ export function useSceneDialogueAudio(input: {
         projectName,
         sceneId,
         dialogueId,
-        { setup: spec, approvalToken }
+        { setup: spec, approveLiveProviderRun: true }
       );
       onContextChange(report.context);
-      setApproval(null);
       setEstimateState({ specSignature, estimate: idleEstimate });
     } finally {
       setActionBusy(false);
     }
   }, [
     actionBusy,
-    approvalToken,
     blocked,
     blockedIssue,
+    canGenerateCurrentEstimate,
     dialogueId,
     onContextChange,
     projectName,
@@ -369,7 +357,7 @@ export function useSceneDialogueAudio(input: {
 
   return {
     actionBusy,
-    approvalToken,
+    canGenerateCurrentEstimate,
     autosave,
     blocked,
     blockedIssue,

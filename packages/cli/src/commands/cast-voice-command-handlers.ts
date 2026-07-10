@@ -17,7 +17,6 @@ export interface CastVoiceCommandFlags {
   cast?: string;
   voice?: string;
   registration?: string;
-  approvalToken?: string;
   simulate?: boolean;
 }
 

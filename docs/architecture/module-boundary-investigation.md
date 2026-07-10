@@ -84,8 +84,7 @@ Missing boundary:
 
 Desired shape:
 
-- `generation/pricing` owns estimates, approval-token hashing for estimates, and
-  billable-unit normalization.
+- `generation/pricing` owns estimates and billable-unit normalization.
 - `generation/execution` owns live/simulated execution, provider payload
   validation, SDK handoff, input file loading, and output persistence.
 - Shared contracts stay in a deliberately named contract module.

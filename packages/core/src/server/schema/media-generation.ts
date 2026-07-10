@@ -39,7 +39,6 @@ export const mediaGenerationRuns = sqliteTable(
     model: text('model').notNull(),
     providerPayloadJson: text('provider_payload_json').notNull(),
     estimateSnapshotJson: text('estimate_snapshot_json').notNull(),
-    approvalToken: text('approval_token'),
     simulated: integer('simulated', { mode: 'boolean' }).notNull(),
     status: text('status').notNull(),
     outputsJson: text('outputs_json').notNull(),

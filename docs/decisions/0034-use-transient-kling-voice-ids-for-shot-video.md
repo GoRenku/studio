@@ -59,9 +59,9 @@ Renku iteration cache policy, not a provider durability guarantee.
 `renku cast voice kling-registration run` are not public commands.
 
 Shot-video estimates include the internal create-voice miss-case cost in the
-same approval token as the final video generation. Cache hits can avoid the
-live create-voice call at run time, but estimates still include the miss-case
-cost so an approval remains valid if a cache entry expires.
+same displayed estimate as the final video generation. Cache hits can avoid the
+live create-voice call at run time, but live generation still requires a fresh
+explicit live provider approval gesture for the run.
 
 Kling dialogue audio binding fails fast when the selected input set has no
 video-backed element target or when multiple audio references/elements make the

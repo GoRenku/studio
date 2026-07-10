@@ -22,7 +22,7 @@ Decision history:
 - `../../decisions/0036-use-unsliced-location-sheets.md`
 - `../../decisions/0040-use-agent-media-execution-policy-for-external-built-in-image-generation.md`
 - `../../decisions/0042-use-purpose-cost-projections-for-generation-estimates.md`
-- `../../decisions/0043-use-single-generation-approval-tokens.md`
+- `../../decisions/0043-use-explicit-live-provider-run-approval.md`
 - `../../decisions/0045-use-generation-preview-purpose-bindings.md`
 - `../../decisions/0046-use-generic-image-create-generation-purpose.md`
 - `../project-asset-storage-conventions.md`
@@ -161,8 +161,7 @@ renku generation spec list --purpose scene.storyboard-sheet --target scene:<id> 
 renku generation spec list --purpose shot.video-take --target scene:<id> --take <take-id> --json
 
 renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approval-token <token> --json
-renku generation run --spec <spec-id> --approve-unpriced-cost --json
+renku generation run --spec <spec-id> --approve-live-provider-run --json
 renku generation run --spec <spec-id> --simulate --json
 renku generation run show --run <run-id> --json
 ```
@@ -243,40 +242,41 @@ Estimate responses return:
 ```ts
 {
   spec: MediaGenerationSpecRecord;
-  estimate: GenerationCostEstimate;
+  estimate: MediaGenerationCostEstimate;
 }
 ```
 
-For priced estimates, pass `estimate.costApprovalToken` to
-`renku generation run --approval-token` for the same persisted spec. The token
-approves one live generation run using the current pricing facts for that spec.
-It is not a provider request hash.
+Estimates are pricing-only. They show provider, model, media kind, estimated
+cost when available, unpriced state, missing pricing inputs, and warnings. They
+do not return approval artifacts, request digests, reusable run permissions, or
+permission to contact a provider.
 
 Dependency plans may include cost estimates for every generated dependency line
 and an aggregate workflow total. Those dependency line estimates are planning
-data only. They do not include approval tokens, cannot be submitted as an
+data only. They do not include approval artifacts, cannot be submitted as an
 approval bundle, and do not permit automatic dependency generation.
 
-Live generation approval is a typed core contract:
+Live generation approval is a typed Core contract:
 
 ```ts
-type MediaGenerationRunCostApprovalInput =
-  | { kind: 'none' }
-  | { kind: 'priced'; approvalToken: string }
-  | { kind: 'unpriced-explicit-approval' };
+interface RunMediaGenerationSpecInput {
+  specId: string;
+  simulate?: boolean;
+  approveLiveProviderRun?: boolean;
+}
 ```
 
-Core accepts simulated runs without approval. Live priced runs require the
-current priced token from the estimate. Live unpriced runs require explicit
-unpriced approval, exposed in the CLI as `--approve-unpriced-cost`. Missing
-pricing inputs fail before provider execution even when unpriced approval is
-present. Purpose runners must not synthesize approval tokens from their current
-estimate; the token is comparison data unless it came from the caller.
+Core accepts simulated runs without live provider approval. Live runs require
+`approveLiveProviderRun: true`, exposed in the CLI as
+`--approve-live-provider-run`. That flag means the caller approves this one
+command invocation to contact the selected live provider for the prepared
+request Core is about to run. Core enforces that approval immediately before
+provider execution; it does not create or persist a reusable approval artifact.
 
 The approval check is for the exact generation spec being run. It does not walk
 dependency plans, validate dependency readiness, or approve child dependency
 generations. The accepted decision is
-`../../decisions/0043-use-single-generation-approval-tokens.md`.
+`../../decisions/0043-use-explicit-live-provider-run-approval.md`.
 
 Cost states:
 
@@ -928,13 +928,13 @@ The command sequence is:
 4. Build the final provider payload.
 5. Validate the provider payload against the model JSON Schema.
 6. Estimate cost through engines.
-7. Return the estimated cost and approval token for the exact request.
-8. Require the approval token for live execution.
+7. Return the estimated cost for display.
+8. Require explicit live provider approval for live execution.
 
-No live provider call should happen when the estimate is unknown or unapproved.
-The approval token is bound to the exact generation policy and request. If the
-model, prompt, parameters, bound input files, or output count change, callers
-must estimate again before running.
+No live provider call should happen without explicit run approval.
+If the model, prompt, parameters, bound input files, provider payload shape, or
+output count change, callers must show the updated preview and estimate again,
+then collect a fresh live-run approval gesture before running.
 
 User-facing approval should be calm and singular, such as "Generate image -
 estimated $0.054" with provider details available nearby. Do not require a
@@ -946,7 +946,6 @@ Generation runs store:
 - provider and model;
 - provider payload;
 - estimate snapshot;
-- approval token;
 - simulation flag;
 - status;
 - outputs;

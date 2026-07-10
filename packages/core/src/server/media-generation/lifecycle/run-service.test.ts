@@ -8,13 +8,6 @@ vi.mock('../../database/access/media-generation.js', () => ({
   insertMediaGenerationRun: vi.fn(),
 }));
 
-vi.mock('../cost/cost-approval.js', () => ({
-  mediaGenerationEstimateWithApproval: vi.fn(),
-  mediaGenerationRunApprovalToken: vi.fn(),
-  parseMediaGenerationRunCostApproval: vi.fn(),
-  requireMediaGenerationCostApproval: vi.fn(),
-}));
-
 vi.mock('../cost/cost-projection.js', () => ({
   estimateMediaGenerationSpecRecordCost: vi.fn(),
 }));
@@ -33,13 +26,9 @@ vi.mock('./spec-service.js', () => ({
 }));
 
 import { runGeneration } from '@gorenku/studio-engines';
-import { insertMediaGenerationRun } from '../../database/access/media-generation.js';
 import {
-  mediaGenerationEstimateWithApproval,
-  mediaGenerationRunApprovalToken,
-  parseMediaGenerationRunCostApproval,
-  requireMediaGenerationCostApproval,
-} from '../cost/cost-approval.js';
+  insertMediaGenerationRun,
+} from '../../database/access/media-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from '../cost/cost-projection.js';
 import { withMediaGenerationProjectSession } from './project-session.js';
 import { requireMediaGenerationPurposeDefinition } from './purpose-lifecycle-registry.js';
@@ -51,10 +40,6 @@ import { runMediaGenerationSpec } from './run-service.js';
 
 const mockedRunGeneration = vi.mocked(runGeneration);
 const mockedInsertRun = vi.mocked(insertMediaGenerationRun);
-const mockedEstimateWithApproval = vi.mocked(mediaGenerationEstimateWithApproval);
-const mockedApprovalToken = vi.mocked(mediaGenerationRunApprovalToken);
-const mockedParseApproval = vi.mocked(parseMediaGenerationRunCostApproval);
-const mockedRequireApproval = vi.mocked(requireMediaGenerationCostApproval);
 const mockedEstimateCost = vi.mocked(estimateMediaGenerationSpecRecordCost);
 const mockedWithProjectSession = vi.mocked(withMediaGenerationProjectSession);
 const mockedRequireDefinition = vi.mocked(requireMediaGenerationPurposeDefinition);
@@ -76,13 +61,6 @@ describe('media generation lifecycle run service', () => {
       state: 'priced',
       estimatedCostUsd: 1.5,
     } as never);
-    mockedParseApproval.mockReturnValue({ kind: 'priced', approvalToken: 'token' });
-    mockedRequireApproval.mockReturnValue({
-      kind: 'priced',
-      approvalToken: 'token',
-    });
-    mockedEstimateWithApproval.mockReturnValue({ approved: true } as never);
-    mockedApprovalToken.mockReturnValue('approval-token');
   });
 
   it('delegates Shot Video Take runs to the owning purpose implementation', async () => {
@@ -134,19 +112,13 @@ describe('media generation lifecycle run service', () => {
 
     const report = await runMediaGenerationSpec({
       specId: 'spec-a',
-      simulate: true,
-      approvalToken: 'token',
+      simulate: false,
+      approveLiveProviderRun: true,
       idGenerator: {
-        next: () => 'media_generation_run_test',
+        next: (prefix: string) => `${prefix}_test`,
       },
     } as never);
 
-    expect(mockedRequireApproval).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'simulated',
-        purpose: 'lookbook.image',
-      })
-    );
     expect(mockedRunGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
         policy: expect.objectContaining({
@@ -165,14 +137,13 @@ describe('media generation lifecycle run service', () => {
         specId: 'spec-a',
         provider: 'fal-ai',
         model: 'nano-banana-2',
-        approvalToken: 'approval-token',
-        simulated: true,
-        status: 'simulated',
+        simulated: false,
+        status: 'completed',
       })
     );
     expect(report.run).toMatchObject({
       id: 'media_generation_run_test',
-      status: 'simulated',
+      status: 'completed',
     });
   });
 
@@ -208,10 +179,50 @@ describe('media generation lifecycle run service', () => {
       runMediaGenerationSpec({
         specId: 'spec-a',
         simulate: true,
-        approvalToken: 'token',
       } as never)
     ).rejects.toMatchObject({
       code: 'CORE_MEDIA_GENERATION_OUTPUT_COUNT_INVALID',
+    });
+
+    expect(mockedRunGeneration).not.toHaveBeenCalled();
+    expect(mockedInsertRun).not.toHaveBeenCalled();
+  });
+
+  it('fails live shared runs without explicit provider approval before execution', async () => {
+    mockedReadSpec.mockResolvedValueOnce({
+      id: 'spec-a',
+      purpose: 'lookbook.image',
+      spec: { purpose: 'lookbook.image' },
+    } as never);
+    mockedPrepareSpec.mockResolvedValueOnce({
+      spec: {
+        id: 'spec-a',
+        purpose: 'lookbook.image',
+        spec: { purpose: 'lookbook.image' },
+      },
+      generation: {
+        policy: {
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
+          mediaKind: 'image',
+          mode: 'text-to-image',
+          outputCount: 1,
+        },
+        request: {
+          prompt: 'Reference image',
+          parameters: {},
+          outputNames: ['reference-image.png'],
+        },
+      },
+      providerPayload: { prompt: 'Reference image' },
+    } as never);
+
+    await expect(
+      runMediaGenerationSpec({
+        specId: 'spec-a',
+      } as never)
+    ).rejects.toMatchObject({
+      code: 'CORE_MEDIA_LIVE_PROVIDER_APPROVAL_REQUIRED',
     });
 
     expect(mockedRunGeneration).not.toHaveBeenCalled();

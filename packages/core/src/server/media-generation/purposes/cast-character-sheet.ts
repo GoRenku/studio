@@ -48,11 +48,8 @@ import { studioResourceKeysForAssetTarget } from '../../studio-coordination/reso
 import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from '../cost/cost-projection.js';
 import {
-  mediaGenerationEstimateWithApproval,
-  mediaGenerationRunApprovalToken,
-  parseMediaGenerationRunCostApproval,
-  requireMediaGenerationCostApproval,
-} from '../cost/cost-approval.js';
+  requireLiveProviderApproval,
+} from '../lifecycle/live-provider-approval.js';
 import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
@@ -140,9 +137,8 @@ export interface UpdateCastCharacterSheetReferenceInclusionInput extends CastCha
 }
 
 export interface RunCastCharacterSheetSpecInput extends CastCharacterSheetSpecIdInput {
-  approvalToken?: string;
   simulate?: boolean;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -151,7 +147,6 @@ export interface RecordCastCharacterSheetRunInput extends CastCharacterSheetSpec
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
-  approvalToken?: string;
   simulated: boolean;
   status: 'simulated' | 'completed' | 'failed';
   outputs: unknown;
@@ -573,14 +568,11 @@ export async function runCastCharacterSheetSpec(
   const { runGeneration } = await loadGenerationEngines();
   const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
   const mode = input.simulate ? 'simulated' : 'live';
-  const costApproval = requireMediaGenerationCostApproval({
+  requireLiveProviderApproval({
     mode,
+    approveLiveProviderRun: input.approveLiveProviderRun,
+    specId: prepared.spec.id,
     purpose: prepared.spec.purpose,
-    estimate,
-    approval: parseMediaGenerationRunCostApproval({
-      approvalToken: input.approvalToken,
-      approveUnpricedCost: input.approveUnpricedCost,
-    }),
   });
   const outputPaths = await resolveCastGenerationOutputPaths(input);
   const result = await runGeneration({
@@ -597,8 +589,7 @@ export async function runCastCharacterSheetSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
-    approvalToken: mediaGenerationRunApprovalToken(costApproval),
+    estimate,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,
@@ -623,7 +614,6 @@ export async function recordCastCharacterSheetRun(
       model: input.model,
       providerPayload: input.providerPayload,
       estimate: input.estimate,
-      approvalToken: input.approvalToken,
       simulated: input.simulated,
       status: input.status,
       outputs: input.outputs,

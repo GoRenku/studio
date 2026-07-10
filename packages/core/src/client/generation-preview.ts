@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
+import type { MediaGenerationCostEstimate } from './media-generation-cost.js';
 import type {
   CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
   CAST_PROFILE_GENERATION_PURPOSE,
@@ -186,6 +186,6 @@ export interface GenerationPreviewProviderPreview {
 export interface GenerationPreviewEstimate {
   state: 'not-estimated' | 'estimated' | 'unpriced';
   estimatedCostUsd?: number | null;
-  costEstimate?: GenerationCostEstimate;
+  costEstimate?: MediaGenerationCostEstimate;
   warnings?: string[];
 }

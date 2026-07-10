@@ -1,7 +1,44 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
+import type {
+  GenerationMediaKind,
+  ModelPriceConfig,
+} from '@gorenku/studio-engines';
 import type { MediaGenerationPurpose } from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
+
+export type MediaGenerationCostEstimate =
+  | {
+      state: 'priced';
+      provider: string;
+      model: string;
+      mediaKind: GenerationMediaKind;
+      pricing: ModelPriceConfig | number;
+      estimatedCostUsd: number;
+      billableUnits: Record<string, unknown>;
+      warnings: [];
+    }
+  | {
+      state: 'unpriced';
+      provider: string;
+      model: string;
+      mediaKind: GenerationMediaKind;
+      pricing: ModelPriceConfig | number | null;
+      estimatedCostUsd: null;
+      reason: string;
+      billableUnits: Record<string, unknown>;
+      warnings: string[];
+    }
+  | {
+      state: 'missing-pricing-input';
+      provider: string;
+      model: string;
+      mediaKind: GenerationMediaKind;
+      pricing: ModelPriceConfig | number | null;
+      estimatedCostUsd: null;
+      missingInputs: string[];
+      billableUnits: Record<string, unknown>;
+      warnings: string[];
+    };
 
 export type MediaGenerationCostLineSource =
   | { kind: 'root-generation' }
@@ -14,7 +51,7 @@ export interface GenerationCostLine {
   target: MediaGenerationTarget | null;
   label: string;
   source: MediaGenerationCostLineSource;
-  estimate: GenerationCostEstimate;
+  estimate: MediaGenerationCostEstimate;
 }
 
 export interface MediaGenerationCostTotal {
@@ -37,5 +74,5 @@ export interface MediaGenerationCostPlan {
 export interface MediaGenerationCostProjection {
   priceKey: import('@gorenku/studio-engines').GenerationPriceKey;
   pricingInputs: import('@gorenku/studio-engines').GenerationPricingInputs;
-  estimate: GenerationCostEstimate;
+  estimate: MediaGenerationCostEstimate;
 }

@@ -2,9 +2,9 @@ import {
   createDiagnosticWarning,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import {
   SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
+  type MediaGenerationCostEstimate,
   type MediaGenerationDependencyPricing,
   type SceneDialogueAudioGenerationSpec,
   type SceneDialogueAudioModelChoice,
@@ -37,7 +37,7 @@ export async function estimateSceneDialogueAudioPricingOnly(input: {
   setup: Partial<SceneDialogueAudioGenerationSpec>;
 }): Promise<{
   pricing: MediaGenerationDependencyPricing;
-  estimate: GenerationCostEstimate | null;
+  estimate: MediaGenerationCostEstimate | null;
   diagnostics: DiagnosticIssue[];
 }> {
   const pricingInput = await sceneDialogueAudioPricingInput(input);

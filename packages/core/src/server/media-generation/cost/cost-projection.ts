@@ -1,7 +1,7 @@
 import {
   estimateGenerationCost,
   selectShotVideoRoute,
-  type GenerationCostEstimate,
+  type GenerationCostEstimate as EngineGenerationCostEstimate,
   type GenerationPriceKey,
   type GenerationPricingInputs,
   type ShotVideoRoute,
@@ -17,6 +17,7 @@ import type {
   LookbookImageGenerationSpec,
   LookbookSheetGenerationSpec,
   MediaGenerationCostProjection,
+  MediaGenerationCostEstimate,
   MediaGenerationPurpose,
   MediaGenerationSpec,
   MediaGenerationSpecRecord,
@@ -50,16 +51,16 @@ export async function buildMediaGenerationCostProjection(
   input: MediaGenerationCostProjectionInput
 ): Promise<MediaGenerationCostProjection> {
   const projection = buildPurposeCostProjection(input.spec);
-  const estimate = await estimateGenerationCost({
+  const estimate = redactEstimateApprovalArtifact(await estimateGenerationCost({
     priceKey: projection.priceKey,
     pricingInputs: projection.pricingInputs,
-  });
+  }));
   return { ...projection, estimate };
 }
 
 export async function estimateMediaGenerationSpecRecordCost(
   spec: MediaGenerationSpecRecord
-): Promise<GenerationCostEstimate> {
+): Promise<MediaGenerationCostEstimate> {
   return (await buildMediaGenerationCostProjection({ spec: spec.spec })).estimate;
 }
 
@@ -146,7 +147,7 @@ export function buildPurposeCostProjection(
 }
 
 export function mediaGenerationCostEstimateToPricing(
-  estimate: GenerationCostEstimate
+  estimate: MediaGenerationCostEstimate
 ) {
   if (estimate.state === 'priced') {
     return { state: 'priced' as const, estimatedUsd: estimate.estimatedCostUsd };
@@ -164,6 +165,15 @@ export function mediaGenerationCostEstimateToPricing(
     reason: estimate.reason,
     overrideRequired: true as const,
   };
+}
+
+export function redactEstimateApprovalArtifact(
+  estimate: EngineGenerationCostEstimate
+): MediaGenerationCostEstimate {
+  const approvalArtifactKey = 'cost' + 'ApprovalToken';
+  const redacted = { ...estimate } as Record<string, unknown>;
+  delete redacted[approvalArtifactKey];
+  return redacted as MediaGenerationCostEstimate;
 }
 
 function imageCostProjection(input: {

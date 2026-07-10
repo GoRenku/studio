@@ -1059,12 +1059,8 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(estimateExitCode).toBe(0);
-    const estimate = JSON.parse(stdout.join('\n')) as {
-      estimate: {
-        costApprovalToken: string;
-      };
-    };
-    expect(estimate.estimate.costApprovalToken).toMatch(/^sha256:/);
+    const estimate = JSON.parse(stdout.join('\n')) as { estimate: Record<string, unknown> };
+    expect(approvalArtifactKeys(estimate.estimate)).toEqual([]);
 
     stdout = [];
     stderr = [];
@@ -3046,9 +3042,7 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(estimateExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      estimate: { costApprovalToken: expect.stringMatching(/^sha256:/) },
-    });
+    expect(approvalArtifactKeys(JSON.parse(stdout.join('\n')).estimate)).toEqual([]);
 
     stdout = [];
     stderr = [];
@@ -4231,4 +4225,11 @@ function isMissingSqliteBindings(exitCode: number, stderr: string[]): boolean {
     return true;
   }
   return false;
+}
+
+function approvalArtifactKeys(value: unknown): string[] {
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+  return Object.keys(value).filter((key) => /approval/i.test(key));
 }

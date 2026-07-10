@@ -294,9 +294,8 @@ export async function buildImageEditGenerationPreview(input: {
 
 export async function runImageEditSpec(
   input: ImageEditSpecIdInput & {
-    approvalToken?: string;
     simulate?: boolean;
-    approveUnpricedCost?: boolean;
+    approveLiveProviderRun?: boolean;
     idGenerator?: ProjectIdGenerator;
   }
 ): Promise<MediaGenerationRunReport> {

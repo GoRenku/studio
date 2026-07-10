@@ -17,14 +17,11 @@ import {
   prepareShotVideoTakeSpec,
 } from '../specs/final-specs.js';
 import {
-  estimateMediaGenerationSpec,
-} from '../../../lifecycle/spec-estimates.js';
+  estimateMediaGenerationSpecRecordCost,
+} from '../../../cost/cost-projection.js';
 import {
-  mediaGenerationEstimateWithApproval,
-  mediaGenerationRunApprovalToken,
-  parseMediaGenerationRunCostApproval,
-  requireMediaGenerationCostApproval,
-} from '../../../cost/cost-approval.js';
+  requireLiveProviderApproval,
+} from '../../../lifecycle/live-provider-approval.js';
 import {
   resolveShotGenerationOutputPaths,
 } from '../provider/generation-output-paths.js';
@@ -65,17 +62,13 @@ export async function runShotVideoTakeSpec(
   });
   assertEditableSceneShotVideoTake(context.take);
   const { runGeneration } = await import('@gorenku/studio-engines');
-  const combinedEstimate = await estimateMediaGenerationSpec(input);
+  const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
   const mode = input.simulate ? 'simulated' : 'live';
-  const approval = parseMediaGenerationRunCostApproval({
-    approvalToken: input.approvalToken,
-    approveUnpricedCost: input.approveUnpricedCost,
-  });
-  const costApproval = requireMediaGenerationCostApproval({
+  requireLiveProviderApproval({
     mode,
+    approveLiveProviderRun: input.approveLiveProviderRun,
+    specId: prepared.spec.id,
     purpose: prepared.spec.purpose,
-    estimate: combinedEstimate.estimate,
-    approval,
   });
   const outputPaths = await resolveShotGenerationOutputPaths(input, context);
   const transientVoiceDiagnostics = await prepareKlingTransientVoicePayload({
@@ -99,11 +92,7 @@ export async function runShotVideoTakeSpec(
     provider: prepared.generation.policy.provider,
     model: prepared.generation.policy.model,
     providerPayload: prepared.providerPayload,
-    estimate: mediaGenerationEstimateWithApproval(
-      combinedEstimate.estimate,
-      costApproval
-    ),
-    approvalToken: mediaGenerationRunApprovalToken(costApproval),
+    estimate,
     simulated: Boolean(input.simulate),
     status: input.simulate ? 'simulated' : 'completed',
     outputs: result.outputs,
@@ -183,7 +172,6 @@ export async function recordShotGenerationRun(
     model: string;
     providerPayload: Record<string, unknown>;
     estimate: unknown;
-    approvalToken?: string;
     simulated: boolean;
     status: 'simulated' | 'completed' | 'failed';
     outputs: unknown;
@@ -202,7 +190,6 @@ export async function recordShotGenerationRun(
       model: input.model,
       providerPayload: input.providerPayload,
       estimate: input.estimate,
-      approvalToken: input.approvalToken,
       simulated: input.simulated,
       status: input.status,
       outputs: input.outputs,

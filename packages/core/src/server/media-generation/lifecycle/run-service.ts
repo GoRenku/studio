@@ -25,14 +25,11 @@ import type {
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import {
-  mediaGenerationEstimateWithApproval,
-  mediaGenerationRunApprovalToken,
-  parseMediaGenerationRunCostApproval,
-  requireMediaGenerationCostApproval,
-} from '../cost/cost-approval.js';
-import {
   estimateMediaGenerationSpecRecordCost,
 } from '../cost/cost-projection.js';
+import {
+  requireLiveProviderApproval,
+} from './live-provider-approval.js';
 import { requireMediaGenerationPurposeDefinition } from './purpose-lifecycle-registry.js';
 import {
   prepareMediaGenerationSpec,
@@ -52,21 +49,18 @@ export async function runMediaGenerationSpec(
   const prepared = await prepareMediaGenerationSpec(input);
   const estimate = await estimateMediaGenerationSpecRecordCost(prepared.spec);
   const mode = input.simulate ? 'simulated' : 'live';
-  const costApproval = requireMediaGenerationCostApproval({
-    mode,
-    purpose: prepared.spec.purpose,
-    estimate,
-    approval: parseMediaGenerationRunCostApproval({
-      approvalToken: input.approvalToken,
-      approveUnpricedCost: input.approveUnpricedCost,
-    }),
-  });
   const outputCount = requirePreparedGenerationOutputCount(prepared);
   const outputPaths = await resolveSharedGenerationOutputPaths(
     input,
     specRecord,
     outputCount
   );
+  requireLiveProviderApproval({
+    mode,
+    approveLiveProviderRun: input.approveLiveProviderRun,
+    specId: prepared.spec.id,
+    purpose: prepared.spec.purpose,
+  });
   const result = await runGeneration({
     ...prepared.generation,
     request: {
@@ -90,8 +84,7 @@ export async function runMediaGenerationSpec(
       provider: prepared.generation.policy.provider,
       model: prepared.generation.policy.model,
       providerPayload: prepared.providerPayload,
-      estimate: mediaGenerationEstimateWithApproval(estimate, costApproval),
-      approvalToken: mediaGenerationRunApprovalToken(costApproval),
+      estimate,
       simulated: Boolean(input.simulate),
       status: input.simulate ? 'simulated' : 'completed',
       outputs: result.outputs,

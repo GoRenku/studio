@@ -1,4 +1,4 @@
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
+import type { MediaGenerationCostEstimate } from './media-generation-cost.js';
 import type { AgentMediaReport } from './agent-media.js';
 import type { Asset } from './assets.js';
 import type { ProjectRelativePath } from './project.js';
@@ -799,7 +799,7 @@ export interface ShotVideoTakePreflightReport {
   prompts: ShotVideoTakePreflightPrompt[];
   finalTake: ShotVideoTakePreflightFinalTake;
   agentBrief: string;
-  estimate: GenerationCostEstimate | null;
+  estimate: MediaGenerationCostEstimate | null;
 }
 
 export interface ShotVideoTakeProductionEstimateReport {
@@ -808,7 +808,7 @@ export interface ShotVideoTakeProductionEstimateReport {
   inputModeId: ShotVideoTakeInputModeId;
   shotGroupMode: ShotVideoTakeShotGroupMode;
   modelChoice: ShotVideoTakeModelChoice;
-  estimate: GenerationCostEstimate | null;
+  estimate: MediaGenerationCostEstimate | null;
   plan?: ShotVideoTakeOutputGenerationPlan;
   issues: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
@@ -1025,7 +1025,7 @@ export interface ShotVideoTakeOutputGenerationPlan {
   lines: MediaGenerationPlanLine[];
   estimate: ShotVideoTakeOutputGenerationPlanEstimate;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
-  finalEstimate: GenerationCostEstimate | null;
+  finalEstimate: MediaGenerationCostEstimate | null;
 }
 
 export interface ShotVideoTakeInputMediaImportReport {

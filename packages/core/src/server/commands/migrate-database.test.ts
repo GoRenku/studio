@@ -255,6 +255,7 @@ describe('migrate database command', () => {
           restored_at text,
           primary key (output_id, shot_id)
         );
+        alter table media_generation_run add column approval_token text;
         pragma foreign_keys = on;
       `);
       setup.pragma('user_version = 33');
@@ -2798,6 +2799,81 @@ describe('migrate database command', () => {
       expect(
         sqlite.prepare(`select id from media_generation_run order by id`).all()
       ).toEqual([{ id: 'run_current_image_create' }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('drops the retired media generation run approval column and scrubs estimate approval artifacts', async () => {
+    const sqlite = new Database(':memory:');
+    try {
+      sqlite.exec(`
+        create table media_generation_run (
+          id text primary key not null,
+          estimate_snapshot_json text not null,
+          approval_token text
+        );
+
+        insert into media_generation_run (
+          id,
+          estimate_snapshot_json,
+          approval_token
+        ) values (
+          'run_with_approval_artifacts',
+          '{"state":"priced","costApprovalToken":"sha256:old-token","approval":{"state":"approved","token":"sha256:old-token"},"provider":"fal"}',
+          'sha256:old-token'
+        ), (
+          'run_with_clean_estimate',
+          '{"state":"free","totalCents":0}',
+          null
+        ), (
+          'run_with_nested_same_name',
+          '{"state":"priced","details":{"costApprovalToken":"kept"},"approval":null}',
+          'sha256:old-null-token'
+        );
+      `);
+
+      const migrationSql = await fs.readFile(
+        path.join(
+          process.cwd(),
+          'drizzle',
+          '0049_drop_media_generation_run_approval_token.sql'
+        ),
+        'utf8'
+      );
+      sqlite.exec(migrationSql);
+
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(39);
+      const columns = sqlite
+        .prepare(`pragma table_info(media_generation_run)`)
+        .all() as Array<{ name: string }>;
+      expect(columns.map((column) => column.name)).toEqual([
+        'id',
+        'estimate_snapshot_json',
+      ]);
+
+      const rows = sqlite
+        .prepare(
+          `select id, estimate_snapshot_json as estimateSnapshotJson
+           from media_generation_run
+           order by id`
+        )
+        .all() as Array<{ id: string; estimateSnapshotJson: string }>;
+      const estimateSnapshots = new Map(
+        rows.map((row) => [row.id, JSON.parse(row.estimateSnapshotJson)])
+      );
+      expect(estimateSnapshots.get('run_with_approval_artifacts')).toEqual({
+        state: 'priced',
+        provider: 'fal',
+      });
+      expect(estimateSnapshots.get('run_with_clean_estimate')).toEqual({
+        state: 'free',
+        totalCents: 0,
+      });
+      expect(estimateSnapshots.get('run_with_nested_same_name')).toEqual({
+        state: 'priced',
+        details: { costApprovalToken: 'kept' },
+      });
     } finally {
       sqlite.close();
     }

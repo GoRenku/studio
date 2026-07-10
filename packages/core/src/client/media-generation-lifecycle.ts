@@ -1,4 +1,4 @@
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
+import type { MediaGenerationCostEstimate } from './media-generation-cost.js';
 import type { MediaGenerationPurpose } from './media-generation-purpose.js';
 import type { MediaGenerationTarget } from './media-generation-target.js';
 import type { ProjectRelativePath } from './project.js';
@@ -72,7 +72,6 @@ export interface MediaGenerationRun {
   specSnapshot: MediaGenerationSpec;
   providerPayload: Record<string, unknown>;
   estimateSnapshot: unknown;
-  approvalToken?: string;
   simulated: boolean;
   status: 'simulated' | 'completed' | 'failed';
   outputs: unknown;
@@ -83,7 +82,7 @@ export interface MediaGenerationRun {
 
 export interface MediaGenerationEstimateReport {
   spec: MediaGenerationSpecRecord;
-  estimate: GenerationCostEstimate;
+  estimate: MediaGenerationCostEstimate;
 }
 
 export interface GenerationReferenceFileInput {

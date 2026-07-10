@@ -1053,9 +1053,8 @@ export interface ReadLookbookImageGenerationSpecInput extends RenkuConfigPathOpt
 
 export interface RunLookbookImageGenerationSpecInput
   extends ReadLookbookImageGenerationSpecInput {
-  approvalToken?: string;
   simulate?: boolean;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1065,7 +1064,6 @@ export interface RecordLookbookImageGenerationRunInput
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
-  approvalToken?: string;
   simulated: boolean;
   status: 'simulated' | 'completed' | 'failed';
   outputs: unknown;
@@ -1112,9 +1110,8 @@ export interface ReadLookbookSheetGenerationSpecInput extends RenkuConfigPathOpt
 
 export interface RunLookbookSheetGenerationSpecInput
   extends ReadLookbookSheetGenerationSpecInput {
-  approvalToken?: string;
   simulate?: boolean;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1124,7 +1121,6 @@ export interface RecordLookbookSheetGenerationRunInput
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
-  approvalToken?: string;
   simulated: boolean;
   status: 'simulated' | 'completed' | 'failed';
   outputs: unknown;
@@ -1225,9 +1221,8 @@ export interface GenerateSceneDialogueAudioTakeInput
   sceneId: string;
   dialogueId: string;
   setup: Partial<SceneDialogueAudioGenerationSpec>;
-  approvalToken?: string;
   simulate?: boolean;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1270,9 +1265,8 @@ export interface UpdateCastCharacterSheetReferenceInclusionInput
 
 export interface RunMediaGenerationSpecInput
   extends ReadMediaGenerationSpecInput {
-  approvalToken?: string;
   simulate?: boolean;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -1319,7 +1313,6 @@ export interface RecordMediaGenerationRunInput
   model: string;
   providerPayload: Record<string, unknown>;
   estimate: unknown;
-  approvalToken?: string;
   simulated: boolean;
   status: 'simulated' | 'completed' | 'failed';
   outputs: unknown;
@@ -1417,9 +1410,8 @@ export interface GenerateLocationHeroFromSheetInput extends RenkuConfigPathOptio
   projectName?: string;
   locationId: string;
   sourceLocationSheetAssetId: string;
-  approvalToken?: string;
   simulate?: boolean;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 

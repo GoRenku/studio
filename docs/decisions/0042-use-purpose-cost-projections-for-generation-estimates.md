@@ -41,9 +41,8 @@ The estimate endpoint returns a cost estimate only:
 }
 ```
 
-The approval token is `estimate.costApprovalToken` when `estimate.state` is
-`"priced"`. It is derived from pricing facts, not from a full provider request
-hash.
+Estimates are pricing-only and do not return approval artifacts. Live provider
+approval is provided at run time through the Core run input or CLI run flag.
 
 ## Consequences
 
@@ -53,12 +52,12 @@ hash.
   priced cost line.
 - Missing pricing facts, such as required duration or character count, produce
   `state: "missing-pricing-input"`.
-- Unknown or unsupported model pricing produces `state: "unpriced"` and may
-  require an explicit unpriced-cost override before a live run.
+- Unknown or unsupported model pricing produces `state: "unpriced"` for display.
+  Live runs still use the same explicit live provider approval boundary.
 - Studio server handlers, CLI handlers, and React code must not recreate cost
   rules locally. They call core and pass through the returned cost estimate.
 - Runtime generation still prepares provider payloads before execution, but
-  live paid runs require a matching cost approval token from the cost rail.
+  live paid runs require explicit live provider approval at the run boundary.
 
 ## Non-Goals
 

@@ -86,21 +86,20 @@ describe('Cast Voice sample generation', () => {
       homeDir,
       spec,
     });
-    await expect(
-      projectData.estimateMediaGenerationSpec({
-        projectName: 'constantinople',
-        homeDir,
-        specId: created.id,
-      })
-    ).resolves.toMatchObject({
+    const estimate = await projectData.estimateMediaGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      specId: created.id,
+    });
+    expect(estimate).toMatchObject({
       estimate: {
         state: 'priced',
         provider: 'elevenlabs',
         model: 'eleven_v3',
         mediaKind: 'audio',
-        costApprovalToken: expect.stringMatching(/^sha256:/),
       },
     });
+    expect(approvalArtifactKeys(estimate.estimate)).toEqual([]);
 
     await expect(
       projectData.runMediaGenerationSpec({
@@ -144,3 +143,10 @@ describe('Cast Voice sample generation', () => {
     };
   }
 });
+
+function approvalArtifactKeys(value: unknown): string[] {
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+  return Object.keys(value).filter((key) => /approval/i.test(key));
+}

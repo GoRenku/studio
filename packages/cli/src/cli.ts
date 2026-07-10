@@ -99,9 +99,8 @@ Options
   --model              Generation model
   --spec               Media Generation Spec id
   --run                Media Generation Run id
-  --approval-token     Binding token returned by generation estimate
-  --approve-unpriced-cost
-                       Approve running generation when no model price is configured
+  --approve-live-provider-run
+                       Approve contacting the selected live provider once for this run
   --receipt            Generation Receipt JSON file
   --role               Asset relationship role
   --file-role          Asset file role
@@ -142,7 +141,6 @@ Options
   --sections           Comma-separated Lookbook section keys
   --anchor             Movie Lookbook point id for Lookbook image placement
   --all-locales        Export every locale with production selects
-  --all                Apply command to all eligible items
   --dry-run            Report production export operations without writing
   --simulate           Run generation without calling a paid provider
   --fresh              Rebuild production export manifest
@@ -219,10 +217,7 @@ function createCliFlags() {
     run: {
       type: 'string',
     },
-    approvalToken: {
-      type: 'string',
-    },
-    approveUnpricedCost: {
+    approveLiveProviderRun: {
       type: 'boolean',
       default: false,
     },
@@ -347,10 +342,6 @@ function createCliFlags() {
       type: 'string',
     },
     allLocales: {
-      type: 'boolean',
-      default: false,
-    },
-    all: {
       type: 'boolean',
       default: false,
     },
@@ -497,7 +488,6 @@ export async function runRenkuCli(
             cast: cli.flags.cast,
             voice: cli.flags.voice,
             registration: cli.flags.registration,
-            approvalToken: cli.flags.approvalToken,
             simulate: cli.flags.simulate,
             design: cli.flags.design,
             active: cli.flags.active,
@@ -600,10 +590,8 @@ export async function runRenkuCli(
             kind: cli.flags.kind,
             subjectKind: cli.flags.subjectKind,
             subjectId: cli.flags.subjectId,
-            approvalToken: cli.flags.approvalToken,
-            approveUnpricedCost: cli.flags.approveUnpricedCost,
+            approveLiveProviderRun: cli.flags.approveLiveProviderRun,
             simulate: cli.flags.simulate,
-            all: cli.flags.all,
           },
           json: cli.flags.json,
           io,

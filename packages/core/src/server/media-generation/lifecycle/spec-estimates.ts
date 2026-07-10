@@ -12,10 +12,8 @@ import { withMediaGenerationEstimationProjectSession } from './project-session.j
 export async function estimateMediaGenerationSpec(
   input: ReadMediaGenerationSpecInput
 ): Promise<MediaGenerationEstimateReport> {
-  return estimateMediaGenerationSpecRecord(
-    await readMediaGenerationSpecForEstimation(input),
-    input
-  );
+  const specRecord = await readMediaGenerationSpecForEstimation(input);
+  return estimateMediaGenerationSpecRecord(specRecord, input);
 }
 
 async function readMediaGenerationSpecForEstimation(

@@ -3,8 +3,8 @@ import {
   isStructuredError,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
 import type {
+  MediaGenerationCostEstimate,
   MediaGenerationDependencyInventory,
   MediaGenerationDependencyLine,
   MediaGenerationDependencyPricing,
@@ -27,7 +27,7 @@ const MAX_DEPENDENCY_EXPANSION_DEPTH = 8;
 export interface MediaGenerationDependencyRootEstimate {
   pricing: MediaGenerationDependencyPricing;
   diagnostics: DiagnosticIssue[];
-  estimate: GenerationCostEstimate | null;
+  estimate: MediaGenerationCostEstimate | null;
 }
 
 export interface PlanMediaGenerationDependencyInventoryInput {
@@ -65,7 +65,7 @@ export async function planMediaGenerationDependencyInventory(
   input: PlanMediaGenerationDependencyInventoryInput
 ): Promise<{
   dependencyInventory: MediaGenerationDependencyInventory;
-  rootEstimate: GenerationCostEstimate | null;
+  rootEstimate: MediaGenerationCostEstimate | null;
 }> {
   const state = createDependencyInventoryPlannerState(input);
 

@@ -318,9 +318,8 @@ export async function buildImageCreateGenerationPreview(input: {
 
 export async function runImageCreateSpec(
   input: ImageCreateSpecIdInput & {
-    approvalToken?: string;
     simulate?: boolean;
-    approveUnpricedCost?: boolean;
+    approveLiveProviderRun?: boolean;
     idGenerator?: ProjectIdGenerator;
   }
 ): Promise<MediaGenerationRunReport> {

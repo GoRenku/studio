@@ -138,7 +138,7 @@ describe('shot video take preflight and validation', () => {
 
     expect(estimate.estimate.estimatedCostUsd).toBeCloseTo(0.98);
     expect(estimate.estimate.state).toBe('priced');
-    expect(estimate.estimate.costApprovalToken).toMatch(/^sha256:/);
+    expect(approvalArtifactKeys(estimate.estimate)).toEqual([]);
     expect(estimate.estimate.billableUnits).toMatchObject({
       uses_voice_control: true,
     });
@@ -289,6 +289,13 @@ describe('shot video take preflight and validation', () => {
     expect(typeof modelSection?.rows[0]?.valueLabel).toBe('string');
   });
 });
+
+function approvalArtifactKeys(value: unknown): string[] {
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+  return Object.keys(value).filter((key) => /approval/i.test(key));
+}
 
 function dialogueAudioInput(assetFileId: string, projectRelativePath: string) {
   return {

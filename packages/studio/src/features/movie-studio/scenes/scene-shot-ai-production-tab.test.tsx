@@ -386,7 +386,6 @@ function estimate(): ShotVideoTakeProductionEstimateReport {
       mediaKind: 'video',
       pricing: 0.42,
       estimatedCostUsd: 0.42,
-      costApprovalToken: 'approval-token',
       billableUnits: {},
       warnings: [],
     },

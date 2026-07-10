@@ -27,7 +27,7 @@ renku generation context --purpose lookbook.image --target lookbook:<id> --json
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
 renku generation spec create --file <spec-json> --json
 renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approval-token <token> --json
+renku generation run --spec <spec-id> --approve-live-provider-run --json
 renku media import --purpose lookbook.image --target lookbook:<id> --source <path> --json
 ```
 
@@ -35,8 +35,8 @@ The generation spec is the persisted, user-editable source of truth. Agents
 must not override binding fields after the user selects them.
 
 Generation runs store snapshots of the spec, provider payload, estimate,
-approval token, simulation flag, status, diagnostics, and outputs. This makes a
-run understandable even after the spec is edited.
+simulation flag, status, diagnostics, and outputs. This makes a run
+understandable even after the spec is edited.
 
 Core builds the final provider payload from the persisted spec and current
 Lookbook context. Engines validates the final payload against the real provider
@@ -60,4 +60,3 @@ manual upload, or a downloaded file.
   not blindly copied from `focusSections`.
 - Future media purposes should follow the persisted-spec and separate-import
   pattern unless a new ADR accepts a different contract.
-

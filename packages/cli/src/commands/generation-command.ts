@@ -75,24 +75,7 @@ function resourceChangedReportFromResult(
   if (directReport) {
     return directReport;
   }
-
-  if (!isObject(result) || !Array.isArray(result.generated)) {
-    return null;
-  }
-
-  const generatedReports = result.generated
-    .map((report) => directResourceChangedReport(report))
-    .filter((report): report is StudioResourceChangedReport => Boolean(report));
-  const project = generatedReports[0]?.project;
-  if (!project) {
-    return null;
-  }
-  return {
-    project,
-    resourceKeys: [
-      ...new Set(generatedReports.flatMap((report) => report.resourceKeys)),
-    ],
-  };
+  return null;
 }
 
 function directResourceChangedReport(

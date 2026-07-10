@@ -118,7 +118,7 @@ describe('Location hero generation and import', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('fails fast on live source-sheet generation without cost approval', async () => {
+  it('fails fast on live source-sheet generation without provider approval', async () => {
     const fixture = await createConfiguredProject();
     const sourceSheet = await importSourceSheet(fixture);
 
@@ -130,7 +130,7 @@ describe('Location hero generation and import', () => {
         sourceLocationSheetAssetId: sourceSheet.imported.assetId,
       })
     ).rejects.toMatchObject({
-      code: 'CORE_MEDIA_COST_APPROVAL_REQUIRED',
+      code: 'CORE_MEDIA_LIVE_PROVIDER_APPROVAL_REQUIRED',
     });
   });
 

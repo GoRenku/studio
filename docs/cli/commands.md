@@ -1501,8 +1501,7 @@ Estimate and run:
 
 ```bash
 renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approval-token <approval-token> --json
-renku generation run --spec <spec-id> --approve-unpriced-cost --json
+renku generation run --spec <spec-id> --approve-live-provider-run --json
 renku generation run --spec <spec-id> --simulate --json
 renku generation run show --run <run-id> --json
 ```
@@ -1524,7 +1523,7 @@ renku generation input list --purpose shot.video-take --target take:<take-id> --
 renku generation preview show --file image-edit-spec.json --json
 renku generation spec create --file image-edit-spec.json --json
 renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approval-token <approval-token> --json
+renku generation run --spec <spec-id> --approve-live-provider-run --json
 renku generation run show --run <run-id> --json
 renku media import --purpose shot.input --kind video-prompt-sheet --target take:<take-id> --source <edited-output-project-relative-path> --receipt image-edit-run.json --selection select --replace-selected --json
 ```
@@ -1600,7 +1599,7 @@ Behavior:
   or generate/import that sheet before creating the scene storyboard spec.
 - Final provider payloads are validated against the provider model JSON Schema
   before estimate or execution.
-- Live generation requires an approval token from `generation estimate`.
+- Live generation requires `generation run --approve-live-provider-run`.
 - `generation run --simulate` validates and records a simulated run without a
   paid provider call.
 - Generation creates staged outputs and run records. It does not attach files

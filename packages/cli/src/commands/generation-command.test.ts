@@ -28,45 +28,4 @@ describe('generationResourceChangedReport', () => {
     });
   });
 
-  it('combines resource keys from bulk dialogue-audio generation reports', () => {
-    const report = generationResourceChangedReport(
-      ['dialogue-audio', 'generate'],
-      {
-        generatedCount: 2,
-        generated: [
-          {
-            context: {
-              project: {
-                name: 'dialogue-audio-test',
-              },
-            },
-            resourceKeys: [
-              'scene:scene_test0001',
-              'scene-dialogue-audio:audio_a',
-            ],
-          },
-          {
-            context: {
-              project: {
-                name: 'dialogue-audio-test',
-              },
-            },
-            resourceKeys: [
-              'scene:scene_test0001',
-              'scene-dialogue-audio:audio_b',
-            ],
-          },
-        ],
-      },
-    );
-
-    expect(report).toEqual({
-      project: { name: 'dialogue-audio-test' },
-      resourceKeys: [
-        'scene:scene_test0001',
-        'scene-dialogue-audio:audio_a',
-        'scene-dialogue-audio:audio_b',
-      ],
-    });
-  });
 });

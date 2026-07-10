@@ -22,10 +22,11 @@ Precise contracts live in `reference/media-generation.md`.
 Generation and import are separate.
 
 Generation reads project context, lists supported models for a purpose, persists
-the user's generation spec, estimates cost, and returns a structured approval
-summary. That approval covers both the estimated cost and the provider transfer
-needed to run the exact request. A live run then uses the approval token from
-that estimate, creates staged outputs, and records a durable generation run.
+the user's generation spec, estimates cost for display, and runs an approved
+provider request. Estimates do not approve runs. A live provider run requires
+explicit one-time approval immediately before Core sends work to the provider
+boundary. The durable generation run records the execution facts, not a separate
+approval marker.
 
 Import attaches an existing file to a project domain target. The file may come
 from a Renku generation run, an external tool, a manual upload, or a download.
@@ -35,9 +36,9 @@ Existing ElevenLabs provider voice sample retrieval is not media generation.
 When a user supplies an ElevenLabs `voiceId` for a Cast Voice, `renku cast voice
 attach` can resolve a provider sample id, fetch the MP3 from ElevenLabs, store it
 under `cast/<handle>/voice-samples/`, and attach it as a normal Cast Voice
-Sample. That path does not create a media generation spec, estimate, approval
-token, or media generation run. New spoken samples generated from text still use
-the `cast.voice-sample` media generation purpose.
+Sample. That path does not create a media generation spec, estimate, live
+provider approval, or media generation run. New spoken samples generated from
+text still use the `cast.voice-sample` media generation purpose.
 
 For all current purposes, the CLI surface is generic:
 
@@ -46,8 +47,8 @@ renku generation context --purpose lookbook.image --target lookbook:<id> --json
 renku generation model list --purpose lookbook.image --target lookbook:<id> --json
 renku generation spec create --file <spec-json> --json
 renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approval-token <token> --json
-renku generation run --spec <spec-id> --approve-unpriced-cost --json
+renku generation run --spec <spec-id> --approve-live-provider-run --json
+renku generation run --spec <spec-id> --simulate --json
 renku media import --purpose lookbook.image --target lookbook:<id> --source <path> --json
 ```
 
@@ -106,7 +107,7 @@ lines plus the root generation line.
 
 The dependency inventory is a human and agent to-do list, not an execution plan.
 It may show the likely full workflow cost, including generated dependencies that
-do not exist yet, but it must not create approval tokens for dependency lines,
+do not exist yet, but it must not create approval artifacts for dependency lines,
 approval bundles, or automatic generation schedules. Each live provider
 generation is still run and approved one at a time.
 
@@ -193,11 +194,11 @@ estimates in `@gorenku/studio-engines`; reused existing assets contribute
 priced. Studio and CLI surfaces render inventory totals and line items, but
 they do not compute generation prices.
 
-There is one approval meaning. A cost approval token approves one live
-generation run for one concrete generation spec. Parent dependency plans do not
-return child approval tokens, and live runs do not walk dependency inventories.
-The accepted decision is
-`../decisions/0043-use-single-generation-approval-tokens.md`.
+There is one approval meaning. Estimates are display-only. A live provider
+request requires explicit one-time approval for the current run command or
+browser action. Parent dependency plans do not return child
+approval artifacts, and live runs do not walk dependency inventories. The
+accepted decision is `../decisions/0043-use-explicit-live-provider-run-approval.md`.
 
 Execution boundaries still fail fast. Final spec creation and provider payload
 construction must reject selected inputs that cannot be sent to the selected
@@ -255,5 +256,5 @@ reference.
 - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
 - `../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
 - `../decisions/0036-use-unsliced-location-sheets.md`
-- `../decisions/0043-use-single-generation-approval-tokens.md`
+- `../decisions/0043-use-explicit-live-provider-run-approval.md`
 - `../decisions/0045-use-generation-preview-purpose-bindings.md`

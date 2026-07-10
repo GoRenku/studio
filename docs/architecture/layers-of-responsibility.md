@@ -187,7 +187,7 @@ The server should not own:
 - asset selection rules;
 - cast pinning or clip binding behavior;
 - queue transition rules.
-- generation cost rules or approval-token derivation.
+- generation cost rules or live provider approval policy.
 
 ## `packages/studio/src`
 
@@ -207,7 +207,7 @@ The UI should not:
 - infer relationships from folder paths;
 - encode domain mutation rules;
 - own long-running task state;
-- decide whether a generation is priced or approval-token-ready;
+- decide whether a generation is priced or approved for live provider execution;
 - import `@gorenku/studio-core/server`;
 - import `better-sqlite3`, Drizzle's SQLite driver, or Node filesystem modules.
 

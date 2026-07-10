@@ -23,7 +23,6 @@ describe('media generation dependency draft estimate classification', () => {
         pricing: null,
         estimatedCostUsd: null,
         reason: 'No pricing is configured for this model.',
-        costApprovalToken: null,
         warnings: ['No pricing is configured for this model.'],
         billableUnits: {},
       },

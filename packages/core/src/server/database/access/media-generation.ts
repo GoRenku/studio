@@ -138,7 +138,6 @@ export function insertMediaGenerationRun(
     model: string;
     providerPayload: Record<string, unknown>;
     estimate: unknown;
-    approvalToken?: string;
     simulated: boolean;
     status: MediaGenerationRun['status'];
     outputs: unknown;
@@ -161,7 +160,6 @@ export function insertMediaGenerationRun(
       model: input.model,
       providerPayloadJson: JSON.stringify(input.providerPayload),
       estimateSnapshotJson: JSON.stringify(input.estimate),
-      approvalToken: input.approvalToken,
       simulated: input.simulated,
       status: input.status,
       outputsJson: JSON.stringify(input.outputs),
@@ -232,7 +230,6 @@ function toRunRecord(row: MediaGenerationRunRow): MediaGenerationRun {
     specSnapshot: spec,
     providerPayload: JSON.parse(row.providerPayloadJson) as Record<string, unknown>,
     estimateSnapshot: JSON.parse(row.estimateSnapshotJson) as unknown,
-    ...(row.approvalToken ? { approvalToken: row.approvalToken } : {}),
     simulated: row.simulated,
     status: row.status as MediaGenerationRun['status'],
     outputs: JSON.parse(row.outputsJson) as unknown,

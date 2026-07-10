@@ -1,4 +1,4 @@
-import type { GenerationCostEstimate } from '@gorenku/studio-engines';
+import type { MediaGenerationCostEstimate } from './media-generation-cost.js';
 import type { ProjectRelativePath } from './project.js';
 import type { ShotVideoTakeInputKind, ShotVideoTakeInputSubjectKind } from './scene-shot-list.js';
 import type { MediaGenerationPurpose, MediaKind } from './media-generation-purpose.js';
@@ -169,7 +169,7 @@ export interface MediaGenerationRootGenerationLine {
   pricing: MediaGenerationDependencyPricing;
   canCreateSpec: boolean;
   blockedReason: string | null;
-  estimate: GenerationCostEstimate | null;
+  estimate: MediaGenerationCostEstimate | null;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }
 
@@ -240,6 +240,6 @@ export interface MediaGenerationDependencyPlan {
   dependencyInventory: MediaGenerationDependencyInventory;
   lines: MediaGenerationPlanLine[];
   estimate: MediaGenerationDependencyInventoryEstimate;
-  finalEstimate: GenerationCostEstimate | null;
+  finalEstimate: MediaGenerationCostEstimate | null;
   diagnostics: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
 }

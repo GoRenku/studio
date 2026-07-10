@@ -39,10 +39,8 @@ export interface GenerationCommandFlags {
   kind?: string;
   subjectKind?: string;
   subjectId?: string;
-  approvalToken?: string;
-  approveUnpricedCost?: boolean;
+  approveLiveProviderRun?: boolean;
   simulate?: boolean;
-  all?: boolean;
 }
 
 export const generationCommandHandlers = [
@@ -324,8 +322,7 @@ async function runGeneration(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.runMediaGenerationSpec({
     ...generationProjectInput(input.runtime),
     specId: requiredFlag(input.flags.spec, '--spec'),
-    approvalToken: input.flags.approvalToken,
-    approveUnpricedCost: input.flags.approveUnpricedCost,
+    approveLiveProviderRun: input.flags.approveLiveProviderRun,
     simulate: input.flags.simulate,
   });
 }
@@ -441,77 +438,14 @@ async function runDialogueAudioGenerate(
   input: GenerationCommandInput,
 ): Promise<unknown> {
   const sceneId = requiredFlag(input.flags.scene, '--scene');
-  if (input.flags.all) {
-    return runAllDialogueAudioGenerate(input, sceneId);
-  }
-  const approvalToken = input.flags.simulate
-    ? input.flags.approvalToken
-    : requiredFlag(input.flags.approvalToken, '--approval-token');
   return input.runtime.projectDataService.generateSceneDialogueAudioTake({
     ...generationProjectInput(input.runtime),
     sceneId,
     dialogueId: requiredFlag(input.flags.dialogue, '--dialogue'),
     setup: {},
-    approvalToken,
-    approveUnpricedCost: input.flags.approveUnpricedCost,
+    approveLiveProviderRun: input.flags.approveLiveProviderRun,
     simulate: input.flags.simulate,
   });
-}
-
-async function runAllDialogueAudioGenerate(
-  input: GenerationCommandInput,
-  sceneId: string
-): Promise<unknown> {
-  assertDialogueAudioBulkGenerateIsSimulated(input);
-  const context =
-    await input.runtime.projectDataService.readSceneDialogueAudioContext({
-      ...generationProjectInput(input.runtime),
-      sceneId,
-    });
-  const generated = [];
-  for (const dialogue of context.dialogues) {
-    if (!canBulkGenerateDialogue(context, dialogue)) {
-      continue;
-    }
-    generated.push(
-      await input.runtime.projectDataService.generateSceneDialogueAudioTake({
-        ...generationProjectInput(input.runtime),
-        sceneId,
-        dialogueId: dialogue.dialogueId,
-        setup: {},
-        approvalToken: input.flags.approvalToken,
-        approveUnpricedCost: input.flags.approveUnpricedCost,
-        simulate: input.flags.simulate,
-      })
-    );
-  }
-  return { generatedCount: generated.length, generated };
-}
-
-function assertDialogueAudioBulkGenerateIsSimulated(
-  input: GenerationCommandInput
-): void {
-  if (input.flags.simulate) {
-    return;
-  }
-  throw new StructuredError({
-    code: 'CLI141',
-    message:
-      'generation dialogue-audio generate --all cannot use one approval token for multiple live dialogue generations.',
-    suggestion:
-      'Run generation dialogue-audio plan, then generate each dialogue separately with the approval token for that exact dialogue request, or add --simulate for a bulk dry run.',
-  });
-}
-
-function canBulkGenerateDialogue(
-  context: SceneDialogueAudioPlanContext,
-  dialogue: SceneDialogueAudioPlanDialogue
-): boolean {
-  if (!dialogue.castMemberId) {
-    return false;
-  }
-  const voices = context.castVoicesByCastMemberId[dialogue.castMemberId] ?? [];
-  return voices.some((voice) => voice.usable);
 }
 
 type GenerationCommandInput = Parameters<

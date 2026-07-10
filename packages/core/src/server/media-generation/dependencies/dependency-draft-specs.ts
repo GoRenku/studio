@@ -41,7 +41,7 @@ export type MediaGenerationDependencyDraftPlan =
       >;
       materializationReason: string;
       pricing: MediaGenerationDependencyPricing;
-      estimate: import('@gorenku/studio-engines').GenerationCostEstimate | null;
+      estimate: import('../../../client/index.js').MediaGenerationCostEstimate | null;
       diagnostics?: import('@gorenku/studio-diagnostics').DiagnosticIssue[];
     };
 

@@ -239,7 +239,6 @@ function estimateReport(): MediaGenerationEstimateReport {
         pricePerCharacter: 0.0001,
       },
       estimatedCostUsd: 0.004,
-      costApprovalToken: 'approval_token',
       billableUnits: { text: spec.v3Text },
       warnings: [],
     },

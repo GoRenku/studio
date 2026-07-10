@@ -183,7 +183,7 @@ export function SceneDialogueAudioPanel({
       </Tabs>
 
       <SceneDialogueAudioFooter
-        approvalToken={dialogueAudio.approvalToken}
+        canGenerateCurrentEstimate={dialogueAudio.canGenerateCurrentEstimate}
         blocked={dialogueAudio.blocked}
         busy={dialogueAudio.actionBusy}
         estimate={dialogueAudio.estimate}

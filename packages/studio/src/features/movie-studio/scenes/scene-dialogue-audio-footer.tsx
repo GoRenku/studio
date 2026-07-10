@@ -3,7 +3,7 @@ import { Button } from '@/ui/button';
 import type { SceneDialogueAudioEstimateState } from './use-scene-dialogue-audio';
 
 interface SceneDialogueAudioFooterProps {
-  approvalToken: string | null;
+  canGenerateCurrentEstimate: boolean;
   blocked: boolean;
   busy: boolean;
   estimate: SceneDialogueAudioEstimateState;
@@ -11,13 +11,13 @@ interface SceneDialogueAudioFooterProps {
 }
 
 export function SceneDialogueAudioFooter({
-  approvalToken,
+  canGenerateCurrentEstimate,
   blocked,
   busy,
   estimate,
   onGenerate,
 }: SceneDialogueAudioFooterProps) {
-  const canGenerate = !blocked && !busy && Boolean(approvalToken);
+  const canGenerate = !blocked && !busy && canGenerateCurrentEstimate;
   return (
     <footer className='flex shrink-0 items-center justify-between gap-2 border-t border-border/40 bg-sidebar-header-bg/70 px-4 py-3'>
       <div className='flex h-8 min-w-0 flex-1 items-center justify-between gap-3 rounded-md border border-border/50 bg-panel-header-bg px-3'>
