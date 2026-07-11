@@ -16,7 +16,7 @@ export interface ImageCollectionItem {
   detectImageAspectRatio?: boolean;
   imageClassName?: string;
   selected?: boolean;
-  bottomRightControl?: ReactNode;
+  bottomRightActions?: ReactNode;
   deleteAction?: {
     label: string;
     title: string;
@@ -66,7 +66,7 @@ export function ImageCollectionSection({
               imageClassName={item.imageClassName}
               selected={item.selected}
               onOpen={item.onOpen}
-              bottomRightControl={item.bottomRightControl}
+              bottomRightActions={item.bottomRightActions}
               topRightAction={
                 item.deleteAction ? (
                   <DeleteConfirmDialog

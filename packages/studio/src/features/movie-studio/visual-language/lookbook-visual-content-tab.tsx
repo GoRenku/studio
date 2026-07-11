@@ -9,7 +9,8 @@ import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
-import { ImageSelectionControl } from '@/ui/image-selection-control';
+import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
+import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
 import {
   lookbookImageFileUrl,
   lookbookSheetFileUrl,
@@ -20,7 +21,6 @@ interface LookbookVisualContentTabProps {
   resource: LookbookResource;
   onDeleteImage: (imageId: string) => Promise<void>;
   onDeleteSheet: (sheetId: string) => Promise<void>;
-  onSetDefaultSheet: (sheetId: string) => Promise<void>;
 }
 
 export function LookbookVisualContentTab({
@@ -28,11 +28,10 @@ export function LookbookVisualContentTab({
   resource,
   onDeleteImage,
   onDeleteSheet,
-  onSetDefaultSheet,
 }: LookbookVisualContentTabProps) {
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const defaultSheetId = resource.sheets[0]?.id ?? null;
+  const { openImageRevision } = useImageRevisionDialog();
 
   const openPreview = (images: PreviewImage[]) => {
     if (!images.length) return;
@@ -69,6 +68,26 @@ export function LookbookVisualContentTab({
                 aspectRatio: lookbookImageAspectRatio(image, 16 / 10),
                 detectImageAspectRatio: true,
                 onOpen: () => openPreview(previewImagesForImage),
+                bottomRightActions: (
+                  <ImageRevisionCardAction
+                    onEdit={() => {
+                      const file = image.asset.files.find(
+                        (candidate) => candidate.mediaKind === 'image'
+                      );
+                      if (!file) return;
+                      openImageRevision({
+                        projectName,
+                        target: {
+                          kind: 'lookbookImage',
+                          lookbookId: resource.lookbook.id,
+                          imageId: image.id,
+                          assetId: image.asset.assetId,
+                          assetFileId: file.id,
+                        },
+                      });
+                    }}
+                  />
+                ),
                 deleteAction: {
                   label: 'Delete image',
                   title: 'Delete Image?',
@@ -91,29 +110,33 @@ export function LookbookVisualContentTab({
                 projectName,
                 sheet
               );
-              const selected = sheet.id === defaultSheetId;
               return {
                 id: sheet.id,
                 imageUrl: previewImagesForSheet[0]?.src ?? null,
-                imageAlt: selected
-                  ? 'Default lookbook sheet'
-                  : 'Lookbook sheet',
+                imageAlt: 'Lookbook sheet',
                 aspectClassName: 'aspect-[4/3]',
                 aspectRatio: lookbookSheetAspectRatio(sheet, 4 / 3),
                 detectImageAspectRatio: true,
                 imageClassName: 'object-contain',
-                selected,
                 onOpen: () => openPreview(previewImagesForSheet),
-                bottomRightControl: (
-                  <ImageSelectionControl
-                    selected={selected}
-                    selectedLabel='Default lookbook sheet'
-                    unselectedLabel='Set default lookbook sheet'
-                    onToggleSelected={() =>
-                      selected
-                        ? Promise.resolve()
-                        : onSetDefaultSheet(sheet.id)
-                    }
+                bottomRightActions: (
+                  <ImageRevisionCardAction
+                    onEdit={() => {
+                      const file = sheet.asset.files.find(
+                        (candidate) => candidate.mediaKind === 'image'
+                      );
+                      if (!file) return;
+                      openImageRevision({
+                        projectName,
+                        target: {
+                          kind: 'lookbookSheet',
+                          lookbookId: resource.lookbook.id,
+                          sheetId: sheet.id,
+                          assetId: sheet.asset.assetId,
+                          assetFileId: file.id,
+                        },
+                      });
+                    }}
                   />
                 ),
                 deleteAction: {

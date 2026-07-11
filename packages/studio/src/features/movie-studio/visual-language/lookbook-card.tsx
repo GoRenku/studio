@@ -69,7 +69,7 @@ export function LookbookCard({
           }
         />
       }
-      bottomRightControl={
+      bottomRightActions={
         <ImageSelectionControl
           selected={item.isSelectedForType}
           selectedLabel={selectedLabel}

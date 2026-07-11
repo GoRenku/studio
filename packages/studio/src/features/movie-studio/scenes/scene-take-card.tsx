@@ -69,7 +69,7 @@ export function SceneTakeCard({
           }
         />
       }
-      bottomRightControl={
+      bottomRightActions={
         <ImageSelectionControl
           selected={picked}
           selectedLabel={`Clear ${title} pick`}

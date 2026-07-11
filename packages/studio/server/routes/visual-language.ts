@@ -301,19 +301,6 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .put('/visual-language/lookbooks/sheets/:sheetId/default', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const sheetId = c.req.param('sheetId') as string;
-        const report = await projectData.setDefaultLookbookSheet({
-          projectName,
-          sheetId,
-        });
-        return c.json({ sheet: report.sheet, resourceKeys: report.resourceKeys });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
     .get('/visual-language/lookbooks/images/:imageId/files/:assetFileId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

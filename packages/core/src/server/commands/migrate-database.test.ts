@@ -176,7 +176,15 @@ describe('migrate database command', () => {
       'project.sqlite'
     );
     const setup = new Database(databasePath);
+    let inputShotMembershipCount = 0;
     try {
+      inputShotMembershipCount = (
+        setup
+          .prepare(
+            'select count(*) as count from scene_shot_video_take_media_input_shot'
+          )
+          .get() as { count: number }
+      ).count;
       await deleteDrizzleMigrationRowsAfterTag(
         setup,
         '0043_drop_scene_dialogue_audio_pick'
@@ -255,6 +263,11 @@ describe('migrate database command', () => {
           restored_at text,
           primary key (output_id, shot_id)
         );
+        alter table scene_shot_video_take_media_input
+          add column media_generation_run_id text;
+        alter table scene_dialogue_audio_take
+          add column media_generation_run_id text;
+        drop table asset_file_generation;
         alter table media_generation_run add column approval_token text;
         pragma foreign_keys = on;
       `);
@@ -306,6 +319,15 @@ describe('migrate database command', () => {
       expect(readColumnNames(migrated, 'scene_shot_video_take')).toContain(
         'regenerated_from_take_id'
       );
+      expect(
+        (
+          migrated
+            .prepare(
+              'select count(*) as count from scene_shot_video_take_media_input_shot'
+            )
+            .get() as { count: number }
+        ).count
+      ).toBe(inputShotMembershipCount);
     } finally {
       migrated.close();
     }

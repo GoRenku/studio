@@ -4,6 +4,11 @@ import {
   createShotVideoTakeTestProject,
   type ShotVideoTakeTestProject,
 } from '../../../../testing/shot-video-take-fixtures.js';
+import {
+  buildDraftMediaGenerationPreview,
+  buildMediaGenerationPreview,
+  updateGenerationPreviewSpec,
+} from '../../../../generation-preview/service.js';
 
 describe('shot video take preflight and validation', () => {
   let shotVideoTakeProject: ShotVideoTakeTestProject;
@@ -172,7 +177,7 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    const preview = await projectData.buildMediaGenerationPreview({
+    const preview = await buildMediaGenerationPreview({
       homeDir,
       specId: spec.id,
     });
@@ -189,7 +194,7 @@ describe('shot video take preflight and validation', () => {
       multi_prompt: multiPrompt,
     });
 
-    const withNegativePrompt = await projectData.updateGenerationPreviewSpec({
+    const withNegativePrompt = await updateGenerationPreviewSpec({
       homeDir,
       specId: spec.id,
       prompt: {
@@ -200,7 +205,7 @@ describe('shot video take preflight and validation', () => {
     });
     expect(withNegativePrompt.finalPrompt.negativeText).toBe('No camera shake.');
 
-    const clearedNegativePrompt = await projectData.updateGenerationPreviewSpec({
+    const clearedNegativePrompt = await updateGenerationPreviewSpec({
       homeDir,
       specId: spec.id,
       prompt: {
@@ -232,7 +237,7 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    const preview = await projectData.buildMediaGenerationPreview({
+    const preview = await buildMediaGenerationPreview({
       homeDir,
       specId: spec.id,
     });
@@ -274,7 +279,7 @@ describe('shot video take preflight and validation', () => {
       },
     });
 
-    const preview = await projectData.buildMediaGenerationPreview({
+    const preview = await buildMediaGenerationPreview({
       homeDir,
       specId: spec.id,
     });
@@ -303,7 +308,7 @@ describe('shot video take preflight and validation', () => {
       takeId: written.take.takeId,
     });
 
-    const preview = await projectData.buildDraftMediaGenerationPreview({
+    const preview = await buildDraftMediaGenerationPreview({
       homeDir,
       spec: {
         purpose: 'shot.video-take',

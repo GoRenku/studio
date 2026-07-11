@@ -18,6 +18,7 @@ export interface SyntaxTextEditorProps {
   wordWrap?: boolean;
   className?: string;
   ariaLabel: string;
+  placeholder?: string;
 }
 
 export function SyntaxTextEditor({
@@ -28,12 +29,14 @@ export function SyntaxTextEditor({
   wordWrap = true,
   className,
   ariaLabel,
+  placeholder,
 }: SyntaxTextEditorProps) {
   const [initialValue] = useState(value);
   const textareaProps: EditorProps['textareaProps'] = {
     'aria-label': ariaLabel,
     readOnly,
     spellCheck: true,
+    placeholder,
   };
 
   return (

@@ -164,7 +164,6 @@ import type {
   SceneShotListResource,
   GarbageCollectionPreview,
   GarbageCollectionReport,
-  GenerationPreviewRequest,
   RecoverableMutationReport,
   TrashListReport,
   VisualLanguageCommandReport,
@@ -385,7 +384,6 @@ export interface ProjectDataService {
   clearLookbookCardImage(input: ClearLookbookCardImageInput): Promise<LookbookImageMutationReport>;
   deleteLookbookImage(input: DeleteLookbookImageInput): Promise<LookbookImageMutationReport>;
   deleteLookbookSheet(input: DeleteLookbookSheetInput): Promise<LookbookSheetMutationReport>;
-  setDefaultLookbookSheet(input: SetDefaultLookbookSheetInput): Promise<LookbookSheetMutationReport>;
   setLookbookImagePlacement(input: SetLookbookImagePlacementInput): Promise<LookbookImageMutationReport>;
   buildLookbookImageContext(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageGenerationContext>;
   listLookbookImageModels(input: ReadLookbookImageGenerationContextInput): Promise<LookbookImageModelListReport>;
@@ -503,9 +501,6 @@ export interface ProjectDataService {
   listMediaGenerationSpecs(input: ListMediaGenerationSpecsInput): Promise<{ specs: MediaGenerationSpecRecord[] }>;
   prepareMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
   prepareDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<PreparedMediaGeneration>;
-  buildMediaGenerationPreview(input: BuildMediaGenerationPreviewInput): Promise<GenerationPreviewRequest>;
-  buildDraftMediaGenerationPreview(input: BuildDraftMediaGenerationPreviewInput): Promise<GenerationPreviewRequest>;
-  updateGenerationPreviewSpec(input: UpdateGenerationPreviewSpecInput): Promise<GenerationPreviewRequest>;
   estimateMediaGenerationSpec(input: ReadMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   estimateDraftMediaGenerationSpec(input: PrepareDraftMediaGenerationSpecInput): Promise<MediaGenerationEstimateReport>;
   planMediaGenerationDependencies(input: PlanMediaGenerationDependenciesInput): Promise<MediaGenerationDependencyPlan>;
@@ -1015,10 +1010,6 @@ export interface DeleteLookbookSheetInput extends VisualLanguageProjectInput {
   sheetId: string;
 }
 
-export interface SetDefaultLookbookSheetInput extends VisualLanguageProjectInput {
-  sheetId: string;
-}
-
 export interface SetLookbookImagePlacementInput extends VisualLanguageProjectInput {
   imageId: string;
   sections: LookbookSection[];
@@ -1249,27 +1240,6 @@ export interface ReadMediaGenerationSpecInput extends RenkuConfigPathOptions {
 export interface ReadMediaGenerationRunInput extends RenkuConfigPathOptions {
   projectName?: string;
   runId: string;
-}
-
-export interface BuildMediaGenerationPreviewInput
-  extends ReadMediaGenerationSpecInput {}
-
-export interface BuildDraftMediaGenerationPreviewInput
-  extends ValidateMediaGenerationSpecInput {}
-
-export interface GenerationPreviewPromptUpdate {
-  authoredText: string;
-  negativeText?: string | null;
-}
-
-export interface GenerationPreviewReferenceSelectionUpdate {
-  dependencyId: string;
-  selected: boolean;
-}
-
-export interface UpdateGenerationPreviewSpecInput extends ReadMediaGenerationSpecInput {
-  prompt: GenerationPreviewPromptUpdate;
-  referenceSelections: GenerationPreviewReferenceSelectionUpdate[];
 }
 
 export interface RunMediaGenerationSpecInput

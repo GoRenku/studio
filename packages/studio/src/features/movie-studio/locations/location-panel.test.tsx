@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as renderTestingLibrary, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   LocationResourceResponse,
@@ -12,6 +12,13 @@ import {
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
 import { LocationPanel } from './location-panel';
+import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
+
+function render(ui: React.ReactElement) {
+  return renderTestingLibrary(
+    <ImageRevisionDialogProvider>{ui}</ImageRevisionDialogProvider>,
+  );
+}
 
 vi.mock('sonner', () => ({
   toast: {

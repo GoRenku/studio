@@ -8,6 +8,7 @@ interface GenerationPreviewPromptPanelProps {
   readOnly: boolean;
   onAuthoredTextChange: (value: string) => void;
   onNegativeTextChange: (value: string) => void;
+  authoredPlaceholder?: string;
 }
 
 export function GenerationPreviewPromptPanel({
@@ -17,6 +18,7 @@ export function GenerationPreviewPromptPanel({
   readOnly,
   onAuthoredTextChange,
   onNegativeTextChange,
+  authoredPlaceholder,
 }: GenerationPreviewPromptPanelProps) {
   return (
     <div
@@ -35,6 +37,7 @@ export function GenerationPreviewPromptPanel({
         readOnly={readOnly}
         wordWrap
         ariaLabel='Generation prompt'
+        placeholder={authoredPlaceholder}
         className='min-h-0'
       />
       {negativeText !== undefined ? (

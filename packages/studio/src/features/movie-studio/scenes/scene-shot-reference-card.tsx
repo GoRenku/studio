@@ -7,6 +7,7 @@ import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
 import { SHOT_REFERENCE_COST_BADGE_OVERLAY_CLASS } from './scene-shot-reference-layout';
 import { formatEstimateUsd } from './shot-video-take-production-projection';
+import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
 
 interface SceneShotReferenceCardProps {
   title?: string;
@@ -24,6 +25,7 @@ interface SceneShotReferenceCardProps {
   onToggleSelected?: () => Promise<void>;
   selectedActionLabel?: string;
   unselectedActionLabel?: string;
+  onEditImage?: () => void;
 }
 
 export function SceneShotReferenceCard({
@@ -42,6 +44,7 @@ export function SceneShotReferenceCard({
   onToggleSelected,
   selectedActionLabel,
   unselectedActionLabel,
+  onEditImage,
 }: SceneShotReferenceCardProps) {
   const needsGeneration = card.state === 'selected-planned';
   const selectedLabel =
@@ -70,14 +73,21 @@ export function SceneShotReferenceCard({
       }
       topRightActionClassName={SHOT_REFERENCE_COST_BADGE_OVERLAY_CLASS}
       topRightActionPersistent={needsGeneration}
-      bottomRightControl={
-        selectable && !card.required && onToggleSelected ? (
-          <ImageSelectionControl
-            selected={selected}
-            selectedLabel={selectedLabel}
-            unselectedLabel={unselectedLabel}
-            onToggleSelected={onToggleSelected}
-          />
+      bottomRightActions={
+        selectable || onEditImage ? (
+          <>
+            {selectable && !card.required && onToggleSelected ? (
+              <ImageSelectionControl
+                selected={selected}
+                selectedLabel={selectedLabel}
+                unselectedLabel={unselectedLabel}
+                onToggleSelected={onToggleSelected}
+              />
+            ) : null}
+            {onEditImage ? (
+              <ImageRevisionCardAction onEdit={onEditImage} />
+            ) : null}
+          </>
         ) : null
       }
       onOpen={onOpen ?? (() => {})}

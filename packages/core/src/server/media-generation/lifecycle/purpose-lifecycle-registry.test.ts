@@ -55,34 +55,33 @@ describe('media generation lifecycle purpose registry', () => {
 
   it('registers preview builders for every saved-spec previewable purpose', () => {
     const previewable = listMediaGenerationPurposeDefinitions()
-      .filter((definition) => typeof definition.buildPreview === 'function');
+      .filter((definition) => Boolean(definition.preview));
 
     expect(previewable.length).toBeGreaterThan(0);
     for (const definition of previewable) {
-      expect(requireMediaGenerationPurposeDefinition(definition.purpose).buildPreview)
-        .toBe(definition.buildPreview);
+      expect(requireMediaGenerationPurposeDefinition(definition.purpose).preview)
+        .toBe(definition.preview);
     }
   });
 
-  it('registers purpose-owned reference updates only where the purpose supports them', () => {
+  it('registers cohesive purpose-owned preview updates', () => {
     expect(
       requireMediaGenerationPurposeDefinition('cast.character-sheet')
-        .applyPreviewReferenceSelections,
+        .preview?.update,
     ).toEqual(expect.any(Function));
     expect(
-      requireMediaGenerationPurposeDefinition('lookbook.image')
-        .applyPreviewReferenceSelections,
-    ).toBeUndefined();
+      requireMediaGenerationPurposeDefinition('lookbook.image').preview?.update,
+    ).toEqual(expect.any(Function));
   });
 
-  it('registers model-schema negative prompt support only for shot video takes', () => {
-    expect(
-      requireMediaGenerationPurposeDefinition('shot.video-take')
-        .supportsPreviewNegativePrompt
-    ).toEqual(expect.any(Function));
+  it('keeps image regeneration capability explicit by purpose', () => {
     expect(
       requireMediaGenerationPurposeDefinition('lookbook.image')
-        .supportsPreviewNegativePrompt
+        .imageRegeneration?.applyEditor,
+    ).toEqual(expect.any(Function));
+    expect(
+      requireMediaGenerationPurposeDefinition('shot.video-take')
+        .imageRegeneration,
     ).toBeUndefined();
   });
 });

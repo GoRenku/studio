@@ -11,19 +11,25 @@ export interface CliCommandRuntime {
   projectDataService: ProjectDataService;
 }
 
-export interface CliCommandHandler<Flags> {
+export interface CliCommandHandler<
+  Flags,
+  Runtime extends CliCommandRuntime = CliCommandRuntime,
+> {
   path: readonly string[];
   run(input: {
     flags: Flags;
-    runtime: CliCommandRuntime;
+    runtime: Runtime;
   }): Promise<unknown>;
 }
 
-export async function dispatchCliCommand<Flags>(input: {
+export async function dispatchCliCommand<
+  Flags,
+  Runtime extends CliCommandRuntime = CliCommandRuntime,
+>(input: {
   commandPath: readonly string[];
   flags: Flags;
-  runtime: CliCommandRuntime;
-  handlers: readonly CliCommandHandler<Flags>[];
+  runtime: Runtime;
+  handlers: readonly CliCommandHandler<Flags, Runtime>[];
   unknownCommand: (commandPath: readonly string[]) => StructuredError;
 }): Promise<unknown> {
   const handler = input.handlers.find((candidate) =>

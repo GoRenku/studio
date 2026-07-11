@@ -33,7 +33,7 @@ import {
 } from '../../../dependencies/dependency-selectors.js';
 import type {
   MediaGenerationDependencyDeclarationInput,
-} from '../../../lifecycle/purpose-lifecycle-registry.js';
+} from '../../../lifecycle/purpose-definition.js';
 import {
   declareShotVideoTakeDependencySlots,
 } from './dependency-slots.js';

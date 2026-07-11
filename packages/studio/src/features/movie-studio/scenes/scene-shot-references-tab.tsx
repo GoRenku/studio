@@ -33,6 +33,7 @@ import {
 } from './scene-shot-reference-layout';
 import { SceneShotReferenceSection } from './scene-shot-reference-section';
 import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
+import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
 
 interface SceneShotReferencesTabProps {
   projectName: string;
@@ -304,6 +305,7 @@ function GeneralReferenceCard({
     inclusion: 'include' | 'exclude' | null
   ) => Promise<void>;
 }) {
+  const { openImageRevision } = useImageRevisionDialog();
   const preview = choice.card.previews[0];
   const imageUrl = preview ? generalReferenceImageUrl(projectName, sceneId, preview) : null;
   const previewImages = previewImageUrl(preview, imageUrl);
@@ -320,6 +322,22 @@ function GeneralReferenceCard({
       aspectClassName='aspect-video'
       detectImageAspectRatio
       onOpen={() => onPreview(previewImages)}
+      onEditImage={
+        preview?.inputId && preview.takeId
+          ? () =>
+              openImageRevision({
+                projectName,
+                target: {
+                  kind: 'shotVideoTakeInput',
+                  sceneId,
+                  takeId: preview.takeId as string,
+                  inputId: preview.inputId as string,
+                  assetId: preview.assetId,
+                  assetFileId: preview.assetFileId,
+                },
+              })
+          : undefined
+      }
       onToggleSelected={() => {
         if (choice.card.dependencyId) {
           return onToggleInclusion(

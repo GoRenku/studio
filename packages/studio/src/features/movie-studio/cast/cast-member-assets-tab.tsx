@@ -21,6 +21,8 @@ import {
 } from './cast-member-assets';
 import { humanizeReferenceName } from './cast-reference-labels';
 import { CastVoiceSampleCard } from './cast-voice-sample-card';
+import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
+import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
 
 interface CastMemberAssetsTabProps {
   projectName: string;
@@ -44,6 +46,7 @@ export function CastMemberAssetsTab({
   onDeleteVoice,
 }: CastMemberAssetsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
+  const { openImageRevision } = useImageRevisionDialog();
   const profileAssets = castImageAssetsForRole(assets, CAST_PROFILE_ROLE);
   const characterSheetAssets = castImageAssetsForRole(
     assets,
@@ -85,6 +88,21 @@ export function CastMemberAssetsTab({
             emptyTitle='No character sheets yet.'
             gridClassName='grid-cols-[repeat(auto-fill,minmax(384px,1fr))]'
             onOpenImage={setPreviewImage}
+            onEditImage={(asset) => {
+              const file = asset.files.find(
+                (candidate) => candidate.mediaKind === 'image'
+              );
+              if (!file) return;
+              openImageRevision({
+                projectName,
+                target: {
+                  kind: 'castCharacterSheet',
+                  castMemberId,
+                  assetId: asset.assetId,
+                  assetFileId: file.id,
+                },
+              });
+            }}
             onDeleteAsset={async (asset) => {
               await onDeleteAsset(asset);
               setPreviewImage((current) =>
@@ -120,6 +138,7 @@ function CastAssetSection({
   emptyTitle,
   onOpenImage,
   onTogglePick,
+  onEditImage,
   onDeleteAsset,
 }: {
   title: string;
@@ -134,6 +153,7 @@ function CastAssetSection({
   emptyTitle: string;
   onOpenImage: (image: PreviewImage) => void;
   onTogglePick?: (asset: StudioAssetResponse) => Promise<void>;
+  onEditImage?: (asset: StudioAssetResponse) => void;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
 }) {
   const selectable = Boolean(onTogglePick);
@@ -160,14 +180,21 @@ function CastAssetSection({
       imageClassName,
       selected: selectable ? selected : false,
       onOpen: () => previewImage && onOpenImage(previewImage),
-      bottomRightControl:
-        selectable && onTogglePick ? (
-          <ImageSelectionControl
-            selected={selected}
-            selectedLabel={`Clear ${roleLabel} pick`}
-            unselectedLabel={`Set ${roleLabel} pick`}
-            onToggleSelected={() => onTogglePick(asset)}
-          />
+      bottomRightActions:
+        selectable || onEditImage ? (
+          <>
+            {selectable && onTogglePick ? (
+              <ImageSelectionControl
+                selected={selected}
+                selectedLabel={`Clear ${roleLabel} pick`}
+                unselectedLabel={`Set ${roleLabel} pick`}
+                onToggleSelected={() => onTogglePick(asset)}
+              />
+            ) : null}
+            {onEditImage ? (
+              <ImageRevisionCardAction onEdit={() => onEditImage(asset)} />
+            ) : null}
+          </>
         ) : undefined,
       deleteAction: {
         label: 'Delete image',

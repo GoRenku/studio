@@ -67,9 +67,9 @@ import {
   castReferenceImageDependencySlot,
 } from '../dependencies/dependency-slot-definitions.js';
 import type {
-  ApplyGenerationPreviewReferenceSelectionsInput,
   MediaGenerationDependencyDeclarationInput,
-} from '../lifecycle/purpose-lifecycle-registry.js';
+  ApplyMediaGenerationPreviewUpdateInput,
+} from '../lifecycle/purpose-definition.js';
 import {
   buildScreenplayContext,
   buildTimePeriodContext,
@@ -93,7 +93,6 @@ import {
   type CastProviderPlan,
 } from './cast-image-common.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
-import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 
 const CHARACTER_SHEET_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2',
@@ -400,7 +399,6 @@ export async function buildCastCharacterSheetGenerationPreview(
     providerModel: plan.model,
     mode: plan.mode,
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: referenceOptions.map((reference) => ({
       kind: 'image' as const,
       role: reference.referenceRole,
@@ -434,7 +432,7 @@ export async function buildCastCharacterSheetGenerationPreview(
 }
 
 export async function applyCastCharacterSheetPreviewReferenceSelections(
-  input: ApplyGenerationPreviewReferenceSelectionsInput,
+  input: Pick<ApplyMediaGenerationPreviewUpdateInput, 'projectName' | 'homeDir' | 'specRecord' | 'referenceSelections'>,
 ): Promise<CastCharacterSheetGenerationSpec> {
   const { specRecord } = input;
   assertCharacterSheetSpec(specRecord.spec);
@@ -457,7 +455,7 @@ export async function applyCastCharacterSheetPreviewReferenceSelections(
 export function applyCastCharacterSheetReferenceSelectionUpdates(input: {
   spec: CastCharacterSheetGenerationSpec;
   referenceOptions: CastCharacterSheetReferenceOption[];
-  referenceSelections: ApplyGenerationPreviewReferenceSelectionsInput['referenceSelections'];
+  referenceSelections: ApplyMediaGenerationPreviewUpdateInput['referenceSelections'];
 }): CastCharacterSheetGenerationSpec {
   const referenceOptionByDependencyId = new Map(
     input.referenceOptions.map((option) => [option.dependencyId, option]),

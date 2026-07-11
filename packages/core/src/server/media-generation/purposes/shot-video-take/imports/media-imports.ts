@@ -63,6 +63,7 @@ import {
 import {
   continueSceneShotVideoTakeIteration,
 } from '../authoring/take-iteration.js';
+import { recordImportedAssetFileGenerationProvenanceInSession } from '../../../../asset-file-generation/import-provenance.js';
 import {
   persistProjectAssetFile,
   validateProjectReferenceFileInput,
@@ -119,6 +120,11 @@ export async function importShotInputMedia(
             subjectKind: 'shot' as const,
             subjectId: prepared.orderedShotIds[0] as string,
           };
+    recordImportedAssetFileGenerationProvenanceInSession({
+      session,
+      assetFileId: imported.assetFileId,
+      receipt: input.receipt,
+    });
     const replacedInput = input.replaceSelected && (input.selection ?? 'select') === 'select'
       ? listShotVideoTakeInputs(session, {
           sceneId: prepared.sceneId,
@@ -140,7 +146,6 @@ export async function importShotInputMedia(
       ...subject,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
-      mediaGenerationRunId: receiptRunId(input.receipt),
       selection: input.selection ?? 'select',
       shotIds: prepared.orderedShotIds,
       now,
@@ -244,11 +249,15 @@ export async function importShotVideoTake(
       idGenerator: input.idGenerator,
       now,
     });
+    recordImportedAssetFileGenerationProvenanceInSession({
+      session,
+      assetFileId: imported.assetFileId,
+      receipt: input.receipt,
+    });
     const video = insertShotVideoTakeVideoRecord(session, {
       takeId: targetTake.takeId,
       assetId: imported.assetId,
       assetFileId: imported.assetFileId,
-      mediaGenerationRunId: receiptRunId(input.receipt),
       now,
     });
     const refreshedSourceTake = requireSceneShotVideoTake(session, {

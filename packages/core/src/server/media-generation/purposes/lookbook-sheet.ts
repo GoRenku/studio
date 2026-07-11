@@ -53,7 +53,6 @@ import { ProjectDataError } from '../../project-data-error.js';
 import { readLookbookResource } from '../../resources/lookbook.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
-import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
@@ -67,6 +66,7 @@ import type {
   MediaGenerationDependencyDraftSpec,
   MediaGenerationDependencyDraftSpecInput,
 } from '../dependencies/dependency-draft-specs.js';
+import { recordImportedAssetFileGenerationProvenanceInSession } from '../../asset-file-generation/import-provenance.js';
 
 const PROJECT_ASPECT_RATIOS = new Set(['1:1', '3:4', '4:3', '16:9', '9:16', '21:9']);
 const OUTPUT_FORMATS = new Set(['png', 'jpeg', 'webp']);
@@ -301,7 +301,6 @@ export async function buildLookbookSheetGenerationPreview(
     providerModel: plan.model,
     mode: 'text-to-image',
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: [],
     payload: plan.payload,
   });
@@ -462,6 +461,11 @@ export async function importLookbookSheetMedia(
           idGenerator: input.idGenerator,
           now,
           origin: input.receipt ? 'generated' : 'imported',
+        });
+        recordImportedAssetFileGenerationProvenanceInSession({
+          session: txSession,
+          assetFileId: imported.assetFileId,
+          receipt: input.receipt,
         });
         const importedSheetId = imported.nextId('lookbook_sheet');
         insertLookbookSheetRecord(txSession, {
@@ -1094,6 +1098,7 @@ function importLookbookSheetFile(input: {
 
   return {
     assetId,
+    assetFileId,
     nextId: ids,
   };
 }

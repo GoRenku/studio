@@ -7,6 +7,7 @@ import type {
   SceneDialogueAudioVoiceSettings,
 } from '../../../client/index.js';
 import {
+  assetFileGenerations,
   sceneDialogueAudio,
   sceneDialogueAudioTakes,
 } from '../../schema/index.js';
@@ -15,7 +16,7 @@ import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type SceneDialogueAudioRecord = typeof sceneDialogueAudio.$inferSelect;
 export type SceneDialogueAudioTakeRecord =
-  typeof sceneDialogueAudioTakes.$inferSelect;
+  typeof sceneDialogueAudioTakes.$inferSelect & { mediaGenerationRunId: string };
 
 export interface UpsertSceneDialogueAudioRecordInput {
   id: string;
@@ -37,7 +38,6 @@ export interface InsertSceneDialogueAudioTakeRecordInput {
   sceneDialogueAudioId: string;
   assetId: string;
   assetFileId: string;
-  mediaGenerationRunId: string;
   modelChoice: SceneDialogueAudioModelChoice;
   castVoiceId: string;
   castVoiceName: string;
@@ -143,8 +143,15 @@ export function listSceneDialogueAudioTakeRecords(
   sceneDialogueAudioId: string
 ): SceneDialogueAudioTakeRecord[] {
   return session.db
-    .select()
+    .select({
+      take: sceneDialogueAudioTakes,
+      mediaGenerationRunId: assetFileGenerations.mediaGenerationRunId,
+    })
     .from(sceneDialogueAudioTakes)
+    .innerJoin(
+      assetFileGenerations,
+      eq(sceneDialogueAudioTakes.assetFileId, assetFileGenerations.assetFileId),
+    )
     .where(
       and(
         eq(sceneDialogueAudioTakes.sceneDialogueAudioId, sceneDialogueAudioId),
@@ -152,7 +159,11 @@ export function listSceneDialogueAudioTakeRecords(
       )
     )
     .orderBy(desc(sceneDialogueAudioTakes.createdAt), desc(sceneDialogueAudioTakes.id))
-    .all();
+    .all()
+    .map(({ take, mediaGenerationRunId }) => ({
+      ...take,
+      mediaGenerationRunId,
+    }));
 }
 
 export function insertSceneDialogueAudioTakeRecord(
@@ -166,7 +177,6 @@ export function insertSceneDialogueAudioTakeRecord(
       sceneDialogueAudioId: input.sceneDialogueAudioId,
       assetId: input.assetId,
       assetFileId: input.assetFileId,
-      mediaGenerationRunId: input.mediaGenerationRunId,
       modelChoice: input.modelChoice,
       castVoiceId: input.castVoiceId,
       castVoiceName: input.castVoiceName,
@@ -200,10 +210,16 @@ export function readSceneDialogueAudioTakeRecord(
   session: DatabaseSession,
   input: { sceneDialogueAudioId: string; takeId: string }
 ): SceneDialogueAudioTakeRecord | null {
-  return (
-    session.db
-      .select()
+  const row = session.db
+      .select({
+        take: sceneDialogueAudioTakes,
+        mediaGenerationRunId: assetFileGenerations.mediaGenerationRunId,
+      })
       .from(sceneDialogueAudioTakes)
+      .innerJoin(
+        assetFileGenerations,
+        eq(sceneDialogueAudioTakes.assetFileId, assetFileGenerations.assetFileId),
+      )
       .where(
         and(
           eq(sceneDialogueAudioTakes.sceneDialogueAudioId, input.sceneDialogueAudioId),
@@ -211,8 +227,10 @@ export function readSceneDialogueAudioTakeRecord(
           isNull(sceneDialogueAudioTakes.discardedAt)
         )
       )
-      .get() ?? null
-  );
+      .get();
+  return row
+    ? { ...row.take, mediaGenerationRunId: row.mediaGenerationRunId }
+    : null;
 }
 
 export function deleteSceneDialogueAudioTakeRecord(

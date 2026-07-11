@@ -16,6 +16,7 @@ import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
+import { createImageRevisionsRoute } from './image-revisions.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
 import { createProductionExportsRoute } from './production-exports.js';
@@ -84,7 +85,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'deleteShotVideoTakeInput'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
-  | 'updateGenerationPreviewSpec'
   | 'updateProjectInformation'
   | 'resolveCoverImage'
   | 'listAssets'
@@ -150,7 +150,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'importLookbookSheetMedia'
   | 'deleteLookbookImage'
   | 'deleteLookbookSheet'
-  | 'setDefaultLookbookSheet'
   | 'setLookbookImagePlacement'
 > & {
   resolveProjectAssetFile(input: {
@@ -203,8 +202,9 @@ export function createProjectsRoute(
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
     .route(
       '/:projectName',
-      createGenerationPreviewRoute({ projectData, requireToken })
+      createGenerationPreviewRoute({ requireToken })
     )
+    .route('/:projectName', createImageRevisionsRoute({ requireToken }))
     .route('/:projectName', createTrashRoute({ projectData, requireToken }))
     .route(
       '/:projectName',

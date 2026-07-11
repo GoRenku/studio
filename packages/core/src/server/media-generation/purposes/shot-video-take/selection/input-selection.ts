@@ -484,7 +484,6 @@ function inputForIterationSelection(input: {
     }),
     assetId: copiedAsset.assetId,
     assetFileId: copiedAsset.assetFileId,
-    mediaGenerationRunId: input.sourceInput.mediaGenerationRunId ?? null,
     selection: 'select',
     shotIds: input.sourceInput.shotIds,
     now: input.now,

@@ -73,7 +73,6 @@ import {
 } from '../../project-asset-files/index.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
-import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import type { LocationHeroMutationReport } from '../../project-data-service-contracts.js';
 import { studioResourceKeysForAssetTarget } from '../../studio-coordination/resource-keys.js';
 import {
@@ -353,7 +352,6 @@ export async function buildLocationHeroGenerationPreview(
     providerModel: plan.model,
     mode: plan.mode,
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: locationHeroPreviewReferences(specRecord.spec, context),
     payload: plan.payload,
   });

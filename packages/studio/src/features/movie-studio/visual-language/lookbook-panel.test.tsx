@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render as renderTestingLibrary, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   Lookbook,
@@ -12,10 +12,16 @@ import {
   deleteLookbookImage,
   deleteLookbookSheet,
   readLookbook,
-  setDefaultLookbookSheet,
   selectLookbookForType,
 } from '@/services/studio-visual-language-api';
 import { LookbookPanel } from './lookbook-panel';
+import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
+
+function render(ui: React.ReactElement) {
+  return renderTestingLibrary(
+    <ImageRevisionDialogProvider>{ui}</ImageRevisionDialogProvider>,
+  );
+}
 
 vi.mock('sonner', () => ({
   toast: {
@@ -27,7 +33,6 @@ vi.mock('@/services/studio-visual-language-api', () => ({
   deleteLookbookImage: vi.fn(),
   deleteLookbookSheet: vi.fn(),
   readLookbook: vi.fn(),
-  setDefaultLookbookSheet: vi.fn(),
   selectLookbookForType: vi.fn(),
 }));
 
@@ -36,7 +41,6 @@ describe('LookbookPanel', () => {
     vi.mocked(deleteLookbookImage).mockReset();
     vi.mocked(deleteLookbookSheet).mockReset();
     vi.mocked(readLookbook).mockReset();
-    vi.mocked(setDefaultLookbookSheet).mockReset();
     vi.mocked(selectLookbookForType).mockReset();
   });
 
@@ -122,7 +126,7 @@ describe('LookbookPanel', () => {
     );
 
     await openVisualContentTab();
-    expect(await screen.findByAltText('Default lookbook sheet')).not.toBeNull();
+    expect(await screen.findByAltText('Lookbook sheet')).not.toBeNull();
     fireEvent.click(screen.getByLabelText('Delete lookbook sheet'));
     expect(screen.getByText('Delete Lookbook Sheet?')).not.toBeNull();
 
@@ -137,50 +141,9 @@ describe('LookbookPanel', () => {
     await waitFor(() => {
       expect(onLookbooksChange).toHaveBeenCalledTimes(1);
     });
-    expect(screen.queryByAltText('Default lookbook sheet')).toBeNull();
+    expect(screen.queryByAltText('Lookbook sheet')).toBeNull();
   });
 
-  it('sets a different Lookbook sheet as the default sheet', async () => {
-    const onLookbooksChange = vi.fn();
-    vi.mocked(setDefaultLookbookSheet).mockResolvedValue(
-      lookbookSheet('lookbook_sheet_test0002')
-    );
-    vi.mocked(readLookbook)
-      .mockResolvedValueOnce(
-        lookbookResource('Original lookbook', true, true, [
-          lookbookSheet('lookbook_sheet_test0001'),
-          lookbookSheet('lookbook_sheet_test0002'),
-        ])
-      )
-      .mockResolvedValueOnce(
-        lookbookResource('Original lookbook', true, true, [
-          lookbookSheet('lookbook_sheet_test0002'),
-          lookbookSheet('lookbook_sheet_test0001'),
-        ])
-      );
-
-    render(
-      <LookbookPanel
-        projectName='constantinople'
-        lookbookId='lookbook_test0001'
-        onLookbooksChange={onLookbooksChange}
-      />
-    );
-
-    await openVisualContentTab();
-    const setDefaultButtons = await screen.findAllByRole('button', {
-      name: 'Set default lookbook sheet',
-    });
-    fireEvent.click(setDefaultButtons[0]!);
-
-    await waitFor(() => {
-      expect(setDefaultLookbookSheet).toHaveBeenCalledWith(
-        'constantinople',
-        'lookbook_sheet_test0002'
-      );
-    });
-    expect(onLookbooksChange).toHaveBeenCalledTimes(1);
-  });
 });
 
 async function openVisualContentTab() {

@@ -36,6 +36,7 @@ import { readScreenplayDocumentFromSession } from '../../database/access/screenp
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
+import { recordImportedAssetFileGenerationProvenanceInSession } from '../../asset-file-generation/import-provenance.js';
 import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
@@ -584,6 +585,11 @@ export async function importCastImageMedia(
           now,
           origin: input.receipt ? 'generated' : 'imported',
         });
+        recordImportedAssetFileGenerationProvenanceInSession({
+          session: txSession,
+          assetFileId: importedAsset.assetFileId,
+          receipt: input.receipt,
+        });
         insertAssetRelationshipRecord(txSession, target, {
           relationshipId: importedAsset.nextId('cast_asset'),
           assetId: importedAsset.assetId,
@@ -752,6 +758,7 @@ function importCastImageFile(input: {
   });
   return {
     assetId,
+    assetFileId,
     nextId: ids,
   };
 }

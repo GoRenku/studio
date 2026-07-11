@@ -9,7 +9,6 @@ import {
   deleteLookbookImage,
   deleteLookbookSheet,
   readLookbook,
-  setDefaultLookbookSheet,
   selectLookbookForType,
 } from '@/services/studio-visual-language-api';
 import {
@@ -86,16 +85,6 @@ export function LookbookPanel({
     }
   };
 
-  const setDefaultSheet = async (sheetId: string) => {
-    try {
-      await setDefaultLookbookSheet(projectName, sheetId);
-      await refreshLookbook();
-      onLookbooksChange();
-    } catch (error) {
-      toast.error(errorMessage(error));
-    }
-  };
-
   if (!resource) {
     return <EmptyState title='Loading Lookbook.' />;
   }
@@ -146,7 +135,6 @@ export function LookbookPanel({
           resource={resource}
           onDeleteImage={removeImage}
           onDeleteSheet={removeSheet}
-          onSetDefaultSheet={setDefaultSheet}
         />
       </LineTabsContent>
     </LineTabs>

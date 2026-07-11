@@ -269,7 +269,6 @@ function copyShotVideoTakeInputRecordsForIteration(
               : mediaInput.subjectId,
           assetId: copiedAsset.assetId,
           assetFileId: copiedAsset.assetFileId,
-          mediaGenerationRunId: mediaInput.mediaGenerationRunId ?? null,
           selection: mediaInput.selected ? 'select' : 'take',
           shotIds: mediaInput.shotIds,
           now: input.now,

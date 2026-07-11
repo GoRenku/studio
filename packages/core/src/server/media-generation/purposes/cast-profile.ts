@@ -35,7 +35,6 @@ import {
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
-import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import { studioResourceKeysForAssetTarget } from '../../studio-coordination/resource-keys.js';
 import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from '../cost/cost-projection.js';
@@ -43,7 +42,7 @@ import {
   requireLiveProviderApproval,
 } from '../lifecycle/live-provider-approval.js';
 import { declareCastProfileDependencySlots } from './cast-profile-dependency-slots.js';
-import type { MediaGenerationDependencyDeclarationInput } from '../lifecycle/purpose-lifecycle-registry.js';
+import type { MediaGenerationDependencyDeclarationInput } from '../lifecycle/purpose-definition.js';
 import {
   buildScreenplayContext,
   buildTimePeriodContext,
@@ -323,7 +322,6 @@ export async function buildCastProfileGenerationPreview(
     providerModel: plan.model,
     mode: plan.mode,
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: castProfilePreviewReferences(specRecord.spec, context),
     payload: plan.payload,
   });

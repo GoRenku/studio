@@ -4,10 +4,12 @@ import type {
 import { readAgentMediaExecutionPolicy } from '../../renku-config.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import {
-  type AgentAwareMediaGenerationContextReport,
-  type MediaGenerationPurposeContextInput,
   requireMediaGenerationPurposeDefinition,
 } from './purpose-lifecycle-registry.js';
+import type {
+  AgentAwareMediaGenerationContextReport,
+  MediaGenerationPurposeContextInput,
+} from './purpose-definition.js';
 
 export async function buildMediaGenerationContext(
   input: MediaGenerationPurposeContextInput

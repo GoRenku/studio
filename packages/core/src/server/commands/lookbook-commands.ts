@@ -1,7 +1,6 @@
 import type {
   LookbookImage,
   LookbookImageMutationReport,
-  LookbookSheet,
   LookbookSheetMutationReport,
   LookbookSourceInspirationsReport,
   LookbookValidationReport,
@@ -32,12 +31,7 @@ import {
   requireLookbookImageRecord,
   setLookbookImageSectionRecords,
 } from '../database/access/lookbook-images.js';
-import {
-  listLookbookSheets,
-  readLookbookSheet,
-  requireLookbookSheetRecord,
-  setLookbookSheetRecordOrder,
-} from '../database/access/lookbook-sheets.js';
+import { requireLookbookSheetRecord } from '../database/access/lookbook-sheets.js';
 import {
   requireInspirationFolderRecord,
 } from '../database/access/inspiration-folders.js';
@@ -66,7 +60,6 @@ import type {
   RenameLookbookInput,
   SelectLookbookForTypeInput,
   SetLookbookCardImageInput,
-  SetDefaultLookbookSheetInput,
   SetLookbookImagePlacementInput,
   SetLookbookSourceInspirationsInput,
   UpdateLookbookInput,
@@ -549,45 +542,6 @@ export async function deleteLookbookSheet(
   });
 }
 
-export async function setDefaultLookbookSheet(
-  input: SetDefaultLookbookSheetInput
-): Promise<LookbookSheetMutationReport> {
-  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
-    const sheet = requireLookbookSheetRecord(session, input.sheetId);
-    const orderedSheets = listLookbookSheets(session, sheet.lookbookId);
-    const selectedSheet = orderedSheets.find((candidate) => candidate.id === input.sheetId);
-    if (!selectedSheet) {
-      throw new ProjectDataError(
-        'PROJECT_DATA412',
-        `Lookbook sheet was not found: ${input.sheetId}.`
-      );
-    }
-    const reorderedSheets = [
-      selectedSheet,
-      ...orderedSheets.filter((candidate) => candidate.id !== input.sheetId),
-    ];
-    const now = new Date().toISOString();
-    session.db.transaction((tx) => {
-      const txSession = { ...session, db: tx };
-      reorderedSheets.forEach((candidate, index) => {
-        setLookbookSheetRecordOrder(txSession, {
-          sheetId: candidate.id,
-          sortOrder: index + 1,
-          now,
-        });
-      });
-    });
-    const defaultSheet = readLookbookSheet(session, input.sheetId);
-    return sheetMutationReport({
-      project,
-      projectFolder,
-      lookbookId: sheet.lookbookId,
-      sheet: defaultSheet ?? selectedSheet,
-      changeType: 'lookbook.defaultSheetSet',
-    });
-  });
-}
-
 function normalizeLookbookName(name: string): string {
   const normalized = name.trim();
   if (!normalized) {
@@ -689,24 +643,6 @@ function toProjectReport(
     id: project.id,
     name: project.name,
     projectFolder,
-  };
-}
-
-function sheetMutationReport(input: {
-  project: Pick<ProjectRecord, 'id' | 'name'>;
-  projectFolder: string;
-  lookbookId: string;
-  sheet?: LookbookSheet;
-  changeType: string;
-}): LookbookSheetMutationReport {
-  return {
-    valid: true,
-    warnings: [],
-    project: toProjectReport(input.project, input.projectFolder),
-    changes: [{ type: input.changeType, lookbookId: input.lookbookId }],
-    lookbookId: input.lookbookId,
-    sheet: input.sheet,
-    resourceKeys: lookbookResourceKeys(input.lookbookId),
   };
 }
 

@@ -3,7 +3,6 @@ import { assetFiles, assets } from './assets.js';
 import { castMembers } from './cast-members.js';
 import { castVoices } from './cast-voices.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
-import { mediaGenerationRuns } from './media-generation.js';
 import { scenes } from './scenes.js';
 
 export const sceneDialogueAudio = sqliteTable(
@@ -55,9 +54,6 @@ export const sceneDialogueAudioTakes = sqliteTable(
     assetFileId: text('asset_file_id')
       .notNull()
       .references(() => assetFiles.id),
-    mediaGenerationRunId: text('media_generation_run_id')
-      .notNull()
-      .references(() => mediaGenerationRuns.id),
     modelChoice: text('model_choice').notNull(),
     castVoiceId: text('cast_voice_id')
       .notNull()
@@ -83,8 +79,5 @@ export const sceneDialogueAudioTakes = sqliteTable(
       table.id
     ),
     uniqueIndex('scene_dialogue_audio_take_asset_idx').on(table.assetId),
-    uniqueIndex('scene_dialogue_audio_take_run_idx').on(
-      table.mediaGenerationRunId
-    ),
   ]
 );

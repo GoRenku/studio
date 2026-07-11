@@ -76,6 +76,7 @@ import {
   persistProjectAssetFileSync,
   rollbackProjectAssetFileWriteSetSync,
 } from '../../project-asset-files/index.js';
+import { recordAssetFileGenerationProvenanceInSession } from '../../asset-file-generation/commands.js';
 
 export interface SceneDialogueAudioTargetInput extends RenkuConfigPathOptions {
   projectName?: string;
@@ -416,6 +417,10 @@ export async function generateSceneDialogueAudioTake(
               mimeTypeForOutputFormat(normalized.spec.outputFormat),
             now,
           });
+          recordAssetFileGenerationProvenanceInSession(txSession, {
+            assetFileId,
+            mediaGenerationRunId: runReport.run.id,
+          });
           insertAssetRelationshipRecord(txSession, target, {
             relationshipId: ids(assetRelationshipIdPrefix(target)),
             assetId,
@@ -435,7 +440,6 @@ export async function generateSceneDialogueAudioTake(
             sceneDialogueAudioId: audioRecord.id,
             assetId,
             assetFileId,
-            mediaGenerationRunId: runReport.run.id,
             modelChoice: normalized.spec.modelChoice,
             castVoiceId: normalized.castVoice.id,
             castVoiceName: normalized.castVoice.name,

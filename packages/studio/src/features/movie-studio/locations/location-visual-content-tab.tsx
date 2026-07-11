@@ -11,6 +11,8 @@ import {
   locationEnvironmentSheetCompositeUrl,
   locationEnvironmentSheetPreviewImages,
 } from './location-assets';
+import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
+import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
 
 interface LocationVisualContentTabProps {
   projectName: string;
@@ -27,6 +29,7 @@ export function LocationVisualContentTab({
 }: LocationVisualContentTabProps) {
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const { openImageRevision } = useImageRevisionDialog();
   const sheetAssets = locationEnvironmentSheetAssets(assets);
 
   const openSheetPreview = (asset: StudioAssetResponse) => {
@@ -51,6 +54,23 @@ export function LocationVisualContentTab({
       detectImageAspectRatio: true,
       imageClassName: 'object-contain',
       onOpen: () => openSheetPreview(asset),
+      bottomRightActions: (
+        <ImageRevisionCardAction
+          onEdit={() => {
+            const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
+            if (!file) return;
+            openImageRevision({
+              projectName,
+              target: {
+                kind: 'locationEnvironmentSheet',
+                locationId,
+                assetId: asset.assetId,
+                assetFileId: file.id,
+              },
+            });
+          }}
+        />
+      ),
       deleteAction: {
         label: 'Delete location sheet',
         title: 'Delete Location Sheet?',

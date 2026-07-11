@@ -23,11 +23,12 @@ import {
 } from '../../database/access/assets.js';
 import {
   insertMediaGenerationSpec,
-  listMediaGenerationRuns,
   listMediaGenerationSpecs,
   requireMediaGenerationSpec,
+  requireMediaGenerationRun,
   updateMediaGenerationSpec,
 } from '../../database/access/media-generation.js';
+import { readAssetFileGenerationRecord } from '../../database/access/asset-file-generations.js';
 import {
   readProjectRecord,
 } from '../../database/access/project.js';
@@ -43,9 +44,6 @@ import {
 import {
   allocateImageEditOutputNames,
 } from '../../project-asset-files/index.js';
-import {
-  providerPreviewPromptText,
-} from '../../generation-preview/provider-preview-prompt.js';
 import {
   buildSavedImageGenerationPreview,
 } from '../../generation-preview/saved-image-preview.js';
@@ -127,7 +125,7 @@ export async function buildImageEditContext(
     const selectedSourceAssetFileId =
       selectedSourceFile?.id ?? null;
     const sourceGeneration = selectedSourceFile
-      ? readSourceGeneration(session, selectedSourceFile.projectRelativePath)
+      ? readSourceGeneration(session, selectedSourceFile.id)
       : null;
     return {
       purpose: IMAGE_EDIT_GENERATION_PURPOSE,
@@ -287,7 +285,6 @@ export async function buildImageEditGenerationPreview(input: {
     providerModel: plan.model,
     mode: plan.mode,
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: imageEditPreviewReferences(specRecord.spec, plan),
     payload: plan.payload,
   });
@@ -816,42 +813,23 @@ function imageEditModelChoices(): ImageEditModelChoiceReport[] {
 
 function readSourceGeneration(
   session: DatabaseSession,
-  projectRelativePath: ProjectRelativePath
+  assetFileId: string,
 ): ImageEditGenerationContext['sourceGeneration'] | null {
-  for (const run of listMediaGenerationRuns(session)) {
-    if (!runOutputsContainProjectRelativePath(run.outputs, projectRelativePath)) {
-      continue;
-    }
-    const mappedEditModelChoice = mapSourceModelToEditChoice(run.model);
-    return {
-      runId: run.id,
-      provider: run.provider,
-      model: run.model,
-      ...(mappedEditModelChoice ? { mappedEditModelChoice } : {}),
-    };
+  const provenance = readAssetFileGenerationRecord(session, assetFileId);
+  if (!provenance) {
+    return null;
   }
-  return null;
-}
-
-function runOutputsContainProjectRelativePath(
-  value: unknown,
-  projectRelativePath: ProjectRelativePath
-): boolean {
-  if (Array.isArray(value)) {
-    return value.some((item) =>
-      runOutputsContainProjectRelativePath(item, projectRelativePath)
-    );
-  }
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  const record = value as Record<string, unknown>;
-  if (record.projectRelativePath === projectRelativePath) {
-    return true;
-  }
-  return Object.values(record).some((item) =>
-    runOutputsContainProjectRelativePath(item, projectRelativePath)
+  const run = requireMediaGenerationRun(
+    session,
+    provenance.mediaGenerationRunId,
   );
+  const mappedEditModelChoice = mapSourceModelToEditChoice(run.model);
+  return {
+    runId: run.id,
+    provider: run.provider,
+    model: run.model,
+    ...(mappedEditModelChoice ? { mappedEditModelChoice } : {}),
+  };
 }
 
 function mapSourceModelToEditChoice(

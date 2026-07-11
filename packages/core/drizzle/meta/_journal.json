@@ -351,6 +351,20 @@
       "when": 1783613422690,
       "tag": "0049_drop_media_generation_run_approval_token",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1783699783316,
+      "tag": "0050_asset-file-generation-provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "6",
+      "when": 1783702972198,
+      "tag": "0051_canonical-asset-file-generation-provenance",
+      "breakpoints": true
     }
   ]
 }

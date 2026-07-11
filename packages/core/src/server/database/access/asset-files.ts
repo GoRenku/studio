@@ -100,6 +100,19 @@ export function readAssetFileRecordIncludingDiscarded(
   );
 }
 
+export function readAssetFileRecordByIdIncludingDiscarded(
+  session: DatabaseSession,
+  assetFileId: string,
+): AssetFileRecord | null {
+  return (
+    session.db
+      .select()
+      .from(assetFiles)
+      .where(eq(assetFiles.id, assetFileId))
+      .get() ?? null
+  );
+}
+
 export function updateAssetFileRecordMetadata(
   session: DatabaseSession,
   input: { assetId: string; assetFileId: string; sizeBytes: number; updatedAt: string }

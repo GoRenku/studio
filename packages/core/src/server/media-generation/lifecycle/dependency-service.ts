@@ -23,9 +23,9 @@ import {
   estimateDraftMediaGenerationSpec,
 } from '../cost/spec-estimates.js';
 import {
-  type MediaGenerationDependencyDeclarationInput,
   requireMediaGenerationPurposeDefinition,
 } from './purpose-lifecycle-registry.js';
+import type { MediaGenerationDependencyDeclarationInput } from './purpose-definition.js';
 import { withMediaGenerationProjectSession } from './project-session.js';
 
 export async function planMediaGenerationDependencies(

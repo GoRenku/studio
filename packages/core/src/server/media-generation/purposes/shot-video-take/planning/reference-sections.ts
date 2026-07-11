@@ -592,8 +592,7 @@ export function buildLookbookReferenceChoices(input: {
   const selectedSheetId = selectedLookbookSheetIdForEditorDirection(
     input.editorDirection
   );
-  const defaultSheetId = lookbookSheets[0]?.id ?? null;
-  const selectedChoiceId = selectedSheetId ?? defaultSheetId;
+  const selectedChoiceId = selectedSheetId;
   const dependencyId = lookbookSheetDependencyId(input.context.activeLookbook.id);
   const line = dependencyLineById(input.plan, dependencyId);
   const planLine = planLineForDependencyLine(input.plan, line);
@@ -610,7 +609,6 @@ export function buildLookbookReferenceChoices(input: {
         lookbookId: input.context.activeLookbook.id,
         title: input.context.activeLookbook.name,
         selected: true,
-        defaultSelected: true,
         card: referenceCardPlan({
           selected: true,
           mediaKind: 'image',
@@ -629,7 +627,6 @@ export function buildLookbookReferenceChoices(input: {
     lookbookId: input.context.activeLookbook!.id,
     title: humanReadableAssetTitle(lookbookSheet.asset.title, 'Lookbook Sheet'),
     selected: lookbookSheet.id === selectedChoiceId,
-    defaultSelected: lookbookSheet.id === defaultSheetId,
     card: referenceCardPlan({
       selected: lookbookSheet.id === selectedChoiceId && inclusion.included,
       mediaKind: 'image',

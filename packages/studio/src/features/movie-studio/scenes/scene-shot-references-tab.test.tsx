@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render as renderTestingLibrary, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type {
   SceneShotVideoTake,
@@ -8,6 +8,13 @@ import type {
 } from '@gorenku/studio-core/client';
 import { idleSaveNotification } from '../detail-save-notification';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
+import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
+
+function render(ui: React.ReactElement) {
+  return renderTestingLibrary(
+    <ImageRevisionDialogProvider>{ui}</ImageRevisionDialogProvider>,
+  );
+}
 
 const mutationMocks = vi.hoisted(() => ({
   updateTakeCharacterSheetSelection: vi.fn(),

@@ -71,7 +71,7 @@ import {
 } from '../../project-asset-files/index.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
-import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
+import { recordImportedAssetFileGenerationProvenanceInSession } from '../../asset-file-generation/import-provenance.js';
 import { draftMediaGenerationSpecRecord } from '../cost/draft-generation.js';
 import { estimateMediaGenerationSpecRecordCost } from '../cost/cost-projection.js';
 import {
@@ -357,7 +357,6 @@ export async function buildLocationEnvironmentSheetGenerationPreview(
     providerModel: plan.model,
     mode: 'text-to-image',
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: [],
     payload: plan.payload,
   });
@@ -511,6 +510,7 @@ export async function importLocationEnvironmentSheetMedia(
       origin: input.receipt ? 'generated' : inferImportOrigin(sourceProjectRelativePath),
       idGenerator: input.idGenerator,
       now,
+      receipt: input.receipt,
     });
     const target = { kind: 'location' as const, locationId: input.locationId };
     const asset = readAssetRelationship(session, {
@@ -1122,6 +1122,7 @@ function insertImportedLocationEnvironmentSheet(input: {
   origin: string;
   idGenerator?: ProjectIdGenerator;
   now: string;
+  receipt?: unknown;
 }) {
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const assetId = ids('asset');
@@ -1158,6 +1159,11 @@ function insertImportedLocationEnvironmentSheet(input: {
         fileRole: 'primary',
         mediaKind: 'image',
         now: input.now,
+      });
+      recordImportedAssetFileGenerationProvenanceInSession({
+        session: txSession,
+        assetFileId,
+        receipt: input.receipt,
       });
       const target = { kind: 'location' as const, locationId: input.locationId };
       insertAssetRelationshipRecord(txSession, target, {

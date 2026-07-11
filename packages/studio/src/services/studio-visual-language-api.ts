@@ -4,7 +4,6 @@ import type {
   InspirationResourceResponse,
   LookbookImageResponse,
   LookbookResourceResponse,
-  LookbookSheetResponse,
   LookbooksResourceResponse,
 } from './studio-project-contracts';
 import type { LookbookType } from '@gorenku/studio-core/client';
@@ -34,11 +33,6 @@ interface LookbookResourceApiResponse {
 
 interface LookbookImageApiResponse {
   image: LookbookImageResponse;
-  resourceKeys?: string[];
-}
-
-interface LookbookSheetApiResponse {
-  sheet: LookbookSheetResponse;
   resourceKeys?: string[];
 }
 
@@ -197,18 +191,6 @@ export async function deleteLookbookSheet(
     'DELETE',
     {}
   );
-}
-
-export async function setDefaultLookbookSheet(
-  projectName: string,
-  sheetId: string
-): Promise<LookbookSheetResponse> {
-  const body = await writeJson<LookbookSheetApiResponse>(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/sheets/${encodeURIComponent(sheetId)}/default`,
-    'PUT',
-    {}
-  );
-  return body.sheet;
 }
 
 export async function setLookbookCardImage(

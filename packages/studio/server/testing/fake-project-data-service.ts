@@ -84,9 +84,6 @@ export function fakeProjectDataService(): NonNullable<
         absolutePath: '/tmp/renku/constantinople/cast/reference.png',
       };
     },
-    async updateGenerationPreviewSpec() {
-      return generationPreviewRequest();
-    },
     async resolveShotVideoTakeInputFile(input) {
       const asset = makeAsset('asset_shot_video_input');
       return {
@@ -1024,12 +1021,6 @@ export function fakeProjectDataService(): NonNullable<
     async deleteLookbookSheet() {
       return makeLookbookSheetMutationReport('lookbook_test0001');
     },
-    async setDefaultLookbookSheet(input) {
-      return makeLookbookSheetMutationReport(
-        'lookbook_test0001',
-        makeLookbookSheet(input.sheetId)
-      );
-    },
     async setLookbookImagePlacement(input) {
       return makeLookbookImageMutationReport('lookbook_test0001', {
         ...makeLookbookImage(input.imageId),
@@ -1814,5 +1805,13 @@ function makeLookbookSheetMutationReport(
     ...makeVisualLanguageCommandReport('lookbook.sheetChanged'),
     lookbookId,
     ...(sheet ? { sheet } : {}),
+  };
+}
+
+export function fakeGenerationPreviewCommands() {
+  return {
+    async updateGenerationPreviewSpec() {
+      return generationPreviewRequest();
+    },
   };
 }

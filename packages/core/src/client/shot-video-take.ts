@@ -872,7 +872,6 @@ export interface ShotVideoTakeLookbookReferenceChoice {
   lookbookSheetId: string | null;
   title: string;
   selected: boolean;
-  defaultSelected: boolean;
   card: ShotVideoTakeReferenceCardPlan;
 }
 

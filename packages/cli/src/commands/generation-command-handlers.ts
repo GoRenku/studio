@@ -1,4 +1,6 @@
 import {
+  buildDraftMediaGenerationPreview,
+  buildMediaGenerationPreview,
   validateGenerationPreviewRequest,
   resolveRenkuStorageRoot,
   type MediaGenerationRequestTarget,
@@ -42,6 +44,13 @@ export interface GenerationCommandFlags {
   approveLiveProviderRun?: boolean;
   simulate?: boolean;
 }
+
+export type GenerationCommandRuntime = CliCommandRuntime & {
+  projectDataService: CliCommandRuntime['projectDataService'] & {
+    buildMediaGenerationPreview: typeof buildMediaGenerationPreview;
+    buildDraftMediaGenerationPreview: typeof buildDraftMediaGenerationPreview;
+  };
+};
 
 export const generationCommandHandlers = [
   {
@@ -120,7 +129,7 @@ export const generationCommandHandlers = [
     path: ['run'],
     run: runGeneration,
   },
-] satisfies CliCommandHandler<GenerationCommandFlags>[];
+] satisfies CliCommandHandler<GenerationCommandFlags, GenerationCommandRuntime>[];
 
 async function runContext(input: GenerationCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.buildMediaGenerationContext(
@@ -449,7 +458,7 @@ async function runDialogueAudioGenerate(
 }
 
 type GenerationCommandInput = Parameters<
-  CliCommandHandler<GenerationCommandFlags>['run']
+  CliCommandHandler<GenerationCommandFlags, GenerationCommandRuntime>['run']
 >[0];
 
 async function readGenerationContextInput(input: GenerationCommandInput) {

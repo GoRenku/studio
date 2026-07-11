@@ -17,6 +17,7 @@ export type {
   ReferenceImageMediaImportReport,
   UpdateAssetReferenceInput,
 } from './assets.js';
+export type * from './asset-file-generation.js';
 export type {
   CastMember,
 } from './cast-members.js';
@@ -88,6 +89,7 @@ export type * from './scene-audio-generation.js';
 export type * from './scene-storyboard-media-generation.js';
 export type * from './shot-video-take.js';
 export type * from './generation-preview.js';
+export type * from './image-revision.js';
 export {
   REFERENCE_IMAGE_MEDIA_PURPOSE,
 } from './assets.js';

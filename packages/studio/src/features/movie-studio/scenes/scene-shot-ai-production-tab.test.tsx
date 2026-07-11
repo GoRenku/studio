@@ -341,7 +341,6 @@ function productionPlan(
               lookbookId: 'lookbook_imperial_wound',
               title: 'Imperial Wound',
               selected: true,
-              defaultSelected: true,
               card: {
                 state: 'selected-planned',
                 mediaKind: 'image',

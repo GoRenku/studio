@@ -1,14 +1,18 @@
-import { createProjectDataService } from '@gorenku/studio-core/server';
+import {
+  buildDraftMediaGenerationPreview,
+  buildMediaGenerationPreview,
+  createProjectDataService,
+} from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { RenkuCliIo } from '../cli.js';
 import {
   generationCommandHandlers,
   type GenerationCommandFlags,
+  type GenerationCommandRuntime,
 } from './generation-command-handlers.js';
 import {
   dispatchCliCommand,
   writeJson,
-  type CliCommandRuntime,
 } from './structured-command.js';
 import {
   appendStudioResourceChangedEvent,
@@ -22,12 +26,16 @@ export async function runGenerationCommand(options: {
   io: RenkuCliIo;
   homeDir?: string;
 }): Promise<number> {
-  const runtime: CliCommandRuntime = {
+  const runtime: GenerationCommandRuntime = {
     projectName: options.flags.project,
     homeDir: options.homeDir,
     json: options.json,
     io: options.io,
-    projectDataService: createProjectDataService(),
+    projectDataService: {
+      ...createProjectDataService(),
+      buildMediaGenerationPreview,
+      buildDraftMediaGenerationPreview,
+    },
   };
   const result = await dispatchCliCommand({
     commandPath: options.input,

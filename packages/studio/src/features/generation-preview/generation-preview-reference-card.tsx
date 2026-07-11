@@ -59,7 +59,7 @@ export function GenerationPreviewReferenceCard({
       imageUrl={reference.browserUrl}
       imageAlt={title ?? 'Generation preview reference'}
       selected={selected}
-      bottomRightControl={control}
+      bottomRightActions={control}
       previewContent={
         reference.kind === 'video'
           ? ({ active }) => (

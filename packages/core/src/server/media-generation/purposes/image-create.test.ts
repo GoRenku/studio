@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { buildDraftMediaGenerationPreview } from '../../generation-preview/service.js';
 import type {
   ImageCreateGenerationContext,
   ImageCreateModelListReport,
@@ -142,7 +143,7 @@ describe('image.create media generation purpose', () => {
       },
     });
 
-    const preview = await fixture.projectData.buildDraftMediaGenerationPreview({
+    const preview = await buildDraftMediaGenerationPreview({
       projectName: 'constantinople',
       homeDir: fixture.homeDir,
       spec,

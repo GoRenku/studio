@@ -21,17 +21,19 @@ import { assertRootDependenciesResolved } from './dependency-service.js';
 import { withMediaGenerationProjectSession } from './project-session.js';
 import { requireMediaGenerationPurposeDefinition } from './purpose-lifecycle-registry.js';
 import {
-  buildDraftMediaGenerationPreview,
   createMediaGenerationSpec,
-  buildMediaGenerationPreview,
   listMediaGenerationSpecs,
   prepareDraftMediaGenerationSpec,
   prepareMediaGenerationSpec,
   readMediaGenerationSpec,
   updateMediaGenerationSpec,
-  updateGenerationPreviewSpec,
   validateMediaGenerationSpec,
 } from './spec-service.js';
+import {
+  buildDraftMediaGenerationPreview,
+  buildMediaGenerationPreview,
+  updateGenerationPreviewSpec,
+} from '../../generation-preview/service.js';
 
 const mockedRequireSpec = vi.mocked(requireMediaGenerationSpec);
 const mockedAssertDependencies = vi.mocked(assertRootDependenciesResolved);
@@ -153,7 +155,9 @@ describe('media generation lifecycle spec service', () => {
       purpose: 'lookbook.image',
       spec: { purpose: 'lookbook.image' },
     } as never);
-    mockedRequireDefinition.mockReturnValueOnce({ buildPreview } as never);
+    mockedRequireDefinition.mockReturnValueOnce({
+      preview: { build: buildPreview },
+    } as never);
 
     await expect(
       buildMediaGenerationPreview({ specId: 'spec-a', homeDir: '/home' })
@@ -195,7 +199,7 @@ describe('media generation lifecycle spec service', () => {
     }));
     mockedRequireDefinition.mockReturnValue({
       validateSpec,
-      buildPreview,
+      preview: { build: buildPreview },
     } as never);
 
     await expect(
@@ -264,8 +268,18 @@ describe('media generation lifecycle spec service', () => {
     }));
     mockedRequireSpec.mockReturnValueOnce(specRecord as never);
     mockedRequireDefinition.mockReturnValueOnce({
-      updateSpec,
-      buildPreview,
+      preview: {
+        update: vi.fn(async (input) => updateSpec({
+          projectName: input.projectName,
+          homeDir: input.homeDir,
+          specId: input.specRecord.id,
+          spec: {
+            ...input.specRecord.spec,
+            prompt: input.prompt.authoredText,
+          },
+        })),
+        build: buildPreview,
+      },
     } as never);
 
     await expect(
@@ -301,8 +315,7 @@ describe('media generation lifecycle spec service', () => {
       },
     } as never);
     mockedRequireDefinition.mockReturnValueOnce({
-      updateSpec: vi.fn(),
-      buildPreview: vi.fn(),
+      preview: { build: vi.fn() },
     } as never);
 
     await expect(
@@ -314,7 +327,7 @@ describe('media generation lifecycle spec service', () => {
         ],
       }),
     ).rejects.toMatchObject({
-      code: 'CORE_MEDIA_GENERATION_PREVIEW_REFERENCE_UPDATE_UNSUPPORTED',
+      code: 'CORE_MEDIA_GENERATION_PREVIEW_UPDATE_UNSUPPORTED',
     });
   });
 });

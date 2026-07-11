@@ -11,6 +11,7 @@ import { projectLocales } from './project-locales.js';
 import { scenes } from './scenes.js';
 import { sequences } from './sequences.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
+import { mediaGenerationRuns } from './media-generation.js';
 
 export const assets = sqliteTable('asset', {
   id: text('id').primaryKey(),
@@ -46,6 +47,23 @@ export const assetFiles = sqliteTable(
     ...discardLifecycleColumns(),
   },
   (table) => [index('asset_file_asset_role_idx').on(table.assetId, table.role)],
+);
+
+export const assetFileGenerations = sqliteTable(
+  'asset_file_generation',
+  {
+    assetFileId: text('asset_file_id')
+      .primaryKey()
+      .references(() => assetFiles.id, { onDelete: 'cascade' }),
+    mediaGenerationRunId: text('media_generation_run_id')
+      .notNull()
+      .references(() => mediaGenerationRuns.id, { onDelete: 'cascade' }),
+    outputArtifactId: text('output_artifact_id'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('asset_file_generation_run_idx').on(table.mediaGenerationRunId),
+  ],
 );
 
 export const projectAssets = sqliteTable(

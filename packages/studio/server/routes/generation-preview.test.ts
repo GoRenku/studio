@@ -1,15 +1,17 @@
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
-import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
+import { fakeGenerationPreviewCommands } from '../testing/fake-project-data-service.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
 
 function createMountedGenerationPreviewRoute(
-  overrides: Partial<ReturnType<typeof fakeProjectDataService>> = {}
+  overrides: Partial<ReturnType<typeof fakeGenerationPreviewCommands>> = {}
 ) {
   return new Hono().route(
     '/:projectName',
     createGenerationPreviewRoute({
-      projectData: { ...fakeProjectDataService(), ...overrides },
+      updateGenerationPreviewSpec:
+        overrides.updateGenerationPreviewSpec ??
+        fakeGenerationPreviewCommands().updateGenerationPreviewSpec,
       generationPreviewProjection: async ({ preview }) => ({
         ...preview,
         subject: { projectLabel: 'Constantinople', castMemberLabel: 'Narrator' },
@@ -29,7 +31,7 @@ function createMountedGenerationPreviewRoute(
 describe('generation preview Hono route', () => {
   it('updates a saved generation preview spec through ProjectDataService', async () => {
     const updateGenerationPreviewSpec = vi.fn(
-      fakeProjectDataService().updateGenerationPreviewSpec,
+      fakeGenerationPreviewCommands().updateGenerationPreviewSpec,
     );
     const app = createMountedGenerationPreviewRoute({
       updateGenerationPreviewSpec,

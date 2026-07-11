@@ -9,6 +9,7 @@ import type {
 } from '../../../client/index.js';
 import {
   assets,
+  assetFileGenerations,
   assetFiles,
   sceneShotVideoTakeMediaInputShots,
   sceneShotVideoTakeMediaInputs,
@@ -56,7 +57,6 @@ export interface InsertShotVideoTakeInputRecord {
   subjectId: string;
   assetId: string;
   assetFileId: string;
-  mediaGenerationRunId?: string | null;
   selection: 'select' | 'take';
   shotIds: string[];
   now: string;
@@ -66,7 +66,6 @@ export interface InsertShotVideoTakeVideoRecord {
   takeId: string;
   assetId: string;
   assetFileId: string;
-  mediaGenerationRunId?: string | null;
   now: string;
 }
 
@@ -88,7 +87,6 @@ export function insertShotVideoTakeInputRecord(
       subjectId: input.subjectId,
       assetId: input.assetId,
       assetFileId: input.assetFileId,
-      mediaGenerationRunId: input.mediaGenerationRunId ?? null,
       selection: input.selection,
       createdAt: input.now,
       updatedAt: input.now,
@@ -117,10 +115,15 @@ export function listShotVideoTakeInputs(
       title: assets.title,
       mediaKind: assetFiles.mediaKind,
       projectRelativePath: assetFiles.projectRelativePath,
+      mediaGenerationRunId: assetFileGenerations.mediaGenerationRunId,
     })
     .from(sceneShotVideoTakeMediaInputs)
     .innerJoin(assetFiles, eq(sceneShotVideoTakeMediaInputs.assetFileId, assetFiles.id))
     .innerJoin(assets, eq(sceneShotVideoTakeMediaInputs.assetId, assets.id))
+    .leftJoin(
+      assetFileGenerations,
+      eq(sceneShotVideoTakeMediaInputs.assetFileId, assetFileGenerations.assetFileId),
+    )
     .where(
       and(
         eq(sceneShotVideoTakeMediaInputs.sceneId, input.sceneId),
@@ -144,7 +147,8 @@ export function listShotVideoTakeInputs(
         row.input,
         row.title,
         row.mediaKind,
-        row.projectRelativePath
+        row.projectRelativePath,
+        row.mediaGenerationRunId,
       )
     );
   if (!input.shotIds) {
@@ -163,10 +167,15 @@ export function requireShotVideoTakeInput(
       title: assets.title,
       mediaKind: assetFiles.mediaKind,
       projectRelativePath: assetFiles.projectRelativePath,
+      mediaGenerationRunId: assetFileGenerations.mediaGenerationRunId,
     })
     .from(sceneShotVideoTakeMediaInputs)
     .innerJoin(assetFiles, eq(sceneShotVideoTakeMediaInputs.assetFileId, assetFiles.id))
     .innerJoin(assets, eq(sceneShotVideoTakeMediaInputs.assetId, assets.id))
+    .leftJoin(
+      assetFileGenerations,
+      eq(sceneShotVideoTakeMediaInputs.assetFileId, assetFileGenerations.assetFileId),
+    )
     .where(
       and(
         eq(sceneShotVideoTakeMediaInputs.id, inputId),
@@ -187,7 +196,8 @@ export function requireShotVideoTakeInput(
     row.input,
     row.title,
     row.mediaKind,
-    row.projectRelativePath
+    row.projectRelativePath,
+    row.mediaGenerationRunId,
   );
 }
 
@@ -315,7 +325,6 @@ export function insertShotVideoTakeVideoRecord(
       takeId: input.takeId,
       assetId: input.assetId,
       assetFileId: input.assetFileId,
-      mediaGenerationRunId: input.mediaGenerationRunId ?? null,
       createdAt: input.now,
       updatedAt: input.now,
     })
@@ -332,10 +341,15 @@ export function readShotVideoTakeVideo(
       video: sceneShotVideoTakeVideos,
       projectRelativePath: assetFiles.projectRelativePath,
       mimeType: assetFiles.mimeType,
+      mediaGenerationRunId: assetFileGenerations.mediaGenerationRunId,
     })
     .from(sceneShotVideoTakeVideos)
     .innerJoin(assetFiles, eq(sceneShotVideoTakeVideos.assetFileId, assetFiles.id))
     .innerJoin(assets, eq(sceneShotVideoTakeVideos.assetId, assets.id))
+    .leftJoin(
+      assetFileGenerations,
+      eq(sceneShotVideoTakeVideos.assetFileId, assetFileGenerations.assetFileId),
+    )
     .where(
       and(
         eq(sceneShotVideoTakeVideos.takeId, takeId),
@@ -346,7 +360,12 @@ export function readShotVideoTakeVideo(
     )
     .get();
   return row
-    ? toVideoTake(row.video, row.projectRelativePath, row.mimeType)
+    ? toVideoTake(
+        row.video,
+        row.projectRelativePath,
+        row.mimeType,
+        row.mediaGenerationRunId,
+      )
     : null;
 }
 
@@ -364,7 +383,7 @@ export function requireShotVideoTakeVideo(
   return video;
 }
 
-function requireShotVideoTakeInputRecord(
+export function requireShotVideoTakeInputRecord(
   session: DatabaseSession,
   inputId: string
 ): SceneShotVideoTakeInputRecord {
@@ -473,7 +492,8 @@ function toAvailableInput(
   row: SceneShotVideoTakeInputRecord,
   title: string,
   mediaKind: string,
-  projectRelativePath: string
+  projectRelativePath: string,
+  mediaGenerationRunId: string | null,
 ): SceneShotVideoTakeMediaInput {
   return {
     inputId: row.id,
@@ -487,8 +507,8 @@ function toAvailableInput(
     subjectId: row.subjectId,
     takeId: row.takeId,
     shotIds: listTakeInputShotIds(session, row.id),
-    ...(row.mediaGenerationRunId
-      ? { mediaGenerationRunId: row.mediaGenerationRunId }
+    ...(mediaGenerationRunId
+      ? { mediaGenerationRunId }
       : {}),
     selected: row.selection === 'select',
     createdAt: row.createdAt,
@@ -498,14 +518,15 @@ function toAvailableInput(
 function toVideoTake(
   row: SceneShotVideoTakeVideoRecord,
   projectRelativePath: string,
-  mimeType: string | null
+  mimeType: string | null,
+  mediaGenerationRunId: string | null,
 ): SceneShotVideoTakeVideo {
   return {
     takeId: row.takeId,
     assetId: row.assetId,
     assetFileId: row.assetFileId,
-    ...(row.mediaGenerationRunId
-      ? { mediaGenerationRunId: row.mediaGenerationRunId }
+    ...(mediaGenerationRunId
+      ? { mediaGenerationRunId }
       : {}),
     projectRelativePath: projectRelativePath as ProjectRelativePath,
     mimeType,

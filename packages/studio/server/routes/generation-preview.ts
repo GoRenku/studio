@@ -1,6 +1,5 @@
 import {
-  createProjectDataService,
-  type ProjectDataService,
+  updateGenerationPreviewSpec as coreUpdateGenerationPreviewSpec,
   type StudioGenerationPreview,
 } from '@gorenku/studio-core/server';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
@@ -9,29 +8,21 @@ import { projectErrorResponse } from '../errors.js';
 import { buildStudioGenerationPreview } from '../projections/generation-preview.js';
 
 export interface CreateGenerationPreviewRouteOptions {
-  projectData?: GenerationPreviewRouteProjectData;
+  updateGenerationPreviewSpec?: typeof coreUpdateGenerationPreviewSpec;
   requireToken: MiddlewareHandler;
   generationPreviewProjection?: StudioGenerationPreviewProjection;
 }
 
-type GenerationPreviewRouteProjectData = Pick<
-  ProjectDataService,
-  'updateGenerationPreviewSpec'
->;
-
 type StudioGenerationPreviewProjection = (input: {
   projectName: string;
-  preview: Awaited<
-    ReturnType<ProjectDataService['updateGenerationPreviewSpec']>
-  >;
+  preview: Awaited<ReturnType<typeof coreUpdateGenerationPreviewSpec>>;
 }) => Promise<StudioGenerationPreview>;
 
 export function createGenerationPreviewRoute(
   options: CreateGenerationPreviewRouteOptions
 ) {
-  const projectData =
-    options.projectData ??
-    (createProjectDataService() as unknown as GenerationPreviewRouteProjectData);
+  const updateGenerationPreviewSpec =
+    options.updateGenerationPreviewSpec ?? coreUpdateGenerationPreviewSpec;
   const projectGenerationPreview =
     options.generationPreviewProjection ?? buildStudioGenerationPreview;
   return new Hono().patch(
@@ -42,7 +33,7 @@ export function createGenerationPreviewRoute(
         const projectName = c.req.param('projectName') as string;
         const specId = c.req.param('specId') as string;
         const body = readGenerationPreviewUpdateBody(await c.req.json());
-        const preview = await projectData.updateGenerationPreviewSpec({
+        const preview = await updateGenerationPreviewSpec({
           projectName,
           specId,
           prompt: body.prompt,

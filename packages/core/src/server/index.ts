@@ -59,6 +59,33 @@ export {
   validateStudioGenerationPreview,
 } from './generation-preview/validation.js';
 export {
+  buildDraftMediaGenerationPreview,
+  buildMediaGenerationPreview,
+  updateGenerationPreviewSpec,
+} from './generation-preview/service.js';
+export {
+  copyAssetFileGenerationProvenance,
+  recordAssetFileGenerationProvenance,
+} from './asset-file-generation/commands.js';
+export { readAssetFileGenerationProvenance } from './asset-file-generation/queries.js';
+export type {
+  CopyAssetFileGenerationProvenanceInput,
+  ReadAssetFileGenerationProvenanceInput,
+  RecordAssetFileGenerationProvenanceInput,
+} from './asset-file-generation/types.js';
+export {
+  estimateImageRevisionDraft,
+  previewImageRevisionDraft,
+  readImageRevisionContext,
+} from './image-revision/service.js';
+export { runImageRevision } from './image-revision/execution.js';
+export type {
+  EstimateImageRevisionDraftInput,
+  PreviewImageRevisionDraftInput,
+  ReadImageRevisionContextInput,
+  RunImageRevisionInput,
+} from './image-revision/contracts.js';
+export {
   buildGenerationPreviewSubject,
   resolveGenerationPreviewReferenceFiles,
 } from './generation-preview/projection.js';
@@ -68,8 +95,6 @@ export type {
 export type {
   ChangeAssetSelectInput,
   ClearLookbookCardImageInput,
-  BuildDraftMediaGenerationPreviewInput,
-  BuildMediaGenerationPreviewInput,
   CreateMovieProjectInput,
   CastMediaGenerationContextInput,
   CreateLookbookInput,
@@ -196,9 +221,6 @@ export type {
   UpdateLookbookSheetGenerationSpecInput,
   UpdateMediaGenerationSpecInput,
   UpdateCastCharacterSheetGenerationSpecInput,
-  GenerationPreviewPromptUpdate,
-  GenerationPreviewReferenceSelectionUpdate,
-  UpdateGenerationPreviewSpecInput,
   UpdateCastProfileGenerationSpecInput,
   UpdateCastVoiceSampleGenerationSpecInput,
   ValidateSceneShotVideoTakeAuthoringDocumentInput,
@@ -246,6 +268,13 @@ export type {
   WriteInspirationAnalysisInput,
   WriteInspirationImageInput,
 } from './project-data-service-contracts.js';
+export type {
+  BuildDraftMediaGenerationPreviewInput,
+  BuildMediaGenerationPreviewInput,
+  GenerationPreviewPromptUpdate,
+  GenerationPreviewReferenceSelectionUpdate,
+  UpdateGenerationPreviewSpecInput,
+} from './generation-preview/contracts.js';
 export {
   DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
 } from '../client/screenplay-analysis.js';

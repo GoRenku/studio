@@ -22,7 +22,7 @@ import {
 } from '../../../../project-data-error.js';
 import type {
   MediaGenerationDependencyDeclarationInput,
-} from '../../../lifecycle/purpose-lifecycle-registry.js';
+} from '../../../lifecycle/purpose-definition.js';
 import {
   buildContextFromPrepared,
 } from '../authoring/context.js';

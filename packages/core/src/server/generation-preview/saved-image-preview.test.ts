@@ -35,7 +35,6 @@ describe('saved image generation preview projection', () => {
       providerModel: 'openai/gpt-image-2',
       mode: 'text-to-image',
       authoredPrompt: spec.prompt,
-      providerPrompt: spec.prompt,
       references: [],
       payload: {
         prompt: spec.prompt,

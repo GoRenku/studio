@@ -24,6 +24,7 @@ import {
   writeConfig,
 } from '../../testing/project-data-fixtures.js';
 import { buildLocationHeroProviderPayload } from './location-hero.js';
+import { buildMediaGenerationPreview } from '../../generation-preview/service.js';
 
 describe('Location hero provider payload mapping', () => {
   it('maps Nano Banana 2 edit to one 16:9 image-edit request with the source sheet', () => {
@@ -227,7 +228,7 @@ describe('Location hero generation and import', () => {
       homeDir: fixture.homeDir,
       specId: specRecord.id,
     });
-    const preview = await fixture.projectData.buildMediaGenerationPreview({
+    const preview = await buildMediaGenerationPreview({
       projectName: 'constantinople',
       homeDir: fixture.homeDir,
       specId: specRecord.id,

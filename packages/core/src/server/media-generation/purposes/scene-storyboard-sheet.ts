@@ -71,7 +71,6 @@ import {
 } from '../../project-asset-files/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { buildSavedImageGenerationPreview } from '../../generation-preview/saved-image-preview.js';
-import { providerPreviewPromptText } from '../../generation-preview/provider-preview-prompt.js';
 import type {
   ImportSceneStoryboardImagesMediaInput,
   ReadSceneStoryboardSheetGenerationContextInput,
@@ -98,7 +97,7 @@ import {
 import { lookbookSheetDependencySlot } from '../dependencies/dependency-slot-definitions.js';
 import type {
   MediaGenerationDependencyDeclarationInput,
-} from '../lifecycle/purpose-lifecycle-registry.js';
+} from '../lifecycle/purpose-definition.js';
 
 const STORYBOARD_SHEET_MODELS = new Set<string>([
   'fal-ai/openai/gpt-image-2',
@@ -377,7 +376,6 @@ export async function buildSceneStoryboardSheetGenerationPreview(
     providerModel: plan.model,
     mode: plan.mode,
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: sceneStoryboardPreviewReferences(context),
     payload: plan.payload,
   });

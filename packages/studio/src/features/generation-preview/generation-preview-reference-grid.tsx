@@ -10,6 +10,7 @@ interface GenerationPreviewReferenceGridProps {
   preview: StudioGenerationPreview;
   draft: GenerationPreviewDraft;
   updating: boolean;
+  editable?: boolean;
   onReferenceToggle: (reference: StudioGenerationPreviewReference) => void;
 }
 
@@ -17,6 +18,7 @@ export function GenerationPreviewReferenceGrid({
   preview,
   draft,
   updating,
+  editable,
   onReferenceToggle,
 }: GenerationPreviewReferenceGridProps) {
   if (!preview.references.length) {
@@ -34,7 +36,7 @@ export function GenerationPreviewReferenceGrid({
           key={`${reference.kind}:${reference.assetId}:${reference.assetFileId}:${index}`}
           reference={reference}
           selected={generationPreviewReferenceSelected(reference, draft)}
-          canEdit={Boolean(preview.generationSpecId)}
+          canEdit={editable ?? Boolean(preview.generationSpecId)}
           updating={updating}
           onToggle={onReferenceToggle}
         />

@@ -9,7 +9,6 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { assetFiles, assets } from './assets.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
-import { mediaGenerationRuns } from './media-generation.js';
 import { scenes } from './scenes.js';
 
 export const sceneShotLists = sqliteTable(
@@ -174,10 +173,6 @@ export const sceneShotVideoTakeMediaInputs = sqliteTable(
     assetFileId: text('asset_file_id')
       .notNull()
       .references(() => assetFiles.id),
-    mediaGenerationRunId: text('media_generation_run_id').references(
-      () => mediaGenerationRuns.id,
-      { onDelete: 'set null' }
-    ),
     selection: text('selection').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -240,10 +235,6 @@ export const sceneShotVideoTakeVideos = sqliteTable(
     assetFileId: text('asset_file_id')
       .notNull()
       .references(() => assetFiles.id),
-    mediaGenerationRunId: text('media_generation_run_id').references(
-      () => mediaGenerationRuns.id,
-      { onDelete: 'set null' }
-    ),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
     ...discardLifecycleColumns(),

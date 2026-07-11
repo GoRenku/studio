@@ -45,9 +45,6 @@ import {
   resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
 import {
-  providerPreviewPromptText,
-} from '../../generation-preview/provider-preview-prompt.js';
-import {
   buildSavedImageGenerationPreview,
 } from '../../generation-preview/saved-image-preview.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -304,7 +301,6 @@ export async function buildImageCreateGenerationPreview(input: {
     providerModel: plan.model,
     mode: plan.mode,
     authoredPrompt: specRecord.spec.prompt,
-    providerPrompt: providerPreviewPromptText(plan.payload, specRecord.spec.prompt),
     references: imageCreatePreviewReferences(plan.referenceImages),
     providerTokenOrder: plan.referenceImages
       .map((reference) => reference.assetFileId)

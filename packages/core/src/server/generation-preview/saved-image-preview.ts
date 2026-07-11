@@ -5,6 +5,7 @@ import type {
   MediaGenerationTarget,
 } from '../../client/index.js';
 import { buildImagePreviewConfiguration } from './configuration/model-input-configuration.js';
+import { providerPreviewPromptText } from './provider-preview-prompt.js';
 
 export interface BuildSavedImageGenerationPreviewInput {
   specRecord: MediaGenerationSpecRecord;
@@ -22,7 +23,6 @@ export interface BuildSavedImageGenerationPreviewInput {
   providerModel: string;
   mode: 'text-to-image' | 'reference-to-image' | 'image-edit';
   authoredPrompt: string;
-  providerPrompt: string;
   references: GenerationPreviewRequestReference[];
   payload: Record<string, unknown>;
   providerTokenOrder?: string[];
@@ -60,7 +60,7 @@ export async function buildSavedImageGenerationPreview(
       : {}),
     finalPrompt: {
       authoredText: input.authoredPrompt,
-      providerText: input.providerPrompt,
+      providerText: providerPreviewPromptText(input.payload, input.authoredPrompt),
     },
     references: input.references,
     configuration: await buildImagePreviewConfiguration({

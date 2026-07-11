@@ -20,7 +20,7 @@ interface ImageOverlayCardProps {
   topRightAction?: ReactNode;
   topRightActionClassName?: string;
   topRightActionPersistent?: boolean;
-  bottomRightControl?: ReactNode;
+  bottomRightActions?: ReactNode;
   onOpen: () => void;
 }
 
@@ -39,7 +39,7 @@ export function ImageOverlayCard({
   topRightAction,
   topRightActionClassName,
   topRightActionPersistent = false,
-  bottomRightControl,
+  bottomRightActions,
   onOpen,
 }: ImageOverlayCardProps) {
   const { aspectRatioStyle, onImageLoad } = useImageAspectRatio(
@@ -93,7 +93,7 @@ export function ImageOverlayCard({
           </span>
         )}
       </Button>
-      {hasCopy || bottomRightControl ? (
+      {hasCopy || bottomRightActions ? (
         <div
           className={cn(
             'pointer-events-none absolute inset-x-0 bottom-0 rounded-b-[inherit] bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.55)_42%,rgba(0,0,0,0.78)_100%)] px-4 pb-3 pt-12',
@@ -113,9 +113,9 @@ export function ImageOverlayCard({
                 </p>
               ) : null}
             </div>
-            {bottomRightControl ? (
-              <div className='pointer-events-auto shrink-0'>
-                {bottomRightControl}
+            {bottomRightActions ? (
+              <div className='pointer-events-auto flex shrink-0 items-center gap-2'>
+                {bottomRightActions}
               </div>
             ) : null}
           </div>

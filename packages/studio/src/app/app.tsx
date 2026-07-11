@@ -4,6 +4,7 @@ import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
 import { GenerationPreviewDialogHost } from '@/features/generation-preview/generation-preview-dialog-host';
+import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 import { Toaster } from '@/ui/sonner';
 
@@ -62,10 +63,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <>
+    <ImageRevisionDialogProvider>
       <AppContent />
       <GenerationPreviewDialogHost />
       <Toaster richColors position='bottom-right' />
-    </>
+    </ImageRevisionDialogProvider>
   );
 }
