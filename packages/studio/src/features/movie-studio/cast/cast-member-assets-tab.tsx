@@ -12,10 +12,11 @@ import {
 } from '@/ui/image-preview-dialog';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
 import {
-  CAST_CHARACTER_SHEET_ROLE,
+  CAST_CHARACTER_SHEET_ROLES,
   CAST_PROFILE_ROLE,
   castImageAssetAspectRatio,
   castImageAssetsForRole,
+  castImageAssetsForRoles,
   castImageAssetUrl,
   castPreviewImageForAsset,
 } from './cast-member-assets';
@@ -48,9 +49,9 @@ export function CastMemberAssetsTab({
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const { openImageRevision } = useImageRevisionDialog();
   const profileAssets = castImageAssetsForRole(assets, CAST_PROFILE_ROLE);
-  const characterSheetAssets = castImageAssetsForRole(
+  const characterSheetAssets = castImageAssetsForRoles(
     assets,
-    CAST_CHARACTER_SHEET_ROLE
+    CAST_CHARACTER_SHEET_ROLES
   );
 
   return (

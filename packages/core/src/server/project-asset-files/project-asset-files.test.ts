@@ -2,10 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type {
-  MediaGenerationSpecRecord,
-  ProjectRelativePath,
-} from '../../client/index.js';
+import type { ProjectRelativePath } from '../../client/index.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
@@ -20,7 +17,7 @@ import {
   createProjectAssetFileWriteSet,
   persistProjectAssetFileSync,
   persistSceneStoryboardShotFilesSync,
-  resolveProjectAssetGenerationOutput,
+  resolveGenerationRunOutputRoot,
   rollbackProjectAssetFileWriteSetSync,
   writeProjectTemporaryFile,
 } from './index.js';
@@ -65,6 +62,21 @@ describe('project asset file storage', () => {
     ).toBe(0);
   });
 
+  it('allocates provider output roots under the project temporary media folder', async () => {
+    const outputRoot = await resolveGenerationRunOutputRoot({
+      projectFolder: projectPath,
+      runId: 'media_generation_run_test0001',
+      purpose: 'cast.profile',
+    });
+
+    expect(outputRoot.projectRelativeRoot).toBe(
+      'tmp/media/media-generation-run-test0001'
+    );
+    expect(outputRoot.absoluteRoot).toBe(
+      path.join(projectPath, 'tmp/media/media-generation-run-test0001')
+    );
+  });
+
   it('persists cast voice samples from the reference name', async () => {
     await writeProjectFile('tmp/source/voice.mp3', 'voice bytes');
     insertReadyAsset(session, {
@@ -94,37 +106,6 @@ describe('project asset file storage', () => {
     expect(file.projectRelativePath).toBe(
       'cast/urban/voice-samples/normal-voice.mp3'
     );
-  });
-
-  it('allocates generated cast voice sample names from the reference name and output format', async () => {
-    const placement = await resolveProjectAssetGenerationOutput({
-      session,
-      projectFolder: projectPath,
-      specRecord: {
-        id: 'media_generation_spec_voice_sample',
-        purpose: 'cast.voice-sample',
-        target: { kind: 'castMember', id: 'cast_test0001' },
-        modelChoice: 'elevenlabs/eleven_v3',
-        title: 'Urban normal voice',
-        spec: {
-          purpose: 'cast.voice-sample',
-          target: { kind: 'castMember', id: 'cast_test0001' },
-          modelChoice: 'elevenlabs/eleven_v3',
-          voiceId: 'voice_urban_normal',
-          text: 'The city is a problem of patience, not force.',
-          referenceName: 'normal-voice',
-          referencePurpose: 'calm strategic baseline',
-          outputFormat: 'pcm_44100',
-          title: 'Urban normal voice',
-        },
-        createdAt: NOW,
-        updatedAt: NOW,
-      } as MediaGenerationSpecRecord,
-      outputCount: 1,
-    });
-
-    expect(placement.projectRelativeRoot).toBe('cast/urban/voice-samples');
-    expect(placement.outputNames).toEqual(['normal-voice.wav']);
   });
 
   it('persists scene dialogue audio with stable dialogue order and take numbering', async () => {

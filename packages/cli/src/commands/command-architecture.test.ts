@@ -4,33 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { castVoiceCommandHandlers } from './cast-voice-command-handlers.js';
 import { generationCommandHandlers } from './generation-command-handlers.js';
-import { SUPPORTED_GENERATION_PURPOSES } from './generation-purpose-command-registry.js';
-import { listMediaImportPurposeHandlers } from './media-import-command-handlers.js';
 
 const commandDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('CLI command architecture', () => {
-  it('keeps generated media and explicit reference media importable', () => {
-    const nonImportPurposes = new Set([
-      'image.create',
-      'image.edit',
-      'cast.voice-sample',
-      'scene.dialogue-audio',
-    ]);
-    const explicitReferenceImportPurposes = ['reference.image', 'shot.input'];
-    const expectedPurposes = [
-      ...SUPPORTED_GENERATION_PURPOSES.filter(
-        (purpose) => !nonImportPurposes.has(purpose)
-      ),
-      ...explicitReferenceImportPurposes,
-    ];
-    const actualPurposes = listMediaImportPurposeHandlers().map(
-      (handler) => handler.purpose
-    );
-    expect(new Set(actualPurposes)).toEqual(new Set(expectedPurposes));
-    expect(actualPurposes).toHaveLength(expectedPurposes.length);
-  });
-
   it('keeps generation command paths unique in one handler registry', () => {
     expectUniqueHandlerPaths(generationCommandHandlers);
   });

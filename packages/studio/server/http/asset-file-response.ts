@@ -41,47 +41,6 @@ export async function readProjectAssetFileByIdResponse(
   });
 }
 
-export async function readShotVideoTakeInputFileResponse(
-  projectData: ProjectsRouteProjectData,
-  input: {
-    projectName: string;
-    sceneId: string;
-    takeId: string;
-    inputId: string;
-    assetFileId: string;
-  }
-): Promise<Response> {
-  const resolved = await projectData.resolveShotVideoTakeInputFile(input);
-  const bytes = await fs.readFile(resolved.absolutePath);
-  return new Response(bytes, {
-    status: 200,
-    headers: {
-      'Content-Type': contentTypeForAssetFile(resolved.file),
-      'Cache-Control': 'private, max-age=31536000, immutable',
-    },
-  });
-}
-
-export async function readShotVideoTakeVideoFileResponse(
-  projectData: ProjectsRouteProjectData,
-  input: {
-    projectName: string;
-    sceneId: string;
-    takeId: string;
-    assetFileId: string;
-  }
-): Promise<Response> {
-  const resolved = await projectData.resolveShotVideoTakeVideoFile(input);
-  const bytes = await fs.readFile(resolved.absolutePath);
-  return new Response(bytes, {
-    status: 200,
-    headers: {
-      'Content-Type': contentTypeForAssetFile(resolved.file),
-      'Cache-Control': 'private, max-age=31536000, immutable',
-    },
-  });
-}
-
 function contentTypeForAssetFile(file: AssetFile): string {
   if (file.mimeType) {
     return file.mimeType;

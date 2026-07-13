@@ -1,27 +1,17 @@
 import { useEffect, useState } from 'react';
 import type {
+  SceneShotVideoTake,
   ShotVideoTakeGeneralReferenceChoice,
-  ShotVideoTakeProductionPlanReport,
   ShotVideoTakeReferenceImagePreview,
 } from '@gorenku/studio-core/client';
+import type { ShotVideoTakeWorkspaceResponse } from '@/services/studio-shot-video-takes-api';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
-import {
-  sceneAssetFileUrl,
-  shotVideoTakeInputFileUrl,
-} from '@/services/studio-project-assets-api';
-import {
-  updateShotGroupReferenceInclusion,
-  updateTakeCharacterSheetSelection,
-  updateTakeLocationSheetSelection,
-  type ShotVideoTakeProductionMutation,
-} from '@/services/studio-shot-video-takes-api';
 import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
 import { idleSaveNotification } from '../detail-save-notification';
-import { lookbookSheetFileUrl } from '../visual-language/visual-language-image-urls';
 import { SceneShotCastReferenceCard } from './scene-shot-cast-reference-card';
 import { previewImageUrl } from './scene-shot-reference-card-images';
 import { SceneShotLocationReferenceRow } from './scene-shot-location-reference-row';
@@ -38,67 +28,42 @@ import { useImageRevisionDialog } from '@/features/image-revision/use-image-revi
 interface SceneShotReferencesTabProps {
   projectName: string;
   sceneId: string;
-  selectedShotId?: string;
-  productionPlan: ShotVideoTakeProductionPlanReport | null;
-  onPlanRefresh?: () => Promise<void>;
-  onTakeMutation?: (result: ShotVideoTakeProductionMutation) => void;
+  take: SceneShotVideoTake | null;
+  references: ShotVideoTakeWorkspaceResponse['generation']['references'] | null;
+  diagnostics?: Array<{ code: string; message: string }>;
+  onSetReference: (selectionId: string, included: boolean) => Promise<void>;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
 export function SceneShotReferencesTab({
   projectName,
   sceneId,
-  selectedShotId,
-  productionPlan,
-  onPlanRefresh,
-  onTakeMutation,
+  take,
+  references,
+  diagnostics = [],
+  onSetReference,
   onSaveNotificationChange,
 }: SceneShotReferencesTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const mutationStatus = useTakeEditorMutationStatus({
     failureMessage: 'References could not be saved.',
   });
-  const references = productionPlan?.references;
-  const scopedShotId = selectedShotId ?? productionPlan?.take?.shotIds[0];
-  const mutationShotId =
-    productionPlan?.take?.state?.structure.mode === 'multi-cut'
-      ? scopedShotId
-      : undefined;
   const referenceIssues =
-    productionPlan?.diagnostics.filter(isReferenceDiagnosticIssue) ?? [];
-
-  const refreshAfterMutation = async (result: ShotVideoTakeProductionMutation) => {
-    onTakeMutation?.(result);
-    if (result.context.take.takeId !== productionPlan?.take?.takeId) {
-      return;
-    }
-    await onPlanRefresh?.();
-  };
+    diagnostics.filter(isReferenceDiagnosticIssue);
   useEffect(() => {
     onSaveNotificationChange?.(mutationStatus.status);
     return () => onSaveNotificationChange?.(idleSaveNotification);
   }, [mutationStatus.status, onSaveNotificationChange]);
 
   const updateReferenceInclusion = async (
-    dependencyId: string,
-    inclusion: 'include' | 'exclude' | null
+    selectionId: string,
+    included: boolean
   ) => {
-    const take = productionPlan?.take;
     if (!take) {
       return;
     }
     await mutationStatus.runTakeEditorMutation(async () => {
-      const result = await updateShotGroupReferenceInclusion(
-        projectName,
-        sceneId,
-        take.takeId,
-        {
-          dependencyId,
-          inclusion,
-          ...(mutationShotId ? { shotId: mutationShotId } : {}),
-        }
-      );
-      await refreshAfterMutation(result);
+      await onSetReference(selectionId, included);
     });
   };
 
@@ -113,10 +78,11 @@ export function SceneShotReferencesTab({
                   key={choice.id}
                   projectName={projectName}
                   sceneId={sceneId}
+                  takeId={take?.takeId ?? ''}
                   choice={choice}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
-                  onToggleInclusion={async (dependencyId, inclusion) => {
-                    await updateReferenceInclusion(dependencyId, inclusion);
+                  onToggleInclusion={async (selectionId, included) => {
+                    await updateReferenceInclusion(selectionId, included);
                   }}
                 />
               ))}
@@ -134,14 +100,7 @@ export function SceneShotReferencesTab({
             <SceneShotReferenceCardGrid>
               {references.lookbook.map((choice) => {
                 const preview = choice.card.previews[0];
-                const imageUrl =
-                  preview && choice.lookbookSheetId
-                    ? lookbookSheetFileUrl(
-                        projectName,
-                        choice.lookbookSheetId,
-                        preview.assetFileId
-                      )
-                    : null;
+                const imageUrl = preview && 'url' in preview ? preview.url : null;
                 const previewImages = previewImageUrl(preview, imageUrl);
                 return (
                   <SceneShotReferenceCard
@@ -155,12 +114,9 @@ export function SceneShotReferencesTab({
                     detectImageAspectRatio
                     onOpen={() => setPreviewImage(previewImages[0] ?? null)}
                     onToggleSelected={async () => {
-                      if (!choice.card.dependencyId) {
-                        return;
-                      }
                       await updateReferenceInclusion(
-                        choice.card.dependencyId,
-                        nextReferenceInclusion(choice.card)
+                        choice.card.selectionId,
+                        !choice.card.included
                       );
                     }}
                   />
@@ -186,27 +142,16 @@ export function SceneShotReferencesTab({
                   projectName={projectName}
                   group={group}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
-                  onToggleInclusion={async (dependencyId, inclusion) => {
-                    await updateReferenceInclusion(dependencyId, inclusion);
+                  onToggleInclusion={async (selectionId, included) => {
+                    await updateReferenceInclusion(selectionId, included);
                   }}
                   onSelectSheet={async (castMemberId, assetId) => {
-                    const take = productionPlan?.take;
-                    if (!take) {
-                      return;
-                    }
+                    const choice = group.characterSheets.find(
+                      (candidate) => candidate.castMemberId === castMemberId && candidate.assetId === assetId
+                    );
+                    if (!choice) return;
                     await mutationStatus.runTakeEditorMutation(async () => {
-                      const sheetResult =
-                        await updateTakeCharacterSheetSelection(
-                          projectName,
-                          sceneId,
-                          take.takeId,
-                          {
-                            ...(mutationShotId ? { shotId: mutationShotId } : {}),
-                            castMemberId,
-                            assetId,
-                          }
-                        );
-                      await refreshAfterMutation(sheetResult);
+                      await onSetReference(choice.card.selectionId, true);
                     });
                   }}
                 />
@@ -232,22 +177,12 @@ export function SceneShotReferencesTab({
                   group={group}
                   onPreview={(images) => setPreviewImage(images[0] ?? null)}
                   onToggleSheet={async (locationId, assetId, selected) => {
-                    const take = productionPlan?.take;
-                    if (!take) {
-                      return;
-                    }
+                    const choice = group.environmentSheets.find(
+                      (candidate) => candidate.locationId === locationId && candidate.assetId === assetId
+                    );
+                    if (!choice) return;
                     await mutationStatus.runTakeEditorMutation(async () => {
-                      const result = await updateTakeLocationSheetSelection(
-                        projectName,
-                        sceneId,
-                        take.takeId,
-                        {
-                          ...(mutationShotId ? { shotId: mutationShotId } : {}),
-                          locationId,
-                          assetId: selected ? null : assetId,
-                        }
-                      );
-                      await refreshAfterMutation(result);
+                      await onSetReference(choice.card.selectionId, !selected);
                     });
                   }}
                 />
@@ -282,9 +217,8 @@ export function SceneShotReferencesTab({
 
 function isReferenceDiagnosticIssue(issue: { code: string }): boolean {
   return (
+    issue.code.startsWith('CORE_GENERATION_SHOT_') ||
     issue.code.startsWith('CORE_SHOT_REFERENCE_') ||
-    issue.code.startsWith('CORE_SHOT_VIDEO_DEPENDENCY_') ||
-    issue.code.startsWith('CORE_SHOT_VIDEO_PLAN_REQUIRED_ATTACHMENT_') ||
     issue.code.startsWith('CORE_MEDIA_DEPENDENCY_')
   );
 }
@@ -292,22 +226,24 @@ function isReferenceDiagnosticIssue(issue: { code: string }): boolean {
 function GeneralReferenceCard({
   projectName,
   sceneId,
+  takeId,
   choice,
   onPreview,
   onToggleInclusion,
 }: {
   projectName: string;
   sceneId: string;
+  takeId: string;
   choice: ShotVideoTakeGeneralReferenceChoice;
   onPreview: (images: PreviewImage[]) => void;
   onToggleInclusion: (
-    dependencyId: string,
-    inclusion: 'include' | 'exclude' | null
+    selectionId: string,
+    included: boolean
   ) => Promise<void>;
 }) {
   const { openImageRevision } = useImageRevisionDialog();
   const preview = choice.card.previews[0];
-  const imageUrl = preview ? generalReferenceImageUrl(projectName, sceneId, preview) : null;
+  const imageUrl = preview ? generalReferenceImageUrl(projectName, preview) : null;
   const previewImages = previewImageUrl(preview, imageUrl);
 
   return (
@@ -323,15 +259,15 @@ function GeneralReferenceCard({
       detectImageAspectRatio
       onOpen={() => onPreview(previewImages)}
       onEditImage={
-        preview?.inputId && preview.takeId
+        preview
           ? () =>
               openImageRevision({
                 projectName,
                 target: {
-                  kind: 'shotVideoTakeInput',
+                  kind: 'shotVideoTakeReference',
                   sceneId,
-                  takeId: preview.takeId as string,
-                  inputId: preview.inputId as string,
+                  takeId,
+                  selectionId: preview.selectionId,
                   assetId: preview.assetId,
                   assetFileId: preview.assetFileId,
                 },
@@ -339,44 +275,21 @@ function GeneralReferenceCard({
           : undefined
       }
       onToggleSelected={() => {
-        if (choice.card.dependencyId) {
-          return onToggleInclusion(
-            choice.card.dependencyId,
-            nextReferenceInclusion(choice.card)
-          );
-        }
-        return Promise.resolve();
+        return onToggleInclusion(
+          choice.card.selectionId,
+          !choice.card.included
+        );
       }}
     />
   );
 }
 
-function nextReferenceInclusion(card: {
-  defaultIncluded: boolean;
-  included: boolean;
-}): 'include' | 'exclude' | null {
-  if (card.included) {
-    return card.defaultIncluded ? 'exclude' : null;
-  }
-  return card.defaultIncluded ? null : 'include';
-}
-
 function generalReferenceImageUrl(
   projectName: string,
-  sceneId: string,
   preview: ShotVideoTakeReferenceImagePreview
 ): string {
-  if (preview.inputId && preview.takeId) {
-    return shotVideoTakeInputFileUrl(
-      projectName,
-      sceneId,
-      preview.takeId,
-      preview.inputId,
-      preview.assetFileId
-    );
-  }
-  if (preview.url) {
+  if ('url' in preview && typeof preview.url === 'string') {
     return preview.url;
   }
-  return sceneAssetFileUrl(projectName, sceneId, preview.assetId, preview.assetFileId);
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(preview.assetId)}/files/${encodeURIComponent(preview.assetFileId)}`;
 }

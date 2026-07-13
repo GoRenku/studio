@@ -12,7 +12,6 @@ import type {
   SequenceResource,
   StoryArcResource,
 } from '../../client/index.js';
-import { readSceneDialogueAudioContext } from '../media-generation/purposes/scene-dialogue-audio.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   listActNavigationPage,
@@ -55,6 +54,7 @@ import type {
   ReadSequenceResourceInput,
 } from '../project-data-service-contracts.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
+import { readSceneDialogueAudioWorkspace } from '../scene-dialogue-audio-workspace/context.js';
 
 export async function readCastOverviewResource(
   input: ListNavigationInput
@@ -393,7 +393,10 @@ export async function readSceneNarrativeResource(
           .filter((location) => location.handle && location.id)
           .map((location) => [location.handle.toLowerCase(), location.id as string])
       ),
-      dialogueAudio: await readSceneDialogueAudioContext(input),
+      dialogueAudio: readSceneDialogueAudioWorkspace({
+        session,
+        sceneId: input.sceneId,
+      }),
     };
   } finally {
     session.close();

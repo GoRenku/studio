@@ -1,12 +1,22 @@
 import type {
-  MediaGenerationPurpose,
-  MediaKind,
+  GenerationPurpose,
   ProjectRelativePath,
-  ShotVideoTakeInputKind,
 } from '../../client/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
-export type ShotVideoTakeMediaRole = ShotVideoTakeInputKind | 'video';
+export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
+
+export type ShotVideoTakeMediaRole =
+  | 'first-frame'
+  | 'last-frame'
+  | 'reference-image'
+  | 'character-sheet'
+  | 'location-sheet'
+  | 'lookbook-sheet'
+  | 'video-prompt-sheet'
+  | 'source-video'
+  | 'audio'
+  | 'video';
 
 export type ProjectAssetFileDestination =
   | { kind: 'cast.characterSheet'; castMemberId: string; titleHint?: string }
@@ -32,7 +42,7 @@ export type ProjectAssetFileDestination =
   | { kind: 'image.editOutput'; sourceAssetId: string; sourceAssetFileId?: string };
 
 export type ProjectTemporaryFileDestination =
-  | { kind: 'generation.media'; purpose: MediaGenerationPurpose }
+  | { kind: 'generation.media'; purpose: GenerationPurpose }
   | { kind: 'generation.spec' }
   | { kind: 'generation.receipt' }
   | { kind: 'operation' }
@@ -54,7 +64,7 @@ export interface PersistProjectAssetFileInput {
   sourceProjectRelativePath: string;
   destination: ProjectAssetFileDestination;
   fileRole: string;
-  mediaKind: MediaKind;
+  mediaKind: ProjectMediaKind;
   mimeType?: string;
   width?: number;
   height?: number;
@@ -68,13 +78,4 @@ export interface ProjectAssetFileWriteSet {
   readonly committed: boolean;
   recordCreatedFile(projectRelativePath: ProjectRelativePath): void;
   markCommitted(): void;
-}
-
-export interface ProjectAssetGenerationOutputPlacement {
-  projectRelativeRoot: ProjectRelativePath;
-  absoluteRoot: string;
-  outputNames: string[];
-  persistenceIntent:
-    | { kind: 'temporary' }
-    | { kind: 'durableAsset'; destination: ProjectAssetFileDestination };
 }

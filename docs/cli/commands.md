@@ -285,7 +285,7 @@ Behavior:
 - `list` and `show` read the canonical Cast Member facts.
 - `context` returns the Cast Member, scenes where the Cast Member appears,
   active Cast Design summary, selected cast media, asset role counts, active
-  Lookbook summary, and generation readiness signals for `cast.character-sheet`
+  Lookbook summary, and generation readiness signals for `cast.video-character-sheet`
   and `cast.profile`.
 - `validate` checks a tagged `kind: "castOperations"` document without
   writing.
@@ -472,7 +472,7 @@ Behavior:
 - Requires a current authoring project.
 - `context` returns the Location, scenes that use it, active Location Design
   summary, selected environment-sheet media, asset role counts, selected Movie
-  Lookbook summary, and generation readiness for `location.environment-sheet`.
+  Lookbook summary, and generation readiness for `location.sheet`.
 - `validate` checks a tagged `kind: "locationOperations"` document without
   writing.
 - `apply` creates, updates, deletes, or moves Location facts through the
@@ -1391,362 +1391,204 @@ Behavior:
 
 ## `renku generation`
 
-Create, estimate, and run persisted media generation specs.
+Use the generic Core generation lifecycle for one explicit provider request.
+Generation and domain attachment are separate operations.
 
-Current implemented purposes:
+Current purposes:
 
 ```text
 image.create
 image.edit
 lookbook.image
-lookbook.sheet
-cast.character-sheet
+lookbook.video-sheet
+lookbook.storyboard-sheet
+cast.video-character-sheet
+cast.storyboard-character-sheet
 cast.profile
 cast.voice-sample
-location.environment-sheet
+scene.dialogue-audio
+location.sheet
+location.hero
 scene.storyboard-sheet
 shot.video-take
 ```
 
-Current target formats:
+Target formats are derived from the purpose contract:
 
 ```text
-asset:<asset-id>
 project
+asset:<asset-id>
 lookbook:<lookbook-id>
 cast:<cast-member-id>
+scene:<scene-id>:dialogue:<scene-dialogue-id>
 location:<location-id>
 scene:<scene-id>
-scene:<scene-id> --shot-list <shot-list-id>
-scene:<scene-id> --take <take-id>
 take:<take-id>
 ```
 
-Read context and available model choices:
+Read the Core-owned context, reusable catalog, and model descriptors:
 
 ```bash
-renku generation context --purpose lookbook.image --target lookbook:<lookbook-id> --json
-renku generation context --purpose image.create --target project --json
-renku generation context --purpose image.edit --target asset:<asset-id> --json
-renku generation model list --purpose lookbook.image --target lookbook:<lookbook-id> --json
-renku generation model list --purpose image.create --target project --json
-renku generation model list --purpose image.edit --target asset:<asset-id> --json
-renku generation context --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
-renku generation model list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
-renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json
-renku generation model list --purpose cast.character-sheet --target cast:<cast-member-id> --json
-renku generation context --purpose cast.profile --target cast:<cast-member-id> --json
-renku generation model list --purpose cast.profile --target cast:<cast-member-id> --json
-renku generation context --purpose cast.voice-sample --target cast:<cast-member-id> --json
-renku generation model list --purpose cast.voice-sample --target cast:<cast-member-id> --json
-renku generation context --purpose location.environment-sheet --target location:<location-id> --json
-renku generation model list --purpose location.environment-sheet --target location:<location-id> --json
-renku generation context --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
-renku generation model list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
-renku take authoring context --take <take-id> --json
-renku take authoring context --take <take-id> --selected-shot <shot-id> --json
-renku generation model list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --intent <input-mode-id> --json
+renku generation context --purpose <purpose> --target <target> --json
+renku generation reference list --media-kind image --json
+renku generation model list --purpose <purpose> --json
 ```
 
-Shot video take authoring and reusable inputs:
+The context report contains fixed and recommended product settings, exact guide
+slots and candidates, initial selections, notices, and selectable model
+metadata. Fixed settings are applied by Core. Recommendations are guidance and
+are authored only when the user or agent explicitly includes the corresponding
+provider field in `values`. Untouched provider defaults remain absent.
 
-```bash
-renku take authoring validate --file <scene-shot-video-take-authoring-json> --json
-renku take authoring apply --file <scene-shot-video-take-authoring-json> --json
-renku generation input list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
-renku generation input list --purpose shot.video-take --target take:<take-id> --json
-renku generation input select --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
-renku generation input clear --purpose shot.video-take --target scene:<scene-id> --take <take-id> --kind <input-kind> --subject-kind <subject-kind> --subject-id <subject-id> --json
-renku generation input delete --purpose shot.video-take --target scene:<scene-id> --take <take-id> --input <input-id> --json
-renku take repair-owned-media --json
+A generic `GenerationSpec` has this shape:
+
+```json
+{
+  "purpose": "location.sheet",
+  "target": { "kind": "location", "id": "location_sea_walls" },
+  "model": { "provider": "fal-ai", "model": "openai/gpt-image-2" },
+  "values": {
+    "prompt": "A Location Sheet for the sea walls...",
+    "image_size": "landscape_16_9",
+    "quality": "high",
+    "num_images": 1,
+    "output_format": "png"
+  },
+  "references": [],
+  "title": "Sea walls Location Sheet"
+}
 ```
 
-`take authoring context` is the agent-facing read contract for final shot-video
-take work. It returns the editable `sceneShotVideoTakeAuthoring` document,
-production plan, reference sections, preflight readiness, estimate, diagnostics,
-and provider payload preview. Agents should validate and apply a full authoring
-document instead of patching take state or writing separate reference-kind
-commands.
+Exact references use stable guide placements:
 
-`take repair-owned-media` is a focused current-contract repair for development
-projects where active Shot Video Take-owned input media was copied by row while
-still sharing the same asset/file. It deep-copies the shared active take-owned
-inputs, updates prepared input state, and reports each repaired input and new
-asset/file id. Normal take reads and deletes do not treat shared take-owned
-media as valid runtime state.
+```json
+{
+  "id": "selected-source",
+  "placement": {
+    "kind": "slot",
+    "sectionId": "source",
+    "slotId": "source-image"
+  },
+  "included": true,
+  "reference": {
+    "kind": "asset-file",
+    "assetId": "asset_source",
+    "assetFileId": "asset_file_source"
+  }
+}
+```
 
-Generated shot dependency drafts must be authored by the agent in
-`production.agentProposal.dependencyDrafts[]` in the authoring document. Core
-blocks missing authored dependency drafts with structured diagnostics and does
-not synthesize generic image prompts for first frames, last frames, ad hoc
-reference images, or video prompt sheets.
+Use `{ "kind": "additional" }` only for an extra exact reference. Slot
+occupancy is guidance, not a dependency graph. Provider-required fields are
+validated against the selected direct endpoint.
 
-Manage persisted specs:
+Manage specs and Preview:
 
 ```bash
-renku generation spec validate --file <spec-json> --json
+renku generation validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
 renku generation spec show --spec <spec-id> --json
-renku generation spec list --purpose image.create --target project --json
-renku generation spec list --purpose lookbook.image --target lookbook:<lookbook-id> --json
-renku generation spec list --purpose image.edit --target asset:<asset-id> --json
-renku generation spec list --purpose lookbook.sheet --target lookbook:<lookbook-id> --json
-renku generation spec list --purpose location.environment-sheet --target location:<location-id> --json
-renku generation spec list --purpose scene.storyboard-sheet --target scene:<scene-id> --shot-list <shot-list-id> --json
-renku generation spec list --purpose shot.video-take --target scene:<scene-id> --take <take-id> --json
+renku generation spec list --purpose <purpose> --json
+renku generation preview show --file <spec-json> --json
+renku generation preview show --spec <spec-id> --json
 ```
 
-Estimate and run:
+Estimate and run only the saved current request:
 
 ```bash
 renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approve-live-provider-run --json
-renku generation run --spec <spec-id> --simulate --json
+renku generation run --spec <spec-id> --approval-token <approval-token> --json
+renku generation run --spec <spec-id> --approval-token <approval-token> --simulate --json
 renku generation run show --run <run-id> --json
 ```
 
-`image.create` creates project-scoped generated image files from text or image
-references. It does not attach those files to Cast, Location, Lookbook, Scene,
-or Shot Video Take state. Use the destination-owned import command after
-inspecting the generated file.
-
-`image.edit` edits one registered image asset and creates generated output
-files plus a Media Generation Run receipt. It does not attach or replace media
-for Shot Video Takes, Cast, Locations, Lookbooks, Scenes, or reference images.
-Use the destination-owned import command after inspecting the generated file.
-
-Example prompt-sheet correction flow:
-
-```bash
-renku generation input list --purpose shot.video-take --target take:<take-id> --json
-renku generation preview show --file image-edit-spec.json --json
-renku generation spec create --file image-edit-spec.json --json
-renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approve-live-provider-run --json
-renku generation run show --run <run-id> --json
-renku media import --purpose shot.input --kind video-prompt-sheet --target take:<take-id> --source <edited-output-project-relative-path> --receipt image-edit-run.json --selection select --replace-selected --json
-```
-
-Lookbook Image spec shape:
-
-```json
-{
-  "purpose": "lookbook.image",
-  "target": { "kind": "lookbook", "id": "lookbook_abc" },
-  "modelChoice": "fal-ai/openai/gpt-image-2",
-  "prompt": "A horror hallway showing the Lookbook palette under dread lighting.",
-  "focusSections": ["palette", "lighting"],
-  "takeCount": 1,
-  "seed": null,
-  "imageFrame": "project",
-  "detail": "standard",
-  "outputFormat": "png",
-  "title": "Horror palette hallway"
-}
-```
-
-`focusSections` must use section names valid for the target Lookbook type.
-Movie Lookbooks use `thesis`, `palette`, `toneMood`, `composition`,
-`lighting`, `texture`, and `camera`. Storyboard Lookbooks use `styleBrief`,
-`lineAndFinish`, `valueAndAccent`, and `guardrails`.
-
-Location Environment Sheet spec shape:
-
-```json
-{
-  "purpose": "location.environment-sheet",
-  "target": { "kind": "location", "id": "location_sea_walls" },
-  "modelChoice": "fal-ai/openai/gpt-image-2",
-  "prompt": "A flexible Location Sheet for the sea walls location, combining siege-facing field scale, wall material, gate depth, and city-edge context...",
-  "takeCount": 1,
-  "seed": null,
-  "sheetFrame": "4:3",
-  "detail": "standard",
-  "outputFormat": "png",
-  "title": "Sea walls siege-facing sheet",
-  "description": "Sea-wall material, gate, tower, field, and city-edge reference for shot planning."
-}
-```
-
-Scene Storyboard Sheet spec shape:
-
-```json
-{
-  "purpose": "scene.storyboard-sheet",
-  "target": { "kind": "scene", "id": "scene_control_room" },
-  "shotListId": "scene_shot_list_control_room_v1",
-  "shotIds": ["shot_001", "shot_002", "shot_003", "shot_004"],
-  "modelChoice": "fal-ai/openai/gpt-image-2",
-  "prompt": "A complete charcoal pencil storyboard sheet laid out as a clean grid...",
-  "takeCount": 1,
-  "seed": null,
-  "sheetFrame": "4:3",
-  "shotFrame": "project",
-  "detail": "standard",
-  "outputFormat": "png",
-  "title": "Control room storyboard sheet"
-}
-```
+The approval token comes from the exact estimate and becomes invalid when the
+request changes. Simulation validates and records the same request without a
+paid provider call.
 
 Behavior:
 
-- The persisted spec is the source of truth for estimate and run.
-- Agents must not override user-selected model choice, take count, seed, image
-  frames, selected shot ids, detail, or output format.
-- `scene.storyboard-sheet` requires a selected Storyboard Lookbook and a
-  Storyboard Lookbook sheet. Run `renku media import --purpose lookbook.sheet`
-  or generate/import that sheet before creating the scene storyboard spec.
-- Final provider payloads are validated against the provider model JSON Schema
-  before estimate or execution.
-- Live generation requires `generation run --approve-live-provider-run`.
-- `generation run --simulate` validates and records a simulated run without a
-  paid provider call.
-- Generation creates staged outputs and run records. It does not attach files
-  to the target asset relationship. Use `renku media import` after inspecting
-  the output.
-- Location environment sheet runs create one composite image. The
-  media-producer agent inspects that composite with vision, writes the four
-  sliced scenic views locally, and imports the grouped files only when the
-  generated sheet is clean enough to slice.
-- Scene storyboard sheet runs create one composite storyboard grid for the
-  selected `shotIds`. The media-producer agent inspects that composite, slices
-  one image per selected shot, and imports only the cropped shot images after
-  scene-shot-designer has supplied the Scene Shot List.
-- Shot first frames, last frames, ad hoc reference images, and video prompt
-  sheets are created through `image.create` specs and then attached with
-  `renku media import --purpose shot.input --kind <input-kind>`. Their Shot
-  Video Take role is an import destination/input kind, not a generation
-  purpose.
-- `video-prompt-sheet` is a take-owned planning sheet. It must be derived from
-  `take authoring context` and inspected before import; do not treat it as a
-  scene storyboard sheet, moodboard, poster, or generic concept collage.
-- The Studio shot References tab displays imported/generated `first-frame`,
-  `last-frame`, `reference-image`, and `video-prompt-sheet` inputs
-  relevant to the selected shot or production group.
-- Image-generation context and model-list reports include `agentMedia`. For
-  eligible image purposes, this report can describe the external built-in
-  `codex.gpt-image-2` capability. That capability is not a Renku provider
-  model, so files created through it are imported without a generation receipt.
+- Prompt and generated media contents are opaque to runtime validation.
+- Engines owns direct provider fields, schemas, capability metadata, request
+  assembly, pricing, execution, outputs, and receipts.
+- Core owns purpose settings, exact eligible guide candidates, spec persistence,
+  validation, direct estimates, runs, and provenance.
+- Estimates cover only the current provider request; they never walk references
+  or construct child work.
+- `image.create` has Additional References only and no named slot.
+- `image.edit` targets the exact source asset and uses the
+  `source/source-image` slot plus optional exact Cast, Location, and
+  Lookbook candidates.
+- `scene.storyboard-sheet` keeps the deterministic 2x2 composite workflow.
+  The agent inspects and splits the returned sheet, then uses the focused
+  storyboard attachment command.
+- `shot.video-take` is one provider request. First Frame, Last Frame, Video
+  Prompt Sheet, Lookbook, repeated Cast, repeated Location, and dialogue audio
+  remain exact guide placements rather than planned dependencies.
+- Generation output is not attached automatically. Inspect the output, then use
+  the focused `renku media import` purpose with the run receipt. Omit the
+  receipt for external files so Core records no synthetic provenance.
 
 ## `renku media import`
 
-Attach an existing media file to a project domain purpose.
+Attach an inspected project-relative media file through a focused Core-owned
+destination. Import is separate from generation.
 
-Current implemented purposes:
+Supported single-file purposes:
 
 ```text
 lookbook.image
-lookbook.sheet
-cast.character-sheet
+lookbook.video-sheet
+lookbook.storyboard-sheet
+cast.video-character-sheet
+cast.storyboard-character-sheet
 cast.profile
-location.environment-sheet
-scene.storyboard-sheet
-shot.input
+location.sheet
+location.hero
 shot.video-take
 ```
 
-```bash
-renku media import \
-  --purpose lookbook.image \
-  --target lookbook:<lookbook-id> \
-  --source <project-relative-path> \
-  --sections palette,lighting \
-  --title <title> \
-  --summary <one-line-summary> \
-  --receipt <generation-run-json> \
-  --json
-```
-
-For Movie Lookbook images, `--sections thesis` places an image under The
-Thesis. To also pin that same image beside a specific point, include the
-point-owning section and `--anchor`, for example `--sections thesis,texture
---anchor texture-cannon-material-states`.
-The Thesis placement is single-image: importing a new image with `--sections
-thesis` replaces the previous Thesis placement without discarding that previous
-image or removing its other placements. Other Movie section and point placements
-append images until the placement slot has 10 images.
-
-Lookbook Sheet import:
+General form:
 
 ```bash
 renku media import \
-  --purpose lookbook.sheet \
-  --target lookbook:<lookbook-id> \
+  --purpose <purpose> \
+  --target <target> \
   --source <project-relative-path> \
   --title <title> \
-  --summary <one-line-summary> \
   --receipt <generation-run-json> \
   --json
 ```
 
-Cast Character Sheet import:
+Examples:
 
 ```bash
-renku media import \
-  --purpose cast.character-sheet \
-  --target cast:<cast-member-id> \
-  --source <project-relative-path> \
-  --reference-name <renku-reference-name> \
-  --reference-purpose <purpose> \
-  --title <title> \
-  --summary <one-line-summary> \
-  --receipt <generation-run-json> \
-  --json
+renku media import --purpose lookbook.image --target lookbook:<lookbook-id> --source tmp/media/lookbook-image.png --title "Lookbook image" --json
+renku media import --purpose lookbook.video-sheet --target lookbook:<lookbook-id> --source tmp/media/video-lookbook-sheet.png --title "Video Lookbook Sheet" --json
+renku media import --purpose lookbook.storyboard-sheet --target lookbook:<lookbook-id> --source tmp/media/storyboard-lookbook-sheet.png --title "Storyboard Lookbook Sheet" --json
+renku media import --purpose cast.video-character-sheet --target cast:<cast-member-id> --source tmp/media/character-sheet.png --title "Video Character Sheet" --json
+renku media import --purpose cast.storyboard-character-sheet --target cast:<cast-member-id> --source tmp/media/storyboard-character-sheet.png --title "Storyboard Character Sheet" --json
+renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --json
+renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
+renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --json
+renku media import --purpose shot.video-take --target take:<take-id> --source generated/video/final.mp4 --title "Final video" --receipt run.json --json
 ```
 
-Cast Profile import:
+Pass `--receipt` only for an exact output from a Renku run whose purpose and
+target match the focused attachment. Core records the real earlier run as
+provenance. Omit `--receipt` for uploaded, downloaded, manually created, or
+Codex-generated media; Core records it as external target-owned media with no
+synthetic generation spec or provenance.
 
-```bash
-renku media import \
-  --purpose cast.profile \
-  --target cast:<cast-member-id> \
-  --source <project-relative-path> \
-  --title <title> \
-  --summary <one-line-summary> \
-  --receipt <generation-run-json> \
-  --json
-```
-
-Cast Voice samples are attached with `renku cast voice attach`, not
-`renku media import`, because the durable Cast Voice record stores provider,
-model, provider voice id, reference name, and purpose.
-
-Location Environment Sheet import:
-
-```bash
-renku media import \
-  --purpose location.environment-sheet \
-  --target location:<location-id> \
-  --source tmp/media/sea-walls-sheet.png \
-  --title <title> \
-  --summary <one-line-summary> \
-  --receipt <generation-run-json> \
-  --json
-```
-
-Location Hero Image import:
-
-```bash
-renku media import \
-  --purpose location.hero \
-  --target location:<location-id> \
-  --source tmp/media/sea-walls-hero.png \
-  --source-sheet <location-sheet-asset-id> \
-  --title <title> \
-  --summary <one-line-summary> \
-  --receipt <generation-run-json> \
-  --json
-```
-
-Scene Storyboard Sheet image import:
+Scene Storyboard Sheet uses the focused cropped-image attachment:
 
 ```bash
 renku media import \
   --purpose scene.storyboard-sheet \
   --target scene:<scene-id> \
   --shot-list <shot-list-id> \
-  --file scene-storyboard-images-import.json \
+  --file <scene-storyboard-images-import.json> \
   --json
 
 renku media import \
@@ -1758,60 +1600,7 @@ renku media import \
   --json
 ```
 
-Shot media import:
-
-```bash
-renku media import \
-  --purpose shot.input \
-  --kind first-frame \
-  --target scene:<scene-id> \
-  --take <take-id> \
-  --source <project-relative-path> \
-  --selection select \
-  --receipt <generation-run-json> \
-  --json
-
-renku media import \
-  --purpose shot.input \
-  --kind reference-image \
-  --target scene:<scene-id> \
-  --take <take-id> \
-  --source <project-relative-path> \
-  --title <reference-intent-title> \
-  --selection select \
-  --receipt <generation-run-json> \
-  --json
-
-renku media import \
-  --purpose shot.input \
-  --kind video-prompt-sheet \
-  --target take:<take-id> \
-  --source <project-relative-path> \
-  --title <group-sheet-title> \
-  --selection select \
-  --receipt <generation-run-json> \
-  --json
-
-renku media import \
-  --purpose shot.video-take \
-  --target scene:<scene-id> \
-  --take <take-id> \
-  --source <project-relative-path> \
-  --receipt <generation-run-json> \
-  --json
-```
-
-Studio refresh notification:
-
-```bash
-renku studio notify-refresh \
-  --project <project-name> \
-  --resource scene-shot-video-take:<take-id> \
-  --json
-```
-
-The import JSON lists cropped shot image files from a temporary generated
-storyboard sheet. It does not include the composite sheet file:
+Grouped document:
 
 ```json
 {
@@ -1822,95 +1611,24 @@ storyboard sheet. It does not include the composite sheet file:
     {
       "shotId": "shot_001",
       "source": "tmp/media/storyboards/control-room-shot-001.png",
-      "title": "Shot 1",
       "sourcePurpose": "scene.storyboard-sheet"
     },
     {
       "shotId": "shot_002",
-      "source": "tmp/media/storyboards/control-room-shot-002.png"
+      "source": "tmp/media/storyboards/control-room-shot-002.png",
+      "sourcePurpose": "scene.storyboard-sheet"
     }
   ]
 }
 ```
 
-Options:
+The agent owns visual inspection and splitting of the deterministic composite;
+Core owns Shot and file ownership validation plus durable attachment. No runtime
+automatic splitting or creative-content validation occurs.
 
-- `--purpose`: required media purpose. Current supported values are
-  `lookbook.image`, `lookbook.sheet`, `cast.character-sheet`, `cast.profile`,
-  `location.environment-sheet`, `location.hero`, `scene.storyboard-sheet`,
-  `shot.input`, and `shot.video-take`.
-- `--kind`: required with `--purpose shot.input`. Supported values are
-  `first-frame`, `last-frame`, `reference-image`, and `video-prompt-sheet`.
-- `--target`: required target. Current supported shapes are
-  `lookbook:<lookbook-id>`, `cast:<cast-member-id>`,
-  `location:<location-id>`, `scene:<scene-id>`, and `take:<take-id>` for
-  shot-video take input and final video imports.
-- `--source`: required project-relative media source path for single-file
-  imports. For `scene.storyboard-sheet`, this imports one cropped shot image
-  and must be paired with exactly one `--shots` id.
-- `--file`: grouped import JSON for multi-shot `scene.storyboard-sheet` image
-  imports.
-- `--source-sheet`: required when importing `location.hero`; it must be the
-  source Location Sheet asset id for the same Location.
-- `--shot-list`: required when importing `scene.storyboard-sheet`.
-- `--shots`: for single-file `scene.storyboard-sheet` imports, it must contain
-  exactly one shot id.
-- `--take`: required when importing shot media and final `shot.video-take`
-  media; the take owns ordered shot membership.
-- `--selection`: optional shot image import selection, either `select` or
-  `take`.
-- `--replace-selected`: for shot-video take input imports, select the new input
-  and discard the previously selected input in the same slot in the same core
-  mutation.
-- `--sections`: optional comma-separated Lookbook section keys valid for the
-  owning Lookbook type.
-- `--reference-name`: required for `cast.character-sheet`; a stable
-  relationship-scoped Renku reference name such as `standard-sheet`.
-- `--reference-purpose`: required for `cast.character-sheet`; the purpose for
-  the reference, such as `default costume and face reference`.
-- `--title`: optional title for the imported media.
-- `--summary`: optional one-line summary.
-- `--receipt`: optional generation run or receipt JSON for single-file imports.
-  Omit it when the source file came from Codex built-in image generation,
-  another tool, a manual upload, or any non-Renku generation source.
-
-Behavior:
-
-- Import is separate from generation. A generated file is not attached to a
-  Lookbook until this command succeeds.
-- The file may come from Renku generation, another tool, a manual upload, or a
-  download.
-- For Lookbook Images, import registers an asset, creates the Lookbook image
-  relationship, stores section placement, and appends Studio resource refresh
-  events.
-- For Lookbook Sheets, import registers a Lookbook sheet asset, stores it under
-  `visual-language/lookbook/`, and appends Studio resource refresh events.
-- For Location Sheets, import registers one image asset, copies one `primary`
-  image file under `locations/<handle>/environment-sheets/` as a flat file, and
-  stores the required summary as the asset description shown in Studio.
-- For Location Hero Images, import registers one `location_hero` image asset,
-  copies one `primary` image file under `locations/<handle>/heroes/`,
-  validates the `--source-sheet` Location Sheet when supplied, and selects the
-  newest hero image for overview/detail display.
-- For Scene Storyboard Sheets, import registers one `scene_storyboard_image`
-  asset per shot, copies only cropped shot images under
-  `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`, attaches each image to
-  the Scene with role `storyboard_image`, and writes direct
-  `scene_shot_storyboard_image` rows keyed by scene, shot list, and shot id. The
-  temporary composite sheet is not copied into the project asset graph.
-- For Shot Video Take inputs, `take:<take-id>` resolves the owning take through
-  core before import. `--replace-selected` is intended for correction flows
-  where the previous selected prepared input should be removed rather than kept
-  as an alternative.
-- Files created outside Renku must be staged under the project first, usually
-  below `tmp/media/`, then imported with the normal project-relative
-  `--source` path. Omit `--receipt` for non-Renku generation sources.
-- `studio notify-refresh` appends only a Studio resource refresh notification.
-  It is not a project-data mutation and should not be used to compensate for a
-  failed import or generation command.
-- Agents should inspect generated images before import and tag only the
-  sections the image visibly demonstrates. Do not blindly copy
-  `focusSections` into `--sections`.
+Every successful import reports Studio resource keys. The CLI appends a Studio
+resource-change event so the existing Cast, Location, Lookbook, Scene, dialogue,
+and Take surfaces refresh without a browser reload.
 
 ## `renku asset list`
 

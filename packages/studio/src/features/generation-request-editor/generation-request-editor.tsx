@@ -1,8 +1,8 @@
 import type {
   GenerationEditorControl,
   GenerationPreviewConfigurationValue,
-  StudioGenerationPreview,
-  StudioGenerationPreviewReference,
+  GenerationPreviewResource,
+  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import { AlertCircle } from 'lucide-react';
 import type { GenerationPreviewDraft } from '@/features/generation-preview/generation-preview-draft';
@@ -19,7 +19,7 @@ import { GenerationRequestControlsPanel } from './generation-request-controls-pa
 export type GenerationRequestEditorTab = 'prompt' | 'references' | 'config';
 
 interface GenerationRequestEditorProps {
-  preview: StudioGenerationPreview | null;
+  preview: GenerationPreviewResource | null;
   draft: GenerationPreviewDraft;
   editorRevision: number;
   tab: GenerationRequestEditorTab;
@@ -31,7 +31,7 @@ interface GenerationRequestEditorProps {
   onTabChange: (tab: GenerationRequestEditorTab) => void;
   onAuthoredTextChange: (value: string) => void;
   onNegativeTextChange: (value: string) => void;
-  onReferenceToggle: (reference: StudioGenerationPreviewReference) => void;
+  onReferenceToggle: (reference: GenerationPreviewResourceReference) => void;
   onControlChange?: (
     controlId: string,
     value: GenerationPreviewConfigurationValue,

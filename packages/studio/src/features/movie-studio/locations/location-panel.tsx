@@ -88,7 +88,10 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
       defaultValue='details'
       items={[
         { value: 'details', label: 'Details' },
-        { value: 'visual', label: 'Visual Content' },
+        {
+          value: 'visual',
+          label: <span className='inline-flex w-[114px] justify-center'>Assets</span>,
+        },
       ]}
     >
       <LineTabsContent value='details'>

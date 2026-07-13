@@ -1,23 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pause, Play } from 'lucide-react';
 import type {
-  MediaGenerationDependencyPricing,
+  SceneShotVideoTake,
   ShotVideoTakeDialogueAudioReferenceChoice,
-  ShotVideoTakeProductionPlanReport,
+  ShotVideoTakeReferenceSections,
 } from '@gorenku/studio-core/client';
 import type {
   SceneShotListResourceResponse,
 } from '@/services/studio-project-contracts';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import {
-  readSceneDialogueAudioContext,
-  type SceneDialogueAudioContextWithUrls,
+  readSceneDialogueAudioWorkspace,
+  type SceneDialogueAudioWorkspaceWithUrls,
 } from '@/services/studio-scene-dialogue-audio-api';
-import {
-  updateShotGroupReferenceInclusion,
-  updateTakeDialogueAudioSelection,
-  type ShotVideoTakeProductionMutation,
-} from '@/services/studio-shot-video-takes-api';
 import { Badge } from '@/ui/badge';
 import { Button } from '@/ui/button';
 import {
@@ -40,48 +35,40 @@ import {
 } from './scene-dialogue-audio-take-format';
 import { idleSaveNotification } from '../detail-save-notification';
 import { useSceneDialogueAudioPlayer } from './use-scene-dialogue-audio';
-import { formatEstimateUsd } from './shot-video-take-production-projection';
 import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
 import { VoiceOverProfilePreview } from '../voice-over-profile-preview';
 
 interface SceneShotDialogsTabProps {
   projectName: string;
   sceneId: string;
-  selectedShotId?: string;
   castMemberImages: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
-  productionPlan: ShotVideoTakeProductionPlanReport | null;
-  onPlanRefresh?: () => Promise<void>;
-  onTakeMutation?: (result: ShotVideoTakeProductionMutation) => void;
+  take: SceneShotVideoTake | null;
+  references: ShotVideoTakeReferenceSections | null;
+  onSetReference: (selectionId: string, included: boolean) => Promise<void>;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
 export function SceneShotDialogsTab({
   projectName,
   sceneId,
-  selectedShotId,
   castMemberImages,
-  productionPlan,
-  onPlanRefresh,
-  onTakeMutation,
+  take,
+  references,
+  onSetReference,
   onSaveNotificationChange,
 }: SceneShotDialogsTabProps) {
   const [dialogueAudioContext, setDialogueAudioContext] =
-    useState<SceneDialogueAudioContextWithUrls | null>(null);
+    useState<SceneDialogueAudioWorkspaceWithUrls | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const mutationStatus = useTakeEditorMutationStatus({
     failureMessage: 'Dialogue choices could not be saved.',
   });
   const player = useSceneDialogueAudioPlayer();
   const choices = useMemo(
-    () => productionPlan?.references.dialogueAudio ?? [],
-    [productionPlan?.references.dialogueAudio]
+    () => references?.dialogueAudio ?? [],
+    [references?.dialogueAudio]
   );
-  const capability = productionPlan?.references.dialogueAudioCapability ?? null;
-  const scopedShotId = selectedShotId ?? productionPlan?.take?.shotIds[0];
-  const mutationShotId =
-    productionPlan?.take?.state?.structure.mode === 'multi-cut'
-      ? scopedShotId
-      : undefined;
+  const capability = references?.dialogueAudioCapability ?? null;
   const dialogueAudioReloadKey = useMemo(
     () =>
       choices
@@ -99,7 +86,7 @@ export function SceneShotDialogsTab({
 
   const loadDialogueAudio = useCallback(() => {
     let cancelled = false;
-    void readSceneDialogueAudioContext(projectName, sceneId).then((context) => {
+    void readSceneDialogueAudioWorkspace(projectName, sceneId).then((context) => {
       if (!cancelled) {
         setDialogueAudioContext(context);
       }
@@ -116,60 +103,33 @@ export function SceneShotDialogsTab({
   }, [mutationStatus.status, onSaveNotificationChange]);
 
   const updateReferenceInclusion = async (
-    dependencyId: string,
-    inclusion: 'include' | 'exclude' | null
+    selectionId: string,
+    included: boolean
   ) => {
-    const take = productionPlan?.take;
     if (!take) {
       return;
     }
     await mutationStatus.runTakeEditorMutation(async () => {
-      const result: ShotVideoTakeProductionMutation =
-        await updateShotGroupReferenceInclusion(
-          projectName,
-          sceneId,
-          take.takeId,
-          {
-            dependencyId,
-            inclusion,
-            ...(mutationShotId ? { shotId: mutationShotId } : {}),
-          }
-        );
-      onTakeMutation?.(result);
-      if (result.context.take.takeId === productionPlan?.take?.takeId) {
-        await onPlanRefresh?.();
-      }
+      await onSetReference(selectionId, included);
     });
   };
 
   const pickTake = async (dialogueId: string, takeId: string) => {
-    const take = productionPlan?.take;
     if (!take) {
       return;
     }
     setActionBusy(true);
     try {
       await mutationStatus.runTakeEditorMutation(async () => {
-        const result = await updateTakeDialogueAudioSelection(
-          projectName,
-          sceneId,
-          take.takeId,
-          {
-            ...(mutationShotId ? { shotId: mutationShotId } : {}),
-            dialogueId,
-            takeId,
-          }
-        );
-        onTakeMutation?.(result);
-        if (result.context.take.takeId !== productionPlan?.take?.takeId) {
-          return;
-        }
-        const context = await readSceneDialogueAudioContext(
+        const choice = choices.find((candidate) => candidate.dialogueId === dialogueId);
+        const available = choice?.availableTakes.find((candidate) => candidate.takeId === takeId);
+        if (!available) return;
+        await onSetReference(available.selectionId, true);
+        const context = await readSceneDialogueAudioWorkspace(
           projectName,
           sceneId
         );
         setDialogueAudioContext(context);
-        await onPlanRefresh?.();
       });
     } finally {
       setActionBusy(false);
@@ -192,7 +152,7 @@ export function SceneShotDialogsTab({
         {capability ? <DialogueAudioCapabilityRow capability={capability} /> : null}
         {choices.map((choice) => (
           <SceneShotDialogueAudioReferenceCard
-            key={choice.dependencyId}
+            key={choice.selectionId}
             choice={choice}
             context={dialogueAudioContext}
             profileImageUrl={
@@ -202,8 +162,8 @@ export function SceneShotDialogsTab({
             }
             actionDisabled={actionBusy}
             player={player}
-            onToggleInclusion={(dependencyId, inclusion) =>
-              updateReferenceInclusion(dependencyId, inclusion)
+            onToggleInclusion={(selectionId, included) =>
+              updateReferenceInclusion(selectionId, included)
             }
             onPickTake={pickTake}
           />
@@ -217,7 +177,7 @@ function DialogueAudioCapabilityRow({
   capability,
 }: {
   capability: NonNullable<
-    ShotVideoTakeProductionPlanReport['references']['dialogueAudioCapability']
+    ShotVideoTakeReferenceSections['dialogueAudioCapability']
   >;
 }) {
   const warning = capability.state === 'unsupported' || capability.state === 'over-limit';
@@ -256,13 +216,13 @@ function SceneShotDialogueAudioReferenceCard({
   onPickTake,
 }: {
   choice: ShotVideoTakeDialogueAudioReferenceChoice;
-  context: SceneDialogueAudioContextWithUrls | null;
+  context: SceneDialogueAudioWorkspaceWithUrls | null;
   profileImageUrl: string | null;
   actionDisabled: boolean;
   player: ReturnType<typeof useSceneDialogueAudioPlayer>;
   onToggleInclusion: (
-    dependencyId: string,
-    inclusion: 'include' | 'exclude' | null
+    selectionId: string,
+    included: boolean
   ) => Promise<void>;
   onPickTake: (dialogueId: string, takeId: string) => Promise<void>;
 }) {
@@ -278,7 +238,6 @@ function SceneShotDialogueAudioReferenceCard({
   const progress = selectedTake ? player.progressByUrl[selectedTake.url] ?? 0 : 0;
   const duration = selectedTake ? player.durationByUrl[selectedTake.url] ?? 0 : 0;
   const isPlaying = selectedTake ? player.playingUrl === selectedTake.url : false;
-  const needsGeneration = choice.card.state === 'selected-planned';
   const opensTakeDialog = choice.takeCount > 1;
   const body = (
     <DialogueCardBody
@@ -326,9 +285,7 @@ function SceneShotDialogueAudioReferenceCard({
               Pick
             </Button>
           ) : null}
-          {needsGeneration ? (
-            <DialogueReferenceCostBadge pricing={choice.card.pricing} />
-          ) : choice.audioState !== 'ready' ? (
+          {choice.audioState !== 'ready' ? (
             <Badge variant='outline'>{dialogueAudioStateLabel(choice)}</Badge>
           ) : null}
           {!choice.required ? (
@@ -338,8 +295,8 @@ function SceneShotDialogueAudioReferenceCard({
               unselectedLabel={`Include ${choice.speakerName} dialogue audio`}
               onToggleSelected={() =>
                 onToggleInclusion(
-                  choice.dependencyId,
-                  nextReferenceInclusion(choice)
+                  choice.selectionId,
+                  !choice.included
                 )
               }
             />
@@ -454,34 +411,6 @@ function dialogueAudioStateLabel(
   return choice.unavailableReason ?? 'Unavailable';
 }
 
-function DialogueReferenceCostBadge({
-  pricing,
-}: {
-  pricing: MediaGenerationDependencyPricing;
-}) {
-  if (pricing.state === 'priced') {
-    return (
-      <Badge
-        variant='accent'
-        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal text-foreground tabular-nums'
-      >
-        {formatEstimateUsd(pricing.estimatedUsd)}
-      </Badge>
-    );
-  }
-  if (pricing.state === 'unpriced') {
-    return (
-      <Badge
-        variant='outline'
-        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal tabular-nums'
-      >
-        Unpriced
-      </Badge>
-    );
-  }
-  return null;
-}
-
 function SceneShotDialogueAudioTakesDialog({
   choice,
   takes,
@@ -492,7 +421,7 @@ function SceneShotDialogueAudioTakesDialog({
 }: {
   choice: ShotVideoTakeDialogueAudioReferenceChoice;
   takes: NonNullable<
-    SceneDialogueAudioContextWithUrls['audioByDialogueId'][string]
+    SceneDialogueAudioWorkspaceWithUrls['audioByDialogueId'][string]
   >['takes'];
   actionDisabled: boolean;
   player: ReturnType<typeof useSceneDialogueAudioPlayer>;
@@ -544,14 +473,4 @@ function SceneShotDialogueAudioTakesDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function nextReferenceInclusion(choice: {
-  defaultIncluded: boolean;
-  included: boolean;
-}): 'include' | 'exclude' | null {
-  if (choice.included) {
-    return choice.defaultIncluded ? 'exclude' : null;
-  }
-  return choice.defaultIncluded ? null : 'include';
 }

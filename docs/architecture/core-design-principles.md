@@ -70,23 +70,22 @@ Decision history:
 - Persist user-editable generation specs before estimate or execution.
 - Store generation run records with spec, provider-payload, estimate, output,
   and diagnostic snapshots.
-- Keep generation cost estimates on a purpose-owned cost rail. Cost projection
-  uses model, route, and pricing inputs; it must not prepare provider payloads,
-  resolve files, or validate dependency readiness.
+- Build estimates from the same schema-validated provider request used by the
+  run boundary, including exact selected files and their current hashes.
 - Treat estimates as display-only. Require explicit live provider approval at
   the run boundary and store the durable run facts without a separate approval
   marker.
-- Dependency cost plans may estimate the full to-do list, but dependency plan
-  lines must not expose approval artifacts or become an execution schedule.
+- Do not create dependency cost plans, child specs, recursive estimates, or
+  non-current-request price projections.
 - Keep generation and media import separate. A generated file is not attached to
   project metadata until an import command succeeds.
 - Generated candidates are assets and may be treated as takes.
 - Durable chosen takes/assets should be modeled as selects.
 - Production-ready selects can be exported into `production-assets/`.
-- Use the accepted shared media generation purpose registry for common
-  generation lifecycle behavior.
-- Keep purpose-specific context, prompt/spec, provider-payload, output, and
-  import behavior inside purpose definitions.
+- Use focused Core purpose descriptors for target context, settings, and exact
+  reference guides while sharing one generic generation lifecycle.
+- Keep provider fields, request assembly, schema validation, pricing, and
+  execution in Engines. Keep focused attachment ownership in Core.
 - Do not introduce provider capability YAML, schema overlays, plugin-style
   purpose frameworks, or generic prompt frameworks unless concrete current
   implementation work proves the additional abstraction is needed.

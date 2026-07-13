@@ -1,21 +1,12 @@
 import type {
   GenerationInputFile,
-  GenerationPolicy,
   GenerationRequest,
 } from '../contracts.js';
 
 export function createGenerationProviderPayloadBase(
-  policy: GenerationPolicy,
   request: GenerationRequest
 ): Record<string, unknown> {
-  const payload: Record<string, unknown> = {
-    ...(request.parameters ?? {}),
-    ...(policy.parameters ?? {}),
-  };
-  if (request.prompt) {
-    payload.prompt = request.prompt;
-  }
-  return payload;
+  return structuredClone(request.payload);
 }
 
 export function assignGenerationInputFilePayloadValue(input: {

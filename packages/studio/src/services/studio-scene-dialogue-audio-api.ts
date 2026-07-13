@@ -1,8 +1,8 @@
 import type {
-  MediaGenerationEstimateReport,
-  SceneDialogueAudioContext,
-  SceneDialogueAudioGenerationSpec,
-  SceneDialogueAudioMutationReport,
+  SceneDialogueAudioEstimateReport,
+  SceneDialogueAudioWorkspace,
+  SceneDialogueAudioSetup,
+  SceneDialogueAudioWorkspaceMutationReport,
   SceneDialogueAudioTake,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
@@ -11,40 +11,40 @@ export type SceneDialogueAudioTakeWithUrl = SceneDialogueAudioTake & {
   url: string;
 };
 
-export type SceneDialogueAudioContextWithUrls = Omit<
-  SceneDialogueAudioContext,
+export type SceneDialogueAudioWorkspaceWithUrls = Omit<
+  SceneDialogueAudioWorkspace,
   'audioByDialogueId'
 > & {
   audioByDialogueId: Record<
     string,
-    Omit<SceneDialogueAudioContext['audioByDialogueId'][string], 'takes'> & {
+    Omit<SceneDialogueAudioWorkspace['audioByDialogueId'][string], 'takes'> & {
       takes: SceneDialogueAudioTakeWithUrl[];
     }
   >;
 };
 
 export interface SceneDialogueAudioMutationWithUrls {
-  context: SceneDialogueAudioContextWithUrls;
+  context: SceneDialogueAudioWorkspaceWithUrls;
   resourceKeys: string[];
 }
 
-export async function readSceneDialogueAudioContext(
+export async function readSceneDialogueAudioWorkspace(
   projectName: string,
   sceneId: string
-): Promise<SceneDialogueAudioContextWithUrls> {
+): Promise<SceneDialogueAudioWorkspaceWithUrls> {
   const response = await fetch(dialogueAudioPath(projectName, sceneId));
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  const body = (await response.json()) as { context: SceneDialogueAudioContext };
-  return decorateSceneDialogueAudioContext(projectName, sceneId, body.context);
+  const body = (await response.json()) as { context: SceneDialogueAudioWorkspace };
+  return decorateSceneDialogueAudioWorkspace(projectName, sceneId, body.context);
 }
 
 export async function saveSceneDialogueAudioSetup(
   projectName: string,
   sceneId: string,
   dialogueId: string,
-  setup: Partial<SceneDialogueAudioGenerationSpec>
+  setup: Partial<SceneDialogueAudioSetup>
 ): Promise<SceneDialogueAudioMutationWithUrls> {
   return sendMutation(
     `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/setup`,
@@ -59,8 +59,8 @@ export async function estimateSceneDialogueAudioDraft(
   projectName: string,
   sceneId: string,
   dialogueId: string,
-  spec: SceneDialogueAudioGenerationSpec
-): Promise<MediaGenerationEstimateReport> {
+  spec: SceneDialogueAudioSetup
+): Promise<SceneDialogueAudioEstimateReport> {
   const response = await fetch(
     `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/estimate`,
     {
@@ -72,7 +72,7 @@ export async function estimateSceneDialogueAudioDraft(
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  const body = (await response.json()) as { estimate: MediaGenerationEstimateReport };
+  const body = (await response.json()) as { estimate: SceneDialogueAudioEstimateReport };
   return body.estimate;
 }
 
@@ -81,7 +81,7 @@ export async function generateSceneDialogueAudioTake(
   sceneId: string,
   dialogueId: string,
   input: {
-    setup: Partial<SceneDialogueAudioGenerationSpec>;
+    setup: Partial<SceneDialogueAudioSetup>;
     simulate?: boolean;
     approveLiveProviderRun?: boolean;
   }
@@ -110,11 +110,11 @@ export async function deleteSceneDialogueAudioTake(
   );
 }
 
-export function decorateSceneDialogueAudioContext(
+export function decorateSceneDialogueAudioWorkspace(
   projectName: string,
   sceneId: string,
-  context: SceneDialogueAudioContext
-): SceneDialogueAudioContextWithUrls {
+  context: SceneDialogueAudioWorkspace
+): SceneDialogueAudioWorkspaceWithUrls {
   return {
     ...context,
     audioByDialogueId: Object.fromEntries(
@@ -147,9 +147,9 @@ async function sendMutation(
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  const report = (await response.json()) as SceneDialogueAudioMutationReport;
+  const report = (await response.json()) as SceneDialogueAudioWorkspaceMutationReport;
   return {
-    context: decorateSceneDialogueAudioContext(projectName, sceneId, report.context),
+    context: decorateSceneDialogueAudioWorkspace(projectName, sceneId, report.context),
     resourceKeys: report.resourceKeys,
   };
 }

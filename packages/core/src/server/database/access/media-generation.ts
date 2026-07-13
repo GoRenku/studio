@@ -1,271 +1,229 @@
-import { desc, eq, and } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import type {
-  MediaGenerationPurpose,
-  MediaGenerationRun,
-  MediaGenerationSpec,
-  MediaGenerationSpecRecord,
-} from '../../../client/index.js';
-import {
-  IMAGE_EDIT_GENERATION_PURPOSE,
-  IMAGE_CREATE_GENERATION_PURPOSE,
-  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
-  CAST_PROFILE_GENERATION_PURPOSE,
-  CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
-  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
-  LOCATION_HERO_GENERATION_PURPOSE,
-  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
-  LOOKBOOK_SHEET_GENERATION_PURPOSE,
-  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-} from '../../../client/index.js';
+  GenerationRun,
+  GenerationSpec,
+  GenerationSpecRecord,
+  GenerationTarget,
+  JsonValue,
+} from '../../../client/generation.js';
+import { isGenerationPurpose } from '../../generation/purposes.js';
 import { mediaGenerationRuns, mediaGenerationSpecs } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
-export type MediaGenerationSpecRow = typeof mediaGenerationSpecs.$inferSelect;
-export type MediaGenerationRunRow = typeof mediaGenerationRuns.$inferSelect;
-
-export function insertMediaGenerationSpec(
+export function insertGenerationSpecRecord(
   session: DatabaseSession,
-  input: {
-    id: string;
-    spec: MediaGenerationSpec;
-    title: string;
-    now: string;
-  }
-): MediaGenerationSpecRecord {
-  session.db
-    .insert(mediaGenerationSpecs)
-    .values({
-      id: input.id,
-      purpose: input.spec.purpose,
-      targetKind: input.spec.target.kind,
-      targetId: mediaGenerationTargetId(input.spec.target),
-      modelChoice: input.spec.modelChoice,
-      title: input.title,
-      specJson: JSON.stringify(input.spec),
-      createdAt: input.now,
-      updatedAt: input.now,
-    })
-    .run();
-  return requireMediaGenerationSpec(session, input.id);
-}
-
-export function updateMediaGenerationSpec(
-  session: DatabaseSession,
-  input: {
-    id: string;
-    spec: MediaGenerationSpec;
-    title: string;
-    now: string;
-  }
-): MediaGenerationSpecRecord {
-  requireMediaGenerationSpec(session, input.id);
-  session.db
-    .update(mediaGenerationSpecs)
-    .set({
-      purpose: input.spec.purpose,
-      targetKind: input.spec.target.kind,
-      targetId: mediaGenerationTargetId(input.spec.target),
-      modelChoice: input.spec.modelChoice,
-      title: input.title,
-      specJson: JSON.stringify(input.spec),
-      updatedAt: input.now,
-    })
-    .where(eq(mediaGenerationSpecs.id, input.id))
-    .run();
-  return requireMediaGenerationSpec(session, input.id);
-}
-
-export function readMediaGenerationSpec(
-  session: DatabaseSession,
-  id: string
-): MediaGenerationSpecRecord | null {
-  const row =
-    session.db
-      .select()
-      .from(mediaGenerationSpecs)
-      .where(eq(mediaGenerationSpecs.id, id))
-      .get() ?? null;
-  return row ? toSpecRecord(row) : null;
-}
-
-export function requireMediaGenerationSpec(
-  session: DatabaseSession,
-  id: string
-): MediaGenerationSpecRecord {
-  const record = readMediaGenerationSpec(session, id);
-  if (!record) {
-    throw new ProjectDataError(
-      'PROJECT_DATA260',
-      `Media generation spec was not found: ${id}.`
-    );
-  }
+  record: GenerationSpecRecord
+): GenerationSpecRecord {
+  session.db.insert(mediaGenerationSpecs).values(toSpecRow(record)).run();
   return record;
 }
 
-export function listMediaGenerationSpecs(
+export function updateGenerationSpecRecord(
   session: DatabaseSession,
-  input: {
-    purpose: MediaGenerationPurpose;
-    targetKind: 'project' | 'asset' | 'lookbook' | 'castMember' | 'location' | 'scene' | 'sceneDialogue' | 'sceneShotVideoTake';
-    targetId: string;
+  record: GenerationSpecRecord
+): GenerationSpecRecord {
+  const row = toSpecRow(record);
+  session.db
+    .update(mediaGenerationSpecs)
+    .set({
+      purpose: row.purpose,
+      targetKind: row.targetKind,
+      targetId: row.targetId,
+      provider: row.provider,
+      model: row.model,
+      title: row.title,
+      valuesJson: row.valuesJson,
+      referencesJson: row.referencesJson,
+      updatedAt: row.updatedAt,
+    })
+    .where(eq(mediaGenerationSpecs.id, record.id))
+    .run();
+  return record;
+}
+
+export function readGenerationSpecRecord(
+  session: DatabaseSession,
+  id: string
+): GenerationSpecRecord | null {
+  const row = session.db
+    .select()
+    .from(mediaGenerationSpecs)
+    .where(eq(mediaGenerationSpecs.id, id))
+    .get();
+  return row ? toSpecRecord(row) : null;
+}
+
+export function listGenerationSpecRecords(
+  session: DatabaseSession,
+  input: { purpose?: string; target?: GenerationTarget }
+): GenerationSpecRecord[] {
+  const conditions = [];
+  if (input.purpose) {
+    conditions.push(eq(mediaGenerationSpecs.purpose, input.purpose));
   }
-): MediaGenerationSpecRecord[] {
+  if (input.target) {
+    conditions.push(
+      eq(mediaGenerationSpecs.targetKind, input.target.kind),
+      eq(mediaGenerationSpecs.targetId, generationTargetId(input.target))
+    );
+  }
   return session.db
     .select()
     .from(mediaGenerationSpecs)
-    .where(
-      and(
-        eq(mediaGenerationSpecs.purpose, input.purpose),
-        eq(mediaGenerationSpecs.targetKind, input.targetKind),
-        eq(mediaGenerationSpecs.targetId, input.targetId)
-      )
-    )
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(mediaGenerationSpecs.updatedAt), desc(mediaGenerationSpecs.id))
     .all()
     .map(toSpecRecord);
 }
 
-export function insertMediaGenerationRun(
+export function insertGenerationRunRecord(
   session: DatabaseSession,
-  input: {
-    id: string;
-    specId: string;
-    spec: MediaGenerationSpec;
-    provider: 'fal-ai' | 'elevenlabs';
-    model: string;
-    providerPayload: Record<string, unknown>;
-    estimate: unknown;
-    simulated: boolean;
-    status: MediaGenerationRun['status'];
-    outputs: unknown;
-    diagnostics: unknown;
-    startedAt: string;
-    completedAt?: string | null;
-  }
-): MediaGenerationRun {
-  session.db
-    .insert(mediaGenerationRuns)
-    .values({
-      id: input.id,
-      specId: input.specId,
-      purpose: input.spec.purpose,
-      targetKind: input.spec.target.kind,
-      targetId: mediaGenerationTargetId(input.spec.target),
-      modelChoice: input.spec.modelChoice,
-      specSnapshotJson: JSON.stringify(input.spec),
-      provider: input.provider,
-      model: input.model,
-      providerPayloadJson: JSON.stringify(input.providerPayload),
-      estimateSnapshotJson: JSON.stringify(input.estimate),
-      simulated: input.simulated,
-      status: input.status,
-      outputsJson: JSON.stringify(input.outputs),
-      diagnosticsJson: JSON.stringify(input.diagnostics),
-      startedAt: input.startedAt,
-      completedAt: input.completedAt ?? null,
-    })
-    .run();
-  return requireMediaGenerationRun(session, input.id);
+  run: GenerationRun
+): GenerationRun {
+  session.db.insert(mediaGenerationRuns).values({
+    id: run.id,
+    specId: run.specId,
+    purpose: run.specSnapshot.purpose,
+    targetKind: run.specSnapshot.target.kind,
+    targetId: generationTargetId(run.specSnapshot.target),
+    provider: run.provider,
+    model: run.model,
+    specSnapshotJson: JSON.stringify(run.specSnapshot),
+    providerPayloadJson: JSON.stringify(run.providerPayload),
+    estimateJson: JSON.stringify(run.estimate),
+    approvalToken: run.estimate.approvalToken,
+    status: run.status,
+    outputsJson: JSON.stringify(run.outputs),
+    receiptJson: run.receipt === null ? null : JSON.stringify(run.receipt),
+    diagnosticsJson: JSON.stringify(run.diagnostics),
+    startedAt: run.startedAt,
+    completedAt: run.completedAt,
+  }).run();
+  return run;
 }
 
-export function requireMediaGenerationRun(
+export function readGenerationRunRecord(
   session: DatabaseSession,
   id: string
-): MediaGenerationRun {
-  const row =
-    session.db
-      .select()
-      .from(mediaGenerationRuns)
-      .where(eq(mediaGenerationRuns.id, id))
-      .get() ?? null;
-  if (!row) {
-    throw new ProjectDataError(
-      'PROJECT_DATA261',
-      `Media generation run was not found: ${id}.`
-    );
-  }
-  return toRunRecord(row);
-}
-
-export function listMediaGenerationRuns(
-  session: DatabaseSession
-): MediaGenerationRun[] {
-  return session.db
+): GenerationRun | null {
+  const row = session.db
     .select()
     .from(mediaGenerationRuns)
-    .orderBy(desc(mediaGenerationRuns.startedAt), desc(mediaGenerationRuns.id))
-    .all()
-    .map(toRunRecord);
-}
-
-function toSpecRecord(row: MediaGenerationSpecRow): MediaGenerationSpecRecord {
-  const spec = JSON.parse(row.specJson) as MediaGenerationSpec;
-  assertMediaGenerationPurpose(spec.purpose);
-  return {
-    id: row.id,
-    purpose: spec.purpose,
-    target: spec.target,
-    modelChoice: spec.modelChoice,
-    title: row.title,
-    spec,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function toRunRecord(row: MediaGenerationRunRow): MediaGenerationRun {
-  const spec = JSON.parse(row.specSnapshotJson) as MediaGenerationSpec;
-  assertMediaGenerationPurpose(spec.purpose);
+    .where(eq(mediaGenerationRuns.id, id))
+    .get();
+  if (!row) {
+    return null;
+  }
+  const specSnapshot = JSON.parse(row.specSnapshotJson) as GenerationSpec;
   return {
     id: row.id,
     specId: row.specId,
-    purpose: spec.purpose,
-    target: spec.target,
-    modelChoice: spec.modelChoice,
-    provider: row.provider as MediaGenerationRun['provider'],
+    specSnapshot,
+    provider: row.provider,
     model: row.model,
-    specSnapshot: spec,
-    providerPayload: JSON.parse(row.providerPayloadJson) as Record<string, unknown>,
-    estimateSnapshot: JSON.parse(row.estimateSnapshotJson) as unknown,
-    simulated: row.simulated,
-    status: row.status as MediaGenerationRun['status'],
-    outputs: JSON.parse(row.outputsJson) as unknown,
-    diagnostics: JSON.parse(row.diagnosticsJson) as unknown,
+    providerPayload: JSON.parse(row.providerPayloadJson) as Record<string, JsonValue>,
+    estimate: JSON.parse(row.estimateJson) as GenerationRun['estimate'],
+    status: row.status as GenerationRun['status'],
+    outputs: JSON.parse(row.outputsJson) as GenerationRun['outputs'],
+    receipt: row.receiptJson === null
+      ? null
+      : JSON.parse(row.receiptJson) as JsonValue,
+    diagnostics: JSON.parse(row.diagnosticsJson) as GenerationRun['diagnostics'],
     startedAt: row.startedAt,
     completedAt: row.completedAt,
   };
 }
 
-function assertMediaGenerationPurpose(
-  purpose: string
-): asserts purpose is MediaGenerationPurpose {
-  if (
-    purpose !== LOOKBOOK_IMAGE_GENERATION_PURPOSE &&
-    purpose !== IMAGE_EDIT_GENERATION_PURPOSE &&
-    purpose !== IMAGE_CREATE_GENERATION_PURPOSE &&
-    purpose !== LOOKBOOK_SHEET_GENERATION_PURPOSE &&
-    purpose !== CAST_CHARACTER_SHEET_GENERATION_PURPOSE &&
-    purpose !== CAST_PROFILE_GENERATION_PURPOSE &&
-    purpose !== CAST_VOICE_SAMPLE_GENERATION_PURPOSE &&
-    purpose !== SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE &&
-    purpose !== LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE &&
-    purpose !== LOCATION_HERO_GENERATION_PURPOSE &&
-    purpose !== SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE &&
-    purpose !== SHOT_VIDEO_TAKE_GENERATION_PURPOSE
-  ) {
-    throw new ProjectDataError(
-      'PROJECT_DATA262',
-      `Unsupported media generation spec purpose: ${purpose}.`
+export function listGenerationRunRecords(
+  session: DatabaseSession,
+  input: { specId?: string; purpose?: string; target?: GenerationTarget }
+): GenerationRun[] {
+  const conditions = [];
+  if (input.specId) {
+    conditions.push(eq(mediaGenerationRuns.specId, input.specId));
+  }
+  if (input.purpose) {
+    conditions.push(eq(mediaGenerationRuns.purpose, input.purpose));
+  }
+  if (input.target) {
+    conditions.push(
+      eq(mediaGenerationRuns.targetKind, input.target.kind),
+      eq(mediaGenerationRuns.targetId, generationTargetId(input.target))
     );
   }
+  return session.db
+    .select()
+    .from(mediaGenerationRuns)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(mediaGenerationRuns.startedAt), desc(mediaGenerationRuns.id))
+    .all()
+    .map((row) => readGenerationRunRecord(session, row.id)!)
 }
 
-function mediaGenerationTargetId(target: MediaGenerationSpec['target']): string {
-  if (target.kind === 'sceneDialogue') {
-    return `${target.sceneId}:${target.dialogueId}`;
+function toSpecRow(record: GenerationSpecRecord) {
+  return {
+    id: record.id,
+    purpose: record.spec.purpose,
+    targetKind: record.spec.target.kind,
+    targetId: generationTargetId(record.spec.target),
+    provider: record.spec.model?.provider ?? null,
+    model: record.spec.model?.model ?? null,
+    title: record.spec.title ?? null,
+    valuesJson: JSON.stringify(record.spec.values),
+    referencesJson: JSON.stringify(record.spec.references),
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
+function toSpecRecord(
+  row: typeof mediaGenerationSpecs.$inferSelect
+): GenerationSpecRecord {
+  if (!isGenerationPurpose(row.purpose)) {
+    throw new Error(`Stored generation purpose is not supported: ${row.purpose}.`);
   }
+  return {
+    id: row.id,
+    spec: {
+      purpose: row.purpose,
+      target: generationTarget(row.targetKind, row.targetId),
+      ...(row.provider !== null || row.model !== null
+        ? {
+            model: {
+              ...(row.provider !== null ? { provider: row.provider } : {}),
+              ...(row.model !== null ? { model: row.model } : {}),
+            },
+          }
+        : {}),
+      values: JSON.parse(row.valuesJson) as GenerationSpec['values'],
+      references: JSON.parse(row.referencesJson) as GenerationSpec['references'],
+      ...(row.title !== null ? { title: row.title } : {}),
+    },
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function generationTarget(kind: string, id: string): GenerationTarget {
+  if (
+    kind === 'project' ||
+    kind === 'asset' ||
+    kind === 'lookbook' ||
+    kind === 'castMember' ||
+    kind === 'location' ||
+    kind === 'scene' ||
+    kind === 'sceneDialogue' ||
+    kind === 'sceneShotVideoTake'
+  ) {
+    return { kind, id };
+  }
+  throw new ProjectDataError(
+    'CORE_GENERATION_TARGET_INVALID',
+    `Unsupported generation target kind in current database: ${kind}.`
+  );
+}
+
+function generationTargetId(target: GenerationTarget): string {
   return target.id;
 }

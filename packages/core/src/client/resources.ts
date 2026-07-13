@@ -12,7 +12,6 @@ import type {
 import type { ScreenplayAnalysisDocument } from './screenplay-analysis.js';
 import type {
   SceneShotListDocument,
-  ShotVideoTakeInputKind,
 } from './scene-shot-list.js';
 import type {
   ProjectCounts,
@@ -20,7 +19,7 @@ import type {
   ProjectInfo,
 } from './project.js';
 import type { ProjectLanguage } from './project-languages.js';
-import type { SceneDialogueAudioContext } from './scene-audio-generation.js';
+import type { SceneDialogueAudioWorkspace } from './scene-dialogue-audio-workspace.js';
 import type {
   InspirationAnalysis,
   InspirationFolder,
@@ -226,7 +225,7 @@ export interface SceneNarrativeResource {
   locationLabels: Record<string, string>;
   castMemberHandles: Record<string, string>;
   locationHandles: Record<string, string>;
-  dialogueAudio: SceneDialogueAudioContext;
+  dialogueAudio: SceneDialogueAudioWorkspace;
 }
 
 export interface CastDesignResource {
@@ -361,15 +360,10 @@ export interface DirectorSceneReadiness {
         missingShotIds: string[];
   };
   shotVideo: {
-    preflightAvailable: boolean;
+    generationAvailable: boolean;
     selectedTakeId: string | null;
     selectedTakeMode: 'continuous' | 'multi-cut' | null;
     selectedShotIds: string[];
-    missingPreparedInputKinds: ShotVideoTakeInputKind[];
-    selectedInputCount: number;
-    selectedTakeCount: number;
-    recommendedSpecialist: 'media-producer' | null;
-    recommendedCommand: string | null;
   };
 }
 

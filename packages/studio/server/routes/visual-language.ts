@@ -270,16 +270,15 @@ export function createVisualLanguageRoute({
           title?: string;
           oneLineSummary?: string;
         }>();
-        const report = await projectData.importLookbookImageMedia({
+        const report = await projectData.attachGenerationMedia({
           projectName,
-          lookbookId,
+          purpose: 'lookbook.image',
+          target: { kind: 'lookbook', id: lookbookId },
           sourceProjectRelativePath: body.projectRelativePath ?? '',
-          sections: body.sections as never,
           title: body.title,
-          oneLineSummary: body.oneLineSummary,
         });
         return c.json(
-          { image: report.imported, resourceKeys: report.resourceKeys },
+          { image: report.asset, resourceKeys: report.resourceKeys },
           201
         );
       } catch (error) {

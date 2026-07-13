@@ -1,30 +1,32 @@
 import {
-  updateGenerationPreviewSpec as coreUpdateGenerationPreviewSpec,
-  type StudioGenerationPreview,
+  createProjectDataService,
+  type GenerationPreviewResource,
+  type ProjectDataService,
 } from '@gorenku/studio-core/server';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
-import { buildStudioGenerationPreview } from '../projections/generation-preview.js';
+import { buildGenerationPreviewResource } from '../projections/generation-preview.js';
 
 export interface CreateGenerationPreviewRouteOptions {
-  updateGenerationPreviewSpec?: typeof coreUpdateGenerationPreviewSpec;
+  projectData?: Pick<ProjectDataService, 'updateGenerationPreviewResource'>;
   requireToken: MiddlewareHandler;
-  generationPreviewProjection?: StudioGenerationPreviewProjection;
+  generationPreviewProjection?: GenerationPreviewResourceProjection;
 }
 
-type StudioGenerationPreviewProjection = (input: {
+type GenerationPreviewResourceProjection = (input: {
   projectName: string;
-  preview: Awaited<ReturnType<typeof coreUpdateGenerationPreviewSpec>>;
-}) => Promise<StudioGenerationPreview>;
+  preview: Awaited<
+    ReturnType<ProjectDataService['updateGenerationPreviewResource']>
+  >;
+}) => Promise<GenerationPreviewResource>;
 
 export function createGenerationPreviewRoute(
   options: CreateGenerationPreviewRouteOptions
 ) {
-  const updateGenerationPreviewSpec =
-    options.updateGenerationPreviewSpec ?? coreUpdateGenerationPreviewSpec;
+  const projectData = options.projectData ?? createProjectDataService();
   const projectGenerationPreview =
-    options.generationPreviewProjection ?? buildStudioGenerationPreview;
+    options.generationPreviewProjection ?? buildGenerationPreviewResource;
   return new Hono().patch(
     '/generation-previews/specs/:specId',
     options.requireToken,
@@ -33,7 +35,7 @@ export function createGenerationPreviewRoute(
         const projectName = c.req.param('projectName') as string;
         const specId = c.req.param('specId') as string;
         const body = readGenerationPreviewUpdateBody(await c.req.json());
-        const preview = await updateGenerationPreviewSpec({
+        const preview = await projectData.updateGenerationPreviewResource({
           projectName,
           specId,
           prompt: body.prompt,
@@ -44,7 +46,7 @@ export function createGenerationPreviewRoute(
             projectName,
             preview,
           }),
-        } satisfies { preview: StudioGenerationPreview });
+        } satisfies { preview: GenerationPreviewResource });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -54,7 +56,7 @@ export function createGenerationPreviewRoute(
 
 function readGenerationPreviewUpdateBody(value: unknown): {
   prompt: { authoredText: string; negativeText?: string | null };
-  referenceSelections: Array<{ dependencyId: string; selected: boolean }>;
+  referenceSelections: Array<{ selectionId: string; selected: boolean }>;
 } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw requestError('Request body must be an object.');
@@ -99,7 +101,7 @@ function readGenerationPreviewUpdateBody(value: unknown): {
 function readReferenceSelection(
   value: unknown,
   index: number,
-): { dependencyId: string; selected: boolean } {
+): { selectionId: string; selected: boolean } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw requestError(
       `Request body referenceSelections[${index}] must be an object.`,
@@ -107,11 +109,11 @@ function readReferenceSelection(
   }
   const selection = value as Record<string, unknown>;
   if (
-    typeof selection.dependencyId !== 'string' ||
-    !selection.dependencyId.trim()
+    typeof selection.selectionId !== 'string' ||
+    !selection.selectionId.trim()
   ) {
     throw requestError(
-      `Request body referenceSelections[${index}].dependencyId must be a non-empty string.`,
+      `Request body referenceSelections[${index}].selectionId must be a non-empty string.`,
     );
   }
   if (typeof selection.selected !== 'boolean') {
@@ -120,7 +122,7 @@ function readReferenceSelection(
     );
   }
   return {
-    dependencyId: selection.dependencyId,
+    selectionId: selection.selectionId,
     selected: selection.selected,
   };
 }

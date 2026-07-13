@@ -183,7 +183,7 @@ export class MovieStudioPage {
   async expectSeededDialogsVisible(): Promise<void> {
     await this.openShotDetailTab('dialogs');
     await expect(this.page.getByText('Hold the gate.')).toBeVisible();
-    await expect(this.page.getByText('Urban')).toBeVisible();
+    await expect(this.page.getByText('Urban', { exact: true })).toBeVisible();
   }
 
   async expectSeededAiProductionVisible(): Promise<void> {
@@ -191,7 +191,9 @@ export class MovieStudioPage {
     await expect(
       this.page.getByRole('button', { name: 'Text only', exact: true })
     ).toHaveAttribute('aria-pressed', 'true');
-    await expect(this.page.getByText('Seedance')).toBeVisible();
+    await expect(
+      this.page.getByText('Seedance 2.0', { exact: true }).first()
+    ).toBeVisible();
   }
 
   async closeTakeWorkspace(): Promise<void> {
@@ -209,15 +211,15 @@ export class MovieStudioPage {
 
   async addSecondShotToCurrentTake(): Promise<void> {
     await this.page
-      .getByRole('button', { name: 'Cycle grouping for Shot 2' })
+      .getByRole('button', { name: 'Expand Select for Shot 2' })
       .click({ force: true });
-    await this.page.getByRole('button', { name: 'Review Groups' }).click();
+    await this.page.getByRole('button', { name: 'Edit Mode' }).click();
     await expect(
-      this.page.getByRole('dialog', { name: 'Review Take Groups' })
+      this.page.getByRole('dialog', { name: 'Edit Mode' })
     ).toBeVisible();
     await this.page.getByRole('button', { name: 'Apply' }).click();
     await expect(
-      this.page.getByRole('dialog', { name: 'Review Take Groups' })
+      this.page.getByRole('dialog', { name: 'Edit Mode' })
     ).toBeHidden();
     await this.page
       .getByRole('button', { name: 'Shot 2 — Crew reaction' })

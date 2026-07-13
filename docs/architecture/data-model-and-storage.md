@@ -49,11 +49,13 @@ Use the focused documents below for current direction.
   production settings, and status for shot-video planning. The
   Scene Shot List remains the ordered coverage source of truth; take
   generations own selected-shot membership for a video take attempt. Shot Video
-  Take state is versioned JSON: `version: 2` stores an explicit `structure`
+  Take state is versioned JSON: `version: 3` stores an explicit `structure`
   mode, either `continuous` with one `sharedDirection` for the grouped move or
   `multi-cut` with one `SceneShotVideoTakeDirection` per grouped shot id.
-  Reference selections live inside the relevant direction scope. AI Production
-  remains take-level in both modes.
+  Composition, motion, cast, location, and dialogue direction remain inside
+  the relevant structure scope. AI Production model values and exact reference
+  selections live in the generic `shot.video-take` Generation Spec instead of
+  take state.
 - Cast Design and Location Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
   `cast_design` and `location_design`, with one active document per owner

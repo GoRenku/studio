@@ -63,7 +63,7 @@ operational companions that teach agents how to use those contracts.
   provider voice id and sample audio are ready.
 - Keeps provider voice ids and sample assets in Cast Voice records, not Cast
   Design JSON.
-- Hands `cast.character-sheet` and `cast.profile` generation to
+- Hands `cast.video-character-sheet`, `cast.storyboard-character-sheet`, and `cast.profile` generation to
   `media-producer`.
 - Hands `cast.voice-sample` generation to `media-producer` when the user wants
   Renku to create the sample audio.
@@ -75,7 +75,7 @@ operational companions that teach agents how to use those contracts.
   `renku production-design`.
 - Owns spatial design, architecture, set dressing, materials, props,
   atmosphere, and continuity risks.
-- Hands `location.environment-sheet` generation to `media-producer`.
+- Hands `location.sheet` and `location.hero` generation to `media-producer`.
 
 `media-producer`
 
@@ -83,14 +83,12 @@ operational companions that teach agents how to use those contracts.
 - Creates or updates persisted generation specs.
 - Estimates cost and runs only approved specs.
 - Imports finished files separately with `renku media import`.
-- For `shot.video-take`, reads take authoring context before proposing
-  changes, compares validation/apply `prior` and `current` snapshots, and
-  re-reads persisted authoring context before final generation so prompt
-  assumptions match the final Studio-reviewed state.
-- For Shot Video Take first frames, last frames, reference images, and video
-  prompt sheets, authors generic `image.create` specs from the take authoring
-  context, then imports finished files with `renku media import --purpose
-  shot.input --kind <input-kind>`.
+- For `shot.video-take`, reads the exact Core purpose context for `take:<id>`,
+  places exact Shot/Lookbook/Cast/Location/dialogue references in stable guide
+  slots, and assigns them to real provider fields before validation.
+- For ad hoc Shot reference images, authors separate generic `image.create`
+  specs and later attaches the exact output file. External media is attached
+  without a synthetic spec or receipt.
 - Shows the Generation Preview Dialog with `renku generation preview show
   --file <media-generation-spec-json>` for transient specs or `--spec
   <media-generation-spec-id>` for saved specs before generating prompt-sheet

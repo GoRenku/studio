@@ -7,14 +7,6 @@ const alias = [
   },
 ];
 
-// Same split as vitest.config.ts: vi.mock needs a fresh module registry per
-// file, everything else shares one worker context so template fixtures build
-// once per run. A vi.mock call in a shared-context file fails loudly; add the
-// file here.
-const moduleMockedTests = [
-  'tests/integration/media-generation-dependency-draft-estimates.test.ts',
-];
-
 const sharedProjectSettings = {
   globals: true,
   environment: 'node' as const,
@@ -36,17 +28,7 @@ export default defineConfig({
           ...sharedProjectSettings,
           name: 'shared-context',
           include: ['tests/integration/**/*.test.ts'],
-          exclude: moduleMockedTests,
           isolate: false,
-        },
-        resolve: { alias },
-      },
-      {
-        test: {
-          ...sharedProjectSettings,
-          name: 'module-mocked',
-          include: moduleMockedTests,
-          isolate: true,
         },
         resolve: { alias },
       },

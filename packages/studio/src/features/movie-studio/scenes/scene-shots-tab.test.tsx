@@ -1,587 +1,190 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  SceneShot,
-  SceneShotListDocument,
-  ShotVideoTakeModelListReport,
-  ShotVideoTakeProductionEstimateReport,
-  ShotVideoTakeProductionPlanReport,
-} from '@gorenku/studio-core/client';
-import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
-import { readLocationAssets } from '@/services/studio-project-assets-api';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
-import {
-  createSceneShotVideoTake,
-  estimateShotVideoTakeProduction,
-  listSceneShotVideoTakes,
-  planShotVideoTakeProduction,
-  readShotVideoTakeProduction,
-  type SceneShotVideoTakeWithHttp,
-  type SceneShotVideoTakeOverviewResponse,
-  type ShotVideoTakeProductionContextResponse,
-} from '@/services/studio-shot-video-takes-api';
-import { SaveNotification } from '@/ui/save-notification';
-import type {
-  SceneShotDetailTab,
-  StudioSelection,
-} from '../movie-studio-selection';
-import { idleSaveNotification } from '../detail-save-notification';
+import { listShotVideoTakes } from '@/services/studio-shot-video-takes-api';
 import { SceneShotsTab } from './scene-shots-tab';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneShotListResource: vi.fn(),
 }));
-
 vi.mock('@/services/studio-project-assets-api', () => ({
   readLocationAssets: vi.fn().mockResolvedValue([]),
-  locationAssetFileUrl: vi.fn(
-    (
-      projectName: string,
-      locationId: string,
-      assetId: string,
-      fileId: string
-    ) =>
-      `/studio-api/projects/${projectName}/locations/${locationId}/assets/${assetId}/files/${fileId}`
-  ),
 }));
-
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  listSceneShotVideoTakes: vi.fn(),
-  createSceneShotVideoTake: vi.fn(),
-  readShotVideoTakeProduction: vi.fn(),
-  updateShotVideoTakeProduction: vi.fn(),
-  estimateShotVideoTakeProduction: vi.fn(),
-  planShotVideoTakeProduction: vi.fn(),
-  selectShotVideoTakeInput: vi.fn(),
-  clearShotVideoTakeInput: vi.fn(),
+  listShotVideoTakes: vi.fn(),
+  createShotVideoTake: vi.fn(),
+  readShotVideoTakeWorkspace: vi.fn(),
+  setShotVideoTakeGenerationSpec: vi.fn(),
+  estimateShotVideoTakeGeneration: vi.fn(),
+  setShotVideoTakeGenerationReference: vi.fn(),
+  setShotVideoTakeDirection: vi.fn(),
+  setShotVideoTakeStructure: vi.fn(),
 }));
-
-// jsdom lacks ResizeObserver, which the Radix Slider in the video stage uses.
-class ResizeObserverStub {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-(globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= ResizeObserverStub;
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
 
 describe('SceneShotsTab', () => {
   beforeEach(() => {
+    vi.mocked(listShotVideoTakes).mockReset().mockResolvedValue({ takes: [] });
     vi.mocked(readSceneShotListResource).mockReset();
-    vi.mocked(readLocationAssets).mockReset();
-    vi.mocked(readLocationAssets).mockResolvedValue([]);
-    vi.mocked(listSceneShotVideoTakes)
-      .mockReset()
-      .mockResolvedValue({ takes: [takeOverview(take())] });
-    vi.mocked(createSceneShotVideoTake)
-      .mockReset()
-      .mockResolvedValue(takeCreateReport(take()));
-    vi.mocked(readShotVideoTakeProduction)
-      .mockReset()
-      .mockResolvedValue({ context: productionContext(), models: productionModels() });
-    vi.mocked(estimateShotVideoTakeProduction)
-      .mockReset()
-      .mockResolvedValue(productionEstimate());
-    vi.mocked(planShotVideoTakeProduction)
-      .mockReset()
-      .mockResolvedValue(productionPlan());
   });
 
-  it('renders the empty state when there is no active shot list', async () => {
-    vi.mocked(readSceneShotListResource).mockResolvedValue(resource(null));
-
-    render(<SceneShotsTabHarness />);
-
-    expect(await screen.findByText('No shot list yet.')).not.toBeNull();
-  });
-
-  it('lists shots in order and updates the detail pane on selection', async () => {
+  it('renders the empty state when there is no active Shot List', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
-      resource(shotList())
+      resource(null) as never
     );
-
-    render(<SceneShotsTabHarness />);
-
-    const railRows = await screen.findAllByRole('button', { name: /^Shot \d+ —/ });
-    expect(railRows.map((row) => row.getAttribute('aria-label'))).toEqual([
-      'Shot 1 — Map study',
-      'Shot 2 — Council reaction',
-    ]);
-
-    // First shot is selected by default; its story beat shows in the detail pane.
-    expect(screen.getByText('Beat one.')).not.toBeNull();
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Shot 2 — Council reaction' })
-    );
-    expect(await screen.findByText('Beat two.')).not.toBeNull();
-    await waitFor(() => expect(readShotVideoTakeProduction).toHaveBeenCalled());
+    render(<SceneShotsTab projectName='constantinople' sceneId='scene_001' />);
+    expect(await screen.findByText('No shot list yet.')).toBeTruthy();
   });
 
-  it('pre-selects the rail row from a shotId deep link', async () => {
+  it('lists Shots in order and updates the detail pane on selection', async () => {
+    const onSelect = vi.fn();
     vi.mocked(readSceneShotListResource).mockResolvedValue(
-      resource(shotList())
+      resource([shot('shot_001', 'Gate Wide'), shot('shot_002', 'Urban Close')]) as never
     );
-
     render(
       <SceneShotsTab
         projectName='constantinople'
-        sceneId='scene_hook'
-        shotId='shot_002'
+        sceneId='scene_001'
+        onSelect={onSelect}
       />
     );
 
-    const selectedRow = await screen.findByRole('button', {
-      name: 'Shot 2 — Council reaction',
-    });
-    expect(selectedRow.getAttribute('aria-current')).toBe('true');
-    expect(screen.getByText('Beat two.')).not.toBeNull();
+    expect((await screen.findAllByText('Gate Wide')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByText('Urban Close'));
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ shotId: 'shot_002', shotTab: 'description' })
+    );
   });
 
-  it('preserves the active shot-detail tab when selecting another shot', async () => {
+  it('preselects the rail row from a Shot deep link', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
-      resource(shotList())
+      resource([shot('shot_001', 'Gate Wide'), shot('shot_002', 'Urban Close')]) as never
     );
-
-    render(<SceneShotsTabHarness initialShotTab='composition' />);
-
-    const compositionTab = await screen.findByRole('tab', {
-      name: 'Composition',
-    });
-    expect(compositionTab.getAttribute('aria-selected')).toBe('true');
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Shot 2 — Council reaction' })
+    render(
+      <SceneShotsTab
+        projectName='constantinople'
+        sceneId='scene_001'
+        shotId='shot_002'
+      />
     );
-
-    expect(
-      (await screen.findByRole('tab', { name: 'Composition' })).getAttribute(
-        'aria-selected'
-      )
-    ).toBe('true');
-    expect(
-      screen
-        .getByRole('button', { name: 'Shot 2 — Council reaction' })
-        .getAttribute('aria-current')
-    ).toBe('true');
+    expect(await screen.findByText('The subject acts in Urban Close.')).toBeTruthy();
   });
 
-  it('renders narrative description fields and not raw ids', async () => {
+  it('preserves the active Shot detail tab while selecting another Shot', async () => {
+    const onSelect = vi.fn();
     vi.mocked(readSceneShotListResource).mockResolvedValue(
-      resource(shotList())
+      resource([shot('shot_001', 'Gate Wide'), shot('shot_002', 'Urban Close')]) as never
     );
-
-    render(<SceneShotsTabHarness />);
-
-    expect(await screen.findByText('Establish the obsession.')).not.toBeNull();
-    expect(screen.getByText('Mehmed studies the map.')).not.toBeNull();
-    expect(screen.getByText('Mehmed')).not.toBeNull();
-    expect(screen.getByText('Council Chamber')).not.toBeNull();
-    expect(screen.queryByText('cast_mehmed')).toBeNull();
-    expect(screen.queryByText('loc_chamber')).toBeNull();
+    render(
+      <SceneShotsTab
+        projectName='constantinople'
+        sceneId='scene_001'
+        shotTab='composition'
+        onSelect={onSelect}
+      />
+    );
+    fireEvent.click(await screen.findByText('Urban Close'));
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ shotId: 'shot_002', shotTab: 'composition' })
+    );
   });
 
-  it('renders the consolidated shot detail tab bar', async () => {
+  it('renders narrative fields and not raw ids', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
-      resource(shotList())
+      resource([shot('shot_001', 'Gate Wide')]) as never
     );
+    render(<SceneShotsTab projectName='constantinople' sceneId='scene_001' />);
+    expect(await screen.findByText('The subject acts in Gate Wide.')).toBeTruthy();
+    expect(screen.queryByText('shot_001')).toBeNull();
+  });
 
-    render(<SceneShotsTabHarness />);
-
-    expect(await screen.findByRole('tab', { name: 'Description' })).not.toBeNull();
-    expect(screen.getByRole('tab', { name: 'Composition' })).not.toBeNull();
-    expect(screen.getByRole('tab', { name: 'Motion' })).not.toBeNull();
-    expect(screen.getByRole('tab', { name: 'References' })).not.toBeNull();
-    expect(screen.getByRole('tab', { name: 'AI Production' })).not.toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Lookbook' })).toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Cast' })).toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Location' })).toBeNull();
+  it('renders the consolidated Shot detail tab bar', async () => {
+    vi.mocked(readSceneShotListResource).mockResolvedValue(
+      resource([shot('shot_001', 'Gate Wide')]) as never
+    );
+    render(<SceneShotsTab projectName='constantinople' sceneId='scene_001' />);
+    await screen.findAllByText('Gate Wide');
+    for (const label of [
+      'Description',
+      'Composition',
+      'Motion',
+      'Dialogs',
+      'References',
+      'AI Production',
+    ]) {
+      expect(screen.getByRole('tab', { name: label })).toBeTruthy();
+    }
   });
 
   it('shows the empty video stage with a disabled transport', async () => {
     vi.mocked(readSceneShotListResource).mockResolvedValue(
-      resource(shotList())
+      resource([shot('shot_001', 'Gate Wide')]) as never
     );
-
-    render(<SceneShotsTab projectName='constantinople' sceneId='scene_hook' />);
-
-    expect(await screen.findByText('No shot video yet')).not.toBeNull();
-    const playButton = screen.getByRole('button', { name: 'Play shot' });
-    expect(playButton.hasAttribute('disabled')).toBe(true);
+    render(<SceneShotsTab projectName='constantinople' sceneId='scene_001' />);
+    expect(await screen.findByText('No shot video yet')).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Play shot' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
   });
 });
 
-function SceneShotsTabHarness({
-  initialShotId,
-  initialShotTab,
-}: {
-  initialShotId?: string;
-  initialShotTab?: SceneShotDetailTab;
-} = {}) {
-  const [action, setAction] = React.useState<React.ReactNode | null>(null);
-  const [saveNotification, setSaveNotification] = React.useState(
-    idleSaveNotification
-  );
-  const [selection, setSelection] = React.useState<
-    Extract<StudioSelection, { type: 'scene' }>
-  >({
-    type: 'scene',
-    id: 'scene_hook',
-    sceneTab: 'shots',
-    ...(initialShotId ? { shotId: initialShotId } : {}),
-    ...(initialShotTab ? { shotTab: initialShotTab } : {}),
-  });
-  return (
-    <>
-      <div>{action}</div>
-      <SaveNotification status={saveNotification} />
-      <SceneShotsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        shotId={selection.shotId}
-        shotTab={selection.shotTab}
-        onSelect={(nextSelection) => {
-          if (nextSelection.type === 'scene') {
-            setSelection(nextSelection);
-          }
-        }}
-        onHeaderActionChange={setAction}
-        onSaveNotificationChange={setSaveNotification}
-      />
-    </>
-  );
-}
-
-function shot(id: string, title: string, storyBeat: string): SceneShot {
-  return {
-    shotId: id,
-    title,
-    storyBeat,
-    narrativePurpose: 'Establish the obsession.',
-    description: 'Mehmed studies the map.',
-    shotType: 'wide',
-    subject: 'Mehmed and the map',
-    action: 'He studies in silence.',
-    dialogue: [],
-    coveredBlockIndexes: [0],
-    castMemberIds: ['cast_mehmed'],
-    locationIds: ['loc_chamber'],
-  };
-}
-
-function shotList(
-  overrides: Partial<SceneShotListDocument> = {}
-): SceneShotListDocument {
-  return {
-    kind: 'sceneShotList',
-    sceneId: 'scene_hook',
-    title: 'Council chamber coverage',
-    summary: 'A restrained coverage plan.',
-    coverageStrategy: 'Hold the table in one composed frame.',
-    shots: [
-      shot('shot_001', 'Map study', 'Beat one.'),
-      shot('shot_002', 'Council reaction', 'Beat two.'),
-    ],
-    ...overrides,
-  };
-}
-
-function resource(
-  activeShotList: SceneShotListDocument | null
-): SceneShotListResourceResponse {
+function resource(shots: ReturnType<typeof shot>[] | null) {
   return {
     scene: {
-      id: 'scene_hook',
-      sequenceId: 'seq_offer',
-      title: 'The Sound That Opens Stone',
+      id: 'scene_001',
+      sequenceId: 'sequence_001',
+      title: 'The Gate',
+      setting: { locationIds: [] },
     },
     sequence: {
-      id: 'seq_offer',
-      actId: 'act_one',
+      id: 'sequence_001',
+      actId: 'act_001',
       number: 1,
-      title: 'The Sound That Opens Stone',
+      title: 'Opening',
       sceneCount: 1,
     },
     act: {
-      id: 'act_one',
-      title: 'The Offer',
+      id: 'act_001',
+      title: 'Act 1',
       sequenceCount: 1,
       sceneCount: 1,
     },
     projectAspectRatio: '16:9',
-    activeShotListId: activeShotList ? 'shot_list_hook' : null,
-    activeShotList,
+    activeShotListId: shots ? 'shot_list_001' : null,
+    activeShotList: shots
+      ? {
+          id: 'shot_list_001',
+          title: 'Shots',
+          summary: 'Coverage.',
+          coverageStrategy: 'Continuous',
+          shots,
+        }
+      : null,
     storyboardImagesByShotId: {},
-    castMemberLabels: { cast_mehmed: 'Mehmed' },
+    castMemberLabels: {},
     castMemberImages: {},
-    locationLabels: { loc_chamber: 'Council Chamber' },
+    locationLabels: {},
   };
 }
 
-function take(): SceneShotVideoTakeWithHttp {
+function shot(shotId: string, title: string) {
   return {
-    takeId: 'take_hook',
-    sceneId: 'scene_hook',
-    sourceShotListId: 'shot_list_hook',
-    shotIds: ['shot_001'],
-    title: 'Shot Video Take hook',
-    picked: false,
-    video: null,
-    state: emptyTakeState({ inputModeId: 'text-only' }),
-    createdAt: '',
-    updatedAt: '',
-    status: {
-      editability: {
-        state: 'editable',
-        diagnostics: [],
-        message: 'This take is editable.',
-      },
-      resolvability: {
-        state: 'resolvable',
-        diagnostics: [],
-        message: 'All tracked take references resolve.',
-      },
-      runnability: {
-        state: 'not-evaluated',
-        diagnostics: [],
-        message: 'Run readiness is evaluated by shot-video preflight.',
-      },
-      archive: { state: 'active', message: 'This take is active.' },
-      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
-    },
-  };
-}
-
-function takeOverview(
-  value: SceneShotVideoTakeWithHttp
-): SceneShotVideoTakeOverviewResponse {
-  return {
-    take: value,
-    sourceShotList: {
-      id: value.sourceShotListId,
-      title: 'Council chamber coverage',
-      summary: 'A restrained coverage plan.',
-      createdAt: value.createdAt,
-      updatedAt: value.updatedAt,
-      isActive: true,
-    },
-    displayShots: shotList().shots,
-    overviewShotIds: [...value.shotIds],
-    storyboardImages: [],
-  };
-}
-
-function takeCreateReport(value: SceneShotVideoTakeWithHttp) {
-  return {
-    overview: takeOverview(value),
-    resourceKeys: [],
-  };
-}
-
-function productionContext(): ShotVideoTakeProductionContextResponse {
-  return {
-    purpose: 'shot.video-take',
-    target: {
-      kind: 'sceneShotVideoTake',
-      id: 'take_hook',
-      sceneId: 'scene_hook',
-      takeId: 'take_hook',
-      shotIds: ['shot_001'],
-    },
-    project: { name: 'constantinople', title: 'Constantinople', aspectRatio: '16:9' },
-    scene: {
-      id: 'scene_hook',
-      title: 'The Sound That Opens Stone',
-      setting: {},
-      storyFunction: [],
-    },
-    shotList: {
-      id: 'shot_list_hook',
-      title: 'Council chamber coverage',
-      summary: 'A restrained coverage plan.',
-      createdAt: '',
-      updatedAt: '',
-      isActive: true,
-    },
-    take: take(),
-    shots: [shot('shot_001', 'Map study', 'Beat one.')],
-    displayShots: [shot('shot_001', 'Map study', 'Beat one.')],
-    selectedCast: [],
-    selectedLocations: [],
-    activeLookbook: null,
-    storyboardImages: [],
-    mediaInputs: [],
-    defaults: {
-      inputModeId: 'text-only',
-      imageDependencyModelChoice: 'fal-ai/nano-banana-2',
-      parameterValues: {},
-    },
-    shotGroupMode: 'single-shot',
-    resourceKeys: [],
-  };
-}
-
-function emptyTakeState(production = {}) {
-  return {
-    version: 2 as const,
-    structure: {
-      mode: 'continuous' as const,
-      sharedDirection: {
-        referenceSelections: {
-          dependencyInclusions: {},
-          selectedCharacterSheetAssetIds: {},
-          selectedLocationSheetAssetIds: {},
-          selectedLookbookSheetIds: [],
-          selectedDialogueAudioTakeIds: {},
-        },
-      },
-    },
-    production,
-  };
-}
-
-function productionModels(): ShotVideoTakeModelListReport {
-  return {
-    purpose: 'shot.video-take',
-    target: productionContext().target,
-    inputModeId: 'text-only',
-    shotGroupMode: 'single-shot',
-    defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
-    models: [],
-  };
-}
-
-function productionEstimate(): ShotVideoTakeProductionEstimateReport {
-  return {
-    target: productionContext().target,
-    take: productionContext().take,
-    inputModeId: 'text-only',
-    shotGroupMode: 'single-shot',
-    modelChoice: 'fal-ai/bytedance/seedance-2.0',
-    estimate: null,
-    issues: [],
-  };
-}
-
-function productionPlan(): ShotVideoTakeProductionPlanReport {
-  const context = productionContext();
-  return {
-    target: context.target,
-    take: context.take,
-    finalPrompt: null,
-    plan: {
-      planId: 'plan_hook',
-      request: {
-        projectId: 'project_hook',
-        sceneId: 'scene_hook',
-        shotListId: 'shot_list_hook',
-        takeId: 'take_hook',
-        inputMode: 'text-only',
-        shotGroupMode: 'single-shot',
-        modelChoice: 'fal-ai/bytedance/seedance-2.0',
-        routeSettings: {},
-        inputPolicy: { defaultMode: 'auto' },
-      },
-      model: {
-        choice: 'fal-ai/bytedance/seedance-2.0',
-        label: 'Seedance 2.0',
-        version: '2.0',
-        provider: 'fal-ai',
-      },
-      route: {
-        inputMode: 'text-only',
-        shotGroupMode: 'single-shot',
-        providerModel: 'bytedance/seedance-2.0/text-to-video',
-        mode: 'text-to-video',
-        inputRoles: [],
-        parameters: [],
-      },
-      dependencyInventory: {
-        rootPurpose: 'shot.video-take',
-        rootTarget: context.target,
-        dependencies: [],
-        rootGeneration: {
-          id: 'root:shot.video-take',
-          purpose: 'shot.video-take',
-          target: context.target,
-          label: 'Final video take',
-          mediaKind: 'video',
-          pricing: { state: 'priced', estimatedUsd: 0 },
-          canCreateSpec: true,
-          blockedReason: null,
-          estimate: null,
-          diagnostics: [],
-        },
-        estimate: {
-          state: 'complete',
-          estimatedTotalUsd: 0,
-          pricedDependencyCount: 0,
-          unpricedDependencyCount: 0,
-          unavailableDependencyCount: 0,
-          requiresPriceOverride: false,
-        },
-        diagnostics: [],
-        agentChecklist: [],
-      },
-      lines: [],
-      estimate: {
-        state: 'complete',
-        estimatedTotalUsd: 0,
-        pricedLineCount: 0,
-        unpricedLineCount: 0,
-        missingLineCount: 0,
-        requiresPriceOverride: false,
-      },
-      diagnostics: [],
-      finalEstimate: null,
-    },
-    references: {
-      general: [],
-      lookbook: [],
-      dialogueAudio: [],
-      dialogueAudioCapability: {
-        state: 'ok',
-        supported: false,
-        selectedCount: 0,
-        maxCount: null,
-        modelLabel: 'Seedance 2.0',
-        message: 'This model does not use audio references',
-        diagnostics: [],
-      },
-      castMembers: [],
-      locations: [
-        {
-          locationId: 'loc_chamber',
-          name: 'Council Chamber',
-          selectedForShot: true,
-          defaultSelectedForShot: true,
-          selectedLocationSheetAssetId: null,
-          environmentSheets: [
-            {
-              id: 'loc_chamber:planned-environment-sheet',
-              locationId: 'loc_chamber',
-              assetId: null,
-              title: 'Council Chamber',
-              description: null,
-              selected: true,
-              card: {
-                state: 'selected-planned',
-                mediaKind: 'image',
-                defaultIncluded: true,
-                included: true,
-                required: false,
-                inclusionOverride: null,
-                pricing: { state: 'not-applicable', estimatedUsd: null },
-                previews: [],
-                diagnostics: [],
-              },
-            },
-          ],
-          diagnostics: [],
-        },
-      ],
-    },
-    diagnostics: [],
+    shotId,
+    title,
+    storyBeat: `The beat for ${title}.`,
+    narrativePurpose: `The purpose of ${title}.`,
+    description: `The description for ${title}.`,
+    shotType: 'Wide',
+    subject: 'The subject',
+    action: `The subject acts in ${title}.`,
+    dialogue: [],
+    coveredBlockIndexes: [0],
+    castMemberIds: [],
+    locationIds: [],
   };
 }

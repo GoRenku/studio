@@ -9,7 +9,7 @@ import {
 } from '@/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
-import type { SceneDialogueAudioContextWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
 
 interface SceneDialogueCardProps {
   block: Extract<Block, { type: 'dialogue' }>;
@@ -35,7 +35,7 @@ export function SceneDialogueCard({
     : fallbackName;
   const dialogueId = block.dialogueId ?? null;
   const dialogueAudio =
-    resource.dialogueAudio as SceneDialogueAudioContextWithUrls;
+    resource.dialogueAudio as SceneDialogueAudioWorkspaceWithUrls;
   const savedAudio = dialogueId
     ? dialogueAudio.audioByDialogueId[dialogueId] ?? null
     : null;

@@ -99,16 +99,13 @@ pnpm --filter @gorenku/studio-core test:integration
 
 The Core integration bucket includes high-signal files such as:
 
-- `packages/core/tests/integration/media-generation-dependency-inventory.test.ts`
-- `packages/core/tests/integration/media-generation-purpose-lifecycle-matrix.test.ts`
-- `packages/core/tests/integration/media-generation-registry-contract.test.ts`
+- `packages/core/tests/integration/context-first-generation-lifecycle.test.ts`
+- `packages/core/tests/integration/focused-generation-workspaces.test.ts`
 
-`media-generation-dependency-inventory.test.ts` is especially important. It
-checks the real dependency planner across generated dependencies, selected
-assets, pricing, structured diagnostics, recursive dependency handling, and
-final plan behavior. This is valuable final verification. It should not be run
-over and over during small edits unless the current change directly touches that
-planner.
+These tests exercise the generic lifecycle and focused Studio use cases through
+real temporary project databases. They verify exact references, direct
+estimates, attachment/provenance, take state, and structured failure boundaries
+without a live provider call.
 
 ### Studio
 
@@ -137,7 +134,7 @@ That integration bucket includes:
 
 These tests are not useless. The estimate matrix test is particularly valuable:
 it protects the AI Production pricing matrix, route coverage, route
-serialization, cost totals, graph estimates, and model/input-mode permutations.
+serialization, direct-request estimates, and model/input-mode permutations.
 It should be treated as protected final coverage. It should not be deleted to
 make development feel faster.
 
@@ -154,6 +151,7 @@ Studio browser e2e uses Playwright under `packages/studio/e2e/tests`.
 This suite is already separate from root `pnpm test`:
 
 ```bash
+pnpm --dir packages/studio test:e2e:compat
 pnpm --dir packages/studio test:e2e:smoke
 pnpm --dir packages/studio test:e2e
 ```
@@ -161,6 +159,11 @@ pnpm --dir packages/studio test:e2e
 The suite starts a real Studio test server, uses an isolated E2E Renku home, and
 runs with one worker. That is appropriate for final browser verification, not
 for routine inner-loop development.
+
+`test:e2e:compat` compares the final desktop experience with locked screenshots
+captured from the isolated pre-work checkout. It is required for backend
+replacements that preserve UI behavior. Keep dynamic masks narrow and pair
+every approved visible change with DOM/accessibility assertions.
 
 ### Engines
 
@@ -273,8 +276,9 @@ provider credentials.
 
 Examples of Tier 3 coverage:
 
-- Core media-generation dependency planner integration.
-- Core lifecycle registry and spec lifecycle integration.
+- Core context-first generation lifecycle integration.
+- Core focused Preview, Image Revision, Dialogue Audio, and Shot workspace
+  integration.
 - Studio in-process AI Production estimate matrix.
 - Studio take-state persistence through service/API paths.
 - Studio route plus React integration where a route response is rendered by a
@@ -525,21 +529,20 @@ Fast Core tests should catch most domain mistakes before integration tests run.
 
 Fast coverage should exist for:
 
-- dependency id building and parsing;
-- dependency slot declarations;
-- dependency inventory line building;
-- cost projection and approval;
-- purpose registry behavior;
-- lifecycle estimate behavior;
+- the complete purpose/settings/model inventory;
+- stable guide placements, exact candidates, and initial selections;
+- fixed setting enforcement and untouched provider defaults;
+- generic spec, preview, validation, direct estimate, approval, and run behavior;
+- focused attachment ownership and provenance;
+- Preview, Image Revision, Dialogue Audio, and Shot Video Take use cases;
 - structured diagnostics for invalid state;
 - shot video take persistence rules where a real database is not essential.
 
 Core integration should remain for:
 
-- full dependency planner behavior across realistic project data;
 - end-to-end lifecycle behavior through `ProjectDataService`;
-- interactions between selected assets, generated dependency drafts, pricing,
-  and structured diagnostics.
+- interactions between exact reference selections, provider validation, direct
+  pricing, focused attachment, Trash, and structured diagnostics.
 
 ### Studio Server
 

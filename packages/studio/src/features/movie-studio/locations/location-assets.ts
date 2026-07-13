@@ -3,19 +3,21 @@ import { imageAspectRatioFromDimensions } from '@/ui/image-aspect-ratio';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
 import { locationAssetFileUrl } from '@/services/studio-project-assets-api';
 
-export const LOCATION_ENVIRONMENT_SHEET_ROLE = 'environment_sheet';
-export const LOCATION_ENVIRONMENT_SHEET_TYPE = 'location_environment_sheet';
+export const LOCATION_SHEET_ROLES = ['environment_sheet', 'location-sheet'] as const;
+export const LOCATION_SHEET_TYPES = ['location_environment_sheet', 'location-sheet'] as const;
 export const LOCATION_HERO_ROLE = 'hero';
 export const LOCATION_HERO_TYPE = 'location_hero';
 
-export function locationEnvironmentSheetAssets(
+export function locationSheetAssets(
   assets: StudioAssetResponse[]
 ): StudioAssetResponse[] {
+  const roles = new Set<string>(LOCATION_SHEET_ROLES);
+  const types = new Set<string>(LOCATION_SHEET_TYPES);
   return sortLocationAssets(
     assets.filter(
       (asset) =>
-        asset.type === LOCATION_ENVIRONMENT_SHEET_TYPE &&
-        asset.role === LOCATION_ENVIRONMENT_SHEET_ROLE &&
+        types.has(asset.type) &&
+        roles.has(asset.role) &&
         Boolean(primaryImageFile(asset))
     )
   );

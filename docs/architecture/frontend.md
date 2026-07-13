@@ -26,6 +26,13 @@ The Studio browser app is organized around clear layers:
 Feature code must use the local UI primitives from `src/ui`; it must not write
 raw browser controls directly.
 
+Generation feature code is an experience projection consumer. Core supplies
+purpose context, exact reference eligibility, focused workspace state, and
+structured diagnostics; Engines supplies provider field capabilities. React may
+hold draft interaction state and bind those fields to existing controls, but it
+must not classify project assets, guess provider field names, construct missing
+generation work, or calculate cost.
+
 ## Shared UI Ownership
 
 Reusable frontend behavior belongs to the layer that owns its meaning.
@@ -131,6 +138,13 @@ Browser E2E coverage is owned by `packages/studio` and uses Playwright Test
 according to ADR 0037. E2E fixtures must create project data through core-owned
 commands and services, not through route-local shortcuts, React-local state, or
 direct SQLite writes.
+
+Backend replacements that promise an unchanged experience must capture the
+pre-work desktop state from an isolated checkout and compare the final Studio
+against locked Playwright screenshots. Dynamic project identifiers and media
+pixels may be masked narrowly; retained layout, copy, cards, controls, dialogs,
+and interaction assertions must remain visible. Approved product deltas need
+separate DOM assertions so a screenshot mask cannot silently broaden them.
 
 For media surfaces, verification should check:
 

@@ -1,11 +1,4 @@
-import type {
-  SceneShotVideoTakeProductionState,
-  SceneShotVideoTakeStructureMode,
-  ShotVideoTakeInputPolicy,
-} from '@gorenku/studio-core/client';
-import {
-  validateShotVideoTakeInputPolicy,
-} from '@gorenku/studio-core/server';
+import type { SceneShotVideoTakeStructureMode } from '@gorenku/studio-core/client';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -18,7 +11,7 @@ import {
   readHttpRequestRecord,
 } from './request-validation.js';
 
-const CONTEXT = 'scene shot video take production request';
+const CONTEXT = 'scene shot video take request';
 
 export interface SceneShotVideoTakeCreateRequest {
   shotListId: string;
@@ -30,10 +23,7 @@ export function readSceneShotVideoTakeCreateRequest(
   input: unknown
 ): SceneShotVideoTakeCreateRequest {
   const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
+  const record = requireRequest(input, issues);
   assertHttpRequestFields(
     record,
     [],
@@ -44,93 +34,45 @@ export function readSceneShotVideoTakeCreateRequest(
   );
   const shotListId = readStringValue(record.shotListId, ['shotListId'], issues);
   const shotIds = readStringArray(record.shotIds, ['shotIds'], issues);
-  const title =
-    record.title === undefined
-      ? undefined
-      : readStringValue(record.title, ['title'], issues);
-
-  if (Array.isArray(record.shotIds) && shotIds.length === 0) {
-    issues.push(
-      createDiagnosticError(
-        'STUDIO_SERVER343',
-        'shotIds must contain at least one shot id.',
-        { path: ['shotIds'], context: CONTEXT },
-        'Send at least one shot id.'
-      )
-    );
-  }
+  const title = record.title === undefined
+    ? undefined
+    : readStringValue(record.title, ['title'], issues);
+  requireShotIds(record.shotIds, shotIds, issues);
   finishOrThrow(issues);
-  return {
-    shotListId,
-    shotIds,
-    ...(title ? { title } : {}),
-  };
-}
-
-export interface SceneShotVideoTakeProductionRequest {
-  production: SceneShotVideoTakeProductionState;
-}
-
-export interface SceneShotVideoTakeShotsRequest {
-  shotIds: string[];
-}
-
-export interface SceneShotVideoTakeStructureModeRequest {
-  mode: SceneShotVideoTakeStructureMode;
-  sourceShotId?: string;
-}
-
-export interface SceneShotVideoTakePickRequest {
-  picked: boolean;
+  return { shotListId, shotIds, ...(title ? { title } : {}) };
 }
 
 export function readSceneShotVideoTakeShotsRequest(
   input: unknown
-): SceneShotVideoTakeShotsRequest {
+): { shotIds: string[] } {
   const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
+  const record = requireRequest(input, issues);
   assertHttpRequestFields(
     record,
     [],
     ['shotIds'],
     issues,
     CONTEXT,
-    'Send only the shotIds field.'
+    'Send only shotIds.'
   );
   const shotIds = readStringArray(record.shotIds, ['shotIds'], issues);
-
-  if (Array.isArray(record.shotIds) && shotIds.length === 0) {
-    issues.push(
-      createDiagnosticError(
-        'STUDIO_SERVER345',
-        'shotIds must contain at least one shot id.',
-        { path: ['shotIds'], context: CONTEXT },
-        'Send at least one shot id.'
-      )
-    );
-  }
+  requireShotIds(record.shotIds, shotIds, issues);
   finishOrThrow(issues);
   return { shotIds };
 }
 
 export function readSceneShotVideoTakePickRequest(
   input: unknown
-): SceneShotVideoTakePickRequest {
+): { picked: boolean } {
   const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
+  const record = requireRequest(input, issues);
   assertHttpRequestFields(
     record,
     [],
     ['picked'],
     issues,
     CONTEXT,
-    'Send only the picked field.'
+    'Send only picked.'
   );
   const picked = readRequiredHttpBoolean(record, ['picked'], issues, CONTEXT);
   finishOrThrow(issues);
@@ -139,12 +81,9 @@ export function readSceneShotVideoTakePickRequest(
 
 export function readSceneShotVideoTakeStructureModeRequest(
   input: unknown
-): SceneShotVideoTakeStructureModeRequest {
+): { mode: SceneShotVideoTakeStructureMode; sourceShotId?: string } {
   const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
+  const record = requireRequest(input, issues);
   assertHttpRequestFields(
     record,
     [],
@@ -154,271 +93,37 @@ export function readSceneShotVideoTakeStructureModeRequest(
     'Send only mode and sourceShotId.'
   );
   const mode = readStructureModeValue(record.mode, ['mode'], issues);
-  const sourceShotId =
-    record.sourceShotId === undefined
-      ? undefined
-      : readStringValue(record.sourceShotId, ['sourceShotId'], issues);
+  const sourceShotId = record.sourceShotId === undefined
+    ? undefined
+    : readStringValue(record.sourceShotId, ['sourceShotId'], issues);
   finishOrThrow(issues);
-  return {
-    mode,
-    ...(sourceShotId ? { sourceShotId } : {}),
-  };
+  return { mode, ...(sourceShotId ? { sourceShotId } : {}) };
 }
 
-export function readSceneShotVideoTakeProductionRequest(
-  input: unknown
-): SceneShotVideoTakeProductionRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['production'],
-    issues,
-    CONTEXT,
-    'Send only the production field.'
-  );
-  const production = readProductionValue(record.production, ['production'], issues);
-  finishOrThrow(issues);
-  return { production };
-}
-
-export interface ShotVideoTakeProductionPlanRequest {
-  production?: SceneShotVideoTakeProductionState;
-  inputPolicy?: ShotVideoTakeInputPolicy;
-  selectedShotId?: string;
-}
-
-export function readShotVideoTakeProductionPlanRequest(
-  input: unknown
-): ShotVideoTakeProductionPlanRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['production', 'inputPolicy', 'selectedShotId'],
-    issues,
-    CONTEXT,
-    'Send only the production, inputPolicy, and selectedShotId fields.'
-  );
-
-  const production =
-    record.production === undefined
-      ? undefined
-      : readProductionValue(record.production, ['production'], issues);
-  const selectedShotId =
-    record.selectedShotId === undefined
-      ? undefined
-      : readStringValue(record.selectedShotId, ['selectedShotId'], issues);
-  finishOrThrow(issues);
-  return {
-    ...(production ? { production } : {}),
-    ...(selectedShotId ? { selectedShotId } : {}),
-    inputPolicy:
-      record.inputPolicy === undefined
-        ? undefined
-        : validateShotVideoTakeInputPolicy(record.inputPolicy),
-  };
-}
-
-export interface ShotCastCharacterSheetReferenceRequest {
-  shotId?: string;
-  castMemberId: string;
-  assetId: string | null;
-}
-
-export function readShotCastCharacterSheetReferenceRequest(
-  input: unknown
-): ShotCastCharacterSheetReferenceRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['shotId', 'castMemberId', 'assetId'],
-    issues,
-    CONTEXT,
-    'Send only the shotId, castMemberId, and assetId fields.'
-  );
-  const shotId =
-    record.shotId === undefined
-      ? undefined
-      : readStringValue(record.shotId, ['shotId'], issues);
-  const castMemberId = readStringValue(record.castMemberId, ['castMemberId'], issues);
-  const assetId =
-    record.assetId === null
-      ? null
-      : readStringValue(record.assetId, ['assetId'], issues);
-  finishOrThrow(issues);
-  return { ...(shotId ? { shotId } : {}), castMemberId, assetId };
-}
-
-export interface ShotLocationSheetReferenceRequest {
-  shotId?: string;
-  locationId: string;
-  assetId: string | null;
-}
-
-export function readShotLocationSheetReferenceRequest(
-  input: unknown
-): ShotLocationSheetReferenceRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['shotId', 'locationId', 'assetId'],
-    issues,
-    CONTEXT,
-    'Send only the shotId, locationId, and assetId fields.'
-  );
-  const shotId =
-    record.shotId === undefined
-      ? undefined
-      : readStringValue(record.shotId, ['shotId'], issues);
-  const locationId = readStringValue(record.locationId, ['locationId'], issues);
-  const assetId =
-    record.assetId === null
-      ? null
-      : readStringValue(record.assetId, ['assetId'], issues);
-  finishOrThrow(issues);
-  return { ...(shotId ? { shotId } : {}), locationId, assetId };
-}
-
-export interface ShotLookbookReferenceRequest {
-  shotId?: string;
-  lookbookSheetId: string | null;
-}
-
-export function readShotLookbookReferenceRequest(
-  input: unknown
-): ShotLookbookReferenceRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['shotId', 'lookbookSheetId'],
-    issues,
-    CONTEXT,
-    'Send only the shotId and lookbookSheetId fields.'
-  );
-  const shotId =
-    record.shotId === undefined
-      ? undefined
-      : readStringValue(record.shotId, ['shotId'], issues);
-  const lookbookSheetId =
-    record.lookbookSheetId === null
-      ? null
-      : readStringValue(record.lookbookSheetId, ['lookbookSheetId'], issues);
-  finishOrThrow(issues);
-  return { ...(shotId ? { shotId } : {}), lookbookSheetId };
-}
-
-export interface ShotReferenceInclusionRequest {
-  shotId?: string;
-  dependencyId: string;
-  inclusion: 'include' | 'exclude' | null;
-}
-
-export function readShotReferenceInclusionRequest(
-  input: unknown
-): ShotReferenceInclusionRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['shotId', 'dependencyId', 'inclusion'],
-    issues,
-    CONTEXT,
-    'Send only the shotId, dependencyId, and inclusion fields.'
-  );
-  const shotId =
-    record.shotId === undefined
-      ? undefined
-      : readStringValue(record.shotId, ['shotId'], issues);
-  const dependencyId = readStringValue(record.dependencyId, ['dependencyId'], issues);
-  const inclusion = readReferenceInclusionValue(
-    record.inclusion,
-    ['inclusion'],
-    issues
-  );
-  finishOrThrow(issues);
-  return { ...(shotId ? { shotId } : {}), dependencyId, inclusion };
-}
-
-export interface TakeDialogueAudioSelectionRequest {
-  shotId?: string;
-  dialogueId: string;
-  takeId: string | null;
-}
-
-export function readTakeDialogueAudioSelectionRequest(
-  input: unknown
-): TakeDialogueAudioSelectionRequest {
-  const issues: DiagnosticIssue[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) {
-    throwRequestError(issues);
-  }
-  assertHttpRequestFields(
-    record,
-    [],
-    ['shotId', 'dialogueId', 'takeId'],
-    issues,
-    CONTEXT,
-    'Send only the shotId, dialogueId, and takeId fields.'
-  );
-  const shotId =
-    record.shotId === undefined
-      ? undefined
-      : readStringValue(record.shotId, ['shotId'], issues);
-  const dialogueId = readStringValue(record.dialogueId, ['dialogueId'], issues);
-  const takeId =
-    record.takeId === null
-      ? null
-      : readStringValue(record.takeId, ['takeId'], issues);
-  finishOrThrow(issues);
-  return { ...(shotId ? { shotId } : {}), dialogueId, takeId };
-}
-
-function readProductionValue(
-  value: unknown,
-  path: string[],
+function requireRequest(
+  input: unknown,
   issues: DiagnosticIssue[]
-): SceneShotVideoTakeProductionState {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+): Record<string, unknown> {
+  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
+  if (!record) throwRequestError(issues);
+  return record;
+}
+
+function requireShotIds(
+  raw: unknown,
+  shotIds: string[],
+  issues: DiagnosticIssue[]
+): void {
+  if (Array.isArray(raw) && shotIds.length === 0) {
     issues.push(
       createDiagnosticError(
-        'STUDIO_SERVER340',
-        `${path.join('.')} must be an object.`,
-        { path, context: CONTEXT },
-        'Send the structured take production object.'
+        'STUDIO_SERVER343',
+        'shotIds must contain at least one Shot id.',
+        { path: ['shotIds'], context: CONTEXT },
+        'Send at least one Shot id.'
       )
     );
-    throwRequestError(issues);
   }
-  return value as SceneShotVideoTakeProductionState;
 }
 
 function readStructureModeValue(
@@ -426,15 +131,12 @@ function readStructureModeValue(
   path: string[],
   issues: DiagnosticIssue[]
 ): SceneShotVideoTakeStructureMode {
-  if (value === 'continuous' || value === 'multi-cut') {
-    return value;
-  }
+  if (value === 'continuous' || value === 'multi-cut') return value;
   issues.push(
     createDiagnosticError(
-      'STUDIO_SERVER352',
+      'STUDIO_SERVER344',
       'mode must be continuous or multi-cut.',
-      { path, context: CONTEXT },
-      'Send continuous or multi-cut.'
+      { path, context: CONTEXT }
     )
   );
   return 'continuous';
@@ -446,29 +148,12 @@ function readStringArray(
   issues: DiagnosticIssue[]
 ): string[] {
   if (!Array.isArray(value)) {
-    issues.push(
-      createDiagnosticError(
-        'STUDIO_SERVER342',
-        `${path.join('.')} must be an array.`,
-        { path, context: CONTEXT },
-        'Send an array of ids.'
-      )
-    );
+    issues.push(createDiagnosticError('STUDIO_SERVER342', 'Value must be an array.', { path, context: CONTEXT }));
     return [];
   }
-  return value.flatMap((item, index) => {
-    if (typeof item === 'string' && item.trim()) {
-      return [item];
-    }
-    issues.push(
-      createDiagnosticError(
-        'STUDIO_SERVER343',
-        `${path.join('.')} must contain only string ids.`,
-        { path: [...path, String(index)], context: CONTEXT },
-        'Send each id as a non-empty string.'
-      )
-    );
-    return [];
+  return value.flatMap((entry, index) => {
+    const result = readStringValue(entry, [...path, String(index)], issues);
+    return result ? [result] : [];
   });
 }
 
@@ -477,51 +162,20 @@ function readStringValue(
   path: string[],
   issues: DiagnosticIssue[]
 ): string {
-  if (typeof value === 'string' && value.trim()) {
-    return value;
-  }
-  issues.push(
-    createDiagnosticError(
-      'STUDIO_SERVER347',
-      `${path.join('.')} must be a string.`,
-      { path, context: CONTEXT },
-      'Send a non-empty string id.'
-    )
-  );
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  issues.push(createDiagnosticError('STUDIO_SERVER342', 'Value must be a non-empty string.', { path, context: CONTEXT }));
   return '';
-}
-
-function readReferenceInclusionValue(
-  value: unknown,
-  path: string[],
-  issues: DiagnosticIssue[]
-): 'include' | 'exclude' | null {
-  if (value === null || value === 'include' || value === 'exclude') {
-    return value;
-  }
-  issues.push(
-    createDiagnosticError(
-      'STUDIO_SERVER349',
-      `${path.join('.')} must be include, exclude, or null.`,
-      { path, context: CONTEXT },
-      'Send include, exclude, or null to clear the override.'
-    )
-  );
-  return null;
 }
 
 function finishOrThrow(issues: DiagnosticIssue[]): void {
   const result = buildDiagnosticResult(issues);
-  if (!result.valid) {
-    throwRequestError(result.issues);
-  }
+  if (!result.valid) throwRequestError(result.issues);
 }
 
 function throwRequestError(issues: DiagnosticIssue[]): never {
   throw createStructuredError({
     code: 'STUDIO_SERVER341',
-    message: 'Shot video take production request failed validation.',
+    message: 'Scene Shot Video Take request failed validation.',
     issues,
-    suggestion: 'Send the fields supported by the take route.',
   });
 }

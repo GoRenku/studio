@@ -16,6 +16,8 @@
     "e2e:build-deps": "pnpm --dir ../.. --filter @gorenku/studio-core... build",
     "pretest:e2e": "pnpm run e2e:build-deps",
     "test:e2e": "playwright test",
+    "pretest:e2e:compat": "pnpm run e2e:build-deps",
+    "test:e2e:compat": "playwright test --project=chromium-compatibility",
     "test:e2e:install-browsers": "playwright install chromium",
     "pretest:e2e:headed": "pnpm run e2e:build-deps",
     "test:e2e:headed": "playwright test --headed",

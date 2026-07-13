@@ -8,7 +8,6 @@ import type {
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
-  createRandomIdGenerator,
 } from '@gorenku/studio-core/server';
 import type { StudioE2eRuntime } from './studio-e2e-runtime';
 import { assertInsideStudioE2eRoot } from './studio-e2e-runtime';
@@ -123,14 +122,13 @@ export async function createShotVideoTakeMovieProject(input: {
     document: sampleShotList(ids),
     idGenerator: createDeterministicIdGenerator(),
   });
-  const takeReport = await projectData.createSceneShotVideoTake({
+  const takeReport = await projectData.createShotVideoTake({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
     sceneId: ids.sceneId,
     shotListId: shotList.shotList.id,
     shotIds: ['shot_001'],
     title: 'Gate pressure',
-    idGenerator: createDeterministicIdGenerator(),
   });
   const take = takeReport.overview.take;
 
@@ -141,7 +139,7 @@ export async function createShotVideoTakeMovieProject(input: {
     ids,
     takeId: take.takeId,
   });
-  await projectData.updateSceneShotVideoTakeDirection({
+  await projectData.setShotVideoTakeDirection({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
     sceneId: ids.sceneId,
@@ -170,16 +168,46 @@ export async function createShotVideoTakeMovieProject(input: {
       location: { locationId: ids.locationId },
     },
   });
-  await projectData.updateSceneShotVideoTakeProduction({
+  const generationWorkspace = await projectData.readShotVideoTakeWorkspace({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
     sceneId: ids.sceneId,
     takeId: take.takeId,
-    production: {
+  });
+  const textModel = generationWorkspace.generation.models.find(
+    (model) => model.label === 'Seedance 2.0' && model.supportedInputModes.includes('text-only')
+  );
+  if (!textModel) {
+    throw new Error('Shot video take E2E fixture could not find Seedance 2.0 text generation.');
+  }
+  await projectData.setShotVideoTakeGenerationSpec({
+    homeDir: input.runtime.homeDir,
+    projectName: input.projectName,
+    sceneId: ids.sceneId,
+    takeId: take.takeId,
+    setup: {
       inputModeId: 'text-only',
-      modelChoice: 'fal-ai/bytedance/seedance-2.0',
+      modelChoice: textModel.modelChoice,
       parameterValues: {},
     },
+  });
+  const workspace = await projectData.readShotVideoTakeWorkspace({
+    homeDir: input.runtime.homeDir,
+    projectName: input.projectName,
+    sceneId: ids.sceneId,
+    takeId: take.takeId,
+  });
+  const dialogueReference = workspace.generation?.references.dialogueAudio[0];
+  if (!dialogueReference) {
+    throw new Error('Shot video take E2E fixture could not find dialogue audio guidance.');
+  }
+  await projectData.setShotVideoTakeGenerationReference({
+    homeDir: input.runtime.homeDir,
+    projectName: input.projectName,
+    sceneId: ids.sceneId,
+    takeId: take.takeId,
+    selectionId: dialogueReference.selectionId,
+    included: true,
   });
 
   return {
@@ -206,14 +234,22 @@ export async function importAdditionalCastProfileImage(input: {
     projectRelativePath: input.relativePath,
     contents: samplePng(),
   });
-  await projectData.importCastProfileMedia({
+  const attachment = await projectData.attachGenerationMedia({
     homeDir: input.runtime.homeDir,
     projectName: input.project.projectName,
-    castMemberId: input.project.castMemberId,
+    purpose: 'cast.profile',
+    target: { kind: 'castMember', id: input.project.castMemberId },
     sourceProjectRelativePath: input.relativePath,
     title: input.title,
+  });
+  await projectData.updateAssetReference({
+    homeDir: input.runtime.homeDir,
+    projectName: input.project.projectName,
+    target: { kind: 'castMember', castMemberId: input.project.castMemberId },
+    assetId: attachment.asset.assetId,
+    title: input.title,
     referenceName: input.title,
-    referencePurpose: `${input.title} profile image for browser E2E.`,
+    purpose: `${input.title} profile image for browser E2E.`,
   });
 }
 
@@ -230,13 +266,23 @@ export async function importAdditionalLocationSheet(input: {
     projectRelativePath: input.relativePath,
     contents: samplePng(),
   });
-  await projectData.importLocationEnvironmentSheetMedia({
+  const attachment = await projectData.attachGenerationMedia({
     homeDir: input.runtime.homeDir,
     projectName: input.project.projectName,
-    locationId: input.project.locationId,
+    purpose: 'location.sheet',
+    target: { kind: 'location', id: input.project.locationId },
     sourceProjectRelativePath: input.relativePath,
     title: input.title,
-    description: `${input.title} location sheet for browser E2E.`,
+  });
+  await projectData.updateAssetReference({
+    homeDir: input.runtime.homeDir,
+    projectName: input.project.projectName,
+    target: { kind: 'location', locationId: input.project.locationId },
+    assetId: attachment.asset.assetId,
+    title: input.title,
+    oneLineSummary: `${input.title} location sheet for browser E2E.`,
+    referenceName: input.title,
+    purpose: `${input.title} location sheet for browser E2E.`,
   });
 }
 
@@ -245,17 +291,16 @@ export async function createDiscardedTakeForTrash(input: {
   project: StudioE2eShotVideoTakeProject;
 }): Promise<void> {
   const projectData = createProjectDataService();
-  const takeReport = await projectData.createSceneShotVideoTake({
+  const takeReport = await projectData.createShotVideoTake({
     homeDir: input.runtime.homeDir,
     projectName: input.project.projectName,
     sceneId: input.project.sceneId,
     shotListId: input.project.shotListId,
     shotIds: [input.project.secondShotId],
     title: 'Trash restore candidate',
-    idGenerator: createRandomIdGenerator(),
   });
   const take = takeReport.overview.take;
-  await projectData.deleteSceneShotVideoTake({
+  await projectData.discardShotVideoTake({
     homeDir: input.runtime.homeDir,
     projectName: input.project.projectName,
     sceneId: input.project.sceneId,
@@ -490,43 +535,65 @@ async function seedTakeReferenceMedia(input: {
     contents: Buffer.from('urban voice sample'),
   });
 
-  const profile = await input.projectData.importCastProfileMedia({
+  const profile = await input.projectData.attachGenerationMedia({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
-    castMemberId: input.ids.castMemberId,
+    purpose: 'cast.profile',
+    target: { kind: 'castMember', id: input.ids.castMemberId },
     sourceProjectRelativePath: 'generated/media/urban-profile.png',
     title: 'Urban profile',
+  });
+  await input.projectData.updateAssetReference({
+    homeDir: input.runtime.homeDir,
+    projectName: input.projectName,
+    target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
+    assetId: profile.asset.assetId,
+    title: 'Urban profile',
     referenceName: 'urban-profile',
-    referencePurpose: 'Browser E2E selectable profile image.',
-    idGenerator,
+    purpose: 'Browser E2E selectable profile image.',
   });
   await input.projectData.createAssetSelect({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
     target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
-    assetId: profile.imported.assetId,
+    assetId: profile.asset.assetId,
   });
-  const characterSheet =
-    await input.projectData.importCastCharacterSheetMedia({
+  const characterSheet = await input.projectData.attachGenerationMedia({
       homeDir: input.runtime.homeDir,
       projectName: input.projectName,
-      castMemberId: input.ids.castMemberId,
+      purpose: 'cast.video-character-sheet',
+      target: { kind: 'castMember', id: input.ids.castMemberId },
       sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
       title: 'Urban character sheet',
-      referenceName: 'urban-character-sheet',
-      referencePurpose: 'Browser E2E character sheet reference.',
-      idGenerator,
-    });
+  });
+  await input.projectData.updateAssetReference({
+    homeDir: input.runtime.homeDir,
+    projectName: input.projectName,
+    target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
+    assetId: characterSheet.asset.assetId,
+    title: 'Urban character sheet',
+    referenceName: 'urban-character-sheet',
+    purpose: 'Browser E2E character sheet reference.',
+  });
   const locationSheet =
-    await input.projectData.importLocationEnvironmentSheetMedia({
+    await input.projectData.attachGenerationMedia({
       homeDir: input.runtime.homeDir,
       projectName: input.projectName,
-      locationId: input.ids.locationId,
+      purpose: 'location.sheet',
+      target: { kind: 'location', id: input.ids.locationId },
       sourceProjectRelativePath: 'generated/media/gate-location-sheet.png',
       title: 'Gate Location Sheet',
-      description: 'The gate, approach, and defensive masonry.',
-      idGenerator,
     });
+  await input.projectData.updateAssetReference({
+    homeDir: input.runtime.homeDir,
+    projectName: input.projectName,
+    target: { kind: 'location', locationId: input.ids.locationId },
+    assetId: locationSheet.asset.assetId,
+    title: 'Gate Location Sheet',
+    oneLineSummary: 'The gate, approach, and defensive masonry.',
+    referenceName: 'gate-location-sheet',
+    purpose: 'Browser E2E location sheet reference.',
+  });
   const lookbook = await input.projectData.createLookbook({
     projectName: input.projectName,
     homeDir: input.runtime.homeDir,
@@ -540,13 +607,13 @@ async function seedTakeReferenceMedia(input: {
     type: 'movie',
     lookbookId: lookbook.lookbook.id,
   });
-  const lookbookSheet = await input.projectData.importLookbookSheetMedia({
+  const lookbookSheet = await input.projectData.attachGenerationMedia({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
-    lookbookId: lookbook.lookbook.id,
+    purpose: 'lookbook.video-sheet',
+    target: { kind: 'lookbook', id: lookbook.lookbook.id },
     sourceProjectRelativePath: 'generated/media/lookbook-sheet.png',
     title: 'Imperial Wound Sheet',
-    idGenerator,
   });
   const voice = await input.projectData.attachCastVoice({
     homeDir: input.runtime.homeDir,
@@ -566,7 +633,7 @@ async function seedTakeReferenceMedia(input: {
       },
     },
   });
-  const dialogueAudio = await input.projectData.generateSceneDialogueAudioTake({
+  await input.projectData.generateSceneDialogueAudioTake({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
     sceneId: input.ids.sceneId,
@@ -580,48 +647,13 @@ async function seedTakeReferenceMedia(input: {
       languageCode: 'en',
     },
     simulate: true,
-    idGenerator,
-  });
-
-  await input.projectData.updateSceneShotVideoTakeCharacterSheetSelection({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: input.ids.sceneId,
-    takeId: input.takeId,
-    castMemberId: input.ids.castMemberId,
-    assetId: characterSheet.imported.assetId,
-  });
-  await input.projectData.updateSceneShotVideoTakeLocationSheetSelection({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: input.ids.sceneId,
-    takeId: input.takeId,
-    locationId: input.ids.locationId,
-    assetIds: [locationSheet.imported.assetId],
-  });
-  await input.projectData.updateSceneShotVideoTakeLookbookSheetSelection({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: input.ids.sceneId,
-    takeId: input.takeId,
-    lookbookSheetId: lookbookSheet.imported.id,
-  });
-  await input.projectData.updateSceneShotVideoTakeDialogueAudioSelection({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: input.ids.sceneId,
-    takeId: input.takeId,
-    dialogueId: input.ids.dialogueId,
-    dialogueAudioTakeId:
-      dialogueAudio.context.audioByDialogueId[input.ids.dialogueId]
-        ?.pickedTakeId ?? null,
   });
 
   return {
     lookbookId: lookbook.lookbook.id,
-    profileAssetId: profile.imported.assetId,
-    locationSheetAssetId: locationSheet.imported.assetId,
-    lookbookSheetId: lookbookSheet.imported.id,
+    profileAssetId: profile.asset.assetId,
+    locationSheetAssetId: locationSheet.asset.assetId,
+    lookbookSheetId: lookbookSheet.ownerRecord!.id,
   };
 }
 

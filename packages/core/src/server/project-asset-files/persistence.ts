@@ -1,7 +1,7 @@
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { MediaKind, ProjectRelativePath } from '../../client/index.js';
+import type { ProjectRelativePath } from '../../client/index.js';
 import {
   insertAssetFileRecord,
   readAssetFileRecord,
@@ -27,6 +27,7 @@ import { validateProjectReferenceFileInput } from './reference-validation.js';
 import type {
   PersistProjectAssetFileInput,
   ProjectAssetFileWriteSet,
+  ProjectMediaKind,
   ShotVideoTakeMediaRole,
 } from './types.js';
 
@@ -144,7 +145,7 @@ export async function copyTakeOwnedProjectAssetFile(input: {
   targetTakeId: string;
   role: ShotVideoTakeMediaRole;
   fileRole: string;
-  mediaKind: MediaKind;
+  mediaKind: ProjectMediaKind;
   mimeType?: string;
   now: string;
 }): Promise<AssetFileRecord> {
@@ -190,7 +191,7 @@ export function copyTakeOwnedProjectAssetFileSync(input: {
   targetTakeId: string;
   role: ShotVideoTakeMediaRole;
   fileRole: string;
-  mediaKind: MediaKind;
+  mediaKind: ProjectMediaKind;
   mimeType?: string;
   width?: number;
   height?: number;
@@ -283,7 +284,7 @@ export function persistProjectAssetFileAtDestinationSync(input: {
   assetId: string;
   assetFileId: string;
   fileRole: string;
-  mediaKind: MediaKind;
+  mediaKind: ProjectMediaKind;
   sourceProjectRelativePath: ProjectRelativePath;
   sourcePath: string;
   destinationProjectRelativePath: ProjectRelativePath;

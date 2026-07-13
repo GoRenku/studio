@@ -44,29 +44,3 @@ export {
   type LoadProviderEnvFilesResult,
 } from './provider-env-files.js';
 export * from './generation/index.js';
-export {
-  SHOT_VIDEO_MODEL_FAMILIES,
-  findShotVideoModelFamily,
-  listShotVideoModelFamilies,
-  selectShotVideoRoute,
-  type ShotVideoDurationDomain,
-  type ShotVideoModelFamily,
-  type ShotVideoRoute,
-  type ShotVideoRouteInputSlot,
-  type ShotVideoRouteParameter,
-  type ShotVideoRoutePricing,
-  type ShotVideoTakeInputKind,
-  type ShotVideoTakeInputMode,
-  type ShotVideoTakeModelChoice,
-  type ShotVideoTakeRouteParameterValue,
-} from './shot-video/shot-video-model-families.js';
-export {
-  normalizeShotVideoRouteSettings,
-  type ShotVideoRouteSettingsNormalization,
-} from './shot-video/shot-video-route-parameters.js';
-export { readShotVideoRoutePricingSupport } from './shot-video/shot-video-route-pricing.js';
-export {
-  validateShotVideoModelFamilies,
-  type ShotVideoRouteDiagnostic,
-  type ShotVideoRouteValidationResult,
-} from './shot-video/shot-video-route-validation.js';

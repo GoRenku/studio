@@ -55,7 +55,7 @@ It should contain:
 - shared DTOs for UI and CLI.
 - Visual Language analysis and Lookbook mutation commands.
 - persisted media generation specs and run records.
-- media generation cost projection contracts and cost approval checks.
+- exact-request generation estimates and approval-token checks.
 - media import behavior that registers generated or imported files as assets.
 
 Broader future generation/task responsibilities also belong in core once
@@ -63,14 +63,16 @@ accepted and implemented. Those include queue state, general task transition
 logic, stale-state calculation, and broader cost approval state. They are
 architectural direction, not current implemented tables or services.
 
-The current accepted generation implementation is narrower: Lookbook Image
-generation uses persisted generation specs and run records owned by core, with
-provider execution delegated to engines.
+The current accepted generation implementation covers fourteen focused media
+purposes through one generic spec/estimate/run lifecycle owned by Core, with
+provider schema projection, request assembly, pricing, and execution delegated
+to Engines.
 
-Generation estimate endpoints are core-owned cost projections. They read or
-draft a media generation spec, call the purpose registry's cost projection, and
-return a `GenerationCostEstimate`. They do not prepare provider payloads or
-resolve dependency media.
+Generation estimate endpoints are Core-owned exact-request projections. They
+read a persisted Generation Spec, use Engines to assemble and validate the same
+provider request that would run, and return a `GenerationEstimate` plus an
+approval token bound to that request. There is no dependency or candidate-cost
+plan.
 
 `studio-core` should be the only package that knows how to apply a metadata
 mutation correctly.

@@ -15,7 +15,7 @@ interface SceneShotAiProductionRunSetupProps {
   parameters: ShotVideoTakeParameterReport[];
   values: ShotVideoTakeParameterValues;
   onParameterChange: (name: string, value: ShotVideoTakeParameterValue) => void;
-  /** Full-plan total in USD, or null while it is being calculated. */
+  /** Selected model estimate in USD, or null while it is being calculated. */
   estimate: number | null;
   estimatePending: boolean;
   finalPrompt: ShotVideoTakePromptDraft | null;

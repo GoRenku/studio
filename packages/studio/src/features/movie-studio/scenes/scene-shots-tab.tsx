@@ -9,8 +9,8 @@ import {
 import type { SceneShotListResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import {
-  createSceneShotVideoTake,
-  listSceneShotVideoTakes,
+  createShotVideoTake,
+  listShotVideoTakes,
   type SceneShotVideoTakeOverviewResponse,
 } from '@/services/studio-shot-video-takes-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
@@ -76,7 +76,7 @@ export function SceneShotsTab({
     let cancelled = false;
     void Promise.all([
       readSceneShotListResource(projectName, sceneId),
-      listSceneShotVideoTakes(projectName, sceneId),
+      listShotVideoTakes(projectName, sceneId),
     ])
       .then(([nextResource, takeReport]) => {
         if (!cancelled) {
@@ -222,7 +222,7 @@ export function SceneShotsTab({
     createTakePendingRef.current = true;
     setCreateTakePending(true);
     try {
-      const report = await createSceneShotVideoTake(projectName, sceneId, {
+      const report = await createShotVideoTake(projectName, sceneId, {
         shotListId: resource.activeShotListId,
         shotIds: [selectedShot.shotId],
         title: selectedShot.title,

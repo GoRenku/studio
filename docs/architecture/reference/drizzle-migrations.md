@@ -214,6 +214,15 @@ Before adding a custom migration:
 - run it through Drizzle Kit's migration flow;
 - do not create a parallel application-level migration runner.
 
+`0053_drop-obsolete-shot-media-inputs.sql` contains one documented custom
+preservation step around Drizzle Kit's generated Take-table rebuild. Drizzle
+runs SQLite migrations inside a transaction, so its generated
+`PRAGMA foreign_keys=OFF` cannot prevent `DROP TABLE` from cascading into the
+current Take Shot-membership and final-video child tables. The migration copies
+both child tables to temporary tables before the generated rebuild and restores
+them afterward. A transaction-level regression test executes the SQL with
+foreign keys enabled and proves that active and discarded child rows survive.
+
 ## Project Store Schema Generation
 
 Renku Studio project databases use SQLite's `PRAGMA user_version` as the

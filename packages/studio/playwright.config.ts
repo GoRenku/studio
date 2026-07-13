@@ -31,7 +31,12 @@ export default defineConfig({
     },
     {
       name: 'chromium-regression',
-      testIgnore: /.*\.smoke\.spec\.ts/,
+      testIgnore: [/.*\.smoke\.spec\.ts/, /.*\.compat\.spec\.ts/],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-compatibility',
+      testMatch: /.*\.compat\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],

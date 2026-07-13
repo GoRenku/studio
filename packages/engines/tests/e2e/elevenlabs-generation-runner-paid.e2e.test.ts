@@ -50,7 +50,7 @@ describeIf('ElevenLabs paid shared generation runner E2E', () => {
     );
     const text = 'Renku Studio paid generation runner contract test.';
     const request: GenerationRequest = {
-      parameters: {
+      payload: {
         text,
         voice: TEST_VOICE_ID,
         output_format: 'mp3_44100_128',

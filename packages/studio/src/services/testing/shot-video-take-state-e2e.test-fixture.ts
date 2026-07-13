@@ -13,9 +13,9 @@ import {
 } from '@gorenku/studio-core/server';
 import { createProjectsRoute } from '../../../server/routes/projects.js';
 import {
-  createSceneShotVideoTake,
-  listSceneShotVideoTakes,
-  updateSceneShotVideoTakeShots,
+  createShotVideoTake,
+  listShotVideoTakes,
+  replaceShotVideoTakeShots,
 } from '../studio-shot-video-takes-api';
 
 export const SHOT_VIDEO_TAKE_STATE_E2E_PROJECT_NAME = 'constantinople';
@@ -74,7 +74,7 @@ export async function createShotVideoTakeStateE2eFixture(): Promise<
     ids,
     shotListId: shotList.shotList.id,
     async createTake(input) {
-      const report = await createSceneShotVideoTake(
+      const report = await createShotVideoTake(
         SHOT_VIDEO_TAKE_STATE_E2E_PROJECT_NAME,
         ids.sceneId,
         {
@@ -120,18 +120,19 @@ export async function createShotVideoTakeReferenceSelectionFixture(
   });
 
   const characterSheet =
-    await fixture.projectData.importCastCharacterSheetMedia({
+    await fixture.projectData.attachGenerationMedia({
       homeDir: fixture.homeDir,
-      castMemberId: fixture.ids.castMemberId,
+      purpose: 'cast.video-character-sheet',
+      target: { kind: 'castMember', id: fixture.ids.castMemberId },
       sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
     });
   const locationSheet =
-    await fixture.projectData.importLocationEnvironmentSheetMedia({
+    await fixture.projectData.attachGenerationMedia({
       homeDir: fixture.homeDir,
-      locationId: fixture.ids.locationId,
+      purpose: 'location.sheet',
+      target: { kind: 'location', id: fixture.ids.locationId },
       sourceProjectRelativePath: 'generated/media/gate-location-sheet.png',
       title: 'Gate Location Sheet',
-      description: 'The gate, approach, and defensive masonry.',
     });
   const lookbook = await fixture.projectData.createLookbook({
     projectName: fixture.projectName,
@@ -146,9 +147,10 @@ export async function createShotVideoTakeReferenceSelectionFixture(
     type: 'movie',
     lookbookId: lookbook.lookbook.id,
   });
-  const lookbookSheet = await fixture.projectData.importLookbookSheetMedia({
+  const lookbookSheet = await fixture.projectData.attachGenerationMedia({
     homeDir: fixture.homeDir,
-    lookbookId: lookbook.lookbook.id,
+    purpose: 'lookbook.video-sheet',
+    target: { kind: 'lookbook', id: lookbook.lookbook.id },
     sourceProjectRelativePath: 'generated/media/lookbook-sheet.png',
     title: 'Imperial Wound Sheet',
   });
@@ -185,9 +187,9 @@ export async function createShotVideoTakeReferenceSelectionFixture(
   });
 
   return {
-    characterSheetAssetId: characterSheet.imported.assetId,
-    locationSheetAssetId: locationSheet.imported.assetId,
-    lookbookSheetId: lookbookSheet.imported.id,
+    characterSheetAssetId: attachmentAssetId(characterSheet.asset),
+    locationSheetAssetId: attachmentAssetId(locationSheet.asset),
+    lookbookSheetId: lookbookSheet.ownerRecord!.id,
     dialogueAudioTakeId:
       dialogueAudio.context.audioByDialogueId[fixture.ids.dialogueId]!
         .takes[0]!.takeId,
@@ -198,7 +200,7 @@ export async function readPersistedShotVideoTake(
   fixture: ShotVideoTakeStateE2eFixture,
   takeId: string
 ): Promise<SceneShotVideoTake> {
-  const reloaded = await listSceneShotVideoTakes(
+  const reloaded = await listShotVideoTakes(
     fixture.projectName,
     fixture.ids.sceneId
   );
@@ -214,12 +216,16 @@ export async function updateShotVideoTakeGrouping(
   takeId: string,
   shotIds: string[]
 ) {
-  return updateSceneShotVideoTakeShots(
+  return replaceShotVideoTakeShots(
     fixture.projectName,
     fixture.ids.sceneId,
     takeId,
     shotIds
   );
+}
+
+function attachmentAssetId(asset: { assetId: string }): string {
+  return asset.assetId;
 }
 
 function installStudioApiFetch(input: {

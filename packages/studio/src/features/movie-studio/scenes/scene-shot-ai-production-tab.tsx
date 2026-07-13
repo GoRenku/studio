@@ -1,9 +1,5 @@
 import { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import type {
-  ShotVideoTakeProductionEstimateReport,
-  ShotVideoTakeProductionPlanReport,
-} from '@gorenku/studio-core/client';
 import { SceneShotAiProductionInputModeList } from './scene-shot-ai-production-input-mode-list';
 import { SceneShotAiProductionModelTable } from './scene-shot-ai-production-model-table';
 import { SceneShotAiProductionRunSetup } from './scene-shot-ai-production-run-setup';
@@ -39,10 +35,10 @@ export function SceneShotAiProductionTab({
     setInputMode,
     setModel,
     setParameter,
-    productionPlan,
+    workspace,
+    setup,
     estimate,
     estimateState,
-    planState,
   } = production;
 
   const inputModeOptions = useMemo(
@@ -59,13 +55,6 @@ export function SceneShotAiProductionTab({
   const selectedModelReport = useMemo(
     () => (models ? findModelReport(models, selectedModel) : null),
     [models, selectedModel]
-  );
-  const promptStale = useMemo(
-    () =>
-      productionPlan?.diagnostics.some(
-        (diagnostic) => diagnostic.code === 'PROJECT_DATA378'
-      ) ?? false,
-    [productionPlan?.diagnostics]
   );
 
   if (loadState === 'error') {
@@ -126,27 +115,16 @@ export function SceneShotAiProductionTab({
         />
         <SceneShotAiProductionRunSetup
           parameters={enabledParameters(selectedModelReport)}
-          values={take.state.production.parameterValues ?? {}}
+          values={setup?.parameterValues ?? {}}
           onParameterChange={setParameter}
-          estimate={displayEstimateTotal(estimate, productionPlan)}
-          estimatePending={estimateState === 'loading' || planState === 'loading'}
-          finalPrompt={productionPlan?.finalPrompt ?? null}
-          promptStale={promptStale}
+          estimate={estimate?.valid ? estimate.estimate.estimatedCostUsd : null}
+          estimatePending={estimateState === 'loading'}
+          finalPrompt={workspace?.generation.finalPrompt ?? null}
+          promptStale={false}
           isMultiShotGroup={isMultiShotGeneration}
           disabled={!isEditable}
         />
       </div>
     </div>
   );
-}
-
-function displayEstimateTotal(
-  estimate: ShotVideoTakeProductionEstimateReport | null,
-  productionPlan: ShotVideoTakeProductionPlanReport | null
-): number | null {
-  const graphEstimate = estimate?.plan?.estimate ?? productionPlan?.plan.estimate ?? null;
-  if (graphEstimate) {
-    return graphEstimate.estimatedTotalUsd;
-  }
-  return estimate?.estimate?.estimatedCostUsd ?? productionPlan?.plan.finalEstimate?.estimatedCostUsd ?? null;
 }

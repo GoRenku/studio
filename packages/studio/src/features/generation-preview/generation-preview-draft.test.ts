@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
+import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import {
   buildGenerationPreviewUpdateRequest,
   createGenerationPreviewDraft,
@@ -23,13 +23,13 @@ describe('generation preview draft', () => {
     const preview = previewFixture();
     const draft = createGenerationPreviewDraft(preview);
     draft.promptDraft.authoredText = 'Updated prompt.\nSecond line.';
-    draft.referenceSelectionDraftByDependencyId.dependency_style = false;
+    draft.referenceSelectionDraftBySelectionId.selection_style = false;
 
     expect(generationPreviewDraftIsDirty(preview, draft)).toBe(true);
     expect(buildGenerationPreviewUpdateRequest(preview, draft)).toEqual({
       prompt: { authoredText: 'Updated prompt.\nSecond line.' },
       referenceSelections: [
-        { dependencyId: 'dependency_style', selected: false },
+        { selectionId: 'selection_style', selected: false },
       ],
     });
   });
@@ -39,7 +39,7 @@ describe('generation preview draft', () => {
     preview.references[0]!.selectionControl!.required = true;
     preview.references[0]!.selected = true;
     const draft = createGenerationPreviewDraft(preview);
-    draft.referenceSelectionDraftByDependencyId.dependency_style = false;
+    draft.referenceSelectionDraftBySelectionId.selection_style = false;
 
     expect(
       generationPreviewReferenceSelected(preview.references[0]!, draft)
@@ -59,12 +59,12 @@ describe('generation preview draft', () => {
   });
 });
 
-function previewFixture(): StudioGenerationPreview {
+function previewFixture(): GenerationPreviewResource {
   return {
     kind: 'generationPreview',
     previewId: 'generation-preview:test',
     generationSpecId: 'media_generation_spec_test',
-    purpose: 'cast.character-sheet',
+    purpose: 'cast.storyboard-character-sheet',
     project: { id: 'project_test', name: 'constantinople' },
     subject: { projectLabel: 'Constantinople' },
     target: { kind: 'castMember', id: 'cast_test' },
@@ -88,10 +88,9 @@ function previewFixture(): StudioGenerationPreview {
         browserUrl: '/style.png',
         selected: true,
         selectionControl: {
-          dependencyId: 'dependency_style',
+          selectionId: 'selection_style',
           required: false,
           defaultIncluded: true,
-          inclusionOverride: null,
           editable: true,
         },
       },

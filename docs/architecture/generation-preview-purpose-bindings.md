@@ -1,211 +1,79 @@
-# Generation Preview Purpose Bindings
+# Generation Preview Resource
 
-Date: 2026-07-06
+Date: 2026-07-12
 
 Status: current
 
-Role: architecture decision note
+Role: architecture reference
 
 ## Purpose
 
-This note defines how saved media-generation specs become generation preview
-payloads.
+Generation Preview lets the user inspect and edit one exact generic
+`GenerationSpec` before estimate or execution. Decision `0047` supersedes the
+former purpose-specific preview-binding architecture.
 
-The preview dialog exists so the user can verify what Renku Studio will send
-before generation runs:
+## Ownership
 
-1. which model and provider route will receive the request;
-2. which prompt and reference media will be sent;
-3. which actual model/provider configuration parameters will be sent or relied
-   on.
+Core owns the experience resource under:
 
-For image generations, Core must not understand the creative contents of the
-generated image. A Lookbook image, Location sheet, Cast profile, Scene
-Storyboard sheet, and shot input image are different product purposes, but the
-creative meaning lives in opaque prompt text, reference assets, and the
-agent/user workflow. Core's preview responsibility is the generation envelope:
-purpose, target, selected model, provider route, prompt field, reference asset
-ids, provider payload, and model-specific parameters.
-
-Decision history:
-
-- `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
-- `../decisions/0041-keep-ai-artifacts-and-prompts-opaque.md`
-- `../decisions/0044-use-media-generation-module-boundaries.md`
-- `../decisions/0045-use-generation-preview-purpose-bindings.md`
-
-## Decision
-
-Saved image generation previews use one shared image preview path for the
-common preview envelope and model-configuration rows.
-
-Individual image purposes may still have purpose-specific preview bindings, but
-those bindings do not own image model-configuration row logic. They bind the
-purpose's existing domain contract to the shared image preview path.
-
-Final `shot.video-take` previews are separate because they target video models
-with route-specific video parameters and image/audio/video input slots. They use
-the shot-video route contract rather than the image model schema helper.
-
-## Shared Image Preview Path
-
-The shared image preview path owns:
-
-- the common `GenerationPreviewRequest` envelope;
-- selected model and provider route display;
-- prompt placement in `finalPrompt`;
-- provider preview metadata;
-- Config rows derived from provider route schema descriptors and the actual
-  provider payload;
-- schema default labeling when Core intentionally relies on provider defaults.
-
-Image Config rows should represent actual model/provider parameters, such as:
-
-- `image_size`;
-- `aspect_ratio`;
-- `quality`;
-- `resolution`;
-- `output_format`;
-- `seed`;
-- `num_images`.
-
-Studio-level spec controls such as `imageFrame`, `sheetFrame`, `heroFrame`,
-`shotFrame`, `detail`, `outputFormat`, and `takeCount` are inputs to purpose
-provider-payload builders. They should not be duplicated as separate Config
-rows by default. If they matter to the generated media, the user should verify
-the effective provider/model parameter they map to, such as `aspect_ratio`,
-`image_size`, `quality`, `output_format`, `seed`, or `num_images`.
-
-## Purpose Bindings
-
-Purpose bindings answer questions the shared image preview path cannot answer
-safely:
-
-- how to read and validate the saved spec;
-- which current project context the spec must be checked against;
-- which existing provider payload builder owns the provider request;
-- which project assets are real references for the purpose;
-- which target and title the preview should use.
-
-The difference between image purposes is therefore mostly context and reference
-ownership, not model-configuration ownership.
-
-Examples:
-
-| Purpose | Shared Preview Path | Purpose Binding Responsibility |
-| --- | --- | --- |
-| `image.edit` | model, prompt, Config from provider payload | Validate the source asset target, call the generic image edit provider payload builder, and include the source image reference with role `image-edit-source`. |
-| `lookbook.image` | model, prompt, Config from provider payload | Read Lookbook context, call the Lookbook Image provider payload builder, and return real selected references only if they exist. |
-| `cast.profile` | model, prompt, Config from provider payload | Validate Cast Member ownership, call the Cast Profile provider payload builder, and resolve selected/source cast image references. |
-| `location.hero` | model, prompt, Config from provider payload | Validate Location ownership, call the Location Hero provider payload builder, and include the selected Location Sheet asset as a reference. |
-| `scene.storyboard-sheet` | model, prompt, Config from provider payload | Validate Scene/Shot List context, call the Scene Storyboard Sheet provider payload builder, and resolve selected Lookbook sheet references without inspecting sheet contents. |
-| `image.create` | model, prompt, Config from provider payload | Validate the project target, prepare text-to-image or reference-to-image payloads, and include only explicitly selected image references. Shot Video Take input roles are handled by dependency planning and later `shot.input` imports, not preview-purpose bindings. |
-
-A purpose binding should be small and explicit:
-
-```ts
-return buildSavedImageGenerationPreview({
-  specRecord,
-  project: context.project,
-  target: specRecord.target,
-  title: specRecord.title,
-  modelChoice: spec.modelChoice,
-  modelLabel,
-  provider: plan.provider,
-  providerModel: plan.model,
-  mode: plan.mode,
-  prompt: spec.prompt,
-  references: resolvedReferences,
-  payload: plan.payload,
-});
+```text
+packages/core/src/server/generation-preview-resource/
+  projection.ts
+  prompt.ts
+  references.ts
+  configuration.ts
+  estimate.ts
+  update.ts
 ```
 
-If a purpose binding hand-builds rows for `aspect_ratio`, `quality`,
-`image_size`, `resolution`, or other image model parameters, that is a review
-smell. Those rows belong in the shared provider-schema/payload configuration
-path.
+The resource projects:
 
-## References
+- purpose, exact target, title, and saved spec id;
+- selected direct provider/model endpoint;
+- authored prompt and optional negative prompt fields identified by Engines
+  semantics;
+- ordered exact references and editable selection ids;
+- schema-derived configuration controls;
+- the direct estimate for the selected model and pricing settings;
+- safe provider payload preview data;
+- structured diagnostics.
 
-References are not Config rows.
+Core projects a draft preview and a saved preview through the same path. A
+saved preview can update prompt text and reference inclusion together through
+the generic spec command. An unsaved preview remains read-only.
 
-The preview References tab should show real media references using durable
-asset and asset-file ids. A shared preview helper must not infer references
-from provider payload URLs, prepared project-relative paths, or prompt text.
+## Layer Boundaries
 
-Each purpose binding owns durable reference resolution because each purpose has
-different domain relationships:
+Engines owns provider field schemas, semantics, payload assembly, validation,
+and pricing. Core owns target context, exact file resolution, generic spec
+persistence, and the Preview resource. The Studio server adds browser-safe file
+URLs and translates structured errors. React owns only draft interaction state,
+request ordering, and rendering.
 
-- a Cast Profile can reference selected/source Cast image assets;
-- a Location Hero references a source Location Sheet asset;
-- an Image Edit references the source asset file as `image-edit-source`;
-- shot input images use the shot input reference bundle;
-- Scene Storyboard Sheet references come from selected Lookbook sheet context
-  when real asset/file ids exist.
+No Studio route or feature may:
 
-If a purpose has no selected asset-backed references, it returns an empty
-`references` array.
+- choose a purpose-specific prompt field;
+- classify reference eligibility;
+- insert provider defaults;
+- estimate candidate or downstream work;
+- construct child specs;
+- semantically validate prompt or media contents.
 
-## Shot Video Preview
+## Update Semantics
 
-Final `shot.video-take` is not an image preview with a different label.
+Preview updates are latest-request-wins in the browser. A stale response cannot
+replace a newer draft. Structured update failure leaves the dialog open and
+preserves the authored draft so the user can correct or retry it.
 
-It uses video route metadata:
+Only the selected model and its pricing settings receive an estimate. Prompts,
+reference availability, and execution readiness do not gate that estimate.
+Reference provenance is display context; it is never traversed for cost or
+execution planning.
 
-- selected video model;
-- selected input mode;
-- selected provider route;
-- route parameters;
-- normalized route settings;
-- prepared image/audio/video inputs as References.
+## Verification
 
-Preview rows must use the existing shot-video route helpers:
-
-- `requireShotVideoTakeRoute(...)`;
-- `parametersForRoute(...)`;
-- `normalizeRouteSettingsForContext(...)`.
-
-Do not create a preview-only video route parameter map.
-
-## Runtime Boundaries
-
-Core preview runtime may validate:
-
-- purpose;
-- target;
-- selected model;
-- provider route;
-- provider parameter shape;
-- prompt field presence/type;
-- reference asset ids and asset file ids.
-
-Core preview runtime must not:
-
-- parse prompt text for creative instructions;
-- inspect image contents;
-- validate storyboard panels, captions, labels, shot coverage, or visual
-  matching;
-- show raw provider payload JSON as Config content;
-- show local paths or provider upload URLs;
-- add compatibility support for retired array-shaped `configuration`.
-
-For `image.edit`, the preview must preserve `providerPreview.mode:
-"image-edit"` and show the source image as a reference. The preview envelope
-may include source asset id and asset file id; it must not include absolute
-local paths or provider upload URLs.
-
-## Review Checklist
-
-Use this checklist when reviewing generation preview changes:
-
-- Image preview Config rows come from provider schema descriptors and actual
-  provider payload/defaults.
-- Purpose bindings do not duplicate image model-parameter row construction.
-- Purpose bindings resolve references through durable asset/file ids.
-- Prompt text appears in the Prompt tab, not Config.
-- Reference media appears in References, not Config counts.
-- Final `shot.video-take` Config rows use shot-video route metadata.
-- Studio renders `preview.configuration.sections` without provider-model
-  branching.
-- CLI and Studio do not translate old preview shapes or compensate for missing
-  Core preview builders.
+Keep the existing Prompt, References, Config, diagnostics, negative-prompt,
+footer-estimate, saved/editable, unsaved/read-only, pending, failure, and
+latest-response-wins assertions. The locked desktop Playwright compatibility
+suite verifies that the current resource replacement does not change the
+dialog experience.

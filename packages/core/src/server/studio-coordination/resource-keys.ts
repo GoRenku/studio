@@ -111,14 +111,6 @@ export function studioSceneShotResourceKey(
   return `scene-shot-list:${shotListId}:shot:${shotId}`;
 }
 
-export function studioShotVideoTakeGroupResourceKey(groupId: string): string {
-  return `scene-shot-video-take-group:${groupId}`;
-}
-
-export function studioShotVideoTakeInputResourceKey(inputId: string): string {
-  return `scene-shot-video-take-input:${inputId}`;
-}
-
 export function studioAssetResourceKey(target: AssetTarget): string {
   switch (target.kind) {
     case 'project':

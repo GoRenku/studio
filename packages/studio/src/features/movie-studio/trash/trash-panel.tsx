@@ -230,8 +230,6 @@ function trashItemKindLabel(kind: TrashItem['itemKind']): string {
       return 'Dialogue Take';
     case 'sceneShotVideoTake':
       return 'Video Take';
-    case 'shotVideoTakeInput':
-      return 'Video Input';
   }
 }
 

@@ -1,32 +1,29 @@
-import {
-  buildGenerationPreviewSubject,
-  resolveGenerationPreviewReferenceFiles,
-  validateStudioGenerationPreview,
-  type GenerationPreviewRequest,
-  type StudioGenerationPreview,
-} from '@gorenku/studio-core/server';
+import type { GenerationPreviewResource } from '@gorenku/studio-core/server';
 
-export async function buildStudioGenerationPreview(input: {
+type CoreGenerationPreviewResource = Omit<
+  GenerationPreviewResource,
+  'references'
+> & {
+  references: Array<
+    Omit<GenerationPreviewResource['references'][number], 'browserUrl'>
+  >;
+};
+
+export async function buildGenerationPreviewResource(input: {
   projectName: string;
-  homeDir?: string;
-  preview: GenerationPreviewRequest;
-}): Promise<StudioGenerationPreview> {
-  const [files, subject] = await Promise.all([
-    resolveGenerationPreviewReferenceFiles(input),
-    buildGenerationPreviewSubject(input),
-  ]);
-  return validateStudioGenerationPreview({
+  preview: CoreGenerationPreviewResource;
+}): Promise<GenerationPreviewResource> {
+  return {
     ...input.preview,
-    subject,
-    references: input.preview.references.map((reference, index) => ({
+    references: input.preview.references.map((reference) => ({
       ...reference,
       browserUrl: studioAssetFileUrl({
         projectName: input.projectName,
-        assetId: files[index]!.assetId,
-        assetFileId: files[index]!.assetFileId,
+        assetId: reference.assetId,
+        assetFileId: reference.assetFileId,
       }),
     })),
-  });
+  };
 }
 
 export function studioAssetFileUrl(input: {

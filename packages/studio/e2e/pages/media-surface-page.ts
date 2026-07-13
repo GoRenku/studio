@@ -18,7 +18,7 @@ export class MediaSurfacePage {
   }
 
   async openLocationVisualContent(): Promise<void> {
-    await this.page.getByRole('tab', { name: 'Visual Content' }).click();
+    await this.page.getByRole('tab', { name: 'Assets' }).click();
     await expect(
       this.page.getByRole('heading', { name: 'Location Sheets' })
     ).toBeVisible();

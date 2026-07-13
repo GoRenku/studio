@@ -5,7 +5,6 @@ import type { ScreenplayCreateDocument } from '../../client/screenplay.js';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
-  type ProjectDataService,
 } from '../index.js';
 import { resolveProjectDatabasePath, resolveProjectFolder } from '../files/project-paths.js';
 import { resolveRenkuStorageRoot } from '../renku-config.js';
@@ -23,7 +22,7 @@ interface DialogueAudioTemplate {
 
 export interface DialogueAudioReadyProject {
   homeDir: string;
-  projectData: ProjectDataService;
+  projectData: ReturnType<typeof createProjectDataService>;
   projectPath: string;
   sceneId: string;
   dialogueId: string;

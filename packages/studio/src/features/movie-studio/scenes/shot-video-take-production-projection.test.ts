@@ -1,50 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import type { ShotVideoTakeModelListReport } from '@gorenku/studio-core/client';
+import type { ShotVideoTakeModelReport } from '@gorenku/studio-core/client';
 import {
   buildInputModeOptions,
   buildModelRows,
+  modelForInputMode,
 } from './shot-video-take-production-projection';
 
-const MODELS: ShotVideoTakeModelListReport = {
-  purpose: 'shot.video-take',
-  target: {
-    kind: 'sceneShotVideoTake',
-    id: 'scene_hook:take_001',
-    sceneId: 'scene_hook',
-    takeId: 'take_001',
-    shotIds: ['s1'],
-  },
-  shotGroupMode: 'single-shot',
-  defaultModelChoice: 'fal-ai/veo3.1',
-  models: [
+const MODELS: ShotVideoTakeModelReport[] = [
     {
       modelChoice: 'fal-ai/xai/grok-imagine-video-1.5',
       label: 'XAI Grok Imagine Video 1.5',
-      available: true,
+      provider: 'fal-ai',
+      model: 'xai/grok-imagine-video-1.5',
       supportedInputModes: ['first-frame'],
       duration: { supported: true, values: [6], default: 6 },
-      inputRoles: [],
       parameters: [],
-      estimateInputs: {
-        canEstimateBeforeDependenciesExist: true,
-        requiresPreparedInputs: false,
-      },
     },
     {
       modelChoice: 'fal-ai/veo3.1',
       label: 'Veo 3.1',
-      available: true,
+      provider: 'fal-ai',
+      model: 'veo3.1',
       supportedInputModes: ['first-last-frame'],
       duration: { supported: true, values: [4, 6, 8], default: 6 },
-      inputRoles: [],
       parameters: [],
-      estimateInputs: {
-        canEstimateBeforeDependenciesExist: false,
-        requiresPreparedInputs: true,
-      },
     },
-  ],
-};
+];
 
 describe('buildInputModeOptions', () => {
   it('returns only real input modes and leaves group mode out of the selector', () => {
@@ -98,15 +79,13 @@ describe('buildInputModeOptions', () => {
   });
 
   it('keeps O3 source-video controls available only for O3 video-to-video models', () => {
-    const models: ShotVideoTakeModelListReport = {
-      ...MODELS,
-      defaultModelChoice: 'fal-ai/kling-video/o3/standard',
-      models: [
-        ...MODELS.models,
+    const models: ShotVideoTakeModelReport[] = [
+        ...MODELS,
         {
           modelChoice: 'fal-ai/kling-video/o3/standard',
           label: 'Kling O3 Standard',
-          available: true,
+          provider: 'fal-ai',
+          model: 'kling-video/o3/standard',
           supportedInputModes: [
             'text-only',
             'first-frame',
@@ -114,15 +93,9 @@ describe('buildInputModeOptions', () => {
             'source-video-reference',
           ],
           duration: { supported: true, values: [5, 10], default: 5 },
-          inputRoles: [],
           parameters: [],
-          estimateInputs: {
-            canEstimateBeforeDependenciesExist: false,
-            requiresPreparedInputs: true,
-          },
         },
-      ],
-    };
+      ];
     const options = buildInputModeOptions(models, 'fal-ai/kling-video/o3/standard');
     expect(options.find((option) => option.id === 'source-video-reference')).toMatchObject({
       enabled: true,
@@ -133,21 +106,80 @@ describe('buildInputModeOptions', () => {
       disabledTooltip: 'No first/last frame',
     });
   });
+
+  it('preserves family-level input modes while retaining exact provider routes', () => {
+    const models: ShotVideoTakeModelReport[] = [
+      {
+        ...MODELS[0],
+        modelChoice: 'fal-ai/seedance/text-to-video',
+        model: 'seedance/text-to-video',
+        label: 'Seedance 2.0',
+        supportedInputModes: ['text-only'],
+      },
+      {
+        ...MODELS[0],
+        modelChoice: 'fal-ai/seedance/image-to-video',
+        model: 'seedance/image-to-video',
+        label: 'Seedance 2.0',
+        supportedInputModes: ['first-frame', 'first-last-frame', 'reference'],
+      },
+    ];
+
+    expect(
+      buildInputModeOptions(models, 'fal-ai/seedance/text-to-video')
+        .filter((option) => option.enabled)
+        .map((option) => option.id)
+    ).toEqual(['text-only', 'first-frame', 'first-last-frame', 'reference']);
+    expect(
+      modelForInputMode(
+        models,
+        'fal-ai/seedance/text-to-video',
+        'first-frame'
+      )
+    ).toBe('fal-ai/seedance/image-to-video');
+  });
 });
 
 describe('buildModelRows', () => {
-  it('reports availability and a concise status per input mode', () => {
+  it('reports Model and Duration data without a Status projection', () => {
     const rows = buildModelRows(MODELS, 'first-last-frame');
     const grok = rows.find((row) => row.label === 'XAI Grok Imagine Video 1.5');
     const veo = rows.find((row) => row.label === 'Veo 3.1');
     expect(grok?.available).toBe(false);
-    expect(grok?.status).toBe('Unavailable');
-    expect(grok?.statusTitle).toBe('No first/last frame');
     expect(veo?.available).toBe(true);
-    expect(veo?.status).toBe('Input required');
-    expect(veo?.statusTitle).toBe(
-      'The selected input mode needs a prepared input, such as a first frame or reference image.'
-    );
     expect(veo?.duration).toBe('4, 6, 8s');
+    expect(Object.keys(veo ?? {}).sort()).toEqual([
+      'available',
+      'duration',
+      'label',
+      'modelChoice',
+    ]);
+  });
+
+  it('keeps one visible row per model family while selecting an exact route', () => {
+    const rows = buildModelRows([
+      {
+        ...MODELS[0],
+        modelChoice: 'fal-ai/seedance/text-to-video',
+        model: 'seedance/text-to-video',
+        label: 'Seedance 2.0',
+        supportedInputModes: ['text-only'],
+      },
+      {
+        ...MODELS[0],
+        modelChoice: 'fal-ai/seedance/image-to-video',
+        model: 'seedance/image-to-video',
+        label: 'Seedance 2.0',
+        supportedInputModes: ['first-frame'],
+      },
+    ], 'first-frame');
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        label: 'Seedance 2.0',
+        modelChoice: 'fal-ai/seedance/image-to-video',
+        available: true,
+      }),
+    ]);
   });
 });

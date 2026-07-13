@@ -839,3 +839,23 @@ visual failure, such as toggling the current pick off, refreshing after
 resource-change events, and calling the correct delete endpoint after
 confirmation. Use desktop browser verification for rendered card size,
 placement, aspect ratio, and overlay consistency.
+
+### Locked Compatibility Baselines
+
+When backend work must preserve the current Studio experience:
+
+1. capture the pre-work `HEAD` from a disposable checkout with the same bundled
+   browser, fonts, deterministic Core-built fixture, and desktop viewport;
+2. store the screenshots in the package-owned Playwright snapshot directory;
+3. keep animations disabled, the caret hidden, and dynamic masks limited to
+   exact project identifiers, media pixels, or explicitly approved regions;
+4. compare final screenshots without regenerating the accepted baseline;
+5. assert approved copy, column, or control changes independently through DOM
+   roles and accessible names;
+6. keep the existing interaction tests for tabs, pickers, playback, autosave,
+   latest-request-wins behavior, structured errors, and resource refresh.
+
+Do not hide an unexplained layout or state change with a broad mask, threshold,
+snapshot update, skipped test, or weaker assertion. A backend fixture may use a
+different identifier or exact media record, but it must drive the same visible
+state before a pixel comparison is treated as compatibility evidence.

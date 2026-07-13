@@ -13,16 +13,15 @@ import type { SceneShotListResourceResponse } from '@/services/studio-project-co
 import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import { restoreTrashItem } from '@/services/studio-trash-api';
 import {
-  createSceneShotVideoTake,
-  deleteSceneShotVideoTake,
-  listSceneShotVideoTakes,
-  readSceneShotVideoTakeEditContext,
-  updateSceneShotVideoTakePick,
-  updateSceneShotVideoTakeShots,
-  type SceneShotVideoTakeEditContextResponse,
+  createShotVideoTake,
+  discardShotVideoTake,
+  listShotVideoTakes,
+  readShotVideoTakeWorkspace,
+  setShotVideoTakePicked,
+  replaceShotVideoTakeShots,
   type SceneShotVideoTakeOverviewResponse,
   type SceneShotVideoTakeWithHttp,
-  type ShotVideoTakeProductionContextResponse,
+  type ShotVideoTakeWorkspaceResponse,
   type ShotVideoTakeStoryboardImageReferenceWithHttp,
 } from '@/services/studio-shot-video-takes-api';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
@@ -135,7 +134,7 @@ export function SceneTakesTab({
     let cancelled = false;
     void Promise.all([
       readSceneShotListResource(projectName, sceneId),
-      listSceneShotVideoTakes(projectName, sceneId),
+      listShotVideoTakes(projectName, sceneId),
     ])
       .then(([nextResource, takeReport]) => {
         if (!cancelled) {
@@ -162,7 +161,7 @@ export function SceneTakesTab({
   const loadTakeEditingContext = useCallback(
     (nextTakeId: string) => {
       let cancelled = false;
-      void readSceneShotVideoTakeEditContext(
+      void readShotVideoTakeWorkspace(
         projectName,
         sceneId,
         nextTakeId
@@ -170,7 +169,7 @@ export function SceneTakesTab({
         .then((editContext) => {
           if (!cancelled) {
             setTakeEditingContext(
-              takeEditingContextFromEditContext(editContext)
+              takeEditingContextFromWorkspace(editContext)
             );
           }
         })
@@ -286,16 +285,16 @@ export function SceneTakesTab({
     return shots[0]?.shotId ?? null;
   }, [displayedActiveTake, shots, shotId]);
 
-  const handleTakeProductionContext = useCallback(
-    (context: ShotVideoTakeProductionContextResponse) => {
-      const nextOverview = overviewFromProductionContext(context);
+  const handleTakeWorkspace = useCallback(
+    (context: ShotVideoTakeWorkspaceResponse) => {
+      const nextOverview = overviewFromWorkspace(context);
       setTakeOverviews((current) =>
         orderSceneShotVideoTakeOverviews(
           upsertSceneShotVideoTakeOverview(current, nextOverview)
         )
       );
       setTakeEditingContext(
-        takeEditingContextFromProductionContext(context)
+        takeEditingContextFromWorkspace(context)
       );
       const nextShotId =
         selectedShotId && context.take.shotIds.includes(selectedShotId)
@@ -362,7 +361,7 @@ export function SceneTakesTab({
   const handleDeleteTake = useCallback(
     async (deletedTakeId: string) => {
       try {
-        const report = await deleteSceneShotVideoTake(
+        const report = await discardShotVideoTake(
           projectName,
           sceneId,
           deletedTakeId
@@ -407,7 +406,7 @@ export function SceneTakesTab({
   const handleToggleTakePick = useCallback(
     async (take: SceneShotVideoTakeWithHttp) => {
       try {
-        const report = await updateSceneShotVideoTakePick(
+        const report = await setShotVideoTakePicked(
           projectName,
           sceneId,
           take.takeId,
@@ -498,13 +497,13 @@ export function SceneTakesTab({
     setSelectionApplyPending(true);
     setSelectionApplyError(null);
     try {
-      const result = await updateSceneShotVideoTakeShots(
+      const result = await replaceShotVideoTakeShots(
         projectName,
         sceneId,
         displayedActiveTake.takeId,
         openDraft.shotIds
       );
-      handleTakeProductionContext(result.context);
+      handleTakeWorkspace(result.workspace);
       setDraftSelectionEdit(null);
       setSelectionReviewOpen(false);
     } catch (applyError) {
@@ -522,7 +521,7 @@ export function SceneTakesTab({
     selectionApplyPending,
     projectName,
     sceneId,
-    handleTakeProductionContext,
+    handleTakeWorkspace,
   ]);
 
   const reportDetailSaveNotification = useCallback(
@@ -625,7 +624,7 @@ export function SceneTakesTab({
     createTakePendingRef.current = true;
     setCreateTakePending(true);
     try {
-      const report = await createSceneShotVideoTake(projectName, sceneId, {
+      const report = await createShotVideoTake(projectName, sceneId, {
         shotListId: resource.activeShotListId,
         shotIds: [shots[0].shotId],
         title: shots[0].title,
@@ -741,7 +740,7 @@ export function SceneTakesTab({
     createTakePendingRef.current = true;
     setCreateTakePending(true);
     try {
-      const report = await createSceneShotVideoTake(projectName, sceneId, {
+      const report = await createShotVideoTake(projectName, sceneId, {
         shotListId: resource.activeShotListId,
         shotIds: [selectedShot.shotId],
         title: selectedShot.title,
@@ -870,7 +869,7 @@ export function SceneTakesTab({
             onTabChange={handleSelectShotTab}
             onCreateTake={handleCreateTake}
             createTakePending={createTakePending}
-            onTakeMutation={handleTakeProductionContext}
+            onTakeMutation={handleTakeWorkspace}
             onSaveNotificationChange={reportDetailSaveNotification}
           />
         </ResizablePanel>
@@ -879,8 +878,8 @@ export function SceneTakesTab({
   );
 }
 
-function takeEditingContextFromEditContext(
-  editContext: SceneShotVideoTakeEditContextResponse
+function takeEditingContextFromWorkspace(
+  editContext: ShotVideoTakeWorkspaceResponse
 ): TakeEditingShotListContext {
   return {
     takeId: editContext.take.takeId,
@@ -893,26 +892,12 @@ function takeEditingContextFromEditContext(
   };
 }
 
-function takeEditingContextFromProductionContext(
-  context: ShotVideoTakeProductionContextResponse
-): TakeEditingShotListContext {
-  return {
-    takeId: context.take.takeId,
-    take: context.take,
-    sourceShotListId: context.shotList.id,
-    displayShots: context.displayShots,
-    storyboardImagesByShotId: storyboardImagesByShotId(
-      context.storyboardImages
-    ),
-  };
-}
-
-function overviewFromProductionContext(
-  context: ShotVideoTakeProductionContextResponse
+function overviewFromWorkspace(
+  context: ShotVideoTakeWorkspaceResponse
 ): SceneShotVideoTakeOverviewResponse {
   return {
     take: context.take,
-    sourceShotList: context.shotList,
+    sourceShotList: context.sourceShotList,
     displayShots: context.displayShots,
     overviewShotIds: [...context.take.shotIds],
     storyboardImages: context.storyboardImages,

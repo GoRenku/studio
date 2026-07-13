@@ -1,11 +1,11 @@
-import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
+import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import { Badge } from '@/ui/badge';
 import { formatEstimateUsd } from '../movie-studio/scenes/shot-video-take-production-projection';
 
 export function GenerationPreviewEstimateFooter({
   preview,
 }: {
-  preview: StudioGenerationPreview;
+  preview: GenerationPreviewResource;
 }) {
   const estimate = preview.estimate;
   if (!estimate) {

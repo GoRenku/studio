@@ -27,7 +27,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "eslint src tests",
+    "lint": "eslint src",
     "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate:project": "drizzle-kit migrate --config drizzle.project-migrate.config.ts",

@@ -1,7 +1,7 @@
-import type { MediaKind, ProjectRelativePath } from '../../../client/index.js';
+import type { ProjectRelativePath } from '../../../client/index.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import type { ProjectAssetFileDestination } from '../types.js';
+import type { ProjectAssetFileDestination, ProjectMediaKind } from '../types.js';
 import {
   resolveCastDestinationFile,
   resolveCastDestinationFileSync,
@@ -94,7 +94,7 @@ export async function resolveDurableDestinationFile(input: {
   projectFolder: string;
   destination: ProjectAssetFileDestination;
   sourceProjectRelativePath: ProjectRelativePath;
-  mediaKind: MediaKind;
+  mediaKind: ProjectMediaKind;
   now: string;
 }): Promise<ProjectRelativePath> {
   return resolverFor(input.destination).resolveFile(input as never);
@@ -105,7 +105,7 @@ export function resolveDurableDestinationFileSync(input: {
   projectFolder: string;
   destination: ProjectAssetFileDestination;
   sourceProjectRelativePath: ProjectRelativePath;
-  mediaKind: MediaKind;
+  mediaKind: ProjectMediaKind;
   now: string;
 }): ProjectRelativePath {
   return resolverFor(input.destination).resolveFileSync(input as never);
@@ -136,7 +136,7 @@ export async function resolveDurableDestinationOutputNames(input: {
   projectFolder: string;
   destination: ProjectAssetFileDestination;
   sourceProjectRelativePath: ProjectRelativePath;
-  mediaKind: MediaKind;
+  mediaKind: ProjectMediaKind;
   outputCount: number;
   now: string;
   outputFormatHint?: string;

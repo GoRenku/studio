@@ -2,11 +2,8 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-  type MediaGenerationEstimateReport,
-} from '@gorenku/studio-core/client';
-import type { SceneDialogueAudioContextWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioEstimateReport } from '@gorenku/studio-core/client';
+import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
 import {
   deleteSceneDialogueAudioTake,
   estimateSceneDialogueAudioDraft,
@@ -118,9 +115,9 @@ describe('SceneDialogueAudioPanel', () => {
   });
 });
 
-function baseContext(): SceneDialogueAudioContextWithUrls {
+function baseContext(): SceneDialogueAudioWorkspaceWithUrls {
   return {
-    purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
+    purpose: 'scene.dialogue-audio',
     target: { kind: 'scene', sceneId: 'scene_hook' },
     project: {
       name: 'constantinople',
@@ -195,9 +192,9 @@ function baseContext(): SceneDialogueAudioContextWithUrls {
   };
 }
 
-function estimateReport(): MediaGenerationEstimateReport {
-  const spec = {
-    purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
+function estimateReport(): SceneDialogueAudioEstimateReport {
+  const setup = {
+    purpose: 'scene.dialogue-audio' as const,
     target: {
       kind: 'sceneDialogue' as const,
       sceneId: 'scene_hook',
@@ -219,33 +216,28 @@ function estimateReport(): MediaGenerationEstimateReport {
   };
   return {
     spec: {
-      id: 'draft',
-      purpose: SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-      target: spec.target,
-      modelChoice: 'elevenlabs/eleven_v3',
+      purpose: 'scene.dialogue-audio',
+      target: { kind: 'sceneDialogue', id: 'dialogue_urban' },
+      model: { provider: 'elevenlabs', model: 'eleven_v3' },
+      values: {
+        text: setup.v3Text,
+        voiceId: setup.castVoiceId,
+        outputFormat: setup.outputFormat,
+      },
+      references: [],
       title: 'Urban dialogue audio',
-      spec,
-      createdAt: '2026-06-10T00:00:00.000Z',
-      updatedAt: '2026-06-10T00:00:00.000Z',
     },
     estimate: {
-      state: 'priced',
       provider: 'elevenlabs',
       model: 'eleven_v3',
-      mediaKind: 'audio',
-      pricing: {
-        function: 'costByCharacters',
-        inputs: ['text'],
-        pricePerCharacter: 0.0001,
-      },
       estimatedCostUsd: 0.004,
-      billableUnits: { text: spec.v3Text },
-      warnings: [],
+      approvalToken: 'approval-token',
+      billableUnits: { text: setup.v3Text },
     },
   };
 }
 
-function savedContext(v3Text: string): SceneDialogueAudioContextWithUrls {
+function savedContext(v3Text: string): SceneDialogueAudioWorkspaceWithUrls {
   return {
     ...baseContext(),
     audioByDialogueId: {

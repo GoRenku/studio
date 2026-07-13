@@ -25,8 +25,8 @@ interface SceneShotCastReferenceCardProps {
   group: ShotVideoTakeCastMemberReferenceGroup;
   onPreview: (images: PreviewImage[]) => void;
   onToggleInclusion: (
-    dependencyId: string,
-    inclusion: 'include' | 'exclude' | null
+    selectionId: string,
+    included: boolean
   ) => Promise<void>;
   onSelectSheet: (castMemberId: string, assetId: string | null) => Promise<void>;
 }
@@ -78,12 +78,10 @@ export function SceneShotCastReferenceCard({
           onPreview(previewImages);
         }}
         onToggleSelected={() =>
-          selectedSheet.card.dependencyId
-            ? onToggleInclusion(
-                selectedSheet.card.dependencyId,
-                nextReferenceInclusion(selectedSheet.card)
-              )
-            : Promise.resolve()
+          onToggleInclusion(
+            selectedSheet.card.selectionId,
+            !selectedSheet.card.included
+          )
         }
       />
       {hasSheetAlternatives ? (
@@ -100,16 +98,6 @@ export function SceneShotCastReferenceCard({
       ) : null}
     </>
   );
-}
-
-function nextReferenceInclusion(card: {
-  defaultIncluded: boolean;
-  included: boolean;
-}): 'include' | 'exclude' | null {
-  if (card.included) {
-    return card.defaultIncluded ? 'exclude' : null;
-  }
-  return card.defaultIncluded ? null : 'include';
 }
 
 function CastSheetDialog({

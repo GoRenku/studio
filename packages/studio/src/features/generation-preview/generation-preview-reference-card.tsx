@@ -1,15 +1,15 @@
-import type { StudioGenerationPreviewReference } from '@gorenku/studio-core/client';
+import type { GenerationPreviewResourceReference } from '@gorenku/studio-core/client';
 import { AudioPreview } from '@/ui/audio-preview';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
 import { VideoPreview } from '@/ui/video-preview';
 
 interface GenerationPreviewReferenceCardProps {
-  reference: StudioGenerationPreviewReference;
+  reference: GenerationPreviewResourceReference;
   selected: boolean;
   canEdit: boolean;
   updating: boolean;
-  onToggle: (reference: StudioGenerationPreviewReference) => void;
+  onToggle: (reference: GenerationPreviewResourceReference) => void;
 }
 
 export function GenerationPreviewReferenceCard({
@@ -78,7 +78,7 @@ export function GenerationPreviewReferenceCard({
 }
 
 function referenceDisplayTitle(
-  reference: StudioGenerationPreviewReference
+  reference: GenerationPreviewResourceReference
 ): string | undefined {
   const label = reference.label.trim();
   if (!label) {

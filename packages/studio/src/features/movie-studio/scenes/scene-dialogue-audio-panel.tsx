@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
-import type { SceneDialogueAudioContextWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
 import { idleSaveNotification } from '../detail-save-notification';
 import {
   useSceneDialogueAudio,
@@ -18,10 +18,10 @@ interface SceneDialogueAudioPanelProps {
   projectName: string;
   sceneId: string;
   dialogueId: string;
-  context: SceneDialogueAudioContextWithUrls;
+  context: SceneDialogueAudioWorkspaceWithUrls;
   player: SceneDialogueAudioPlayer;
   onClose: () => void;
-  onContextChange: (context: SceneDialogueAudioContextWithUrls) => void;
+  onContextChange: (context: SceneDialogueAudioWorkspaceWithUrls) => void;
   onDraftTextPreviewChange?: (text: string | null) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }

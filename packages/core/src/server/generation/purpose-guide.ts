@@ -1,0 +1,199 @@
+import type {
+  GenerationModelDescriptor,
+  GenerationGuideNotice,
+  GenerationReferenceCatalogItem,
+  GenerationReferenceGuide,
+  GenerationReferenceGuideSection,
+  GenerationReferenceGuideSlot,
+  GenerationSpec,
+} from '../../client/generation.js';
+import { listGenerationReferences } from './references.js';
+import type { BuildGenerationPurposeInput } from './purpose-contract.js';
+import { and, eq, isNull } from 'drizzle-orm';
+import { sceneDialogueAudio, sceneDialogueAudioTakes } from '../schema/index.js';
+import type { LookbookType } from '../../client/index.js';
+import { readSelectedLookbookId } from '../database/access/lookbook.js';
+import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
+import { listGenerationReferenceAssetFileRecords } from '../database/access/generation-references.js';
+
+export interface GuideSlotDefinition {
+  sectionId: string;
+  sectionLabel: string;
+  slotId: string;
+  slotLabel: string;
+  cardinality: 'one' | 'many';
+  guidance?: string;
+  scope?: { kind: string; id: string };
+  subject?: { kind: string; id: string };
+  owner?: { kind: string; id: string };
+  assetId?: string;
+  assetFileIds?: string[];
+  roles?: string[];
+  mediaKind?: 'image' | 'audio' | 'video';
+  initializeFirst?: boolean;
+}
+
+export function addRequestGuideNotices(input: {
+  guide: GenerationReferenceGuide;
+  spec: GenerationSpec;
+  models: GenerationModelDescriptor[];
+}): GenerationReferenceGuide {
+  if (input.spec.purpose !== 'shot.video-take') {
+    return input.guide;
+  }
+  const model = input.models.find((candidate) =>
+    candidate.provider === input.spec.model?.provider && candidate.model === input.spec.model?.model
+  );
+  const referenceMode = model?.fields.some((field) => field.media?.acceptedKinds.includes('image')) ?? false;
+  const hasGeneralReference = input.spec.references.some((selection) =>
+    selection.included && selection.placement.kind === 'slot' &&
+    selection.placement.sectionId === 'shot' && selection.placement.slotId === 'general-reference'
+  );
+  if (!referenceMode || hasGeneralReference) {
+    return input.guide;
+  }
+  return {
+    ...input.guide,
+    notices: [...input.guide.notices, {
+      code: 'CORE_GENERATION_SHOT_REFERENCES_RECOMMENDED',
+      message: 'Reference-mode video generation is more consistent with at least one general reference.',
+      suggestion: 'Add a reference or choose a text-only provider route.',
+    }],
+  };
+}
+
+export function buildReferenceGuide(input: {
+  context: BuildGenerationPurposeInput;
+  slots?: GuideSlotDefinition[];
+  notices?: GenerationGuideNotice[];
+}): GenerationReferenceGuide {
+  const sections = new Map<string, GenerationReferenceGuideSection>();
+  for (const definition of input.slots ?? []) {
+    const sectionKey = `${definition.sectionId}\0${definition.scope?.kind ?? ''}\0${definition.scope?.id ?? ''}`;
+    let section = sections.get(sectionKey);
+    if (!section) {
+      section = {
+        id: definition.sectionId,
+        label: definition.sectionLabel,
+        ...(definition.scope ? { scope: definition.scope } : {}),
+        slots: [],
+      };
+      sections.set(sectionKey, section);
+    }
+    section.slots.push(slotFromDefinition(input.context, definition));
+  }
+  return {
+    sections: [...sections.values()],
+    additionalReferences: [],
+    notices: input.notices ?? [],
+  };
+}
+
+export function allImageCandidates(input: BuildGenerationPurposeInput) {
+  return listGenerationReferences({ session: input.session, mediaKind: 'image', limit: 200 }).items;
+}
+
+function slotFromDefinition(
+  context: BuildGenerationPurposeInput,
+  definition: GuideSlotDefinition
+): GenerationReferenceGuideSlot {
+  const candidates = listGenerationReferences({
+    session: context.session,
+    mediaKind: definition.mediaKind ?? 'image',
+    ...(definition.owner ? { owner: definition.owner } : {}),
+    ...(definition.assetId ? { assetId: definition.assetId } : {}),
+    ...(definition.assetFileIds ? { assetFileIds: definition.assetFileIds } : {}),
+    limit: 200,
+  }).items.filter((candidate) => matchesRole(candidate, definition.roles));
+  const first = definition.initializeFirst ? candidates[0] : undefined;
+  return {
+    id: definition.slotId,
+    label: definition.slotLabel,
+    cardinality: definition.cardinality,
+    ...(definition.subject ? { subject: definition.subject } : {}),
+    ...(definition.guidance ? { guidance: definition.guidance } : {}),
+    candidates,
+    selections: first ? [{
+      id: `initial:${referenceIdentity(first)}`,
+      placement: {
+        kind: 'slot',
+        sectionId: definition.sectionId,
+        slotId: definition.slotId,
+        ...(definition.scope ? { scope: definition.scope } : {}),
+        ...(definition.subject ? { subject: definition.subject } : {}),
+      },
+      included: true,
+      reference: first.reference,
+    }] : [],
+  };
+}
+
+export function dialogueAudioFileIds(
+  context: BuildGenerationPurposeInput,
+  dialogueId: string
+): string[] {
+  return context.session.db
+    .select({ assetFileId: sceneDialogueAudioTakes.assetFileId })
+    .from(sceneDialogueAudioTakes)
+    .innerJoin(sceneDialogueAudio, eq(sceneDialogueAudioTakes.sceneDialogueAudioId, sceneDialogueAudio.id))
+    .where(and(eq(sceneDialogueAudio.dialogueId, dialogueId), isNull(sceneDialogueAudioTakes.discardedAt)))
+    .all()
+    .map((row) => row.assetFileId);
+}
+
+export function selectedLookbookSheetFileIds(
+  context: BuildGenerationPurposeInput,
+  type: LookbookType
+): string[] {
+  const lookbookId = readSelectedLookbookId(context.session, type);
+  return lookbookId
+    ? listLookbookSheets(context.session, lookbookId).flatMap((sheet) =>
+        sheet.asset.files.map((file) => file.id)
+      )
+    : [];
+}
+
+export function domainAssetGroupsForRoles(
+  context: BuildGenerationPurposeInput,
+  ownerKind: 'castMember' | 'location',
+  roles: string[]
+): Array<{ owner: { kind: 'castMember' | 'location'; id: string }; assetFileIds: string[] }> {
+  const filesByOwnerId = new Map<string, string[]>();
+  for (const record of listGenerationReferenceAssetFileRecords(context.session)) {
+    if (
+      record.owner?.kind !== ownerKind ||
+      !matchesOwnerRole(record.owner.role, roles)
+    ) {
+      continue;
+    }
+    const assetFileIds = filesByOwnerId.get(record.owner.id) ?? [];
+    assetFileIds.push(record.file.id);
+    filesByOwnerId.set(record.owner.id, assetFileIds);
+  }
+  return [...filesByOwnerId].map(([id, assetFileIds]) => ({
+    owner: { kind: ownerKind, id },
+    assetFileIds,
+  }));
+}
+
+function referenceIdentity(candidate: GenerationReferenceCatalogItem): string {
+  return candidate.reference.kind === 'asset-file'
+    ? candidate.reference.assetFileId
+    : candidate.reference.projectRelativePath;
+}
+
+function matchesRole(
+  candidate: GenerationReferenceCatalogItem,
+  roles: string[] | undefined
+): boolean {
+  if (!roles || roles.length === 0) {
+    return true;
+  }
+  const normalized = candidate.role.replaceAll('_', '-').toLocaleLowerCase();
+  return roles.some((role) => normalized.includes(role.replaceAll('_', '-').toLocaleLowerCase()));
+}
+
+function matchesOwnerRole(ownerRole: string, roles: string[]): boolean {
+  const normalized = ownerRole.replaceAll('_', '-').toLocaleLowerCase();
+  return roles.some((role) => normalized.includes(role.replaceAll('_', '-').toLocaleLowerCase()));
+}

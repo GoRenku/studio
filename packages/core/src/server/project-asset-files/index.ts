@@ -2,7 +2,7 @@ export type {
   PersistProjectAssetFileInput,
   ProjectAssetFileDestination,
   ProjectAssetFileWriteSet,
-  ProjectAssetGenerationOutputPlacement,
+  ProjectMediaKind,
   ProjectReferenceFileValidation,
   ProjectTemporaryFileDestination,
   ShotVideoTakeMediaRole,
@@ -23,10 +23,10 @@ export {
   removeCopiedProjectAssetFileSync,
 } from './persistence.js';
 export {
+  resolveGenerationRunOutputRoot,
   resolveTemporaryFileRoot,
   writeProjectTemporaryFile,
 } from './temporary-files.js';
-export { resolveProjectAssetGenerationOutput } from './generation-output/index.js';
 export { allocateImageEditOutputNames } from './destinations/image-edit.js';
 export { persistSceneStoryboardShotFilesSync } from './destinations/scene-storyboard.js';
 export {

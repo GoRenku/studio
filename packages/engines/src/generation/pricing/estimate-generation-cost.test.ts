@@ -22,7 +22,6 @@ describe('generation estimates', () => {
           provider: 'fal-ai',
           model: 'image-model',
           mediaKind: 'image',
-          modes: ['text-to-image'],
         }),
       ])
     );
@@ -37,11 +36,14 @@ describe('generation estimates', () => {
         provider: 'fal-ai',
         model: 'image-model',
         mediaKind: 'image',
-        parameters: { image_size: '1024x1024', quality: 'medium' },
       },
       request: {
-        prompt: 'A test image',
-        parameters: { num_images: 2 },
+        payload: {
+          prompt: 'A test image',
+          image_size: '1024x1024',
+          quality: 'medium',
+          num_images: 2,
+        },
       },
     });
 
@@ -70,8 +72,8 @@ describe('generation estimates', () => {
           mediaKind: 'image',
         },
         request: {
-          prompt: 'A test image',
-          parameters: { resolution: '2K', num_images: 3 },
+          payload: {
+            prompt: 'A test image', resolution: '2K', num_images: 3 },
         },
       })
     ).resolves.toMatchObject({
@@ -95,8 +97,8 @@ describe('generation estimates', () => {
           mediaKind: 'image',
         },
         request: {
-          prompt: 'A test image',
-          parameters: {
+          payload: {
+            prompt: 'A test image',
             image_size: 'landscape_4_3',
             quality: 'medium',
             num_images: 1,
@@ -121,11 +123,10 @@ describe('generation estimates', () => {
           provider: 'fal-ai',
           model: 'openai/gpt-image-2/edit',
           mediaKind: 'image',
-          mode: 'image-edit',
         },
         request: {
-          prompt: 'An edited source image.',
-          parameters: {
+          payload: {
+            prompt: 'An edited source image.',
             image_size: { width: 1536, height: 1152 },
             quality: 'medium',
             num_images: 1,
@@ -161,8 +162,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A test camera move',
-          parameters: { duration: 5, resolution: '720p' },
+          payload: {
+            prompt: 'A test camera move', duration: 5, resolution: '720p' },
           inputFiles: [
             {
               field: 'image_url',
@@ -195,8 +196,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A test camera move',
-          parameters: { duration: 5, resolution: '720p' },
+          payload: {
+            prompt: 'A test camera move', duration: 5, resolution: '720p' },
           pricingInputCounts: { image: 1 },
         },
       })
@@ -222,8 +223,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A smooth pan across a lobby.',
-          parameters: { duration: 5, resolution: '480p' },
+          payload: {
+            prompt: 'A smooth pan across a lobby.', duration: 5, resolution: '480p' },
           inputFiles: [
             {
               field: 'image_url',
@@ -252,8 +253,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A locked-off shot of smoke moving across a wall.',
-          parameters: {
+          payload: {
+            prompt: 'A locked-off shot of smoke moving across a wall.',
             duration: '9',
             resolution: '720p',
             aspect_ratio: '16:9',
@@ -292,8 +293,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A locked-off shot of smoke moving across a wall.',
-          parameters: {
+          payload: {
+            prompt: 'A locked-off shot of smoke moving across a wall.',
             duration: '9',
             resolution: '720p',
             aspect_ratio: '16:9',
@@ -332,8 +333,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A locked-off shot of smoke moving across a wall.',
-          parameters: {
+          payload: {
+            prompt: 'A locked-off shot of smoke moving across a wall.',
             duration: '9',
             resolution: '720p',
             aspect_ratio: '16:9',
@@ -372,8 +373,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A siege wall collapses through drifting smoke.',
-          parameters: {
+          payload: {
+            prompt: 'A siege wall collapses through drifting smoke.',
             duration: '9',
             generate_audio: true,
             cfg_scale: 0.5,
@@ -403,62 +404,62 @@ describe('generation estimates', () => {
     const cases = [
       {
         model: 'kling-video/v3/standard/text-to-video',
-        parameters: { duration: '5', generate_audio: false },
+        payload: { duration: '5', generate_audio: false },
         expected: 0.42,
       },
       {
         model: 'kling-video/v3/standard/text-to-video',
-        parameters: { duration: '5', generate_audio: true },
+        payload: { duration: '5', generate_audio: true },
         expected: 0.63,
       },
       {
         model: 'kling-video/v3/standard/image-to-video',
-        parameters: { duration: '5', generate_audio: true, uses_voice_control: true },
+        payload: { duration: '5', generate_audio: true, uses_voice_control: true },
         expected: 0.77,
       },
       {
         model: 'kling-video/v3/pro/text-to-video',
-        parameters: { duration: '5', generate_audio: false },
+        payload: { duration: '5', generate_audio: false },
         expected: 0.56,
       },
       {
         model: 'kling-video/v3/pro/text-to-video',
-        parameters: { duration: '5', generate_audio: true },
+        payload: { duration: '5', generate_audio: true },
         expected: 0.84,
       },
       {
         model: 'kling-video/v3/pro/image-to-video',
-        parameters: { duration: '5', generate_audio: true, uses_voice_control: true },
+        payload: { duration: '5', generate_audio: true, uses_voice_control: true },
         expected: 0.98,
       },
       {
         model: 'kling-video/o3/standard/reference-to-video',
-        parameters: { duration: '5', generate_audio: false },
+        payload: { duration: '5', generate_audio: false },
         expected: 0.42,
       },
       {
         model: 'kling-video/o3/standard/reference-to-video',
-        parameters: { duration: '5', generate_audio: true },
+        payload: { duration: '5', generate_audio: true },
         expected: 0.56,
       },
       {
         model: 'kling-video/o3/pro/reference-to-video',
-        parameters: { duration: '5', generate_audio: false },
+        payload: { duration: '5', generate_audio: false },
         expected: 0.56,
       },
       {
         model: 'kling-video/o3/pro/reference-to-video',
-        parameters: { duration: '5', generate_audio: true },
+        payload: { duration: '5', generate_audio: true },
         expected: 0.7,
       },
       {
         model: 'kling-video/o3/standard/video-to-video/reference',
-        parameters: { duration: '5' },
+        payload: { duration: '5' },
         expected: 0.63,
       },
       {
         model: 'kling-video/o3/pro/video-to-video/reference',
-        parameters: { duration: '5' },
+        payload: { duration: '5' },
         expected: 0.84,
       },
     ];
@@ -472,8 +473,10 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A measured camera move through the scene.',
-          parameters: testCase.parameters,
+          payload: {
+            prompt: 'A measured camera move through the scene.',
+            ...testCase.payload,
+          },
           pricingInputCounts: {},
         },
       });
@@ -489,7 +492,7 @@ describe('generation estimates', () => {
           mediaKind: 'json',
         },
         request: {
-          parameters: { voice_url: 'https://example.com/voice.mp3' },
+          payload: { voice_url: 'https://example.com/voice.mp3' },
           pricingInputCounts: {},
         },
       })
@@ -511,8 +514,8 @@ describe('generation estimates', () => {
           mediaKind: 'video',
         },
         request: {
-          prompt: 'A quiet character study.',
-          parameters: {
+          payload: {
+            prompt: 'A quiet character study.',
             duration: '5',
             generate_audio: false,
             uses_voice_control: true,
@@ -543,10 +546,9 @@ describe('generation estimates', () => {
             provider: 'elevenlabs',
             model,
             mediaKind: 'audio',
-            mode: 'text-to-speech',
           },
           request: {
-            parameters: {
+            payload: {
               text,
               voice: 'voice_urban',
             },
@@ -578,8 +580,8 @@ describe('generation estimates', () => {
           mediaKind: 'image',
         },
         request: {
-          prompt: 'A test image',
-          parameters: {
+          payload: {
+            prompt: 'A test image',
             image_size: 'unknown_size',
             quality: 'medium',
             num_images: 1,
@@ -599,11 +601,14 @@ describe('generation estimates', () => {
       provider: 'fal-ai',
       model: 'image-model',
       mediaKind: 'image' as const,
-      parameters: { image_size: '1024x1024', quality: 'medium' },
     };
     const request = {
-      prompt: 'A test image',
-      parameters: { num_images: 2 },
+      payload: {
+        prompt: 'A test image',
+        image_size: '1024x1024',
+        quality: 'medium',
+        num_images: 2,
+      },
     };
 
     await expect(
@@ -625,9 +630,7 @@ function estimateGenerationFromRequest(input: {
   request: GenerationRequest;
 }) {
   const payload: Record<string, unknown> = {
-    ...(input.policy.parameters ?? {}),
-    ...(input.request.parameters ?? {}),
-    ...(input.request.prompt ? { prompt: input.request.prompt } : {}),
+    ...(input.request.payload ?? {}),
   };
   const pricingCounts = input.request.pricingInputCounts ?? {};
   return estimateGenerationCost({

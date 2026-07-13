@@ -13,7 +13,7 @@ import type {
   StoryArcResourceResponse,
 } from './studio-project-contracts';
 import { readStudioApiError } from './studio-api-errors';
-import { decorateSceneDialogueAudioContext } from './studio-scene-dialogue-audio-api';
+import { decorateSceneDialogueAudioWorkspace } from './studio-scene-dialogue-audio-api';
 
 interface ResourceResponse<T> {
   resource: T | null;
@@ -144,7 +144,7 @@ export async function readSceneNarrativeResource(
   );
   return {
     ...resource,
-    dialogueAudio: decorateSceneDialogueAudioContext(
+    dialogueAudio: decorateSceneDialogueAudioWorkspace(
       projectName,
       sceneId,
       resource.dialogueAudio

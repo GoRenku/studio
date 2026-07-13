@@ -1,12 +1,12 @@
 import { createDiagnosticError, createStructuredError } from '@gorenku/studio-diagnostics';
-import type { SceneDialogueAudioGenerationSpec } from '@gorenku/studio-core/client';
+import type { SceneDialogueAudioSetup } from '@gorenku/studio-core/client';
 import { readHttpRequestRecord } from './request-validation.js';
 
 const CONTEXT = 'Scene Dialogue Audio request';
 
 export function readSceneDialogueAudioSetupRequest(
   input: unknown
-): Partial<SceneDialogueAudioGenerationSpec> {
+): Partial<SceneDialogueAudioSetup> {
   const issues: ReturnType<typeof createDiagnosticError>[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
@@ -20,7 +20,7 @@ export function readSceneDialogueAudioSetupRequest(
 }
 
 export function readSceneDialogueAudioGenerateRequest(input: unknown): {
-  setup: Partial<SceneDialogueAudioGenerationSpec>;
+  setup: Partial<SceneDialogueAudioSetup>;
   simulate?: boolean;
   approveLiveProviderRun?: boolean;
 } {
@@ -45,7 +45,7 @@ export function readSceneDialogueAudioGenerateRequest(input: unknown): {
 
 export function readSceneDialogueAudioEstimateRequest(
   input: unknown
-): SceneDialogueAudioGenerationSpec {
+): SceneDialogueAudioSetup {
   const issues: ReturnType<typeof createDiagnosticError>[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
@@ -65,21 +65,21 @@ export function readSceneDialogueAudioEstimateRequest(
   if (issues.length > 0) {
     throw invalidRequest(issues);
   }
-  return spec as SceneDialogueAudioGenerationSpec;
+  return spec as SceneDialogueAudioSetup;
 }
 
 function optionalSetup(
   record: Record<string, unknown>
-): Partial<SceneDialogueAudioGenerationSpec> {
+): Partial<SceneDialogueAudioSetup> {
   return {
     ...(typeof record.modelChoice === 'string'
-      ? { modelChoice: record.modelChoice as SceneDialogueAudioGenerationSpec['modelChoice'] }
+      ? { modelChoice: record.modelChoice as SceneDialogueAudioSetup['modelChoice'] }
       : {}),
     ...(typeof record.castVoiceId === 'string' ? { castVoiceId: record.castVoiceId } : {}),
     ...(typeof record.plainText === 'string' ? { plainText: record.plainText } : {}),
     ...(typeof record.v3Text === 'string' ? { v3Text: record.v3Text } : {}),
     ...(record.voiceSettings && typeof record.voiceSettings === 'object'
-      ? { voiceSettings: record.voiceSettings as SceneDialogueAudioGenerationSpec['voiceSettings'] }
+      ? { voiceSettings: record.voiceSettings as SceneDialogueAudioSetup['voiceSettings'] }
       : {}),
     ...(typeof record.outputFormat === 'string' ? { outputFormat: record.outputFormat } : {}),
     ...(typeof record.languageCode === 'string'

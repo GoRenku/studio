@@ -1,7 +1,7 @@
-import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
+import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
-export interface UpdateStudioGenerationPreviewSpecInput {
+export interface UpdateGenerationPreviewResourceSpecInput {
   projectName: string;
   specId: string;
   prompt: {
@@ -9,14 +9,14 @@ export interface UpdateStudioGenerationPreviewSpecInput {
     negativeText?: string | null;
   };
   referenceSelections: Array<{
-    dependencyId: string;
+    selectionId: string;
     selected: boolean;
   }>;
 }
 
-export async function updateGenerationPreviewSpec(
-  input: UpdateStudioGenerationPreviewSpecInput,
-): Promise<StudioGenerationPreview> {
+export async function updateGenerationPreviewResource(
+  input: UpdateGenerationPreviewResourceSpecInput,
+): Promise<GenerationPreviewResource> {
   const response = await fetch(
     `/studio-api/projects/${encodeURIComponent(input.projectName)}/generation-previews/specs/${encodeURIComponent(input.specId)}`,
     {
@@ -31,7 +31,7 @@ export async function updateGenerationPreviewSpec(
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
-  const body = (await response.json()) as { preview: StudioGenerationPreview };
+  const body = (await response.json()) as { preview: GenerationPreviewResource };
   return body.preview;
 }
 

@@ -71,7 +71,7 @@ export async function runGeneration(
     options.policy.provider,
     options.policy.model
   );
-  const payload = buildLogicalProviderPayload(options.policy, options.request);
+  const payload = buildLogicalProviderPayload(options.request);
   await validateGenerationProviderPayload({
     catalog,
     provider: options.policy.provider,
@@ -124,7 +124,6 @@ export async function runGeneration(
       provider: options.policy.provider,
       model: options.policy.model,
       mediaKind: options.policy.mediaKind,
-      mode: options.policy.mode,
       generatedAt: new Date().toISOString(),
       requestHash,
       outputs,
@@ -185,10 +184,7 @@ async function buildExecutionProviderPayload(input: {
   request: GenerationRequest;
   inputRoot?: string;
 }): Promise<Record<string, unknown>> {
-  const payload = createGenerationProviderPayloadBase(
-    input.policy,
-    input.request
-  );
+  const payload = createGenerationProviderPayloadBase(input.request);
   const files = input.request.inputFiles ?? [];
   if (files.length === 0) {
     return payload;

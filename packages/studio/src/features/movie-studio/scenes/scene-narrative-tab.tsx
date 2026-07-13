@@ -15,7 +15,7 @@ import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
-import type { SceneDialogueAudioContextWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
 import type { StudioSelection } from '../movie-studio-selection';
 import { SceneDialogueAudioPanel } from './scene-dialogue-audio-panel';
 import {
@@ -59,7 +59,7 @@ export function SceneNarrativeTab({
   >({});
   const player = useSceneDialogueAudioPlayer();
   const dialogueAudioContext =
-    resource.dialogueAudio as SceneDialogueAudioContextWithUrls;
+    resource.dialogueAudio as SceneDialogueAudioWorkspaceWithUrls;
   const dialogueIds = useMemo(
     () =>
       new Set(

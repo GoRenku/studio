@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShot,
 } from '@gorenku/studio-core/client';
-import { updateSceneShotVideoTakeStructureMode } from '@/services/studio-shot-video-takes-api';
+import { setShotVideoTakeStructure } from '@/services/studio-shot-video-takes-api';
 import type { SceneShotVideoTakeWithHttp } from '@/services/studio-shot-video-takes-api';
 import type { UseShotVideoTakeProductionResult } from './use-shot-video-take-production';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
@@ -16,7 +16,7 @@ vi.mock('./use-shot-video-take-production', () => ({
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  updateSceneShotVideoTakeStructureMode: vi.fn(),
+  setShotVideoTakeStructure: vi.fn(),
 }));
 
 class ResizeObserverStub {
@@ -63,11 +63,6 @@ const TAKE: SceneShotVideoTakeWithHttp = {
         diagnostics: [],
         message: 'All tracked take references resolve.',
       },
-      runnability: {
-        state: 'not-evaluated',
-        diagnostics: [],
-        message: 'Run readiness is evaluated by shot-video preflight.',
-      },
       archive: { state: 'active', message: 'This take is active.' },
       history: { differences: [], message: 'This take matches its recorded history snapshot.' },
     },
@@ -82,50 +77,28 @@ const GROUPED_TAKE: SceneShotVideoTakeWithHttp = {
 const MULTI_CUT_TAKE: SceneShotVideoTakeWithHttp = {
   ...GROUPED_TAKE,
   state: {
-    version: 2,
+    version: 3,
     structure: {
       mode: 'multi-cut',
       directionsByShotId: {
         shot_001: {
           composition: { shotSize: 'wide-shot' },
-          referenceSelections: emptyReferenceSelections(),
         },
         shot_002: {
           composition: { shotSize: 'close-up' },
-          referenceSelections: emptyReferenceSelections(),
         },
       },
     },
-    production: {},
   },
 };
 
 function emptyTakeState() {
   return {
-    version: 2 as const,
+    version: 3 as const,
     structure: {
       mode: 'continuous' as const,
-      sharedDirection: {
-        referenceSelections: {
-          dependencyInclusions: {},
-          selectedCharacterSheetAssetIds: {},
-          selectedLocationSheetAssetIds: {},
-          selectedLookbookSheetIds: [],
-          selectedDialogueAudioTakeIds: {},
-        },
-      },
+      sharedDirection: {},
     },
-    production: {},
-  };
-}
-
-function emptyReferenceSelections() {
-  return {
-    dependencyInclusions: {},
-    selectedCharacterSheetAssetIds: {},
-    selectedLocationSheetAssetIds: {},
-    selectedLookbookSheetIds: [],
-    selectedDialogueAudioTakeIds: {},
   };
 }
 
@@ -136,17 +109,18 @@ function productionResult(
   > &
     Partial<Pick<UseShotVideoTakeProductionResult['autosave'], 'flushPending'>>,
   take = TAKE,
-  refreshProductionPlan = vi.fn(async () => {})
+  refreshWorkspace = vi.fn(async () => {})
 ): UseShotVideoTakeProductionResult {
   return {
     loadState: 'ready',
     loadError: null,
-    context: null,
+    workspace: null,
     models: null,
     take,
     isEditable: true,
     selectedInputMode: null,
     selectedModel: undefined,
+    setup: null,
     setInputMode: vi.fn(),
     setModel: vi.fn(),
     setParameter: vi.fn(),
@@ -154,23 +128,18 @@ function productionResult(
       flushPending: async () => true,
       ...autosave,
     },
-    productionPlan: null,
     estimate: null,
     estimateState: 'idle',
     estimateError: null,
-    planState: 'idle',
-    planError: null,
-    refreshProductionPlan,
-    reuseInput: vi.fn(async () => {}),
-    regenerateInput: vi.fn(async () => {}),
-    deleteInput: vi.fn(async () => {}),
+    refreshWorkspace,
+    setReferenceIncluded: vi.fn(async () => {}),
   };
 }
 
 describe('SceneShotDetail save notifications', () => {
   beforeEach(() => {
     vi.mocked(useShotVideoTakeProduction).mockReset();
-    vi.mocked(updateSceneShotVideoTakeStructureMode).mockReset();
+    vi.mocked(setShotVideoTakeStructure).mockReset();
   });
 
   it('routes AI Production autosave status to the details header path', async () => {
@@ -248,16 +217,16 @@ describe('SceneShotDetail save notifications', () => {
   });
 
   it('shows the structure toggle beside grouped takes and delegates mode changes', async () => {
-    const refreshProductionPlan = vi.fn(async () => {});
+    const refreshWorkspace = vi.fn(async () => {});
     vi.mocked(useShotVideoTakeProduction).mockReturnValue(
       productionResult(
         { state: 'idle', message: null },
         GROUPED_TAKE,
-        refreshProductionPlan
+        refreshWorkspace
       )
     );
-    vi.mocked(updateSceneShotVideoTakeStructureMode).mockResolvedValue({
-      context: {
+    vi.mocked(setShotVideoTakeStructure).mockResolvedValue({
+      workspace: {
         take: {
           ...GROUPED_TAKE,
           state: {
@@ -265,8 +234,8 @@ describe('SceneShotDetail save notifications', () => {
             structure: {
               mode: 'multi-cut',
               directionsByShotId: {
-                shot_001: { referenceSelections: emptyReferenceSelections() },
-                shot_002: { referenceSelections: emptyReferenceSelections() },
+                shot_001: {},
+                shot_002: {},
               },
             },
           },
@@ -297,7 +266,7 @@ describe('SceneShotDetail save notifications', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Multi-Cut Sequence' }));
 
     await waitFor(() => {
-      expect(updateSceneShotVideoTakeStructureMode).toHaveBeenCalledWith(
+      expect(setShotVideoTakeStructure).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
@@ -305,7 +274,7 @@ describe('SceneShotDetail save notifications', () => {
         undefined
       );
     });
-    expect(refreshProductionPlan).toHaveBeenCalledOnce();
+    expect(refreshWorkspace).toHaveBeenCalledOnce();
     expect(onTakeMutation).toHaveBeenCalledOnce();
   });
 
@@ -313,12 +282,12 @@ describe('SceneShotDetail save notifications', () => {
     vi.mocked(useShotVideoTakeProduction).mockReturnValue(
       productionResult({ state: 'idle', message: null }, MULTI_CUT_TAKE)
     );
-    vi.mocked(updateSceneShotVideoTakeStructureMode)
+    vi.mocked(setShotVideoTakeStructure)
       .mockRejectedValueOnce(
         new Error('CORE_SHOT_VIDEO_TAKE_STRUCTURE_MISSING_SOURCE_SHOT')
       )
       .mockResolvedValueOnce({
-        context: {
+        workspace: {
           take: {
             ...MULTI_CUT_TAKE,
             state: {
@@ -327,7 +296,6 @@ describe('SceneShotDetail save notifications', () => {
                 mode: 'continuous',
                 sharedDirection: {
                   composition: { shotSize: 'close-up' },
-                  referenceSelections: emptyReferenceSelections(),
                 },
               },
             },
@@ -360,7 +328,7 @@ describe('SceneShotDetail save notifications', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Use Shot 2' }));
 
     await waitFor(() => {
-      expect(updateSceneShotVideoTakeStructureMode).toHaveBeenLastCalledWith(
+      expect(setShotVideoTakeStructure).toHaveBeenLastCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',

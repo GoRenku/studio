@@ -15,7 +15,7 @@ import {
   buildStudioImageRevisionContext,
   buildStudioImageRevisionEstimate,
 } from '../projections/image-revision.js';
-import { buildStudioGenerationPreview } from '../projections/generation-preview.js';
+import { buildGenerationPreviewResource } from '../projections/generation-preview.js';
 
 export interface ImageRevisionRouteCommands {
   readImageRevisionContext: typeof coreReadImageRevisionContext;
@@ -69,7 +69,7 @@ export function createImageRevisionsRoute(
           draft: body.draft,
         });
         return c.json({
-          preview: await buildStudioGenerationPreview({
+          preview: await buildGenerationPreviewResource({
             projectName,
             preview,
           }),

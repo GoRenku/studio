@@ -10,7 +10,6 @@ import type {
   SceneNarrativeResource,
   SceneShotListResource,
   SceneShotVideoTakeCreateReport,
-  SceneShotVideoTakeEditContext,
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeOverview,
   SceneShotVideoTake,
@@ -19,7 +18,8 @@ import type {
   ScreenplayImageReferenceWithHttp,
   SequenceResource,
   SequenceSceneRow,
-  ShotVideoTakeProductionContext,
+  ShotVideoTakeWorkspace,
+  ShotVideoTakeReferenceSections,
   ShotVideoTakeStoryboardImageReference,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
@@ -140,20 +140,35 @@ export type SceneShotVideoTakeCreateReportResponse = Omit<
   overview: SceneShotVideoTakeOverviewResponse;
 };
 
-export type ShotVideoTakeProductionContextResponse = Omit<
-  ShotVideoTakeProductionContext,
-  'take' | 'storyboardImages'
+export type ShotVideoTakeWorkspaceResponse = Omit<
+  ShotVideoTakeWorkspace,
+  'take' | 'storyboardImages' | 'generation'
 > & {
   take: SceneShotVideoTakeWithHttp;
   storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
+  generation: Omit<ShotVideoTakeWorkspace['generation'], 'references'> & {
+    references: ShotVideoTakeReferenceSectionsWithHttp;
+  };
 };
 
-export type SceneShotVideoTakeEditContextResponse = Omit<
-  SceneShotVideoTakeEditContext,
-  'take' | 'storyboardImages'
+type ShotVideoTakeReferenceSectionsWithHttp = Omit<
+  ShotVideoTakeReferenceSections,
+  'general' | 'lookbook' | 'castMembers' | 'locations'
 > & {
-  take: SceneShotVideoTakeWithHttp;
-  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
+  general: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['general'][number]>>;
+  lookbook: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['lookbook'][number]>>;
+  castMembers: Array<Omit<ShotVideoTakeReferenceSections['castMembers'][number], 'characterSheets'> & {
+    characterSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['castMembers'][number]['characterSheets'][number]>>;
+  }>;
+  locations: Array<Omit<ShotVideoTakeReferenceSections['locations'][number], 'environmentSheets'> & {
+    environmentSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['locations'][number]['environmentSheets'][number]>>;
+  }>;
+};
+
+type ReferenceChoiceWithHttp<T extends { card: { previews: unknown[] } }> = Omit<T, 'card'> & {
+  card: Omit<T['card'], 'previews'> & {
+    previews: Array<T['card']['previews'][number] & { url: string }>;
+  };
 };
 
 export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {
@@ -333,29 +348,20 @@ export function toSceneShotVideoTakeOverviewResponse(
   };
 }
 
-export function toShotVideoTakeProductionContextResponse(
+export function toShotVideoTakeWorkspaceResponse(
   projectName: string,
-  context: ShotVideoTakeProductionContext
-): ShotVideoTakeProductionContextResponse {
+  workspace: ShotVideoTakeWorkspace
+): ShotVideoTakeWorkspaceResponse {
   return {
-    ...context,
-    take: withShotVideoTakeVideoUrl(projectName, context.take),
-    storyboardImages: context.storyboardImages.map((image) =>
-      withShotVideoTakeStoryboardImageUrl(projectName, context.scene.id, image)
+    ...workspace,
+    take: withShotVideoTakeVideoUrl(projectName, workspace.take),
+    storyboardImages: workspace.storyboardImages.map((image) =>
+      withShotVideoTakeStoryboardImageUrl(projectName, workspace.take.sceneId, image)
     ),
-  };
-}
-
-export function toSceneShotVideoTakeEditContextResponse(
-  projectName: string,
-  context: SceneShotVideoTakeEditContext
-): SceneShotVideoTakeEditContextResponse {
-  return {
-    ...context,
-    take: withShotVideoTakeVideoUrl(projectName, context.take),
-    storyboardImages: context.storyboardImages.map((image) =>
-      withShotVideoTakeStoryboardImageUrl(projectName, context.scene.id, image)
-    ),
+    generation: {
+      ...workspace.generation,
+      references: withReferenceUrls(projectName, workspace.generation.references),
+    },
   };
 }
 
@@ -453,8 +459,37 @@ function withShotVideoTakeVideoUrl(
     video: take.video
       ? {
           ...take.video,
-          url: `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(take.sceneId)}/takes/${encodeURIComponent(take.takeId)}/video/files/${encodeURIComponent(take.video.assetFileId)}`,
+          url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(take.video.assetId)}/files/${encodeURIComponent(take.video.assetFileId)}`,
         }
       : null,
+  };
+}
+
+function withReferenceUrls(
+  projectName: string,
+  references: ShotVideoTakeReferenceSections
+): ShotVideoTakeReferenceSectionsWithHttp {
+  const withChoice = <T extends { card: ShotVideoTakeReferenceSections['general'][number]['card'] }>(choice: T) => ({
+    ...choice,
+    card: {
+      ...choice.card,
+      previews: choice.card.previews.map((preview) => ({
+        ...preview,
+        url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(preview.assetId)}/files/${encodeURIComponent(preview.assetFileId)}`,
+      })),
+    },
+  });
+  return {
+    ...references,
+    general: references.general.map(withChoice),
+    lookbook: references.lookbook.map(withChoice),
+    castMembers: references.castMembers.map((group) => ({
+      ...group,
+      characterSheets: group.characterSheets.map(withChoice),
+    })),
+    locations: references.locations.map((group) => ({
+      ...group,
+      environmentSheets: group.environmentSheets.map(withChoice),
+    })),
   };
 }

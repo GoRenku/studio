@@ -2,7 +2,6 @@ export type {
   GenerationCostEstimate,
   GenerationInputFile,
   GenerationMediaKind,
-  GenerationMode,
   GenerationModelSummary,
   GenerationOutput,
   GenerationPolicy,
@@ -19,6 +18,9 @@ export {
   estimateGenerationCost,
   hashGenerationCostApproval,
 } from './pricing/estimate-generation-cost.js';
+export {
+  estimateGenerationProviderRequest,
+} from './pricing/provider-request-estimate.js';
 export {
   buildLogicalProviderPayload,
 } from './execution/logical-provider-payload.js';
@@ -37,11 +39,29 @@ export {
   type GenerationModelInputValue,
 } from './catalog/model-input-descriptors.js';
 export {
+  listStudioModelAvailability,
+  type StudioGenerationUse,
+  type StudioModelAvailability,
+} from './studio-model-availability.js';
+export {
+  bindGenerationProductSettings,
+  bindGenerationSemanticValues,
+  type GenerationProductSettingBinding,
+  type GenerationProductSettingInput,
+  type GenerationSemanticValues,
+} from './setting-fields.js';
+export {
   hashGenerationRequest,
 } from './execution/request-hash.js';
 export {
   validateGenerationProviderPayload,
 } from './execution/provider-payload-validation.js';
+export {
+  assembleGenerationProviderRequest,
+  type GenerationProviderPayloadIssue,
+  type GenerationProviderReferenceInput,
+  type GenerationProviderRequestAssembly,
+} from './execution/provider-request-assembly.js';
 export {
   readGenerationPricingSupport,
   type GenerationPricingSupport,

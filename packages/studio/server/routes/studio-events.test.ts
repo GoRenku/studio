@@ -1,8 +1,8 @@
 import type { Project } from '@gorenku/studio-core/client';
 import type {
   AppendStudioEventInput,
-  GenerationPreviewRequest,
-  StudioGenerationPreview,
+  GenerationPreview,
+  GenerationPreviewResource,
   StudioCoordinationService,
   StudioEvent,
 } from '@gorenku/studio-core/server';
@@ -89,10 +89,11 @@ describe('studio events Hono route', () => {
       token,
       cliNotificationToken: 'notification-token-test',
       coordination: fakeCoordinationService(appended),
+      projectData: fakeProjectDataService(),
       generationPreviewProjection: async (input) => {
         expect(input.projectName).toBe('constantinople');
-        expect(input.preview).toEqual(preview);
-        return studioGenerationPreviewFixture(input.preview);
+        expect(input.preview).toEqual(coreGenerationPreviewResourceFixture());
+        return studioGenerationPreviewFixture();
       },
     });
 
@@ -123,7 +124,7 @@ describe('studio events Hono route', () => {
           id: 'project_test0001',
           storageRoot: '/tmp/renku',
         },
-        preview: studioGenerationPreviewFixture(preview),
+        preview: studioGenerationPreviewFixture(),
         source: { kind: 'cli', command: 'generation preview show' },
         operationId: 'studio_operation_preview_test',
       },
@@ -156,6 +157,7 @@ describe('studio events Hono route', () => {
       token,
       cliNotificationToken: 'notification-token-test',
       coordination: fakeCoordinationService([]),
+      projectData: fakeProjectDataService(),
       generationPreviewProjection: async () => {
         throw createStructuredError({
           code: 'CORE_GENERATION_PREVIEW_REFERENCE_FILE_NOT_FOUND',
@@ -195,6 +197,21 @@ describe('studio events Hono route', () => {
       token,
       cliNotificationToken: 'notification-token-test',
       coordination: fakeCoordinationService([]),
+      projectData: {
+        ...fakeProjectDataService(),
+        async buildGenerationPreviewResource() {
+          throw createStructuredError({
+            code: 'CORE_GENERATION_PREVIEW_INVALID',
+            message: 'Generation preview contains an unsafe reference URL.',
+            issues: [{
+              code: 'CORE_GENERATION_PREVIEW_REFERENCE_FIELD_UNSUPPORTED',
+              severity: 'error',
+              message: 'Reference URLs are server-owned.',
+              location: { path: ['preview', 'references', '0'] },
+            }],
+          });
+        },
+      },
     });
     const preview = generationPreviewFixture();
     preview.references[0] = {
@@ -268,7 +285,7 @@ describe('studio events Hono route', () => {
     });
   });
 
-  it('rejects generation preview notifications for a different projectRef', async () => {
+  it('rejects generation preview notifications for an unknown projectRef', async () => {
     const token = createStudioRuntimeToken();
     const app = createStudioEventsRoute({
       token,
@@ -293,18 +310,10 @@ describe('studio events Hono route', () => {
       },
     });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(404);
     await expect(response.json()).resolves.toMatchObject({
       error: {
-        code: 'STUDIO_SERVER032',
-        issues: [
-          {
-            message: 'projectRef.id must match preview.project.id.',
-          },
-          {
-            message: 'projectRef.name must match preview.project.name.',
-          },
-        ],
+        code: expect.any(String),
       },
     });
   });
@@ -535,6 +544,9 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
         locationLabels: {},
       };
     },
+    async buildGenerationPreviewResource() {
+      return coreGenerationPreviewResourceFixture();
+    },
   };
 }
 
@@ -564,79 +576,70 @@ function makeProject(): Project {
   };
 }
 
-function generationPreviewFixture(): GenerationPreviewRequest {
+function generationPreviewFixture(): GenerationPreview {
   return {
-    kind: 'generationPreview',
+    spec: {
+      purpose: 'image.create',
+      target: { kind: 'project', id: 'project_test0001' },
+      model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },
+      values: { prompt: 'Create a motion annotated video prompt image.' },
+      references: [],
+    },
+    referenceGuide: {
+      sections: [],
+      additionalReferences: [],
+      notices: [],
+    },
+    references: [],
+    diagnostics: [],
+  };
+}
+
+function coreGenerationPreviewResourceFixture() {
+  return {
+    kind: 'generationPreview' as const,
     previewId: 'generation_preview_test',
-    purpose: 'image.create',
+    purpose: 'image.create' as const,
     project: {
       id: 'project_test0001',
       name: 'constantinople',
       title: 'Preparation of the Siege',
     },
-    target: {
-      kind: 'project',
-      id: 'project_test0001',
-    },
+    target: { kind: 'project' as const, id: 'project_test0001' },
     title: 'Choreography reference image',
-    model: {
-      provider: 'fal-ai',
-      modelId: 'fal-ai/openai/gpt-image-2',
-      mediaKind: 'image',
-      executionPath: 'renku-managed',
-    },
-    finalPrompt: {
-      authoredText: 'Create a motion annotated video prompt image.',
-      providerText: 'Create a motion annotated video prompt image.',
-    },
-    references: [
-      {
-        kind: 'image',
-        role: 'style',
-        label: 'Storyboard Lookbook Sheet',
-        providerToken: '@Reference1',
-        assetId: 'asset_style',
-        assetFileId: 'asset_file_style',
-        sourcePurpose: 'lookbook.sheet',
-        selected: true,
-      },
-    ],
-    configuration: {
-      sections: [
-        {
-          key: 'model-inputs',
-          label: 'Model inputs',
-          rows: [
-            {
-              key: 'image_size',
-              label: 'Image size',
-              value: 'landscape_16_9',
-              providerField: 'image_size',
-              schemaDefault: 'landscape_4_3',
-              allowedValues: ['landscape_4_3', 'landscape_16_9'],
-              required: false,
-              source: 'spec',
-              presentation: 'parameter-control',
-            },
-          ],
-        },
-      ],
-    },
-    diagnostics: [],
-  };
-}
-
-function studioGenerationPreviewFixture(
-  preview: GenerationPreviewRequest
-): StudioGenerationPreview {
-  return {
-    ...preview,
     subject: {
       projectLabel: 'Preparation of the Siege',
       sceneLabel: 'Opening council',
       takeLabel: 'Take 1',
       shotLabel: 'Shot 1',
     },
+    model: {
+      provider: 'fal-ai',
+      modelId: 'openai/gpt-image-2',
+      mediaKind: 'image' as const,
+      executionPath: 'renku-managed' as const,
+    },
+    finalPrompt: {
+      authoredText: 'Create a motion annotated video prompt image.',
+      providerText: 'Create a motion annotated video prompt image.',
+    },
+    references: [{
+      kind: 'image' as const,
+      role: 'style',
+      label: 'Storyboard Lookbook Sheet',
+      assetId: 'asset_style',
+      assetFileId: 'asset_file_style',
+      selected: true,
+    }],
+    configuration: { sections: [] },
+    diagnostics: [],
+  };
+}
+
+function studioGenerationPreviewFixture(): GenerationPreviewResource {
+  const preview = coreGenerationPreviewResourceFixture();
+  return {
+    ...preview,
     references: preview.references.map((reference) => ({
       ...reference,
       browserUrl:

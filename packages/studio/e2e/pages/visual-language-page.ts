@@ -60,13 +60,11 @@ export class VisualLanguagePage {
   async expectLookbookDefinitionAndMedia(): Promise<void> {
     await expect(this.page.getByText('The movie should feel rigorous and tense.'))
       .toBeVisible();
-    await this.page.getByRole('tab', { name: 'Visual Content' }).click();
+    await this.page.getByRole('tab', { name: 'Assets' }).click();
     await expect(
       this.page.getByRole('heading', { name: 'Lookbook Sheets' })
     ).toBeVisible();
-    await expect(
-      this.page.getByRole('button', { name: 'Default lookbook sheet' }).first()
-    ).toBeVisible();
+    await expect(this.page.getByText('1 image', { exact: true })).toBeVisible();
   }
 
   async expectProductionExportCommandVisible(): Promise<void> {

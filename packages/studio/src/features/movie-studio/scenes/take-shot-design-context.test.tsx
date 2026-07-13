@@ -8,9 +8,9 @@ import type {
   SceneShotVideoTakeDirection,
 } from '@gorenku/studio-core/client';
 import {
-  updateSceneShotVideoTakeDirection,
+  setShotVideoTakeDirection,
   type SceneShotVideoTakeWithHttp,
-  type ShotVideoTakeProductionMutation,
+  type ShotVideoTakeWorkspaceMutation,
 } from '@/services/studio-shot-video-takes-api';
 import { Button } from '@/ui/button';
 import {
@@ -19,7 +19,7 @@ import {
 } from './take-shot-design-context';
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  updateSceneShotVideoTakeDirection: vi.fn(),
+  setShotVideoTakeDirection: vi.fn(),
 }));
 
 const SHOT_2: SceneShot = {
@@ -40,8 +40,8 @@ const SHOT_2: SceneShot = {
 describe('TakeShotDesignProvider', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.mocked(updateSceneShotVideoTakeDirection).mockReset();
-    vi.mocked(updateSceneShotVideoTakeDirection).mockResolvedValue(
+    vi.mocked(setShotVideoTakeDirection).mockReset();
+    vi.mocked(setShotVideoTakeDirection).mockResolvedValue(
       savedMutation(continuousTake())
     );
   });
@@ -66,7 +66,7 @@ describe('TakeShotDesignProvider', () => {
       await vi.advanceTimersByTimeAsync(700);
     });
 
-    expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
+    expect(setShotVideoTakeDirection).toHaveBeenCalledWith(
       'constantinople',
       'scene_test',
       'take_001',
@@ -152,9 +152,8 @@ function takeWithStructure(
     picked: false,
     video: null,
     state: {
-      version: 2,
+      version: 3,
       structure,
-      production: {},
     },
     status: {
       editability: {
@@ -166,11 +165,6 @@ function takeWithStructure(
         state: 'resolvable',
         diagnostics: [],
         message: 'Resolvable.',
-      },
-      runnability: {
-        state: 'not-evaluated',
-        diagnostics: [],
-        message: 'Not evaluated.',
       },
       archive: {
         state: 'active',
@@ -188,9 +182,9 @@ function takeWithStructure(
 
 function savedMutation(
   take: SceneShotVideoTake
-): ShotVideoTakeProductionMutation {
+): ShotVideoTakeWorkspaceMutation {
   return {
-    context: {
+    workspace: {
       take,
       project: {
         id: 'project_test',
@@ -214,16 +208,8 @@ function savedMutation(
       },
       shots: [],
       storyboardImages: [],
-      selectedInputs: [],
-      availableInputs: [],
-      assetReadiness: {
-        selectedInputCount: 0,
-        readyInputCount: 0,
-        missingInputCount: 0,
-      },
-      availableModels: [],
       resourceKeys: [],
     },
     resourceKeys: [],
-  } as unknown as ShotVideoTakeProductionMutation;
+  } as unknown as ShotVideoTakeWorkspaceMutation;
 }

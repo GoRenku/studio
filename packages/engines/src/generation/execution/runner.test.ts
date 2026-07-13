@@ -6,7 +6,7 @@ import type { LoadedModelCatalog } from '../../model-catalog.js';
 import { runGeneration } from './runner.js';
 
 describe('runGeneration', () => {
-  it('derives simulated output count from request parameters', async () => {
+  it('derives simulated output count from request payload', async () => {
     const outputRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), 'renku-generation-output-')
     );
@@ -19,11 +19,10 @@ describe('runGeneration', () => {
         provider: 'fal-ai',
         model: 'nano-banana-2',
         mediaKind: 'image',
-        mode: 'text-to-image',
       },
       request: {
-        prompt: 'A simulated image for tests.',
-        parameters: {
+        payload: {
+          prompt: 'A simulated image for tests.',
           num_images: 3,
         },
         outputNames: ['first.png', 'second.png', 'third.png'],
@@ -52,11 +51,10 @@ describe('runGeneration', () => {
           provider: 'fal-ai',
           model: 'nano-banana-2',
           mediaKind: 'image',
-          mode: 'text-to-image',
         },
         request: {
-          prompt: 'A simulated image for tests.',
-          parameters: {
+          payload: {
+            prompt: 'A simulated image for tests.',
             num_images: 1,
           },
           outputNames: ['../../project.sqlite'],
@@ -88,10 +86,8 @@ describe('runGeneration', () => {
         provider: 'test-provider',
         model: 'image-edit',
         mediaKind: 'image',
-        mode: 'image-edit',
       },
       request: {
-        prompt: 'Turn this character sheet into a profile portrait.',
         inputFiles: [
           {
             field: 'image_urls',
@@ -108,7 +104,8 @@ describe('runGeneration', () => {
             required: true,
           },
         ],
-        parameters: {
+        payload: {
+          prompt: 'Turn this character sheet into a profile portrait.',
           num_images: 1,
           aspect_ratio: '1:1',
           resolution: '2K',
@@ -130,7 +127,6 @@ describe('runGeneration', () => {
       ],
       receipt: {
         model: 'image-edit',
-        mode: 'image-edit',
         simulated: true,
       },
     });
@@ -156,11 +152,10 @@ describe('runGeneration', () => {
         provider: 'test-provider',
         model: 'text-to-speech',
         mediaKind: 'audio',
-        mode: 'text-to-speech',
         outputCount: 1,
       },
       request: {
-        parameters: {
+        payload: {
           text: 'A simulated text-to-speech sample.',
           voice: 'voice_urban_normal',
         },
@@ -185,11 +180,10 @@ describe('runGeneration', () => {
           provider: 'test-provider',
           model: 'text-to-speech',
           mediaKind: 'audio',
-          mode: 'text-to-speech',
           outputCount: 1,
         },
         request: {
-          parameters: {
+          payload: {
             text: 'Core approved this request before calling engines.',
           },
         },

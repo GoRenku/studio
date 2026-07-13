@@ -387,7 +387,7 @@ function castGenerationReadiness(
     characterSheet: true,
     profile: selectedAssets.some((asset) => asset.role === 'character-sheet'),
     notes: [
-      'Use media-producer for cast.character-sheet and cast.profile generation.',
+      'Use media-producer for cast.video-character-sheet, cast.storyboard-character-sheet, and cast.profile generation.',
       'Costume-variant media and voice media do not have first-class generation targets yet.',
     ],
   };

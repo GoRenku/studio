@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  SceneDialogueAudioGenerationSpec,
+  SceneDialogueAudioSetup,
   SceneDialogueAudioModelChoice,
   SceneDialogueAudioVoiceSettings,
 } from '@gorenku/studio-core/client';
@@ -9,7 +9,7 @@ import {
   generateSceneDialogueAudioTake,
   deleteSceneDialogueAudioTake,
   saveSceneDialogueAudioSetup,
-  type SceneDialogueAudioContextWithUrls,
+  type SceneDialogueAudioWorkspaceWithUrls,
 } from '@/services/studio-scene-dialogue-audio-api';
 import { useDebouncedAutosave } from '@/hooks/use-debounced-autosave';
 
@@ -47,9 +47,9 @@ export function useSceneDialogueAudio(input: {
   projectName: string;
   sceneId: string;
   dialogueId: string;
-  context: SceneDialogueAudioContextWithUrls;
+  context: SceneDialogueAudioWorkspaceWithUrls;
   onDraftTextPreviewChange?: (text: string | null) => void;
-  onContextChange: (context: SceneDialogueAudioContextWithUrls) => void;
+  onContextChange: (context: SceneDialogueAudioWorkspaceWithUrls) => void;
 }) {
   const {
     projectName,
@@ -137,7 +137,7 @@ export function useSceneDialogueAudio(input: {
   const nonV3 = draft.modelChoice !== 'elevenlabs/eleven_v3';
   const takes = existing?.takes ?? [];
 
-  const spec = useMemo<SceneDialogueAudioGenerationSpec>(
+  const spec = useMemo<SceneDialogueAudioSetup>(
     () => ({
       purpose: 'scene.dialogue-audio',
       target: { kind: 'sceneDialogue', sceneId, dialogueId },

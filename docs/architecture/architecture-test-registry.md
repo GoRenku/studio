@@ -144,7 +144,6 @@ Owner docs:
 
 Static tests:
 
-- `packages/core/src/server/architecture.test.ts`
 
 Runtime tests:
 
@@ -167,45 +166,51 @@ Maintenance owner:
   prove bad state fails before a write. Static tests should protect the owner
   boundary, not require a central list of every focused command.
 
-### Core Media Generation Cost Rail
+### Context-First Generation Foundation
 
 Owner docs:
 
+- `docs/decisions/0047-use-context-first-provider-valid-generation.md`
 - `docs/architecture/media-generation.md`
-- `docs/architecture/reference/media-generation.md`
-- `docs/decisions/0042-use-purpose-cost-projections-for-generation-estimates.md`
-- `plans/active/0108-media-generation-module-boundary-refactor.md`
+- `docs/architecture/reference/context-first-generation-foundation-manifest.md`
 
 Static tests:
 
+- `packages/core/src/server/generation/architecture.test.ts`
 - `packages/core/src/server/architecture.test.ts`
+- `packages/engines/src/generation/architecture.test.ts`
 
 Runtime tests:
 
-- `packages/core/src/server/media-generation/cost/cost-projection.test.ts`
-- `packages/core/src/server/media-generation/cost/cost-approval.test.ts`
-- `packages/core/tests/integration/media-generation-dependency-inventory.test.ts`
+- `packages/core/src/server/generation/specs.test.ts`
+- `packages/core/src/server/generation/validation.test.ts`
+- `packages/engines/src/generation/catalog/model-input-descriptors.test.ts`
+- `packages/engines/src/generation/execution/provider-request-assembly.test.ts`
 
 Forbidden capabilities:
 
-- importing media-generation lifecycle readiness services;
-- importing the lifecycle purpose registry;
-- importing shared generation orchestration;
-- resolving concrete dependency assets through dependency selectors;
-- building or validating provider payloads;
-- importing generation run or media import modules;
-- importing low-level database access;
-- reading or resolving provider input/output files;
-- importing Shot Video Take readiness or planning modules.
+- provider validation importing context, purpose guide, candidate, slot, or
+  dependency-planning modules;
+- Core or adapters guessing provider media fields or duplicating provider
+  schemas;
+- provider defaults being copied into authored values or assembled payloads;
+- validation substituting files, assigning fields, switching models, clamping
+  values, or repairing requests;
+- generation services importing Studio code or provider SDK adapters;
+- direct Drizzle schema imports outside database access and schema modules;
+- a compatibility CLI, HTTP, or Studio runtime between the Plan `0134` backend
+  replacement and Plan `0135` product integration.
 
 Maintenance owner:
 
-- Cost work must keep `packages/core/src/server/media-generation/cost` limited
-  to pricing projection, cost approval, cost-line conversion, and cost-only
-  purpose registry behavior. Persisted spec reads belong in lifecycle services,
-  which delegate in-memory spec records to cost. Add runtime tests for pricing
-  states and import-boundary tests only for stable module ownership, not private
-  helper names.
+- Generic generation work must keep persistence, reference projection,
+  validation, preview, pricing, and execution in focused modules. Runtime tests
+  prove partial-save and provider-validity behavior. Static tests protect stable
+  package/import boundaries and must not inventory function or helper names.
+
+The older cost/lifecycle/dependency registrations below describe the
+pre-replacement backend. Plan `0134` removes them; they are not boundaries for
+new foundation code. Plan `0135` must not recreate them for old callers.
 
 ### Engines Generation Pricing Rail
 
@@ -242,167 +247,3 @@ Maintenance owner:
   work belongs in `packages/engines/src/generation/execution`. Static tests
   should protect those module folders, while runtime tests prove pricing math,
   payload validation, and runner behavior.
-
-### Core Media Generation Lifecycle And Dependencies
-
-Owner docs:
-
-- `docs/architecture/media-generation.md`
-- `docs/architecture/reference/media-generation.md`
-- `docs/decisions/0044-use-media-generation-module-boundaries.md`
-
-Static tests:
-
-- `packages/core/src/server/architecture.test.ts`
-
-Runtime tests:
-
-- `packages/core/tests/integration/media-generation-dependency-inventory.test.ts`
-- `packages/core/tests/integration/media-generation-purpose-lifecycle-matrix.test.ts`
-
-Forbidden capabilities:
-
-- adapter code importing purpose-private modules instead of Core services;
-- cost code importing lifecycle readiness services;
-- dependency selectors living in cost projection code;
-- purpose lifecycle and cost registries drifting apart by public purpose id;
-- lifecycle service files taking direct low-level database or filesystem
-  ownership outside their narrow service role.
-
-Maintenance owner:
-
-- Lifecycle work belongs in `packages/core/src/server/media-generation/lifecycle`.
-  Dependency infrastructure belongs in
-  `packages/core/src/server/media-generation/dependencies`. Adapters should call
-  ProjectDataService/Core service wiring; they should not enforce
-  media-generation domain rules locally.
-
-### Shot Video Take Submodule Direction
-
-Owner docs:
-
-- `docs/architecture/media-generation.md`
-- `docs/architecture/reference/media-generation.md`
-- `docs/decisions/0044-use-media-generation-module-boundaries.md`
-
-Static tests:
-
-- `packages/core/src/server/architecture.test.ts`
-
-Runtime tests:
-
-- `packages/core/src/server/media-generation/purposes/shot-video-take/authoring/authoring.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/planning/production-plan.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/planning/preflight-report.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/input-selection.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/mutations/reference-selections.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/specs/spec-validation.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/provider/provider-payloads.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/imports/media-imports.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/persistence/takes.test.ts`
-
-Forbidden capabilities:
-
-- planning importing provider, run, import, or persistence writer modules;
-- selection importing provider, run, or import modules;
-- provider preparation importing selection mutation modules or persistence
-  writers;
-- imports importing provider or run modules;
-- persistence importing provider, run, import, engine execution, or engine
-  pricing modules;
-- callers using removed root-level `media-generation/shot-video-take` import
-  paths or a `shot-video-take/index.ts` compatibility barrel.
-
-Maintenance owner:
-
-- Shot Video Take work should add behavior to the submodule that owns the
-  domain rule: user-editable direction in `authoring`, dependency/readiness
-  reports in `planning`, selected inputs/references in `selection`, spec
-  lifecycle in `specs`, provider payload preparation in `provider`, live run
-  recording in `runs`, media attachment in `imports`, durable take records and
-  write primitives in `persistence`, and cross-submodule read-only helpers in
-  `shared`.
-
-## Feature Plan Requirement
-
-Every active implementation plan that adds or changes one of these surfaces
-must include an `Architecture Test Impact` note:
-
-- new Studio server route module;
-- new CLI command family or subcommand;
-- new durable metadata mutation;
-- new media-generation purpose or dependency selector;
-- new React feature workflow that sends mutations;
-- new SQLite table, JSON column, or migration;
-- new resource-refresh event or matcher;
-- new public core service method.
-
-The note must answer:
-
-- Which package owns the domain rule?
-- Which adapter is allowed to call it?
-- Which existing static boundary check, if any, already prevents the rule from
-  moving into the adapter?
-- Which runtime boundary test proves invalid state fails before write?
-- Does the feature introduce a new boundary category or failure mode that needs
-  a new architecture test?
-- Would the proposed test fail on a normal refactor inside the owning layer?
-
-If no architecture test needs to change, the plan must say that explicitly and
-explain why existing tests already protect the new surface. Silent omission is
-not acceptable. A new architecture test is expected only when the feature
-introduces a boundary or failure mode that current tests do not already cover.
-
-## Architecture Test Acceptance Criteria
-
-Before adding or keeping a static architecture test, answer these questions in
-the plan, test comment, or this registry:
-
-1. What specific boundary does this protect?
-2. What bad code would this catch?
-3. Would a normal refactor inside the owning layer make this fail?
-4. Will adding a routine new command, helper, or service require editing this
-   test?
-5. Is a runtime behavior test a better fit?
-6. Is the forbidden pattern stable enough for a static test?
-7. Can this be enforced by a narrow import rule instead of a source-text scan?
-
-If the answer to question 3 or 4 is yes, redesign or remove the test unless
-there is an explicit accepted architecture decision saying the exact public
-shape is the contract.
-
-## ESLint Policy
-
-ESLint may be used for low-noise import boundaries, especially where an import
-restriction is clearer than a Vitest source scan.
-
-Good ESLint candidates:
-
-- browser feature code cannot import server-only core entrypoints;
-- browser feature code cannot import Node, database, Drizzle, or SQLite APIs;
-- package or directory scopes cannot import another layer's private internals.
-
-Avoid ESLint rules that:
-
-- inspect arbitrary identifier names;
-- ban common words or helper names;
-- encode current implementation function names;
-- require large allowlists;
-- use broad syntax bans where the violation is not a clear boundary crossing.
-
-## Updating Tests When A Boundary Changes
-
-When an accepted ADR or architecture document changes a boundary:
-
-1. Update the owner doc or ADR first.
-2. Update this registry in the same slice.
-3. Update static architecture tests only when the changed boundary needs a
-   static guard.
-4. Update runtime boundary tests for concrete data-integrity behavior.
-5. Remove tests for superseded boundaries.
-
-Do not keep old and new architecture tests as a compatibility period unless the
-user explicitly asks for a staged migration.
-
-Exceptions must stay small, named, and tied to an accepted architecture doc. An
-allowlist entry should explain why the boundary still holds.

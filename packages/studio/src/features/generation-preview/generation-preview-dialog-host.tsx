@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
+import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import { GenerationPreviewDialog } from './generation-preview-dialog';
 
 interface GenerationPreviewEventDetail {
   projectName: string;
-  preview: StudioGenerationPreview;
+  preview: GenerationPreviewResource;
   eventId: string;
   createdAt: string;
 }

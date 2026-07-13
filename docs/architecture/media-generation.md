@@ -1,273 +1,153 @@
 # Media Generation Architecture
 
-Date: 2026-05-26
+Date: 2026-07-12
 
 Status: current
 
 Role: topic overview
 
-## Purpose
+## Current Architecture
 
-Media generation is the Renku Studio path for creating AI media from project
-context while preserving user choices, cost approval, and project metadata
-boundaries.
+Decision `0047` replaces the old generation dependency, lifecycle, purpose
+provider, preview-binding, recursive-cost, and Shot route/input-mode backend
+with a context-first, provider-valid foundation.
 
-The implemented purposes are `lookbook.image`, `cast.character-sheet`,
-`cast.profile`, `location.environment-sheet`, `location.hero`,
-`scene.storyboard-sheet`, the shot-video input purposes, and `shot.video-take`.
-Precise contracts live in `reference/media-generation.md`.
+Plans `0134` and `0136` completed the coordinated replacement across Engines,
+Core, CLI, Studio server, React, and Studio Skills. There is no compatibility
+API, second runtime, dependency planner, or purpose-specific lifecycle.
 
-## Current Shape
+The resolved cutover inventory is recorded in
+`reference/context-first-generation-caller-handoff.md`.
 
-Generation and import are separate.
+## Ownership
 
-Generation reads project context, lists supported models for a purpose, persists
-the user's generation spec, estimates cost for display, and runs an approved
-provider request. Estimates do not approve runs. A live provider run requires
-explicit one-time approval immediately before Core sends work to the provider
-boundary. The durable generation run records the execution facts, not a separate
-approval marker.
+`packages/core` owns:
 
-Import attaches an existing file to a project domain target. The file may come
-from a Renku generation run, an external tool, a manual upload, or a download.
-The domain target does not care how the file was produced.
+- the generic purpose, target, context, reference-guide, spec, preview,
+  estimate, and run contracts;
+- exact reference catalog queries and project-file resolution;
+- partial spec persistence without provider-readiness validation;
+- execution-readiness orchestration and structured diagnostics;
+- exact-request approval identity and immutable run persistence.
 
-Existing ElevenLabs provider voice sample retrieval is not media generation.
-When a user supplies an ElevenLabs `voiceId` for a Cast Voice, `renku cast voice
-attach` can resolve a provider sample id, fetch the MP3 from ElevenLabs, store it
-under `cast/<handle>/voice-samples/`, and attach it as a normal Cast Voice
-Sample. That path does not create a media generation spec, estimate, live
-provider approval, or media generation run. New spoken samples generated from
-text still use the `cast.voice-sample` media generation purpose.
+`packages/engines` owns:
 
-For all current purposes, the CLI surface is generic:
+- provider/model discovery and provider JSON schemas;
+- provider field descriptors, including media type/cardinality and
+  aspect-ratio/quality classification;
+- full payload assembly from authored values and provider-assigned exact files;
+- provider payload validation, pricing, uploads, execution, outputs, and
+  receipts.
 
-```bash
-renku generation context --purpose lookbook.image --target lookbook:<id> --json
-renku generation model list --purpose lookbook.image --target lookbook:<id> --json
-renku generation spec create --file <spec-json> --json
-renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approve-live-provider-run --json
-renku generation run --spec <spec-id> --simulate --json
-renku media import --purpose lookbook.image --target lookbook:<id> --source <path> --json
-```
+Core owns one purpose descriptor tree. Purpose descriptors provide context,
+reference guides, candidate queries, product settings, and model presentation.
+Generic provider validation does not interpret guide slots as requirements.
 
-Internally, the common lifecycle is registry-backed and split by ownership.
-Core lifecycle services live under
-`packages/core/src/server/media-generation/lifecycle` and own purpose lookup,
-context/model service entrypoints, spec persistence, readiness preparation,
-dependency planning, run orchestration, and persisted-spec estimate reads.
-Core cost behavior lives under `media-generation/cost` and owns cost
-projection, cost approval, cost-line pricing states, and the cost-only purpose
-registry. Shared dependency ids, dependency selectors, dependency inventory,
-dependency draft contracts, and dependency line projection live under
-`media-generation/dependencies`.
+Focused Core resources compose that generic lifecycle for the existing Studio
+experiences:
 
-Purpose implementations live under
-`packages/core/src/server/media-generation/purposes`. Purpose definitions still
-own purpose-specific context construction, spec validation, provider payloads,
-output names, dependency declarations, draft dependency specs, and import
-behavior. Cost projection code belongs in `media-generation/cost`, not hidden
-inside purpose readiness modules.
+- `generation-preview-resource` projects and updates the saved or draft
+  Preview experience;
+- `image-revision-workflow` owns Regenerate/Edit source ownership, generic
+  `image.edit` execution, and destination attachment;
+- `scene-dialogue-audio-workspace` owns dialogue setup, generic audio
+  generation, takes, playback metadata, and recoverable deletion;
+- `shot-video-take-workspace` owns take design/lifecycle separately from its
+  active generic `shot.video-take` generation request.
 
-Saved-spec generation previews follow
-`generation-preview-purpose-bindings.md`. Image generation previews share one
-model-configuration path based on provider route schema descriptors and the
-actual provider payload. Purpose-specific preview code is a binding layer for
-current context, provider plan selection, target/title data, and durable
-reference asset/file ids; it must not duplicate image model-parameter row
-construction. Final `shot.video-take` previews use shot-video route metadata
-because they target video models with route-specific parameters and media input
-slots.
+## Generic Lifecycle
 
-Saved previews expose prompt text as two deliberate values:
-`finalPrompt.authoredText` is the exact persisted prompt that Studio may edit,
-while `finalPrompt.providerText` is the provider-facing preview after any
-accepted app-owned transform. `finalPrompt.negativeText` is present only when
-the selected provider model schema exposes a negative-prompt field; it remains
-present as an empty editable string when the saved spec has no negative prompt
-yet. Studio updates a saved preview through the focused Core
-`updateGenerationPreviewSpec` lifecycle service. That service updates the
-authored prompt, delegates editable reference selections to the owning purpose,
-persists through the purpose's existing `updateSpec` contract, and rebuilds the
-preview. Purpose-specific reference storage never belongs in the Studio route
-or browser draft model.
+A `GenerationSpec` is the one saved editing and execution shape. It can be
+incomplete. Create and update validate only its durable JSON envelope, target,
+and guide placement structure. They do not validate provider readiness, insert
+defaults, assign media fields, select references, or repair authored values.
 
-Browser-safe media generation contracts are split by ownership under
-`packages/core/src/client`. Shared purpose, target, dependency, and lifecycle
-contracts live in `media-generation-purpose.ts`,
-`media-generation-target.ts`, `media-generation-dependency.ts`, and
-`media-generation-lifecycle.ts`; each purpose keeps its context, spec, model
-report, and import report shapes in its own client contract file. The public
-browser entrypoint remains `packages/core/src/client/index.ts`.
+An estimate consumes pricing inputs only: provider, model, output media kind,
+schema-derived generation settings, and intended input-media counts. Estimation
+does not resolve files, require prompts or references, assemble an executable
+payload, or invoke execution validation. Provider defaults may supply pricing
+inputs, except Shot Video Take duration, which always resolves to an explicit
+duration and defaults to the lowest duration allowed by the selected model.
 
-Shot-video server behavior is split under
-`packages/core/src/server/media-generation/purposes/shot-video-take`. The
-submodules are `authoring`, `planning`, `selection`, `specs`, `provider`,
-`runs`, `imports`, `persistence`, and `shared`. There is no local
-`shot-video-take.ts` compatibility surface or shot-video index barrel; service
-wiring and the lifecycle registry import the operation owner modules directly.
-Read-only take-state projections and project media file helpers live in
-`shared` when multiple submodules need them without crossing into persistence
-or provider ownership.
+Before preview with a provider payload or run:
 
-Dependency planning is shared media-generation architecture, not a shot-video
-special case. Core builds a read-only dependency inventory from purpose-owned
-dependency declarations, resolves existing assets through deterministic asset
-selectors, estimates planned dependency specs through the same shared lifecycle
-used by persisted specs, and aggregates the inventory total from dependency
-lines plus the root generation line.
+1. Core resolves every included exact file without substitution.
+2. Engines reads the selected provider/model endpoint.
+3. Engines combines authored provider fields with ordered exact media
+   assignments.
+4. Engines validates the complete logical payload against the provider schema.
+5. Run repeats readiness validation immediately before execution.
 
-The dependency inventory is a human and agent to-do list, not an execution plan.
-It may show the likely full workflow cost, including generated dependencies that
-do not exist yet, but it must not create approval artifacts for dependency lines,
-approval bundles, or automatic generation schedules. Each live provider
-generation is still run and approved one at a time.
+The approval token approves the provider/model price returned from pricing
+inputs. Changing creative prompt text or file contents does not invalidate an
+unchanged price approval. Run compares the current estimate first, then performs
+full execution validation as a separate operation.
 
-Dependency pricing and generation readiness are separate facts. A generated
-dependency can be priced while still reporting `missing-input` when the user or
-agent must supply setup before generation is runnable. Planning stays advisory:
-route capability warnings and missing-input reasons do not generate assets,
-drop selected references, cap selections, or rewrite user choices.
+Excluded references and included references without a provider assignment remain
+valid editing state. They do not enter the provider payload.
 
-Dependency ids are also a core contract. Purpose code and Studio UI code must
-not hand-build or parse dependency ids locally. Core-owned dependency id helpers
-name the domain kind, target, and shot-video input slot, and core returns any
-mutation data the Studio UI needs, such as the exact input slot to clear for a
-selected general reference.
+Every run has immediate inputs and outputs only. There is no dependency graph,
+recursive estimate, automatic child generation, provider fallback, value
+clamping, semantic retry, or automatic import.
 
-Shot-video dialogue audio references use the public subject kind
-`scene-dialogue` and the dependency kind `reference-audio`. The dependency id is
-keyed by dialogue id, not by a take asset id. Dialogs stores the selected
-dialogue audio take in the shot-video take direction, and generation resolves
-that selected take to the concrete audio file at request time.
+## Context And Guidance
 
-Shot-video prompt sheets are opaque image dependencies for Scene Shot Video
-Takes. Core validates the durable generation envelope: purpose, take target,
-dependency kind, selected references, model, parameters, prompt presence, and
-the deterministic metadata fields `promptSheetVisualStyleId` and
-`promptSheetNotationModeId`. Studio does not validate prompt-sheet layout,
-panel count, labels, captions, timing marks, shot coverage, or whether the
-generated pixels match the selected metadata. GPT-Image-2 is the default
-prompt-sheet image model.
+A `GenerationReferenceGuide` is presentation guidance. Sections and slots may
+carry scope, subject, label, cardinality, exact candidates, initial selections,
+and guidance copy. They never carry provider fields, hard provider
+requirements, generation purposes, cost, or provider rules.
 
-Shot-video take-owned media must not be shared between active takes. Video
-Prompt Sheets, first frames, last frames, shot-video reference images, and final
-take videos are part of a take's production workspace. Creating a copied take
-iteration must copy take-owned media into new asset/file ownership for the new
-take. Deleting a take may discard only media that Core proves is exclusively
-owned by that take. Non-owned references such as Cast Character Sheets,
-Location Sheets, Lookbook Sheets, and Dialogue Audio remain shared project
-references. The accepted rule is
-`shot-video-take-owned-media.md`.
+All purposes can expose ordered Additional References. A user or agent may use
+any compatible exact project media regardless of its original purpose. Creative
+prompts and media remain opaque under Decision `0041`.
 
-Generation previews are a live review surface before expensive generation. The
-CLI/agent contract is a saved media generation spec id or a transient
-`MediaGenerationSpec` JSON file. The CLI asks Core to build the
-`GenerationPreviewRequest`, then delivers that Core-authored preview to a
-running Studio server. The Studio event contract is `StudioGenerationPreview`,
-which is created after Core resolves logical `assetId + assetFileId` references
-to active project asset files and builds meaningful subject labels. The preview
-dialog shows generator-bound prompt text, model identity, resolved references,
-provider token order, configuration, diagnostics, prompt-sheet metadata when
-present, and sanitized provider payloads. Preview events are not durable project
-history and do not create offline backlogs when Studio is closed.
+## Persistence
 
-App-owned prompt transforms are allowed only for specific Studio product roles
-or mechanical provider handoffs. Current classifications:
+`media_generation_spec` stores purpose, target, nullable provider/model,
+title, authored values JSON, ordered references JSON, and timestamps. It does
+not store a mirrored complete spec JSON blob.
 
-- `scene.storyboard-sheet` is an accepted batch-generation optimization: Studio
-  asks for a strict composite so agents can crop per-shot storyboard images.
-- Lookbook image and Lookbook sheet generation are accepted Lookbook artifact
-  transforms: Core appends role-specific Movie Lookbook or Storyboard Lookbook
-  framing to an authored prompt.
-- Location environment sheet and Cast character sheet dependency drafts are
-  accepted artifact-role transforms: Core can draft a purpose-specific prompt
-  from selected project context, then agents/users may revise the authored spec.
-- Location Hero Image is an accepted Studio overview-surface transform derived
-  from a selected Location Sheet and location metadata.
-- Shot-video reference-conditioning prose is mechanical provider mapping: Core
-  names selected logical references and provider token order without validating
-  reference contents or prompt semantics.
+`media_generation_run` stores the immutable spec snapshot, exact provider
+payload, estimate and approval token, outputs, receipt, diagnostics, status, and
+timestamps.
 
-None of these classifications allow Studio to inspect generated media contents,
-require prompt wording, or generalize a sheet layout into runtime validation.
+The generation-42 migration was generated from the Drizzle TypeScript schema and
+contains a documented custom one-way data step. It deletes obsolete spec/run
+rows and their provenance links, preserves imported assets/files, converts
+unambiguous explicit Shot selections into generic spec references, strips
+retired generation state from takes, and fails before migration when an exact
+selection is ambiguous. The real Urban Basilica database was backed up and
+migrated from generation 41 to generation 42. It contains 13 migrated Shot
+specs with 31 exact selections; SQLite `quick_check` is `ok` and
+`foreign_key_check` returns no rows. The same migration was replayed
+successfully against a copy of the verified pre-migration backup.
 
-Selectors must state their defaulting policy explicitly. `selected-only`
-selectors use only a concrete selected asset or sheet. `selected-or-default`
-selectors may fall back to the purpose-owned default only when that behavior is
-part of the selector contract. Unknown selector kinds, wrong request shapes,
-invalid selected targets, missing selected files, unavailable referenced
-or selected sheet assets, and missing primary image files are structured
-dependency diagnostics, not quiet missing states.
+The generated `0053_drop-obsolete-shot-media-inputs.sql` migration then removes
+the two obsolete Shot media-input tables and updates the take-state default to
+version 3. It was replayed together with generation 42 from the verified
+generation-41 backup and applied to the real project. Both databases retain 13
+Shot specs, 31 exact selections, and 30 version-3 takes; `quick_check` remains
+`ok`, `foreign_key_check` remains empty, and neither obsolete table exists. The
+transaction-safe custom portion of the migration also preserves all 35
+Take-to-Shot membership rows and all four final-video rows while rebuilding the
+parent Take table.
 
-There is one pricing meaning. Generated node prices come from provider
-estimates in `@gorenku/studio-engines`; reused existing assets contribute
-`$0.00`; manual external attachments are not generation work and are not
-priced. Studio and CLI surfaces render inventory totals and line items, but
-they do not compute generation prices.
+## Public Foundation
 
-There is one approval meaning. Estimates are display-only. A live provider
-request requires explicit one-time approval for the current run command or
-browser action. Parent dependency plans do not return child
-approval artifacts, and live runs do not walk dependency inventories. The
-accepted decision is `../decisions/0043-use-explicit-live-provider-run-approval.md`.
+The accepted Core contract is
+`packages/core/src/client/generation.ts`. The accepted Core services are the
+focused modules in `packages/core/src/server/generation`:
 
-Execution boundaries still fail fast. Final spec creation and provider payload
-construction must reject selected inputs that cannot be sent to the selected
-provider route, including unsupported dialogue audio references or audio
-reference counts above the route limit.
+- `buildGenerationContext`;
+- `listGenerationReferences`;
+- `listGenerationModels`;
+- `createGenerationSpec`, `updateGenerationSpec`,
+  `readGenerationSpec`, and `listGenerationSpecs`;
+- `validateGenerationSpec`;
+- `buildGenerationPreview`;
+- `estimateGenerationCost` and `estimateGeneration`;
+- `runGeneration` and `readGenerationRun`.
 
-Generated dependency lines start as unpriced until their draft spec is
-estimated. They must not fall back to `not-applicable` pricing. `not-applicable`
-is reserved for manual attachment work and unselected non-dependency
-alternatives in product surfaces. If a dependency draft is invalid, lacks an
-explicit materialization state, cannot be priced by a supported route, or the
-root generation estimate fails, the planner returns structured diagnostics and
-marks the inventory estimate unavailable or partial as appropriate.
-
-Root spec creation and update refuse to persist a spec while required
-dependencies are still planned or missing. Callers generate or import the
-dependency outputs, refresh the inventory, and then create the root spec once
-every required provider input resolves to a real project asset.
-
-A generated file still does not become project metadata until an explicit media
-import succeeds.
-
-Generated output roots and import destinations follow
-`project-asset-storage-conventions.md`. Core chooses the purpose-specific
-output folder, and current durable asset paths must not use `generated/media/`.
-Temporary agent/debug specs, receipts, and QA files belong under top-level
-`tmp/`, while temporary Scene Storyboard source sheets live under the scene's
-`storyboards/<sequence>/<scene>/tmp/` folder.
-
-Location Sheets are full-image production reference boards. Core asks the
-selected image model for one Location Sheet, and import stores one image asset
-with one `primary` file plus a concise persisted description. Location Sheets
-do not have Location-level pick/default selection, fixed view files, or azimuth
-metadata. Shot/take workflows reference exact Location Sheet asset ids when a
-sheet is selected for a specific generation direction. Shot-video take
-references do not use hidden first-sheet defaults; available sheets remain
-choices until a take direction stores the selected asset id.
-
-Location Hero Images are separate display assets generated or imported from an
-explicit source Location Sheet. They use asset type `location_hero`, Location
-asset role `hero`, and one `primary` file. The selected hero image drives
-Location overview/detail display only; it is never a hidden shot-generation
-reference.
-
-## Related References
-
-- `reference/media-generation.md`
-- `reference/studio-skills.md`
-- `generation-preview-purpose-bindings.md`
-- `project-asset-storage-conventions.md`
-- `visual-language.md`
-- `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
-- `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
-- `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
-- `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
-- `../decisions/0032-use-shared-generation-dependency-graph-as-reference-and-pricing-source.md`
-- `../decisions/0036-use-unsliced-location-sheets.md`
-- `../decisions/0043-use-explicit-live-provider-run-approval.md`
-- `../decisions/0045-use-generation-preview-purpose-bindings.md`
+The Core server entrypoint also exports focused Preview, Image Revision,
+Dialogue Audio, Shot Video Take, and attachment commands. CLI and HTTP callers
+remain thin projections of these Core-owned contracts.

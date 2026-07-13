@@ -5,9 +5,16 @@ import type {
   ScenePanelTab,
   SceneShot,
   SceneShotDetailTab,
-  SceneShotVideoTakeDirection,
+  CameraAngleId,
+  FocusId,
+  LensId,
+  MoveDirectionId,
+  MoveTrackId,
+  RigId,
+  ShotMovementId,
+  ShotSizeId,
+  SubjectFramingId,
 } from '../../client/index.js';
-import { sceneShotVideoTakeDirectionForShot } from '../media-generation/purposes/shot-video-take/shared/take-state-projections.js';
 import {
   CAMERA_ANGLE_LABELS,
   FOCUS_LABELS,
@@ -37,6 +44,27 @@ import type {
 
 const BROWSER_SESSION_STALE_AFTER_MS = 120_000;
 const FOCUS_REQUEST_STALE_AFTER_MS = 5 * 60_000;
+
+interface TakeDirectionProjection {
+  composition?: {
+    shotSize?: ShotSizeId;
+    subjectFraming?: SubjectFramingId[];
+    cameraAngle?: CameraAngleId;
+    dutch?: 'left' | 'right';
+    lens?: { type?: LensId; millimeters?: number; focus?: FocusId };
+    customComposition?: string;
+  };
+  motion?: {
+    movement?: ShotMovementId;
+    secondary?: ShotMovementId;
+    directions?: MoveDirectionId[];
+    track?: MoveTrackId;
+    rig?: RigId;
+    customMotion?: string;
+  };
+  cast?: { castMemberIds?: string[] };
+  location?: { locationId?: string };
+}
 
 export interface ProjectStudioCurrentInput extends RenkuConfigPathOptions {
   events: StudioEvent[];
@@ -455,59 +483,11 @@ async function sceneTakeWorkspace(input: {
     ...(input.selection.shotId ? { selectedShotId: input.selection.shotId } : {}),
     ...(input.selection.takeId
       ? {
-          recommendedReadCommand: `renku take authoring context --take ${input.selection.takeId} --json`,
+          recommendedReadCommand: `renku generation context --purpose shot.video-take --target take:${input.selection.takeId} --json`,
         }
       : {}),
   } satisfies StudioCurrentTakeWorkspace;
-  if (!input.selection.takeId) {
-    return { workspace: fallback, warnings: [] };
-  }
-  try {
-    const take = await input.projectData.readSceneShotVideoTake({
-      projectName: input.projectName,
-      homeDir: input.homeDir,
-      takeId: input.selection.takeId,
-    });
-    if (take.sceneId !== input.selection.id) {
-      return {
-        workspace: fallback,
-        warnings: [
-          studioCoordinationWarning(
-            'STUDIO_COORDINATION042',
-            'Current Studio take workspace belongs to a different scene.',
-            ['selection', 'takeId'],
-            'Refresh Studio and select a take in the current scene.'
-          ),
-        ],
-      };
-    }
-    return {
-      workspace: {
-        mode,
-        takeId: take.takeId,
-        takeMode: take.state.structure.mode,
-        sourceShotListId: take.sourceShotListId,
-        shotIds: take.shotIds,
-        ...(input.selection.shotId
-          ? { selectedShotId: input.selection.shotId }
-          : {}),
-        recommendedReadCommand: `renku take authoring context --take ${take.takeId} --json`,
-      },
-      warnings: [],
-    };
-  } catch {
-    return {
-      workspace: fallback,
-      warnings: [
-        studioCoordinationWarning(
-          'STUDIO_COORDINATION043',
-          'Current Studio take workspace could not load.',
-          ['selection', 'takeId'],
-          'Refresh Studio and select an existing take before acting on take media.'
-        ),
-      ],
-    };
-  }
+  return { workspace: fallback, warnings: [] };
 }
 
 function effectiveSceneTab(selection: Extract<StudioSelection, { type: 'scene' }>): ScenePanelTab {
@@ -559,19 +539,7 @@ async function shotTabSelections(input: {
   selections: StudioCurrentShotTabSelections;
   warnings: DiagnosticIssue[];
 }> {
-  const take = input.takeId
-    ? await input.projectData.readSceneShotVideoTake({
-        projectName: input.projectName,
-        takeId: input.takeId,
-        homeDir: input.homeDir,
-      })
-    : null;
-  const direction = take
-    ? sceneShotVideoTakeDirectionForShot({
-        state: take.state,
-        shotId: input.shot.shotId,
-      })
-    : undefined;
+  const direction = unavailableTakeDirection();
   const composition = direction?.composition;
   const motion = direction?.motion;
   switch (input.shotTab) {
@@ -693,47 +661,7 @@ async function shotTabSelections(input: {
       if (!input.takeId) {
         return { selections: fallback, warnings: [] };
       }
-      try {
-        const take = await input.projectData.readSceneShotVideoTake({
-          projectName: input.projectName,
-          homeDir: input.homeDir,
-          takeId: input.takeId,
-        });
-        if (take.sceneId !== input.sceneId) {
-          return {
-            selections: fallback,
-            warnings: [
-              studioCoordinationWarning(
-                'STUDIO_COORDINATION040',
-                'Current Studio take focus belongs to a different scene.',
-                ['selection', 'takeId'],
-                'Refresh Studio and select a take in the current scene.'
-              ),
-            ],
-          };
-        }
-        return {
-          selections: {
-            kind: 'take',
-            takeId: take.takeId,
-            sourceShotListId: take.sourceShotListId,
-            shotIds: take.shotIds,
-          },
-          warnings: [],
-        };
-      } catch {
-        return {
-          selections: fallback,
-          warnings: [
-            studioCoordinationWarning(
-              'STUDIO_COORDINATION041',
-              'Current Studio take focus could not load.',
-              ['selection', 'takeId'],
-              'Refresh Studio and select an existing take.'
-            ),
-          ],
-        };
-      }
+      return { selections: fallback, warnings: [] };
     }
     case 'description':
     case 'lookbook':
@@ -743,7 +671,11 @@ async function shotTabSelections(input: {
   }
 }
 
-function compositionLens(direction: SceneShotVideoTakeDirection | undefined) {
+function unavailableTakeDirection(): TakeDirectionProjection | undefined {
+  return undefined;
+}
+
+function compositionLens(direction: TakeDirectionProjection | undefined) {
   const lens = direction?.composition?.lens;
   if (!lens?.type && !lens?.focus && lens?.millimeters === undefined) {
     return {};

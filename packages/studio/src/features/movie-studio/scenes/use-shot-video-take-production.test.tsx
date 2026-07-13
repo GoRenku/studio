@@ -2,397 +2,318 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  SceneShotVideoTake,
-} from '@gorenku/studio-core/client';
-import { Button } from '@/ui/button';
 import {
-  estimateShotVideoTakeProduction,
-  planShotVideoTakeProduction,
-  readShotVideoTakeProduction,
-  type ShotVideoTakeProductionContextResponse,
-  type ShotVideoTakeProductionRead,
-  updateShotVideoTakeProduction,
+  estimateShotVideoTakeGeneration,
+  readShotVideoTakeWorkspace,
+  setShotVideoTakeGenerationReference,
+  setShotVideoTakeGenerationSpec,
 } from '@/services/studio-shot-video-takes-api';
+import { Button } from '@/ui/button';
 import { useShotVideoTakeProduction } from './use-shot-video-take-production';
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  clearShotVideoTakeInput: vi.fn(),
-  deleteShotVideoTakeInput: vi.fn(),
-  estimateShotVideoTakeProduction: vi.fn(),
-  planShotVideoTakeProduction: vi.fn(),
-  readShotVideoTakeProduction: vi.fn(),
-  selectShotVideoTakeInput: vi.fn(),
-  updateShotVideoTakeProduction: vi.fn(),
+  estimateShotVideoTakeGeneration: vi.fn(),
+  readShotVideoTakeWorkspace: vi.fn(),
+  setShotVideoTakeGenerationReference: vi.fn(),
+  setShotVideoTakeGenerationSpec: vi.fn(),
 }));
 
 describe('useShotVideoTakeProduction', () => {
   beforeEach(() => {
     vi.useRealTimers();
-    vi.mocked(readShotVideoTakeProduction).mockReset();
-    vi.mocked(readShotVideoTakeProduction).mockResolvedValue(
-      productionRead(initialTake())
+    vi.mocked(readShotVideoTakeWorkspace).mockReset().mockResolvedValue(
+      workspace() as never
     );
-    vi.mocked(updateShotVideoTakeProduction).mockReset();
-    vi.mocked(updateShotVideoTakeProduction).mockResolvedValue({
-      context: productionContext(
-        takeWithProduction({
-          inputModeId: 'text-only',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          parameterValues: { duration: 9 },
-        })
-      ),
+    vi.mocked(setShotVideoTakeGenerationSpec).mockReset().mockResolvedValue({
+      workspace: workspace() as never,
       resourceKeys: [],
     });
-    vi.mocked(estimateShotVideoTakeProduction).mockReset();
-    vi.mocked(estimateShotVideoTakeProduction).mockResolvedValue(
-      {} as Awaited<ReturnType<typeof estimateShotVideoTakeProduction>>
-    );
-    vi.mocked(planShotVideoTakeProduction).mockReset();
-    vi.mocked(planShotVideoTakeProduction).mockResolvedValue(
-      {
-        take: initialTake(),
-        target: { kind: 'shot-video-take', takeId: 'take_001' },
-        diagnostics: [],
-        references: {
-          general: [],
-          lookbook: [],
-          dialogueAudio: [],
-          castMembers: [],
-          locations: [],
-          dialogueAudioCapability: null,
-        },
-        plan: {
-          request: {
-            inputMode: 'text-only',
-            shotGroupMode: 'single-shot',
-            modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          },
-          finalEstimate: null,
-          diagnostics: [],
-        },
-      } as unknown as Awaited<ReturnType<typeof planShotVideoTakeProduction>>
-    );
+    vi.mocked(estimateShotVideoTakeGeneration).mockReset().mockResolvedValue({
+      valid: false,
+      diagnostics: [],
+    });
+    vi.mocked(setShotVideoTakeGenerationReference).mockReset().mockResolvedValue({
+      workspace: workspace() as never,
+      resourceKeys: [],
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('forwards the persisted production mutation result into local take state', async () => {
-    render(<ShotVideoTakeProductionHarness />);
+  it('loads the focused workspace and exposes Engines-derived model state', async () => {
+    render(<Harness />);
+    expect(await screen.findByText('Seedance 2.0')).toBeTruthy();
+    expect(readShotVideoTakeWorkspace).toHaveBeenCalledWith(
+      'constantinople',
+      'scene_hook',
+      'take_001'
+    );
+  });
 
-    const setDuration = await screen.findByRole('button', { name: 'Set duration' });
+  it('loads a multi-cut workspace for the selected Shot', async () => {
+    render(<Harness selectedShotId='shot_002' />);
+    expect(await screen.findByText('Seedance 2.0')).toBeTruthy();
+    expect(readShotVideoTakeWorkspace).toHaveBeenCalledWith(
+      'constantinople',
+      'scene_hook',
+      'take_001',
+      'shot_002'
+    );
+  });
+
+  it('autosaves authored setup through the generic spec command', async () => {
+    render(<Harness />);
+    await screen.findByText('Seedance 2.0');
     vi.useFakeTimers();
-    fireEvent.click(setDuration);
-
+    fireEvent.click(screen.getByRole('button', { name: 'Set duration' }));
     await act(async () => {
-      vi.advanceTimersByTime(700);
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(700);
     });
     vi.useRealTimers();
 
-    await waitFor(() => {
-      expect(updateShotVideoTakeProduction).toHaveBeenCalledWith(
+    await waitFor(() =>
+      expect(setShotVideoTakeGenerationSpec).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
-        {
-          inputModeId: 'text-only',
+        expect.objectContaining({
           modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          parameterValues: { duration: 9 },
-        }
-      );
-    });
-    await waitFor(() => {
-      expect(screen.getByText('duration:9')).toBeTruthy();
-    });
-  });
-
-  it('persists the visible default input mode and model for editable takes', async () => {
-    vi.mocked(readShotVideoTakeProduction).mockResolvedValue(
-      productionRead(takeWithProduction({}))
-    );
-    vi.mocked(updateShotVideoTakeProduction).mockResolvedValueOnce({
-      context: productionContext(
-        takeWithProduction({
-          inputModeId: 'text-only',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: { duration: 8 },
         })
-      ),
-      resourceKeys: [],
+      )
+    );
+  });
+
+  it('does not write generation defaults merely because the workspace loaded', async () => {
+    render(<Harness />);
+    await screen.findByText('Seedance 2.0');
+    expect(setShotVideoTakeGenerationSpec).not.toHaveBeenCalled();
+  });
+
+  it('estimates the resolved minimum duration as soon as the workspace loads', async () => {
+    vi.mocked(estimateShotVideoTakeGeneration).mockResolvedValue({
+      valid: true,
+      diagnostics: [],
+      estimate: {
+        provider: 'fal-ai',
+        model: 'bytedance/seedance-2.0',
+        estimatedCostUsd: 0.42,
+        billableUnits: { duration: 5 },
+      },
     });
+    render(<Harness />);
 
-    render(<ShotVideoTakeProductionHarness autosaveDelayMs={1} />);
-
-    await waitFor(() => {
-      expect(updateShotVideoTakeProduction).toHaveBeenCalledWith(
+    await waitFor(() =>
+      expect(estimateShotVideoTakeGeneration).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
         {
           inputModeId: 'text-only',
           modelChoice: 'fal-ai/bytedance/seedance-2.0',
+          parameterValues: { duration: 5 },
         }
-      );
-    });
+      )
+    );
   });
 
-  it('flushes pending AI Production edits when the editor unmounts', async () => {
-    const { unmount } = render(<ShotVideoTakeProductionHarness />);
+  it('re-estimates an authored duration without requiring an autosave first', async () => {
+    render(<Harness />);
+    await screen.findByText('Seedance 2.0');
+    fireEvent.click(screen.getByRole('button', { name: 'Set duration' }));
 
-    const setDuration = await screen.findByRole('button', { name: 'Set duration' });
+    await waitFor(() =>
+      expect(estimateShotVideoTakeGeneration).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        expect.objectContaining({ parameterValues: { duration: 8 } })
+      )
+    );
+  });
+
+  it('resets Run Setup to the new model minimum before estimating a model change', async () => {
+    render(<Harness />);
+    await screen.findByText('Seedance 2.0');
+    fireEvent.click(screen.getByRole('button', { name: 'Select alternate model' }));
+
+    await waitFor(() =>
+      expect(estimateShotVideoTakeGeneration).toHaveBeenCalledWith(
+        'constantinople',
+        'scene_hook',
+        'take_001',
+        expect.objectContaining({
+          modelChoice: 'fal-ai/alternate-video-model',
+          parameterValues: { duration: 4, resolution: '720p' },
+        })
+      )
+    );
+  });
+
+  it('flushes pending authored setup when the editor unmounts', async () => {
+    const { unmount } = render(<Harness />);
+    await screen.findByText('Seedance 2.0');
     vi.useFakeTimers();
-    fireEvent.click(setDuration);
-
+    fireEvent.click(screen.getByRole('button', { name: 'Set duration' }));
     await act(async () => {
       unmount();
       await Promise.resolve();
     });
     vi.useRealTimers();
 
-    await waitFor(() => {
-      expect(updateShotVideoTakeProduction).toHaveBeenCalledWith(
-        'constantinople',
-        'scene_hook',
-        'take_001',
-        {
-          inputModeId: 'text-only',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          parameterValues: { duration: 9 },
-        }
-      );
-    });
-  });
-
-  it('refreshes multi-cut production plans with the selected shot id', async () => {
-    vi.mocked(readShotVideoTakeProduction).mockResolvedValue(
-      productionRead(multiCutTake())
+    await waitFor(() =>
+      expect(setShotVideoTakeGenerationSpec).toHaveBeenCalled()
     );
-    const { rerender } = render(
-      <ShotVideoTakeProductionHarness selectedShotId='shot_002' />
-    );
-
-    await waitFor(() => {
-      expect(planShotVideoTakeProduction).toHaveBeenCalledWith(
-        'constantinople',
-        'scene_hook',
-        'take_001',
-        {
-          inputModeId: 'text-only',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          parameterValues: { duration: 6 },
-        },
-        { defaultMode: 'auto' },
-        'shot_002'
-      );
-    });
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Refresh plan' }));
-
-    await waitFor(() => {
-      expect(planShotVideoTakeProduction).toHaveBeenLastCalledWith(
-        'constantinople',
-        'scene_hook',
-        'take_001',
-        {
-          inputModeId: 'text-only',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          parameterValues: { duration: 6 },
-        },
-        { defaultMode: 'auto' },
-        'shot_002'
-      );
-    });
-
-    rerender(<ShotVideoTakeProductionHarness selectedShotId='shot_001' />);
-
-    await waitFor(() => {
-      expect(planShotVideoTakeProduction).toHaveBeenLastCalledWith(
-        'constantinople',
-        'scene_hook',
-        'take_001',
-        {
-          inputModeId: 'text-only',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          parameterValues: { duration: 6 },
-        },
-        { defaultMode: 'auto' },
-        'shot_001'
-      );
-    });
   });
 });
 
-function ShotVideoTakeProductionHarness({
-  selectedShotId,
-  autosaveDelayMs,
-}: {
-  selectedShotId?: string;
-  autosaveDelayMs?: number;
-}) {
+function Harness({ selectedShotId }: { selectedShotId?: string }) {
   const production = useShotVideoTakeProduction({
     projectName: 'constantinople',
     sceneId: 'scene_hook',
     takeId: 'take_001',
-    selectedShotId,
-    autosaveDelayMs,
+    ...(selectedShotId ? { selectedShotId } : {}),
+    autosaveDelayMs: 500,
   });
-
   if (production.loadState !== 'ready') {
     return <p>Loading</p>;
   }
-
   return (
     <div>
-      <p>{`duration:${production.take?.state.production.parameterValues?.duration ?? 'none'}`}</p>
-      <Button type='button' onClick={() => production.setParameter('duration', 9)}>
+      <p>{production.models?.[0]?.label}</p>
+      <Button
+        type='button'
+        onClick={() => production.setParameter('duration', 8)}
+      >
         Set duration
       </Button>
-      <Button type='button' onClick={() => void production.refreshProductionPlan()}>
-        Refresh plan
+      <Button
+        type='button'
+        onClick={() => production.setModel('fal-ai/alternate-video-model')}
+      >
+        Select alternate model
       </Button>
     </div>
   );
 }
 
-function productionRead(
-  take: SceneShotVideoTake
-): ShotVideoTakeProductionRead {
-  return {
-    context: productionContext(take),
-    models: {
-      purpose: 'shot.video-take',
-      target: { kind: 'shot-video-take', takeId: 'take_001' },
-      inputModeId: 'text-only',
-      shotGroupMode: 'single-shot',
-      defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
-      models: [
-        {
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          label: 'Seedance 2.0',
-          available: true,
-          supportedInputModes: ['text-only'],
-          duration: { supported: true, values: [4, 5, 6] },
-          inputRoles: [],
-          parameters: [],
-          estimateInputs: {
-            canEstimateBeforeDependenciesExist: true,
-            requiresPreparedInputs: false,
-          },
-        },
-      ],
-    },
-  } as unknown as ShotVideoTakeProductionRead;
-}
-
-function productionContext(
-  take: SceneShotVideoTake
-): ShotVideoTakeProductionContextResponse {
-  return {
-    take,
-    defaults: {
-      inputModeId: 'text-only',
-    },
-  } as unknown as ShotVideoTakeProductionContextResponse;
-}
-
-function initialTake(): SceneShotVideoTake {
-  return takeWithProduction({
-    inputModeId: 'text-only',
-    modelChoice: 'fal-ai/bytedance/seedance-2.0',
-    parameterValues: { duration: 6 },
-  });
-}
-
-function multiCutTake(): SceneShotVideoTake {
-  const take = takeWithProduction({
-    inputModeId: 'text-only',
-    modelChoice: 'fal-ai/bytedance/seedance-2.0',
-    parameterValues: { duration: 6 },
-  });
-  return {
-    ...take,
-    shotIds: ['shot_001', 'shot_002'],
-    state: {
-      ...take.state,
-      structure: {
-        mode: 'multi-cut',
-        directionsByShotId: {
-          shot_001: {
-            referenceSelections: {
-              dependencyInclusions: {},
-              selectedCharacterSheetAssetIds: {},
-              selectedLocationSheetAssetIds: {},
-              selectedLookbookSheetIds: [],
-              selectedDialogueAudioTakeIds: {},
-            },
-          },
-          shot_002: {
-            referenceSelections: {
-              dependencyInclusions: {},
-              selectedCharacterSheetAssetIds: {},
-              selectedLocationSheetAssetIds: {},
-              selectedLookbookSheetIds: [],
-              selectedDialogueAudioTakeIds: {},
-            },
-          },
-        },
-      },
-    },
-  };
-}
-
-function takeWithProduction(
-  production: SceneShotVideoTake['state']['production']
-): SceneShotVideoTake {
-  return {
+function workspace() {
+  const take = {
     takeId: 'take_001',
     sceneId: 'scene_hook',
-    sourceShotListId: 'shot_list_hook',
+    sourceShotListId: 'shot_list_001',
+    title: 'Take 1',
     shotIds: ['shot_001'],
-    title: 'Shot Video Take',
     picked: false,
     video: null,
     state: {
-      version: 2,
-    structure: {
-      mode: 'continuous',
-      sharedDirection: {
-        referenceSelections: {
-          dependencyInclusions: {},
-          selectedCharacterSheetAssetIds: {},
-          selectedLocationSheetAssetIds: {},
-          selectedLookbookSheetIds: [],
-          selectedDialogueAudioTakeIds: {},
-        },
-      },
+      version: 3 as const,
+      structure: { mode: 'continuous' as const, sharedDirection: {} },
     },
-      production,
-    },
-    createdAt: '',
-    updatedAt: '',
     status: {
       editability: {
-        state: 'editable',
+        state: 'editable' as const,
         diagnostics: [],
-        message: 'This take is editable.',
+        message: 'Editable.',
       },
       resolvability: {
-        state: 'resolvable',
+        state: 'resolvable' as const,
         diagnostics: [],
-        message: 'All tracked take references resolve.',
+        message: 'Resolvable.',
       },
-      runnability: {
-        state: 'not-evaluated',
-        diagnostics: [],
-        message: 'Run readiness is evaluated by shot-video preflight.',
-      },
-      archive: { state: 'active', message: 'This take is active.' },
-      history: {
-        differences: [],
-        message: 'This take matches its recorded history snapshot.',
-      },
+      archive: { state: 'active' as const, message: 'Active.' },
+      history: { differences: [], message: 'Current.' },
     },
+    createdAt: '2026-07-12T00:00:00.000Z',
+    updatedAt: '2026-07-12T00:00:00.000Z',
+  };
+  return {
+    take,
+    sourceShotList: {
+      id: 'shot_list_001',
+      title: 'Shots',
+      summary: 'Coverage.',
+      createdAt: take.createdAt,
+      updatedAt: take.updatedAt,
+      isActive: true,
+    },
+    sourceShots: [],
+    displayShots: [],
+    storyboardImages: [],
+    generation: {
+      context: {
+        purpose: 'shot.video-take',
+        target: { kind: 'sceneShotVideoTake', id: 'take_001' },
+        outputMediaKind: 'video',
+        facts: {},
+        settings: { fixed: [], recommended: [] },
+        models: [],
+        referenceGuide: { sections: [], additionalReferences: [], notices: [] },
+      },
+      spec: null,
+      setup: {
+        inputModeId: 'text-only',
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        parameterValues: { duration: 5 },
+      },
+      models: [{
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        provider: 'fal-ai',
+        model: 'bytedance/seedance-2.0',
+        label: 'Seedance 2.0',
+        supportedInputModes: ['text-only'],
+        duration: { supported: true, values: [5, 8], default: 5 },
+        parameters: [{
+          name: 'duration',
+          label: 'Duration',
+          required: false,
+          defaultValue: 5,
+          allowedValues: [5, 8],
+        }],
+      }, {
+        modelChoice: 'fal-ai/alternate-video-model',
+        provider: 'fal-ai',
+        model: 'alternate-video-model',
+        label: 'Alternate model',
+        supportedInputModes: ['text-only'],
+        duration: { supported: true, values: [4, 6, 8], default: 4 },
+        parameters: [{
+          name: 'duration',
+          label: 'Duration',
+          required: false,
+          defaultValue: 4,
+          allowedValues: [4, 6, 8],
+        }, {
+          name: 'resolution',
+          label: 'Resolution',
+          required: false,
+          defaultValue: '720p',
+          allowedValues: ['720p'],
+        }],
+      }],
+      references: {
+        general: [],
+        lookbook: [],
+        dialogueAudio: [],
+        dialogueAudioCapability: {
+          state: 'unsupported',
+          supported: false,
+          selectedCount: 0,
+          maxCount: null,
+          modelLabel: 'Seedance 2.0',
+          message: 'This model does not use audio references.',
+          diagnostics: [],
+        },
+        castMembers: [],
+        locations: [],
+      },
+      finalPrompt: null,
+      estimate: null,
+      run: null,
+      diagnostics: [],
+    },
+    resourceKeys: [],
   };
 }

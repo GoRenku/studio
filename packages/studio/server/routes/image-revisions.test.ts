@@ -57,6 +57,18 @@ describe('Image Revision routes', () => {
       projectName: 'constantinople',
       target,
     });
+    await expect(response.json()).resolves.toMatchObject({
+      context: {
+        edit: {
+          preview: {
+            references: [{
+              browserUrl:
+                '/studio-api/projects/constantinople/assets/asset_test/files/asset_file_test',
+            }],
+          },
+        },
+      },
+    });
   });
 
   it('adds explicit live approval only at the run endpoint', async () => {
@@ -107,7 +119,12 @@ function imageRevisionContext(): ImageRevisionEditorContext {
         referenceSelections: [],
         generationControls: [],
       },
-      preview: null,
+      preview: {
+        references: [{
+          assetId: target.assetId,
+          assetFileId: target.assetFileId,
+        }],
+      } as never,
       controls: [],
       diagnostics: [],
     },

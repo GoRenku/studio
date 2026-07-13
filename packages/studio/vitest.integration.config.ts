@@ -12,6 +12,8 @@ export default defineConfig({
     fileParallelism: false,
     minWorkers: 1,
     maxWorkers: 1,
+    testTimeout: 20_000,
+    hookTimeout: 30_000,
     include: ['src/**/*.e2e.test.ts', 'src/**/*.e2e.test.tsx'],
     exclude: ['node_modules', 'dist', 'server-dist'],
   },

@@ -7,7 +7,7 @@ import type {
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type {
   SceneShotVideoTakeWithHttp,
-  ShotVideoTakeProductionMutation,
+  ShotVideoTakeWorkspaceMutation,
 } from '@/services/studio-shot-video-takes-api';
 import {
   useTakeShotDesign,
@@ -24,7 +24,7 @@ interface TakeShotDesignProviderProps {
   sceneId: string;
   shot: SceneShot;
   take?: SceneShotVideoTakeWithHttp | null;
-  onSaved?: (result: ShotVideoTakeProductionMutation) => void;
+  onSaved?: (result: ShotVideoTakeWorkspaceMutation) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   children: ReactNode;
 }

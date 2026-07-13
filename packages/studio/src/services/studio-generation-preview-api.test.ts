@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { updateGenerationPreviewSpec } from './studio-generation-preview-api';
+import { updateGenerationPreviewResource } from './studio-generation-preview-api';
 
 describe('studio generation preview API', () => {
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe('studio generation preview API', () => {
     } as Response);
 
     await expect(
-      updateGenerationPreviewSpec({
+      updateGenerationPreviewResource({
         projectName: 'constantinople',
         specId: 'media_generation_spec_test',
         prompt: {
@@ -30,7 +30,7 @@ describe('studio generation preview API', () => {
           negativeText: null,
         },
         referenceSelections: [
-          { dependencyId: 'dependency_style', selected: false },
+          { selectionId: 'selection_style', selected: false },
         ],
       })
     ).resolves.toBe(preview);
@@ -49,7 +49,7 @@ describe('studio generation preview API', () => {
             negativeText: null,
           },
           referenceSelections: [
-            { dependencyId: 'dependency_style', selected: false },
+            { selectionId: 'selection_style', selected: false },
           ],
         }),
       }
@@ -67,7 +67,7 @@ describe('studio generation preview API', () => {
     } as Response);
 
     await expect(
-      updateGenerationPreviewSpec({
+      updateGenerationPreviewResource({
         projectName: 'constantinople',
         specId: 'media_generation_spec_test',
         prompt: { authoredText: 'Updated prompt.' },

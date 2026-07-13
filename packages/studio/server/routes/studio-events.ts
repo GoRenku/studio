@@ -2,12 +2,11 @@ import {
   createProjectDataService,
   createStudioCoordinationService,
   createStudioOperationId,
-  validateGenerationPreviewRequest,
   validateStudioFocusRequestForProject,
-  type GenerationPreviewRequest,
+  type GenerationPreview,
   type ScenePanelTab,
   type SceneShotDetailTab,
-  type StudioGenerationPreview,
+  type GenerationPreviewResource,
   type StudioSelection,
   type StudioBrowserSessionActivityKind,
   type ProjectDataService,
@@ -28,7 +27,7 @@ import {
   createStudioNotificationTokenMiddleware,
 } from '../http/studio-api-token.js';
 import {
-  buildStudioGenerationPreview,
+  buildGenerationPreviewResource,
 } from '../projections/generation-preview.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
@@ -56,18 +55,21 @@ export interface CreateStudioEventsRouteOptions {
   cliNotificationToken?: string;
   serverInstanceId?: string;
   homeDir?: string;
-  generationPreviewProjection?: StudioGenerationPreviewProjection;
+  generationPreviewProjection?: GenerationPreviewResourceProjection;
 }
 
-type StudioGenerationPreviewProjection = (input: {
+type GenerationPreviewResourceProjection = (input: {
   projectName: string;
-  homeDir?: string;
-  preview: GenerationPreviewRequest;
-}) => Promise<StudioGenerationPreview>;
+  preview: Awaited<
+    ReturnType<ProjectDataService['buildGenerationPreviewResource']>
+  >;
+}) => Promise<GenerationPreviewResource>;
 
 type StudioEventsRouteProjectData = Pick<
   ProjectDataService,
-  'readProject' | 'readSceneShotListResource'
+  | 'readProject'
+  | 'readSceneShotListResource'
+  | 'buildGenerationPreviewResource'
 >;
 
 export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions) {
@@ -78,7 +80,7 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
     options.cliNotificationToken
   );
   const projectGenerationPreview =
-    options.generationPreviewProjection ?? buildStudioGenerationPreview;
+    options.generationPreviewProjection ?? buildGenerationPreviewResource;
 
   return new Hono()
     .get('/', async (c) => {
@@ -118,10 +120,14 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
       try {
         const body = await c.req.json();
         const request = readGenerationPreviewRequest(body);
-        const preview = await projectGenerationPreview({
+        const corePreview = await projectData.buildGenerationPreviewResource({
           projectName: request.projectRef.name,
           homeDir: options.homeDir,
           preview: request.preview,
+        });
+        const preview = await projectGenerationPreview({
+          projectName: request.projectRef.name,
+          preview: corePreview,
         });
         const event = await coordination.appendStudioEvent({
           type: 'studio.generationPreviewRequested',
@@ -266,7 +272,7 @@ function readGenerationPreviewRequest(body: unknown) {
       message: 'Generation preview notification body must be an object.',
     });
   }
-  const preview = validateGenerationPreviewRequest(request.preview);
+  const preview = readGenericGenerationPreview(request.preview, issues);
   const projectRef = readProjectRef(
     request.projectRef,
     issues,
@@ -287,26 +293,7 @@ function readGenerationPreviewRequest(body: unknown) {
       )
     );
   }
-  if (projectRef && projectRef.id !== preview.project.id) {
-    issues.push(
-      notificationIssue(
-        'projectRef.id must match preview.project.id.',
-        ['projectRef', 'id'],
-        GENERATION_PREVIEW_NOTIFICATION_CONTEXT
-      )
-    );
-  }
-  if (projectRef && projectRef.name !== preview.project.name) {
-    issues.push(
-      notificationIssue(
-        'projectRef.name must match preview.project.name.',
-        ['projectRef', 'name'],
-        GENERATION_PREVIEW_NOTIFICATION_CONTEXT
-      )
-    );
-  }
-
-  if (issues.length > 0 || !projectRef || !source) {
+  if (issues.length > 0 || !projectRef || !source || !preview) {
     throw createStructuredError({
       code: 'STUDIO_SERVER032',
       message: 'Generation preview notification failed validation.',
@@ -322,6 +309,25 @@ function readGenerationPreviewRequest(body: unknown) {
     source,
     ...(typeof operationId === 'string' ? { operationId } : {}),
   };
+}
+
+function readGenericGenerationPreview(
+  value: unknown,
+  issues: DiagnosticIssue[]
+): GenerationPreview | null {
+  const preview = readRecord(value);
+  const spec = readRecord(preview?.spec);
+  if (!preview || !spec || !Array.isArray(preview.references)) {
+    issues.push(
+      notificationIssue(
+        'preview must be a generic generation preview with a spec and references.',
+        ['preview'],
+        GENERATION_PREVIEW_NOTIFICATION_CONTEXT
+      )
+    );
+    return null;
+  }
+  return value as GenerationPreview;
 }
 
 async function validateSceneShotSelection(input: {

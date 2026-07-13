@@ -168,7 +168,7 @@ describe('LocationPanel', () => {
 
 async function openVisualContentTab() {
   const visualContentTab = await screen.findByRole('tab', {
-    name: 'Visual Content',
+    name: 'Assets',
   });
   fireEvent.pointerDown(visualContentTab, { button: 0, ctrlKey: false });
   fireEvent.pointerUp(visualContentTab);

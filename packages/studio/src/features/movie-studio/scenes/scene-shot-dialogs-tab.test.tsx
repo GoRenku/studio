@@ -1,31 +1,16 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  ScreenplayImageReferenceWithHttp,
-  ShotVideoTakeProductionPlanReport,
+  SceneShotVideoTake,
+  ShotVideoTakeReferenceSections,
 } from '@gorenku/studio-core/client';
-import { idleSaveNotification } from '../detail-save-notification';
+import { readSceneDialogueAudioWorkspace } from '@/services/studio-scene-dialogue-audio-api';
 import { SceneShotDialogsTab } from './scene-shot-dialogs-tab';
 
-const serviceMocks = vi.hoisted(() => ({
-  readSceneDialogueAudioContext: vi.fn(),
-  updateShotGroupReferenceInclusion: vi.fn(),
-  updateShotReferenceInclusion: vi.fn(),
-  updateTakeDialogueAudioSelection: vi.fn(),
-}));
-
 vi.mock('@/services/studio-scene-dialogue-audio-api', () => ({
-  readSceneDialogueAudioContext: serviceMocks.readSceneDialogueAudioContext,
-}));
-
-vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  updateShotGroupReferenceInclusion:
-    serviceMocks.updateShotGroupReferenceInclusion,
-  updateShotReferenceInclusion: serviceMocks.updateShotReferenceInclusion,
-  updateTakeDialogueAudioSelection:
-    serviceMocks.updateTakeDialogueAudioSelection,
+  readSceneDialogueAudioWorkspace: vi.fn(),
 }));
 
 class ResizeObserverStub {
@@ -38,524 +23,131 @@ class ResizeObserverStub {
 
 describe('SceneShotDialogsTab', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.mocked(readSceneDialogueAudioWorkspace).mockReset();
+    vi.mocked(readSceneDialogueAudioWorkspace).mockResolvedValue(
+      dialogueWorkspace() as never
+    );
   });
 
-  it('renders dialogue audio cards without compact Pick or Delete actions', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    const { container } = render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{
-          cast_urban: profileImage(),
-        }}
-        productionPlan={dialogueProductionPlan(1)}
-      />
-    );
-
-    expect(container.querySelector('.flex.flex-col.gap-3')).toBeTruthy();
-    expect(
-      await screen.findByText('Seedance 2.0 allows up to 3 audio references per generation')
-    ).toBeTruthy();
-    expect(screen.getByText('1 / 3 selected')).toBeTruthy();
+  it('renders every exact Scene dialogue choice', async () => {
+    renderTab();
     expect(await screen.findByText('Urban')).toBeTruthy();
-    expect(await screen.findByText('Take 1')).toBeTruthy();
-    expect(screen.queryByText('Jun 12, 10:00 AM')).toBeNull();
-    expect(screen.getByText('Hold the line.')).toBeTruthy();
-    expect(screen.getByAltText('Urban profile image')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Play dialogue audio' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Pick' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Delete/ })).toBeNull();
+    expect(screen.getByText('Hold the gate.')).toBeTruthy();
+    expect(screen.getByText('Take 1')).toBeTruthy();
   });
 
-  it('uses the voice-over preview for narrator dialogue without a profile image', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
-          dialogueChoice({
-            dependencyId: 'audio:scene-dialogue:dialogue_narrator',
-            dialogueId: 'dialogue_narrator',
-            castMemberId: 'cast_narrator',
-            speakerName: 'Narrator',
-            plainText: 'The walls remember.',
-          }),
-        ])}
-      />
-    );
-
-    expect(await screen.findByText('Narrator')).toBeTruthy();
-    expect(screen.getByTestId('voice-over-profile-placeholder')).toBeTruthy();
-    expect(screen.queryByAltText('Narrator profile image')).toBeNull();
+  it('preserves dialogue audio playback controls', async () => {
+    renderTab();
+    const play = await screen.findByRole('button', {
+      name: 'Play dialogue audio',
+    });
+    expect(play).toBeTruthy();
   });
 
-  it('shows every scene dialogue while default-selecting only referenced dialogue', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
-          dialogueChoice({
-            dialogueId: 'dialogue_urban',
-            castMemberId: 'cast_urban',
-            speakerName: 'Urban',
-            plainText: 'Hold the line.',
-            defaultIncluded: true,
-            included: true,
-          }),
-          dialogueChoice({
-            dependencyId: 'audio:scene-dialogue:dialogue_mara',
-            dialogueId: 'dialogue_mara',
-            castMemberId: 'cast_mara',
-            speakerName: 'Mara',
-            plainText: 'Keep your head down.',
-            defaultIncluded: false,
-            included: false,
-          }),
-        ])}
-      />
+  it('persists include and exclude through the exact take selection', async () => {
+    const onSetReference = vi.fn().mockResolvedValue(undefined);
+    renderTab({ onSetReference });
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: /Exclude Urban dialogue audio/i,
+      })
     );
 
-    expect(await screen.findByText('Urban')).toBeTruthy();
-    expect(screen.getByText('Mara')).toBeTruthy();
+    await waitFor(() =>
+      expect(onSetReference).toHaveBeenCalledWith(
+        'selection_dialogue_take_001',
+        false
+      )
+    );
+  });
+
+  it('preserves unsupported-model capability guidance', async () => {
+    const refs = references();
+    refs.dialogueAudioCapability = {
+      state: 'unsupported',
+      supported: false,
+      selectedCount: 1,
+      maxCount: null,
+      modelLabel: 'Seedance 2.0',
+      message: 'This model does not use audio references.',
+      diagnostics: [],
+    };
+    renderTab({ references: refs });
     expect(
-      screen.getByRole('button', { name: /Exclude Urban dialogue audio/ })
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: /Include Mara dialogue audio/ })
+      await screen.findByText('This model does not use audio references.')
     ).toBeTruthy();
   });
 
-  it('shows not-generated dialogue as planned audio with a cost estimate', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue({
-      audioByDialogueId: {},
-    });
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(0, ['shot_001'], [
-          dialogueChoice({
-            selectedTake: null,
-            takeCount: 0,
-            audioState: 'not-generated',
-            unavailableReason: 'Not generated yet',
-            defaultIncluded: true,
-            included: true,
-            card: {
-              state: 'selected-planned',
-              mediaKind: 'audio',
-              dependencyId: 'audio:scene-dialogue:dialogue_urban',
-              defaultIncluded: true,
-              included: true,
-              required: false,
-              inclusionOverride: null,
-              pricing: { state: 'priced', estimatedUsd: 0.03 },
-              previews: [],
-              diagnostics: [],
-            },
-          }),
-        ])}
-      />
-    );
-
-    expect(await screen.findByText('Urban')).toBeTruthy();
-    expect(screen.getByText('Not generated')).toBeTruthy();
-    expect(screen.getByText('$0.03')).toBeTruthy();
-  });
-
-  it('shows route capability warnings without clearing selected dialogue', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
-          dialogueChoice({ included: true }),
-          dialogueChoice({
-            dependencyId: 'audio:scene-dialogue:dialogue_mara',
-            dialogueId: 'dialogue_mara',
-            castMemberId: 'cast_mara',
-            speakerName: 'Mara',
-            included: true,
-          }),
-        ], {
-          state: 'unsupported',
-          supported: false,
-          selectedCount: 2,
-          maxCount: null,
-          modelLabel: 'Test model',
-          message: 'This model does not use audio references',
-          diagnostics: [],
-        })}
-      />
-    );
-
-    expect(await screen.findByText('This model does not use audio references')).toBeTruthy();
-    expect(screen.getByText('2 selected')).toBeTruthy();
+  it('preserves over-limit capability guidance', async () => {
+    const refs = references();
+    refs.dialogueAudioCapability = {
+      state: 'over-limit',
+      supported: true,
+      selectedCount: 4,
+      maxCount: 3,
+      modelLabel: 'Seedance 2.0',
+      message: 'Seedance 2.0 allows up to 3 audio references per generation.',
+      diagnostics: [],
+    };
+    renderTab({ references: refs });
     expect(
-      screen.getByRole('button', { name: /Exclude Urban dialogue audio/ })
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: /Exclude Mara dialogue audio/ })
+      await screen.findByText(
+        'Seedance 2.0 allows up to 3 audio references per generation.'
+      )
     ).toBeTruthy();
   });
 
-  it('shows over-limit capability warnings with max-count copy', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
-          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_1', dialogueId: 'dialogue_1' }),
-          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_2', dialogueId: 'dialogue_2' }),
-          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_3', dialogueId: 'dialogue_3' }),
-          dialogueChoice({ dependencyId: 'audio:scene-dialogue:dialogue_4', dialogueId: 'dialogue_4' }),
-        ], {
-          state: 'over-limit',
-          supported: true,
-          selectedCount: 4,
-          maxCount: 3,
-          modelLabel: 'Seedance 2.0',
-          message: 'Seedance 2.0 allows up to 3 audio references per generation',
-          diagnostics: [],
-        })}
-      />
-    );
-
-    expect(
-      await screen.findByText('Seedance 2.0 allows up to 3 audio references per generation')
-    ).toBeTruthy();
-    expect(screen.getByText('4 / 3 selected')).toBeTruthy();
-  });
-
-  it('reloads dialogue audio context when plan take state changes', async () => {
-    serviceMocks.readSceneDialogueAudioContext
-      .mockResolvedValueOnce({ audioByDialogueId: {} })
-      .mockResolvedValueOnce(dialogueAudioContext());
-    const { rerender } = render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(0, ['shot_001'], [
-          dialogueChoice({
-            selectedTake: null,
-            takeCount: 0,
-            audioState: 'not-generated',
-          }),
-        ])}
-      />
-    );
-
-    await waitFor(() => {
-      expect(serviceMocks.readSceneDialogueAudioContext).toHaveBeenCalledTimes(1);
-    });
-
-    rerender(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1)}
-      />
-    );
-
-    await waitFor(() => {
-      expect(serviceMocks.readSceneDialogueAudioContext).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  it('lets the shot pick the only generated dialogue take', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue({
-      audioByDialogueId: {
-        dialogue_urban: {
-          takes: [take('take_001', true, '2026-06-12T10:00:00.000Z')],
-        },
-      },
-    });
-    serviceMocks.updateTakeDialogueAudioSelection.mockResolvedValue({
-      context: dialogueMutationContext(),
-      resourceKeys: [],
-    });
-    const onPlanRefresh = vi.fn(async () => undefined);
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        onPlanRefresh={onPlanRefresh}
-        productionPlan={dialogueProductionPlan(1, ['shot_001'], [
-          dialogueChoice({
-            selectedTake: null,
-            audioState: 'no-selected-take',
-            unavailableReason: 'No selected audio take',
-          }),
-        ])}
-      />
-    );
-
-    expect(await screen.findAllByText('No selected take')).toHaveLength(2);
-    const pickButton = await screen.findByRole('button', { name: 'Pick' });
-    expect((pickButton as HTMLButtonElement).disabled).toBe(false);
-
-    fireEvent.click(pickButton);
-
-    await waitFor(() => {
-      expect(serviceMocks.updateTakeDialogueAudioSelection).toHaveBeenCalledWith(
-        'constantinople',
-        'scene_hook',
-        'take_001',
-        {
-          dialogueId: 'dialogue_urban',
-          takeId: 'take_001',
-        }
-      );
-    });
-    expect(onPlanRefresh).toHaveBeenCalled();
-  });
-
-  it('opens take management when multiple takes are available', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(2)}
-      />
-    );
-
-    fireEvent.click(await screen.findByRole('button', { name: /Take 1/ }));
-
-    const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: 'Urban' })).toBeTruthy();
-    expect(within(dialog).getAllByRole('button', { name: 'Pick' })).toHaveLength(
-      2
-    );
-  });
-
-  it('uses group inclusion updates for multi-shot dialogue selections', async () => {
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    serviceMocks.updateShotGroupReferenceInclusion.mockResolvedValue({
-      context: dialogueMutationContext(['shot_001', 'shot_002']),
-      resourceKeys: [],
-    });
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1, ['shot_001', 'shot_002'])}
-      />
-    );
-
-    fireEvent.click(await screen.findByRole('button', { name: /Exclude Urban dialogue audio/ }));
-
-    await waitFor(() => {
-      expect(serviceMocks.updateShotGroupReferenceInclusion).toHaveBeenCalledWith(
-        'constantinople',
-        'scene_hook',
-        'take_001',
-        {
-          dependencyId: 'audio:scene-dialogue:dialogue_urban',
-          inclusion: null,
-        }
-      );
-    });
-    expect(serviceMocks.updateShotReferenceInclusion).not.toHaveBeenCalled();
-  });
-
-  it('reports dialogue save status around successful mutations', async () => {
-    const mutation = deferredMutation();
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    serviceMocks.updateShotGroupReferenceInclusion.mockReturnValueOnce(
-      mutation.promise
-    );
+  it('publishes saved feedback after a dialogue selection mutation', async () => {
     const onSaveNotificationChange = vi.fn();
-    render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1, ['shot_001', 'shot_002'])}
-        onPlanRefresh={vi.fn(async () => undefined)}
-        onSaveNotificationChange={onSaveNotificationChange}
-      />
-    );
-
-    fireEvent.click(await screen.findByRole('button', {
-      name: /Exclude Urban dialogue audio/,
-    }));
-
-    await waitFor(() => {
-      expect(onSaveNotificationChange).toHaveBeenCalledWith({
-        state: 'saving',
-        message: 'Saving',
-      });
+    renderTab({
+      onSaveNotificationChange,
+      onSetReference: vi.fn().mockResolvedValue(undefined),
     });
-    expect(onSaveNotificationChange).not.toHaveBeenCalledWith({
-      state: 'saved',
-      message: 'Saved',
-    });
-
-    mutation.resolve();
-
-    await waitFor(() => {
-      expect(onSaveNotificationChange).toHaveBeenCalledWith({
-        state: 'saved',
-        message: 'Saved',
-      });
-    });
-  });
-
-  it('clears dialogue save status when unmounted during a mutation', async () => {
-    const mutation = deferredMutation();
-    serviceMocks.readSceneDialogueAudioContext.mockResolvedValue(dialogueAudioContext());
-    serviceMocks.updateShotGroupReferenceInclusion.mockReturnValueOnce(
-      mutation.promise
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: /Exclude Urban dialogue audio/i,
+      })
     );
-    const onSaveNotificationChange = vi.fn();
-    const { unmount } = render(
-      <SceneShotDialogsTab
-        projectName='constantinople'
-        sceneId='scene_hook'
-        castMemberImages={{}}
-        productionPlan={dialogueProductionPlan(1, ['shot_001', 'shot_002'])}
-        onPlanRefresh={vi.fn(async () => undefined)}
-        onSaveNotificationChange={onSaveNotificationChange}
-      />
+    await waitFor(() =>
+      expect(onSaveNotificationChange).toHaveBeenCalledWith(
+        expect.objectContaining({ state: 'saved' })
+      )
     );
-
-    fireEvent.click(await screen.findByRole('button', {
-      name: /Exclude Urban dialogue audio/,
-    }));
-
-    await waitFor(() => {
-      expect(onSaveNotificationChange).toHaveBeenCalledWith({
-        state: 'saving',
-        message: 'Saving',
-      });
-    });
-
-    unmount();
-
-    expect(onSaveNotificationChange).toHaveBeenLastCalledWith(
-      idleSaveNotification
-    );
-    mutation.resolve();
   });
 });
 
-function dialogueAudioContext() {
+function renderTab(overrides: {
+  references?: ShotVideoTakeReferenceSections;
+  onSetReference?: (selectionId: string, included: boolean) => Promise<void>;
+  onSaveNotificationChange?: ReturnType<typeof vi.fn>;
+} = {}) {
+  return render(
+    <SceneShotDialogsTab
+      projectName='constantinople'
+      sceneId='scene_001'
+      castMemberImages={{}}
+      take={take()}
+      references={overrides.references ?? references()}
+      onSetReference={overrides.onSetReference ?? vi.fn().mockResolvedValue(undefined)}
+      onSaveNotificationChange={overrides.onSaveNotificationChange}
+    />
+  );
+}
+
+function take(): SceneShotVideoTake {
   return {
-    audioByDialogueId: {
-      dialogue_urban: {
-        takes: [
-          take('take_001', true, '2026-06-12T10:00:00.000Z'),
-          take('take_002', false, '2026-06-12T11:00:00.000Z'),
-        ],
-      },
+    takeId: 'take_001',
+    sceneId: 'scene_001',
+    sourceShotListId: 'shot_list_001',
+    title: 'Take 1',
+    shotIds: ['shot_001'],
+    picked: false,
+    video: null,
+    state: {
+      version: 3,
+      structure: { mode: 'continuous', sharedDirection: {} },
     },
-  };
-}
-
-function take(takeId: string, picked: boolean, createdAt: string) {
-  return {
-    takeId,
-    sceneDialogueAudioId: 'audio_001',
-    assetId: `asset_${takeId}`,
-    assetFileId: `file_${takeId}`,
-    mediaGenerationRunId: `run_${takeId}`,
-    modelChoice: 'elevenlabs/eleven_v3',
-    castVoiceId: 'voice_001',
-    castVoiceName: 'Urban voice',
-    provider: 'elevenlabs',
-    providerVoiceId: 'provider_voice',
-    providerTextSnapshot: 'Hold the line.',
-    plainTextSnapshot: 'Hold the line.',
-    v3TextSnapshot: 'Hold the line.',
-    textTreatment: 'plain-tts',
-    voiceSettingsSnapshot: {},
-    outputFormat: 'mp3_44100_128',
-    languageCode: null,
-    picked,
-    createdAt,
-    url: `/audio/${takeId}.mp3`,
-  };
-}
-
-function profileImage(): ScreenplayImageReferenceWithHttp {
-  return {
-    assetId: 'asset_profile',
-    relationshipId: 'relationship_profile',
-    assetFileId: 'file_profile',
-    title: 'Urban profile',
-    fileRole: 'profile',
-    mediaKind: 'image',
-    mimeType: 'image/png',
-    width: 512,
-    height: 512,
-    url: '/profile.png',
-  };
-}
-
-function deferredMutation() {
-  let resolve: (value: unknown) => void = () => {};
-  const promise = new Promise<unknown>((settle) => {
-    resolve = settle;
-  });
-  return {
-    promise,
-    resolve: () =>
-      resolve({
-        context: dialogueMutationContext(['shot_001', 'shot_002']),
-        resourceKeys: [],
-      }),
-  };
-}
-
-function dialogueMutationContext(shotIds: string[] = ['shot_001']) {
-  return {
-    take: dialogueProductionPlan(1, shotIds).take,
-  };
-}
-
-function dialogueProductionPlan(
-  takeCount: number,
-  shotIds: string[] = ['shot_001'],
-  dialogueAudio = [dialogueChoice({ takeCount })],
-  dialogueAudioCapability: ShotVideoTakeProductionPlanReport['references']['dialogueAudioCapability'] = {
-    state: 'ok',
-    supported: true,
-    selectedCount: dialogueAudio.filter((choice) => choice.included).length,
-    maxCount: 3,
-    modelLabel: 'Seedance 2.0',
-    message: 'Seedance 2.0 allows up to 3 audio references per generation',
-    diagnostics: [],
-  }
-): ShotVideoTakeProductionPlanReport {
-  return {
-    take: {
-      takeId: 'take_001',
-      sceneId: 'scene_hook',
-      shotListId: 'shot_list_hook',
-      shotIds,
-      title: 'Take',
-      production: {},
-      createdAt: '',
-      updatedAt: '',
-      status: {
+    status: {
       editability: {
         state: 'editable',
         diagnostics: [],
@@ -564,70 +156,119 @@ function dialogueProductionPlan(
       resolvability: {
         state: 'resolvable',
         diagnostics: [],
-        message: 'All tracked take references resolve.',
-      },
-      runnability: {
-        state: 'not-evaluated',
-        diagnostics: [],
-        message: 'Run readiness is evaluated by shot-video preflight.',
+        message: 'All references resolve.',
       },
       archive: { state: 'active', message: 'This take is active.' },
-      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
+      history: { differences: [], message: 'No differences.' },
     },
-    },
-    references: {
-      general: [],
-      lookbook: [],
-      dialogueAudio,
-      dialogueAudioCapability,
-      castMembers: [],
-      locations: [],
-    },
-    diagnostics: [],
-  } as unknown as ShotVideoTakeProductionPlanReport;
+    createdAt: '2026-07-12T00:00:00.000Z',
+    updatedAt: '2026-07-12T00:00:00.000Z',
+  };
 }
 
-function dialogueChoice(
-  overrides: Partial<
-    ShotVideoTakeProductionPlanReport['references']['dialogueAudio'][number]
-  > = {}
-): ShotVideoTakeProductionPlanReport['references']['dialogueAudio'][number] {
-  const dependencyId =
-    overrides.dependencyId ?? 'audio:scene-dialogue:dialogue_urban';
-  const defaultIncluded = overrides.defaultIncluded ?? false;
-  const included = overrides.included ?? true;
-  const required = overrides.required ?? false;
+function references(): ShotVideoTakeReferenceSections {
   return {
-    dependencyId,
-    dialogueId: 'dialogue_urban',
-    castMemberId: 'cast_urban',
-    speakerName: 'Urban',
-    plainText: 'Hold the line.',
-    selectedTake: {
-      takeId: 'take_001',
-      takeLabel: 'Take 1',
-      createdAt: '2026-06-12T10:00:00.000Z',
-      assetId: 'asset_take_001',
-      assetFileId: 'file_take_001',
-    },
-    takeCount: 1,
-    defaultIncluded,
-    included,
-    required,
-    unavailableReason: null,
-    audioState: 'ready',
-    card: {
-      state: included ? 'selected-ready' : 'available',
-      mediaKind: 'audio',
-      dependencyId,
-      defaultIncluded,
-      included,
-      required,
-      inclusionOverride: defaultIncluded ? null : 'include',
-      pricing: { state: 'not-applicable', estimatedUsd: null },
-      previews: [],
+    general: [],
+    lookbook: [],
+    castMembers: [],
+    locations: [],
+    dialogueAudio: [{
+      selectionId: 'selection_dialogue_take_001',
+      dialogueId: 'dialogue_001',
+      castMemberId: 'cast_urban',
+      speakerName: 'Urban',
+      plainText: 'Hold the gate.',
+      audioState: 'ready',
+      selectedTake: {
+        takeId: 'dialogue_take_001',
+        takeLabel: 'Take 1',
+        createdAt: '2026-07-12T00:00:00.000Z',
+        assetId: 'asset_dialogue_001',
+        assetFileId: 'file_dialogue_001',
+      },
+      availableTakes: [{
+        takeId: 'dialogue_take_001',
+        selectionId: 'selection_dialogue_take_001',
+      }],
+      takeCount: 1,
+      defaultIncluded: true,
+      included: true,
+      required: false,
+      unavailableReason: null,
+      card: {
+        state: 'selected-ready',
+        selectionId: 'selection_dialogue_take_001',
+        defaultIncluded: true,
+        included: true,
+        required: false,
+        previews: [],
+        diagnostics: [],
+      },
+    }],
+    dialogueAudioCapability: {
+      state: 'ok',
+      supported: true,
+      selectedCount: 1,
+      maxCount: 3,
+      modelLabel: 'Seedance 2.0',
+      message: '1 dialogue reference selected',
       diagnostics: [],
     },
-    ...overrides,
+  };
+}
+
+function dialogueWorkspace() {
+  return {
+    purpose: 'scene.dialogue-audio' as const,
+    target: { kind: 'scene' as const, sceneId: 'scene_001' },
+    project: {
+      name: 'constantinople',
+      title: 'Constantinople',
+      baseLanguageCode: null,
+    },
+    scene: { id: 'scene_001', title: 'The Gate', settingLabel: null },
+    dialogues: [{
+      dialogueId: 'dialogue_001',
+      castMemberId: 'cast_urban',
+      speakerName: 'Urban',
+      plainText: 'Hold the gate.',
+    }],
+    castMemberLabels: { cast_urban: 'Urban' },
+    castVoicesByCastMemberId: {},
+    audioByDialogueId: {
+      dialogue_001: {
+        id: 'audio_001',
+        sceneId: 'scene_001',
+        dialogueId: 'dialogue_001',
+        castMemberId: 'cast_urban',
+        castVoiceId: null,
+        modelChoice: 'elevenlabs/eleven_v3' as const,
+        plainText: 'Hold the gate.',
+        v3Text: 'Hold the gate.',
+        voiceSettings: {},
+        outputFormat: 'mp3_44100_128',
+        languageCode: null,
+        takes: [{
+          takeId: 'dialogue_take_001',
+          label: 'Take 1',
+          assetId: 'asset_dialogue_001',
+          assetFileId: 'file_dialogue_001',
+          createdAt: '2026-07-12T00:00:00.000Z',
+          durationSeconds: 1.5,
+          mediaGenerationRunId: 'run_001',
+          url: '/audio.mp3',
+        }],
+        createdAt: '2026-07-12T00:00:00.000Z',
+        updatedAt: '2026-07-12T00:00:00.000Z',
+      },
+    },
+    models: [],
+    defaults: {
+      modelChoice: 'elevenlabs/eleven_v3' as const,
+      outputFormat: 'mp3_44100_128',
+      languageCode: null,
+      voiceSettings: {},
+    },
+    resourceKeys: [],
   };
 }

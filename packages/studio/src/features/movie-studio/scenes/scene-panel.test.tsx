@@ -10,7 +10,7 @@ import {
   readSceneNarrativeResource,
   readSceneShotListResource,
 } from '@/services/studio-screenplay-api';
-import { listSceneShotVideoTakes } from '@/services/studio-shot-video-takes-api';
+import { listShotVideoTakes } from '@/services/studio-shot-video-takes-api';
 import { ScenePanel } from './scene-panel';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -19,16 +19,16 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 }));
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  createSceneShotVideoTake: vi.fn(),
-  listSceneShotVideoTakes: vi.fn(),
+  createShotVideoTake: vi.fn(),
+  listShotVideoTakes: vi.fn(),
 }));
 
 describe('ScenePanel', () => {
   beforeEach(() => {
     vi.mocked(readSceneNarrativeResource).mockReset();
     vi.mocked(readSceneShotListResource).mockReset();
-    vi.mocked(listSceneShotVideoTakes).mockReset();
-    vi.mocked(listSceneShotVideoTakes).mockResolvedValue({
+    vi.mocked(listShotVideoTakes).mockReset();
+    vi.mocked(listShotVideoTakes).mockResolvedValue({
       takes: [],
     });
   });

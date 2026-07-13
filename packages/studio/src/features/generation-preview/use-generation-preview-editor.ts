@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import type {
-  StudioGenerationPreview,
-  StudioGenerationPreviewReference,
+  GenerationPreviewResource,
+  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
-import { updateGenerationPreviewSpec } from '@/services/studio-generation-preview-api';
+import { updateGenerationPreviewResource } from '@/services/studio-generation-preview-api';
 import {
   buildGenerationPreviewUpdateRequest,
   createGenerationPreviewDraft,
@@ -14,14 +14,14 @@ import {
 
 export interface GenerationPreviewEditorSession {
   projectName: string;
-  preview: StudioGenerationPreview;
+  preview: GenerationPreviewResource;
   eventId: string;
 }
 
 export function useGenerationPreviewEditor(
   session: GenerationPreviewEditorSession,
 ) {
-  const [preview, setPreview] = useState<StudioGenerationPreview>(session.preview);
+  const [preview, setPreview] = useState<GenerationPreviewResource>(session.preview);
   const [draft, setDraft] = useState<GenerationPreviewDraft>(() =>
     createGenerationPreviewDraft(session.preview),
   );
@@ -46,7 +46,7 @@ export function useGenerationPreviewEditor(
     setUpdateError(null);
   };
 
-  const toggleReference = (reference: StudioGenerationPreviewReference) => {
+  const toggleReference = (reference: GenerationPreviewResourceReference) => {
     const control = reference.selectionControl;
     if (
       !preview.generationSpecId ||
@@ -59,9 +59,9 @@ export function useGenerationPreviewEditor(
     const selected = generationPreviewReferenceSelected(reference, draft);
     setDraft((current) => ({
       ...current,
-      referenceSelectionDraftByDependencyId: {
-        ...current.referenceSelectionDraftByDependencyId,
-        [control.dependencyId]: !selected,
+      referenceSelectionDraftBySelectionId: {
+        ...current.referenceSelectionDraftBySelectionId,
+        [control.selectionId]: !selected,
       },
     }));
     setUpdateError(null);
@@ -77,7 +77,7 @@ export function useGenerationPreviewEditor(
     setUpdatePending(true);
     setUpdateError(null);
     try {
-      const nextPreview = await updateGenerationPreviewSpec({
+      const nextPreview = await updateGenerationPreviewResource({
         projectName: session.projectName,
         specId: preview.generationSpecId,
         ...request,

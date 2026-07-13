@@ -13,7 +13,6 @@ import type {
   StudioSelection,
   StudioSelectionContextResult,
 } from '../../client/index.js';
-import type { ShotVideoTakeInputKind } from '../../client/scene-shot-list.js';
 import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
 import {
   listAssetRelationshipPage,
@@ -65,9 +64,6 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { readStudioSelectionContextProjection } from './selection-context.js';
-import { buildAgentMediaReport } from '../media-generation/lifecycle/context-service.js';
-import { buildShotVideoTakeContext } from '../media-generation/purposes/shot-video-take/authoring/context.js';
-import { previewShotVideoTakeProductionForContext } from '../media-generation/purposes/shot-video-take/planning/preflight-report.js';
 
 export async function readDirectorContext(
   input: ReadDirectorContextInput = {}
@@ -128,10 +124,18 @@ export async function readDirectorContext(
       cast,
       productionDesign,
       selectedScene,
-      agentMedia: await buildAgentMediaReport({
-        homeDir: input.homeDir,
-        mediaKind: 'image',
-      }),
+      agentMedia: {
+        imageGeneration: {
+          defaultExecutionPath: 'ask',
+          appliesToPurpose: false,
+          renkuManagedAvailable: false,
+          externalBuiltInGeneration: {
+            preferred: null,
+            availableInRenku: false,
+            requiresHarnessTool: true,
+          },
+        },
+      },
       nextSteps,
       resourceKeys: directorResourceKeys(currentSelection, selectedScene),
       diagnostics,
@@ -322,15 +326,10 @@ async function readSelectedSceneReadiness(input: {
       shotCount: 0,
       storyboardStatus: { available: false, missingShotIds: [] },
       shotVideo: {
-        preflightAvailable: false,
+        generationAvailable: false,
         selectedTakeId: null,
         selectedTakeMode: null,
         selectedShotIds: [],
-        missingPreparedInputKinds: [],
-        selectedInputCount: 0,
-        selectedTakeCount: 0,
-        recommendedSpecialist: null,
-        recommendedCommand: null,
       },
     };
   }
@@ -363,12 +362,9 @@ async function readSelectedSceneReadiness(input: {
     );
   }
 
-  const shotVideo = await readSelectedShotVideoReadiness({
+  const shotVideo = readSelectedShotVideoReadiness({
     selection,
     selectedShotIds,
-    currentProject: input.currentProject,
-    homeDir: input.homeDir,
-    diagnostics,
   });
 
   return {
@@ -384,76 +380,23 @@ async function readSelectedSceneReadiness(input: {
   };
 }
 
-async function readSelectedShotVideoReadiness(input: {
+function readSelectedShotVideoReadiness(input: {
   selection: Extract<StudioSelection, { type: 'scene' }>;
   selectedShotIds: string[];
-  currentProject: CurrentProject;
-  homeDir?: string;
-  diagnostics: DiagnosticIssue[];
-}): Promise<DirectorSceneReadiness['shotVideo']> {
+}): DirectorSceneReadiness['shotVideo'] {
   const base: DirectorSceneReadiness['shotVideo'] = {
-    preflightAvailable: input.selectedShotIds.length > 0,
+    generationAvailable: input.selectedShotIds.length > 0,
     selectedTakeId: null,
     selectedTakeMode: null,
     selectedShotIds: input.selectedShotIds,
-    missingPreparedInputKinds: [] as ShotVideoTakeInputKind[],
-    selectedInputCount: 0,
-    selectedTakeCount: 0,
-    recommendedSpecialist: null,
-    recommendedCommand:
-      input.selectedShotIds.length > 0
-        ? 'renku take authoring context --take <take-id> --json'
-        : null,
   };
   if (!input.selection.takeId) {
     return base;
   }
-  try {
-    const context = await buildShotVideoTakeContext({
-      projectName: input.currentProject.projectName,
-      homeDir: input.homeDir,
-      sceneId: input.selection.id,
-      takeId: input.selection.takeId,
-    });
-    const preflight = await previewShotVideoTakeProductionForContext({
-      context,
-      projectName: input.currentProject.projectName,
-      homeDir: input.homeDir,
-    });
-    const selectedInputs = context.mediaInputs.filter((mediaInput) => mediaInput.selected);
-    return {
-      preflightAvailable: true,
-      selectedTakeId: context.take.takeId,
-      selectedTakeMode: context.take.state.structure.mode,
-      selectedShotIds: context.take.shotIds,
-      missingPreparedInputKinds: [
-        ...new Set(
-          preflight.inputsToCreate
-            .filter((dependency) => dependency.required)
-            .map((dependency) => dependency.outputInputKind)
-        ),
-      ],
-      selectedInputCount: selectedInputs.length,
-      selectedTakeCount: context.take.video ? 1 : 0,
-      recommendedSpecialist: 'media-producer',
-      recommendedCommand: `renku take authoring context --take ${context.take.takeId} --json`,
-    };
-  } catch {
-    input.diagnostics.push(
-      directorWarning(
-        'DIRECTOR_CONTEXT014',
-        'The selected Shot Video Take could not be loaded for readiness.',
-        ['selectedScene', 'shotVideo', 'selectedTakeId'],
-        'Refresh Studio, confirm the take still exists, and run studio current again.'
-      )
-    );
-    return {
-      ...base,
-      selectedTakeId: input.selection.takeId,
-      recommendedSpecialist: 'media-producer',
-      recommendedCommand: `renku take authoring context --take ${input.selection.takeId} --json`,
-    };
-  }
+  return {
+    ...base,
+    selectedTakeId: input.selection.takeId,
+  };
 }
 
 function selectedShotIdsForScene(
@@ -615,7 +558,7 @@ function buildNextSteps(input: {
       title: 'Establish cast visuals',
       specialistSkill: 'media-producer',
       reason: 'Cast members need selected character-sheet or profile media for visual continuity.',
-      command: 'renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json',
+      command: 'renku generation context --purpose cast.video-character-sheet --target cast:<cast-member-id> --json',
     });
   }
   if (!input.productionDesign.everyLocationHasSelectedEnvironmentSheet) {
@@ -624,7 +567,7 @@ function buildNextSteps(input: {
       title: 'Establish location visuals',
       specialistSkill: 'media-producer',
       reason: 'Locations need selected environment sheets before shots rely on location visuals.',
-      command: 'renku generation context --purpose location.environment-sheet --target location:<location-id> --json',
+      command: 'renku generation context --purpose location.sheet --target location:<location-id> --json',
     });
   }
   if (input.selectedScene?.shotVideo.selectedTakeId) {
@@ -633,8 +576,8 @@ function buildNextSteps(input: {
       title: 'Prepare the active shot video take',
       specialistSkill: 'media-producer',
       reason:
-        'Studio is focused on an existing Shot Video Take, so take-owned media and readiness work should start from the take authoring context.',
-      command: input.selectedScene.shotVideo.recommendedCommand,
+        'Studio is focused on an existing Shot Video Take, so generation work should start from its exact Core context.',
+      command: `renku generation context --purpose shot.video-take --target take:${input.selectedScene.shotVideo.selectedTakeId} --json`,
     });
   } else if (input.selectedScene && !input.selectedScene.activeShotListId) {
     steps.push({
@@ -655,13 +598,13 @@ function buildNextSteps(input: {
       reason: 'The active shot list has shots without durable storyboard images.',
       command: `renku generation context --purpose scene.storyboard-sheet --target scene:${input.selectedScene.sceneId} --json`,
     });
-  } else if (input.selectedScene?.shotVideo.preflightAvailable) {
+  } else if (input.selectedScene?.shotVideo.generationAvailable) {
     steps.push({
       id: 'generate-shot-video',
-      title: 'Author selected shot video take',
+      title: 'Create or select a shot video take',
       specialistSkill: 'media-producer',
-      reason: 'The selected scene has an active shot list and can move into shot-video take authoring.',
-      command: 'renku take authoring context --take <take-id> --json',
+      reason: 'The selected scene has an active shot list; create or select a Take in Studio before authoring its exact generation request.',
+      command: null,
     });
   }
   return steps;

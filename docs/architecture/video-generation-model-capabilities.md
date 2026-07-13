@@ -4,6 +4,13 @@ Date: 2026-06-01
 
 Status: reference
 
+Current implementation note: this document preserves capability research, not
+the active runtime contract. The schema-first Engines catalog exposes each
+provider route directly, Core projects those exact routes into the focused Shot
+Video Take workspace, and Studio groups named route families only for
+presentation. The illustrative normalized `modelChoice` interface below is not
+a current API.
+
 ## Purpose
 
 This document records the current capability analysis for the video-generation

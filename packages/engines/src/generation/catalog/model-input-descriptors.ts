@@ -42,13 +42,56 @@ export interface GenerationModelInputFieldDescriptor {
   name: string;
   label: string;
   kind: GenerationModelInputFieldKind;
+  semantic?: GenerationModelInputFieldSemantic;
+  productSettingKind?: 'aspect-ratio' | 'quality';
+  productSettingValues?: Record<string, GenerationModelInputScalarValue>;
   required: boolean;
   defaultValue?: GenerationModelInputValue;
   allowedValues?: GenerationModelInputScalarValue[];
   minimum?: number;
   maximum?: number;
   description?: string;
+  media?: {
+    acceptedKinds: Array<'image' | 'audio' | 'video'>;
+    cardinality: 'one' | 'many';
+    minimum: number;
+    maximum: number | null;
+    acceptedMimeTypes?: string[];
+    maximumSizeBytes?: number;
+    minimumWidth?: number;
+    maximumWidth?: number;
+    minimumHeight?: number;
+    maximumHeight?: number;
+    minimumDurationSeconds?: number;
+    maximumDurationSeconds?: number;
+    minimumAspectRatio?: number;
+    maximumAspectRatio?: number;
+  };
 }
+
+export type GenerationModelInputFieldSemantic =
+  | { kind: 'authored-text'; role: 'prompt' | 'negative-prompt' }
+  | {
+      kind: 'setting';
+      role:
+        | 'aspect-ratio'
+        | 'quality'
+        | 'duration'
+        | 'voice'
+        | 'voice-settings'
+        | 'output-format'
+        | 'language';
+    }
+  | {
+      kind: 'media';
+      role:
+        | 'source-image'
+        | 'reference-image'
+        | 'first-frame'
+        | 'last-frame'
+        | 'source-video'
+        | 'audio';
+    };
 
 export async function describeGenerationModelInputs(input: {
   provider: string;
@@ -116,11 +159,27 @@ function describeField(input: {
   const minimum = numericBoundary(input.schema.minimum);
   const maximum = numericBoundary(input.schema.maximum);
   const nonNullVariants = variants.filter((variant) => variant.type !== 'null');
+  const productSettingKind = productSettingKindForField(input.name);
+  const semantic = semanticForField(input.name, productSettingKind);
+  const productSettingValues = productSettingKind
+    ? productSettingValuesForField(productSettingKind, allowedValues)
+    : undefined;
+  const media = describeMediaField({
+    name: input.name,
+    schema: input.schema,
+    variants: nonNullVariants,
+    required: input.required,
+  });
   return {
     name: input.name,
     label: schemaTitle(input.schema, input.name),
     kind: fieldKind(input.schema, nonNullVariants, allowedValues),
     required: input.required,
+    ...(semantic ? { semantic } : {}),
+    ...(productSettingKind ? { productSettingKind } : {}),
+    ...(productSettingValues && Object.keys(productSettingValues).length > 0
+      ? { productSettingValues }
+      : {}),
     ...(defaultValue !== undefined ? { defaultValue } : {}),
     ...(allowedValues.length > 0 ? { allowedValues } : {}),
     ...(minimum !== undefined ? { minimum } : {}),
@@ -128,7 +187,273 @@ function describeField(input: {
     ...(typeof input.schema.description === 'string'
       ? { description: input.schema.description }
       : {}),
+    ...(media ? { media } : {}),
   };
+}
+
+function semanticForField(
+  name: string,
+  productSettingKind: GenerationModelInputFieldDescriptor['productSettingKind']
+): GenerationModelInputFieldSemantic | undefined {
+  if (name === 'prompt' || name === 'text') {
+    return { kind: 'authored-text', role: 'prompt' };
+  }
+  if (name === 'negative_prompt' || name === 'negativePrompt') {
+    return { kind: 'authored-text', role: 'negative-prompt' };
+  }
+  if (productSettingKind) {
+    return { kind: 'setting', role: productSettingKind };
+  }
+  if (
+    name === 'duration' ||
+    name === 'duration_seconds' ||
+    name === 'video_duration'
+  ) {
+    return { kind: 'setting', role: 'duration' };
+  }
+  if (name === 'voice' || name === 'voice_id') {
+    return { kind: 'setting', role: 'voice' };
+  }
+  if (name === 'voice_settings') {
+    return { kind: 'setting', role: 'voice-settings' };
+  }
+  if (name === 'output_format') {
+    return { kind: 'setting', role: 'output-format' };
+  }
+  if (name === 'language_code') {
+    return { kind: 'setting', role: 'language' };
+  }
+  if (
+    name === 'start_image_url' ||
+    name === 'first_frame_url' ||
+    name === 'first_frame_image_url'
+  ) {
+    return { kind: 'media', role: 'first-frame' };
+  }
+  if (
+    name === 'end_image_url' ||
+    name === 'last_frame_url' ||
+    name === 'last_frame_image_url'
+  ) {
+    return { kind: 'media', role: 'last-frame' };
+  }
+  if (name === 'source_video_url' || name === 'video_url') {
+    return { kind: 'media', role: 'source-video' };
+  }
+  if (name === 'audio_url' || name === 'audio_urls') {
+    return { kind: 'media', role: 'audio' };
+  }
+  if (
+    name === 'source_image_url' ||
+    name === 'input_image_url' ||
+    name === 'image_url'
+  ) {
+    return { kind: 'media', role: 'source-image' };
+  }
+  if (
+    name === 'reference_image_url' ||
+    name === 'reference_image_urls' ||
+    name === 'image_urls'
+  ) {
+    return { kind: 'media', role: 'reference-image' };
+  }
+  return undefined;
+}
+
+function productSettingValuesForField(
+  kind: NonNullable<GenerationModelInputFieldDescriptor['productSettingKind']>,
+  allowedValues: GenerationModelInputScalarValue[]
+): Record<string, GenerationModelInputScalarValue> {
+  if (kind === 'quality') {
+    const stringValues = allowedValues.filter((value): value is string => typeof value === 'string');
+    const aliases: Record<string, string[]> = {
+      low: ['low', '1K', '1k'],
+      medium: ['medium', '2K', '2k'],
+      high: ['high', '4K', '4k'],
+    };
+    return Object.fromEntries(Object.entries(aliases).flatMap(([canonical, candidates]) => {
+      const value = stringValues.find((candidate) => candidates.includes(candidate));
+      return value === undefined ? [] : [[canonical, value]];
+    }));
+  }
+  const aliases: Record<string, string[]> = {
+    '1:1': ['1:1', 'square', 'square_hd'],
+    '4:3': ['4:3', 'landscape_4_3'],
+    '16:9': ['16:9', 'landscape_16_9'],
+  };
+  return Object.fromEntries(
+    Object.entries(aliases).flatMap(([canonical, candidates]) => {
+      const value = allowedValues.find(
+        (candidate) => typeof candidate === 'string' && candidates.includes(candidate)
+      );
+      return value === undefined ? [] : [[canonical, value]];
+    })
+  );
+}
+
+function productSettingKindForField(
+  name: string
+): GenerationModelInputFieldDescriptor['productSettingKind'] {
+  if (name === 'aspect_ratio' || name === 'image_size') {
+    return 'aspect-ratio';
+  }
+  if (name === 'quality' || name === 'resolution') {
+    return 'quality';
+  }
+  return undefined;
+}
+
+function describeMediaField(input: {
+  name: string;
+  schema: JSONSchema7;
+  variants: JSONSchema7[];
+  required: boolean;
+}): GenerationModelInputFieldDescriptor['media'] | undefined {
+  const schemas = [input.schema, ...input.variants];
+  const cardinality = schemas.some(isDirectUriArraySchema) ? 'many' : 'one';
+  if (!schemas.some(isDirectUriSchema) && cardinality === 'one') {
+    return undefined;
+  }
+  const acceptedKinds = mediaKindsForField(input.name, schemas);
+  if (acceptedKinds.length === 0) {
+    return undefined;
+  }
+  const arraySchema = schemas.find(isDirectUriArraySchema);
+  const mediaSchemas = schemas.flatMap((schema) =>
+    isDirectUriArraySchema(schema) && isSchemaObject(schema.items)
+      ? [schema.items]
+      : [schema]
+  );
+  const mediaConstraints = describeMediaConstraints(mediaSchemas);
+  return {
+    acceptedKinds,
+    cardinality,
+    minimum:
+      cardinality === 'many'
+        ? numericBoundary(arraySchema?.minItems) ?? (input.required ? 1 : 0)
+        : input.required
+          ? 1
+          : 0,
+    maximum:
+      cardinality === 'many'
+        ? numericBoundary(arraySchema?.maxItems) ?? null
+        : 1,
+    ...mediaConstraints,
+  };
+}
+
+function describeMediaConstraints(
+  schemas: JSONSchema7[]
+): Omit<
+  NonNullable<GenerationModelInputFieldDescriptor['media']>,
+  'acceptedKinds' | 'cardinality' | 'minimum' | 'maximum'
+> {
+  const xFal = schemas
+    .map((schema) => schema['x-fal' as keyof JSONSchema7])
+    .find(isSchemaObject) as Record<string, unknown> | undefined;
+  const acceptedMimeTypes = schemas
+    .map((schema) => schema['contentMediaType' as keyof JSONSchema7])
+    .filter((value): value is string => typeof value === 'string');
+  return {
+    ...(acceptedMimeTypes.length > 0
+      ? { acceptedMimeTypes: [...new Set(acceptedMimeTypes)] }
+      : {}),
+    ...constraintValue(xFal, 'max_file_size', 'maximumSizeBytes'),
+    ...constraintValue(xFal, 'min_width', 'minimumWidth'),
+    ...constraintValue(xFal, 'max_width', 'maximumWidth'),
+    ...constraintValue(xFal, 'min_height', 'minimumHeight'),
+    ...constraintValue(xFal, 'max_height', 'maximumHeight'),
+    ...constraintValue(xFal, 'min_duration', 'minimumDurationSeconds'),
+    ...constraintValue(xFal, 'max_duration', 'maximumDurationSeconds'),
+    ...constraintValue(xFal, 'min_aspect_ratio', 'minimumAspectRatio'),
+    ...constraintValue(xFal, 'max_aspect_ratio', 'maximumAspectRatio'),
+  };
+}
+
+function constraintValue(
+  source: Record<string, unknown> | undefined,
+  sourceKey: string,
+  resultKey: string
+): Record<string, number> {
+  const value = source?.[sourceKey];
+  return typeof value === 'number' ? { [resultKey]: value } : {};
+}
+
+function isDirectUriSchema(schema: JSONSchema7): boolean {
+  return schema.type === 'string' && schema.format === 'uri';
+}
+
+function isDirectUriArraySchema(schema: JSONSchema7): boolean {
+  return (
+    schema.type === 'array' &&
+    isSchemaObject(schema.items) &&
+    isDirectUriSchema(schema.items)
+  );
+}
+
+function mediaKindsForField(
+  name: string,
+  schemas: JSONSchema7[]
+): Array<'image' | 'audio' | 'video'> {
+  const explicitKinds = schemas
+    .map((schema) => schemaUiMediaKind(schema) ?? schemaUiMediaKind(schema.items))
+    .filter((kind): kind is 'image' | 'audio' | 'video' => Boolean(kind));
+  if (explicitKinds.length > 0) {
+    return [...new Set(explicitKinds)];
+  }
+  const normalizedName = name.toLowerCase();
+  if (
+    normalizedName.includes('image') ||
+    normalizedName.includes('frame') ||
+    normalizedName.includes('mask') ||
+    normalizedName === 'img_cond_path'
+  ) {
+    return ['image'];
+  }
+  if (
+    normalizedName.includes('audio') ||
+    normalizedName.includes('voice') ||
+    normalizedName.includes('speaker')
+  ) {
+    return ['audio'];
+  }
+  if (
+    normalizedName.includes('video') ||
+    normalizedName.includes('clip')
+  ) {
+    return ['video'];
+  }
+  const schemaText = schemas
+    .flatMap((schema) => [schema.title, schema.description])
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase();
+  if (/\bimage\b/.test(schemaText)) {
+    return ['image'];
+  }
+  if (/\baudio\b|\bvoice\b/.test(schemaText)) {
+    return ['audio'];
+  }
+  if (/\bvideo\b|\bclip\b/.test(schemaText)) {
+    return ['video'];
+  }
+  return [];
+}
+
+function schemaUiMediaKind(
+  schema: unknown
+): 'image' | 'audio' | 'video' | undefined {
+  if (!isSchemaObject(schema)) {
+    return undefined;
+  }
+  const ui = schema['ui' as keyof JSONSchema7];
+  if (!isSchemaObject(ui)) {
+    return undefined;
+  }
+  const field = ui['field' as keyof JSONSchema7];
+  return field === 'image' || field === 'audio' || field === 'video'
+    ? field
+    : undefined;
 }
 
 function schemaProperties(schema: JSONSchema7): Record<string, JSONSchema7> {

@@ -7,7 +7,7 @@ import {
 } from '@/ui/image-preview-dialog';
 import {
   locationEnvironmentSheetAspectRatio,
-  locationEnvironmentSheetAssets,
+  locationSheetAssets,
   locationEnvironmentSheetCompositeUrl,
   locationEnvironmentSheetPreviewImages,
 } from './location-assets';
@@ -30,7 +30,7 @@ export function LocationVisualContentTab({
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const { openImageRevision } = useImageRevisionDialog();
-  const sheetAssets = locationEnvironmentSheetAssets(assets);
+  const sheetAssets = locationSheetAssets(assets);
 
   const openSheetPreview = (asset: StudioAssetResponse) => {
     const images = locationEnvironmentSheetPreviewImages(

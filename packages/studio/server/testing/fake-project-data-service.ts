@@ -1,19 +1,13 @@
 import type {
-  MediaGenerationSpec,
-  GenerationPreviewRequest,
+  GenerationPreviewResourceData,
   LookbookSection,
-  MediaGenerationSpecRecord,
   ProjectRelativePath,
   ProjectLibrary,
-  SceneDialogueAudioContext,
-  SceneShotVideoTakeEditContext,
+  SceneDialogueAudioWorkspace,
   SceneShotVideoTake,
-  SceneShotVideoTakeReferenceSelections,
-  ShotVideoTakeProductionContext,
-  ShotVideoTakeOutputGenerationPlan,
-  SceneShotVideoTakeProductionState,
+  ShotVideoTakeGenerationSetup,
+  ShotVideoTakeWorkspace,
 } from '@gorenku/studio-core/client';
-import { SHOT_VIDEO_TAKE_GENERATION_PURPOSE } from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
 import { makeAsset, makeProject, makeProjectShell } from './route-fixtures.js';
 
@@ -82,56 +76,6 @@ export function fakeProjectDataService(): NonNullable<
           id: input.assetFileId,
         },
         absolutePath: '/tmp/renku/constantinople/cast/reference.png',
-      };
-    },
-    async resolveShotVideoTakeInputFile(input) {
-      const asset = makeAsset('asset_shot_video_input');
-      return {
-        input: {
-          inputId: input.inputId,
-          kind: 'first-frame',
-          title: 'First frame',
-          assetId: asset.assetId,
-          assetFileId: input.assetFileId,
-          mediaKind: 'image',
-          projectRelativePath:
-            'generated/media/shot-video-input.png' as ProjectRelativePath,
-          subjectKind: 'shot',
-          subjectId: 'shot_001',
-          takeId: 'scene_shot_video_take_001',
-          selected: true,
-          shotIds: ['shot_001'],
-          createdAt: '2026-01-01T00:00:00.000Z',
-        },
-        file: {
-          ...asset.files[0],
-          id: input.assetFileId,
-          projectRelativePath:
-            'generated/media/shot-video-input.png' as ProjectRelativePath,
-        },
-        absolutePath: '/tmp/renku/constantinople/generated/media/shot-video-input.png',
-      };
-    },
-    async resolveShotVideoTakeVideoFile(input) {
-      return {
-        take: makeSceneShotVideoTake({
-          sceneId: input.sceneId,
-          takeId: input.takeId,
-        }),
-        file: {
-          id: input.assetFileId,
-          role: 'primary',
-          projectRelativePath:
-            'generated/media/shot-video-take.mp4' as ProjectRelativePath,
-          mediaKind: 'video',
-          mimeType: 'video/mp4',
-          sizeBytes: 1234,
-          contentHash: 'hash',
-          width: null,
-          height: null,
-          durationSeconds: null,
-        },
-        absolutePath: '/tmp/renku/constantinople/generated/media/shot-video-take.mp4',
       };
     },
     async listAssets() {
@@ -351,45 +295,52 @@ export function fakeProjectDataService(): NonNullable<
         locationLabels: {},
         castMemberHandles: {},
         locationHandles: {},
-        dialogueAudio: makeSceneDialogueAudioContext(project),
+        dialogueAudio: makeSceneDialogueAudioWorkspace(project),
       };
     },
-    async readSceneDialogueAudioContext() {
-      return makeSceneDialogueAudioContext(project);
+    async readSceneDialogueAudioWorkspace() {
+      return makeSceneDialogueAudioWorkspace(project);
     },
     async estimateSceneDialogueAudioDraft(input) {
       return {
-        spec: makeMediaGenerationSpecRecord(
-          'media_generation_spec_dialogue_audio',
-          input.spec
-        ),
+        spec: {
+          purpose: input.spec.purpose,
+          target: { kind: 'sceneDialogue', id: input.spec.target.dialogueId },
+          model: {
+            provider: 'elevenlabs',
+            model: input.spec.modelChoice.replace('elevenlabs/', ''),
+          },
+          values: {
+            text: input.spec.plainText,
+            voiceId: input.spec.castVoiceId,
+          },
+          references: [],
+          title: input.spec.title,
+        },
         estimate: {
-          state: 'priced',
           provider: 'elevenlabs',
           model: 'eleven_v3',
-          mediaKind: 'audio',
-          pricing: 0.01,
           estimatedCostUsd: 0.01,
+          approvalToken: 'approval-token',
           billableUnits: {},
-          warnings: [],
         },
       };
     },
     async updateSceneDialogueAudioSetup() {
       return {
-        context: makeSceneDialogueAudioContext(project),
+        context: makeSceneDialogueAudioWorkspace(project),
         resourceKeys: [],
       };
     },
     async generateSceneDialogueAudioTake() {
       return {
-        context: makeSceneDialogueAudioContext(project),
+        context: makeSceneDialogueAudioWorkspace(project),
         resourceKeys: [],
       };
     },
     async deleteSceneDialogueAudioTake() {
       return {
-        context: makeSceneDialogueAudioContext(project),
+        context: makeSceneDialogueAudioWorkspace(project),
         resourceKeys: [],
       };
     },
@@ -712,307 +663,20 @@ export function fakeProjectDataService(): NonNullable<
     async clearLookbookCardImage(input) {
       return makeLookbookImageMutationReport(input.lookbookId);
     },
-    async buildLookbookImageContext(input) {
+    async attachGenerationMedia(input) {
+      const asset = makeAsset('asset_generated');
       return {
-        purpose: 'lookbook.image',
-        target: { kind: 'lookbook', id: input.lookbookId },
+        valid: true,
+        purpose: input.purpose,
+        target: input.target,
+        asset,
+        provenance: null,
+        resourceKeys: [],
         project: {
-          id: 'project_test',
-          name: 'test-project',
-          title: project.identity.title,
-          aspectRatio: project.identity.aspectRatio ?? null,
+          name: project.identity.name,
+          id: project.identity.id,
+          projectFolder: project.identity.folderPath,
         },
-        lookbook: makeLookbook(input.lookbookId),
-        sourceInspirationFolders: [],
-        existingImages: [],
-        imagesBySection: {
-          thesis: [],
-          palette: [],
-          toneMood: [],
-          composition: [],
-          lighting: [],
-          texture: [],
-          camera: [],
-          styleBrief: [],
-          lineAndFinish: [],
-          valueAndAccent: [],
-          guardrails: [],
-        },
-        cardImage: null,
-        defaults: {
-          takeCount: 1,
-          seed: null,
-          imageFrame: 'project',
-          resolvedAspectRatio: project.identity.aspectRatio ?? null,
-          detail: 'standard',
-          outputFormat: 'png',
-        },
-        resourceKeys: [],
-      };
-    },
-    async listLookbookImageModels(input) {
-      return {
-        purpose: 'lookbook.image',
-        target: { kind: 'lookbook', id: input.lookbookId },
-        models: [],
-      };
-    },
-    async validateLookbookImageSpec(input) {
-      return {
-        valid: true,
-        spec: input.spec,
-        providerPayload: {},
-      };
-    },
-    async createLookbookImageSpec(input) {
-      return makeMediaGenerationSpecRecord('media_generation_spec_test0001', input.spec);
-    },
-    async updateLookbookImageSpec(input) {
-      return makeMediaGenerationSpecRecord(input.specId, input.spec);
-    },
-    async readLookbookImageSpec(input) {
-      return makeMediaGenerationSpecRecord(input.specId, makeLookbookImageSpec());
-    },
-    async listLookbookImageSpecs() {
-      return { specs: [] };
-    },
-    async prepareLookbookImageSpec(input) {
-      return {
-        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookImageSpec()),
-        providerPayload: {},
-        generation: {
-          policy: {
-            provider: 'fal-ai',
-            model: 'nano-banana-2',
-            mediaKind: 'image',
-            mode: 'text-to-image',
-            outputCount: 1,
-          },
-          request: {
-            prompt: 'A Lookbook image.',
-            parameters: {},
-            outputNames: ['lookbook-image.png'],
-          },
-        },
-      };
-    },
-    async estimateLookbookImageSpec(input) {
-      return {
-        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookImageSpec()),
-        estimate: {
-          state: 'priced',
-          provider: 'fal-ai',
-          model: 'nano-banana-2',
-          mediaKind: 'image',
-          pricing: 0,
-          estimatedCostUsd: 0,
-          billableUnits: { outputCount: 1 },
-          warnings: [],
-        },
-      };
-    },
-    async runLookbookImageSpec(input) {
-      return {
-        run: {
-          id: 'media_generation_run_test0001',
-          specId: input.specId,
-          purpose: 'lookbook.image',
-          target: { kind: 'lookbook', id: 'lookbook_test0001' },
-          modelChoice: 'fal-ai/nano-banana-2',
-          provider: 'fal-ai',
-          model: 'nano-banana-2',
-          specSnapshot: makeLookbookImageSpec(),
-          providerPayload: {},
-          estimateSnapshot: {
-            state: 'priced',
-            estimatedCostUsd: 0,
-          },
-          simulated: Boolean(input.simulate),
-          status: input.simulate ? 'simulated' : 'completed',
-          outputs: [],
-          diagnostics: {},
-          startedAt: '2026-05-22T00:00:00.000Z',
-          completedAt: '2026-05-22T00:00:00.000Z',
-        },
-      };
-    },
-    async recordLookbookImageRun(input) {
-      return {
-        run: {
-          id: 'media_generation_run_test0001',
-          specId: input.specId,
-          purpose: 'lookbook.image',
-          target: { kind: 'lookbook', id: 'lookbook_test0001' },
-          modelChoice: 'fal-ai/nano-banana-2',
-          provider: 'fal-ai',
-          model: 'nano-banana-2',
-          specSnapshot: makeLookbookImageSpec(),
-          providerPayload: {},
-          estimateSnapshot: {},
-          simulated: true,
-          status: 'simulated',
-          outputs: [],
-          diagnostics: {},
-          startedAt: '2026-05-22T00:00:00.000Z',
-          completedAt: '2026-05-22T00:00:00.000Z',
-        },
-      };
-    },
-    async importLookbookImageMedia(input) {
-      return {
-        valid: true,
-        warnings: [],
-        project: { name: 'test-project' },
-        changes: [{ type: 'lookbook.imageImported', lookbookId: input.lookbookId }],
-        purpose: 'lookbook.image',
-        target: { kind: 'lookbook', id: input.lookbookId },
-        imported: makeLookbookImage('lookbook_image_test0001'),
-        resourceKeys: [],
-      };
-    },
-    async buildLookbookSheetContext(input) {
-      return {
-        purpose: 'lookbook.sheet',
-        target: { kind: 'lookbook', id: input.lookbookId },
-        project: {
-          id: 'project_test',
-          name: 'test-project',
-          title: project.identity.title,
-          aspectRatio: project.identity.aspectRatio ?? null,
-        },
-        lookbook: makeLookbook(input.lookbookId),
-        sourceInspirationFolders: [],
-        existingSheets: [makeLookbookSheet('lookbook_sheet_test0001')],
-        cardImage: null,
-        defaults: {
-          takeCount: 1,
-          seed: null,
-          sheetFrame: 'project',
-          resolvedAspectRatio: project.identity.aspectRatio ?? null,
-          detail: 'standard',
-          outputFormat: 'png',
-        },
-        resourceKeys: [],
-      };
-    },
-    async listLookbookSheetModels(input) {
-      return {
-        purpose: 'lookbook.sheet',
-        target: { kind: 'lookbook', id: input.lookbookId },
-        models: [],
-      };
-    },
-    async validateLookbookSheetSpec(input) {
-      return {
-        valid: true,
-        spec: input.spec,
-        providerPayload: {},
-      };
-    },
-    async createLookbookSheetSpec(input) {
-      return makeMediaGenerationSpecRecord('media_generation_spec_test0001', input.spec);
-    },
-    async updateLookbookSheetSpec(input) {
-      return makeMediaGenerationSpecRecord(input.specId, input.spec);
-    },
-    async readLookbookSheetSpec(input) {
-      return makeMediaGenerationSpecRecord(input.specId, makeLookbookSheetSpec());
-    },
-    async listLookbookSheetSpecs() {
-      return { specs: [] };
-    },
-    async prepareLookbookSheetSpec(input) {
-      return {
-        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookSheetSpec()),
-        providerPayload: {},
-        generation: {
-          policy: {
-            provider: 'fal-ai',
-            model: 'nano-banana-2',
-            mediaKind: 'image',
-            mode: 'text-to-image',
-            outputCount: 1,
-          },
-          request: {
-            prompt: 'A Lookbook sheet.',
-            parameters: {},
-            outputNames: ['lookbook-sheet.png'],
-          },
-        },
-      };
-    },
-    async estimateLookbookSheetSpec(input) {
-      return {
-        spec: makeMediaGenerationSpecRecord(input.specId, makeLookbookSheetSpec()),
-        estimate: {
-          state: 'priced',
-          provider: 'fal-ai',
-          model: 'nano-banana-2',
-          mediaKind: 'image',
-          pricing: 0,
-          estimatedCostUsd: 0,
-          billableUnits: { outputCount: 1 },
-          warnings: [],
-        },
-      };
-    },
-    async runLookbookSheetSpec(input) {
-      return {
-        run: {
-          id: 'media_generation_run_test0001',
-          specId: input.specId,
-          purpose: 'lookbook.sheet',
-          target: { kind: 'lookbook', id: 'lookbook_test0001' },
-          modelChoice: 'fal-ai/nano-banana-2',
-          provider: 'fal-ai',
-          model: 'nano-banana-2',
-          specSnapshot: makeLookbookSheetSpec(),
-          providerPayload: {},
-          estimateSnapshot: {
-            state: 'priced',
-            estimatedCostUsd: 0,
-          },
-          simulated: Boolean(input.simulate),
-          status: input.simulate ? 'simulated' : 'completed',
-          outputs: [],
-          diagnostics: {},
-          startedAt: '2026-05-22T00:00:00.000Z',
-          completedAt: '2026-05-22T00:00:00.000Z',
-        },
-      };
-    },
-    async recordLookbookSheetRun(input) {
-      return {
-        run: {
-          id: 'media_generation_run_test0001',
-          specId: input.specId,
-          purpose: 'lookbook.sheet',
-          target: { kind: 'lookbook', id: 'lookbook_test0001' },
-          modelChoice: 'fal-ai/nano-banana-2',
-          provider: 'fal-ai',
-          model: 'nano-banana-2',
-          specSnapshot: makeLookbookSheetSpec(),
-          providerPayload: {},
-          estimateSnapshot: {},
-          simulated: true,
-          status: 'simulated',
-          outputs: [],
-          diagnostics: {},
-          startedAt: '2026-05-22T00:00:00.000Z',
-          completedAt: '2026-05-22T00:00:00.000Z',
-        },
-      };
-    },
-    async importLookbookSheetMedia(input) {
-      return {
-        valid: true,
-        warnings: [],
-        project: { name: 'test-project' },
-        changes: [{ type: 'lookbook.sheetImported', lookbookId: input.lookbookId }],
-        purpose: 'lookbook.sheet',
-        target: { kind: 'lookbook', id: input.lookbookId },
-        imported: makeLookbookSheet('lookbook_sheet_test0001'),
-        resourceKeys: [],
       };
     },
     async deleteLookbookImage() {
@@ -1027,440 +691,139 @@ export function fakeProjectDataService(): NonNullable<
         sections: input.sections,
       });
     },
-    async createSceneShotVideoTake(input) {
-      const take = makeSceneShotVideoTake({
+    async createShotVideoTake(input) {
+      const workspace = makeShotVideoTakeWorkspace({
         sceneId: input.sceneId,
-        sourceShotListId: input.shotListId,
         shotIds: input.shotIds,
+        takeId: 'scene_shot_video_take_001',
         title: input.title,
       });
       return {
-        overview: makeSceneShotVideoTakeOverview(take),
-        resourceKeys: [
-          `scene:${take.sceneId}`,
-          `surface:scene:${take.sceneId}:shots`,
-          `surface:scene:${take.sceneId}:takes`,
-          `scene-shot-video-take:${take.takeId}`,
-        ],
+        overview: {
+          take: workspace.take,
+          sourceShotList: workspace.sourceShotList,
+          displayShots: workspace.displayShots,
+          overviewShotIds: workspace.take.shotIds,
+          storyboardImages: workspace.storyboardImages,
+        },
+        resourceKeys: workspace.resourceKeys,
       };
     },
-    async readSceneShotVideoTake(input) {
-      return makeSceneShotVideoTake({
+    async readShotVideoTakeWorkspace(input) {
+      return makeShotVideoTakeWorkspace({
+        sceneId: input.sceneId,
         takeId: input.takeId,
       });
     },
-    async listSceneShotVideoTakes(input) {
+    async listShotVideoTakes(input) {
+      const workspace = makeShotVideoTakeWorkspace({ sceneId: input.sceneId });
       return {
-        takes: [
-          makeSceneShotVideoTakeOverview(
-            makeSceneShotVideoTake({
-              sceneId: input.sceneId,
-            })
-          ),
-        ],
+        takes: [{
+          take: workspace.take,
+          sourceShotList: workspace.sourceShotList,
+          displayShots: workspace.displayShots,
+          overviewShotIds: workspace.take.shotIds,
+          storyboardImages: workspace.storyboardImages,
+        }],
       };
     },
-    async deleteSceneShotVideoTake(input) {
+    async discardShotVideoTake(input) {
       return makeRecoverableMutationReport({
         changeType: 'sceneShotVideoTake.discarded',
         itemId: input.takeId,
         resourceKeys: [
-          `scene:${input.sceneId ?? 'scene_opening'}`,
-          `surface:scene:${input.sceneId ?? 'scene_opening'}:takes`,
+          `scene:${input.sceneId}`,
+          `surface:scene:${input.sceneId}:takes`,
           `scene-shot-video-take:${input.takeId}`,
         ],
       });
     },
-    async updateSceneShotVideoTakePick(input) {
+    async setShotVideoTakePicked(input) {
       return {
         take: {
-          ...makeSceneShotVideoTake({
-            takeId: input.takeId,
+          ...makeShotVideoTakeWorkspace({
             sceneId: input.sceneId,
-          }),
+            takeId: input.takeId,
+          }).take,
           picked: input.picked,
         },
-        resourceKeys: [
-          `scene:${input.sceneId ?? 'scene_opening'}`,
-          `surface:scene:${input.sceneId ?? 'scene_opening'}:takes`,
-          `scene-shot-video-take:${input.takeId}`,
-        ],
+        resourceKeys: [],
       };
     },
-    async buildShotVideoTakeContext(input) {
-      return makeShotVideoTakeContext(input);
-    },
-    async readSceneShotVideoTakeEditContext(input) {
-      return makeSceneShotVideoTakeEditContext(input);
-    },
-    async listShotVideoTakeModels(input) {
-      const context = makeShotVideoTakeContext(input);
+    async replaceShotVideoTakeShots(input) {
       return {
-        purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-        target: makeShotVideoTakeTarget(input),
-        ...(input.inputModeId ? { inputModeId: input.inputModeId } : {}),
-        shotGroupMode: context.shotGroupMode,
-        defaultModelChoice: 'fal-ai/bytedance/seedance-2.0',
-        models: [
-          {
-            modelChoice: 'fal-ai/bytedance/seedance-2.0',
-            label: 'Seedance 2.0',
-            available: true,
-            supportedInputModes: ['text-only', 'first-frame', 'first-last-frame', 'reference'],
-            duration: { supported: true, values: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
-            inputRoles: [],
-            parameters: [],
-            estimateInputs: {
-              canEstimateBeforeDependenciesExist: true,
-              requiresPreparedInputs: false,
+        workspace: makeShotVideoTakeWorkspace({
+          sceneId: input.sceneId,
+          takeId: input.takeId,
+          shotIds: input.shotIds,
+        }),
+        resourceKeys: [],
+      };
+    },
+    async setShotVideoTakeDirection(input) {
+      const workspace = makeShotVideoTakeWorkspace({
+        sceneId: input.sceneId,
+        takeId: input.takeId,
+      });
+      workspace.take.state = input.shotId
+        ? {
+            version: 3,
+            structure: {
+              mode: 'multi-cut',
+              directionsByShotId: { [input.shotId]: input.direction ?? {} },
             },
-          },
-        ],
+          }
+        : {
+            version: 3,
+            structure: {
+              mode: 'continuous',
+              sharedDirection: input.direction ?? {},
+            },
+          };
+      return { workspace, resourceKeys: [] };
+    },
+    async setShotVideoTakeStructure(input) {
+      const workspace = makeShotVideoTakeWorkspace({
+        sceneId: input.sceneId,
+        takeId: input.takeId,
+      });
+      workspace.take.state = {
+        version: 3,
+        structure: input.mode === 'continuous'
+          ? { mode: 'continuous', sharedDirection: {} }
+          : { mode: 'multi-cut', directionsByShotId: {} },
+      };
+      return { workspace, resourceKeys: [] };
+    },
+    async setShotVideoTakeGenerationSpec(input) {
+      const workspace = makeShotVideoTakeWorkspace({
+        sceneId: input.sceneId,
+        takeId: input.takeId,
+        setup: input.setup,
+      });
+      return { workspace, resourceKeys: [] };
+    },
+    async setShotVideoTakeGenerationReference(input) {
+      return {
+        workspace: makeShotVideoTakeWorkspace({
+          sceneId: input.sceneId,
+          takeId: input.takeId,
+        }),
+        resourceKeys: [],
       };
     },
-    async updateSceneShotVideoTakeProduction(input) {
-      return makeShotVideoTakeContext(input, input.production);
-    },
-    async updateSceneShotVideoTakeDirection(input) {
-      return makeShotVideoTakeContext(input);
-    },
-    async updateSceneShotVideoTakeStructureMode(input) {
-      return makeShotVideoTakeContext(input);
-    },
-    async updateSceneShotVideoTakeShots(input) {
-      return makeShotVideoTakeContext(input, undefined, input.shotIds);
-    },
-    async updateSceneShotVideoTakeCharacterSheetSelection(input) {
-      return makeShotVideoTakeContext(input, undefined, undefined, {
-        selectedCharacterSheetAssetIds: input.assetId
-          ? { [input.castMemberId]: input.assetId }
-          : {},
-      });
-    },
-    async updateSceneShotVideoTakeLocationSheetSelection(input) {
-      return makeShotVideoTakeContext(input, undefined, undefined, {
-        selectedLocationSheetAssetIds: input.assetId
-          ? { [input.locationId]: input.assetId }
-          : {},
-      });
-    },
-    async updateSceneShotVideoTakeLookbookSheetSelection(input) {
-      return makeShotVideoTakeContext(input, undefined, undefined, {
-        selectedLookbookSheetIds: input.lookbookSheetId
-          ? [input.lookbookSheetId]
-          : [],
-      });
-    },
-    async updateSceneShotVideoTakeDialogueAudioSelection(input) {
-      return makeShotVideoTakeContext(input, undefined, undefined, {
-        selectedDialogueAudioTakeIds: input.dialogueAudioTakeId
-          ? { [input.dialogueId]: input.dialogueAudioTakeId }
-          : {},
-      });
-    },
-    async updateSceneShotVideoTakeReferenceInclusion(input) {
-      return makeShotVideoTakeContext(input, undefined, undefined, {
-        dependencyInclusions: input.inclusion
-          ? { [input.dependencyId]: input.inclusion }
-          : {},
-      });
-    },
-    async planShotVideoTakeProduction(input) {
-      return makeShotVideoTakePlan(input);
-    },
-    async readShotVideoTakeProductionPlan(input) {
-      const target = makeShotVideoTakeTarget(input);
-      const plan = makeShotVideoTakePlan(input);
-      const take = makeSceneShotVideoTake({
-        takeId: input.takeId,
-        production: input.production,
-      });
+    async estimateShotVideoTakeGeneration(_input) {
       return {
-        target,
-        take,
-        finalPrompt: null,
-        plan,
-        references: {
-          general: [],
-          lookbook: [],
-          dialogueAudio: [],
-          dialogueAudioCapability: {
-            state: 'ok',
-            supported: false,
-            selectedCount: 0,
-            maxCount: null,
-            modelLabel: 'Seedance 2.0',
-            message: 'This model does not use audio references',
-            diagnostics: [],
-          },
-          castMembers: [],
-          locations: [],
-        },
-        diagnostics: plan.diagnostics,
-      };
-    },
-    async estimateShotVideoTakeProduction(input) {
-      const target = makeShotVideoTakeTarget(input);
-      const plan = makeShotVideoTakePlan(input);
-      const take = makeSceneShotVideoTake({
-        takeId: input.takeId,
-        production: input.production,
-      });
-      return {
-        target,
-        take,
-        inputModeId: input.production?.inputModeId ?? 'text-only',
-        shotGroupMode:
-          take.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
-        modelChoice:
-          input.production?.modelChoice ??
-          'fal-ai/bytedance/seedance-2.0',
+        valid: true,
+        diagnostics: [],
         estimate: {
-          state: 'priced',
           provider: 'fal-ai',
-          model: 'fal-ai/bytedance/seedance-2.0',
-          mediaKind: 'video',
-          pricing: 0.42,
+          model: 'bytedance/seedance-2.0',
           estimatedCostUsd: 0.42,
           billableUnits: {},
-          warnings: [],
         },
-        plan,
-        issues: [],
       };
     },
-    async selectShotVideoTakeInput(input) {
-      return makeShotVideoTakeContext(input);
-    },
-    async clearShotVideoTakeInputSelection(input) {
-      return makeShotVideoTakeContext(input);
-    },
-    async deleteShotVideoTakeInput(input) {
-      return makeShotVideoTakeContext(input);
-    },
-  };
-}
-
-function makeShotVideoTakePlan(input: {
-  takeId: string;
-  production?: SceneShotVideoTakeProductionState;
-}): ShotVideoTakeOutputGenerationPlan {
-  const target = makeShotVideoTakeTarget(input);
-  const take = makeSceneShotVideoTake({
-    takeId: input.takeId,
-    production: input.production,
-  });
-  const inputMode = input.production?.inputModeId ?? 'text-only';
-  const shotGroupMode =
-    take.shotIds.length > 1 ? 'multi-shot' : 'single-shot';
-  const modelChoice = input.production?.modelChoice ?? 'fal-ai/bytedance/seedance-2.0';
-  return {
-    planId: 'shot_video_take_plan_fake',
-    request: {
-      projectId: 'project_test',
-      sceneId: take.sceneId,
-      shotListId: take.sourceShotListId,
-      takeId: take.takeId,
-      inputMode,
-      shotGroupMode,
-      modelChoice,
-      routeSettings: input.production?.parameterValues ?? {},
-      inputPolicy: { defaultMode: 'auto' },
-    },
-    model: {
-      choice: modelChoice,
-      label: 'Seedance 2.0',
-      version: '2.0',
-      provider: 'fal-ai',
-    },
-    route: {
-      inputMode,
-      shotGroupMode,
-      providerModel: 'bytedance/seedance-2.0/text-to-video',
-      mode: 'text-to-video',
-      inputRoles: [],
-      parameters: [],
-    },
-    dependencyInventory: {
-      rootPurpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-      rootTarget: target,
-      dependencies: [],
-      rootGeneration: {
-        id: 'root:shot.video-take',
-        purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-        target,
-        label: 'Final video take',
-        mediaKind: 'video',
-        pricing: { state: 'priced', estimatedUsd: 0.42 },
-        canCreateSpec: true,
-        blockedReason: null,
-        estimate: null,
-        diagnostics: [],
-      },
-      estimate: {
-        state: 'complete',
-        estimatedTotalUsd: 0.42,
-        pricedDependencyCount: 1,
-        unpricedDependencyCount: 0,
-        unavailableDependencyCount: 0,
-        requiresPriceOverride: false,
-      },
-      diagnostics: [],
-      agentChecklist: [],
-    },
-    lines: [
-      {
-        id: 'line:root:shot.video-take',
-        dependencyLineId: 'root:shot.video-take',
-        kind: 'final-video-generation',
-        label: 'Final video take',
-        purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-        mediaKind: 'video',
-        depth: 0,
-        state: 'planned',
-        materializationState: 'generatable',
-        pricing: { state: 'priced', estimatedUsd: 0.42 },
-        required: true,
-        diagnostics: [],
-      },
-    ],
-    estimate: {
-      state: 'complete',
-      estimatedTotalUsd: 0.42,
-      pricedLineCount: 1,
-      unpricedLineCount: 0,
-      missingLineCount: 0,
-      requiresPriceOverride: false,
-    },
-    diagnostics: [],
-    finalEstimate: {
-      state: 'priced',
-      provider: 'fal-ai',
-      model: 'bytedance/seedance-2.0/text-to-video',
-      mediaKind: 'video',
-      pricing: 0.42,
-      estimatedCostUsd: 0.42,
-      billableUnits: {},
-      warnings: [],
-    },
-  };
-}
-
-function makeShotVideoTakeTarget(input: {
-  takeId: string;
-}) {
-  const take = makeSceneShotVideoTake({
-    takeId: input.takeId,
-  });
-  return {
-    kind: 'sceneShotVideoTake' as const,
-    id: take.takeId,
-    sceneId: take.sceneId,
-    sourceShotListId: take.sourceShotListId,
-    takeId: take.takeId,
-    shotIds: take.shotIds,
-  };
-}
-
-function makeShotVideoTakeContext(
-  input: {
-    takeId: string;
-  },
-  production?: SceneShotVideoTakeProductionState,
-  shotIds?: string[],
-  referenceSelections?: Partial<
-    SceneShotVideoTakeReferenceSelections
-  >
-): ShotVideoTakeProductionContext {
-  const take = makeSceneShotVideoTake({
-    takeId: input.takeId,
-    shotIds,
-    referenceSelections,
-  });
-  const target = makeShotVideoTakeTarget(input);
-  return {
-    purpose: SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-    target,
-    project: {
-      name: 'test-project',
-      title: 'Test Project',
-      aspectRatio: '16:9',
-    },
-    scene: {
-      id: take.sceneId,
-      title: 'Opening Scene',
-      setting: { locationIds: [] },
-      storyFunction: [],
-    },
-    shotList: {
-      id: take.sourceShotListId,
-      title: 'Opening coverage',
-      summary: 'Coverage summary.',
-      createdAt: '2026-05-22T00:00:00.000Z',
-      updatedAt: '2026-05-22T00:00:00.000Z',
-      isActive: true,
-    },
-    take,
-    shotGroupMode: take.shotIds.length > 1 ? 'multi-shot' : 'single-shot',
-    shots: [],
-    displayShots: [],
-    selectedCast: [],
-    selectedLocations: [],
-    activeLookbook: null,
-    storyboardImages: [],
-    mediaInputs: [],
-    defaults: {
-      inputModeId: 'text-only',
-      imageDependencyModelChoice: 'fal-ai/nano-banana-2',
-      parameterValues: {},
-    },
-    resourceKeys: [
-      `surface:scene:${take.sceneId}:takes`,
-      `scene-shot-video-take:${take.takeId}`,
-    ],
-  };
-}
-
-function makeSceneShotVideoTakeOverview(take: SceneShotVideoTake) {
-  const context = makeShotVideoTakeContext({
-    takeId: take.takeId,
-  });
-  return {
-    take,
-    sourceShotList: context.shotList,
-    displayShots: context.displayShots,
-    overviewShotIds: [...take.shotIds],
-    storyboardImages: context.storyboardImages,
-  };
-}
-
-function makeSceneShotVideoTakeEditContext(input: {
-  takeId: string;
-}): SceneShotVideoTakeEditContext {
-  const context = makeShotVideoTakeContext(input);
-  return {
-    purpose: context.purpose,
-    target: context.target,
-    project: context.project,
-    scene: context.scene,
-    take: context.take,
-    sourceShotList: context.shotList,
-    sourceShots: context.shots,
-    displayShots: context.displayShots,
-    shotGroupMode: context.shotGroupMode,
-    selectedCast: context.selectedCast,
-    selectedLocations: context.selectedLocations,
-    activeLookbook: context.activeLookbook,
-    storyboardImages: context.storyboardImages,
-    mediaInputs: context.mediaInputs,
-    assetReadiness: {
-      selectedInputCount: 0,
-      readyInputCount: 0,
-      missingInputCount: 0,
-      diagnostics: [],
-    },
-    defaults: context.defaults,
-    resourceKeys: context.resourceKeys,
   };
 }
 
@@ -1471,8 +834,6 @@ function makeSceneShotVideoTake(
     sourceShotListId?: string;
     shotIds?: string[];
     title?: string;
-    production?: SceneShotVideoTakeProductionState;
-    referenceSelections?: Partial<SceneShotVideoTakeReferenceSelections>;
   } = {}
 ): SceneShotVideoTake {
   const shotIds = input.shotIds ?? ['shot_001'];
@@ -1486,21 +847,11 @@ function makeSceneShotVideoTake(
     picked: false,
     video: null,
     state: {
-      version: 2,
+      version: 3,
       structure: {
         mode: 'continuous',
-        sharedDirection: {
-          referenceSelections: {
-            dependencyInclusions: {},
-            selectedCharacterSheetAssetIds: {},
-            selectedLocationSheetAssetIds: {},
-            selectedLookbookSheetIds: [],
-            selectedDialogueAudioTakeIds: {},
-            ...input.referenceSelections,
-          },
-        },
+        sharedDirection: {},
       },
-      production: input.production ?? {},
     },
     status: {
       editability: {
@@ -1513,11 +864,6 @@ function makeSceneShotVideoTake(
         diagnostics: [],
         message: 'All tracked take references resolve.',
       },
-      runnability: {
-        state: 'not-evaluated',
-        diagnostics: [],
-        message: 'Run readiness is evaluated by shot-video preflight.',
-      },
       archive: { state: 'active', message: 'This take is active.' },
       history: { differences: [], message: 'This take matches its recorded history snapshot.' },
     },
@@ -1526,38 +872,95 @@ function makeSceneShotVideoTake(
   };
 }
 
-function makeLookbookImageSpec() {
+function makeShotVideoTakeWorkspace(input: {
+  takeId?: string;
+  sceneId?: string;
+  shotIds?: string[];
+  title?: string;
+  setup?: ShotVideoTakeGenerationSetup;
+} = {}): ShotVideoTakeWorkspace {
+  const take = makeSceneShotVideoTake(input);
+  const shots = take.shotIds.map((shotId, index) => ({
+    shotId,
+    title: `Shot ${index + 1}`,
+    storyBeat: 'The siege begins.',
+    narrativePurpose: 'Establish the scene.',
+    description: 'The defenders prepare.',
+    shotType: 'wide-shot',
+    subject: 'The city walls',
+    action: 'Defenders take position.',
+    dialogue: [],
+    coveredBlockIndexes: [0],
+    castMemberIds: [],
+    locationIds: [],
+  }));
+  const setup = input.setup ?? {
+    inputModeId: 'text-only',
+    modelChoice: 'fal-ai/bytedance/seedance-2.0',
+    parameterValues: { duration: 5 },
+  };
   return {
-    purpose: 'lookbook.image' as const,
-    target: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
-    modelChoice: 'fal-ai/nano-banana-2' as const,
-    prompt: 'A Lookbook image.',
-    focusSections: ['palette'] as LookbookSection[],
-    takeCount: 1,
-    seed: null,
-    imageFrame: 'project' as const,
-    detail: 'standard' as const,
-    outputFormat: 'png' as const,
+    take,
+    sourceShotList: {
+      id: take.sourceShotListId,
+      title: 'Opening shots',
+      summary: 'Opening coverage.',
+      createdAt: take.createdAt,
+      updatedAt: take.updatedAt,
+      isActive: true,
+    },
+    sourceShots: shots,
+    displayShots: shots,
+    storyboardImages: [],
+    generation: {
+      context: {
+        purpose: 'shot.video-take',
+        target: { kind: 'sceneShotVideoTake', id: take.takeId },
+        outputMediaKind: 'video',
+        facts: {},
+        settings: { fixed: [], recommended: [] },
+        models: [],
+        referenceGuide: { sections: [], additionalReferences: [], notices: [] },
+      },
+      spec: null,
+      setup,
+      models: [{
+        modelChoice: 'fal-ai/bytedance/seedance-2.0',
+        provider: 'fal-ai',
+        model: 'bytedance/seedance-2.0',
+        label: 'Seedance 2.0',
+        supportedInputModes: ['text-only', 'first-frame', 'first-last-frame', 'reference'],
+        duration: { supported: true, values: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], default: 5 },
+        parameters: [],
+      }],
+      references: {
+        general: [],
+        lookbook: [],
+        dialogueAudio: [],
+        dialogueAudioCapability: {
+          state: 'unsupported',
+          supported: false,
+          selectedCount: 0,
+          maxCount: null,
+          modelLabel: 'Seedance 2.0',
+          message: 'This model does not use audio references.',
+          diagnostics: [],
+        },
+        castMembers: [],
+        locations: [],
+      },
+      finalPrompt: null,
+      estimate: null,
+      run: null,
+      diagnostics: [],
+    },
+    resourceKeys: [`scene:${take.sceneId}`, `scene-shot-video-take:${take.takeId}`],
   };
 }
 
-function makeLookbookSheetSpec() {
-  return {
-    purpose: 'lookbook.sheet' as const,
-    target: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
-    modelChoice: 'fal-ai/nano-banana-2' as const,
-    prompt: 'A Lookbook sheet.',
-    takeCount: 1,
-    seed: null,
-    sheetFrame: 'project' as const,
-    detail: 'standard' as const,
-    outputFormat: 'png' as const,
-  };
-}
-
-function makeSceneDialogueAudioContext(
+function makeSceneDialogueAudioWorkspace(
   project: ReturnType<typeof makeProject>
-): SceneDialogueAudioContext {
+): SceneDialogueAudioWorkspace {
   return {
     purpose: 'scene.dialogue-audio',
     target: { kind: 'scene', sceneId: 'scene_opening' },
@@ -1583,22 +986,6 @@ function makeSceneDialogueAudioContext(
       voiceSettings: {},
     },
     resourceKeys: [],
-  };
-}
-
-function makeMediaGenerationSpecRecord(
-  id: string,
-  spec: MediaGenerationSpec
-): MediaGenerationSpecRecord {
-  return {
-    id,
-    purpose: spec.purpose,
-    target: spec.target,
-    modelChoice: spec.modelChoice,
-    title: 'title' in spec && spec.title ? spec.title : 'Media generation',
-    spec,
-    createdAt: '2026-05-22T00:00:00.000Z',
-    updatedAt: '2026-05-22T00:00:00.000Z',
   };
 }
 
@@ -1707,18 +1094,22 @@ function makeVisualLanguageCommandReport(type: string) {
   };
 }
 
-function generationPreviewRequest(): GenerationPreviewRequest {
+function generationPreviewResource(): GenerationPreviewResourceData {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
     generationSpecId: 'media_generation_spec_test',
-    purpose: 'cast.character-sheet',
+    purpose: 'cast.storyboard-character-sheet',
     project: {
       id: 'project_test0001',
       name: 'constantinople',
     },
     target: { kind: 'castMember', id: 'cast_narrator' },
     title: 'Narrator Character Sheet',
+    subject: {
+      projectLabel: 'Constantinople',
+      castMemberLabel: 'Narrator',
+    },
     model: {
       provider: 'fal-ai',
       modelId: 'openai/gpt-image-2/edit',
@@ -1729,29 +1120,25 @@ function generationPreviewRequest(): GenerationPreviewRequest {
       authoredText: 'Create a lean character sheet.',
       providerText: 'Create a lean character sheet.',
     },
-    references: [
-      {
-        kind: 'image',
-        role: 'character-sheet-continuity',
-        label: 'Existing sheet',
-        providerToken: 'image_urls',
-        assetId: 'asset_cast_reference',
-        assetFileId: 'asset_file_cast_reference',
-        selected: true,
-        selectionControl: {
-          dependencyId: 'cast-character-sheet:cast_narrator:asset_cast_reference',
-          required: false,
-          defaultIncluded: true,
-          inclusionOverride: null,
-          editable: true,
-        },
+    references: [{
+      kind: 'image',
+      role: 'character-sheet-continuity',
+      label: 'Existing sheet',
+      providerToken: 'image_urls',
+      assetId: 'asset_cast_reference',
+      assetFileId: 'asset_file_cast_reference',
+      selected: true,
+      selectionControl: {
+        selectionId: 'reference_cast_narrator',
+        required: false,
+        defaultIncluded: true,
+        editable: true,
       },
-    ],
+    }],
     configuration: { sections: [] },
     diagnostics: [],
   };
 }
-
 function makeRecoverableMutationReport(input: {
   changeType: string;
   itemId: string;
@@ -1810,8 +1197,8 @@ function makeLookbookSheetMutationReport(
 
 export function fakeGenerationPreviewCommands() {
   return {
-    async updateGenerationPreviewSpec() {
-      return generationPreviewRequest();
+    async updateGenerationPreviewResource() {
+      return generationPreviewResource();
     },
   };
 }

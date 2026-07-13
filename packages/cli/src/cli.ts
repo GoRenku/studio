@@ -23,7 +23,6 @@ import { runProductionCommand } from './commands/production-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCommand } from './commands/studio-command.js';
-import { runTakeCommand } from './commands/take-command.js';
 import { runTrashCommand } from './commands/trash-command.js';
 
 export interface RenkuCliIo {
@@ -79,7 +78,6 @@ Commands
   screenplay           Inspect, validate, create, and revise screenplay JSON
   studio current       Show current Studio focus and context
   studio server status Show canonical local Studio server status
-  take                 List, show, create, update, and repair shot video takes
   trash                List, restore, preview, and empty Trash
 
 Options
@@ -99,8 +97,7 @@ Options
   --model              Generation model
   --spec               Media Generation Spec id
   --run                Media Generation Run id
-  --approve-live-provider-run
-                       Approve contacting the selected live provider once for this run
+  --approval-token     Approval token returned by generation estimate
   --receipt            Generation Receipt JSON file
   --role               Asset relationship role
   --file-role          Asset file role
@@ -118,12 +115,7 @@ Options
   --take               Scene Dialogue Audio take id or Shot Video Take id
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for take creation or storyboard imports
-  --selected-shot      Selected shot id for scoped take authoring reads
-  --intent             Shot video take input mode id
-  --input              Shot video take reusable input id
   --kind               Shot video take input kind
-  --subject-kind       Shot video take input subject kind
-  --subject-id         Shot video take input subject id
   --selection          Media import selection: select or take
                        Director context selection: Studio selection JSON
   --replace-selected   Replace the currently selected prepared input in the same slot
@@ -217,9 +209,8 @@ function createCliFlags() {
     run: {
       type: 'string',
     },
-    approveLiveProviderRun: {
-      type: 'boolean',
-      default: false,
+    approvalToken: {
+      type: 'string',
     },
     receipt: {
       type: 'string',
@@ -278,22 +269,7 @@ function createCliFlags() {
     shots: {
       type: 'string',
     },
-    selectedShot: {
-      type: 'string',
-    },
-    intent: {
-      type: 'string',
-    },
-    input: {
-      type: 'string',
-    },
     kind: {
-      type: 'string',
-    },
-    subjectKind: {
-      type: 'string',
-    },
-    subjectId: {
       type: 'string',
     },
     selection: {
@@ -585,12 +561,8 @@ export async function runRenkuCli(
             scene: cli.flags.scene,
             dialogue: cli.flags.dialogue,
             take: cli.flags.take,
-            intent: cli.flags.intent,
-            input: cli.flags.input,
             kind: cli.flags.kind,
-            subjectKind: cli.flags.subjectKind,
-            subjectId: cli.flags.subjectId,
-            approveLiveProviderRun: cli.flags.approveLiveProviderRun,
+            approvalToken: cli.flags.approvalToken,
             simulate: cli.flags.simulate,
           },
           json: cli.flags.json,
@@ -686,22 +658,6 @@ export async function runRenkuCli(
           input,
           project: cli.flags.project,
           resource: cli.flags.resource,
-          json: cli.flags.json,
-          io,
-          homeDir: options.homeDir,
-        });
-      case 'take':
-        return await runTakeCommand({
-          input,
-          flags: {
-            project: cli.flags.project,
-            scene: cli.flags.scene,
-            shotList: cli.flags.shotList,
-            shots: cli.flags.shots,
-            take: cli.flags.take,
-            file: cli.flags.file,
-            selectedShot: cli.flags.selectedShot,
-          },
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,

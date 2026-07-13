@@ -14,6 +14,11 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 const cache = new Map<ValidatorCacheKey, ValidatorEntry>();
 
+export interface PayloadValidationIssue {
+  path: string;
+  message: string;
+}
+
 function computeKey(schemaText: string): ValidatorCacheKey {
   return createHash('sha256').update(schemaText).digest('hex');
 }
@@ -36,8 +41,21 @@ function extractSchemaProperties(schema: unknown): Set<string> {
 }
 
 export function validatePayload(schemaText: string | undefined, payload: unknown, label: string): void {
+  const issues = validatePayloadIssues(schemaText, payload, label);
+  if (issues.length > 0) {
+    throw new Error(
+      `Invalid ${label} payload: ${issues.map((issue) => `${issue.path} ${issue.message}`).join('; ')}`
+    );
+  }
+}
+
+export function validatePayloadIssues(
+  schemaText: string | undefined,
+  payload: unknown,
+  label: string
+): PayloadValidationIssue[] {
   if (!schemaText) {
-    return;
+    return [];
   }
   const key = computeKey(schemaText);
   let entry = cache.get(key);
@@ -55,21 +73,30 @@ export function validatePayload(schemaText: string | undefined, payload: unknown
     cache.set(key, entry);
   }
 
-  // Check for unknown fields in the payload that don't exist in the schema
+  const issues: PayloadValidationIssue[] = [];
   if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
     const payloadKeys = Object.keys(payload as Record<string, unknown>);
     const unknownFields = payloadKeys.filter((k) => !entry.schemaProperties.has(k));
-    if (unknownFields.length > 0) {
-      throw new Error(
-        `Invalid ${label} payload: unknown field(s) [${unknownFields.join(', ')}] not defined in schema. ` +
-          `Valid fields are: [${[...entry.schemaProperties].join(', ')}]`
-      );
+    for (const field of unknownFields) {
+      issues.push({
+        path: `/${field}`,
+        message: `unknown field "${field}" is not defined by the ${label} schema. Valid fields are: [${[...entry.schemaProperties].join(', ')}]`,
+      });
     }
   }
 
-  const valid = entry.validate(payload);
-  if (!valid) {
-    const messages = (entry.validate.errors ?? []).map((err) => `${err.instancePath || '/'} ${err.message ?? ''}`.trim());
-    throw new Error(`Invalid ${label} payload: ${messages.join('; ')}`);
+  entry.validate(payload);
+  for (const error of entry.validate.errors ?? []) {
+    const missingProperty = error.keyword === 'required'
+      ? (error.params as { missingProperty?: unknown }).missingProperty
+      : undefined;
+    issues.push({
+      path:
+        typeof missingProperty === 'string'
+          ? `${error.instancePath}/${missingProperty}`
+          : error.instancePath || '/',
+      message: error.message ?? 'is invalid',
+    });
   }
+  return issues;
 }

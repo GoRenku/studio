@@ -4,7 +4,7 @@ import type {
   ImageRevisionEstimateReport,
   ImageRevisionRunReport,
   ImageRevisionTarget,
-  StudioGenerationPreview,
+  GenerationPreviewResource,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
@@ -12,7 +12,7 @@ type StudioImageRevisionModeContext =
   | (Omit<
       Extract<ImageRevisionEditorContext['regenerate'], { state: 'available' }>,
       'preview'
-    > & { preview: StudioGenerationPreview | null })
+    > & { preview: GenerationPreviewResource })
   | Extract<ImageRevisionEditorContext['regenerate'], { state: 'unavailable' }>;
 
 export type StudioImageRevisionEditorContext = Omit<
@@ -26,7 +26,7 @@ export type StudioImageRevisionEditorContext = Omit<
 export type StudioImageRevisionEstimateReport = Omit<
   ImageRevisionEstimateReport,
   'preview'
-> & { preview: StudioGenerationPreview };
+> & { preview: GenerationPreviewResource };
 
 export async function readImageRevisionContext(input: {
   projectName: string;
@@ -42,12 +42,12 @@ export async function previewImageRevisionDraft(input: {
   projectName: string;
   target: ImageRevisionTarget;
   draft: ImageRevisionDraft;
-}): Promise<StudioGenerationPreview> {
+}): Promise<GenerationPreviewResource> {
   const body = await request(input.projectName, 'preview', {
     target: input.target,
     draft: input.draft,
   });
-  return (body as { preview: StudioGenerationPreview }).preview;
+  return (body as { preview: GenerationPreviewResource }).preview;
 }
 
 export async function estimateImageRevisionDraft(input: {

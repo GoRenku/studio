@@ -4,8 +4,8 @@ import {
   readAssetFileGenerationRecord,
 } from '../database/access/asset-file-generations.js';
 import { readAssetFileRecordByIdIncludingDiscarded } from '../database/access/asset-files.js';
-import { requireMediaGenerationRun } from '../database/access/media-generation.js';
-import { withMediaGenerationProjectSession } from '../media-generation/lifecycle/project-session.js';
+import { readGenerationRunRecord } from '../database/access/media-generation.js';
+import { withProjectDatabaseSession } from '../database/lifecycle/project-operation.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { matchingMediaGenerationOutputs } from './output-match.js';
 import type {
@@ -17,8 +17,8 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 export async function recordAssetFileGenerationProvenance(
   input: RecordAssetFileGenerationProvenanceInput,
 ): Promise<AssetFileGenerationProvenance> {
-  return withMediaGenerationProjectSession(input, ({ session }) =>
-    recordAssetFileGenerationProvenanceInSession(session, input),
+  return withProjectDatabaseSession(input, (session) =>
+    recordAssetFileGenerationProvenanceInSession(session, input)
   );
 }
 
@@ -36,7 +36,13 @@ export function recordAssetFileGenerationProvenanceInSession(
       `Active AssetFile was not found: ${input.assetFileId}.`,
     );
   }
-  const run = requireMediaGenerationRun(session, input.mediaGenerationRunId);
+  const run = readGenerationRunRecord(session, input.mediaGenerationRunId);
+  if (!run) {
+    throw new ProjectDataError(
+      'CORE_ASSET_FILE_GENERATION_PROVENANCE_MISSING',
+      `Generation run was not found: ${input.mediaGenerationRunId}.`
+    );
+  }
   if (run.status !== 'completed' && run.status !== 'simulated') {
     throw new ProjectDataError(
       'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
@@ -85,7 +91,7 @@ export function recordAssetFileGenerationProvenanceInSession(
 export async function copyAssetFileGenerationProvenance(
   input: CopyAssetFileGenerationProvenanceInput,
 ): Promise<AssetFileGenerationProvenance | null> {
-  return withMediaGenerationProjectSession(input, ({ session }) => {
+  return withProjectDatabaseSession(input, (session) => {
     const source = readAssetFileGenerationRecord(
       session,
       input.sourceAssetFileId,

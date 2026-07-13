@@ -1,4 +1,4 @@
-import type { SceneShotVideoTakeDirection } from '@gorenku/studio-core/server';
+import type { SceneShotVideoTakeDirection } from '@gorenku/studio-core/client';
 import {
   buildDiagnosticResult,
   createDiagnosticError,

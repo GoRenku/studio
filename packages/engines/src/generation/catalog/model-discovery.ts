@@ -9,7 +9,6 @@ import {
 import {
   modelTypeToMediaKind,
   type GenerationMediaKind,
-  type GenerationMode,
   type GenerationModelSummary,
 } from '../contracts.js';
 
@@ -63,35 +62,9 @@ function toGenerationModelSummary(
     provider,
     model: model.name,
     mediaKind,
-    modes: defaultGenerationModes(model),
     mime: model.mime ?? defaultMime(mediaKind),
     price: model.price,
   };
-}
-
-function defaultGenerationModes(model: ModelDefinition): GenerationMode[] {
-  if (model.type === 'image') {
-    if (model.name.includes('edit') || model.name.includes('kontext')) {
-      return ['reference-to-image', 'image-edit'];
-    }
-    return ['text-to-image'];
-  }
-  if (model.type === 'video') {
-    if (model.name.includes('image') || model.name.includes('frame')) {
-      return ['image-to-video'];
-    }
-    return ['text-to-video'];
-  }
-  if (model.type === 'audio') {
-    if (model.name.includes('speech') || model.name.includes('tts')) {
-      return ['text-to-speech'];
-    }
-    return ['text-to-audio'];
-  }
-  if (model.type === 'json') {
-    return ['json'];
-  }
-  return ['text'];
 }
 
 function defaultMime(mediaKind: GenerationMediaKind): string[] {

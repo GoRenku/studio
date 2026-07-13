@@ -4,8 +4,8 @@ import type {
   ImageRevisionDraft,
   ImageRevisionMode,
   ImageRevisionTarget,
-  StudioGenerationPreview,
-  StudioGenerationPreviewReference,
+  GenerationPreviewResource,
+  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import {
   estimateImageRevisionDraft,
@@ -32,7 +32,7 @@ export function useImageRevisionEditor(
     useState<StudioImageRevisionEditorContext | null>(null);
   const [mode, setMode] = useState<ImageRevisionMode>('regenerate');
   const [draft, setDraft] = useState<ImageRevisionDraft | null>(null);
-  const [preview, setPreview] = useState<StudioGenerationPreview | null>(null);
+  const [preview, setPreview] = useState<GenerationPreviewResource | null>(null);
   const [estimatedUsd, setEstimatedUsd] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [estimatePending, setEstimatePending] = useState(false);
@@ -111,9 +111,9 @@ export function useImageRevisionEditor(
       const next = createGenerationPreviewDraft(preview);
       next.promptDraft.authoredText = draft.authoredText;
       next.promptDraft.negativeText = draft.negativeText;
-      next.referenceSelectionDraftByDependencyId = Object.fromEntries(
+      next.referenceSelectionDraftBySelectionId = Object.fromEntries(
         draft.referenceSelections.map((selection) => [
-          selection.dependencyId,
+          selection.selectionId,
           selection.selected,
         ]),
       );
@@ -126,9 +126,9 @@ export function useImageRevisionEditor(
           ? { negativeText: draft.negativeText }
           : {}),
       },
-      referenceSelectionDraftByDependencyId: Object.fromEntries(
+      referenceSelectionDraftBySelectionId: Object.fromEntries(
         draft.referenceSelections.map((selection) => [
-          selection.dependencyId,
+          selection.selectionId,
           selection.selected,
         ]),
       ),
@@ -140,13 +140,13 @@ export function useImageRevisionEditor(
     setError(null);
   };
 
-  const toggleReference = (reference: StudioGenerationPreviewReference) => {
+  const toggleReference = (reference: GenerationPreviewResourceReference) => {
     if (!draft || !editorDraft || !reference.selectionControl?.editable) return;
     const selected = generationPreviewReferenceSelected(reference, editorDraft);
     updateDraft((current) => ({
       ...current,
       referenceSelections: current.referenceSelections.map((selection) =>
-        selection.dependencyId === reference.selectionControl?.dependencyId
+        selection.selectionId === reference.selectionControl?.selectionId
           ? { ...selection, selected: !selected }
           : selection,
       ),
@@ -212,7 +212,6 @@ export function useImageRevisionEditor(
         requestRevision.current += 1;
         setEstimatePending(false);
         setEstimatedUsd(null);
-        if (mode === 'edit') setPreview(null);
       }
       updateDraft((current) => ({ ...current, authoredText }));
     },

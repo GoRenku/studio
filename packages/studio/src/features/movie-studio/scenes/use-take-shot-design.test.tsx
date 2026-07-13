@@ -4,18 +4,18 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SceneShotVideoTakeDirection } from '@gorenku/studio-core/client';
 import {
-  updateSceneShotVideoTakeDirection,
-  type ShotVideoTakeProductionMutation,
+  setShotVideoTakeDirection,
+  type ShotVideoTakeWorkspaceMutation,
 } from '@/services/studio-shot-video-takes-api';
 import { Button } from '@/ui/button';
 import { useTakeShotDesign } from './use-take-shot-design';
 
 vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  updateSceneShotVideoTakeDirection: vi.fn(),
+  setShotVideoTakeDirection: vi.fn(),
 }));
 
 const SAVED_MUTATION = {
-  context: {
+  workspace: {
     take: {
       takeId: 'take_001',
       state: {
@@ -29,13 +29,13 @@ const SAVED_MUTATION = {
     },
   },
   resourceKeys: [],
-} as unknown as ShotVideoTakeProductionMutation;
+} as unknown as ShotVideoTakeWorkspaceMutation;
 
 describe('useTakeShotDesign', () => {
   beforeEach(() => {
     vi.useRealTimers();
-    vi.mocked(updateSceneShotVideoTakeDirection).mockReset();
-    vi.mocked(updateSceneShotVideoTakeDirection).mockResolvedValue(
+    vi.mocked(setShotVideoTakeDirection).mockReset();
+    vi.mocked(setShotVideoTakeDirection).mockResolvedValue(
       SAVED_MUTATION
     );
   });
@@ -58,7 +58,7 @@ describe('useTakeShotDesign', () => {
     vi.useRealTimers();
 
     await waitFor(() =>
-      expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
+      expect(setShotVideoTakeDirection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
@@ -82,7 +82,7 @@ describe('useTakeShotDesign', () => {
     vi.useRealTimers();
 
     await waitFor(() =>
-      expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
+      expect(setShotVideoTakeDirection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
@@ -92,7 +92,7 @@ describe('useTakeShotDesign', () => {
     );
   });
 
-  it('saves reference-only direction state instead of clearing it', async () => {
+  it('saves cast direction state instead of clearing it', async () => {
     render(<TakeShotDesignHarness />);
 
     vi.useFakeTimers();
@@ -105,20 +105,12 @@ describe('useTakeShotDesign', () => {
     vi.useRealTimers();
 
     await waitFor(() =>
-      expect(updateSceneShotVideoTakeDirection).toHaveBeenCalledWith(
+      expect(setShotVideoTakeDirection).toHaveBeenCalledWith(
         'constantinople',
         'scene_hook',
         'take_001',
         {
-          referenceSelections: {
-            dependencyInclusions: {},
-            selectedCharacterSheetAssetIds: {
-              cast_urban: 'asset_character_sheet_001',
-            },
-            selectedLocationSheetAssetIds: {},
-            selectedLookbookSheetIds: [],
-            selectedDialogueAudioTakeIds: {},
-          },
+          cast: { castMemberIds: ['cast_urban'] },
         },
         'shot_001'
       )
@@ -129,7 +121,7 @@ describe('useTakeShotDesign', () => {
 function TakeShotDesignHarness({
   onSaved,
 }: {
-  onSaved?: (result: ShotVideoTakeProductionMutation) => void;
+  onSaved?: (result: ShotVideoTakeWorkspaceMutation) => void;
 }) {
   const { update } = useTakeShotDesign({
     projectName: 'constantinople',
@@ -147,15 +139,7 @@ function TakeShotDesignHarness({
   };
   const setReference = () => {
     const direction: SceneShotVideoTakeDirection = {
-      referenceSelections: {
-        dependencyInclusions: {},
-        selectedCharacterSheetAssetIds: {
-          cast_urban: 'asset_character_sheet_001',
-        },
-        selectedLocationSheetAssetIds: {},
-        selectedLookbookSheetIds: [],
-        selectedDialogueAudioTakeIds: {},
-      },
+      cast: { castMemberIds: ['cast_urban'] },
     };
     update(direction);
   };

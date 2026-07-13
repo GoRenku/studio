@@ -1,7 +1,7 @@
 import { SceneDetailPage } from '../../pages/scene-detail-page';
 import { test } from '../../fixtures/studio-e2e-test';
 
-test('shows simulated dialogue audio generation output and the picked audio reference', async ({
+test('shows simulated dialogue audio generation output after reload', async ({
   page,
   shotVideoTakeProject,
 }) => {
@@ -13,5 +13,5 @@ test('shows simulated dialogue audio generation output and the picked audio refe
 
   await page.reload();
   await sceneDetail.expectNarrativeVisible();
-  await sceneDetail.expectPickedDialogueAudioReferenceVisible();
+  await sceneDetail.expectGeneratedDialogueAudioAvailable();
 });

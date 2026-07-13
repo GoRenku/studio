@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  ShotVideoTakeProductionContext,
+  GenerationCostEstimateReport,
+  ShotVideoTakeGenerationSetup,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
-  ShotVideoTakeModelListReport,
+  ShotVideoTakeModelReport,
   ShotVideoTakeParameterValue,
-  ShotVideoTakeProductionEstimateReport,
-  SceneShotVideoTake,
-  SceneShotVideoTakeProductionState,
-  ShotVideoTakeProductionPlanReport,
 } from '@gorenku/studio-core/client';
+import { selectShotVideoTakeGenerationModel } from '@gorenku/studio-core/client';
 import {
   useDebouncedAutosave,
   type DebouncedSaveStatus,
@@ -19,20 +17,17 @@ import {
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import {
-  defaultModelForInputMode,
-  findModelReport,
-} from './shot-video-take-production-projection';
-import {
-  clearShotVideoTakeInput,
-  deleteShotVideoTakeInput,
-  estimateShotVideoTakeProduction,
-  planShotVideoTakeProduction,
-  readShotVideoTakeProduction,
-  selectShotVideoTakeInput,
-  updateShotVideoTakeProduction,
-  type ShotVideoTakeInputSlot,
-  type ShotVideoTakeProductionMutation,
+  estimateShotVideoTakeGeneration,
+  readShotVideoTakeWorkspace,
+  setShotVideoTakeGenerationReference,
+  setShotVideoTakeGenerationSpec,
+  type ShotVideoTakeWorkspaceMutation,
+  type ShotVideoTakeWorkspaceResponse,
 } from '@/services/studio-shot-video-takes-api';
+import {
+  defaultModelForInputMode,
+  modelForInputMode,
+} from './shot-video-take-production-projection';
 
 export interface UseShotVideoTakeProductionInput {
   projectName: string;
@@ -40,32 +35,28 @@ export interface UseShotVideoTakeProductionInput {
   takeId?: string | null;
   selectedShotId?: string;
   autosaveDelayMs?: number;
-  onMutationSaved?: (result: ShotVideoTakeProductionMutation) => void;
+  onMutationSaved?: (result: ShotVideoTakeWorkspaceMutation) => void;
 }
 
 export interface UseShotVideoTakeProductionResult {
   loadState: 'loading' | 'ready' | 'error';
   loadError: string | null;
-  context: ShotVideoTakeProductionContext | null;
-  models: ShotVideoTakeModelListReport | null;
-  take: SceneShotVideoTake | null;
+  workspace: ShotVideoTakeWorkspaceResponse | null;
+  models: ShotVideoTakeModelReport[] | null;
+  take: ShotVideoTakeWorkspaceResponse['take'] | null;
   isEditable: boolean;
   selectedInputMode: ShotVideoTakeInputModeId | null;
   selectedModel: ShotVideoTakeModelChoice | undefined;
+  setup: ShotVideoTakeGenerationSetup | null;
   setInputMode: (inputMode: ShotVideoTakeInputModeId) => void;
   setModel: (model: ShotVideoTakeModelChoice) => void;
   setParameter: (name: string, value: ShotVideoTakeParameterValue) => void;
   autosave: DebouncedSaveStatus;
-  productionPlan: ShotVideoTakeProductionPlanReport | null;
-  estimate: ShotVideoTakeProductionEstimateReport | null;
+  estimate: GenerationCostEstimateReport | null;
   estimateState: 'idle' | 'loading' | 'error';
   estimateError: string | null;
-  planState: 'idle' | 'loading' | 'error';
-  planError: string | null;
-  refreshProductionPlan: () => Promise<void>;
-  reuseInput: (inputId: string) => Promise<void>;
-  regenerateInput: (slot: ShotVideoTakeInputSlot) => Promise<void>;
-  deleteInput: (inputId: string) => Promise<void>;
+  refreshWorkspace: () => Promise<void>;
+  setReferenceIncluded: (selectionId: string, included: boolean) => Promise<void>;
 }
 
 export function useShotVideoTakeProduction(
@@ -79,580 +70,212 @@ export function useShotVideoTakeProduction(
     autosaveDelayMs,
     onMutationSaved,
   } = input;
-  const takeIdKey = takeId ?? '';
-
-  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
-    'loading'
-  );
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [context, setContext] = useState<ShotVideoTakeProductionContext | null>(
-    null
-  );
-  const [models, setModels] = useState<ShotVideoTakeModelListReport | null>(
-    null
-  );
-  const [take, setTake] =
-    useState<SceneShotVideoTake | null>(null);
-  const [productionPlan, setProductionPlan] =
-    useState<ShotVideoTakeProductionPlanReport | null>(null);
-  const [estimate, setEstimate] =
-    useState<ShotVideoTakeProductionEstimateReport | null>(null);
-  const [estimateState, setEstimateState] = useState<
-    'idle' | 'loading' | 'error'
-  >('idle');
+  const [workspace, setWorkspace] = useState<ShotVideoTakeWorkspaceResponse | null>(null);
+  const [setup, setSetup] = useState<ShotVideoTakeGenerationSetup | null>(null);
+  const [estimate, setEstimate] = useState<GenerationCostEstimateReport | null>(null);
+  const [estimateState, setEstimateState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [estimateError, setEstimateError] = useState<string | null>(null);
-  const [planState, setPlanState] = useState<'idle' | 'loading' | 'error'>(
-    'idle'
-  );
-  const [planError, setPlanError] = useState<string | null>(null);
+  const edited = useRef(false);
+  const requestRevision = useRef(0);
 
-  // Autosave only starts after the user edits a value, so loading the group
-  // never triggers a spurious save.
-  const hasUserEditedRef = useRef(false);
-  const isEditable = take?.status.editability.state === 'editable';
+  const applyWorkspace = useCallback((next: ShotVideoTakeWorkspaceResponse) => {
+    setWorkspace(next);
+    setSetup(next.generation.setup);
+    setLoadState('ready');
+    setLoadError(null);
+  }, []);
+
+  const refreshWorkspace = useCallback(async () => {
+    if (!takeId) return;
+    const revision = ++requestRevision.current;
+    try {
+      const next = selectedShotId
+        ? await readShotVideoTakeWorkspace(
+            projectName,
+            sceneId,
+            takeId,
+            selectedShotId
+          )
+        : await readShotVideoTakeWorkspace(projectName, sceneId, takeId);
+      if (requestRevision.current === revision) applyWorkspace(next);
+    } catch (error) {
+      if (requestRevision.current !== revision) return;
+      setLoadState('error');
+      setLoadError(error instanceof Error ? error.message : 'Unable to load AI Production.');
+    }
+  }, [applyWorkspace, projectName, sceneId, selectedShotId, takeId]);
 
   useEffect(() => {
-    let cancelled = false;
-    hasUserEditedRef.current = false;
-    const load = async () => {
-      setLoadState('loading');
-      setLoadError(null);
-      setProductionPlan(null);
+    const timer = window.setTimeout(() => {
+      edited.current = false;
       setEstimate(null);
-      setEstimateState('idle');
       setEstimateError(null);
       if (!takeId) {
-        setContext(null);
-        setModels(null);
-        setTake(null);
+        setWorkspace(null);
+        setSetup(null);
         setLoadState('ready');
         return;
       }
-      try {
-        const read = await readShotVideoTakeProduction(
-          projectName,
-          sceneId,
-          takeId
-        );
-        if (cancelled) return;
-        setContext(read.context);
-        setModels(read.models);
-        setTake(read.context.take);
-        setLoadState('ready');
-      } catch (error) {
-        if (cancelled) return;
-        setLoadError(
-          error instanceof Error ? error.message : 'Unable to load AI Production.'
-        );
-        setLoadState('error');
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [projectName, sceneId, takeId, takeIdKey]);
-
-  const save = useCallback(
-    (production: SceneShotVideoTakeProductionState) => {
-      if (!takeId) {
-        return Promise.reject(new Error('No take to save.'));
-      }
-      return updateShotVideoTakeProduction(
-        projectName,
-        sceneId,
-        takeId,
-        production
-      );
-    },
-    [projectName, sceneId, takeId]
-  );
+      setLoadState('loading');
+      void refreshWorkspace();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refreshWorkspace, takeId]);
 
   const autosave = useDebouncedAutosave({
-    value: take?.state.production ?? null,
-    save: (production) => {
-      if (!production) {
-        return Promise.reject(new Error('No take production to save.'));
-      }
-      return save(production);
+    value: setup,
+    save: (value) => {
+      if (!takeId || !value) return Promise.reject(new Error('No take generation setup to save.'));
+      return selectedShotId
+        ? setShotVideoTakeGenerationSpec(
+            projectName,
+            sceneId,
+            takeId,
+            value,
+            selectedShotId
+          )
+        : setShotVideoTakeGenerationSpec(projectName, sceneId, takeId, value);
     },
     delayMs: autosaveDelayMs,
     failureMessage: 'AI Production settings could not be saved.',
     flushOnUnmount: true,
-    isReady: () =>
-      hasUserEditedRef.current &&
-      take !== null &&
-      take.status.editability.state === 'editable',
+    isReady: () => edited.current && Boolean(takeId && setup && workspace?.take.status.editability.state === 'editable'),
     onSaved: (result) => {
-      hasUserEditedRef.current = false;
-      setContext(result.context);
-      setTake(result.context.take);
+      edited.current = false;
+      applyWorkspace(result.workspace);
       onMutationSaved?.(result);
     },
   });
-  const { flushPending } = autosave;
 
-  const editProduction = useCallback(
-    (
-      mutate: (
-        production: SceneShotVideoTakeProductionState
-      ) => SceneShotVideoTakeProductionState
-    ) => {
-      setTake((current) => {
-        if (!current || current.status.editability.state !== 'editable') {
-          return current;
-        }
-        hasUserEditedRef.current = true;
-        return {
-          ...current,
-          state: {
-            ...current.state,
-            production: mutate(current.state.production),
-          },
-        };
-      });
+  const editSetup = useCallback(
+    (update: (current: ShotVideoTakeGenerationSetup) => ShotVideoTakeGenerationSetup) => {
+      edited.current = true;
+      setSetup((current) => current ? update(current) : current);
     },
     []
   );
 
-  const storedInputMode = take?.state.production.inputModeId;
-  const selectedInputMode = useMemo<ShotVideoTakeInputModeId | null>(() => {
-    if (!take) return null;
-    return (
-      take.state.production.inputModeId ??
-      context?.defaults.inputModeId ??
-      null
-    );
-  }, [context?.defaults.inputModeId, take]);
-  const storedModelChoice = take?.state.production.modelChoice;
-  const editorPlanSelectedShotId =
-    take?.state.structure.mode === 'multi-cut' ? selectedShotId : undefined;
-
-  const setInputMode = useCallback(
-    (inputMode: ShotVideoTakeInputModeId) => {
-      editProduction((group) => ({
-        ...group,
-        inputModeId: inputMode,
-      }));
-    },
-    [editProduction]
+  const models = workspace?.generation.models ?? null;
+  const selectedInputMode = setup?.inputModeId ?? null;
+  const selectedModel = setup?.modelChoice ?? (
+    models && selectedInputMode
+      ? defaultModelForInputMode(models, selectedInputMode)
+      : undefined
   );
 
-  useEffect(() => {
-    if (!selectedInputMode || !takeId) {
-      return;
-    }
-    if (models?.inputModeId === selectedInputMode) {
-      return;
-    }
-    let cancelled = false;
-    const loadModels = async () => {
-      try {
-        const read = await readShotVideoTakeProduction(
-          projectName,
-          sceneId,
-          takeId,
-          selectedInputMode
-        );
-        if (cancelled) {
-          return;
-        }
-        setModels(read.models);
-        if (!storedModelChoice) {
-          return;
-        }
-        const currentReport = findModelReport(read.models, storedModelChoice);
-        if (
-          currentReport?.available &&
-          currentReport.supportedInputModes.includes(selectedInputMode)
-        ) {
-          return;
-        }
-        const nextModel = defaultModelForInputMode(read.models, selectedInputMode);
-        if (nextModel && nextModel !== storedModelChoice && isEditable) {
-          editProduction((group) => ({
-            ...group,
-            modelChoice: nextModel,
-          }));
-        }
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        setLoadError(
-          error instanceof Error ? error.message : 'Unable to load AI Production.'
-        );
-        setLoadState('error');
-      }
-    };
-    void loadModels();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    editProduction,
-    projectName,
-    sceneId,
-    selectedInputMode,
-    storedModelChoice,
-    models?.inputModeId,
-    takeId,
-    isEditable,
-  ]);
-
-  useEffect(() => {
-    if (!takeId || !isEditable || !models || !selectedInputMode) {
-      return;
-    }
-    const modelChoice =
-      storedModelChoice ?? defaultModelForInputMode(models, selectedInputMode);
-    if (!modelChoice) {
-      return;
-    }
-    if (storedInputMode === selectedInputMode && storedModelChoice === modelChoice) {
-      return;
-    }
-    editProduction((production) => {
-      const nextInputMode = production.inputModeId ?? selectedInputMode;
-      const nextModelChoice = production.modelChoice ?? modelChoice;
-      if (
-        production.inputModeId === nextInputMode &&
-        production.modelChoice === nextModelChoice
-      ) {
-        return production;
-      }
-      return {
-        ...production,
-        inputModeId: nextInputMode,
-        modelChoice: nextModelChoice,
-      };
+  const setInputMode = useCallback((inputModeId: ShotVideoTakeInputModeId) => {
+    editSetup((current) => {
+      const next = { ...current, inputModeId };
+      const modelChoice = models
+        ? modelForInputMode(models, current.modelChoice, inputModeId)
+        : undefined;
+      const model = models?.find((candidate) => candidate.modelChoice === modelChoice);
+      return model
+        ? selectShotVideoTakeGenerationModel(next, model)
+        : { ...next, ...(modelChoice ? { modelChoice } : {}) };
     });
-  }, [
-    editProduction,
-    isEditable,
-    models,
-    selectedInputMode,
-    storedInputMode,
-    storedModelChoice,
-    takeId,
-  ]);
+  }, [editSetup, models]);
 
-  const setModel = useCallback(
-    (model: ShotVideoTakeModelChoice) => {
-      editProduction((group) => ({
-        ...group,
-        modelChoice: model,
-      }));
-    },
-    [editProduction]
-  );
+  const setModel = useCallback((modelChoice: ShotVideoTakeModelChoice) => {
+    editSetup((current) => {
+      const model = models?.find((candidate) => candidate.modelChoice === modelChoice);
+      return model
+        ? selectShotVideoTakeGenerationModel(current, model)
+        : { ...current, modelChoice };
+    });
+  }, [editSetup, models]);
 
-  const setParameter = useCallback(
-    (name: string, value: ShotVideoTakeParameterValue) => {
-      editProduction((group) => ({
-        ...group,
-        parameterValues: {
-          ...group.parameterValues,
-          [name]: value,
-        },
-      }));
-    },
-    [editProduction]
-  );
+  const setParameter = useCallback((name: string, value: ShotVideoTakeParameterValue) => {
+    editSetup((current) => ({
+      ...current,
+      parameterValues: { ...current.parameterValues, [name]: value },
+    }));
+  }, [editSetup]);
 
   useEffect(() => {
-    if (!take || !takeId) {
-      return;
-    }
-    let cancelled = false;
-    const loadEstimate = async () => {
+    if (!takeId || !setup || !selectedModel) return;
+    const revision = ++requestRevision.current;
+    const timer = window.setTimeout(() => {
       setEstimateState('loading');
       setEstimateError(null);
-      try {
-        const report = await estimateShotVideoTakeProduction(
-          projectName,
-          sceneId,
-          takeId,
-          take.state.production
-        );
-        if (cancelled) {
-          return;
-        }
+      void estimateShotVideoTakeGeneration(projectName, sceneId, takeId, {
+        ...setup,
+        modelChoice: selectedModel,
+      }).then((report) => {
+        if (requestRevision.current !== revision) return;
         setEstimate(report);
         setEstimateState('idle');
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
+      }).catch((error) => {
+        if (requestRevision.current !== revision) return;
         setEstimate(null);
-        setEstimateError(
-          error instanceof Error ? error.message : 'Unable to estimate setup.'
-        );
         setEstimateState('error');
-      }
-    };
-    void loadEstimate();
-    return () => {
-      cancelled = true;
-    };
-  }, [projectName, sceneId, take, takeId]);
-
-  const refreshProductionPlan = useCallback(async () => {
-    if (!takeId) return;
-    setPlanState('loading');
-    setPlanError(null);
-    try {
-      const report = await planShotVideoTakeProduction(
-        projectName,
-        sceneId,
-        takeId,
-        take?.state.production,
-        { defaultMode: 'auto' },
-        editorPlanSelectedShotId
-      );
-      setProductionPlan(report);
-      setEstimate({
-        target: report.target,
-        take: report.take,
-        inputModeId: report.plan.request.inputMode,
-        shotGroupMode: report.plan.request.shotGroupMode,
-        modelChoice: report.plan.request.modelChoice,
-        estimate: report.plan.finalEstimate,
-        plan: report.plan,
-        issues: report.plan.diagnostics,
+        setEstimateError(error instanceof Error ? error.message : 'Unable to estimate setup.');
       });
-      setEstimateState('idle');
-      setEstimateError(null);
-      setPlanState('idle');
-    } catch (error) {
-      setPlanError(
-        error instanceof Error ? error.message : 'Unable to build take plan.'
-      );
-      setPlanState('error');
-    }
-  }, [editorPlanSelectedShotId, projectName, sceneId, take, takeId]);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [projectName, sceneId, selectedModel, setup, takeId]);
 
-  const refreshFromResourceChange = useCallback(async () => {
-    if (!takeId) {
-      return;
-    }
-    if (hasUserEditedRef.current) {
-      const saved = await flushPending();
-      if (!saved) {
-        return;
-      }
-    }
-    try {
-      const read = await readShotVideoTakeProduction(
-        projectName,
-        sceneId,
-        takeId,
-        selectedInputMode ?? undefined
-      );
-      setContext(read.context);
-      setModels(read.models);
-      setTake(read.context.take);
-      setLoadState('ready');
-      setLoadError(null);
-      const report = await planShotVideoTakeProduction(
-        projectName,
-        sceneId,
-        takeId,
-        read.context.take.state.production,
-        { defaultMode: 'auto' },
-        editorPlanSelectedShotId
-      );
-      setProductionPlan(report);
-      setEstimate({
-        target: report.target,
-        take: report.take,
-        inputModeId: report.plan.request.inputMode,
-        shotGroupMode: report.plan.request.shotGroupMode,
-        modelChoice: report.plan.request.modelChoice,
-        estimate: report.plan.finalEstimate,
-        plan: report.plan,
-        issues: report.plan.diagnostics,
-      });
-      setEstimateState('idle');
-      setEstimateError(null);
-      setPlanState('idle');
-      setPlanError(null);
-    } catch (error) {
-      setLoadError(
-        error instanceof Error ? error.message : 'Unable to load AI Production.'
-      );
-      setLoadState('error');
-    }
-  }, [
-    editorPlanSelectedShotId,
-    flushPending,
-    projectName,
-    sceneId,
-    selectedInputMode,
-    takeId,
-  ]);
+  const setReferenceIncluded = useCallback(async (
+    selectionId: string,
+    included: boolean
+  ) => {
+    if (!takeId || workspace?.take.status.editability.state !== 'editable') return;
+    const result = await setShotVideoTakeGenerationReference(
+      projectName,
+      sceneId,
+      takeId,
+      { selectionId, included, ...(selectedShotId ? { selectedShotId } : {}) }
+    );
+    applyWorkspace(result.workspace);
+    onMutationSaved?.(result);
+  }, [applyWorkspace, onMutationSaved, projectName, sceneId, selectedShotId, takeId, workspace?.take.status.editability.state]);
 
   useStudioResourceRefresh({
     projectName,
     enabled: Boolean(takeId),
-    matches: (resourceKeys) =>
-      takeId
-        ? matchesSceneTakesResource({
-            resourceKeys,
-            sceneId,
-            takeId,
-          })
-        : false,
-    onRefresh: refreshFromResourceChange,
+    matches: (resourceKeys) => takeId
+      ? matchesSceneTakesResource({ resourceKeys, sceneId, takeId })
+      : false,
+    onRefresh: refreshWorkspace,
   });
 
-  useEffect(() => {
-    if (!takeId) {
-      return;
-    }
-    let cancelled = false;
-    const loadPlan = async () => {
-      setPlanState('loading');
-      setPlanError(null);
-      try {
-        const report = await planShotVideoTakeProduction(
-          projectName,
-          sceneId,
-          takeId,
-          take?.state.production,
-          { defaultMode: 'auto' },
-          editorPlanSelectedShotId
-        );
-        if (cancelled) {
-          return;
-        }
-        setProductionPlan(report);
-        setEstimate({
-          target: report.target,
-          take: report.take,
-          inputModeId: report.plan.request.inputMode,
-          shotGroupMode: report.plan.request.shotGroupMode,
-          modelChoice: report.plan.request.modelChoice,
-          estimate: report.plan.finalEstimate,
-          plan: report.plan,
-          issues: report.plan.diagnostics,
-        });
-        setEstimateState('idle');
-        setEstimateError(null);
-        setPlanState('idle');
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        setPlanError(
-          error instanceof Error ? error.message : 'Unable to build take plan.'
-        );
-        setPlanState('error');
-      }
-    };
-    void loadPlan();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    editorPlanSelectedShotId,
-    projectName,
-    sceneId,
-    take?.state.production,
-    takeId,
-  ]);
-
-  const applyMutationResult = useCallback(
-    (result: ShotVideoTakeProductionMutation): boolean => {
-      const activeTakeChanged = result.context.take.takeId !== takeId;
-      hasUserEditedRef.current = false;
-      setContext(result.context);
-      setTake(result.context.take);
-      onMutationSaved?.(result);
-      return activeTakeChanged;
-    },
-    [onMutationSaved, takeId]
-  );
-
-  const reuseInput = useCallback(
-    async (inputId: string) => {
-      if (!takeId || !isEditable) return;
-      const result = await selectShotVideoTakeInput(
-        projectName,
-        sceneId,
-        takeId,
-        inputId
-      );
-      const activeTakeChanged = applyMutationResult(result);
-      if (!activeTakeChanged) {
-        await refreshProductionPlan();
-      }
-    },
-    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
-  );
-
-  const regenerateInput = useCallback(
-    async (slot: ShotVideoTakeInputSlot) => {
-      if (!takeId || !isEditable) return;
-      const result = await clearShotVideoTakeInput(
-        projectName,
-        sceneId,
-        takeId,
-        slot
-      );
-      const activeTakeChanged = applyMutationResult(result);
-      if (!activeTakeChanged) {
-        await refreshProductionPlan();
-      }
-    },
-    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
-  );
-
-  const deleteInput = useCallback(
-    async (inputId: string) => {
-      if (!takeId || !isEditable) return;
-      const result = await deleteShotVideoTakeInput(
-        projectName,
-        sceneId,
-        takeId,
-        inputId
-      );
-      const activeTakeChanged = applyMutationResult(result);
-      if (!activeTakeChanged) {
-        await refreshProductionPlan();
-      }
-    },
-    [applyMutationResult, isEditable, projectName, refreshProductionPlan, sceneId, takeId]
-  );
-
-  const selectedModel =
-    storedModelChoice ??
-    (models && selectedInputMode
-      ? defaultModelForInputMode(models, selectedInputMode)
-      : undefined);
-
-  return {
+  return useMemo(() => ({
     loadState,
     loadError,
-    context,
+    workspace,
     models,
-    take,
-    isEditable,
+    take: workspace?.take ?? null,
+    isEditable: workspace?.take.status.editability.state === 'editable',
+    selectedInputMode,
+    selectedModel,
+    setup,
+    setInputMode,
+    setModel,
+    setParameter,
+    autosave,
+    estimate,
+    estimateState,
+    estimateError,
+    refreshWorkspace,
+    setReferenceIncluded,
+  }), [
+    autosave,
+    estimate,
+    estimateError,
+    estimateState,
+    loadError,
+    loadState,
+    models,
+    refreshWorkspace,
     selectedInputMode,
     selectedModel,
     setInputMode,
     setModel,
     setParameter,
-    autosave,
-    productionPlan,
-    estimate,
-    estimateState,
-    estimateError,
-    planState,
-    planError,
-    refreshProductionPlan,
-    reuseInput,
-    regenerateInput,
-    deleteInput,
-  };
+    setReferenceIncluded,
+    setup,
+    workspace,
+  ]);
 }

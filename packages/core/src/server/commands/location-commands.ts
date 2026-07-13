@@ -100,7 +100,7 @@ export async function readLocationContext(
       assetRoleCounts: roleCounts(selectedAssets),
       generationReadiness: {
         environmentSheet: true,
-        notes: ['Use media-producer for location.environment-sheet generation.'],
+        notes: ['Use media-producer for location.sheet generation.'],
       },
     };
   });

@@ -9,9 +9,11 @@ function createMountedGenerationPreviewRoute(
   return new Hono().route(
     '/:projectName',
     createGenerationPreviewRoute({
-      updateGenerationPreviewSpec:
-        overrides.updateGenerationPreviewSpec ??
-        fakeGenerationPreviewCommands().updateGenerationPreviewSpec,
+      projectData: {
+        updateGenerationPreviewResource:
+          overrides.updateGenerationPreviewResource ??
+          fakeGenerationPreviewCommands().updateGenerationPreviewResource,
+      },
       generationPreviewProjection: async ({ preview }) => ({
         ...preview,
         subject: { projectLabel: 'Constantinople', castMemberLabel: 'Narrator' },
@@ -30,11 +32,11 @@ function createMountedGenerationPreviewRoute(
 
 describe('generation preview Hono route', () => {
   it('updates a saved generation preview spec through ProjectDataService', async () => {
-    const updateGenerationPreviewSpec = vi.fn(
-      fakeGenerationPreviewCommands().updateGenerationPreviewSpec,
+    const updateGenerationPreviewResource = vi.fn(
+      fakeGenerationPreviewCommands().updateGenerationPreviewResource,
     );
     const app = createMountedGenerationPreviewRoute({
-      updateGenerationPreviewSpec,
+      updateGenerationPreviewResource,
     });
 
     const response = await app.request(
@@ -48,8 +50,7 @@ describe('generation preview Hono route', () => {
           },
           referenceSelections: [
             {
-              dependencyId:
-                'cast-character-sheet:cast_narrator:asset_cast_reference',
+              selectionId: 'reference_cast_narrator',
               selected: false,
             },
           ],
@@ -61,19 +62,19 @@ describe('generation preview Hono route', () => {
     await expect(response.json()).resolves.toMatchObject({
       preview: {
         generationSpecId: 'media_generation_spec_test',
-        purpose: 'cast.character-sheet',
+        purpose: 'cast.storyboard-character-sheet',
         references: [
           {
             browserUrl:
               '/studio-api/projects/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference',
             selectionControl: {
-              dependencyId: 'cast-character-sheet:cast_narrator:asset_cast_reference',
+              selectionId: 'reference_cast_narrator',
             },
           },
         ],
       },
     });
-    expect(updateGenerationPreviewSpec).toHaveBeenCalledWith({
+    expect(updateGenerationPreviewResource).toHaveBeenCalledWith({
       projectName: 'constantinople',
       specId: 'media_generation_spec_test',
       prompt: {
@@ -82,8 +83,7 @@ describe('generation preview Hono route', () => {
       },
       referenceSelections: [
         {
-          dependencyId:
-            'cast-character-sheet:cast_narrator:asset_cast_reference',
+          selectionId: 'reference_cast_narrator',
           selected: false,
         },
       ],
@@ -100,7 +100,7 @@ describe('generation preview Hono route', () => {
         body: JSON.stringify({
           prompt: { authoredText: 'Updated prompt.' },
           referenceSelections: [
-            { dependencyId: 'dependency_test', selected: 'yes' },
+            { selectionId: 'selection_test', selected: 'yes' },
           ],
         }),
       },

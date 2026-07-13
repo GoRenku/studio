@@ -12,8 +12,7 @@ interface SceneShotAiProductionModelTableProps {
 
 /**
  * Model table (column 2 of the AI Production tab, 0041). A real table with
- * exactly `Model`, `Duration`, and `Status` columns. Rows select directly;
- * disabled rows stay visible with compact status text.
+ * exactly `Model` and `Duration` columns. Rows select directly.
  */
 export function SceneShotAiProductionModelTable({
   rows,
@@ -28,6 +27,10 @@ export function SceneShotAiProductionModelTable({
       </h4>
       <div className='min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-lg border border-border/50'>
         <table className='w-full border-collapse text-xs'>
+          <colgroup>
+            <col />
+            <col className='w-[84px]' />
+          </colgroup>
           <thead className='sticky top-0 z-10 bg-panel-header-bg'>
             <tr className='border-b border-border/50 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
               <th scope='col' className='px-3 py-2 text-left font-semibold'>
@@ -35,9 +38,6 @@ export function SceneShotAiProductionModelTable({
               </th>
               <th scope='col' className='px-3 py-2 text-left font-semibold'>
                 Duration
-              </th>
-              <th scope='col' className='px-3 py-2 text-left font-semibold'>
-                Status
               </th>
             </tr>
           </thead>
@@ -61,7 +61,7 @@ export function SceneShotAiProductionModelTable({
                     }
                   }}
                   className={cn(
-                    'border-b border-border/25 outline-none last:border-b-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
+                    'h-[38.328125px] border-b border-border/25 outline-none last:border-b-0 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
                     !disabled && row.available
                       ? 'cursor-pointer hover:bg-item-hover-bg'
                       : 'cursor-not-allowed opacity-55',
@@ -87,21 +87,6 @@ export function SceneShotAiProductionModelTable({
                   </td>
                   <td className='px-3 py-2.5 text-muted-foreground'>
                     {row.duration}
-                  </td>
-                  <td className='px-3 py-2.5'>
-                    <span
-                      title={row.statusTitle ?? undefined}
-                      className={cn(
-                        'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
-                        row.available && row.status === 'Ready'
-                          ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400'
-                          : row.available
-                            ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300'
-                            : 'bg-muted/60 text-muted-foreground'
-                      )}
-                    >
-                      {row.status}
-                    </span>
                   </td>
                 </tr>
               );

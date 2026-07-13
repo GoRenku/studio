@@ -75,44 +75,14 @@ export type {
 } from './production-export.js';
 export type * from './trash.js';
 export type * from './agent-media.js';
-export type * from './media-generation-purpose.js';
-export type * from './media-generation-target.js';
-export type * from './media-generation-cost.js';
-export type * from './media-generation-dependency.js';
-export type * from './media-generation-lifecycle.js';
-export type * from './image-create-media-generation.js';
-export type * from './image-edit-media-generation.js';
-export type * from './lookbook-media-generation.js';
-export type * from './cast-media-generation.js';
-export type * from './location-media-generation.js';
-export type * from './scene-audio-generation.js';
-export type * from './scene-storyboard-media-generation.js';
-export type * from './shot-video-take.js';
-export type * from './generation-preview.js';
-export type * from './image-revision.js';
+export type * from './generation.js';
+export type * from './generation-preview-resource.js';
+export type * from './image-revision-workflow.js';
+export type * from './scene-dialogue-audio-workspace.js';
+export * from './shot-video-take-workspace.js';
 export {
   REFERENCE_IMAGE_MEDIA_PURPOSE,
 } from './assets.js';
-export {
-  SHOT_INPUT_MEDIA_IMPORT_PURPOSE,
-  sceneShotVideoTakeDirectionHasPromptFields,
-  sceneShotVideoTakeDirectionHasShotProjectionFields,
-  sceneShotVideoTakeDirectionHasState,
-} from './shot-video-take.js';
-export {
-  IMAGE_CREATE_GENERATION_PURPOSE,
-  IMAGE_EDIT_GENERATION_PURPOSE,
-  CAST_CHARACTER_SHEET_GENERATION_PURPOSE,
-  CAST_PROFILE_GENERATION_PURPOSE,
-  CAST_VOICE_SAMPLE_GENERATION_PURPOSE,
-  LOCATION_ENVIRONMENT_SHEET_GENERATION_PURPOSE,
-  LOCATION_HERO_GENERATION_PURPOSE,
-  LOOKBOOK_IMAGE_GENERATION_PURPOSE,
-  LOOKBOOK_SHEET_GENERATION_PURPOSE,
-  SCENE_STORYBOARD_SHEET_GENERATION_PURPOSE,
-  SCENE_DIALOGUE_AUDIO_GENERATION_PURPOSE,
-  SHOT_VIDEO_TAKE_GENERATION_PURPOSE,
-} from './media-generation-purpose.js';
 export type {
   ProjectLanguage,
 } from './project-languages.js';
@@ -210,23 +180,6 @@ export type {
   RigId,
   SceneShot,
   SceneShotDialogueReference,
-  ShotVideoTakeAgentProposal,
-  ShotVideoTakeDependencyDraft,
-  ShotVideoTakeDependencyKind,
-  ShotVideoTakeImageInputImportKind,
-  ShotVideoTakeInputKind,
-  ShotVideoTakeInputSubjectKind,
-  ShotVideoTakeInputModeId,
-  ShotVideoTakeShotGroupMode,
-  ShotVideoTakeModelChoice,
-  ShotVideoTakeParameterValue,
-  ShotVideoTakeParameterValues,
-  ShotVideoTakeOwnedMediaRepairChange,
-  ShotVideoTakeOwnedMediaRepairReport,
-  ShotVideoTakePreparedInput,
-  SceneShotVideoTakeProductionState,
-  ShotVideoTakePromptDraft,
-  ShotVideoTakeRequestedInput,
   ShotLensSpecs,
   ShotMovementId,
   ShotSizeId,
@@ -270,9 +223,7 @@ export {
   RIG_LABELS,
   SHOT_SIZE_LABELS,
   SUBJECT_FRAMING_LABELS,
-  deriveTakeDirectionPromptStrings,
 } from './shot-spec-labels.js';
-export type { DerivedTakeDirectionPromptStrings } from './shot-spec-labels.js';
 export type {
   Project,
   ProjectCoverImage,

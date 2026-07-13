@@ -85,7 +85,7 @@ describe('Studio server architecture', () => {
       findings,
       [
         'Studio routes must stay thin: read HTTP params/body, call focused core commands, and serialize the response.',
-        'Take reference-selection ownership, scene membership, and dependency-scope rules belong in packages/core.',
+        'Take reference-selection ownership, scene membership, and generation-reference scope rules belong in packages/core.',
         'Resolve these failures in 0077 by adding focused core commands, not by adding route-local validation or allowlists.',
       ].join(' ')
     ).toEqual([]);

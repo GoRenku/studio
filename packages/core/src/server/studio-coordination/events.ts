@@ -1,5 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
+  GenerationPreviewResource,
   ProjectLanguage,
   ScenePanelTab,
   SceneTakeWorkspaceMode,
@@ -14,18 +15,17 @@ import type {
   ShotSizeId,
   SubjectFramingId,
 } from '../../client/index.js';
-import type { StudioGenerationPreview } from '../../client/generation-preview.js';
 
 export const STUDIO_COORDINATION_EVENT_VERSION = '0.1.0' as const;
 
 export type StudioEventType =
   | 'studio.projectRefreshRequested'
   | 'studio.projectResourcesChanged'
-  | 'studio.generationPreviewRequested'
   | 'studio.focusRequested'
   | 'studio.focusChanged'
   | 'studio.focusRequestFailed'
-  | 'studio.browserSessionActive';
+  | 'studio.browserSessionActive'
+  | 'studio.generationPreviewRequested';
 
 export type StudioEventSource =
   | { kind: 'cli'; command: string }
@@ -112,7 +112,7 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
 export interface StudioGenerationPreviewRequestedEvent extends StudioEventBase {
   type: 'studio.generationPreviewRequested';
   projectRef: StudioProjectRef;
-  preview: StudioGenerationPreview;
+  preview: GenerationPreviewResource;
 }
 
 export interface StudioFocusRequestedEvent extends StudioEventBase {
@@ -158,22 +158,22 @@ export interface StudioBrowserSessionActiveEvent extends StudioEventBase {
 export type StudioEvent =
   | StudioProjectRefreshRequestedEvent
   | StudioProjectResourcesChangedEvent
-  | StudioGenerationPreviewRequestedEvent
   | StudioFocusRequestedEvent
   | StudioFocusChangedEvent
   | StudioFocusRequestFailedEvent
-  | StudioBrowserSessionActiveEvent;
+  | StudioBrowserSessionActiveEvent
+  | StudioGenerationPreviewRequestedEvent;
 
 type StudioAssignedEnvelopeKeys = 'id' | 'version' | 'createdAt';
 
 export type AppendStudioEventInput =
   | (Omit<StudioProjectRefreshRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioProjectResourcesChangedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
-  | (Omit<StudioGenerationPreviewRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusChangedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusRequestFailedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
-  | (Omit<StudioBrowserSessionActiveEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput);
+  | (Omit<StudioBrowserSessionActiveEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
+  | (Omit<StudioGenerationPreviewRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput);
 
 export interface StudioEventMetadataInput {
   source: StudioEventSource;

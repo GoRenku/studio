@@ -94,7 +94,10 @@ export function LookbookPanel({
       defaultValue='definition'
       items={[
         { value: 'definition', label: 'Definition' },
-        { value: 'visual', label: 'Visual Content' },
+        {
+          value: 'visual',
+          label: <span className='inline-flex w-[114px] justify-center'>Assets</span>,
+        },
       ]}
     >
       <LineTabsContent value='definition'>

@@ -1,4 +1,4 @@
-import type { MediaGenerationRun } from '../../client/index.js';
+import type { GenerationRun } from '../../client/generation.js';
 import type { AssetFileRecord } from '../database/access/asset-files.js';
 
 export interface MediaGenerationOutputMatch {
@@ -8,7 +8,7 @@ export interface MediaGenerationOutputMatch {
 }
 
 export function matchingMediaGenerationOutputs(
-  run: MediaGenerationRun,
+  run: GenerationRun,
   file: AssetFileRecord,
 ): MediaGenerationOutputMatch[] {
   if (!file.contentHash) {

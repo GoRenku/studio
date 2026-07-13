@@ -2,22 +2,10 @@ import type { ModelPriceConfig, ModelType } from '../model-catalog.js';
 
 export type GenerationMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
-export type GenerationMode =
-  | 'text-to-image'
-  | 'reference-to-image'
-  | 'image-edit'
-  | 'text-to-video'
-  | 'image-to-video'
-  | 'text-to-audio'
-  | 'text-to-speech'
-  | 'text'
-  | 'json';
-
 export interface GenerationModelSummary {
   provider: string;
   model: string;
   mediaKind: GenerationMediaKind;
-  modes: GenerationMode[];
   mime: string[];
   price?: ModelPriceConfig | number;
 }
@@ -26,8 +14,6 @@ export interface GenerationPolicy {
   provider: string;
   model: string;
   mediaKind: GenerationMediaKind;
-  mode?: GenerationMode;
-  parameters?: Record<string, unknown>;
   outputCount?: number;
 }
 
@@ -41,10 +27,9 @@ export interface GenerationInputFile {
 }
 
 export interface GenerationRequest {
-  prompt?: string;
   inputFiles?: GenerationInputFile[];
   pricingInputCounts?: Partial<Record<GenerationMediaKind, number>>;
-  parameters?: Record<string, unknown>;
+  payload: Record<string, unknown>;
   outputNames?: string[];
 }
 
@@ -122,7 +107,6 @@ export interface GenerationReceipt {
   provider: string;
   model: string;
   mediaKind: GenerationMediaKind;
-  mode?: GenerationMode;
   generatedAt: string;
   estimatedCostUsd?: number;
   actualCostUsd?: number;

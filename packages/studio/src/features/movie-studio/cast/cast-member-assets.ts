@@ -4,7 +4,11 @@ import type { StudioAssetResponse } from '@/services/studio-project-contracts';
 import { castAssetFileUrl } from '@/services/studio-project-assets-api';
 
 export const CAST_PROFILE_ROLE = 'profile';
-export const CAST_CHARACTER_SHEET_ROLE = 'character_sheet';
+export const CAST_CHARACTER_SHEET_ROLES = [
+  'character_sheet',
+  'video-character-sheet',
+  'storyboard-character-sheet',
+] as const;
 
 export function castImageAssetsForRole(
   assets: StudioAssetResponse[],
@@ -13,6 +17,18 @@ export function castImageAssetsForRole(
   return sortCastAssets(
     assets.filter(
       (asset) => asset.role === role && Boolean(castImageAssetFile(asset))
+    )
+  );
+}
+
+export function castImageAssetsForRoles(
+  assets: StudioAssetResponse[],
+  roles: readonly string[]
+): StudioAssetResponse[] {
+  const acceptedRoles = new Set(roles);
+  return sortCastAssets(
+    assets.filter(
+      (asset) => acceptedRoles.has(asset.role) && Boolean(castImageAssetFile(asset))
     )
   );
 }

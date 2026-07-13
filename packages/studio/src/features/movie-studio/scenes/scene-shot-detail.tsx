@@ -20,11 +20,11 @@ import type {
 } from '@/services/studio-project-contracts';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
-import { updateSceneShotVideoTakeStructureMode } from '@/services/studio-shot-video-takes-api';
+import { setShotVideoTakeStructure } from '@/services/studio-shot-video-takes-api';
 import type {
   SceneShotVideoTakeWithHttp,
-  ShotVideoTakeProductionContextResponse,
-  ShotVideoTakeProductionMutation,
+  ShotVideoTakeWorkspaceResponse,
+  ShotVideoTakeWorkspaceMutation,
 } from '@/services/studio-shot-video-takes-api';
 import type { SceneShotDetailTab } from '../movie-studio-selection';
 import { idleSaveNotification } from '../detail-save-notification';
@@ -59,7 +59,7 @@ interface SceneShotDetailProps {
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onCreateTake?: () => Promise<void>;
   createTakePending?: boolean;
-  onTakeMutation?: (context: ShotVideoTakeProductionContextResponse) => void;
+  onTakeMutation?: (workspace: ShotVideoTakeWorkspaceResponse) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -111,10 +111,10 @@ export function SceneShotDetail({
     takeId: editableTake?.takeId,
     selectedShotId: shot.shotId,
     onMutationSaved: (result) => {
-      onTakeMutation?.(result.context);
+      onTakeMutation?.(result.workspace);
     },
   });
-  const { refreshProductionPlan } = production;
+  const { refreshWorkspace } = production;
   const [structureDialogOpen, setStructureDialogOpen] = useState(false);
   const [structureBusy, setStructureBusy] = useState(false);
   const handleShotDesignSaveNotificationChange = useCallback(
@@ -152,8 +152,8 @@ export function SceneShotDetail({
   }, [activeTab, isShotEditable, onTabChange]);
 
   const handleTakeMutation = useCallback(
-    (result: ShotVideoTakeProductionMutation) => {
-      onTakeMutation?.(result.context);
+    (result: ShotVideoTakeWorkspaceMutation) => {
+      onTakeMutation?.(result.workspace);
     },
     [onTakeMutation]
   );
@@ -168,7 +168,7 @@ export function SceneShotDetail({
       }
       setStructureBusy(true);
       try {
-        const result = await updateSceneShotVideoTakeStructureMode(
+        const result = await setShotVideoTakeStructure(
           projectName,
           sceneId,
           editableTake.takeId,
@@ -176,8 +176,8 @@ export function SceneShotDetail({
           sourceShotId
         );
         handleTakeMutation(result);
-        if (result.context.take.takeId === editableTake.takeId) {
-          await refreshProductionPlan();
+        if (result.workspace.take.takeId === editableTake.takeId) {
+          await refreshWorkspace();
         }
         setStructureDialogOpen(false);
       } catch (error) {
@@ -200,7 +200,7 @@ export function SceneShotDetail({
       editableTake,
       handleTakeMutation,
       projectName,
-      refreshProductionPlan,
+      refreshWorkspace,
       sceneId,
       setStructureDialogOpen,
       setStructureBusy,
@@ -283,11 +283,10 @@ export function SceneShotDetail({
                       <SceneShotDialogsTab
                         projectName={projectName}
                         sceneId={sceneId}
-                        selectedShotId={shot.shotId}
                         castMemberImages={castMemberImages}
-                        productionPlan={production.productionPlan}
-                        onPlanRefresh={refreshProductionPlan}
-                        onTakeMutation={handleTakeMutation}
+                        take={production.take}
+                        references={production.workspace?.generation.references ?? null}
+                        onSetReference={production.setReferenceIncluded}
                         onSaveNotificationChange={handleDialogsSaveNotificationChange}
                       />
                     </LineTabsContent>
@@ -295,10 +294,10 @@ export function SceneShotDetail({
                       <SceneShotReferencesTab
                         projectName={projectName}
                         sceneId={sceneId}
-                        selectedShotId={shot.shotId}
-                        productionPlan={production.productionPlan}
-                        onPlanRefresh={refreshProductionPlan}
-                        onTakeMutation={handleTakeMutation}
+                        take={production.take}
+                        references={production.workspace?.generation.references ?? null}
+                        diagnostics={production.workspace?.generation.diagnostics}
+                        onSetReference={production.setReferenceIncluded}
                         onSaveNotificationChange={handleReferencesSaveNotificationChange}
                       />
                     </LineTabsContent>

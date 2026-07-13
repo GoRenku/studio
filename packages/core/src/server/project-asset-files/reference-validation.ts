@@ -1,4 +1,4 @@
-import type { MediaKind } from '../../client/index.js';
+import type { ProjectMediaKind } from './types.js';
 import { normalizeProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import { statProjectFile } from './file-operations.js';
 import { assertResolvedPathInsideProject } from './path-guards.js';
@@ -7,7 +7,7 @@ import type { ProjectReferenceFileValidation } from './types.js';
 export async function validateProjectReferenceFileInput(input: {
   projectFolder: string;
   projectRelativePath: string;
-  mediaKind?: MediaKind;
+  mediaKind?: ProjectMediaKind;
   role?: string;
 }): Promise<ProjectReferenceFileValidation> {
   const projectRelativePath = normalizeProjectRelativePath(

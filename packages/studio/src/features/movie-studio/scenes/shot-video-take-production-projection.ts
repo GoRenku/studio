@@ -1,8 +1,7 @@
 import type {
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
-  ShotVideoTakeModelChoiceReport,
-  ShotVideoTakeModelListReport,
+  ShotVideoTakeModelReport,
   ShotVideoTakeParameterReport,
 } from '@gorenku/studio-core/client';
 
@@ -44,34 +43,58 @@ export interface InputModeOption {
 }
 
 export function buildInputModeOptions(
-  models?: ShotVideoTakeModelListReport | null,
+  models?: ShotVideoTakeModelReport[] | null,
   selectedModel?: ShotVideoTakeModelChoice
 ): InputModeOption[] {
   const model = models ? findModelReport(models, selectedModel) : null;
+  const family = model && models
+    ? models.filter((candidate) => candidate.label === model.label)
+    : model ? [model] : [];
   return SHOT_VIDEO_TAKE_INPUT_MODE_IDS.map((id) => ({
     id,
     label: INPUT_MODE_LABELS[id] ?? id,
-    enabled: !model || model.supportedInputModes.includes(id),
+    enabled: !model || family.some((candidate) => candidate.supportedInputModes.includes(id)),
     disabledTooltip:
-      model && !model.supportedInputModes.includes(id)
+      model && !family.some((candidate) => candidate.supportedInputModes.includes(id))
         ? (INPUT_MODE_UNAVAILABLE_REASON[id] ?? 'Unavailable')
         : null,
   }));
 }
 
+export function modelForInputMode(
+  models: ShotVideoTakeModelReport[],
+  selectedModel: ShotVideoTakeModelChoice | undefined,
+  inputMode: ShotVideoTakeInputModeId
+): ShotVideoTakeModelChoice | undefined {
+  const selected = findModelReport(models, selectedModel);
+  const familyMatch = selected
+    ? models
+        .filter(
+          (model) =>
+            model.label === selected.label &&
+            model.supportedInputModes.includes(inputMode)
+        )
+        .sort(
+          (left, right) =>
+            left.supportedInputModes.length - right.supportedInputModes.length
+        )[0]
+    : undefined;
+  return familyMatch?.modelChoice ?? defaultModelForInputMode(models, inputMode);
+}
+
 export function findModelReport(
-  models: ShotVideoTakeModelListReport,
+  models: ShotVideoTakeModelReport[],
   modelChoice: ShotVideoTakeModelChoice | undefined
-): ShotVideoTakeModelChoiceReport | null {
+): ShotVideoTakeModelReport | null {
   if (!modelChoice) {
     return null;
   }
   return (
-    models.models.find((model) => model.modelChoice === modelChoice) ?? null
+    models.find((model) => model.modelChoice === modelChoice) ?? null
   );
 }
 
-function durationLabel(model: ShotVideoTakeModelChoiceReport): string {
+function durationLabel(model: ShotVideoTakeModelReport): string {
   if (!model.duration.supported) {
     return '—';
   }
@@ -112,8 +135,6 @@ export interface ModelRow {
   label: string;
   duration: string;
   available: boolean;
-  status: string;
-  statusTitle: string | null;
 }
 
 /**
@@ -122,40 +143,33 @@ export interface ModelRow {
  * stretch the row.
  */
 export function buildModelRows(
-  models: ShotVideoTakeModelListReport,
+  models: ShotVideoTakeModelReport[],
   selectedInputMode: ShotVideoTakeInputModeId
 ): ModelRow[] {
-  return models.models.map((model) => {
-    const supportsInputMode = model.supportedInputModes.includes(selectedInputMode);
-    const available = model.available && supportsInputMode;
-    const unavailableReason =
-      model.unavailableReason && !supportsInputMode
-        ? (INPUT_MODE_UNAVAILABLE_REASON[selectedInputMode] ?? 'Unavailable')
-        : !supportsInputMode
-          ? (INPUT_MODE_UNAVAILABLE_REASON[selectedInputMode] ?? 'Unavailable')
-          : (model.unavailableReason ?? 'Unavailable');
+  const families = new Map<string, ShotVideoTakeModelReport[]>();
+  for (const model of models) {
+    families.set(model.label, [...(families.get(model.label) ?? []), model]);
+  }
+  return [...families.entries()].map(([label, family]) => {
+    const matchingModel = family
+      .filter((model) => model.supportedInputModes.includes(selectedInputMode))
+      .sort(
+        (left, right) =>
+          left.supportedInputModes.length - right.supportedInputModes.length
+      )[0];
+    const model = matchingModel ?? family[0]!;
     return {
       modelChoice: model.modelChoice,
-      label: model.label,
-      duration: durationLabel(model),
-      available,
-      status: available
-        ? model.estimateInputs.requiresPreparedInputs
-          ? 'Input required'
-          : 'Ready'
-        : 'Unavailable',
-      statusTitle: available
-        ? model.estimateInputs.requiresPreparedInputs
-          ? 'The selected input mode needs a prepared input, such as a first frame or reference image.'
-          : null
-        : unavailableReason,
+      label,
+      duration: matchingModel ? durationLabel(model) : '—',
+      available: Boolean(matchingModel),
     };
   });
 }
 
 /** Parameters valid for the current model and selected input mode. */
 export function enabledParameters(
-  model: ShotVideoTakeModelChoiceReport | null
+  model: ShotVideoTakeModelReport | null
 ): ShotVideoTakeParameterReport[] {
   return model?.parameters ?? [];
 }
@@ -174,20 +188,11 @@ export function formatEstimateUsd(value: number | null | undefined): string {
 }
 
 export function defaultModelForInputMode(
-  models: ShotVideoTakeModelListReport,
+  models: ShotVideoTakeModelReport[],
   inputMode: ShotVideoTakeInputModeId
 ): ShotVideoTakeModelChoice | undefined {
-  const defaultModel = models.models.find(
-    (model) =>
-      model.modelChoice === models.defaultModelChoice &&
-      model.available &&
-      model.supportedInputModes.includes(inputMode)
-  );
-  if (defaultModel) {
-    return defaultModel.modelChoice;
-  }
-  const match = models.models.find(
-    (model) => model.available && model.supportedInputModes.includes(inputMode)
+  const match = models.find(
+    (model) => model.supportedInputModes.includes(inputMode)
   );
   return match?.modelChoice;
 }

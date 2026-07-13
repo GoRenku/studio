@@ -1,152 +1,74 @@
 # Shot Video Take-Owned Media Ownership
 
-Date: 2026-07-07
+Date: 2026-07-12
 
 Status: accepted
 
 Role: architecture decision
 
-## Context
-
-Shot Video Takes can use several kinds of media during production:
-
-- take-owned generated or imported inputs, such as Video Prompt Sheets, first
-  frames, last frames, and shot reference images;
-- final generated take videos;
-- non-owned project references, such as Cast Character Sheets, Location Sheets,
-  Lookbook Sheets, and Scene Dialogue Audio takes.
-
-These concepts must not share one lifecycle. A user expects deleting one take
-to delete that take's own workspace, not to remove references from another
-active take.
-
-A development-project failure exposed the boundary problem. A copied take
-iteration had its own `scene_shot_video_take_media_input` row for a Video
-Prompt Sheet, but the row reused the source take's `assetId` and `assetFileId`.
-When another copied take was discarded, the Trash lifecycle marked that shared
-asset/file discarded. The active take still had a selected input row, but Core
-correctly hid it because active media reads reject discarded assets and files.
-
-The file bytes still existed. The durable ownership graph was wrong.
-
 ## Decision
 
-Shot Video Take-owned media must not be shared between active takes.
+Shot Video Take-owned media and reusable project references have different
+lifecycle ownership.
 
-When a take iteration copies selected take-owned media, Core must create new
-asset/file ownership for the new take. That copy includes:
+Take-owned media consists of:
 
-- a new `asset` row;
-- new `asset_file` rows;
-- distinct project-relative file paths;
-- copied file bytes;
-- media input or video rows pointing to the copied asset/file ids.
+- the final video attached through the focused `shot.video-take` command;
+- an exact generated reference revision stored only in the Take generic spec
+  when that asset has no Cast, Location, Lookbook, Scene, Sequence, or Project
+  relationship.
 
-The copied asset can preserve provenance metadata from the source media, but it
-is not the same owned asset. It belongs to the new take's production workspace.
-
-Deleting a take may discard only media that is exclusively owned by that take.
-If Core detects that a take-owned media asset or file is still referenced by
-another active take input or take video, normal deletion must not discard that
-shared asset. Shared active ownership of take-owned media is invalid state and
-must be reported through structured diagnostics or repaired through a deliberate
-current-contract repair path.
-
-Non-owned project references are different. Copying a take may copy selection
-state for Cast Character Sheets, Location Sheets, Lookbook Sheets, Dialogue
-Audio, and other project-owned references. It must not copy or discard the
-underlying referenced assets.
-
-## Ownership Rules
-
-### Take-Owned Media
-
-Take-owned media is part of a single Shot Video Take's production workspace.
-Current examples include:
-
-- `video-prompt-sheet` inputs;
-- `first-frame` inputs;
-- `last-frame` inputs;
-- `reference-image` inputs created for shot-video production;
-- generated dialogue audio when it is take-owned shot production media;
-- final `shot.video-take` video media.
-
-Take-owned media can be discarded with its owning take only when no other active
-owner references the same asset/file.
-
-### Non-Owned References
-
-Non-owned references are selected or included by a take, but owned elsewhere in
-the project. Current examples include:
+Reusable references remain owned by their existing domains:
 
 - Cast Character Sheets;
 - Location Sheets;
-- Lookbook Sheets;
+- selected Lookbook Sheets;
 - Scene Dialogue Audio takes;
-- project, scene, cast, location, and visual-language assets resolved through
-  dependency selectors.
+- other exact assets with an active project-domain relationship.
 
-Deleting a take removes only the take's selection or inclusion state for these
-references. It must not discard the referenced assets or files.
+The active `shot.video-take` spec stores reference selection and inclusion. It
+does not transfer ownership of a reusable domain asset to the Take.
+
+## Persistence
+
+Final video ownership is recorded by `scene_shot_video_take_video`. Exact
+generation references are recorded in `media_generation_spec.references_json`.
+The pre-cutover Shot media-input tables were consumed by migration 0052 and
+removed by migration 0053; current runtime code does not recognize or write
+them.
+
+Final video attachment creates the Asset and AssetFile without a synthetic
+Scene relationship. A matching Renku receipt preserves the real generation run
+as provenance. An external final video has no synthetic run or provenance.
+
+Image Revision of an exact Shot reference creates a new exclusive Asset and
+AssetFile, updates the exact spec selection, and preserves the actual revision
+run. It does not create a broad Scene asset relationship.
+
+## Trash Rules
+
+Discarding a Take is recoverable. Core discards:
+
+- the Take row and ordered Shot membership;
+- the final-video ownership row;
+- final video files exclusively owned by that Take;
+- exact no-owner reference assets used only by that Take spec.
+
+Core does not discard reusable references with another domain owner. If an
+exclusive asset/file is referenced by another active Take spec or final-video
+row, deletion fails with a structured ownership diagnostic before changing
+durable state. There is no repair compatibility command; invalid shared
+take-owned state must be corrected by attaching distinct current media.
+
+Restore reinstates the same Take, membership, conflict-free picked state, final
+video, and exclusive files. Empty Trash can then move only files with no active
+owner.
 
 ## Ownership Boundary
 
-This rule belongs in `packages/core`.
+These rules belong in Core. Studio routes and CLI handlers call focused Core
+commands; React and Skills do not classify ownership, copy canonical media, or
+decide what deletion may cascade to.
 
-Core owns:
-
-- take-owned media classification;
-- take iteration copy behavior;
-- project file copy behavior for take-owned media;
-- prepared-input state updates when copied media receives new asset/file ids;
-- Trash lifecycle safety checks;
-- structured diagnostics for invalid shared ownership;
-- deliberate repair for already-corrupted development data.
-
-Studio server handlers, Studio React components, CLI handlers, and agents must
-not implement their own take-owned media deletion rules. They should call
-focused Core commands and render or format Core responses.
-
-## Consequences
-
-- A copied take iteration with a selected Video Prompt Sheet receives its own
-  prompt-sheet asset/file.
-- Deleting a source take cannot make a copied take lose its prompt-sheet
-  preview.
-- Deleting a copied take cannot discard the source take's prompt-sheet media.
-- Empty Trash can safely move discarded take-owned files because active takes
-  keep distinct file paths.
-- Non-owned references remain shared project assets and are not duplicated per
-  take.
-- Existing development data with shared take-owned assets requires a deliberate
-  repair. Runtime code should not keep compatibility branches that treat shared
-  take-owned assets as a supported shape.
-
-The current repair surface is `renku take repair-owned-media`. It scans active
-Shot Video Take-owned input rows, deep-copies shared active take-owned
-asset/files for every owner except one retained original owner, updates input
-rows and prepared input state, and returns a structured report of changed input,
-take, asset, and asset file ids.
-
-Project file paths for take-owned media are governed by
-`project-asset-storage-conventions.md`. The current path shape is:
-
-```text
-shots/<sequence-name>/<scene-name>/<take-name>-<nn>/
-```
-
-Older references to `generated/media/scene-shot-video-takes/<take-id>/` are
-superseded by that decision.
-
-## Implementation Guidance
-
-The implementation plan is
-`../../plans/active/0121-shot-video-take-owned-media-copy-and-trash.md`.
-
-Relevant current architecture references:
-
-- `media-generation.md`
-- `reference/media-generation.md`
-- `reference/recoverable-discard-and-trash.md`
-- `shot-video-take-structure-modes.md`
-- `project-asset-storage-conventions.md`
+Project file paths remain governed by
+`project-asset-storage-conventions.md`.

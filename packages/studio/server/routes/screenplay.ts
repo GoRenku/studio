@@ -1,15 +1,13 @@
 import {
-  type ShotVideoTakeInputModeId,
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
 } from '@gorenku/studio-core/server';
+import type { ShotVideoTakeGenerationSetup } from '@gorenku/studio-core/client';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import {
   readAssetFileResponse,
-  readShotVideoTakeInputFileResponse,
-  readShotVideoTakeVideoFileResponse,
 } from '../http/asset-file-response.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import {
@@ -21,31 +19,18 @@ import {
   toSceneNarrativeResourceResponse,
   toSceneShotListResourceResponse,
   toSceneShotVideoTakeCreateReportResponse,
-  toSceneShotVideoTakeEditContextResponse,
   toSceneShotVideoTakeListReportResponse,
-  toShotVideoTakeProductionContextResponse,
+  toShotVideoTakeWorkspaceResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
 import { readSceneShotVideoTakeDirectionRequest } from '../http/scene-shot-direction-request.js';
 import { readCastMemberVoiceOverRequest } from '../http/cast-member-request.js';
 import {
-  readShotCastCharacterSheetReferenceRequest,
-  readShotLocationSheetReferenceRequest,
-  readShotLookbookReferenceRequest,
-  readShotReferenceInclusionRequest,
   readSceneShotVideoTakeCreateRequest,
   readSceneShotVideoTakePickRequest,
-  readSceneShotVideoTakeProductionRequest,
   readSceneShotVideoTakeShotsRequest,
   readSceneShotVideoTakeStructureModeRequest,
-  readTakeDialogueAudioSelectionRequest,
-  readShotVideoTakeProductionPlanRequest,
 } from '../http/scene-shot-video-take-production-request.js';
-import {
-  readShotVideoTakeInputClearRequest,
-  readShotVideoTakeInputDeleteRequest,
-  readShotVideoTakeInputSelectRequest,
-} from '../http/scene-shot-video-take-input-request.js';
 import {
   readSceneDialogueAudioEstimateRequest,
   readSceneDialogueAudioGenerateRequest,
@@ -249,7 +234,7 @@ export function createScreenplayRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const sceneId = c.req.param('sceneId') as string;
-        const context = await projectData.readSceneDialogueAudioContext({
+        const context = await projectData.readSceneDialogueAudioWorkspace({
           projectName,
           sceneId,
         });
@@ -343,10 +328,9 @@ export function createScreenplayRoute({
           const dialogueId = c.req.param('dialogueId') as string;
           const takeId = c.req.param('takeId') as string;
           const assetFileId = c.req.param('assetFileId') as string;
-          const context = await projectData.readSceneDialogueAudioContext({
+          const context = await projectData.readSceneDialogueAudioWorkspace({
             projectName,
             sceneId,
-            dialogueId,
           });
           const take = context.audioByDialogueId[dialogueId]?.takes.find(
             (candidate) =>
@@ -375,7 +359,7 @@ export function createScreenplayRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const sceneId = c.req.param('sceneId') as string;
-        const report = await projectData.listSceneShotVideoTakes({
+        const report = await projectData.listShotVideoTakes({
           projectName,
           sceneId,
         });
@@ -394,7 +378,7 @@ export function createScreenplayRoute({
           const request = readSceneShotVideoTakeCreateRequest(
             await c.req.json()
           );
-          const report = await projectData.createSceneShotVideoTake({
+          const report = await projectData.createShotVideoTake({
             projectName,
             sceneId,
             shotListId: request.shotListId,
@@ -414,50 +398,22 @@ export function createScreenplayRoute({
         const projectName = c.req.param('projectName') as string;
         const sceneId = c.req.param('sceneId') as string;
         const takeId = c.req.param('takeId') as string;
-        const requestedInputModeId = parseShotVideoTakeInputModeQuery(
-          c.req.query('inputModeId')
-        );
-        const context = await projectData.buildShotVideoTakeContext({
+        const selectedShotId = c.req.query('selectedShotId');
+        const workspace = await projectData.readShotVideoTakeWorkspace({
           projectName,
           sceneId,
-          takeId: takeId,
-        });
-        const models = await projectData.listShotVideoTakeModels({
-          projectName,
-          sceneId,
-          takeId: takeId,
-          inputModeId:
-            requestedInputModeId ??
-            context.take.state.production.inputModeId ??
-            context.defaults.inputModeId,
+          takeId,
+          ...(selectedShotId
+            ? { selectedShotId }
+            : {}),
         });
         return c.json({
-          context: toShotVideoTakeProductionContextResponse(projectName, context),
-          models,
+          workspace: toShotVideoTakeWorkspaceResponse(projectName, workspace),
         });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
     })
-    .get(
-      '/screenplay/scenes/:sceneId/takes/:takeId/video/files/:assetFileId',
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const assetFileId = c.req.param('assetFileId') as string;
-          return readShotVideoTakeVideoFileResponse(projectData, {
-            projectName,
-            sceneId,
-            takeId,
-            assetFileId,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
     .delete(
       '/screenplay/scenes/:sceneId/takes/:takeId',
       requireToken,
@@ -466,7 +422,7 @@ export function createScreenplayRoute({
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
           const takeId = c.req.param('takeId') as string;
-          const report = await projectData.deleteSceneShotVideoTake({
+          const report = await projectData.discardShotVideoTake({
             projectName,
             sceneId,
             takeId,
@@ -488,7 +444,7 @@ export function createScreenplayRoute({
           const request = readSceneShotVideoTakePickRequest(
             await c.req.json()
           );
-          const report = await projectData.updateSceneShotVideoTakePick({
+          const report = await projectData.setShotVideoTakePicked({
             projectName,
             sceneId,
             takeId,
@@ -500,53 +456,27 @@ export function createScreenplayRoute({
         }
       }
     )
-    .get(
-      '/screenplay/scenes/:sceneId/takes/:takeId/edit-context',
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const editContext = await projectData.readSceneShotVideoTakeEditContext({
-            projectName,
-            sceneId,
-            takeId: takeId,
-          });
-          return c.json({
-            editContext: toSceneShotVideoTakeEditContextResponse(
-              projectName,
-              editContext
-            ),
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
     .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId',
+      '/screenplay/scenes/:sceneId/takes/:takeId/generation',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
           const takeId = c.req.param('takeId') as string;
-          const { production } = readSceneShotVideoTakeProductionRequest(
-            await c.req.json()
-          );
-          const context =
-            await projectData.updateSceneShotVideoTakeProduction({
-              projectName,
-              sceneId,
-              takeId: takeId,
-              production,
-            });
+          const body = await c.req.json();
+          const setup = readGenerationSetup(body);
+          const selectedShotId = readOptionalSelectedShotId(body);
+          const report = await projectData.setShotVideoTakeGenerationSpec({
+            projectName,
+            sceneId,
+            takeId,
+            setup,
+            ...(selectedShotId ? { selectedShotId } : {}),
+          });
           return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
+            workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
+            resourceKeys: report.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -564,18 +494,15 @@ export function createScreenplayRoute({
           const request = readSceneShotVideoTakeShotsRequest(
             await c.req.json()
           );
-          const context = await projectData.updateSceneShotVideoTakeShots({
+          const report = await projectData.replaceShotVideoTakeShots({
             projectName,
             sceneId,
-            takeId: takeId,
+            takeId,
             shotIds: request.shotIds,
           });
           return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
+            workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
+            resourceKeys: report.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -593,18 +520,15 @@ export function createScreenplayRoute({
           const direction = readSceneShotVideoTakeDirectionRequest(
             await c.req.json()
           );
-          const context = await projectData.updateSceneShotVideoTakeDirection({
+          const report = await projectData.setShotVideoTakeDirection({
             projectName,
             sceneId,
-            takeId: takeId,
+            takeId,
             direction,
           });
           return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
+            workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
+            resourceKeys: report.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -623,20 +547,17 @@ export function createScreenplayRoute({
           const direction = readSceneShotVideoTakeDirectionRequest(
             await c.req.json()
           );
-          const context =
-            await projectData.updateSceneShotVideoTakeDirection({
+          const report =
+            await projectData.setShotVideoTakeDirection({
               projectName,
               sceneId,
-              takeId: takeId,
+              takeId,
               shotId,
               direction,
             });
           return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
+            workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
+            resourceKeys: report.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -654,45 +575,18 @@ export function createScreenplayRoute({
           const request = readSceneShotVideoTakeStructureModeRequest(
             await c.req.json()
           );
-          const context =
-            await projectData.updateSceneShotVideoTakeStructureMode({
+          const report =
+            await projectData.setShotVideoTakeStructure({
               projectName,
               sceneId,
-              takeId: takeId,
+              takeId,
               mode: request.mode,
               sourceShotId: request.sourceShotId,
             });
           return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
+            workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
+            resourceKeys: report.resourceKeys,
           });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .post(
-      '/screenplay/scenes/:sceneId/takes/:takeId/plan',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const { production, inputPolicy, selectedShotId } =
-            readShotVideoTakeProductionPlanRequest(await c.req.json());
-          const report = await projectData.readShotVideoTakeProductionPlan({
-            projectName,
-            sceneId,
-            takeId: takeId,
-            production,
-            inputPolicy,
-            selectedShotId,
-          });
-          return c.json({ report });
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -706,14 +600,12 @@ export function createScreenplayRoute({
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
           const takeId = c.req.param('takeId') as string;
-          const { production } = readSceneShotVideoTakeProductionRequest(
-            await c.req.json()
-          );
-          const estimate = await projectData.estimateShotVideoTakeProduction({
+          const setup = readGenerationSetup(await c.req.json());
+          const estimate = await projectData.estimateShotVideoTakeGeneration({
             projectName,
             sceneId,
-            takeId: takeId,
-            production,
+            takeId,
+            setup,
           });
           return c.json({ estimate });
         } catch (error) {
@@ -721,260 +613,28 @@ export function createScreenplayRoute({
         }
       }
     )
-    .get(
-      '/screenplay/scenes/:sceneId/takes/:takeId/inputs/:inputId/files/:assetFileId',
+    .patch(
+      '/screenplay/scenes/:sceneId/takes/:takeId/generation/references',
+      requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const sceneId = c.req.param('sceneId') as string;
           const takeId = c.req.param('takeId') as string;
-          const inputId = c.req.param('inputId') as string;
-          const assetFileId = c.req.param('assetFileId') as string;
-          return await readShotVideoTakeInputFileResponse(projectData, {
+          const request = readGenerationReferenceUpdate(await c.req.json());
+          const report = await projectData.setShotVideoTakeGenerationReference({
             projectName,
             sceneId,
             takeId,
-            inputId,
-            assetFileId,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .post(
-      '/screenplay/scenes/:sceneId/takes/:takeId/inputs/select',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readShotVideoTakeInputSelectRequest(
-            await c.req.json()
-          );
-          const context = await projectData.selectShotVideoTakeInput({
-            projectName,
-            sceneId,
-            takeId: takeId,
-            inputId: request.inputId,
+            selectionId: request.selectionId,
+            included: request.included,
+            ...(request.selectedShotId
+              ? { selectedShotId: request.selectedShotId }
+              : {}),
           });
           return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .post(
-      '/screenplay/scenes/:sceneId/takes/:takeId/inputs/clear',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readShotVideoTakeInputClearRequest(await c.req.json());
-          const context = await projectData.clearShotVideoTakeInputSelection({
-            projectName,
-            sceneId,
-            takeId: takeId,
-            kind: request.kind,
-            // Core owns subject-kind/subject-id requirements; the reader only
-            // forwards what the client sent (0040/0041).
-            subjectKind: request.subjectKind!,
-            subjectId: request.subjectId!,
-          });
-          return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .delete(
-      '/screenplay/scenes/:sceneId/takes/:takeId/inputs/:inputId',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const inputId = c.req.param('inputId') as string;
-          readShotVideoTakeInputDeleteRequest(await c.req.json());
-          const context = await projectData.deleteShotVideoTakeInput({
-            projectName,
-            sceneId,
-            takeId: takeId,
-            inputId,
-          });
-          return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            recovery: context.recovery,
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/character-sheets',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readShotCastCharacterSheetReferenceRequest(
-            await c.req.json()
-          );
-          const context =
-            await projectData.updateSceneShotVideoTakeCharacterSheetSelection({
-              projectName,
-              sceneId,
-              takeId,
-              shotId: request.shotId,
-              castMemberId: request.castMemberId,
-              assetId: request.assetId,
-            });
-          return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/location-sheets',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readShotLocationSheetReferenceRequest(await c.req.json());
-          const context =
-            await projectData.updateSceneShotVideoTakeLocationSheetSelection({
-              projectName,
-              sceneId,
-              takeId,
-              shotId: request.shotId,
-              locationId: request.locationId,
-              assetId: request.assetId,
-            });
-          return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/lookbook-sheets',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readShotLookbookReferenceRequest(await c.req.json());
-          const context =
-            await projectData.updateSceneShotVideoTakeLookbookSheetSelection({
-              projectName,
-              sceneId,
-              takeId,
-              shotId: request.shotId,
-              lookbookSheetId: request.lookbookSheetId,
-            });
-          return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/reference-selections/dialogue-audio',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readTakeDialogueAudioSelectionRequest(await c.req.json());
-          const context =
-            await projectData.updateSceneShotVideoTakeDialogueAudioSelection({
-              projectName,
-              sceneId,
-              takeId,
-              shotId: request.shotId,
-              dialogueId: request.dialogueId,
-              dialogueAudioTakeId: request.takeId,
-            });
-          return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .patch(
-      '/screenplay/scenes/:sceneId/takes/:takeId/reference-inclusions',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const sceneId = c.req.param('sceneId') as string;
-          const takeId = c.req.param('takeId') as string;
-          const request = readShotReferenceInclusionRequest(await c.req.json());
-          const context = await projectData.updateSceneShotVideoTakeReferenceInclusion({
-            projectName,
-            sceneId,
-            takeId,
-            shotId: request.shotId,
-            dependencyId: request.dependencyId,
-            inclusion: request.inclusion,
-          });
-          return c.json({
-            context: toShotVideoTakeProductionContextResponse(
-              projectName,
-              context
-            ),
-            resourceKeys: context.resourceKeys,
+            workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
+            resourceKeys: report.resourceKeys,
           });
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -998,26 +658,70 @@ export function createScreenplayRoute({
     });
 }
 
-function parseShotVideoTakeInputModeQuery(
-  raw: string | undefined
-): ShotVideoTakeInputModeId | undefined {
-  if (!raw) {
+function readGenerationSetup(value: unknown): ShotVideoTakeGenerationSetup {
+  const body = requireRecord(value, 'Request body');
+  const setup = requireRecord(body.setup, 'setup');
+  const inputModeId = setup.inputModeId;
+  if (
+    inputModeId !== 'text-only' &&
+    inputModeId !== 'first-frame' &&
+    inputModeId !== 'first-last-frame' &&
+    inputModeId !== 'reference' &&
+    inputModeId !== 'source-video-reference'
+  ) {
+    throw requestError('Generation setup inputModeId is invalid.');
+  }
+  const parameterValues = requireRecord(setup.parameterValues, 'setup.parameterValues');
+  if (setup.modelChoice !== undefined && typeof setup.modelChoice !== 'string') {
+    throw requestError('Generation setup modelChoice must be a string.');
+  }
+  return {
+    inputModeId,
+    ...(typeof setup.modelChoice === 'string'
+      ? { modelChoice: setup.modelChoice }
+      : {}),
+    parameterValues: parameterValues as ShotVideoTakeGenerationSetup['parameterValues'],
+  };
+}
+
+function readGenerationReferenceUpdate(value: unknown): {
+  selectionId: string;
+  included: boolean;
+  selectedShotId?: string;
+} {
+  const body = requireRecord(value, 'Request body');
+  if (typeof body.selectionId !== 'string' || typeof body.included !== 'boolean') {
+    throw requestError('Generation reference update requires selectionId and included.');
+  }
+  const selectedShotId = readOptionalSelectedShotId(body);
+  return {
+    selectionId: body.selectionId,
+    included: body.included,
+    ...(selectedShotId ? { selectedShotId } : {}),
+  };
+}
+
+function readOptionalSelectedShotId(value: unknown): string | undefined {
+  const body = requireRecord(value, 'Request body');
+  if (body.selectedShotId === undefined) {
     return undefined;
   }
-  if (
-    raw === 'text-only' ||
-    raw === 'first-frame' ||
-    raw === 'first-last-frame' ||
-    raw === 'reference' ||
-    raw === 'source-video-reference'
-  ) {
-    return raw;
+  if (typeof body.selectedShotId !== 'string' || !body.selectedShotId.trim()) {
+    throw requestError('selectedShotId must be a non-empty string.');
   }
-  throw createStructuredError({
+  return body.selectedShotId.trim();
+}
+
+function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw requestError(`${label} must be an object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function requestError(message: string) {
+  return createStructuredError({
     code: 'STUDIO_SERVER346',
-    message: 'Unsupported shot video take input mode query parameter.',
-    issues: [],
-    suggestion:
-      'Pass a supported inputModeId value such as text-only, first-frame, first-last-frame, reference, or source-video-reference.',
+    message,
   });
 }

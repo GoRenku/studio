@@ -1,19 +1,19 @@
 import type {
-  StudioGenerationPreview,
-  StudioGenerationPreviewReference,
+  GenerationPreviewResource,
+  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
-import type { UpdateStudioGenerationPreviewSpecInput } from '@/services/studio-generation-preview-api';
+import type { UpdateGenerationPreviewResourceSpecInput } from '@/services/studio-generation-preview-api';
 
 export interface GenerationPreviewDraft {
   promptDraft: {
     authoredText: string;
     negativeText?: string;
   };
-  referenceSelectionDraftByDependencyId: Record<string, boolean>;
+  referenceSelectionDraftBySelectionId: Record<string, boolean>;
 }
 
 export function createGenerationPreviewDraft(
-  preview: StudioGenerationPreview
+  preview: GenerationPreviewResource
 ): GenerationPreviewDraft {
   return {
     promptDraft: {
@@ -22,31 +22,31 @@ export function createGenerationPreviewDraft(
         ? { negativeText: preview.finalPrompt.negativeText }
         : {}),
     },
-    referenceSelectionDraftByDependencyId: Object.fromEntries(
+    referenceSelectionDraftBySelectionId: Object.fromEntries(
       preview.references.flatMap((reference) => {
-        const dependencyId = reference.selectionControl?.dependencyId;
-        return dependencyId ? [[dependencyId, reference.selected]] : [];
+        const selectionId = reference.selectionControl?.selectionId;
+        return selectionId ? [[selectionId, reference.selected]] : [];
       })
     ),
   };
 }
 
 export function generationPreviewReferenceSelected(
-  reference: StudioGenerationPreviewReference,
+  reference: GenerationPreviewResourceReference,
   draft: GenerationPreviewDraft
 ): boolean {
   if (reference.selectionControl?.required) {
     return true;
   }
-  const dependencyId = reference.selectionControl?.dependencyId;
-  return dependencyId &&
-    dependencyId in draft.referenceSelectionDraftByDependencyId
-    ? draft.referenceSelectionDraftByDependencyId[dependencyId]!
+  const selectionId = reference.selectionControl?.selectionId;
+  return selectionId &&
+    selectionId in draft.referenceSelectionDraftBySelectionId
+    ? draft.referenceSelectionDraftBySelectionId[selectionId]!
     : reference.selected;
 }
 
 export function generationPreviewDraftIsDirty(
-  preview: StudioGenerationPreview,
+  preview: GenerationPreviewResource,
   draft: GenerationPreviewDraft
 ): boolean {
   if (
@@ -64,10 +64,10 @@ export function generationPreviewDraftIsDirty(
 }
 
 export function buildGenerationPreviewUpdateRequest(
-  preview: StudioGenerationPreview,
+  preview: GenerationPreviewResource,
   draft: GenerationPreviewDraft
 ): Pick<
-  UpdateStudioGenerationPreviewSpecInput,
+  UpdateGenerationPreviewResourceSpecInput,
   'prompt' | 'referenceSelections'
 > {
   return {
@@ -89,7 +89,7 @@ export function buildGenerationPreviewUpdateRequest(
       }
       return [
         {
-          dependencyId: control.dependencyId,
+          selectionId: control.selectionId,
           selected: generationPreviewReferenceSelected(reference, draft),
         },
       ];

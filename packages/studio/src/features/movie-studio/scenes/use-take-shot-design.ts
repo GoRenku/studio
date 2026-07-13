@@ -8,8 +8,8 @@ import {
   type DebouncedSaveStatus,
 } from '@/hooks/use-debounced-autosave';
 import {
-  updateSceneShotVideoTakeDirection,
-  type ShotVideoTakeProductionMutation,
+  setShotVideoTakeDirection,
+  type ShotVideoTakeWorkspaceMutation,
 } from '@/services/studio-shot-video-takes-api';
 
 export interface UseTakeShotDesignInput {
@@ -18,7 +18,7 @@ export interface UseTakeShotDesignInput {
   takeId?: string | null;
   shotId?: string;
   initial: SceneShotVideoTakeDirection | undefined;
-  onSaved?: (result: ShotVideoTakeProductionMutation) => void;
+  onSaved?: (result: ShotVideoTakeWorkspaceMutation) => void;
 }
 
 export interface UseTakeShotDesignResult {
@@ -40,7 +40,7 @@ export function useTakeShotDesign(
       if (!takeId) {
         return Promise.resolve(null);
       }
-      return updateSceneShotVideoTakeDirection(
+      return setShotVideoTakeDirection(
         projectName,
         sceneId,
         takeId,
@@ -68,13 +68,5 @@ export function useTakeShotDesign(
 }
 
 function emptyDirection(): SceneShotVideoTakeDirection {
-  return {
-    referenceSelections: {
-      dependencyInclusions: {},
-      selectedCharacterSheetAssetIds: {},
-      selectedLocationSheetAssetIds: {},
-      selectedLookbookSheetIds: [],
-      selectedDialogueAudioTakeIds: {},
-    },
-  };
+  return {};
 }

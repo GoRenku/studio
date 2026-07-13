@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import type { StudioGenerationPreview } from '@gorenku/studio-core/client';
+import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationPreviewDialogHost } from './generation-preview-dialog-host';
@@ -62,7 +62,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.character-sheet',
+        purpose: 'cast.storyboard-character-sheet',
         title: 'Cast Preview',
       })
     );
@@ -196,7 +196,7 @@ describe('GenerationPreviewDialogHost', () => {
       ok: true,
       json: async () => ({
         preview: previewFixture({
-          purpose: 'cast.character-sheet',
+          purpose: 'cast.storyboard-character-sheet',
           title: 'Character Sheet Preview',
           referenceLabel: 'Storyboard Lookbook Sheet',
           selected: false,
@@ -211,7 +211,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.character-sheet',
+        purpose: 'cast.storyboard-character-sheet',
         title: 'Character Sheet Preview',
         referenceLabel: 'Storyboard Lookbook Sheet',
         selected: true,
@@ -254,7 +254,7 @@ describe('GenerationPreviewDialogHost', () => {
               authoredText: 'Updated production prompt.\nSecond line.',
             },
             referenceSelections: [
-              { dependencyId: 'dependency_style', selected: false },
+              { selectionId: 'selection_style', selected: false },
             ],
           }),
         })
@@ -280,6 +280,9 @@ describe('GenerationPreviewDialogHost', () => {
       })
     );
     expect(await screen.findByText('Shot Video Generation Preview')).toBeTruthy();
+    await act(async () => {
+      selectTab('References');
+    });
     expect(screen.getByText('Reopened Storyboard Lookbook Sheet')).toBeTruthy();
   });
 
@@ -297,7 +300,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.character-sheet',
+        purpose: 'cast.storyboard-character-sheet',
         title: 'Character Sheet Preview',
         editableReference: true,
       }),
@@ -331,7 +334,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.character-sheet',
+        purpose: 'cast.storyboard-character-sheet',
         title: 'Required Reference Preview',
         editableReference: true,
         requiredReference: true,
@@ -441,14 +444,16 @@ function selectTab(name: string): void {
   fireEvent.click(tab);
 }
 
-async function dispatchPreview(preview: StudioGenerationPreview): Promise<void> {
+let previewEventSequence = 0;
+
+async function dispatchPreview(preview: GenerationPreviewResource): Promise<void> {
   await act(async () => {
     window.dispatchEvent(
       new CustomEvent('renku:generation-preview-requested', {
         detail: {
           projectName: preview.project.name,
           preview,
-          eventId: 'studio_event_test',
+          eventId: `studio_event_test_${++previewEventSequence}`,
           createdAt: '2026-07-02T10:00:00.000Z',
         },
       })
@@ -457,7 +462,7 @@ async function dispatchPreview(preview: StudioGenerationPreview): Promise<void> 
 }
 
 function previewFixture(input: {
-  purpose: StudioGenerationPreview['purpose'];
+  purpose: GenerationPreviewResource['purpose'];
   title: string;
   referenceLabel?: string;
   selected?: boolean;
@@ -466,10 +471,10 @@ function previewFixture(input: {
   saved?: boolean;
   authoredText?: string;
   negativeText?: string;
-  providerPreview?: StudioGenerationPreview['providerPreview'];
-  diagnostics?: StudioGenerationPreview['diagnostics'];
-  estimate?: StudioGenerationPreview['estimate'];
-}): StudioGenerationPreview {
+  providerPreview?: GenerationPreviewResource['providerPreview'];
+  diagnostics?: GenerationPreviewResource['diagnostics'];
+  estimate?: GenerationPreviewResource['estimate'];
+}): GenerationPreviewResource {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
@@ -492,9 +497,6 @@ function previewFixture(input: {
     target: {
       kind: 'sceneShotVideoTake',
       id: 'take_test0001',
-      sceneId: 'scene_test0001',
-      takeId: 'take_test0001',
-      shotIds: ['shot_test0001'],
     },
     title: input.title,
     model: {
@@ -521,14 +523,13 @@ function previewFixture(input: {
         providerToken: '@Reference1',
         assetId: 'asset_style',
         assetFileId: 'asset_file_style',
-        sourcePurpose: 'lookbook.sheet',
+        sourcePurpose: 'lookbook.storyboard-sheet',
         selected: input.selected ?? true,
         selectionControl: input.editableReference
           ? {
-              dependencyId: 'dependency_style',
+              selectionId: 'selection_style',
               required: input.requiredReference ?? false,
               defaultIncluded: true,
-              inclusionOverride: null,
               editable: true,
             }
           : undefined,

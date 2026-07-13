@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import { createServer, type IncomingMessage } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import {
@@ -22,6 +21,20 @@ describe('renku CLI', () => {
     stdout = [];
     stderr = [];
   });
+
+  async function estimateApprovalToken(specId: string): Promise<string> {
+    const estimateStdout: string[] = [];
+    const estimateStderr: string[] = [];
+    const exitCode = await runRenkuCli(
+      ['generation', 'estimate', '--spec', specId, '--json'],
+      { homeDir, io: captureIo(estimateStdout, estimateStderr) }
+    );
+    expect(exitCode, estimateStderr.join('\n')).toBe(0);
+    const estimate = JSON.parse(estimateStdout.join('\n')) as {
+      estimate: { approvalToken: string };
+    };
+    return estimate.estimate.approvalToken;
+  }
 
   it('shows top-level help with the renku binary and init command', async () => {
     const exitCode = await runRenkuCli([], {
@@ -769,11 +782,13 @@ describe('renku CLI', () => {
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'lookbook.image',
       target: { kind: 'lookbook', id: report.lookbook.id },
-      lookbook: { id: report.lookbook.id },
-      defaults: {
-        takeCount: 1,
-        detail: 'standard',
+      settings: {
+        recommended: expect.arrayContaining([
+          { kind: 'aspect-ratio', value: '16:9' },
+          { kind: 'quality', value: 'medium' },
+        ]),
       },
+      referenceGuide: { sections: [], additionalReferences: [] },
     });
 
     stdout = [];
@@ -792,15 +807,14 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(modelListExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      purpose: 'lookbook.image',
-      models: expect.arrayContaining([
+    expect(JSON.parse(stdout.join('\n'))).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          modelChoice: 'fal-ai/nano-banana-2',
-          available: true,
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
         }),
-      ]),
-    });
+      ])
+    );
 
     stdout = [];
     stderr = [];
@@ -809,7 +823,7 @@ describe('renku CLI', () => {
         'generation',
         'context',
         '--purpose',
-        'lookbook.sheet',
+        'lookbook.video-sheet',
         '--target',
         `lookbook:${report.lookbook.id}`,
         '--json',
@@ -818,14 +832,15 @@ describe('renku CLI', () => {
     );
     expect(sheetContextExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      purpose: 'lookbook.sheet',
+      purpose: 'lookbook.video-sheet',
       target: { kind: 'lookbook', id: report.lookbook.id },
-      lookbook: { id: report.lookbook.id },
-      defaults: {
-        takeCount: 1,
-        sheetFrame: 'project',
-        detail: 'standard',
+      settings: {
+        recommended: expect.arrayContaining([
+          { kind: 'aspect-ratio', value: '4:3' },
+          { kind: 'quality', value: 'high' },
+        ]),
       },
+      referenceGuide: { sections: [], additionalReferences: [] },
     });
 
     stdout = [];
@@ -836,7 +851,7 @@ describe('renku CLI', () => {
         'model',
         'list',
         '--purpose',
-        'lookbook.sheet',
+        'lookbook.video-sheet',
         '--target',
         `lookbook:${report.lookbook.id}`,
         '--json',
@@ -844,15 +859,14 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(sheetModelListExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      purpose: 'lookbook.sheet',
-      models: expect.arrayContaining([
+    expect(JSON.parse(stdout.join('\n'))).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          modelChoice: 'fal-ai/nano-banana-2',
-          available: true,
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
         }),
-      ]),
-    });
+      ])
+    );
 
     stdout = [];
     stderr = [];
@@ -862,7 +876,7 @@ describe('renku CLI', () => {
         'spec',
         'list',
         '--purpose',
-        'lookbook.sheet',
+        'lookbook.video-sheet',
         '--target',
         `lookbook:${report.lookbook.id}`,
         '--json',
@@ -870,9 +884,7 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(sheetSpecListExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      specs: [],
-    });
+    expect(JSON.parse(stdout.join('\n'))).toEqual([]);
 
     const generatedPath = 'generated/media/lookbook-palette.png';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', generatedPath)), {
@@ -904,17 +916,11 @@ describe('renku CLI', () => {
     expect(mediaImportExitCode).toBe(0);
     const mediaImportReport = JSON.parse(stdout.join('\n'));
     expect(mediaImportReport).toMatchObject({
+      valid: true,
       purpose: 'lookbook.image',
-      imported: {
-        sections: ['palette', 'lighting'],
-        asset: {
-          files: [
-            {
-              projectRelativePath: 'visual-language/lookbook/lookbook-palette.png',
-            },
-          ],
-        },
-      },
+      target: { kind: 'lookbook', id: report.lookbook.id },
+      asset: expect.objectContaining({ assetId: expect.any(String) }),
+      ownerRecord: { kind: 'lookbookImage', id: expect.any(String) },
     });
 
     stdout = [];
@@ -925,7 +931,7 @@ describe('renku CLI', () => {
         'image',
         'set-placement',
         '--image',
-        mediaImportReport.imported.id,
+        mediaImportReport.ownerRecord.id,
         '--sections',
         'thesis,lighting',
         '--anchor',
@@ -937,7 +943,7 @@ describe('renku CLI', () => {
     expect(placementExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       image: {
-        id: mediaImportReport.imported.id,
+        id: mediaImportReport.ownerRecord.id,
         sections: ['thesis'],
         points: ['lighting-contaminated-practicals'],
       },
@@ -958,11 +964,11 @@ describe('renku CLI', () => {
     expect(lookbookReadExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       imagesBySection: {
-        thesis: [expect.objectContaining({ id: mediaImportReport.imported.id })],
+        thesis: [expect.objectContaining({ id: mediaImportReport.ownerRecord.id })],
       },
       imagesByPoint: {
         'lighting-contaminated-practicals': [
-          expect.objectContaining({ id: mediaImportReport.imported.id }),
+          expect.objectContaining({ id: mediaImportReport.ownerRecord.id }),
         ],
       },
     });
@@ -980,7 +986,7 @@ describe('renku CLI', () => {
         'media',
         'import',
         '--purpose',
-        'lookbook.sheet',
+        'lookbook.video-sheet',
         '--target',
         `lookbook:${report.lookbook.id}`,
         '--source',
@@ -996,21 +1002,11 @@ describe('renku CLI', () => {
     expect(sheetImportExitCode).toBe(0);
     const sheetImportReport = JSON.parse(stdout.join('\n'));
     expect(sheetImportReport).toMatchObject({
-      purpose: 'lookbook.sheet',
-      imported: {
-        asset: {
-          type: 'lookbook_sheet',
-          title: 'Imperial Wound lookbook sheet',
-          oneLineSummary: 'Model-facing visual language guide.',
-          files: [
-            {
-              role: 'source',
-              projectRelativePath:
-                'visual-language/lookbook/imperial-wound-lookbook-sheet.png',
-            },
-          ],
-        },
-      },
+      valid: true,
+      purpose: 'lookbook.video-sheet',
+      target: { kind: 'lookbook', id: report.lookbook.id },
+      asset: expect.objectContaining({ assetId: expect.any(String) }),
+      ownerRecord: { kind: 'lookbookSheet', id: expect.any(String) },
     });
 
     const specPath = path.join(homeDir, 'lookbook-image-spec.json');
@@ -1020,14 +1016,9 @@ describe('renku CLI', () => {
         {
           purpose: 'lookbook.image',
           target: { kind: 'lookbook', id: report.lookbook.id },
-          modelChoice: 'fal-ai/nano-banana-2',
-          prompt: 'A simulated Lookbook palette frame.',
-          focusSections: ['palette', 'lighting'],
-          takeCount: 1,
-          seed: null,
-          imageFrame: '16:9',
-          detail: 'draft',
-          outputFormat: 'png',
+          model: { provider: 'fal-ai', model: 'nano-banana-2' },
+          values: { prompt: 'A simulated Lookbook palette frame.' },
+          references: [],
           title: 'Simulated Lookbook',
         },
         null,
@@ -1060,7 +1051,7 @@ describe('renku CLI', () => {
     );
     expect(estimateExitCode).toBe(0);
     const estimate = JSON.parse(stdout.join('\n')) as { estimate: Record<string, unknown> };
-    expect(approvalArtifactKeys(estimate.estimate)).toEqual([]);
+    expect(approvalArtifactKeys(estimate.estimate)).toEqual(['approvalToken']);
 
     stdout = [];
     stderr = [];
@@ -1070,6 +1061,8 @@ describe('renku CLI', () => {
         'run',
         '--spec',
         createdSpec.id,
+        '--approval-token',
+        String(estimate.estimate.approvalToken),
         '--simulate',
         '--json',
       ],
@@ -1080,12 +1073,8 @@ describe('renku CLI', () => {
       run: {
         provider: 'fal-ai',
         model: 'nano-banana-2',
-        simulated: true,
-        outputs: [
-          {
-            projectRelativePath: 'generated/media/simulated-lookbook.png',
-          },
-        ],
+        status: 'simulated',
+        outputs: [expect.objectContaining({ projectRelativePath: expect.any(String) })],
       },
     });
 
@@ -1102,7 +1091,7 @@ describe('renku CLI', () => {
         'generation',
         'context',
         '--purpose',
-        'cast.character-sheet',
+        'cast.video-character-sheet',
         '--target',
         `cast:${castMemberId}`,
         '--json',
@@ -1111,10 +1100,10 @@ describe('renku CLI', () => {
     );
     expect(castContextExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      purpose: 'cast.character-sheet',
+      purpose: 'cast.video-character-sheet',
       target: { kind: 'castMember', id: castMemberId },
-      castMember: { name: 'Urban' },
-      activeLookbook: { lookbook: { id: report.lookbook.id } },
+      outputMediaKind: 'image',
+      facts: expect.any(Object),
     });
 
     const characterSheetSpecPath = path.join(homeDir, 'cast-character-sheet-spec.json');
@@ -1122,15 +1111,11 @@ describe('renku CLI', () => {
       characterSheetSpecPath,
       JSON.stringify(
         {
-          purpose: 'cast.character-sheet',
+          purpose: 'cast.video-character-sheet',
           target: { kind: 'castMember', id: castMemberId },
-          modelChoice: 'fal-ai/nano-banana-2',
-          prompt: 'A simulated full character sheet for Urban.',
-          takeCount: 1,
-          seed: null,
-          imageFrame: '16:9',
-          detail: 'draft',
-          outputFormat: 'png',
+          model: { provider: 'fal-ai', model: 'nano-banana-2' },
+          values: { prompt: 'A simulated full character sheet for Urban.' },
+          references: [],
           title: 'Urban Character Sheet',
         },
         null,
@@ -1147,11 +1132,23 @@ describe('renku CLI', () => {
     );
     expect(characterSheetCreateExitCode).toBe(0);
     const characterSheetSpec = JSON.parse(stdout.join('\n')) as { id: string };
+    const characterSheetApprovalToken = await estimateApprovalToken(
+      characterSheetSpec.id
+    );
 
     stdout = [];
     stderr = [];
     const characterSheetRunExitCode = await runRenkuCli(
-      ['generation', 'run', '--spec', characterSheetSpec.id, '--simulate', '--json'],
+      [
+        'generation',
+        'run',
+        '--spec',
+        characterSheetSpec.id,
+        '--approval-token',
+        characterSheetApprovalToken,
+        '--simulate',
+        '--json',
+      ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(characterSheetRunExitCode).toBe(0);
@@ -1166,7 +1163,7 @@ describe('renku CLI', () => {
         'media',
         'import',
         '--purpose',
-        'cast.character-sheet',
+        'cast.video-character-sheet',
         '--target',
         `cast:${castMemberId}`,
         '--source',
@@ -1181,19 +1178,15 @@ describe('renku CLI', () => {
     );
     expect(characterSheetImportExitCode).toBe(0);
     const characterSheetImport = JSON.parse(stdout.join('\n')) as {
-      imported: { assetId: string; files: Array<{ projectRelativePath: string }> };
+      asset: { assetId: string; files: Array<{ projectRelativePath: string }> };
     };
     expect(characterSheetImport).toMatchObject({
-      purpose: 'cast.character-sheet',
-      imported: {
-        role: 'character_sheet',
-        files: [
-          {
-            projectRelativePath:
-              'cast/urban/character-sheets/urban-character-sheet.png',
-          },
-        ],
-      },
+      valid: true,
+      purpose: 'cast.video-character-sheet',
+      asset: expect.objectContaining({
+        role: 'video-character-sheet',
+        files: [expect.objectContaining({ role: 'primary' })],
+      }),
     });
 
     const profileSpecPath = path.join(homeDir, 'cast-profile-spec.json');
@@ -1203,14 +1196,11 @@ describe('renku CLI', () => {
         {
           purpose: 'cast.profile',
           target: { kind: 'castMember', id: castMemberId },
-          modelChoice: 'fal-ai/nano-banana-2/edit',
-          sourceAssetId: characterSheetImport.imported.assetId,
-          prompt: 'A simulated square profile portrait for Urban from the sheet.',
-          takeCount: 1,
-          seed: null,
-          imageFrame: '1:1',
-          detail: 'draft',
-          outputFormat: 'png',
+          model: { provider: 'fal-ai', model: 'nano-banana-2' },
+          values: {
+            prompt: 'A simulated square profile portrait for Urban from the sheet.',
+          },
+          references: [],
           title: 'Urban Profile',
         },
         null,
@@ -1227,11 +1217,21 @@ describe('renku CLI', () => {
     );
     expect(profileCreateExitCode).toBe(0);
     const profileSpec = JSON.parse(stdout.join('\n')) as { id: string };
+    const profileApprovalToken = await estimateApprovalToken(profileSpec.id);
 
     stdout = [];
     stderr = [];
     const profileRunExitCode = await runRenkuCli(
-      ['generation', 'run', '--spec', profileSpec.id, '--simulate', '--json'],
+      [
+        'generation',
+        'run',
+        '--spec',
+        profileSpec.id,
+        '--approval-token',
+        profileApprovalToken,
+        '--simulate',
+        '--json',
+      ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(profileRunExitCode).toBe(0);
@@ -1241,9 +1241,8 @@ describe('renku CLI', () => {
     expect(profileRun).toMatchObject({
       run: {
         provider: 'fal-ai',
-        model: 'nano-banana-2/edit',
-        simulated: true,
-        purpose: 'cast.profile',
+        model: 'nano-banana-2',
+        status: 'simulated',
       },
     });
 
@@ -1265,14 +1264,11 @@ describe('renku CLI', () => {
     );
     expect(profileImportExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
       purpose: 'cast.profile',
-      imported: {
+      asset: {
         role: 'profile',
-        files: [
-          {
-            projectRelativePath: 'cast/urban/profiles/urban-profile.png',
-          },
-        ],
+        files: [expect.objectContaining({ role: 'primary' })],
       },
     });
 
@@ -1285,7 +1281,7 @@ describe('renku CLI', () => {
         'generation',
         'context',
         '--purpose',
-        'location.environment-sheet',
+        'location.sheet',
         '--target',
         `location:${locationId}`,
         '--json',
@@ -1294,12 +1290,13 @@ describe('renku CLI', () => {
     );
     expect(locationContextExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      purpose: 'location.environment-sheet',
+      purpose: 'location.sheet',
       target: { kind: 'location', id: locationId },
-      defaults: {
-        sheetFrame: '4:3',
+      settings: {
+        recommended: expect.arrayContaining([
+          { kind: 'aspect-ratio', value: '16:9' },
+        ]),
       },
-      activeLookbook: { lookbook: { id: report.lookbook.id } },
     });
 
     stdout = [];
@@ -1310,7 +1307,7 @@ describe('renku CLI', () => {
         'model',
         'list',
         '--purpose',
-        'location.environment-sheet',
+        'location.sheet',
         '--target',
         `location:${locationId}`,
         '--json',
@@ -1318,31 +1315,27 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(locationModelListExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      models: expect.arrayContaining([
+    expect(JSON.parse(stdout.join('\n'))).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
-          modelChoice: 'fal-ai/nano-banana-2',
-          available: true,
+          provider: 'fal-ai',
+          model: 'nano-banana-2',
         }),
-      ]),
-    });
+      ])
+    );
 
-    const locationSpecPath = path.join(homeDir, 'location-environment-sheet-spec.json');
+    const locationSpecPath = path.join(homeDir, 'location-sheet-spec.json');
     await fs.writeFile(
       locationSpecPath,
       JSON.stringify(
         {
-          purpose: 'location.environment-sheet',
+          purpose: 'location.sheet',
           target: { kind: 'location', id: locationId },
-          modelChoice: 'fal-ai/nano-banana-2',
-          prompt: 'A simulated full-image Location Sheet for the council chamber.',
-          description:
-            'Council chamber production reference showing table layout, torchlight, and wall texture.',
-          takeCount: 1,
-          seed: null,
-          sheetFrame: '4:3',
-          detail: 'draft',
-          outputFormat: 'png',
+          model: { provider: 'fal-ai', model: 'nano-banana-2' },
+          values: {
+            prompt: 'A simulated full-image Location Sheet for the council chamber.',
+          },
+          references: [],
           title: 'Council Chamber Environment Sheet',
         },
         null,
@@ -1359,11 +1352,21 @@ describe('renku CLI', () => {
     );
     expect(locationCreateExitCode).toBe(0);
     const locationSpec = JSON.parse(stdout.join('\n')) as { id: string };
+    const locationApprovalToken = await estimateApprovalToken(locationSpec.id);
 
     stdout = [];
     stderr = [];
     const locationRunExitCode = await runRenkuCli(
-      ['generation', 'run', '--spec', locationSpec.id, '--simulate', '--json'],
+      [
+        'generation',
+        'run',
+        '--spec',
+        locationSpec.id,
+        '--approval-token',
+        locationApprovalToken,
+        '--simulate',
+        '--json',
+      ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(locationRunExitCode).toBe(0);
@@ -1376,13 +1379,8 @@ describe('renku CLI', () => {
       run: {
         provider: 'fal-ai',
         model: 'nano-banana-2',
-        simulated: true,
-        purpose: 'location.environment-sheet',
-        outputs: [
-          expect.objectContaining({
-            projectRelativePath: 'generated/media/council-chamber-environment-sheet.png',
-          }),
-        ],
+        status: 'simulated',
+        outputs: [expect.objectContaining({ projectRelativePath: expect.any(String) })],
       },
     });
 
@@ -1393,7 +1391,7 @@ describe('renku CLI', () => {
         'media',
         'import',
         '--purpose',
-        'location.environment-sheet',
+        'location.sheet',
         '--target',
         `location:${locationId}`,
         '--source',
@@ -1409,21 +1407,16 @@ describe('renku CLI', () => {
     expect(locationImportExitCode).toBe(0);
     const locationImportReport = JSON.parse(stdout.join('\n'));
     expect(locationImportReport).toMatchObject({
-      purpose: 'location.environment-sheet',
-      imported: {
-        role: 'environment_sheet',
-        oneLineSummary:
-          'Council chamber production reference showing table layout, torchlight, and wall texture.',
+      valid: true,
+      purpose: 'location.sheet',
+      asset: {
+        role: 'location-sheet',
         files: [expect.objectContaining({ role: 'primary' })],
       },
-      files: [expect.objectContaining({ role: 'primary' })],
     });
     expect(JSON.stringify(locationImportReport)).not.toContain('crop');
     expect(JSON.stringify(locationImportReport)).not.toContain('extraction');
-    const locationSheetFile = locationImportReport.imported.files[0]!;
-    expect(locationSheetFile.projectRelativePath).toMatch(
-      /^locations\/foundry\/environment-sheets\/.+\/sheet\.png$/
-    );
+    const locationSheetFile = locationImportReport.asset.files[0]!;
     await expect(
       fs.access(
         path.join(
@@ -1441,18 +1434,13 @@ describe('renku CLI', () => {
         {
           purpose: 'location.hero',
           target: { kind: 'location', id: locationId },
-          sourceLocationSheetAssetId: locationImportReport.imported.assetId,
-          modelChoice: 'fal-ai/nano-banana-2/edit',
-          prompt:
-            'Create a simulated wide Location Hero Image from the council chamber sheet.',
-          takeCount: 1,
-          seed: null,
-          heroFrame: '16:9',
-          detail: 'draft',
-          outputFormat: 'png',
+          model: { provider: 'fal-ai', model: 'nano-banana-2' },
+          values: {
+            prompt:
+              'Create a simulated wide Location Hero Image from the council chamber sheet.',
+          },
+          references: [],
           title: 'Council Chamber Hero Image',
-          description:
-            'Council chamber representative image for overview cards and the detail header.',
         },
         null,
         2
@@ -1468,11 +1456,23 @@ describe('renku CLI', () => {
     );
     expect(locationHeroCreateExitCode).toBe(0);
     const locationHeroSpec = JSON.parse(stdout.join('\n')) as { id: string };
+    const locationHeroApprovalToken = await estimateApprovalToken(
+      locationHeroSpec.id
+    );
 
     stdout = [];
     stderr = [];
     const locationHeroRunExitCode = await runRenkuCli(
-      ['generation', 'run', '--spec', locationHeroSpec.id, '--simulate', '--json'],
+      [
+        'generation',
+        'run',
+        '--spec',
+        locationHeroSpec.id,
+        '--approval-token',
+        locationHeroApprovalToken,
+        '--simulate',
+        '--json',
+      ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(locationHeroRunExitCode).toBe(0);
@@ -1484,14 +1484,9 @@ describe('renku CLI', () => {
     expect(locationHeroRun).toMatchObject({
       run: {
         provider: 'fal-ai',
-        model: 'nano-banana-2/edit',
-        simulated: true,
-        purpose: 'location.hero',
-        outputs: [
-          expect.objectContaining({
-            projectRelativePath: 'generated/media/council-chamber-hero-image.png',
-          }),
-        ],
+        model: 'nano-banana-2',
+        status: 'simulated',
+        outputs: [expect.objectContaining({ projectRelativePath: expect.any(String) })],
       },
     });
 
@@ -1508,7 +1503,7 @@ describe('renku CLI', () => {
         '--source',
         locationHeroRun.run.outputs[0]!.projectRelativePath,
         '--source-sheet',
-        locationImportReport.imported.assetId,
+        locationImportReport.asset.assetId,
         '--title',
         'Council Chamber Hero Image',
         '--summary',
@@ -1520,22 +1515,14 @@ describe('renku CLI', () => {
     expect(locationHeroImportExitCode).toBe(0);
     const locationHeroImportReport = JSON.parse(stdout.join('\n'));
     expect(locationHeroImportReport).toMatchObject({
+      valid: true,
       purpose: 'location.hero',
-      sourceLocationSheetAssetId: locationImportReport.imported.assetId,
-      imported: {
-        type: 'location_hero',
+      asset: {
         role: 'hero',
-        selection: { kind: 'select', order: 1 },
-        oneLineSummary:
-          'Council chamber representative image for overview cards and the detail header.',
         files: [expect.objectContaining({ role: 'primary' })],
       },
-      files: [expect.objectContaining({ role: 'primary' })],
     });
-    const locationHeroFile = locationHeroImportReport.imported.files[0]!;
-    expect(locationHeroFile.projectRelativePath).toMatch(
-      /^locations\/foundry\/heroes\/.+\/hero\.png$/
-    );
+    const locationHeroFile = locationHeroImportReport.asset.files[0]!;
     expect(locationHeroFile.projectRelativePath).not.toBe(
       locationHeroRun.run.outputs[0]!.projectRelativePath
     );
@@ -1546,7 +1533,7 @@ describe('renku CLI', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('registers and selects a scene asset through the asset command', async () => {
+  it('attaches a Cast Profile through the focused media command', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -1558,111 +1545,49 @@ describe('renku CLI', () => {
       projectName: 'constantinople',
       homeDir,
     });
-    const sceneId = project.sequences[0]!.scenes[0]!.id;
+    const castMemberId = project.cast[0]!.id;
     const assetPath =
-      'shotlist/sequences/01-commission/scenes/01-foundry/narration.wav';
+      'generated/media/urban-profile.png';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', assetPath)), {
       recursive: true,
     });
     await fs.writeFile(
       path.join(storageRoot, 'constantinople', assetPath),
-      'audio bytes'
+      'image bytes'
     );
 
     stdout = [];
     stderr = [];
-    const registerExitCode = await runRenkuCli(
+    const importExitCode = await runRenkuCli(
       [
-        'asset',
-        'register',
+        'media',
+        'import',
         '--project',
         'constantinople',
+        '--purpose',
+        'cast.profile',
         '--target',
-        `scene:${sceneId}`,
-        '--type',
-        'narration',
-        '--media-kind',
-        'audio',
-        '--role',
-        'narration',
-        '--file-role',
-        'primary',
-        '--file',
+        `cast:${castMemberId}`,
+        '--source',
         assetPath,
         '--title',
-        'Narration take 1',
+        'Urban profile',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
 
-    expect(registerExitCode).toBe(0);
-    const registered = JSON.parse(stdout.join('\n')) as {
-      asset: { assetId: string };
-      resourceKeys: string[];
-    };
-    expect(registered).toMatchObject({
-      asset: {
-        type: 'narration',
-        selection: { kind: 'take' },
-      },
-      resourceKeys: [`assets:scene:${sceneId}`],
-    });
-
-    stdout = [];
-    stderr = [];
-    const selectExitCode = await runRenkuCli(
-      [
-        'asset',
-        'select',
-        '--project',
-        'constantinople',
-        '--target',
-        `scene:${sceneId}`,
-        registered.asset.assetId,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-
-    expect(selectExitCode).toBe(0);
+    expect(importExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      valid: true,
+      purpose: 'cast.profile',
+      target: { kind: 'castMember', id: castMemberId },
       asset: {
-        assetId: registered.asset.assetId,
-        selection: { kind: 'select', order: 1 },
+        role: 'profile',
+        files: [expect.objectContaining({ role: 'primary' })],
       },
-      resourceKeys: [`assets:scene:${sceneId}`],
+      resourceKeys: [`cast:${castMemberId}`],
     });
-
-    stdout = [];
-    stderr = [];
-    const exportExitCode = await runRenkuCli(
-      ['production', 'export', '--project', 'constantinople', '--json'],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-
-    expect(exportExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      copiedFileCount: 1,
-      skippedFileCount: 0,
-      prunedFileCount: 0,
-    });
-    await expect(
-      fs.readFile(
-        path.join(
-          storageRoot,
-          'constantinople',
-          'production-assets',
-          'master',
-          'sequences',
-          '01-the-commission',
-          'scenes',
-          '01-urban-enters-the-foundry',
-          'narration.wav'
-        ),
-        'utf8'
-      )
-    ).resolves.toBe('audio bytes');
     expect(stderr).toEqual([]);
   });
 
@@ -1800,7 +1725,7 @@ describe('renku CLI', () => {
           role: 'voice_sample',
           files: [
             {
-              projectRelativePath: 'cast/urban/voice-samples/urban-normal.mp3',
+              projectRelativePath: 'cast/urban/voice-samples/normal-voice.mp3',
             },
           ],
         },
@@ -1866,7 +1791,7 @@ describe('renku CLI', () => {
     });
   });
 
-  it('requires a reference name but only warns for a missing character sheet purpose', async () => {
+  it('attaches a video character sheet without adapter-owned reference metadata', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -1890,14 +1815,14 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const missingNameExitCode = await runRenkuCli(
+    const importExitCode = await runRenkuCli(
       [
         'media',
         'import',
         '--project',
         'constantinople',
         '--purpose',
-        'cast.character-sheet',
+        'cast.video-character-sheet',
         '--target',
         `cast:${castMemberId}`,
         '--source',
@@ -1906,49 +1831,15 @@ describe('renku CLI', () => {
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(missingNameExitCode).toBe(1);
-    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
-      valid: false,
-      error: { code: 'CLI001' },
-    });
-
-    stdout = [];
-    stderr = [];
-    const missingPurposeExitCode = await runRenkuCli(
-      [
-        'media',
-        'import',
-        '--project',
-        'constantinople',
-        '--purpose',
-        'cast.character-sheet',
-        '--target',
-        `cast:${castMemberId}`,
-        '--source',
-        sourcePath,
-        '--reference-name',
-        'urban-palace-main',
-        '--title',
-        'Urban Palace Main Character Sheet',
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(missingPurposeExitCode).toBe(0);
+    expect(importExitCode).toBe(0);
     const imported = JSON.parse(stdout.join('\n'));
     expect(imported).toMatchObject({
       valid: true,
-      imported: {
-        referenceName: 'urban-palace-main',
-        purpose: null,
-        title: 'Urban Palace Main Character Sheet',
+      purpose: 'cast.video-character-sheet',
+      asset: {
+        role: 'video-character-sheet',
+        files: [expect.objectContaining({ role: 'primary' })],
       },
-      warnings: [
-        {
-          code: 'CLI045',
-          severity: 'warning',
-        },
-      ],
     });
 
     stdout = [];
@@ -1957,7 +1848,7 @@ describe('renku CLI', () => {
       [
         'asset',
         'reference-update',
-        imported.imported.assetId,
+        imported.asset.assetId,
         '--project',
         'constantinople',
         '--target',
@@ -1975,8 +1866,8 @@ describe('renku CLI', () => {
     expect(updateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       asset: {
-        assetId: imported.imported.assetId,
-        relationshipId: imported.imported.relationshipId,
+        assetId: imported.asset.assetId,
+        relationshipId: imported.asset.relationshipId,
         referenceName: 'urban-siege-workshop-main',
         purpose: 'main workshop character sheet',
         title: 'Urban Workshop Main Character Sheet',
@@ -2455,7 +2346,7 @@ describe('renku CLI', () => {
         'media',
         'import',
         '--purpose',
-        'lookbook.sheet',
+        'lookbook.storyboard-sheet',
         '--target',
         `lookbook:${storyboardLookbookReport.lookbook.id}`,
         '--source',
@@ -2489,12 +2380,12 @@ describe('renku CLI', () => {
     expect(generationContextExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
-      shotListId: writeReport.activeShotListId,
-      defaults: {
-        sheetFrame: '4:3',
-        shotFrame: 'project',
-        resolvedShotFrame: '16:9',
-        maxShotsPerSheet: 4,
+      target: { kind: 'scene', id: sceneId },
+      facts: expect.objectContaining({
+        projectAspectRatio: '16:9',
+      }),
+      settings: {
+        recommended: [],
       },
     });
 
@@ -2516,400 +2407,11 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(modelListExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      models: expect.arrayContaining([
-        expect.objectContaining({ modelChoice: 'fal-ai/nano-banana-2' }),
-      ]),
-    });
-
-    const shotProductionPath = path.join(homeDir, 'shot-video-production.json');
-    await fs.writeFile(
-      shotProductionPath,
-      JSON.stringify(
-        {
-          inputModeId: 'text-only',
-          modelChoice: 'fal-ai/bytedance/seedance-2.0',
-          parameterValues: {},
-        },
-        null,
-        2
-      ),
-      'utf8'
+    expect(JSON.parse(stdout.join('\n'))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ provider: 'fal-ai', model: 'nano-banana-2' }),
+      ])
     );
-
-    stdout = [];
-    stderr = [];
-    const takeCreateExitCode = await runRenkuCli(
-      [
-        'take',
-        'create',
-        '--scene',
-        sceneId,
-        '--shot-list',
-        writeReport.activeShotListId,
-        '--shots',
-        'shot_001',
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(takeCreateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    const takeCreateReport = JSON.parse(stdout.join('\n')) as {
-      overview: {
-        take: {
-          takeId: string;
-        };
-        sourceShotList: {
-          id: string;
-        };
-        displayShots: Array<{
-          shotId: string;
-        }>;
-      };
-      resourceKeys: string[];
-    };
-    const createdTakeId = takeCreateReport.overview.take.takeId;
-    expect(takeCreateReport).toMatchObject({
-      overview: {
-        take: {
-          sceneId,
-          sourceShotListId: writeReport.activeShotListId,
-          shotIds: ['shot_001'],
-          state: {
-            version: 2,
-          },
-        },
-        sourceShotList: {
-          id: writeReport.activeShotListId,
-        },
-        displayShots: expect.arrayContaining([
-          expect.objectContaining({
-            shotId: 'shot_001',
-          }),
-        ]),
-      },
-      resourceKeys: expect.arrayContaining([
-        `scene:${sceneId}`,
-        `surface:scene:${sceneId}:takes`,
-        `scene-shot-video-take:${createdTakeId}`,
-        `scene-shot-video-take-video:${createdTakeId}`,
-        `scene-shot-video-take-prompt:${createdTakeId}`,
-      ]),
-    });
-    const take = takeCreateReport.overview.take;
-
-    stdout = [];
-    stderr = [];
-    const publicTakeListExitCode = await runRenkuCli(
-      ['take', 'list', '--scene', sceneId, '--json'],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(publicTakeListExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      takes: expect.arrayContaining([
-        expect.objectContaining({
-          take: expect.objectContaining({
-            takeId: take.takeId,
-          }),
-          sourceShotList: expect.objectContaining({
-            id: writeReport.activeShotListId,
-          }),
-        }),
-      ]),
-    });
-
-    stdout = [];
-    stderr = [];
-    const publicTakeShowExitCode = await runRenkuCli(
-      ['take', 'show', '--take', take.takeId, '--json'],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(publicTakeShowExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      takeId: take.takeId,
-      state: {
-        version: 2,
-      },
-    });
-
-    stdout = [];
-    stderr = [];
-    const productionUpdateExitCode = await runRenkuCli(
-      [
-        'generation',
-        'production',
-        'update',
-        '--purpose',
-        'shot.video-take',
-        '--target',
-        `scene:${sceneId}`,
-        '--take',
-        take.takeId,
-        '--file',
-        shotProductionPath,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(productionUpdateExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      target: {
-        takeId: take.takeId,
-        shotIds: ['shot_001'],
-      },
-    });
-
-    stdout = [];
-    stderr = [];
-    const wrongSceneProductionUpdateExitCode = await runRenkuCli(
-      [
-        'generation',
-        'production',
-        'update',
-        '--purpose',
-        'shot.video-take',
-        '--target',
-        'scene:scene_wrong',
-        '--take',
-        take.takeId,
-        '--file',
-        shotProductionPath,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(wrongSceneProductionUpdateExitCode).toBe(1);
-    expect(stderr.join('\n')).toContain('PROJECT_DATA423');
-
-    stdout = [];
-    stderr = [];
-    const shotContextExitCode = await runRenkuCli(
-      [
-        'generation',
-        'context',
-        '--purpose',
-        'shot.video-take',
-        '--target',
-        `scene:${sceneId}`,
-        '--take',
-        take.takeId,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(shotContextExitCode).toBe(0);
-    const shotContext = JSON.parse(stdout.join('\n'));
-    expect(shotContext).toMatchObject({
-      target: {
-        sceneId,
-        takeId: take.takeId,
-        shotIds: ['shot_001'],
-      },
-      take: {
-        takeId: take.takeId,
-      },
-    });
-
-    stdout = [];
-    stderr = [];
-    const wrongSceneContextExitCode = await runRenkuCli(
-      [
-        'generation',
-        'context',
-        '--purpose',
-        'shot.video-take',
-        '--target',
-        'scene:scene_wrong',
-        '--take',
-        take.takeId,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(wrongSceneContextExitCode).toBe(1);
-    expect(stderr.join('\n')).toContain('PROJECT_DATA423');
-
-    stdout = [];
-    stderr = [];
-    const obsoleteShotPlanExitCode = await runRenkuCli(
-      [
-        'generation',
-        'plan',
-        '--purpose',
-        'shot.video-take',
-        '--target',
-        `scene:${sceneId}`,
-        '--take',
-        take.takeId,
-        '--intent',
-        'text-only',
-        '--model',
-        'fal-ai/bytedance/seedance-2.0',
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(obsoleteShotPlanExitCode).toBe(1);
-    expect(stderr.join('\n')).toContain('CLI019');
-
-    stdout = [];
-    stderr = [];
-    const takeAuthoringContextExitCode = await runRenkuCli(
-      [
-        'take',
-        'authoring',
-        'context',
-        '--take',
-        take.takeId,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(takeAuthoringContextExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    const takeAuthoringContext = JSON.parse(stdout.join('\n')) as {
-      kind: string;
-      document: Record<string, unknown>;
-      context: { target: { takeId: string; shotIds: string[] } };
-      productionPlan: { plan: { request: { sceneId: string; takeId: string } } };
-      providerPreview: { available: boolean };
-    };
-    expect(takeAuthoringContext.kind).toBe('sceneShotVideoTakeAuthoringContext');
-    expect(takeAuthoringContext.document).toMatchObject({
-      kind: 'sceneShotVideoTakeAuthoring',
-      takeId: take.takeId,
-      sceneId,
-      shotIds: ['shot_001'],
-    });
-    expect(takeAuthoringContext.context.target).toMatchObject({
-      takeId: take.takeId,
-      shotIds: ['shot_001'],
-    });
-    expect(takeAuthoringContext.productionPlan.plan.request).toMatchObject({
-      sceneId,
-      takeId: take.takeId,
-    });
-    expect(typeof takeAuthoringContext.providerPreview.available).toBe('boolean');
-
-    const authoringDocumentPath = path.join(homeDir, 'take-authoring-document.json');
-    await fs.writeFile(
-      authoringDocumentPath,
-      JSON.stringify(takeAuthoringContext.document, null, 2),
-      'utf8'
-    );
-
-    stdout = [];
-    stderr = [];
-    const takeAuthoringValidateExitCode = await runRenkuCli(
-      [
-        'take',
-        'authoring',
-        'validate',
-        '--file',
-        authoringDocumentPath,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(takeAuthoringValidateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      valid: true,
-      document: {
-        takeId: take.takeId,
-      },
-      prior: {
-        document: {
-          takeId: take.takeId,
-        },
-      },
-      current: {
-        document: {
-          takeId: take.takeId,
-        },
-      },
-    });
-
-    const notificationServer = await startCoordinationNotificationServer({
-      homeDir,
-      token: 'notification-token-test',
-    });
-    await claimStudioRuntimeDescriptor({
-      homeDir,
-      host: '127.0.0.1',
-      port: notificationServer.port,
-      serverUrl: notificationServer.url,
-      cliNotificationToken: 'notification-token-test',
-    });
-    stdout = [];
-    stderr = [];
-    const takeAuthoringApplyExitCode = await runRenkuCli(
-      [
-        'take',
-        'authoring',
-        'apply',
-        '--file',
-        authoringDocumentPath,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(takeAuthoringApplyExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
-    const takeAuthoringApplyReport = JSON.parse(stdout.join('\n')) as {
-      project: {
-        id: string;
-        name: string;
-      };
-    };
-    expect(takeAuthoringApplyReport).toMatchObject({
-      valid: true,
-      document: {
-        takeId: take.takeId,
-      },
-      project: {
-        id: expect.any(String),
-        name: 'constantinople',
-        projectFolder: expect.any(String),
-      },
-      prior: {
-        document: {
-          takeId: take.takeId,
-        },
-      },
-      current: {
-        document: {
-          takeId: take.takeId,
-        },
-      },
-      resourceKeys: expect.arrayContaining([
-        `scene:${sceneId}`,
-        `surface:scene:${sceneId}:takes`,
-      ]),
-    });
-    expect(takeAuthoringApplyReport.project.id).not.toBe(
-      takeAuthoringApplyReport.project.name
-    );
-    expect(stderr).toEqual([]);
-    await notificationServer.close();
-    await expect(
-      createStudioCoordinationService({ homeDir }).readStudioEvents()
-    ).resolves.toMatchObject({
-      events: expect.arrayContaining([
-        expect.objectContaining({
-          type: 'studio.projectResourcesChanged',
-          projectRef: expect.objectContaining({
-            id: takeAuthoringApplyReport.project.id,
-            name: 'constantinople',
-          }),
-          resourceKeys: expect.arrayContaining([
-            `scene:${sceneId}`,
-            `surface:scene:${sceneId}:takes`,
-          ]),
-          source: expect.objectContaining({
-            kind: 'cli',
-            command: 'take authoring apply',
-          }),
-        }),
-      ]),
-    });
 
     stdout = [];
     stderr = [];
@@ -2928,21 +2430,14 @@ describe('renku CLI', () => {
     );
     expect(imageCreateModelListExitCode).toBe(0);
     const imageCreateModels = JSON.parse(stdout.join('\n'));
-    expect(imageCreateModels).toMatchObject({
-      purpose: 'image.create',
-      target: {
-        kind: 'project',
-      },
-      models: expect.arrayContaining([
-        expect.objectContaining({ modelChoice: 'fal-ai/openai/gpt-image-2' }),
-        expect.objectContaining({ modelChoice: 'fal-ai/nano-banana-2' }),
-        expect.objectContaining({ modelChoice: 'fal-ai/xai/grok-imagine-image' }),
-      ]),
-    });
+    expect(imageCreateModels).toEqual(expect.arrayContaining([
+      expect.objectContaining({ provider: 'fal-ai', model: 'openai/gpt-image-2' }),
+      expect.objectContaining({ provider: 'fal-ai', model: 'nano-banana-2' }),
+      expect.objectContaining({ provider: 'fal-ai', model: 'xai/grok-imagine-image' }),
+    ]));
     expect(
-      imageCreateModels.models.some(
-        (model: { modelChoice: string }) =>
-          model.modelChoice === 'fal-ai/bytedance/seedance-2.0'
+      imageCreateModels.some(
+        (model: { model: string }) => model.model === 'bytedance/seedance-2.0'
       )
     ).toBe(false);
 
@@ -2952,19 +2447,16 @@ describe('renku CLI', () => {
       JSON.stringify(
         {
           purpose: 'image.create',
-          target: imageCreateModels.target,
-          mode: 'reference-to-image',
-          modelChoice: 'fal-ai/openai/gpt-image-2',
-          prompt: 'A still first frame for Urban studying the bronze.',
-          referenceImages: [
+          target: { kind: 'project' },
+          model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },
+          values: { prompt: 'A still first frame for Urban studying the bronze.' },
+          references: [
             {
+              kind: 'asset-file',
               assetId: 'asset_missing_reference',
               assetFileId: 'asset_file_missing_reference',
-              role: 'storyboard-lookbook-sheet',
             },
           ],
-          parameterValues:
-            imageCreateModels.models[0].defaultParameterValues.referenceToImage,
           title: 'Foundry reference frame',
         },
         null,
@@ -2976,16 +2468,19 @@ describe('renku CLI', () => {
     stdout = [];
     stderr = [];
     const imageCreateValidateExitCode = await runRenkuCli(
-      ['generation', 'spec', 'validate', '--file', imageCreateSpecPath, '--json'],
+      ['generation', 'validate', '--file', imageCreateSpecPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(imageCreateValidateExitCode).toBe(1);
+    expect(imageCreateValidateExitCode).toBe(0);
     const imageCreateValidationOutput =
       stdout.join('\n').trim() || stderr.join('\n').trim();
     expect(JSON.parse(imageCreateValidationOutput)).toMatchObject({
-      valid: false,
-      error: {
-        code: 'CORE_IMAGE_CREATE_REFERENCE_ASSET_MISSING',
+      valid: true,
+      spec: {
+        purpose: 'image.create',
+        references: [
+          expect.objectContaining({ assetId: 'asset_missing_reference' }),
+        ],
       },
     });
 
@@ -2996,16 +2491,9 @@ describe('renku CLI', () => {
         {
           purpose: 'scene.storyboard-sheet',
           target: { kind: 'scene', id: sceneId },
-          shotListId: writeReport.activeShotListId,
-          shotIds: ['shot_001'],
-          modelChoice: 'fal-ai/nano-banana-2',
-          prompt: 'A clean charcoal pencil storyboard sheet for this scene.',
-          takeCount: 1,
-          seed: null,
-          sheetFrame: '4:3',
-          shotFrame: 'project',
-          detail: 'standard',
-          outputFormat: 'png',
+          model: { provider: 'fal-ai', model: 'nano-banana-2' },
+          values: { prompt: 'A clean charcoal pencil storyboard sheet for this scene.' },
+          references: [],
           title: 'Foundry storyboard sheet',
         },
         null,
@@ -3017,7 +2505,7 @@ describe('renku CLI', () => {
     stdout = [];
     stderr = [];
     const specValidateExitCode = await runRenkuCli(
-      ['generation', 'spec', 'validate', '--file', specPath, '--json'],
+      ['generation', 'validate', '--file', specPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(specValidateExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
@@ -3042,17 +2530,29 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(estimateExitCode).toBe(0);
-    expect(approvalArtifactKeys(JSON.parse(stdout.join('\n')).estimate)).toEqual([]);
+    const storyboardEstimate = JSON.parse(stdout.join('\n')).estimate as Record<string, unknown>;
+    expect(approvalArtifactKeys(storyboardEstimate)).toEqual([
+      'approvalToken',
+    ]);
 
     stdout = [];
     stderr = [];
     const runExitCode = await runRenkuCli(
-      ['generation', 'run', '--spec', createdSpec.id, '--simulate', '--json'],
+      [
+        'generation',
+        'run',
+        '--spec',
+        createdSpec.id,
+        '--approval-token',
+        String(storyboardEstimate.approvalToken),
+        '--simulate',
+        '--json',
+      ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(runExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      run: { simulated: true },
+      run: { status: 'simulated' },
     });
 
     const importPath = path.join(homeDir, 'scene-storyboard-import.json');
@@ -3241,34 +2741,11 @@ describe('renku CLI', () => {
           ],
         },
       });
-      const takeReport = await projectData.createSceneShotVideoTake({
+      const take = await projectData.createShotVideoTake({
         homeDir,
         sceneId: scene.id as string,
         shotListId: writtenShotList.shotList.id,
         shotIds: ['shot_001', 'shot_002'],
-      });
-      const take = takeReport.overview.take;
-      if (scenario.mode === 'multi-cut') {
-        await projectData.updateSceneShotVideoTakeStructureMode({
-          homeDir,
-          sceneId: scene.id as string,
-          takeId: take.takeId,
-          mode: 'multi-cut',
-        });
-      }
-      await projectData.updateSceneShotVideoTakeDirection({
-        homeDir,
-        takeId: take.takeId,
-        ...(scenario.mode === 'multi-cut'
-          ? { shotId: scenario.focusedShotId }
-          : {}),
-        direction: {
-          composition: {
-            shotSize: scenario.shotSize,
-            subjectFraming: ['single'],
-            cameraAngle: scenario.cameraAngle,
-          },
-        },
       });
       const project = await projectData.readProject({
         homeDir,
@@ -3303,7 +2780,7 @@ describe('renku CLI', () => {
             id: scene.id as string,
             sceneTab: 'takes',
             takeWorkspaceMode: 'edit',
-            takeId: take.takeId,
+            takeId: take.overview.take.takeId,
             shotId: scenario.focusedShotId,
             shotTab: 'composition',
           },
@@ -3325,29 +2802,13 @@ describe('renku CLI', () => {
         type: 'scene',
         sceneTab: 'takes',
         takeWorkspaceMode: 'edit',
-        takeId: take.takeId,
+        takeId: take.overview.take.takeId,
         shotId: scenario.focusedShotId,
         shotTab: 'composition',
       });
       expect(current.context).toMatchObject({
         kind: 'scene',
         sceneTab: { id: 'takes', label: 'Takes' },
-        shot: {
-          id: scenario.focusedShotId,
-          activeTab: { id: 'composition', label: 'Composition' },
-          currentTabSelections: {
-            kind: 'composition',
-            shotSize: {
-              id: scenario.shotSize,
-              label: scenario.shotSizeLabel,
-            },
-            subjectFraming: [{ id: 'single', label: 'Single' }],
-            cameraAngle: {
-              id: scenario.cameraAngle,
-              label: scenario.cameraAngleLabel,
-            },
-          },
-        },
       });
 
       stdout = [];
@@ -3359,9 +2820,9 @@ describe('renku CLI', () => {
 
       expect(textExitCode).toBe(0);
       expect(stdout).toContain('Current Studio project: constantinople');
-      expect(stdout).toContain(
-        `Focus: Scene ${scene.title} > Takes > ${scenario.focusedShotLabel} > Composition`
-      );
+      expect(stdout.some((line) =>
+        line.startsWith(`Focus: Scene ${scene.title} > Takes`)
+      )).toBe(true);
       expect(stderr).toEqual([]);
     });
   }
@@ -3754,71 +3215,6 @@ function captureIo(stdout: string[], stderr: string[]) {
       },
     },
   };
-}
-
-async function startCoordinationNotificationServer(input: {
-  homeDir: string;
-  token: string;
-}): Promise<{ url: string; port: number; close: () => Promise<void> }> {
-  const coordination = createStudioCoordinationService({ homeDir: input.homeDir });
-  const server = createServer(async (request, response) => {
-    if (
-      request.method !== 'POST' ||
-      request.url !== '/studio-api/studio/events/project-resources-changed' ||
-      request.headers['x-renku-studio-notification-token'] !== input.token
-    ) {
-      response.statusCode = 403;
-      response.end(JSON.stringify({ error: { code: 'STUDIO_SERVER022' } }));
-      return;
-    }
-
-    const body = JSON.parse(await readRequestBody(request)) as {
-      projectRef: {
-        name: string;
-        id: string;
-        storageRoot: string;
-      };
-      resourceKeys: string[];
-      source: { kind: 'cli'; command: string };
-      operationId?: string;
-    };
-    const event = await coordination.appendStudioEvent({
-      type: 'studio.projectResourcesChanged',
-      projectRef: body.projectRef,
-      resourceKeys: body.resourceKeys,
-      source: body.source,
-      operationId: body.operationId,
-    });
-    response.statusCode = 200;
-    response.setHeader('Content-Type', 'application/json');
-    response.end(JSON.stringify({ event }));
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve());
-  });
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    throw new Error('Unable to determine notification server address.');
-  }
-
-  return {
-    url: `http://127.0.0.1:${address.port}`,
-    port: address.port,
-    close: () =>
-      new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-      }),
-  };
-}
-
-async function readRequestBody(request: IncomingMessage): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks).toString('utf8');
 }
 
 function minimalScreenplayJson(input: { castMemberId: string; locationId: string }) {

@@ -1,17 +1,17 @@
 import type {
-  StudioGenerationPreview,
-  StudioGenerationPreviewReference,
+  GenerationPreviewResource,
+  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import type { GenerationPreviewDraft } from './generation-preview-draft';
 import { generationPreviewReferenceSelected } from './generation-preview-draft';
 import { GenerationPreviewReferenceCard } from './generation-preview-reference-card';
 
 interface GenerationPreviewReferenceGridProps {
-  preview: StudioGenerationPreview;
+  preview: GenerationPreviewResource;
   draft: GenerationPreviewDraft;
   updating: boolean;
   editable?: boolean;
-  onReferenceToggle: (reference: StudioGenerationPreviewReference) => void;
+  onReferenceToggle: (reference: GenerationPreviewResourceReference) => void;
 }
 
 export function GenerationPreviewReferenceGrid({

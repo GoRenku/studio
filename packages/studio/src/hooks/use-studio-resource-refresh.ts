@@ -169,8 +169,6 @@ export function matchesSceneShotsResource(input: {
       resourceKey === `surface:scene:${input.sceneId}:dialogue-audio` ||
       resourceKey.startsWith('scene-dialogue-audio:') ||
       resourceKey.startsWith('scene-dialogue-audio-take:') ||
-      resourceKey.startsWith('scene-shot-video-take-group:') ||
-      resourceKey.startsWith('scene-shot-video-take-input:') ||
       (input.shotListId
         ? resourceKey.startsWith(`scene-shot-list:${input.shotListId}:`) ||
           resourceKey === `scene-shot-list:${input.shotListId}`
@@ -192,17 +190,11 @@ export function matchesSceneTakesResource(input: {
     }
     if (!input.takeId) {
       return (
-        resourceKey.startsWith('scene-shot-video-take:') ||
-        resourceKey.startsWith('scene-shot-video-take-video:') ||
-        resourceKey.startsWith('scene-shot-video-take-prompt:') ||
-        resourceKey.startsWith('scene-shot-video-take-input:')
+        resourceKey.startsWith('scene-shot-video-take:')
       );
     }
     return (
-      resourceKey === `scene-shot-video-take:${input.takeId}` ||
-      resourceKey === `scene-shot-video-take-video:${input.takeId}` ||
-      resourceKey === `scene-shot-video-take-prompt:${input.takeId}` ||
-      resourceKey.startsWith('scene-shot-video-take-input:')
+      resourceKey === `scene-shot-video-take:${input.takeId}`
     );
   });
 }

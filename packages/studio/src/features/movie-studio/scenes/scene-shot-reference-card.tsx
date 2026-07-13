@@ -1,12 +1,6 @@
-import type {
-  MediaGenerationDependencyPricing,
-  ShotVideoTakeReferenceCardPlan,
-} from '@gorenku/studio-core/client';
-import { Badge } from '@/ui/badge';
+import type { ShotVideoTakeReferenceCard } from '@gorenku/studio-core/client';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
 import { ImageSelectionControl } from '@/ui/image-selection-control';
-import { SHOT_REFERENCE_COST_BADGE_OVERLAY_CLASS } from './scene-shot-reference-layout';
-import { formatEstimateUsd } from './shot-video-take-production-projection';
 import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
 
 interface SceneShotReferenceCardProps {
@@ -14,7 +8,7 @@ interface SceneShotReferenceCardProps {
   description?: string;
   imageUrl: string | null;
   imageAlt: string;
-  card: ShotVideoTakeReferenceCardPlan;
+  card: ShotVideoTakeReferenceCard;
   selected?: boolean;
   selectable?: boolean;
   controlMode?: 'selection' | 'inclusion';
@@ -46,7 +40,6 @@ export function SceneShotReferenceCard({
   unselectedActionLabel,
   onEditImage,
 }: SceneShotReferenceCardProps) {
-  const needsGeneration = card.state === 'selected-planned';
   const selectedLabel =
     selectedActionLabel ??
     (controlMode === 'inclusion'
@@ -68,11 +61,6 @@ export function SceneShotReferenceCard({
       aspectClassName={aspectClassName}
       detectImageAspectRatio={detectImageAspectRatio}
       selected={selected}
-      topRightAction={
-        needsGeneration ? <ReferenceCostBadge pricing={card.pricing} /> : null
-      }
-      topRightActionClassName={SHOT_REFERENCE_COST_BADGE_OVERLAY_CLASS}
-      topRightActionPersistent={needsGeneration}
       bottomRightActions={
         selectable || onEditImage ? (
           <>
@@ -93,32 +81,4 @@ export function SceneShotReferenceCard({
       onOpen={onOpen ?? (() => {})}
     />
   );
-}
-
-function ReferenceCostBadge({
-  pricing,
-}: {
-  pricing: MediaGenerationDependencyPricing;
-}) {
-  if (pricing.state === 'priced' && pricing.estimatedUsd > 0) {
-    return (
-      <Badge
-        variant='accent'
-        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal text-foreground tabular-nums'
-      >
-        {formatEstimateUsd(pricing.estimatedUsd)}
-      </Badge>
-    );
-  }
-  if (pricing.state === 'unpriced') {
-    return (
-      <Badge
-        variant='outline'
-        className='border-transparent bg-transparent px-2.5 py-1 text-[10px] tracking-normal tabular-nums'
-      >
-        Unpriced
-      </Badge>
-    );
-  }
-  return null;
 }

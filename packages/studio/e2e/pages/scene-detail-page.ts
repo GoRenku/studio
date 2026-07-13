@@ -35,12 +35,15 @@ export class SceneDetailPage {
       .getByRole('tab', { name: 'Takes' })
       .click();
     await expect(this.page.getByText('Take 1')).toBeVisible();
-    await expect(this.page.getByText('Picked')).toBeVisible();
+    await expect(this.page.getByRole('button', { name: 'Play Take 1' }))
+      .toBeVisible();
+    await expect(this.page.getByRole('button', { name: 'Delete Take 1' }))
+      .toBeVisible();
   }
 
-  async expectPickedDialogueAudioReferenceVisible(): Promise<void> {
+  async expectGeneratedDialogueAudioAvailable(): Promise<void> {
     await expect(
-      this.page.getByLabel('Play dialogue audio')
+      this.page.getByLabel('Open dialogue audio takes')
     ).toBeVisible();
   }
 }

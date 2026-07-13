@@ -2,13 +2,13 @@ import type {
   GenerationPreviewConfigurationRow,
   GenerationPreviewConfigurationSection,
   GenerationPreviewConfigurationValue,
-  StudioGenerationPreview,
+  GenerationPreviewResource,
 } from '@gorenku/studio-core/client';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface GenerationPreviewConfigPanelProps {
-  preview: StudioGenerationPreview;
+  preview: GenerationPreviewResource;
 }
 
 export function GenerationPreviewConfigPanel({

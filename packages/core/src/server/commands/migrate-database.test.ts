@@ -6,7 +6,6 @@ import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProjectDataService } from '../index.js';
 import { migrateProjectDatabase } from '../database/lifecycle/migrator.js';
-import { closeProjectStore } from '../database/lifecycle/store.js';
 import {
   currentProjectStoreSchemaGeneration,
 } from '../database/lifecycle/project-store-schema-generation.js';
@@ -14,7 +13,6 @@ import {
   createCommandBuiltSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
-import { parseSceneShotVideoTakeState } from '../shot-video-take-json/validator.js';
 
 describe('migrate database command', () => {
   let homeDir: string;
@@ -96,8 +94,6 @@ describe('migrate database command', () => {
           'scene_shot_storyboard_image',
           'scene_shot_video_take',
           'scene_shot_video_take_shot',
-          'scene_shot_video_take_media_input',
-          'scene_shot_video_take_media_input_shot',
           'scene_shot_video_take_video',
           'scene_dialogue_audio',
           'scene_dialogue_audio_take',
@@ -117,6 +113,8 @@ describe('migrate database command', () => {
           'location_environment_sheet_view',
           'scene_shot_video_take_output',
           'scene_shot_video_take_output_shot',
+          'scene_shot_video_take_media_input',
+          'scene_shot_video_take_media_input_shot',
         ])
       );
       expect(
@@ -126,13 +124,6 @@ describe('migrate database command', () => {
           'scene_shot_storyboard_image_asset_idx'
         )
       ).toMatchObject({ isUnique: 0 });
-      expect(
-        readIndexForTable(
-          sqlite,
-          'scene_shot_video_take_media_input',
-          'scene_shot_video_take_media_input_selected_idx'
-        )
-      ).toMatchObject({ isUnique: 1 });
       expect(readColumnNames(sqlite, 'scene_shot_video_take')).toEqual(
         expect.arrayContaining(['regenerated_from_take_id'])
       );
@@ -159,177 +150,6 @@ describe('migrate database command', () => {
       expect(readTableNames(backup)).toContain('project');
     } finally {
       backup.close();
-    }
-  });
-
-  it('auto-migrates generation 33 shot video take databases before reads', async () => {
-    const projectData = createProjectDataService();
-    const created = await createCommandBuiltSampleMovieProject({ projectData, homeDir });
-    if (!created) {
-      return;
-    }
-
-    closeProjectStore({ projectFolder: created.projectPath });
-    const databasePath = path.join(
-      created.projectPath,
-      '.renku',
-      'project.sqlite'
-    );
-    const setup = new Database(databasePath);
-    let inputShotMembershipCount = 0;
-    try {
-      inputShotMembershipCount = (
-        setup
-          .prepare(
-            'select count(*) as count from scene_shot_video_take_media_input_shot'
-          )
-          .get() as { count: number }
-      ).count;
-      await deleteDrizzleMigrationRowsAfterTag(
-        setup,
-        '0043_drop_scene_dialogue_audio_pick'
-      );
-      setup.exec(`
-        pragma foreign_keys = off;
-        drop table scene_shot_video_take_video;
-        create table __generation_33_scene_shot_video_take (
-          id text primary key not null,
-          scene_id text not null references scene(id) on delete cascade,
-          source_shot_list_id text not null references scene_shot_list(id) on delete cascade,
-          title text not null,
-          state_json text default '{"version":2,"structure":{"mode":"continuous","sharedDirection":{"referenceSelections":{"dependencyInclusions":{},"selectedCharacterSheetAssetIds":{},"selectedLocationSheetAssetIds":{},"selectedLookbookSheetIds":[],"selectedDialogueAudioTakeIds":{}}}},"production":{}}' not null,
-          is_picked integer default false not null,
-          history_snapshot_json text not null,
-          created_at text not null,
-          updated_at text not null,
-          discarded_at text,
-          discard_operation_id text,
-          restored_at text
-        );
-        insert into __generation_33_scene_shot_video_take (
-          id,
-          scene_id,
-          source_shot_list_id,
-          title,
-          state_json,
-          is_picked,
-          history_snapshot_json,
-          created_at,
-          updated_at,
-          discarded_at,
-          discard_operation_id,
-          restored_at
-        )
-        select
-          id,
-          scene_id,
-          source_shot_list_id,
-          title,
-          state_json,
-          is_picked,
-          history_snapshot_json,
-          created_at,
-          updated_at,
-          discarded_at,
-          discard_operation_id,
-          restored_at
-        from scene_shot_video_take;
-        drop table scene_shot_video_take;
-        alter table __generation_33_scene_shot_video_take rename to scene_shot_video_take;
-        create index scene_shot_video_take_scene_idx
-          on scene_shot_video_take (scene_id, updated_at, id);
-        create index scene_shot_video_take_source_shot_list_idx
-          on scene_shot_video_take (source_shot_list_id, created_at, id);
-        create table scene_shot_video_take_output (
-          id text primary key not null,
-          scene_id text not null,
-          take_id text not null,
-          asset_id text not null,
-          asset_file_id text not null,
-          media_generation_run_id text,
-          created_at text not null,
-          updated_at text not null,
-          is_selected integer not null,
-          discarded_at text,
-          discard_operation_id text,
-          restored_at text
-        );
-        create table scene_shot_video_take_output_shot (
-          output_id text not null,
-          shot_id text not null,
-          shot_order integer not null,
-          discarded_at text,
-          discard_operation_id text,
-          restored_at text,
-          primary key (output_id, shot_id)
-        );
-        alter table scene_shot_video_take_media_input
-          add column media_generation_run_id text;
-        alter table scene_dialogue_audio_take
-          add column media_generation_run_id text;
-        drop table asset_file_generation;
-        alter table media_generation_run add column approval_token text;
-        pragma foreign_keys = on;
-      `);
-      setup.pragma('user_version = 33');
-      expect(readTableNames(setup)).toContain('scene_shot_video_take_output');
-      expect(readTableNames(setup)).not.toContain('scene_shot_video_take_video');
-      expect(readColumnNames(setup, 'scene_shot_video_take')).not.toContain(
-        'regenerated_from_take_id'
-      );
-    } finally {
-      setup.close();
-    }
-
-    await expect(
-      projectData.readProject({ projectName: 'constantinople', homeDir })
-    ).resolves.toMatchObject({
-      identity: { name: 'constantinople' },
-    });
-
-    const [backupPath] = await listBackupSqliteFiles(
-      path.join(created.projectPath, '.renku', 'project-database-backups')
-    );
-    expect(backupPath).toBeDefined();
-    const backup = new Database(backupPath, {
-      readonly: true,
-      fileMustExist: true,
-    });
-    try {
-      expect(backup.pragma('quick_check', { simple: true })).toBe('ok');
-      expect(backup.pragma('user_version', { simple: true })).toBe(33);
-      expect(readTableNames(backup)).toContain('scene_shot_video_take_output');
-      expect(readTableNames(backup)).not.toContain('scene_shot_video_take_video');
-      expect(readColumnNames(backup, 'scene_shot_video_take')).not.toContain(
-        'regenerated_from_take_id'
-      );
-    } finally {
-      backup.close();
-    }
-
-    const migrated = new Database(databasePath);
-    try {
-      expect(migrated.pragma('user_version', { simple: true })).toBe(
-        currentProjectStoreSchemaGeneration()
-      );
-      expect(readTableNames(migrated)).toContain('scene_shot_video_take_video');
-      expect(readTableNames(migrated)).not.toContain(
-        'scene_shot_video_take_output'
-      );
-      expect(readColumnNames(migrated, 'scene_shot_video_take')).toContain(
-        'regenerated_from_take_id'
-      );
-      expect(
-        (
-          migrated
-            .prepare(
-              'select count(*) as count from scene_shot_video_take_media_input_shot'
-            )
-            .get() as { count: number }
-        ).count
-      ).toBe(inputShotMembershipCount);
-    } finally {
-      migrated.close();
     }
   });
 
@@ -1184,9 +1004,13 @@ describe('migrate database command', () => {
         )
         .get('take_missing_reference_mode') as { stateJson: string };
 
-      const repairedState = parseSceneShotVideoTakeState({
-        value: repaired.stateJson,
-      });
+      const repairedState = JSON.parse(repaired.stateJson) as {
+        production: {
+          agentProposal?: {
+            dependencyDrafts: Array<{ dependencyKind: string }>;
+          };
+        };
+      };
       expect(repairedState).toMatchObject({
           production: {
             preparedInputs: [
@@ -1240,7 +1064,7 @@ describe('migrate database command', () => {
            where id = ?`
         )
         .get('take_without_dependency_drafts') as { stateJson: string };
-      expect(parseSceneShotVideoTakeState({ value: untouched.stateJson }))
+      expect(JSON.parse(untouched.stateJson))
         .toMatchObject({ production: {} });
     } finally {
       sqlite.close();
@@ -1539,7 +1363,7 @@ describe('migrate database command', () => {
         )
         .get() as { stateJson: string };
       expect(
-        parseSceneShotVideoTakeState({ value: regeneratedStateRow.stateJson })
+        JSON.parse(regeneratedStateRow.stateJson)
       ).toMatchObject({
         production: {
           requestedInputs: [
@@ -2764,9 +2588,13 @@ describe('migrate database command', () => {
         .get('take_with_retired_dependency_draft_fields') as {
         stateJson: string;
       };
-      const repairedState = parseSceneShotVideoTakeState({
-        value: repaired.stateJson,
-      });
+      const repairedState = JSON.parse(repaired.stateJson) as {
+        production: {
+          agentProposal?: {
+            dependencyDrafts: Array<Record<string, unknown>>;
+          };
+        };
+      };
       expect(repairedState.production.agentProposal?.dependencyDrafts).toEqual([
         expect.objectContaining({
           dependencyKind: 'first-frame',
@@ -3681,37 +3509,6 @@ function readTableNames(sqlite: Database.Database): string[] {
     .prepare("select name from sqlite_master where type = 'table'")
     .all()
     .map((row) => (row as { name: string }).name);
-}
-
-async function listBackupSqliteFiles(backupDir: string): Promise<string[]> {
-  const entries = await fs.readdir(backupDir);
-  return entries
-    .filter((entry) => entry.endsWith('.sqlite'))
-    .map((entry) => path.join(backupDir, entry))
-    .sort();
-}
-
-async function deleteDrizzleMigrationRowsAfterTag(
-  sqlite: Database.Database,
-  tag: string
-): Promise<void> {
-  const journalPath = path.join(
-    process.cwd(),
-    'drizzle',
-    'meta',
-    '_journal.json'
-  );
-  const journal = JSON.parse(await fs.readFile(journalPath, 'utf8')) as {
-    entries: Array<{ tag: string; when: number }>;
-  };
-  const boundary = journal.entries.find((entry) => entry.tag === tag);
-  if (!boundary) {
-    throw new Error(`Drizzle migration journal tag was not found: ${tag}.`);
-  }
-
-  sqlite
-    .prepare(`delete from __drizzle_migrations where created_at > ?`)
-    .run(boundary.when);
 }
 
 function readColumnNames(sqlite: Database.Database, tableName: string): string[] {

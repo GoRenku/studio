@@ -38,28 +38,7 @@ describe('Studio resource refresh matchers', () => {
   it('matches take-owned video, prompt, and input changes for the takes surface', () => {
     expect(
       matchesSceneTakesResource({
-        resourceKeys: ['scene-shot-video-take-video:take_001'],
-        sceneId: 'scene_bombardment',
-        takeId: 'take_001',
-      })
-    ).toBe(true);
-    expect(
-      matchesSceneTakesResource({
-        resourceKeys: ['scene-shot-video-take-prompt:take_001'],
-        sceneId: 'scene_bombardment',
-        takeId: 'take_001',
-      })
-    ).toBe(true);
-    expect(
-      matchesSceneTakesResource({
-        resourceKeys: ['scene-shot-video-take-input:input_001'],
-        sceneId: 'scene_bombardment',
-        takeId: 'take_001',
-      })
-    ).toBe(true);
-    expect(
-      matchesSceneTakesResource({
-        resourceKeys: ['scene-shot-video-take-video:take_002'],
+        resourceKeys: ['scene-shot-video-take:take_002'],
         sceneId: 'scene_bombardment',
         takeId: 'take_001',
       })

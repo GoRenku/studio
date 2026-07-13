@@ -2,7 +2,8 @@ import crypto from 'node:crypto';
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { MediaKind, ProjectRelativePath } from '../../client/index.js';
+import type { ProjectRelativePath } from '../../client/index.js';
+import type { ProjectMediaKind } from './types.js';
 import { resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 
@@ -71,7 +72,7 @@ export function hashFileSync(absolutePath: string): string {
 
 export function mimeTypeForProjectPath(
   projectRelativePath: ProjectRelativePath,
-  mediaKind: MediaKind
+  mediaKind: ProjectMediaKind
 ): string {
   const extension = path.extname(projectRelativePath).toLowerCase();
   if (mediaKind === 'audio') {
