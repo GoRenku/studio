@@ -1492,6 +1492,8 @@ renku generation spec show --spec <spec-id> --json
 renku generation spec list --purpose <purpose> --json
 renku generation preview show --file <spec-json> --json
 renku generation preview show --spec <spec-id> --json
+renku generation preview show --file <first-spec-json> --file <second-spec-json> --json
+renku generation preview show --spec <first-spec-id> --spec <second-spec-id> --json
 ```
 
 Estimate and run only the saved current request:

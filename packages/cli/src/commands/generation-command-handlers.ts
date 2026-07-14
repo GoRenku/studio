@@ -1,6 +1,6 @@
 import type { GenerationSpec } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
-import { notifyStudioGenerationPreview } from './studio-notification-client.js';
+import { notifyStudioGenerationPreviews } from './studio-notification-client.js';
 import { parseGenerationPurpose, parseGenerationTarget } from './generation-purpose-command-registry.js';
 import { readJsonFile, requiredFlag, type CliCommandHandler, type CliCommandRuntime } from './structured-command.js';
 
@@ -11,8 +11,8 @@ export interface GenerationCommandFlags {
   mediaKind?: string;
   provider?: string;
   model?: string;
-  file?: string;
-  spec?: string;
+  file?: string | string[];
+  spec?: string | string[];
   run?: string;
   approvalToken?: string;
   simulate?: boolean;
@@ -71,16 +71,16 @@ async function runModelList(input: Input) {
 }
 
 async function runValidate(input: Input) {
-  return input.runtime.projectDataService.validateGenerationSpec({ ...projectInput(input), spec: await readSpec(requiredFlag(input.flags.file, '--file')) });
+  return input.runtime.projectDataService.validateGenerationSpec({ ...projectInput(input), spec: await readSpec(requiredFlag(singleFlag(input.flags.file), '--file')) });
 }
 async function runSpecCreate(input: Input) {
-  return input.runtime.projectDataService.createGenerationSpec({ ...projectInput(input), spec: await readSpec(requiredFlag(input.flags.file, '--file')) });
+  return input.runtime.projectDataService.createGenerationSpec({ ...projectInput(input), spec: await readSpec(requiredFlag(singleFlag(input.flags.file), '--file')) });
 }
 async function runSpecUpdate(input: Input) {
-  return input.runtime.projectDataService.updateGenerationSpec({ ...projectInput(input), specId: requiredFlag(input.flags.spec, '--spec'), spec: await readSpec(requiredFlag(input.flags.file, '--file')) });
+  return input.runtime.projectDataService.updateGenerationSpec({ ...projectInput(input), specId: requiredFlag(singleFlag(input.flags.spec), '--spec'), spec: await readSpec(requiredFlag(singleFlag(input.flags.file), '--file')) });
 }
 async function runSpecShow(input: Input) {
-  return input.runtime.projectDataService.readGenerationSpec({ ...projectInput(input), specId: requiredFlag(input.flags.spec, '--spec') });
+  return input.runtime.projectDataService.readGenerationSpec({ ...projectInput(input), specId: requiredFlag(singleFlag(input.flags.spec), '--spec') });
 }
 async function runSpecList(input: Input) {
   return input.runtime.projectDataService.listGenerationSpecs({
@@ -89,33 +89,42 @@ async function runSpecList(input: Input) {
   });
 }
 async function runPreviewShow(input: Input) {
-  if (input.flags.file && input.flags.spec) {
+  const files = flagValues(input.flags.file);
+  const specIds = flagValues(input.flags.spec);
+  if (files.length > 0 && specIds.length > 0) {
     throw new StructuredError({ code: 'CLI145', message: 'generation preview show accepts either --file or --spec, not both.', suggestion: 'Choose a draft JSON file or a saved spec id.' });
   }
-  const preview = input.flags.spec
-    ? await input.runtime.projectDataService.buildGenerationPreview({ ...projectInput(input), specId: input.flags.spec })
-    : await input.runtime.projectDataService.buildGenerationPreview({ ...projectInput(input), spec: await readSpec(requiredFlag(input.flags.file, '--file')) });
+  if (files.length === 0 && specIds.length === 0) {
+    requiredFlag(undefined, '--file or --spec');
+  }
+  const previews = specIds.length > 0
+    ? await Promise.all(specIds.map((specId) =>
+        input.runtime.projectDataService.buildGenerationPreview({ ...projectInput(input), specId })
+      ))
+    : await Promise.all(files.map(async (file) =>
+        input.runtime.projectDataService.buildGenerationPreview({ ...projectInput(input), spec: await readSpec(file) })
+      ));
   const project = await input.runtime.projectDataService.readProject({ projectName: requiredProjectName(input) });
-  const delivery = await notifyStudioGenerationPreview({
+  const delivery = await notifyStudioGenerationPreviews({
     homeDir: input.runtime.homeDir,
     notification: {
       projectRef: { name: project.identity.name, id: project.identity.id, storageRoot: project.identity.folderPath },
-      preview,
+      previews,
       source: { kind: 'cli', command: 'generation preview show' },
     },
   });
   if (delivery.status !== 'delivered') {
     throw previewDeliveryError(delivery);
   }
-  return { valid: true, purpose: preview.spec.purpose, target: preview.spec.target, studio: { delivery: 'delivered' } };
+  return { valid: true, requestCount: previews.length, studio: { delivery: 'delivered' } };
 }
 async function runEstimate(input: Input) {
-  return input.runtime.projectDataService.estimateGeneration({ ...projectInput(input), specId: requiredFlag(input.flags.spec, '--spec') });
+  return input.runtime.projectDataService.estimateGeneration({ ...projectInput(input), specId: requiredFlag(singleFlag(input.flags.spec), '--spec') });
 }
 async function runGeneration(input: Input) {
   return input.runtime.projectDataService.runGeneration({
     ...projectInput(input),
-    specId: requiredFlag(input.flags.spec, '--spec'),
+    specId: requiredFlag(singleFlag(input.flags.spec), '--spec'),
     approvalToken: requiredFlag(input.flags.approvalToken, '--approval-token'),
     mode: input.flags.simulate ? 'simulated' : 'live',
   });
@@ -136,6 +145,15 @@ function parseMediaKind(value?: string): 'image' | 'audio' | 'video' | undefined
   }
   throw new StructuredError({ code: 'CLI149', message: `Unsupported media kind: ${value}.`, suggestion: 'Use image, audio, or video.' });
 }
-function previewDeliveryError(delivery: Exclude<Awaited<ReturnType<typeof notifyStudioGenerationPreview>>, { status: 'delivered' }>) {
+function flagValues(value: string | string[] | undefined): string[] {
+  if (value === undefined) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
+function singleFlag(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value.at(-1) : value;
+}
+function previewDeliveryError(delivery: Exclude<Awaited<ReturnType<typeof notifyStudioGenerationPreviews>>, { status: 'delivered' }>) {
   return new StructuredError({ code: 'CLI144', message: delivery.status === 'deliveryFailed' ? delivery.detail : 'Studio is not available to show the generation preview.', suggestion: 'Start Studio for the project and retry.' });
 }

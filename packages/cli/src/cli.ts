@@ -152,6 +152,7 @@ Examples
   $ renku create urban-basilica --title "Urban Basilica"
   $ renku init ~/Movies/renku
   $ renku init /Volumes/Media/Renku --json
+  $ renku generation preview show --file tmp/sheet-1.json --file tmp/sheet-2.json --project urban-basilica --json
 `;
 
 function createCliFlags() {
@@ -543,7 +544,10 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
-      case 'generation':
+      case 'generation': {
+        const generationPreviewFlags = input.join(' ') === 'preview show'
+          ? repeatedGenerationPreviewFlags(argv)
+          : {};
         return await runGenerationCommand({
           input,
           flags: {
@@ -553,8 +557,8 @@ export async function runRenkuCli(
             mediaKind: cli.flags.mediaKind,
             provider: cli.flags.provider,
             model: cli.flags.model,
-            file: cli.flags.file,
-            spec: cli.flags.spec,
+            file: generationPreviewFlags.file ?? cli.flags.file,
+            spec: generationPreviewFlags.spec ?? cli.flags.spec,
             run: cli.flags.run,
             shotList: cli.flags.shotList,
             shots: cli.flags.shots,
@@ -569,6 +573,7 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
+      }
       case 'lookbook':
         return await runLookbookCommand({
           input,
@@ -704,6 +709,28 @@ export async function runRenkuCli(
     io.stderr.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
+}
+
+function repeatedGenerationPreviewFlags(argv: string[]): {
+  file?: string[];
+  spec?: string[];
+} {
+  const file = repeatedFlagValues(argv, '--file');
+  const spec = repeatedFlagValues(argv, '--spec');
+  return {
+    ...(file.length > 0 ? { file } : {}),
+    ...(spec.length > 0 ? { spec } : {}),
+  };
+}
+
+function repeatedFlagValues(argv: string[], name: string): string[] {
+  return argv.flatMap((argument, index) =>
+    argument === name && argv[index + 1] !== undefined
+      ? [argv[index + 1]!]
+      : argument.startsWith(`${name}=`)
+        ? [argument.slice(name.length + 1)]
+        : []
+  );
 }
 
 function findUnknownFlags(

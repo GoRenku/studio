@@ -33,8 +33,9 @@ not accumulate offline resource-refresh backlogs.
 `studio.projectRefreshRequested` remains available for the narrower project
 information and project library refresh cases.
 
-Generation previews use `studio.generationPreviewRequested`. This event opens or
-updates the read-only Generation Preview Dialog with the exact prompt, model,
+Generation previews use `studio.generationPreviewsRequested`. This event opens or
+updates the Generation Preview Dialog with an ordered array of one or more
+ordinary Core Previews. Each entry retains its own exact prompt and model,
 resolved references, provider preview data, typed configuration projection,
 diagnostics, and prompt-sheet metadata that an agent is about to submit. The
 CLI/agent request uses logical project references only; the Studio server

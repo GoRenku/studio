@@ -2,7 +2,7 @@
 
 Date: 2026-07-12
 
-Status: resolved by Plan `0136`
+Status: resolved by Plans `0136` and `0137`
 
 Plan `0134` intentionally removed the old Core/Engines generation backend,
 client contract families, broad `ProjectDataService` generation inventory,
@@ -25,7 +25,7 @@ No compatibility export or temporary adapter was added.
 | Shot reference selection mutations in take state | generic spec reference selections with stable guide placement ids and `included` |
 | Image Revision service contracts | the `image.edit` purpose through generic preview/estimate/run |
 | purpose-specific import methods | focused domain attachment/import commands created in the owning purpose integration slice |
-| `studio.generationPreviewRequested` old preview event | a generic-spec Studio coordination payload or deletion if normal resource refresh is sufficient |
+| singular generation Preview event | `studio.generationPreviewsRequested` with an ordered array of ordinary Preview resources |
 | legacy take authoring/AI Production commands | Plan `0136` Shot purpose context plus generic spec commands; retain only focused take/media ownership operations |
 
 ## CLI Production Callers
@@ -137,44 +137,24 @@ No compatibility export or temporary adapter was added.
 
 ## Studio Skills Companion Callers
 
-The following paths are relative to the sister `studio-skills` repository.
-Plan `0136` updated or deleted every dependency-planning command, obsolete
-purpose name, and old JSON-spec instruction in these files.
+Plan `0137` completed the sister repository cutover after Plan `0136` landed
+the runtime contract. The current companion surface is:
 
-- `studio-skills/README.md`
-- `studio-skills/skills/casting-director/SKILL.md`
-- `studio-skills/skills/casting-director/references/cast-media-handoff.md`
-- `studio-skills/skills/casting-director/references/cast-voice-attachments.md`
-- `studio-skills/skills/media-producer/SKILL.md`
-- `studio-skills/skills/media-producer/references/cast-character-sheet.md`
-- `studio-skills/skills/media-producer/references/character-images.md`
-- `studio-skills/skills/media-producer/references/location-environment-sheet.md`
-- `studio-skills/skills/media-producer/references/location-sheet-board-design.md`
-- `studio-skills/skills/media-producer/references/lookbook-image.md`
-- `studio-skills/skills/media-producer/references/lookbook-sheet.md`
-- `studio-skills/skills/media-producer/references/scene-storyboard-sheet.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/first-last-frame-dependencies.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/generic-reference-inputs.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/index.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/input-dependencies.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/kling/index.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/prompt-quality-checklist.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/renku-workflow.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/seedance/storyboard-reference-final-video.md`
-- `studio-skills/skills/media-producer/references/shot-video-take/storyboard-reference-image.md`
-- `studio-skills/skills/media-producer/references/voice-over-profile-image.md`
-- `studio-skills/skills/media-producer/references/workflow.md`
-- `studio-skills/skills/media-producer/samples/shot-video-take/first-last-frame-production-group.json`
-- `studio-skills/skills/media-producer/samples/shot-video-take/shot-last-frame-spec.json`
-- `studio-skills/skills/movie-director/SKILL.md`
-- `studio-skills/skills/movie-director/references/cli-coverage-and-gaps.md`
-- `studio-skills/skills/movie-director/references/department-map.md`
-- `studio-skills/skills/movie-director/references/specialist-handoff-checklists.md`
-- `studio-skills/skills/movie-director/references/workflow-playbooks.md`
-- `studio-skills/skills/production-designer/SKILL.md`
-- `studio-skills/skills/production-designer/references/media-and-shot-list-handoff.md`
-- `studio-skills/skills/scene-shot-designer/SKILL.md`
-- `studio-skills/skills/scene-shot-designer/references/scene-shot-list-json-contract.md`
+- `studio-skills/README.md` for the public skill inventory;
+- `studio-skills/skills/media-producer/` for the generic lifecycle,
+  purpose-specific guidance, direct provider endpoint guidance, samples,
+  metadata, and forward-test cases;
+- `studio-skills/skills/movie-director/` for coordination and exact
+  `shot.video-take` handoff;
+- `studio-skills/skills/casting-director/`,
+  `studio-skills/skills/production-designer/`,
+  `studio-skills/skills/scene-shot-designer/`, and
+  `studio-skills/skills/lookbook-designer/` for specialist context and focused
+  attachment handoffs.
+
+Removed reference paths, dependency plans, speculative purpose instructions,
+and obsolete samples were deleted directly. No alias file or compatibility
+instruction preserves them.
 
 ## Resolution Evidence
 
@@ -185,8 +165,12 @@ purpose name, and old JSON-spec instruction in these files.
 - Studio server routes call current Core commands and Studio features consume
   current projections without importing server or database modules.
 - Studio Skills use `GenerationSpec`, stable guide placements, explicit
-  validate/estimate/run steps, and focused attachment. Obsolete purpose samples
-  and dependency-planning references were removed.
+  provider-field assignments, pricing-only estimate approval, separate
+  execution-readiness validation, Preview review, and focused attachment.
+  Obsolete purpose samples and dependency-planning references were removed.
+- Plan `0137` validated all touched skills, assembled every GenerationSpec
+  sample against the current Engines descriptors, exercised the isolated CLI
+  lifecycle without a provider call, and completed fresh-agent forward tests.
 - The generation-42 migration and generated obsolete-table cleanup migration
   were replayed against a verified copy and applied to `urban-basilica`; final
   package and browser gates are recorded in Plan `0136`.

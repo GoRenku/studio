@@ -55,17 +55,17 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
   resourceKeys: string[];
 }
 
-export interface GenerationPreviewResourceRequestedEvent extends StudioEventBase {
-  type: 'studio.generationPreviewRequested';
+export interface GenerationPreviewsResourceRequestedEvent extends StudioEventBase {
+  type: 'studio.generationPreviewsRequested';
   projectRef: StudioProjectRef;
-  preview: GenerationPreviewResource;
+  previews: GenerationPreviewResource[];
 }
 
 export type StudioEvent =
   | StudioFocusRequestedEvent
   | StudioProjectRefreshRequestedEvent
   | StudioProjectResourcesChangedEvent
-  | GenerationPreviewResourceRequestedEvent
+  | GenerationPreviewsResourceRequestedEvent
   | StudioEventBase;
 
 export interface StudioEventsResponse {

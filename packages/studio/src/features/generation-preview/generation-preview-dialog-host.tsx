@@ -4,7 +4,7 @@ import { GenerationPreviewDialog } from './generation-preview-dialog';
 
 interface GenerationPreviewEventDetail {
   projectName: string;
-  preview: GenerationPreviewResource;
+  previews: GenerationPreviewResource[];
   eventId: string;
   createdAt: string;
 }
@@ -16,7 +16,7 @@ export function GenerationPreviewDialogHost() {
   useEffect(() => {
     const handlePreview = (event: Event) => {
       const detail = (event as CustomEvent<GenerationPreviewEventDetail>).detail;
-      if (!detail?.preview) {
+      if (!detail?.previews?.length) {
         return;
       }
       setState(detail);
@@ -33,7 +33,7 @@ export function GenerationPreviewDialogHost() {
   return state ? (
     <GenerationPreviewDialog
       key={state.eventId}
-      open={open && Boolean(state?.preview)}
+      open={open && state.previews.length > 0}
       session={state}
       onOpenChange={setOpen}
     />

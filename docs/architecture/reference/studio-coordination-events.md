@@ -189,16 +189,16 @@ To keep that boundary from regressing:
 - adding a new event type must include a short explanation of why it is UI
   coordination state rather than durable project state.
 
-`studio.generationPreviewRequested` is a UI coordination event. Agents request
-the preview from a saved media generation spec id or a transient
-`MediaGenerationSpec` JSON file. The CLI notification carries the Core-built
-and Core-validated `GenerationPreviewRequest` with logical project references
-only. Before appending the event, the Studio server asks Core to resolve each
+`studio.generationPreviewsRequested` is a UI coordination event. Agents request
+one or more ordinary previews from saved generation spec ids or transient
+`GenerationSpec` JSON files. The CLI notification carries an ordered array of
+Core-built `GenerationPreview` values with logical project references only.
+Before appending the event, the Studio server asks Core to resolve each
 `assetId + assetFileId` into an active project asset file and to build
-meaningful subject labels. The stored event carries the browser display
-projection, `StudioGenerationPreview`, with Studio-safe asset-file URLs and
-subject labels so the running browser can open or update the Generation Preview
-Dialog before an agent generates a video prompt image or final video.
+meaningful subject labels for every entry. It appends nothing unless every
+projection succeeds. The stored event carries the ordered browser display
+projections with Studio-safe asset-file URLs and subject labels so the running
+browser can open one Generation Preview Dialog at `1 / N`.
 
 The preview may include final prompt text, model identity, configuration,
 provider-token ordering, diagnostics, prompt-sheet metadata, and a sanitized
@@ -227,7 +227,13 @@ The CLI command is:
 ```bash
 renku generation preview show --file <media-generation-spec-json> --json
 renku generation preview show --spec <media-generation-spec-id> --json
+renku generation preview show --file <first-spec-json> --file <second-spec-json> --json
+renku generation preview show --spec <first-spec-id> --spec <second-spec-id> --json
 ```
+
+Repeated inputs preserve command-line order and may not mix `--file` with
+`--spec`. The array is a display request only: every preview retains its own
+spec, estimate, approval, update, run, receipt, and attachment lifecycle.
 
 Unlike resource refresh, generation previews do not have an offline backlog. If
 Studio is not running, the command fails because the requested result is a

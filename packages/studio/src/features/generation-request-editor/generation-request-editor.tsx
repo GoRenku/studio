@@ -5,6 +5,7 @@ import type {
   GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import { AlertCircle } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { GenerationPreviewDraft } from '@/features/generation-preview/generation-preview-draft';
 import { GenerationPreviewConfigPanel } from '@/features/generation-preview/generation-preview-config-panel';
 import { GenerationPreviewDiagnosticsBanner } from '@/features/generation-preview/generation-preview-diagnostics-banner';
@@ -37,6 +38,7 @@ interface GenerationRequestEditorProps {
     value: GenerationPreviewConfigurationValue,
   ) => void;
   authoredPlaceholder?: string;
+  tabRowTrailing?: ReactNode;
 }
 
 export function GenerationRequestEditor({
@@ -55,6 +57,7 @@ export function GenerationRequestEditor({
   onReferenceToggle,
   onControlChange = () => {},
   authoredPlaceholder,
+  tabRowTrailing,
 }: GenerationRequestEditorProps) {
   return (
     <Tabs
@@ -64,7 +67,10 @@ export function GenerationRequestEditor({
       }
       className='contents'
     >
-      <LineTabBar items={generationRequestEditorTabItems} />
+      <LineTabBar
+        items={generationRequestEditorTabItems}
+        trailing={tabRowTrailing}
+      />
       <div className='flex min-h-0 flex-col overflow-hidden px-6 py-4'>
         {error ? (
           <Alert variant='destructive' className='mb-4 shrink-0'>

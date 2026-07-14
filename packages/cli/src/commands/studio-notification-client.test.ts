@@ -10,6 +10,7 @@ import {
 } from '@gorenku/studio-core/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  notifyStudioGenerationPreviews,
   notifyStudioProjectResourcesChanged,
   type StudioProjectResourcesChangedNotification,
 } from './studio-notification-client.js';
@@ -153,6 +154,37 @@ describe('Studio notification client', () => {
     await expect(
       fs.access(resolveStudioEventStorePath({ homeDir }))
     ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('posts one ordered array of ordinary generation Previews', async () => {
+    const received: unknown[] = [];
+    const server = await startNotificationServer(async (request) => {
+      received.push(JSON.parse(await readRequestBody(request)));
+      return { status: 200, body: JSON.stringify({ event: { id: 'studio_event_test' } }) };
+    });
+    servers.push(server);
+    await claimStudioRuntimeDescriptor({
+      homeDir,
+      host: '127.0.0.1',
+      port: server.port,
+      serverUrl: server.url,
+      cliNotificationToken: 'notification-token-test',
+    });
+    const previews = [
+      { spec: { title: 'First request' }, references: [] },
+      { spec: { title: 'Second request' }, references: [] },
+    ];
+
+    await expect(notifyStudioGenerationPreviews({
+      homeDir,
+      notification: {
+        projectRef: { name: 'constantinople', id: 'project_test0001', storageRoot: '/tmp/projects' },
+        previews: previews as never,
+        source: { kind: 'cli', command: 'generation preview show' },
+      },
+    })).resolves.toEqual({ status: 'delivered' });
+
+    expect(received).toEqual([expect.objectContaining({ previews })]);
   });
 
   it('reports deliveryFailed for server rejection', async () => {

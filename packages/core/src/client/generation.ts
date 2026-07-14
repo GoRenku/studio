@@ -111,6 +111,7 @@ export interface GenerationContext {
   purpose: GenerationPurpose;
   target: GenerationTarget;
   outputMediaKind: GenerationOutputMediaKind;
+  /** Target-resolved facts may include opaque authored source text at `contextText`. */
   facts: Record<string, JsonValue>;
   settings: GenerationPurposeSettings;
   models: GenerationModelDescriptor[];

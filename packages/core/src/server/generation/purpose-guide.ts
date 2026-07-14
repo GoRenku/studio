@@ -28,6 +28,7 @@ export interface GuideSlotDefinition {
   owner?: { kind: string; id: string };
   assetId?: string;
   assetFileIds?: string[];
+  selectedAssetFileIds?: string[];
   roles?: string[];
   mediaKind?: 'image' | 'audio' | 'video';
   initializeFirst?: boolean;
@@ -105,7 +106,17 @@ function slotFromDefinition(
     ...(definition.assetFileIds ? { assetFileIds: definition.assetFileIds } : {}),
     limit: 200,
   }).items.filter((candidate) => matchesRole(candidate, definition.roles));
-  const first = definition.initializeFirst ? candidates[0] : undefined;
+  const hasExactSelections = definition.selectedAssetFileIds !== undefined;
+  const selectedAssetFileIds = new Set(definition.selectedAssetFileIds ?? []);
+  const selected = candidates.filter((candidate) =>
+    candidate.reference.kind === 'asset-file' &&
+    selectedAssetFileIds.has(candidate.reference.assetFileId)
+  );
+  const initialized = hasExactSelections
+    ? selected
+    : definition.initializeFirst && candidates[0]
+      ? [candidates[0]]
+      : [];
   return {
     id: definition.slotId,
     label: definition.slotLabel,
@@ -113,8 +124,8 @@ function slotFromDefinition(
     ...(definition.subject ? { subject: definition.subject } : {}),
     ...(definition.guidance ? { guidance: definition.guidance } : {}),
     candidates,
-    selections: first ? [{
-      id: `initial:${referenceIdentity(first)}`,
+    selections: initialized.map((candidate) => ({
+      id: `initial:${referenceIdentity(candidate)}`,
       placement: {
         kind: 'slot',
         sectionId: definition.sectionId,
@@ -123,8 +134,8 @@ function slotFromDefinition(
         ...(definition.subject ? { subject: definition.subject } : {}),
       },
       included: true,
-      reference: first.reference,
-    }] : [],
+      reference: candidate.reference,
+    })),
   };
 }
 

@@ -46,7 +46,7 @@ const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
 const PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT =
   'studio.projectResourcesChanged notification';
 const GENERATION_PREVIEW_NOTIFICATION_CONTEXT =
-  'studio.generationPreviewRequested notification';
+  'studio.generationPreviewsRequested notification';
 
 export interface CreateStudioEventsRouteOptions {
   coordination?: StudioCoordinationService;
@@ -120,25 +120,27 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
       try {
         const body = await c.req.json();
         const request = readGenerationPreviewRequest(body);
-        const corePreview = await projectData.buildGenerationPreviewResource({
-          projectName: request.projectRef.name,
-          homeDir: options.homeDir,
-          preview: request.preview,
-        });
-        const preview = await projectGenerationPreview({
-          projectName: request.projectRef.name,
-          preview: corePreview,
-        });
+        const previews = await Promise.all(request.previews.map(async (requestedPreview) => {
+          const corePreview = await projectData.buildGenerationPreviewResource({
+            projectName: request.projectRef.name,
+            homeDir: options.homeDir,
+            preview: requestedPreview,
+          });
+          return projectGenerationPreview({
+            projectName: request.projectRef.name,
+            preview: corePreview,
+          });
+        }));
         const event = await coordination.appendStudioEvent({
-          type: 'studio.generationPreviewRequested',
+          type: 'studio.generationPreviewsRequested',
           projectRef: request.projectRef,
-          preview,
+          previews,
           source: request.source,
           operationId: request.operationId ?? createStudioOperationId(),
         });
         return c.json({
           eventId: event.id,
-          previewId: preview.previewId,
+          previewIds: previews.map((preview) => preview.previewId),
           event,
         });
       } catch (error) {
@@ -272,7 +274,7 @@ function readGenerationPreviewRequest(body: unknown) {
       message: 'Generation preview notification body must be an object.',
     });
   }
-  const preview = readGenericGenerationPreview(request.preview, issues);
+  const previews = readGenericGenerationPreviews(request.previews, issues);
   const projectRef = readProjectRef(
     request.projectRef,
     issues,
@@ -293,7 +295,7 @@ function readGenerationPreviewRequest(body: unknown) {
       )
     );
   }
-  if (issues.length > 0 || !projectRef || !source || !preview) {
+  if (issues.length > 0 || !projectRef || !source || !previews) {
     throw createStructuredError({
       code: 'STUDIO_SERVER032',
       message: 'Generation preview notification failed validation.',
@@ -305,29 +307,43 @@ function readGenerationPreviewRequest(body: unknown) {
 
   return {
     projectRef,
-    preview,
+    previews,
     source,
     ...(typeof operationId === 'string' ? { operationId } : {}),
   };
 }
 
-function readGenericGenerationPreview(
+function readGenericGenerationPreviews(
   value: unknown,
   issues: DiagnosticIssue[]
-): GenerationPreview | null {
-  const preview = readRecord(value);
-  const spec = readRecord(preview?.spec);
-  if (!preview || !spec || !Array.isArray(preview.references)) {
+): GenerationPreview[] | null {
+  if (!Array.isArray(value) || value.length === 0) {
     issues.push(
       notificationIssue(
-        'preview must be a generic generation preview with a spec and references.',
-        ['preview'],
+        'previews must be a non-empty array of generic generation previews.',
+        ['previews'],
         GENERATION_PREVIEW_NOTIFICATION_CONTEXT
       )
     );
     return null;
   }
-  return value as GenerationPreview;
+  const previews: GenerationPreview[] = [];
+  for (const [index, candidate] of value.entries()) {
+    const preview = readRecord(candidate);
+    const spec = readRecord(preview?.spec);
+    if (!preview || !spec || !Array.isArray(preview.references)) {
+      issues.push(
+        notificationIssue(
+          'previews entries must be generic generation previews with a spec and references.',
+          ['previews', String(index)],
+          GENERATION_PREVIEW_NOTIFICATION_CONTEXT
+        )
+      );
+      continue;
+    }
+    previews.push(candidate as GenerationPreview);
+  }
+  return previews.length === value.length ? previews : null;
 }
 
 async function validateSceneShotSelection(input: {

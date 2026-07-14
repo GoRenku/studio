@@ -82,10 +82,16 @@ export function collectStudioEventIssues(value: unknown) {
         }
       }
       break;
-    case 'studio.generationPreviewRequested':
+    case 'studio.generationPreviewsRequested':
       validateProjectRef(record.projectRef, ['projectRef'], issues);
-      if (!readRecord(record.preview)) {
-        issues.push(issue('STUDIO_COORDINATION005', 'preview must be an object.', ['preview']));
+      if (!Array.isArray(record.previews) || record.previews.length === 0) {
+        issues.push(issue('STUDIO_COORDINATION005', 'previews must be a non-empty array.', ['previews']));
+      } else {
+        for (const [index, preview] of record.previews.entries()) {
+          if (!readRecord(preview)) {
+            issues.push(issue('STUDIO_COORDINATION005', 'previews entries must be objects.', ['previews', String(index)]));
+          }
+        }
       }
       break;
     case 'studio.focusRequested':

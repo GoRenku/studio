@@ -52,6 +52,21 @@ describe('StudioCoordinationService', () => {
     expect(secondRead.events.map((event) => event.id)).toEqual([second.id]);
   });
 
+  it('rejects generation Preview events without at least one ordinary Preview', async () => {
+    const coordination = createStudioCoordinationService({ homeDir });
+
+    await expect(coordination.appendStudioEvent({
+      type: 'studio.generationPreviewsRequested',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot: path.join(homeDir, 'projects'),
+      },
+      previews: [],
+      source: { kind: 'cli', command: 'generation preview show' },
+    })).rejects.toMatchObject({ code: 'STUDIO_COORDINATION003' });
+  });
+
   it('creates the Renku config directory before appending events', async () => {
     const isolatedHomeDir = path.join(homeDir, 'fresh-home');
     const coordination = createStudioCoordinationService({ homeDir: isolatedHomeDir });

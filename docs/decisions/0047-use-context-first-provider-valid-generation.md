@@ -114,8 +114,10 @@ changes are limited to those accepted in that companion plan.
 - Predictable provider failures return structured diagnostics before a provider
   call and never mutate authored intent.
 - Provider defaults remain omitted unless explicitly authored.
-- Changing authored values, ordered references, provider identity, or file
-  contents invalidates exact-request approval.
+- Changing provider/model pricing inputs can change the price-approval token.
+  Creative values, ordered references, and file contents still require a new
+  validation, Preview, estimate review, and explicit live-run confirmation,
+  but may preserve the token when their pricing facts are unchanged.
 - Studio, CLI, and Skills consume Core contracts and do not duplicate purpose or
   provider rules.
 - There is no compatibility reader, dual write, fallback model, request repair,

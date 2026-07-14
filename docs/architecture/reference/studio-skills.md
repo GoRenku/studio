@@ -80,20 +80,36 @@ operational companions that teach agents how to use those contracts.
 `media-producer`
 
 - Generates purpose-specific media from Renku context.
-- Creates or updates persisted generation specs.
+- Authors one generic `GenerationSpec` from Core context and Engines-owned
+  provider field descriptors.
+- Preserves stable guide placement ids and separately assigns every included
+  exact reference to a real provider media field.
+- Treats `facts.contextText` as opaque authored source context and keeps
+  continuity relevance, Shot batching, and creative fallback decisions in the
+  agent workflow.
+- Uses exact registered `asset-file` references or normalized `project-file`
+  references; it never invents asset identities or provenance.
+- Creates or updates persisted generation specs only after the draft request is
+  explicit enough to review.
 - Estimates cost and runs only approved specs.
-- Imports finished files separately with `renku media import`.
+- Imports finished files only through current focused attachment purposes.
 - For `shot.video-take`, reads the exact Core purpose context for `take:<id>`,
   places exact Shot/Lookbook/Cast/Location/dialogue references in stable guide
   slots, and assigns them to real provider fields before validation.
 - For ad hoc Shot reference images, authors separate generic `image.create`
-  specs and later attaches the exact output file. External media is attached
-  without a synthetic spec or receipt.
-- Shows the Generation Preview Dialog with `renku generation preview show
-  --file <media-generation-spec-json>` for transient specs or `--spec
-  <media-generation-spec-id>` for saved specs before generating prompt-sheet
-  images or final shot videos, then revises the same Core-built preview when
-  the user gives feedback.
+  specs and reuses the exact output path as a `project-file` reference until a
+  current focused destination attaches it. External media uses the same exact
+  file contract without a synthetic spec or receipt.
+- Treats Lookbook Image import and Lookbook section/point placement as separate
+  owning commands.
+- Shows one or more ordinary requests in the Generation Preview Dialog with
+  repeated `--file` values for transient specs or repeated `--spec` values for
+  saved specs. Multi-request display never combines estimates, approvals, or
+  runs.
+- For `scene.storyboard-sheet`, reads the exact Scene Shot List, batches one to
+  four Shots, inspects and includes the relevant selected Storyboard Lookbook,
+  Cast, and Location references, and stops for user direction when needed
+  continuity media is unavailable.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
   the output to `casting-director` for `renku cast voice attach`.
 
@@ -116,9 +132,11 @@ operational companions that teach agents how to use those contracts.
   active shot list history.
 - Writes validated `kind: "sceneShotList"` JSON through the CLI.
 - Hands storyboard image requests to `media-producer` after a valid Scene Shot
-  List and selected Storyboard Lookbook exist. The media-producer skill owns
-  Storyboard Lookbook sheet readiness, `scene.storyboard-sheet` generation
-  specs, visual inspection, slicing, and per-shot storyboard image import.
+  List exists and uses a selected Storyboard Lookbook when available. The
+  media-producer skill owns
+  non-blocking Storyboard Lookbook Sheet guidance, `scene.storyboard-sheet`
+  generation specs, visual inspection, slicing, and per-shot storyboard image
+  import.
 
 ## Skill Rules
 

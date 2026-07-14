@@ -1,8 +1,11 @@
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { notifyStudioGenerationPreview } from './studio-notification-client.js';
+import { notifyStudioGenerationPreviews } from './studio-notification-client.js';
 import { generationCommandHandlers } from './generation-command-handlers.js';
 
-vi.mock('./studio-notification-client.js', () => ({ notifyStudioGenerationPreview: vi.fn() }));
+vi.mock('./studio-notification-client.js', () => ({ notifyStudioGenerationPreviews: vi.fn() }));
 
 describe('generation command handlers', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -36,13 +39,37 @@ describe('generation command handlers', () => {
     expect(runGeneration).toHaveBeenCalledWith(expect.objectContaining({ specId: 'spec_1', approvalToken: 'sha256:approved', mode: 'simulated' }));
   });
 
-  it('delivers a generic preview to Studio', async () => {
+  it('delivers ordered generic previews to Studio through the single-input path', async () => {
     const preview = { spec: { purpose: 'image.create', target: { kind: 'project', id: 'project' }, values: {}, references: [] }, referenceGuide: { sections: [], additionalReferences: [], notices: [] }, references: [], diagnostics: [] };
-    vi.mocked(notifyStudioGenerationPreview).mockResolvedValue({ status: 'delivered' });
-    const buildGenerationPreview = vi.fn().mockResolvedValue(preview);
+    vi.mocked(notifyStudioGenerationPreviews).mockResolvedValue({ status: 'delivered' });
+    const buildGenerationPreview = vi.fn()
+      .mockResolvedValueOnce({ ...preview, specId: 'spec_1' })
+      .mockResolvedValueOnce({ ...preview, specId: 'spec_2' });
     const readProject = vi.fn().mockResolvedValue({ identity: { id: 'project_1', name: 'movie', folderPath: '/tmp/movie' } });
-    await handler('preview show').run(input({ spec: 'spec_1' }, { buildGenerationPreview, readProject }));
-    expect(notifyStudioGenerationPreview).toHaveBeenCalledWith(expect.objectContaining({ notification: expect.objectContaining({ preview }) }));
+    await expect(handler('preview show').run(input({ spec: ['spec_1', 'spec_2'] }, { buildGenerationPreview, readProject }))).resolves.toEqual({ valid: true, requestCount: 2, studio: { delivery: 'delivered' } });
+    expect(buildGenerationPreview.mock.calls.map(([value]) => value.specId)).toEqual(['spec_1', 'spec_2']);
+    expect(notifyStudioGenerationPreviews).toHaveBeenCalledWith(expect.objectContaining({ notification: expect.objectContaining({ previews: [{ ...preview, specId: 'spec_1' }, { ...preview, specId: 'spec_2' }] }) }));
+  });
+
+  it('reads repeated transient files in order without saving them', async () => {
+    const folder = await mkdtemp(path.join(os.tmpdir(), 'renku-preview-files-'));
+    const files = [path.join(folder, 'one.json'), path.join(folder, 'two.json')];
+    await Promise.all(files.map((file, index) => writeFile(file, JSON.stringify({ purpose: 'image.create', target: { kind: 'project', id: `project-${index + 1}` }, values: {}, references: [] }))));
+    vi.mocked(notifyStudioGenerationPreviews).mockResolvedValue({ status: 'delivered' });
+    const buildGenerationPreview = vi.fn().mockImplementation(async ({ spec }) => ({ spec, references: [], diagnostics: [] }));
+    const readProject = vi.fn().mockResolvedValue({ identity: { id: 'project_1', name: 'movie', folderPath: '/tmp/movie' } });
+    await handler('preview show').run(input({ file: files }, { buildGenerationPreview, readProject }));
+    expect(notifyStudioGenerationPreviews).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(notifyStudioGenerationPreviews).mock.calls[0]![0].notification.previews.map((preview) => preview.spec.target.id)).toEqual(['project-1', 'project-2']);
+  });
+
+  it('rejects mixed inputs and does not notify when any preview fails', async () => {
+    await expect(handler('preview show').run(input({ file: ['one.json'], spec: ['spec_1'] }, {}))).rejects.toMatchObject({ code: 'CLI145' });
+    const buildGenerationPreview = vi.fn()
+      .mockResolvedValueOnce({ spec: { purpose: 'image.create' } })
+      .mockRejectedValueOnce(new Error('invalid second spec'));
+    await expect(handler('preview show').run(input({ spec: ['spec_1', 'spec_2'] }, { buildGenerationPreview }))).rejects.toThrow('invalid second spec');
+    expect(notifyStudioGenerationPreviews).not.toHaveBeenCalled();
   });
 });
 

@@ -24,9 +24,9 @@ export interface StudioProjectResourcesChangedNotification {
   operationId?: string;
 }
 
-export interface StudioGenerationPreviewNotification {
+export interface StudioGenerationPreviewsNotification {
   projectRef: StudioProjectRef;
-  preview: GenerationPreview;
+  previews: GenerationPreview[];
   source: { kind: 'cli'; command: string };
   operationId?: string;
 }
@@ -57,9 +57,9 @@ export async function notifyStudioProjectResourcesChanged(input: {
   });
 }
 
-export async function notifyStudioGenerationPreview(input: {
+export async function notifyStudioGenerationPreviews(input: {
   homeDir?: string;
-  notification: StudioGenerationPreviewNotification;
+  notification: StudioGenerationPreviewsNotification;
   requestTimeoutMs?: number;
   now?: Date;
 }): Promise<StudioNotificationDeliveryResult> {

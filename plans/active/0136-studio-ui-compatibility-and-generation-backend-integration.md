@@ -1767,7 +1767,9 @@ Verified on 2026-07-13:
 - [x] Record Plan `0136` as superseding all Plan `0135` implementation and
       checklist authority after acceptance.
 - [ ] Add the Plan `0135` closure note after Plan `0136` completes.
-- [x] Align current Studio Skills without duplicating runtime rules.
+- [x] Align current Studio Skills without duplicating runtime rules. Plan
+      `0137` contains the final sister-repository rewrite and verification
+      evidence after this runtime integration landed.
 - [x] Preserve golden agent-owned Storyboard splitting instructions.
 - [x] Leave historical plans and ADRs unchanged except where they explicitly
       document the newly accepted decision.

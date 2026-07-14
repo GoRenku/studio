@@ -89,6 +89,55 @@ describe('GenerationPreviewDialogHost', () => {
     expect(await screen.findByText('Shot Video Generation Preview')).toBeTruthy();
   });
 
+  it('navigates ordered previews while preserving the selected tab and independent drafts', async () => {
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreviews([
+      previewFixture({
+        purpose: 'image.create',
+        title: 'First Preview',
+        saved: true,
+        authoredText: 'First prompt.',
+      }),
+      previewFixture({
+        purpose: 'shot.video-take',
+        title: 'Second Preview',
+        saved: true,
+        authoredText: 'Second prompt.',
+      }),
+    ]);
+
+    expect(await screen.findByText('1 / 2')).toBeTruthy();
+    const previous = screen.getByRole('button', { name: 'Previous generation request' });
+    const next = screen.getByRole('button', { name: 'Next generation request' });
+    expect(previous.hasAttribute('disabled')).toBe(true);
+    fireEvent.input(screen.getByRole('textbox', { name: 'Generation prompt' }), {
+      target: { value: 'First unsaved draft.' },
+    });
+    await act(async () => selectTab('References'));
+    fireEvent.click(next);
+
+    expect(await screen.findByText('2 / 2')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'References' }).getAttribute('data-state')).toBe('active');
+    expect(screen.getByRole('button', { name: 'Next generation request' }).hasAttribute('disabled')).toBe(true);
+    await act(async () => selectTab('Prompt'));
+    fireEvent.input(screen.getByRole('textbox', { name: 'Generation prompt' }), {
+      target: { value: 'Second unsaved draft.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Previous generation request' }));
+    expect((screen.getByRole('textbox', { name: 'Generation prompt' }) as HTMLTextAreaElement).value).toBe('First unsaved draft.');
+    fireEvent.click(screen.getByRole('button', { name: 'Next generation request' }));
+    expect((screen.getByRole('textbox', { name: 'Generation prompt' }) as HTMLTextAreaElement).value).toBe('Second unsaved draft.');
+  });
+
+  it('keeps the single-preview surface free of request navigation', async () => {
+    render(<GenerationPreviewDialogHost />);
+    await dispatchPreview(previewFixture({ purpose: 'image.create', title: 'Only Preview' }));
+    expect(await screen.findByText('Image Create Generation Preview')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Previous generation request' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Next generation request' })).toBeNull();
+  });
+
   it('renders references and config without role, token, or payload fields', async () => {
     render(<GenerationPreviewDialogHost />);
 
@@ -447,12 +496,16 @@ function selectTab(name: string): void {
 let previewEventSequence = 0;
 
 async function dispatchPreview(preview: GenerationPreviewResource): Promise<void> {
+  return dispatchPreviews([preview]);
+}
+
+async function dispatchPreviews(previews: GenerationPreviewResource[]): Promise<void> {
   await act(async () => {
     window.dispatchEvent(
       new CustomEvent('renku:generation-preview-requested', {
         detail: {
-          projectName: preview.project.name,
-          preview,
+          projectName: previews[0]!.project.name,
+          previews,
           eventId: `studio_event_test_${++previewEventSequence}`,
           createdAt: '2026-07-02T10:00:00.000Z',
         },

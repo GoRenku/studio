@@ -85,6 +85,7 @@ describe('studio events Hono route', () => {
     const token = createStudioRuntimeToken();
     const appended: AppendStudioEventInput[] = [];
     const preview = generationPreviewFixture();
+    let projectionIndex = 0;
     const app = createStudioEventsRoute({
       token,
       cliNotificationToken: 'notification-token-test',
@@ -93,7 +94,11 @@ describe('studio events Hono route', () => {
       generationPreviewProjection: async (input) => {
         expect(input.projectName).toBe('constantinople');
         expect(input.preview).toEqual(coreGenerationPreviewResourceFixture());
-        return studioGenerationPreviewFixture();
+        projectionIndex += 1;
+        return {
+          ...studioGenerationPreviewFixture(),
+          previewId: `generation_preview_test_${projectionIndex}`,
+        };
       },
     });
 
@@ -105,7 +110,7 @@ describe('studio events Hono route', () => {
           id: 'project_test0001',
           storageRoot: '/tmp/renku',
         },
-        preview,
+        previews: [preview, preview],
         source: { kind: 'cli', command: 'generation preview show' },
         operationId: 'studio_operation_preview_test',
       }),
@@ -118,47 +123,56 @@ describe('studio events Hono route', () => {
     expect(response.status).toBe(200);
     expect(appended).toEqual([
       {
-        type: 'studio.generationPreviewRequested',
+        type: 'studio.generationPreviewsRequested',
         projectRef: {
           name: 'constantinople',
           id: 'project_test0001',
           storageRoot: '/tmp/renku',
         },
-        preview: studioGenerationPreviewFixture(),
+        previews: [
+          { ...studioGenerationPreviewFixture(), previewId: 'generation_preview_test_1' },
+          { ...studioGenerationPreviewFixture(), previewId: 'generation_preview_test_2' },
+        ],
         source: { kind: 'cli', command: 'generation preview show' },
         operationId: 'studio_operation_preview_test',
       },
     ]);
-    await expect(response.json()).resolves.toMatchObject({
+    const responseBody = await response.json();
+    expect(responseBody).toMatchObject({
       eventId: 'studio_event_test',
-      previewId: 'generation_preview_test',
-      event: {
-        preview: {
-          subject: {
-            projectLabel: 'Preparation of the Siege',
-            sceneLabel: 'Opening council',
-            takeLabel: 'Take 1',
-            shotLabel: 'Shot 1',
-          },
-          references: [
-            {
-              browserUrl:
-                '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
-            },
-          ],
-        },
+      previewIds: ['generation_preview_test_1', 'generation_preview_test_2'],
+    });
+    expect(responseBody.event.previews).toHaveLength(2);
+    expect(responseBody.event.previews[0]).toMatchObject({
+      subject: {
+        projectLabel: 'Preparation of the Siege',
+        sceneLabel: 'Opening council',
+        takeLabel: 'Take 1',
+        shotLabel: 'Shot 1',
       },
+      references: [
+        {
+          browserUrl:
+            '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
+        },
+      ],
     });
   });
 
   it('rejects generation preview notifications when references cannot be resolved', async () => {
     const token = createStudioRuntimeToken();
+    const appended: AppendStudioEventInput[] = [];
+    let projectionCount = 0;
     const app = createStudioEventsRoute({
       token,
       cliNotificationToken: 'notification-token-test',
-      coordination: fakeCoordinationService([]),
+      coordination: fakeCoordinationService(appended),
       projectData: fakeProjectDataService(),
       generationPreviewProjection: async () => {
+        projectionCount += 1;
+        if (projectionCount === 1) {
+          return studioGenerationPreviewFixture();
+        }
         throw createStructuredError({
           code: 'CORE_GENERATION_PREVIEW_REFERENCE_FILE_NOT_FOUND',
           message: 'Generation preview reference asset file was not found.',
@@ -174,7 +188,7 @@ describe('studio events Hono route', () => {
           id: 'project_test0001',
           storageRoot: '/tmp/renku',
         },
-        preview: generationPreviewFixture(),
+        previews: [generationPreviewFixture(), generationPreviewFixture()],
         source: { kind: 'cli', command: 'generation preview show' },
       }),
       headers: {
@@ -184,6 +198,8 @@ describe('studio events Hono route', () => {
     });
 
     expect(response.status).toBe(400);
+    expect(projectionCount).toBe(2);
+    expect(appended).toEqual([]);
     await expect(response.json()).resolves.toMatchObject({
       error: {
         code: 'CORE_GENERATION_PREVIEW_REFERENCE_FILE_NOT_FOUND',
@@ -227,7 +243,7 @@ describe('studio events Hono route', () => {
           id: 'project_test0001',
           storageRoot: '/tmp/renku',
         },
-        preview,
+        previews: [preview],
         source: { kind: 'cli', command: 'generation preview show' },
       }),
       headers: {
@@ -263,7 +279,7 @@ describe('studio events Hono route', () => {
     const response = await app.request('/generation-previews', {
       method: 'POST',
       body: JSON.stringify({
-        preview: generationPreviewFixture(),
+        previews: [generationPreviewFixture()],
         source: { kind: 'cli', command: 'generation preview show' },
       }),
       headers: {
@@ -301,7 +317,7 @@ describe('studio events Hono route', () => {
           id: 'project_other0001',
           storageRoot: '/tmp/renku/other-project',
         },
-        preview: generationPreviewFixture(),
+        previews: [generationPreviewFixture()],
         source: { kind: 'cli', command: 'generation preview show' },
       }),
       headers: {

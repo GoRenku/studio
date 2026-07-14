@@ -11,6 +11,7 @@ import {
 import { listAssetFileRecords, readAssetFileRecord } from './asset-files.js';
 import { listAssetRecords, readAssetRecord } from './assets.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import { listAssetRelationshipPage } from './asset-relationships/index.js';
 
 export interface GenerationReferenceAssetFileRecord {
   asset: NonNullable<ReturnType<typeof readAssetRecord>>;
@@ -66,6 +67,32 @@ export function readGenerationReferenceAssetFileRecord(
     owner: readAssetOwners(session).get(asset.id) ?? null,
     generationRunId: generation?.mediaGenerationRunId ?? null,
   };
+}
+
+export function listSelectedGenerationReferenceFileIds(input: {
+  session: DatabaseSession;
+  owner: { kind: 'castMember' | 'location' | 'scene'; id: string };
+  roles: string[];
+}): string[] {
+  const target = input.owner.kind === 'castMember'
+    ? { kind: 'castMember' as const, castMemberId: input.owner.id }
+    : input.owner.kind === 'location'
+      ? { kind: 'location' as const, locationId: input.owner.id }
+      : { kind: 'scene' as const, sceneId: input.owner.id };
+  return listAssetRelationshipPage(input.session, {
+    target,
+    selection: 'select',
+    limit: 200,
+  }).items
+    .filter((asset) => matchesAcceptedRole(asset.role, input.roles))
+    .flatMap((asset) => asset.files.map((file) => file.id));
+}
+
+function matchesAcceptedRole(value: string, roles: string[]): boolean {
+  const normalized = value.replaceAll('_', '-').toLocaleLowerCase();
+  return roles.some((role) =>
+    normalized.includes(role.replaceAll('_', '-').toLocaleLowerCase())
+  );
 }
 
 function readAssetOwners(session: DatabaseSession): Map<

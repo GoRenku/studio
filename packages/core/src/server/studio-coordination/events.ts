@@ -25,7 +25,7 @@ export type StudioEventType =
   | 'studio.focusChanged'
   | 'studio.focusRequestFailed'
   | 'studio.browserSessionActive'
-  | 'studio.generationPreviewRequested';
+  | 'studio.generationPreviewsRequested';
 
 export type StudioEventSource =
   | { kind: 'cli'; command: string }
@@ -109,10 +109,10 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
   resourceKeys: string[];
 }
 
-export interface StudioGenerationPreviewRequestedEvent extends StudioEventBase {
-  type: 'studio.generationPreviewRequested';
+export interface StudioGenerationPreviewsRequestedEvent extends StudioEventBase {
+  type: 'studio.generationPreviewsRequested';
   projectRef: StudioProjectRef;
-  preview: GenerationPreviewResource;
+  previews: GenerationPreviewResource[];
 }
 
 export interface StudioFocusRequestedEvent extends StudioEventBase {
@@ -162,7 +162,7 @@ export type StudioEvent =
   | StudioFocusChangedEvent
   | StudioFocusRequestFailedEvent
   | StudioBrowserSessionActiveEvent
-  | StudioGenerationPreviewRequestedEvent;
+  | StudioGenerationPreviewsRequestedEvent;
 
 type StudioAssignedEnvelopeKeys = 'id' | 'version' | 'createdAt';
 
@@ -173,7 +173,7 @@ export type AppendStudioEventInput =
   | (Omit<StudioFocusChangedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioFocusRequestFailedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
   | (Omit<StudioBrowserSessionActiveEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput)
-  | (Omit<StudioGenerationPreviewRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput);
+  | (Omit<StudioGenerationPreviewsRequestedEvent, StudioAssignedEnvelopeKeys> & StudioEventMetadataInput);
 
 export interface StudioEventMetadataInput {
   source: StudioEventSource;

@@ -16,7 +16,7 @@ import type {
   StudioFocus,
   StudioEvent,
   StudioFocusRequestedEvent,
-  GenerationPreviewResourceRequestedEvent,
+  GenerationPreviewsResourceRequestedEvent,
   StudioPendingRequest,
   StudioProjectRef,
 } from '@/services/studio-current-contracts';
@@ -302,8 +302,8 @@ async function applyStudioEventBatch(input: {
       }
     }
 
-    if (event.type === 'studio.generationPreviewRequested') {
-      const previewEvent = event as GenerationPreviewResourceRequestedEvent;
+    if (event.type === 'studio.generationPreviewsRequested') {
+      const previewEvent = event as GenerationPreviewsResourceRequestedEvent;
       if (
         input.currentProjectRef.current?.identity.id ===
         previewEvent.projectRef.id
@@ -332,13 +332,13 @@ async function applyStudioEventBatch(input: {
 }
 
 function publishGenerationPreview(
-  event: GenerationPreviewResourceRequestedEvent
+  event: GenerationPreviewsResourceRequestedEvent
 ): void {
   window.dispatchEvent(
     new CustomEvent('renku:generation-preview-requested', {
       detail: {
         projectName: event.projectRef.name,
-        preview: event.preview,
+        previews: event.previews,
         eventId: event.id,
         createdAt: event.createdAt,
       },
