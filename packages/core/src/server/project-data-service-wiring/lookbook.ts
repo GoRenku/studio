@@ -1,36 +1,36 @@
 import {
-  clearLookbookSelection,
   clearLookbookCardImage,
-  createLookbook,
-  deleteLookbook,
   deleteLookbookImage,
   deleteLookbookSheet,
   listLookbookSourceInspirations,
-  renameLookbook,
-  selectLookbookForType,
   setLookbookCardImage,
   setLookbookImagePlacement,
   setLookbookSourceInspirations,
-  updateLookbook,
-  validateLookbook,
 } from '../commands/lookbook-commands.js';
 import {
-  listLookbooksResource as listLookbooks,
-  readLookbookResource as readLookbook,
-} from '../resources/lookbook.js';
+  validateProductionLookbook,
+  writeProductionLookbook,
+} from '../commands/production-lookbook-commands.js';
+import {
+  validateStoryboardLookbook,
+  writeStoryboardLookbook,
+} from '../commands/storyboard-lookbook-commands.js';
+import {
+  readProductionLookbookResource as readProductionLookbook,
+  readProjectLookbooksResource as readProjectLookbooks,
+  readStoryboardLookbookResource as readStoryboardLookbook,
+} from '../resources/project-lookbooks.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createLookbookServiceWiring(): Pick<
   ProjectDataService,
-  | 'listLookbooks'
-  | 'readLookbook'
-  | 'validateLookbook'
-  | 'createLookbook'
-  | 'updateLookbook'
-  | 'renameLookbook'
-  | 'deleteLookbook'
-  | 'selectLookbookForType'
-  | 'clearLookbookSelection'
+  | 'readProjectLookbooks'
+  | 'readProductionLookbook'
+  | 'readStoryboardLookbook'
+  | 'validateProductionLookbook'
+  | 'validateStoryboardLookbook'
+  | 'writeProductionLookbook'
+  | 'writeStoryboardLookbook'
   | 'setLookbookSourceInspirations'
   | 'listLookbookSourceInspirations'
   | 'clearLookbookCardImage'
@@ -40,15 +40,13 @@ export function createLookbookServiceWiring(): Pick<
   | 'setLookbookImagePlacement'
 > {
   return {
-    listLookbooks,
-    readLookbook,
-    validateLookbook,
-    createLookbook,
-    updateLookbook,
-    renameLookbook,
-    deleteLookbook,
-    selectLookbookForType,
-    clearLookbookSelection,
+    readProjectLookbooks,
+    readProductionLookbook,
+    readStoryboardLookbook,
+    validateProductionLookbook,
+    validateStoryboardLookbook,
+    writeProductionLookbook,
+    writeStoryboardLookbook,
     setLookbookSourceInspirations,
     listLookbookSourceInspirations,
     clearLookbookCardImage,

@@ -16,21 +16,17 @@ import renkuLogo from '@/assets/renku-logo.svg';
 import type {
   ActNavigationRow,
   InspirationResource,
-  LookbookListItemWithSources,
   SceneNavigationRow,
   SequenceNavigationRow,
-  LookbooksResource,
 } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { cn } from '@/lib/utils';
 import {
   deleteInspirationFolder,
-  listLookbooks,
   readInspirationResource,
 } from '@/services/studio-visual-language-api';
 import {
   matchesVisualLanguageInspirationResource,
-  matchesVisualLanguageLookbooksResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
@@ -50,7 +46,6 @@ interface StudioSidebarProps {
   onHome: () => void;
   isProductionExportRunning: boolean;
   onProductionExport: () => void;
-  lookbooksRevision: number;
   inspirationFoldersRevision: number;
   onInspirationFoldersChange: () => void;
 }
@@ -63,7 +58,6 @@ export function StudioSidebar({
   onHome,
   isProductionExportRunning,
   onProductionExport,
-  lookbooksRevision,
   inspirationFoldersRevision,
   onInspirationFoldersChange,
 }: StudioSidebarProps) {
@@ -83,26 +77,9 @@ export function StudioSidebar({
   const [collapsedAutoSequences, setCollapsedAutoSequences] = useState<Set<string>>(
     () => new Set()
   );
-  const [lookbooksResource, setLookbooksResource] =
-    useState<LookbooksResource | null>(null);
   const [inspirationResource, setInspirationResource] =
     useState<InspirationResource | null>(null);
-  const [lookbooksResourceRevision, setLookbooksResourceRevision] = useState(0);
   const [inspirationResourceRevision, setInspirationResourceRevision] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void listLookbooks(project.identity.name)
-      .then((resource) => {
-        if (!cancelled) setLookbooksResource(resource);
-      })
-      .catch(() => {
-        if (!cancelled) setLookbooksResource(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [project.identity.name, lookbooksResourceRevision, lookbooksRevision]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,11 +99,6 @@ export function StudioSidebar({
     inspirationResourceRevision,
   ]);
 
-  useStudioResourceRefresh({
-    projectName: project.identity.name,
-    matches: matchesVisualLanguageLookbooksResource,
-    onRefresh: () => setLookbooksResourceRevision((current) => current + 1),
-  });
   useStudioResourceRefresh({
     projectName: project.identity.name,
     matches: (resourceKeys) =>
@@ -149,8 +121,8 @@ export function StudioSidebar({
     if (selection.type === 'inspiration') {
       sections.push('visualLanguage', 'inspiration');
     }
-    if (selection.type === 'lookbooks' || selection.type === 'lookbook') {
-      sections.push('visualLanguage');
+    if (selection.type === 'lookbook') {
+      sections.push('visualLanguage', 'lookbooks');
     }
     if (
       selection.type === 'storyArc' ||
@@ -333,33 +305,42 @@ export function StudioSidebar({
                   ))
                 : null}
               <StudioSidebarButton
-                active={selection.type === 'lookbooks'}
-                icon={<Palette className='h-4 w-4' />}
+                active={false}
+                icon={<Layers3 className='h-4 w-4' />}
                 label='Lookbooks'
-                detail={lookbookSelectionSummary(lookbooksResource)}
+                detail='Production and Storyboard'
                 compact
-                onClick={() => onSelect({ type: 'lookbooks' })}
+                onClick={() => toggleSection('lookbooks')}
+                disclosure={{
+                  expanded: visibleExpandedSections.has('lookbooks'),
+                  label: `${visibleExpandedSections.has('lookbooks') ? 'Collapse' : 'Expand'} Lookbooks`,
+                  onToggle: () => toggleSection('lookbooks'),
+                }}
               />
-              {lookbooksResource?.lookbooks.map((item) => (
-                <div key={item.lookbook.id} className='pl-3'>
-                  <StudioSidebarButton
-                    active={
-                      selection.type === 'lookbook' &&
-                      selection.lookbookId === item.lookbook.id
-                    }
-                    icon={<Palette className='h-4 w-4' />}
-                    label={item.lookbook.name}
-                    detail={lookbookRowDetail(item)}
-                    compact
-                    onClick={() =>
-                      onSelect({
-                        type: 'lookbook',
-                        lookbookId: item.lookbook.id,
-                      })
-                    }
-                  />
-                </div>
-              ))}
+              {visibleExpandedSections.has('lookbooks') ? (
+                <>
+                  <div className='pl-3'>
+                    <StudioSidebarButton
+                      active={selection.type === 'lookbook' && selection.kind === 'production'}
+                      icon={<Palette className='h-4 w-4' />}
+                      label='Production'
+                      detail='Final video direction'
+                      compact
+                      onClick={() => onSelect({ type: 'lookbook', kind: 'production' })}
+                    />
+                  </div>
+                  <div className='pl-3'>
+                    <StudioSidebarButton
+                      active={selection.type === 'lookbook' && selection.kind === 'storyboard'}
+                      icon={<Palette className='h-4 w-4' />}
+                      label='Storyboard'
+                      detail='Storyboard direction'
+                      compact
+                      onClick={() => onSelect({ type: 'lookbook', kind: 'storyboard' })}
+                    />
+                  </div>
+                </>
+              ) : null}
             </div>
           ) : null}
         </StudioSidebarSection>
@@ -485,27 +466,6 @@ function subtractValues<T>(current: Set<T>, values: ReadonlySet<T>): Set<T> {
     }
   }
   return changed ? next : current;
-}
-
-function lookbookSelectionSummary(
-  resource: LookbooksResource | null
-): string {
-  const selected = resource?.selectedLookbookIdsByType ?? {};
-  if (selected.movie && selected.storyboard) {
-    return 'Movie and Storyboard selected';
-  }
-  if (selected.movie) {
-    return 'Storyboard missing';
-  }
-  if (selected.storyboard) {
-    return 'Movie missing';
-  }
-  return 'Movie and Storyboard missing';
-}
-
-function lookbookRowDetail(item: LookbookListItemWithSources): string {
-  const label = item.lookbook.type === 'movie' ? 'Movie' : 'Storyboard';
-  return item.isSelectedForType ? `${label} selected` : label;
 }
 
 function ProjectCard({

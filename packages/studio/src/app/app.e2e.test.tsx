@@ -59,6 +59,25 @@ describe('App', () => {
     });
     await screen.findByText('Project Name');
     await screen.findByText('Acts');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Expand Visual Language' })
+    );
+    expect(
+      screen.getByRole('button', { name: 'LookbooksProduction and Storyboard' })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'ProductionFinal video direction' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'StoryboardStoryboard direction' })
+    ).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Lookbooks' }));
+    expect(
+      screen.getAllByRole('button', { name: 'ProductionFinal video direction' })
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByRole('button', { name: 'StoryboardStoryboard direction' })
+    ).toHaveLength(1);
     expect(fetchLog).toContain('/studio-api/projects/constantinople');
     expect(fetchLog.some((url) => url.includes('/select'))).toBe(false);
   });
@@ -579,6 +598,23 @@ describe('App', () => {
     ).toBeTruthy();
   });
 
+  it('rejects unknown Lookbook kinds instead of opening Production', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/projects/constantinople/visual-language/lookbooks/produciton'
+    );
+    mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    renderApp();
+
+    await screen.findByText('Project Library');
+    expect(screen.getByText('Unknown Lookbook kind: produciton')).toBeTruthy();
+  });
+
   it('returns home from a project route and stays on the project library route', async () => {
     window.history.pushState({}, '', '/projects/constantinople');
     mockStudioFetch({
@@ -734,9 +770,14 @@ describe('App', () => {
       '/projects/constantinople/visual-language/inspiration',
     ],
     [
-      'Lookbooks',
-      { type: 'lookbooks' },
-      '/projects/constantinople/visual-language/lookbooks',
+      'Production Lookbook',
+      { type: 'lookbook', kind: 'production' },
+      '/projects/constantinople/visual-language/lookbooks/production',
+    ],
+    [
+      'Storyboard Lookbook',
+      { type: 'lookbook', kind: 'storyboard' },
+      '/projects/constantinople/visual-language/lookbooks/storyboard',
     ],
     ['Trash', { type: 'trash' }, '/projects/constantinople/trash'],
     ['Story Arc', { type: 'storyArc' }, '/projects/constantinople/acts'],

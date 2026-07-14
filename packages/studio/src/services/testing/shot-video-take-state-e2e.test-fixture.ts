@@ -134,18 +134,11 @@ export async function createShotVideoTakeReferenceSelectionFixture(
       sourceProjectRelativePath: 'generated/media/gate-location-sheet.png',
       title: 'Gate Location Sheet',
     });
-  const lookbook = await fixture.projectData.createLookbook({
+  const lookbook = await fixture.projectData.writeProductionLookbook({
     projectName: fixture.projectName,
     homeDir: fixture.homeDir,
-    name: 'Imperial Wound',
     document: lookbookDocument(),
     idGenerator: createDeterministicIdGenerator(),
-  });
-  await fixture.projectData.selectLookbookForType({
-    projectName: fixture.projectName,
-    homeDir: fixture.homeDir,
-    type: 'movie',
-    lookbookId: lookbook.lookbook.id,
   });
   const lookbookSheet = await fixture.projectData.attachGenerationMedia({
     homeDir: fixture.homeDir,
@@ -486,8 +479,8 @@ async function writeProjectFile(input: {
 
 function lookbookDocument() {
   return {
-    kind: 'movieLookbook' as const,
-    movieLookbook: {
+    kind: 'productionLookbook' as const,
+    productionLookbook: {
       name: 'Imperial Wound',
       thesis: {
         statement: 'The movie should feel rigorous and tense.',

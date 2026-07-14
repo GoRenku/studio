@@ -14,9 +14,9 @@ import type {
   ReportImage,
 } from './lookbook-report-images';
 import {
-  MovieLookbookReport,
-  type MovieVisualLanguageSections,
-} from './movie-lookbook-report';
+  ProductionLookbookReport,
+  type ProductionVisualLanguageSections,
+} from './production-lookbook-report';
 import { StoryboardLookbookReport } from './storyboard-lookbook-report';
 
 interface VisualLanguageReportProps {
@@ -25,7 +25,7 @@ interface VisualLanguageReportProps {
   headerMeta?: ReactNode;
   action?: ReactNode;
   onDeleteLookbookImage?: (imageId: string) => Promise<void>;
-  sections: MovieVisualLanguageSections | StoryboardLookbookDefinition;
+  sections: ProductionVisualLanguageSections | StoryboardLookbookDefinition;
   source: LookbookReportSource;
 }
 
@@ -64,7 +64,7 @@ export function VisualLanguageReport({
           onRequestDeleteImage={onRequestDeleteImage}
         />
       ) : (
-        <MovieLookbookReport
+        <ProductionLookbookReport
           projectName={projectName}
           sections={sections}
           source={source}
@@ -96,7 +96,7 @@ export function VisualLanguageReport({
 }
 
 function isStoryboardSections(
-  sections: MovieVisualLanguageSections | StoryboardLookbookDefinition
+  sections: ProductionVisualLanguageSections | StoryboardLookbookDefinition
 ): sections is StoryboardLookbookDefinition {
   return 'styleBrief' in sections;
 }

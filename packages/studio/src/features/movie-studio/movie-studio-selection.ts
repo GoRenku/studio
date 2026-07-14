@@ -4,6 +4,7 @@ import type {
   SceneNavigationRow,
   SequenceNavigationRow,
   ActNavigationRow,
+  LookbookKind,
 } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import type { ScreenplayNavigationState } from './use-screenplay-navigation';
@@ -11,8 +12,7 @@ import type { ScreenplayNavigationState } from './use-screenplay-navigation';
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'inspiration'; folderId?: string }
-  | { type: 'lookbooks' }
-  | { type: 'lookbook'; lookbookId: string }
+  | { type: 'lookbook'; kind: LookbookKind }
   | { type: 'trash' }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
@@ -123,10 +123,11 @@ export function resolveStudioSelection(
       return valid('Project Details', 'Project information loaded from project data.');
     case 'inspiration':
       return valid('Inspiration', 'Reference grabs and analysis.');
-    case 'lookbooks':
-      return valid('Lookbooks', 'Generated visual language options.');
     case 'lookbook':
-      return valid('Lookbook', 'Generated visual language guide.');
+      return valid(
+        selection.kind === 'production' ? 'Production' : 'Storyboard',
+        'Project visual language guide.'
+      );
     case 'trash':
       return valid('Trash', 'Discarded project items.');
     case 'cast':

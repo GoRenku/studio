@@ -7,12 +7,12 @@ import type {
   LookbookImage,
   LookbookResource,
   LookbookSheet,
+  ProjectLookbooksResource,
 } from '@gorenku/studio-core/client';
 import {
   deleteLookbookImage,
   deleteLookbookSheet,
-  readLookbook,
-  selectLookbookForType,
+  readProjectLookbooks,
 } from '@/services/studio-visual-language-api';
 import { LookbookPanel } from './lookbook-panel';
 import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
@@ -32,28 +32,25 @@ vi.mock('sonner', () => ({
 vi.mock('@/services/studio-visual-language-api', () => ({
   deleteLookbookImage: vi.fn(),
   deleteLookbookSheet: vi.fn(),
-  readLookbook: vi.fn(),
-  selectLookbookForType: vi.fn(),
+  readProjectLookbooks: vi.fn(),
 }));
 
 describe('LookbookPanel', () => {
   beforeEach(() => {
     vi.mocked(deleteLookbookImage).mockReset();
     vi.mocked(deleteLookbookSheet).mockReset();
-    vi.mocked(readLookbook).mockReset();
-    vi.mocked(selectLookbookForType).mockReset();
+    vi.mocked(readProjectLookbooks).mockReset();
   });
 
   it('refreshes the open Lookbook when a Studio resource event reports an imported image', async () => {
-    vi.mocked(readLookbook)
+    vi.mocked(readProjectLookbooks)
       .mockResolvedValueOnce(lookbookResource('Original lookbook'))
       .mockResolvedValueOnce(lookbookResource('Updated lookbook'));
 
     render(
       <LookbookPanel
         projectName='constantinople'
-        lookbookId='lookbook_test0001'
-        onLookbooksChange={vi.fn()}
+        kind='production'
       />
     );
 
@@ -71,23 +68,21 @@ describe('LookbookPanel', () => {
     });
 
     await waitFor(() => {
-      expect(vi.mocked(readLookbook)).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(readProjectLookbooks)).toHaveBeenCalledTimes(2);
     });
     expect(await screen.findByText('Updated lookbook')).not.toBeNull();
   });
 
   it('deletes a Lookbook image after confirmation', async () => {
-    const onLookbooksChange = vi.fn();
     vi.mocked(deleteLookbookImage).mockResolvedValue();
-    vi.mocked(readLookbook)
+    vi.mocked(readProjectLookbooks)
       .mockResolvedValueOnce(lookbookResource('Original lookbook'))
       .mockResolvedValueOnce(lookbookResource('Original lookbook', false));
 
     render(
       <LookbookPanel
         projectName='constantinople'
-        lookbookId='lookbook_test0001'
-        onLookbooksChange={onLookbooksChange}
+        kind='production'
       />
     );
 
@@ -104,24 +99,19 @@ describe('LookbookPanel', () => {
         'lookbook_image_test0001'
       );
     });
-    await waitFor(() => {
-      expect(onLookbooksChange).toHaveBeenCalledTimes(1);
-    });
     expect(screen.queryByAltText('Palette frame')).toBeNull();
   });
 
   it('deletes a Lookbook sheet after confirmation', async () => {
-    const onLookbooksChange = vi.fn();
     vi.mocked(deleteLookbookSheet).mockResolvedValue();
-    vi.mocked(readLookbook)
+    vi.mocked(readProjectLookbooks)
       .mockResolvedValueOnce(lookbookResource('Original lookbook', true, true))
       .mockResolvedValueOnce(lookbookResource('Original lookbook', true, false));
 
     render(
       <LookbookPanel
         projectName='constantinople'
-        lookbookId='lookbook_test0001'
-        onLookbooksChange={onLookbooksChange}
+        kind='production'
       />
     );
 
@@ -137,9 +127,6 @@ describe('LookbookPanel', () => {
         'constantinople',
         'lookbook_sheet_test0001'
       );
-    });
-    await waitFor(() => {
-      expect(onLookbooksChange).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByAltText('Lookbook sheet')).toBeNull();
   });
@@ -162,6 +149,28 @@ function lookbookResource(
   includeImage = true,
   includeSheets = false,
   sheets = includeSheets ? [lookbookSheet('lookbook_sheet_test0001')] : []
+): ProjectLookbooksResource {
+  const production = productionLookbookResource(
+    name,
+    includeImage,
+    includeSheets,
+    sheets
+  );
+  return {
+    valid: true,
+    warnings: [],
+    project: { name: 'constantinople' },
+    production,
+    storyboard: null,
+    resourceKeys: [],
+  };
+}
+
+function productionLookbookResource(
+  name: string,
+  includeImage = true,
+  includeSheets = false,
+  sheets = includeSheets ? [lookbookSheet('lookbook_sheet_test0001')] : []
 ): LookbookResource {
   const paletteImage = lookbookImage();
   return {
@@ -172,7 +181,6 @@ function lookbookResource(
     lookbook: lookbook(name),
     sourceInspirationFolders: [],
     cardImage: null,
-    isSelectedForType: false,
     sheets,
     images: includeImage ? [paletteImage] : [],
     imagesBySection: {
@@ -196,7 +204,7 @@ function lookbookImage(): LookbookImage {
   return {
     id: 'lookbook_image_test0001',
     lookbookId: 'lookbook_test0001',
-    lookbookType: 'movie',
+    lookbookKind: 'production',
     sections: ['palette'],
     asset: {
       assetId: 'asset_test0001',
@@ -230,7 +238,7 @@ function lookbookSheet(id: string): LookbookSheet {
   return {
     id,
     lookbookId: 'lookbook_test0001',
-    lookbookType: 'movie',
+    lookbookKind: 'production',
     asset: {
       assetId: `asset_${id}`,
       type: 'lookbook_sheet',
@@ -263,7 +271,7 @@ function lookbook(name: string): Lookbook {
   return {
     id: 'lookbook_test0001',
     name,
-    type: 'movie',
+    kind: 'production',
     definition: {
       thesis: {
         statement: 'The visual thesis.',

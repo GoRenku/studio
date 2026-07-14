@@ -59,9 +59,9 @@ export function readMovieStudioSelectionRequest(input: unknown): {
     typeof selection.folderId === 'string' && selection.folderId.trim()
       ? selection.folderId.trim()
       : undefined;
-  const lookbookId =
-    typeof selection.lookbookId === 'string' && selection.lookbookId.trim()
-      ? selection.lookbookId.trim()
+  const kind =
+    selection.kind === 'production' || selection.kind === 'storyboard'
+      ? selection.kind
       : undefined;
   const shotId =
     typeof selection.shotId === 'string' && selection.shotId.trim()
@@ -117,13 +117,13 @@ export function readMovieStudioSelectionRequest(input: unknown): {
       ),
     ]);
   }
-  if (type === 'lookbook' && !lookbookId) {
+  if (type === 'lookbook' && !kind) {
     throwMovieStudioSelectionRequestError([
       createDiagnosticError(
         'STUDIO_SERVER034',
-        'selection.lookbookId is required for lookbook selections.',
-        { path: ['selection', 'lookbookId'] },
-        'Send the selected Lookbook id.'
+        'selection.kind is required for Lookbook selections.',
+        { path: ['selection', 'kind'] },
+        'Send production or storyboard.'
       ),
     ]);
   }
@@ -151,7 +151,7 @@ export function readMovieStudioSelectionRequest(input: unknown): {
     selection: studioSelectionFromRequest(type, {
       id,
       folderId,
-      lookbookId,
+      kind,
       shotId,
       takeWorkspaceMode,
       takeId,
@@ -167,7 +167,6 @@ function isStudioSelectionType(
   return (
     type === 'projectInformation' ||
     type === 'inspiration' ||
-    type === 'lookbooks' ||
     type === 'lookbook' ||
     type === 'trash' ||
     type === 'cast' ||
@@ -186,7 +185,7 @@ function studioSelectionFromRequest(
   ids: {
     id?: string;
     folderId?: string;
-    lookbookId?: string;
+    kind?: 'production' | 'storyboard';
     shotId?: string;
     takeWorkspaceMode?: 'list' | 'new' | 'edit';
     takeId?: string;
@@ -215,11 +214,10 @@ function studioSelectionFromRequest(
     case 'location':
       return { type, id: ids.id as string };
     case 'lookbook':
-      return { type, lookbookId: ids.lookbookId as string };
+      return { type, kind: ids.kind as 'production' | 'storyboard' };
     case 'projectInformation':
     case 'inspiration':
       return ids.folderId ? { type, folderId: ids.folderId } : { type };
-    case 'lookbooks':
     case 'cast':
     case 'locations':
     case 'storyArc':

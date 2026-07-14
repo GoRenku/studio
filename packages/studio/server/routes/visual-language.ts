@@ -4,7 +4,7 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import type { LookbookSheet, LookbookType } from '@gorenku/studio-core/server';
+import type { LookbookSheet, LookbookKind } from '@gorenku/studio-core/server';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -197,65 +197,20 @@ export function createVisualLanguageRoute({
     .get('/visual-language/lookbooks', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const resource = await projectData.listLookbooks({ projectName });
+        const resource = await projectData.readProjectLookbooks({ projectName });
         return c.json({ resource });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
     })
-    .get('/visual-language/lookbooks/:lookbookId', async (c) => {
+    .get('/visual-language/lookbooks/:kind', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const lookbookId = c.req.param('lookbookId') as string;
-        const resource = await projectData.readLookbook({ projectName, lookbookId });
+        const kind = readLookbookKind(c.req.param('kind'));
+        const resource = kind === 'production'
+          ? await projectData.readProductionLookbook({ projectName })
+          : await projectData.readStoryboardLookbook({ projectName });
         return c.json({ resource });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .delete('/visual-language/lookbooks/selection/:type', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const type = readLookbookSelectionType(c.req.param('type'));
-        const report = await projectData.clearLookbookSelection({ projectName, type });
-        return c.json({
-          ok: true,
-          recovery: report.recovery,
-          resourceKeys: report.resourceKeys,
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .delete('/visual-language/lookbooks/:lookbookId', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const lookbookId = c.req.param('lookbookId') as string;
-        const report = await projectData.deleteLookbook({ projectName, lookbookId });
-        return c.json({
-          ok: true,
-          recovery: report.recovery,
-          resourceKeys: report.resourceKeys,
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .put('/visual-language/lookbooks/selection/:type', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const type = readLookbookSelectionType(c.req.param('type'));
-        const body = await c.req.json<{ lookbookId?: string }>();
-        const report = await projectData.selectLookbookForType({
-          projectName,
-          type,
-          lookbookId: requiredBodyString(body.lookbookId, 'lookbookId'),
-        });
-        return c.json({
-          ok: true,
-          recovery: report.recovery,
-          resourceKeys: report.resourceKeys,
-        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -305,21 +260,16 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const imageId = c.req.param('imageId') as string;
         const assetFileId = c.req.param('assetFileId') as string;
-        const lookbooks = await projectData.listLookbooks({ projectName });
-        const lookbook = lookbooks.lookbooks.find(
-          (candidate) => candidate.cardImage?.id === imageId
+        const lookbooks = await projectData.readProjectLookbooks({ projectName });
+        const resources = [lookbooks.production, lookbooks.storyboard].filter(
+          (resource): resource is NonNullable<typeof resource> => resource !== null
         );
-        let image = lookbook?.cardImage ?? null;
-        if (!image) {
-          for (const candidate of lookbooks.lookbooks) {
-            const resource = await projectData.readLookbook({
-              projectName,
-              lookbookId: candidate.lookbook.id,
-            });
-            image = resource.images.find((item) => item.id === imageId) ?? null;
-            if (image) break;
-          }
-        }
+        let image = resources
+          .map((resource) => resource.cardImage)
+          .find((candidate) => candidate?.id === imageId) ?? null;
+        image ??= resources
+          .flatMap((resource) => resource.images)
+          .find((item) => item.id === imageId) ?? null;
         const file = image?.asset.files.find((candidate) => candidate.id === assetFileId);
         if (!image || !file) {
           throw createStructuredError({
@@ -350,16 +300,11 @@ export function createVisualLanguageRoute({
         const projectName = c.req.param('projectName') as string;
         const sheetId = c.req.param('sheetId') as string;
         const assetFileId = c.req.param('assetFileId') as string;
-        const lookbooks = await projectData.listLookbooks({ projectName });
-        let sheet: LookbookSheet | null = null;
-        for (const candidate of lookbooks.lookbooks) {
-          const resource = await projectData.readLookbook({
-            projectName,
-            lookbookId: candidate.lookbook.id,
-          });
-          sheet = resource.sheets.find((item) => item.id === sheetId) ?? null;
-          if (sheet) break;
-        }
+        const lookbooks = await projectData.readProjectLookbooks({ projectName });
+        const sheet: LookbookSheet | null = [lookbooks.production, lookbooks.storyboard]
+          .filter((resource): resource is NonNullable<typeof resource> => resource !== null)
+          .flatMap((resource) => resource.sheets)
+          .find((item) => item.id === sheetId) ?? null;
         const file = sheet?.asset.files.find((candidate) => candidate.id === assetFileId);
         if (!sheet || !file) {
           throw createStructuredError({
@@ -470,25 +415,14 @@ function contentTypeForPath(projectRelativePath: string): string {
   return 'image/png';
 }
 
-function readLookbookSelectionType(value: string | undefined): LookbookType {
-  if (value === 'movie' || value === 'storyboard') {
+function readLookbookKind(value: string | undefined): LookbookKind {
+  if (value === 'production' || value === 'storyboard') {
     return value;
   }
   throwInvalidLookbookDocumentRequest(
-    ['type'],
-    'Lookbook selection type must be movie or storyboard.',
-    'Use /visual-language/lookbooks/selection/movie or /visual-language/lookbooks/selection/storyboard.'
-  );
-}
-
-function requiredBodyString(value: unknown, field: string): string {
-  if (typeof value === 'string' && value.trim()) {
-    return value.trim();
-  }
-  throwInvalidLookbookDocumentRequest(
-    [field],
-    `${field} is required.`,
-    `Send ${field} as a non-empty string.`
+    ['kind'],
+    'Lookbook kind must be production or storyboard.',
+    'Use /visual-language/lookbooks/production or /visual-language/lookbooks/storyboard.'
   );
 }
 

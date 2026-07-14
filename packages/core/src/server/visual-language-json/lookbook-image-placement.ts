@@ -1,6 +1,6 @@
 import type {
   LookbookSection,
-  MovieLookbookDefinition,
+  ProductionLookbookDefinition,
 } from '../../client/index.js';
 import type {
   LookbookImagePlacement,
@@ -18,7 +18,7 @@ export function resolveLookbookImagePlacements(input: {
   anchorPointId?: string;
 }): LookbookImagePlacement[] {
   const sections = assertLookbookSectionsForType(
-    input.lookbook.type,
+    input.lookbook.kind,
     input.sections
   );
   const anchorPointId = input.anchorPointId;
@@ -40,7 +40,7 @@ export function resolveLookbookImagePlacements(input: {
       `Lookbook image anchor point was not found: ${anchorPointId}.`,
       {
         suggestion:
-          'Use an id from the selected Lookbook section pattern or observation.',
+          'Use an id from the Lookbook section pattern or observation.',
       }
     );
   }
@@ -87,22 +87,22 @@ interface LookbookAnchorPoint {
 }
 
 function lookbookAnchorPoints(lookbook: LookbookRecord): LookbookAnchorPoint[] {
-  if (lookbook.type !== 'movie') {
+  if (lookbook.kind !== 'production') {
     parseStoredLookbookDefinition({
-      type: lookbook.type,
+      kind: lookbook.kind,
       value: lookbook.definitionJson,
     });
     return [];
   }
   const definition = parseStoredLookbookDefinition({
-    type: lookbook.type,
+    kind: lookbook.kind,
     value: lookbook.definitionJson,
   });
-  return movieLookbookAnchorPoints(definition);
+  return productionLookbookAnchorPoints(definition);
 }
 
-function movieLookbookAnchorPoints(
-  definition: MovieLookbookDefinition
+function productionLookbookAnchorPoints(
+  definition: ProductionLookbookDefinition
 ): LookbookAnchorPoint[] {
   const points: LookbookAnchorPoint[] = [];
   appendAnchorPoints(points, 'palette', definition.palette.observations);

@@ -105,7 +105,6 @@ export function resolveStudioSelectionForProject(
 
   if (
     selection.type === 'inspiration' ||
-    selection.type === 'lookbooks' ||
     selection.type === 'lookbook'
   ) {
     return {

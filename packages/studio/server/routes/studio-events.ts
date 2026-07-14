@@ -438,7 +438,6 @@ function readStudioSelection(value: unknown): StudioSelection | null {
 
   if (
     selection.type === 'projectInformation' ||
-    selection.type === 'lookbooks' ||
     selection.type === 'cast' ||
     selection.type === 'locations' ||
     selection.type === 'storyArc'
@@ -454,10 +453,9 @@ function readStudioSelection(value: unknown): StudioSelection | null {
 
   if (
     selection.type === 'lookbook' &&
-    typeof selection.lookbookId === 'string' &&
-    selection.lookbookId.trim()
+    (selection.kind === 'production' || selection.kind === 'storyboard')
   ) {
-    return { type: selection.type, lookbookId: selection.lookbookId };
+    return { type: selection.type, kind: selection.kind };
   }
 
   if (selection.type === 'scene' && typeof selection.id === 'string' && selection.id.trim()) {

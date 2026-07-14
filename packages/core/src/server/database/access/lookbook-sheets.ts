@@ -3,7 +3,7 @@ import type {
   LookbookSheet,
   LookbookSheetAsset,
   LookbookSheetAssetFile,
-  LookbookType,
+  LookbookKind,
 } from '../../../client/index.js';
 import {
   assetFiles,
@@ -22,7 +22,7 @@ interface LookbookSheetAssetRow {
   lookbookId: string;
   assetId: string;
   sortOrder: number;
-  lookbookType: LookbookType;
+  lookbookKind: LookbookKind;
   type: string;
   mediaKind: string;
   title: string;
@@ -141,7 +141,7 @@ export function listLookbookSheets(
       lookbookId: lookbookSheets.lookbookId,
       assetId: lookbookSheets.assetId,
       sortOrder: lookbookSheets.sortOrder,
-      lookbookType: lookbook.type,
+      lookbookKind: lookbook.kind,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -162,7 +162,7 @@ export function listLookbookSheets(
   return rows.map((row) => ({
     id: row.id,
     lookbookId: row.lookbookId,
-    lookbookType: row.lookbookType,
+    lookbookKind: row.lookbookKind,
     asset: toLookbookSheetAsset(row, assetFilesByAssetId),
   }));
 }
@@ -177,7 +177,7 @@ export function readLookbookSheet(
       lookbookId: lookbookSheets.lookbookId,
       assetId: lookbookSheets.assetId,
       sortOrder: lookbookSheets.sortOrder,
-      lookbookType: lookbook.type,
+      lookbookKind: lookbook.kind,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -198,7 +198,7 @@ export function readLookbookSheet(
   return {
     id: row.id,
     lookbookId: row.lookbookId,
-    lookbookType: row.lookbookType,
+    lookbookKind: row.lookbookKind,
     asset: toLookbookSheetAsset(row, readAssetFilesForRows(session, [row])),
   };
 }

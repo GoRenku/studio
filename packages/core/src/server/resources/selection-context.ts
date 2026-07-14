@@ -19,7 +19,7 @@ import {
   readSceneNavigationContext,
   readSequenceNavigationContext,
 } from '../database/access/navigation.js';
-import { readLookbookRecordById } from '../database/access/lookbook.js';
+import { readLookbookRecordByKind } from '../database/access/lookbook.js';
 import { readInspirationFolderRecord } from '../database/access/inspiration-folders.js';
 import {
   readActiveSceneShotListRecord,
@@ -83,23 +83,17 @@ export function readStudioSelectionContextProjection(
           context: { surface: 'visual-language-inspiration' },
           resourceKeys: [studioVisualLanguageInspirationResourceKey()],
         };
-      case 'lookbooks':
+      case 'lookbook': {
+        const lookbook = readLookbookRecordByKind(session, input.selection.kind);
         return {
           valid: true,
           selection: input.selection,
-          context: { surface: 'visual-language-lookbooks' },
-          resourceKeys: [studioVisualLanguageLookbooksResourceKey()],
+          context: { surface: 'visual-language-lookbook' },
+          resourceKeys: [
+            studioVisualLanguageLookbooksResourceKey(),
+            ...(lookbook ? [studioVisualLanguageLookbookResourceKey(lookbook.id)] : []),
+          ],
         };
-      case 'lookbook': {
-        const lookbook = readLookbookRecordById(session, input.selection.lookbookId);
-        return lookbook
-          ? {
-              valid: true,
-              selection: input.selection,
-              context: { surface: 'visual-language-lookbook' },
-              resourceKeys: [studioVisualLanguageLookbookResourceKey(lookbook.id)],
-            }
-          : selectionNotFound(input.selection);
       }
       case 'trash':
         return {

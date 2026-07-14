@@ -1,7 +1,6 @@
 import {
   index,
   integer,
-  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -42,15 +41,20 @@ export const inspirationAnalysis = sqliteTable('inspiration_analysis', {
   ...discardLifecycleColumns(),
 });
 
-export const lookbook = sqliteTable('lookbook', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  type: text('type', { enum: ['movie', 'storyboard'] }).notNull(),
-  definitionJson: text('definition_json').notNull(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-  ...discardLifecycleColumns(),
-});
+export const lookbook = sqliteTable(
+  'lookbook',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    kind: text('kind', { enum: ['production', 'storyboard'] }).notNull(),
+    definitionJson: text('definition_json').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('lookbook_kind_unique_idx').on(table.kind),
+  ]
+);
 
 export const lookbookInspirations = sqliteTable(
   'lookbook_inspiration',
@@ -84,49 +88,6 @@ export const lookbookInspirations = sqliteTable(
       table.inspirationFolderId,
       table.lookbookId
     ),
-  ]
-);
-
-export const lookbookSelections = sqliteTable(
-  'lookbook_selection',
-  {
-    lookbookType: text('lookbook_type', { enum: ['movie', 'storyboard'] })
-      .primaryKey()
-      .notNull(),
-    lookbookId: text('lookbook_id')
-      .notNull()
-      .references(() => lookbook.id, { onDelete: 'cascade' }),
-    selectedAt: text('selected_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
-  },
-  (table) => [
-    index('lookbook_selection_lookbook_idx').on(table.lookbookId),
-  ]
-);
-
-export const storyboardLookbookSourceMovies = sqliteTable(
-  'storyboard_lookbook_source_movie',
-  {
-    storyboardLookbookId: text('storyboard_lookbook_id')
-      .notNull()
-      .references(() => lookbook.id, { onDelete: 'cascade' }),
-    movieLookbookId: text('movie_lookbook_id')
-      .notNull()
-      .references(() => lookbook.id, { onDelete: 'cascade' }),
-    sortOrder: integer('sort_order').notNull(),
-    createdAt: text('created_at').notNull(),
-    updatedAt: text('updated_at').notNull(),
-    ...discardLifecycleColumns(),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.storyboardLookbookId, table.movieLookbookId],
-    }),
-    index('storyboard_lookbook_source_movie_order_idx').on(
-      table.storyboardLookbookId,
-      table.sortOrder
-    ),
-    index('storyboard_lookbook_source_movie_movie_idx').on(table.movieLookbookId),
   ]
 );
 

@@ -25,7 +25,7 @@ import {
   type ReportImage,
 } from './lookbook-report-images';
 
-export interface MovieVisualLanguageSections {
+export interface ProductionVisualLanguageSections {
   thesis: ThesisSection;
   palette: PaletteSection;
   toneMood: ToneMoodSection;
@@ -36,21 +36,21 @@ export interface MovieVisualLanguageSections {
   inspiredBy?: InspiredBySection;
 }
 
-interface MovieLookbookReportProps {
+interface ProductionLookbookReportProps {
   projectName: string;
-  sections: MovieVisualLanguageSections;
+  sections: ProductionVisualLanguageSections;
   source: LookbookReportSource;
   onOpenImage: (image: PreviewImage) => void;
   onRequestDeleteImage?: (image: ReportImage) => void;
 }
 
-export function MovieLookbookReport({
+export function ProductionLookbookReport({
   projectName,
   sections,
   source,
   onOpenImage,
   onRequestDeleteImage,
-}: MovieLookbookReportProps) {
+}: ProductionLookbookReportProps) {
   const themeColors = sections.palette.colors.map((color) => color.hex);
   const thesisImages = imagesForSection(
     projectName,

@@ -13,7 +13,7 @@ import type {
   LookbookImage,
   LookbookResource,
   LookbookSheet,
-  LookbooksResource,
+  ProjectLookbooksResource,
   SceneDesignResource,
   SceneNarrativeResource,
   ScreenplayImageReferenceWithHttp,
@@ -173,7 +173,7 @@ export type ActStoryboardResourceResponse = Omit<
 export type InspirationResourceResponse = InspirationResource;
 export type InspirationFolderResourceResponse = InspirationFolderResource;
 export type InspirationFolderResponse = InspirationFolder;
-export type LookbooksResourceResponse = LookbooksResource;
+export type ProjectLookbooksResourceResponse = ProjectLookbooksResource;
 export type LookbookResourceResponse = LookbookResource;
 export type LookbookResponse = Lookbook;
 export type LookbookImageResponse = LookbookImage;

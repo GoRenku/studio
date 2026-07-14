@@ -4,9 +4,9 @@ import type {
   InspirationResourceResponse,
   LookbookImageResponse,
   LookbookResourceResponse,
-  LookbooksResourceResponse,
+  ProjectLookbooksResourceResponse,
 } from './studio-project-contracts';
-import type { LookbookType } from '@gorenku/studio-core/client';
+import type { LookbookKind } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
 interface InspirationResourceApiResponse {
@@ -23,8 +23,8 @@ interface InspirationFolderApiResponse {
   resourceKeys?: string[];
 }
 
-interface LookbooksResourceApiResponse {
-  resource: LookbooksResourceResponse;
+interface ProjectLookbooksResourceApiResponse {
+  resource: ProjectLookbooksResourceResponse;
 }
 
 interface LookbookResourceApiResponse {
@@ -118,10 +118,10 @@ export async function deleteInspirationImage(
   return body.resource;
 }
 
-export async function listLookbooks(
+export async function readProjectLookbooks(
   projectName: string
-): Promise<LookbooksResourceResponse> {
-  const body = await readJson<LookbooksResourceApiResponse>(
+): Promise<ProjectLookbooksResourceResponse> {
+  const body = await readJson<ProjectLookbooksResourceApiResponse>(
     `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks`
   );
   return body.resource;
@@ -129,46 +129,12 @@ export async function listLookbooks(
 
 export async function readLookbook(
   projectName: string,
-  lookbookId: string
+  kind: LookbookKind
 ): Promise<LookbookResourceResponse> {
   const body = await readJson<LookbookResourceApiResponse>(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/${encodeURIComponent(lookbookId)}`
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/${encodeURIComponent(kind)}`
   );
   return body.resource;
-}
-
-export async function selectLookbookForType(
-  projectName: string,
-  type: LookbookType,
-  lookbookId: string
-): Promise<void> {
-  await writeJson(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/selection/${encodeURIComponent(type)}`,
-    'PUT',
-    { lookbookId }
-  );
-}
-
-export async function clearLookbookSelection(
-  projectName: string,
-  type: LookbookType
-): Promise<void> {
-  await writeJson(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/selection/${encodeURIComponent(type)}`,
-    'DELETE',
-    {}
-  );
-}
-
-export async function deleteLookbook(
-  projectName: string,
-  lookbookId: string
-): Promise<void> {
-  await writeJson(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/${encodeURIComponent(lookbookId)}`,
-    'DELETE',
-    {}
-  );
 }
 
 export async function deleteLookbookImage(

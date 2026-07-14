@@ -19,6 +19,7 @@ import type {
   Scene,
   ScreenplayDocument,
 } from '../../client/screenplay.js';
+import type { ProductionLookbook } from '../../client/visual-language.js';
 import {
   listSceneShotListRecords,
   readActiveSceneShotListId,
@@ -36,11 +37,7 @@ import {
 } from '../database/access/scene-shot-lists.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
-import {
-  readSelectedMovieLookbookId,
-  requireLookbookRecordById,
-  toLookbook,
-} from '../database/access/lookbook.js';
+import { readLookbookRecordByKind, toLookbook } from '../database/access/lookbook.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import {
   createRandomIdGenerator,
@@ -1005,16 +1002,13 @@ function collectSceneReferences(
 }
 
 function readActiveLookbookContext(
-  session: Parameters<typeof readSelectedMovieLookbookId>[0]
+  session: Parameters<typeof readLookbookRecordByKind>[0]
 ): SceneShotListContextReport['activeLookbook'] {
-  const activeLookbookId = readSelectedMovieLookbookId(session);
-  if (!activeLookbookId) {
+  const row = readLookbookRecordByKind(session, 'production');
+  if (!row) {
     return null;
   }
-  const lookbook = toLookbook(requireLookbookRecordById(session, activeLookbookId));
-  if (lookbook.type !== 'movie') {
-    return null;
-  }
+  const lookbook = toLookbook(row) as ProductionLookbook;
   const definition = lookbook.definition;
   return {
     id: lookbook.id,

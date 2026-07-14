@@ -1,7 +1,7 @@
 import type { InspirationResource } from '@gorenku/studio-core/client';
 import { EmptyState } from './empty-state';
 import { InspirationFolderCard } from './inspiration-folder-card';
-import { LookbookCardGrid } from './lookbook-card-grid';
+import { VisualLanguageCardGrid } from './visual-language-card-grid';
 
 interface InspirationFoldersPanelProps {
   projectName: string;
@@ -22,7 +22,7 @@ export function InspirationFoldersPanel({
 
   return (
     <div className='p-4 sm:p-5 lg:p-6'>
-      <LookbookCardGrid>
+    <VisualLanguageCardGrid>
         {resource.folders.items.map((item) => (
           <InspirationFolderCard
             key={item.folder.id}
@@ -32,7 +32,7 @@ export function InspirationFoldersPanel({
             onDelete={() => onDeleteFolder(item.folder.id)}
           />
         ))}
-      </LookbookCardGrid>
+    </VisualLanguageCardGrid>
     </div>
   );
 }

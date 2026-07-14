@@ -37,10 +37,10 @@ operational companions that teach agents how to use those contracts.
 
 `lookbook-designer`
 
-- Creates or revises durable Movie Lookbooks and Storyboard Lookbooks.
+- Creates or revises durable Production Lookbooks and Storyboard Lookbooks.
 - Uses Inspiration folders, existing analyses, named references, screenplay
   context, and user direction as source context.
-- Writes validated `kind: "movieLookbook"` or `kind: "storyboardLookbook"`
+- Writes validated `kind: "productionLookbook"` or `kind: "storyboardLookbook"`
   JSON through the CLI.
 - Hands generated image requests to `media-producer`.
 
@@ -107,7 +107,7 @@ operational companions that teach agents how to use those contracts.
   saved specs. Multi-request display never combines estimates, approvals, or
   runs.
 - For `scene.storyboard-sheet`, reads the exact Scene Shot List, batches one to
-  four Shots, inspects and includes the relevant selected Storyboard Lookbook,
+  four Shots, inspects and includes the project Storyboard Lookbook,
   Cast, and Location references, and stops for user direction when needed
   continuity media is unavailable.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
@@ -128,11 +128,11 @@ operational companions that teach agents how to use those contracts.
 
 - Designs and persists Scene Shot Lists for individual screenplay scenes.
 - Uses `renku screenplay shot-list context` to read screenplay blocks,
-  referenced cast, referenced locations, selected Movie Lookbook guidance, and
+  referenced cast, referenced locations, Production Lookbook guidance, and
   active shot list history.
 - Writes validated `kind: "sceneShotList"` JSON through the CLI.
 - Hands storyboard image requests to `media-producer` after a valid Scene Shot
-  List exists and uses a selected Storyboard Lookbook when available. The
+  List exists and uses the Storyboard Lookbook when available. The
   media-producer skill owns
   non-blocking Storyboard Lookbook Sheet guidance, `scene.storyboard-sheet`
   generation specs, visual inspection, slicing, and per-shot storyboard image

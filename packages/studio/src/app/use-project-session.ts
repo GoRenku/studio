@@ -315,12 +315,21 @@ function readStudioRoute(): StudioRoute {
       window.location.pathname
     );
   if (lookbookRoute?.[1] && lookbookRoute[2]) {
+    const kind = decodeURIComponent(lookbookRoute[2]);
+    if (kind !== 'production' && kind !== 'storyboard') {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(lookbookRoute[1]),
+        selection: { type: 'lookbook', kind: 'production' },
+        routeError: `Unknown Lookbook kind: ${kind}`,
+      };
+    }
     return {
       screen: 'movieStudio',
       projectName: decodeURIComponent(lookbookRoute[1]),
       selection: {
         type: 'lookbook',
-        lookbookId: decodeURIComponent(lookbookRoute[2]),
+        kind,
       },
     };
   }
@@ -333,7 +342,7 @@ function readStudioRoute(): StudioRoute {
     return {
       screen: 'movieStudio',
       projectName: decodeURIComponent(lookbooksRoute[1]),
-      selection: { type: 'lookbooks' },
+      selection: { type: 'lookbook', kind: 'production' },
     };
   }
 
@@ -534,9 +543,6 @@ function selectionContextErrorMessage(
   if ('id' in selection) {
     return `${selectionTypeLabel(selection.type)} not found: ${selection.id}`;
   }
-  if ('lookbookId' in selection) {
-    return `${selectionTypeLabel(selection.type)} not found: ${selection.lookbookId}`;
-  }
   if ('folderId' in selection && selection.folderId) {
     return `${selectionTypeLabel(selection.type)} not found: ${selection.folderId}`;
   }
@@ -559,8 +565,6 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Project information';
     case 'inspiration':
       return 'Inspiration';
-    case 'lookbooks':
-      return 'Lookbooks';
     case 'lookbook':
       return 'Visual language';
     case 'trash':
@@ -594,7 +598,7 @@ function canResolveRouteSelection(
     return false;
   }
   if (selection.type === 'lookbook') {
-    return false;
+    return true;
   }
   if (selection.type === 'inspiration' && selection.folderId) {
     return false;
@@ -628,11 +632,8 @@ function studioSelectionRoutePath(
       ? `${base}/${encodeURIComponent(selection.folderId)}`
       : base;
   }
-  if (selection.type === 'lookbooks') {
-    return `${projectRoutePath(projectName)}/visual-language/lookbooks`;
-  }
   if (selection.type === 'lookbook') {
-    return `${projectRoutePath(projectName)}/visual-language/lookbooks/${encodeURIComponent(selection.lookbookId)}`;
+    return `${projectRoutePath(projectName)}/visual-language/lookbooks/${encodeURIComponent(selection.kind)}`;
   }
   if (selection.type === 'trash') {
     return `${projectRoutePath(projectName)}/trash`;

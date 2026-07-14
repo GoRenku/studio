@@ -91,33 +91,27 @@ Rules:
 Current CLI surface:
 
 ```bash
-renku lookbook list --json
-renku lookbook show --lookbook <lookbook-id> --json
+renku lookbook show --kind production --json
+renku lookbook show --kind storyboard --json
 renku lookbook validate --file <lookbook-json> --json
-renku lookbook create --name <name> --file <lookbook-json> --json
-renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
-renku lookbook rename --lookbook <lookbook-id> --name <name> --json
-renku lookbook discard --lookbook <lookbook-id> --json
-renku lookbook select --type movie --lookbook <lookbook-id> --json
-renku lookbook select --type storyboard --lookbook <lookbook-id> --json
-renku lookbook clear-selection --type movie --json
-renku lookbook clear-selection --type storyboard --json
+renku lookbook apply --file <lookbook-json> --json
 ```
 
-`discard` records a recoverable Trash item for the Lookbook. Restore through
-`renku trash restore`; emptying Trash is a separate explicit user-approved
-operation.
+Lookbooks are permanent project roles and cannot be discarded or restored.
+`apply` authors a missing role or replaces the current document for that role
+without changing its identity. Lookbook Images and Lookbook Sheets remain
+individually discardable media.
 
-Movie Lookbooks and Storyboard Lookbooks are different typed documents.
-Movie Lookbooks steer cinematic generation. Storyboard Lookbooks steer
+Production Lookbooks and Storyboard Lookbooks are different typed documents.
+Production Lookbooks steer cinematic generation. Storyboard Lookbooks steer
 storyboard drawing style, panel treatment, notation, and continuity clarity.
 
-Movie Lookbook input:
+Production Lookbook input:
 
 ```json
 {
-  "kind": "movieLookbook",
-  "movieLookbook": {
+  "kind": "productionLookbook",
+  "productionLookbook": {
     "name": "Movie visual language",
     "thesis": { "statement": "", "principles": [] },
     "palette": { "description": "", "colors": [], "observations": [] },
@@ -143,25 +137,28 @@ Storyboard Lookbook input:
     "valueAndAccent": { "text": "Soft gray values with restrained warm accents." },
     "guardrails": { "text": "Avoid photoreal stills and decorative text inside panels." }
   },
-  "sourceMovieLookbookIds": [],
   "sourceInspirationFolderIds": []
 }
 ```
 
 Rules:
 
-- `sourceInspirationFolderIds` is optional on create and update.
+- Each project has at most one permanent Lookbook for each role. The role may
+  be unauthored before its first apply.
+- `apply` creates the role when absent and updates the same durable Lookbook id
+  when present.
+- `sourceInspirationFolderIds` is optional on apply.
 - When `sourceInspirationFolderIds` is present, every folder id must exist and
   duplicates are rejected.
 - Omitting `sourceInspirationFolderIds` on update preserves existing source
   relationships.
 - Providing an empty array clears source relationships.
 - Lookbook JSON must not contain `imageFiles`.
-- `lookbook create` does not select the Lookbook by default.
-- Use `lookbook select --type movie` for movie/cinematic generation.
-- Use `lookbook select --type storyboard` for scene storyboard sheet generation.
+- There is no Lookbook list or selection state. Production and Storyboard are
+  fixed project roles.
+- Storyboard Lookbooks do not store a Production Lookbook source pointer.
 - Lookbook image section placement must use section names valid for the owning
-  Lookbook type.
+  Lookbook role.
 
 ## Lookbook Source Inspirations
 
@@ -201,8 +198,8 @@ renku media import \
   --json
 ```
 
-For a Movie thesis image, use `--sections thesis`. If the same image should
-also sit beside a point-level Movie Lookbook pattern or observation, include the
+For a Production thesis image, use `--sections thesis`. If the same image should
+also sit beside a point-level Production Lookbook pattern or observation, include the
 point-owning section and `--anchor`, for example `--sections thesis,texture
 --anchor texture-cannon-material-states`.
 
@@ -228,7 +225,7 @@ section for that point becomes point-level evidence and any additional
 thesis,texture --anchor texture-cannon-material-states` makes one image appear
 under Thesis and beside that Texture point. `thesis` and `toneMood` have no point
 ids and use section-level placement only.
-`thesis` is a single-image Movie Lookbook slot. Adding a new Thesis placement
+`thesis` is a single-image Production Lookbook slot. Adding a new Thesis placement
 replaces the previous Thesis placement without discarding the previous image or
 removing its other placements. Other Movie section and point placements append
 images until the placement slot has 10 images.

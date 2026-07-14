@@ -43,9 +43,8 @@ import type {
   LookbookSheetMutationReport,
   LookbookResource,
   LookbookSourceInspirationsReport,
-  LookbooksResource,
+  ProjectLookbooksResource,
   LookbookSection,
-  LookbookType,
   LookbookValidationReport,
   LookbookWriteReport,
   LocationNavigationRow,
@@ -95,12 +94,12 @@ import type {
   GarbageCollectionReport,
   RecoverableMutationReport,
   TrashListReport,
-  VisualLanguageCommandReport,
 } from '../client/index.js';
 import type {
   InspirationAnalysisDocument,
-  LookbookDocument,
   LookbookSourceInspirationsDocument,
+  ProductionLookbookDocument,
+  StoryboardLookbookDocument,
 } from './visual-language-json/validator.js';
 import type {
   Act as ScreenplayAct,
@@ -291,15 +290,13 @@ export interface ProjectDataService {
   readInspirationAnalysis(input: ReadInspirationAnalysisInput): Promise<InspirationFolderReport>;
   validateInspirationAnalysis(input: ValidateInspirationAnalysisInput): Promise<InspirationAnalysisValidationReport>;
   writeInspirationAnalysis(input: WriteInspirationAnalysisInput): Promise<InspirationAnalysisWriteReport>;
-  listLookbooks(input: ListLookbooksInput): Promise<LookbooksResource>;
-  readLookbook(input: ReadLookbookInput): Promise<LookbookResource>;
-  validateLookbook(input: ValidateLookbookInput): Promise<LookbookValidationReport>;
-  createLookbook(input: CreateLookbookInput): Promise<LookbookWriteReport>;
-  updateLookbook(input: UpdateLookbookInput): Promise<LookbookWriteReport>;
-  renameLookbook(input: RenameLookbookInput): Promise<LookbookWriteReport>;
-  deleteLookbook(input: DeleteLookbookInput): Promise<VisualLanguageCommandReport>;
-  selectLookbookForType(input: SelectLookbookForTypeInput): Promise<VisualLanguageCommandReport>;
-  clearLookbookSelection(input: ClearLookbookSelectionInput): Promise<VisualLanguageCommandReport>;
+  readProjectLookbooks(input: ReadProjectLookbooksInput): Promise<ProjectLookbooksResource>;
+  readProductionLookbook(input: ReadLookbookByKindInput): Promise<LookbookResource>;
+  readStoryboardLookbook(input: ReadLookbookByKindInput): Promise<LookbookResource>;
+  validateProductionLookbook(input: ValidateProductionLookbookInput): Promise<LookbookValidationReport>;
+  validateStoryboardLookbook(input: ValidateStoryboardLookbookInput): Promise<LookbookValidationReport>;
+  writeProductionLookbook(input: WriteProductionLookbookInput): Promise<LookbookWriteReport>;
+  writeStoryboardLookbook(input: WriteStoryboardLookbookInput): Promise<LookbookWriteReport>;
   setLookbookSourceInspirations(input: SetLookbookSourceInspirationsInput): Promise<LookbookWriteReport>;
   listLookbookSourceInspirations(input: ListLookbookSourceInspirationsInput): Promise<LookbookSourceInspirationsReport>;
   setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImageMutationReport>;
@@ -699,48 +696,26 @@ export interface WriteInspirationAnalysisInput extends VisualLanguageProjectInpu
   filePath?: string;
 }
 
-export interface ListLookbooksInput extends VisualLanguageProjectInput {}
+export interface ReadProjectLookbooksInput extends VisualLanguageProjectInput {}
 
-export interface ReadLookbookInput extends VisualLanguageProjectInput {
-  lookbookId: string;
+export interface ReadLookbookByKindInput extends VisualLanguageProjectInput {}
+
+export interface ValidateProductionLookbookInput extends VisualLanguageProjectInput {
+  document: ProductionLookbookDocument;
+  filePath?: string;
 }
 
-export interface CreateLookbookInput extends VisualLanguageProjectInput {
-  name?: string;
-  document: LookbookDocument;
+export interface ValidateStoryboardLookbookInput extends VisualLanguageProjectInput {
+  document: StoryboardLookbookDocument;
   filePath?: string;
+}
+
+export interface WriteProductionLookbookInput extends ValidateProductionLookbookInput {
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface UpdateLookbookInput extends VisualLanguageProjectInput {
-  lookbookId: string;
-  name?: string;
-  document?: LookbookDocument;
-  filePath?: string;
+export interface WriteStoryboardLookbookInput extends ValidateStoryboardLookbookInput {
   idGenerator?: ProjectIdGenerator;
-}
-
-export interface ValidateLookbookInput extends VisualLanguageProjectInput {
-  document: LookbookDocument;
-  filePath?: string;
-}
-
-export interface RenameLookbookInput extends VisualLanguageProjectInput {
-  lookbookId: string;
-  name: string;
-}
-
-export interface DeleteLookbookInput extends VisualLanguageProjectInput {
-  lookbookId: string;
-}
-
-export interface SelectLookbookForTypeInput extends VisualLanguageProjectInput {
-  type: LookbookType;
-  lookbookId: string;
-}
-
-export interface ClearLookbookSelectionInput extends VisualLanguageProjectInput {
-  type: LookbookType;
 }
 
 export interface SetLookbookSourceInspirationsInput extends VisualLanguageProjectInput {

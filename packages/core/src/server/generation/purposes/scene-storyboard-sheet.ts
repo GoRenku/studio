@@ -1,11 +1,11 @@
 import { defineGenerationPurpose } from '../purpose-factory.js';
 import { listSelectedGenerationReferenceFileIds } from '../../database/access/generation-references.js';
-import { buildReferenceGuide, selectedLookbookSheetFileIds, type GuideSlotDefinition } from '../purpose-guide.js';
+import { buildReferenceGuide, lookbookSheetFileIds, type GuideSlotDefinition } from '../purpose-guide.js';
 export const sceneStoryboardSheetPurpose = defineGenerationPurpose({
   purpose: 'scene.storyboard-sheet', targetKind: 'scene', outputMediaKind: 'image', modelUse: 'any',
   settings: { fixed: [{ kind: 'aspect-ratio', value: '4:3' }, { kind: 'quality', value: 'high' }], recommended: [], recommendedModel: { provider: 'fal-ai', model: 'openai/gpt-image-2' } },
   async buildReferenceGuide(context) {
-    const slots: GuideSlotDefinition[] = [{ sectionId: 'visual-language', sectionLabel: 'Visual Language', slotId: 'storyboard-lookbook-sheet', slotLabel: 'Storyboard Lookbook Sheet', cardinality: 'one', assetFileIds: selectedLookbookSheetFileIds(context, 'storyboard'), roles: ['storyboard-lookbook-sheet'], initializeFirst: true }];
+    const slots: GuideSlotDefinition[] = [{ sectionId: 'visual-language', sectionLabel: 'Visual Language', slotId: 'storyboard-lookbook-sheet', slotLabel: 'Storyboard Lookbook Sheet', cardinality: 'one', assetFileIds: lookbookSheetFileIds(context, 'storyboard'), roles: ['storyboard-lookbook-sheet'], initializeFirst: true }];
     const sceneCastMemberIds = (context.facts?.sceneCastMemberIds as string[] | undefined) ?? [];
     const sceneLocationIds = (context.facts?.sceneLocationIds as string[] | undefined) ?? [];
     for (const id of sceneCastMemberIds) {

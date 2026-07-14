@@ -209,8 +209,8 @@ export const cameraSectionSchema = {
   additionalProperties: false,
 } as const;
 
-export const lookbookSectionsSchema = {
-  $id: 'https://schemas.gorenku.com/studio/movie-lookbook-sections.schema.json',
+export const productionLookbookSectionsSchema = {
+  $id: 'https://schemas.gorenku.com/studio/production-lookbook-sections.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
   required: [
@@ -330,10 +330,10 @@ export const lookbookDocumentSchema = {
   oneOf: [
     {
       type: 'object',
-      required: ['kind', 'movieLookbook'],
+      required: ['kind', 'productionLookbook'],
       properties: {
-        kind: { const: 'movieLookbook' },
-        movieLookbook: {
+        kind: { const: 'productionLookbook' },
+        productionLookbook: {
           type: 'object',
           properties: {
             name: trimmedString,
@@ -388,10 +388,6 @@ export const lookbookDocumentSchema = {
           additionalProperties: false,
         },
         sourceInspirationFolderIds: {
-          type: 'array',
-          items: trimmedString,
-        },
-        sourceMovieLookbookIds: {
           type: 'array',
           items: trimmedString,
         },

@@ -1,5 +1,5 @@
 import { defineGenerationPurpose, noSettings } from '../purpose-factory.js';
-import { buildReferenceGuide, dialogueAudioFileIds, selectedLookbookSheetFileIds, type GuideSlotDefinition } from '../purpose-guide.js';
+import { buildReferenceGuide, dialogueAudioFileIds, lookbookSheetFileIds, type GuideSlotDefinition } from '../purpose-guide.js';
 export const shotVideoTakePurpose = defineGenerationPurpose({
   purpose: 'shot.video-take', targetKind: 'sceneShotVideoTake', outputMediaKind: 'video', modelUse: 'any', settings: noSettings,
   async buildReferenceGuide(context) {
@@ -32,7 +32,7 @@ export const shotVideoTakePurpose = defineGenerationPurpose({
         { sectionId: 'shot', sectionLabel: 'Shot', slotId: 'last-frame', slotLabel: 'Last Frame', cardinality: 'one', scope, roles: ['last-frame'] },
         { sectionId: 'shot', sectionLabel: 'Shot', slotId: 'video-prompt-sheet', slotLabel: 'Video Prompt Sheet', cardinality: 'one', scope, roles: ['video-prompt-sheet'] },
         { sectionId: 'shot', sectionLabel: 'Shot', slotId: 'general-reference', slotLabel: 'General References', cardinality: 'many', scope, assetFileIds: [] },
-        { sectionId: 'lookbook', sectionLabel: 'Lookbook', slotId: 'video-lookbook-sheet', slotLabel: 'Video Lookbook Sheets', cardinality: 'many', scope, assetFileIds: selectedLookbookSheetFileIds(context, 'movie') },
+        { sectionId: 'lookbook', sectionLabel: 'Lookbook', slotId: 'video-lookbook-sheet', slotLabel: 'Video Lookbook Sheets', cardinality: 'many', scope, assetFileIds: lookbookSheetFileIds(context, 'production') },
       );
       for (const id of sceneCastMemberIds) {
         slots.push({ sectionId: 'cast', sectionLabel: 'Cast', slotId: 'character-sheet', slotLabel: 'Character Sheet', cardinality: 'one', scope, subject: { kind: 'castMember', id }, owner: { kind: 'castMember', id }, roles: ['character-sheet'], initializeFirst: direction.castMemberIds.includes(id) });

@@ -90,7 +90,18 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       }
       if (attachment.lookbookRecord) {
         assertTarget(input, 'lookbook');
-        requireLookbookRecordById(session, input.target.id);
+        const lookbook = requireLookbookRecordById(session, input.target.id);
+        const requiredKind = input.purpose === 'lookbook.video-sheet'
+          ? 'production'
+          : input.purpose === 'lookbook.storyboard-sheet'
+            ? 'storyboard'
+            : null;
+        if (requiredKind && lookbook.kind !== requiredKind) {
+          throw new ProjectDataError(
+            'CORE_LOOKBOOK_TARGET_KIND_INVALID',
+            `${input.purpose} requires the current ${requiredKind} Lookbook.`
+          );
+        }
         if (attachment.lookbookRecord === 'image') {
           insertLookbookImageRecord(session, {
             id: ownerRecordId!,

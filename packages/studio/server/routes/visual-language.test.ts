@@ -15,41 +15,6 @@ function createMountedVisualLanguageRoute(
 }
 
 describe('visual language Hono route', () => {
-  it('routes typed Lookbook selection clearing before parameterized Lookbook deletes', async () => {
-    let clearSelectionCalled = false;
-    let deletedLookbookId: string | null = null;
-    const app = createMountedVisualLanguageRoute({
-      ...fakeProjectDataService(),
-      async clearLookbookSelection() {
-        clearSelectionCalled = true;
-        return {
-          valid: true,
-          warnings: [],
-          project: { name: 'constantinople' },
-          resourceKeys: [],
-        };
-      },
-      async deleteLookbook(input) {
-        deletedLookbookId = input.lookbookId;
-        return {
-          valid: true,
-          warnings: [],
-          project: { name: 'constantinople' },
-          resourceKeys: [],
-        };
-      },
-    });
-
-    const response = await app.request(
-      '/constantinople/visual-language/lookbooks/selection/movie',
-      { method: 'DELETE' }
-    );
-
-    expect(response.status).toBe(200);
-    expect(clearSelectionCalled).toBe(true);
-    expect(deletedLookbookId).toBeNull();
-  });
-
   it('rejects Lookbook image placement updates without a sections array', async () => {
     let placementUpdateCalled = false;
     const app = createMountedVisualLanguageRoute({

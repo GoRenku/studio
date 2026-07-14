@@ -11,7 +11,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
-import type { MovieLookbookDocument } from '../visual-language-json/validator.js';
+import type { ProductionLookbookDocument } from '../visual-language-json/validator.js';
 
 describe('visual language commands', () => {
   let homeDir: string;
@@ -269,13 +269,12 @@ describe('visual language commands', () => {
     }
 
     await expect(
-      projectData.createLookbook({
+      projectData.writeProductionLookbook({
         projectName: 'constantinople',
         homeDir,
-        name: 'Invalid Lookbook',
         document: {
           ...lookbookDocument(),
-          movieLookbook: {
+          productionLookbook: {
             ...lookbookSections(),
             name: 'Invalid Lookbook',
             thesis: { statement: 'Missing principles' },
@@ -291,18 +290,16 @@ describe('visual language commands', () => {
     });
     const source = sourceReport.folder;
     await expect(
-      projectData.createLookbook({
+      projectData.writeProductionLookbook({
         projectName: 'constantinople',
         homeDir,
-        name: 'Duplicate Sources',
         document: lookbookDocument([source.id, source.id]),
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA249' });
+    ).rejects.toMatchObject({ code: 'CORE_LOOKBOOK_SOURCE_DUPLICATE' });
 
-    const lookbook = await projectData.createLookbook({
+    await projectData.writeProductionLookbook({
       projectName: 'constantinople',
       homeDir,
-      name: 'Corruptible Lookbook',
       document: lookbookDocument(),
       idGenerator: createDeterministicIdGenerator(),
     });
@@ -315,12 +312,131 @@ describe('visual language commands', () => {
     }
 
     await expect(
-      projectData.readLookbook({
+      projectData.readProductionLookbook({
         projectName: 'constantinople',
         homeDir,
-        lookbookId: lookbook.lookbook.id,
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA230' });
+  });
+
+  it('creates and then updates the fixed Production role without changing its id', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+
+    const source = await projectData.createInspirationFolder({
+      projectName: 'constantinople',
+      homeDir,
+      name: 'Palette Source',
+    });
+    const first = await projectData.writeProductionLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      document: lookbookDocument([source.folder.id]),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const {
+      sourceInspirationFolderIds: _sourceInspirationFolderIds,
+      ...documentWithoutSources
+    } = lookbookDocument();
+    const updated = await projectData.writeProductionLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      document: {
+        ...documentWithoutSources,
+        productionLookbook: {
+          ...lookbookSections(),
+          name: 'Revised Production Language',
+        },
+      },
+    });
+
+    expect(first.changes).toEqual([
+      { type: 'lookbook.created', lookbookId: first.lookbook.id },
+    ]);
+    expect(updated).toMatchObject({
+      changes: [{ type: 'lookbook.updated', lookbookId: first.lookbook.id }],
+      lookbook: {
+        id: first.lookbook.id,
+        kind: 'production',
+        name: 'Revised Production Language',
+      },
+    });
+    await expect(
+      projectData.readProjectLookbooks({
+        projectName: 'constantinople',
+        homeDir,
+      })
+    ).resolves.toMatchObject({
+      production: { lookbook: { id: first.lookbook.id } },
+      storyboard: null,
+    });
+    await expect(
+      projectData.listLookbookSourceInspirations({
+        projectName: 'constantinople',
+        homeDir,
+        lookbookId: first.lookbook.id,
+      })
+    ).resolves.toMatchObject({
+      sourceInspirationFolders: [{ id: source.folder.id }],
+    });
+
+    await expect(
+      projectData.writeProductionLookbook({
+        projectName: 'constantinople',
+        homeDir,
+        document: {
+          kind: 'storyboardLookbook',
+          storyboardLookbook: {
+            name: 'Wrong Role',
+            styleBrief: { text: 'Loose graphite.' },
+            lineAndFinish: { text: 'Visible construction lines.' },
+            valueAndAccent: { text: 'Gray wash.' },
+            guardrails: { text: 'Avoid final-film polish.' },
+          },
+          sourceInspirationFolderIds: [],
+        } as never,
+      })
+    ).rejects.toMatchObject({ code: 'CORE_LOOKBOOK_TARGET_KIND_INVALID' });
+
+    const storyboard = await projectData.writeStoryboardLookbook({
+      projectName: 'constantinople',
+      homeDir,
+      document: {
+        kind: 'storyboardLookbook',
+        storyboardLookbook: {
+          name: 'Graphite Boards',
+          styleBrief: { text: 'Loose graphite.' },
+          lineAndFinish: { text: 'Visible construction lines.' },
+          valueAndAccent: { text: 'Gray wash.' },
+          guardrails: { text: 'Avoid final-film polish.' },
+        },
+        sourceInspirationFolderIds: [],
+      },
+    });
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, 'tmp', 'lookbook-sheet.png'), 'sheet');
+
+    await expect(
+      projectData.attachGenerationMedia({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'lookbook.video-sheet',
+        target: { kind: 'lookbook', id: storyboard.lookbook.id },
+        sourceProjectRelativePath: 'tmp/lookbook-sheet.png',
+      })
+    ).rejects.toMatchObject({ code: 'CORE_LOOKBOOK_TARGET_KIND_INVALID' });
+    await expect(
+      projectData.attachGenerationMedia({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'lookbook.storyboard-sheet',
+        target: { kind: 'lookbook', id: first.lookbook.id },
+        sourceProjectRelativePath: 'tmp/lookbook-sheet.png',
+      })
+    ).rejects.toMatchObject({ code: 'CORE_LOOKBOOK_TARGET_KIND_INVALID' });
   });
 });
 
@@ -408,10 +524,10 @@ function lookbookSections() {
 
 function lookbookDocument(
   sourceInspirationFolderIds: string[] = []
-): MovieLookbookDocument {
+): ProductionLookbookDocument {
   return {
-    kind: 'movieLookbook' as const,
-    movieLookbook: {
+    kind: 'productionLookbook' as const,
+    productionLookbook: {
       name: 'Siege Steel',
       ...lookbookSections(),
     },

@@ -121,7 +121,7 @@ function storyboardImage(
   return {
     id: `lookbook_image_${label}`,
     lookbookId: 'lookbook_test0001',
-    lookbookType: 'storyboard',
+    lookbookKind: 'storyboard',
     sections,
     asset: {
       assetId: `asset_${label}`,

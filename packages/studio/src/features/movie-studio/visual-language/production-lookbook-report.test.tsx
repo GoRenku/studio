@@ -8,7 +8,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import { VisualLanguageReport } from './visual-language-report';
 
-describe('Movie Lookbook report', () => {
+describe('Production Lookbook report', () => {
   it('renders shared Inspiration Analysis sections including Lineage', () => {
     render(
       <VisualLanguageReport
@@ -94,7 +94,7 @@ describe('Movie Lookbook report', () => {
     expect(screen.getByRole('dialog', { name: 'Palette frame' })).not.toBeNull();
   });
 
-  it('renders shared Movie Lookbook sections including Camera', () => {
+  it('renders shared Production Lookbook sections including Camera', () => {
     render(
       <VisualLanguageReport
         projectName='constantinople'
@@ -133,7 +133,7 @@ describe('Movie Lookbook report', () => {
     expect(screen.getByText('Framing')).not.toBeNull();
   });
 
-  it('renders Movie Lookbook images anchored to a specific point', () => {
+  it('renders Production Lookbook images anchored to a specific point', () => {
     const sections = sharedMovieSections();
 
     render(
@@ -165,7 +165,7 @@ describe('Movie Lookbook report', () => {
     expect(screen.getByAltText('Composition board')).not.toBeNull();
   });
 
-  it('renders Movie Lookbook thesis section images under the thesis', () => {
+  it('renders Production Lookbook thesis section images under the thesis', () => {
     render(
       <VisualLanguageReport
         projectName='constantinople'
@@ -303,7 +303,7 @@ function lookbookImage(title: string, id: string = 'comp'): LookbookImage {
   return {
     id: `lookbook_image_${id}`,
     lookbookId: 'lookbook_test0001',
-    lookbookType: 'movie',
+    lookbookKind: 'production',
     sections: [],
     points: ['comp-map-pressure'],
     asset: {

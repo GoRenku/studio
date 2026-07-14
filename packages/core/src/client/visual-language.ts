@@ -36,36 +36,25 @@ export interface InspirationAnalysis {
   inspiredBy: InspiredBySection;
 }
 
-export type LookbookType = 'movie' | 'storyboard';
+export type LookbookKind = 'production' | 'storyboard';
 
-export interface MovieLookbook {
+export interface ProductionLookbook {
   id: string;
   name: string;
-  type: 'movie';
-  definition: MovieLookbookDefinition;
+  kind: 'production';
+  definition: ProductionLookbookDefinition;
 }
 
 export interface StoryboardLookbook {
   id: string;
   name: string;
-  type: 'storyboard';
+  kind: 'storyboard';
   definition: StoryboardLookbookDefinition;
-  sourceMovieLookbookIds: string[];
 }
 
-export type Lookbook = MovieLookbook | StoryboardLookbook;
+export type Lookbook = ProductionLookbook | StoryboardLookbook;
 
-export interface LookbookListItem {
-  lookbook: Lookbook;
-  cardImage: LookbookImage | null;
-  isSelectedForType: boolean;
-}
-
-export interface LookbookListItemWithSources extends LookbookListItem {
-  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
-}
-
-export interface MovieLookbookDefinition {
+export interface ProductionLookbookDefinition {
   thesis: ThesisSection;
   palette: PaletteSection;
   toneMood: ToneMoodSection;
@@ -121,7 +110,7 @@ export interface StoryboardGuardrailsSection
   favored?: string[];
 }
 
-export type MovieLookbookSection =
+export type ProductionLookbookSection =
   | 'thesis'
   | 'palette'
   | 'toneMood'
@@ -136,22 +125,22 @@ export type StoryboardLookbookSection =
   | 'valueAndAccent'
   | 'guardrails';
 
-export type LookbookSection = MovieLookbookSection | StoryboardLookbookSection;
+export type LookbookSection = ProductionLookbookSection | StoryboardLookbookSection;
 
 export type LookbookSectionsByType = {
-  movie: MovieLookbookSection;
+  production: ProductionLookbookSection;
   storyboard: StoryboardLookbookSection;
 };
 
 export type LookbookDefinitionByType = {
-  movie: MovieLookbookDefinition;
+  production: ProductionLookbookDefinition;
   storyboard: StoryboardLookbookDefinition;
 };
 
 export interface LookbookImage {
   id: string;
   lookbookId: string;
-  lookbookType: LookbookType;
+  lookbookKind: LookbookKind;
   asset: LookbookImageAsset;
   /** Sections this image is section-level evidence for (un-anchored placements). */
   sections: LookbookSection[];
@@ -162,7 +151,7 @@ export interface LookbookImage {
 export interface LookbookSheet {
   id: string;
   lookbookId: string;
-  lookbookType: LookbookType;
+  lookbookKind: LookbookKind;
   asset: LookbookSheetAsset;
 }
 
@@ -349,19 +338,9 @@ export interface InspirationAnalysisWriteReport
   analysis: InspirationAnalysis;
 }
 
-export interface LookbookListReport extends VisualLanguageCommandReport {
-  selectedLookbookIdsByType: Partial<Record<LookbookType, string>>;
-  lookbooks: LookbookListItemWithSources[];
-}
-
-export interface LookbookShowReport extends VisualLanguageCommandReport {
-  lookbook: Lookbook;
-  sourceInspirationFolders: InspirationFolderWithResolvedPath[];
-  cardImage: LookbookImage | null;
-  isSelectedForType: boolean;
-  images: LookbookImage[];
-  sheets: LookbookSheet[];
-  imagesBySection: Record<LookbookSection, LookbookImage[]>;
+export interface ProjectLookbooks {
+  production: ProductionLookbook | null;
+  storyboard: StoryboardLookbook | null;
 }
 
 export interface LookbookValidationReport extends VisualLanguageCommandReport {

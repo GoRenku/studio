@@ -1,6 +1,10 @@
 import type {
   GenerationPreviewResourceData,
   LookbookSection,
+  Lookbook,
+  LookbookResource,
+  ProductionLookbook,
+  StoryboardLookbook,
   ProjectRelativePath,
   ProjectLibrary,
   SceneDialogueAudioWorkspace,
@@ -571,60 +575,34 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
-    async listLookbooks() {
+    async readProjectLookbooks() {
+      const production = makeLookbookResource('production');
       return {
         valid: true,
         warnings: [],
         project: { name: 'test-project' },
-        selectedLookbookIdsByType: {},
-        lookbooks: [],
+        production,
+        storyboard: null,
         resourceKeys: [],
       };
     },
-    async readLookbook(input) {
-      return {
-        valid: true,
-        warnings: [],
-        project: { name: 'test-project' },
-        lookbook: makeLookbook(input.lookbookId),
-        sourceInspirationFolders: [],
-        cardImage: null,
-        isSelectedForType: false,
-        images: [],
-        sheets: [makeLookbookSheet('lookbook_sheet_test0001')],
-        imagesBySection: {
-          thesis: [],
-          palette: [],
-          toneMood: [],
-          composition: [],
-          lighting: [],
-          texture: [],
-          camera: [],
-          styleBrief: [],
-          lineAndFinish: [],
-          valueAndAccent: [],
-          guardrails: [],
-        },
-        imagesByPoint: {},
-        resourceKeys: [],
-      };
+    async readProductionLookbook() {
+      return makeLookbookResource('production');
     },
-    async createLookbook(input) {
+    async readStoryboardLookbook() {
+      return makeLookbookResource('storyboard');
+    },
+    async writeProductionLookbook() {
       return makeLookbookWriteReport({
-        lookbook: makeLookbook('lookbook_test0001', input.name),
+        lookbook: makeLookbook('lookbook_test0001'),
       });
     },
-    async updateLookbook(input) {
+    async writeStoryboardLookbook() {
       return makeLookbookWriteReport({
-        lookbook: makeLookbook(input.lookbookId, input.name),
+        lookbook: makeStoryboardLookbook('lookbook_storyboard_test0001'),
       });
     },
-    async renameLookbook(input) {
-      return makeLookbookWriteReport({
-        lookbook: makeLookbook(input.lookbookId, input.name),
-      });
-    },
-    async validateLookbook() {
+    async validateProductionLookbook() {
       return {
         valid: true,
         warnings: [],
@@ -633,14 +611,14 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
-    async deleteLookbook() {
-      return makeVisualLanguageCommandReport('lookbook.deleted');
-    },
-    async selectLookbookForType() {
-      return makeVisualLanguageCommandReport('lookbook.selectedForType');
-    },
-    async clearLookbookSelection() {
-      return makeVisualLanguageCommandReport('lookbook.selectionCleared');
+    async validateStoryboardLookbook() {
+      return {
+        valid: true,
+        warnings: [],
+        project: { name: 'test-project' },
+        sourceInspirationFolders: [],
+        resourceKeys: [],
+      };
     },
     async setLookbookSourceInspirations(input) {
       return makeLookbookWriteReport({
@@ -993,7 +971,7 @@ function makeLookbook(id: string, name = 'Lookbook') {
   return {
     id,
     name,
-    type: 'movie' as const,
+    kind: 'production' as const,
     definition: {
       thesis: {
         statement: 'The movie favors pressure over spectacle.',
@@ -1031,11 +1009,58 @@ function makeLookbook(id: string, name = 'Lookbook') {
   };
 }
 
+function makeStoryboardLookbook(id: string, name = 'Storyboard Lookbook') {
+  return {
+    id,
+    name,
+    kind: 'storyboard' as const,
+    definition: {
+      styleBrief: { text: 'Graphite boards with clear staging.' },
+      lineAndFinish: { text: 'Loose construction under crisp accents.' },
+      valueAndAccent: { text: 'Soft values with restrained warmth.' },
+      guardrails: { text: 'Keep action and silhouettes legible.' },
+    },
+  };
+}
+
+function makeLookbookResource(kind: 'production'): LookbookResource & { lookbook: ProductionLookbook };
+function makeLookbookResource(kind: 'storyboard'): LookbookResource & { lookbook: StoryboardLookbook };
+function makeLookbookResource(kind: 'production' | 'storyboard'): LookbookResource {
+  const lookbook = kind === 'production'
+    ? makeLookbook('lookbook_test0001')
+    : makeStoryboardLookbook('lookbook_storyboard_test0001');
+  return {
+    valid: true as const,
+    warnings: [],
+    project: { name: 'test-project' },
+    lookbook,
+    sourceInspirationFolders: [],
+    cardImage: null,
+    images: [],
+    sheets: kind === 'production' ? [makeLookbookSheet('lookbook_sheet_test0001')] : [],
+    imagesBySection: {
+      thesis: [],
+      palette: [],
+      toneMood: [],
+      composition: [],
+      lighting: [],
+      texture: [],
+      camera: [],
+      styleBrief: [],
+      lineAndFinish: [],
+      valueAndAccent: [],
+      guardrails: [],
+    },
+    imagesByPoint: {},
+    resourceKeys: [],
+  };
+}
+
 function makeLookbookImage(id: string) {
   return {
     id,
     lookbookId: 'lookbook_test0001',
-    lookbookType: 'movie' as const,
+    lookbookKind: 'production' as const,
     asset: {
       assetId: 'asset_lookbook_image',
       type: 'lookbook_image',
@@ -1055,7 +1080,7 @@ function makeLookbookSheet(id: string) {
   return {
     id,
     lookbookId: 'lookbook_test0001',
-    lookbookType: 'movie' as const,
+    lookbookKind: 'production' as const,
     asset: {
       assetId: 'asset_lookbook_sheet',
       type: 'lookbook_sheet',
@@ -1165,7 +1190,7 @@ function makeRecoverableMutationReport(input: {
   };
 }
 
-function makeLookbookWriteReport(input: { lookbook: ReturnType<typeof makeLookbook> }) {
+function makeLookbookWriteReport(input: { lookbook: Lookbook }) {
   return {
     ...makeVisualLanguageCommandReport('lookbook.updated'),
     lookbook: input.lookbook,

@@ -110,6 +110,34 @@ describe('readDirectorContext', () => {
     );
   });
 
+  it('reports Lookbook readiness from the two authored project roles', async () => {
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const production = await projectData.writeProductionLookbook({
+      homeDir,
+      document: productionLookbookDocument(),
+    });
+    const storyboard = await projectData.writeStoryboardLookbook({
+      homeDir,
+      document: storyboardLookbookDocument(),
+    });
+
+    const report = await projectData.readDirectorContext({ homeDir });
+
+    expect(report.visualLanguage).toMatchObject({
+      productionLookbookId: production.lookbook.id,
+      storyboardLookbookId: storyboard.lookbook.id,
+    });
+    expect(report.diagnostics.map((issue) => issue.code)).not.toContain(
+      'DIRECTOR_CONTEXT004'
+    );
+    expect(report.diagnostics.map((issue) => issue.code)).not.toContain(
+      'DIRECTOR_CONTEXT013'
+    );
+  });
+
   async function createSampleProjectAndReadSceneId(): Promise<string | null> {
     return (await createSampleProjectAndReadScene())?.sceneId ?? null;
   }
@@ -134,6 +162,52 @@ describe('readDirectorContext', () => {
     };
   }
 });
+
+function productionLookbookDocument() {
+  return {
+    kind: 'productionLookbook' as const,
+    productionLookbook: {
+      name: 'Production Language',
+      thesis: { statement: 'Held monumental frames.', principles: ['Keep scale legible.'] },
+      palette: {
+        description: 'Stone and ember.',
+        colors: [{ hex: '#8A6437', name: 'Worked bronze', meaning: 'Engineered force.' }],
+        observations: [],
+      },
+      toneMood: { tone: 'severe', moodTags: ['monumental'], description: 'Restrained pressure.' },
+      composition: {
+        description: 'Stable axes.',
+        patterns: [{ name: 'Held center', description: 'Keep mass legible.' }],
+      },
+      lighting: {
+        description: 'Low sun and fire.',
+        patterns: [{ name: 'Ember edge', description: 'Use fire as a narrow accent.' }],
+      },
+      texture: { description: 'Stone and smoke.', observations: [] },
+      camera: {
+        description: 'Measured movement.',
+        movement: [{ name: 'Slow push', description: 'Move only as decisions harden.' }],
+        motion: [{ name: 'Held weight', description: 'Let labor remain deliberate.' }],
+        framing: [{ name: 'Human scale', description: 'Keep bodies small against masonry.' }],
+      },
+    },
+    sourceInspirationFolderIds: [],
+  };
+}
+
+function storyboardLookbookDocument() {
+  return {
+    kind: 'storyboardLookbook' as const,
+    storyboardLookbook: {
+      name: 'Storyboard Language',
+      styleBrief: { text: 'Loose graphite frames.' },
+      lineAndFinish: { text: 'Visible construction lines.' },
+      valueAndAccent: { text: 'Gray wash with ochre accents.' },
+      guardrails: { text: 'Avoid final-film polish.' },
+    },
+    sourceInspirationFolderIds: [],
+  };
+}
 
 function sampleShotList(ids: {
   sceneId: string;

@@ -11,8 +11,8 @@ import { listGenerationReferences } from './references.js';
 import type { BuildGenerationPurposeInput } from './purpose-contract.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import { sceneDialogueAudio, sceneDialogueAudioTakes } from '../schema/index.js';
-import type { LookbookType } from '../../client/index.js';
-import { readSelectedLookbookId } from '../database/access/lookbook.js';
+import type { LookbookKind } from '../../client/index.js';
+import { readLookbookRecordByKind } from '../database/access/lookbook.js';
 import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
 import { listGenerationReferenceAssetFileRecords } from '../database/access/generation-references.js';
 
@@ -152,13 +152,13 @@ export function dialogueAudioFileIds(
     .map((row) => row.assetFileId);
 }
 
-export function selectedLookbookSheetFileIds(
+export function lookbookSheetFileIds(
   context: BuildGenerationPurposeInput,
-  type: LookbookType
+  type: LookbookKind
 ): string[] {
-  const lookbookId = readSelectedLookbookId(context.session, type);
-  return lookbookId
-    ? listLookbookSheets(context.session, lookbookId).flatMap((sheet) =>
+  const lookbook = readLookbookRecordByKind(context.session, type);
+  return lookbook
+    ? listLookbookSheets(context.session, lookbook.id).flatMap((sheet) =>
         sheet.asset.files.map((file) => file.id)
       )
     : [];

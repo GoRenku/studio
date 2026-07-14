@@ -19,13 +19,9 @@ import {
   castVoices,
   inspirationFolders,
   locationAssets,
-  lookbook,
   lookbookCardImages,
   lookbookImages,
-  lookbookInspirations,
-  lookbookSelections,
   lookbookSheets,
-  storyboardLookbookSourceMovies,
   projectAssets,
   sceneAssets,
   sceneDialogueAudioTakes,
@@ -233,47 +229,6 @@ const inspirationImageDefinition: TrashObjectDefinition = {
         fileName: fileNameParts.join('/'),
       },
     ];
-  },
-};
-
-const lookbookDefinition: TrashObjectDefinition = {
-  itemKind: 'lookbook',
-  readTrashItems(input) {
-    const row = input.session.db
-      .select()
-      .from(lookbook)
-      .where(and(eq(lookbook.id, input.itemId), isNull(lookbook.discardedAt)))
-      .get();
-    if (!row) {
-      return [];
-    }
-    return [
-      {
-        itemKind: 'lookbook',
-        itemId: row.id,
-        title: row.name,
-        restoreSnapshot: {},
-      },
-    ];
-  },
-  applyDiscard(input) {
-    markLookbookTreeDiscarded(input);
-    clearLookbookSelectionForDiscardedLookbook(input);
-  },
-  applyRestore(input) {
-    restoreLookbookTree(input);
-  },
-  collectFiles(input) {
-    return collectLookbookFiles(input);
-  },
-  resourceKeys(input) {
-    return [
-      studioVisualLanguageLookbooksResourceKey(),
-      studioVisualLanguageLookbookResourceKey(input.itemId),
-    ];
-  },
-  restoredChanges(input) {
-    return [{ type: 'lookbook.restored', lookbookId: input.itemId }];
   },
 };
 
@@ -807,7 +762,6 @@ const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinitio
   sceneShotVideoTake: sceneShotVideoTakeDefinition,
   inspirationFolder: inspirationFolderDefinition,
   inspirationImage: inspirationImageDefinition,
-  lookbook: lookbookDefinition,
   lookbookImage: lookbookImageDefinition,
   lookbookSheet: lookbookSheetDefinition,
 };
@@ -837,133 +791,6 @@ function unsupportedDefinition(kind: TrashItemKind): TrashObjectDefinition {
       return [{ type: 'trash.restored', itemKind: kind, itemId: input.itemId }];
     },
   };
-}
-
-function clearLookbookSelectionForDiscardedLookbook(input: TrashObjectDiscardContext): void {
-  const row = input.session.db
-    .select({ type: lookbook.type })
-    .from(lookbook)
-    .where(eq(lookbook.id, input.itemId))
-    .get();
-  if (!row) {
-    return;
-  }
-  input.session.db
-    .delete(lookbookSelections)
-    .where(
-      and(
-        eq(lookbookSelections.lookbookType, row.type),
-        eq(lookbookSelections.lookbookId, input.itemId)
-      )
-    )
-    .run();
-}
-
-function markLookbookTreeDiscarded(input: TrashObjectDiscardContext): void {
-  input.session.db
-    .update(lookbook)
-    .set({
-      discardedAt: input.now,
-      discardOperationId: input.operationId,
-      restoredAt: null,
-    })
-    .where(eq(lookbook.id, input.itemId))
-    .run();
-  input.session.db
-    .update(lookbookImages)
-    .set({
-      discardedAt: input.now,
-      discardOperationId: input.operationId,
-      restoredAt: null,
-    })
-    .where(and(eq(lookbookImages.lookbookId, input.itemId), isNull(lookbookImages.discardedAt)))
-    .run();
-  input.session.db
-    .update(lookbookSheets)
-    .set({
-      discardedAt: input.now,
-      discardOperationId: input.operationId,
-      restoredAt: null,
-    })
-    .where(and(eq(lookbookSheets.lookbookId, input.itemId), isNull(lookbookSheets.discardedAt)))
-    .run();
-  input.session.db
-    .update(lookbookInspirations)
-    .set({
-      discardedAt: input.now,
-      discardOperationId: input.operationId,
-      restoredAt: null,
-    })
-    .where(and(eq(lookbookInspirations.lookbookId, input.itemId), isNull(lookbookInspirations.discardedAt)))
-    .run();
-  input.session.db
-    .update(storyboardLookbookSourceMovies)
-    .set({
-      discardedAt: input.now,
-      discardOperationId: input.operationId,
-      restoredAt: null,
-    })
-    .where(
-      and(
-        or(
-          eq(storyboardLookbookSourceMovies.storyboardLookbookId, input.itemId),
-          eq(storyboardLookbookSourceMovies.movieLookbookId, input.itemId)
-        ),
-        isNull(storyboardLookbookSourceMovies.discardedAt)
-      )
-    )
-    .run();
-  input.session.db
-    .update(lookbookCardImages)
-    .set({
-      discardedAt: input.now,
-      discardOperationId: input.operationId,
-      restoredAt: null,
-    })
-    .where(and(eq(lookbookCardImages.lookbookId, input.itemId), isNull(lookbookCardImages.discardedAt)))
-    .run();
-}
-
-function restoreLookbookTree(input: TrashObjectRestoreContext): void {
-  const lookbookId = input.trashItem.itemId;
-  input.session.db
-    .update(lookbook)
-    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-    .where(and(eq(lookbook.id, lookbookId), eq(lookbook.discardOperationId, input.trashItem.operationId)))
-    .run();
-  input.session.db
-    .update(lookbookImages)
-    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-    .where(and(eq(lookbookImages.lookbookId, lookbookId), eq(lookbookImages.discardOperationId, input.trashItem.operationId)))
-    .run();
-  input.session.db
-    .update(lookbookSheets)
-    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-    .where(and(eq(lookbookSheets.lookbookId, lookbookId), eq(lookbookSheets.discardOperationId, input.trashItem.operationId)))
-    .run();
-  input.session.db
-    .update(lookbookInspirations)
-    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-    .where(and(eq(lookbookInspirations.lookbookId, lookbookId), eq(lookbookInspirations.discardOperationId, input.trashItem.operationId)))
-    .run();
-  input.session.db
-    .update(storyboardLookbookSourceMovies)
-    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-    .where(
-      and(
-        or(
-          eq(storyboardLookbookSourceMovies.storyboardLookbookId, lookbookId),
-          eq(storyboardLookbookSourceMovies.movieLookbookId, lookbookId)
-        ),
-        eq(storyboardLookbookSourceMovies.discardOperationId, input.trashItem.operationId)
-      )
-    )
-    .run();
-  input.session.db
-    .update(lookbookCardImages)
-    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-    .where(and(eq(lookbookCardImages.lookbookId, lookbookId), eq(lookbookCardImages.discardOperationId, input.trashItem.operationId)))
-    .run();
 }
 
 function markLookbookImageDiscarded(input: TrashObjectDiscardContext): void {
@@ -1044,34 +871,6 @@ function restoreLookbookSheet(input: TrashObjectRestoreContext): void {
     ...input,
     trashItem: { ...input.trashItem, itemId: snapshot.assetId },
   });
-}
-
-function collectLookbookFiles(
-  input: TrashObjectGarbageCollectionContext
-): TrashFileDraft[] {
-  const images = input.session.db
-    .select()
-    .from(lookbookImages)
-    .where(
-      and(
-        eq(lookbookImages.lookbookId, input.trashItem.itemId),
-        eq(lookbookImages.discardOperationId, input.trashItem.operationId)
-      )
-    )
-    .all();
-  const sheets = input.session.db
-    .select()
-    .from(lookbookSheets)
-    .where(
-      and(
-        eq(lookbookSheets.lookbookId, input.trashItem.itemId),
-        eq(lookbookSheets.discardOperationId, input.trashItem.operationId)
-      )
-    )
-    .all();
-  return [...images, ...sheets].flatMap((row) =>
-    collectAssetFiles(input, row.assetId)
-  );
 }
 
 function collectAssetFiles(

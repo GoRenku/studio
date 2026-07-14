@@ -245,14 +245,15 @@ Behavior:
 - Requires a current authoring project and fails with `PROJECT_DATA202` when
   none is open.
 - Summarizes screenplay, active Screenplay Analysis, Inspiration folders,
-  selected Movie and Storyboard Lookbooks, selected cast visuals, selected
+  authored Production and Storyboard Lookbooks, selected cast visuals, selected
   location environment sheets, and selected-scene shot readiness.
 - Reports structured director diagnostics for missing screenplay state, missing
-  selected Movie or Storyboard Lookbooks, missing selected visual media, missing
+  Production or Storyboard Lookbooks, missing selected visual media, missing
   active shot lists, and missing storyboard images.
 - Returns ordered `nextSteps` such as `draft-screenplay`, `analyze-screenplay`,
-  `create-lookbook`, `design-cast`, `design-production`, `design-shot-list`,
-  `generate-storyboards`, and `generate-shot-video`.
+  `author-production-lookbook`, `author-storyboard-lookbook`, `design-cast`,
+  `design-production`, `design-shot-list`, `generate-storyboards`, and
+  `generate-shot-video`.
 - Does not mutate project state and does not run paid generation.
 
 ## `renku cast`
@@ -440,7 +441,7 @@ Behavior:
 
 - Requires a current authoring project and an existing Cast Member.
 - `context` returns the Cast Member facts, screenplay appearances, active Cast
-  Design when present, selected cast media, selected Movie Lookbook summary,
+  Design when present, selected cast media, Production Lookbook summary,
   and media generation readiness.
 - `validate` checks a tagged `kind: "castDesign"` document without writing.
 - `write` creates a Cast Member-owned design history row and makes it active.
@@ -471,7 +472,7 @@ Behavior:
 
 - Requires a current authoring project.
 - `context` returns the Location, scenes that use it, active Location Design
-  summary, selected environment-sheet media, asset role counts, selected Movie
+  summary, selected environment-sheet media, asset role counts, Production
   Lookbook summary, and generation readiness for `location.sheet`.
 - `validate` checks a tagged `kind: "locationOperations"` document without
   writing.
@@ -526,7 +527,7 @@ Behavior:
 - Location Design is location-level production design: spatial thesis,
   architecture, set dressing, materials, atmosphere, props, continuity, and
   environment-sheet guidance.
-- `context` commands return the relevant screenplay hierarchy, selected Movie
+- `context` commands return the relevant screenplay hierarchy, the Production
   Lookbook summary, active design summary when present, selected media, and
   downstream readiness signals.
 - `validate` checks tagged `kind: "locationDesign"` documents without writing.
@@ -816,7 +817,7 @@ Behavior:
 
 - Requires a current authoring project and existing screenplay data.
 - `context` returns the scene hierarchy, scene blocks, referenced cast and
-  locations, project default aspect ratio, selected Movie Lookbook text, and
+  locations, project default aspect ratio, Production Lookbook text, and
   active shot list summary.
 - `validate` checks a tagged `kind: "sceneShotList"` document without writing.
 - `write` creates a new scene-owned shot-list history row and makes it active.
@@ -1207,25 +1208,18 @@ Behavior:
 Manage Visual Language Lookbooks for the current authoring project.
 
 ```bash
-renku lookbook list --json
-renku lookbook show --lookbook <lookbook-id> --json
+renku lookbook show --kind production --json
+renku lookbook show --kind storyboard --json
 renku lookbook validate --file <lookbook-json> --json
-renku lookbook create --name <name> --file <lookbook-json> --json
-renku lookbook update --lookbook <lookbook-id> --file <lookbook-json> --json
-renku lookbook rename --lookbook <lookbook-id> --name <name> --json
-renku lookbook discard --lookbook <lookbook-id> --json
-renku lookbook select --type movie --lookbook <lookbook-id> --json
-renku lookbook select --type storyboard --lookbook <lookbook-id> --json
-renku lookbook clear-selection --type movie --json
-renku lookbook clear-selection --type storyboard --json
+renku lookbook apply --file <lookbook-json> --json
 ```
 
-Movie Lookbook input JSON:
+Production Lookbook input JSON:
 
 ```json
 {
-  "kind": "movieLookbook",
-  "movieLookbook": {
+  "kind": "productionLookbook",
+  "productionLookbook": {
     "name": "Project visual language",
     "thesis": {
       "statement": "Project visual-language thesis.",
@@ -1307,23 +1301,23 @@ Storyboard Lookbook input JSON:
     "valueAndAccent": { "text": "Soft gray values with restrained warm accents." },
     "guardrails": { "text": "Avoid photoreal stills and decorative text inside panels." }
   },
-  "sourceMovieLookbookIds": [],
   "sourceInspirationFolderIds": []
 }
 ```
 
 Behavior:
 
-- The input must be a tagged `kind: "movieLookbook"` or
+- The input must be a tagged `kind: "productionLookbook"` or
   `kind: "storyboardLookbook"` document with all required sections for that
-  type.
-- `sourceInspirationFolderIds` is optional. When present on create or update,
+  role.
+- `apply` creates an absent role or updates its existing durable row without
+  changing the Lookbook id.
+- `sourceInspirationFolderIds` is optional. When present on apply,
   every folder id must exist and duplicates are rejected.
 - Lookbook JSON must not contain `imageFiles`; generated examples are attached
   through Lookbook image commands.
-- `lookbook create` does not select the Lookbook by default. Use
-  `lookbook select --type movie` for cinematic generation and
-  `lookbook select --type storyboard` for scene storyboard generation.
+- Production and Storyboard are fixed project roles. There is no list,
+  selection command, or Storyboard-to-Production source pointer.
 - The old `renku visual-language lookbook ...` command surface is not kept as a
   compatibility alias.
 
@@ -1349,10 +1343,10 @@ Behavior:
   values remain section-level placements, so `--sections thesis,texture
   --anchor texture-cannon-material-states` shows the same image under Thesis
   and beside that Texture point.
-- `thesis` is a single-image Movie Lookbook slot. Importing or placing another
+- `thesis` is a single-image Production Lookbook slot. Importing or placing another
   image with `--sections thesis` replaces the previous Thesis placement without
   discarding the previous image or removing its other placements.
-- Other Movie section and point placements append images until the placement
+- Other Production section and point placements append images until the placement
   slot has 10 images. Move or discard an existing Lookbook image before adding
   another image to a full slot.
 - `thesis` and `toneMood` have no point ids; tag them with `--sections` only.

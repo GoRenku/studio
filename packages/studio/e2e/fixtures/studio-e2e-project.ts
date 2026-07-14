@@ -594,18 +594,11 @@ async function seedTakeReferenceMedia(input: {
     referenceName: 'gate-location-sheet',
     purpose: 'Browser E2E location sheet reference.',
   });
-  const lookbook = await input.projectData.createLookbook({
+  const lookbook = await input.projectData.writeProductionLookbook({
     projectName: input.projectName,
     homeDir: input.runtime.homeDir,
-    name: 'Imperial Wound',
     document: lookbookDocument(),
     idGenerator,
-  });
-  await input.projectData.selectLookbookForType({
-    projectName: input.projectName,
-    homeDir: input.runtime.homeDir,
-    type: 'movie',
-    lookbookId: lookbook.lookbook.id,
   });
   const lookbookSheet = await input.projectData.attachGenerationMedia({
     homeDir: input.runtime.homeDir,
@@ -683,8 +676,8 @@ export function samplePng(): Buffer {
 
 function lookbookDocument() {
   return {
-    kind: 'movieLookbook' as const,
-    movieLookbook: {
+    kind: 'productionLookbook' as const,
+    productionLookbook: {
       name: 'Imperial Wound',
       thesis: {
         statement: 'The movie should feel rigorous and tense.',

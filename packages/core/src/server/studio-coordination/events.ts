@@ -54,8 +54,7 @@ export interface StudioProjectRef {
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'inspiration'; folderId?: string }
-  | { type: 'lookbooks' }
-  | { type: 'lookbook'; lookbookId: string }
+  | { type: 'lookbook'; kind: 'production' | 'storyboard' }
   | { type: 'trash' }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }

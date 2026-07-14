@@ -6,269 +6,277 @@ import {
 import {
   createProjectDataService,
   type LookbookDocument,
+  type LookbookKind,
   type LookbookSection,
   type LookbookSourceInspirationsDocument,
-  type LookbookType,
+  type ProductionLookbookDocument,
+  type StoryboardLookbookDocument,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 import { parseAnchor } from './studio-target-parsing.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
-export async function runLookbookCommand(options: {
+type LookbookCommandOptions = {
   input: string[];
   flags: {
     anchor?: string;
     file?: string;
     image?: string;
+    kind?: string;
     lookbook?: string;
-    name?: string;
     project?: string;
     sections?: string;
-    type?: string;
   };
   json: boolean;
   io: RenkuCliIo;
   homeDir?: string;
-}): Promise<number> {
+};
+
+type Service = ReturnType<typeof createProjectDataService>;
+
+export async function runLookbookCommand(
+  options: LookbookCommandOptions
+): Promise<number> {
   const [action, nested, operation] = options.input;
   const service = createProjectDataService();
-  const projectName = options.flags.project;
-
-  if (action === 'list') {
-    writeJson(
-      options.io,
-      await service.listLookbooks({ projectName, homeDir: options.homeDir })
-    );
-    return 0;
-  }
-
   if (action === 'show') {
-    writeJson(
-      options.io,
-      await service.readLookbook({
-        projectName,
-        homeDir: options.homeDir,
-        lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-      })
-    );
-    return 0;
+    return showLookbook(options, service);
   }
-
   if (action === 'validate') {
-    const filePath = requiredFlag(options.flags.file, '--file');
-    const document = await readJsonInput(filePath);
-    writeJson(
-      options.io,
-      await service.validateLookbook({
-        projectName,
-        homeDir: options.homeDir,
-        document: document as LookbookDocument,
-        filePath: filePath !== '-' ? filePath : undefined,
-      })
-    );
-    return 0;
+    return validateLookbook(options, service);
   }
-
-  if (action === 'create') {
-    const filePath = requiredFlag(options.flags.file, '--file');
-    const document = await readJsonInput(filePath);
-    const report = await service.createLookbook({
-      projectName,
-      homeDir: options.homeDir,
-      name: options.flags.name,
-      document: document as LookbookDocument,
-      filePath: filePath !== '-' ? filePath : undefined,
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook create',
-    });
-    writeJson(options.io, report);
-    return 0;
+  if (action === 'apply') {
+    return applyLookbook(options, service);
   }
-
-  if (action === 'update') {
-    const filePath = options.flags.file;
-    const document = filePath
-      ? ((await readJsonInput(filePath)) as LookbookDocument)
-      : undefined;
-    const report = await service.updateLookbook({
-      projectName,
-      homeDir: options.homeDir,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-      name: options.flags.name,
-      document,
-      filePath: filePath && filePath !== '-' ? filePath : undefined,
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook update',
-    });
-    writeJson(options.io, report);
-    return 0;
-  }
-
-  if (action === 'rename') {
-    const report = await service.renameLookbook({
-      projectName,
-      homeDir: options.homeDir,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-      name: requiredFlag(options.flags.name, '--name'),
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook rename',
-    });
-    writeJson(options.io, report);
-    return 0;
-  }
-
-  if (action === 'discard') {
-    const report = await service.deleteLookbook({
-      projectName,
-      homeDir: options.homeDir,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook discard',
-    });
-    writeJson(options.io, report);
-    return 0;
-  }
-
-  if (action === 'select') {
-    const type = parseLookbookType(options.flags.type);
-    const report = await service.selectLookbookForType({
-      projectName,
-      homeDir: options.homeDir,
-      type,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook select',
-    });
-    writeJson(options.io, report);
-    return 0;
-  }
-
-  if (action === 'clear-selection') {
-    const type = parseLookbookType(options.flags.type);
-    const report = await service.clearLookbookSelection({
-      projectName,
-      homeDir: options.homeDir,
-      type,
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook clear-selection',
-    });
-    writeJson(options.io, report);
-    return 0;
-  }
-
   if (action === 'image' && nested === 'set-placement') {
-    const report = await service.setLookbookImagePlacement({
-      projectName,
-      homeDir: options.homeDir,
-      imageId: requiredFlag(options.flags.image, '--image'),
-      sections: parseSections(options.flags.sections),
-      anchorPointId: parseAnchor(options.flags.anchor),
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook image set-placement',
-    });
-    writeJson(options.io, report);
-    return 0;
+    return setImagePlacement(options, service);
   }
-
   if (action === 'image' && nested === 'discard') {
-    const report = await service.deleteLookbookImage({
-      projectName,
-      homeDir: options.homeDir,
-      imageId: requiredFlag(options.flags.image, '--image'),
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook image discard',
-    });
-    writeJson(options.io, report);
-    return 0;
+    return discardImage(options, service);
   }
-
   if (action === 'card-image' && nested === 'set') {
-    const report = await service.setLookbookCardImage({
-      projectName,
-      homeDir: options.homeDir,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-      imageId: requiredFlag(options.flags.image, '--image'),
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook card-image set',
-    });
-    writeJson(options.io, report);
-    return 0;
+    return setCardImage(options, service);
   }
-
   if (action === 'card-image' && nested === 'clear') {
-    const report = await service.clearLookbookCardImage({
-      projectName,
-      homeDir: options.homeDir,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook card-image clear',
-    });
-    writeJson(options.io, report);
-    return 0;
+    return clearCardImage(options, service);
   }
-
   if (action === 'inspiration' && nested === 'list') {
-    writeJson(
-      options.io,
-      await service.listLookbookSourceInspirations({
-        projectName,
-        homeDir: options.homeDir,
-        lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-      })
-    );
-    return 0;
+    return listInspirations(options, service);
   }
-
   if (action === 'inspiration' && nested === 'set') {
-    const filePath = requiredFlag(options.flags.file, '--file');
-    const document = await readJsonInput(filePath);
-    const report = await service.setLookbookSourceInspirations({
-      projectName,
-      homeDir: options.homeDir,
-      lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-      document: document as LookbookSourceInspirationsDocument,
-      filePath: filePath !== '-' ? filePath : undefined,
-    });
-    await appendStudioResourceChangedEvent({
-      runtime: cliRuntime(options, service),
-      report,
-      command: 'lookbook inspiration set',
-    });
-    writeJson(options.io, report);
-    return 0;
+    return setInspirations(options, service);
   }
+  throw unknownCommand(action, nested, operation);
+}
 
+async function showLookbook(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const kind = parseLookbookKind(options.flags.kind);
+  const report = kind === 'production'
+    ? await service.readProductionLookbook(projectInput(options))
+    : await service.readStoryboardLookbook(projectInput(options));
+  return writeJson(options, report);
+}
+
+async function validateLookbook(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const { document, filePath } = await readDocument(options);
+  const report = document.kind === 'productionLookbook'
+    ? await service.validateProductionLookbook({
+        ...projectInput(options),
+        document,
+        filePath,
+      })
+    : await service.validateStoryboardLookbook({
+        ...projectInput(options),
+        document,
+        filePath,
+      });
+  return writeJson(options, report);
+}
+
+async function applyLookbook(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const { document, filePath } = await readDocument(options);
+  const report = document.kind === 'productionLookbook'
+    ? await service.writeProductionLookbook({
+        ...projectInput(options),
+        document,
+        filePath,
+      })
+    : await service.writeStoryboardLookbook({
+        ...projectInput(options),
+        document,
+        filePath,
+      });
+  await notify(options, service, report, 'lookbook apply');
+  return writeJson(options, report);
+}
+
+async function setImagePlacement(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const report = await service.setLookbookImagePlacement({
+    ...projectInput(options),
+    imageId: requiredFlag(options.flags.image, '--image'),
+    sections: parseSections(options.flags.sections),
+    anchorPointId: parseAnchor(options.flags.anchor),
+  });
+  await notify(options, service, report, 'lookbook image set-placement');
+  return writeJson(options, report);
+}
+
+async function discardImage(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const report = await service.deleteLookbookImage({
+    ...projectInput(options),
+    imageId: requiredFlag(options.flags.image, '--image'),
+  });
+  await notify(options, service, report, 'lookbook image discard');
+  return writeJson(options, report);
+}
+
+async function setCardImage(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const report = await service.setLookbookCardImage({
+    ...projectInput(options),
+    lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+    imageId: requiredFlag(options.flags.image, '--image'),
+  });
+  await notify(options, service, report, 'lookbook card-image set');
+  return writeJson(options, report);
+}
+
+async function clearCardImage(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const report = await service.clearLookbookCardImage({
+    ...projectInput(options),
+    lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+  });
+  await notify(options, service, report, 'lookbook card-image clear');
+  return writeJson(options, report);
+}
+
+async function listInspirations(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const report = await service.listLookbookSourceInspirations({
+    ...projectInput(options),
+    lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+  });
+  return writeJson(options, report);
+}
+
+async function setInspirations(
+  options: LookbookCommandOptions,
+  service: Service
+): Promise<number> {
+  const file = requiredFlag(options.flags.file, '--file');
+  const document = await readJsonInput(file) as LookbookSourceInspirationsDocument;
+  const report = await service.setLookbookSourceInspirations({
+    ...projectInput(options),
+    lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
+    document,
+    filePath: file === '-' ? undefined : file,
+  });
+  await notify(options, service, report, 'lookbook inspiration set');
+  return writeJson(options, report);
+}
+
+async function readDocument(options: LookbookCommandOptions): Promise<{
+  document: ProductionLookbookDocument | StoryboardLookbookDocument;
+  filePath?: string;
+}> {
+  const file = requiredFlag(options.flags.file, '--file');
+  const document = await readJsonInput(file) as LookbookDocument;
+  if (document.kind !== 'productionLookbook' && document.kind !== 'storyboardLookbook') {
+    throw new StructuredError({
+      code: 'CORE_LOOKBOOK_TARGET_KIND_INVALID',
+      message: 'Lookbook document kind is required.',
+      issues: [
+        createDiagnosticError(
+          'CORE_LOOKBOOK_TARGET_KIND_INVALID',
+          'Lookbook document kind must be productionLookbook or storyboardLookbook.',
+          { path: ['kind'], ...(file !== '-' ? { filePath: file } : {}) },
+          'Use a current Lookbook document kind.'
+        ),
+      ],
+      suggestion: 'Use productionLookbook or storyboardLookbook.',
+    });
+  }
+  return { document, ...(file !== '-' ? { filePath: file } : {}) };
+}
+
+function parseLookbookKind(input?: string): LookbookKind {
+  const value = requiredFlag(input, '--kind');
+  if (value === 'production' || value === 'storyboard') {
+    return value;
+  }
   throw new StructuredError({
+    code: 'CLI096',
+    message: 'Unsupported Lookbook kind.',
+    issues: [
+      createDiagnosticError(
+        'CLI096',
+        `Unsupported Lookbook kind: ${value}.`,
+        { path: ['--kind'], context: 'renku CLI arguments' },
+        'Use production or storyboard.'
+      ),
+    ],
+    suggestion: 'Use --kind production or --kind storyboard.',
+  });
+}
+
+function projectInput(options: LookbookCommandOptions): {
+  projectName?: string;
+  homeDir?: string;
+} {
+  return { projectName: options.flags.project, homeDir: options.homeDir };
+}
+
+async function notify(
+  options: LookbookCommandOptions,
+  service: Service,
+  report: { project: { name: string; id?: string }; resourceKeys: string[] },
+  command: string
+): Promise<void> {
+  await appendStudioResourceChangedEvent({
+    runtime: {
+      homeDir: options.homeDir,
+      json: options.json,
+      io: options.io,
+      projectDataService: service,
+    },
+    report,
+    command,
+  });
+}
+
+function writeJson(options: LookbookCommandOptions, value: unknown): number {
+  options.io.stdout.log(JSON.stringify(value, null, 2));
+  return 0;
+}
+
+function unknownCommand(
+  action?: string,
+  nested?: string,
+  operation?: string
+): StructuredError {
+  return new StructuredError({
     code: 'CLI095',
     message: 'Unknown lookbook command.',
     issues: [
@@ -276,7 +284,7 @@ export async function runLookbookCommand(options: {
         'CLI095',
         'Unknown lookbook command.',
         { path: ['lookbook', action ?? '', nested ?? '', operation ?? ''] },
-        'Use list/show/validate/create/update/rename/discard/select/clear-selection, image set-placement/discard, card-image set/clear, or inspiration list/set.'
+        'Use show/validate/apply, image set-placement/discard, card-image set/clear, or inspiration list/set.'
       ),
     ],
     suggestion: 'Use a supported lookbook command.',
@@ -319,80 +327,26 @@ async function readFile(file: string): Promise<string> {
           'Check that the file exists and is readable, or pass `--file -` for stdin.'
         ),
       ],
-      suggestion:
-        'Check that the file exists and is readable, or pass `--file -` for stdin.',
+      suggestion: 'Check that the file exists and is readable.',
     });
   }
 }
 
 async function readStdin(): Promise<string> {
-  try {
-    const chunks: Buffer[] = [];
-    for await (const chunk of process.stdin) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-    }
-    return Buffer.concat(chunks).toString('utf8');
-  } catch {
-    throw new StructuredError({
-      code: 'CLI083',
-      message: 'Could not read stdin.',
-      issues: [
-        createDiagnosticError(
-          'CLI083',
-          'Could not read stdin.',
-          { path: ['stdin'] },
-          'Send a complete JSON document on stdin.'
-        ),
-      ],
-      suggestion: 'Send a complete JSON document on stdin.',
-    });
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
   }
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 function parseSections(input?: string): LookbookSection[] {
-  if (!input) {
-    return [];
-  }
   return input
-    .split(',')
-    .map((section) => section.trim())
-    .filter(Boolean) as LookbookSection[];
-}
-
-function parseLookbookType(input?: string): LookbookType {
-  const value = requiredFlag(input, '--type');
-  if (value === 'movie' || value === 'storyboard') {
-    return value;
-  }
-  throw new StructuredError({
-    code: 'CLI096',
-    message: 'Unsupported Lookbook type.',
-    issues: [
-      createDiagnosticError(
-        'CLI096',
-        `Unsupported Lookbook type: ${value}.`,
-        { path: ['--type'], context: 'renku CLI arguments' },
-        'Use movie or storyboard.'
-      ),
-    ],
-    suggestion: 'Use --type movie or --type storyboard.',
-  });
-}
-
-function cliRuntime(
-  options: {
-    json: boolean;
-    io: RenkuCliIo;
-    homeDir?: string;
-  },
-  projectDataService: ReturnType<typeof createProjectDataService>
-) {
-  return {
-    homeDir: options.homeDir,
-    json: options.json,
-    io: options.io,
-    projectDataService,
-  };
+    ? (input
+        .split(',')
+        .map((section) => section.trim())
+        .filter(Boolean) as LookbookSection[])
+    : [];
 }
 
 function requiredFlag(value: string | undefined, flag: string): string {
@@ -412,8 +366,4 @@ function requiredFlag(value: string | undefined, flag: string): string {
     ],
     suggestion: `Pass ${flag}.`,
   });
-}
-
-function writeJson(io: RenkuCliIo, value: unknown): void {
-  io.stdout.log(JSON.stringify(value, null, 2));
 }

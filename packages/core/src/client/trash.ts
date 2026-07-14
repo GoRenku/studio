@@ -8,7 +8,6 @@ export type TrashItemKind =
   | 'castVoice'
   | 'inspirationFolder'
   | 'inspirationImage'
-  | 'lookbook'
   | 'lookbookImage'
   | 'lookbookSheet'
   | 'sceneDialogueAudioTake'

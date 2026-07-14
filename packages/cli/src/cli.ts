@@ -115,7 +115,7 @@ Options
   --take               Scene Dialogue Audio take id or Shot Video Take id
   --shot-list          Scene Shot List id
   --shots              Comma-separated shot ids for take creation or storyboard imports
-  --kind               Shot video take input kind
+  --kind               Lookbook role or Shot video take input kind
   --selection          Media import selection: select or take
                        Director context selection: Studio selection JSON
   --replace-selected   Replace the currently selected prepared input in the same slot
@@ -124,14 +124,13 @@ Options
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
   --lookbook           Lookbook id
-  --type               Lookbook type: movie or storyboard
   --image              Lookbook image id
   --trash-item         Trash item id to restore
   --confirmation-token Empty Trash confirmation token from preview
   --older-than-iso     ISO timestamp cutoff for Empty Trash preview/run
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
-  --anchor             Movie Lookbook point id for Lookbook image placement
+  --anchor             Production Lookbook point id for Lookbook image placement
   --all-locales        Export every locale with production selects
   --dry-run            Report production export operations without writing
   --simulate           Run generation without calling a paid provider
@@ -582,10 +581,9 @@ export async function runRenkuCli(
             file: cli.flags.file,
             image: cli.flags.image,
             lookbook: cli.flags.lookbook,
-            name: cli.flags.name,
+            kind: cli.flags.kind,
             project: cli.flags.project,
             sections: cli.flags.sections,
-            type: cli.flags.type,
           },
           json: cli.flags.json,
           io,

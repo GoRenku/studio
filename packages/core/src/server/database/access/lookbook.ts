@@ -1,10 +1,8 @@
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
-import type { Lookbook, LookbookType } from '../../../client/index.js';
+import { and, asc, eq, isNull } from 'drizzle-orm';
+import type { Lookbook, LookbookKind } from '../../../client/index.js';
 import {
   lookbook,
   lookbookCardImages,
-  lookbookSelections,
-  storyboardLookbookSourceMovies,
 } from '../../schema/index.js';
 import {
   parseStoredLookbookDefinition,
@@ -13,14 +11,12 @@ import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type LookbookRecord = typeof lookbook.$inferSelect;
-export type LookbookSelectionRecord = typeof lookbookSelections.$inferSelect;
 export type LookbookCardImageRecord = typeof lookbookCardImages.$inferSelect;
 
 export function listLookbookRecords(session: DatabaseSession): LookbookRecord[] {
   return session.db
     .select()
     .from(lookbook)
-    .where(isNull(lookbook.discardedAt))
     .orderBy(asc(lookbook.updatedAt), asc(lookbook.id))
     .all();
 }
@@ -33,10 +29,37 @@ export function readLookbookRecordById(
     session.db
       .select()
       .from(lookbook)
-      .where(and(eq(lookbook.id, lookbookId), isNull(lookbook.discardedAt)))
+      .where(eq(lookbook.id, lookbookId))
       .get() ??
     null
   );
+}
+
+export function readLookbookRecordByKind(
+  session: DatabaseSession,
+  kind: LookbookKind
+): LookbookRecord | null {
+  return (
+    session.db
+      .select()
+      .from(lookbook)
+      .where(eq(lookbook.kind, kind))
+      .get() ?? null
+  );
+}
+
+export function requireLookbookRecordByKind(
+  session: DatabaseSession,
+  kind: LookbookKind
+): LookbookRecord {
+  const row = readLookbookRecordByKind(session, kind);
+  if (!row) {
+    throw new ProjectDataError(
+      'CORE_LOOKBOOK_NOT_AUTHORED',
+      `${kind === 'production' ? 'Production' : 'Storyboard'} Lookbook has not been authored.`
+    );
+  }
+  return row;
 }
 
 export function requireLookbookRecordById(
@@ -58,22 +81,37 @@ export function insertLookbookRecord(
   input: {
     id: string;
     name: string;
-    type: LookbookType;
+    kind: LookbookKind;
     definitionJson: string;
     now: string;
   }
 ): void {
-  session.db
-    .insert(lookbook)
-    .values({
-      id: input.id,
-      name: input.name,
-      type: input.type,
-      definitionJson: input.definitionJson,
-      createdAt: input.now,
-      updatedAt: input.now,
-    })
-    .run();
+  try {
+    session.db
+      .insert(lookbook)
+      .values({
+        id: input.id,
+        name: input.name,
+        kind: input.kind,
+        definitionJson: input.definitionJson,
+        createdAt: input.now,
+        updatedAt: input.now,
+      })
+      .run();
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'SQLITE_CONSTRAINT_UNIQUE'
+    ) {
+      throw new ProjectDataError(
+        'CORE_LOOKBOOK_ALREADY_EXISTS',
+        `A current ${input.kind} Lookbook already exists.`
+      );
+    }
+    throw error;
+  }
 }
 
 export function updateLookbookRecord(
@@ -95,160 +133,6 @@ export function updateLookbookRecord(
     })
     .where(eq(lookbook.id, input.lookbookId))
     .run();
-}
-
-export function deleteLookbookRecord(
-  session: DatabaseSession,
-  lookbookId: string
-): void {
-  session.db.delete(lookbook).where(eq(lookbook.id, lookbookId)).run();
-}
-
-export function listSelectedLookbookIdsByType(
-  session: DatabaseSession
-): Partial<Record<LookbookType, string>> {
-  const selections = session.db.select().from(lookbookSelections).all();
-  return Object.fromEntries(
-    selections.map((selection) => [selection.lookbookType, selection.lookbookId])
-  ) as Partial<Record<LookbookType, string>>;
-}
-
-export function readSelectedLookbookId(
-  session: DatabaseSession,
-  type: LookbookType
-): string | null {
-  return (
-    session.db
-      .select({ lookbookId: lookbookSelections.lookbookId })
-      .from(lookbookSelections)
-      .where(eq(lookbookSelections.lookbookType, type))
-      .get()?.lookbookId ?? null
-  );
-}
-
-export function readSelectedMovieLookbookId(
-  session: DatabaseSession
-): string | null {
-  return readSelectedLookbookId(session, 'movie');
-}
-
-export function readSelectedStoryboardLookbookId(
-  session: DatabaseSession
-): string | null {
-  return readSelectedLookbookId(session, 'storyboard');
-}
-
-export function setLookbookSelectionRecord(
-  session: DatabaseSession,
-  input: { type: LookbookType; lookbookId: string; now: string }
-): void {
-  const existing = readSelectedLookbookId(session, input.type);
-  if (existing) {
-    session.db
-      .update(lookbookSelections)
-      .set({
-        lookbookId: input.lookbookId,
-        updatedAt: input.now,
-      })
-      .where(eq(lookbookSelections.lookbookType, input.type))
-      .run();
-    return;
-  }
-  session.db
-    .insert(lookbookSelections)
-    .values({
-      lookbookType: input.type,
-      lookbookId: input.lookbookId,
-      selectedAt: input.now,
-      updatedAt: input.now,
-    })
-    .run();
-}
-
-export function clearLookbookSelectionRecord(
-  session: DatabaseSession,
-  type: LookbookType
-): void {
-  session.db
-    .delete(lookbookSelections)
-    .where(eq(lookbookSelections.lookbookType, type))
-    .run();
-}
-
-export function clearLookbookSelectionForLookbookRecord(
-  session: DatabaseSession,
-  input: { lookbookId: string; type: LookbookType }
-): void {
-  session.db
-    .delete(lookbookSelections)
-    .where(
-      and(
-        eq(lookbookSelections.lookbookType, input.type),
-        eq(lookbookSelections.lookbookId, input.lookbookId)
-      )
-    )
-    .run();
-}
-
-export function replaceStoryboardLookbookSourceMovieRecords(
-  session: DatabaseSession,
-  input: {
-    storyboardLookbookId: string;
-    movieLookbookIds: string[];
-    now: string;
-  }
-): void {
-  session.db
-    .delete(storyboardLookbookSourceMovies)
-    .where(
-      eq(
-        storyboardLookbookSourceMovies.storyboardLookbookId,
-        input.storyboardLookbookId
-      )
-    )
-    .run();
-  input.movieLookbookIds.forEach((movieLookbookId, index) => {
-    session.db
-      .insert(storyboardLookbookSourceMovies)
-      .values({
-        storyboardLookbookId: input.storyboardLookbookId,
-        movieLookbookId,
-        sortOrder: index + 1,
-        createdAt: input.now,
-        updatedAt: input.now,
-      })
-      .run();
-  });
-}
-
-export function listStoryboardSourceMovieIdsByLookbookId(
-  session: DatabaseSession,
-  lookbookIds: string[]
-): Map<string, string[]> {
-  const sourceIdsByLookbookId = new Map<string, string[]>();
-  if (lookbookIds.length === 0) {
-    return sourceIdsByLookbookId;
-  }
-  const rows = session.db
-    .select()
-    .from(storyboardLookbookSourceMovies)
-    .where(
-      and(
-        inArray(storyboardLookbookSourceMovies.storyboardLookbookId, lookbookIds),
-        isNull(storyboardLookbookSourceMovies.discardedAt)
-      )
-    )
-    .orderBy(
-      asc(storyboardLookbookSourceMovies.storyboardLookbookId),
-      asc(storyboardLookbookSourceMovies.sortOrder)
-    )
-    .all();
-  for (const row of rows) {
-    const existing = sourceIdsByLookbookId.get(row.storyboardLookbookId) ?? [];
-    existing.push(row.movieLookbookId);
-    sourceIdsByLookbookId.set(row.storyboardLookbookId, existing);
-  }
-  return sourceIdsByLookbookId;
 }
 
 export function readLookbookCardImageId(
@@ -315,16 +199,15 @@ export function clearLookbookCardImageRecord(
 }
 
 export function toLookbook(
-  row: LookbookRecord,
-  input?: { sourceMovieLookbookIds?: string[] }
+  row: LookbookRecord
 ): Lookbook {
-  if (row.type === 'movie') {
+  if (row.kind === 'production') {
     return {
       id: row.id,
       name: row.name,
-      type: 'movie',
+      kind: 'production',
       definition: parseStoredLookbookDefinition({
-        type: 'movie',
+        kind: 'production',
         value: row.definitionJson,
       }),
     };
@@ -332,11 +215,10 @@ export function toLookbook(
   return {
     id: row.id,
     name: row.name,
-    type: 'storyboard',
+    kind: 'storyboard',
     definition: parseStoredLookbookDefinition({
-      type: 'storyboard',
+      kind: 'storyboard',
       value: row.definitionJson,
     }),
-    sourceMovieLookbookIds: input?.sourceMovieLookbookIds ?? [],
   };
 }

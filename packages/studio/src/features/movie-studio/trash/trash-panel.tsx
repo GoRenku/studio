@@ -220,8 +220,6 @@ function trashItemKindLabel(kind: TrashItem['itemKind']): string {
       return 'Inspiration Folder';
     case 'inspirationImage':
       return 'Inspiration Image';
-    case 'lookbook':
-      return 'Lookbook';
     case 'lookbookImage':
       return 'Lookbook Image';
     case 'lookbookSheet':

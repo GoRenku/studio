@@ -42,16 +42,15 @@ function storyboardDocument(): StoryboardLookbookDocument {
       },
     },
     sourceInspirationFolderIds: [],
-    sourceMovieLookbookIds: [],
   };
 }
 
 describe('storyboard Lookbook validator', () => {
   it('accepts and round-trips the optional style fields', () => {
     const serialized = serializeLookbookDocument({ document: storyboardDocument() });
-    expect(serialized.type).toBe('storyboard');
+    expect(serialized.kind).toBe('storyboard');
     const definition = parseStoredLookbookDefinition({
-      type: 'storyboard',
+      kind: 'storyboard',
       value: serialized.definitionJson,
     });
     expect(definition.styleBrief.styleKind).toBe('graphite hand-drawn');

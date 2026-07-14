@@ -644,7 +644,7 @@ describe('renku CLI', () => {
     });
   });
 
-  it('validates and creates Lookbooks through the top-level command', async () => {
+  it('validates and applies project Lookbooks through the top-level command', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -707,15 +707,7 @@ describe('renku CLI', () => {
     stdout = [];
     stderr = [];
     const createLookbookExitCode = await runRenkuCli(
-      [
-        'lookbook',
-        'create',
-        '--name',
-        'Contaminated Tenderness',
-        '--file',
-        lookbookPath,
-        '--json',
-      ],
+      ['lookbook', 'apply', '--file', lookbookPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(createLookbookExitCode).toBe(0);
@@ -725,7 +717,7 @@ describe('renku CLI', () => {
       changes: [{ type: 'lookbook.created' }],
       lookbook: {
         name: 'Contaminated Tenderness',
-        type: 'movie',
+        kind: 'production',
         definition: { palette: { colors: [{ hex: '#39FF75' }] } },
       },
       sourceInspirationFolders: [{ id: folder.id }],
@@ -736,24 +728,8 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const selectMovieLookbookExitCode = await runRenkuCli(
-      [
-        'lookbook',
-        'select',
-        '--type',
-        'movie',
-        '--lookbook',
-        report.lookbook.id,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(selectMovieLookbookExitCode).toBe(0);
-
-    stdout = [];
-    stderr = [];
     const showExitCode = await runRenkuCli(
-      ['lookbook', 'show', '--lookbook', report.lookbook.id, '--json'],
+      ['lookbook', 'show', '--kind', 'production', '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(showExitCode).toBe(0);
@@ -955,8 +931,8 @@ describe('renku CLI', () => {
       [
         'lookbook',
         'show',
-        '--lookbook',
-        report.lookbook.id,
+        '--kind',
+        'production',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -1532,6 +1508,7 @@ describe('renku CLI', () => {
         path.join(storageRoot, 'constantinople', locationHeroFile.projectRelativePath)
       )
     ).resolves.toBeUndefined();
+
   });
 
   it('attaches a Cast Profile through the focused media command', async () => {
@@ -2305,7 +2282,7 @@ describe('renku CLI', () => {
     const createStoryboardLookbookExitCode = await runRenkuCli(
       [
         'lookbook',
-        'create',
+        'apply',
         '--file',
         storyboardLookbookPath,
         '--json',
@@ -2314,22 +2291,6 @@ describe('renku CLI', () => {
     );
     expect(createStoryboardLookbookExitCode).toBe(0);
     const storyboardLookbookReport = JSON.parse(stdout.join('\n'));
-
-    stdout = [];
-    stderr = [];
-    const selectStoryboardLookbookExitCode = await runRenkuCli(
-      [
-        'lookbook',
-        'select',
-        '--type',
-        'storyboard',
-        '--lookbook',
-        storyboardLookbookReport.lookbook.id,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(selectStoryboardLookbookExitCode).toBe(0);
 
     const storyboardLookbookSheetPath =
       'generated/media/graphite-storyboard-lookbook-sheet.png';
@@ -3519,8 +3480,8 @@ function inspirationAnalysisJson(imageFile: string) {
 
 function lookbookJson(sourceInspirationFolderIds: string[] = []) {
   return {
-    kind: 'movieLookbook',
-    movieLookbook: {
+    kind: 'productionLookbook',
+    productionLookbook: {
       name: 'Contaminated Tenderness',
       thesis: {
         statement:
@@ -3609,7 +3570,6 @@ function storyboardLookbookJson() {
       valueAndAccent: { text: 'Soft gray values with restrained warm accents.' },
       guardrails: { text: 'Avoid photoreal stills and decorative text inside panels.' },
     },
-    sourceMovieLookbookIds: [],
     sourceInspirationFolderIds: [],
   };
 }

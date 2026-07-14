@@ -22,8 +22,7 @@ import { listCastMemberRecords } from '../database/access/cast-members.js';
 import { listInspirationFolderRecords } from '../database/access/inspiration-folders.js';
 import {
   listLookbookRecords,
-  readSelectedMovieLookbookId,
-  readSelectedStoryboardLookbookId,
+  readLookbookRecordByKind,
 } from '../database/access/lookbook.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import {
@@ -163,17 +162,17 @@ function readScreenplayReadiness(
 function readVisualLanguageReadiness(
   session: DatabaseSession
 ): DirectorVisualLanguageReadiness {
-  const selectedMovieLookbookId = readSelectedMovieLookbookId(session);
-  const selectedStoryboardLookbookId = readSelectedStoryboardLookbookId(session);
+  const productionLookbookId = readLookbookRecordByKind(session, 'production')?.id ?? null;
+  const storyboardLookbookId = readLookbookRecordByKind(session, 'storyboard')?.id ?? null;
   return {
     inspirationFolderCount: listInspirationFolderRecords(session, {
       limit: MAX_RESOURCE_PAGE_LIMIT,
     }).items.length,
     lookbookCount: listLookbookRecords(session).length,
-    selectedMovieLookbookId,
-    selectedStoryboardLookbookId,
-    movieLookbookReadyForGeneration: selectedMovieLookbookId !== null,
-    storyboardLookbookReadyForGeneration: selectedStoryboardLookbookId !== null,
+    productionLookbookId,
+    storyboardLookbookId,
+    productionLookbookReadyForGeneration: productionLookbookId !== null,
+    storyboardLookbookReadyForGeneration: storyboardLookbookId !== null,
   };
 }
 
@@ -440,23 +439,23 @@ function readinessDiagnostics(input: {
       )
     );
   }
-  if (!input.visualLanguage.selectedMovieLookbookId) {
+  if (!input.visualLanguage.productionLookbookId) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT004',
-        'The current project does not have a selected Movie Lookbook.',
-        ['visualLanguage', 'selectedMovieLookbookId'],
-        'Create or select a Movie Lookbook before production visual generation.'
+        'The current project does not have a Production Lookbook.',
+        ['visualLanguage', 'productionLookbookId'],
+        'Create the Production Lookbook before production visual generation.'
       )
     );
   }
-  if (!input.visualLanguage.selectedStoryboardLookbookId) {
+  if (!input.visualLanguage.storyboardLookbookId) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT013',
-        'The current project does not have a selected Storyboard Lookbook.',
-        ['visualLanguage', 'selectedStoryboardLookbookId'],
-        'Create or select a Storyboard Lookbook before storyboard image generation.'
+        'The current project does not have a Storyboard Lookbook.',
+        ['visualLanguage', 'storyboardLookbookId'],
+        'Create the Storyboard Lookbook before storyboard image generation.'
       )
     );
   }
@@ -533,23 +532,22 @@ function buildNextSteps(input: {
       command: 'renku screenplay analyze context --json',
     });
   }
-  if (!input.visualLanguage.selectedMovieLookbookId) {
+  if (!input.visualLanguage.productionLookbookId) {
     steps.push({
-      id: 'select-movie-lookbook',
-      title: 'Create or select a Movie Lookbook',
+      id: 'author-production-lookbook',
+      title: 'Create the Production Lookbook',
       specialistSkill: 'lookbook-designer',
-      reason: 'Production visual generation should use an explicit movie visual-language source.',
-      command: 'renku lookbook select --type movie --lookbook <lookbook-id> --json',
+      reason: 'Production visual generation should use the project Production Lookbook.',
+      command: 'renku lookbook apply --file <production-lookbook-json> --json',
     });
   }
-  if (!input.visualLanguage.selectedStoryboardLookbookId) {
+  if (!input.visualLanguage.storyboardLookbookId) {
     steps.push({
-      id: 'select-storyboard-lookbook',
-      title: 'Create or select a Storyboard Lookbook',
+      id: 'author-storyboard-lookbook',
+      title: 'Create the Storyboard Lookbook',
       specialistSkill: 'lookbook-designer',
       reason: 'Storyboard image generation should use a dedicated graphic-language source.',
-      command:
-        'renku lookbook select --type storyboard --lookbook <lookbook-id> --json',
+      command: 'renku lookbook apply --file <storyboard-lookbook-json> --json',
     });
   }
   if (!input.cast.everyCastMemberHasSelectedVisualReference) {

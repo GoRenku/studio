@@ -4,7 +4,7 @@ import type {
   LookbookImageAsset,
   LookbookImageAssetFile,
   LookbookSection,
-  LookbookType,
+  LookbookKind,
 } from '../../../client/index.js';
 import {
   assetFiles,
@@ -25,7 +25,7 @@ interface LookbookImageAssetRow {
   lookbookId: string;
   assetId: string;
   sortOrder: number;
-  lookbookType: LookbookType;
+  lookbookKind: LookbookKind;
   type: string;
   mediaKind: string;
   title: string;
@@ -255,7 +255,7 @@ export function listLookbookImages(
       lookbookId: lookbookImages.lookbookId,
       assetId: lookbookImages.assetId,
       sortOrder: lookbookImages.sortOrder,
-      lookbookType: lookbook.type,
+      lookbookKind: lookbook.kind,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -279,7 +279,7 @@ export function listLookbookImages(
     return {
       id: row.id,
       lookbookId: row.lookbookId,
-      lookbookType: row.lookbookType,
+      lookbookKind: row.lookbookKind,
       asset: toLookbookImageAsset(row, assetFilesByAssetId),
       sections: sectionLevelSections(placements),
       points: anchoredPointIds(placements),
@@ -297,7 +297,7 @@ export function readLookbookImage(
       lookbookId: lookbookImages.lookbookId,
       assetId: lookbookImages.assetId,
       sortOrder: lookbookImages.sortOrder,
-      lookbookType: lookbook.type,
+      lookbookKind: lookbook.kind,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -320,7 +320,7 @@ export function readLookbookImage(
   return {
     id: row.id,
     lookbookId: row.lookbookId,
-    lookbookType: row.lookbookType,
+    lookbookKind: row.lookbookKind,
     asset: toLookbookImageAsset(row, readAssetFilesForRows(session, rows)),
     sections: sectionLevelSections(placements),
     points: anchoredPointIds(placements),

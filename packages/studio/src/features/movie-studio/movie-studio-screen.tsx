@@ -5,7 +5,6 @@ import { exportProductionAssets } from '@/services/studio-projects-api';
 import { createInspirationFolder } from '@/services/studio-visual-language-api';
 import {
   matchesVisualLanguageInspirationResource,
-  matchesVisualLanguageLookbooksResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
@@ -73,7 +72,6 @@ export function MovieStudioScreen({
       flushPending: async () => true,
     });
   const [isProductionExportRunning, setIsProductionExportRunning] = useState(false);
-  const [lookbooksRevision, setLookbooksRevision] = useState(0);
   const [inspirationFoldersRevision, setInspirationFoldersRevision] = useState(0);
   const [sceneHeaderAction, setSceneHeaderAction] = useState<{
     sceneId: string;
@@ -93,18 +91,10 @@ export function MovieStudioScreen({
     },
     []
   );
-  const handleLookbooksChange = useCallback(() => {
-    setLookbooksRevision((current) => current + 1);
-  }, []);
   const handleInspirationFoldersChange = useCallback(() => {
     setInspirationFoldersRevision((current) => current + 1);
   }, []);
 
-  useStudioResourceRefresh({
-    projectName: project.identity.name,
-    matches: matchesVisualLanguageLookbooksResource,
-    onRefresh: handleLookbooksChange,
-  });
   useStudioResourceRefresh({
     projectName: project.identity.name,
     matches: (resourceKeys) =>
@@ -322,7 +312,6 @@ export function MovieStudioScreen({
               onHome={onHome}
               isProductionExportRunning={isProductionExportRunning}
               onProductionExport={handleProductionExport}
-              lookbooksRevision={lookbooksRevision}
               inspirationFoldersRevision={inspirationFoldersRevision}
               onInspirationFoldersChange={handleInspirationFoldersChange}
             />
@@ -358,13 +347,11 @@ export function MovieStudioScreen({
                   onSaveStatusChange={handleProjectInformationSaveStatusChange}
                 />
               ) : selection.type === 'inspiration' ||
-                selection.type === 'lookbooks' ||
                 selection.type === 'lookbook' ? (
                 <VisualLanguagePanel
                   project={project}
                   selection={selection}
                   onSelect={selectMovieStudioSurface}
-                  onLookbooksChange={handleLookbooksChange}
                   onInspirationFoldersChange={handleInspirationFoldersChange}
                   inspirationFoldersRevision={inspirationFoldersRevision}
                 />

@@ -2,20 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import type {
   InspirationFolderWithResolvedPath,
-  LookbookType,
+  LookbookKind,
   LookbookResource,
 } from '@gorenku/studio-core/client';
 import {
   deleteLookbookImage,
   deleteLookbookSheet,
-  readLookbook,
-  selectLookbookForType,
+  readProjectLookbooks,
 } from '@/services/studio-visual-language-api';
 import {
-  matchesVisualLanguageLookbookResource,
+  matchesVisualLanguageLookbooksResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import { EmptyState } from './empty-state';
@@ -24,52 +22,47 @@ import { VisualLanguageReport } from './visual-language-report';
 
 interface LookbookPanelProps {
   projectName: string;
-  lookbookId: string;
-  onLookbooksChange: () => void;
+  kind: LookbookKind;
 }
 
 export function LookbookPanel({
   projectName,
-  lookbookId,
-  onLookbooksChange,
+  kind,
 }: LookbookPanelProps) {
-  const [resource, setResource] = useState<LookbookResource | null>(null);
+  const [resource, setResource] = useState<LookbookResource | null>();
   const [resourceRevision, setResourceRevision] = useState(0);
 
   const refreshLookbook = useCallback(async () => {
-    setResource(await readLookbook(projectName, lookbookId));
-  }, [lookbookId, projectName]);
+    const lookbooks = await readProjectLookbooks(projectName);
+    setResource(lookbooks[kind]);
+  }, [kind, projectName]);
 
   useEffect(() => {
     let cancelled = false;
-    void readLookbook(projectName, lookbookId)
-      .then((nextResource) => {
-        if (!cancelled) setResource(nextResource);
+    void readProjectLookbooks(projectName)
+      .then((lookbooks) => {
+        if (!cancelled) setResource(lookbooks[kind]);
       })
       .catch((error) => toast.error(errorMessage(error)));
     return () => {
       cancelled = true;
     };
-  }, [projectName, lookbookId, resourceRevision]);
+  }, [projectName, kind, resourceRevision]);
 
   useStudioResourceRefresh({
     projectName,
     matches: (resourceKeys) =>
-      matchesVisualLanguageLookbookResource(resourceKeys, lookbookId),
+      matchesVisualLanguageLookbooksResource(resourceKeys) ||
+      resourceKeys.some((key) =>
+        key.startsWith('surface:visual-language:lookbook:')
+      ),
     onRefresh: () => setResourceRevision((current) => current + 1),
   });
-
-  const selectForType = async (type: LookbookType) => {
-    await selectLookbookForType(projectName, type, lookbookId);
-    await refreshLookbook();
-    onLookbooksChange();
-  };
 
   const removeImage = async (imageId: string) => {
     try {
       await deleteLookbookImage(projectName, imageId);
       await refreshLookbook();
-      onLookbooksChange();
     } catch (error) {
       toast.error(errorMessage(error));
     }
@@ -79,14 +72,21 @@ export function LookbookPanel({
     try {
       await deleteLookbookSheet(projectName, sheetId);
       await refreshLookbook();
-      onLookbooksChange();
     } catch (error) {
       toast.error(errorMessage(error));
     }
   };
 
-  if (!resource) {
+  if (resource === undefined) {
     return <EmptyState title='Loading Lookbook.' />;
+  }
+
+  if (resource === null) {
+    return (
+      <EmptyState
+        title={`${kind === 'production' ? 'Production' : 'Storyboard'} Lookbook has not been authored.`}
+      />
+    );
   }
 
   return (
@@ -106,23 +106,9 @@ export function LookbookPanel({
           title={resource.lookbook.name}
           headerMeta={
             <LookbookHeaderMeta
-              type={resource.lookbook.type}
+              type={resource.lookbook.kind}
               sourceInspirationFolders={resource.sourceInspirationFolders}
             />
-          }
-          action={
-            !resource.isSelectedForType ? (
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={() => void selectForType(resource.lookbook.type)}
-              >
-                {resource.lookbook.type === 'movie'
-                  ? 'Use for movie generation'
-                  : 'Use for storyboard images'}
-              </Button>
-            ) : null
           }
           source={{
             kind: 'lookbook',
@@ -148,12 +134,12 @@ function LookbookHeaderMeta({
   type,
   sourceInspirationFolders,
 }: {
-  type: LookbookType;
+  type: LookbookKind;
   sourceInspirationFolders: InspirationFolderWithResolvedPath[];
 }) {
   return (
     <div className='flex flex-wrap items-center gap-2'>
-      <Badge variant='accent'>{type === 'movie' ? 'Movie' : 'Storyboard'}</Badge>
+      <Badge variant='accent'>{type === 'production' ? 'Production' : 'Storyboard'}</Badge>
       <SourceInspirationList
         sourceInspirationFolders={sourceInspirationFolders}
       />

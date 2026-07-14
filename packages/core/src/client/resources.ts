@@ -28,10 +28,9 @@ import type {
   InspirationImage,
   Lookbook,
   LookbookImage,
-  LookbookListItemWithSources,
   LookbookSection,
   LookbookSheet,
-  LookbookType,
+  LookbookKind,
   VisualLanguageCommandReport,
 } from './visual-language.js';
 
@@ -262,7 +261,6 @@ export interface LookbookResource extends VisualLanguageCommandReport {
   lookbook: Lookbook;
   sourceInspirationFolders: InspirationFolderWithResolvedPath[];
   cardImage: LookbookImage | null;
-  isSelectedForType: boolean;
   images: LookbookImage[];
   sheets: LookbookSheet[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;
@@ -270,9 +268,9 @@ export interface LookbookResource extends VisualLanguageCommandReport {
   imagesByPoint: Record<string, LookbookImage[]>;
 }
 
-export interface LookbooksResource extends VisualLanguageCommandReport {
-  selectedLookbookIdsByType: Partial<Record<LookbookType, string>>;
-  lookbooks: LookbookListItemWithSources[];
+export interface ProjectLookbooksResource extends VisualLanguageCommandReport {
+  production: LookbookResource | null;
+  storyboard: LookbookResource | null;
 }
 
 export interface ProjectInformationResource {
@@ -321,9 +319,9 @@ export interface DirectorScreenplayReadiness {
 export interface DirectorVisualLanguageReadiness {
   inspirationFolderCount: number;
   lookbookCount: number;
-  selectedMovieLookbookId: string | null;
-  selectedStoryboardLookbookId: string | null;
-  movieLookbookReadyForGeneration: boolean;
+  productionLookbookId: string | null;
+  storyboardLookbookId: string | null;
+  productionLookbookReadyForGeneration: boolean;
   storyboardLookbookReadyForGeneration: boolean;
 }
 
@@ -370,8 +368,8 @@ export interface DirectorSceneReadiness {
 export type DirectorNextStepId =
   | 'draft-screenplay'
   | 'analyze-screenplay'
-  | 'select-movie-lookbook'
-  | 'select-storyboard-lookbook'
+  | 'author-production-lookbook'
+  | 'author-storyboard-lookbook'
   | 'design-cast'
   | 'design-production'
   | 'design-shot-list'
@@ -417,8 +415,7 @@ export type SceneShotDetailTab =
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'inspiration'; folderId?: string }
-  | { type: 'lookbooks' }
-  | { type: 'lookbook'; lookbookId: string }
+  | { type: 'lookbook'; kind: LookbookKind }
   | { type: 'trash' }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
@@ -441,7 +438,6 @@ export type StudioSelectionContext =
   | { surface: 'project-information' }
   | { surface: 'trash' }
   | { surface: 'visual-language-inspiration' }
-  | { surface: 'visual-language-lookbooks' }
   | { surface: 'visual-language-lookbook' }
   | { surface: 'cast'; cast: PageResponse<CastNavigationRow> }
   | { surface: 'cast-member'; castMember: CastNavigationRow }

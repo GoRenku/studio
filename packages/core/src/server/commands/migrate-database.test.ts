@@ -2795,7 +2795,7 @@ describe('migrate database command', () => {
           id, name, thesis, palette, tone_mood, composition, lighting, texture, camera, created_at, updated_at
         ) values (
           'lookbook_movie',
-          'Movie Lookbook',
+          'Production Lookbook',
           '{"statement":"Thesis","principles":["Clear"]}',
           '{"description":"Palette","colors":[{"hex":"#ffffff","name":"White","meaning":"Light"}],"observations":[]}',
           '{"tone":"calm","moodTags":["clear"],"description":"Soft mood"}',
@@ -2896,6 +2896,152 @@ describe('migrate database command', () => {
           )
           .get()
       ).toBeTruthy();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('preserves selected Lookbook winners and their owned media during the role migration', async () => {
+    const sqlite = createLegacyLookbookDatabase();
+    try {
+      sqlite.exec(`
+        insert into lookbook (id, type, discarded_at) values
+          ('production_winner', 'movie', null),
+          ('production_loser', 'movie', null),
+          ('storyboard_only', 'storyboard', null);
+        insert into lookbook_selection (lookbook_type, lookbook_id) values
+          ('movie', 'production_winner'),
+          ('storyboard', 'storyboard_only');
+        insert into lookbook_sheet (id, lookbook_id) values
+          ('winner_sheet', 'production_winner'),
+          ('loser_sheet', 'production_loser'),
+          ('storyboard_sheet', 'storyboard_only');
+        insert into storyboard_lookbook_source_movie (storyboard_lookbook_id, movie_lookbook_id)
+        values ('storyboard_only', 'production_winner');
+      `);
+
+      await applyProjectLookbookRolesMigration(sqlite);
+
+      expect(sqlite.prepare('select id, kind from lookbook order by id').all()).toEqual([
+        { id: 'production_winner', kind: 'production' },
+        { id: 'storyboard_only', kind: 'storyboard' },
+      ]);
+      expect(sqlite.prepare('select id, lookbook_id as lookbookId from lookbook_sheet order by id').all()).toEqual([
+        { id: 'storyboard_sheet', lookbookId: 'storyboard_only' },
+        { id: 'winner_sheet', lookbookId: 'production_winner' },
+      ]);
+      expect(readTableNames(sqlite)).not.toContain('lookbook_selection');
+      expect(readTableNames(sqlite)).not.toContain('storyboard_lookbook_source_movie');
+      expect(() =>
+        sqlite.prepare("insert into lookbook (id, kind, discarded_at) values ('duplicate', 'production', null)").run()
+      ).toThrow(/UNIQUE constraint failed/);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('preserves a sole unselected Lookbook for each role', async () => {
+    const sqlite = createLegacyLookbookDatabase();
+    try {
+      sqlite.exec(`
+        insert into lookbook (id, type, discarded_at) values
+          ('production_only', 'movie', null),
+          ('storyboard_only', 'storyboard', null);
+      `);
+
+      await applyProjectLookbookRolesMigration(sqlite);
+
+      expect(sqlite.prepare('select id, kind from lookbook order by id').all()).toEqual([
+        { id: 'production_only', kind: 'production' },
+        { id: 'storyboard_only', kind: 'storyboard' },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('aborts the role migration instead of guessing between unselected Lookbooks', async () => {
+    const sqlite = createLegacyLookbookDatabase();
+    try {
+      sqlite.exec(`
+        insert into lookbook (id, type, discarded_at) values
+          ('production_one', 'movie', null),
+          ('production_two', 'movie', null);
+      `);
+
+      await expect(applyProjectLookbookRolesMigration(sqlite)).rejects.toThrow(
+        /CHECK constraint failed/
+      );
+
+      expect(sqlite.prepare('select id, type from lookbook order by id').all()).toEqual([
+        { id: 'production_one', type: 'movie' },
+        { id: 'production_two', type: 'movie' },
+      ]);
+      expect(readTableNames(sqlite)).toContain('lookbook_selection');
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('makes project Lookbook roles permanent without losing owned rows', async () => {
+    const sqlite = new Database(':memory:');
+    sqlite.pragma('foreign_keys = ON');
+    try {
+      sqlite.exec(`
+        create table lookbook (
+          id text primary key not null,
+          name text not null,
+          kind text not null,
+          definition_json text not null,
+          created_at text not null,
+          updated_at text not null,
+          discarded_at text,
+          discard_operation_id text,
+          restored_at text
+        );
+        create unique index lookbook_current_kind_unique_idx
+          on lookbook (kind) where discarded_at is null;
+        create table lookbook_sheet (
+          id text primary key not null,
+          lookbook_id text not null references lookbook(id) on delete cascade
+        );
+        insert into lookbook (
+          id, name, kind, definition_json, created_at, updated_at
+        ) values (
+          'production', 'Production', 'production', '{}',
+          '2026-07-14T00:00:00.000Z', '2026-07-14T00:00:00.000Z'
+        );
+        insert into lookbook_sheet (id, lookbook_id)
+        values ('production_sheet', 'production');
+      `);
+
+      await applyPermanentProjectLookbooksMigration(sqlite);
+
+      expect(readColumnNames(sqlite, 'lookbook')).toEqual([
+        'id',
+        'name',
+        'kind',
+        'definition_json',
+        'created_at',
+        'updated_at',
+      ]);
+      expect(
+        readIndexForTable(sqlite, 'lookbook', 'lookbook_kind_unique_idx')
+      ).toEqual({ name: 'lookbook_kind_unique_idx', isUnique: 1 });
+      expect(
+        sqlite.prepare('select id, lookbook_id as lookbookId from lookbook_sheet').all()
+      ).toEqual([{ id: 'production_sheet', lookbookId: 'production' }]);
+      expect(() =>
+        sqlite.prepare(`
+          insert into lookbook (
+            id, name, kind, definition_json, created_at, updated_at
+          ) values (
+            'duplicate', 'Duplicate', 'production', '{}',
+            '2026-07-14T00:00:00.000Z', '2026-07-14T00:00:00.000Z'
+          )
+        `).run()
+      ).toThrow(/UNIQUE constraint failed/);
+      expect(sqlite.pragma('user_version', { simple: true })).toBe(44);
     } finally {
       sqlite.close();
     }
@@ -3503,6 +3649,63 @@ describe('migrate database command', () => {
     }
   });
 });
+
+function createLegacyLookbookDatabase(): Database.Database {
+  const sqlite = new Database(':memory:');
+  sqlite.pragma('foreign_keys = ON');
+  sqlite.exec(`
+    create table lookbook (
+      id text primary key not null,
+      type text not null,
+      discarded_at text
+    );
+    create table lookbook_selection (
+      lookbook_type text primary key not null,
+      lookbook_id text not null references lookbook(id) on delete cascade
+    );
+    create table storyboard_lookbook_source_movie (
+      storyboard_lookbook_id text not null references lookbook(id) on delete cascade,
+      movie_lookbook_id text not null references lookbook(id) on delete cascade
+    );
+    create table lookbook_sheet (
+      id text primary key not null,
+      lookbook_id text not null references lookbook(id) on delete cascade
+    );
+  `);
+  return sqlite;
+}
+
+async function applyProjectLookbookRolesMigration(
+  sqlite: Database.Database
+): Promise<void> {
+  const migration = await fs.readFile(
+    path.join(process.cwd(), 'drizzle', '0055_project_lookbook_roles.sql'),
+    'utf8'
+  );
+  const statements = migration
+    .split('--> statement-breakpoint')
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+  sqlite.transaction(() => {
+    statements.forEach((statement) => sqlite.exec(statement));
+  })();
+}
+
+async function applyPermanentProjectLookbooksMigration(
+  sqlite: Database.Database
+): Promise<void> {
+  const migration = await fs.readFile(
+    path.join(process.cwd(), 'drizzle', '0056_permanent-project-lookbooks.sql'),
+    'utf8'
+  );
+  const statements = migration
+    .split('--> statement-breakpoint')
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+  sqlite.transaction(() => {
+    statements.forEach((statement) => sqlite.exec(statement));
+  })();
+}
 
 function readTableNames(sqlite: Database.Database): string[] {
   return sqlite
