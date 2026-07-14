@@ -12,3 +12,5 @@ coverage
 tmp
 .playwright-mcp/
 sample-assets/
+# Astro generated types (packages/website)
+.astro/

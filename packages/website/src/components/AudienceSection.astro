@@ -1,0 +1,126 @@
+---
+import { audiences, benefits } from '../data/site';
+---
+
+<section class="audience" id="audience">
+  <div class="container">
+    <p class="eyebrow" data-reveal>Who it’s for</p>
+    <h2 data-reveal style="--reveal-delay: 0.06s">
+      Made for the ones who can’t afford a wasted shot
+    </h2>
+    <p class="audience-lead" data-reveal style="--reveal-delay: 0.12s">
+      Big productions buy previs by the department. Renku puts the same
+      discipline — structure, look, coverage, cost — in the hands of one
+      filmmaker with a script and a vision.
+    </p>
+
+    <div class="audience-grid">
+      {
+        audiences.map((audience, i) => (
+          <article
+            class="audience-card"
+            style={`--card-accent: ${audience.accent}; --reveal-delay: ${0.1 + i * 0.08}s`}
+            data-reveal
+          >
+            <h3>{audience.title}</h3>
+            <p>{audience.text}</p>
+          </article>
+        ))
+      }
+    </div>
+
+    <div class="benefits">
+      {
+        benefits.map((benefit, i) => (
+          <div
+            class="benefit"
+            data-reveal
+            style={`--reveal-delay: ${0.1 + i * 0.08}s`}
+          >
+            <h3>{benefit.title}</h3>
+            <p>{benefit.text}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .audience {
+    padding-block: clamp(5rem, 12vh, 8rem);
+    text-align: center;
+    background:
+      radial-gradient(
+        50rem 30rem at 50% 0%,
+        rgba(253, 160, 45, 0.06),
+        transparent 70%
+      );
+  }
+
+  h2 {
+    font-size: clamp(1.9rem, 4vw, 2.9rem);
+    margin-top: 0.9rem;
+  }
+
+  .audience-lead {
+    max-width: 44rem;
+    margin: 1.25rem auto 0;
+    color: var(--paper-300);
+  }
+
+  .audience-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1.1rem;
+    margin-top: 3rem;
+    text-align: left;
+  }
+
+  .audience-card {
+    padding: 1.8rem 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(244, 239, 230, 0.08);
+    border-top: 3px solid var(--card-accent);
+    background: linear-gradient(180deg, var(--ink-850), var(--ink-900));
+    transition: transform 0.3s var(--ease-out);
+  }
+
+  .audience-card:hover {
+    transform: translateY(-5px);
+  }
+
+  .audience-card h3 {
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 650;
+  }
+
+  .audience-card p {
+    margin-top: 0.7rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--paper-500);
+  }
+
+  .benefits {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: clamp(1.5rem, 4vw, 3rem);
+    margin-top: clamp(3.5rem, 8vh, 5.5rem);
+    padding-top: clamp(2.5rem, 6vh, 4rem);
+    border-top: 1px solid rgba(244, 239, 230, 0.08);
+    text-align: left;
+  }
+
+  .benefit h3 {
+    font-size: 1.35rem;
+    color: var(--amber-400);
+  }
+
+  .benefit p {
+    margin-top: 0.7rem;
+    font-size: 0.95rem;
+    color: var(--paper-300);
+  }
+</style>

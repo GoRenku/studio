@@ -1,0 +1,58 @@
+---
+import { Image } from 'astro:assets';
+
+import logo from '../assets/renku-logo.svg';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <Image src={logo} alt="" width="26" height="29" />
+      <span>renku</span>
+    </div>
+    <p class="footer-tag">The previs studio for filmmakers.</p>
+    <p class="footer-legal">© {year} Renku. All rights reserved.</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid rgba(244, 239, 230, 0.07);
+    padding-block: 2.5rem;
+  }
+
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  .footer-tag {
+    color: var(--paper-500);
+    font-size: 0.88rem;
+  }
+
+  .footer-legal {
+    margin-inline-start: auto;
+    color: var(--paper-700);
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 640px) {
+    .footer-legal {
+      margin-inline-start: 0;
+    }
+  }
+</style>

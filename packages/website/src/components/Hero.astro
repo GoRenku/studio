@@ -1,0 +1,184 @@
+---
+import { Image } from 'astro:assets';
+
+import { heroImage, site } from '../data/site';
+---
+
+<section class="hero" id="top">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="container hero-inner">
+    <p class="eyebrow" data-reveal>Previsualization studio for filmmakers</p>
+    <h1 data-reveal style="--reveal-delay: 0.08s">
+      See your film <em>before</em> you shoot a single frame.
+    </h1>
+    <p class="hero-sub" data-reveal style="--reveal-delay: 0.16s">
+      {site.name} turns your screenplay into a living previs — cast, locations,
+      lookbooks, storyboards, shot lists, and animatic takes — inside one
+      cinematic workspace.
+    </p>
+    <div class="hero-actions" data-reveal style="--reveal-delay: 0.24s">
+      <a href={site.studioUrl} class="btn btn-primary">Start your previs</a>
+      <a href="#features" class="btn btn-ghost">Explore the studio</a>
+    </div>
+  </div>
+
+  <div class="container hero-visual" data-reveal style="--reveal-delay: 0.34s">
+    <figure class="hero-frame">
+      <div class="frame-bar" aria-hidden="true">
+        <span></span><span></span><span></span>
+        <p class="frame-title">Basilica — Story Arc</p>
+      </div>
+      <Image
+        src={heroImage.image}
+        alt={heroImage.alt}
+        widths={[720, 1200, 1800, 2400]}
+        sizes="(max-width: 76rem) 94vw, 72rem"
+        loading="eager"
+        fetchpriority="high"
+      />
+    </figure>
+    <p class="hero-caption">
+      A real screenplay, mapped: dramatic energy, plot points, and structure —
+      charted by {site.name}.
+    </p>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    padding-top: clamp(8rem, 16vh, 11rem);
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    inset: -20% -10% auto;
+    height: 46rem;
+    background:
+      radial-gradient(
+        42rem 24rem at 22% 18%,
+        rgba(253, 160, 45, 0.16),
+        transparent 65%
+      ),
+      radial-gradient(
+        38rem 22rem at 80% 8%,
+        rgba(229, 54, 95, 0.1),
+        transparent 65%
+      ),
+      radial-gradient(
+        30rem 20rem at 55% 30%,
+        rgba(30, 179, 176, 0.07),
+        transparent 60%
+      );
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    position: relative;
+    text-align: center;
+    max-width: 56rem;
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 6.4vw, 4.6rem);
+    margin-top: 1.25rem;
+  }
+
+  h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--amber-400);
+  }
+
+  .hero-sub {
+    margin: 1.5rem auto 0;
+    max-width: 42rem;
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    color: var(--paper-300);
+  }
+
+  .hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2.25rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-visual {
+    position: relative;
+    margin-top: clamp(3rem, 7vh, 5rem);
+  }
+
+  .hero-frame {
+    margin: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid rgba(244, 239, 230, 0.1);
+    background: var(--ink-850);
+    box-shadow:
+      0 40px 90px -30px rgba(0, 0, 0, 0.8),
+      0 0 120px -40px rgba(253, 160, 45, 0.35);
+    animation: hero-drift 9s ease-in-out infinite alternate;
+  }
+
+  @keyframes hero-drift {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(-10px);
+    }
+  }
+
+  .frame-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.7rem 1rem;
+    background: var(--ink-800);
+    border-bottom: 1px solid rgba(244, 239, 230, 0.07);
+  }
+
+  .frame-bar span {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: var(--ink-600);
+  }
+
+  .frame-bar span:first-child {
+    background: var(--rose-500);
+  }
+
+  .frame-bar span:nth-child(2) {
+    background: var(--amber-400);
+  }
+
+  .frame-bar span:nth-child(3) {
+    background: var(--teal-500);
+  }
+
+  .frame-title {
+    margin-inline: auto;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: var(--paper-700);
+    transform: translateX(-1.5rem);
+  }
+
+  .hero-caption {
+    margin-top: 1.1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--paper-700);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-frame {
+      animation: none;
+    }
+  }
+</style>

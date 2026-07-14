@@ -1,0 +1,182 @@
+---
+import { Image } from 'astro:assets';
+
+import type { Feature } from '../data/site';
+
+interface Props {
+  feature: Feature;
+  flip?: boolean;
+}
+
+const { feature, flip = false } = Astro.props;
+---
+
+<section id={feature.id} class:list={['feature', { flip }]}>
+  <div class="container feature-inner">
+    <div class="feature-copy" data-reveal>
+      <p class="eyebrow">{feature.eyebrow}</p>
+      <h2>{feature.title}</h2>
+      <p class="feature-desc">{feature.description}</p>
+      <ul class="feature-bullets">
+        {
+          feature.bullets.map((bullet) => (
+            <li>
+              <svg
+                viewBox="0 0 16 16"
+                width="16"
+                height="16"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2.5 8.5l3.5 3.5 7.5-8" />
+              </svg>
+              <span>{bullet}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="feature-media" data-reveal style="--reveal-delay: 0.12s">
+      <figure class="shot primary">
+        <Image
+          src={feature.image}
+          alt={feature.imageAlt}
+          widths={[640, 1080, 1600]}
+          sizes="(max-width: 60rem) 94vw, 44rem"
+        />
+      </figure>
+      {
+        feature.secondaryImage && (
+          <figure class="shot secondary">
+            <Image
+              src={feature.secondaryImage}
+              alt={feature.secondaryImageAlt ?? ''}
+              widths={[480, 800]}
+              sizes="18rem"
+            />
+          </figure>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .feature {
+    padding-block: clamp(3.5rem, 9vh, 6.5rem);
+  }
+
+  .feature-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .flip .feature-inner {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+
+  .flip .feature-copy {
+    order: 2;
+  }
+
+  .flip .feature-media {
+    order: 1;
+  }
+
+  h2 {
+    font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+    margin-top: 0.9rem;
+  }
+
+  .feature-desc {
+    margin-top: 1.1rem;
+    color: var(--paper-300);
+  }
+
+  .feature-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .feature-bullets li {
+    display: flex;
+    gap: 0.65rem;
+    align-items: baseline;
+    font-size: 0.95rem;
+    color: var(--paper-300);
+  }
+
+  .feature-bullets svg {
+    flex-shrink: 0;
+    color: var(--amber-500);
+    transform: translateY(2px);
+  }
+
+  .feature-media {
+    position: relative;
+  }
+
+  .shot {
+    margin: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid rgba(244, 239, 230, 0.1);
+    box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.75);
+    background: var(--ink-850);
+  }
+
+  .shot.secondary {
+    position: absolute;
+    width: clamp(11rem, 42%, 19rem);
+    bottom: -2.2rem;
+    border-radius: var(--radius-md);
+    border-color: rgba(253, 160, 45, 0.25);
+    box-shadow:
+      0 24px 50px -18px rgba(0, 0, 0, 0.85),
+      0 0 60px -25px rgba(253, 160, 45, 0.4);
+    transition: transform 0.35s var(--ease-out);
+  }
+
+  .feature:not(.flip) .shot.secondary {
+    right: -1.25rem;
+  }
+
+  .flip .shot.secondary {
+    left: -1.25rem;
+  }
+
+  .feature-media:hover .shot.secondary {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+
+  @media (max-width: 60rem) {
+    .feature-inner,
+    .flip .feature-inner {
+      grid-template-columns: 1fr;
+    }
+
+    .flip .feature-copy {
+      order: 0;
+    }
+
+    .flip .feature-media {
+      order: 1;
+    }
+
+    .shot.secondary {
+      position: static;
+      width: 60%;
+      margin-top: 1rem;
+    }
+  }
+</style>

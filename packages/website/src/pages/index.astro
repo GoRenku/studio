@@ -1,0 +1,29 @@
+---
+import AudienceSection from '../components/AudienceSection.astro';
+import CtaSection from '../components/CtaSection.astro';
+import FeatureSection from '../components/FeatureSection.astro';
+import Hero from '../components/Hero.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import WorkflowStrip from '../components/WorkflowStrip.astro';
+import { features } from '../data/site';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout>
+  <SiteHeader />
+  <main>
+    <Hero />
+    <WorkflowStrip />
+    <div id="features">
+      {
+        features.map((feature, i) => (
+          <FeatureSection feature={feature} flip={i % 2 === 1} />
+        ))
+      }
+    </div>
+    <AudienceSection />
+    <CtaSection />
+  </main>
+  <SiteFooter />
+</BaseLayout>

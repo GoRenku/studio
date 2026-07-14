@@ -1,0 +1,85 @@
+---
+import { Image } from 'astro:assets';
+
+import logo from '../assets/renku-logo.svg';
+import { site } from '../data/site';
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="#top" class="brand">
+      <Image src={logo} alt="" width="34" height="38" loading="eager" />
+      <span class="brand-name">renku</span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#audience">Who it’s for</a>
+    </nav>
+    <a href={site.studioUrl} class="btn btn-primary header-cta">Open Studio</a>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: color-mix(in srgb, var(--ink-950) 72%, transparent);
+    border-bottom: 1px solid rgba(244, 239, 230, 0.06);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 4.25rem;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .brand-name {
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .site-nav {
+    display: flex;
+    gap: 1.75rem;
+    margin-inline-start: auto;
+    font-size: 0.92rem;
+    color: var(--paper-300);
+  }
+
+  .site-nav a {
+    transition: color 0.2s ease;
+  }
+
+  .site-nav a:hover {
+    color: var(--amber-400);
+  }
+
+  .header-cta {
+    padding: 0.6rem 1.15rem;
+    font-size: 0.88rem;
+  }
+
+  @media (max-width: 640px) {
+    .site-nav {
+      display: none;
+    }
+
+    .header-inner {
+      justify-content: space-between;
+    }
+  }
+</style>

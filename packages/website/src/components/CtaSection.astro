@@ -1,0 +1,55 @@
+---
+import { Image } from 'astro:assets';
+
+import logo from '../assets/renku-logo.svg';
+import { site } from '../data/site';
+---
+
+<section class="cta">
+  <div class="container cta-inner" data-reveal>
+    <Image src={logo} alt="" width="64" height="72" class="cta-logo" />
+    <h2>Your film is waiting to be seen.</h2>
+    <p>
+      Open the studio, drop in your screenplay, and watch it take shape —
+      scene by scene, face by face, frame by frame.
+    </p>
+    <a href={site.studioUrl} class="btn btn-primary">Open Renku Studio</a>
+  </div>
+</section>
+
+<style>
+  .cta {
+    padding-block: clamp(5rem, 14vh, 9rem);
+    text-align: center;
+    background:
+      radial-gradient(
+        44rem 26rem at 50% 100%,
+        rgba(253, 160, 45, 0.12),
+        transparent 70%
+      );
+  }
+
+  .cta-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.4rem;
+    max-width: 40rem;
+  }
+
+  .cta-logo {
+    filter: drop-shadow(0 8px 30px rgba(253, 160, 45, 0.35));
+  }
+
+  h2 {
+    font-size: clamp(2rem, 4.6vw, 3.2rem);
+  }
+
+  p {
+    color: var(--paper-300);
+  }
+
+  .btn {
+    margin-top: 0.5rem;
+  }
+</style>

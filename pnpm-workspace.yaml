@@ -4,6 +4,7 @@ packages:
   - 'packages/cli'
   - 'packages/engines'
   - 'packages/studio'
+  - 'packages/website'
 
 blockExoticSubdeps: true
 minimumReleaseAge: 10080

@@ -1,0 +1,191 @@
+/* ------------------------------------------------------------------ */
+/* Design tokens                                                       */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Cinematic dark palette, tuned to the Renku Studio UI */
+  --ink-950: #0c0b09;
+  --ink-900: #12100d;
+  --ink-850: #171512;
+  --ink-800: #1d1a16;
+  --ink-700: #2a2621;
+  --ink-600: #3a352e;
+
+  --paper-100: #f4efe6;
+  --paper-300: #d8d0c2;
+  --paper-500: #a89f8f;
+  --paper-700: #6f685c;
+
+  --amber-400: #fec638;
+  --amber-500: #fda02d;
+  --amber-600: #d97f1e;
+  --rose-500: #e5365f;
+  --teal-500: #1eb3b0;
+  --coral-500: #fb5a34;
+
+  --accent: var(--amber-500);
+  --accent-soft: rgba(253, 160, 45, 0.14);
+
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Inter Variable', system-ui, -apple-system, sans-serif;
+
+  --max-width: 74rem;
+  --gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --radius-lg: 20px;
+  --radius-md: 12px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-950);
+  color: var(--paper-100);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 560;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+::selection {
+  background: var(--amber-600);
+  color: var(--ink-950);
+}
+
+/* ------------------------------------------------------------------ */
+/* Shared primitives                                                   */
+/* ------------------------------------------------------------------ */
+
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--amber-500);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1;
+  transition:
+    transform 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    background 0.25s var(--ease-out),
+    border-color 0.25s var(--ease-out);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--amber-400), var(--amber-600));
+  color: var(--ink-950);
+  box-shadow: 0 8px 28px -8px rgba(253, 160, 45, 0.55);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px -8px rgba(253, 160, 45, 0.65);
+}
+
+.btn-ghost {
+  border: 1px solid var(--ink-600);
+  color: var(--paper-100);
+}
+
+.btn-ghost:hover {
+  border-color: var(--amber-500);
+  background: var(--accent-soft);
+}
+
+/* ------------------------------------------------------------------ */
+/* Scroll-reveal animation                                             */
+/* ------------------------------------------------------------------ */
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s var(--ease-out),
+    transform 0.9s var(--ease-out);
+  transition-delay: var(--reveal-delay, 0s);
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
