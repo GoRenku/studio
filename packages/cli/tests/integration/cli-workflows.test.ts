@@ -1091,7 +1091,7 @@ describe('renku CLI', () => {
         'generation',
         'context',
         '--purpose',
-        'cast.video-character-sheet',
+        'cast.character-sheet',
         '--target',
         `cast:${castMemberId}`,
         '--json',
@@ -1100,7 +1100,7 @@ describe('renku CLI', () => {
     );
     expect(castContextExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      purpose: 'cast.video-character-sheet',
+      purpose: 'cast.character-sheet',
       target: { kind: 'castMember', id: castMemberId },
       outputMediaKind: 'image',
       facts: expect.any(Object),
@@ -1111,7 +1111,7 @@ describe('renku CLI', () => {
       characterSheetSpecPath,
       JSON.stringify(
         {
-          purpose: 'cast.video-character-sheet',
+          purpose: 'cast.character-sheet',
           target: { kind: 'castMember', id: castMemberId },
           model: { provider: 'fal-ai', model: 'nano-banana-2' },
           values: { prompt: 'A simulated full character sheet for Urban.' },
@@ -1163,7 +1163,7 @@ describe('renku CLI', () => {
         'media',
         'import',
         '--purpose',
-        'cast.video-character-sheet',
+        'cast.character-sheet',
         '--target',
         `cast:${castMemberId}`,
         '--source',
@@ -1182,9 +1182,10 @@ describe('renku CLI', () => {
     };
     expect(characterSheetImport).toMatchObject({
       valid: true,
-      purpose: 'cast.video-character-sheet',
+      purpose: 'cast.character-sheet',
       asset: expect.objectContaining({
-        role: 'video-character-sheet',
+        type: 'character_sheet',
+        role: 'character-sheet',
         files: [expect.objectContaining({ role: 'primary' })],
       }),
     });
@@ -1791,7 +1792,7 @@ describe('renku CLI', () => {
     });
   });
 
-  it('attaches a video character sheet without adapter-owned reference metadata', async () => {
+  it('attaches a character sheet without adapter-owned reference metadata', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -1822,7 +1823,7 @@ describe('renku CLI', () => {
         '--project',
         'constantinople',
         '--purpose',
-        'cast.video-character-sheet',
+        'cast.character-sheet',
         '--target',
         `cast:${castMemberId}`,
         '--source',
@@ -1835,9 +1836,10 @@ describe('renku CLI', () => {
     const imported = JSON.parse(stdout.join('\n'));
     expect(imported).toMatchObject({
       valid: true,
-      purpose: 'cast.video-character-sheet',
+      purpose: 'cast.character-sheet',
       asset: {
-        role: 'video-character-sheet',
+        type: 'character_sheet',
+        role: 'character-sheet',
         files: [expect.objectContaining({ role: 'primary' })],
       },
     });

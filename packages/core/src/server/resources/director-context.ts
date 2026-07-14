@@ -197,7 +197,7 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
       selection: 'select',
       limit: MAX_RESOURCE_PAGE_LIMIT,
     }).items.filter(
-      (asset) => asset.role === 'character_sheet' || asset.role === 'profile'
+      (asset) => asset.role === 'character-sheet' || asset.role === 'profile'
     );
     selectedVisualReferenceCount += selectedAssets.length;
     if (selectedAssets.length === 0) {
@@ -558,7 +558,7 @@ function buildNextSteps(input: {
       title: 'Establish cast visuals',
       specialistSkill: 'media-producer',
       reason: 'Cast members need selected character-sheet or profile media for visual continuity.',
-      command: 'renku generation context --purpose cast.video-character-sheet --target cast:<cast-member-id> --json',
+      command: 'renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json',
     });
   }
   if (!input.productionDesign.everyLocationHasSelectedEnvironmentSheet) {

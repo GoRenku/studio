@@ -41,7 +41,7 @@ describe('image revision workflow', () => {
       title: 'Urban Character Sheet',
       projectRelativePath,
       fileRole: 'primary',
-      role: 'character_sheet',
+      role: 'character-sheet',
     });
 
     const context = await readImageRevisionContext({

@@ -9,7 +9,7 @@ export const sceneStoryboardSheetPurpose = defineGenerationPurpose({
     const sceneCastMemberIds = (context.facts?.sceneCastMemberIds as string[] | undefined) ?? [];
     const sceneLocationIds = (context.facts?.sceneLocationIds as string[] | undefined) ?? [];
     for (const id of sceneCastMemberIds) {
-      const roles = ['storyboard-character-sheet', 'video-character-sheet', 'character-sheet'];
+      const roles = ['character-sheet'];
       slots.push({
         sectionId: 'cast',
         sectionLabel: 'Cast',

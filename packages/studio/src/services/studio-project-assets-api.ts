@@ -89,7 +89,7 @@ export async function readLocationAssets(
 export async function readCastDesignResource(
   projectName: string,
   castMemberId: string,
-  role = 'character_sheet'
+  role = 'character-sheet'
 ): Promise<CastDesignResourceResponse> {
   const response = await fetch(
     `${castDesignResourceUrl(projectName, castMemberId)}?role=${encodeURIComponent(role)}`

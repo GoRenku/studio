@@ -464,7 +464,7 @@ function firstPreferredImageAsset(
       }).items[0] ??
       listAssetRelationshipPage(session, {
         target,
-        role: 'character_sheet',
+        role: 'character-sheet',
         mediaKind: 'image',
         selection: 'select',
         limit: 1,

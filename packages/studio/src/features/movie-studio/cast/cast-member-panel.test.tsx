@@ -265,7 +265,7 @@ function castCharacterSheetAsset(): StudioAssetResponse {
     type: 'character_sheet',
     mediaKind: 'image',
     title: 'Urban Sheet',
-    role: 'character_sheet',
+    role: 'character-sheet',
     referenceName: 'standard-sheet',
     purpose: 'default costume and face reference',
     files: [

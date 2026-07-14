@@ -62,7 +62,7 @@ describe('generation preview Hono route', () => {
     await expect(response.json()).resolves.toMatchObject({
       preview: {
         generationSpecId: 'media_generation_spec_test',
-        purpose: 'cast.storyboard-character-sheet',
+        purpose: 'cast.character-sheet',
         references: [
           {
             browserUrl:

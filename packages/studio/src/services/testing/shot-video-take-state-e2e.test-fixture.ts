@@ -122,7 +122,7 @@ export async function createShotVideoTakeReferenceSelectionFixture(
   const characterSheet =
     await fixture.projectData.attachGenerationMedia({
       homeDir: fixture.homeDir,
-      purpose: 'cast.video-character-sheet',
+      purpose: 'cast.character-sheet',
       target: { kind: 'castMember', id: fixture.ids.castMemberId },
       sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
     });

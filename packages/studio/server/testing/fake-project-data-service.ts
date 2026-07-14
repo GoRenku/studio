@@ -1099,7 +1099,7 @@ function generationPreviewResource(): GenerationPreviewResourceData {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
     generationSpecId: 'media_generation_spec_test',
-    purpose: 'cast.storyboard-character-sheet',
+    purpose: 'cast.character-sheet',
     project: {
       id: 'project_test0001',
       name: 'constantinople',

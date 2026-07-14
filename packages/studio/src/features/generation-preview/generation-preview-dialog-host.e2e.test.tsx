@@ -62,7 +62,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.storyboard-character-sheet',
+        purpose: 'cast.character-sheet',
         title: 'Cast Preview',
       })
     );
@@ -245,7 +245,7 @@ describe('GenerationPreviewDialogHost', () => {
       ok: true,
       json: async () => ({
         preview: previewFixture({
-          purpose: 'cast.storyboard-character-sheet',
+          purpose: 'cast.character-sheet',
           title: 'Character Sheet Preview',
           referenceLabel: 'Storyboard Lookbook Sheet',
           selected: false,
@@ -260,7 +260,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.storyboard-character-sheet',
+        purpose: 'cast.character-sheet',
         title: 'Character Sheet Preview',
         referenceLabel: 'Storyboard Lookbook Sheet',
         selected: true,
@@ -349,7 +349,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.storyboard-character-sheet',
+        purpose: 'cast.character-sheet',
         title: 'Character Sheet Preview',
         editableReference: true,
       }),
@@ -383,7 +383,7 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'cast.storyboard-character-sheet',
+        purpose: 'cast.character-sheet',
         title: 'Required Reference Preview',
         editableReference: true,
         requiredReference: true,

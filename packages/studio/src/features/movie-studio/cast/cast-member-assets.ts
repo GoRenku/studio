@@ -4,11 +4,7 @@ import type { StudioAssetResponse } from '@/services/studio-project-contracts';
 import { castAssetFileUrl } from '@/services/studio-project-assets-api';
 
 export const CAST_PROFILE_ROLE = 'profile';
-export const CAST_CHARACTER_SHEET_ROLES = [
-  'character_sheet',
-  'video-character-sheet',
-  'storyboard-character-sheet',
-] as const;
+export const CAST_CHARACTER_SHEET_ROLES = ['character-sheet'] as const;
 
 export function castImageAssetsForRole(
   assets: StudioAssetResponse[],

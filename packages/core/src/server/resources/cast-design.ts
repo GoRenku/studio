@@ -62,7 +62,7 @@ export function readCastDesignResourceProjection(
     }).items,
     activeTakePage: listAssetRelationshipPage(session, {
       target,
-      role: input.activeRole ?? 'character_sheet',
+      role: input.activeRole ?? 'character-sheet',
       selection: 'take',
       limit: input.limit,
       cursor: input.cursor,

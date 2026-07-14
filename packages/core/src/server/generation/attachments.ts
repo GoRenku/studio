@@ -198,11 +198,10 @@ function attachmentDestination(input: AttachGenerationMediaInput & { session: Da
       return { ...projectAttachment(input, { kind: 'visualLanguage.lookbookSheet', titleHint: input.title }, 'video-lookbook-sheet', 'Video Lookbook Sheet'), lookbookRecord: 'sheet' as const };
     case 'lookbook.storyboard-sheet':
       return { ...projectAttachment(input, { kind: 'visualLanguage.lookbookSheet', titleHint: input.title }, 'storyboard-lookbook-sheet', 'Storyboard Lookbook Sheet'), lookbookRecord: 'sheet' as const };
-    case 'cast.video-character-sheet':
-    case 'cast.storyboard-character-sheet': {
+    case 'cast.character-sheet': {
       assertTarget(input, 'castMember');
-      const role = input.purpose === 'cast.video-character-sheet' ? 'video-character-sheet' : 'storyboard-character-sheet';
-      return { destination: { kind: 'cast.characterSheet', castMemberId: input.target.id, titleHint: input.title }, owner: { kind: 'castMember', castMemberId: input.target.id }, role, label: 'Character Sheet', assetType: role, mediaKind: 'image', resourceKeys: [`cast:${input.target.id}`] };
+      const role = 'character-sheet';
+      return { destination: { kind: 'cast.characterSheet', castMemberId: input.target.id, titleHint: input.title }, owner: { kind: 'castMember', castMemberId: input.target.id }, role, label: 'Character Sheet', assetType: 'character_sheet', mediaKind: 'image', resourceKeys: [`cast:${input.target.id}`] };
     }
     case 'cast.profile':
       assertTarget(input, 'castMember');

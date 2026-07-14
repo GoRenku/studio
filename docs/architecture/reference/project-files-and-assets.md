@@ -61,7 +61,7 @@ through Lookbook image relationships. Section placement belongs in
 `lookbook_image_section`, not in Lookbook JSON.
 
 A **Cast Character Sheet** is an image asset attached to a cast member with the
-`character_sheet` role. Imported/generated character sheets are stored under
+`character-sheet` role. Imported/generated character sheets are stored under
 `cast/<handle>/character-sheets/`.
 
 A **Cast Profile** is an image asset attached to a cast member with the

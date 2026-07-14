@@ -35,7 +35,7 @@ export const shotVideoTakePurpose = defineGenerationPurpose({
         { sectionId: 'lookbook', sectionLabel: 'Lookbook', slotId: 'video-lookbook-sheet', slotLabel: 'Video Lookbook Sheets', cardinality: 'many', scope, assetFileIds: selectedLookbookSheetFileIds(context, 'movie') },
       );
       for (const id of sceneCastMemberIds) {
-        slots.push({ sectionId: 'cast', sectionLabel: 'Cast', slotId: 'video-character-sheet', slotLabel: 'Video Character Sheet', cardinality: 'one', scope, subject: { kind: 'castMember', id }, owner: { kind: 'castMember', id }, roles: ['video-character-sheet', 'character-sheet'], initializeFirst: direction.castMemberIds.includes(id) });
+        slots.push({ sectionId: 'cast', sectionLabel: 'Cast', slotId: 'character-sheet', slotLabel: 'Character Sheet', cardinality: 'one', scope, subject: { kind: 'castMember', id }, owner: { kind: 'castMember', id }, roles: ['character-sheet'], initializeFirst: direction.castMemberIds.includes(id) });
       }
       for (const id of sceneLocationIds) {
         slots.push({ sectionId: 'location', sectionLabel: 'Location', slotId: 'location-sheet', slotLabel: 'Location Sheet', cardinality: 'one', scope, subject: { kind: 'location', id }, owner: { kind: 'location', id }, roles: ['location-sheet', 'environment-sheet'], initializeFirst: direction.locationIds.includes(id) });

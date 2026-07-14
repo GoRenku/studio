@@ -379,6 +379,13 @@
       "when": 1783903415748,
       "tag": "0053_drop-obsolete-shot-media-inputs",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "6",
+      "when": 1784028096444,
+      "tag": "0054_merge_cast_character_sheet_purposes",
+      "breakpoints": true
     }
   ]
 }

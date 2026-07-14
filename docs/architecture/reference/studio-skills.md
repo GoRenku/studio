@@ -63,7 +63,7 @@ operational companions that teach agents how to use those contracts.
   provider voice id and sample audio are ready.
 - Keeps provider voice ids and sample assets in Cast Voice records, not Cast
   Design JSON.
-- Hands `cast.video-character-sheet`, `cast.storyboard-character-sheet`, and `cast.profile` generation to
+- Hands `cast.character-sheet` and `cast.profile` generation to
   `media-producer`.
 - Hands `cast.voice-sample` generation to `media-producer` when the user wants
   Renku to create the sample audio.

@@ -112,7 +112,7 @@ describe('export production assets', () => {
       title: 'Mehmed character sheet',
       projectRelativePath: helperSheetPath as ProjectRelativePath,
       fileRole: 'primary',
-      role: 'character_sheet',
+      role: 'character-sheet',
     });
     const subtitles = await createTestAssetFixture({
       projectName: 'constantinople',

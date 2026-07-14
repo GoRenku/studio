@@ -285,7 +285,7 @@ Behavior:
 - `list` and `show` read the canonical Cast Member facts.
 - `context` returns the Cast Member, scenes where the Cast Member appears,
   active Cast Design summary, selected cast media, asset role counts, active
-  Lookbook summary, and generation readiness signals for `cast.video-character-sheet`
+  Lookbook summary, and generation readiness signals for `cast.character-sheet`
   and `cast.profile`.
 - `validate` checks a tagged `kind: "castOperations"` document without
   writing.
@@ -1402,8 +1402,7 @@ image.edit
 lookbook.image
 lookbook.video-sheet
 lookbook.storyboard-sheet
-cast.video-character-sheet
-cast.storyboard-character-sheet
+cast.character-sheet
 cast.profile
 cast.voice-sample
 scene.dialogue-audio
@@ -1543,8 +1542,7 @@ Supported single-file purposes:
 lookbook.image
 lookbook.video-sheet
 lookbook.storyboard-sheet
-cast.video-character-sheet
-cast.storyboard-character-sheet
+cast.character-sheet
 cast.profile
 location.sheet
 location.hero
@@ -1569,8 +1567,7 @@ Examples:
 renku media import --purpose lookbook.image --target lookbook:<lookbook-id> --source tmp/media/lookbook-image.png --title "Lookbook image" --json
 renku media import --purpose lookbook.video-sheet --target lookbook:<lookbook-id> --source tmp/media/video-lookbook-sheet.png --title "Video Lookbook Sheet" --json
 renku media import --purpose lookbook.storyboard-sheet --target lookbook:<lookbook-id> --source tmp/media/storyboard-lookbook-sheet.png --title "Storyboard Lookbook Sheet" --json
-renku media import --purpose cast.video-character-sheet --target cast:<cast-member-id> --source tmp/media/character-sheet.png --title "Video Character Sheet" --json
-renku media import --purpose cast.storyboard-character-sheet --target cast:<cast-member-id> --source tmp/media/storyboard-character-sheet.png --title "Storyboard Character Sheet" --json
+renku media import --purpose cast.character-sheet --target cast:<cast-member-id> --source tmp/media/character-sheet.png --title "Character Sheet" --json
 renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --json
 renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
 renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --json

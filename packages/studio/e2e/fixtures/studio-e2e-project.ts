@@ -561,7 +561,7 @@ async function seedTakeReferenceMedia(input: {
   const characterSheet = await input.projectData.attachGenerationMedia({
       homeDir: input.runtime.homeDir,
       projectName: input.projectName,
-      purpose: 'cast.video-character-sheet',
+      purpose: 'cast.character-sheet',
       target: { kind: 'castMember', id: input.ids.castMemberId },
       sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
       title: 'Urban character sheet',

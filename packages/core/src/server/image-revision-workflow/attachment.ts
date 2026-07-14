@@ -141,11 +141,7 @@ function revisionDestination(input: {
       return {
         file: { kind: 'cast.characterSheet', castMemberId: input.target.castMemberId, titleHint: input.source.asset.title },
         owner: { kind: 'castMember', castMemberId: input.target.castMemberId },
-        role: requireOwnerRole(input.source, [
-          'character-sheet',
-          'video-character-sheet',
-          'storyboard-character-sheet',
-        ]),
+        role: requireOwnerRole(input.source, ['character-sheet']),
         assetType: input.source.asset.type,
         resourceKeys: [`cast:${input.target.castMemberId}`],
       };
