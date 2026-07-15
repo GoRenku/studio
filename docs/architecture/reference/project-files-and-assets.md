@@ -29,18 +29,16 @@ An **Asset File** is a concrete file on disk that belongs to an asset.
 A **Compound Asset** is an asset represented by a folder because several files
 belong together, such as a video plus thumbnail and captions.
 
-A **Take** is a persisted generated or imported candidate option.
+A **Take** is a persisted generated or imported candidate in a focused domain
+that defines Take behavior, such as a Shot Video Take or Dialogue Audio Take.
+Generic asset relationships do not carry take/select state.
 
-A **Select** is the current project choice from persisted takes or imported
-options. Users can change selects later, but the current take/select value
-belongs in project metadata, not ephemeral UI state.
+A **focused display choice** selects one ready Cast Profile or Location Hero for
+Studio presentation. It is stored in a purpose-specific display table and does
+not affect generation or export.
 
-In SQLite, an attached asset's take/select classification belongs on the domain
-asset relationship row. A relationship with `selection = 'take'` is a persisted
-candidate. A relationship with `selection = 'select'` is currently selected.
-
-A **Production Asset** is a selected asset that has been exported into the
-clean production handoff tree.
+A **Production Export Media row** is the final video of a picked Shot Video Take
+or an exact included Dialogue Audio Take from that Take's saved request.
 
 A **Visual Language Asset** is an asset attached to a project Visual Language
 entry. Initial roles include `guidance`, `prompt`, `reference`, and
@@ -82,8 +80,8 @@ workflows reference the specific sheet assets they need.
 
 A **Location Hero Image** is a compact representative image attached to a
 location with the `hero` role. It uses asset type `location_hero` and one
-primary image file. The current selected hero image drives overview and detail
-display only; it is not a hidden default shot reference.
+primary image file. A focused Location display choice drives overview and detail
+display only; it is not a generation reference default.
 
 A **Scene Storyboard Image** is an image asset attached to a Scene and a
 specific shot in a Scene Shot List. Durable storyboard images are stored under
@@ -91,10 +89,11 @@ top-level `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`.
 Temporary storyboard sheets generated for slicing or review live under that
 scene storyboard folder's `tmp/` subfolder and are not assets.
 
-A **Shot Video Take-owned media file** is a generated or imported input or
-output whose lifecycle belongs to one Shot Video Take. Current examples include
-video prompt sheets, first frames, last frames, ad hoc reference images,
-take-owned dialogue audio, and final generated take videos. These files are
+A **Shot Video Take-owned media file** is a generated or imported output whose
+lifecycle belongs to one Shot Video Take. Current examples are Video Prompt
+images, First Frames, Last Frames, and final generated Take videos. Reusable
+Cast, Location, Lookbook, and Dialogue Audio references retain their domain
+ownership. These files are
 stored under top-level
 `shots/<sequence-name>/<scene-name>/<take-name>-<nn>/`.
 
@@ -357,18 +356,13 @@ Feature-owned localized working files may use feature-local subfolders when the
 feature defines them. SQLite still owns locale context and relationships; the
 folder structure must not be parsed to infer locale ownership.
 
-## Select Materialization
+## Production Export Materialization
 
-Selects are project choices stored in SQLite.
-
-Exporting a select into `production-assets/` is copy-based. Working assets stay
-in place; production export copies selected files into the handoff tree, skips
-unchanged files, and can prune unmanaged files according to the export manifest.
-
-The current production export path exports selected project, sequence, scene,
-and clip assets. Cast and visual-language assets are part of the registered
-asset graph, but they are not production-exportable targets until a product
-decision gives them production handoff semantics.
+Production export is copy-based. Working media stays in place; export copies
+focused picked-Take video and included Dialogue Audio rows into the handoff
+tree, skips unchanged files, and prunes stale managed files according to the
+manifest. Storyboards, Lookbooks, Cast/Location design media, focused display
+images, Take frames, and Video Prompt images are excluded.
 
 ## Files Do Not Define Relationships
 

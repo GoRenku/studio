@@ -29,29 +29,6 @@ export function castImageAssetsForRoles(
   );
 }
 
-export function selectedCastImageAssetForRole(
-  assets: StudioAssetResponse[],
-  role: string
-): StudioAssetResponse | null {
-  return (
-    castImageAssetsForRole(assets, role).find(
-      (asset) => asset.selection.kind === 'select'
-    ) ?? null
-  );
-}
-
-export function preferredCastImageAssetForRole(
-  assets: StudioAssetResponse[],
-  role: string
-): StudioAssetResponse | null {
-  const roleAssets = castImageAssetsForRole(assets, role);
-  return (
-    roleAssets.find((asset) => asset.selection.kind === 'select') ??
-    roleAssets[0] ??
-    null
-  );
-}
-
 export function castImageAssetFile(asset: StudioAssetResponse) {
   return asset.files.find((file) => file.mediaKind === 'image') ?? null;
 }
@@ -122,14 +99,6 @@ function humanizeAssetTitle(title: string): string {
 
 function sortCastAssets(assets: StudioAssetResponse[]): StudioAssetResponse[] {
   return [...assets].sort((left, right) => {
-    const selectionDifference =
-      selectionRank(left) - selectionRank(right);
-    if (selectionDifference !== 0) return selectionDifference;
-
-    const selectionOrderDifference =
-      selectionOrderRank(left) - selectionOrderRank(right);
-    if (selectionOrderDifference !== 0) return selectionOrderDifference;
-
     const sortDifference = left.sortOrder - right.sortOrder;
     if (sortDifference !== 0) return sortDifference;
 
@@ -138,14 +107,4 @@ function sortCastAssets(assets: StudioAssetResponse[]): StudioAssetResponse[] {
 
     return left.assetId.localeCompare(right.assetId);
   });
-}
-
-function selectionRank(asset: StudioAssetResponse): number {
-  return asset.selection.kind === 'select' ? 0 : 1;
-}
-
-function selectionOrderRank(asset: StudioAssetResponse): number {
-  return asset.selection.kind === 'select'
-    ? asset.selection.order
-    : Number.MAX_SAFE_INTEGER;
 }

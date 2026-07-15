@@ -156,8 +156,7 @@ export function fakeProjectDataService(): NonNullable<
     async readCastDesignResource() {
       return {
         castMember: project.cast[0],
-        selectedAssets: [],
-        activeTakePage: {
+        assetPage: {
           items: [makeAsset('asset_cast_reference')],
           nextCursor: null,
         },
@@ -179,8 +178,7 @@ export function fakeProjectDataService(): NonNullable<
           title: 'Opening',
           sceneCount: 1,
         },
-        selectedAssets: [],
-        activeTakePage: { items: [], nextCursor: null },
+        assetPage: { items: [], nextCursor: null },
       };
     },
     async readStudioSelectionContext(input) {
@@ -389,15 +387,14 @@ export function fakeProjectDataService(): NonNullable<
         sequences: [],
       };
     },
-    async createAssetSelect(input) {
-      return {
-        ...makeAsset(input.assetId),
-        selection: { kind: 'select', order: 1 },
-      };
-    },
-    async removeAssetSelect(input) {
+    async setCastProfileDisplayAsset(input) {
       return makeAsset(input.assetId);
     },
+    async clearCastProfileDisplayAsset() {},
+    async setLocationHeroDisplayAsset(input) {
+      return makeAsset(input.assetId);
+    },
+    async clearLocationHeroDisplayAsset() {},
     async discardAsset(input) {
       return makeRecoverableMutationReport({
         changeType: 'asset.discarded',
@@ -898,7 +895,7 @@ function makeShotVideoTakeWorkspace(input: {
         facts: {},
         settings: { fixed: [], recommended: [] },
         models: [],
-        referenceGuide: { sections: [], additionalReferences: [], notices: [] },
+        referenceGuide: { sections: [], notices: [] },
       },
       spec: null,
       setup,
@@ -1145,21 +1142,7 @@ function generationPreviewResource(): GenerationPreviewResourceData {
       authoredText: 'Create a lean character sheet.',
       providerText: 'Create a lean character sheet.',
     },
-    references: [{
-      kind: 'image',
-      role: 'character-sheet-continuity',
-      label: 'Existing sheet',
-      providerToken: 'image_urls',
-      assetId: 'asset_cast_reference',
-      assetFileId: 'asset_file_cast_reference',
-      selected: true,
-      selectionControl: {
-        selectionId: 'reference_cast_narrator',
-        required: false,
-        defaultIncluded: true,
-        editable: true,
-      },
-    }],
+    references: { slots: [], additional: [] },
     configuration: { sections: [] },
     diagnostics: [],
   };

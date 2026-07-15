@@ -172,9 +172,6 @@ async function createImageEditSpec(input: {
       'No available image-edit model accepts a source image.'
     );
   }
-  const sourceSlot = context.referenceGuide.sections
-    .find((section) => section.id === 'source')?.slots
-    .find((slot) => slot.id === 'source-image');
   const selection: GenerationReferenceSelection = {
     id: `image-revision-source:${input.source.file.id}`,
     placement: { kind: 'slot', sectionId: 'source', slotId: 'source-image' },
@@ -193,11 +190,6 @@ async function createImageEditSpec(input: {
     values: {},
     references: [
       selection,
-      ...context.referenceGuide.sections
-        .flatMap((section) => section.slots.flatMap((slot) => slot.selections))
-        .filter((candidate) =>
-          !sourceSlot || candidate.reference.kind !== 'asset-file' || candidate.reference.assetFileId !== input.source.file.id
-        ),
     ],
   };
 }
@@ -246,14 +238,7 @@ function draftFromPreview(
     ...(preview.finalPrompt.negativeText !== undefined
       ? { negativeText: preview.finalPrompt.negativeText }
       : {}),
-    referenceSelections: preview.references.flatMap((reference) =>
-      reference.selectionControl
-        ? [{
-            selectionId: reference.selectionControl.selectionId,
-            selected: reference.selected,
-          }]
-        : []
-    ),
+    referenceSelections: [],
     generationControls: controlsFromPreview(preview).map((control) => ({
       controlId: control.controlId,
       value: control.value,

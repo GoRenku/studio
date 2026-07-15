@@ -21,17 +21,16 @@ export interface GuideSlotDefinition {
   sectionLabel: string;
   slotId: string;
   slotLabel: string;
-  cardinality: 'one' | 'many';
+  cardinality: 'one';
   guidance?: string;
   scope?: { kind: string; id: string };
   subject?: { kind: string; id: string };
   owner?: { kind: string; id: string };
   assetId?: string;
   assetFileIds?: string[];
-  selectedAssetFileIds?: string[];
   roles?: string[];
   mediaKind?: 'image' | 'audio' | 'video';
-  initializeFirst?: boolean;
+  providerRole: GenerationReferenceGuideSlot['providerRole'];
 }
 
 export function addRequestGuideNotices(input: {
@@ -85,7 +84,6 @@ export function buildReferenceGuide(input: {
   }
   return {
     sections: [...sections.values()],
-    additionalReferences: [],
     notices: input.notices ?? [],
   };
 }
@@ -106,36 +104,14 @@ function slotFromDefinition(
     ...(definition.assetFileIds ? { assetFileIds: definition.assetFileIds } : {}),
     limit: 200,
   }).items.filter((candidate) => matchesRole(candidate, definition.roles));
-  const hasExactSelections = definition.selectedAssetFileIds !== undefined;
-  const selectedAssetFileIds = new Set(definition.selectedAssetFileIds ?? []);
-  const selected = candidates.filter((candidate) =>
-    candidate.reference.kind === 'asset-file' &&
-    selectedAssetFileIds.has(candidate.reference.assetFileId)
-  );
-  const initialized = hasExactSelections
-    ? selected
-    : definition.initializeFirst && candidates[0]
-      ? [candidates[0]]
-      : [];
   return {
     id: definition.slotId,
     label: definition.slotLabel,
     cardinality: definition.cardinality,
     ...(definition.subject ? { subject: definition.subject } : {}),
     ...(definition.guidance ? { guidance: definition.guidance } : {}),
+    providerRole: definition.providerRole,
     candidates,
-    selections: initialized.map((candidate) => ({
-      id: `initial:${referenceIdentity(candidate)}`,
-      placement: {
-        kind: 'slot',
-        sectionId: definition.sectionId,
-        slotId: definition.slotId,
-        ...(definition.scope ? { scope: definition.scope } : {}),
-        ...(definition.subject ? { subject: definition.subject } : {}),
-      },
-      included: true,
-      reference: candidate.reference,
-    })),
   };
 }
 
@@ -187,12 +163,6 @@ export function domainAssetGroupsForRoles(
   }));
 }
 
-function referenceIdentity(candidate: GenerationReferenceCatalogItem): string {
-  return candidate.reference.kind === 'asset-file'
-    ? candidate.reference.assetFileId
-    : candidate.reference.projectRelativePath;
-}
-
 function matchesRole(
   candidate: GenerationReferenceCatalogItem,
   roles: string[] | undefined
@@ -201,10 +171,10 @@ function matchesRole(
     return true;
   }
   const normalized = candidate.role.replaceAll('_', '-').toLocaleLowerCase();
-  return roles.some((role) => normalized.includes(role.replaceAll('_', '-').toLocaleLowerCase()));
+  return roles.some((role) => normalized === role.replaceAll('_', '-').toLocaleLowerCase());
 }
 
 function matchesOwnerRole(ownerRole: string, roles: string[]): boolean {
   const normalized = ownerRole.replaceAll('_', '-').toLocaleLowerCase();
-  return roles.some((role) => normalized.includes(role.replaceAll('_', '-').toLocaleLowerCase()));
+  return roles.some((role) => normalized === role.replaceAll('_', '-').toLocaleLowerCase());
 }

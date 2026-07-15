@@ -36,15 +36,6 @@ export function locationHeroAssets(
   );
 }
 
-export function currentLocationHeroAsset(
-  assets: StudioAssetResponse[]
-): StudioAssetResponse | null {
-  const heroes = locationHeroAssets(assets);
-  return (
-    heroes.find((asset) => asset.selection.kind === 'select') ?? null
-  );
-}
-
 export function primaryImageFile(asset: StudioAssetResponse) {
   return (
     asset.files.find(
@@ -101,13 +92,6 @@ function sortLocationAssets(
   assets: StudioAssetResponse[]
 ): StudioAssetResponse[] {
   return [...assets].sort((left, right) => {
-    const selectionDifference = selectionRank(left) - selectionRank(right);
-    if (selectionDifference !== 0) return selectionDifference;
-
-    const selectionOrderDifference =
-      selectionOrderRank(left) - selectionOrderRank(right);
-    if (selectionOrderDifference !== 0) return selectionOrderDifference;
-
     const sortDifference = left.sortOrder - right.sortOrder;
     if (sortDifference !== 0) return sortDifference;
 
@@ -116,16 +100,6 @@ function sortLocationAssets(
 
     return left.assetId.localeCompare(right.assetId);
   });
-}
-
-function selectionRank(asset: StudioAssetResponse): number {
-  return asset.selection.kind === 'select' ? 0 : 1;
-}
-
-function selectionOrderRank(asset: StudioAssetResponse): number {
-  return asset.selection.kind === 'select'
-    ? asset.selection.order
-    : Number.MAX_SAFE_INTEGER;
 }
 
 function humanizeAssetTitle(title: string): string {

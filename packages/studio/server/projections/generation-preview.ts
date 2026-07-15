@@ -4,9 +4,12 @@ type CoreGenerationPreviewResource = Omit<
   GenerationPreviewResource,
   'references'
 > & {
-  references: Array<
-    Omit<GenerationPreviewResource['references'][number], 'browserUrl'>
-  >;
+  references: {
+    slots: Array<Omit<GenerationPreviewResource['references']['slots'][number], 'candidates'> & {
+      candidates: Array<Omit<GenerationPreviewResource['references']['slots'][number]['candidates'][number], 'browserUrl'>>;
+    }>;
+    additional: Array<Omit<GenerationPreviewResource['references']['additional'][number], 'browserUrl'>>;
+  };
 };
 
 export async function buildGenerationPreviewResource(input: {
@@ -15,14 +18,29 @@ export async function buildGenerationPreviewResource(input: {
 }): Promise<GenerationPreviewResource> {
   return {
     ...input.preview,
-    references: input.preview.references.map((reference) => ({
-      ...reference,
-      browserUrl: studioAssetFileUrl({
-        projectName: input.projectName,
-        assetId: reference.assetId,
-        assetFileId: reference.assetFileId,
-      }),
-    })),
+    references: {
+      slots: input.preview.references.slots.map((slot) => ({
+        ...slot,
+        candidates: slot.candidates.map((reference) => withBrowserUrl(input.projectName, reference)),
+      })),
+      additional: input.preview.references.additional.map((reference) =>
+        withBrowserUrl(input.projectName, reference)
+      ),
+    },
+  };
+}
+
+function withBrowserUrl<T extends { assetId: string; assetFileId: string }>(
+  projectName: string,
+  reference: T
+): T & { browserUrl: string } {
+  return {
+    ...reference,
+    browserUrl: studioAssetFileUrl({
+      projectName,
+      assetId: reference.assetId,
+      assetFileId: reference.assetFileId,
+    }),
   };
 }
 

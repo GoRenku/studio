@@ -1638,72 +1638,6 @@ Options:
 - `--target`: required asset target.
 - `--locale`: optional locale id.
 
-## `renku asset select`
-
-Promote an asset to a select.
-
-```bash
-renku asset select <asset-id> --project <project-name> --target <target>
-renku asset select <asset-id> --project <project-name> --target <target> --order 10 --json
-```
-
-Options:
-
-- `--project`: required project name.
-- `--target`: required asset target.
-- `--order`: optional selection order.
-
-Behavior:
-
-- Marks the asset as selected for the target.
-- Appends Studio resource-changed events for affected surfaces when possible.
-
-## `renku asset select-update`
-
-Update the order of an existing select.
-
-```bash
-renku asset select-update <asset-id> --project <project-name> --target <target> --order 20
-```
-
-Options:
-
-- `--project`: required project name.
-- `--target`: required asset target.
-- `--order`: required selection order.
-
-## `renku asset select-remove`
-
-Remove an asset from the selected set.
-
-```bash
-renku asset select-remove <asset-id> --project <project-name> --target <target>
-```
-
-Options:
-
-- `--project`: required project name.
-- `--target`: required asset target.
-
-Behavior:
-
-- Changes the asset back to a normal take.
-
-## `renku asset selects`
-
-List selected assets for a target.
-
-```bash
-renku asset selects --project <project-name> --target <target>
-renku asset selects --project <project-name> --target <target> --json
-```
-
-Options:
-
-- `--project`: required project name.
-- `--target`: required asset target.
-- `--locale`: optional locale id.
-
 ## `renku trash`
 
 List, restore, preview, and empty recoverable discarded project content.
@@ -1740,7 +1674,9 @@ Behavior:
 
 ## `renku production export`
 
-Export selected production assets.
+Export picked Shot Video Take final video and its exact included Dialogue Audio
+Takes. Visual/design media, display choices, frames, and Video Prompt images are
+excluded.
 
 ```bash
 renku production export --project <project-name>

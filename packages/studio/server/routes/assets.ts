@@ -103,16 +103,16 @@ export function createAssetsRoute({
       }
     })
     .post(
-      '/cast/:castMemberId/assets/:assetId/select',
+      '/cast/:castMemberId/display-profile/:assetId',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const castMemberId = c.req.param('castMemberId') as string;
           const assetId = c.req.param('assetId') as string;
-          const asset = await projectData.createAssetSelect({
+          const asset = await projectData.setCastProfileDisplayAsset({
             projectName,
-            target: { kind: 'castMember', castMemberId },
+            castMemberId,
             assetId,
           });
           const resourceKeys = studioResourceKeysForAssetTarget({
@@ -126,23 +126,21 @@ export function createAssetsRoute({
       }
     )
     .delete(
-      '/cast/:castMemberId/assets/:assetId/select',
+      '/cast/:castMemberId/display-profile',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const castMemberId = c.req.param('castMemberId') as string;
-          const assetId = c.req.param('assetId') as string;
-          const asset = await projectData.removeAssetSelect({
+          await projectData.clearCastProfileDisplayAsset({
             projectName,
-            target: { kind: 'castMember', castMemberId },
-            assetId,
+            castMemberId,
           });
           const resourceKeys = studioResourceKeysForAssetTarget({
             kind: 'castMember',
             castMemberId,
           });
-          return c.json({ asset, resourceKeys });
+          return c.json({ resourceKeys });
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -197,14 +195,14 @@ export function createAssetsRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .post('/locations/:locationId/assets/:assetId/select', requireToken, async (c) => {
+    .post('/locations/:locationId/display-hero/:assetId', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const locationId = c.req.param('locationId') as string;
         const assetId = c.req.param('assetId') as string;
-        const asset = await projectData.createAssetSelect({
+        const asset = await projectData.setLocationHeroDisplayAsset({
           projectName,
-          target: { kind: 'location', locationId },
+          locationId,
           assetId,
         });
         const resourceKeys = studioResourceKeysForAssetTarget({
@@ -216,21 +214,19 @@ export function createAssetsRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .delete('/locations/:locationId/assets/:assetId/select', requireToken, async (c) => {
+    .delete('/locations/:locationId/display-hero', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const locationId = c.req.param('locationId') as string;
-        const assetId = c.req.param('assetId') as string;
-        const asset = await projectData.removeAssetSelect({
+        await projectData.clearLocationHeroDisplayAsset({
           projectName,
-          target: { kind: 'location', locationId },
-          assetId,
+          locationId,
         });
         const resourceKeys = studioResourceKeysForAssetTarget({
           kind: 'location',
           locationId,
         });
-        return c.json({ asset, resourceKeys });
+        return c.json({ resourceKeys });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

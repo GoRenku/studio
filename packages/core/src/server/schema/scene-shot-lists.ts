@@ -178,3 +178,31 @@ export const sceneShotVideoTakeVideos = sqliteTable(
     index('scene_shot_video_take_video_asset_idx').on(table.assetId),
   ],
 );
+
+export const sceneShotVideoTakeImages = sqliteTable(
+  'scene_shot_video_take_image',
+  {
+    takeId: text('take_id')
+      .notNull()
+      .references(() => sceneShotVideoTakes.id, { onDelete: 'cascade' }),
+    role: text('role', {
+      enum: ['first-frame', 'last-frame', 'video-prompt'],
+    }).notNull(),
+    assetId: text('asset_id')
+      .notNull()
+      .references(() => assets.id, { onDelete: 'cascade' }),
+    assetFileId: text('asset_file_id')
+      .notNull()
+      .references(() => assetFiles.id),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    ...discardLifecycleColumns(),
+  },
+  (table) => [
+    uniqueIndex('scene_shot_video_take_image_role_idx').on(
+      table.takeId,
+      table.role
+    ),
+    index('scene_shot_video_take_image_asset_idx').on(table.assetId),
+  ],
+);

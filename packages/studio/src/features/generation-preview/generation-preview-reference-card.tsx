@@ -1,39 +1,20 @@
 import type { GenerationPreviewResourceReference } from '@gorenku/studio-core/client';
 import { AudioPreview } from '@/ui/audio-preview';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
-import { ImageSelectionControl } from '@/ui/image-selection-control';
 import { VideoPreview } from '@/ui/video-preview';
 
 interface GenerationPreviewReferenceCardProps {
   reference: GenerationPreviewResourceReference;
   selected: boolean;
-  canEdit: boolean;
-  updating: boolean;
-  onToggle: (reference: GenerationPreviewResourceReference) => void;
+  onOpen?: () => void;
 }
 
 export function GenerationPreviewReferenceCard({
   reference,
   selected,
-  canEdit,
-  updating,
-  onToggle,
+  onOpen,
 }: GenerationPreviewReferenceCardProps) {
-  const canToggle =
-    canEdit &&
-    Boolean(reference.selectionControl?.editable) &&
-    !reference.selectionControl?.required;
   const title = referenceDisplayTitle(reference);
-  const control = canToggle ? (
-    <ImageSelectionControl
-      selected={selected}
-      selectedLabel={`Exclude ${title ?? 'reference'}`}
-      unselectedLabel={`Include ${title ?? 'reference'}`}
-      disabled={updating}
-      busy={updating}
-      onToggleSelected={async () => onToggle(reference)}
-    />
-  ) : null;
 
   if (reference.kind === 'audio') {
     return (
@@ -48,7 +29,6 @@ export function GenerationPreviewReferenceCard({
           title={reference.label}
           className='w-full'
         />
-        {control ? <div className='flex justify-end'>{control}</div> : null}
       </article>
     );
   }
@@ -59,7 +39,6 @@ export function GenerationPreviewReferenceCard({
       imageUrl={reference.browserUrl}
       imageAlt={title ?? 'Generation preview reference'}
       selected={selected}
-      bottomRightActions={control}
       previewContent={
         reference.kind === 'video'
           ? ({ active }) => (
@@ -72,7 +51,7 @@ export function GenerationPreviewReferenceCard({
             )
           : undefined
       }
-      onOpen={() => {}}
+      onOpen={onOpen ?? (() => {})}
     />
   );
 }

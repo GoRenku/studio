@@ -1,4 +1,5 @@
-import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
 export const mediaGenerationSpecs = sqliteTable(
   'media_generation_spec',
@@ -22,6 +23,9 @@ export const mediaGenerationSpecs = sqliteTable(
       table.targetId,
       table.updatedAt
     ),
+    uniqueIndex('media_generation_spec_take_purpose_idx')
+      .on(table.purpose, table.targetKind, table.targetId)
+      .where(sql`${table.targetKind} = 'sceneShotVideoTake' and ${table.purpose} in ('shot.first-frame', 'shot.last-frame', 'shot.video-prompt', 'shot.video-take')`),
   ]
 );
 

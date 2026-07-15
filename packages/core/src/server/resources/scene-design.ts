@@ -3,7 +3,6 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   listAssetRelationshipPage,
-  MAX_RESOURCE_PAGE_LIMIT,
 } from '../database/access/asset-relationships/index.js';
 import { readSceneNavigationContext } from '../database/access/navigation.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -37,15 +36,9 @@ export function readSceneDesignResourceProjection(
   return {
     scene: chain.scene,
     sequence: chain.sequence,
-    selectedAssets: listAssetRelationshipPage(session, {
-      target,
-      selection: 'select',
-      limit: MAX_RESOURCE_PAGE_LIMIT,
-    }).items,
-    activeTakePage: listAssetRelationshipPage(session, {
+    assetPage: listAssetRelationshipPage(session, {
       target,
       role: input.activeRole,
-      selection: 'take',
       limit: input.limit,
       cursor: input.cursor,
     }),

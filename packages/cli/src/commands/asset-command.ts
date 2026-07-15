@@ -37,7 +37,6 @@ export interface AssetCommandFlags {
   referenceName?: string;
   referencePurpose?: string;
   locale?: string;
-  order?: number;
 }
 
 export async function runAssetCommand(
@@ -50,29 +49,16 @@ export async function runAssetCommand(
   if (subcommand === 'list') {
     return await listAssets(options);
   }
-  if (subcommand === 'select') {
-    return await createAssetSelect(options, assetId);
-  }
-  if (subcommand === 'select-update') {
-    return await updateAssetSelect(options, assetId);
-  }
-  if (subcommand === 'select-remove') {
-    return await removeAssetSelect(options, assetId);
-  }
-  if (subcommand === 'selects') {
-    return await listAssetSelects(options);
-  }
-
   throw new StructuredError({
     code: 'CLI040',
     message:
-      'Unknown asset command. Usage: renku asset reference-update|list|select|select-update|select-remove|selects ...',
+      'Unknown asset command. Usage: renku asset reference-update|list ...',
     issues: [
       createDiagnosticError(
         'CLI040',
         'Unknown asset command.',
         { path: ['asset'], context: 'renku CLI arguments' },
-        'Use renku asset reference-update, list, select, select-update, select-remove, or selects.'
+        'Use renku asset reference-update or list.'
       ),
     ],
   });
@@ -140,113 +126,6 @@ async function listAssets(options: RunAssetCommandOptions): Promise<number> {
   return 0;
 }
 
-async function createAssetSelect(
-  options: RunAssetCommandOptions,
-  assetId?: string
-): Promise<number> {
-  const projectName = requiredFlag(options, 'project');
-  const target = readTarget(options);
-  const projectData = createProjectDataService();
-  const eventProject = await readAssetEventProject(
-    projectData,
-    projectName,
-    options.homeDir
-  );
-  const asset = await projectData.createAssetSelect({
-    projectName,
-    target,
-    assetId: requiredAssetId(assetId),
-    selectionOrder: options.flags.order,
-    homeDir: options.homeDir,
-  });
-  const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendStudioResourceChangedEvent({
-    runtime: cliRuntime(options, projectData),
-    report: { project: eventProject, resourceKeys },
-    command: 'asset select',
-  });
-  writeAssetResult(options, asset, `Selected asset: ${asset.assetId}`, resourceKeys);
-  return 0;
-}
-
-async function updateAssetSelect(
-  options: RunAssetCommandOptions,
-  assetId?: string
-): Promise<number> {
-  const projectName = requiredFlag(options, 'project');
-  const target = readTarget(options);
-  const projectData = createProjectDataService();
-  const eventProject = await readAssetEventProject(
-    projectData,
-    projectName,
-    options.homeDir
-  );
-  const asset = await projectData.updateAssetSelect({
-    projectName,
-    target,
-    assetId: requiredAssetId(assetId),
-    selectionOrder: requiredOrder(options),
-    homeDir: options.homeDir,
-  });
-  const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendStudioResourceChangedEvent({
-    runtime: cliRuntime(options, projectData),
-    report: { project: eventProject, resourceKeys },
-    command: 'asset select-update',
-  });
-  writeAssetResult(
-    options,
-    asset,
-    `Updated selected asset: ${asset.assetId}`,
-    resourceKeys
-  );
-  return 0;
-}
-
-async function removeAssetSelect(
-  options: RunAssetCommandOptions,
-  assetId?: string
-): Promise<number> {
-  const projectName = requiredFlag(options, 'project');
-  const target = readTarget(options);
-  const projectData = createProjectDataService();
-  const eventProject = await readAssetEventProject(
-    projectData,
-    projectName,
-    options.homeDir
-  );
-  const asset = await projectData.removeAssetSelect({
-    projectName,
-    target,
-    assetId: requiredAssetId(assetId),
-    homeDir: options.homeDir,
-  });
-  const resourceKeys = studioResourceKeysForAssetTarget(target);
-  await appendStudioResourceChangedEvent({
-    runtime: cliRuntime(options, projectData),
-    report: { project: eventProject, resourceKeys },
-    command: 'asset select-remove',
-  });
-  writeAssetResult(
-    options,
-    asset,
-    `Changed asset back to take: ${asset.assetId}`,
-    resourceKeys
-  );
-  return 0;
-}
-
-async function listAssetSelects(options: RunAssetCommandOptions): Promise<number> {
-  const assets = await createProjectDataService().listAssetSelects({
-    projectName: requiredFlag(options, 'project'),
-    target: readTarget(options),
-    locale: readLocale(options),
-    homeDir: options.homeDir,
-  });
-  writeAssetList(options, assets);
-  return 0;
-}
-
 function writeAssetResult(
   options: RunAssetCommandOptions,
   asset: Asset,
@@ -263,7 +142,6 @@ function writeAssetResult(
   }
   options.io.stdout.log(message);
   options.io.stdout.log(`Attached to: ${formatTarget(asset.target)}`);
-  options.io.stdout.log(`Selection: ${asset.selection.kind}`);
   if (resourceKeys.length > 0) {
     options.io.stdout.log(`Refresh resources: ${resourceKeys.join(', ')}`);
   }
@@ -280,7 +158,7 @@ function writeAssetList(options: RunAssetCommandOptions, assets: Asset[]): void 
   }
   for (const asset of assets) {
     options.io.stdout.log(
-      `${asset.assetId} ${asset.type} ${asset.role} ${asset.selection.kind}`
+      `${asset.assetId} ${asset.type} ${asset.role}`
     );
   }
 }
@@ -375,27 +253,9 @@ function requiredAssetId(assetId?: string): string {
     issues: [
       createDiagnosticError(
         'CLI042',
-        'Asset selection commands require an asset id.',
+        'Asset commands that mutate a record require an asset id.',
         { path: ['asset'], context: 'renku CLI arguments' },
         'Pass the asset id as the final positional argument.'
-      ),
-    ],
-  });
-}
-
-function requiredOrder(options: RunAssetCommandOptions): number {
-  if (options.flags.order !== undefined) {
-    return options.flags.order;
-  }
-  throw new StructuredError({
-    code: 'CLI043',
-    message: 'Missing required --order option.',
-    issues: [
-      createDiagnosticError(
-        'CLI043',
-        'select-update requires --order.',
-        { path: ['--order'], context: 'renku CLI arguments' },
-        'Pass --order <number>.'
       ),
     ],
   });

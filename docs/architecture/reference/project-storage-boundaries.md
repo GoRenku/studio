@@ -38,7 +38,8 @@ This means SQLite stores facts such as:
 - visual language records;
 - asset records;
 - asset file records;
-- asset selects;
+- focused Cast Profile and Location Hero display choices;
+- request-scoped generation reference choices;
 - bindings between domain objects;
 - Inspiration folder metadata and persisted Inspiration Analysis JSON;
 - Lookbooks, source Inspiration relationships, and Lookbook image placement;

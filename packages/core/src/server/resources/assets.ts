@@ -62,18 +62,6 @@ export async function listAssets(
   }
 }
 
-export async function listAssetSelects(
-  input: {
-    projectName: string;
-    target: AssetTarget;
-    locale?: AssetLocaleContext;
-  } & RenkuConfigPathOptions
-): Promise<Asset[]> {
-  return (await listAssets(input)).filter(
-    (asset) => asset.selection.kind === 'select'
-  );
-}
-
 export async function resolveProjectAssetFile(
   input: ResolveProjectAssetFileInput
 ): Promise<ResolvedProjectAssetFile> {

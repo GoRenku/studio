@@ -1,4 +1,4 @@
-import type { GenerationModelDescriptor, GenerationPurposeSettings, GenerationReferenceGuide } from '../../client/generation.js';
+import type { GenerationModelDescriptor, GenerationPurposeSettings } from '../../client/generation.js';
 import { buildGenerationContext } from './context.js';
 import type {
   BuildGenerationPurposeInput,
@@ -35,7 +35,7 @@ export function defineGenerationPurpose(input: Omit<GenerationPurposeDescriptor,
           `No selectable ${descriptor.outputMediaKind} model can represent the fixed settings for ${descriptor.purpose}.`
         );
       }
-      const recommendedModel = resolveRecommendedModel(settings.recommendedModel, models, referenceGuide);
+      const recommendedModel = resolveRecommendedModel(settings.recommendedModel, models);
       return buildGenerationContext({
         purpose: descriptor,
         target: contextInput.target,
@@ -51,22 +51,13 @@ export function defineGenerationPurpose(input: Omit<GenerationPurposeDescriptor,
 
 function resolveRecommendedModel(
   recommended: GenerationPurposeSettings['recommendedModel'],
-  models: GenerationModelDescriptor[],
-  guide: GenerationReferenceGuide
+  models: GenerationModelDescriptor[]
 ) {
   if (!recommended?.provider || !recommended.model) {
     return recommended;
   }
   const direct = models.find((model) => model.provider === recommended.provider && model.model === recommended.model);
-  const selectedKinds = new Set(guide.sections.flatMap((section) => section.slots.flatMap((slot) => slot.selections.length > 0 ? slot.candidates.slice(0, 1).map((candidate) => candidate.mediaKind) : [])));
-  if (selectedKinds.size === 0 || direct?.fields.some((field) => field.media && [...selectedKinds].every((kind) => field.media!.acceptedKinds.includes(kind)))) {
-    return recommended;
-  }
-  const referenceCapable = models.find((model) =>
-    model.provider === direct?.provider && model.label === direct?.label &&
-    model.fields.some((field) => field.media && [...selectedKinds].every((kind) => field.media!.acceptedKinds.includes(kind)))
-  );
-  return referenceCapable ? { provider: referenceCapable.provider, model: referenceCapable.model } : recommended;
+  return direct ? recommended : undefined;
 }
 
 export const noSettings: GenerationPurposeSettings = { fixed: [], recommended: [] };

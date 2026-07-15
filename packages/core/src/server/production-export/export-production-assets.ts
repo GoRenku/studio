@@ -7,8 +7,8 @@ import type {
 import {
   assertProductionExportLocaleExists,
   readProductionProjectInfo,
-  readSelectedProductionAssetRows,
-  type SelectedProductionAssetRow,
+  readProductionExportMediaRows,
+  type ProductionExportMediaRow,
 } from '../database/access/production-export.js';
 import { openProjectStore, type DatabaseSession } from '../database/lifecycle/store.js';
 import { resolveProjectFolder } from '../files/project-paths.js';
@@ -38,8 +38,8 @@ export async function exportProductionAssets(
   });
   try {
     const project = readProductionProjectInfo(session);
-    const selectedRows = readSelectedProductionAssetRows(session);
-    const variants = readRequestedVariants(session, selectedRows, input.variants);
+    const mediaRows = readProductionExportMediaRows(session);
+    const variants = readRequestedVariants(session, mediaRows, input.variants);
     const previousManifest = input.fresh
       ? null
       : await readProductionExportManifest(projectFolder, project.id);
@@ -47,7 +47,7 @@ export async function exportProductionAssets(
       projectFolder,
       session,
       variants,
-      selectedRows,
+      mediaRows,
       previousManifest,
       dryRun: input.dryRun === true,
     });
@@ -55,7 +55,7 @@ export async function exportProductionAssets(
     if (plans.every((plan) => plan.files.length === 0)) {
       throw new ProjectDataError(
         'PROJECT_DATA100',
-        'No production-exportable selected assets were found.'
+        'No picked Shot Video Take media is available for production export.'
       );
     }
 
@@ -142,7 +142,7 @@ export async function exportProductionAssets(
 
 function readRequestedVariants(
   session: DatabaseSession,
-  selectedRows: SelectedProductionAssetRow[],
+  mediaRows: ProductionExportMediaRow[],
   inputVariants?: ProductionExportVariant[]
 ): ProductionExportVariant[] {
   if (inputVariants?.length) {
@@ -154,19 +154,6 @@ function readRequestedVariants(
     return inputVariants;
   }
 
-  const localeIds = [
-    ...new Set(
-      selectedRows
-        .map((row) => row.localeId)
-        .filter((localeId): localeId is string => localeId !== null)
-    ),
-  ].sort((left, right) => left.localeCompare(right));
-
-  return [
-    { kind: 'master' },
-    ...localeIds.map((localeId): ProductionExportVariant => ({
-      kind: 'localized',
-      localeId,
-    })),
-  ];
+  void mediaRows;
+  return [{ kind: 'master' }];
 }

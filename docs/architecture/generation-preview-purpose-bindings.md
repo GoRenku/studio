@@ -32,15 +32,19 @@ The resource projects:
 - selected direct provider/model endpoint;
 - authored prompt and optional negative prompt fields identified by Engines
   semantics;
-- ordered exact references and editable selection ids;
+- grouped cardinality-one reference slots, every safe exact candidate, and the
+  current saved spec choice;
+- opaque additional references stored directly by the spec;
 - schema-derived configuration controls;
 - the direct estimate for the selected model and pricing settings;
 - safe provider payload preview data;
 - structured diagnostics.
 
 Core projects a draft preview and a saved preview through the same path. A
-saved preview can update prompt text and reference inclusion together through
-the generic spec command. An unsaved preview remains read-only.
+saved preview can update prompt text and replace or clear slot choices together
+through the generic spec command. Core rebuilds current context, validates exact
+candidate membership, and binds the selected model field before persistence.
+An unsaved preview remains read-only.
 
 ## Layer Boundaries
 
@@ -69,6 +73,12 @@ Only the selected model and its pricing settings receive an estimate. Prompts,
 reference availability, and execution readiness do not gate that estimate.
 Reference provenance is display context; it is never traversed for cost or
 execution planning.
+
+The guide contains candidates, not defaults. The current card is derived only
+from `GenerationSpec.references`. Preview omits a slot only when it has no
+candidate and no saved choice. React uses the shared reference picker used by
+Shot Take choices; it sends replace/clear intent and never decides eligibility
+or provider binding.
 
 ## Verification
 

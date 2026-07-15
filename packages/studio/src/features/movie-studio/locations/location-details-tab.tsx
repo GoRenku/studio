@@ -12,7 +12,6 @@ import {
 } from '@/ui/image-preview-dialog';
 import { cn } from '@/lib/utils';
 import {
-  currentLocationHeroAsset,
   locationEnvironmentSheetAspectRatio,
   locationEnvironmentSheetPreviewImages,
 } from './location-assets';
@@ -32,7 +31,9 @@ export function LocationDetailsTab({
 }: LocationDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const location = resource.location;
-  const heroAsset = currentLocationHeroAsset(assets);
+  const heroAsset = assets.find(
+    (asset) => asset.assetId === resource.firstImage?.assetId
+  ) ?? null;
   const heroPreview = heroAsset
     ? locationEnvironmentSheetPreviewImages(projectName, locationId, heroAsset)[0] ??
       null

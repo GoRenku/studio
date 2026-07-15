@@ -7,7 +7,9 @@ import type {
 } from '@/services/studio-project-contracts';
 import {
   deleteLocationAsset,
+  clearLocationHeroDisplayAsset,
   readLocationAssets,
+  setLocationHeroDisplayAsset,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
 import {
@@ -76,6 +78,19 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
     }
   };
 
+  const toggleHeroDisplay = async (asset: StudioAssetResponse) => {
+    try {
+      if (resource?.firstImage?.assetId === asset.assetId) {
+        await clearLocationHeroDisplayAsset(projectName, locationId);
+      } else {
+        await setLocationHeroDisplayAsset(projectName, locationId, asset.assetId);
+      }
+      await refreshLocation();
+    } catch (displayError) {
+      toast.error(errorMessage(displayError));
+    }
+  };
+
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
   }
@@ -107,6 +122,8 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
           projectName={projectName}
           locationId={locationId}
           assets={assets}
+          displayHeroAssetId={resource.firstImage?.assetId ?? null}
+          onToggleHeroDisplay={toggleHeroDisplay}
           onDeleteAsset={removeAsset}
         />
       </LineTabsContent>

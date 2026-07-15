@@ -15,6 +15,14 @@ import {
 } from '../database/access/media-generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { GenerationPurposeEditingContract } from './purpose-contract.js';
+import { requireShotVideoTakeAuthoringMutable } from '../database/access/shot-video-take-media.js';
+
+const SINGLETON_TAKE_PURPOSES = new Set<GenerationSpec['purpose']>([
+  'shot.first-frame',
+  'shot.last-frame',
+  'shot.video-prompt',
+  'shot.video-take',
+]);
 
 export function createGenerationSpec(input: {
   id: string;
@@ -23,6 +31,7 @@ export function createGenerationSpec(input: {
   session: DatabaseSession;
   now: string;
 }): GenerationSpecRecord {
+  assertTakeSpecCanBeCreated(input);
   assertGenerationSpecEditingEnvelope(input.spec, input.purpose);
   return insertGenerationSpecRecord(input.session, {
     id: input.id,
@@ -40,6 +49,7 @@ export function updateGenerationSpec(input: {
   now: string;
 }): GenerationSpecRecord {
   const current = readGenerationSpec({ id: input.id, session: input.session });
+  assertTakeSpecCanBeEdited(input);
   assertGenerationSpecEditingEnvelope(input.spec, input.purpose);
   return updateGenerationSpecRecord(input.session, {
     id: input.id,
@@ -47,6 +57,59 @@ export function updateGenerationSpec(input: {
     createdAt: current.createdAt,
     updatedAt: input.now,
   });
+}
+
+function assertTakeSpecCanBeCreated(input: {
+  spec: GenerationSpec;
+  session: DatabaseSession;
+}): void {
+  if (!isSingletonTakeSpec(input.spec)) {
+    return;
+  }
+  requireShotVideoTakeAuthoringMutable({
+    session: input.session,
+    takeId: input.spec.target.id,
+  });
+  if (listGenerationSpecRecords(input.session, {
+    purpose: input.spec.purpose,
+    target: input.spec.target,
+  }).length > 0) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_TAKE_SPEC_ALREADY_EXISTS',
+      `Shot Video Take already has a ${input.spec.purpose} generation spec.`
+    );
+  }
+}
+
+function assertTakeSpecCanBeEdited(input: {
+  id: string;
+  spec: GenerationSpec;
+  session: DatabaseSession;
+}): void {
+  if (!isSingletonTakeSpec(input.spec)) {
+    return;
+  }
+  requireShotVideoTakeAuthoringMutable({
+    session: input.session,
+    takeId: input.spec.target.id,
+  });
+  const duplicates = listGenerationSpecRecords(input.session, {
+    purpose: input.spec.purpose,
+    target: input.spec.target,
+  }).filter((record) => record.id !== input.id);
+  if (duplicates.length > 0) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_TAKE_SPEC_ALREADY_EXISTS',
+      `Shot Video Take already has another ${input.spec.purpose} generation spec.`
+    );
+  }
+}
+
+function isSingletonTakeSpec(spec: GenerationSpec): spec is GenerationSpec & {
+  target: Extract<GenerationTarget, { kind: 'sceneShotVideoTake' }>;
+} {
+  return SINGLETON_TAKE_PURPOSES.has(spec.purpose) &&
+    spec.target.kind === 'sceneShotVideoTake';
 }
 
 export function readGenerationSpec(input: {
@@ -126,8 +189,17 @@ function assertGenerationSpecEditingEnvelope(
       }
     }
     const slot = findGuideSlot(purpose.referenceGuide, selection);
-    if (!slot || slot.cardinality !== 'one') {
+    if (!slot) {
       continue;
+    }
+    if (!slot.candidates.some((candidate) => referencesEqual(
+      candidate.reference,
+      selection.reference
+    ))) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_SELECTION_INVALID',
+        `Generation reference is not a current candidate for guide slot ${slot.id}.`
+      );
     }
     const key = selectionPlacementKey(selection);
     const count = (oneSlotSelections.get(key) ?? 0) + 1;
@@ -139,6 +211,17 @@ function assertGenerationSpecEditingEnvelope(
       );
     }
   }
+}
+
+function referencesEqual(
+  left: GenerationReferenceSelection['reference'],
+  right: GenerationReferenceSelection['reference']
+): boolean {
+  return left.kind === 'asset-file' && right.kind === 'asset-file'
+    ? left.assetId === right.assetId && left.assetFileId === right.assetFileId
+    : left.kind === 'project-file' && right.kind === 'project-file'
+      ? left.projectRelativePath === right.projectRelativePath
+      : false;
 }
 
 function findGuideSlot(

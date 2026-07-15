@@ -2,6 +2,7 @@ import type {
   GenerationEditorControl,
   GenerationPreviewConfigurationValue,
   GenerationPreviewResource,
+  GenerationPreviewReferenceSlot,
   GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import { AlertCircle } from 'lucide-react';
@@ -32,7 +33,10 @@ interface GenerationRequestEditorProps {
   onTabChange: (tab: GenerationRequestEditorTab) => void;
   onAuthoredTextChange: (value: string) => void;
   onNegativeTextChange: (value: string) => void;
-  onReferenceToggle: (reference: GenerationPreviewResourceReference) => void;
+  onReferenceChoose: (
+    slot: GenerationPreviewReferenceSlot,
+    reference: GenerationPreviewResourceReference | null
+  ) => void;
   onControlChange?: (
     controlId: string,
     value: GenerationPreviewConfigurationValue,
@@ -54,7 +58,7 @@ export function GenerationRequestEditor({
   onTabChange,
   onAuthoredTextChange,
   onNegativeTextChange,
-  onReferenceToggle,
+  onReferenceChoose,
   onControlChange = () => {},
   authoredPlaceholder,
   tabRowTrailing,
@@ -106,7 +110,7 @@ export function GenerationRequestEditor({
               draft={draft}
               updating={pending || readOnly}
               editable={!readOnly}
-              onReferenceToggle={onReferenceToggle}
+              onReferenceChoose={onReferenceChoose}
             />
           ) : (
             <p className='text-sm text-muted-foreground'>

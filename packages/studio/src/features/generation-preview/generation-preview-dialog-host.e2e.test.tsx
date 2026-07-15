@@ -281,13 +281,14 @@ describe('GenerationPreviewDialogHost', () => {
     });
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Exclude Storyboard Lookbook Sheet',
+        name: 'Storyboard Lookbook Sheet',
       })
     );
+    fireEvent.click(await screen.findByRole('button', { name: 'None' }));
     expect(fetchMock).not.toHaveBeenCalled();
     expect(
       await screen.findByRole('button', {
-        name: 'Include Storyboard Lookbook Sheet',
+        name: 'Choose Visual language',
       }),
     ).toBeTruthy();
 
@@ -302,8 +303,15 @@ describe('GenerationPreviewDialogHost', () => {
             prompt: {
               authoredText: 'Updated production prompt.\nSecond line.',
             },
-            referenceSelections: [
-              { selectionId: 'selection_style', selected: false },
+            referenceChanges: [
+              {
+                kind: 'clear',
+                placement: {
+                  kind: 'slot',
+                  sectionId: 'visual-language',
+                  slotId: 'lookbook',
+                },
+              },
             ],
           }),
         })
@@ -568,8 +576,15 @@ function previewFixture(input: {
         ? { negativeText: input.negativeText }
         : {}),
     },
-    references: [
-      {
+    references: {
+      slots: [{
+        label: 'Visual language',
+        placement: {
+          kind: 'slot',
+          sectionId: 'visual-language',
+          slotId: 'lookbook',
+        },
+        candidates: [{
         kind: 'image',
         role: 'style',
         label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
@@ -578,18 +593,12 @@ function previewFixture(input: {
         assetFileId: 'asset_file_style',
         sourcePurpose: 'lookbook.storyboard-sheet',
         selected: input.selected ?? true,
-        selectionControl: input.editableReference
-          ? {
-              selectionId: 'selection_style',
-              required: input.requiredReference ?? false,
-              defaultIncluded: true,
-              editable: true,
-            }
-          : undefined,
         browserUrl:
           '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
-      },
-    ],
+        }],
+      }],
+      additional: [],
+    },
     configuration: {
       sections: [
         {

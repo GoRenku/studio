@@ -100,7 +100,6 @@ function purposeContract(): GenerationPurposeEditingContract {
     targetKind: 'asset' as const,
     outputMediaKind: 'image' as const,
     referenceGuide: {
-      additionalReferences: [],
       notices: [],
       sections: [{
         id: 'source',
@@ -109,8 +108,26 @@ function purposeContract(): GenerationPurposeEditingContract {
           id: 'source-image',
           label: 'Source image',
           cardinality: 'one' as const,
-          candidates: [],
-          selections: [],
+          providerRole: 'source-image',
+          candidates: [
+            ...['missing.png', 'first.png', 'second.png'].map((filename) => ({
+              role: 'source',
+              label: filename,
+              mediaKind: 'image' as const,
+              mimeType: 'image/png',
+              sizeBytes: null,
+              width: null,
+              height: null,
+              durationSeconds: null,
+              owner: null,
+              provenance: { origin: 'project-file' },
+              projectRelativePath: `assets/${filename}` as never,
+              reference: {
+                kind: 'project-file' as const,
+                projectRelativePath: `assets/${filename}` as never,
+              },
+            })),
+          ],
         }],
       }],
     },

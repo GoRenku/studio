@@ -40,7 +40,7 @@ import {
 import { assertCastOperationDocument } from '../department-design-json/validator.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
-  listCastAssetRoleSelectionRecords,
+  listCastAssetRoleRecords,
   listCastMemberRecords,
   readCastMemberDeleteDependencySummary,
   type CastMemberDeleteDependencySummary,
@@ -78,7 +78,7 @@ export async function readCastContext(
     const screenplay = readScreenplayDocumentFromSession(session);
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveCastDesignDocument(session, input.castMemberId);
-    const selectedAssets = listCastAssetRoleSelectionRecords(session, input.castMemberId);
+    const assets = listCastAssetRoleRecords(session, input.castMemberId);
     return {
       valid: true,
       warnings: [],
@@ -114,9 +114,9 @@ export async function readCastContext(
         : null,
       scenes: screenplay ? castScenes(screenplay, input.castMemberId) : [],
       activeLookbook: null,
-      selectedAssets: [],
-      assetRoleCounts: roleCounts(selectedAssets),
-      generationReadiness: castGenerationReadiness(castMember, selectedAssets),
+      assets: [],
+      assetRoleCounts: roleCounts(assets),
+      generationReadiness: castGenerationReadiness(castMember, assets),
     };
   });
 }
@@ -370,7 +370,7 @@ function toCastMember(input: CastMemberInput): CastMember {
 
 function castGenerationReadiness(
   castMember: CastMember,
-  selectedAssets: Array<{ role: string; selection: string }>
+  assets: Array<{ role: string }>
 ): CastDesignContextReport['generationReadiness'] {
   if (castMember.isVoiceOver) {
     return {
@@ -385,7 +385,7 @@ function castGenerationReadiness(
   }
   return {
     characterSheet: true,
-    profile: selectedAssets.some((asset) => asset.role === 'character-sheet'),
+    profile: assets.some((asset) => asset.role === 'character-sheet'),
     notes: [
       'Use media-producer for cast.character-sheet and cast.profile generation.',
       'Costume-variant media and voice media do not have first-class generation targets yet.',
@@ -477,20 +477,15 @@ function castScenes(
 }
 
 function roleCounts(
-  records: Array<{ role: string; selection: string }>
-): Array<{ role: string; selectedCount: number; takeCount: number }> {
-  const counts = new Map<string, { role: string; selectedCount: number; takeCount: number }>();
+  records: Array<{ role: string }>
+): Array<{ role: string; count: number }> {
+  const counts = new Map<string, { role: string; count: number }>();
   records.forEach((record) => {
     const count = counts.get(record.role) ?? {
       role: record.role,
-      selectedCount: 0,
-      takeCount: 0,
+      count: 0,
     };
-    if (record.selection === 'select') {
-      count.selectedCount += 1;
-    } else {
-      count.takeCount += 1;
-    }
+    count.count += 1;
     counts.set(record.role, count);
   });
   return [...counts.values()];

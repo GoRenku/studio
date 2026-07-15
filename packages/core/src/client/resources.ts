@@ -229,22 +229,19 @@ export interface SceneNarrativeResource {
 
 export interface CastDesignResource {
   castMember: CastMember;
-  selectedAssets: Asset[];
-  activeTakePage: PageResponse<Asset>;
+  assetPage: PageResponse<Asset>;
   countsByRole: CastDesignAssetRoleCount[];
 }
 
 export interface CastDesignAssetRoleCount {
   role: string;
-  selectedCount: number;
-  takeCount: number;
+  count: number;
 }
 
 export interface SceneDesignResource {
   scene: SceneNavigationRow;
   sequence: SequenceNavigationRow;
-  selectedAssets: Asset[];
-  activeTakePage: PageResponse<Asset>;
+  assetPage: PageResponse<Asset>;
 }
 
 export interface InspirationResource {
@@ -329,18 +326,18 @@ export interface DirectorCastReadiness {
   castMemberCount: number;
   activeCastDesignCount: number;
   missingActiveCastDesignCastMemberIds: string[];
-  selectedVisualReferenceCount: number;
-  missingSelectedVisualReferenceCastMemberIds: string[];
-  everyCastMemberHasSelectedVisualReference: boolean;
+  visualReferenceCount: number;
+  missingVisualReferenceCastMemberIds: string[];
+  everyCastMemberHasVisualReference: boolean;
 }
 
 export interface DirectorProductionDesignReadiness {
   locationCount: number;
   activeLocationDesignCount: number;
   missingActiveLocationDesignLocationIds: string[];
-  selectedEnvironmentSheetCount: number;
-  missingSelectedEnvironmentSheetLocationIds: string[];
-  everyLocationHasSelectedEnvironmentSheet: boolean;
+  environmentSheetCount: number;
+  missingEnvironmentSheetLocationIds: string[];
+  everyLocationHasEnvironmentSheet: boolean;
 }
 
 export interface DirectorSceneReadiness {

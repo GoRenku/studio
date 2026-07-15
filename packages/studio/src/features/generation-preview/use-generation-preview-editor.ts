@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type {
   GenerationPreviewResource,
+  GenerationPreviewReferenceSlot,
   GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import { updateGenerationPreviewResource } from '@/services/studio-generation-preview-api';
@@ -8,7 +9,7 @@ import {
   buildGenerationPreviewUpdateRequest,
   createGenerationPreviewDraft,
   generationPreviewDraftIsDirty,
-  generationPreviewReferenceSelected,
+  changeGenerationPreviewReference,
   type GenerationPreviewDraft,
 } from './generation-preview-draft';
 
@@ -46,24 +47,14 @@ export function useGenerationPreviewEditor(
     setUpdateError(null);
   };
 
-  const toggleReference = (reference: GenerationPreviewResourceReference) => {
-    const control = reference.selectionControl;
-    if (
-      !preview.generationSpecId ||
-      !control?.editable ||
-      control.required ||
-      updatePending
-    ) {
+  const chooseReference = (
+    slot: GenerationPreviewReferenceSlot,
+    reference: GenerationPreviewResourceReference | null
+  ) => {
+    if (!preview.generationSpecId || updatePending) {
       return;
     }
-    const selected = generationPreviewReferenceSelected(reference, draft);
-    setDraft((current) => ({
-      ...current,
-      referenceSelectionDraftBySelectionId: {
-        ...current.referenceSelectionDraftBySelectionId,
-        [control.selectionId]: !selected,
-      },
-    }));
+    setDraft((current) => changeGenerationPreviewReference(current, slot, reference));
     setUpdateError(null);
   };
 
@@ -108,7 +99,7 @@ export function useGenerationPreviewEditor(
     updateDirty: generationPreviewDraftIsDirty(preview, draft),
     updateAuthoredText,
     updateNegativeText,
-    toggleReference,
+    chooseReference,
     update,
   };
 }

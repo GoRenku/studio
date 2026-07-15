@@ -14,7 +14,6 @@ export function readAssetPageRequest(
   target: AssetTarget;
   role?: string;
   mediaKind?: string;
-  selection?: 'take' | 'select';
   locale?: { localeId: string | null };
   limit?: number;
   cursor?: string;
@@ -23,37 +22,12 @@ export function readAssetPageRequest(
     target: readAssetTargetQuery(query),
     role: readOptionalQueryString(query.role),
     mediaKind: readOptionalQueryString(query.mediaKind),
-    selection: readAssetSelectionQuery(query.selection),
     locale:
       query.localeId === undefined
         ? undefined
         : { localeId: query.localeId === '' ? null : query.localeId },
     ...readPageRequest(query),
   };
-}
-
-function readAssetSelectionQuery(
-  value: string | undefined
-): 'take' | 'select' | undefined {
-  if (value === undefined || value === '') {
-    return undefined;
-  }
-  if (value === 'take' || value === 'select') {
-    return value;
-  }
-  throw createStructuredError({
-    code: 'STUDIO_SERVER031',
-    message: 'Unsupported asset selection filter.',
-    issues: [
-      createDiagnosticError(
-        'STUDIO_SERVER031',
-        'Asset selection must be take or select.',
-        { path: ['selection'] },
-        'Use selection=take or selection=select.'
-      ),
-    ],
-    suggestion: 'Use selection=take or selection=select.',
-  });
 }
 
 function readAssetTargetQuery(

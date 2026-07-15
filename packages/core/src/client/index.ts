@@ -12,7 +12,6 @@ export type {
   AssetFile,
   AssetLocaleContext,
   AssetReference,
-  AssetSelection,
   AssetTarget,
   ReferenceImageMediaImportReport,
   UpdateAssetReferenceInput,

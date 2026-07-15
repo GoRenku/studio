@@ -146,6 +146,17 @@ export function SceneShotReferencesTab({
                     await updateReferenceInclusion(selectionId, included);
                   }}
                   onSelectSheet={async (castMemberId, assetId) => {
+                    if (assetId === null) {
+                      const current = group.characterSheets.find(
+                        (candidate) => candidate.selected
+                      );
+                      if (current) {
+                        await mutationStatus.runTakeEditorMutation(async () => {
+                          await onSetReference(current.card.selectionId, false);
+                        });
+                      }
+                      return;
+                    }
                     const choice = group.characterSheets.find(
                       (candidate) => candidate.castMemberId === castMemberId && candidate.assetId === assetId
                     );

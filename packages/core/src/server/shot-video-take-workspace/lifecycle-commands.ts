@@ -12,6 +12,7 @@ import {
 } from '../database/access/scene-shot-lists.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { readProjectRecord } from '../database/access/project.js';
+import { requireShotVideoTakeAuthoringMutable } from '../database/access/shot-video-take-media.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -148,6 +149,7 @@ export async function replaceShotVideoTakeShots(input: {
   now: string;
 }): Promise<ShotVideoTakeWorkspaceMutationReport> {
   const record = requireShotVideoTakeForScene(input);
+  requireShotVideoTakeAuthoringMutable(input);
   const screenplay = requireScreenplay(input.session);
   const row = requireSceneShotListForScene({
     session: input.session,

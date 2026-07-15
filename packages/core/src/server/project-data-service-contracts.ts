@@ -194,9 +194,24 @@ export interface ProjectDataService {
   ): Promise<ResolvedProjectAssetFileById>;
   updateAssetReference(input: UpdateAssetReferenceInput & RenkuConfigPathOptions): Promise<Asset>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
-  createAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
-  updateAssetSelect(input: ChangeAssetSelectInput): Promise<Asset>;
-  removeAssetSelect(input: RemoveAssetSelectInput): Promise<Asset>;
+  setCastProfileDisplayAsset(input: RenkuConfigPathOptions & {
+    projectName: string;
+    castMemberId: string;
+    assetId: string;
+  }): Promise<Asset>;
+  clearCastProfileDisplayAsset(input: RenkuConfigPathOptions & {
+    projectName: string;
+    castMemberId: string;
+  }): Promise<void>;
+  setLocationHeroDisplayAsset(input: RenkuConfigPathOptions & {
+    projectName: string;
+    locationId: string;
+    assetId: string;
+  }): Promise<Asset>;
+  clearLocationHeroDisplayAsset(input: RenkuConfigPathOptions & {
+    projectName: string;
+    locationId: string;
+  }): Promise<void>;
   discardAsset(input: DiscardAssetInput): Promise<RecoverableMutationReport>;
   restoreAsset(input: RestoreAssetInput): Promise<RecoverableMutationReport>;
   listTrash(input: ListTrashInput): Promise<TrashListReport>;
@@ -205,7 +220,6 @@ export interface ProjectDataService {
     input: PreviewGarbageCollectionInput
   ): Promise<GarbageCollectionPreview>;
   emptyTrash(input: EmptyTrashInput): Promise<GarbageCollectionReport>;
-  listAssetSelects(input: ListAssetsInput): Promise<Asset[]>;
   exportProductionAssets(
     input: ProductionExportInput & RenkuConfigPathOptions
   ): Promise<ProductionExportSummary>;
@@ -773,7 +787,6 @@ export interface ListAssetPageInput extends RenkuConfigPathOptions {
   locale?: AssetLocaleContext;
   role?: string;
   mediaKind?: string;
-  selection?: 'take' | 'select';
   limit?: number;
   cursor?: string | null;
 }
@@ -916,19 +929,6 @@ export interface ListAssetsInput extends RenkuConfigPathOptions {
   projectName: string;
   target: AssetTarget;
   locale?: AssetLocaleContext;
-}
-
-export interface ChangeAssetSelectInput extends RenkuConfigPathOptions {
-  projectName: string;
-  target: AssetTarget;
-  assetId: string;
-  selectionOrder?: number;
-}
-
-export interface RemoveAssetSelectInput extends RenkuConfigPathOptions {
-  projectName: string;
-  target: AssetTarget;
-  assetId: string;
 }
 
 export interface DiscardAssetInput extends RenkuConfigPathOptions {

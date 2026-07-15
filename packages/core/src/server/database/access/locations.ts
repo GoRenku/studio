@@ -77,12 +77,12 @@ export function replaceLocationAuthoringRecords(
   session.db.delete(locations).where(notInArray(locations.id, ids)).run();
 }
 
-export function listLocationAssetRoleSelectionRecords(
+export function listLocationAssetRoleRecords(
   session: DatabaseSession,
   locationId: string
-): Array<{ role: string; selection: string }> {
+): Array<{ role: string }> {
   return session.db
-    .select({ role: locationAssets.role, selection: locationAssets.selection })
+    .select({ role: locationAssets.role })
     .from(locationAssets)
     .where(eq(locationAssets.locationId, locationId))
     .all();

@@ -400,6 +400,13 @@
       "when": 1784040075892,
       "tag": "0056_permanent-project-lookbooks",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "6",
+      "when": 1784049758769,
+      "tag": "0057_request-scoped-generation-references-and-take-media",
+      "breakpoints": true
     }
   ]
 }

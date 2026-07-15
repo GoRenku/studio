@@ -5,7 +5,6 @@ import type {
   ImageRevisionMode,
   ImageRevisionTarget,
   GenerationPreviewResource,
-  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import {
   estimateImageRevisionDraft,
@@ -15,7 +14,6 @@ import {
 } from '@/services/studio-image-revisions-api';
 import {
   createGenerationPreviewDraft,
-  generationPreviewReferenceSelected,
   type GenerationPreviewDraft,
 } from '@/features/generation-preview/generation-preview-draft';
 
@@ -111,12 +109,7 @@ export function useImageRevisionEditor(
       const next = createGenerationPreviewDraft(preview);
       next.promptDraft.authoredText = draft.authoredText;
       next.promptDraft.negativeText = draft.negativeText;
-      next.referenceSelectionDraftBySelectionId = Object.fromEntries(
-        draft.referenceSelections.map((selection) => [
-          selection.selectionId,
-          selection.selected,
-        ]),
-      );
+      next.referenceChanges = [];
       return next;
     }
     return {
@@ -126,31 +119,13 @@ export function useImageRevisionEditor(
           ? { negativeText: draft.negativeText }
           : {}),
       },
-      referenceSelectionDraftBySelectionId: Object.fromEntries(
-        draft.referenceSelections.map((selection) => [
-          selection.selectionId,
-          selection.selected,
-        ]),
-      ),
+      referenceChanges: [],
     };
   }, [draft, preview]);
 
   const updateDraft = (update: (current: ImageRevisionDraft) => ImageRevisionDraft) => {
     setDraft((current) => (current ? update(current) : current));
     setError(null);
-  };
-
-  const toggleReference = (reference: GenerationPreviewResourceReference) => {
-    if (!draft || !editorDraft || !reference.selectionControl?.editable) return;
-    const selected = generationPreviewReferenceSelected(reference, editorDraft);
-    updateDraft((current) => ({
-      ...current,
-      referenceSelections: current.referenceSelections.map((selection) =>
-        selection.selectionId === reference.selectionControl?.selectionId
-          ? { ...selection, selected: !selected }
-          : selection,
-      ),
-    }));
   };
 
   const updateControl = (
@@ -217,7 +192,6 @@ export function useImageRevisionEditor(
     },
     updateNegativeText: (negativeText: string) =>
       updateDraft((current) => ({ ...current, negativeText })),
-    toggleReference,
     updateControl,
     run,
   };

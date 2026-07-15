@@ -17,11 +17,21 @@ function createMountedGenerationPreviewRoute(
       generationPreviewProjection: async ({ preview }) => ({
         ...preview,
         subject: { projectLabel: 'Constantinople', castMemberLabel: 'Narrator' },
-        references: preview.references.map((reference) => ({
-          ...reference,
-          browserUrl:
-            '/studio-api/projects/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference',
-        })),
+        references: {
+          slots: preview.references.slots.map((slot) => ({
+            ...slot,
+            candidates: slot.candidates.map((reference) => ({
+              ...reference,
+              browserUrl:
+                '/studio-api/projects/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference',
+            })),
+          })),
+          additional: preview.references.additional.map((reference) => ({
+            ...reference,
+            browserUrl:
+              '/studio-api/projects/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference',
+          })),
+        },
       }),
       requireToken: async (_c, next) => {
         await next();
@@ -48,10 +58,14 @@ describe('generation preview Hono route', () => {
             authoredText: 'Updated character sheet prompt.',
             negativeText: null,
           },
-          referenceSelections: [
+          referenceChanges: [
             {
-              selectionId: 'reference_cast_narrator',
-              selected: false,
+              kind: 'clear',
+              placement: {
+                kind: 'slot',
+                sectionId: 'continuity',
+                slotId: 'cast',
+              },
             },
           ],
         }),
@@ -63,15 +77,7 @@ describe('generation preview Hono route', () => {
       preview: {
         generationSpecId: 'media_generation_spec_test',
         purpose: 'cast.character-sheet',
-        references: [
-          {
-            browserUrl:
-              '/studio-api/projects/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference',
-            selectionControl: {
-              selectionId: 'reference_cast_narrator',
-            },
-          },
-        ],
+        references: { slots: [], additional: [] },
       },
     });
     expect(updateGenerationPreviewResource).toHaveBeenCalledWith({
@@ -81,10 +87,14 @@ describe('generation preview Hono route', () => {
         authoredText: 'Updated character sheet prompt.',
         negativeText: null,
       },
-      referenceSelections: [
+      referenceChanges: [
         {
-          selectionId: 'reference_cast_narrator',
-          selected: false,
+          kind: 'clear',
+          placement: {
+            kind: 'slot',
+            sectionId: 'continuity',
+            slotId: 'cast',
+          },
         },
       ],
     });
@@ -99,9 +109,7 @@ describe('generation preview Hono route', () => {
         method: 'PATCH',
         body: JSON.stringify({
           prompt: { authoredText: 'Updated prompt.' },
-          referenceSelections: [
-            { selectionId: 'selection_test', selected: 'yes' },
-          ],
+          referenceChanges: [{ kind: 'clear', placement: { kind: 'bad' } }],
         }),
       },
     );

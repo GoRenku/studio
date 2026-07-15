@@ -65,7 +65,7 @@ describe('Shot Location Sheet references e2e', () => {
     });
   });
 
-  it('persists alternate inclusion in the generic spec', async () => {
+  it('persists the exact chosen Location Sheet in the generic spec', async () => {
     const take = await fixture.createTake({
       shotIds: ['shot_001'],
       title: 'Selected Location reference take',
@@ -97,5 +97,22 @@ describe('Shot Location Sheet references e2e', () => {
         .find((location) => location.locationId === fixture.ids.locationId)
         ?.environmentSheets[0]?.selected
     ).toBe(true);
+
+    await setShotVideoTakeGenerationReference(
+      fixture.projectName,
+      fixture.ids.sceneId,
+      take.takeId,
+      { selectionId: choice!.card.selectionId, included: false }
+    );
+    const cleared = await readShotVideoTakeWorkspace(
+      fixture.projectName,
+      fixture.ids.sceneId,
+      take.takeId
+    );
+    expect(
+      cleared.generation.references.locations
+        .find((location) => location.locationId === fixture.ids.locationId)
+        ?.environmentSheets[0]?.selected
+    ).toBe(false);
   });
 });

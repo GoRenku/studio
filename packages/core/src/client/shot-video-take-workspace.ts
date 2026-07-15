@@ -181,7 +181,7 @@ export interface ShotVideoTakeReferenceCard {
 }
 export interface ShotVideoTakeGeneralReferenceChoice {
   id: string;
-  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet';
+  kind: 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt';
   title: string;
   selected: boolean;
   card: ShotVideoTakeReferenceCard;
@@ -200,7 +200,6 @@ export interface ShotVideoTakeCharacterSheetReferenceChoice {
   assetId: string | null;
   title: string;
   selected: boolean;
-  defaultSelected: boolean;
   card: ShotVideoTakeReferenceCard;
 }
 export interface ShotVideoTakeCastMemberReferenceGroup {
@@ -208,9 +207,6 @@ export interface ShotVideoTakeCastMemberReferenceGroup {
   name: string;
   role: string | null;
   selectedForShot: boolean;
-  defaultSelectedForShot: boolean;
-  selectedCharacterSheetAssetId: string | null;
-  defaultCharacterSheetAssetId: string | null;
   characterSheets: ShotVideoTakeCharacterSheetReferenceChoice[];
   diagnostics: DiagnosticIssue[];
 }
@@ -227,8 +223,6 @@ export interface ShotVideoTakeLocationReferenceGroup {
   locationId: string;
   name: string;
   selectedForShot: boolean;
-  defaultSelectedForShot: boolean;
-  selectedLocationSheetAssetId: string | null;
   environmentSheets: ShotVideoTakeEnvironmentSheetReferenceChoice[];
   diagnostics: DiagnosticIssue[];
 }

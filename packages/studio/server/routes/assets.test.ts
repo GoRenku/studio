@@ -24,7 +24,7 @@ describe('assets Hono route', () => {
     const app = createMountedAssetsRoute();
 
     const response = await app.request(
-      '/constantinople/assets?targetKind=castMember&targetId=cast_narrator&selection=take'
+      '/constantinople/assets?targetKind=castMember&targetId=cast_narrator'
     );
 
     expect(response.status).toBe(200);
@@ -59,15 +59,15 @@ describe('assets Hono route', () => {
     });
   });
 
-  it('selects and unselects cast member assets through ProjectDataService', async () => {
+  it('sets and clears the Cast Profile display asset through ProjectDataService', async () => {
     const app = createMountedAssetsRoute();
 
     const selected = await app.request(
-      '/constantinople/cast/cast_narrator/assets/asset_cast_reference/select',
+      '/constantinople/cast/cast_narrator/display-profile/asset_cast_reference',
       { method: 'POST' }
     );
     const unselected = await app.request(
-      '/constantinople/cast/cast_narrator/assets/asset_cast_reference/select',
+      '/constantinople/cast/cast_narrator/display-profile',
       { method: 'DELETE' }
     );
 
@@ -75,15 +75,11 @@ describe('assets Hono route', () => {
     await expect(selected.json()).resolves.toMatchObject({
       asset: {
         assetId: 'asset_cast_reference',
-        selection: { kind: 'select', order: 1 },
       },
     });
     expect(unselected.status).toBe(200);
     await expect(unselected.json()).resolves.toMatchObject({
-      asset: {
-        assetId: 'asset_cast_reference',
-        selection: { kind: 'take' },
-      },
+      resourceKeys: expect.any(Array),
     });
   });
 
@@ -257,22 +253,12 @@ describe('assets Hono route', () => {
             });
             return { items: [locationAsset], nextCursor: null };
           },
-          async createAssetSelect(input) {
-            expect(input.target).toEqual({
-              kind: 'location',
-              locationId: 'location_gate',
-            });
-            return {
-              ...locationAsset,
-              selection: { kind: 'select' as const, order: 1 },
-            };
-          },
-          async removeAssetSelect(input) {
-            expect(input.target).toEqual({
-              kind: 'location',
-              locationId: 'location_gate',
-            });
+          async setLocationHeroDisplayAsset(input) {
+            expect(input.locationId).toBe('location_gate');
             return locationAsset;
+          },
+          async clearLocationHeroDisplayAsset(input) {
+            expect(input.locationId).toBe('location_gate');
           },
           discardAsset,
           async resolveProjectAssetFile(input) {
@@ -298,11 +284,11 @@ describe('assets Hono route', () => {
       '/constantinople/locations/location_gate/assets'
     );
     const selected = await app.request(
-      '/constantinople/locations/location_gate/assets/asset_location_reference/select',
+      '/constantinople/locations/location_gate/display-hero/asset_location_reference',
       { method: 'POST' }
     );
     const unselected = await app.request(
-      '/constantinople/locations/location_gate/assets/asset_location_reference/select',
+      '/constantinople/locations/location_gate/display-hero',
       { method: 'DELETE' }
     );
     const deleted = await app.request(
@@ -326,7 +312,7 @@ describe('assets Hono route', () => {
     });
     expect(selected.status).toBe(200);
     await expect(selected.json()).resolves.toMatchObject({
-      asset: { selection: { kind: 'select', order: 1 } },
+      asset: { assetId: 'asset_location_reference' },
       resourceKeys: [
         'assets:location:location_gate',
         'surface:location:location_gate',
@@ -334,7 +320,7 @@ describe('assets Hono route', () => {
     });
     expect(unselected.status).toBe(200);
     await expect(unselected.json()).resolves.toMatchObject({
-      asset: { selection: { kind: 'take' } },
+      resourceKeys: expect.any(Array),
     });
     expect(deleted.status).toBe(200);
     expect(discardAsset).toHaveBeenCalledWith({
@@ -405,23 +391,16 @@ describe('assets Hono route', () => {
     await expect(response.text()).resolves.toBe('shot bytes');
   });
 
-  it('rejects malformed asset target and selection query values', async () => {
+  it('rejects a malformed asset target', async () => {
     const app = createMountedAssetsRoute();
 
     const targetResponse = await app.request(
       '/constantinople/assets?targetKind=castMember'
     );
-    const selectionResponse = await app.request(
-      '/constantinople/assets?targetKind=project&selection=maybe'
-    );
 
     expect(targetResponse.status).toBe(400);
     await expect(targetResponse.json()).resolves.toMatchObject({
       error: { code: 'STUDIO_SERVER033' },
-    });
-    expect(selectionResponse.status).toBe(400);
-    await expect(selectionResponse.json()).resolves.toMatchObject({
-      error: { code: 'STUDIO_SERVER031' },
     });
   });
 });

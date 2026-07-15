@@ -42,6 +42,8 @@ import {
 } from '../shot-video-take-workspace/generation-commands.js';
 import { attachShotVideoTakeOutput } from '../shot-video-take-workspace/outputs.js';
 import { resolveGenerationRunOutputRoot } from '../project-asset-files/index.js';
+import { bindGenerationReferenceFields } from '../generation/reference-field-binding.js';
+import type { GenerationPreviewReferenceChange } from '../../client/generation-preview-resource.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 
@@ -72,17 +74,19 @@ export function createGenerationServiceWiring() {
     async createGenerationSpec(input: ProjectInput & { spec: GenerationSpec }) {
       return withGenerationProject(input, async ({ session, projectFolder }) => {
         const purpose = readGenerationPurpose(input.spec.purpose);
-        const spec = await applyFixedGenerationSettings({ spec: input.spec, purpose });
-        const guide = await purpose.buildReferenceGuide({ target: spec.target, session, projectFolder });
-        return createGenerationSpec({ id: createRandomIdGenerator().next('media_generation_spec'), spec, purpose: { ...purpose, referenceGuide: guide }, session, now: new Date().toISOString() });
+        const authored = await applyFixedGenerationSettings({ spec: input.spec, purpose });
+        const context = await purpose.buildContext({ target: authored.target, session, projectFolder });
+        const spec = bindGenerationReferenceFields({ spec: authored, guide: context.referenceGuide, models: context.models });
+        return createGenerationSpec({ id: createRandomIdGenerator().next('media_generation_spec'), spec, purpose: { ...purpose, referenceGuide: context.referenceGuide }, session, now: new Date().toISOString() });
       });
     },
     async updateGenerationSpec(input: ProjectInput & { specId: string; spec: GenerationSpec }) {
       return withGenerationProject(input, async ({ session, projectFolder }) => {
         const purpose = readGenerationPurpose(input.spec.purpose);
-        const spec = await applyFixedGenerationSettings({ spec: input.spec, purpose });
-        const guide = await purpose.buildReferenceGuide({ target: spec.target, session, projectFolder });
-        return updateGenerationSpec({ id: input.specId, spec, purpose: { ...purpose, referenceGuide: guide }, session, now: new Date().toISOString() });
+        const authored = await applyFixedGenerationSettings({ spec: input.spec, purpose });
+        const context = await purpose.buildContext({ target: authored.target, session, projectFolder });
+        const spec = bindGenerationReferenceFields({ spec: authored, guide: context.referenceGuide, models: context.models });
+        return updateGenerationSpec({ id: input.specId, spec, purpose: { ...purpose, referenceGuide: context.referenceGuide }, session, now: new Date().toISOString() });
       });
     },
     async readGenerationSpec(input: ProjectInput & { specId: string }) {
@@ -113,7 +117,7 @@ export function createGenerationServiceWiring() {
     async updateGenerationPreviewResource(input: ProjectInput & {
       specId: string;
       prompt: { authoredText: string; negativeText?: string | null };
-      referenceSelections: Array<{ selectionId: string; selected: boolean }>;
+      referenceChanges: GenerationPreviewReferenceChange[];
     }) {
       return withGenerationProject(input, ({ session, projectFolder }) => {
         const record = readGenerationSpec({ id: input.specId, session });

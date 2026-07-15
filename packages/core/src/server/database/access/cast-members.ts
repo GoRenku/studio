@@ -158,12 +158,12 @@ export function updateCastMemberVoiceOverRecord(
   return result.changes > 0;
 }
 
-export function listCastAssetRoleSelectionRecords(
+export function listCastAssetRoleRecords(
   session: DatabaseSession,
   castMemberId: string
-): Array<{ role: string; selection: string }> {
+): Array<{ role: string }> {
   return session.db
-    .select({ role: castAssets.role, selection: castAssets.selection })
+    .select({ role: castAssets.role })
     .from(castAssets)
     .where(eq(castAssets.castMemberId, castMemberId))
     .all();

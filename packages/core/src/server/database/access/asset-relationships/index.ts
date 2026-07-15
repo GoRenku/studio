@@ -27,7 +27,6 @@ import {
   assertAssetTargetExists,
   assertProjectLocaleExists,
   assetRelationshipTableConfig,
-  type AssetRelationshipTable,
   type AssetRelationshipTableConfig,
 } from './targets.js';
 import {
@@ -48,8 +47,6 @@ export interface AssetRelationshipRecord {
   referenceName: string | null;
   purpose: string | null;
   sortOrder: number;
-  selection: string;
-  selectionOrder: number | null;
   type: string;
   mediaKind: string;
   title: string;
@@ -90,7 +87,6 @@ export interface AssetRelationshipPageInput {
   locale?: AssetLocaleContext;
   role?: string;
   mediaKind?: string;
-  selection?: 'take' | 'select';
   limit?: number;
   cursor?: string | null;
 }
@@ -206,29 +202,14 @@ export function listAssetRelationshipPage(
   const conditions = assetRelationshipConditions(config, input);
   const cursor = parseAssetCursor(input.cursor);
   if (cursor) {
-    const selectionRank = assetSelectionRank(table);
-    const selectionOrderRank = sql<number>`coalesce(${table.selectionOrder}, 2147483647)`;
     conditions.push(
       or(
-        gt(selectionRank, cursor.selectionRank),
+        gt(table.sortOrder, cursor.sortOrder),
         and(
-          eq(selectionRank, cursor.selectionRank),
-          gt(selectionOrderRank, cursor.selectionOrderRank)
-        ),
-        and(
-          eq(selectionRank, cursor.selectionRank),
-          eq(selectionOrderRank, cursor.selectionOrderRank),
-          gt(table.sortOrder, cursor.sortOrder)
-        ),
-        and(
-          eq(selectionRank, cursor.selectionRank),
-          eq(selectionOrderRank, cursor.selectionOrderRank),
           eq(table.sortOrder, cursor.sortOrder),
           gt(assets.title, cursor.title)
         ),
         and(
-          eq(selectionRank, cursor.selectionRank),
-          eq(selectionOrderRank, cursor.selectionOrderRank),
           eq(table.sortOrder, cursor.sortOrder),
           eq(assets.title, cursor.title),
           gt(assets.id, cursor.assetId)
@@ -253,33 +234,6 @@ export function listAssetRelationshipPage(
         ? encodeAssetCursor(pageRows[pageRows.length - 1]!)
         : null,
   };
-}
-
-export function updateAssetRelationshipSelection(
-  session: DatabaseSession,
-  input: {
-    target: AssetTarget;
-    assetId: string;
-    selection: 'take' | 'select';
-    selectionOrder: number | null;
-    updatedAt: string;
-  }
-): void {
-  const config = assetRelationshipTableConfig(input.target);
-  const table = config.table;
-  const conditions = [eq(table.assetId, input.assetId)];
-  if (config.targetColumn && config.targetId) {
-    conditions.push(eq(config.targetColumn, config.targetId));
-  }
-  session.db
-    .update(table)
-    .set({
-      selection: input.selection,
-      selectionOrder: input.selectionOrder,
-      updatedAt: input.updatedAt,
-    })
-    .where(and(...conditions))
-    .run();
 }
 
 export function updateAssetRelationshipReferenceMetadata(
@@ -388,35 +342,10 @@ export function nextAssetRelationshipSortOrder(
   return (row?.maxSortOrder ?? 0) + 1;
 }
 
-export function nextAssetSelectionOrder(
-  session: DatabaseSession,
-  input: { target: AssetTarget; role: string; localeId: string | null }
-): number {
-  const config = assetRelationshipTableConfig(input.target);
-  const table = config.table;
-  const conditions = [
-    isNull(table.discardedAt),
-    eq(table.role, input.role),
-    eq(table.selection, 'select'),
-    input.localeId === null
-      ? isNull(table.localeId)
-      : eq(table.localeId, input.localeId),
-  ];
-  if (config.targetColumn && config.targetId) {
-    conditions.push(eq(config.targetColumn, config.targetId));
-  }
-  const row = session.db
-    .select({ maxSelectionOrder: sql<number | null>`max(${table.selectionOrder})` })
-    .from(table)
-    .where(and(...conditions))
-    .get();
-  return (row?.maxSelectionOrder ?? 0) + 1;
-}
-
 export function countAssetRelationshipsByRole(
   session: DatabaseSession,
   target: AssetTarget
-): Array<{ role: string; selectedCount: number; takeCount: number }> {
+): Array<{ role: string; count: number }> {
   const config = assetRelationshipTableConfig(target);
   const table = config.table;
   const conditions: SQL[] = [isNull(table.discardedAt)];
@@ -426,8 +355,7 @@ export function countAssetRelationshipsByRole(
   const rows = session.db
     .select({
       role: table.role,
-      selectedCount: sql<number>`sum(case when ${table.selection} = 'select' then 1 else 0 end)`,
-      takeCount: sql<number>`sum(case when ${table.selection} = 'take' then 1 else 0 end)`,
+      count: sql<number>`count(*)`,
     })
     .from(table)
     .where(conditions.length ? and(...conditions) : undefined)
@@ -436,8 +364,7 @@ export function countAssetRelationshipsByRole(
     .all();
   return rows.map((row) => ({
     role: row.role,
-    selectedCount: row.selectedCount,
-    takeCount: row.takeCount,
+    count: row.count,
   }));
 }
 
@@ -460,8 +387,6 @@ function selectAssetRelationshipRows(
   input: { conditions: SQL[]; limit: number }
 ): AssetRelationshipRecord[] {
   const table = config.table;
-  const selectionRank = assetSelectionRank(table);
-  const selectionOrderRank = sql<number>`coalesce(${table.selectionOrder}, 2147483647)`;
   return session.db
     .select({
       relationshipId: table.id,
@@ -472,8 +397,6 @@ function selectAssetRelationshipRows(
       referenceName: table.referenceName,
       purpose: table.purpose,
       sortOrder: table.sortOrder,
-      selection: table.selection,
-      selectionOrder: table.selectionOrder,
       type: assets.type,
       mediaKind: assets.mediaKind,
       title: assets.title,
@@ -486,11 +409,14 @@ function selectAssetRelationshipRows(
     .from(table)
     .innerJoin(assets, eq(assets.id, table.assetId))
     .where(
-      and(...input.conditions, isNull(table.discardedAt), isNull(assets.discardedAt))
+      and(
+        ...input.conditions,
+        eq(assets.availability, 'ready'),
+        isNull(table.discardedAt),
+        isNull(assets.discardedAt)
+      )
     )
     .orderBy(
-      asc(selectionRank),
-      asc(selectionOrderRank),
       asc(table.sortOrder),
       asc(assets.title),
       asc(assets.id)
@@ -513,9 +439,6 @@ function assetRelationshipConditions(
   }
   if (input.mediaKind) {
     conditions.push(eq(assets.mediaKind, input.mediaKind));
-  }
-  if (input.selection) {
-    conditions.push(eq(table.selection, input.selection));
   }
   const localeId = input.locale?.localeId;
   if (localeId === null) {
@@ -576,10 +499,6 @@ function toAsset(
     target,
     localeId: row.localeId,
     type: row.type,
-    selection:
-      row.selection === 'select'
-        ? { kind: 'select', order: row.selectionOrder ?? 1 }
-        : { kind: 'take' },
     availability: 'ready',
     mediaKind: row.mediaKind,
     title: row.title,
@@ -610,13 +529,7 @@ function toAssetFile(row: AssetFileRecord): AssetFile {
   };
 }
 
-function assetSelectionRank(table: AssetRelationshipTable): SQL<number> {
-  return sql<number>`case when ${table.selection} = 'select' then 0 else 1 end`;
-}
-
 interface AssetCursor {
-  selectionRank: number;
-  selectionOrderRank: number;
   sortOrder: number;
   title: string;
   assetId: string;
@@ -628,8 +541,6 @@ function parseAssetCursor(cursor: string | null | undefined): AssetCursor | null
     return null;
   }
   if (
-    typeof value.selectionRank !== 'number' ||
-    typeof value.selectionOrderRank !== 'number' ||
     typeof value.sortOrder !== 'number' ||
     typeof value.title !== 'string' ||
     typeof value.assetId !== 'string'
@@ -641,8 +552,6 @@ function parseAssetCursor(cursor: string | null | undefined): AssetCursor | null
 
 function encodeAssetCursor(row: AssetRelationshipRecord): string {
   return encodeProjectPageCursor({
-    selectionRank: row.selection === 'select' ? 0 : 1,
-    selectionOrderRank: row.selectionOrder ?? 2147483647,
     sortOrder: row.sortOrder,
     title: row.title,
     assetId: row.assetId,

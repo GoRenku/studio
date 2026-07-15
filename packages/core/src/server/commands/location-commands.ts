@@ -36,7 +36,7 @@ import {
 import { assertLocationOperationDocument } from '../department-design-json/validator.js';
 import { listCastMemberRecords } from '../database/access/cast-members.js';
 import {
-  listLocationAssetRoleSelectionRecords,
+  listLocationAssetRoleRecords,
   listLocationRecords,
   readLocationDeleteDependencySummary,
   type LocationDeleteDependencySummary,
@@ -72,7 +72,7 @@ export async function readLocationContext(
     const screenplay = readScreenplayDocumentFromSession(session);
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveLocationDesignDocument(session, input.locationId);
-    const selectedAssets = listLocationAssetRoleSelectionRecords(session, input.locationId);
+    const assets = listLocationAssetRoleRecords(session, input.locationId);
     return {
       valid: true,
       warnings: [],
@@ -96,8 +96,8 @@ export async function readLocationContext(
         : null,
       scenes: screenplay ? locationScenes(screenplay, input.locationId) : [],
       activeLookbook: null,
-      selectedAssets: [],
-      assetRoleCounts: roleCounts(selectedAssets),
+      assets: [],
+      assetRoleCounts: roleCounts(assets),
       generationReadiness: {
         environmentSheet: true,
         notes: ['Use media-producer for location.sheet generation.'],
@@ -393,20 +393,15 @@ function locationScenes(
 }
 
 function roleCounts(
-  records: Array<{ role: string; selection: string }>
-): Array<{ role: string; selectedCount: number; takeCount: number }> {
-  const counts = new Map<string, { role: string; selectedCount: number; takeCount: number }>();
+  records: Array<{ role: string }>
+): Array<{ role: string; count: number }> {
+  const counts = new Map<string, { role: string; count: number }>();
   records.forEach((record) => {
     const count = counts.get(record.role) ?? {
       role: record.role,
-      selectedCount: 0,
-      takeCount: 0,
+      count: 0,
     };
-    if (record.selection === 'select') {
-      count.selectedCount += 1;
-    } else {
-      count.takeCount += 1;
-    }
+    count.count += 1;
     counts.set(record.role, count);
   });
   return [...counts.values()];

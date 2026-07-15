@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import {
   buildGenerationPreviewUpdateRequest,
+  changeGenerationPreviewReference,
   createGenerationPreviewDraft,
   generationPreviewDraftIsDirty,
   generationPreviewReferenceSelected,
@@ -14,7 +15,11 @@ describe('generation preview draft', () => {
 
     expect(draft.promptDraft.authoredText).toBe('Original prompt.');
     expect(
-      generationPreviewReferenceSelected(preview.references[0]!, draft)
+      generationPreviewReferenceSelected(
+        preview.references.slots[0]!,
+        preview.references.slots[0]!.candidates[0]!,
+        draft
+      )
     ).toBe(true);
     expect(generationPreviewDraftIsDirty(preview, draft)).toBe(false);
   });
@@ -23,26 +28,50 @@ describe('generation preview draft', () => {
     const preview = previewFixture();
     const draft = createGenerationPreviewDraft(preview);
     draft.promptDraft.authoredText = 'Updated prompt.\nSecond line.';
-    draft.referenceSelectionDraftBySelectionId.selection_style = false;
+    const changed = changeGenerationPreviewReference(
+      draft,
+      preview.references.slots[0]!,
+      null
+    );
 
-    expect(generationPreviewDraftIsDirty(preview, draft)).toBe(true);
-    expect(buildGenerationPreviewUpdateRequest(preview, draft)).toEqual({
+    expect(generationPreviewDraftIsDirty(preview, changed)).toBe(true);
+    expect(buildGenerationPreviewUpdateRequest(preview, changed)).toEqual({
       prompt: { authoredText: 'Updated prompt.\nSecond line.' },
-      referenceSelections: [
-        { selectionId: 'selection_style', selected: false },
+      referenceChanges: [
+        {
+          kind: 'clear',
+          placement: {
+            kind: 'slot',
+            sectionId: 'continuity',
+            slotId: 'style',
+          },
+        },
       ],
     });
   });
 
-  it('keeps required references selected', () => {
+  it('replaces a slot with one exact candidate', () => {
     const preview = previewFixture();
-    preview.references[0]!.selectionControl!.required = true;
-    preview.references[0]!.selected = true;
     const draft = createGenerationPreviewDraft(preview);
-    draft.referenceSelectionDraftBySelectionId.selection_style = false;
+    const replacement = {
+      ...preview.references.slots[0]!.candidates[0]!,
+      assetId: 'asset_replacement',
+      assetFileId: 'asset_file_replacement',
+      selected: false,
+    };
+    preview.references.slots[0]!.candidates.push(replacement);
+    const changed = changeGenerationPreviewReference(
+      draft,
+      preview.references.slots[0]!,
+      replacement
+    );
 
     expect(
-      generationPreviewReferenceSelected(preview.references[0]!, draft)
+      generationPreviewReferenceSelected(
+        preview.references.slots[0]!,
+        replacement,
+        changed
+      )
     ).toBe(true);
   });
 
@@ -78,23 +107,26 @@ function previewFixture(): GenerationPreviewResource {
       authoredText: 'Original prompt.',
       providerText: 'Provider prompt.',
     },
-    references: [
-      {
-        kind: 'image',
-        role: 'style',
-        label: 'Style sheet',
-        assetId: 'asset_style',
-        assetFileId: 'asset_file_style',
-        browserUrl: '/style.png',
-        selected: true,
-        selectionControl: {
-          selectionId: 'selection_style',
-          required: false,
-          defaultIncluded: true,
-          editable: true,
+    references: {
+      slots: [{
+        label: 'Style reference',
+        placement: {
+          kind: 'slot',
+          sectionId: 'continuity',
+          slotId: 'style',
         },
-      },
-    ],
+        candidates: [{
+          kind: 'image',
+          role: 'style',
+          label: 'Style sheet',
+          assetId: 'asset_style',
+          assetFileId: 'asset_file_style',
+          browserUrl: '/style.png',
+          selected: true,
+        }],
+      }],
+      additional: [],
+    },
     configuration: { sections: [] },
     diagnostics: [],
   };

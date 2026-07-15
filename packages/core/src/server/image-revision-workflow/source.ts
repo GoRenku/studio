@@ -26,7 +26,7 @@ export interface ResolvedImageRevisionSource {
     | 'first-frame'
     | 'last-frame'
     | 'reference-image'
-    | 'video-prompt-sheet';
+    | 'video-prompt';
 }
 
 export function resolveImageRevisionSource(
@@ -90,7 +90,7 @@ function readOwnerRole(
 function readShotReferenceRole(
   session: DatabaseSession,
   target: Extract<ImageRevisionTarget, { kind: 'shotVideoTakeReference' }>
-): 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt-sheet' {
+): 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt' {
   const spec = listGenerationSpecRecords(session, {
     purpose: 'shot.video-take',
     target: { kind: 'sceneShotVideoTake', id: target.takeId },
@@ -100,7 +100,7 @@ function readShotReferenceRole(
     return 'reference-image';
   }
   const slotId = selection.placement.slotId;
-  return slotId === 'first-frame' || slotId === 'last-frame' || slotId === 'video-prompt-sheet'
+  return slotId === 'first-frame' || slotId === 'last-frame' || slotId === 'video-prompt'
     ? slotId
     : 'reference-image';
 }

@@ -11,7 +11,6 @@ export function makeAsset(assetId: string): Asset {
     target: { kind: 'castMember', castMemberId: 'cast_narrator' },
     localeId: null,
     type: 'reference',
-    selection: { kind: 'take' },
     availability: 'ready',
     mediaKind: 'image',
     title: 'Narrator reference',

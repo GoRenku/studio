@@ -1,4 +1,5 @@
 import type { GenerationSpec } from '../../client/generation.js';
+import type { GenerationPreviewReferenceChange } from '../../client/generation-preview-resource.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { buildGenerationPreview } from '../generation/previews.js';
@@ -7,11 +8,13 @@ import { readGenerationSpec, updateGenerationSpec } from '../generation/specs.js
 import { validateGenerationSpecForExecution } from '../generation/validation.js';
 import { addRequestGuideNotices } from '../generation/purpose-guide.js';
 import { projectGenerationPreviewResource } from './projection.js';
+import { applyGenerationSpecReferenceChanges } from '../generation/spec-reference-edits.js';
+import { bindGenerationReferenceFields } from '../generation/reference-field-binding.js';
 
 export async function updateGenerationPreviewResource(input: {
   specId: string;
   prompt: { authoredText: string; negativeText?: string | null };
-  referenceSelections: Array<{ selectionId: string; selected: boolean }>;
+  referenceChanges: GenerationPreviewReferenceChange[];
   purpose: GenerationPurposeDescriptor;
   session: DatabaseSession;
   projectFolder: string;
@@ -50,7 +53,7 @@ export async function updateGenerationPreviewResource(input: {
       'The selected generation model does not expose a negative prompt field.'
     );
   }
-  const spec: GenerationSpec = structuredClone(record.spec);
+  let spec: GenerationSpec = structuredClone(record.spec);
   spec.values[promptField.name] = input.prompt.authoredText;
   if (negativeField && input.prompt.negativeText !== undefined) {
     if (input.prompt.negativeText === null) {
@@ -59,25 +62,16 @@ export async function updateGenerationPreviewResource(input: {
       spec.values[negativeField.name] = input.prompt.negativeText;
     }
   }
-  const selections = new Map(
-    input.referenceSelections.map((selection) => [
-      selection.selectionId,
-      selection.selected,
-    ])
-  );
-  for (const selectionId of selections.keys()) {
-    if (!spec.references.some((reference) => reference.id === selectionId)) {
-      throw new ProjectDataError(
-        'CORE_GENERATION_SELECTION_INVALID',
-        `Generation reference selection was not found: ${selectionId}.`
-      );
-    }
-  }
-  spec.references = spec.references.map((reference) => ({
-    ...reference,
-    included: selections.get(reference.id) ?? reference.included,
-  }));
   const guide = context.referenceGuide;
+  spec = applyGenerationSpecReferenceChanges({
+    spec,
+    changes: input.referenceChanges,
+  });
+  spec = bindGenerationReferenceFields({
+    spec,
+    guide,
+    models: context.models,
+  });
   const updated = updateGenerationSpec({
     id: input.specId,
     spec,

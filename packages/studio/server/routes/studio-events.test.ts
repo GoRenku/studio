@@ -150,12 +150,14 @@ describe('studio events Hono route', () => {
         takeLabel: 'Take 1',
         shotLabel: 'Shot 1',
       },
-      references: [
-        {
-          browserUrl:
-            '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
-        },
-      ],
+      references: {
+        slots: [{
+          candidates: [{
+            browserUrl:
+              '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
+          }],
+        }],
+      },
     });
   });
 
@@ -603,7 +605,6 @@ function generationPreviewFixture(): GenerationPreview {
     },
     referenceGuide: {
       sections: [],
-      additionalReferences: [],
       notices: [],
     },
     references: [],
@@ -639,14 +640,25 @@ function coreGenerationPreviewResourceFixture() {
       authoredText: 'Create a motion annotated video prompt image.',
       providerText: 'Create a motion annotated video prompt image.',
     },
-    references: [{
-      kind: 'image' as const,
-      role: 'style',
-      label: 'Storyboard Lookbook Sheet',
-      assetId: 'asset_style',
-      assetFileId: 'asset_file_style',
-      selected: true,
-    }],
+    references: {
+      slots: [{
+        label: 'Visual language',
+        placement: {
+          kind: 'slot' as const,
+          sectionId: 'visual-language',
+          slotId: 'lookbook',
+        },
+        candidates: [{
+          kind: 'image' as const,
+          role: 'style',
+          label: 'Storyboard Lookbook Sheet',
+          assetId: 'asset_style',
+          assetFileId: 'asset_file_style',
+          selected: true,
+        }],
+      }],
+      additional: [],
+    },
     configuration: { sections: [] },
     diagnostics: [],
   };
@@ -656,10 +668,16 @@ function studioGenerationPreviewFixture(): GenerationPreviewResource {
   const preview = coreGenerationPreviewResourceFixture();
   return {
     ...preview,
-    references: preview.references.map((reference) => ({
-      ...reference,
-      browserUrl:
-        '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
-    })),
+    references: {
+      slots: preview.references.slots.map((slot) => ({
+        ...slot,
+        candidates: slot.candidates.map((reference) => ({
+          ...reference,
+          browserUrl:
+            '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
+        })),
+      })),
+      additional: [],
+    },
   };
 }

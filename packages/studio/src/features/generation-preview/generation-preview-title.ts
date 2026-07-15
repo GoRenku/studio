@@ -11,6 +11,9 @@ const GENERATION_PREVIEW_TITLES = {
   'location.hero': 'Location Hero Generation Preview',
   'scene.storyboard-sheet': 'Scene Storyboard Sheet Generation Preview',
   'image.create': 'Image Create Generation Preview',
+  'shot.first-frame': 'First Frame Generation Preview',
+  'shot.last-frame': 'Last Frame Generation Preview',
+  'shot.video-prompt': 'Video Prompt Image Generation Preview',
   'shot.video-take': 'Shot Video Generation Preview',
 } satisfies Record<GenerationPreviewPurpose, string>;
 

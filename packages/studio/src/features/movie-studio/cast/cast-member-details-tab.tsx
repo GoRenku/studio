@@ -18,10 +18,8 @@ import {
 import { Switch } from '@/ui/switch';
 import { cn } from '@/lib/utils';
 import {
-  CAST_PROFILE_ROLE,
   castImageAssetAspectRatio,
   castPreviewImageForAsset,
-  preferredCastImageAssetForRole,
 } from './cast-member-assets';
 
 interface CastMemberDetailsTabProps {
@@ -41,7 +39,9 @@ export function CastMemberDetailsTab({
 }: CastMemberDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const castMember = resource.castMember;
-  const profileAsset = preferredCastImageAssetForRole(assets, CAST_PROFILE_ROLE);
+  const profileAsset = assets.find(
+    (asset) => asset.assetId === resource.firstImage?.assetId
+  ) ?? null;
   const firstVoice = resource.voices[0] ?? null;
   const firstVoiceFile = firstVoice?.sample.files[0] ?? null;
   const audioRef = useRef<HTMLAudioElement | null>(null);

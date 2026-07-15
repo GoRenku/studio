@@ -6,6 +6,7 @@ import type {
 } from '../../client/shot-video-take-workspace.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { sceneShotVideoTakes } from '../schema/index.js';
+import { requireShotVideoTakeAuthoringMutable } from '../database/access/shot-video-take-media.js';
 import { resourceKeys } from './lifecycle-commands.js';
 import { readShotVideoTakeDomain, requireShotVideoTakeForScene } from './queries.js';
 import {
@@ -25,6 +26,7 @@ export async function setShotVideoTakeStructure(input: {
   now: string;
 }): Promise<ShotVideoTakeWorkspaceMutationReport> {
   requireShotVideoTakeForScene(input);
+  requireShotVideoTakeAuthoringMutable(input);
   const take = readShotVideoTakeDomain(input);
   const state = setShotVideoTakeStructureState({
     state: take.state,
@@ -47,6 +49,7 @@ export async function setShotVideoTakeDirection(input: {
   now: string;
 }): Promise<ShotVideoTakeWorkspaceMutationReport> {
   requireShotVideoTakeForScene(input);
+  requireShotVideoTakeAuthoringMutable(input);
   const take = readShotVideoTakeDomain(input);
   const state = setShotVideoTakeDirectionState({
     state: take.state,

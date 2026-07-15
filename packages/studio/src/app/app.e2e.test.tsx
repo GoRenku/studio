@@ -472,7 +472,6 @@ describe('App', () => {
           castMemberId: 'cast_narrator',
           role: 'profile',
           title: 'Narrator profile',
-          selection: { kind: 'select', order: 1 },
         });
         return jsonResponse({
           assets: [asset],
@@ -495,7 +494,6 @@ describe('App', () => {
           castMemberId: 'cast_mehmed',
           role: 'profile',
           title: 'Mehmed profile',
-          selection: { kind: 'select', order: 1 },
         });
         return jsonResponse({
           assets: [asset],
@@ -1388,7 +1386,6 @@ function mockStudioFetch(input: {
         castMemberId: 'cast_narrator',
         role: 'profile',
         title: 'Narrator profile',
-        selection: { kind: 'select', order: 1 },
       });
       return jsonResponse({
         assets: [asset],
@@ -1873,7 +1870,6 @@ function makeStudioAsset(options: {
   castMemberId: string;
   role: string;
   title: string;
-  selection?: StudioAssetResponse['selection'];
 }): StudioAssetResponse {
   return {
     assetId: options.assetId,
@@ -1881,7 +1877,6 @@ function makeStudioAsset(options: {
     target: { kind: 'castMember', castMemberId: options.castMemberId },
     localeId: null,
     type: options.role === 'profile' ? 'cast_profile' : 'character_sheet',
-    selection: options.selection ?? { kind: 'take' },
     availability: 'ready',
     mediaKind: 'image',
     title: options.title,

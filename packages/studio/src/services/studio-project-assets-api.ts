@@ -132,13 +132,13 @@ export async function readSceneDesignResource(
   return body.resource;
 }
 
-export async function selectCastAsset(
+export async function setCastProfileDisplayAsset(
   projectName: string,
   castMemberId: string,
   assetId: string
 ): Promise<StudioAssetResponse> {
   const response = await fetch(
-    castAssetSelectUrl(projectName, castMemberId, assetId),
+    castProfileDisplayUrl(projectName, castMemberId, assetId),
     {
       method: 'POST',
       headers: {
@@ -159,13 +159,12 @@ export async function selectCastAsset(
   return body.asset;
 }
 
-export async function unselectCastAsset(
+export async function clearCastProfileDisplayAsset(
   projectName: string,
-  castMemberId: string,
-  assetId: string
-): Promise<StudioAssetResponse> {
+  castMemberId: string
+): Promise<void> {
   const response = await fetch(
-    castAssetSelectUrl(projectName, castMemberId, assetId),
+    castProfileDisplayUrl(projectName, castMemberId),
     {
       method: 'DELETE',
       headers: {
@@ -177,11 +176,7 @@ export async function unselectCastAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as StudioAssetApiResponse;
-  if (!body.asset) {
-    throw new Error('Renku Studio API returned no cast asset.');
-  }
-  return body.asset;
+  await response.json();
 }
 
 export async function deleteCastAsset(
@@ -222,13 +217,13 @@ export async function deleteCastVoice(
   return body.removed;
 }
 
-export async function selectLocationAsset(
+export async function setLocationHeroDisplayAsset(
   projectName: string,
   locationId: string,
   assetId: string
 ): Promise<StudioAssetResponse> {
   const response = await fetch(
-    locationAssetSelectUrl(projectName, locationId, assetId),
+    locationHeroDisplayUrl(projectName, locationId, assetId),
     {
       method: 'POST',
       headers: {
@@ -249,13 +244,12 @@ export async function selectLocationAsset(
   return body.asset;
 }
 
-export async function unselectLocationAsset(
+export async function clearLocationHeroDisplayAsset(
   projectName: string,
-  locationId: string,
-  assetId: string
-): Promise<StudioAssetResponse> {
+  locationId: string
+): Promise<void> {
   const response = await fetch(
-    locationAssetSelectUrl(projectName, locationId, assetId),
+    locationHeroDisplayUrl(projectName, locationId),
     {
       method: 'DELETE',
       headers: {
@@ -267,11 +261,7 @@ export async function unselectLocationAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as StudioAssetApiResponse;
-  if (!body.asset) {
-    throw new Error('Renku Studio API returned no location asset.');
-  }
-  return body.asset;
+  await response.json();
 }
 
 export async function deleteLocationAsset(
@@ -359,20 +349,22 @@ function locationAssetUrl(
   return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}`;
 }
 
-function castAssetSelectUrl(
+function castProfileDisplayUrl(
   projectName: string,
   castMemberId: string,
-  assetId: string
+  assetId?: string
 ): string {
-  return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}/select`;
+  const root = castAssetsUrl(projectName, castMemberId).replace(/\/assets$/, '/display-profile');
+  return assetId ? `${root}/${encodeURIComponent(assetId)}` : root;
 }
 
-function locationAssetSelectUrl(
+function locationHeroDisplayUrl(
   projectName: string,
   locationId: string,
-  assetId: string
+  assetId?: string
 ): string {
-  return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}/select`;
+  const root = locationAssetsUrl(projectName, locationId).replace(/\/assets$/, '/display-hero');
+  return assetId ? `${root}/${encodeURIComponent(assetId)}` : root;
 }
 
 function readStudioApiToken(): string {

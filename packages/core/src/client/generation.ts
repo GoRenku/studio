@@ -17,6 +17,9 @@ export type GenerationPurpose =
   | 'location.sheet'
   | 'location.hero'
   | 'scene.storyboard-sheet'
+  | 'shot.first-frame'
+  | 'shot.last-frame'
+  | 'shot.video-prompt'
   | 'shot.video-take';
 export type GenerationOutputMediaKind = 'image' | 'audio' | 'video';
 
@@ -66,7 +69,6 @@ export type GenerationReference =
 
 export interface GenerationReferenceGuide {
   sections: GenerationReferenceGuideSection[];
-  additionalReferences: GenerationReferenceSelection[];
   notices: GenerationGuideNotice[];
 }
 
@@ -80,11 +82,14 @@ export interface GenerationReferenceGuideSection {
 export interface GenerationReferenceGuideSlot {
   id: string;
   label: string;
-  cardinality: 'one' | 'many';
+  cardinality: 'one';
   subject?: { kind: string; id: string };
   guidance?: string;
+  providerRole: Extract<
+    NonNullable<GenerationModelFieldDescriptor['semantic']>,
+    { kind: 'media' }
+  >['role'];
   candidates: GenerationReferenceCatalogItem[];
-  selections: GenerationReferenceSelection[];
 }
 
 export interface GenerationGuideNotice {

@@ -1,33 +1,39 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import {
   assetFiles,
   assets,
-  projectAssets,
+  mediaGenerationSpecs,
   projectLocales,
   projects,
-  sceneAssets,
+  sceneDialogueAudio,
+  sceneDialogueAudioTakes,
   scenes,
-  sequenceAssets,
+  sceneShotVideoTakes,
+  sceneShotVideoTakeVideos,
   sequences,
 } from '../../schema/index.js';
+import type { GenerationSpec } from '../../../client/generation.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
-export interface SelectedProductionAssetRow {
+export interface ProductionExportMediaRow {
   assetId: string;
   relationshipId: string;
   assetFileId: string;
-  targetKind: 'project' | 'castMember' | 'sequence' | 'scene';
-  targetId: string | null;
-  localeId: string | null;
-  localeTag: string | null;
-  role: string;
-  selectionOrder: number;
+  localeId: null;
+  role: 'shot-video' | 'dialogue-audio';
   title: string;
   sourceProjectRelativePath: string;
-  mediaKind: string;
+  mediaKind: 'video' | 'audio';
   sourceSizeBytes: number | null;
   sourceContentHash: string | null;
+  sequencePosition: number;
+  sequenceTitle: string;
+  scenePosition: number;
+  sceneTitle: string;
+  takeId: string;
+  takeTitle: string;
+  dialogueId: string | null;
 }
 
 export function readProductionProjectInfo(session: DatabaseSession): { id: string } {
@@ -42,11 +48,8 @@ export function assertProductionExportLocaleExists(
   session: DatabaseSession,
   localeId: string
 ): void {
-  const row = session.db
-    .select({ id: projectLocales.id })
-    .from(projectLocales)
-    .where(eq(projectLocales.id, localeId))
-    .get();
+  const row = session.db.select({ id: projectLocales.id }).from(projectLocales)
+    .where(eq(projectLocales.id, localeId)).get();
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA103',
@@ -59,11 +62,8 @@ export function readProductionLocaleTag(
   session: DatabaseSession,
   localeId: string
 ): string {
-  const row = session.db
-    .select({ localeTag: projectLocales.localeTag })
-    .from(projectLocales)
-    .where(eq(projectLocales.id, localeId))
-    .get();
+  const row = session.db.select({ localeTag: projectLocales.localeTag })
+    .from(projectLocales).where(eq(projectLocales.id, localeId)).get();
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_DATA103',
@@ -73,14 +73,137 @@ export function readProductionLocaleTag(
   return row.localeTag;
 }
 
-export function readSelectedProductionAssetRows(
+export function readProductionExportMediaRows(
   session: DatabaseSession
-): SelectedProductionAssetRow[] {
-  return [
-    ...readProjectSelectedAssetRows(session),
-    ...readSequenceSelectedAssetRows(session),
-    ...readSceneSelectedAssetRows(session),
-  ].sort(compareSelectedAssetRows);
+): ProductionExportMediaRow[] {
+  const videoRows = session.db.select({
+    assetId: assets.id,
+    assetFileId: assetFiles.id,
+    sourceProjectRelativePath: assetFiles.projectRelativePath,
+    sourceSizeBytes: assetFiles.sizeBytes,
+    sourceContentHash: assetFiles.contentHash,
+    title: assets.title,
+    sequencePosition: sequences.position,
+    sequenceTitle: sequences.title,
+    scenePosition: scenes.position,
+    sceneTitle: scenes.title,
+    takeId: sceneShotVideoTakes.id,
+    takeTitle: sceneShotVideoTakes.title,
+  }).from(sceneShotVideoTakes)
+    .innerJoin(scenes, eq(scenes.id, sceneShotVideoTakes.sceneId))
+    .innerJoin(sequences, eq(sequences.id, scenes.sequenceId))
+    .innerJoin(sceneShotVideoTakeVideos, eq(sceneShotVideoTakeVideos.takeId, sceneShotVideoTakes.id))
+    .innerJoin(assets, eq(assets.id, sceneShotVideoTakeVideos.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, sceneShotVideoTakeVideos.assetFileId))
+    .where(and(
+      eq(sceneShotVideoTakes.isPicked, true),
+      isNull(sceneShotVideoTakes.discardedAt),
+      isNull(sceneShotVideoTakeVideos.discardedAt),
+      isNull(assets.discardedAt),
+      isNull(assetFiles.discardedAt)
+    ))
+    .orderBy(asc(sequences.position), asc(scenes.position), asc(sceneShotVideoTakes.createdAt))
+    .all();
+  const rows: ProductionExportMediaRow[] = [];
+  for (const video of videoRows) {
+    rows.push({
+      ...video,
+      relationshipId: `shot-video:${video.takeId}`,
+      localeId: null,
+      role: 'shot-video',
+      mediaKind: 'video',
+      dialogueId: null,
+    });
+    rows.push(...readDialogueRows(session, video));
+  }
+  return rows;
+}
+
+function readDialogueRows(
+  session: DatabaseSession,
+  video: Omit<ProductionExportMediaRow, 'relationshipId' | 'localeId' | 'role' | 'mediaKind' | 'dialogueId'>
+): ProductionExportMediaRow[] {
+  const records = session.db.select({ referencesJson: mediaGenerationSpecs.referencesJson })
+    .from(mediaGenerationSpecs)
+    .where(and(
+      eq(mediaGenerationSpecs.purpose, 'shot.video-take'),
+      eq(mediaGenerationSpecs.targetKind, 'sceneShotVideoTake'),
+      eq(mediaGenerationSpecs.targetId, video.takeId)
+    )).all();
+  if (records.length === 0) {
+    return [];
+  }
+  if (records.length > 1) {
+    throw new ProjectDataError(
+      'CORE_PRODUCTION_EXPORT_TAKE_SPEC_AMBIGUOUS',
+      `Picked Shot Video Take has more than one current shot.video-take spec: ${video.takeId}.`
+    );
+  }
+  const record = records[0]!;
+  const references = JSON.parse(record.referencesJson) as GenerationSpec['references'];
+  return references.flatMap((reference) => {
+    if (!reference.included || reference.placement.kind !== 'slot' ||
+      reference.placement.slotId !== 'dialogue-audio' ||
+      reference.reference.kind !== 'asset-file') {
+      return [];
+    }
+    const dialogueId = reference.placement.subject?.kind === 'sceneDialogue'
+      ? reference.placement.subject.id
+      : null;
+    if (!dialogueId) {
+      throw invalidDialogueReference(video.takeId);
+    }
+    const row = session.db.select({
+      takeId: sceneDialogueAudioTakes.id,
+      dialogueId: sceneDialogueAudio.dialogueId,
+      assetId: sceneDialogueAudioTakes.assetId,
+      assetFileId: sceneDialogueAudioTakes.assetFileId,
+      title: assets.title,
+      sourceProjectRelativePath: assetFiles.projectRelativePath,
+      sourceSizeBytes: assetFiles.sizeBytes,
+      sourceContentHash: assetFiles.contentHash,
+    }).from(sceneDialogueAudioTakes)
+      .innerJoin(sceneDialogueAudio, eq(sceneDialogueAudio.id, sceneDialogueAudioTakes.sceneDialogueAudioId))
+      .innerJoin(assets, eq(assets.id, sceneDialogueAudioTakes.assetId))
+      .innerJoin(assetFiles, eq(assetFiles.id, sceneDialogueAudioTakes.assetFileId))
+      .where(and(
+        eq(sceneDialogueAudioTakes.assetId, reference.reference.assetId),
+        eq(sceneDialogueAudioTakes.assetFileId, reference.reference.assetFileId),
+        eq(sceneDialogueAudio.dialogueId, dialogueId),
+        isNull(sceneDialogueAudioTakes.discardedAt),
+        isNull(assets.discardedAt),
+        isNull(assetFiles.discardedAt)
+      )).get();
+    if (!row) {
+      throw invalidDialogueReference(video.takeId);
+    }
+    return [{
+      assetId: row.assetId,
+      relationshipId: `dialogue-audio:${row.takeId}`,
+      assetFileId: row.assetFileId,
+      localeId: null,
+      role: 'dialogue-audio' as const,
+      title: row.title,
+      sourceProjectRelativePath: row.sourceProjectRelativePath,
+      mediaKind: 'audio' as const,
+      sourceSizeBytes: row.sourceSizeBytes,
+      sourceContentHash: row.sourceContentHash,
+      sequencePosition: video.sequencePosition,
+      sequenceTitle: video.sequenceTitle,
+      scenePosition: video.scenePosition,
+      sceneTitle: video.sceneTitle,
+      takeId: video.takeId,
+      takeTitle: video.takeTitle,
+      dialogueId,
+    }];
+  });
+}
+
+function invalidDialogueReference(takeId: string): ProjectDataError {
+  return new ProjectDataError(
+    'CORE_PRODUCTION_EXPORT_DIALOGUE_REFERENCE_INVALID',
+    `Picked Shot Video Take has an invalid Dialogue Audio reference: ${takeId}.`
+  );
 }
 
 export function refreshProductionAssetFileMetadata(input: {
@@ -89,192 +212,9 @@ export function refreshProductionAssetFileMetadata(input: {
   contentHash: string;
   sizeBytes: number;
 }): void {
-  input.session.db
-    .update(assetFiles)
-    .set({
-      contentHash: input.contentHash,
-      sizeBytes: input.sizeBytes,
-      updatedAt: new Date().toISOString(),
-    })
-    .where(eq(assetFiles.id, input.assetFileId))
-    .run();
-}
-
-export function readSequenceProductionHierarchy(
-  session: DatabaseSession,
-  sequenceId: string
-): {
-  sequencePosition: number;
-  sequenceTitle: string;
-} {
-  const row = session.db
-    .select({
-      sequencePosition: sequences.position,
-      sequenceTitle: sequences.title,
-    })
-    .from(sequences)
-    .where(eq(sequences.id, sequenceId))
-    .get();
-  if (!row) {
-    throw new ProjectDataError(
-      'PROJECT_DATA108',
-      `Sequence target was not found for production export: ${sequenceId}.`
-    );
-  }
-  return row;
-}
-
-export function readSceneProductionHierarchy(
-  session: DatabaseSession,
-  sceneId: string
-): {
-  sequencePosition: number;
-  sequenceTitle: string;
-  scenePosition: number;
-  sceneTitle: string;
-} {
-  const row = session.db
-    .select({
-      sequencePosition: sequences.position,
-      sequenceTitle: sequences.title,
-      scenePosition: scenes.position,
-      sceneTitle: scenes.title,
-    })
-    .from(scenes)
-    .innerJoin(sequences, eq(sequences.id, scenes.sequenceId))
-    .where(eq(scenes.id, sceneId))
-    .get();
-  if (!row) {
-    throw new ProjectDataError(
-      'PROJECT_DATA109',
-      `Scene target was not found for production export: ${sceneId}.`
-    );
-  }
-  return row;
-}
-
-function readProjectSelectedAssetRows(
-  session: DatabaseSession
-): SelectedProductionAssetRow[] {
-  return session.db
-    .select({
-      assetId: assets.id,
-      relationshipId: projectAssets.id,
-      assetFileId: assetFiles.id,
-      localeId: projectAssets.localeId,
-      localeTag: projectLocales.localeTag,
-      role: projectAssets.role,
-      selectionOrder: projectAssets.selectionOrder,
-      title: assets.title,
-      sourceProjectRelativePath: assetFiles.projectRelativePath,
-      mediaKind: assetFiles.mediaKind,
-      sourceSizeBytes: assetFiles.sizeBytes,
-      sourceContentHash: assetFiles.contentHash,
-    })
-    .from(projectAssets)
-    .innerJoin(assets, eq(assets.id, projectAssets.assetId))
-    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
-    .leftJoin(projectLocales, eq(projectLocales.id, projectAssets.localeId))
-    .where(and(eq(projectAssets.selection, 'select'), eq(assets.availability, 'ready')))
-    .orderBy(
-      asc(projectAssets.role),
-      asc(projectAssets.selectionOrder),
-      asc(projectAssets.assetId)
-    )
-    .all()
-    .map((row) => ({
-      ...row,
-      targetKind: 'project' as const,
-      targetId: null,
-      selectionOrder: row.selectionOrder ?? 1,
-    }));
-}
-
-function readSequenceSelectedAssetRows(
-  session: DatabaseSession
-): SelectedProductionAssetRow[] {
-  return session.db
-    .select({
-      assetId: assets.id,
-      relationshipId: sequenceAssets.id,
-      assetFileId: assetFiles.id,
-      targetId: sequenceAssets.sequenceId,
-      localeId: sequenceAssets.localeId,
-      localeTag: projectLocales.localeTag,
-      role: sequenceAssets.role,
-      selectionOrder: sequenceAssets.selectionOrder,
-      title: assets.title,
-      sourceProjectRelativePath: assetFiles.projectRelativePath,
-      mediaKind: assetFiles.mediaKind,
-      sourceSizeBytes: assetFiles.sizeBytes,
-      sourceContentHash: assetFiles.contentHash,
-    })
-    .from(sequenceAssets)
-    .innerJoin(assets, eq(assets.id, sequenceAssets.assetId))
-    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
-    .leftJoin(projectLocales, eq(projectLocales.id, sequenceAssets.localeId))
-    .where(and(eq(sequenceAssets.selection, 'select'), eq(assets.availability, 'ready')))
-    .orderBy(
-      asc(sequenceAssets.sequenceId),
-      asc(sequenceAssets.role),
-      asc(sequenceAssets.selectionOrder),
-      asc(sequenceAssets.assetId)
-    )
-    .all()
-    .map((row) => ({
-      ...row,
-      targetKind: 'sequence' as const,
-      selectionOrder: row.selectionOrder ?? 1,
-    }));
-}
-
-function readSceneSelectedAssetRows(
-  session: DatabaseSession
-): SelectedProductionAssetRow[] {
-  return session.db
-    .select({
-      assetId: assets.id,
-      relationshipId: sceneAssets.id,
-      assetFileId: assetFiles.id,
-      targetId: sceneAssets.sceneId,
-      localeId: sceneAssets.localeId,
-      localeTag: projectLocales.localeTag,
-      role: sceneAssets.role,
-      selectionOrder: sceneAssets.selectionOrder,
-      title: assets.title,
-      sourceProjectRelativePath: assetFiles.projectRelativePath,
-      mediaKind: assetFiles.mediaKind,
-      sourceSizeBytes: assetFiles.sizeBytes,
-      sourceContentHash: assetFiles.contentHash,
-    })
-    .from(sceneAssets)
-    .innerJoin(assets, eq(assets.id, sceneAssets.assetId))
-    .innerJoin(assetFiles, eq(assetFiles.assetId, assets.id))
-    .leftJoin(projectLocales, eq(projectLocales.id, sceneAssets.localeId))
-    .where(and(eq(sceneAssets.selection, 'select'), eq(assets.availability, 'ready')))
-    .orderBy(
-      asc(sceneAssets.sceneId),
-      asc(sceneAssets.role),
-      asc(sceneAssets.selectionOrder),
-      asc(sceneAssets.assetId)
-    )
-    .all()
-    .map((row) => ({
-      ...row,
-      targetKind: 'scene' as const,
-      selectionOrder: row.selectionOrder ?? 1,
-    }));
-}
-
-function compareSelectedAssetRows(
-  left: SelectedProductionAssetRow,
-  right: SelectedProductionAssetRow
-): number {
-  return (
-    left.targetKind.localeCompare(right.targetKind) ||
-    String(left.targetId ?? '').localeCompare(String(right.targetId ?? '')) ||
-    left.role.localeCompare(right.role) ||
-    left.selectionOrder - right.selectionOrder ||
-    left.assetId.localeCompare(right.assetId)
-  );
+  input.session.db.update(assetFiles).set({
+    contentHash: input.contentHash,
+    sizeBytes: input.sizeBytes,
+    updatedAt: new Date().toISOString(),
+  }).where(eq(assetFiles.id, input.assetFileId)).run();
 }

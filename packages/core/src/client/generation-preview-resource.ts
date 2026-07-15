@@ -1,6 +1,7 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
   GenerationPurpose,
+  GenerationReferenceSelection,
   GenerationTarget,
   JsonValue,
 } from './generation.js';
@@ -29,7 +30,7 @@ export interface GenerationPreviewResource {
     | 'handdrawn-storyboard';
   promptSheetNotationModeId?: 'none' | 'motion-annotation';
   finalPrompt: GenerationPreviewPrompt;
-  references: GenerationPreviewResourceReference[];
+  references: GenerationPreviewReferences;
   configuration: GenerationPreviewConfiguration;
   providerPreview?: GenerationPreviewProviderPreview;
   estimate?: GenerationPreviewEstimate;
@@ -58,13 +59,6 @@ export interface GenerationPreviewPrompt {
   negativeText?: string;
 }
 
-export interface GenerationPreviewReferenceSelectionControl {
-  selectionId: string;
-  required: boolean;
-  defaultIncluded: boolean;
-  editable: boolean;
-}
-
 export interface GenerationPreviewResourceReference {
   kind: 'image' | 'audio' | 'video';
   role: string;
@@ -75,18 +69,45 @@ export interface GenerationPreviewResourceReference {
   dialogueId?: string;
   sourcePurpose?: string;
   selected: boolean;
-  selectionControl?: GenerationPreviewReferenceSelectionControl;
   browserUrl: string;
+}
+
+export interface GenerationPreviewReferences {
+  slots: GenerationPreviewReferenceSlot[];
+  additional: GenerationPreviewResourceReference[];
+}
+
+export interface GenerationPreviewReferenceSlot {
+  label: string;
+  placement: Extract<
+    GenerationReferenceSelection['placement'],
+    { kind: 'slot' }
+  >;
+  candidates: GenerationPreviewResourceReference[];
 }
 
 export type GenerationPreviewResourceData = Omit<
   GenerationPreviewResource,
   'references'
 > & {
-  references: Array<
-    Omit<GenerationPreviewResourceReference, 'browserUrl'>
-  >;
+  references: {
+    slots: Array<Omit<GenerationPreviewReferenceSlot, 'candidates'> & {
+      candidates: Array<Omit<GenerationPreviewResourceReference, 'browserUrl'>>;
+    }>;
+    additional: Array<Omit<GenerationPreviewResourceReference, 'browserUrl'>>;
+  };
 };
+
+export type GenerationPreviewReferenceChange =
+  | {
+      kind: 'replace';
+      placement: Extract<GenerationReferenceSelection['placement'], { kind: 'slot' }>;
+      reference: import('./generation.js').GenerationReference;
+    }
+  | {
+      kind: 'clear';
+      placement: Extract<GenerationReferenceSelection['placement'], { kind: 'slot' }>;
+    };
 
 export type GenerationPreviewConfigurationValue =
   | string

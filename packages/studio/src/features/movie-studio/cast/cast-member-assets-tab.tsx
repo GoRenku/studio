@@ -30,6 +30,7 @@ interface CastMemberAssetsTabProps {
   castMemberId: string;
   resource: CastMemberResourceResponse;
   assets: StudioAssetResponse[];
+  displayProfileAssetId: string | null;
   onTogglePick: (asset: StudioAssetResponse) => Promise<void>;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
   onDeleteVoice: (
@@ -42,6 +43,7 @@ export function CastMemberAssetsTab({
   castMemberId,
   resource,
   assets,
+  displayProfileAssetId,
   onTogglePick,
   onDeleteAsset,
   onDeleteVoice,
@@ -66,6 +68,7 @@ export function CastMemberAssetsTab({
             projectName={projectName}
             castMemberId={castMemberId}
             assets={profileAssets}
+            selectedAssetId={displayProfileAssetId}
             emptyTitle='No profile images yet.'
             gridClassName='grid-cols-[repeat(auto-fill,minmax(240px,1fr))]'
             onOpenImage={setPreviewImage}
@@ -136,6 +139,7 @@ function CastAssetSection({
   projectName,
   castMemberId,
   assets,
+  selectedAssetId,
   emptyTitle,
   onOpenImage,
   onTogglePick,
@@ -151,6 +155,7 @@ function CastAssetSection({
   projectName: string;
   castMemberId: string;
   assets: StudioAssetResponse[];
+  selectedAssetId?: string | null;
   emptyTitle: string;
   onOpenImage: (image: PreviewImage) => void;
   onTogglePick?: (asset: StudioAssetResponse) => Promise<void>;
@@ -164,7 +169,7 @@ function CastAssetSection({
       castMemberId,
       asset
     );
-    const selected = asset.selection.kind === 'select';
+    const selected = asset.assetId === selectedAssetId;
     const imageUrl = castImageAssetUrl(projectName, castMemberId, asset);
     const title = asset.referenceName
       ? humanizeReferenceName(asset.referenceName)

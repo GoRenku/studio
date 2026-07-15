@@ -180,9 +180,9 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
   const visualCastMembers = listCastMemberRecords(session).filter(
     (castMember) => !castMember.isVoiceOver
   );
-  const missingSelectedVisualReferenceCastMemberIds: string[] = [];
+  const missingVisualReferenceCastMemberIds: string[] = [];
   const missingActiveCastDesignCastMemberIds: string[] = [];
-  let selectedVisualReferenceCount = 0;
+  let visualReferenceCount = 0;
   let activeCastDesignCount = 0;
 
   for (const castMember of visualCastMembers) {
@@ -191,16 +191,15 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
     } else {
       missingActiveCastDesignCastMemberIds.push(castMember.id);
     }
-    const selectedAssets = listAssetRelationshipPage(session, {
+    const assets = listAssetRelationshipPage(session, {
       target: { kind: 'castMember', castMemberId: castMember.id },
-      selection: 'select',
       limit: MAX_RESOURCE_PAGE_LIMIT,
     }).items.filter(
       (asset) => asset.role === 'character-sheet' || asset.role === 'profile'
     );
-    selectedVisualReferenceCount += selectedAssets.length;
-    if (selectedAssets.length === 0) {
-      missingSelectedVisualReferenceCastMemberIds.push(castMember.id);
+    visualReferenceCount += assets.length;
+    if (assets.length === 0) {
+      missingVisualReferenceCastMemberIds.push(castMember.id);
     }
   }
 
@@ -208,11 +207,11 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
     castMemberCount: visualCastMembers.length,
     activeCastDesignCount,
     missingActiveCastDesignCastMemberIds,
-    selectedVisualReferenceCount,
-    missingSelectedVisualReferenceCastMemberIds,
-    everyCastMemberHasSelectedVisualReference:
+    visualReferenceCount,
+    missingVisualReferenceCastMemberIds,
+    everyCastMemberHasVisualReference:
       visualCastMembers.length > 0 &&
-      missingSelectedVisualReferenceCastMemberIds.length === 0,
+      missingVisualReferenceCastMemberIds.length === 0,
   };
 }
 
@@ -220,9 +219,9 @@ function readProductionDesignReadiness(
   session: DatabaseSession
 ): DirectorProductionDesignReadiness {
   const locations = listScreenplayLocationsFromSession(session);
-  const missingSelectedEnvironmentSheetLocationIds: string[] = [];
+  const missingEnvironmentSheetLocationIds: string[] = [];
   const missingActiveLocationDesignLocationIds: string[] = [];
-  let selectedEnvironmentSheetCount = 0;
+  let environmentSheetCount = 0;
   let activeLocationDesignCount = 0;
 
   for (const location of locations) {
@@ -234,15 +233,14 @@ function readProductionDesignReadiness(
     } else {
       missingActiveLocationDesignLocationIds.push(location.id);
     }
-    const selectedAssets = listAssetRelationshipPage(session, {
+    const assets = listAssetRelationshipPage(session, {
       target: { kind: 'location', locationId: location.id },
-      selection: 'select',
       role: 'environment_sheet',
       limit: MAX_RESOURCE_PAGE_LIMIT,
     }).items;
-    selectedEnvironmentSheetCount += selectedAssets.length;
-    if (selectedAssets.length === 0) {
-      missingSelectedEnvironmentSheetLocationIds.push(location.id);
+    environmentSheetCount += assets.length;
+    if (assets.length === 0) {
+      missingEnvironmentSheetLocationIds.push(location.id);
     }
   }
 
@@ -250,11 +248,11 @@ function readProductionDesignReadiness(
     locationCount: locations.length,
     activeLocationDesignCount,
     missingActiveLocationDesignLocationIds,
-    selectedEnvironmentSheetCount,
-    missingSelectedEnvironmentSheetLocationIds,
-    everyLocationHasSelectedEnvironmentSheet:
+    environmentSheetCount,
+    missingEnvironmentSheetLocationIds,
+    everyLocationHasEnvironmentSheet:
       locations.length > 0 &&
-      missingSelectedEnvironmentSheetLocationIds.length === 0,
+      missingEnvironmentSheetLocationIds.length === 0,
   };
 }
 
@@ -459,22 +457,22 @@ function readinessDiagnostics(input: {
       )
     );
   }
-  if (!input.cast.everyCastMemberHasSelectedVisualReference) {
+  if (!input.cast.everyCastMemberHasVisualReference) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT005',
-        'One or more cast members do not have selected character-sheet or profile media.',
-        ['cast', 'missingSelectedVisualReferenceCastMemberIds'],
+        'One or more cast members do not have character-sheet or profile media.',
+        ['cast', 'missingVisualReferenceCastMemberIds'],
         'Generate or select cast character sheets or profiles before relying on cast visuals.'
       )
     );
   }
-  if (!input.productionDesign.everyLocationHasSelectedEnvironmentSheet) {
+  if (!input.productionDesign.everyLocationHasEnvironmentSheet) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT006',
-        'One or more locations do not have selected environment-sheet media.',
-        ['productionDesign', 'missingSelectedEnvironmentSheetLocationIds'],
+        'One or more locations do not have environment-sheet media.',
+        ['productionDesign', 'missingEnvironmentSheetLocationIds'],
         'Generate or select location environment sheets before relying on location visuals.'
       )
     );
@@ -550,21 +548,21 @@ function buildNextSteps(input: {
       command: 'renku lookbook apply --file <storyboard-lookbook-json> --json',
     });
   }
-  if (!input.cast.everyCastMemberHasSelectedVisualReference) {
+  if (!input.cast.everyCastMemberHasVisualReference) {
     steps.push({
       id: 'design-cast',
       title: 'Establish cast visuals',
       specialistSkill: 'media-producer',
-      reason: 'Cast members need selected character-sheet or profile media for visual continuity.',
+      reason: 'Cast members need available character-sheet or profile media for visual continuity.',
       command: 'renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json',
     });
   }
-  if (!input.productionDesign.everyLocationHasSelectedEnvironmentSheet) {
+  if (!input.productionDesign.everyLocationHasEnvironmentSheet) {
     steps.push({
       id: 'design-production',
       title: 'Establish location visuals',
       specialistSkill: 'media-producer',
-      reason: 'Locations need selected environment sheets before shots rely on location visuals.',
+      reason: 'Locations need available environment sheets before shots rely on location visuals.',
       command: 'renku generation context --purpose location.sheet --target location:<location-id> --json',
     });
   }

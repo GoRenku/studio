@@ -20,7 +20,7 @@ describe('asset resources', () => {
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
   });
 
-  it('lists registered assets, selected assets, and persisted selections', async () => {
+  it('lists registered assets without generic selection state', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -46,13 +46,6 @@ describe('asset resources', () => {
       role: 'narration',
     });
 
-    await projectData.createAssetSelect({
-      projectName: 'constantinople',
-      homeDir,
-      target: { kind: 'scene', sceneId: 'scene_test0001' },
-      assetId: registered.assetId,
-    });
-
     await expect(
       projectData.listAssets({
         projectName: 'constantinople',
@@ -68,17 +61,5 @@ describe('asset resources', () => {
       ])
     );
 
-    await expect(
-      createProjectDataService().listAssetSelects({
-        projectName: 'constantinople',
-        homeDir,
-        target: { kind: 'scene', sceneId: 'scene_test0001' },
-      })
-    ).resolves.toEqual([
-      expect.objectContaining({
-        assetId: registered.assetId,
-        selection: { kind: 'select', order: 1 },
-      }),
-    ]);
   });
 });

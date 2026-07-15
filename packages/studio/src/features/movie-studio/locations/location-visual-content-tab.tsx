@@ -10,14 +10,18 @@ import {
   locationSheetAssets,
   locationEnvironmentSheetCompositeUrl,
   locationEnvironmentSheetPreviewImages,
+  locationHeroAssets,
 } from './location-assets';
 import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
 import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
+import { ImageSelectionControl } from '@/ui/image-selection-control';
 
 interface LocationVisualContentTabProps {
   projectName: string;
   locationId: string;
   assets: StudioAssetResponse[];
+  displayHeroAssetId: string | null;
+  onToggleHeroDisplay: (asset: StudioAssetResponse) => Promise<void>;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
 }
 
@@ -25,12 +29,15 @@ export function LocationVisualContentTab({
   projectName,
   locationId,
   assets,
+  displayHeroAssetId,
+  onToggleHeroDisplay,
   onDeleteAsset,
 }: LocationVisualContentTabProps) {
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const { openImageRevision } = useImageRevisionDialog();
   const sheetAssets = locationSheetAssets(assets);
+  const heroAssets = locationHeroAssets(assets);
 
   const openSheetPreview = (asset: StudioAssetResponse) => {
     const images = locationEnvironmentSheetPreviewImages(
@@ -89,11 +96,44 @@ export function LocationVisualContentTab({
       },
     };
   });
+  const heroItems = heroAssets.map((asset) => {
+    const selected = asset.assetId === displayHeroAssetId;
+    return {
+      id: asset.assetId,
+      imageUrl: locationEnvironmentSheetCompositeUrl(projectName, locationId, asset),
+      imageAlt: selected ? 'Current location hero' : 'Location hero',
+      aspectClassName: 'aspect-video',
+      aspectRatio: locationEnvironmentSheetAspectRatio(asset, 16 / 9),
+      detectImageAspectRatio: true,
+      selected,
+      onOpen: () => openSheetPreview(asset),
+      bottomRightActions: (
+        <ImageSelectionControl
+          selected={selected}
+          selectedLabel='Clear location hero display'
+          unselectedLabel='Use as location hero display'
+          onToggleSelected={() => onToggleHeroDisplay(asset)}
+        />
+      ),
+      deleteAction: {
+        label: 'Delete location hero',
+        title: 'Delete Location Hero?',
+        message: 'Remove this hero image from this location. This cannot be undone.',
+        onDelete: () => onDeleteAsset(asset),
+      },
+    };
+  });
 
   return (
     <>
       <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
         <div className='space-y-8'>
+          <ImageCollectionSection
+            title='Hero Images'
+            emptyTitle='No hero images yet.'
+            items={heroItems}
+            gridClassName='grid-cols-[repeat(auto-fill,minmax(320px,1fr))]'
+          />
           <ImageCollectionSection
             title='Location Sheets'
             emptyTitle='No location sheets yet.'

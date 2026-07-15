@@ -9,8 +9,8 @@ import {
   deleteCastAsset,
   deleteCastVoice,
   readCastAssets,
-  selectCastAsset,
-  unselectCastAsset,
+  clearCastProfileDisplayAsset,
+  setCastProfileDisplayAsset,
 } from '@/services/studio-project-assets-api';
 import {
   readCastMemberResource,
@@ -76,24 +76,12 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
 
   const togglePick = async (asset: StudioAssetResponse) => {
     try {
-      if (asset.selection.kind === 'select') {
-        await unselectCastAsset(projectName, castMemberId, asset.assetId);
+      if (resource?.firstImage?.assetId === asset.assetId) {
+        await clearCastProfileDisplayAsset(projectName, castMemberId);
         await refreshCastMember();
         return;
       }
-
-      const selectedAssetsWithSameRole = assets.filter(
-        (candidate) =>
-          candidate.role === asset.role &&
-          candidate.assetId !== asset.assetId &&
-          candidate.selection.kind === 'select'
-      );
-      await selectCastAsset(projectName, castMemberId, asset.assetId);
-      await Promise.all(
-        selectedAssetsWithSameRole.map((candidate) =>
-          unselectCastAsset(projectName, castMemberId, candidate.assetId)
-        )
-      );
+      await setCastProfileDisplayAsset(projectName, castMemberId, asset.assetId);
       await refreshCastMember();
     } catch (selectError) {
       toast.error(errorMessage(selectError));
@@ -164,6 +152,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
           castMemberId={castMemberId}
           resource={resource}
           assets={assets}
+          displayProfileAssetId={resource.firstImage?.assetId ?? null}
           onTogglePick={togglePick}
           onDeleteAsset={removeAsset}
           onDeleteVoice={removeVoice}

@@ -13,7 +13,7 @@ export type ShotVideoTakeMediaRole =
   | 'character-sheet'
   | 'location-sheet'
   | 'lookbook-sheet'
-  | 'video-prompt-sheet'
+  | 'video-prompt'
   | 'source-video'
   | 'audio'
   | 'video';

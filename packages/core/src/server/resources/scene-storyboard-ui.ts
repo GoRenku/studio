@@ -99,33 +99,17 @@ function firstCastMemberImage(
       target,
       role: 'profile',
       mediaKind: 'image',
-      selection: 'select',
-      limit: 1,
-    }).items[0] ??
-    listAssetRelationshipPage(session, {
-      target,
-      role: 'profile',
-      mediaKind: 'image',
-      selection: 'take',
       limit: 1,
     }).items[0] ??
     listAssetRelationshipPage(session, {
       target,
       role: 'character-sheet',
       mediaKind: 'image',
-      selection: 'select',
       limit: 1,
     }).items[0] ??
     listAssetRelationshipPage(session, {
       target,
       mediaKind: 'image',
-      selection: 'select',
-      limit: 1,
-    }).items[0] ??
-    listAssetRelationshipPage(session, {
-      target,
-      mediaKind: 'image',
-      selection: 'take',
       limit: 1,
     }).items[0];
   return asset ? toScreenplayImageReference(asset) : undefined;

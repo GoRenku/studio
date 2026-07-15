@@ -32,6 +32,10 @@ import {
   readAssetRelationship,
 } from '../database/access/asset-relationships/index.js';
 import {
+  readCastProfileDisplayAssetId,
+  readLocationHeroDisplayAssetId,
+} from '../database/access/display-assets.js';
+import {
   listCastVoiceProviderRegistrationRecords,
   listCastVoiceRecords,
   type CastVoiceProviderRegistrationRecord,
@@ -447,50 +451,16 @@ function firstPreferredImageAsset(
   target: AssetTarget
 ): Asset | undefined {
   if (target.kind === 'castMember') {
-    return (
-      listAssetRelationshipPage(session, {
-        target,
-        role: 'profile',
-        mediaKind: 'image',
-        selection: 'select',
-        limit: 1,
-      }).items[0] ??
-      listAssetRelationshipPage(session, {
-        target,
-        role: 'profile',
-        mediaKind: 'image',
-        selection: 'take',
-        limit: 1,
-      }).items[0] ??
-      listAssetRelationshipPage(session, {
-        target,
-        role: 'character-sheet',
-        mediaKind: 'image',
-        selection: 'select',
-        limit: 1,
-      }).items[0] ??
-      listAssetRelationshipPage(session, {
-        target,
-        mediaKind: 'image',
-        selection: 'select',
-        limit: 1,
-      }).items[0] ??
-      listAssetRelationshipPage(session, {
-        target,
-        mediaKind: 'image',
-        selection: 'take',
-        limit: 1,
-      }).items[0]
-    );
+    const assetId = readCastProfileDisplayAssetId(session, target.castMemberId);
+    return assetId
+      ? readAssetRelationship(session, { target, assetId }) ?? undefined
+      : undefined;
   }
   if (target.kind === 'location') {
-    return listAssetRelationshipPage(session, {
-      target,
-      role: 'hero',
-      mediaKind: 'image',
-      selection: 'select',
-      limit: 1,
-    }).items[0];
+    const assetId = readLocationHeroDisplayAssetId(session, target.locationId);
+    return assetId
+      ? readAssetRelationship(session, { target, assetId }) ?? undefined
+      : undefined;
   }
   return listAssetRelationshipPage(session, {
     target,

@@ -23,10 +23,6 @@ type NullableRelationshipTextColumn = AnySQLiteColumn<{
   notNull: false;
 }>;
 type RelationshipNumberColumn = AnySQLiteColumn<{ data: number; notNull: true }>;
-type NullableRelationshipNumberColumn = AnySQLiteColumn<{
-  data: number;
-  notNull: false;
-}>;
 
 export type AssetRelationshipTable = SQLiteTable & {
   id: RelationshipTextColumn;
@@ -36,8 +32,6 @@ export type AssetRelationshipTable = SQLiteTable & {
   referenceName: NullableRelationshipTextColumn;
   purpose: NullableRelationshipTextColumn;
   sortOrder: RelationshipNumberColumn;
-  selection: RelationshipTextColumn;
-  selectionOrder: NullableRelationshipNumberColumn;
   discardedAt: NullableRelationshipTextColumn;
   discardOperationId: NullableRelationshipTextColumn;
   restoredAt: NullableRelationshipTextColumn;

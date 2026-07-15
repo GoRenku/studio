@@ -6,7 +6,6 @@ import { readCastMemberRecord } from '../database/access/cast-members.js';
 import {
   countAssetRelationshipsByRole,
   listAssetRelationshipPage,
-  MAX_RESOURCE_PAGE_LIMIT,
 } from '../database/access/asset-relationships/index.js';
 import type { ReadCastDesignResourceInput } from '../project-data-service-contracts.js';
 
@@ -55,15 +54,9 @@ export function readCastDesignResourceProjection(
       voiceNotes: castMember.voiceNotes ?? undefined,
       description: castMember.description ?? undefined,
     },
-    selectedAssets: listAssetRelationshipPage(session, {
-      target,
-      selection: 'select',
-      limit: MAX_RESOURCE_PAGE_LIMIT,
-    }).items,
-    activeTakePage: listAssetRelationshipPage(session, {
+    assetPage: listAssetRelationshipPage(session, {
       target,
       role: input.activeRole ?? 'character-sheet',
-      selection: 'take',
       limit: input.limit,
       cursor: input.cursor,
     }),

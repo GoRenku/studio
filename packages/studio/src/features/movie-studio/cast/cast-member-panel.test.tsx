@@ -9,8 +9,8 @@ import type {
 import {
   deleteCastVoice,
   readCastAssets,
-  selectCastAsset,
-  unselectCastAsset,
+  setCastProfileDisplayAsset,
+  clearCastProfileDisplayAsset,
 } from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-screenplay-api';
 import { CastMemberPanel } from './cast-member-panel';
@@ -41,8 +41,8 @@ vi.mock('@/services/studio-project-assets-api', () => ({
   deleteCastAsset: vi.fn(),
   deleteCastVoice: vi.fn(),
   readCastAssets: vi.fn(),
-  selectCastAsset: vi.fn(),
-  unselectCastAsset: vi.fn(),
+  setCastProfileDisplayAsset: vi.fn(),
+  clearCastProfileDisplayAsset: vi.fn(),
 }));
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -52,8 +52,8 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 describe('CastMemberPanel', () => {
   beforeEach(() => {
     vi.mocked(readCastAssets).mockReset();
-    vi.mocked(selectCastAsset).mockReset();
-    vi.mocked(unselectCastAsset).mockReset();
+    vi.mocked(setCastProfileDisplayAsset).mockReset();
+    vi.mocked(clearCastProfileDisplayAsset).mockReset();
     vi.mocked(deleteCastVoice).mockReset();
     vi.mocked(readCastMemberResource).mockReset();
     vi.spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue();
@@ -61,13 +61,25 @@ describe('CastMemberPanel', () => {
   });
 
   it('unselects the current profile pick when the pick control is clicked again', async () => {
-    vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
+    vi.mocked(readCastMemberResource).mockResolvedValue({
+      ...castMemberResource(),
+      firstImage: {
+        assetId: 'asset_profile',
+        relationshipId: 'asset_relationship_profile',
+        assetFileId: 'asset_file_profile',
+        title: 'Urban profile',
+        fileRole: 'primary',
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        width: 1024,
+        height: 1024,
+        url: '/profile.png',
+      },
+    });
     vi.mocked(readCastAssets)
-      .mockResolvedValueOnce([castProfileAsset({ selected: true })])
-      .mockResolvedValueOnce([castProfileAsset({ selected: false })]);
-    vi.mocked(unselectCastAsset).mockResolvedValue(
-      castProfileAsset({ selected: false })
-    );
+      .mockResolvedValueOnce([castProfileAsset()])
+      .mockResolvedValueOnce([castProfileAsset()]);
+    vi.mocked(clearCastProfileDisplayAsset).mockResolvedValue(undefined);
 
     render(
       <CastMemberPanel
@@ -87,13 +99,12 @@ describe('CastMemberPanel', () => {
     );
 
     await waitFor(() => {
-      expect(unselectCastAsset).toHaveBeenCalledWith(
+      expect(clearCastProfileDisplayAsset).toHaveBeenCalledWith(
         'constantinople',
-        'cast_urban',
-        'asset_profile'
+        'cast_urban'
       );
     });
-    expect(selectCastAsset).not.toHaveBeenCalled();
+    expect(setCastProfileDisplayAsset).not.toHaveBeenCalled();
   });
 
   it('renders Details narrative facts without visual-anchor copy or a Voice Design tab', async () => {
@@ -103,7 +114,7 @@ describe('CastMemberPanel', () => {
         voiceNotes: 'Low, clipped, dry under pressure.',
       })
     );
-    vi.mocked(readCastAssets).mockResolvedValue([castProfileAsset({ selected: true })]);
+    vi.mocked(readCastAssets).mockResolvedValue([castProfileAsset()]);
 
     render(
       <CastMemberPanel
@@ -122,7 +133,7 @@ describe('CastMemberPanel', () => {
   it('shows Character Sheet footers without a pick control or raw filename copy', async () => {
     vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
     vi.mocked(readCastAssets).mockResolvedValue([
-      castProfileAsset({ selected: false }),
+      castProfileAsset(),
       castCharacterSheetAsset(),
     ]);
 
@@ -217,18 +228,13 @@ function activateTab(tab: HTMLElement): void {
   fireEvent.click(tab);
 }
 
-function castProfileAsset({
-  selected,
-}: {
-  selected: boolean;
-}): StudioAssetResponse {
+function castProfileAsset(): StudioAssetResponse {
   return {
     assetId: 'asset_profile',
     relationshipId: 'asset_relationship_profile',
     target: { kind: 'castMember', castMemberId: 'cast_urban' },
     localeId: null,
     type: 'cast_profile',
-    selection: selected ? { kind: 'select', order: 0 } : { kind: 'take' },
     availability: 'ready',
     mediaKind: 'image',
     title: 'Urban profile',
@@ -259,7 +265,7 @@ function castProfileAsset({
 
 function castCharacterSheetAsset(): StudioAssetResponse {
   return {
-    ...castProfileAsset({ selected: false }),
+    ...castProfileAsset(),
     assetId: 'asset_character_sheet',
     relationshipId: 'asset_relationship_character_sheet',
     type: 'character_sheet',
@@ -311,7 +317,6 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
       target: { kind: 'castMember', castMemberId: 'cast_urban' },
       localeId: null,
       type: 'cast_voice_sample',
-      selection: { kind: 'take' },
       availability: 'ready',
       mediaKind: 'audio',
       title: 'Urban normal voice sample',

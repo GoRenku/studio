@@ -16,6 +16,7 @@ import type {
   ShotVideoTakeWorkspaceMutationReport,
 } from '../../client/shot-video-take-workspace.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
+import { requireShotVideoTakeAuthoringMutable } from '../database/access/shot-video-take-media.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import {
   estimateGenerationCost,
@@ -51,6 +52,7 @@ export async function setShotVideoTakeGenerationSpec(input: {
   now: string;
 }): Promise<ShotVideoTakeWorkspaceMutationReport> {
   requireShotVideoTakeSelectionContext(input);
+  requireShotVideoTakeAuthoringMutable(input);
   const context = await readGenerationPurpose('shot.video-take').buildContext({
     target: { kind: 'sceneShotVideoTake', id: input.takeId },
     session: input.session,
@@ -68,8 +70,7 @@ export async function setShotVideoTakeGenerationSpec(input: {
     current: current?.spec ?? null,
     model,
     setup: input.setup,
-    references: current?.spec.references ?? context.referenceGuide.sections
-      .flatMap((section) => section.slots.flatMap((slot) => slot.selections)),
+    references: current?.spec.references ?? [],
     takeId: input.takeId,
   });
   const purpose = {
@@ -109,6 +110,7 @@ export async function setShotVideoTakeGenerationReference(input: {
   now: string;
 }): Promise<ShotVideoTakeWorkspaceMutationReport> {
   requireShotVideoTakeSelectionContext(input);
+  requireShotVideoTakeAuthoringMutable(input);
   const current = currentSpec(input.session, input.takeId);
   const purpose = readGenerationPurpose('shot.video-take');
   const context = await purpose.buildContext({

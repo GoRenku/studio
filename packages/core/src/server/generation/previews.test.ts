@@ -22,7 +22,7 @@ describe('generic generation preview', () => {
           },
         }],
       },
-      referenceGuide: { sections: [], additionalReferences: [], notices: [] },
+      referenceGuide: { sections: [], notices: [] },
       session: {} as DatabaseSession,
       projectFolder: await mkdtemp(
         path.join(os.tmpdir(), 'renku-generation-preview-')

@@ -146,8 +146,8 @@ function shotVideoTakeMediaBaseName(role: ShotVideoTakeMediaRole): string {
       return 'last-frame';
     case 'reference-image':
       return 'reference-image';
-    case 'video-prompt-sheet':
-      return 'video-prompt-sheet';
+    case 'video-prompt':
+      return 'video-prompt';
     case 'video':
       return 'video';
     default:

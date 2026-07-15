@@ -56,12 +56,12 @@ Commands
   create <project-name>           Create a clean movie project
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
-  asset                Register, list, and select assets
+  asset                Register and list assets
   cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
   location             Author location facts
   production-design    Author Location Design documents
-  production export    Export selected production assets
+  production export    Export picked Shot Video Take media
   info show            Show project information
   info set             Update project information
   info clear           Clear optional project information fields
@@ -101,7 +101,6 @@ Options
   --receipt            Generation Receipt JSON file
   --role               Asset relationship role
   --file-role          Asset file role
-  --order              Selection order
   --locale             Project locale id
   --cast               Cast member id for cast commands
   --voice              Cast Voice id or reference name
@@ -449,7 +448,6 @@ export async function runRenkuCli(
             referenceName: cli.flags.referenceName,
             referencePurpose: cli.flags.referencePurpose,
             locale: cli.flags.locale,
-            order: cli.flags.order,
           },
           json: cli.flags.json,
           io,

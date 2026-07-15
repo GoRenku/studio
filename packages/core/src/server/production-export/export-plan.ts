@@ -5,7 +5,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   readProductionLocaleTag,
   refreshProductionAssetFileMetadata,
-  type SelectedProductionAssetRow,
+  type ProductionExportMediaRow,
 } from '../database/access/production-export.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
@@ -22,33 +22,11 @@ import type {
   ProductionExportVariantPlan,
 } from './types.js';
 
-const PRODUCTION_EXPORT_ROLES = new Set([
-  'dialogue',
-  'final-graphic',
-  'final_graphic',
-  'locale-audio-override',
-  'locale_audio_override',
-  'locale-video-override',
-  'locale_video_override',
-  'music',
-  'narration',
-  'scene-video',
-  'scene_video',
-  'sound-effect',
-  'sound_effect',
-  'subtitles',
-  'title-card',
-  'title_card',
-  'video',
-  'word-timing',
-  'word_timing',
-]);
-
 export async function buildProductionVariantPlans(input: {
   projectFolder: string;
   session: DatabaseSession;
   variants: ProductionExportVariant[];
-  selectedRows: SelectedProductionAssetRow[];
+  mediaRows: ProductionExportMediaRow[];
   previousManifest: ProductionExportManifest | null;
   dryRun: boolean;
 }): Promise<ProductionExportVariantPlan[]> {
@@ -63,10 +41,7 @@ export async function buildProductionVariantPlans(input: {
             readProductionLocaleTag(input.session, variant.localeId)
           );
     const files: DesiredProductionExportFile[] = [];
-    for (const row of input.selectedRows) {
-      if (!isProductionExportable(row.role)) {
-        continue;
-      }
+    for (const row of input.mediaRows) {
       if (!rowBelongsToVariant(row, variant)) {
         continue;
       }
@@ -125,7 +100,7 @@ export async function buildProductionVariantPlans(input: {
 }
 
 function rowBelongsToVariant(
-  row: SelectedProductionAssetRow,
+  row: ProductionExportMediaRow,
   variant: ProductionExportVariant
 ): boolean {
   if (variant.kind === 'master') {
@@ -134,13 +109,9 @@ function rowBelongsToVariant(
   return row.localeId === variant.localeId;
 }
 
-function isProductionExportable(role: string): boolean {
-  return PRODUCTION_EXPORT_ROLES.has(role);
-}
-
 async function statSourceFile(
   sourcePath: string,
-  row: SelectedProductionAssetRow
+  row: ProductionExportMediaRow
 ): Promise<{ size: number; mtime: Date }> {
   try {
     const stats = await fs.stat(sourcePath);

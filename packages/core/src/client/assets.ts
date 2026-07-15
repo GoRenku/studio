@@ -47,7 +47,6 @@ export interface AssetReference {
 export type Asset = AssetReference & {
   localeId: string | null;
   type: string;
-  selection: AssetSelection;
   availability: AssetAvailability;
   mediaKind: string;
   title: string;
@@ -61,8 +60,6 @@ export type Asset = AssetReference & {
   createdAt: string;
   updatedAt: string;
 };
-
-export type AssetSelection = { kind: 'take' } | { kind: 'select'; order: number };
 
 export type AssetAvailability = 'ready';
 

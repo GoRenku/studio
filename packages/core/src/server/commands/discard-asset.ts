@@ -4,6 +4,7 @@ import {
 } from '../database/access/asset-relationships/index.js';
 import {
   sceneShotVideoTakes,
+  sceneShotVideoTakeImages,
   sceneShotVideoTakeVideos,
 } from '../schema/index.js';
 import { and, eq, isNull } from 'drizzle-orm';
@@ -93,7 +94,20 @@ function assertAssetNotReferencedByTakeMedia(
       isNull(sceneShotVideoTakes.discardedAt)
     ))
     .get();
-  if (reference || video) {
+  const image = session.db
+    .select({ takeId: sceneShotVideoTakeImages.takeId })
+    .from(sceneShotVideoTakeImages)
+    .innerJoin(
+      sceneShotVideoTakes,
+      eq(sceneShotVideoTakeImages.takeId, sceneShotVideoTakes.id)
+    )
+    .where(and(
+      eq(sceneShotVideoTakeImages.assetId, assetId),
+      isNull(sceneShotVideoTakeImages.discardedAt),
+      isNull(sceneShotVideoTakes.discardedAt)
+    ))
+    .get();
+  if (reference || image || video) {
     throw new ProjectDataError(
       'PROJECT_DATA429',
       `Asset ${assetId} is referenced by active Shot take media.`

@@ -552,10 +552,10 @@ async function seedTakeReferenceMedia(input: {
     referenceName: 'urban-profile',
     purpose: 'Browser E2E selectable profile image.',
   });
-  await input.projectData.createAssetSelect({
+  await input.projectData.setCastProfileDisplayAsset({
     homeDir: input.runtime.homeDir,
     projectName: input.projectName,
-    target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
+    castMemberId: input.ids.castMemberId,
     assetId: profile.asset.assetId,
   });
   const characterSheet = await input.projectData.attachGenerationMedia({

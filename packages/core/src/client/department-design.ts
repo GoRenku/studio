@@ -297,8 +297,8 @@ export interface CastDesignContextReport extends DepartmentCommandReport {
     blocks: Block[];
   }>;
   activeLookbook: DepartmentLookbookContext | null;
-  selectedAssets: Asset[];
-  assetRoleCounts: Array<{ role: string; selectedCount: number; takeCount: number }>;
+  assets: Asset[];
+  assetRoleCounts: Array<{ role: string; count: number }>;
   generationReadiness: {
     characterSheet: boolean;
     profile: boolean;
@@ -320,8 +320,8 @@ export interface ProductionDesignLocationContextReport extends DepartmentCommand
     excerpts: string[];
   }>;
   activeLookbook: DepartmentLookbookContext | null;
-  selectedAssets: Asset[];
-  assetRoleCounts: Array<{ role: string; selectedCount: number; takeCount: number }>;
+  assets: Asset[];
+  assetRoleCounts: Array<{ role: string; count: number }>;
   generationReadiness: {
     environmentSheet: boolean;
     notes: string[];

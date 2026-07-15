@@ -123,17 +123,17 @@ test('locks the three approved visible deltas in the DOM', async ({
   expect(modelTableGeometry.wrapper?.width).toBeCloseTo(274.703125, 1);
   expect(modelTableGeometry.wrapper?.height).toBeCloseTo(162.734375, 1);
   expect(modelTableGeometry.rowHeights).toEqual([
-    53,
-    53,
-    53,
-    69,
-    53,
-    69,
+    38.328125,
+    38.328125,
+    38.328125,
+    38.328125,
+    38.328125,
+    38.328125,
+    38.328125,
+    38.328125,
     53,
     38.328125,
-    69,
     38.328125,
-    68.5,
   ]);
 
   await movieStudio.openShotDetailTab('references');

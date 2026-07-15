@@ -32,11 +32,11 @@ export function projectShotVideoTakeReferences(input: {
 }): ShotVideoTakeReferenceSections {
   const screenplay = readScreenplayDocumentFromSession(input.session);
   const selections = input.spec?.references ?? [];
-  const shotSlots = slots(input.guide, 'shot', input.selectedShotId);
+  const shotSlots = slots(input.guide, 'take-media', input.selectedShotId);
   const general = selections.flatMap((selection) => {
     if (
       selection.placement.kind !== 'slot' ||
-      selection.placement.sectionId !== 'shot' ||
+      selection.placement.sectionId !== 'take-media' ||
       !scopeIsVisible(selection.placement.scope, input.selectedShotId)
     ) {
       return [];
@@ -60,7 +60,7 @@ export function projectShotVideoTakeReferences(input: {
       card: card(selection, entry.slot, entry.scope, candidate),
     }];
   });
-  const lookbookSlots = slots(input.guide, 'lookbook', input.selectedShotId);
+  const lookbookSlots = slots(input.guide, 'visual-language', input.selectedShotId);
   const lookbook = uniqueAssetCandidates(
     lookbookSlots.flatMap(({ slot }) => slot.candidates),
     input.session,
@@ -73,7 +73,7 @@ export function projectShotVideoTakeReferences(input: {
           'A Lookbook reference candidate has no owning guide slot.'
         );
       }
-      const selection = selectionForCandidate(selections, 'lookbook', entry.slot, entry.scope, candidate);
+      const selection = selectionForCandidate(selections, 'visual-language', entry.slot, entry.scope, candidate);
       const sheet = candidate.reference.kind === 'asset-file'
         ? input.session.db
             .select()
@@ -106,21 +106,16 @@ export function projectShotVideoTakeReferences(input: {
         assetId: candidate.reference.kind === 'asset-file' ? candidate.reference.assetId : null,
         title: candidate.label,
         selected: selection?.included ?? false,
-        defaultSelected: entry.slot.selections.some((defaultSelection) => sameReference(defaultSelection.reference, candidate.reference)),
         card: card(selection, entry.slot, entry.scope, candidate),
       };
     });
     const member = screenplay?.cast.find((candidate) => candidate.id === castMemberId);
     const selected = choices.find((choice) => choice.selected);
-    const defaultChoice = choices.find((choice) => choice.defaultSelected);
     return {
       castMemberId,
       name: member?.name ?? castMemberId,
       role: member?.role ?? null,
-      selectedForShot: input.spec ? Boolean(selected) : Boolean(defaultChoice),
-      defaultSelectedForShot: Boolean(defaultChoice),
-      selectedCharacterSheetAssetId: selected?.assetId ?? null,
-      defaultCharacterSheetAssetId: defaultChoice?.assetId ?? null,
+      selectedForShot: Boolean(selected),
       characterSheets: choices,
       diagnostics: [],
     };
@@ -146,17 +141,10 @@ export function projectShotVideoTakeReferences(input: {
       };
     });
     const location = screenplay?.locations.find((candidate) => candidate.id === locationId);
-    const defaultSelectedForShot = locationSlots.some(({ slot }) =>
-      slot.selections.some((selection) => selection.included)
-    );
     return {
       locationId,
       name: location?.name ?? locationId,
-      selectedForShot: input.spec
-        ? choices.some((choice) => choice.selected)
-        : defaultSelectedForShot,
-      defaultSelectedForShot,
-      selectedLocationSheetAssetId: choices.find((choice) => choice.selected)?.assetId ?? null,
+      selectedForShot: choices.some((choice) => choice.selected),
       environmentSheets: choices,
       diagnostics: [],
     };
@@ -279,9 +267,12 @@ export function setShotVideoTakeReferenceSelection(input: {
 }): GenerationReferenceSelection[] {
   const current = input.selections.find((selection) => selection.id === input.selectionId);
   if (current) {
+    if (!input.included) {
+      return input.selections.filter((selection) => selection.id !== input.selectionId);
+    }
     return input.selections.map((selection) =>
       selection.id === input.selectionId
-        ? { ...selection, included: input.included }
+        ? { ...selection, included: true }
         : selection
     );
   }
@@ -303,6 +294,9 @@ export function setShotVideoTakeReferenceSelection(input: {
           included: input.included,
           reference: candidate.reference,
         };
+        if (!input.included) {
+          return input.selections;
+        }
         const withoutAlternate = slot.cardinality === 'one'
           ? input.selections.filter((selection) =>
               !samePlacement(selection, next)
@@ -417,8 +411,8 @@ function uniqueAssetCandidates(
 
 function generalKind(
   slotId: string
-): 'first-frame' | 'last-frame' | 'video-prompt-sheet' | 'reference-image' {
-  return slotId === 'first-frame' || slotId === 'last-frame' || slotId === 'video-prompt-sheet'
+): 'first-frame' | 'last-frame' | 'video-prompt' | 'reference-image' {
+  return slotId === 'first-frame' || slotId === 'last-frame' || slotId === 'video-prompt'
     ? slotId
     : 'reference-image' as const;
 }
@@ -448,12 +442,11 @@ function card(
   scope: { kind: string; id: string } | undefined,
   candidate: GenerationReferenceCatalogItem
 ): ShotVideoTakeReferenceCard {
-  const defaultSelection = slot.selections.find((entry) => sameReference(entry.reference, candidate.reference));
   const included = selection?.included ?? false;
   return {
     state: included ? 'selected-ready' : selection ? 'not-selected' : 'available',
     selectionId: selectionId(selection, slot, scope, candidate),
-    defaultIncluded: defaultSelection?.included ?? false,
+    defaultIncluded: false,
     included,
     required: false,
     previews: candidate.mediaKind === 'image' && candidate.reference.kind === 'asset-file'

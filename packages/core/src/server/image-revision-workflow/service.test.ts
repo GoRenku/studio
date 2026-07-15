@@ -55,17 +55,18 @@ describe('image revision workflow', () => {
       },
     });
 
-    expect(context.edit).toMatchObject({
-      state: 'available',
-      preview: {
-        references: [
-          expect.objectContaining({
-            assetId: asset.assetId,
-            assetFileId: asset.files[0]!.id,
-            selected: true,
-          }),
-        ],
-      },
-    });
+    expect(context.edit.state).toBe('available');
+    if (context.edit.state !== 'available') {
+      return;
+    }
+    expect(context.edit.preview.references.slots).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        candidates: [expect.objectContaining({
+          assetId: asset.assetId,
+          assetFileId: asset.files[0]!.id,
+          selected: true,
+        })],
+      }),
+    ]));
   });
 });

@@ -109,7 +109,6 @@ export type {
 } from './asset-file-generation/types.js';
 
 export type {
-  ChangeAssetSelectInput,
   ClearLookbookCardImageInput,
   CreateMovieProjectInput,
   CreateInspirationFolderInput,
@@ -167,7 +166,6 @@ export type {
   ReadScreenplayLocationInput,
   ReadScreenplaySceneInput,
   ReadScreenplaySequenceInput,
-  RemoveAssetSelectInput,
   RemoveCastVoiceProviderRegistrationInput,
   RemoveCastVoiceInput,
   RenameInspirationFolderInput,
@@ -278,7 +276,6 @@ export type {
   AssetFile,
   AssetLocaleContext,
   AssetReference,
-  AssetSelection,
   AssetTarget,
   ReferenceImageMediaImportReport,
   CameraSection,
@@ -441,6 +438,12 @@ export {
   validateStudioFocusRequestForProject,
 } from './studio-coordination/index.js';
 export { sceneShotListResourceKeys } from './commands/scene-shot-list-commands.js';
+export {
+  clearCastProfileDisplayAsset,
+  clearLocationHeroDisplayAsset,
+  setCastProfileDisplayAsset,
+  setLocationHeroDisplayAsset,
+} from './commands/display-asset-commands.js';
 export type {
   AppendStudioEventInput,
   ClaimStudioRuntimeDescriptorInput,

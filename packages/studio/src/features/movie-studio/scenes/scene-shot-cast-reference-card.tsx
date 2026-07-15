@@ -3,22 +3,11 @@ import type {
   ShotVideoTakeCastMemberReferenceGroup,
   ShotVideoTakeCharacterSheetReferenceChoice,
 } from '@gorenku/studio-core/client';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/ui/dialog';
 import { castAssetFileUrl } from '@/services/studio-project-assets-api';
 import type { PreviewImage } from '@/ui/image-preview-dialog';
 import { previewImageUrl } from './scene-shot-reference-card-images';
 import { SceneShotReferenceCard } from './scene-shot-reference-card';
-import { SceneShotReferenceCardGrid } from './scene-shot-reference-card-grid';
-import {
-  SHOT_CAST_SHEET_DIALOG_CARD_MIN_WIDTH,
-  SHOT_CAST_SHEET_DIALOG_CLASS,
-} from './scene-shot-reference-layout';
+import { ReferencePickerDialog } from '@/features/reference-picker/reference-picker-dialog';
 
 interface SceneShotCastReferenceCardProps {
   projectName: string;
@@ -115,55 +104,25 @@ function CastSheetDialog({
   onPreview: (images: PreviewImage[]) => void;
   onSelectSheet: (assetId: string | null) => Promise<void>;
 }) {
+  void onPreview;
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={SHOT_CAST_SHEET_DIALOG_CLASS}>
-        <DialogHeader>
-          <DialogTitle className='truncate text-base normal-case leading-6 tracking-normal'>
-            {group.name}
-          </DialogTitle>
-          <DialogDescription className='sr-only'>
-            Select a character sheet for this cast member.
-          </DialogDescription>
-        </DialogHeader>
-        <div className='max-h-[60vh] overflow-y-auto px-5 py-5'>
-          <SceneShotReferenceCardGrid
-            minCardWidth={SHOT_CAST_SHEET_DIALOG_CARD_MIN_WIDTH}
-          >
-            {group.characterSheets.map((choice, index) => {
-              const preview = choice.card.previews[0];
-              const imageUrl = castReferenceImageUrl(
-                projectName,
-                group.castMemberId,
-                choice,
-                preview
-              );
-              const previewImages = previewImageUrl(preview, imageUrl);
-              const sheetLabel =
-                group.characterSheets.length > 1 ? `Sheet ${index + 1}` : group.name;
-              return (
-                <SceneShotReferenceCard
-                  key={choice.id}
-                  title={sheetLabel}
-                  imageUrl={imageUrl}
-                  imageAlt={sheetLabel}
-                  card={choice.card}
-                  selected={choice.selected}
-                  aspectRatio={4 / 3}
-                  aspectClassName='aspect-[4/3]'
-                  onOpen={() => {
-                    if (previewImages.length) {
-                      onPreview(previewImages);
-                    }
-                  }}
-                  onToggleSelected={() => onSelectSheet(choice.assetId)}
-                />
-              );
-            })}
-          </SceneShotReferenceCardGrid>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ReferencePickerDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={group.name}
+      description='Choose the exact Character Sheet for this saved Take request.'
+      candidates={group.characterSheets.map((choice) => {
+        const preview = choice.card.previews[0];
+        return {
+          id: choice.assetId ?? choice.id,
+          title: choice.title,
+          imageUrl: castReferenceImageUrl(projectName, group.castMemberId, choice, preview),
+          imageAlt: choice.title,
+          selected: choice.selected,
+        };
+      })}
+      onChoose={(assetId) => onSelectSheet(assetId)}
+    />
   );
 }
 

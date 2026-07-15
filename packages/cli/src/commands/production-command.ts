@@ -73,7 +73,7 @@ function readVariants(
           'CLI061',
           'Conflicting production export locale options.',
           { path: ['--locale'], context: 'renku CLI arguments' },
-          'Choose one locale filter, or omit both options to export master and all locales with selected production assets.'
+          'Choose one locale filter, or omit both options to export the master picked-Take media set.'
         ),
       ],
     });

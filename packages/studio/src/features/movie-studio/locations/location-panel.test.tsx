@@ -52,7 +52,21 @@ describe('LocationPanel', () => {
   });
 
   it('opens location details preview for the current hero image', async () => {
-    vi.mocked(readLocationResource).mockResolvedValue(locationResource());
+    vi.mocked(readLocationResource).mockResolvedValue({
+      ...locationResource(),
+      firstImage: {
+        assetId: 'asset_location_hero',
+        relationshipId: 'asset_location_hero_relationship',
+        assetFileId: 'asset_location_hero_primary',
+        title: 'Gate hero image',
+        fileRole: 'primary',
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        width: 1536,
+        height: 1152,
+        url: '/gate-hero.png',
+      },
+    });
     vi.mocked(readLocationAssets).mockResolvedValue([
       locationSheetAsset(),
       locationHeroAsset({ selected: true }),
@@ -255,7 +269,6 @@ function locationAsset({
     target: { kind: 'location', locationId: 'location_gate' },
     localeId: null,
     type,
-    selection: selected ? { kind: 'select', order: 0 } : { kind: 'take' },
     availability: 'ready',
     mediaKind: 'image',
     title,

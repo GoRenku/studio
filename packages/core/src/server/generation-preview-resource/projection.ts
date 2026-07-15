@@ -20,11 +20,7 @@ export function projectGenerationPreviewResource(input: {
   preview: GenerationPreview;
   session: DatabaseSession;
   estimate?: GenerationEstimate;
-}): Omit<GenerationPreviewResource, 'references'> & {
-  references: Array<
-    Omit<GenerationPreviewResource['references'][number], 'browserUrl'>
-  >;
-} {
+}): import('../../client/generation-preview-resource.js').GenerationPreviewResourceData {
   const project = readProjectRecord(input.session);
   const model = input.preview.models?.find(
     (candidate) =>

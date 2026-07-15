@@ -50,7 +50,7 @@ export class VisualLanguagePage {
 
   async gotoLookbook(project: StudioE2eShotVideoTakeProject): Promise<void> {
     await this.page.goto(
-      `/projects/${encodeURIComponent(project.projectName)}/visual-language/lookbooks/${encodeURIComponent(project.lookbookId)}`
+      `/projects/${encodeURIComponent(project.projectName)}/visual-language/lookbooks/production`
     );
     await expect(
       this.page.getByRole('heading', { name: 'Imperial Wound' })

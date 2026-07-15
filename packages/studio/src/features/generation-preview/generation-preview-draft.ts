@@ -1,4 +1,6 @@
 import type {
+  GenerationPreviewReferenceChange,
+  GenerationPreviewReferenceSlot,
   GenerationPreviewResource,
   GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
@@ -9,7 +11,7 @@ export interface GenerationPreviewDraft {
     authoredText: string;
     negativeText?: string;
   };
-  referenceSelectionDraftBySelectionId: Record<string, boolean>;
+  referenceChanges: GenerationPreviewReferenceChange[];
 }
 
 export function createGenerationPreviewDraft(
@@ -22,77 +24,87 @@ export function createGenerationPreviewDraft(
         ? { negativeText: preview.finalPrompt.negativeText }
         : {}),
     },
-    referenceSelectionDraftBySelectionId: Object.fromEntries(
-      preview.references.flatMap((reference) => {
-        const selectionId = reference.selectionControl?.selectionId;
-        return selectionId ? [[selectionId, reference.selected]] : [];
-      })
-    ),
+    referenceChanges: [],
   };
 }
 
 export function generationPreviewReferenceSelected(
+  slot: GenerationPreviewReferenceSlot,
   reference: GenerationPreviewResourceReference,
   draft: GenerationPreviewDraft
 ): boolean {
-  if (reference.selectionControl?.required) {
-    return true;
+  const change = draft.referenceChanges.find((candidate) =>
+    placementKey(candidate.placement) === placementKey(slot.placement)
+  );
+  if (!change) {
+    return reference.selected;
   }
-  const selectionId = reference.selectionControl?.selectionId;
-  return selectionId &&
-    selectionId in draft.referenceSelectionDraftBySelectionId
-    ? draft.referenceSelectionDraftBySelectionId[selectionId]!
-    : reference.selected;
+  return change.kind === 'replace' &&
+    change.reference.kind === 'asset-file' &&
+    change.reference.assetId === reference.assetId &&
+    change.reference.assetFileId === reference.assetFileId;
+}
+
+export function changeGenerationPreviewReference(
+  draft: GenerationPreviewDraft,
+  slot: GenerationPreviewReferenceSlot,
+  reference: GenerationPreviewResourceReference | null
+): GenerationPreviewDraft {
+  const key = placementKey(slot.placement);
+  const referenceChanges = draft.referenceChanges.filter(
+    (change) => placementKey(change.placement) !== key
+  );
+  referenceChanges.push(reference
+    ? {
+        kind: 'replace',
+        placement: slot.placement,
+        reference: {
+          kind: 'asset-file',
+          assetId: reference.assetId,
+          assetFileId: reference.assetFileId,
+        },
+      }
+    : { kind: 'clear', placement: slot.placement });
+  return { ...draft, referenceChanges };
 }
 
 export function generationPreviewDraftIsDirty(
   preview: GenerationPreviewResource,
   draft: GenerationPreviewDraft
 ): boolean {
-  if (
+  return draft.referenceChanges.length > 0 ||
     draft.promptDraft.authoredText !== preview.finalPrompt.authoredText ||
-    draft.promptDraft.negativeText !== preview.finalPrompt.negativeText
-  ) {
-    return true;
-  }
-  return preview.references.some(
-    (reference) =>
-      reference.selectionControl?.editable === true &&
-      generationPreviewReferenceSelected(reference, draft) !==
-        reference.selected
-  );
+    draft.promptDraft.negativeText !== preview.finalPrompt.negativeText;
 }
 
 export function buildGenerationPreviewUpdateRequest(
   preview: GenerationPreviewResource,
   draft: GenerationPreviewDraft
-): Pick<
-  UpdateGenerationPreviewResourceSpecInput,
-  'prompt' | 'referenceSelections'
-> {
+): Pick<UpdateGenerationPreviewResourceSpecInput, 'prompt' | 'referenceChanges'> {
   return {
     prompt: {
       authoredText: draft.promptDraft.authoredText,
       ...(preview.finalPrompt.negativeText !== undefined
         ? {
-            negativeText:
-              draft.promptDraft.negativeText === ''
-                ? null
-                : draft.promptDraft.negativeText ?? null,
+            negativeText: draft.promptDraft.negativeText === ''
+              ? null
+              : draft.promptDraft.negativeText ?? null,
           }
         : {}),
     },
-    referenceSelections: preview.references.flatMap((reference) => {
-      const control = reference.selectionControl;
-      if (!control?.editable) {
-        return [];
-      }
-      return [
-        {
-          selectionId: control.selectionId,
-          selected: generationPreviewReferenceSelected(reference, draft),
-        },
-      ];
-    }),
+    referenceChanges: draft.referenceChanges,
   };
+}
+
+function placementKey(
+  placement: GenerationPreviewReferenceSlot['placement']
+): string {
+  return [
+    placement.sectionId,
+    placement.slotId,
+    placement.scope?.kind ?? '',
+    placement.scope?.id ?? '',
+    placement.subject?.kind ?? '',
+    placement.subject?.id ?? '',
+  ].join(':');
 }

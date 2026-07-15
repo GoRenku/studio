@@ -16,7 +16,7 @@ describe('Scene generation context', () => {
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
   });
 
-  it('projects opaque narrative text and exact selected continuity files', async () => {
+  it('projects opaque narrative text and every exact owned continuity file', async () => {
     const created = await createSampleMovieProject({ homeDir, projectData });
     if (!created) {
       return;
@@ -44,11 +44,8 @@ describe('Scene generation context', () => {
       { kind: 'asset-file', assetId: 'asset_cast_selected', assetFileId: 'asset_file_cast_selected' },
       { kind: 'asset-file', assetId: 'asset_cast_take', assetFileId: 'asset_file_cast_take' },
     ]));
-    expect(castSlot.selections.map((selection) => selection.reference)).toEqual([
-      { kind: 'asset-file', assetId: 'asset_cast_selected', assetFileId: 'asset_file_cast_selected' },
-    ]);
     const locationSlot = context.referenceGuide.sections.find((section) => section.id === 'location')!.slots[0]!;
-    expect(locationSlot.selections.map((selection) => selection.reference)).toEqual([
+    expect(locationSlot.candidates.map((candidate) => candidate.reference)).toEqual([
       { kind: 'asset-file', assetId: 'asset_location_selected', assetFileId: 'asset_file_location_selected' },
     ]);
   });
@@ -72,11 +69,11 @@ function seedContinuityAssets(
       assetFile('asset_file_location_selected', 'asset_location_selected', 'location-selected.png', now),
     ]).run();
     session.db.insert(castAssets).values([
-      relationship('cast_asset_selected', 'asset_cast_selected', ids.castMemberId, 'character-sheet', 'select', 1, now),
-      relationship('cast_asset_take', 'asset_cast_take', ids.castMemberId, 'character-sheet', 'take', null, now),
+      relationship('cast_asset_selected', 'asset_cast_selected', ids.castMemberId, 'character-sheet', now),
+      relationship('cast_asset_take', 'asset_cast_take', ids.castMemberId, 'character-sheet', now),
     ]).run();
     session.db.insert(locationAssets).values(
-      relationship('location_asset_selected', 'asset_location_selected', ids.locationId, 'location-sheet', 'select', 1, now)
+      relationship('location_asset_selected', 'asset_location_selected', ids.locationId, 'location-sheet', now)
     ).run();
   } finally {
     session.close();
@@ -91,6 +88,6 @@ function assetFile(id: string, assetId: string, filename: string, now: string) {
   return { id, assetId, role: 'primary', projectRelativePath: `references/${filename}`, mediaKind: 'image', mimeType: 'image/png', createdAt: now, updatedAt: now };
 }
 
-function relationship(id: string, assetId: string, ownerId: string, role: string, selection: string, selectionOrder: number | null, now: string) {
-  return { id, assetId, castMemberId: ownerId, locationId: ownerId, role, sortOrder: 1, selection, selectionOrder, createdAt: now, updatedAt: now };
+function relationship(id: string, assetId: string, ownerId: string, role: string, now: string) {
+  return { id, assetId, castMemberId: ownerId, locationId: ownerId, role, sortOrder: 1, createdAt: now, updatedAt: now };
 }

@@ -104,7 +104,7 @@ export function ImageRevisionDialog({
             onTabChange={setEditorTab}
             onAuthoredTextChange={editor.updateAuthoredText}
             onNegativeTextChange={editor.updateNegativeText}
-            onReferenceToggle={editor.toggleReference}
+            onReferenceChoose={() => {}}
             onControlChange={editor.updateControl}
             authoredPlaceholder={
               editor.mode === 'edit'
