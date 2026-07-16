@@ -9,12 +9,11 @@ import {
 } from '../database/access/asset-files.js';
 import { readAssetRecord, type AssetRecord } from '../database/access/assets.js';
 import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
-import { readGenerationRunRecord, listGenerationSpecRecords } from '../database/access/media-generation.js';
+import { readGenerationRunRecord } from '../database/access/media-generation.js';
 import { requireLookbookImageRecord } from '../database/access/lookbook-images.js';
 import { requireLookbookSheetRecord } from '../database/access/lookbook-sheets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { requireShotVideoTakeForScene } from '../shot-video-take-workspace/queries.js';
 
 export interface ResolvedImageRevisionSource {
   target: ImageRevisionTarget;
@@ -22,11 +21,6 @@ export interface ResolvedImageRevisionSource {
   file: AssetFileRecord;
   generationRun: GenerationRun | null;
   ownerRole?: string;
-  shotReferenceRole?:
-    | 'first-frame'
-    | 'last-frame'
-    | 'reference-image'
-    | 'video-prompt';
 }
 
 export function resolveImageRevisionSource(
@@ -61,9 +55,6 @@ export function resolveImageRevisionSource(
       ? readGenerationRunRecord(session, provenance.mediaGenerationRunId)
       : null,
     ...(ownerRole ? { ownerRole } : {}),
-    ...(target.kind === 'shotVideoTakeReference'
-      ? { shotReferenceRole: readShotReferenceRole(session, target) }
-      : {}),
   };
 }
 
@@ -85,24 +76,6 @@ function readOwnerRole(
     target: owner,
     assetId: target.assetId,
   })?.role ?? null;
-}
-
-function readShotReferenceRole(
-  session: DatabaseSession,
-  target: Extract<ImageRevisionTarget, { kind: 'shotVideoTakeReference' }>
-): 'first-frame' | 'last-frame' | 'reference-image' | 'video-prompt' {
-  const spec = listGenerationSpecRecords(session, {
-    purpose: 'shot.video-take',
-    target: { kind: 'sceneShotVideoTake', id: target.takeId },
-  })[0];
-  const selection = spec?.spec.references.find((candidate) => candidate.id === target.selectionId);
-  if (selection?.placement.kind !== 'slot') {
-    return 'reference-image';
-  }
-  const slotId = selection.placement.slotId;
-  return slotId === 'first-frame' || slotId === 'last-frame' || slotId === 'video-prompt'
-    ? slotId
-    : 'reference-image';
 }
 
 function assertOwnership(session: DatabaseSession, target: ImageRevisionTarget): void {
@@ -139,25 +112,6 @@ function assertOwnership(session: DatabaseSession, target: ImageRevisionTarget):
       throw ownerMismatch();
     }
     return;
-  }
-  requireShotVideoTakeForScene({
-    session,
-    sceneId: target.sceneId,
-    takeId: target.takeId,
-  });
-  const spec = listGenerationSpecRecords(session, {
-    purpose: 'shot.video-take',
-    target: { kind: 'sceneShotVideoTake', id: target.takeId },
-  })[0];
-  const selection = spec?.spec.references.find(
-    (candidate) => candidate.id === target.selectionId
-  );
-  if (
-    selection?.reference.kind !== 'asset-file' ||
-    selection.reference.assetId !== target.assetId ||
-    selection.reference.assetFileId !== target.assetFileId
-  ) {
-    throw ownerMismatch();
   }
 }
 

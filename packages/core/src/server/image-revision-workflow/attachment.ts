@@ -6,7 +6,6 @@ import { insertAssetRelationshipRecord, nextAssetRelationshipSortOrder } from '.
 import { insertAssetRecord } from '../database/access/assets.js';
 import { insertLookbookImageRecord, nextLookbookImageSortOrder } from '../database/access/lookbook-images.js';
 import { insertLookbookSheetRecord, nextLookbookSheetSortOrder } from '../database/access/lookbook-sheets.js';
-import { listGenerationSpecRecords, updateGenerationSpecRecord } from '../database/access/media-generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
@@ -105,15 +104,6 @@ export function attachImageRevisionOutput(input: {
         assetFileId,
         receipt: { run: input.run },
       });
-      if (input.target.kind === 'shotVideoTakeReference') {
-        replaceShotReference(session, {
-          takeId: input.target.takeId,
-          selectionId: input.target.selectionId,
-          assetId,
-          assetFileId,
-          now: input.now,
-        });
-      }
       writeSet.markCommitted();
     });
   } catch (error) {
@@ -175,22 +165,6 @@ function revisionDestination(input: {
         assetType: input.source.asset.type,
         resourceKeys: ['visual-language'],
       };
-    case 'shotVideoTakeReference': {
-      const role = input.source.shotReferenceRole;
-      if (!role) {
-        throw new ProjectDataError(
-          'CORE_IMAGE_REVISION_OWNER_MISMATCH',
-          'Shot reference placement is unavailable for Image Revision.'
-        );
-      }
-      return {
-        file: { kind: 'shotVideoTake.media', takeId: input.target.takeId, role },
-        owner: null,
-        role,
-        assetType: 'shot.input',
-        resourceKeys: [`scene:${input.target.sceneId}`, `scene-shot-video-take:${input.target.takeId}`],
-      };
-    }
   }
 }
 
@@ -205,47 +179,6 @@ function requireOwnerRole(
     'CORE_IMAGE_REVISION_OWNER_MISMATCH',
     'The Image Revision source no longer has an eligible owner role.'
   );
-}
-
-function replaceShotReference(
-  session: DatabaseSession,
-  input: {
-    takeId: string;
-    selectionId: string;
-    assetId: string;
-    assetFileId: string;
-    now: string;
-  }
-): void {
-  const record = listGenerationSpecRecords(session, {
-    purpose: 'shot.video-take',
-    target: { kind: 'sceneShotVideoTake', id: input.takeId },
-  })[0];
-  if (!record || !record.spec.references.some((selection) => selection.id === input.selectionId)) {
-    throw new ProjectDataError(
-      'CORE_IMAGE_REVISION_OWNER_MISMATCH',
-      'The revised Shot reference is no longer selected by the active generation spec.'
-    );
-  }
-  updateGenerationSpecRecord(session, {
-    ...record,
-    spec: {
-      ...record.spec,
-      references: record.spec.references.map((selection) =>
-        selection.id === input.selectionId
-          ? {
-              ...selection,
-              reference: {
-                kind: 'asset-file',
-                assetId: input.assetId,
-                assetFileId: input.assetFileId,
-              },
-            }
-          : selection
-      ),
-    },
-    updatedAt: input.now,
-  });
 }
 
 function relationshipPrefix(

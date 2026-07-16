@@ -5,7 +5,6 @@ import type { ProjectRelativePath } from '../../client/index.js';
 import {
   insertAssetFileRecord,
   readAssetFileRecord,
-  readAssetFileRecordIncludingDiscarded,
   type AssetFileRecord,
 } from '../database/access/asset-files.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -28,7 +27,7 @@ import type {
   PersistProjectAssetFileInput,
   ProjectAssetFileWriteSet,
   ProjectMediaKind,
-  ShotVideoTakeMediaRole,
+
 } from './types.js';
 
 export async function persistProjectAssetFile(
@@ -130,129 +129,6 @@ export function persistProjectAssetFileSync(
     width: input.width,
     height: input.height,
     durationSeconds: input.durationSeconds,
-    now: input.now,
-    writeSet: input.writeSet,
-  });
-}
-
-export async function copyTakeOwnedProjectAssetFile(input: {
-  session: DatabaseSession;
-  projectFolder: string;
-  sourceAssetId: string;
-  sourceAssetFileId: string;
-  targetAssetId: string;
-  targetAssetFileId: string;
-  targetTakeId: string;
-  role: ShotVideoTakeMediaRole;
-  fileRole: string;
-  mediaKind: ProjectMediaKind;
-  mimeType?: string;
-  now: string;
-}): Promise<AssetFileRecord> {
-  const sourceFile = readAssetFileRecord(input.session, {
-    assetId: input.sourceAssetId,
-    assetFileId: input.sourceAssetFileId,
-  });
-  if (!sourceFile) {
-    throw new ProjectDataError(
-      'PROJECT_ASSET_FILE_SOURCE_RECORD_MISSING',
-      `Take-owned source asset file was not found: ${input.sourceAssetFileId}.`
-    );
-  }
-  return persistProjectAssetFile({
-    session: input.session,
-    projectFolder: input.projectFolder,
-    assetId: input.targetAssetId,
-    assetFileId: input.targetAssetFileId,
-    sourceProjectRelativePath: sourceFile.projectRelativePath,
-    destination: {
-      kind: 'shotVideoTake.media',
-      takeId: input.targetTakeId,
-      role: input.role,
-    },
-    fileRole: input.fileRole,
-    mediaKind: input.mediaKind,
-    mimeType: input.mimeType ?? sourceFile.mimeType ?? undefined,
-    width: sourceFile.width ?? undefined,
-    height: sourceFile.height ?? undefined,
-    durationSeconds: sourceFile.durationSeconds ?? undefined,
-    now: input.now,
-  });
-}
-
-export function copyTakeOwnedProjectAssetFileSync(input: {
-  session: DatabaseSession;
-  projectFolder: string;
-  writeSet?: ProjectAssetFileWriteSet;
-  sourceAssetId: string;
-  sourceAssetFileId: string;
-  targetAssetId: string;
-  targetAssetFileId: string;
-  targetTakeId: string;
-  role: ShotVideoTakeMediaRole;
-  fileRole: string;
-  mediaKind: ProjectMediaKind;
-  mimeType?: string;
-  width?: number;
-  height?: number;
-  durationSeconds?: number;
-  allowDiscardedSource?: boolean;
-  now: string;
-}): AssetFileRecord {
-  const sourceFile = input.allowDiscardedSource
-    ? readAssetFileRecordIncludingDiscarded(input.session, {
-        assetId: input.sourceAssetId,
-        assetFileId: input.sourceAssetFileId,
-      })
-    : readAssetFileRecord(input.session, {
-        assetId: input.sourceAssetId,
-        assetFileId: input.sourceAssetFileId,
-      });
-  if (!sourceFile) {
-    throw new ProjectDataError(
-      'PROJECT_ASSET_FILE_SOURCE_RECORD_MISSING',
-      `Take-owned source asset file was not found: ${input.sourceAssetFileId}.`
-    );
-  }
-  const sourceProjectRelativePath = normalizeProjectRelativePath(
-    sourceFile.projectRelativePath
-  );
-  const sourcePath = resolveProjectRelativePath(
-    input.projectFolder,
-    sourceProjectRelativePath
-  );
-  assertResolvedPathInsideProject(input.projectFolder, sourcePath);
-  statProjectFileSync(sourcePath, {
-    code: 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND',
-    message: `Take-owned source asset file was not found on disk: ${sourceProjectRelativePath}.`,
-  });
-  const destination = resolveDurableDestinationFileSync({
-    session: input.session,
-    projectFolder: input.projectFolder,
-    destination: {
-      kind: 'shotVideoTake.media',
-      takeId: input.targetTakeId,
-      role: input.role,
-    },
-    sourceProjectRelativePath,
-    mediaKind: input.mediaKind,
-    now: input.now,
-  });
-  return persistProjectAssetFileAtDestinationSync({
-    session: input.session,
-    projectFolder: input.projectFolder,
-    assetId: input.targetAssetId,
-    assetFileId: input.targetAssetFileId,
-    fileRole: input.fileRole,
-    mediaKind: input.mediaKind,
-    sourceProjectRelativePath,
-    sourcePath,
-    destinationProjectRelativePath: destination,
-    mimeType: input.mimeType ?? sourceFile.mimeType ?? undefined,
-    width: input.width ?? sourceFile.width ?? undefined,
-    height: input.height ?? sourceFile.height ?? undefined,
-    durationSeconds:
-      input.durationSeconds ?? sourceFile.durationSeconds ?? undefined,
     now: input.now,
     writeSet: input.writeSet,
   });

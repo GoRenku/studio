@@ -62,15 +62,15 @@ describe('generic generation estimates', () => {
 });
 
 const videoPurpose = {
-  purpose: 'shot.video-take',
-  targetKind: 'sceneShotVideoTake',
-  outputMediaKind: 'video',
+  purpose: 'image.create',
+  targetKind: 'project',
+  outputMediaKind: 'image',
 } satisfies GenerationPurposeContract;
 
 function seedanceSpec(values: Record<string, string>): GenerationSpec {
   return {
-    purpose: 'shot.video-take',
-    target: { kind: 'sceneShotVideoTake', id: 'take-1' },
+    purpose: 'image.create',
+    target: { kind: 'project', id: 'project' },
     model: {
       provider: 'fal-ai',
       model: 'bytedance/seedance-2.0/image-to-video',

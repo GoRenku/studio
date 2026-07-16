@@ -138,8 +138,8 @@ function writeDirectorContextSummary(
   );
   if (report.selectedScene) {
     io.stdout.log(
-      `Selected scene: ${report.selectedScene.sceneId}; active shot list: ${
-        report.selectedScene.activeShotListId ?? 'none'
+      `Selected scene: ${report.selectedScene.sceneId}; active Beat Sheet: ${
+        report.selectedScene.activeBeatSheetId ?? 'none'
       }`
     );
   }

@@ -71,16 +71,15 @@ describe('Studio focus validation', () => {
       resolveStudioSelectionForProject(project, {
         type: 'scene',
         id: 'scene_1_1',
-        sceneTab: 'shots',
-        shotId: 'shot_001',
-        shotTab: 'composition',
+        sceneTab: 'beats',
+        beatId: 'beat_001',
       })
     ).toMatchObject({
       ok: true,
       context: {
         kind: 'scene',
         id: 'scene_1_1',
-        sceneTab: { id: 'shots', label: 'Shots' },
+        sceneTab: { id: 'beats', label: 'Beats' },
         parentSequence: { id: 'seq_opening' },
       },
     });
@@ -179,7 +178,7 @@ describe('Studio focus validation', () => {
     });
   });
 
-  it('rejects unsupported scene and shot tab focus values with structured diagnostics', () => {
+  it('rejects unsupported Scene tabs and fields with structured diagnostics', () => {
     const project = makeProject();
 
     expect(
@@ -198,8 +197,8 @@ describe('Studio focus validation', () => {
         type: 'scene',
         id: 'scene_1_1',
         sceneTab: 'shots',
-        shotTab: 'camera' as never,
-      })
+        unexpected: true,
+      } as never)
     ).toMatchObject({
       ok: false,
       reason: 'unsupportedSelection',
@@ -210,7 +209,7 @@ describe('Studio focus validation', () => {
         type: 'scene',
         id: 'scene_1_1',
         sceneTab: 'narrative',
-        shotId: 'shot_001',
+        beatId: 'beat_001',
       })
     ).toMatchObject({
       ok: false,

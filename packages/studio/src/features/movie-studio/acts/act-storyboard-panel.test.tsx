@@ -15,7 +15,7 @@ describe('ActStoryboardPanel', () => {
     vi.mocked(readActStoryboardResource).mockReset();
   });
 
-  it('groups scenes by sequence and renders shots in order', async () => {
+  it('groups scenes by sequence and renders Beats in order', async () => {
     vi.mocked(readActStoryboardResource).mockResolvedValue(actResource());
 
     render(
@@ -26,12 +26,12 @@ describe('ActStoryboardPanel', () => {
       />
     );
 
-    const shotButtons = await screen.findAllByRole('button', {
-      name: /^Shot \d+ —/,
+    const beatButtons = await screen.findAllByRole('button', {
+      name: /^Beat \d+ —/,
     });
-    expect(shotButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Shot 1 — Map study',
-      'Shot 2 — Council reaction',
+    expect(beatButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Beat 1 — Map study',
+      'Beat 2 — Council reaction',
     ]);
   });
 
@@ -47,12 +47,12 @@ describe('ActStoryboardPanel', () => {
     );
 
     const placeholders = await screen.findAllByRole('button', {
-      name: 'Open scene shots',
+      name: 'Open scene beats',
     });
     expect(placeholders).toHaveLength(1);
   });
 
-  it('navigates to the scene with the shotId when a shot is clicked', async () => {
+  it('navigates to the selected Beat', async () => {
     const onSelect = vi.fn();
     vi.mocked(readActStoryboardResource).mockResolvedValue(actResource());
 
@@ -64,11 +64,12 @@ describe('ActStoryboardPanel', () => {
       />
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Shot 1 — Map study' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Beat 1 — Map study' }));
     expect(onSelect).toHaveBeenCalledWith({
       type: 'scene',
       id: 'scene_hook',
-      shotId: 'shot_001',
+      sceneTab: 'beats',
+      beatId: 'beat_001',
     });
   });
 
@@ -83,14 +84,14 @@ describe('ActStoryboardPanel', () => {
       />
     );
 
-    await screen.findByRole('button', { name: 'Shot 1 — Map study' });
+    await screen.findByRole('button', { name: 'Beat 1 — Map study' });
 
     act(() => {
       window.dispatchEvent(
         new CustomEvent('renku:studio-resource-changed', {
           detail: {
             projectName: 'constantinople',
-            resourceKeys: ['surface:scene:scene_hook:shots'],
+            resourceKeys: ['surface:scene:scene_hook:beats'],
           },
         })
       );
@@ -142,16 +143,16 @@ function actResource(): ActStoryboardResourceResponse {
               sequenceId: 'seq_offer',
               title: 'The Sound That Opens Stone',
             },
-            shots: [
+            beats: [
               {
-                shotId: 'shot_001',
-                label: 'Shot 1',
+                beatId: 'beat_001',
+                label: 'Beat 1',
                 title: 'Map study',
                 image: image('001'),
               },
               {
-                shotId: 'shot_002',
-                label: 'Shot 2',
+                beatId: 'beat_002',
+                label: 'Beat 2',
                 title: 'Council reaction',
                 image: image('002'),
               },
@@ -163,7 +164,7 @@ function actResource(): ActStoryboardResourceResponse {
               sequenceId: 'seq_offer',
               title: 'The Emperor Without Coin',
             },
-            shots: [],
+            beats: [],
           },
         ],
       },

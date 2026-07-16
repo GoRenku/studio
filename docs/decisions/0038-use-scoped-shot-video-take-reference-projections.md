@@ -2,7 +2,7 @@
 
 Date: 2026-06-28
 
-Status: accepted
+Status: superseded by Decision 0052
 
 ## Context
 

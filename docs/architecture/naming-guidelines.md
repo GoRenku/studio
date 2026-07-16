@@ -750,7 +750,6 @@ These names mean:
 - `server/routes/navigation.ts`: owns navigation page routes below one project;
 - `server/routes/project-information.ts`: owns Project Information routes;
 - `server/routes/markdown-assets.ts`: owns Markdown asset content routes;
-- `server/routes/production-exports.ts`: owns production export routes;
 - `server/http/project-responses.ts`: adapts core contracts to HTTP response
   shapes when HTTP-only fields are needed;
 - `server/http/project-cover-url.ts`: builds Studio API cover URLs only.

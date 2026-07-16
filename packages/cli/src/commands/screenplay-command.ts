@@ -10,8 +10,8 @@ import {
   type ScreenplayDocument,
   type ScreenplayOperationDocument,
   type ScreenplaySceneRevisionDocument,
-  type SceneShotListDocument,
-  type SceneShotListOperationDocument,
+  type SceneBeatSheetDocument,
+  type SceneBeatSheetOperationDocument,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
@@ -25,7 +25,7 @@ export async function runScreenplayCommand(options: {
     analysis?: string;
     revision?: string;
     scene?: string;
-    shotList?: string;
+    beatSheet?: string;
     includeVisualReferences?: boolean;
     sequence?: string;
     dryRun?: boolean;
@@ -101,11 +101,11 @@ export async function runScreenplayCommand(options: {
     }
   }
 
-  if (subcommand === 'shot-list') {
+  if (subcommand === 'beat-sheet') {
     if (nested === 'context') {
       writeJson(
         options.io,
-        await service.readSceneShotListContext({
+        await service.readSceneBeatSheetContext({
           homeDir: options.homeDir,
           sceneId: requiredFlag(options.flags.scene, '--scene'),
           includeVisualReferences: options.flags.includeVisualReferences,
@@ -116,7 +116,7 @@ export async function runScreenplayCommand(options: {
     if (nested === 'list') {
       writeJson(
         options.io,
-        await service.listSceneShotLists({
+        await service.listSceneBeatSheets({
           homeDir: options.homeDir,
           sceneId: requiredFlag(options.flags.scene, '--scene'),
         })
@@ -126,11 +126,11 @@ export async function runScreenplayCommand(options: {
     if (nested === 'show') {
       writeJson(
         options.io,
-        await service.readSceneShotList({
+        await service.readSceneBeatSheet({
           homeDir: options.homeDir,
           active: options.flags.active,
           sceneId: options.flags.scene,
-          shotListId: options.flags.shotList,
+          beatSheetId: options.flags.beatSheet,
         })
       );
       return 0;
@@ -140,9 +140,9 @@ export async function runScreenplayCommand(options: {
       const document = await readJsonInput(filePath);
       writeJson(
         options.io,
-        await service.validateSceneShotList({
+        await service.validateSceneBeatSheet({
           homeDir: options.homeDir,
-          document: document as SceneShotListDocument,
+          document: document as SceneBeatSheetDocument,
           filePath: filePath !== '-' ? filePath : undefined,
         })
       );
@@ -153,9 +153,9 @@ export async function runScreenplayCommand(options: {
       const document = await readJsonInput(filePath);
       writeJson(
         options.io,
-        await service.validateSceneShotListOperations({
+        await service.validateSceneBeatSheetOperations({
           homeDir: options.homeDir,
-          document: document as SceneShotListOperationDocument,
+          document: document as SceneBeatSheetOperationDocument,
           filePath: filePath !== '-' ? filePath : undefined,
         })
       );
@@ -164,9 +164,9 @@ export async function runScreenplayCommand(options: {
     if (nested === 'apply') {
       const filePath = requiredFlag(options.flags.file, '--file');
       const document = await readJsonInput(filePath);
-      const report = await service.applySceneShotListOperations({
+      const report = await service.applySceneBeatSheetOperations({
         homeDir: options.homeDir,
-        document: document as SceneShotListOperationDocument,
+        document: document as SceneBeatSheetOperationDocument,
         filePath: filePath !== '-' ? filePath : undefined,
         dryRun: options.flags.dryRun,
       });
@@ -174,7 +174,7 @@ export async function runScreenplayCommand(options: {
         await appendStudioResourceChangedEvent({
           runtime: cliRuntime(options, service),
           report: { ...report, resourceKeys: report.resourceKeys ?? [] },
-          command: 'screenplay shot-list apply',
+          command: 'screenplay beat-sheet apply',
         });
       }
       writeJson(options.io, report);
@@ -183,10 +183,10 @@ export async function runScreenplayCommand(options: {
     if (nested === 'storyboard' && id === 'status') {
       writeJson(
         options.io,
-        await service.readSceneShotListStoryboardStatus({
+        await service.readSceneBeatSheetStoryboardStatus({
           homeDir: options.homeDir,
           sceneId: requiredFlag(options.flags.scene, '--scene'),
-          shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+          beatSheetId: requiredFlag(options.flags.beatSheet, '--beat-sheet'),
         })
       );
       return 0;
@@ -194,29 +194,29 @@ export async function runScreenplayCommand(options: {
     if (nested === 'write') {
       const filePath = requiredFlag(options.flags.file, '--file');
       const document = await readJsonInput(filePath);
-      const report = await service.writeSceneShotList({
+      const report = await service.writeSceneBeatSheet({
         homeDir: options.homeDir,
-        document: document as SceneShotListDocument,
+        document: document as SceneBeatSheetDocument,
         filePath: filePath !== '-' ? filePath : undefined,
       });
       await appendStudioResourceChangedEvent({
         runtime: cliRuntime(options, service),
         report: { ...report, resourceKeys: report.resourceKeys ?? [] },
-        command: 'screenplay shot-list write',
+        command: 'screenplay beat-sheet write',
       });
       writeJson(options.io, report);
       return 0;
     }
     if (nested === 'set-active') {
-      const report = await service.setActiveSceneShotList({
+      const report = await service.setActiveSceneBeatSheet({
         homeDir: options.homeDir,
         sceneId: requiredFlag(options.flags.scene, '--scene'),
-        shotListId: requiredFlag(options.flags.shotList, '--shot-list'),
+        beatSheetId: requiredFlag(options.flags.beatSheet, '--beat-sheet'),
       });
       await appendStudioResourceChangedEvent({
         runtime: cliRuntime(options, service),
         report: { ...report, resourceKeys: report.resourceKeys ?? [] },
-        command: 'screenplay shot-list set-active',
+        command: 'screenplay beat-sheet set-active',
       });
       writeJson(options.io, report);
       return 0;
@@ -390,7 +390,7 @@ export async function runScreenplayCommand(options: {
         'CLI081',
         'Unknown screenplay command.',
         { path: ['screenplay', subcommand ?? ''] },
-        'Use status, show, validate, create, apply, analyze, shot-list, cast, location, act, sequence, or scene.'
+        'Use status, show, validate, create, apply, analyze, beat-sheet, cast, location, act, sequence, or scene.'
       ),
     ],
     suggestion: 'Use a supported screenplay command.',

@@ -94,40 +94,25 @@ Future enforceable check:
 - Once pricing and execution are separate modules, add an import-boundary test
   that pricing cannot import execution, payload, SDK, or filesystem modules.
 
-### 3. Shot Video Take Is A Large Sibling Folder Instead Of Bounded Submodules
+### 3. Scene Beats And Shot Authoring Needed Separate Owners
 
-Current direction:
+Resolution:
 
-- Shot Video Take has several distinct domains: authoring, production planning,
-  dependency inventory, reference selection, input preparation, final spec
-  creation, provider payload construction, media import, generation run
-  recording, and durable take-state mutation.
+- Decision 0052 replaced the mislabeled scene coverage aggregate with a focused
+  Scene Beat Sheet domain in Core.
+- Beat context, history, operations, storyboard status, and validation are
+  separate focused modules behind the Core-owned public contract.
+- The reusable Shot composition, motion, dialogue, and AI Production controls
+  live in a persistence-free Studio feature kit.
+- There is no Shot service, Take workspace, Shot generation purpose, or broad
+  durable state patch API.
 
-Current smell:
+Enforceable boundary:
 
-- These responsibilities are split into many files, but they are still mostly
-  peers in one folder.
-- Because the folder does not express submodule ownership, architecture tests
-  cannot tell whether an import crosses a domain boundary or is normal local
-  collaboration.
-- The result is temptation to write tests that ban today's file names instead of
-  enforcing a real boundary.
-
-Missing boundary:
-
-- Explicit Shot Video Take submodules with named ownership and public entry
-  points.
-
-Candidate submodules:
-
-- authoring and user-editable direction state;
-- production planning and dependency inventory;
-- reference and input selection;
-- final spec preparation;
-- provider payload preparation;
-- live generation/run recording;
-- media import;
-- durable take persistence.
+- UI and adapters may consume Beat projections and send Beat Sheet intent to
+  Core, but they may not validate or write Beat metadata directly.
+- Shot authoring components may not import project services or create durable
+  Shot/Take state until a future accepted architecture defines that owner.
 
 Future enforceable check:
 

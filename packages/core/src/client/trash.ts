@@ -10,9 +10,7 @@ export type TrashItemKind =
   | 'inspirationImage'
   | 'lookbookImage'
   | 'lookbookSheet'
-  | 'sceneDialogueAudioTake'
-  | 'sceneShotReferenceAsset'
-  | 'sceneShotVideoTake';
+  | 'sceneDialogueAudioTake';
 
 export interface TrashProjectReport {
   id: string;

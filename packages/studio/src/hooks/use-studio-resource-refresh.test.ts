@@ -1,47 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import {
   matchesActStoryboardResource,
-  matchesSceneTakesResource,
-  matchesSceneShotsResource,
+  matchesSceneBeatsResource,
   matchesSequenceResource,
 } from './use-studio-resource-refresh';
 
 describe('Studio resource refresh matchers', () => {
-  it('matches broad scene-shot-list changes for the scene shots surface', () => {
+  it('matches broad Beat Sheet changes for the Scene Beats surface', () => {
     expect(
-      matchesSceneShotsResource({
-        resourceKeys: ['scene-shot-list'],
+      matchesSceneBeatsResource({
+        resourceKeys: ['scene-beat-sheet'],
         sceneId: 'scene_bombardment',
-        shotListId: 'scene_shot_list_bombardment',
+        beatSheetId: 'scene_beat_sheet_bombardment',
       })
     ).toBe(true);
   });
 
-  it('matches broad scene-shot-list changes for storyboard surfaces', () => {
+  it('matches broad Beat Sheet changes for storyboard surfaces', () => {
     expect(
       matchesSequenceResource({
-        resourceKeys: ['scene-shot-list'],
+        resourceKeys: ['scene-beat-sheet'],
         sequenceId: 'sequence_siege',
         sceneIds: new Set(['scene_bombardment']),
       })
     ).toBe(true);
     expect(
       matchesActStoryboardResource({
-        resourceKeys: ['scene-shot-list'],
+        resourceKeys: ['scene-beat-sheet'],
         actId: 'act_one',
         sequenceIds: new Set(['sequence_siege']),
         sceneIds: new Set(['scene_bombardment']),
       })
     ).toBe(true);
-  });
-
-  it('matches take-owned video, prompt, and input changes for the takes surface', () => {
-    expect(
-      matchesSceneTakesResource({
-        resourceKeys: ['scene-shot-video-take:take_002'],
-        sceneId: 'scene_bombardment',
-        takeId: 'take_001',
-      })
-    ).toBe(false);
   });
 });

@@ -66,21 +66,6 @@ export function parseSceneDialogueTarget(
   return { sceneId, dialogueId };
 }
 
-export function parseShots(value: string): string[] {
-  const shots = value
-    .split(',')
-    .map((shotId) => shotId.trim())
-    .filter(Boolean);
-  if (shots.length === 0) {
-    throw new StructuredError({
-      code: 'CLI030',
-      message: '--shots must include at least one shot id.',
-      suggestion: 'Use --shots shot_001 or --shots shot_001,shot_002.',
-    });
-  }
-  return shots;
-}
-
 export function parseSelection(
   value: string | undefined
 ): 'select' | 'take' | undefined {

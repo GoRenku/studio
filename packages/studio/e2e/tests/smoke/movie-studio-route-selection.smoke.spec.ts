@@ -1,27 +1,30 @@
-import { MovieStudioPage } from '../../pages/movie-studio-page';
-import { test } from '../../fixtures/studio-e2e-test';
+import { expect, test } from '../../fixtures/studio-e2e-test';
 
-test('keeps scene take editor selection across reload and browser navigation', async ({
+test('keeps Scene Beat and Shots route selection across reload and browser navigation', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
 }) => {
-  const movieStudio = new MovieStudioPage(page);
+  const projectRoute = `/projects/${encodeURIComponent(movieProject.projectName)}`;
+  const sceneRoute = `${projectRoute}/scenes/${encodeURIComponent(movieProject.sceneId)}`;
+  const beatRoute = `${sceneRoute}?sceneTab=beats&beat=${movieProject.secondBeatId}`;
 
-  await movieStudio.gotoProject(shotVideoTakeProject);
-  await movieStudio.expectProjectInformationVisible(shotVideoTakeProject);
+  await page.goto(projectRoute);
+  await expect(page.getByLabel('Title')).toHaveValue(movieProject.title);
 
-  await movieStudio.gotoTakeEditor(shotVideoTakeProject, { tab: 'composition' });
-  await movieStudio.expectTakeEditorVisible();
-  await movieStudio.expectSeededCompositionVisible();
-
+  await page.goto(beatRoute);
+  await expect(page.getByText('Crew reaction', { exact: true }).first())
+    .toBeVisible();
   await page.reload();
-  await movieStudio.expectTakeEditorVisible();
-  await movieStudio.expectSeededCompositionVisible();
+  await expect(page).toHaveURL(beatRoute);
+  await expect(page.getByText('Show consequence through human response.'))
+    .toBeVisible();
+
+  await page.goto(`${sceneRoute}?sceneTab=shots`);
+  await expect(page.getByRole('button', { name: 'New Shot' })).toBeVisible();
 
   await page.goBack();
-  await movieStudio.expectProjectInformationVisible(shotVideoTakeProject);
-
+  await expect(page).toHaveURL(beatRoute);
   await page.goForward();
-  await movieStudio.expectTakeEditorVisible();
-  await movieStudio.expectSeededCompositionVisible();
+  await expect(page).toHaveURL(`${sceneRoute}?sceneTab=shots`);
+  await expect(page.getByRole('button', { name: 'New Shot' })).toBeVisible();
 });

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
+import type { SceneBeatSheetDocument } from '../../client/scene-beat-sheet.js';
 import { createProjectDataService } from '../index.js';
 import {
   createSampleMovieProject,
@@ -24,8 +24,8 @@ describe('readStudioSelectionContext', () => {
     await createSampleMovieProject({ projectData, homeDir });
   });
 
-  it('rejects narrative scene selections that include shot-level state', async () => {
-    const { sceneId } = await writeShotList();
+  it('rejects Beat focus outside the Beats tab', async () => {
+    const { sceneId } = await writeBeatSheet();
 
     await expect(
       projectData.readStudioSelectionContext({
@@ -35,24 +35,7 @@ describe('readStudioSelectionContext', () => {
           type: 'scene',
           id: sceneId,
           sceneTab: 'narrative',
-          shotId: 'shot_001',
-        },
-      })
-    ).resolves.toMatchObject({
-      valid: false,
-      reason: 'unsupportedSelection',
-      diagnostics: [{ code: 'STUDIO_COORDINATION036', severity: 'error' }],
-    });
-
-    await expect(
-      projectData.readStudioSelectionContext({
-        projectName: PROJECT_NAME,
-        homeDir,
-        selection: {
-          type: 'scene',
-          id: sceneId,
-          sceneTab: 'narrative',
-          shotTab: 'composition',
+          beatId: 'beat_001',
         },
       })
     ).resolves.toMatchObject({
@@ -62,7 +45,7 @@ describe('readStudioSelectionContext', () => {
     });
   });
 
-  async function writeShotList(): Promise<{ sceneId: string }> {
+  async function writeBeatSheet(): Promise<{ sceneId: string }> {
     const screenplay = await projectData.readScreenplay({ homeDir });
     const act = screenplay.screenplay!.acts[0]!;
     const sequence = act.sequences[0]!;
@@ -72,37 +55,34 @@ describe('readStudioSelectionContext', () => {
       castMemberId: screenplay.screenplay!.cast[1]!.id as string,
       locationId: screenplay.screenplay!.locations[0]!.id as string,
     };
-    await projectData.writeSceneShotList({
+    await projectData.writeSceneBeatSheet({
       homeDir,
-      document: sampleShotList(ids),
+      document: sampleBeatSheet(ids),
     });
     return { sceneId: ids.sceneId };
   }
 });
 
-function sampleShotList(ids: {
+function sampleBeatSheet(ids: {
   sceneId: string;
   castMemberId: string;
   locationId: string;
-}): SceneShotListDocument {
+}): SceneBeatSheetDocument {
   return {
-    kind: 'sceneShotList',
+    kind: 'sceneBeatSheet',
     sceneId: ids.sceneId,
     title: 'Council chamber coverage',
     summary: 'A restrained coverage plan for the first scene.',
-    coverageStrategy: 'Hold the map table and Mehmed in one composed frame.',
-    shots: [
+    narrativeProgression: 'Hold the map table and Mehmed in one composed frame.',
+    beats: [
       {
-        shotId: 'shot_001',
+        id: 'beat_001',
         title: 'Map study',
-        storyBeat: 'Mehmed studies the city map before the siege plan hardens.',
+        description:
+          'Mehmed stands at the council table with the city map spread before him.',
+        narrativeDevelopment: 'Mehmed studies the city map before the siege plan hardens.',
         narrativePurpose: 'Establish the strategic obsession driving the scene.',
-        description: 'Wide static shot of Mehmed at the table with the map.',
-        shotType: 'wide',
-        subject: 'Mehmed and the city map',
-        action: 'Mehmed studies the map in silence.',
-        dialogue: [],
-        coveredBlockIndexes: [0],
+        screenplayBlockIndexes: [0],
         castMemberIds: [ids.castMemberId],
         locationIds: [ids.locationId],
       },

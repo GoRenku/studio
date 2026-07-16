@@ -17,13 +17,13 @@ describe('media import command handler', () => {
   it('passes an agent-cropped Storyboard image to the focused Scene attachment command', async () => {
     const attachSceneStoryboardImages = vi.fn().mockResolvedValue({ valid: true, purpose: 'scene.storyboard-sheet', project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
     await mediaImportCommandHandler.run({
-      flags: { purpose: 'scene.storyboard-sheet', target: 'scene:scene_1', shotList: 'shot_list_1', shots: 'shot_1', source: 'tmp/media/shot-1.png' },
+      flags: { purpose: 'scene.storyboard-sheet', target: 'scene:scene_1', beatSheet: 'scene_beat_sheet_1', beats: 'beat_1', source: 'tmp/media/beat-1.png' },
       runtime: { projectName: 'movie', projectDataService: { attachSceneStoryboardImages } },
     } as never);
     expect(attachSceneStoryboardImages).toHaveBeenCalledWith(expect.objectContaining({
       sceneId: 'scene_1',
-      shotListId: 'shot_list_1',
-      document: expect.objectContaining({ shots: [expect.objectContaining({ shotId: 'shot_1', source: 'tmp/media/shot-1.png' })] }),
+      beatSheetId: 'scene_beat_sheet_1',
+      document: expect.objectContaining({ beats: [expect.objectContaining({ beatId: 'beat_1', source: 'tmp/media/beat-1.png' })] }),
     }));
   });
 });

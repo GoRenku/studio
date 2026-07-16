@@ -129,7 +129,6 @@ File meanings:
 - `routes/assets.ts`: asset page, selection, and file routes mounted below one project;
 - `routes/project-information.ts`: Project Information routes mounted below one project;
 - `routes/markdown-assets.ts`: Markdown asset content routes mounted below one project;
-- `routes/production-exports.ts`: production export route mounted below one project;
 - `routes/movie-studio-selection-context.ts`: Movie Studio selection context route
   mounted below one project;
 - `routes/studio-events.ts`: Studio coordination event resource route module;

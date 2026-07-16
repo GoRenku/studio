@@ -156,47 +156,24 @@ export function matchesSceneNarrativeResource(
   );
 }
 
-export function matchesSceneShotsResource(input: {
+export function matchesSceneBeatsResource(input: {
   resourceKeys: string[];
   sceneId: string;
-  shotListId?: string | null;
+  beatSheetId?: string | null;
 }): boolean {
   return input.resourceKeys.some(
     (resourceKey) =>
       resourceKey === `scene:${input.sceneId}` ||
-      resourceKey === 'scene-shot-list' ||
-      resourceKey === `surface:scene:${input.sceneId}:shots` ||
+      resourceKey === 'scene-beat-sheet' ||
+      resourceKey === `surface:scene:${input.sceneId}:beats` ||
       resourceKey === `surface:scene:${input.sceneId}:dialogue-audio` ||
       resourceKey.startsWith('scene-dialogue-audio:') ||
       resourceKey.startsWith('scene-dialogue-audio-take:') ||
-      (input.shotListId
-        ? resourceKey.startsWith(`scene-shot-list:${input.shotListId}:`) ||
-          resourceKey === `scene-shot-list:${input.shotListId}`
+      (input.beatSheetId
+        ? resourceKey.startsWith(`scene-beat-sheet:${input.beatSheetId}:`) ||
+          resourceKey === `scene-beat-sheet:${input.beatSheetId}`
         : false)
   );
-}
-
-export function matchesSceneTakesResource(input: {
-  resourceKeys: string[];
-  sceneId: string;
-  takeId?: string | null;
-}): boolean {
-  return input.resourceKeys.some((resourceKey) => {
-    if (
-      resourceKey === `scene:${input.sceneId}` ||
-      resourceKey === `surface:scene:${input.sceneId}:takes`
-    ) {
-      return true;
-    }
-    if (!input.takeId) {
-      return (
-        resourceKey.startsWith('scene-shot-video-take:')
-      );
-    }
-    return (
-      resourceKey === `scene-shot-video-take:${input.takeId}`
-    );
-  });
 }
 
 export function matchesSequenceResource(input: {
@@ -244,15 +221,15 @@ function matchesStoryboardSceneResource(
   sceneIds: Set<string>
 ): boolean {
   if (
-    resourceKey === 'scene-shot-list' ||
-    resourceKey.startsWith('scene-shot-list:')
+    resourceKey === 'scene-beat-sheet' ||
+    resourceKey.startsWith('scene-beat-sheet:')
   ) {
     return true;
   }
   for (const sceneId of sceneIds) {
     if (
       resourceKey === `scene:${sceneId}` ||
-      resourceKey === `surface:scene:${sceneId}:shots`
+      resourceKey === `surface:scene:${sceneId}:beats`
     ) {
       return true;
     }

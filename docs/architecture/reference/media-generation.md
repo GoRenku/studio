@@ -45,10 +45,9 @@ interface GenerationReferenceSelection {
 }
 ```
 
-The stable target kinds are `project`, `asset`, `lookbook`,
-`castMember`, `location`, `scene`, `sceneDialogue`, and
-`sceneShotVideoTake`. Every target is `{ kind, id }`; purpose descriptors
-own any additional context lookup.
+The stable target kinds are `project`, `asset`, `lookbook`, `castMember`,
+`location`, `scene`, and `sceneDialogue`. Every target is `{ kind, id }`;
+purpose descriptors own any additional context lookup.
 
 ## Editing And Validation
 
@@ -119,7 +118,7 @@ unavailable when exact pricing facts are insufficient.
 A provider failure after execution begins is a persisted failed run. A
 predictable validation or approval failure is not.
 
-## Database Generation 42
+## Database Generation 46
 
 `media_generation_spec` columns:
 
@@ -136,26 +135,10 @@ spec_snapshot_json, provider_payload_json, estimate_json, approval_token,
 status, outputs_json, receipt_json, diagnostics_json, started_at, completed_at
 ```
 
-Migration `0052_context-first-generation.sql` is a documented custom Drizzle
-migration. Its preflight reports
-`CORE_GENERATION_MIGRATION_AMBIGUOUS_REFERENCE` when an explicit legacy Shot
-selection cannot resolve to exactly one active file. Runtime code has no old
-generation JSON reader.
-
-The corrected copied Urban Basilica proof produced 13 generic Shot-selection
-specs with 31 exact references and converted 23 provenance-backed historical
-requests and runs to the current generic contract. It retained all 24
-`asset_file_generation` links, advanced 30 take states to version 3, retained
-84 asset files, passed `quick_check`, and had no foreign-key violations.
-Unlinked drafts and obsolete purpose rows are deliberately not retained.
-
-## Intermediate Boundary
-
-Old purpose-specific Core contracts and backend modules are absent. The CLI,
-Studio, and Skills caller inventory is
-`context-first-generation-caller-handoff.md`. Plan `0135` must update or
-delete every listed caller directly and restore root/product gates without
-adding aliases, shims, dual schemas, or compatibility readers.
+Migration `0059_scene_beats_and_shot_authoring_reset.sql` removes the retired
+Shot Video Take generation purposes, targets, specs, runs, provenance, and
+Take-owned assets. The current generation runtime has no compatibility reader,
+target parser, attachment route, or fallback for those contracts.
 
 Decision history is recorded in
 `../../decisions/0047-use-context-first-provider-valid-generation.md`.

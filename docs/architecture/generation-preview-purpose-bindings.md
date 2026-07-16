@@ -26,10 +26,8 @@ packages/core/src/server/generation-preview-resource/
 ```
 
 The resource projects exact persisted current choices separately from optional
-typed candidates. For a Draft Shot Video Take, Character Sheet and Location
-Sheet slots come from the complete Scene context, one Production Lookbook slot
-is always present, and First Frame, Last Frame, and Video Prompt Image slots are
-always present regardless of selected-model fields.
+typed candidates supplied by the active purpose guide. No Shot or Take-specific
+slot family exists in the current generation contract.
 
 Each Draft typed slot has `current: null` or one exact persisted choice plus
 subject-filtered eligible candidates. A sole candidate is visible but unchecked
@@ -41,10 +39,6 @@ Generic references are a separate ordered collection. Their catalog is
 searchable, paginated, and media-generic across image, audio, and video,
 including imported/external assets. Typed pickers use focused domain
 relationships and never use this all-project catalog.
-
-Completed Take References use only the successful materializing run's immutable
-`specSnapshot`. They do not query current candidates, show empty suggestion
-slots, or expose editing controls.
 
 ## Update Semantics
 
@@ -82,7 +76,5 @@ media.
 ## Verification
 
 Keep Prompt, References, Config, diagnostics, estimate, saved/editable,
-unsaved/read-only, pending, failure, and latest-response-wins coverage. Desktop
-coverage must also prove complete-Scene Draft slots, fixed supporting slots,
-unchecked sole candidates, exact successful-snapshot Completed references, and
-absence of completed-Take editing controls.
+unsaved/read-only, pending, failure, latest-response-wins, typed-slot, and
+unchecked-sole-candidate coverage.

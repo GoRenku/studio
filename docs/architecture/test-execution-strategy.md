@@ -128,15 +128,8 @@ pnpm --filter @gorenku/studio test:integration
 
 That integration bucket includes:
 
-- `packages/studio/src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts`
-- `packages/studio/src/services/scene-shot-video-take-state-persistence.e2e.test.ts`
-- `packages/studio/src/features/movie-studio/scenes/scene-shot-location-sheets.e2e.test.tsx`
-
-These tests are not useless. The estimate matrix test is particularly valuable:
-it protects the AI Production pricing matrix, route coverage, route
-serialization, direct-request estimates, and model/input-mode permutations.
-It should be treated as protected final coverage. It should not be deleted to
-make development feel faster.
+- `packages/studio/src/app/app.e2e.test.tsx`
+- `packages/studio/src/features/generation-preview/generation-preview-dialog-host.e2e.test.tsx`
 
 The named estimate matrix command remains available:
 
@@ -213,7 +206,7 @@ Examples:
 
 ```bash
 pnpm --dir packages/core exec vitest run src/server/media-generation/cost/cost-projection.test.ts
-pnpm --dir packages/studio exec vitest run src/features/movie-studio/scenes/shot-video-take-production-projection.test.ts
+pnpm --dir packages/studio exec vitest run src/features/movie-studio/shot-authoring/shot-ai-production-projection.test.ts
 pnpm --dir packages/cli exec vitest run src/commands/generation-command-handlers.test.ts
 pnpm --dir packages/engines exec vitest run src/sdk/replicate/retry.test.ts
 ```
@@ -329,9 +322,9 @@ delete them merely to speed up development.
 
 Protected examples:
 
-- `packages/studio/src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts`
-- `packages/studio/src/services/scene-shot-video-take-state-persistence.e2e.test.ts`
-- `packages/core/tests/integration/media-generation-dependency-inventory.test.ts`
+- `packages/studio/src/app/app.e2e.test.tsx`
+- `packages/studio/src/features/generation-preview/generation-preview-dialog-host.e2e.test.tsx`
+- `packages/core/tests/integration/context-first-generation-lifecycle.test.ts`
 - `packages/studio/e2e/tests/smoke/*.spec.ts`
 - provider e2e tests under `packages/engines/tests/e2e` when provider behavior
   is being changed intentionally.
@@ -534,9 +527,9 @@ Fast coverage should exist for:
 - fixed setting enforcement and untouched provider defaults;
 - generic spec, preview, validation, direct estimate, approval, and run behavior;
 - focused attachment ownership and provenance;
-- Preview, Image Revision, Dialogue Audio, and Shot Video Take use cases;
+- Preview, Image Revision, Dialogue Audio, and Scene Beat Sheet use cases;
 - structured diagnostics for invalid state;
-- shot video take persistence rules where a real database is not essential.
+- persistence-free Shot authoring component behavior.
 
 Core integration should remain for:
 
@@ -643,10 +636,10 @@ For example:
   `packages/studio/src/**/*.e2e.test.*`.
 - [x] Keep Studio default tests focused on server route tests, service unit tests,
   React feature tests, and local utility tests.
-- [x] Preserve `packages/studio/src/services/shot-video-take-ai-production-estimate-matrix.e2e.test.ts`
-  as a protected final check.
-- [x] Audit fast tests around the highest-value rules protected by the estimate matrix
-  so developers do not need to run the matrix repeatedly.
+- [x] Preserve app and Generation Preview integration tests as protected final
+  checks.
+- [x] Audit fast tests around the highest-value Beat and Shot-authoring rules so
+  developers do not need to run integration tests repeatedly.
 - [x] Split CLI broad workflow tests from fast command-handler tests when the CLI
   test suite becomes a development-loop bottleneck.
 - [x] Move `packages/engines/src/sdk/unified/simulation-integration.test.ts`

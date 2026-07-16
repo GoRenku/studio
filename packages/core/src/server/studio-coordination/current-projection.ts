@@ -3,29 +3,7 @@ import { createProjectDataService } from '../project-data-service.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
   ScenePanelTab,
-  SceneShot,
-  SceneShotDetailTab,
-  CameraAngleId,
-  FocusId,
-  LensId,
-  MoveDirectionId,
-  MoveTrackId,
-  RigId,
-  ShotMovementId,
-  ShotSizeId,
-  SubjectFramingId,
 } from '../../client/index.js';
-import {
-  CAMERA_ANGLE_LABELS,
-  FOCUS_LABELS,
-  LENS_LABELS,
-  MOVE_DIRECTION_LABELS,
-  MOVE_TRACK_LABELS,
-  MOVEMENT_LABELS,
-  RIG_LABELS,
-  SHOT_SIZE_LABELS,
-  SUBJECT_FRAMING_LABELS,
-} from '../../client/shot-spec-labels.js';
 import { studioCoordinationWarning } from './errors.js';
 import { isStudioRuntimeDescriptorUsable, readStudioRuntimeDescriptor } from './runtime-descriptor.js';
 import { resolveStudioSelectionForProject } from './focus-validation.js';
@@ -34,8 +12,6 @@ import type {
   StudioBrowserSessionActiveEvent,
   StudioCurrent,
   StudioCurrentContext,
-  StudioCurrentShotTabSelections,
-  StudioCurrentTakeWorkspace,
   StudioEvent,
   StudioFocus,
   StudioFocusRequestedEvent,
@@ -44,27 +20,6 @@ import type {
 
 const BROWSER_SESSION_STALE_AFTER_MS = 120_000;
 const FOCUS_REQUEST_STALE_AFTER_MS = 5 * 60_000;
-
-interface TakeDirectionProjection {
-  composition?: {
-    shotSize?: ShotSizeId;
-    subjectFraming?: SubjectFramingId[];
-    cameraAngle?: CameraAngleId;
-    dutch?: 'left' | 'right';
-    lens?: { type?: LensId; millimeters?: number; focus?: FocusId };
-    customComposition?: string;
-  };
-  motion?: {
-    movement?: ShotMovementId;
-    secondary?: ShotMovementId;
-    directions?: MoveDirectionId[];
-    track?: MoveTrackId;
-    rig?: RigId;
-    customMotion?: string;
-  };
-  cast?: { castMemberIds?: string[] };
-  location?: { locationId?: string };
-}
 
 export interface ProjectStudioCurrentInput extends RenkuConfigPathOptions {
   events: StudioEvent[];
@@ -341,7 +296,7 @@ async function enrichMovieStudioFocus(
   const resolution = resolveStudioSelectionForProject(project, selection);
   let context: StudioCurrentContext | null = resolution.ok ? resolution.context : null;
   if (resolution.ok && context?.kind === 'scene') {
-    const enriched = await enrichSceneShotFocusContext({
+    const enriched = await enrichSceneBeatFocusContext({
       projectData,
       projectName: project.identity.name,
       selection,
@@ -362,7 +317,7 @@ async function enrichMovieStudioFocus(
   };
 }
 
-async function enrichSceneShotFocusContext(input: {
+function enrichSceneBeatFocusContext(input: {
   projectData: ReturnType<typeof createProjectDataService>;
   projectName: string;
   selection: StudioSelection;
@@ -373,332 +328,20 @@ async function enrichSceneShotFocusContext(input: {
   warnings: DiagnosticIssue[];
 }> {
   if (input.selection.type !== 'scene') {
-    return { context: input.context, warnings: [] };
+    return Promise.resolve({ context: input.context, warnings: [] });
   }
-  const selection = input.selection;
-  const sceneTab = effectiveSceneTab(selection);
-  const takeWorkspace = await sceneTakeWorkspace({
-    projectData: input.projectData,
-    projectName: input.projectName,
-    homeDir: input.options.homeDir,
-    selection,
+  return Promise.resolve({
+    context: {
+      ...input.context,
+      sceneTab: sceneTabLabel(input.selection.sceneTab ?? 'narrative'),
+    },
+    warnings: [],
   });
-  const baseContext = {
-    ...input.context,
-    sceneTab: sceneTabLabel(sceneTab),
-    ...(takeWorkspace.workspace
-      ? { takeWorkspace: takeWorkspace.workspace }
-      : {}),
-  };
-  const takeWorkspaceWarnings = takeWorkspace.warnings;
-  if (sceneTab !== 'shots' && sceneTab !== 'takes') {
-    return { context: baseContext, warnings: takeWorkspaceWarnings };
-  }
-  try {
-    const resource = await input.projectData.readSceneShotListResource({
-      projectName: input.projectName,
-      sceneId: selection.id,
-      homeDir: input.options.homeDir,
-    });
-    const shots = resource.activeShotList?.shots ?? [];
-    const shotIndex = selection.shotId
-      ? shots.findIndex((shot) => shot.shotId === selection.shotId)
-      : shots.length > 0
-        ? 0
-        : -1;
-    if (shotIndex < 0) {
-      return {
-      context: baseContext,
-      warnings: selection.shotId
-          ? takeWorkspaceWarnings.concat([
-              studioCoordinationWarning(
-                'STUDIO_COORDINATION038',
-                'Current Studio shot focus no longer exists in the active shot list.',
-                ['selection', 'shotId'],
-                'Select a shot that exists in the scene active shot list.'
-              ),
-            ])
-          : takeWorkspaceWarnings,
-      };
-    }
-    const shot = shots[shotIndex]!;
-    const shotTab = selection.shotTab ?? 'description';
-    const shotTabProjection = await shotTabSelections({
-      projectData: input.projectData,
-      projectName: input.projectName,
-      homeDir: input.options.homeDir,
-      sceneId: selection.id,
-      takeId: selection.takeId,
-      shot,
-      shotTab,
-      castMemberLabels: resource.castMemberLabels,
-      locationLabels: resource.locationLabels,
-    });
-    return {
-      context: {
-        ...baseContext,
-        shot: {
-          id: shot.shotId,
-          index: shotIndex,
-          label: `Shot ${shotIndex + 1}`,
-          title: shot.title,
-          activeTab: shotTabLabel(shotTab),
-          currentTabSelections: shotTabProjection.selections,
-        },
-      },
-      warnings: takeWorkspaceWarnings.concat(shotTabProjection.warnings),
-    };
-  } catch {
-    return {
-      context: baseContext,
-      warnings: takeWorkspaceWarnings.concat([
-        studioCoordinationWarning(
-          'STUDIO_COORDINATION039',
-          'Current Studio shot focus could not load the active shot list.',
-          ['context', 'shot'],
-          'Refresh Studio and try reading current focus again.'
-        ),
-      ]),
-    };
-  }
-}
-
-async function sceneTakeWorkspace(input: {
-  projectData: ReturnType<typeof createProjectDataService>;
-  projectName: string;
-  homeDir?: string;
-  selection: Extract<StudioSelection, { type: 'scene' }>;
-}): Promise<{
-  workspace: StudioCurrentTakeWorkspace | null;
-  warnings: DiagnosticIssue[];
-}> {
-  if (!input.selection.takeWorkspaceMode && !input.selection.takeId) {
-    return { workspace: null, warnings: [] };
-  }
-  const mode = input.selection.takeWorkspaceMode ?? 'edit';
-  const fallback = {
-    mode,
-    ...(input.selection.takeId ? { takeId: input.selection.takeId } : {}),
-    shotIds: input.selection.shotId ? [input.selection.shotId] : [],
-    ...(input.selection.shotId ? { selectedShotId: input.selection.shotId } : {}),
-    ...(input.selection.takeId
-      ? {
-          recommendedReadCommand: `renku generation context --purpose shot.video-take --target take:${input.selection.takeId} --json`,
-        }
-      : {}),
-  } satisfies StudioCurrentTakeWorkspace;
-  return { workspace: fallback, warnings: [] };
-}
-
-function effectiveSceneTab(selection: Extract<StudioSelection, { type: 'scene' }>): ScenePanelTab {
-  return selection.sceneTab ?? (selection.shotId || selection.shotTab ? 'takes' : 'narrative');
 }
 
 function sceneTabLabel(tab: ScenePanelTab) {
   return {
     id: tab,
-    label:
-      tab === 'takes' ? 'Takes' : tab === 'shots' ? 'Shots' : 'Narrative',
-  };
-}
-
-function shotTabLabel(tab: SceneShotDetailTab) {
-  switch (tab) {
-    case 'description':
-      return { id: tab, label: 'Description' };
-    case 'lookbook':
-      return { id: tab, label: 'Lookbook' };
-    case 'composition':
-      return { id: tab, label: 'Composition' };
-    case 'motion':
-      return { id: tab, label: 'Motion' };
-    case 'dialogs':
-      return { id: tab, label: 'Dialogs' };
-    case 'cast':
-      return { id: tab, label: 'Cast' };
-    case 'location':
-      return { id: tab, label: 'Location' };
-    case 'references':
-      return { id: tab, label: 'References' };
-    case 'ai-production':
-      return { id: tab, label: 'AI Production' };
-  }
-}
-
-async function shotTabSelections(input: {
-  projectData: ReturnType<typeof createProjectDataService>;
-  projectName: string;
-  homeDir?: string;
-  sceneId: string;
-  takeId?: string;
-  shot: SceneShot;
-  shotTab: SceneShotDetailTab;
-  castMemberLabels: Record<string, string>;
-  locationLabels: Record<string, string>;
-}): Promise<{
-  selections: StudioCurrentShotTabSelections;
-  warnings: DiagnosticIssue[];
-}> {
-  const direction = unavailableTakeDirection();
-  const composition = direction?.composition;
-  const motion = direction?.motion;
-  switch (input.shotTab) {
-    case 'composition':
-      return {
-        selections: {
-          kind: 'composition',
-        ...(composition?.shotSize
-          ? {
-              shotSize: {
-                id: composition.shotSize,
-                label: SHOT_SIZE_LABELS[composition.shotSize],
-              },
-            }
-          : {}),
-        subjectFraming: (composition?.subjectFraming ?? []).map((id) => ({
-          id,
-          label: SUBJECT_FRAMING_LABELS[id],
-        })),
-        ...(composition?.cameraAngle
-          ? {
-              cameraAngle: {
-                id: composition.cameraAngle,
-                label: CAMERA_ANGLE_LABELS[composition.cameraAngle],
-              },
-            }
-          : {}),
-        ...(composition?.dutch ? { dutch: composition.dutch } : {}),
-          ...compositionLens(direction),
-          ...(composition?.customComposition?.trim()
-            ? { customComposition: composition.customComposition.trim() }
-            : {}),
-        },
-        warnings: [],
-      };
-    case 'motion':
-      return {
-        selections: {
-          kind: 'motion',
-        ...(motion?.movement
-          ? {
-              movement: {
-                id: motion.movement,
-                label: MOVEMENT_LABELS[motion.movement],
-              },
-            }
-          : {}),
-        ...(motion?.secondary
-          ? {
-              secondary: {
-                id: motion.secondary,
-                label: MOVEMENT_LABELS[motion.secondary],
-              },
-            }
-          : {}),
-        directions: (motion?.directions ?? []).map((id) => ({
-          id,
-          label: MOVE_DIRECTION_LABELS[id],
-        })),
-        ...(motion?.track
-          ? {
-              track: {
-                id: motion.track,
-                label: MOVE_TRACK_LABELS[motion.track],
-              },
-            }
-          : {}),
-        ...(motion?.rig
-          ? {
-              rig: {
-                id: motion.rig,
-                label: RIG_LABELS[motion.rig],
-              },
-            }
-          : {}),
-          ...(motion?.customMotion?.trim()
-            ? { customMotion: motion.customMotion.trim() }
-            : {}),
-        },
-        warnings: [],
-      };
-    case 'cast': {
-      const castMemberIds =
-        direction?.cast?.castMemberIds ?? input.shot.castMemberIds;
-      return {
-        selections: {
-          kind: 'cast',
-          cast: castMemberIds.map((id) => ({
-            id,
-            name: input.castMemberLabels[id] ?? id,
-          })),
-        },
-        warnings: [],
-      };
-    }
-    case 'location': {
-      const locationIds = direction?.location?.locationId
-        ? [direction.location.locationId]
-        : input.shot.locationIds;
-      return {
-        selections: {
-          kind: 'location',
-          locations: locationIds.map((id) => ({
-            id,
-            name: input.locationLabels[id] ?? id,
-          })),
-        },
-        warnings: [],
-      };
-    }
-    case 'ai-production': {
-      const fallback = {
-        kind: 'take' as const,
-        ...(input.takeId
-          ? { takeId: input.takeId }
-          : {}),
-        shotIds: [input.shot.shotId],
-      };
-      if (!input.takeId) {
-        return { selections: fallback, warnings: [] };
-      }
-      return { selections: fallback, warnings: [] };
-    }
-    case 'description':
-    case 'lookbook':
-    case 'dialogs':
-    case 'references':
-      return { selections: { kind: input.shotTab }, warnings: [] };
-  }
-}
-
-function unavailableTakeDirection(): TakeDirectionProjection | undefined {
-  return undefined;
-}
-
-function compositionLens(direction: TakeDirectionProjection | undefined) {
-  const lens = direction?.composition?.lens;
-  if (!lens?.type && !lens?.focus && lens?.millimeters === undefined) {
-    return {};
-  }
-  return {
-    lens: {
-      ...(lens.type
-        ? {
-            type: {
-              id: lens.type,
-              label: LENS_LABELS[lens.type],
-            },
-          }
-        : {}),
-      ...(lens.millimeters !== undefined ? { millimeters: lens.millimeters } : {}),
-      ...(lens.focus
-        ? {
-            focus: {
-              id: lens.focus,
-              label: FOCUS_LABELS[lens.focus],
-            },
-          }
-        : {}),
-    },
+    label: tab === 'beats' ? 'Beats' : tab === 'shots' ? 'Shots' : 'Narrative',
   };
 }

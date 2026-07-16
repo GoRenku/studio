@@ -2,7 +2,8 @@
 
 Date: 2026-07-15
 
-Status: accepted
+Status: accepted for generic generation authoring; Shot/Take-specific clauses
+superseded by Decision 0052
 
 ## Context
 
@@ -96,4 +97,3 @@ assembling an executable payload.
   secrets, or provider upload URLs.
 - Engine schema validation remains independent of Core purpose and typed-slot
   projection.
-

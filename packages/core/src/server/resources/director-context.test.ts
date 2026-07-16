@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
+import type { SceneBeatSheetDocument } from '../../client/scene-beat-sheet.js';
 import { createProjectDataService } from '../index.js';
 import {
   createBlankMovieProject,
@@ -46,7 +46,7 @@ describe('readDirectorContext', () => {
     );
   });
 
-  it('recommends shot-list design for a selected scene without an active shot list', async () => {
+  it('recommends beat-sheet design for a selected scene without an active Beat Sheet', async () => {
     const sceneId = await createSampleProjectAndReadSceneId();
     if (!sceneId) {
       return;
@@ -63,9 +63,9 @@ describe('readDirectorContext', () => {
     });
     expect(report.selectedScene).toMatchObject({
       sceneId,
-      activeShotListId: null,
+      activeBeatSheetId: null,
     });
-    expect(report.nextSteps.map((step) => step.id)).toContain('design-shot-list');
+    expect(report.nextSteps.map((step) => step.id)).toContain('design-beat-sheet');
     expect(report.diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'DIRECTOR_CONTEXT007' }),
@@ -73,14 +73,14 @@ describe('readDirectorContext', () => {
     );
   });
 
-  it('recommends storyboard generation when the selected scene shot list has missing images', async () => {
+  it('recommends storyboard generation when the selected scene Beat Sheet has missing images', async () => {
     const scene = await createSampleProjectAndReadScene();
     if (!scene) {
       return;
     }
-    await projectData.writeSceneShotList({
+    await projectData.writeSceneBeatSheet({
       homeDir,
-      document: sampleShotList({
+      document: sampleBeatSheet({
         sceneId: scene.sceneId,
         castMemberId: scene.castMemberId,
         locationId: scene.locationId,
@@ -94,10 +94,10 @@ describe('readDirectorContext', () => {
 
     expect(report.selectedScene).toMatchObject({
       sceneId: scene.sceneId,
-      activeShotListId: expect.any(String),
+      activeBeatSheetId: expect.any(String),
       storyboardStatus: {
         available: true,
-        missingShotIds: ['shot_001'],
+        missingBeatIds: ['beat_001'],
       },
     });
     expect(report.nextSteps.map((step) => step.id)).toContain(
@@ -209,29 +209,26 @@ function storyboardLookbookDocument() {
   };
 }
 
-function sampleShotList(ids: {
+function sampleBeatSheet(ids: {
   sceneId: string;
   castMemberId: string;
   locationId: string;
-}): SceneShotListDocument {
+}): SceneBeatSheetDocument {
   return {
-    kind: 'sceneShotList',
+    kind: 'sceneBeatSheet',
     sceneId: ids.sceneId,
     title: 'Council chamber coverage',
     summary: 'A restrained coverage plan for the first scene.',
-    coverageStrategy: 'Hold the map table and Mehmed in one composed frame.',
-    shots: [
+    narrativeProgression: 'Hold the map table and Mehmed in one composed frame.',
+    beats: [
       {
-        shotId: 'shot_001',
+        id: 'beat_001',
         title: 'Map study',
-        storyBeat: 'Mehmed studies the city map before the siege plan hardens.',
+        description:
+          'Mehmed stands at the council table with the city map spread before him.',
+        narrativeDevelopment: 'Mehmed studies the city map before the siege plan hardens.',
         narrativePurpose: 'Establish the strategic obsession driving the scene.',
-        description: 'Wide static shot of Mehmed at the table with the map.',
-        shotType: 'wide',
-        subject: 'Mehmed and the city map',
-        action: 'Mehmed studies the map in silence.',
-        dialogue: [],
-        coveredBlockIndexes: [0],
+        screenplayBlockIndexes: [0],
         castMemberIds: [ids.castMemberId],
         locationIds: [ids.locationId],
       },

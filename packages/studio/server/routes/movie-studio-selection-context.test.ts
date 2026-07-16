@@ -34,7 +34,7 @@ describe('movie studio selection context Hono route', () => {
     });
   });
 
-  it('accepts the Dialogs shot-detail tab in scene selections', async () => {
+  it('accepts Beat selection state', async () => {
     const app = createMountedMovieStudioSelectionContextRoute();
 
     const response = await app.request(
@@ -45,9 +45,8 @@ describe('movie studio selection context Hono route', () => {
           selection: {
             type: 'scene',
             id: 'scene_bombardment',
-            sceneTab: 'shots',
-            shotId: 'shot_001',
-            shotTab: 'dialogs',
+            sceneTab: 'beats',
+            beatId: 'beat_001',
           },
         }),
         headers: { 'Content-Type': 'application/json' },
@@ -60,9 +59,8 @@ describe('movie studio selection context Hono route', () => {
       selection: {
         type: 'scene',
         id: 'scene_bombardment',
-        sceneTab: 'shots',
-        shotId: 'shot_001',
-        shotTab: 'dialogs',
+        sceneTab: 'beats',
+        beatId: 'beat_001',
       },
     });
   });

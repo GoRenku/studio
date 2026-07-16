@@ -16,11 +16,7 @@ export type GenerationPurpose =
   | 'scene.dialogue-audio'
   | 'location.sheet'
   | 'location.hero'
-  | 'scene.storyboard-sheet'
-  | 'shot.first-frame'
-  | 'shot.last-frame'
-  | 'shot.video-prompt'
-  | 'shot.video-take';
+  | 'scene.storyboard-sheet';
 export type GenerationOutputMediaKind = 'image' | 'audio' | 'video';
 
 export type GenerationTarget =
@@ -30,8 +26,7 @@ export type GenerationTarget =
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
   | { kind: 'scene'; id: string }
-  | { kind: 'sceneDialogue'; id: string }
-  | { kind: 'sceneShotVideoTake'; id: string };
+  | { kind: 'sceneDialogue'; id: string };
 
 export interface GenerationModelIdentity {
   provider?: string;
@@ -269,14 +264,3 @@ export interface GenerationRun {
 export type GenerationRunReport =
   | { valid: true; run: GenerationRun; diagnostics: DiagnosticIssue[] }
   | { valid: false; diagnostics: DiagnosticIssue[] };
-
-export interface ShotVideoTakeSummary {
-  id: string;
-  sceneId: string;
-  sourceShotListId: string;
-  title: string;
-  shotIds: string[];
-  isPicked: boolean;
-  createdAt: string;
-  updatedAt: string;
-}

@@ -8,16 +8,18 @@ import {
 } from '../commands/screenplay-revision-commands.js';
 import { listScreenplayAnalyses, readScreenplayAnalysis, readScreenplayAnalysisContext, setActiveScreenplayAnalysis, validateScreenplayAnalysis, writeScreenplayAnalysis } from '../commands/screenplay-analysis-commands.js';
 import {
-  applySceneShotListOperations,
-  listSceneShotLists,
-  readSceneShotList,
-  readSceneShotListContext,
-  readSceneShotListStoryboardStatus,
-  setActiveSceneShotList,
-  validateSceneShotList,
-  validateSceneShotListOperations,
-  writeSceneShotList,
-} from '../commands/scene-shot-list-commands.js';
+  listSceneBeatSheets,
+  readSceneBeatSheet,
+  setActiveSceneBeatSheet,
+  validateSceneBeatSheet,
+  writeSceneBeatSheet,
+} from '../scene-beat-sheet/history.js';
+import { readSceneBeatSheetContext } from '../scene-beat-sheet/context.js';
+import {
+  applySceneBeatSheetOperations,
+  validateSceneBeatSheetOperations,
+} from '../scene-beat-sheet/operations.js';
+import { readSceneBeatSheetStoryboardStatus } from '../scene-beat-sheet/storyboard-status.js';
 import { validateScreenplayJson } from '../commands/validate-screenplay-json.js';
 import {
   listScreenplayActs,
@@ -49,10 +51,10 @@ export function createScreenplayServiceWiring(): Pick<
   | 'readScreenplayAnalysisContext' | 'listScreenplayAnalyses'
   | 'readScreenplayAnalysis' | 'validateScreenplayAnalysis'
   | 'writeScreenplayAnalysis' | 'setActiveScreenplayAnalysis'
-  | 'readSceneShotListContext' | 'listSceneShotLists' | 'readSceneShotList'
-  | 'validateSceneShotList' | 'writeSceneShotList' | 'setActiveSceneShotList'
-  | 'validateSceneShotListOperations' | 'applySceneShotListOperations'
-  | 'readSceneShotListStoryboardStatus'
+  | 'readSceneBeatSheetContext' | 'listSceneBeatSheets' | 'readSceneBeatSheet'
+  | 'validateSceneBeatSheet' | 'writeSceneBeatSheet' | 'setActiveSceneBeatSheet'
+  | 'validateSceneBeatSheetOperations' | 'applySceneBeatSheetOperations'
+  | 'readSceneBeatSheetStoryboardStatus'
 > {
   return {
     readScreenplayStatus, readScreenplay,
@@ -67,9 +69,9 @@ export function createScreenplayServiceWiring(): Pick<
     readScreenplayAnalysisContext, listScreenplayAnalyses,
     readScreenplayAnalysis, validateScreenplayAnalysis,
     writeScreenplayAnalysis, setActiveScreenplayAnalysis,
-    readSceneShotListContext, listSceneShotLists, readSceneShotList,
-    validateSceneShotList, writeSceneShotList, setActiveSceneShotList,
-    validateSceneShotListOperations, applySceneShotListOperations,
-    readSceneShotListStoryboardStatus,
+    readSceneBeatSheetContext, listSceneBeatSheets, readSceneBeatSheet,
+    validateSceneBeatSheet, writeSceneBeatSheet, setActiveSceneBeatSheet,
+    validateSceneBeatSheetOperations, applySceneBeatSheetOperations,
+    readSceneBeatSheetStoryboardStatus,
   };
 }

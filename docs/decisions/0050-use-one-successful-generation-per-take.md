@@ -2,7 +2,7 @@
 
 Date: 2026-07-15
 
-Status: accepted
+Status: superseded by Decision 0052
 
 ## Context
 
@@ -79,4 +79,3 @@ decision.
 - Completed Take media and successful snapshots are immutable and inspectable.
 - Production export may rely on one current final video per materialized Take,
   while still failing explicitly when a picked Take lacks ready media.
-

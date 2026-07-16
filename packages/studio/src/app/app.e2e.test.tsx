@@ -364,25 +364,6 @@ describe('App', () => {
     );
   });
 
-  it('exports production assets from the sidebar header action', async () => {
-    window.history.pushState({}, '', '/projects/constantinople');
-    const fetchLog = mockStudioFetch({
-      library: makeLibrary([makeProjectSummary()]),
-      project: makeProject(),
-    });
-
-    renderApp();
-
-    await screen.findByText('Project Name');
-    fireEvent.click(screen.getByLabelText('Export production assets'));
-
-    await waitFor(() => {
-      expect(fetchLog).toContain(
-        '/studio-api/projects/constantinople/production-export'
-      );
-    });
-  });
-
   it('uses browser history to restore route-owned Movie Studio selections', async () => {
     window.history.pushState({}, '', '/projects/constantinople');
     mockStudioFetch({
@@ -790,20 +771,23 @@ describe('App', () => {
       '/projects/constantinople/scenes/scene_1_1',
     ],
     [
-      'Scene shot',
-      { type: 'scene', id: 'scene_1_1', shotId: 'shot_001' },
-      '/projects/constantinople/scenes/scene_1_1?sceneTab=takes&shot=shot_001',
-    ],
-    [
-      'Scene shot composition',
+      'Scene Beat',
       {
         type: 'scene',
         id: 'scene_1_1',
-        sceneTab: 'takes',
-        shotId: 'shot_001',
-        shotTab: 'composition',
+        sceneTab: 'beats',
+        beatId: 'beat_001',
       },
-      '/projects/constantinople/scenes/scene_1_1?sceneTab=takes&shot=shot_001&shotTab=composition',
+      '/projects/constantinople/scenes/scene_1_1?sceneTab=beats&beat=beat_001',
+    ],
+    [
+      'Scene Shots placeholder',
+      {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'shots',
+      },
+      '/projects/constantinople/scenes/scene_1_1?sceneTab=shots',
     ],
     ['Cast overview', { type: 'cast' }, '/projects/constantinople/cast'],
     [
@@ -917,9 +901,9 @@ describe('App', () => {
       }
       if (
         url ===
-        '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1/shot-list'
+        '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1/beat-sheet'
       ) {
-        return jsonResponse({ resource: makeSceneShotListResource() });
+        return jsonResponse({ resource: makeSceneBeatSheetResource() });
       }
       if (url === '/studio-api/studio/events/current') {
         return jsonResponse({
@@ -1278,17 +1262,6 @@ function mockStudioFetch(input: {
     }
     if (url === '/studio-api/projects/constantinople') {
       return jsonResponse({ project: input.project ?? makeProject() });
-    }
-    if (url === '/studio-api/projects/constantinople/production-export') {
-      return jsonResponse({
-        summary: {
-          copiedFileCount: 1,
-          skippedFileCount: 0,
-          prunedFileCount: 0,
-          unmanagedFileCount: 0,
-          variants: [],
-        },
-      });
     }
     if (
       url ===
@@ -1813,7 +1786,7 @@ function makeSceneNarrativeResource(
   };
 }
 
-function makeSceneShotListResource() {
+function makeSceneBeatSheetResource() {
   return {
     scene: {
       id: 'scene_1_1',
@@ -1834,8 +1807,9 @@ function makeSceneShotListResource() {
       sceneCount: 1,
     },
     projectAspectRatio: '16:9',
-    activeShotList: null,
-    storyboardImagesByShotId: {},
+    activeBeatSheetId: null,
+    activeBeatSheet: null,
+    storyboardImagesByBeatId: {},
     castMemberLabels: {},
     castMemberImages: {},
     locationLabels: {},

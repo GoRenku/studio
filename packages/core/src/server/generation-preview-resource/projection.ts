@@ -11,7 +11,7 @@ import type {
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { sceneShotVideoTakes, scenes } from '../schema/index.js';
+import { scenes } from '../schema/index.js';
 import { projectGenerationPreviewConfiguration } from './configuration.js';
 import { projectGenerationPreviewPrompt } from './prompt.js';
 import { projectGenerationPreviewReferences } from './references.js';
@@ -94,24 +94,16 @@ function projectSubject(
       ...(castMember?.name ? { castMemberLabel: castMember.name } : {}),
     };
   }
-  if (preview.spec.target.kind !== 'sceneShotVideoTake') {
+  if (preview.spec.target.kind !== 'scene') {
     return result;
   }
-  const take = session.db
+  const scene = session.db
     .select()
-    .from(sceneShotVideoTakes)
-    .where(eq(sceneShotVideoTakes.id, preview.spec.target.id))
+    .from(scenes)
+    .where(eq(scenes.id, preview.spec.target.id))
     .get();
-  const scene = take
-    ? session.db
-        .select()
-        .from(scenes)
-        .where(eq(scenes.id, take.sceneId))
-        .get()
-    : null;
   return {
     ...result,
     ...(scene?.title ? { sceneLabel: scene.title } : {}),
-    ...(take?.title ? { takeLabel: take.title } : {}),
   };
 }

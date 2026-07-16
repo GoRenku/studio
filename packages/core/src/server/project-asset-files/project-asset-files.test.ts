@@ -16,7 +16,7 @@ import { createDialogueAudioReadyProject } from '../testing/dialogue-audio-templ
 import {
   createProjectAssetFileWriteSet,
   persistProjectAssetFileSync,
-  persistSceneStoryboardShotFilesSync,
+  persistSceneStoryboardBeatFilesSync,
   resolveGenerationRunOutputRoot,
   rollbackProjectAssetFileWriteSetSync,
   writeProjectTemporaryFile,
@@ -141,8 +141,8 @@ describe('project asset file storage', () => {
   });
 
   it('persists storyboard batches into one iteration folder', async () => {
-    await writeProjectFile('tmp/storyboards/shot-a.png', 'shot a');
-    await writeProjectFile('tmp/storyboards/shot-b.png', 'shot b');
+    await writeProjectFile('tmp/storyboards/beat-a.png', 'shot a');
+    await writeProjectFile('tmp/storyboards/beat-b.png', 'shot b');
     insertReadyAsset(session, {
       assetId: 'asset_storyboard_0',
       type: 'scene_storyboard_image',
@@ -156,7 +156,7 @@ describe('project asset file storage', () => {
       title: 'Storyboard 1',
     });
 
-    const files = persistSceneStoryboardShotFilesSync({
+    const files = persistSceneStoryboardBeatFilesSync({
       session,
       projectFolder: projectPath,
       sceneId,
@@ -164,24 +164,24 @@ describe('project asset file storage', () => {
         {
           assetId: 'asset_storyboard_0',
           assetFileId: 'asset_file_storyboard_0',
-          shotId: 'shot_0',
-          shotOrdinal: 1,
-          sourceProjectRelativePath: projectRelativePath('tmp/storyboards/shot-a.png'),
+          beatId: 'shot_0',
+          beatOrdinal: 1,
+          sourceProjectRelativePath: projectRelativePath('tmp/storyboards/beat-a.png'),
         },
         {
           assetId: 'asset_storyboard_1',
           assetFileId: 'asset_file_storyboard_1',
-          shotId: 'shot_1',
-          shotOrdinal: 2,
-          sourceProjectRelativePath: projectRelativePath('tmp/storyboards/shot-b.png'),
+          beatId: 'shot_1',
+          beatOrdinal: 2,
+          sourceProjectRelativePath: projectRelativePath('tmp/storyboards/beat-b.png'),
         },
       ],
       now: NOW,
     });
 
     expect(files.map((file) => file.assetFile.projectRelativePath)).toEqual([
-      'storyboards/the-wall/cannon-test/00-iteration/shot-01.png',
-      'storyboards/the-wall/cannon-test/00-iteration/shot-02.png',
+      'storyboards/the-wall/cannon-test/00-iteration/beat-01.png',
+      'storyboards/the-wall/cannon-test/00-iteration/beat-02.png',
     ]);
   });
 

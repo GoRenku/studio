@@ -9,8 +9,6 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import { assetRelationshipTrashItemId } from '../trash/trash-object-registry.js';
-import { countActiveSceneShotReferenceAssetOwners } from '../database/access/scene-shot-reference-assets.js';
-import { countActiveSceneShotVideoTakeMediaOwners } from '../database/access/shot-video-take-media.js';
 
 export async function discardAsset(
   input: {
@@ -28,7 +26,6 @@ export async function discardAsset(
         `Project database has no project row: ${session.databasePath}.`
       );
     }
-    assertAssetNotReferencedByTakeMedia(session, input.assetId);
     const asset = readAssetRelationship(session, {
       target: input.target,
       assetId: input.assetId,
@@ -52,20 +49,6 @@ export async function discardAsset(
     });
   } finally {
     session.close();
-  }
-}
-
-function assertAssetNotReferencedByTakeMedia(
-  session: Awaited<ReturnType<typeof openProjectSession>>['session'],
-  assetId: string
-): void {
-  const ownerCount = countActiveSceneShotReferenceAssetOwners(session, assetId) +
-    countActiveSceneShotVideoTakeMediaOwners(session, assetId);
-  if (ownerCount > 0) {
-    throw new ProjectDataError(
-      'PROJECT_DATA429',
-      `Asset ${assetId} is referenced by active Shot take media.`
-    );
   }
 }
 

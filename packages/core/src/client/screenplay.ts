@@ -188,18 +188,18 @@ export interface ScreenplayCommandReport {
   changes?: ScreenplayCommandChange[];
   generatedIds?: GeneratedId[];
   resourceKeys?: string[];
-  shotListImpacts?: ScreenplayShotListImpact[];
+  beatSheetImpacts?: ScreenplayBeatSheetImpact[];
 }
 
-export interface ScreenplayShotListImpact {
+export interface ScreenplayBeatSheetImpact {
   sceneId: string;
-  activeShotListId: string | null;
+  activeBeatSheetId: string | null;
   changedBlockIndexes: number[];
   deletedBlockIndexes: number[];
   insertedBlockIndexes: number[];
   uncoveredBlockIndexes: number[];
-  shotsReferencingChangedBlocks: string[];
-  shotsReferencingDeletedBlocks: string[];
+  beatsReferencingChangedBlocks: string[];
+  beatsReferencingDeletedBlocks: string[];
   suggestedNextCommand: string | null;
 }
 

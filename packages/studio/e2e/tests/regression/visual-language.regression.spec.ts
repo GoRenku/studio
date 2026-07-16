@@ -5,31 +5,26 @@ import { VisualLanguagePage } from '../../pages/visual-language-page';
 
 test('creates an inspiration folder, uploads and previews an image, then deletes it', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
 }) => {
   const visualLanguage = new VisualLanguagePage(page);
   const uploadPath = await writeStudioE2eProjectFile({
-    project: shotVideoTakeProject,
+    project: movieProject,
     projectRelativePath: 'e2e-upload/inspiration-fixture.png',
     contents: samplePng(),
   });
 
-  await visualLanguage.gotoInspiration(shotVideoTakeProject);
+  await visualLanguage.gotoInspiration(movieProject);
   await visualLanguage.createFolder('E2E Inspiration Folder');
   await visualLanguage.uploadPreviewAndDeleteImage(uploadPath);
 });
 
 test('opens a movie lookbook definition and shows selected visual content', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
 }) => {
   const visualLanguage = new VisualLanguagePage(page);
 
-  await visualLanguage.gotoLookbook(shotVideoTakeProject);
+  await visualLanguage.gotoLookbook(movieProject);
   await visualLanguage.expectLookbookDefinitionAndMedia();
-});
-
-test.skip('exports production assets after the product specification pass', async () => {
-  // Production Export predates the current Studio product model and needs a
-  // specification pass before browser-level behavior should be locked in.
 });

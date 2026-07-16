@@ -3,7 +3,7 @@ import { ImageOff } from 'lucide-react';
 import type {
   ActStoryboardResourceResponse,
   ActStoryboardSequenceResponse,
-  ActStoryboardShotResponse,
+  ActStoryboardBeatResponse,
 } from '@/services/studio-project-contracts';
 import { readActStoryboardResource } from '@/services/studio-screenplay-api';
 import {
@@ -110,8 +110,8 @@ function SequenceSection({
   sequence: ActStoryboardSequenceResponse;
   onSelect: (selection: StudioSelection) => void;
 }) {
-  const shotCount = sequence.scenes.reduce(
-    (total, scene) => total + scene.shots.length,
+  const beatCount = sequence.scenes.reduce(
+    (total, scene) => total + scene.beats.length,
     0
   );
   return (
@@ -126,7 +126,7 @@ function SequenceSection({
           {sequence.sequence.title}
         </Button>
         <span className='rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground/70'>
-          {sequence.scenes.length} scenes · {shotCount} shots
+          {sequence.scenes.length} scenes · {beatCount} beats
         </span>
       </div>
       <div className='space-y-6'>
@@ -159,18 +159,18 @@ function SceneCluster({
       >
         {scene.scene.title}
       </Button>
-      {scene.shots.length ? (
+      {scene.beats.length ? (
         <div
           className={cn('grid', ACT_STORYBOARD_LAYOUT.shotGapClass)}
           style={{
             gridTemplateColumns: `repeat(auto-fill, minmax(${ACT_STORYBOARD_LAYOUT.shotMinWidthPx}px, 1fr))`,
           }}
         >
-          {scene.shots.map((shot) => (
-            <ShotThumbnail
-              key={shot.shotId}
+          {scene.beats.map((beat) => (
+            <BeatThumbnail
+              key={beat.beatId}
               sceneId={scene.scene.id}
-              shot={shot}
+              beat={beat}
               onSelect={onSelect}
             />
           ))}
@@ -185,13 +185,13 @@ function SceneCluster({
   );
 }
 
-function ShotThumbnail({
+function BeatThumbnail({
   sceneId,
-  shot,
+  beat,
   onSelect,
 }: {
   sceneId: string;
-  shot: ActStoryboardShotResponse;
+  beat: ActStoryboardBeatResponse;
   onSelect: (selection: StudioSelection) => void;
 }) {
   return (
@@ -199,16 +199,21 @@ function ShotThumbnail({
       type='button'
       variant='ghost'
       onClick={() =>
-        onSelect({ type: 'scene', id: sceneId, shotId: shot.shotId })
+        onSelect({
+          type: 'scene',
+          id: sceneId,
+          sceneTab: 'beats',
+          beatId: beat.beatId,
+        })
       }
-      aria-label={`${shot.label} — ${shot.title}`}
+      aria-label={`${beat.label} — ${beat.title}`}
       className='group h-auto min-w-0 flex-col items-stretch gap-1.5 overflow-hidden rounded-md border border-border/40 bg-card p-0 text-left hover:border-item-active-border hover:bg-card'
     >
       <span className='aspect-[4/3] w-full overflow-hidden bg-muted'>
-        {shot.image ? (
+        {beat.image ? (
           <img
-            src={shot.image.url}
-            alt={`${shot.label} — ${shot.title}`}
+            src={beat.image.url}
+            alt={`${beat.label} — ${beat.title}`}
             className='h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]'
           />
         ) : (
@@ -219,9 +224,9 @@ function ShotThumbnail({
       </span>
       <span className='flex w-full flex-col gap-0.5 px-2 pb-2'>
         <span className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-          {shot.label}
+          {beat.label}
         </span>
-        <span className='truncate text-xs text-foreground/85'>{shot.title}</span>
+        <span className='truncate text-xs text-foreground/85'>{beat.title}</span>
       </span>
     </Button>
   );
@@ -239,7 +244,7 @@ function ScenePlaceholderSlot({
       type='button'
       variant='ghost'
       onClick={() => onSelect({ type: 'scene', id: sceneId })}
-      aria-label='Open scene shots'
+      aria-label='Open scene beats'
       className='flex h-auto items-center justify-center rounded-md border border-dashed border-border/50 bg-muted/15 px-4 py-6 text-center hover:border-item-active-border hover:bg-muted/15'
       style={{ maxWidth: `${ACT_STORYBOARD_LAYOUT.sceneSlotMinWidthPx}px` }}
     >

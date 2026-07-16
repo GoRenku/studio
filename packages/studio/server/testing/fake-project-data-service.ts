@@ -8,9 +8,6 @@ import type {
   ProjectRelativePath,
   ProjectLibrary,
   SceneDialogueAudioWorkspace,
-  SceneShotVideoTake,
-  ShotVideoTakeGenerationSetup,
-  ShotVideoTakeWorkspace,
 } from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
 import { makeAsset, makeProject, makeProjectShell } from './route-fixtures.js';
@@ -346,7 +343,7 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
-    async readSceneShotListResource() {
+    async readSceneBeatSheetResource() {
       return {
         scene: {
           id: 'scene_opening',
@@ -368,9 +365,9 @@ export function fakeProjectDataService(): NonNullable<
           sceneCount: 1,
         },
         projectAspectRatio: '16:9',
-        activeShotListId: 'shot_list_opening',
-        activeShotList: null,
-        storyboardImagesByShotId: {},
+        activeBeatSheetId: 'scene_beat_sheet_opening',
+        activeBeatSheet: null,
+        storyboardImagesByBeatId: {},
         castMemberLabels: {},
         castMemberImages: {},
         locationLabels: {},
@@ -442,15 +439,6 @@ export function fakeProjectDataService(): NonNullable<
         manifestProjectRelativePath:
           '.renku/trash/emptied/trash_operation_test0001/manifest.json',
         resourceKeys: ['trash:list'],
-      };
-    },
-    async exportProductionAssets() {
-      return {
-        copiedFileCount: 1,
-        skippedFileCount: 0,
-        prunedFileCount: 0,
-        unmanagedFileCount: 0,
-        variants: [],
       };
     },
     async readInspirationResource() {
@@ -666,301 +654,9 @@ export function fakeProjectDataService(): NonNullable<
         sections: input.sections,
       });
     },
-    async createShotVideoTake(input) {
-      const workspace = makeShotVideoTakeWorkspace({
-        sceneId: input.sceneId,
-        shotIds: input.shotIds,
-        takeId: 'scene_shot_video_take_001',
-        title: input.title,
-      });
-      return {
-        overview: {
-          take: workspace.take,
-          sourceShotList: workspace.sourceShotList,
-          displayShots: workspace.displayShots,
-          overviewShotIds: workspace.take.shotIds,
-          storyboardImages: workspace.storyboardImages,
-        },
-        resourceKeys: workspace.resourceKeys,
-      };
-    },
-    async createSceneShotVideoTakeFromTake(input) {
-      const workspace = makeShotVideoTakeWorkspace({
-        sceneId: input.sceneId,
-        takeId: 'scene_shot_video_take_new',
-      });
-      return {
-        overview: {
-          take: workspace.take,
-          sourceShotList: workspace.sourceShotList,
-          displayShots: workspace.displayShots,
-          overviewShotIds: workspace.take.shotIds,
-          storyboardImages: workspace.storyboardImages,
-        },
-        resourceKeys: workspace.resourceKeys,
-      };
-    },
-    async readShotVideoTakeWorkspace(input) {
-      return makeShotVideoTakeWorkspace({
-        sceneId: input.sceneId,
-        takeId: input.takeId,
-      });
-    },
-    async listShotVideoTakes(input) {
-      const workspace = makeShotVideoTakeWorkspace({ sceneId: input.sceneId });
-      return {
-        takes: [{
-          take: workspace.take,
-          sourceShotList: workspace.sourceShotList,
-          displayShots: workspace.displayShots,
-          overviewShotIds: workspace.take.shotIds,
-          storyboardImages: workspace.storyboardImages,
-        }],
-      };
-    },
-    async discardShotVideoTake(input) {
-      return makeRecoverableMutationReport({
-        changeType: 'sceneShotVideoTake.discarded',
-        itemId: input.takeId,
-        resourceKeys: [
-          `scene:${input.sceneId}`,
-          `surface:scene:${input.sceneId}:takes`,
-          `scene-shot-video-take:${input.takeId}`,
-        ],
-      });
-    },
-    async setShotVideoTakePicked(input) {
-      return {
-        take: {
-          ...makeShotVideoTakeWorkspace({
-            sceneId: input.sceneId,
-            takeId: input.takeId,
-          }).take,
-          picked: input.picked,
-        },
-        resourceKeys: [],
-      };
-    },
-    async replaceShotVideoTakeShots(input) {
-      return {
-        workspace: makeShotVideoTakeWorkspace({
-          sceneId: input.sceneId,
-          takeId: input.takeId,
-          shotIds: input.shotIds,
-        }),
-        resourceKeys: [],
-      };
-    },
-    async setShotVideoTakeDirection(input) {
-      const workspace = makeShotVideoTakeWorkspace({
-        sceneId: input.sceneId,
-        takeId: input.takeId,
-      });
-      workspace.take.state = input.shotId
-        ? {
-            version: 3,
-            structure: {
-              mode: 'multi-cut',
-              directionsByShotId: { [input.shotId]: input.direction ?? {} },
-            },
-          }
-        : {
-            version: 3,
-            structure: {
-              mode: 'continuous',
-              sharedDirection: input.direction ?? {},
-            },
-          };
-      return { workspace, resourceKeys: [] };
-    },
-    async setShotVideoTakeStructure(input) {
-      const workspace = makeShotVideoTakeWorkspace({
-        sceneId: input.sceneId,
-        takeId: input.takeId,
-      });
-      workspace.take.state = {
-        version: 3,
-        structure: input.mode === 'continuous'
-          ? { mode: 'continuous', sharedDirection: {} }
-          : { mode: 'multi-cut', directionsByShotId: {} },
-      };
-      return { workspace, resourceKeys: [] };
-    },
-    async setShotVideoTakeGenerationSpec(input) {
-      const workspace = makeShotVideoTakeWorkspace({
-        sceneId: input.sceneId,
-        takeId: input.takeId,
-        setup: input.setup,
-      });
-      return { workspace, resourceKeys: [] };
-    },
-    async setShotVideoTakeGenerationReference(input) {
-      return {
-        workspace: makeShotVideoTakeWorkspace({
-          sceneId: input.sceneId,
-          takeId: input.takeId,
-        }),
-        resourceKeys: [],
-      };
-    },
-    async setShotVideoTakeGenerationGenericReferences(input) {
-      return {
-        workspace: makeShotVideoTakeWorkspace({
-          sceneId: input.sceneId,
-          takeId: input.takeId,
-        }),
-        resourceKeys: [],
-      };
-    },
     async listGenerationReferences() {
       return { items: [], nextCursor: null };
     },
-    async estimateShotVideoTakeGeneration(_input) {
-      return {
-        valid: true,
-        diagnostics: [],
-        estimate: {
-          provider: 'fal-ai',
-          model: 'bytedance/seedance-2.0',
-          estimatedCostUsd: 0.42,
-          billableUnits: {},
-        },
-      };
-    },
-  };
-}
-
-function makeSceneShotVideoTake(
-  input: {
-    takeId?: string;
-    sceneId?: string;
-    sourceShotListId?: string;
-    shotIds?: string[];
-    title?: string;
-  } = {}
-): SceneShotVideoTake {
-  const shotIds = input.shotIds ?? ['shot_001'];
-  return {
-    takeId:
-      input.takeId ?? 'scene_shot_video_take_001',
-    sceneId: input.sceneId ?? 'scene_opening',
-    sourceShotListId: input.sourceShotListId ?? 'shot_list_opening',
-    title: input.title ?? 'Opening take',
-    shotIds,
-    picked: false,
-    video: null,
-    state: {
-      version: 3,
-      structure: {
-        mode: 'continuous',
-        sharedDirection: {},
-      },
-    },
-    status: {
-      editability: {
-        state: 'editable',
-        diagnostics: [],
-        message: 'This take is editable.',
-      },
-      resolvability: {
-        state: 'resolvable',
-        diagnostics: [],
-        message: 'All tracked take references resolve.',
-      },
-      archive: { state: 'active', message: 'This take is active.' },
-      history: { differences: [], message: 'This take matches its recorded history snapshot.' },
-    },
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-  };
-}
-
-function makeShotVideoTakeWorkspace(input: {
-  takeId?: string;
-  sceneId?: string;
-  shotIds?: string[];
-  title?: string;
-  setup?: ShotVideoTakeGenerationSetup;
-} = {}): ShotVideoTakeWorkspace {
-  const take = makeSceneShotVideoTake(input);
-  const shots = take.shotIds.map((shotId, index) => ({
-    shotId,
-    title: `Shot ${index + 1}`,
-    storyBeat: 'The siege begins.',
-    narrativePurpose: 'Establish the scene.',
-    description: 'The defenders prepare.',
-    shotType: 'wide-shot',
-    subject: 'The city walls',
-    action: 'Defenders take position.',
-    dialogue: [],
-    coveredBlockIndexes: [0],
-    castMemberIds: [],
-    locationIds: [],
-  }));
-  const setup = input.setup ?? {
-    inputModeId: 'text-only',
-    modelChoice: 'fal-ai/bytedance/seedance-2.0',
-    parameterValues: { duration: 5 },
-  };
-  return {
-    take,
-    sourceShotList: {
-      id: take.sourceShotListId,
-      title: 'Opening shots',
-      summary: 'Opening coverage.',
-      createdAt: take.createdAt,
-      updatedAt: take.updatedAt,
-      isActive: true,
-    },
-    sourceShots: shots,
-    displayShots: shots,
-    storyboardImages: [],
-    generation: {
-      authoringState: { kind: 'draft', failedAttemptCount: 0 },
-      context: {
-        purpose: 'shot.video-take',
-        target: { kind: 'sceneShotVideoTake', id: take.takeId },
-        outputMediaKind: 'video',
-        facts: {},
-        settings: { fixed: [], recommended: [] },
-        models: [],
-        referenceGuide: { sections: [], notices: [] },
-      },
-      spec: null,
-      setup,
-      models: [{
-        modelChoice: 'fal-ai/bytedance/seedance-2.0',
-        provider: 'fal-ai',
-        model: 'bytedance/seedance-2.0',
-        label: 'Seedance 2.0',
-        supportedInputModes: ['text-only', 'first-frame', 'first-last-frame', 'reference'],
-        duration: { supported: true, values: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
-        parameters: [],
-      }],
-      references: {
-        kind: 'draft',
-        general: [],
-        genericReferences: [],
-        lookbook: [],
-        dialogueAudio: [],
-        dialogueAudioCapability: {
-          state: 'unsupported',
-          supported: false,
-          selectedCount: 0,
-          maxCount: null,
-          modelLabel: 'Seedance 2.0',
-          message: 'This model does not use audio references.',
-          diagnostics: [],
-        },
-        castMembers: [],
-        locations: [],
-      },
-      finalPrompt: null,
-      estimate: null,
-      run: null,
-      diagnostics: [],
-    },
-    resourceKeys: [`scene:${take.sceneId}`, `scene-shot-video-take:${take.takeId}`],
   };
 }
 

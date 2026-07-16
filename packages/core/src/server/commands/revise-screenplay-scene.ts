@@ -4,7 +4,7 @@ import type {
 } from '../../client/screenplay.js';
 import {
   buildScreenplayDraftForOperations,
-  calculateScreenplayShotListImpacts,
+  calculateScreenplayBeatSheetImpacts,
 } from './apply-screenplay-operations.js';
 import { replaceScreenplayDocument, resolveScreenplayDocumentIds } from '../database/access/screenplay-persistence.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
@@ -67,7 +67,7 @@ export async function reviseScreenplayScene(
       idGenerator: input.idGenerator,
       mode: 'mutation',
     });
-    const shotListImpacts = calculateScreenplayShotListImpacts({
+    const beatSheetImpacts = calculateScreenplayBeatSheetImpacts({
       session,
       before: base,
       after: resolved.document,
@@ -101,7 +101,7 @@ export async function reviseScreenplayScene(
         studioScreenplayResourceKey(),
         studioSceneNarrativeResourceKey(input.sceneId),
       ],
-      shotListImpacts,
+      beatSheetImpacts,
     };
   });
 }

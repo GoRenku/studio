@@ -3,11 +3,11 @@ import { test } from '../../fixtures/studio-e2e-test';
 
 test('shows simulated dialogue audio generation output after reload', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
 }) => {
   const sceneDetail = new SceneDetailPage(page);
 
-  await sceneDetail.gotoNarrative(shotVideoTakeProject);
+  await sceneDetail.gotoNarrative(movieProject);
   await sceneDetail.openDialogueAudioPanel();
   await sceneDetail.expectSimulatedDialogueAudioTakeVisible();
 

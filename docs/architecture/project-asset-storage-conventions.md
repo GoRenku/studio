@@ -122,7 +122,7 @@ visual-language/lookbook/<asset-slug>.<ext>
 Scene Storyboard images are top-level project assets, not screenplay files:
 
 ```text
-storyboards/<sequence-name>/<scene-name>/<nn>-iteration/shot-<nn>.<ext>
+storyboards/<sequence-name>/<scene-name>/<nn>-iteration/beat-<nn>.<ext>
 ```
 
 The storyboard iteration number starts at `00` and is zero-padded so normal
@@ -150,14 +150,7 @@ generation, insertion, or deletion changes the current scene array position.
 
 The take number is the next unused zero-based two-digit suffix for that
 dialogue filename prefix. Scene-owned Dialogue Audio must not be stored under
-`storyboards/`, and it moves under a Shot Video Take folder only after a take
-workflow materializes it as take-owned media.
-
-Shot Video Take-owned media lives under:
-
-```text
-shots/<sequence-name>/<scene-name>/<take-name>-<nn>/
-```
+`storyboards/`. The current architecture has no Shot-owned media destination.
 
 The take number is two digits and scene-local. Folder and file names use
 kebab-case. Example:
@@ -229,8 +222,8 @@ Import commands may accept a `research/` file as a source. When a research file
 becomes a durable project asset, Core must copy it into the relevant owner
 folder and register that destination path. A file should become a structured
 SQLite asset only when Renku has a domain object that owns it, such as a Cast
-Member Character Sheet, Location Sheet, Lookbook Sheet, Shot Video Take-owned
-input, or a future Prop. Until Prop support exists, a helmet image used once as
+Member Character Sheet, Location Sheet, Lookbook Sheet, or a future Prop. Until
+Prop support exists, a helmet image used once as
 an accessory reference for a cast generation remains a one-off reference file,
 not a database asset.
 
@@ -260,9 +253,9 @@ Shot, or Take, and changing selection state. The project asset-file module owns
 the durable file destination and the `asset_file.project_relative_path` write.
 Its durable destination contract is owner-aware, for example
 `cast.characterSheet`, `cast.voiceSample`, `location.hero`,
-`visualLanguage.lookbookSheet`, `scene.dialogueAudio`, `shotVideoTake.media`,
-or `image.editOutput`. Scene Storyboard imports use a batch storage API so all
-shots in one import share one iteration folder. The module must not accept
+`visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or `image.editOutput`.
+Scene Storyboard imports use a batch storage API so all Beats in one import
+share one iteration folder. The module must not accept
 arbitrary caller-provided destination folders.
 
 Temporary files use a separate explicit contract and must not create
@@ -301,7 +294,6 @@ private destination, persistence, or generation-output modules.
 This decision supersedes older current or plan text that recommends:
 
 - `generated/media/` as the normal staging directory for imported assets;
-- `generated/media/scene-shot-video-takes/<take-id>/` for take-owned media;
 - `screenplay/storyboards/` for durable storyboard images;
 - `locations/<handle>/environment-sheets/<sheet-slug>/` for Location
   Environment Sheets;

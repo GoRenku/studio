@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import type { StudioE2eShotVideoTakeProject } from '../fixtures/studio-e2e-project';
+import type { StudioE2eMovieProject } from '../fixtures/studio-e2e-project';
 
 export class VisualLanguagePage {
   private readonly page: Page;
@@ -8,7 +8,7 @@ export class VisualLanguagePage {
     this.page = page;
   }
 
-  async gotoInspiration(project: StudioE2eShotVideoTakeProject): Promise<void> {
+  async gotoInspiration(project: StudioE2eMovieProject): Promise<void> {
     await this.page.goto(
       `/projects/${encodeURIComponent(project.projectName)}/visual-language/inspiration`
     );
@@ -48,7 +48,7 @@ export class VisualLanguagePage {
     ).toBeHidden();
   }
 
-  async gotoLookbook(project: StudioE2eShotVideoTakeProject): Promise<void> {
+  async gotoLookbook(project: StudioE2eMovieProject): Promise<void> {
     await this.page.goto(
       `/projects/${encodeURIComponent(project.projectName)}/visual-language/lookbooks/production`
     );

@@ -18,8 +18,6 @@ export interface GenerationCommandFlags {
   simulate?: boolean;
   search?: string;
   cursor?: string;
-  shotList?: string;
-  shots?: string;
   scene?: string;
   dialogue?: string;
   take?: string;

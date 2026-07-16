@@ -1,61 +1,26 @@
-import {
-  createDiscardedTakeForTrash,
-  importAdditionalLocationSheet,
-} from '../../fixtures/studio-e2e-project';
+import { importAdditionalLocationSheet } from '../../fixtures/studio-e2e-project';
 import { test } from '../../fixtures/studio-e2e-test';
 import { MediaSurfacePage } from '../../pages/media-surface-page';
 
 test('previews location media and refreshes after a resource change', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
   studioE2eRuntime,
 }) => {
   const mediaSurface = new MediaSurfacePage(page);
 
-  await mediaSurface.gotoLocation(shotVideoTakeProject);
+  await mediaSurface.gotoLocation(movieProject);
   await mediaSurface.openLocationVisualContent();
   await mediaSurface.previewLocationSheet();
 
   await importAdditionalLocationSheet({
     runtime: studioE2eRuntime,
-    project: shotVideoTakeProject,
+    project: movieProject,
     relativePath: 'generated/media/gate-refreshed-location-sheet.png',
     title: 'Gate Refreshed Location Sheet',
   });
-  await mediaSurface.publishLocationResourceChange(shotVideoTakeProject);
+  await mediaSurface.publishLocationResourceChange(movieProject);
   await mediaSurface.expectLocationSheetVisible(
     'Gate Refreshed Location Sheet location sheet for browser E2E.'
   );
-});
-
-test('restores a discarded take from Trash', async ({
-  page,
-  trashProject,
-  studioE2eRuntime,
-}) => {
-  const mediaSurface = new MediaSurfacePage(page);
-
-  await createDiscardedTakeForTrash({
-    runtime: studioE2eRuntime,
-    project: trashProject,
-  });
-  await mediaSurface.gotoTrash(trashProject);
-  await mediaSurface.expectDiscardedTakeVisible();
-  await mediaSurface.restoreDiscardedTake();
-});
-
-test('empties Trash for a discarded take after confirmation', async ({
-  page,
-  trashProject,
-  studioE2eRuntime,
-}) => {
-  const mediaSurface = new MediaSurfacePage(page);
-
-  await createDiscardedTakeForTrash({
-    runtime: studioE2eRuntime,
-    project: trashProject,
-  });
-  await mediaSurface.gotoTrash(trashProject);
-  await mediaSurface.expectDiscardedTakeVisible();
-  await mediaSurface.emptyTrash();
 });

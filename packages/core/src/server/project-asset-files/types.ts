@@ -6,18 +6,6 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
-export type ShotVideoTakeMediaRole =
-  | 'first-frame'
-  | 'last-frame'
-  | 'reference-image'
-  | 'character-sheet'
-  | 'location-sheet'
-  | 'lookbook-sheet'
-  | 'video-prompt'
-  | 'source-video'
-  | 'audio'
-  | 'video';
-
 export type ProjectAssetFileDestination =
   | { kind: 'cast.characterSheet'; castMemberId: string; titleHint?: string }
   | { kind: 'cast.profile'; castMemberId: string; titleHint?: string }
@@ -31,7 +19,6 @@ export type ProjectAssetFileDestination =
   | { kind: 'location.hero'; locationId: string; heroName?: string }
   | { kind: 'visualLanguage.lookbookImage'; titleHint?: string }
   | { kind: 'visualLanguage.lookbookSheet'; titleHint?: string }
-  | { kind: 'shotVideoTake.media'; takeId: string; role: ShotVideoTakeMediaRole }
   | {
       kind: 'scene.dialogueAudio';
       sceneId: string;

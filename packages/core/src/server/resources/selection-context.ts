@@ -22,9 +22,9 @@ import {
 import { readLookbookRecordByKind } from '../database/access/lookbook.js';
 import { readInspirationFolderRecord } from '../database/access/inspiration-folders.js';
 import {
-  readActiveSceneShotListRecord,
-  readSceneShotListDocument,
-} from '../database/access/scene-shot-lists.js';
+  readActiveSceneBeatSheetRecord,
+  readSceneBeatSheetDocument,
+} from '../database/access/scene-beat-sheets.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import {
   studioActSurfaceResourceKey,
@@ -193,8 +193,8 @@ export function readStudioSelectionContextProjection(
         const act = chain ? readActNavigationRow(session, chain.sequence.actId) : null;
         if (
           chain &&
-          input.selection.shotId &&
-          !sceneShotExists(session, input.selection.id, input.selection.shotId)
+          input.selection.beatId &&
+          !sceneBeatExists(session, input.selection.id, input.selection.beatId)
         ) {
           return selectionNotFound(input.selection);
         }
@@ -226,34 +226,34 @@ export function readStudioSelectionContextProjection(
 function validateSceneSelectionTabs(
   selection: Extract<StudioSelection, { type: 'scene' }>
 ): StudioSelectionContextResult | null {
-  if (selection.sceneTab === 'narrative' && (selection.shotId || selection.shotTab)) {
+  if (selection.beatId && selection.sceneTab !== 'beats') {
     return unsupportedSelection(
       createDiagnosticError(
         'STUDIO_COORDINATION036',
-        'Shot focus requires the Takes scene tab.',
+        'Beat focus requires the Beats scene tab.',
         { path: ['selection', 'sceneTab'], context: 'movie studio selection' },
-        'Use sceneTab: "takes" when requesting a shot or shot-detail tab.'
+        'Use sceneTab: "beats" when requesting a Beat.'
       )
     );
   }
   return null;
 }
 
-function sceneShotExists(
+function sceneBeatExists(
   session: DatabaseSession,
   sceneId: string,
-  shotId: string
+  beatId: string
 ): boolean {
-  const activeShotList = readActiveSceneShotListRecord(session, sceneId);
+  const activeBeatSheet = readActiveSceneBeatSheetRecord(session, sceneId);
   const screenplay = readScreenplayDocumentFromSession(session);
-  if (!activeShotList || !screenplay) {
+  if (!activeBeatSheet || !screenplay) {
     return false;
   }
-  const document = readSceneShotListDocument({
-    row: activeShotList,
+  const document = readSceneBeatSheetDocument({
+    row: activeBeatSheet,
     screenplay,
   });
-  return document.shots.some((shot) => shot.shotId === shotId);
+  return document.beats.some((beat) => beat.id === beatId);
 }
 
 function selectionNotFound(selection: StudioSelection): StudioSelectionContextResult {

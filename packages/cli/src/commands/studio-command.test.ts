@@ -45,7 +45,7 @@ describe('studio command', () => {
       runStudioCommand({
         input: ['notify-refresh'],
         project: 'constantinople',
-        resource: ['scene-shot-video-take:take_test0001'],
+        resource: ['scene-beat-sheet:scene_beat_sheet_test0001'],
         json: true,
         io: ioFixture({ stdout, stderr }),
         homeDir,
@@ -59,7 +59,7 @@ describe('studio command', () => {
         name: 'constantinople',
         id: project.identity.id,
       },
-      resourceKeys: ['scene-shot-video-take:take_test0001'],
+      resourceKeys: ['scene-beat-sheet:scene_beat_sheet_test0001'],
     });
     expect(notifyStudioProjectResourcesChanged).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -69,7 +69,7 @@ describe('studio command', () => {
             name: 'constantinople',
             id: project.identity.id,
           }),
-          resourceKeys: ['scene-shot-video-take:take_test0001'],
+          resourceKeys: ['scene-beat-sheet:scene_beat_sheet_test0001'],
         }),
       })
     );

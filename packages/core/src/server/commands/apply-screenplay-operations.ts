@@ -3,7 +3,7 @@ import type {
   Act,
   Placement,
   Scene,
-  ScreenplayShotListImpact,
+  ScreenplayBeatSheetImpact,
   ScreenplayCommandChange,
   ScreenplayDocument,
   ScreenplayCommandReport,
@@ -19,9 +19,9 @@ import { readScreenplayDocumentFromSession } from '../database/access/screenplay
 import { replaceScreenplayDocument, resolveScreenplayDocumentIds } from '../database/access/screenplay-persistence.js';
 import { insertScreenplayRevisionRecord } from '../database/access/screenplay-revisions.js';
 import {
-  readActiveSceneShotListRecord,
-  readSceneShotListDocument,
-} from '../database/access/scene-shot-lists.js';
+  readActiveSceneBeatSheetRecord,
+  readSceneBeatSheetDocument,
+} from '../database/access/scene-beat-sheets.js';
 import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
@@ -62,7 +62,7 @@ export async function applyScreenplayOperations(
       idGenerator: input.idGenerator,
       mode: 'mutation',
     });
-    const shotListImpacts = calculateScreenplayShotListImpacts({
+    const beatSheetImpacts = calculateScreenplayBeatSheetImpacts({
       session,
       before: base,
       after: resolved.document,
@@ -94,17 +94,17 @@ export async function applyScreenplayOperations(
       changes,
       generatedIds: resolved.generatedIds,
       resourceKeys: [studioScreenplayResourceKey()],
-      shotListImpacts,
+      beatSheetImpacts,
     };
   });
 }
 
-export function calculateScreenplayShotListImpacts(input: {
+export function calculateScreenplayBeatSheetImpacts(input: {
   session: DatabaseSession;
   before: ScreenplayDocument;
   after: ScreenplayDocument;
   sceneIds: string[];
-}): ScreenplayShotListImpact[] {
+}): ScreenplayBeatSheetImpact[] {
   const uniqueSceneIds = [...new Set(input.sceneIds)];
   return uniqueSceneIds
     .map((sceneId) => {
@@ -113,7 +113,7 @@ export function calculateScreenplayShotListImpacts(input: {
       if (!beforeScene || !afterScene) {
         return null;
       }
-      return calculateSceneShotListImpact({
+      return calculateSceneBeatSheetImpact({
         session: input.session,
         screenplay: input.after,
         sceneId,
@@ -121,24 +121,24 @@ export function calculateScreenplayShotListImpacts(input: {
         afterScene,
       });
     })
-    .filter((impact): impact is ScreenplayShotListImpact => impact !== null);
+    .filter((impact): impact is ScreenplayBeatSheetImpact => impact !== null);
 }
 
-function calculateSceneShotListImpact(input: {
+function calculateSceneBeatSheetImpact(input: {
   session: DatabaseSession;
   screenplay: ScreenplayDocument;
   sceneId: string;
   beforeScene: Scene;
   afterScene: Scene;
-}): ScreenplayShotListImpact {
+}): ScreenplayBeatSheetImpact {
   const blockDiff = diffSceneBlocks(input.beforeScene, input.afterScene);
-  const activeShotList = readActiveSceneShotListRecord(
+  const activeBeatSheet = readActiveSceneBeatSheetRecord(
     input.session,
     input.sceneId
   );
-  const document = activeShotList
-    ? readSceneShotListDocument({
-        row: activeShotList,
+  const document = activeBeatSheet
+    ? readSceneBeatSheetDocument({
+        row: activeBeatSheet,
         screenplay: input.screenplay,
       })
     : null;
@@ -148,16 +148,16 @@ function calculateSceneShotListImpact(input: {
   ]);
   const deleted = new Set(blockDiff.deletedBlockIndexes);
   const coveredBlocks = new Set<number>();
-  const shotsReferencingChangedBlocks: string[] = [];
-  const shotsReferencingDeletedBlocks: string[] = [];
-  for (const shot of document?.shots ?? []) {
-    for (const blockIndex of shot.coveredBlockIndexes) {
+  const beatsReferencingChangedBlocks: string[] = [];
+  const beatsReferencingDeletedBlocks: string[] = [];
+  for (const beat of document?.beats ?? []) {
+    for (const blockIndex of beat.screenplayBlockIndexes) {
       coveredBlocks.add(blockIndex);
       if (changedOrInserted.has(blockIndex)) {
-        shotsReferencingChangedBlocks.push(shot.shotId);
+        beatsReferencingChangedBlocks.push(beat.id);
       }
       if (deleted.has(blockIndex)) {
-        shotsReferencingDeletedBlocks.push(shot.shotId);
+        beatsReferencingDeletedBlocks.push(beat.id);
       }
     }
   }
@@ -166,15 +166,15 @@ function calculateSceneShotListImpact(input: {
   );
   return {
     sceneId: input.sceneId,
-    activeShotListId: activeShotList?.id ?? null,
+    activeBeatSheetId: activeBeatSheet?.id ?? null,
     changedBlockIndexes: blockDiff.changedBlockIndexes,
     deletedBlockIndexes: blockDiff.deletedBlockIndexes,
     insertedBlockIndexes: blockDiff.insertedBlockIndexes,
     uncoveredBlockIndexes,
-    shotsReferencingChangedBlocks: [...new Set(shotsReferencingChangedBlocks)],
-    shotsReferencingDeletedBlocks: [...new Set(shotsReferencingDeletedBlocks)],
-    suggestedNextCommand: activeShotList
-      ? `renku screenplay shot-list storyboard status --scene ${input.sceneId} --shot-list ${activeShotList.id} --json`
+    beatsReferencingChangedBlocks: [...new Set(beatsReferencingChangedBlocks)],
+    beatsReferencingDeletedBlocks: [...new Set(beatsReferencingDeletedBlocks)],
+    suggestedNextCommand: activeBeatSheet
+      ? `renku screenplay beat-sheet storyboard status --scene ${input.sceneId} --beat-sheet ${activeBeatSheet.id} --json`
       : null,
   };
 }

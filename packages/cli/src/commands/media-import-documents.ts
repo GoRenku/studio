@@ -16,31 +16,31 @@ export async function readSceneStoryboardImagesImportDocument(
   if (!isRecord(parsed) || parsed.kind !== 'sceneStoryboardImagesImport') {
     throw invalidSceneStoryboardImagesImportFile(filePath);
   }
-  const shots = parsed.shots;
-  if (!Array.isArray(shots) || typeof parsed.shotListId !== 'string') {
+  const beats = parsed.beats;
+  if (!Array.isArray(beats) || typeof parsed.beatSheetId !== 'string') {
     throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   return {
     kind: 'sceneStoryboardImagesImport',
     ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
-    shotListId: parsed.shotListId,
-    shots: shots.map((shot) => readSceneStoryboardImagesImportShot(shot, filePath)),
+    beatSheetId: parsed.beatSheetId,
+    beats: beats.map((beat) => readSceneStoryboardImagesImportBeat(beat, filePath)),
   };
 }
 
-function readSceneStoryboardImagesImportShot(
+function readSceneStoryboardImagesImportBeat(
   value: unknown,
   filePath: string
-): SceneStoryboardImagesImportDocument['shots'][number] {
+): SceneStoryboardImagesImportDocument['beats'][number] {
   if (
     !isRecord(value) ||
-    typeof value.shotId !== 'string' ||
+    typeof value.beatId !== 'string' ||
     typeof value.source !== 'string'
   ) {
     throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   return {
-    shotId: value.shotId,
+    beatId: value.beatId,
     source: value.source,
     ...(typeof value.title === 'string' ? { title: value.title } : {}),
     ...(value.sourcePurpose === 'scene.storyboard-sheet'
@@ -62,7 +62,7 @@ function invalidSceneStoryboardImagesImportFile(
     code: 'CLI029',
     message: `Invalid Scene storyboard image import file: ${filePath}.`,
     suggestion:
-      'Provide JSON with kind "sceneStoryboardImagesImport", shotListId, and shots[] entries containing shotId and source.',
+      'Provide JSON with kind "sceneStoryboardImagesImport", beatSheetId, and beats[] entries containing beatId and source.',
   });
 }
 

@@ -1,33 +1,42 @@
 import { MovieStudioPage } from '../../pages/movie-studio-page';
 import { SceneDetailPage } from '../../pages/scene-detail-page';
-import { SceneShotDetailPage } from '../../pages/scene-shot-detail-page';
-import { test } from '../../fixtures/studio-e2e-test';
+import { expect, test } from '../../fixtures/studio-e2e-test';
 
 test('opens act, sequence, and scene details with narrative content', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
 }) => {
   const movieStudio = new MovieStudioPage(page);
   const sceneDetail = new SceneDetailPage(page);
 
-  await movieStudio.gotoAct(shotVideoTakeProject);
+  await movieStudio.gotoAct(movieProject);
   await movieStudio.expectActVisible();
 
-  await movieStudio.gotoSequence(shotVideoTakeProject);
+  await movieStudio.gotoSequence(movieProject);
   await movieStudio.expectSequenceVisible();
 
-  await sceneDetail.gotoNarrative(shotVideoTakeProject);
+  await sceneDetail.gotoNarrative(movieProject);
   await sceneDetail.expectNarrativeVisible();
 });
 
-test('selects scene shot cards and updates the shot detail panel', async ({
+test('selects Scene Beat cards and keeps the Shots placeholder inert', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
 }) => {
-  const sceneShots = new SceneShotDetailPage(page);
+  const sceneRoute = `/projects/${encodeURIComponent(movieProject.projectName)}/scenes/${encodeURIComponent(movieProject.sceneId)}`;
+  await page.goto(`${sceneRoute}?sceneTab=beats&beat=${movieProject.firstBeatId}`);
+  await expect(page.getByText('Gate pressure', { exact: true }).first())
+    .toBeVisible();
+  await page.getByText('Crew reaction', { exact: true }).first().click();
+  await expect(page).toHaveURL(
+    `${sceneRoute}?sceneTab=beats&beat=${movieProject.secondBeatId}`
+  );
+  await expect(page.getByText('Show consequence through human response.'))
+    .toBeVisible();
 
-  await sceneShots.gotoShots(shotVideoTakeProject);
-  await sceneShots.expectFirstShotVisible();
-
-  await sceneShots.selectSecondShot();
+  await page.goto(`${sceneRoute}?sceneTab=shots`);
+  const newShot = page.getByRole('button', { name: 'New Shot' });
+  await expect(newShot).toBeVisible();
+  await newShot.click();
+  await expect(page).toHaveURL(`${sceneRoute}?sceneTab=shots`);
 });

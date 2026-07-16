@@ -4,7 +4,7 @@ import type {
   ScreenplayRevisionListReport,
   ScreenplayRevisionReadReport,
 } from '../../client/screenplay.js';
-import { calculateScreenplayShotListImpacts } from './apply-screenplay-operations.js';
+import { calculateScreenplayBeatSheetImpacts } from './apply-screenplay-operations.js';
 import { replaceScreenplayDocument } from '../database/access/screenplay-persistence.js';
 import {
   insertScreenplayRevisionRecord,
@@ -71,7 +71,7 @@ export async function restoreScreenplayRevision(
     const row = requireScreenplayRevisionRecord(session, input.revisionId);
     const restored = readScreenplayRevisionDocument(row);
     const sceneIds = changedSceneIds(base, restored);
-    const shotListImpacts = calculateScreenplayShotListImpacts({
+    const beatSheetImpacts = calculateScreenplayBeatSheetImpacts({
       session,
       before: base,
       after: restored,
@@ -104,7 +104,7 @@ export async function restoreScreenplayRevision(
         studioScreenplayResourceKey(),
         ...sceneIds.map((sceneId) => studioSceneNarrativeResourceKey(sceneId)),
       ],
-      shotListImpacts,
+      beatSheetImpacts,
     };
   });
 }

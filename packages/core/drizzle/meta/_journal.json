@@ -414,6 +414,13 @@
       "when": 1784135389728,
       "tag": "0058_flexible_generation_authoring",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "6",
+      "when": 1784204060318,
+      "tag": "0059_scene_beats_and_shot_authoring_reset",
+      "breakpoints": true
     }
   ]
 }

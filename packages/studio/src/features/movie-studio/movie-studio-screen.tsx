@@ -1,7 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import type { DebouncedSaveStatus } from '@/hooks/use-debounced-autosave';
-import { exportProductionAssets } from '@/services/studio-projects-api';
 import { createInspirationFolder } from '@/services/studio-visual-language-api';
 import {
   matchesVisualLanguageInspirationResource,
@@ -71,7 +69,6 @@ export function MovieStudioScreen({
       message: null,
       flushPending: async () => true,
     });
-  const [isProductionExportRunning, setIsProductionExportRunning] = useState(false);
   const [inspirationFoldersRevision, setInspirationFoldersRevision] = useState(0);
   const [sceneHeaderAction, setSceneHeaderAction] = useState<{
     sceneId: string;
@@ -255,30 +252,6 @@ export function MovieStudioScreen({
     [activeSceneId, handleSceneHeaderTitleChange]
   );
 
-  const handleProductionExport = useCallback(async () => {
-    setIsProductionExportRunning(true);
-    toast.loading('Exporting production assets', {
-      id: 'production-export',
-    });
-    try {
-      const summary = await exportProductionAssets(project.identity.name);
-      toast.success('Production assets exported', {
-        id: 'production-export',
-        description: `Copied ${summary.copiedFileCount}, skipped ${summary.skippedFileCount}, pruned ${summary.prunedFileCount}.`,
-      });
-    } catch (error) {
-      toast.error('Export failed', {
-        id: 'production-export',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Production export failed.',
-      });
-    } finally {
-      setIsProductionExportRunning(false);
-    }
-  }, [project.identity.name]);
-
   const handleCreateInspirationFolder = useCallback(
     async (name: string) => {
       const folder = await createInspirationFolder(project.identity.name, name);
@@ -310,8 +283,6 @@ export function MovieStudioScreen({
               selection={selection}
               onSelect={selectMovieStudioSurface}
               onHome={onHome}
-              isProductionExportRunning={isProductionExportRunning}
-              onProductionExport={handleProductionExport}
               inspirationFoldersRevision={inspirationFoldersRevision}
               onInspirationFoldersChange={handleInspirationFoldersChange}
             />
@@ -401,10 +372,7 @@ export function MovieStudioScreen({
                   projectName={project.identity.name}
                   sceneId={selection.id}
                   sceneTab={selection.sceneTab}
-                  shotId={selection.shotId}
-                  takeWorkspaceMode={selection.takeWorkspaceMode}
-                  takeId={selection.takeId}
-                  shotTab={selection.shotTab}
+                  beatId={selection.beatId}
                   onSelect={selectMovieStudioSurface}
                   onHeaderActionChange={handleActiveSceneHeaderActionChange}
                   onHeaderTitleChange={handleActiveSceneHeaderTitleChange}

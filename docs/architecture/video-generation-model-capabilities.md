@@ -6,15 +6,15 @@ Status: reference
 
 Current implementation note: this document preserves capability research, not
 the active runtime contract. The schema-first Engines catalog exposes each
-provider route directly, Core projects those exact routes into the focused Shot
-Video Take workspace, and Studio groups named route families only for
-presentation. The illustrative normalized `modelChoice` interface below is not
-a current API.
+provider route directly. Decision 0052 removed the legacy Take runtime, and the
+current persistence-free Shot authoring kit does not project or execute these
+routes. The illustrative normalized `modelChoice` interface below is not a
+current API.
 
 ## Purpose
 
 This document records the current capability analysis for the video-generation
-models Renku Studio plans to support for shot video takes.
+models Renku Studio may support for future Shot video authoring.
 
 It is deliberately separate from the active implementation plans:
 
@@ -256,9 +256,8 @@ Kling voice control is modeled as transient shot-video preparation:
 - `fal-ai/kling-video/create-voice` accepts `voice_url` from `.mp3`, `.wav`,
   `.mp4`, or `.mov` source media, requires clean single-voice content from 5 to
   30 seconds, costs `$0.007` per generation, and returns `voice_id`;
-- Renku creates or reuses this `voice_id` inside the final `shot.video-take`
-  run when selected dialogue audio is bound to a supported video-backed Kling
-  element;
+- a future Shot generation design may create or reuse this `voice_id` when
+  selected dialogue audio is bound to a supported video-backed Kling element;
 - transient IDs may be reused from
   `.renku/cache/kling-transient-voice-ids.json` for 24 hours when the selected
   source audio content fingerprint matches;

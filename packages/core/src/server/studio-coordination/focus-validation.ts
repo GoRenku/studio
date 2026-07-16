@@ -7,7 +7,6 @@ import type {
   Location,
   Project,
   ScenePanelTab,
-  SceneShotDetailTab,
   Scene,
   Sequence,
 } from '../../client/index.js';
@@ -17,18 +16,7 @@ import type {
   StudioFocusRequest,
 } from './events.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots', 'takes'];
-const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
-  'description',
-  'lookbook',
-  'composition',
-  'motion',
-  'cast',
-  'location',
-  'dialogs',
-  'references',
-  'ai-production',
-];
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'beats', 'shots'];
 
 export type StudioSelectionResolution =
   | {
@@ -288,6 +276,27 @@ export function resolveStudioSelectionForProject(
 function validateSceneTabs(
   selection: Extract<StudioSelection, { type: 'scene' }>
 ): StudioSelectionResolution | null {
+  const unknownField = Object.keys(selection).find(
+    (field) => !['type', 'id', 'sceneTab', 'beatId'].includes(field)
+  );
+  if (unknownField) {
+    return {
+      ok: false,
+      selection,
+      reason: 'unsupportedSelection',
+      diagnostics: [
+        createDiagnosticError(
+          'STUDIO_COORDINATION037',
+          'Requested Scene selection field is not supported.',
+          {
+            path: ['focus', 'selection', unknownField],
+            context: 'studio.focusRequested',
+          },
+          'Use only type, id, sceneTab, and beatId for a Scene selection.'
+        ),
+      ],
+    };
+  }
   if (
     selection.sceneTab !== undefined &&
     !SCENE_PANEL_TABS.includes(selection.sceneTab)
@@ -301,30 +310,12 @@ function validateSceneTabs(
           'STUDIO_COORDINATION036',
           'Requested scene tab is not supported.',
           { path: ['focus', 'selection', 'sceneTab'], context: 'studio.focusRequested' },
-          'Request a supported scene tab: narrative or shots.'
+          'Request a supported scene tab: narrative, beats, or shots.'
         ),
       ],
     };
   }
-  if (
-    selection.shotTab !== undefined &&
-    !SCENE_SHOT_DETAIL_TABS.includes(selection.shotTab)
-  ) {
-    return {
-      ok: false,
-      selection,
-      reason: 'unsupportedSelection',
-      diagnostics: [
-        createDiagnosticError(
-          'STUDIO_COORDINATION037',
-          'Requested shot tab is not supported.',
-          { path: ['focus', 'selection', 'shotTab'], context: 'studio.focusRequested' },
-          'Request a supported shot tab.'
-        ),
-      ],
-    };
-  }
-  if (selection.sceneTab === 'narrative' && (selection.shotId || selection.shotTab)) {
+  if (selection.beatId && selection.sceneTab !== 'beats') {
     return {
       ok: false,
       selection,
@@ -332,9 +323,12 @@ function validateSceneTabs(
       diagnostics: [
         createDiagnosticError(
           'STUDIO_COORDINATION036',
-          'Shot focus requires the Takes scene tab.',
-          { path: ['focus', 'selection', 'sceneTab'], context: 'studio.focusRequested' },
-          'Use sceneTab: "takes" when requesting a shot or shot-detail tab.'
+          'Beat focus requires the Beats scene tab.',
+          {
+            path: ['focus', 'selection', 'sceneTab'],
+            context: 'studio.focusRequested',
+          },
+          'Use sceneTab: "beats" when requesting a Beat.'
         ),
       ],
     };
@@ -345,14 +339,13 @@ function validateSceneTabs(
 function effectiveSceneTab(
   selection: Extract<StudioSelection, { type: 'scene' }>
 ): ScenePanelTab {
-  return selection.sceneTab ?? (selection.shotId || selection.shotTab ? 'takes' : 'narrative');
+  return selection.sceneTab ?? (selection.beatId ? 'beats' : 'narrative');
 }
 
 function sceneTabLabel(tab: ScenePanelTab): { id: ScenePanelTab; label: string } {
   return {
     id: tab,
-    label:
-      tab === 'takes' ? 'Takes' : tab === 'shots' ? 'Shots' : 'Narrative',
+    label: tab === 'beats' ? 'Beats' : tab === 'shots' ? 'Shots' : 'Narrative',
   };
 }
 

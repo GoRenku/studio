@@ -59,16 +59,16 @@ Standalone movie project
   -> Sequence
     -> Scene
       -> Clip
-      -> Scene Shot List
-        -> Shot
+      -> Scene Beat Sheet
+        -> Beat
 
 Series project
   -> Episode
     -> Sequence
       -> Scene
         -> Clip
-        -> Scene Shot List
-          -> Shot
+        -> Scene Beat Sheet
+          -> Beat
 ```
 
 `Sequence` is a film and screenwriting term for a meaningful group of scenes
@@ -81,11 +81,15 @@ Related terms:
   the v1 hierarchy.
 - **Chapter** can be a friendly display label for documentaries, courses,
   serialized web videos, or exports. It should not be the canonical schema term.
-- **Scene Shot List** is a scene-owned coverage planning document. It is stored
-  as validated project data with history and one active shot list per scene.
-- **Shot** is one planned camera unit inside a Scene Shot List. Shots are
-  ordered by their array position in the shot-list JSON. They are not final edit
-  timeline entries.
+- **Scene Beat Sheet** is a scene-owned narrative breakdown document. It is
+  stored as validated project data with history and one active Beat Sheet per
+  scene.
+- **Beat** is one non-camera narrative unit inside a Scene Beat Sheet. Beats
+  are ordered by their array position and contain exactly the accepted
+  eight-field Beat shape.
+- **Shot** is a future camera-authored unit. It is deliberately separate from
+  Beats; the current reset preserves a persistence-free Shot authoring kit but
+  defines no durable Shot record.
 - **Clip** remains a structural unit in the existing project hierarchy. Do not
   use Clip as a synonym for Shot when describing scene coverage.
 
@@ -101,18 +105,18 @@ Related terms:
 | Inspiration Folder            | A project Visual Language folder containing user-provided reference images.                                                              | Folder metadata is stored in SQLite. Images inside the folder are filesystem content, not per-image assets. |
 | Inspiration Analysis          | A validated visual study of one Inspiration Folder.                                                                                      | Stored as tagged JSON through `renku inspiration analysis`; image citations use folder-local filenames.     |
 | Screenplay Analysis           | A validated critique of the current screenplay structure, scene energy, evidence, and suggested additions.                               | Stored as history through `renku screenplay analyze`; suggestions do not mutate screenplay rows.            |
-| Scene Shot List               | A validated scene-owned coverage plan made of ordered Shots.                                                                             | Stored as history through `renku screenplay shot-list`; one active shot list can be selected per Scene.     |
-| Shot                          | One planned camera unit inside a Scene Shot List.                                                                                       | Stores stable `shotId` values scoped to one shot list. Shot labels are derived from order.                  |
-| Scene Shot Video Take | A scene-owned shot-video planning unit for one explicit ordered selection from a Scene Shot List.                                      | Owns selected-shot membership, production settings, and status for shot-video generation. Final video takes preserve the shot membership at import time. |
+| Scene Beat Sheet              | A validated scene-owned narrative breakdown made of ordered Beats.                                                                        | Stored as history through `renku screenplay beat-sheet`; one active Beat Sheet can be selected per Scene.   |
+| Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus title, description, narrative development, narrative purpose, cast/location ids, and screenplay block indexes. |
+| Shot                          | A future camera-authored unit derived from scene and Beat context.                                                                         | No durable Shot contract exists in the reset; current Shot controls are persistence-free UI components.     |
 | Lookbook                      | One of the two project-owned visual direction roles.                                                                                       | A project has at most one Production Lookbook and one Storyboard Lookbook. The role is permanent and cannot be discarded. |
-| Production Lookbook           | The project Lookbook for final-video visual language: palette, lighting, texture, composition, camera, and tone/mood.                      | Read directly for movie, cast, location, and shot-video visual-language guidance; it is never selected from alternatives. |
+| Production Lookbook           | The project Lookbook for final-video visual language: palette, lighting, texture, composition, camera, and tone/mood.                      | Read directly for movie, cast, location, and future Shot visual-language guidance; it is never selected from alternatives. |
 | Storyboard Lookbook           | The project Lookbook for storyboard drawing language: style brief, line/finish, value/accent, notation, continuity, and guardrails.        | Read directly for `scene.storyboard-sheet`; it has no stored pointer to the Production Lookbook. |
 | Source Inspiration            | An ordered relationship between a Lookbook and an Inspiration Folder.                                                                    | Do not copy Inspiration Analysis JSON into the Lookbook.                                                    |
 | Lookbook Image                | A registered image asset attached to a Lookbook.                                                                                         | Section placement is stored in relationship rows, not in Lookbook JSON.                                     |
 | Continuity Reference          | A reusable subject that must stay visually consistent, such as a location, prop, costume, architecture, vehicle, ship, symbol, or group. | Do not hide these under Visual Language or a vague "world" bucket.                                          |
 | Location Sheet                | A full-image production reference board for one Location.                                                                               | Attached to a Location with role `environment_sheet`; one asset can show maps, elevations, material references, annotated context, or other location-specific visual guidance. |
 | Location Hero Image           | A compact representative image for a Location in overview and detail surfaces.                                                          | Asset type `location_hero`, Location asset role `hero`, file role `primary`; it is generated or imported from an explicit source Location Sheet and is not a shot reference default. |
-| Scene Storyboard Sheet        | A compound storyboard image asset generated for one Scene Shot List.                                                                     | The original sheet and all sliced shot files are Asset Files under one Asset. SQLite stores shot ownership, not crop or grid metadata. |
+| Scene Storyboard Sheet        | A compound storyboard image asset generated for one Scene Beat Sheet.                                                                    | The original sheet and all sliced Beat files are Asset Files under one Asset. SQLite stores Beat ownership, not crop or grid metadata. |
 | Style Sheet                   | A visual language asset type, usually an image or board that demonstrates a desired look.                                                | This is an asset type, not the name of the whole creative-direction system.                                 |
 
 ## Language And Localization
@@ -191,7 +195,6 @@ Use **Select** for a currently chosen asset, **Pin** for cast favorites, and
 | Compound Asset        | An asset that needs a folder because several files belong together.                                       | Example: a video take folder with `video.mp4`, `thumbnail.png`, and captions.                                                                             |
 | Take                  | A persisted generated or imported candidate option.                                                       | Candidates are takes until the user chooses one or more.                                                                                                  |
 | Select                | The current project choice from persisted takes or imported options.                                      | Use for current chosen asset(s), including intermediary references such as character sheets. Selects are changeable, but they are not ephemeral UI state. |
-| Production Export Media | A picked Shot Video Take final video or exact included Dialogue Audio Take copied into the clean handoff tree. | Export is copy-based; working media remains in place and unrelated visual/design assets are excluded. |
 | Project Relative Path | A normalized path from the project folder to a project-owned file or folder.                              | SQLite stores these paths for asset files. Runtime code resolves them against the project folder. Do not store absolute paths in project metadata.        |
 
 ## Generation
@@ -200,7 +203,7 @@ Use **Select** for a currently chosen asset, **Pin** for cast favorites, and
 | --------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Media Purpose         | The project-facing reason media is being made or imported.                          | Example: `lookbook.image`. The purpose supplies context and import behavior; it does not replace persisted generation choices.                                                                                   |
 | Media Purpose Key     | The stable key identifying a media purpose.                                         | Example: `lookbook.image`. A purpose key does not imply a generic registry or adapter framework.                                                                                                                 |
-| Generation Type       | A category of generation work, such as `cast.character-sheet` or `shot.video-take`. | Use Media Purpose when the work is about producing or importing media for a domain object.                                                                                                                       |
+| Generation Type       | A category of generation work, such as `cast.character-sheet` or `scene.storyboard-sheet`. | Use Media Purpose when the work is about producing or importing media for a domain object.                                                                                                                  |
 | Generation Definition | The code-owned setup for reusable generation guidance.                              | Owns purpose guidance and prompt templates. Provider/model selection and user-facing parameters are persisted in a `Generation Spec`. It is not a project-local editable folder.                                 |
 | Generation Key        | The stable key identifying a generation type.                                       | Prefer Media Purpose Key for media-producing commands.                                                                                                                                                           |
 | Generation Spec       | The persisted, user-editable generation choices for a concrete target.              | Agents must not override binding fields such as model choice, take count, seed, frame, detail, or output format. Current implemented media specs include Lookbook Image, Cast Character Sheet, Cast Profile, Location Sheet, Location Hero Image, and Scene Storyboard Sheet. |

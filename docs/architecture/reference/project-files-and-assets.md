@@ -29,16 +29,13 @@ An **Asset File** is a concrete file on disk that belongs to an asset.
 A **Compound Asset** is an asset represented by a folder because several files
 belong together, such as a video plus thumbnail and captions.
 
-A **Take** is a persisted generated or imported candidate in a focused domain
-that defines Take behavior, such as a Shot Video Take or Dialogue Audio Take.
-Generic asset relationships do not carry take/select state.
+A **Take** is a persisted generated or imported candidate only in a focused
+domain that explicitly defines Take behavior. The current example is a Scene
+Dialogue Audio Take. Generic asset relationships do not carry take/select state.
 
 A **focused display choice** selects one ready Cast Profile or Location Hero for
 Studio presentation. It is stored in a purpose-specific display table and does
-not affect generation or export.
-
-A **Production Export Media row** is the final video of a picked Shot Video Take
-or an exact included Dialogue Audio Take from that Take's saved request.
+not affect generation.
 
 A **Visual Language Asset** is an asset attached to a project Visual Language
 entry. Initial roles include `guidance`, `prompt`, `reference`, and
@@ -75,8 +72,8 @@ reference name, purpose, and structured `sampleSource` provenance.
 
 A **Location Sheet** is a full-image production reference board attached to a
 location with the `environment_sheet` role. It has one primary image file and a
-persisted description. A Location can have many Location Sheets; shot/take
-workflows reference the specific sheet assets they need.
+persisted description. A Location can have many Location Sheets; future Shot
+workflows may reference specific sheet assets.
 
 A **Location Hero Image** is a compact representative image attached to a
 location with the `hero` role. It uses asset type `location_hero` and one
@@ -84,18 +81,10 @@ primary image file. A focused Location display choice drives overview and detail
 display only; it is not a generation reference default.
 
 A **Scene Storyboard Image** is an image asset attached to a Scene and a
-specific shot in a Scene Shot List. Durable storyboard images are stored under
+specific Beat in a Scene Beat Sheet. Durable storyboard images are stored under
 top-level `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`.
 Temporary storyboard sheets generated for slicing or review live under that
 scene storyboard folder's `tmp/` subfolder and are not assets.
-
-A **Shot Video Take-owned media file** is a generated or imported output whose
-lifecycle belongs to one Shot Video Take. Current examples are Video Prompt
-images, First Frames, Last Frames, and final generated Take videos. Reusable
-Cast, Location, Lookbook, and Dialogue Audio references retain their domain
-ownership. These files are
-stored under top-level
-`shots/<sequence-name>/<scene-name>/<take-name>-<nn>/`.
 
 The **Research folder** is user-owned scratch space for external references.
 Files in `research/` are not asset files. A generation spec may reference a
@@ -108,13 +97,13 @@ Durable asset-file persistence is centralized in
 APIs from `packages/core/src/server/project-asset-files/index.ts`, pass a source
 project-relative path and an owner-aware destination such as a Cast Character
 Sheet, Cast Voice Sample, Location Environment Sheet, Location Hero, Lookbook
-Image, Lookbook Sheet, Shot Video Take media file, Scene Dialogue Audio take, or
-Image Edit output. The destination and generation-output submodules are private
+Image, Lookbook Sheet, Scene Dialogue Audio take, or Image Edit output. The
+destination and generation-output submodules are private
 implementation details that own path allocation by domain family and purpose
 family.
 
 Scene Storyboard imports use a batch storage API so one import writes one shared
-iteration folder for all imported shot files. Callers must not precompute
+iteration folder for all imported Beat files. Callers must not precompute
 durable destination folders or insert `asset_file` rows for new durable media
 directly. Temporary project files use the module's temporary destination
 contract and never become SQLite asset files unless a domain import command
@@ -127,9 +116,7 @@ audio/<sequence-name>/<scene-name>/<dialogue-order-key>-<character-name>-<take-n
 ```
 
 The dialogue order key is persisted on the screenplay dialogue block and is not
-recomputed from the current array index. Shot Video Take-owned copies of
-dialogue audio use the take-owned `shots/<sequence>/<scene>/<take-folder>/`
-hierarchy only after a take workflow materializes the audio as take media.
+recomputed from the current array index.
 
 ## Working Assets Versus Production Assets
 
@@ -259,8 +246,8 @@ Folder responsibilities:
 - `production-assets/` contains clean post-production handoff files.
 
 Project creation may create only the folders needed by the current project
-contents. Feature writers and production export create additional parent folders
-when they write files.
+contents. Feature writers create additional parent folders when they write
+files.
 
 Current runtime code must not create `generated/` as a project asset or
 temporary output folder. Historical plans and old development data may still

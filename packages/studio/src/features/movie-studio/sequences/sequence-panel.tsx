@@ -92,7 +92,7 @@ interface SequenceStoryboardPreviewCardProps {
   title: string;
   metadata?: string;
   images: Array<{
-    shotId: string;
+    beatId: string;
     image: ScreenplayImageReferenceWithHttp | null;
   }>;
   onClick: () => void;
@@ -115,7 +115,7 @@ function SequenceStoryboardPreviewCard({
       <span className='grid aspect-[4/3] w-full grid-cols-2 grid-rows-2 gap-px overflow-hidden bg-border/50'>
         {cells.map((cell, index) => (
           <span
-            key={cell?.shotId ?? `empty-${index}`}
+            key={cell?.beatId ?? `empty-${index}`}
             className='block min-h-0 bg-muted'
           >
             {cell?.image ? (

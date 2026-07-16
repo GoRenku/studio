@@ -8,7 +8,7 @@ import type {
   ShotMovementId,
   ShotSizeId,
   SubjectFramingId,
-} from './scene-shot-list.js';
+} from './shot-authoring.js';
 
 // Canonical display labels for the structured shot specs vocabularies (0036).
 // These are the single source of truth shared by the prompt-string derivation

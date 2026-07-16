@@ -35,37 +35,6 @@ describe('CLI command architecture', () => {
     );
   });
 
-  it('does not expose arbitrary shot-video take state patching from CLI commands', async () => {
-    const commandSources = await readCommandSources();
-    const forbiddenPatterns = [
-      {
-        label: 'durable take state type',
-        pattern: /\bSceneShotVideoTakeState\b/,
-        reason: 'CLI commands must not accept or assemble durable take state',
-      },
-      {
-        label: 'state patch payload',
-        pattern: /\bstatePatch\b/,
-        reason:
-          'CLI commands must not accept or assemble arbitrary durable take-state patches',
-      },
-      {
-        label: 'partial durable take state',
-        pattern: /\bPartial\s*<\s*SceneShotVideoTakeState\s*>/,
-        reason: 'CLI commands must not expose partial durable take-state patches',
-      },
-    ];
-    const findings = findForbiddenPatterns(commandSources, forbiddenPatterns);
-
-    expect(
-      findings,
-      [
-        'The CLI is a thin adapter over current core commands.',
-        'It may parse flags and typed JSON files, but it must not expose raw take-state JSON patching.',
-      ].join(' ')
-    ).toEqual([]);
-  });
-
   it('keeps CLI commands away from project database internals', async () => {
     const commandSources = await readCommandSources();
     const forbiddenPatterns = [
@@ -142,22 +111,6 @@ async function listTypeScriptFiles(root: string): Promise<string[]> {
   return files.flat();
 }
 
-function findForbiddenPatterns(
-  sources: Array<{ file: string; source: string }>,
-  forbiddenPatterns: Array<{ label: string; pattern: RegExp; reason: string }>
-): Array<{ file: string; line: number; pattern: string; reason: string }> {
-  return sources.flatMap(({ file, source }) =>
-    forbiddenPatterns.flatMap((forbiddenPattern) =>
-      findPatternLines(source, forbiddenPattern.pattern).map((line) => ({
-        file,
-        line,
-        pattern: forbiddenPattern.label,
-        reason: forbiddenPattern.reason,
-      }))
-    )
-  );
-}
-
 function findForbiddenImports(
   sources: Array<{ file: string; source: string }>,
   forbiddenImports: Array<{ label: string; pattern: RegExp; reason: string }>
@@ -179,12 +132,6 @@ function findForbiddenImports(
         : [];
     })
   );
-}
-
-function findPatternLines(source: string, pattern: RegExp): number[] {
-  return source
-    .split('\n')
-    .flatMap((line, index) => (pattern.test(line) ? [index + 1] : []));
 }
 
 function extractImportSources(source: string): string[] {

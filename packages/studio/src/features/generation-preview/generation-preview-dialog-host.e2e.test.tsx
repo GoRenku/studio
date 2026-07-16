@@ -82,11 +82,11 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-take',
-        title: 'Video Take Preview',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
       })
     );
-    expect(await screen.findByText('Shot Video Generation Preview')).toBeTruthy();
+    expect(await screen.findByText('Image Create Generation Preview')).toBeTruthy();
   });
 
   it('navigates ordered previews while preserving the selected tab and independent drafts', async () => {
@@ -100,7 +100,7 @@ describe('GenerationPreviewDialogHost', () => {
         authoredText: 'First prompt.',
       }),
       previewFixture({
-        purpose: 'shot.video-take',
+        purpose: 'image.create',
         title: 'Second Preview',
         saved: true,
         authoredText: 'Second prompt.',
@@ -214,8 +214,8 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-take',
-        title: 'Video Take Preview',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
         diagnostics: [
           {
             severity: 'warning',
@@ -229,7 +229,7 @@ describe('GenerationPreviewDialogHost', () => {
     );
 
     expect(
-      await screen.findByText('Shot Video Generation Preview')
+      await screen.findByText('Image Create Generation Preview')
     ).toBeTruthy();
     expect(screen.getByText('Generation Preview Notes')).toBeTruthy();
     const alert = screen.getByRole('alert');
@@ -332,12 +332,12 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-take',
-        title: 'Video Take Preview',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
         referenceLabel: 'Reopened Storyboard Lookbook Sheet',
       })
     );
-    expect(await screen.findByText('Shot Video Generation Preview')).toBeTruthy();
+    expect(await screen.findByText('Image Create Generation Preview')).toBeTruthy();
     await act(async () => {
       selectTab('References');
     });
@@ -414,8 +414,8 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-take',
-        title: 'Video Take Preview',
+        purpose: 'image.create',
+        title: 'Image Create Preview',
         saved: true,
         negativeText: 'No camera shake.',
       })
@@ -448,8 +448,8 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-take',
-        title: 'First Video Take Preview',
+        purpose: 'image.create',
+        title: 'First Image Create Preview',
         saved: true,
         authoredText: 'First preview prompt.',
       })
@@ -462,8 +462,8 @@ describe('GenerationPreviewDialogHost', () => {
 
     await dispatchPreview(
       previewFixture({
-        purpose: 'shot.video-take',
-        title: 'Newer Video Take Preview',
+        purpose: 'image.create',
+        title: 'Newer Image Create Preview',
         saved: true,
         authoredText: 'Newer preview prompt.',
       })
@@ -473,8 +473,8 @@ describe('GenerationPreviewDialogHost', () => {
         ok: true,
         json: async () => ({
           preview: previewFixture({
-            purpose: 'shot.video-take',
-            title: 'Stale Video Take Preview',
+            purpose: 'image.create',
+            title: 'Stale Image Create Preview',
             saved: true,
             authoredText: 'Stale response prompt.',
           }),
@@ -557,8 +557,8 @@ function previewFixture(input: {
       castMemberLabel: 'Valeria',
     },
     target: {
-      kind: 'sceneShotVideoTake',
-      id: 'take_test0001',
+      kind: 'project',
+      id: 'project',
     },
     title: input.title,
     model: {

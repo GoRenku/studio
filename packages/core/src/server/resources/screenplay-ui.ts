@@ -48,7 +48,7 @@ import {
   readScreenplaySequenceFromSession,
 } from '../database/access/screenplay-resource.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
-import { readSceneStoryboardPreview } from './scene-storyboard-ui.js';
+import { readSceneStoryboardPreview } from './storyboard-overviews.js';
 import type {
   ListNavigationInput,
   ReadCastMemberResourceInput,

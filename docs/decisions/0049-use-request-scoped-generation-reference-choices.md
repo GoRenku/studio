@@ -2,13 +2,14 @@
 
 Date: 2026-07-14
 
-Status: superseded by Decisions 0050 and 0051
+Status: generic request-scoped choices retained; Take-specific clauses
+superseded by Decision 0052
 
 ## Decision
 
-The request-scoped exact-choice principle below remains accepted. Decisions
-0050 and 0051 supersede this document's candidate-eligibility,
-provider-field-binding, guide-validation, and Take-freezing rules.
+The request-scoped exact-choice principle below remains accepted. Decision 0051
+supersedes candidate-eligibility, provider-field-binding, and guide-validation
+rules. Decision 0052 removes every Take-specific rule and contract.
 
 Generation reference choices belong to one persisted `GenerationSpec`. A
 purpose guide exposes current exact candidates in cardinality-one slots, but it

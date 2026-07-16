@@ -37,13 +37,6 @@ import {
   resolveSceneDialogueAudioDestinationRoot,
   resolveSceneDialogueAudioDestinationRootSync,
 } from './scene-dialogue-audio.js';
-import {
-  resolveShotVideoTakeDestinationFile,
-  resolveShotVideoTakeDestinationFileSync,
-  resolveShotVideoTakeDestinationOutputNames,
-  resolveShotVideoTakeDestinationRoot,
-  resolveShotVideoTakeDestinationRootSync,
-} from './shot-video-take.js';
 import type {
   DestinationKind,
   DestinationResolver,
@@ -66,13 +59,6 @@ const destinationResolvers = {
   'location.hero': locationHeroResolver,
   'visualLanguage.lookbookImage': lookbookImageResolver,
   'visualLanguage.lookbookSheet': lookbookSheetResolver,
-  'shotVideoTake.media': {
-    resolveFile: resolveShotVideoTakeDestinationFile,
-    resolveFileSync: resolveShotVideoTakeDestinationFileSync,
-    resolveRoot: resolveShotVideoTakeDestinationRoot,
-    resolveRootSync: resolveShotVideoTakeDestinationRootSync,
-    resolveOutputNames: resolveShotVideoTakeDestinationOutputNames,
-  },
   'scene.dialogueAudio': {
     resolveFile: resolveSceneDialogueAudioDestinationFile,
     resolveFileSync: resolveSceneDialogueAudioDestinationFileSync,

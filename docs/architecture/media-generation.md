@@ -52,8 +52,8 @@ experiences:
   `image.edit` execution, and destination attachment;
 - `scene-dialogue-audio-workspace` owns dialogue setup, generic audio
   generation, takes, playback metadata, and recoverable deletion;
-- `shot-video-take-workspace` owns take design/lifecycle separately from its
-  active generic `shot.video-take` generation request.
+- `scene-beat-sheet` owns Beat history, active selection, storyboard status,
+  and storyboard-image attachment separately from generic generation.
 
 ## Generic Lifecycle
 
@@ -108,9 +108,10 @@ assets for their exact domain subject. A generic reference is never promoted
 into a typed slot automatically. Creative prompts and media remain opaque under
 Decision `0041`.
 
-Draft Shot Video Take typed slots use complete Scene Cast/Location context, one
-Production Lookbook slot, and three fixed supporting-media slots. Completed
-Takes show only exact references from their successful immutable run snapshot.
+The reset intentionally defines no Shot video generation purpose, Shot-owned
+reference guide, or durable Shot production lifecycle. Future Shot generation
+must be designed from the new Shot domain rather than reusing removed Take
+contracts.
 
 ## Persistence
 
@@ -122,31 +123,13 @@ not store a mirrored complete spec JSON blob.
 payload, estimate and approval token, outputs, receipt, diagnostics, status, and
 timestamps.
 
-The generation-42 migration was generated from the Drizzle TypeScript schema and
-contains a documented custom one-way data step. It deletes obsolete spec/run
-rows and their provenance links, preserves imported assets/files, converts
-unambiguous explicit Shot selections into generic spec references, strips
-retired generation state from takes, and fails before migration when an exact
-selection is ambiguous. The real Urban Basilica database was backed up and
-migrated from generation 41 to generation 42. It contains 13 migrated Shot
-specs with 31 exact selections; SQLite `quick_check` is `ok` and
-`foreign_key_check` returns no rows. The same migration was replayed
-successfully against a copy of the verified pre-migration backup.
-
-Current schema changes continue to use Drizzle Kit's code-first generation and
-backup-gated migration flow. The accepted current schema adds explicit Shot
-generic-reference ownership, removes persisted Take lineage, and constrains one
-successful materializing run per Take.
-
-The generated `0053_drop-obsolete-shot-media-inputs.sql` migration then removes
-the two obsolete Shot media-input tables and updates the take-state default to
-version 3. It was replayed together with generation 42 from the verified
-generation-41 backup and applied to the real project. Both databases retain 13
-Shot specs, 31 exact selections, and 30 version-3 takes; `quick_check` remains
-`ok`, `foreign_key_check` remains empty, and neither obsolete table exists. The
-transaction-safe custom portion of the migration also preserves all 35
-Take-to-Shot membership rows and all four final-video rows while rebuilding the
-parent Take table.
+Migration `0059_scene_beats_and_shot_authoring_reset.sql` converts every Scene
+Shot List revision into the exact Scene Beat Sheet shape, preserves active
+revision selection and suitable storyboard image relationships, recomputes
+content fingerprints, and removes all retired Shot Video Take, Shot membership,
+Take media, Take generation, and Take asset records. It also removes the retired
+tables and advances the project database to generation 46. The migration fails
+on invalid non-retired ownership rather than guessing how to repair it.
 
 ## Public Foundation
 
@@ -165,5 +148,5 @@ focused modules in `packages/core/src/server/generation`:
 - `runGeneration` and `readGenerationRun`.
 
 The Core server entrypoint also exports focused Preview, Image Revision,
-Dialogue Audio, Shot Video Take, and attachment commands. CLI and HTTP callers
-remain thin projections of these Core-owned contracts.
+Dialogue Audio, Scene Beat Sheet, and storyboard attachment commands. CLI and
+HTTP callers remain thin projections of these Core-owned contracts.

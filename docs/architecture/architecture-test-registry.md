@@ -51,15 +51,15 @@ Static tests:
 
 Runtime tests:
 
-- `packages/studio/server/routes/screenplay-video-take-production.test.ts`
+- `packages/studio/server/routes/screenplay.test.ts`
 
 Forbidden capabilities:
 
 - route-local project database, schema, Drizzle, or SQLite access;
-- generic shot-video take state patching;
-- route-local inspection of durable take `referenceSelections`;
-- broad durable mutation escape hatches that let a route write arbitrary take
-  state instead of calling focused core behavior.
+- route-local Beat validation or durable Beat Sheet writes;
+- route-local Shot persistence or production behavior;
+- broad durable mutation escape hatches that let a route write arbitrary
+  project state instead of calling focused Core behavior.
 
 Maintenance owner:
 
@@ -85,8 +85,8 @@ Runtime tests:
 
 Forbidden capabilities:
 
-- arbitrary shot-video take state patching;
-- public raw take-state JSON update commands;
+- arbitrary Beat Sheet state patching;
+- public raw Shot or Take state update commands;
 - project database, schema, Drizzle, or SQLite access from command handlers;
 - deep imports of core media-generation internals when the CLI should call the
   public core service contract.
@@ -95,8 +95,8 @@ Maintenance owner:
 
 - CLI feature work must add command handlers through the focused registry, call
   core services, and keep command-boundary diagnostics structured. Runtime CLI
-  tests should carry behavior such as take-scoped commands not requiring
-  caller-owned shot ids.
+  tests should carry behavior such as Beat Sheet commands preserving
+  Core-owned validation and structured diagnostics.
 
 ### React Feature Code Is A Projection Consumer
 
@@ -147,15 +147,12 @@ Static tests:
 
 Runtime tests:
 
-- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/mutations/reference-selections.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/selection/input-selection.test.ts`
-- `packages/core/src/server/media-generation/purposes/shot-video-take/persistence/take-shot-membership.test.ts`
+- `packages/core/src/server/scene-beat-sheet/history.test.ts`
 
 Forbidden capabilities:
 
-- adapter-facing generic take-state patch contracts;
-- low-level durable take-state writers imported outside core-owned media
-  generation command modules;
+- adapter-facing generic Beat Sheet or Shot-state patch contracts;
+- low-level durable Beat Sheet writers imported outside the owning Core module;
 - broad service wiring functions that directly own durable mutation rules;
 - compatibility aliases for obsolete mutation shapes.
 

@@ -2,7 +2,11 @@
 
 Date: 2026-05-12
 
-Status: accepted
+Status: partially superseded by Decision 0052
+
+Core-owned asset storage remains accepted. The take-driven production export
+contract is removed until a future Shot/select model defines a new export
+source.
 
 ## Context
 

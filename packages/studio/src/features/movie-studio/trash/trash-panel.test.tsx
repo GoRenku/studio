@@ -54,7 +54,7 @@ describe('TrashPanel', () => {
     await waitFor(() => {
       expect(restoreTrashItem).toHaveBeenCalledWith(
         'constantinople',
-        'trash_item_take'
+        'trash_item_asset'
       );
     });
     await waitFor(() => {
@@ -108,12 +108,12 @@ function trashProject(): TrashProjectReport {
 
 function trashItem(): TrashItem {
   return {
-    id: 'trash_item_take',
-    operationId: 'trash_operation_take',
-    itemKind: 'sceneShotVideoTake',
-    itemId: 'scene_shot_video_take_001',
-    ownerKind: 'sceneShot',
-    ownerId: 'shot_001',
+    id: 'trash_item_asset',
+    operationId: 'trash_operation_asset',
+    itemKind: 'asset',
+    itemId: 'asset_001',
+    ownerKind: 'project',
+    ownerId: 'project_001',
     title: 'Trash restore candidate',
     originalProjectRelativePath: null,
     trashProjectRelativePath: null,

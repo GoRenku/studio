@@ -213,8 +213,7 @@ function generationTarget(kind: string, id: string): GenerationTarget {
     kind === 'castMember' ||
     kind === 'location' ||
     kind === 'scene' ||
-    kind === 'sceneDialogue' ||
-    kind === 'sceneShotVideoTake'
+    kind === 'sceneDialogue'
   ) {
     return { kind, id };
   }

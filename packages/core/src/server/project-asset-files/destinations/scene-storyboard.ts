@@ -14,7 +14,7 @@ import { assertResolvedPathInsideProject } from '../path-guards.js';
 import { persistProjectAssetFileAtDestinationSync } from '../persistence.js';
 import type { ProjectAssetFileWriteSet } from '../types.js';
 
-export function persistSceneStoryboardShotFilesSync(input: {
+export function persistSceneStoryboardBeatFilesSync(input: {
   session: DatabaseSession;
   projectFolder: string;
   writeSet?: ProjectAssetFileWriteSet;
@@ -22,13 +22,13 @@ export function persistSceneStoryboardShotFilesSync(input: {
   files: Array<{
     assetId: string;
     assetFileId: string;
-    shotId: string;
-    shotOrdinal: number;
+    beatId: string;
+    beatOrdinal: number;
     sourceProjectRelativePath: ProjectRelativePath;
   }>;
   now: string;
 }): Array<{
-  shotId: string;
+  beatId: string;
   assetFile: ReturnType<typeof persistProjectAssetFileAtDestinationSync>;
 }> {
   const hierarchy = requireSceneHierarchy(input.session, input.sceneId);
@@ -47,7 +47,7 @@ export function persistSceneStoryboardShotFilesSync(input: {
     );
     const destination = joinProjectRelativePath(
       iterationFolder,
-      `shot-${String(file.shotOrdinal).padStart(2, '0')}${extensionForMediaSource(sourceProjectRelativePath)}`
+      `beat-${String(file.beatOrdinal).padStart(2, '0')}${extensionForMediaSource(sourceProjectRelativePath)}`
     );
     const sourcePath = resolveProjectRelativePath(
       input.projectFolder,
@@ -59,7 +59,7 @@ export function persistSceneStoryboardShotFilesSync(input: {
       message: `Storyboard source file was not found: ${sourceProjectRelativePath}.`,
     });
     return {
-      shotId: file.shotId,
+      beatId: file.beatId,
       assetFile: persistProjectAssetFileAtDestinationSync({
         session: input.session,
         projectFolder: input.projectFolder,

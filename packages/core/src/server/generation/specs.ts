@@ -14,14 +14,6 @@ import {
 } from '../database/access/media-generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { GenerationPurposeContract } from './purpose-contract.js';
-import { requireSceneShotVideoTakeAuthoringOpen } from '../database/access/shot-video-take-media.js';
-
-const SINGLETON_TAKE_PURPOSES = new Set<GenerationSpec['purpose']>([
-  'shot.first-frame',
-  'shot.last-frame',
-  'shot.video-prompt',
-  'shot.video-take',
-]);
 
 export function createGenerationSpec(input: {
   id: string;
@@ -30,7 +22,6 @@ export function createGenerationSpec(input: {
   session: DatabaseSession;
   now: string;
 }): GenerationSpecRecord {
-  assertTakeSpecCanBeCreated(input);
   assertGenerationSpecEditingEnvelope(input.spec, input.purpose);
   return insertGenerationSpecRecord(input.session, {
     id: input.id,
@@ -49,7 +40,6 @@ export function updateGenerationSpec(input: {
 }): GenerationSpecRecord {
   const current = readGenerationSpec({ id: input.id, session: input.session });
   assertGenerationSpecIdentity(current.spec, input.spec);
-  assertTakeSpecCanBeEdited({ ...input, currentSpec: current.spec });
   assertGenerationSpecEditingEnvelope(input.spec, input.purpose);
   return updateGenerationSpecRecord(input.session, {
     id: input.id,
@@ -57,60 +47,6 @@ export function updateGenerationSpec(input: {
     createdAt: current.createdAt,
     updatedAt: input.now,
   });
-}
-
-function assertTakeSpecCanBeCreated(input: {
-  spec: GenerationSpec;
-  session: DatabaseSession;
-}): void {
-  if (!isSingletonTakeSpec(input.spec)) {
-    return;
-  }
-  requireSceneShotVideoTakeAuthoringOpen({
-    session: input.session,
-    takeId: input.spec.target.id,
-  });
-  if (listGenerationSpecRecords(input.session, {
-    purpose: input.spec.purpose,
-    target: input.spec.target,
-  }).length > 0) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_TAKE_SPEC_ALREADY_EXISTS',
-      `Shot Video Take already has a ${input.spec.purpose} generation spec.`
-    );
-  }
-}
-
-function assertTakeSpecCanBeEdited(input: {
-  id: string;
-  spec: GenerationSpec;
-  currentSpec: GenerationSpec;
-  session: DatabaseSession;
-}): void {
-  if (!isSingletonTakeSpec(input.currentSpec)) {
-    return;
-  }
-  requireSceneShotVideoTakeAuthoringOpen({
-    session: input.session,
-    takeId: input.currentSpec.target.id,
-  });
-  const duplicates = listGenerationSpecRecords(input.session, {
-    purpose: input.spec.purpose,
-    target: input.spec.target,
-  }).filter((record) => record.id !== input.id);
-  if (duplicates.length > 0) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_TAKE_SPEC_ALREADY_EXISTS',
-      `Shot Video Take already has another ${input.spec.purpose} generation spec.`
-    );
-  }
-}
-
-function isSingletonTakeSpec(spec: GenerationSpec): spec is GenerationSpec & {
-  target: Extract<GenerationTarget, { kind: 'sceneShotVideoTake' }>;
-} {
-  return SINGLETON_TAKE_PURPOSES.has(spec.purpose) &&
-    spec.target.kind === 'sceneShotVideoTake';
 }
 
 export function readGenerationSpec(input: {

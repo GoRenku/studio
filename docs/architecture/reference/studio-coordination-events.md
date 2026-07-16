@@ -47,7 +47,7 @@ renku studio current --json
 That command should return the current Studio focus and enough domain context
 for the agent to act on the same subject as the user.
 
-## Scene And Shot Tab Focus
+## Scene, Beat, And Shot Tab Focus
 
 Scene focus may include route-owned tab state. The scene selection shape is:
 
@@ -55,45 +55,25 @@ Scene focus may include route-owned tab state. The scene selection shape is:
 {
   type: 'scene';
   id: string;
-  sceneTab?: 'narrative' | 'shots' | 'takes';
-  takeWorkspaceMode?: 'list' | 'new' | 'edit';
-  takeId?: string;
-  shotId?: string;
-  shotTab?:
-    | 'description'
-    | 'lookbook'
-    | 'composition'
-    | 'motion'
-    | 'dialogs'
-    | 'cast'
-    | 'location'
-    | 'references'
-    | 'ai-production';
+  sceneTab?: 'narrative' | 'beats' | 'shots';
+  beatId?: string;
 }
 ```
 
 Rules:
 
-- absent `sceneTab` means `narrative` unless `shotId` or `shotTab` is present;
-- `shotId` or `shotTab` implies the `shots` scene tab;
-- `sceneTab: 'narrative'` must not be combined with shot-level state;
-- `takeWorkspaceMode` controls the Takes workspace surface and may be `list`,
-  `new`, or `edit`;
-- `takeId` requires `takeWorkspaceMode: 'edit'` and `sceneTab: 'takes'`;
-- in Takes edit mode, `shotId` and `shotTab` refer to the selected shot and
-  active shot-detail tab inside the take editor;
-- `shotTab` controls only the active shot-detail tab and defaults to
-  `description`;
-- selected values inside a tab, such as shot size, subject framing, camera
-  angle, selected cast, selected location, references, or AI Production
-  settings, remain project data and are not stored in route or coordination
-  events.
+- absent `sceneTab` means `narrative` unless `beatId` is present;
+- `beatId` requires `sceneTab: 'beats'`;
+- `sceneTab: 'narrative'` and `sceneTab: 'shots'` must not include `beatId`;
+- the Beats route is `?sceneTab=beats&beat=<beat-id>`;
+- the Shots route is `?sceneTab=shots`;
+- the Shots tab is currently an inert placeholder. It defines no Shot id,
+  Shot-detail route state, service read, or durable mutation.
 
 `renku studio current --json` enriches scene focus with the active scene tab and,
-when the focus is on `Shots` or a Takes edit workspace, the current shot and
-active shot-detail tab. For tabs backed by structured shot or take data, the
-current context reports selected values with stable ids and human-readable labels
-derived from core label maps.
+when the focus is on `Beats`, the selected Beat summary. The Beat projection is
+read from the active Scene Beat Sheet. Shot authoring controls are not reported
+as current project state because the preserved kit has no persistence contract.
 
 Example:
 
@@ -102,25 +82,15 @@ Example:
   "selection": {
     "type": "scene",
     "id": "scene_djkfgf9p",
-    "sceneTab": "takes",
-    "takeWorkspaceMode": "edit",
-    "takeId": "take_01HX...",
-    "shotId": "shot_003",
-    "shotTab": "composition"
+    "sceneTab": "beats",
+    "beatId": "beat_003"
   },
   "context": {
     "kind": "scene",
-    "sceneTab": { "id": "takes", "label": "Takes" },
-    "shot": {
-      "id": "shot_003",
-      "label": "Shot 3",
-      "activeTab": { "id": "composition", "label": "Composition" },
-      "currentTabSelections": {
-        "kind": "composition",
-        "shotSize": {
-          "id": "medium-close-up",
-          "label": "Medium Close-Up"
-        }
+    "sceneTab": { "id": "beats", "label": "Beats" },
+    "beat": {
+      "id": "beat_003",
+      "label": "The warning lands"
     }
   }
 }

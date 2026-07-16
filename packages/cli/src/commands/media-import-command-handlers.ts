@@ -19,8 +19,8 @@ export interface MediaCommandFlags {
   anchor?: string;
   receipt?: string;
   sourceSheet?: string;
-  shotList?: string;
-  shots?: string;
+  beatSheet?: string;
+  beats?: string;
   take?: string;
   kind?: string;
   selection?: string;
@@ -33,11 +33,11 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
     const purpose = parseGenerationPurpose(requiredFlag(flags.purpose, '--purpose'));
     if (purpose === 'scene.storyboard-sheet') {
       const target = parseGenerationTarget({ purpose, target: requiredFlag(flags.target, '--target') });
-      const shotListId = requiredFlag(flags.shotList, '--shot-list');
+      const beatSheetId = requiredFlag(flags.beatSheet, '--beat-sheet');
       const document = flags.file
         ? await readSceneStoryboardImagesImportDocument(flags.file)
-        : singleStoryboardImageDocument({ shotListId, shotId: requiredSingleShot(flags.shots), source: requiredFlag(flags.source, '--source'), title: flags.title });
-      const report = await runtime.projectDataService.attachSceneStoryboardImages({ projectName: runtime.projectName, homeDir: runtime.homeDir, sceneId: target.id, shotListId, document });
+        : singleStoryboardImageDocument({ beatSheetId, beatId: requiredSingleBeat(flags.beats), source: requiredFlag(flags.source, '--source'), title: flags.title });
+      const report = await runtime.projectDataService.attachSceneStoryboardImages({ projectName: runtime.projectName, homeDir: runtime.homeDir, sceneId: target.id, beatSheetId, document });
       await appendStudioResourceChangedEvent({ runtime, report, command: 'media import' });
       return report;
     }
@@ -71,20 +71,19 @@ export function listMediaImportPurposeHandlers(): ReadonlyArray<{
     { purpose: 'location.sheet' },
     { purpose: 'location.hero' },
     { purpose: 'scene.storyboard-sheet' },
-    { purpose: 'shot.video-take' },
   ];
 }
 
-function requiredSingleShot(value: string | undefined): string {
-  const shots = value?.split(',').map((shot) => shot.trim()).filter(Boolean) ?? [];
-  if (shots.length !== 1) {
-    throw new StructuredError({ code: 'CLI150', message: 'Single-file Scene Storyboard attachment requires exactly one --shots id.', suggestion: 'Pass one Shot id or use --file with a grouped sceneStoryboardImagesImport document.' });
+function requiredSingleBeat(value: string | undefined): string {
+  const beats = value?.split(',').map((beat) => beat.trim()).filter(Boolean) ?? [];
+  if (beats.length !== 1) {
+    throw new StructuredError({ code: 'CLI150', message: 'Single-file Scene Storyboard attachment requires exactly one --beats id.', suggestion: 'Pass one Beat id or use --file with a grouped sceneStoryboardImagesImport document.' });
   }
-  return shots[0]!;
+  return beats[0]!;
 }
 
-function singleStoryboardImageDocument(input: { shotListId: string; shotId: string; source: string; title?: string }) {
-  return { kind: 'sceneStoryboardImagesImport' as const, shotListId: input.shotListId, ...(input.title ? { title: input.title } : {}), shots: [{ shotId: input.shotId, source: input.source, ...(input.title ? { title: input.title } : {}), sourcePurpose: 'scene.storyboard-sheet' as const }] };
+function singleStoryboardImageDocument(input: { beatSheetId: string; beatId: string; source: string; title?: string }) {
+  return { kind: 'sceneStoryboardImagesImport' as const, beatSheetId: input.beatSheetId, ...(input.title ? { title: input.title } : {}), beats: [{ beatId: input.beatId, source: input.source, ...(input.title ? { title: input.title } : {}), sourcePurpose: 'scene.storyboard-sheet' as const }] };
 }
 
 export function unsupportedMediaPurpose(purpose: string): StructuredError {

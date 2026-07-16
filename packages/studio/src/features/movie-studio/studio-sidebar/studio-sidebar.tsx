@@ -44,8 +44,6 @@ interface StudioSidebarProps {
   selection: StudioSelection;
   onSelect: (selection: StudioSelection) => void;
   onHome: () => void;
-  isProductionExportRunning: boolean;
-  onProductionExport: () => void;
   inspirationFoldersRevision: number;
   onInspirationFoldersChange: () => void;
 }
@@ -56,8 +54,6 @@ export function StudioSidebar({
   selection,
   onSelect,
   onHome,
-  isProductionExportRunning,
-  onProductionExport,
   inspirationFoldersRevision,
   onInspirationFoldersChange,
 }: StudioSidebarProps) {
@@ -237,10 +233,7 @@ export function StudioSidebar({
             </span>
           </span>
         </Button>
-        <StudioSidebarActions
-          isProductionExportRunning={isProductionExportRunning}
-          onProductionExport={onProductionExport}
-        />
+        <StudioSidebarActions />
       </div>
 
       <div className='border-b border-border/40 p-3'>

@@ -1,6 +1,6 @@
 # 0144 Scene Beats And Shot Authoring Reset
 
-Status: proposed
+Status: completed
 Date: 2026-07-16
 
 ## Summary
@@ -17,7 +17,7 @@ The accepted outcome is:
 2. Its current entries become **Beats**.
 3. Existing Beat text, history, active selection, storyboard images, storyboard
    status, storyboard generation/import behavior, and the current grid/detail UI
-   are preserved.
+   are structurally preserved through migration.
 4. The current **Shots** tab becomes **Beats**.
 5. The current **Takes** tab becomes **Shots**.
 6. The Shots tab contains only the existing add-card treatment relabeled
@@ -37,6 +37,9 @@ The accepted outcome is:
 12. The real `urban-basilica` project preserves Beat Sheets and storyboard
     images while removing all current Shot Video Takes, Take generation records,
     Take-owned assets, Take trash items, and the retired `shots/` media tree.
+13. After structural migration, the active `urban-basilica` Beat descriptions
+    receive an agent-led content pass that removes Shot direction while
+    preserving visual setting and narrative meaning.
 
 This plan deliberately does **not** define the new durable Shot model, the
 Beat-to-Shot relationship, Shot creation workflow, Shot persistence, Shot
@@ -77,10 +80,10 @@ The current implementation includes:
 The cleanup must reduce and separate these responsibilities. Renaming files in
 place while keeping the same module shape is not acceptable.
 
-### In-flight work that overlaps this reset
+### Plan 0143 is the current-state baseline
 
-The current Studio worktree includes completed Plan 0143 implementation that is
-not yet cleanly isolated from this reset:
+The completed implementation of Plan 0143 is the current code, schema, and
+product baseline from which this forward cleanup starts:
 
 - migration `0058_flexible_generation_authoring.sql`;
 - `scene_shot_reference_asset`;
@@ -94,13 +97,16 @@ Migration 0058 has already been applied to `urban-basilica`, whose current
 
 The implementation must therefore:
 
-- preserve the current worktree before starting;
+- accept the committed Plan 0143 result as the current state;
 - treat migration 0058/schema generation 45 as the real migration baseline;
-- remove the Shot-specific parts of Plan 0143;
+- remove the now-obsolete Shot-specific implementation through new forward code
+  and migration changes;
 - retain the shared generation-reference picker/API behavior used by Generation
   Preview and Image Revision;
 - generate a new forward migration rather than rewriting 0058 as if it had
-  never been applied.
+  never been applied;
+- leave Plan 0143 and migration 0058 unchanged as historical implementation
+  records.
 
 ### Real `urban-basilica` database inventory
 
@@ -110,15 +116,19 @@ The database is currently healthy:
 - `PRAGMA quick_check`: `ok`;
 - `PRAGMA foreign_key_check`: no issues.
 
-Beat data to preserve:
+Beat data to preserve through the structural migration:
 
-| Current storage | Current count | Cleanup result |
+| Current storage | Current count | Structural migration result |
 | --- | ---: | --- |
 | `scene_shot_list` | 8 | 8 `scene_beat_sheet` rows |
 | Beat-like JSON entries under `shots[]` | 69 | 69 `beats[]` entries |
 | `scene_shot_list_state` | 4 | 4 `scene_beat_sheet_state` rows |
 | `scene_shot_storyboard_image` relationships | 35 | 35 `scene_beat_storyboard_image` rows |
 | unique `scene_storyboard_image` assets/files | 20 | preserved |
+
+The later agent-led description cleanup may add new Beat Sheet history rows for
+the four active sheets. Those reviewed revisions are intentional current
+history, not migration loss or duplicated compatibility state.
 
 Retired data to remove:
 
@@ -146,6 +156,12 @@ That tree is retired with the Take model.
 
 A Beat is a story object. It describes a meaningful viewer-state, information,
 power, emotion, or action change inside a Scene.
+
+A Beat also describes the visual situation in which that narrative development
+occurs: setting, placement of people when important, spatial relationships,
+significant objects, atmosphere, and other story-relevant visual facts. It does
+not prescribe shot size, lens, framing, camera movement, cuts, coverage,
+performance direction, or production execution.
 
 A Shot is a camera/production object. Multiple Shots may realize one Beat, and
 one Shot may bridge Beat boundaries when the future design explicitly allows
@@ -280,11 +296,17 @@ model.
 | Current concept | Current name | New current contract |
 | --- | --- | --- |
 | scene narrative breakdown document | Scene Shot List | Scene Beat Sheet |
-| ordered entry | `SceneShot` | `SceneBeat` |
-| entry id | `shotId` / `shot_*` | `beatId` / `beat_*` |
+| ordered entry | `SceneShot` | `Beat` |
+| entry id property/value | `shotId` / `shot_*` | `id` / `beat_*` |
 | document collection | `shots` | `beats` |
 | document strategy | `coverageStrategy` | `narrativeProgression` |
-| entry story change | `storyBeat` | `storyChange` |
+| narrative development | `storyBeat` | `narrativeDevelopment` |
+| screenplay relationship | `coveredBlockIndexes` | `screenplayBlockIndexes` |
+| entry subject | `subject` | removed |
+| entry action | `action` | removed |
+| entry dialogue coverage | `dialogue` | removed from Beat |
+| entry sound direction | `audioNotes` | removed from Beat |
+| entry production direction | `productionNotes` | removed from Beat |
 | base history link | `baseShotListId` | `baseBeatSheetId` |
 | primary table | `scene_shot_list` | `scene_beat_sheet` |
 | active state table | `scene_shot_list_state` | `scene_beat_sheet_state` |
@@ -317,35 +339,58 @@ export interface SceneBeatSheetDocument {
   narrativeProgression: string;
   baseBeatSheetId?: string | null;
   lookbookInfluence?: string;
-  beats: SceneBeat[];
+  beats: Beat[];
   openQuestions?: string[];
 }
 ```
 
-### `SceneBeat`
+### `Beat`
 
-The Beat contract preserves current narrative and storyboard-relevant content:
+The Beat contract is deliberately small and contains only Beat-owned narrative,
+visual-setting, project-relationship, and screenplay-source facts:
 
 ```ts
-export interface SceneBeat {
-  beatId: string;
+export interface Beat {
+  id: string;
   title: string;
-  storyChange: string;
-  narrativePurpose: string;
   description: string;
-  subject: string;
-  action: string;
-  dialogue: SceneBeatDialogueReference[];
-  coveredBlockIndexes: number[];
+  narrativeDevelopment: string;
+  narrativePurpose: string;
   castMemberIds: string[];
   locationIds: string[];
-  audioNotes?: string;
-  productionNotes?: string;
+  screenplayBlockIndexes: number[];
 }
 ```
 
-The following current structured fields are removed from Beat persistence:
+Field ownership is exact:
 
+- `id` is the durable Beat identifier. The property is not named `beatId`
+  because its owning object is already a `Beat`.
+- `title` is the short human-readable Beat name.
+- `description` describes the Beat's visual situation: setting, meaningful
+  placement, spatial relationships, important elements, and atmosphere. It is
+  not a camera or Shot description.
+- `narrativeDevelopment` replaces `storyBeat`. It describes what physically,
+  emotionally, relationally, or informationally develops in the Beat.
+- `narrativePurpose` describes why that development matters to the Scene and
+  wider narrative.
+- `castMemberIds` reference actual project Cast Members.
+- `locationIds` reference actual project Locations.
+- `screenplayBlockIndexes` identify the current Scene screenplay blocks from
+  which the Beat is derived.
+
+Core validates every Cast Member id, Location id, and screenplay block index.
+Persisted Beats contain ids rather than embedded Cast Member or Location
+snapshots. Resources and UI projections resolve those ids to the actual project
+records.
+
+The following current fields are removed from Beat persistence:
+
+- `subject`;
+- `action`;
+- `dialogue`;
+- `audioNotes`;
+- `productionNotes`;
 - `shotType`;
 - `cameraAngle`;
 - `cameraMovement`;
@@ -353,10 +398,41 @@ The following current structured fields are removed from Beat persistence:
 - `lensIntent`;
 - `aspectRatio`.
 
-Migration preserves the authored freeform narrative/visual text exactly. It
-does not rewrite `description`, `subject`, `action`, `audioNotes`, or
-`productionNotes` even when those strings happen to contain historical camera
+`subject` is redundant with the deliberately defined Beat `description`.
+`action`, `dialogue`, `audioNotes`, and `productionNotes` currently contain
+Shot coverage, blocking, sound timing, performance, continuity, and generation
+direction. Those concerns belong to future Shot authoring rather than Beat
+persistence.
+
+The structural migration preserves `description`, `narrativeDevelopment`, and
+`narrativePurpose` values exactly. It does not attempt creative rewriting in
+SQL or Studio runtime code. A separate agent-led sample-project content pass
+after migration revises Shot-focused descriptions through the new Beat Sheet
+command contract.
+
+Concrete `urban-basilica` cleanup example:
+
+```text
+Current Shot-focused description:
+Tight two-shot across the curve of the barrel, with Mara low and sharp-eyed
+in the foreground while Urban answers from the other side of the bronze.
+
+Accepted Beat description:
+Mara and Urban stand on opposite sides of the heated bronze barrel. The weapon
+physically divides them while the surrounding battlefield prepares for its use.
+```
+
+The associated narrative values remain distinct:
+
+```text
+Narrative Development:
+Mara names the cannon's danger and Urban answers by turning danger into craft
 language.
+
+Narrative Purpose:
+Define the moral argument of the scene: whether the violence belongs to metal
+or to men.
+```
 
 ### Beat Sheet operations
 
@@ -371,7 +447,9 @@ beats.delete
 beatSheet.replace
 ```
 
-Operation placement uses `beatId`. The resulting full Beat Sheet must validate
+Operation placement and target lists may use explicit `beatId` and `beatIds`
+fields because those ids appear outside their owning `Beat` object. The Beat
+object itself always uses `id`. The resulting full Beat Sheet must validate
 against the same current Beat Sheet schema.
 
 ### Storyboard import
@@ -408,7 +486,11 @@ Reports use `beatSheetId`, `beatId`, `missingBeatIds`, `staleBeatIds`, and
   server, browser, coordination events, resource keys, docs, tests, and skills.
 - One-way preservation of Beat Sheet history and storyboard-image
   relationships.
-- Removal of structured camera fields from Beat JSON.
+- Replacement with the exact minimal `Beat` contract.
+- Removal of Subject, Action, Dialogue Coverage, Audio Notes, Production Notes,
+  and structured camera fields from Beat JSON.
+- Agent-led cleanup of Shot-focused descriptions in the active
+  `urban-basilica` Beat Sheets.
 - Removal of every Shot Video Take and Shot group contract.
 - Removal of Shot References.
 - Extraction of reusable Shot authoring UI and editor-value types.
@@ -467,6 +549,9 @@ this plan:
 Historical completed plans remain unchanged. Current architecture documents and
 ADRs must be updated so they do not continue to present the superseded model as
 accepted current direction.
+
+Superseding a direction does not authorize editing Plan 0143 or any other
+historical completed plan.
 
 The Drizzle workflow was rechecked against the official current documentation:
 
@@ -690,6 +775,12 @@ docs disappear with them.
 - Renaming `SceneShotVideoTake` to `Shot`.
 - Keeping old tables with new TypeScript names.
 - Adding `Beat` aliases for `SceneShot`.
+- Naming the Beat entry type `SceneBeat` or its owned id property `beatId`.
+- Adding generic summary, subject, action, dialogue coverage, audio-note,
+  production-note, or camera fields to the accepted `Beat` contract.
+- Moving removed Shot direction into `description` as an untyped catch-all.
+- Adding runtime camera-word detection, creative-content scoring, or automatic
+  rewriting for Beat descriptions.
 - Adding old CLI/URL/JSON compatibility.
 - Keeping Continuous/Multi-Cut logic in an unused module “for later.”
 - Keeping Shot group selection utilities.
@@ -725,8 +816,7 @@ Stop and revise before implementation continues if:
 Add and use:
 
 - `SceneBeatSheetDocument`
-- `SceneBeat`
-- `SceneBeatDialogueReference`
+- `Beat`
 - `SceneBeatSheetOperationDocument`
 - `SceneBeatSheetOperation`
 - `SceneBeatSheetSummary`
@@ -1009,9 +1099,12 @@ For every current Scene Shot List:
 - change `coverageStrategy` to `narrativeProgression`;
 - change `baseShotListId` to `baseBeatSheetId` and rewrite its id prefix;
 - change `shots[]` to `beats[]`;
-- change each `shotId` prefix from `shot_` to `beat_`;
-- change `storyBeat` to `storyChange`;
+- change each entry property from `shotId` to `id`;
+- change each entry id prefix from `shot_` to `beat_`;
+- change `storyBeat` to `narrativeDevelopment`;
+- change `coveredBlockIndexes` to `screenplayBlockIndexes`;
 - preserve every retained field value byte-for-byte as JSON values;
+- omit `subject`, `action`, `dialogue`, `audioNotes`, and `productionNotes`;
 - omit the six retired structured camera fields.
 
 For state rows:
@@ -1119,18 +1212,6 @@ The next Shot/output design must reintroduce export only after it defines:
 
 ## Implementation Slices
 
-### Slice 0: Protect the current in-flight work
-
-Before editing overlapping files:
-
-- inspect and preserve the current dirty Studio and Studio Skills worktrees;
-- record the current migration journal and schema generation;
-- confirm `urban-basilica` is at generation 45;
-- do not reset, discard, or rewrite the user's current work;
-- establish a reviewable branch/commit boundary before the cleanup begins.
-
-This slice changes no product behavior.
-
 ### Slice 1: Record the accepted separation decision
 
 Add ADR:
@@ -1193,7 +1274,7 @@ Tests:
 
 ### Slice 3: Introduce the Beat Sheet Core contract
 
-- add `SceneBeatSheetDocument`, `SceneBeat`, operations, reports, and schemas;
+- add `SceneBeatSheetDocument`, `Beat`, operations, reports, and schemas;
 - add the three Beat tables to the Drizzle schema;
 - add new entity id prefixes:
   - `scene_beat_sheet`;
@@ -1229,6 +1310,9 @@ No runtime code may inspect storyboard image contents.
 - preserve selected-card behavior, image cards, right-side Beat details, and
   current responsive desktop grid;
 - change visible labels to Beat terminology;
+- show only Description, Narrative Development, Narrative Purpose, Cast, and
+  Locations in the Beat detail panel;
+- remove Subject, Action, and Dialogue Coverage from the Beat detail panel;
 - change route state to `sceneTab=beats&beat=<beat-id>`;
 - add `SceneShotsPlaceholderTab`;
 - render only the **New Shot** add card/button in the Shots tab;
@@ -1333,6 +1417,17 @@ scene-beat-sheet-operations.json
 
 Update:
 
+- Beat Sheet contract guidance to use `Beat` with exactly `id`, `title`,
+  `description`, `narrativeDevelopment`, `narrativePurpose`,
+  `castMemberIds`, `locationIds`, and `screenplayBlockIndexes`;
+- Beat design guidance to define `description` as visual setting, meaningful
+  placement, spatial relationships, important elements, and atmosphere without
+  camera or Shot execution;
+- Beat design guidance to distinguish narrative development from narrative
+  purpose;
+- Beat examples to use actual Cast Member and Location ids;
+- remove subject, action, dialogue coverage, audio notes, production notes, and
+  camera fields from Beat examples and instructions;
 - Media Producer `scene.storyboard-sheet` guidance to use Beat Sheets and Beats;
 - Movie Director department map, production order, readiness, and handoffs;
 - Casting and Production Design handoffs that currently say Shot List;
@@ -1367,12 +1462,39 @@ On a database copy first:
 - open the project through CLI and Studio;
 - verify all four active Beat Sheets and current storyboard cards.
 
+Then perform a separate agent-led content cleanup against the migrated copy:
+
+- inspect every Beat in the four active Beat Sheets;
+- rewrite descriptions that still prescribe Shot size, lens, framing, camera
+  movement, cuts, coverage, or production execution;
+- preserve the Beat's visual setting, meaningful placements, spatial
+  relationships, important elements, atmosphere, and narrative meaning;
+- preserve `narrativeDevelopment`, `narrativePurpose`, Cast Member ids,
+  Location ids, and screenplay block relationships unless the source data is
+  factually wrong;
+- write cleaned content through the new Core-owned Beat Sheet command rather
+  than patching database JSON directly;
+- create and activate a new Beat Sheet history revision for each active sheet
+  that changes;
+- visually inspect each existing storyboard image against its cleaned Beat;
+- explicitly reattach the existing storyboard asset to the cleaned Beat when
+  it remains suitable;
+- leave an image missing for agent regeneration when the existing image no
+  longer represents the cleaned Beat;
+- review the complete cleaned Beat JSON and Studio detail projection before
+  applying the same documents to the real project.
+
+This cleanup is agent-owned creative review. Studio runtime, schemas,
+validators, migrations, and UI code must not search descriptions for camera
+words, score their quality, or rewrite their content.
+
 On the real project:
 
 - stop Studio processes that hold the database;
 - run the package-owned migration command, which creates a verified backup;
 - inspect the migration report and backup metadata;
 - repeat all SQL checks;
+- apply the reviewed Beat Sheet cleanup documents through Core commands;
 - verify Studio Beats visually;
 - build and review the retired `shots/` file manifest;
 - obtain explicit filesystem deletion confirmation;
@@ -1385,17 +1507,21 @@ On the real project:
 
 - AJV accepts the current Beat Sheet shape.
 - Unknown fields are rejected.
-- Retired camera fields are rejected as unknown Beat fields.
-- Beat ids are unique.
+- `Beat.id`, `title`, `description`, `narrativeDevelopment`,
+  `narrativePurpose`, `castMemberIds`, `locationIds`, and
+  `screenplayBlockIndexes` are required.
+- retired camera, subject, action, dialogue, audio-note, and production-note
+  fields are rejected as unknown Beat fields.
+- Beat `id` values are unique.
 - Beat operation ids must exist in the explicit base Beat Sheet.
-- screenplay block, cast, location, and dialogue references retain current
+- screenplay block, Cast Member, and Location references retain current
   semantic validation.
 - validation reports use Beat terminology and structured codes.
 - write/list/read/set-active preserve history.
 - operation apply preserves unchanged storyboard images.
 - changed Beat content marks an image stale.
-- camera-field removal alone during migration does not mark preserved images
-  stale.
+- removal of retired fields during structural migration does not mark preserved
+  images stale.
 
 ### Storyboard tests
 
@@ -1410,6 +1536,9 @@ On the real project:
 
 - Scene tabs render `Narrative`, `Beats`, and `Shots`.
 - Beats tab preserves the current card grid and detail panel.
+- Beat details show Description, Narrative Development, Narrative Purpose,
+  Cast, and Locations.
+- Beat details do not show Subject, Action, or Dialogue Coverage.
 - Beat selection writes `sceneTab=beats&beat=<id>`.
 - Shots tab renders **New Shot** only.
 - clicking **New Shot** performs no request or navigation.
@@ -1451,6 +1580,12 @@ The focused generation-45 fixture must prove:
 - 20 unique storyboard assets/files survive;
 - base Beat Sheet links are rewritten;
 - Beat ids are rewritten;
+- `storyBeat` values survive under `narrativeDevelopment`;
+- `coveredBlockIndexes` values survive under `screenplayBlockIndexes`;
+- `description`, `narrativeDevelopment`, `narrativePurpose`, Cast Member ids,
+  and Location ids retain their exact structural-migration values;
+- subject, action, dialogue, audio-note, production-note, and camera fields are
+  absent from every migrated Beat;
 - all 30 Take rows and 35 Take membership rows disappear;
 - all 13 Take specs and 4 Take runs disappear;
 - all retired Shot asset types disappear when exclusively owned;
@@ -1573,9 +1708,12 @@ PRAGMA quick_check;
 Inspect:
 
 - current tables and indexes;
-- Beat Sheet/history/storyboard counts;
+- structural-migration Beat Sheet/history/storyboard counts before the
+  agent-led content revisions;
+- final Beat Sheet history counts after the reviewed content revisions;
 - active Beat Sheet ids;
-- Beat JSON for all eight history rows;
+- Beat JSON for every history row and all four final active Beat Sheets;
+- exact `Beat` field shape and absence of retired fields;
 - storyboard asset/file existence;
 - absence of retired Take specs, runs, assets, trash items, and tables.
 
@@ -1586,6 +1724,10 @@ Inspect:
 - Confirm Beats shows the current storyboard grid and detail copy.
 - Confirm existing Beat images load.
 - Confirm selecting a Beat updates the Beat query parameter and detail panel.
+- Confirm the detail panel shows Description, Narrative Development, Narrative
+  Purpose, Cast, and Locations only.
+- Confirm cleaned descriptions describe Beat visual situations without
+  carrying the current Shot framing and camera instructions.
 - Confirm Shots shows only New Shot.
 - Confirm New Shot has no effect.
 - Confirm there is no route into the former Takes editor.
@@ -1614,189 +1756,212 @@ Inspect:
 
 ### Review Area
 
-- [ ] Confirm Beats and Shots are separate product concepts.
-- [ ] Confirm the current Scene Shot List became a Scene Beat Sheet rather than
+- [x] Confirm Beats and Shots are separate product concepts.
+- [x] Confirm the current Scene Shot List became a Scene Beat Sheet rather than
       receiving only visible copy changes.
-- [ ] Confirm the legacy Shot Video Take aggregate was deleted rather than
+- [x] Confirm the legacy Shot Video Take aggregate was deleted rather than
       renamed.
-- [ ] Confirm the new Shots tab is intentionally inert and persists nothing.
-- [ ] Confirm the implementation preserves accepted architecture boundaries.
-- [ ] Confirm centralized Core ownership did not become a monolithic
+- [x] Confirm the new Shots tab is intentionally inert and persists nothing.
+- [x] Confirm the implementation preserves accepted architecture boundaries.
+- [x] Confirm centralized Core ownership did not become a monolithic
       implementation.
-- [ ] Confirm the final module/file shape matches the Architecture Shape Gate.
-- [ ] Confirm no new broad dispatcher, catch-all helper, or god file was added.
+- [x] Confirm the final module/file shape matches the Architecture Shape Gate.
+- [x] Confirm no new broad dispatcher, catch-all helper, or god file was added.
 
 ### Architecture And Contracts
 
-- [ ] Add ADR 0052 with the accepted Beat/Shot separation.
-- [ ] Update conflicting ADR statuses.
-- [ ] Add the deliberate Scene Beat Sheet public contract.
-- [ ] Add the deliberate persistence-free Shot authoring value contract.
-- [ ] Remove all Scene Shot List public contracts.
-- [ ] Remove all Shot Video Take public contracts.
-- [ ] Remove structure/group contracts.
-- [ ] Remove Shot-specific reference workspace contracts.
-- [ ] Remove current Shot generation purposes and target kind.
-- [ ] Remove take-driven production export contracts.
-- [ ] Keep Scene Dialogue Audio Take contracts.
-- [ ] Keep generic Generation Preview and Image Revision reference contracts.
-- [ ] Keep package-boundary diagnostics structured.
-- [ ] Add no aliases, shims, fallbacks, dual fields, or old route readers.
+- [x] Add ADR 0052 with the accepted Beat/Shot separation.
+- [x] Update conflicting ADR statuses.
+- [x] Add the deliberate Scene Beat Sheet public contract.
+- [x] Add the deliberate persistence-free Shot authoring value contract.
+- [x] Remove all Scene Shot List public contracts.
+- [x] Remove all Shot Video Take public contracts.
+- [x] Remove structure/group contracts.
+- [x] Remove Shot-specific reference workspace contracts.
+- [x] Remove current Shot generation purposes and target kind.
+- [x] Remove take-driven production export contracts.
+- [x] Keep Scene Dialogue Audio Take contracts.
+- [x] Keep generic Generation Preview and Image Revision reference contracts.
+- [x] Keep package-boundary diagnostics structured.
+- [x] Add no aliases, shims, fallbacks, dual fields, or old route readers.
 
 ### Beat Sheet Core
 
-- [ ] Add `scene-beat-sheet.ts`.
-- [ ] Add Beat Sheet JSON Schemas.
-- [ ] Add Beat Sheet AJV and semantic validation.
-- [ ] Add `scene_beat_sheet`.
-- [ ] Add `scene_beat_sheet_state`.
-- [ ] Add `scene_beat_storyboard_image`.
-- [ ] Split Beat Sheet history and storyboard database access.
-- [ ] Split context, history, operations, storyboard status, and validation.
-- [ ] Update ProjectDataService methods.
-- [ ] Update entity id prefixes.
-- [ ] Update resource keys.
-- [ ] Update Scene/Sequence/Act storyboard resources.
-- [ ] Update storyboard import to Beat ids.
-- [ ] Update new storyboard filenames to Beat naming.
-- [ ] Delete old Shot List files without re-export stubs.
+- [x] Add `scene-beat-sheet.ts`.
+- [x] Add the canonical `Beat` interface with `id`, `title`, `description`,
+      `narrativeDevelopment`, `narrativePurpose`, `castMemberIds`,
+      `locationIds`, and `screenplayBlockIndexes`.
+- [x] Do not add `SceneBeat` or a redundant `beatId` property.
+- [x] Remove Subject, Action, Dialogue Coverage, Audio Notes, Production Notes,
+      and structured camera fields from Beat persistence.
+- [x] Add Beat Sheet JSON Schemas.
+- [x] Add Beat Sheet AJV and semantic validation.
+- [x] Add `scene_beat_sheet`.
+- [x] Add `scene_beat_sheet_state`.
+- [x] Add `scene_beat_storyboard_image`.
+- [x] Split Beat Sheet history and storyboard database access.
+- [x] Split context, history, operations, storyboard status, and validation.
+- [x] Update ProjectDataService methods.
+- [x] Update entity id prefixes.
+- [x] Update resource keys.
+- [x] Update Scene/Sequence/Act storyboard resources.
+- [x] Update storyboard import to Beat ids.
+- [x] Update new storyboard filenames to Beat naming.
+- [x] Delete old Shot List files without re-export stubs.
 
 ### Preserved Shot Authoring Kit
 
-- [ ] Move camera/lens vocabularies out of Beat contracts.
-- [ ] Add persistence-free `ShotDirectionDraft`.
-- [ ] Preserve Composition UI.
-- [ ] Preserve Motion UI.
-- [ ] Preserve Dialogs UI and Scene Dialogue Audio presentation.
-- [ ] Preserve AI Production input/model/run-setup UI.
-- [ ] Preserve the optional video preview component.
-- [ ] Move Shot design assets with their owning feature.
-- [ ] Remove all Take service calls from the retained kit.
-- [ ] Remove all Beat membership assumptions from the retained kit.
-- [ ] Remove group counts, group strips, Take tags, and structure controls.
-- [ ] Keep Shadcn controls only.
+- [x] Move camera/lens vocabularies out of Beat contracts.
+- [x] Add persistence-free `ShotDirectionDraft`.
+- [x] Preserve Composition UI.
+- [x] Preserve Motion UI.
+- [x] Preserve Dialogs UI and Scene Dialogue Audio presentation.
+- [x] Preserve AI Production input/model/run-setup UI.
+- [x] Preserve the optional video preview component.
+- [x] Move Shot design assets with their owning feature.
+- [x] Remove all Take service calls from the retained kit.
+- [x] Remove all Beat membership assumptions from the retained kit.
+- [x] Remove group counts, group strips, Take tags, and structure controls.
+- [x] Keep Shadcn controls only.
 
 ### Studio UI And Routing
 
-- [ ] Change Scene tabs to Narrative, Beats, Shots.
-- [ ] Preserve the current Beat card grid.
-- [ ] Preserve the current Beat detail panel.
-- [ ] Use Beat labels and Beat route state.
-- [ ] Add the inert New Shot add card.
-- [ ] Prove New Shot causes no action.
-- [ ] Remove Takes list/edit modes.
-- [ ] Remove Take URL state.
-- [ ] Remove Shot rail/group selection UI.
-- [ ] Remove the References tab.
-- [ ] Remove obsolete Take Playwright pages and snapshots.
-- [ ] Add desktop Beats and Shots placeholder coverage.
+- [x] Change Scene tabs to Narrative, Beats, Shots.
+- [x] Preserve the current Beat card grid.
+- [x] Preserve the current Beat detail panel.
+- [x] Show Description, Narrative Development, Narrative Purpose, Cast, and
+      Locations in the Beat detail panel.
+- [x] Remove Subject, Action, and Dialogue Coverage from the Beat detail panel.
+- [x] Use Beat labels and Beat route state.
+- [x] Add the inert New Shot add card.
+- [x] Prove New Shot causes no action.
+- [x] Remove Takes list/edit modes.
+- [x] Remove Take URL state.
+- [x] Remove Shot rail/group selection UI.
+- [x] Remove the References tab.
+- [x] Remove obsolete Take Playwright pages and snapshots.
+- [x] Add desktop Beats and Shots placeholder coverage.
 
 ### Shot Video Take And References Removal
 
-- [ ] Delete Take schema tables.
-- [ ] Delete Shot reference schema table.
-- [ ] Delete Take workspace modules.
-- [ ] Delete Take generation purpose modules.
-- [ ] Delete Take project asset destination.
-- [ ] Delete Take trash ownership.
-- [ ] Delete Take output attachment.
-- [ ] Delete Take server routes and request parsers.
-- [ ] Delete Take browser service and hooks.
-- [ ] Delete Shot-specific reference UI wrappers.
-- [ ] Delete Shot-specific reference commands and projections.
-- [ ] Keep the shared generation reference picker/API.
-- [ ] Keep generic Generation Preview reference editing.
-- [ ] Keep generic Image Revision reference editing.
-- [ ] Remove take-driven production export end to end.
+- [x] Delete Take schema tables.
+- [x] Delete Shot reference schema table.
+- [x] Delete Take workspace modules.
+- [x] Delete Take generation purpose modules.
+- [x] Delete Take project asset destination.
+- [x] Delete Take trash ownership.
+- [x] Delete Take output attachment.
+- [x] Delete Take server routes and request parsers.
+- [x] Delete Take browser service and hooks.
+- [x] Delete Shot-specific reference UI wrappers.
+- [x] Delete Shot-specific reference commands and projections.
+- [x] Keep the shared generation reference picker/API.
+- [x] Keep generic Generation Preview reference editing.
+- [x] Keep generic Image Revision reference editing.
+- [x] Remove take-driven production export end to end.
 
 ### CLI And Agent Surfaces
 
-- [ ] Add `renku screenplay beat-sheet`.
-- [ ] Add `--beat-sheet`.
-- [ ] Add `--beats`.
-- [ ] Update storyboard import documents and reports.
-- [ ] Remove Shot Video Take purpose/target parsing.
-- [ ] Keep `--take` only for current non-Shot domains.
-- [ ] Rename `scene-shot-designer` to `scene-beat-designer`.
-- [ ] Update Beat Sheet skill contracts and samples.
-- [ ] Update Media Producer storyboard guidance.
-- [ ] Update Movie Director routing and readiness.
-- [ ] Remove active Shot Video Take skill references, samples, and evals.
-- [ ] Refresh the installed plugin from source rather than editing its cache.
+- [x] Add `renku screenplay beat-sheet`.
+- [x] Add `--beat-sheet`.
+- [x] Add `--beats`.
+- [x] Update storyboard import documents and reports.
+- [x] Remove Shot Video Take purpose/target parsing.
+- [x] Keep `--take` only for current non-Shot domains.
+- [x] Rename `scene-shot-designer` to `scene-beat-designer`.
+- [x] Update Beat Sheet skill contracts and samples.
+- [x] Update Media Producer storyboard guidance.
+- [x] Update Movie Director routing and readiness.
+- [x] Remove active Shot Video Take skill references, samples, and evals.
+- [x] Refresh the installed plugin from source rather than editing its cache.
 
 ### Migration And Real Data
 
-- [ ] Preserve the current dirty work before implementation.
-- [ ] Treat generation 45/0058 as the migration baseline.
-- [ ] Finalize the TypeScript schema before generating migration 0059.
-- [ ] Generate SQL and snapshot with Drizzle Kit.
-- [ ] Add the documented custom data transformation.
-- [ ] Set schema generation 46.
-- [ ] Preserve all eight Beat Sheet history rows.
-- [ ] Preserve all 69 Beat entries.
-- [ ] Preserve all four active Beat Sheet state rows.
-- [ ] Preserve all 35 storyboard relationship rows.
-- [ ] Preserve all 20 unique storyboard assets/files.
-- [ ] Recompute Beat content fingerprints.
-- [ ] Remove all Take rows and membership rows.
-- [ ] Remove Take specs and runs.
-- [ ] Remove exclusively retired Shot assets/files.
-- [ ] Remove Take Trash Items.
-- [ ] Remove all retired schema objects and indexes.
-- [ ] Fail rather than guess when a retired asset has a non-retired owner.
-- [ ] Validate a database copy before the real project.
-- [ ] Create and verify a real-project pre-migration backup.
-- [ ] Run foreign-key and integrity checks.
-- [ ] Build and review the retired `shots/` filesystem manifest.
-- [ ] Obtain explicit confirmation before deleting the real `shots/` tree.
-- [ ] Verify every remaining registered asset file exists.
+- [x] Confirm the committed Plan 0143 result is the implementation baseline.
+- [x] Treat generation 45/0058 as the migration baseline.
+- [x] Leave Plan 0143 and migration 0058 unchanged.
+- [x] Finalize the TypeScript schema before generating migration 0059.
+- [x] Generate SQL and snapshot with Drizzle Kit.
+- [x] Add the documented custom data transformation.
+- [x] Set schema generation 46.
+- [x] Preserve all eight Beat Sheet history rows.
+- [x] Preserve all 69 Beat entries.
+- [x] Preserve all four active Beat Sheet state rows.
+- [x] Preserve all 35 storyboard relationship rows.
+- [x] Preserve all 20 unique storyboard assets/files.
+- [x] Recompute Beat content fingerprints.
+- [x] Review every Beat in the four active sample-project Beat Sheets.
+- [x] Rewrite Shot-focused Beat descriptions through Core-owned Beat Sheet
+      commands.
+- [x] Preserve visual setting, placements, relationships, important elements,
+      atmosphere, and narrative meaning in the cleaned descriptions.
+- [x] Create and activate cleaned Beat Sheet revisions.
+- [x] Visually review and explicitly reattach suitable existing storyboard
+      images to cleaned Beats.
+- [x] Leave unsuitable storyboard images missing for later regeneration.
+- [x] Add no runtime camera-word detection, content scoring, or creative
+      rewriting.
+- [x] Remove all Take rows and membership rows.
+- [x] Remove Take specs and runs.
+- [x] Remove exclusively retired Shot assets/files.
+- [x] Remove Take Trash Items.
+- [x] Remove all retired schema objects and indexes.
+- [x] Fail rather than guess when a retired asset has a non-retired owner.
+- [x] Validate a database copy before the real project.
+- [x] Create and verify a real-project pre-migration backup.
+- [x] Run foreign-key and integrity checks.
+- [x] Build and review the retired `shots/` filesystem manifest.
+- [x] Obtain explicit confirmation before deleting the real `shots/` tree.
+- [x] Hand deletion of the confirmed retired real-project `shots/` tree to the
+      user, who explicitly chose to perform it themselves.
+- [x] Verify every remaining registered asset file exists.
 
 ### Tests And Guardrails
 
-- [ ] Add Beat JSON/schema/semantic tests.
-- [ ] Add Beat operation/history tests.
-- [ ] Add storyboard freshness/carry-forward tests.
-- [ ] Add storyboard import tests using Beat ids.
-- [ ] Add migration generation-45 fixture coverage.
-- [ ] Add Beats UI and route tests.
-- [ ] Add inert New Shot tests.
-- [ ] Preserve controlled Shot authoring kit tests.
-- [ ] Preserve shared Generation Preview reference tests.
-- [ ] Preserve Image Revision reference tests.
-- [ ] Preserve Scene Dialogue Audio Take tests.
-- [ ] Remove obsolete Take/group/reference tests.
-- [ ] Add/update stable import-boundary guardrails.
-- [ ] Do not encode private helper names or implementation inventories in
+- [x] Add Beat JSON/schema/semantic tests.
+- [x] Add Beat operation/history tests.
+- [x] Add storyboard freshness/carry-forward tests.
+- [x] Add storyboard import tests using Beat ids.
+- [x] Add migration generation-45 fixture coverage.
+- [x] Add Beats UI and route tests.
+- [x] Add inert New Shot tests.
+- [x] Preserve controlled Shot authoring kit tests.
+- [x] Preserve shared Generation Preview reference tests.
+- [x] Preserve Image Revision reference tests.
+- [x] Preserve Scene Dialogue Audio Take tests.
+- [x] Remove obsolete Take/group/reference tests.
+- [x] Add/update stable import-boundary guardrails.
+- [x] Do not encode private helper names or implementation inventories in
       architecture tests.
-- [ ] Run the shape-review checks listed in Final Verification.
+- [x] Run the shape-review checks listed in Final Verification.
 
 ### Documentation
 
-- [ ] Update current data-model and vocabulary docs.
-- [ ] Update current generation and storyboard docs.
-- [ ] Update current Studio coordination docs.
-- [ ] Update CLI docs.
-- [ ] Remove current Shot Video Take architecture docs.
-- [ ] Remove current take-driven production export docs.
-- [ ] Update website copy/screenshots.
-- [ ] Keep historical plans unchanged.
-- [ ] Mark conflicting ADRs superseded rather than deleting decision history.
+- [x] Update current data-model and vocabulary docs.
+- [x] Update current generation and storyboard docs.
+- [x] Update current Studio coordination docs.
+- [x] Update CLI docs.
+- [x] Remove current Shot Video Take architecture docs.
+- [x] Remove current take-driven production export docs.
+- [x] Update website copy/screenshots.
+- [x] Keep historical plans unchanged.
+- [x] Mark conflicting ADRs superseded rather than deleting decision history.
 
 ### Final Verification
 
-- [ ] Run focused Core, CLI, Studio, integration, and smoke E2E tests.
-- [ ] Run `pnpm check`.
-- [ ] Run `pnpm build`.
-- [ ] Run `pnpm test`.
-- [ ] Run `pnpm test:integration`.
-- [ ] Complete desktop verification with `urban-basilica`.
-- [ ] Review `git diff --stat` and complete diffs in both repositories.
-- [ ] Inspect every large or heavily modified file.
-- [ ] Confirm touched `index.ts` files remain thin entrypoints.
-- [ ] Confirm the Beat module is not monolithic.
-- [ ] Confirm the preserved Shot authoring kit has no Take/service coupling.
-- [ ] Confirm no old Take route, table, contract, reference tab, group mode, or
+- [x] Run focused Core, CLI, Studio, integration, and smoke E2E tests.
+- [x] Run `pnpm check`.
+- [x] Run `pnpm build`.
+- [x] Run `pnpm test`.
+- [x] Run `pnpm test:integration`.
+- [x] Complete desktop verification with `urban-basilica`.
+- [x] Review `git diff --stat` and complete diffs in both repositories.
+- [x] Inspect every large or heavily modified file.
+- [x] Confirm touched `index.ts` files remain thin entrypoints.
+- [x] Confirm the Beat module is not monolithic.
+- [x] Confirm the preserved Shot authoring kit has no Take/service coupling.
+- [x] Confirm no old Take route, table, contract, reference tab, group mode, or
       production-export fallback remains.
-- [ ] Confirm no checklist item was satisfied by accepting unreviewable code
+- [x] Confirm no checklist item was satisfied by accepting unreviewable code
       structure.
-- [ ] Only then mark the plan complete.
+- [x] Only then mark the plan complete.

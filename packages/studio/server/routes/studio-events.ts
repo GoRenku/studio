@@ -5,7 +5,6 @@ import {
   validateStudioFocusRequestForProject,
   type GenerationPreview,
   type ScenePanelTab,
-  type SceneShotDetailTab,
   type GenerationPreviewResource,
   type StudioSelection,
   type StudioBrowserSessionActivityKind,
@@ -31,18 +30,7 @@ import {
 } from '../projections/generation-preview.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots', 'takes'];
-const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
-  'description',
-  'lookbook',
-  'composition',
-  'motion',
-  'cast',
-  'location',
-  'dialogs',
-  'references',
-  'ai-production',
-];
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'beats', 'shots'];
 const PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT =
   'studio.projectResourcesChanged notification';
 const GENERATION_PREVIEW_NOTIFICATION_CONTEXT =
@@ -68,7 +56,7 @@ type GenerationPreviewResourceProjection = (input: {
 type StudioEventsRouteProjectData = Pick<
   ProjectDataService,
   | 'readProject'
-  | 'readSceneShotListResource'
+  | 'readSceneBeatSheetResource'
   | 'buildGenerationPreviewResource'
 >;
 
@@ -223,13 +211,13 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
             diagnostics: validation.diagnostics,
           });
         }
-        const shotValidation = await validateSceneShotSelection({
+        const beatValidation = await validateSceneBeatSelection({
           projectData,
           projectName: body.projectName ?? '',
           focus: focus.focus,
         });
-        if (!shotValidation.valid) {
-          return c.json(shotValidation);
+        if (!beatValidation.valid) {
+          return c.json(beatValidation);
         }
         return c.json({ valid: true });
       } catch (error) {
@@ -346,7 +334,7 @@ function readGenericGenerationPreviews(
   return previews.length === value.length ? previews : null;
 }
 
-async function validateSceneShotSelection(input: {
+async function validateSceneBeatSelection(input: {
   projectData: StudioEventsRouteProjectData;
   projectName: string;
   focus: StudioFocusRequest;
@@ -362,17 +350,17 @@ async function validateSceneShotSelection(input: {
     return { valid: true };
   }
   const selection = input.focus.selection;
-  if (selection.type !== 'scene' || !selection.shotId) {
+  if (selection.type !== 'scene' || !selection.beatId) {
     return { valid: true };
   }
-  const resource = await input.projectData.readSceneShotListResource({
+  const resource = await input.projectData.readSceneBeatSheetResource({
     projectName: input.projectName,
     sceneId: selection.id,
   });
-  const shot = resource.activeShotList?.shots.find(
-    (entry) => entry.shotId === selection.shotId
+  const beat = resource.activeBeatSheet?.beats.find(
+    (entry) => entry.id === selection.beatId
   );
-  if (shot) {
+  if (beat) {
     return { valid: true };
   }
   return {
@@ -381,9 +369,9 @@ async function validateSceneShotSelection(input: {
     diagnostics: [
       createDiagnosticError(
         'STUDIO_COORDINATION038',
-        `Requested shot '${selection.shotId}' was not found in the active shot list.`,
-        { path: ['focus', 'selection', 'shotId'], context: 'studio.focusRequested' },
-        'Request a shot id from the scene active shot list.'
+        `Requested Beat '${selection.beatId}' was not found in the active Beat Sheet.`,
+        { path: ['focus', 'selection', 'beatId'], context: 'studio.focusRequested' },
+        'Request a Beat id from the Scene active Beat Sheet.'
       ),
     ],
   };
@@ -460,36 +448,18 @@ function readStudioSelection(value: unknown): StudioSelection | null {
 
   if (selection.type === 'scene' && typeof selection.id === 'string' && selection.id.trim()) {
     const sceneTab = readScenePanelTab(selection.sceneTab);
-    const shotId =
-      typeof selection.shotId === 'string' && selection.shotId.trim()
-        ? selection.shotId
-        : undefined;
-    const shotTab = readSceneShotDetailTab(selection.shotTab);
-    const takeWorkspaceMode =
-      selection.takeWorkspaceMode === 'list' ||
-      selection.takeWorkspaceMode === 'new' ||
-      selection.takeWorkspaceMode === 'edit'
-        ? selection.takeWorkspaceMode
-        : undefined;
-    const takeId =
-      typeof selection.takeId === 'string' &&
-      selection.takeId.trim()
-        ? selection.takeId
+    const beatId =
+      typeof selection.beatId === 'string' && selection.beatId.trim()
+        ? selection.beatId
         : undefined;
     if (selection.sceneTab !== undefined && !sceneTab) {
-      return null;
-    }
-    if (selection.shotTab !== undefined && !shotTab) {
       return null;
     }
     return {
       type: selection.type,
       id: selection.id,
       ...(sceneTab ? { sceneTab } : {}),
-      ...(shotId ? { shotId } : {}),
-      ...(takeWorkspaceMode ? { takeWorkspaceMode } : {}),
-      ...(takeId ? { takeId } : {}),
-      ...(shotTab ? { shotTab } : {}),
+      ...(beatId ? { beatId } : {}),
     };
   }
 
@@ -669,15 +639,6 @@ function readScenePanelTab(value: unknown): ScenePanelTab | undefined {
   return typeof value === 'string' &&
     SCENE_PANEL_TABS.includes(value as ScenePanelTab)
     ? (value as ScenePanelTab)
-    : undefined;
-}
-
-function readSceneShotDetailTab(
-  value: unknown
-): SceneShotDetailTab | undefined {
-  return typeof value === 'string' &&
-    SCENE_SHOT_DETAIL_TABS.includes(value as SceneShotDetailTab)
-    ? (value as SceneShotDetailTab)
     : undefined;
 }
 

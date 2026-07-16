@@ -73,10 +73,10 @@ function sequenceResource(): SequenceResourceResponse {
             timeOfDay: 'NIGHT',
           },
           storyboardPreview: {
-            shotListId: 'shot_list_hook',
+            beatSheetId: 'scene_beat_sheet_hook',
             images: [
               {
-                shotId: 'shot_001',
+                beatId: 'beat_001',
                 image: {
                   assetId: 'asset_storyboard',
                   relationshipId: 'scene_asset_storyboard',

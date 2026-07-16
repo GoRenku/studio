@@ -41,21 +41,20 @@ Use the focused documents below for current direction.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
   agent-authored critique history as tagged JSON in `screenplay_analysis`, with
   one active analysis tracked in `screenplay_analysis_state`.
-- Scene Shot Lists are SQLite-owned project data. They store validated,
-  agent-authored scene coverage history as tagged JSON in `scene_shot_list`,
-  with one active shot list per scene tracked in `scene_shot_list_state`.
-- Scene Shot Video Takes are SQLite-owned project data. They bind a
-  scene, a scene shot list, an explicit ordered shot selection, take
-  production settings, and status for shot-video planning. The
-  Scene Shot List remains the ordered coverage source of truth; take
-  generations own selected-shot membership for a video take attempt. Shot Video
-  Take state is versioned JSON: `version: 3` stores an explicit `structure`
-  mode, either `continuous` with one `sharedDirection` for the grouped move or
-  `multi-cut` with one `SceneShotVideoTakeDirection` per grouped shot id.
-  Composition, motion, cast, location, and dialogue direction remain inside
-  the relevant structure scope. AI Production model values and exact reference
-  selections live in the generic `shot.video-take` Generation Spec instead of
-  take state.
+- Scene Beat Sheets are SQLite-owned project data. They store validated,
+  agent-authored narrative breakdown history as tagged JSON in
+  `scene_beat_sheet`, with one active Beat Sheet per scene tracked in
+  `scene_beat_sheet_state`.
+- A Beat is a non-camera narrative unit with exactly eight authored fields:
+  `id`, `title`, `description`, `narrativeDevelopment`, `narrativePurpose`,
+  `castMemberIds`, `locationIds`, and `screenplayBlockIndexes`. Beat order is
+  the JSON array order.
+  Beat descriptions and the other authored fields must not encode framing,
+  lenses, camera movement, composition, coverage, or production instructions.
+- Shot authoring is a separate, currently persistence-free UI capability. The
+  Shots tab is an inert placeholder, and the preserved composition, motion,
+  dialogue, and AI Production controls have no project service or durable
+  write contract.
 - Cast Design and Location Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
   `cast_design` and `location_design`, with one active document per owner
@@ -88,11 +87,11 @@ Use the focused documents below for current direction.
 - Location Hero Images are separate display assets attached to Locations with
   role `hero`. The selected hero asset drives overview/detail imagery and does
   not become a shot-generation reference.
-- Scene dialogue audio takes are durable scene dialogue media assets. Shot
-  video generation references them through the public `scene-dialogue` subject
-  kind and resolves the dialogue audio take selected by the shot-video take
-  direction at generation-request time.
-- Scene storyboard images are durable per-shot Assets. The
+- Scene dialogue audio takes are durable scene dialogue media assets. They
+  remain available for future Shot authoring through the public
+  `scene-dialogue` subject kind, but the current reset defines no Shot-owned
+  selection or generation contract.
+- Scene storyboard images are durable per-Beat Assets. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
   sheet for batch prompting, but import stores only the cropped shot images as
   `scene_storyboard_image` assets and records direct ownership in
@@ -174,8 +173,7 @@ direction is superseded by ADR 0017.
 
 - `docs/architecture/project-asset-storage-conventions.md`
   Defines the current owner-folder placement rules for durable assets,
-  `tmp/`, `research/`, Storyboards, Shot Video Take media, and image edit
-  version suffixes.
+  `tmp/`, `research/`, Storyboards, and image edit version suffixes.
 
 - `docs/architecture/reference/visual-language.md`
   Defines Inspiration Analysis, Lookbooks, source Inspiration relationships,
@@ -184,9 +182,6 @@ direction is superseded by ADR 0017.
 - `docs/architecture/reference/media-generation.md`
   Defines persisted generation specs, generation runs, and separate media
   import for the current media purposes.
-
-- `docs/architecture/shot-video-take-structure-modes.md`
-  Defines the current continuous and multi-cut Shot Video Take structure modes.
 
 - `docs/architecture/json-storage-validation.md`
   Defines the AJV and JSON Schema validation rule for SQLite JSON columns.

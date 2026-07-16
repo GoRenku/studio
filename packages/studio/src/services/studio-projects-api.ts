@@ -6,7 +6,6 @@ import type {
   ProjectInformationResourceResponse,
   ProjectInformationUpdateRequest,
   ProjectLibraryWithHttp,
-  ProductionExportSummaryResponse,
   ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
 import './studio-current-contracts';
@@ -31,10 +30,6 @@ interface NavigationPageQuery {
 
 interface LibraryResponse {
   library: ProjectLibraryWithHttp;
-}
-
-interface ProductionExportResponse {
-  summary: ProductionExportSummaryResponse;
 }
 
 export async function readProject(projectName: string): Promise<ProjectShellWithHttp> {
@@ -144,29 +139,6 @@ export async function updateProjectInformation(
     throw new Error('Renku Studio API returned no project information resource.');
   }
   return body.resource;
-}
-
-export async function exportProductionAssets(
-  projectName: string
-): Promise<ProductionExportSummaryResponse> {
-  const response = await fetch(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/production-export`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Renku-Studio-Token': readStudioApiToken(),
-      },
-      body: JSON.stringify({}),
-    }
-  );
-
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-
-  const body = (await response.json()) as ProductionExportResponse;
-  return body.summary;
 }
 
 function readStudioApiToken(): string {

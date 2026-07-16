@@ -12,8 +12,9 @@ import {
   studioProjectLibraryResourceKey,
   studioProjectShellResourceKey,
   studioSceneNarrativeResourceKey,
-  studioSceneShotListResourceKey,
-  studioSceneShotResourceKey,
+  studioSceneBeatSheetResourceKey,
+  studioBeatResourceKey,
+  studioSceneBeatsResourceKey,
   studioSceneShotsResourceKey,
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
@@ -61,11 +62,14 @@ describe('Studio resource key catalog', () => {
     expect(studioSceneShotsResourceKey('scene_gate')).toBe(
       'surface:scene:scene_gate:shots'
     );
-    expect(studioSceneShotListResourceKey('shot_list_gate')).toBe(
-      'scene-shot-list:shot_list_gate'
+    expect(studioSceneBeatsResourceKey('scene_gate')).toBe(
+      'surface:scene:scene_gate:beats'
     );
-    expect(studioSceneShotResourceKey('shot_list_gate', 'shot_arrival')).toBe(
-      'scene-shot-list:shot_list_gate:shot:shot_arrival'
+    expect(studioSceneBeatSheetResourceKey('beat_sheet_gate')).toBe(
+      'scene-beat-sheet:beat_sheet_gate'
+    );
+    expect(studioBeatResourceKey('beat_sheet_gate', 'beat_arrival')).toBe(
+      'scene-beat-sheet:beat_sheet_gate:beat:beat_arrival'
     );
   });
 

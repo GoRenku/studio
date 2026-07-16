@@ -1,7 +1,6 @@
 import { discardAsset } from '../commands/discard-asset.js';
 import { restoreAsset } from '../commands/restore-asset.js';
 import { updateAssetReference } from '../commands/update-asset-reference.js';
-import { exportProductionAssets } from '../production-export/export-production-assets.js';
 import {
   listAssetPage,
   listAssets,
@@ -29,7 +28,6 @@ export function createAssetServiceWiring(): Pick<
   | 'clearLocationHeroDisplayAsset'
   | 'discardAsset'
   | 'restoreAsset'
-  | 'exportProductionAssets'
 > {
   return {
     listAssetPage,
@@ -43,6 +41,5 @@ export function createAssetServiceWiring(): Pick<
     clearLocationHeroDisplayAsset,
     discardAsset,
     restoreAsset,
-    exportProductionAssets,
   };
 }

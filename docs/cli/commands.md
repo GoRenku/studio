@@ -246,14 +246,13 @@ Behavior:
   none is open.
 - Summarizes screenplay, active Screenplay Analysis, Inspiration folders,
   authored Production and Storyboard Lookbooks, selected cast visuals, selected
-  location environment sheets, and selected-scene shot readiness.
+  location environment sheets, and selected-scene Beat readiness.
 - Reports structured director diagnostics for missing screenplay state, missing
   Production or Storyboard Lookbooks, missing selected visual media, missing
-  active shot lists, and missing storyboard images.
+  active Beat Sheets, and missing storyboard images.
 - Returns ordered `nextSteps` such as `draft-screenplay`, `analyze-screenplay`,
   `author-production-lookbook`, `author-storyboard-lookbook`, `design-cast`,
-  `design-production`, `design-shot-list`, `generate-storyboards`, and
-  `generate-shot-video`.
+  `design-production`, `design-beat-sheet`, and `generate-storyboards`.
 - Does not mutate project state and does not run paid generation.
 
 ## `renku cast`
@@ -775,102 +774,87 @@ Validation rules:
 - Suggested scene additions are critique only. They do not create scene rows.
 - Unknown fields are rejected for this agent-authored JSON format.
 
-## `renku screenplay shot-list`
+## `renku screenplay beat-sheet`
 
-Read, validate, write, and activate durable Scene Shot List documents for one
+Read, validate, write, and activate durable Scene Beat Sheet documents for one
 screenplay scene.
 
 ```bash
-renku screenplay shot-list context --scene <scene-id> --json
-renku screenplay shot-list context --scene <scene-id> --include-visual-references --json
-renku screenplay shot-list list --scene <scene-id> --json
-renku screenplay shot-list show --active --scene <scene-id> --json
-renku screenplay shot-list show --shot-list <shot-list-id> --json
-renku screenplay shot-list validate --file <shot-list-json> --json
-renku screenplay shot-list validate --file - --json
-renku screenplay shot-list write --file <shot-list-json> --json
-renku screenplay shot-list write --file - --json
-renku screenplay shot-list validate-operations --file <operations-json> --json
-renku screenplay shot-list apply --file <operations-json> --json
-renku screenplay shot-list apply --file <operations-json> --dry-run --json
-renku screenplay shot-list storyboard status --scene <scene-id> --shot-list <shot-list-id> --json
-renku screenplay shot-list set-active --scene <scene-id> --shot-list <shot-list-id> --json
+renku screenplay beat-sheet context --scene <scene-id> --json
+renku screenplay beat-sheet context --scene <scene-id> --include-visual-references --json
+renku screenplay beat-sheet list --scene <scene-id> --json
+renku screenplay beat-sheet show --active --scene <scene-id> --json
+renku screenplay beat-sheet show --beat-sheet <beat-sheet-id> --json
+renku screenplay beat-sheet validate --file <beat-sheet-json> --json
+renku screenplay beat-sheet validate --file - --json
+renku screenplay beat-sheet write --file <beat-sheet-json> --json
+renku screenplay beat-sheet write --file - --json
+renku screenplay beat-sheet validate-operations --file <operations-json> --json
+renku screenplay beat-sheet apply --file <operations-json> --json
+renku screenplay beat-sheet apply --file <operations-json> --dry-run --json
+renku screenplay beat-sheet storyboard status --scene <scene-id> --beat-sheet <beat-sheet-id> --json
+renku screenplay beat-sheet set-active --scene <scene-id> --beat-sheet <beat-sheet-id> --json
 ```
 
 Options:
 
 - `--scene`: required for `context`, `list`, `show --active`,
   `storyboard status`, and `set-active`.
-- `--shot-list`: required for `show --shot-list`, `storyboard status`, and
+- `--beat-sheet`: required for `show --beat-sheet`, `storyboard status`, and
   `set-active`.
 - `--file`: required for `validate`, `write`, `validate-operations`, and
   `apply`. Use `-` to read stdin.
 - `--dry-run`: for `apply`, validates and reports planned changes without
-  writing a derived shot-list version.
+  writing a derived Beat Sheet version.
 - `--include-visual-references`: opt-in context flag for user-requested visual
   inspection. Default context stays text-only.
-- `--active`: shows the active shot list for a scene. Returns
-  `shotList: null` when no active shot list exists.
+- `--active`: shows the active Beat Sheet for a scene. Returns
+  `beatSheet: null` when no active Beat Sheet exists.
 - `--json`: print machine-readable JSON.
 
 Behavior:
 
 - Requires a current authoring project and existing screenplay data.
 - `context` returns the scene hierarchy, scene blocks, referenced cast and
-  locations, project default aspect ratio, Production Lookbook text, and
-  active shot list summary.
-- `validate` checks a tagged `kind: "sceneShotList"` document without writing.
-- `write` creates a new scene-owned shot-list history row and makes it active.
-- `validate-operations` checks a tagged `kind: "sceneShotListOperations"`
+  locations, Production Lookbook text, and active Beat Sheet summary.
+- `validate` checks a tagged `kind: "sceneBeatSheet"` document without writing.
+- `write` creates a new scene-owned Beat Sheet history row and makes it active.
+- `validate-operations` checks a tagged `kind: "sceneBeatSheetOperations"`
   document without writing.
-- `apply` creates a new scene-owned shot-list history row derived from the
-  explicit `baseShotListId` in the operations document. It activates the new
+- `apply` creates a new scene-owned Beat Sheet history row derived from the
+  explicit `baseBeatSheetId` in the operations document. It activates the new
   row only when `activate: true`.
-- `storyboard status` reports which shots in a specific shot-list version have
+- `storyboard status` reports which Beats in a specific Beat Sheet version have
   current storyboard images, missing images, or stale images.
-- `set-active` changes only the active shot-list pointer for the scene.
+- `set-active` changes only the active Beat Sheet pointer for the scene.
 - `write`, `apply`, and `set-active` append Studio resource-change events for
-  the scene Shots surface, the shot-list collection, the specific shot list,
-  changed shot keys, and the scene.
-- Shot-level `aspectRatio` is optional. When omitted, the shot inherits the
-  project aspect ratio.
-- Unknown fields are rejected. Shot-list JSON must not store absolute paths,
-  generated image paths, setup minutes, crew assignments, call-sheet timing, or
-  other analog shooting logistics.
+  the scene Beats surface, Beat Sheet collection, specific Beat Sheet, changed
+  Beat keys, and the scene.
+- Unknown fields are rejected. Beat Sheet JSON must use the exact eight-field
+  Beat shape: `id`, `title`, `description`, `narrativeDevelopment`,
+  `narrativePurpose`, `castMemberIds`, `locationIds`, and
+  `screenplayBlockIndexes`. It must not store camera, framing, lens, movement,
+  coverage, generated image, or production-logistics instructions.
 
 Input JSON shape:
 
 ```json
 {
-  "kind": "sceneShotList",
+  "kind": "sceneBeatSheet",
   "sceneId": "scene_control_room",
   "title": "Ada confronts the empty control room",
-  "summary": "A restrained coverage plan that starts wide and ends intimate.",
-  "coverageStrategy": "Open with geography, then tighten toward Ada's face and hands.",
-  "lookbookInfluence": "Use cold practical light and centered institutional framing.",
-  "shots": [
+  "beats": [
     {
-      "shotId": "shot_001",
-      "title": "Empty room establishes the absence",
-      "storyBeat": "Ada enters expecting someone and finds the room abandoned.",
-      "narrativePurpose": "Establish geography, absence, and emotional distance.",
-      "description": "Wide static frame from the doorway with Ada small against the consoles.",
-      "shotType": "wide",
-      "cameraAngle": "eye level",
-      "cameraMovement": "static",
-      "framing": "centered doorway frame with deep background symmetry",
-      "lensIntent": "moderate wide lens feel; keep room geometry legible",
-      "subject": "Ada and the empty control room",
-      "action": "Ada pauses in the doorway before stepping inside.",
-      "dialogue": [],
-      "coveredBlockIndexes": [0, 1],
+      "id": "beat_001",
+      "title": "The room is empty",
+      "description": "Ada enters expecting the night operator, finds the consoles abandoned, and stops at the threshold.",
+      "narrativeDevelopment": "Expectation gives way to unease when Ada discovers the room is empty.",
+      "narrativePurpose": "Establish the absence that forces Ada to investigate.",
       "castMemberIds": ["cast_ada"],
       "locationIds": ["location_control_room"],
-      "audioNotes": "Let room tone and distant machinery carry the silence.",
-      "productionNotes": "Avoid warm fill; the absence should feel institutional."
+      "screenplayBlockIndexes": [0, 1]
     }
-  ],
-  "openQuestions": []
+  ]
 }
 ```
 
@@ -878,24 +862,25 @@ Operation JSON shape:
 
 ```json
 {
-  "kind": "sceneShotListOperations",
+  "kind": "sceneBeatSheetOperations",
   "sceneId": "scene_control_room",
-  "baseShotListId": "scene_shot_list_control_room_v1",
+  "baseBeatSheetId": "scene_beat_sheet_control_room_v1",
   "activate": true,
-  "title": "Control room coverage, revised",
+  "title": "Control room Beats, revised",
   "operations": [
     {
-      "operation": "shots.replace",
-      "shotIds": ["shot_003"],
-      "shots": [
+      "operation": "beats.replace",
+      "beatIds": ["beat_003"],
+      "beats": [
         {
-          "shotId": "shot_003a",
-          "title": "Ada enters the dark room",
-          "summary": "A wider reveal that re-establishes the space.",
-          "coveredBlockIndexes": [2],
+          "id": "beat_003a",
+          "title": "Ada commits to the search",
+          "description": "Ada crosses the room, lifts the abandoned headset, and calls for the operator.",
+          "narrativeDevelopment": "Ada turns passive discovery into an active search.",
+          "narrativePurpose": "Move the scene from unease into committed investigation.",
           "castMemberIds": ["cast_ada"],
           "locationIds": ["location_control_room"],
-          "dialogue": []
+          "screenplayBlockIndexes": [2]
         }
       ]
     }
@@ -1403,7 +1388,6 @@ scene.dialogue-audio
 location.sheet
 location.hero
 scene.storyboard-sheet
-shot.video-take
 ```
 
 Target formats are derived from the purpose contract:
@@ -1416,7 +1400,6 @@ cast:<cast-member-id>
 scene:<scene-id>:dialogue:<scene-dialogue-id>
 location:<location-id>
 scene:<scene-id>
-take:<take-id>
 ```
 
 Read the Core-owned context, reusable catalog, and model descriptors:
@@ -1518,9 +1501,6 @@ Behavior:
 - `scene.storyboard-sheet` keeps the deterministic 2x2 composite workflow.
   The agent inspects and splits the returned sheet, then uses the focused
   storyboard attachment command.
-- `shot.video-take` is one provider request. First Frame, Last Frame, Video
-  Prompt Sheet, Lookbook, repeated Cast, repeated Location, and dialogue audio
-  remain exact guide placements rather than planned dependencies.
 - Generation output is not attached automatically. Inspect the output, then use
   the focused `renku media import` purpose with the run receipt. Omit the
   receipt for external files so Core records no synthetic provenance.
@@ -1540,7 +1520,6 @@ cast.character-sheet
 cast.profile
 location.sheet
 location.hero
-shot.video-take
 ```
 
 General form:
@@ -1565,7 +1544,6 @@ renku media import --purpose cast.character-sheet --target cast:<cast-member-id>
 renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --json
 renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
 renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --json
-renku media import --purpose shot.video-take --target take:<take-id> --source generated/video/final.mp4 --title "Final video" --receipt run.json --json
 ```
 
 Pass `--receipt` only for an exact output from a Renku run whose purpose and
@@ -1580,16 +1558,16 @@ Scene Storyboard Sheet uses the focused cropped-image attachment:
 renku media import \
   --purpose scene.storyboard-sheet \
   --target scene:<scene-id> \
-  --shot-list <shot-list-id> \
+  --beat-sheet <beat-sheet-id> \
   --file <scene-storyboard-images-import.json> \
   --json
 
 renku media import \
   --purpose scene.storyboard-sheet \
   --target scene:<scene-id> \
-  --shot-list <shot-list-id> \
-  --shots <shot-id> \
-  --source <cropped-shot-image-path> \
+  --beat-sheet <beat-sheet-id> \
+  --beats <beat-id> \
+  --source <cropped-beat-image-path> \
   --json
 ```
 
@@ -1598,17 +1576,17 @@ Grouped document:
 ```json
 {
   "kind": "sceneStoryboardImagesImport",
-  "shotListId": "scene_shot_list_control_room_v1",
+  "beatSheetId": "scene_beat_sheet_control_room_v1",
   "title": "Control room storyboard images",
-  "shots": [
+  "beats": [
     {
-      "shotId": "shot_001",
-      "source": "tmp/media/storyboards/control-room-shot-001.png",
+      "beatId": "beat_001",
+      "source": "tmp/media/storyboards/control-room-beat-001.png",
       "sourcePurpose": "scene.storyboard-sheet"
     },
     {
-      "shotId": "shot_002",
-      "source": "tmp/media/storyboards/control-room-shot-002.png",
+      "beatId": "beat_002",
+      "source": "tmp/media/storyboards/control-room-beat-002.png",
       "sourcePurpose": "scene.storyboard-sheet"
     }
   ]
@@ -1616,7 +1594,7 @@ Grouped document:
 ```
 
 The agent owns visual inspection and splitting of the deterministic composite;
-Core owns Shot and file ownership validation plus durable attachment. No runtime
+Core owns Beat and file ownership validation plus durable attachment. No runtime
 automatic splitting or creative-content validation occurs.
 
 Every successful import reports Studio resource keys. The CLI appends a Studio
@@ -1671,37 +1649,6 @@ Behavior:
   empty Trash after reviewing the preview.
 - Restore can return structured warnings when content is restored but an active
   selected or picked replacement remains in place.
-
-## `renku production export`
-
-Export picked Shot Video Take final video and its exact Dialogue Audio
-Takes. Visual/design media, display choices, frames, and Video Prompt images are
-excluded.
-
-```bash
-renku production export --project <project-name>
-renku production export --project <project-name> --locale <locale-id>
-renku production export --project <project-name> --all-locales
-renku production export --project <project-name> --dry-run --fresh --json
-```
-
-Options:
-
-- `--project`: required project name.
-- `--locale`: export master plus one localized variant.
-- `--all-locales`: export all locales with selected production assets.
-- `--dry-run`: report export operations without writing.
-- `--fresh`: rebuild the production export manifest.
-- `--json`: print the export summary as JSON.
-
-Behavior:
-
-- Fails with `CLI061` when `--locale` and `--all-locales` are both provided.
-- Fails with `CLI062` when `--project` is missing.
-- Preflights the complete picked-Take set before projecting any export rows.
-- Fails with structured `CORE_PRODUCTION_EXPORT_TAKE_VIDEO_MISSING` issues for
-  every picked Take without one current active, ready video AssetFile.
-- Never silently omits a picked Take or writes a partial production tree.
 
 ## `renku studio current`
 

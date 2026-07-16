@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import type { StudioE2eShotVideoTakeProject } from '../fixtures/studio-e2e-project';
+import type { StudioE2eMovieProject } from '../fixtures/studio-e2e-project';
 
 export class SceneDetailPage {
   private readonly page: Page;
@@ -8,7 +8,7 @@ export class SceneDetailPage {
     this.page = page;
   }
 
-  async gotoNarrative(project: StudioE2eShotVideoTakeProject): Promise<void> {
+  async gotoNarrative(project: StudioE2eMovieProject): Promise<void> {
     await this.page.goto(sceneRoute(project));
     await this.expectNarrativeVisible();
   }
@@ -48,6 +48,6 @@ export class SceneDetailPage {
   }
 }
 
-export function sceneRoute(project: StudioE2eShotVideoTakeProject): string {
+export function sceneRoute(project: StudioE2eMovieProject): string {
   return `/projects/${encodeURIComponent(project.projectName)}/scenes/${encodeURIComponent(project.sceneId)}`;
 }

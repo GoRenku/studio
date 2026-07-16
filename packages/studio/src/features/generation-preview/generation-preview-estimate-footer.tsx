@@ -1,6 +1,17 @@
 import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import { Badge } from '@/ui/badge';
-import { formatEstimateUsd } from '../movie-studio/scenes/shot-video-take-production-projection';
+
+function formatEstimateUsd(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 export function GenerationPreviewEstimateFooter({
   preview,

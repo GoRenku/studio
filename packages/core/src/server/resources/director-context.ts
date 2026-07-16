@@ -13,7 +13,6 @@ import type {
   StudioSelection,
   StudioSelectionContextResult,
 } from '../../client/index.js';
-import type { SceneShotListDocument } from '../../client/scene-shot-list.js';
 import {
   listAssetRelationshipPage,
   MAX_RESOURCE_PAGE_LIMIT,
@@ -38,10 +37,12 @@ import {
   readScreenplayDocumentFromSession,
 } from '../database/access/screenplay-resource.js';
 import {
-  listSceneShotStoryboardImageRecords,
-  readActiveSceneShotListRecord,
-  readSceneShotListDocument,
-} from '../database/access/scene-shot-lists.js';
+  readActiveSceneBeatSheetRecord,
+  readSceneBeatSheetDocument,
+} from '../database/access/scene-beat-sheets.js';
+import {
+  listSceneBeatStoryboardImageRecords,
+} from '../database/access/scene-beat-storyboard-images.js';
 import {
   readActiveCastDesignId,
   readActiveLocationDesignId,
@@ -56,8 +57,8 @@ import {
   studioCastNavigationResourceKey,
   studioLocationNavigationResourceKey,
   studioProjectInformationResourceKey,
-  studioSceneShotListResourceKey,
-  studioSceneShotsResourceKey,
+  studioSceneBeatSheetResourceKey,
+  studioSceneBeatsResourceKey,
   studioScreenplayResourceKey,
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbooksResourceKey,
@@ -314,20 +315,14 @@ async function readSelectedSceneReadiness(input: {
     return null;
   }
 
-  const activeShotList = readActiveSceneShotListRecord(session, selection.id);
-  if (!activeShotList) {
+  const activeBeatSheet = readActiveSceneBeatSheetRecord(session, selection.id);
+  if (!activeBeatSheet) {
     return {
       sceneId: selection.id,
-      shotId: selection.shotId ?? null,
-      activeShotListId: null,
-      shotCount: 0,
-      storyboardStatus: { available: false, missingShotIds: [] },
-      shotVideo: {
-        generationAvailable: false,
-        selectedTakeId: null,
-        selectedTakeMode: null,
-        selectedShotIds: [],
-      },
+      beatId: selection.beatId ?? null,
+      activeBeatSheetId: null,
+      beatCount: 0,
+      storyboardStatus: { available: false, missingBeatIds: [] },
     };
   }
 
@@ -335,77 +330,42 @@ async function readSelectedSceneReadiness(input: {
   if (!screenplay) {
     return null;
   }
-  const document = readSceneShotListDocument({
-    row: activeShotList,
+  const document = readSceneBeatSheetDocument({
+    row: activeBeatSheet,
     screenplay,
   });
-  const storyboardImages = listSceneShotStoryboardImageRecords(session, {
-    shotListId: activeShotList.id,
+  const storyboardImages = listSceneBeatStoryboardImageRecords(session, {
+    beatSheetId: activeBeatSheet.id,
   });
-  const storyboardShotIds = new Set(storyboardImages.map((image) => image.shotId));
-  const missingShotIds = document.shots
-    .filter((shot) => !storyboardShotIds.has(shot.shotId))
-    .map((shot) => shot.shotId);
-  const selectedShotIds = selectedShotIdsForScene(selection, document);
+  const storyboardBeatIds = new Set(storyboardImages.map((image) => image.beatId));
+  const missingBeatIds = document.beats
+    .filter((beat) => !storyboardBeatIds.has(beat.id))
+    .map((beat) => beat.id);
 
-  if (selection.shotId && !selectedShotIds.includes(selection.shotId)) {
+  if (
+    selection.beatId &&
+    !document.beats.some((beat) => beat.id === selection.beatId)
+  ) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT009',
-        'Selected shot is not in the active Scene Shot List.',
-        ['selectedScene', 'shotId'],
-        'Select a shot from the active Scene Shot List before generating shot media.'
+        'Selected Beat is not in the active Scene Beat Sheet.',
+        ['selectedScene', 'beatId'],
+        'Select a Beat from the active Scene Beat Sheet.'
       )
     );
   }
 
-  const shotVideo = readSelectedShotVideoReadiness({
-    selection,
-    selectedShotIds,
-  });
-
   return {
     sceneId: selection.id,
-    shotId: selection.shotId ?? null,
-    activeShotListId: activeShotList.id,
-    shotCount: document.shots.length,
+    beatId: selection.beatId ?? null,
+    activeBeatSheetId: activeBeatSheet.id,
+    beatCount: document.beats.length,
     storyboardStatus: {
       available: true,
-      missingShotIds,
+      missingBeatIds,
     },
-    shotVideo,
   };
-}
-
-function readSelectedShotVideoReadiness(input: {
-  selection: Extract<StudioSelection, { type: 'scene' }>;
-  selectedShotIds: string[];
-}): DirectorSceneReadiness['shotVideo'] {
-  const base: DirectorSceneReadiness['shotVideo'] = {
-    generationAvailable: input.selectedShotIds.length > 0,
-    selectedTakeId: null,
-    selectedTakeMode: null,
-    selectedShotIds: input.selectedShotIds,
-  };
-  if (!input.selection.takeId) {
-    return base;
-  }
-  return {
-    ...base,
-    selectedTakeId: input.selection.takeId,
-  };
-}
-
-function selectedShotIdsForScene(
-  selection: Extract<StudioSelection, { type: 'scene' }>,
-  document: SceneShotListDocument
-): string[] {
-  if (selection.shotId) {
-    return document.shots.some((shot) => shot.shotId === selection.shotId)
-      ? [selection.shotId]
-      : [];
-  }
-  return document.shots.map((shot) => shot.shotId);
 }
 
 function readinessDiagnostics(input: {
@@ -477,26 +437,26 @@ function readinessDiagnostics(input: {
       )
     );
   }
-  if (input.selectedScene && !input.selectedScene.activeShotListId) {
+  if (input.selectedScene && !input.selectedScene.activeBeatSheetId) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT007',
-        'The selected scene does not have an active Scene Shot List.',
-        ['selectedScene', 'activeShotListId'],
-        'Create a Scene Shot List before generating storyboard images or video takes.'
+        'The selected scene does not have an active Scene Beat Sheet.',
+        ['selectedScene', 'activeBeatSheetId'],
+        'Create a Scene Beat Sheet before generating storyboard images.'
       )
     );
   }
   if (
     input.selectedScene?.storyboardStatus.available &&
-    input.selectedScene.storyboardStatus.missingShotIds.length > 0
+    input.selectedScene.storyboardStatus.missingBeatIds.length > 0
   ) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT008',
         'The selected scene is missing one or more storyboard images.',
-        ['selectedScene', 'storyboardStatus', 'missingShotIds'],
-        'Generate and import storyboard images before final shot-video work.'
+        ['selectedScene', 'storyboardStatus', 'missingBeatIds'],
+        'Generate and import storyboard images for the missing Beats.'
       )
     );
   }
@@ -566,41 +526,24 @@ function buildNextSteps(input: {
       command: 'renku generation context --purpose location.sheet --target location:<location-id> --json',
     });
   }
-  if (input.selectedScene?.shotVideo.selectedTakeId) {
+  if (input.selectedScene && !input.selectedScene.activeBeatSheetId) {
     steps.push({
-      id: 'generate-shot-video',
-      title: 'Prepare the active shot video take',
-      specialistSkill: 'media-producer',
-      reason:
-        'Studio is focused on an existing Shot Video Take, so generation work should start from its exact Core context.',
-      command: `renku generation context --purpose shot.video-take --target take:${input.selectedScene.shotVideo.selectedTakeId} --json`,
-    });
-  } else if (input.selectedScene && !input.selectedScene.activeShotListId) {
-    steps.push({
-      id: 'design-shot-list',
-      title: 'Design the selected scene shot list',
-      specialistSkill: 'scene-shot-designer',
-      reason: 'The selected scene needs an active Scene Shot List before storyboard or video work.',
-      command: `renku screenplay shot-list context --scene ${input.selectedScene.sceneId} --json`,
+      id: 'design-beat-sheet',
+      title: 'Design the selected Scene Beat Sheet',
+      specialistSkill: 'scene-beat-designer',
+      reason: 'The selected Scene needs an active Scene Beat Sheet before storyboard work.',
+      command: `renku screenplay beat-sheet context --scene ${input.selectedScene.sceneId} --json`,
     });
   } else if (
     input.selectedScene?.storyboardStatus.available &&
-    input.selectedScene.storyboardStatus.missingShotIds.length > 0
+    input.selectedScene.storyboardStatus.missingBeatIds.length > 0
   ) {
     steps.push({
       id: 'generate-storyboards',
       title: 'Generate missing storyboard images',
       specialistSkill: 'media-producer',
-      reason: 'The active shot list has shots without durable storyboard images.',
+      reason: 'The active Beat Sheet has Beats without durable storyboard images.',
       command: `renku generation context --purpose scene.storyboard-sheet --target scene:${input.selectedScene.sceneId} --json`,
-    });
-  } else if (input.selectedScene?.shotVideo.generationAvailable) {
-    steps.push({
-      id: 'generate-shot-video',
-      title: 'Create or select a shot video take',
-      specialistSkill: 'media-producer',
-      reason: 'The selected scene has an active shot list; create or select a Take in Studio before authoring its exact generation request.',
-      command: null,
     });
   }
   return steps;
@@ -620,9 +563,9 @@ function directorResourceKeys(
     studioLocationNavigationResourceKey(),
     ...(selectedScene
       ? [
-          studioSceneShotsResourceKey(selectedScene.sceneId),
-          ...(selectedScene.activeShotListId
-            ? [studioSceneShotListResourceKey(selectedScene.activeShotListId)]
+          studioSceneBeatsResourceKey(selectedScene.sceneId),
+          ...(selectedScene.activeBeatSheetId
+            ? [studioSceneBeatSheetResourceKey(selectedScene.activeBeatSheetId)]
             : []),
         ]
       : []),

@@ -9,13 +9,11 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import type {
   ScenePanelTab,
-  SceneShotDetailTab,
-  SceneTakeWorkspaceMode,
   StudioSelection,
 } from '../movie-studio-selection';
 import { SceneNarrativeTab } from './scene-narrative-tab';
-import { SceneShotsReviewTab } from './scene-shots-review-tab';
-import { SceneTakesTab } from './scene-takes-tab';
+import { SceneBeatsTab } from './scene-beats-tab';
+import { SceneShotsPlaceholderTab } from './scene-shots-placeholder-tab';
 
 interface SceneNeighbor {
   id: string;
@@ -26,10 +24,7 @@ interface ScenePanelProps {
   projectName: string;
   sceneId: string;
   sceneTab?: ScenePanelTab;
-  shotId?: string;
-  takeWorkspaceMode?: SceneTakeWorkspaceMode;
-  takeId?: string;
-  shotTab?: SceneShotDetailTab;
+  beatId?: string;
   onSelect: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
   onHeaderTitleChange?: (title: string | null) => void;
@@ -42,10 +37,7 @@ export function ScenePanel({
   projectName,
   sceneId,
   sceneTab,
-  shotId,
-  takeWorkspaceMode,
-  takeId,
-  shotTab,
+  beatId,
   onSelect,
   onHeaderActionChange,
   onHeaderTitleChange,
@@ -57,14 +49,7 @@ export function ScenePanel({
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
   const [tabBarAction, setTabBarAction] = useState<ReactNode | null>(null);
-  const activeTab: ScenePanelTab =
-    sceneTab ?? (shotId || shotTab || takeId ? 'takes' : 'narrative');
-  const takesLabel =
-    activeTab === 'takes' && takeWorkspaceMode === 'edit'
-      ? 'Takes - Edit'
-      : activeTab === 'takes' && takeWorkspaceMode === 'new'
-        ? 'Takes - New'
-        : 'Takes';
+  const activeTab: ScenePanelTab = sceneTab ?? (beatId ? 'beats' : 'narrative');
 
   useEffect(() => {
     let cancelled = false;
@@ -116,71 +101,57 @@ export function ScenePanel({
     <LineTabs
       value={activeTab}
       onValueChange={(value) => {
-        if (value === 'shots') {
-          onSelect({ type: 'scene', id: sceneId, sceneTab: 'shots', shotId });
+        if (value === 'beats') {
+          onSelect({ type: 'scene', id: sceneId, sceneTab: 'beats', beatId });
           return;
         }
-        if (value === 'takes') {
-          onSelect({
-            type: 'scene',
-            id: sceneId,
-            sceneTab: 'takes',
-            shotId,
-            shotTab,
-            takeWorkspaceMode,
-            takeId,
-          });
+        if (value === 'shots') {
+          onSelect({ type: 'scene', id: sceneId, sceneTab: 'shots' });
           return;
         }
         onSelect({ type: 'scene', id: sceneId });
       }}
       items={[
         { value: 'narrative', label: 'Narrative' },
+        { value: 'beats', label: 'Beats' },
         { value: 'shots', label: 'Shots' },
-        { value: 'takes', label: takesLabel },
       ]}
       trailing={tabBarAction}
     >
       <LineTabsContent value='narrative' className='overflow-hidden'>
-        <SceneNarrativeTab
-          projectName={projectName}
-          sceneId={sceneId}
-          resource={resource}
-          previousScene={previousScene}
-          nextScene={nextScene}
-          onResourceChange={setResource}
-          onSaveNotificationChange={onSaveNotificationChange}
-          onSelect={onSelect}
-        />
+        {activeTab === 'narrative' ? (
+          <SceneNarrativeTab
+            projectName={projectName}
+            sceneId={sceneId}
+            resource={resource}
+            previousScene={previousScene}
+            nextScene={nextScene}
+            onResourceChange={setResource}
+            onSaveNotificationChange={onSaveNotificationChange}
+            onSelect={onSelect}
+          />
+        ) : null}
+      </LineTabsContent>
+      <LineTabsContent
+        value='beats'
+        className='flex min-h-0 min-w-0 overflow-hidden'
+      >
+        {activeTab === 'beats' ? (
+          <SceneBeatsTab
+            projectName={projectName}
+            sceneId={sceneId}
+            beatId={beatId}
+            onSelect={onSelect}
+            onHeaderActionChange={setTabBarAction}
+            onSaveNotificationChange={onSaveNotificationChange}
+          />
+        ) : null}
       </LineTabsContent>
       <LineTabsContent
         value='shots'
         className='flex min-h-0 min-w-0 overflow-hidden'
       >
-        <SceneShotsReviewTab
-          projectName={projectName}
-          sceneId={sceneId}
-          shotId={shotId}
-          onSelect={onSelect}
-          onHeaderActionChange={setTabBarAction}
-          onSaveNotificationChange={onSaveNotificationChange}
-        />
-      </LineTabsContent>
-      <LineTabsContent
-        value='takes'
-        className='flex min-h-0 min-w-0 overflow-hidden'
-      >
-        <SceneTakesTab
-          projectName={projectName}
-          sceneId={sceneId}
-          shotId={shotId}
-          shotTab={shotTab}
-          takeWorkspaceMode={takeWorkspaceMode}
-          takeId={takeId}
-          onSelect={onSelect}
-          onHeaderActionChange={setTabBarAction}
-          onSaveNotificationChange={onSaveNotificationChange}
-        />
+        {activeTab === 'shots' ? <SceneShotsPlaceholderTab /> : null}
       </LineTabsContent>
     </LineTabs>
   );

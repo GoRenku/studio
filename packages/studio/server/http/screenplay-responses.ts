@@ -2,26 +2,17 @@ import type {
   Asset,
   ActStoryboardResource,
   ActStoryboardSequence,
-  ActStoryboardShot,
+  ActStoryboardBeat,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
   LocationResource,
   SceneNarrativeResource,
-  SceneShotListResource,
-  SceneShotVideoTakeCreateReport,
-  SceneShotVideoTakeListReport,
-  SceneShotVideoTakeOverview,
-  SceneShotVideoTake,
-  SceneShotVideoTakeVideo,
+  SceneBeatSheetResource,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
   SequenceResource,
   SequenceSceneRow,
-  ShotVideoTakeWorkspace,
-  SceneShotVideoTakeReferenceWorkspace,
-  ShotVideoTakeDraftReferenceSections,
-  ShotVideoTakeStoryboardImageReference,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
 
@@ -80,9 +71,9 @@ export type SceneNarrativeResourceResponse = Omit<
 
 export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardPreview'> & {
   storyboardPreview?: {
-    shotListId: string;
+    beatSheetId: string;
     images: Array<{
-      shotId: string;
+      beatId: string;
       image: ScreenplayImageReferenceWithHttp | null;
     }>;
   };
@@ -95,91 +86,15 @@ export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
   };
 };
 
-export type SceneShotListResourceResponse = Omit<
-  SceneShotListResource,
-  'storyboardImagesByShotId' | 'castMemberImages'
+export type SceneBeatSheetResourceResponse = Omit<
+  SceneBeatSheetResource,
+  'storyboardImagesByBeatId' | 'castMemberImages'
 > & {
-  storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
+  storyboardImagesByBeatId: Record<string, ScreenplayImageReferenceWithHttp>;
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
-export type ShotVideoTakeStoryboardImageReferenceWithHttp =
-  ShotVideoTakeStoryboardImageReference & {
-    url: string;
-  };
-
-export type SceneShotVideoTakeVideoWithHttp = SceneShotVideoTakeVideo & {
-  url: string;
-};
-
-export type SceneShotVideoTakeWithHttp = Omit<
-  SceneShotVideoTake,
-  'video'
-> & {
-  video: SceneShotVideoTakeVideoWithHttp | null;
-};
-
-export type SceneShotVideoTakeOverviewResponse = Omit<
-  SceneShotVideoTakeOverview,
-  'take' | 'storyboardImages'
-> & {
-  take: SceneShotVideoTakeWithHttp;
-  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
-};
-
-export type SceneShotVideoTakeListReportResponse = Omit<
-  SceneShotVideoTakeListReport,
-  'takes'
-> & {
-  takes: SceneShotVideoTakeOverviewResponse[];
-};
-
-export type SceneShotVideoTakeCreateReportResponse = Omit<
-  SceneShotVideoTakeCreateReport,
-  'overview'
-> & {
-  overview: SceneShotVideoTakeOverviewResponse;
-};
-
-export type ShotVideoTakeWorkspaceResponse = Omit<
-  ShotVideoTakeWorkspace,
-  'take' | 'storyboardImages' | 'generation'
-> & {
-  take: SceneShotVideoTakeWithHttp;
-  storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
-  generation: Omit<ShotVideoTakeWorkspace['generation'], 'references'> & {
-    references: ShotVideoTakeReferenceWorkspaceWithHttp;
-  };
-};
-
-type ShotVideoTakeDraftReferenceSectionsWithHttp = Omit<
-  ShotVideoTakeDraftReferenceSections,
-  'general' | 'genericReferences' | 'lookbook' | 'castMembers' | 'locations'
-> & {
-  general: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['general'][number]>>;
-  genericReferences: Array<ShotVideoTakeDraftReferenceSections['genericReferences'][number] & {
-    browserUrl?: string;
-  }>;
-  lookbook: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['lookbook'][number]>>;
-  castMembers: Array<Omit<ShotVideoTakeDraftReferenceSections['castMembers'][number], 'characterSheets'> & {
-    characterSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['castMembers'][number]['characterSheets'][number]>>;
-  }>;
-  locations: Array<Omit<ShotVideoTakeDraftReferenceSections['locations'][number], 'environmentSheets'> & {
-    environmentSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['locations'][number]['environmentSheets'][number]>>;
-  }>;
-};
-
-type ShotVideoTakeReferenceWorkspaceWithHttp =
-  | ShotVideoTakeDraftReferenceSectionsWithHttp
-  | Extract<SceneShotVideoTakeReferenceWorkspace, { kind: 'completed' }>;
-
-type ReferenceChoiceWithHttp<T extends { card: { previews: unknown[] } }> = Omit<T, 'card'> & {
-  card: Omit<T['card'], 'previews'> & {
-    previews: Array<T['card']['previews'][number] & { url: string }>;
-  };
-};
-
-export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {
+export type ActStoryboardBeatResponse = Omit<ActStoryboardBeat, 'image'> & {
   image: ScreenplayImageReferenceWithHttp | null;
 };
 
@@ -189,7 +104,7 @@ export type ActStoryboardSequenceResponse = Omit<
 > & {
   scenes: Array<{
     scene: ActStoryboardSequence['scenes'][number]['scene'];
-    shots: ActStoryboardShotResponse[];
+    beats: ActStoryboardBeatResponse[];
   }>;
 };
 
@@ -279,9 +194,9 @@ export function toSequenceResourceResponse(
         ...scene,
         storyboardPreview: scene.storyboardPreview
           ? {
-              shotListId: scene.storyboardPreview.shotListId,
+              beatSheetId: scene.storyboardPreview.beatSheetId,
               images: scene.storyboardPreview.images.map((entry) => ({
-                shotId: entry.shotId,
+                beatId: entry.beatId,
                 image: entry.image
                   ? withSceneImageUrl(projectName, scene.id, entry.image)
                   : null,
@@ -293,16 +208,16 @@ export function toSequenceResourceResponse(
   };
 }
 
-export function toSceneShotListResourceResponse(
+export function toSceneBeatSheetResourceResponse(
   projectName: string,
-  resource: SceneShotListResource
-): SceneShotListResourceResponse {
+  resource: SceneBeatSheetResource
+): SceneBeatSheetResourceResponse {
   const sceneId = resource.scene.id;
   return {
     ...resource,
-    storyboardImagesByShotId: Object.fromEntries(
-      Object.entries(resource.storyboardImagesByShotId).map(([shotId, image]) => [
-        shotId,
+    storyboardImagesByBeatId: Object.fromEntries(
+      Object.entries(resource.storyboardImagesByBeatId).map(([beatId, image]) => [
+        beatId,
         withSceneImageUrl(projectName, sceneId, image),
       ])
     ),
@@ -312,64 +227,6 @@ export function toSceneShotListResourceResponse(
         withImageUrl(projectName, 'cast', castMemberId, image),
       ])
     ),
-  };
-}
-
-export function toSceneShotVideoTakeListReportResponse(
-  projectName: string,
-  report: SceneShotVideoTakeListReport
-): SceneShotVideoTakeListReportResponse {
-  return {
-    takes: report.takes.map((overview) =>
-      toSceneShotVideoTakeOverviewResponse(projectName, overview)
-    ),
-  };
-}
-
-export function toSceneShotVideoTakeCreateReportResponse(
-  projectName: string,
-  report: SceneShotVideoTakeCreateReport
-): SceneShotVideoTakeCreateReportResponse {
-  return {
-    ...report,
-    overview: toSceneShotVideoTakeOverviewResponse(
-      projectName,
-      report.overview
-    ),
-  };
-}
-
-export function toSceneShotVideoTakeOverviewResponse(
-  projectName: string,
-  overview: SceneShotVideoTakeOverview
-): SceneShotVideoTakeOverviewResponse {
-  return {
-    ...overview,
-    take: withShotVideoTakeVideoUrl(projectName, overview.take),
-    storyboardImages: overview.storyboardImages.map((image) =>
-      withShotVideoTakeStoryboardImageUrl(
-        projectName,
-        overview.take.sceneId,
-        image
-      )
-    ),
-  };
-}
-
-export function toShotVideoTakeWorkspaceResponse(
-  projectName: string,
-  workspace: ShotVideoTakeWorkspace
-): ShotVideoTakeWorkspaceResponse {
-  return {
-    ...workspace,
-    take: withShotVideoTakeVideoUrl(projectName, workspace.take),
-    storyboardImages: workspace.storyboardImages.map((image) =>
-      withShotVideoTakeStoryboardImageUrl(projectName, workspace.take.sceneId, image)
-    ),
-    generation: {
-      ...workspace.generation,
-      references: withReferenceUrls(projectName, workspace.generation.references),
-    },
   };
 }
 
@@ -398,10 +255,10 @@ export function toActStoryboardResourceResponse(
       ...sequence,
       scenes: sequence.scenes.map((scene) => ({
         scene: scene.scene,
-        shots: scene.shots.map((shot) => ({
-          ...shot,
-          image: shot.image
-            ? withSceneImageUrl(projectName, scene.scene.id, shot.image)
+        beats: scene.beats.map((beat) => ({
+          ...beat,
+          image: beat.image
+            ? withSceneImageUrl(projectName, scene.scene.id, beat.image)
             : null,
         })),
       })),
@@ -444,81 +301,5 @@ function withSceneImageUrl(
   return {
     ...image,
     url: `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
-  };
-}
-
-function withShotVideoTakeStoryboardImageUrl(
-  projectName: string,
-  sceneId: string,
-  image: ShotVideoTakeStoryboardImageReference
-): ShotVideoTakeStoryboardImageReferenceWithHttp {
-  return {
-    ...image,
-    url: `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
-  };
-}
-
-function withShotVideoTakeVideoUrl(
-  projectName: string,
-  take: SceneShotVideoTake
-): SceneShotVideoTakeWithHttp {
-  return {
-    ...take,
-    video: take.video
-      ? {
-          ...take.video,
-          url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(take.video.assetId)}/files/${encodeURIComponent(take.video.assetFileId)}`,
-        }
-      : null,
-  };
-}
-
-function withReferenceUrls(
-  projectName: string,
-  references: SceneShotVideoTakeReferenceWorkspace
-): ShotVideoTakeReferenceWorkspaceWithHttp {
-  if (references.kind === 'completed') {
-    return {
-      ...references,
-      usedReferences: references.usedReferences.map((reference) => ({
-        ...reference,
-        ...(reference.assetId && reference.assetFileId
-          ? {
-              browserUrl: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(reference.assetId)}/files/${encodeURIComponent(reference.assetFileId)}`,
-            }
-          : {}),
-      })),
-    };
-  }
-  const withChoice = <T extends { card: ShotVideoTakeDraftReferenceSections['general'][number]['card'] }>(choice: T) => ({
-    ...choice,
-    card: {
-      ...choice.card,
-      previews: choice.card.previews.map((preview) => ({
-        ...preview,
-        url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(preview.assetId)}/files/${encodeURIComponent(preview.assetFileId)}`,
-      })),
-    },
-  });
-  return {
-    ...references,
-    genericReferences: references.genericReferences.map((reference) => ({
-      ...reference,
-      ...(reference.reference.kind === 'asset-file'
-        ? {
-            browserUrl: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(reference.reference.assetId)}/files/${encodeURIComponent(reference.reference.assetFileId)}`,
-          }
-        : {}),
-    })),
-    general: references.general.map(withChoice),
-    lookbook: references.lookbook.map(withChoice),
-    castMembers: references.castMembers.map((group) => ({
-      ...group,
-      characterSheets: group.characterSheets.map(withChoice),
-    })),
-    locations: references.locations.map((group) => ({
-      ...group,
-      environmentSheets: group.environmentSheets.map(withChoice),
-    })),
   };
 }

@@ -37,14 +37,6 @@ export type ImageRevisionTarget =
       sheetId: string;
       assetId: string;
       assetFileId: string;
-    }
-  | {
-      kind: 'shotVideoTakeReference';
-      sceneId: string;
-      takeId: string;
-      selectionId: string;
-      assetId: string;
-      assetFileId: string;
     };
 
 export type ImageRevisionMode = 'regenerate' | 'edit';

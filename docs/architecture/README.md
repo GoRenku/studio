@@ -39,12 +39,7 @@ Use this page as the map:
 - `media-generation.md` explains the current persisted media generation and
   separate media import architecture.
 - `generation-preview-purpose-bindings.md` defines the saved-spec generation
-  preview boundary: shared image preview configuration, purpose bindings, and
-  separate final shot-video route preview logic.
-- `shot-video-take-owned-media.md` defines the ownership rule for
-  take-owned media, copied take iterations, and take deletion safety.
-- `shot-video-take-structure-modes.md` defines the continuous versus multi-cut
-  Shot Video Take structure model.
+  preview boundary and shared configuration projection.
 - `drizzle-first-project-data.md` defines the Drizzle-first runtime query
   policy and raw SQL escape hatch.
 - `project-database-distribution.md` explains how installed packages ship
@@ -54,12 +49,11 @@ Use this page as the map:
   SQLite JSON columns.
 - `reference/domain-vocabulary.md` defines canonical project vocabulary.
 - `reference/project-storage-boundaries.md` explains SQLite versus filesystem ownership.
-- `reference/project-files-and-assets.md` explains assets, files, takes, selects, and
-  production exports.
+- `reference/project-files-and-assets.md` explains assets, files, focused
+  display choices, and dialogue audio takes.
 - `reference/project-relative-paths.md` defines the stored path contract.
 - `project-asset-storage-conventions.md` defines the accepted owner-folder
-  convention for durable assets, `tmp/`, `research/`, Storyboards, and
-  Shot Video Take media.
+  convention for durable assets, `tmp/`, `research/`, and Storyboards.
 - `reference/recoverable-discard-and-trash.md` defines recoverable discard,
   restore conflicts, Empty Trash blockers, and replacement-flow audit results.
 - `reference/visual-language.md` defines current Inspiration Analysis,
@@ -77,6 +71,8 @@ Use this page as the map:
   - `../decisions/0011-use-drizzle-kit-for-project-sqlite-migrations.md`
   - `../decisions/0012-store-project-file-references-as-project-relative-paths.md`
   - `../decisions/0013-use-core-owned-project-assets-and-production-exports.md`
+    for Core-owned asset storage; its take-driven production-export clauses are
+    superseded by Decision 0052.
   - `../decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
     for active project SQLite sessions only; its eager surface data direction is
     superseded.
@@ -89,12 +85,9 @@ Use this page as the map:
   - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
   - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
   - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
-  - `../decisions/0038-use-scoped-shot-video-take-reference-projections.md`
-    for editor-direction versus generation-direction Shot Video Take reference
-    projection.
-  - `../decisions/0039-use-uniform-shot-video-take-sheet-reference-selection.md`
-    for singular per-direction Character Sheet and Location Sheet selections
-    with asset-scoped selected dependency ids.
+  - `../decisions/0052-separate-scene-beats-from-shot-authoring.md`
+    for Scene Beat Sheets, the persistence-free Shot authoring reset, and
+    removal of the legacy Take domain.
   - `project-asset-storage-conventions.md`
     for current filesystem placement rules that supersede older
     `generated/media/`, nested Location Environment Sheet, and
@@ -151,8 +144,7 @@ Use this page as the map:
   generation slice, persisted generation specs, generation runs, and separate
   media import.
 - `generation-preview-purpose-bindings.md` defines saved-spec generation
-  preview ownership, shared image preview configuration, and final shot-video
-  preview route handling.
+  preview ownership and shared image preview configuration.
 - `reference/media-generation.md` defines the current exact generation and
   import contract.
 - `plans/exploration/project-generation-definitions.md` explores a broader

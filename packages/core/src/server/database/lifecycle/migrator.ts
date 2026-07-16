@@ -10,7 +10,6 @@ import {
   type ProjectDatabasePreMigrationBackupReport,
 } from './project-database-backups.js';
 import { ProjectStoreSchemaGenerationResolutionError } from './project-store-schema-generation-reader.js';
-import { assertContextFirstGenerationMigrationReady } from './context-first-generation-migration.js';
 
 const CORE_PACKAGE_NAME = '@gorenku/studio-core';
 const PROJECT_DATABASE_PATH_ENV = 'RENKU_PROJECT_DATABASE_PATH';
@@ -40,7 +39,6 @@ export function migrateProjectDatabase(
     );
   }
 
-  assertContextFirstGenerationMigrationReady(databasePath);
   const preMigrationBackup = createPreMigrationBackup(databasePath);
   const result = spawnSync(
     process.execPath,

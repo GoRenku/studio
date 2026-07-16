@@ -8,18 +8,7 @@ import {
   type StudioProjectRef,
 } from './events.js';
 
-const SCENE_PANEL_TABS = ['narrative', 'shots', 'takes'];
-const SCENE_SHOT_DETAIL_TABS = [
-  'description',
-  'lookbook',
-  'composition',
-  'motion',
-  'cast',
-  'location',
-  'dialogs',
-  'references',
-  'ai-production',
-];
+const SCENE_PANEL_TABS = ['narrative', 'beats', 'shots'];
 
 export function validateStudioEvent(value: unknown): StudioEvent {
   const issues = collectStudioEventIssues(value);
@@ -191,11 +180,18 @@ function validateSelection(value: unknown, path: string[], issues: ReturnType<ty
     ) {
       issues.push(issue('STUDIO_COORDINATION036', 'Unsupported scene tab.', [...path, 'sceneTab']));
     }
-    if (
-      selection.shotTab !== undefined &&
-      !SCENE_SHOT_DETAIL_TABS.includes(selection.shotTab)
-    ) {
-      issues.push(issue('STUDIO_COORDINATION037', 'Unsupported shot-detail tab.', [...path, 'shotTab']));
+    const fields = Object.keys(selection);
+    const unknownField = fields.find(
+      (field) => !['type', 'id', 'sceneTab', 'beatId'].includes(field)
+    );
+    if (unknownField) {
+      issues.push(
+        issue(
+          'STUDIO_COORDINATION037',
+          'Unsupported Scene selection field.',
+          [...path, unknownField]
+        )
+      );
     }
     return;
   }

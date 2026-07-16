@@ -20,7 +20,6 @@ import { createGenerationReferencesRoute } from './generation-references.js';
 import { createImageRevisionsRoute } from './image-revisions.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
-import { createProductionExportsRoute } from './production-exports.js';
 import { createProjectInformationRoute } from './project-information.js';
 import { createScreenplayRoute } from './screenplay.js';
 import { createTrashRoute } from './trash.js';
@@ -58,21 +57,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'updateSceneDialogueAudioSetup'
   | 'generateSceneDialogueAudioTake'
   | 'deleteSceneDialogueAudioTake'
-  | 'readSceneShotListResource'
-  | 'createShotVideoTake'
-  | 'createSceneShotVideoTakeFromTake'
-  | 'readShotVideoTakeWorkspace'
-  | 'listShotVideoTakes'
-  | 'discardShotVideoTake'
-  | 'setShotVideoTakePicked'
-  | 'replaceShotVideoTakeShots'
-  | 'setShotVideoTakeDirection'
-  | 'setShotVideoTakeStructure'
-  | 'setShotVideoTakeGenerationSpec'
-  | 'setShotVideoTakeGenerationReference'
-  | 'setShotVideoTakeGenerationGenericReferences'
+  | 'readSceneBeatSheetResource'
   | 'listGenerationReferences'
-  | 'estimateShotVideoTakeGeneration'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
   | 'updateProjectInformation'
@@ -91,7 +77,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'listCastVoices'
   | 'readCastVoice'
   | 'removeCastVoice'
-  | 'exportProductionAssets'
   | 'readInspirationResource'
   | 'readInspirationFolder'
   | 'createInspirationFolder'
@@ -180,10 +165,6 @@ export function createProjectsRoute(
     .route(
       '/:projectName',
       createProjectInformationRoute({ projectData, requireToken })
-    )
-    .route(
-      '/:projectName',
-      createProductionExportsRoute({ projectData, requireToken })
     )
     .route(
       '/:projectName',

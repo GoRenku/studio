@@ -8,17 +8,10 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { generationRunIdFromReceipt, recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
 import { readGenerationRunRecord } from '../database/access/media-generation.js';
-import { and, eq, isNull } from 'drizzle-orm';
-import { sceneShotVideoTakes } from '../schema/index.js';
 import { insertLookbookImageRecord, nextLookbookImageSortOrder } from '../database/access/lookbook-images.js';
 import { insertLookbookSheetRecord, nextLookbookSheetSortOrder } from '../database/access/lookbook-sheets.js';
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
 import { readAssetFileRecord } from '../database/access/asset-files.js';
-import {
-  setSceneShotVideoTakeImage,
-  attachSuccessfulSceneShotVideoTakeVideo,
-  type ShotVideoTakeImageRole,
-} from '../database/access/shot-video-take-media.js';
 
 export interface AttachGenerationMediaInput {
   purpose: GenerationPurpose;
@@ -46,12 +39,6 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
 }): GenerationMediaAttachmentReport {
   const attachment = attachmentDestination(input);
   const generationRunId = validateGenerationProvenance(input);
-  if (input.purpose === 'shot.video-take' && !generationRunId) {
-    throw new ProjectDataError(
-      'CORE_SHOT_VIDEO_TAKE_SUCCESSFUL_RUN_REQUIRED',
-      'A final Shot Video Take video must be attached from its exact successful Renku generation run.'
-    );
-  }
   const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
   const relationshipId = attachment.owner
@@ -131,11 +118,6 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
           });
         }
       }
-      if (attachment.takeId && attachment.takeImageRole) {
-        setSceneShotVideoTakeImage({ session, takeId: attachment.takeId, role: attachment.takeImageRole, assetId, assetFileId, now });
-      } else if (attachment.takeId) {
-        attachSuccessfulSceneShotVideoTakeVideo({ session, takeId: attachment.takeId, generationRunId: generationRunId!, assetId, assetFileId, now });
-      }
       if (generationRunId) {
         recordImportedAssetFileGenerationProvenanceInSession({ session, assetFileId, receipt: input.receipt });
       }
@@ -212,8 +194,6 @@ function attachmentDestination(input: AttachGenerationMediaInput & { session: Da
   assetType: string;
   mediaKind: 'image' | 'audio' | 'video';
   resourceKeys: string[];
-  takeId?: string;
-  takeImageRole?: ShotVideoTakeImageRole;
   lookbookRecord?: 'image' | 'sheet';
 } {
   switch (input.purpose) {
@@ -237,52 +217,9 @@ function attachmentDestination(input: AttachGenerationMediaInput & { session: Da
     case 'location.hero':
       assertTarget(input, 'location');
       return { destination: { kind: 'location.hero', locationId: input.target.id, heroName: input.title }, owner: { kind: 'location', locationId: input.target.id }, role: 'hero', label: 'Location Hero', assetType: 'location-hero', mediaKind: 'image', resourceKeys: [`location:${input.target.id}`] };
-    case 'shot.video-take': {
-      assertTarget(input, 'sceneShotVideoTake');
-      const take = input.session.db.select().from(sceneShotVideoTakes).where(and(eq(sceneShotVideoTakes.id, input.target.id), isNull(sceneShotVideoTakes.discardedAt))).get();
-      if (!take) {
-        throw new ProjectDataError('CORE_GENERATION_TARGET_NOT_FOUND', `Scene Shot Video Take was not found: ${input.target.id}.`);
-      }
-      return { destination: { kind: 'shotVideoTake.media', takeId: take.id, role: 'video' }, owner: null, role: 'shot-video-take', label: 'Shot Video Take', assetType: 'shot-video-take', mediaKind: 'video', resourceKeys: [`scene:${take.sceneId}`, `scene-shot-video-take:${take.id}`], takeId: take.id };
-    }
-    case 'shot.first-frame':
-      return takeImageAttachment(input, 'first-frame', 'First Frame');
-    case 'shot.last-frame':
-      return takeImageAttachment(input, 'last-frame', 'Last Frame');
-    case 'shot.video-prompt':
-      return takeImageAttachment(input, 'video-prompt', 'Video Prompt Image');
     default:
       throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_UNSUPPORTED', `Focused media attachment is not available for ${input.purpose}.`);
   }
-}
-
-function takeImageAttachment(
-  input: AttachGenerationMediaInput & { session: DatabaseSession },
-  role: ShotVideoTakeImageRole,
-  label: string
-) {
-  assertTarget(input, 'sceneShotVideoTake');
-  const take = input.session.db.select().from(sceneShotVideoTakes).where(and(
-    eq(sceneShotVideoTakes.id, input.target.id),
-    isNull(sceneShotVideoTakes.discardedAt)
-  )).get();
-  if (!take) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_TARGET_NOT_FOUND',
-      `Scene Shot Video Take was not found: ${input.target.id}.`
-    );
-  }
-  return {
-    destination: { kind: 'shotVideoTake.media' as const, takeId: take.id, role },
-    owner: null,
-    role,
-    label,
-    assetType: role,
-    mediaKind: 'image' as const,
-    resourceKeys: [`scene:${take.sceneId}`, `scene-shot-video-take:${take.id}`],
-    takeId: take.id,
-    takeImageRole: role,
-  };
 }
 
 function projectAttachment(input: AttachGenerationMediaInput, destination: ProjectAssetFileDestination, role: string, label: string) {

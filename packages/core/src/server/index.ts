@@ -78,11 +78,6 @@ export type {
 export { applyFixedGenerationSettings } from './generation/purpose-settings.js';
 export { attachGenerationMedia, type AttachGenerationMediaInput, type GenerationMediaAttachmentReport } from './generation/attachments.js';
 export { attachSceneStoryboardImages } from './generation/scene-storyboard-attachments.js';
-export { createShotVideoTake, deleteShotVideoTake, listShotVideoTakes, readShotVideoTake } from './generation/shot-video-takes.js';
-export {
-  discardSceneShotGenericReferenceAsset,
-  registerSceneShotGenericReferenceAsset,
-} from './commands/scene-shot-reference-asset-commands.js';
 export { validateGenerationSpec } from './generation/validation.js';
 export { buildGenerationPreview } from './generation/previews.js';
 export {
@@ -91,7 +86,6 @@ export {
   type GenerationCostEstimateInput,
 } from './generation/estimates.js';
 export { readGenerationRun, runGeneration } from './generation/runs.js';
-export { attachShotVideoTakeOutput } from './shot-video-take-workspace/outputs.js';
 export type * from '../client/generation.js';
 export type * from '../client/generation-preview-resource.js';
 export {
@@ -164,8 +158,8 @@ export type {
   ReadLocationContextInput,
   ReadLocationDesignInput,
   ReadLocationInput,
-  ReadSceneShotListContextInput,
-  ReadSceneShotListInput,
+  ReadSceneBeatSheetContextInput,
+  ReadSceneBeatSheetInput,
   ReadScreenplayCastMemberInput,
   ReadScreenplayLocationInput,
   ReadScreenplaySceneInput,
@@ -180,9 +174,9 @@ export type {
   ResolvedProjectAssetFileById,
   ResolvedProjectAssetFile,
   ScreenplayAnalysisProjectInput,
-  SceneShotListProjectInput,
+  SceneBeatSheetProjectInput,
   SetLookbookImagePlacementInput,
-  SetActiveSceneShotListInput,
+  SetActiveSceneBeatSheetInput,
   SetActiveCastDesignInput,
   SetActiveLocationDesignInput,
   SetActiveScreenplayAnalysisInput,
@@ -200,9 +194,9 @@ export type {
   WriteProductionLookbookInput,
   WriteStoryboardLookbookInput,
   ValidateScreenplayAnalysisInput,
-  ValidateSceneShotListInput,
+  ValidateSceneBeatSheetInput,
   ValidateScreenplayJsonInput,
-  WriteSceneShotListInput,
+  WriteSceneBeatSheetInput,
   WriteCastDesignInput,
   WriteLocationDesignInput,
   WriteScreenplayAnalysisInput,
@@ -214,21 +208,20 @@ export {
   DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
 } from '../client/screenplay-analysis.js';
 export type {
-  SceneShot,
-  SceneShotDialogueReference,
-  SceneShotListContextReport,
-  SceneShotListDocument,
-  SceneShotListApplyReport,
-  SceneShotListListReport,
-  SceneShotListOperationDocument,
-  SceneShotListReadReport,
-  SceneShotListStoryboardStatus,
-  SceneShotListSummary,
-  SceneShotListValidationReport,
-  SceneShotListWriteReport,
+  Beat,
+  SceneBeatSheetContextReport,
+  SceneBeatSheetDocument,
+  SceneBeatSheetApplyReport,
+  SceneBeatSheetListReport,
+  SceneBeatSheetOperationDocument,
+  SceneBeatSheetReadReport,
+  SceneBeatSheetStoryboardStatus,
+  SceneBeatSheetSummary,
+  SceneBeatSheetValidationReport,
+  SceneBeatSheetWriteReport,
   SceneStoryboardImagesImportDocument,
   SceneStoryboardImagesImportReport,
-} from '../client/scene-shot-list.js';
+} from '../client/scene-beat-sheet.js';
 export type {
   ScreenplayAnalysisContextReport,
   ScreenplayAnalysisDocument,
@@ -270,7 +263,7 @@ export type {
   ScreenplayRevisionReadReport,
   ScreenplayRevisionSummary,
   ScreenplaySceneRevisionDocument,
-  ScreenplayShotListImpact,
+  ScreenplayBeatSheetImpact,
   ScreenplayStatusReport,
   Sequence as ScreenplaySequence,
 } from '../client/screenplay.js';
@@ -356,10 +349,6 @@ export type {
   LookbookWriteReport,
   ScreenplayNavigation,
   PageResponse,
-  ProductionExportInput,
-  ProductionExportSummary,
-  ProductionExportVariant,
-  ProductionExportVariantSummary,
   Project,
   ProjectInfo,
   ProjectInformationResource,
@@ -373,7 +362,6 @@ export type {
   SceneDesignResource,
   ScenePanelTab,
   SceneNavigationRow,
-  SceneShotDetailTab,
   Sequence,
   SequenceNavigationRow,
   StudioSelection,
@@ -425,8 +413,7 @@ export {
   studioProjectInformationResourceKey,
   studioProjectShellResourceKey,
   studioSceneNarrativeResourceKey,
-  studioSceneShotListResourceKey,
-  studioSceneShotResourceKey,
+  studioSceneBeatSheetResourceKey,
   studioSceneShotsResourceKey,
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
@@ -441,7 +428,7 @@ export {
   studioVisualLanguageLookbooksResourceKey,
   validateStudioFocusRequestForProject,
 } from './studio-coordination/index.js';
-export { sceneShotListResourceKeys } from './commands/scene-shot-list-commands.js';
+export { sceneBeatSheetResourceKeys } from './scene-beat-sheet/storyboard-status.js';
 export {
   clearCastProfileDisplayAsset,
   clearLocationHeroDisplayAsset,

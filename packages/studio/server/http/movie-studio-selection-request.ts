@@ -1,6 +1,5 @@
 import type {
   ScenePanelTab,
-  SceneShotDetailTab,
   StudioSelection,
 } from '@gorenku/studio-core/server';
 import {
@@ -14,18 +13,7 @@ import {
   readRequiredHttpString,
 } from './request-validation.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'shots', 'takes'];
-const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
-  'description',
-  'lookbook',
-  'composition',
-  'motion',
-  'cast',
-  'location',
-  'dialogs',
-  'references',
-  'ai-production',
-];
+const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'beats', 'shots'];
 
 export function readMovieStudioSelectionRequest(input: unknown): {
   selection: StudioSelection;
@@ -63,28 +51,13 @@ export function readMovieStudioSelectionRequest(input: unknown): {
     selection.kind === 'production' || selection.kind === 'storyboard'
       ? selection.kind
       : undefined;
-  const shotId =
-    typeof selection.shotId === 'string' && selection.shotId.trim()
-      ? selection.shotId.trim()
-      : undefined;
-  const takeWorkspaceMode =
-    selection.takeWorkspaceMode === 'list' ||
-    selection.takeWorkspaceMode === 'new' ||
-    selection.takeWorkspaceMode === 'edit'
-      ? selection.takeWorkspaceMode
-      : undefined;
-  const takeId =
-    typeof selection.takeId === 'string' &&
-    selection.takeId.trim()
-      ? selection.takeId.trim()
+  const beatId =
+    typeof selection.beatId === 'string' && selection.beatId.trim()
+      ? selection.beatId.trim()
       : undefined;
   const sceneTab =
     typeof selection.sceneTab === 'string' && selection.sceneTab.trim()
       ? selection.sceneTab.trim()
-      : undefined;
-  const shotTab =
-    typeof selection.shotTab === 'string' && selection.shotTab.trim()
-      ? selection.shotTab.trim()
       : undefined;
   const result = buildDiagnosticResult(issues);
   if (!result.valid || type === null) {
@@ -137,26 +110,13 @@ export function readMovieStudioSelectionRequest(input: unknown): {
       ),
     ]);
   }
-  if (type === 'scene' && shotTab && !SCENE_SHOT_DETAIL_TABS.includes(shotTab as SceneShotDetailTab)) {
-    throwMovieStudioSelectionRequestError([
-      createDiagnosticError(
-        'STUDIO_SERVER034',
-        `Unsupported shot tab: ${shotTab}.`,
-        { path: ['selection', 'shotTab'] },
-        'Send a supported shot tab.'
-      ),
-    ]);
-  }
   return {
     selection: studioSelectionFromRequest(type, {
       id,
       folderId,
       kind,
-      shotId,
-      takeWorkspaceMode,
-      takeId,
+      beatId,
       sceneTab: sceneTab as ScenePanelTab | undefined,
-      shotTab: shotTab as SceneShotDetailTab | undefined,
     }),
   };
 }
@@ -186,11 +146,8 @@ function studioSelectionFromRequest(
     id?: string;
     folderId?: string;
     kind?: 'production' | 'storyboard';
-    shotId?: string;
-    takeWorkspaceMode?: 'list' | 'new' | 'edit';
-    takeId?: string;
+    beatId?: string;
     sceneTab?: ScenePanelTab;
-    shotTab?: SceneShotDetailTab;
   }
 ): StudioSelection {
   switch (type) {
@@ -199,14 +156,7 @@ function studioSelectionFromRequest(
         type,
         id: ids.id as string,
         ...(ids.sceneTab ? { sceneTab: ids.sceneTab } : {}),
-        ...(ids.shotId ? { shotId: ids.shotId } : {}),
-        ...(ids.takeWorkspaceMode
-          ? { takeWorkspaceMode: ids.takeWorkspaceMode }
-          : {}),
-        ...(ids.takeId
-          ? { takeId: ids.takeId }
-          : {}),
-        ...(ids.shotTab ? { shotTab: ids.shotTab } : {}),
+        ...(ids.beatId ? { beatId: ids.beatId } : {}),
       };
     case 'act':
     case 'sequence':

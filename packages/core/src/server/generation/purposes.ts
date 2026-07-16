@@ -14,12 +14,8 @@ import { sceneDialogueAudioPurpose } from './purposes/scene-dialogue-audio.js';
 import { locationSheetPurpose } from './purposes/location-sheet.js';
 import { locationHeroPurpose } from './purposes/location-hero.js';
 import { sceneStoryboardSheetPurpose } from './purposes/scene-storyboard-sheet.js';
-import { shotVideoTakePurpose } from './purposes/shot-video-take.js';
-import { shotFirstFramePurpose } from './purposes/shot-first-frame.js';
-import { shotLastFramePurpose } from './purposes/shot-last-frame.js';
-import { shotVideoPromptPurpose } from './purposes/shot-video-prompt.js';
 
-const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, sceneStoryboardSheetPurpose, shotFirstFramePurpose, shotLastFramePurpose, shotVideoPromptPurpose, shotVideoTakePurpose];
+const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, sceneStoryboardSheetPurpose];
 const descriptorByPurpose = new Map(descriptors.map((descriptor) => [descriptor.purpose, descriptor]));
 
 export function listGenerationPurposes(): GenerationPurposeDescriptor[] { return [...descriptors]; }

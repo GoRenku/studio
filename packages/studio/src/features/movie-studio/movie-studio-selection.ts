@@ -25,37 +25,15 @@ export type StudioSelection =
       type: 'scene';
       id: string;
       sceneTab?: ScenePanelTab;
-      shotId?: string;
-      takeWorkspaceMode?: SceneTakeWorkspaceMode;
-      takeId?: string;
-      shotTab?: SceneShotDetailTab;
+      beatId?: string;
     };
 
-export type ScenePanelTab = 'narrative' | 'shots' | 'takes';
-
-export type SceneTakeWorkspaceMode = 'list' | 'new' | 'edit';
-
-export type SceneShotDetailTab =
-  | 'description'
-  | 'composition'
-  | 'motion'
-  | 'dialogs'
-  | 'references'
-  | 'ai-production';
+export type ScenePanelTab = 'narrative' | 'beats' | 'shots';
 
 export const SCENE_PANEL_TABS: ScenePanelTab[] = [
   'narrative',
+  'beats',
   'shots',
-  'takes',
-];
-
-export const SCENE_SHOT_DETAIL_TABS: SceneShotDetailTab[] = [
-  'description',
-  'composition',
-  'motion',
-  'dialogs',
-  'references',
-  'ai-production',
 ];
 
 export interface MovieStudioLookup {

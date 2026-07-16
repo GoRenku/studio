@@ -2,7 +2,8 @@
 
 Date: 2026-07-12
 
-Status: resolved by Plans `0136` and `0137`
+Status: historical cutover evidence; superseded for Shot/Take callers by
+Decision `0052`
 
 Plan `0134` intentionally removed the old Core/Engines generation backend,
 client contract families, broad `ProjectDataService` generation inventory,

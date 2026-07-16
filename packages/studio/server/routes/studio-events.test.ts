@@ -533,7 +533,7 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
     async readProject() {
       return project;
     },
-    async readSceneShotListResource() {
+    async readSceneBeatSheetResource() {
       return {
         scene: {
           id: 'scene_test0001',
@@ -554,9 +554,9 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
           sceneCount: 1,
         },
         projectAspectRatio: '16:9',
-        activeShotListId: null,
-        activeShotList: null,
-        storyboardImagesByShotId: {},
+        activeBeatSheetId: null,
+        activeBeatSheet: null,
+        storyboardImagesByBeatId: {},
         castMemberLabels: {},
         castMemberImages: {},
         locationLabels: {},

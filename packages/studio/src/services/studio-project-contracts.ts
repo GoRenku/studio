@@ -20,7 +20,6 @@ import type {
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
-  ProductionExportSummary,
   ProjectInformationResource,
   ProjectLibrary,
   ProjectShell,
@@ -29,10 +28,10 @@ import type {
   SequenceNavigationRow,
   SequenceResource,
   SequenceSceneRow,
-  SceneShotListResource,
+  SceneBeatSheetResource,
   ActStoryboardResource,
   ActStoryboardSequence,
-  ActStoryboardShot,
+  ActStoryboardBeat,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
 
@@ -66,7 +65,6 @@ export interface ProjectInformationLanguageUpdateRequest {
   supportsSubtitles: boolean;
 }
 
-export type ProductionExportSummaryResponse = ProductionExportSummary;
 
 export type StudioAssetResponse = Asset;
 
@@ -127,9 +125,9 @@ export type SceneNarrativeResourceResponse = Omit<
 
 export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardPreview'> & {
   storyboardPreview?: {
-    shotListId: string;
+    beatSheetId: string;
     images: Array<{
-      shotId: string;
+      beatId: string;
       image: ScreenplayImageReferenceWithHttp | null;
     }>;
   };
@@ -142,15 +140,15 @@ export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
   };
 };
 
-export type SceneShotListResourceResponse = Omit<
-  SceneShotListResource,
-  'storyboardImagesByShotId' | 'castMemberImages'
+export type SceneBeatSheetResourceResponse = Omit<
+  SceneBeatSheetResource,
+  'storyboardImagesByBeatId' | 'castMemberImages'
 > & {
-  storyboardImagesByShotId: Record<string, ScreenplayImageReferenceWithHttp>;
+  storyboardImagesByBeatId: Record<string, ScreenplayImageReferenceWithHttp>;
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
-export type ActStoryboardShotResponse = Omit<ActStoryboardShot, 'image'> & {
+export type ActStoryboardBeatResponse = Omit<ActStoryboardBeat, 'image'> & {
   image: ScreenplayImageReferenceWithHttp | null;
 };
 
@@ -160,7 +158,7 @@ export type ActStoryboardSequenceResponse = Omit<
 > & {
   scenes: Array<{
     scene: ActStoryboardSequence['scenes'][number]['scene'];
-    shots: ActStoryboardShotResponse[];
+    beats: ActStoryboardBeatResponse[];
   }>;
 };
 

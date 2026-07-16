@@ -6,16 +6,15 @@ import castSheets from '../assets/screens/cast-sheets.png';
 import inspirationGrid from '../assets/screens/inspiration-grid.png';
 import locationDetail from '../assets/screens/location-detail.png';
 import lookbookPalette from '../assets/screens/lookbook-palette.png';
+import sceneBeats from '../assets/screens/scene-beats.png';
 import sceneNarrative from '../assets/screens/scene-narrative.png';
-import sceneShots from '../assets/screens/scene-shots.png';
-import sceneTakes from '../assets/screens/scene-takes.png';
 import storyArc from '../assets/screens/story-arc.png';
 
 export const site = {
   name: 'Renku',
   tagline: 'See your film before you shoot a single frame.',
   description:
-    'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, storyboards, shot lists, and animatic takes — one cinematic workspace.',
+    'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, narrative Beat Sheets, and storyboards — one cinematic workspace.',
   studioUrl: 'http://localhost:5173',
 };
 
@@ -60,7 +59,7 @@ export const features: Feature[] = [
     eyebrow: 'Cast Development',
     title: 'Give every character a face',
     description:
-      'Every role in your script gets a profile — want, need, arc, voice — and a generated portrait to match. Character sheets with turnarounds and expression studies keep each face consistent across every storyboard frame and take.',
+      'Every role in your script gets a profile — want, need, arc, voice — and a generated portrait to match. Character sheets with turnarounds and expression studies keep each face consistent across every storyboard frame.',
     bullets: [
       'AI portraits grounded in each character’s role and age',
       'Character sheets: turnarounds, poses, and expression grids',
@@ -108,36 +107,21 @@ export const features: Feature[] = [
   },
   {
     id: 'storyboards',
-    eyebrow: 'Storyboards & Shot Lists',
-    title: 'Board every shot, with intent',
+    eyebrow: 'Beats & Storyboards',
+    title: 'Turn narrative Beats into visible scenes',
     description:
-      'Renku drafts a storyboard for every scene — and each frame knows why it exists. Story beat, narrative purpose, subject, and action ride along with every shot, so your coverage reads like a director’s plan, not a pile of pictures.',
+      'Renku breaks each scene into clear narrative Beats before camera decisions begin. Every Beat carries its people, place, story elements, emotional tone, and narrative function, with storyboard imagery attached as a separate visual layer.',
     bullets: [
-      'Sketch-style boards for every scene, shot by shot',
-      'Each shot carries beat, purpose, subject, and action',
-      'Whole-act overviews show your coverage at a glance',
+      'Narrative Beat Sheets stay separate from camera and coverage choices',
+      'Each Beat carries narrative development, purpose, cast, and locations',
+      'Whole-act overviews show the storyboard flow at a glance',
     ],
-    image: sceneShots,
+    image: sceneBeats,
     imageAlt:
-      'A shot list in Renku with storyboard thumbnails and a detailed shot breakdown panel.',
+      'A Scene Beat Sheet in Renku with storyboard thumbnails and the selected Beat details.',
     secondaryImage: actStoryboard,
     secondaryImageAlt:
       'An act overview showing storyboard frames for every scene.',
-  },
-  {
-    id: 'takes',
-    eyebrow: 'Takes & Animatics',
-    title: 'From boards to moving takes',
-    description:
-      'Assemble shots into takes and carry them toward motion. The take workspace holds composition, motion, dialog, and references for each shot — with generation cost tracked before you commit a single credit.',
-    bullets: [
-      'Group shots into takes and iterate on each cut',
-      'Composition, motion, dialog, and reference notes per shot',
-      'Generation activity and cost, visible at every step',
-    ],
-    image: sceneTakes,
-    imageAlt:
-      'The takes view in Renku showing take cards assembled from storyboard shots.',
   },
 ];
 
@@ -159,13 +143,8 @@ export const workflow = [
   },
   {
     step: '04',
-    title: 'Board every shot',
-    text: 'Storyboards and shot lists with narrative intent.',
-  },
-  {
-    step: '05',
-    title: 'Cut animatic takes',
-    text: 'Moving previs, with generation cost in plain sight.',
+    title: 'Design scene Beats',
+    text: 'Narrative units and storyboards with clear intent.',
   },
 ];
 
@@ -199,10 +178,10 @@ export const benefits = [
   },
   {
     title: 'Iterate before you spend',
-    text: 'Rewrite the shot, not the shoot. Every experiment happens in the studio, where a bad idea costs minutes instead of money.',
+    text: 'Rewrite the Beat, not the shoot. Every story experiment happens in the studio, where a bad idea costs minutes instead of money.',
   },
   {
     title: 'One source of truth',
-    text: 'Script, cast, locations, look, boards, and takes stay linked. Change the scene and everything downstream knows.',
+    text: 'Script, cast, locations, look, Beats, and boards stay linked. Change the scene and everything downstream knows.',
   },
 ];

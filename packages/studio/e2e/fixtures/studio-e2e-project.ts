@@ -2,8 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   ProjectRelativePath,
-  SceneShotListDocument,
-  SceneShotVideoTake,
+  SceneBeatSheetDocument,
 } from '@gorenku/studio-core/client';
 import {
   createDeterministicIdGenerator,
@@ -18,17 +17,16 @@ export interface StudioE2eProject {
   projectPath: string;
 }
 
-export interface StudioE2eShotVideoTakeProject extends StudioE2eProject {
+export interface StudioE2eMovieProject extends StudioE2eProject {
   sceneId: string;
   actId: string;
   sequenceId: string;
   castMemberId: string;
   locationId: string;
   dialogueId: string;
-  shotListId: string;
-  firstShotId: string;
-  secondShotId: string;
-  take: SceneShotVideoTake;
+  beatSheetId: string;
+  firstBeatId: string;
+  secondBeatId: string;
   lookbookId: string;
   profileAssetId: string;
   locationSheetAssetId: string;
@@ -62,11 +60,11 @@ export async function createMinimalMovieProject(input: {
   };
 }
 
-export async function createShotVideoTakeMovieProject(input: {
+export async function createBeatSheetMovieProject(input: {
   runtime: StudioE2eRuntime;
   projectName: string;
   title: string;
-}): Promise<StudioE2eShotVideoTakeProject> {
+}): Promise<StudioE2eMovieProject> {
   const projectData = createProjectDataService();
   const project = await createMinimalMovieProject(input);
 
@@ -117,116 +115,32 @@ export async function createShotVideoTakeMovieProject(input: {
     homeDir: input.runtime.homeDir,
     projectData,
   });
-  const shotList = await projectData.writeSceneShotList({
+  const beatSheet = await projectData.writeSceneBeatSheet({
     homeDir: input.runtime.homeDir,
-    document: sampleShotList(ids),
+    document: sampleBeatSheet(ids),
     idGenerator: createDeterministicIdGenerator(),
   });
-  const takeReport = await projectData.createShotVideoTake({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: ids.sceneId,
-    shotListId: shotList.shotList.id,
-    shotIds: ['shot_001'],
-    title: 'Gate pressure',
-  });
-  const take = takeReport.overview.take;
 
-  const mediaIds = await seedTakeReferenceMedia({
+  const mediaIds = await seedProjectMedia({
     runtime: input.runtime,
     projectData,
     projectName: input.projectName,
     ids,
-    takeId: take.takeId,
-  });
-  await projectData.setShotVideoTakeDirection({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: ids.sceneId,
-    takeId: take.takeId,
-    direction: {
-      composition: {
-        shotSize: 'close-up',
-        subjectFraming: ['single'],
-        cameraAngle: 'low-angle',
-        dutch: 'left',
-        lens: {
-          type: 'tele',
-          millimeters: 85,
-          focus: 'shallow-focus',
-        },
-        customComposition: 'The gate fills the frame with severe pressure.',
-      },
-      motion: {
-        movement: 'push-in',
-        directions: ['forward'],
-        track: 'straight',
-        rig: 'dolly',
-        customMotion: 'A slow push tightens the pressure on the gate.',
-      },
-      cast: { castMemberIds: [ids.castMemberId] },
-      location: { locationId: ids.locationId },
-    },
-  });
-  const generationWorkspace = await projectData.readShotVideoTakeWorkspace({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: ids.sceneId,
-    takeId: take.takeId,
-  });
-  const textModel = generationWorkspace.generation.models.find(
-    (model) => model.label === 'Seedance 2.0' && model.supportedInputModes.includes('text-only')
-  );
-  if (!textModel) {
-    throw new Error('Shot video take E2E fixture could not find Seedance 2.0 text generation.');
-  }
-  await projectData.setShotVideoTakeGenerationSpec({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: ids.sceneId,
-    takeId: take.takeId,
-    setup: {
-      inputModeId: 'text-only',
-      modelChoice: textModel.modelChoice,
-      parameterValues: {},
-    },
-  });
-  const workspace = await projectData.readShotVideoTakeWorkspace({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: ids.sceneId,
-    takeId: take.takeId,
-  });
-  const references = workspace.generation.references;
-  const dialogueReference = references.kind === 'draft'
-    ? references.dialogueAudio[0]
-    : undefined;
-  const dialogueSelection = dialogueReference?.availableTakes[0]?.selection;
-  if (!dialogueSelection) {
-    throw new Error('Shot video take E2E fixture could not find dialogue audio guidance.');
-  }
-  await projectData.setShotVideoTakeGenerationReference({
-    homeDir: input.runtime.homeDir,
-    projectName: input.projectName,
-    sceneId: ids.sceneId,
-    takeId: take.takeId,
-    selection: dialogueSelection,
   });
 
   return {
     ...project,
     ...ids,
-    shotListId: shotList.shotList.id,
-    firstShotId: 'shot_001',
-    secondShotId: 'shot_002',
-    take,
+    beatSheetId: beatSheet.beatSheet.id,
+    firstBeatId: 'beat_001',
+    secondBeatId: 'beat_002',
     ...mediaIds,
   };
 }
 
 export async function importAdditionalCastProfileImage(input: {
   runtime: StudioE2eRuntime;
-  project: StudioE2eShotVideoTakeProject;
+  project: StudioE2eMovieProject;
   relativePath: string;
   title: string;
 }): Promise<void> {
@@ -258,7 +172,7 @@ export async function importAdditionalCastProfileImage(input: {
 
 export async function importAdditionalLocationSheet(input: {
   runtime: StudioE2eRuntime;
-  project: StudioE2eShotVideoTakeProject;
+  project: StudioE2eMovieProject;
   relativePath: string;
   title: string;
 }): Promise<void> {
@@ -286,28 +200,6 @@ export async function importAdditionalLocationSheet(input: {
     oneLineSummary: `${input.title} location sheet for browser E2E.`,
     referenceName: input.title,
     purpose: `${input.title} location sheet for browser E2E.`,
-  });
-}
-
-export async function createDiscardedTakeForTrash(input: {
-  runtime: StudioE2eRuntime;
-  project: StudioE2eShotVideoTakeProject;
-}): Promise<void> {
-  const projectData = createProjectDataService();
-  const takeReport = await projectData.createShotVideoTake({
-    homeDir: input.runtime.homeDir,
-    projectName: input.project.projectName,
-    sceneId: input.project.sceneId,
-    shotListId: input.project.shotListId,
-    shotIds: [input.project.secondShotId],
-    title: 'Trash restore candidate',
-  });
-  const take = takeReport.overview.take;
-  await projectData.discardShotVideoTake({
-    homeDir: input.runtime.homeDir,
-    projectName: input.project.projectName,
-    sceneId: input.project.sceneId,
-    takeId: take.takeId,
   });
 }
 
@@ -378,7 +270,7 @@ async function readSampleIds(input: {
   const castMember = screenplay.screenplay?.cast[0];
   const location = screenplay.screenplay?.locations[0];
   if (!act?.id || !sequence?.id || !scene?.id || !castMember?.id || !location?.id) {
-    throw new Error('Shot video take E2E fixture did not create its sample ids.');
+    throw new Error('Beat Sheet E2E fixture did not create its sample ids.');
   }
   return {
     actId: act.id,
@@ -446,60 +338,44 @@ function sampleScreenplayCreateDocument(): Parameters<
   };
 }
 
-function sampleShotList(ids: SampleIds): SceneShotListDocument {
+function sampleBeatSheet(ids: SampleIds): SceneBeatSheetDocument {
   return {
-    kind: 'sceneShotList',
+    kind: 'sceneBeatSheet',
     sceneId: ids.sceneId,
-    title: 'Bombardment coverage',
-    summary: 'Coverage for a multi-shot video take.',
-    coverageStrategy: 'Keep the gate geography legible.',
+    title: 'Bombardment Beats',
+    summary: 'Two narrative Beats for desktop browser verification.',
+    narrativeProgression: 'The gate becomes the center of pressure, then the crew absorbs the consequence.',
     lookbookInfluence: 'Use the project aspect ratio.',
-    shots: [
+    beats: [
       {
-        shotId: 'shot_001',
+        id: 'beat_001',
         title: 'Gate pressure',
-        storyBeat: 'The gate becomes the scene center.',
+        narrativeDevelopment: 'The gate becomes the scene center.',
         narrativePurpose: 'Establish the force pressing against the city.',
-        description: 'A held shot of the gate under pressure.',
-        shotType: 'wide',
-        subject: 'The city gate',
-        action: 'Dust drifts across the gate.',
-        dialogue: [
-          {
-            blockIndex: 1,
-            lineIndexes: [0],
-            castMemberId: ids.castMemberId,
-            purpose: 'Primary dialogue audio reference for the take.',
-          },
-        ],
-        coveredBlockIndexes: [0, 1],
+        description: 'Dust drifts across the battered gate while Urban stands beside the cannon.',
         castMemberIds: [ids.castMemberId],
         locationIds: [ids.locationId],
+        screenplayBlockIndexes: [0, 1],
       },
       {
-        shotId: 'shot_002',
+        id: 'beat_002',
         title: 'Crew reaction',
-        storyBeat: 'The cannon crew absorbs the result.',
+        narrativeDevelopment: 'The cannon crew absorbs the result.',
         narrativePurpose: 'Show consequence through human response.',
         description: 'The crew watches the gate in silence.',
-        shotType: 'medium',
-        subject: 'The cannon crew',
-        action: 'The crew stills after impact.',
-        dialogue: [],
-        coveredBlockIndexes: [0],
         castMemberIds: [ids.castMemberId],
         locationIds: [ids.locationId],
+        screenplayBlockIndexes: [0],
       },
     ],
   };
 }
 
-async function seedTakeReferenceMedia(input: {
+async function seedProjectMedia(input: {
   runtime: StudioE2eRuntime;
   projectData: ProjectDataService;
   projectName: string;
   ids: SampleIds;
-  takeId: string;
 }): Promise<{
   lookbookId: string;
   profileAssetId: string;
@@ -621,7 +497,7 @@ async function seedTakeReferenceMedia(input: {
       provider: 'elevenlabs',
       model: 'eleven_v3',
       voiceId: 'voice_urban_primary',
-      purpose: 'Primary speaking voice for take persistence tests.',
+      purpose: 'Primary speaking voice for dialogue audio browser tests.',
       sample: {
         sourceProjectRelativePath:
           'generated/audio/urban-sample.mp3' as ProjectRelativePath,

@@ -89,13 +89,9 @@ describe('migrate database command', () => {
           'screenplay_analysis',
           'screenplay_analysis_state',
           'screenplay_revision',
-          'scene_shot_list',
-          'scene_shot_list_state',
-          'scene_shot_reference_asset',
-          'scene_shot_storyboard_image',
-          'scene_shot_video_take',
-          'scene_shot_video_take_shot',
-          'scene_shot_video_take_video',
+          'scene_beat_sheet',
+          'scene_beat_sheet_state',
+          'scene_beat_storyboard_image',
           'scene_dialogue_audio',
           'scene_dialogue_audio_take',
           'cast_voice_provider_registration',
@@ -110,6 +106,13 @@ describe('migrate database command', () => {
           'visual_language',
           'visual_language_asset',
           'scene_shot_storyboard_sheet',
+          'scene_shot_list',
+          'scene_shot_list_state',
+          'scene_shot_reference_asset',
+          'scene_shot_storyboard_image',
+          'scene_shot_video_take',
+          'scene_shot_video_take_shot',
+          'scene_shot_video_take_video',
           'location_environment_sheet',
           'location_environment_sheet_view',
           'scene_shot_video_take_output',
@@ -121,27 +124,17 @@ describe('migrate database command', () => {
       expect(
         readIndexForTable(
           sqlite,
-          'scene_shot_storyboard_image',
-          'scene_shot_storyboard_image_asset_idx'
+          'scene_beat_storyboard_image',
+          'scene_beat_storyboard_image_asset_idx'
         )
       ).toMatchObject({ isUnique: 0 });
-      expect(readColumnNames(sqlite, 'scene_shot_video_take')).not.toContain(
-        'regenerated_from_take_id'
-      );
       expect(
         readIndexForTable(
           sqlite,
           'media_generation_run',
           'media_generation_run_take_success_idx'
         )
-      ).toMatchObject({ isUnique: 1 });
-      expect(
-        readIndexForTable(
-          sqlite,
-          'scene_shot_video_take_video',
-          'scene_shot_video_take_video_take_id_unique'
-        )
-      ).toMatchObject({ isUnique: 1 });
+      ).toBeUndefined();
     } finally {
       sqlite.close();
     }

@@ -1,7 +1,5 @@
 import {
   createDiagnosticError,
-  createDiagnosticWarning,
-  type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { AssetTarget, TrashItemKind } from '../../client/index.js';
@@ -25,11 +23,6 @@ import {
   projectAssets,
   sceneAssets,
   sceneDialogueAudioTakes,
-  sceneShotVideoTakeImages,
-  sceneShotReferenceAssets,
-  sceneShotVideoTakeVideos,
-  sceneShotVideoTakeShots,
-  sceneShotVideoTakes,
   sequenceAssets,
 } from '../schema/index.js';
 import {
@@ -40,13 +33,6 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { countActiveSceneShotReferenceAssetOwners } from '../database/access/scene-shot-reference-assets.js';
-import {
-  countActiveSceneShotVideoTakeMediaOwners,
-  listActiveSceneShotVideoTakeOwnedMedia,
-  listSceneShotVideoTakeOwnedMediaConflicts,
-  type SceneShotVideoTakeOwnedMediaConflict,
-} from '../database/access/shot-video-take-media.js';
 import type {
   TrashFileDraft,
   TrashObjectDefinition,
@@ -609,296 +595,18 @@ const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
   },
 };
 
-const sceneShotVideoTakeDefinition: TrashObjectDefinition = {
-  itemKind: 'sceneShotVideoTake',
-  readTrashItems(input) {
-    const take = input.session.db
-      .select()
-      .from(sceneShotVideoTakes)
-      .where(
-        and(
-          eq(sceneShotVideoTakes.id, input.itemId),
-          isNull(sceneShotVideoTakes.discardedAt)
-        )
-      )
-      .get();
-    if (!take) {
-      return [];
-    }
-    const ownedAssetIds = listExclusiveSceneShotVideoTakeOwnedAssetIds(
-      input,
-      take.id
-    );
-    return [
-      {
-        itemKind: 'sceneShotVideoTake',
-        itemId: take.id,
-        ownerKind: 'scene',
-        ownerId: take.sceneId,
-        title: take.title,
-        restoreSnapshot: {
-          sceneId: take.sceneId,
-          wasPicked: take.isPicked,
-          ownedAssetIds,
-        },
-      },
-    ];
-  },
-  applyDiscard(input) {
-    const take = input.session.db
-      .select()
-      .from(sceneShotVideoTakes)
-      .where(eq(sceneShotVideoTakes.id, input.itemId))
-      .get();
-    if (!take) {
-      return;
-    }
-    const ownedAssetIds = listExclusiveSceneShotVideoTakeOwnedAssetIds(
-      input,
-      input.itemId
-    );
-    input.session.db
-      .update(sceneShotVideoTakes)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-        isPicked: false,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotVideoTakes.id, input.itemId))
-      .run();
-    input.session.db
-      .update(sceneShotVideoTakeShots)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-      })
-      .where(eq(sceneShotVideoTakeShots.takeId, input.itemId))
-      .run();
-    input.session.db
-      .update(sceneShotVideoTakeImages)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotVideoTakeImages.takeId, input.itemId))
-      .run();
-    input.session.db
-      .update(sceneShotVideoTakeVideos)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotVideoTakeVideos.takeId, input.itemId))
-      .run();
-    ownedAssetIds.forEach((assetId) =>
-      markAssetRecordAndFilesDiscarded({ ...input, itemId: assetId })
-    );
-  },
-  applyRestore(input) {
-    const snapshot = requireSceneShotVideoTakeSnapshot(
-      input.snapshot,
-      input.trashItem.id
-    );
-    const warnings: DiagnosticIssue[] = [];
-    const restoredPick = shouldRestoreSceneShotVideoTakePick(input, snapshot);
-    input.session.db
-      .update(sceneShotVideoTakes)
-      .set({
-        discardedAt: null,
-        discardOperationId: null,
-        restoredAt: input.now,
-        isPicked: restoredPick,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotVideoTakes.id, input.trashItem.itemId))
-      .run();
-    if (snapshot.wasPicked && !restoredPick) {
-      warnings.push(
-        restoreConflictWarning({
-          path: ['trashItem', input.trashItem.id, 'isPicked'],
-          message:
-            'The restored Scene Shot Video Take was not made picked because another active take is picked.',
-          suggestion:
-            'Review the active picked take before changing the scene take pick.',
-        })
-      );
-    }
-    input.session.db
-      .update(sceneShotVideoTakeShots)
-      .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-      .where(eq(sceneShotVideoTakeShots.takeId, input.trashItem.itemId))
-      .run();
-    input.session.db
-      .update(sceneShotVideoTakeImages)
-      .set({
-        discardedAt: null,
-        discardOperationId: null,
-        restoredAt: input.now,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotVideoTakeImages.takeId, input.trashItem.itemId))
-      .run();
-    input.session.db
-      .update(sceneShotVideoTakeVideos)
-      .set({
-        discardedAt: null,
-        discardOperationId: null,
-        restoredAt: input.now,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotVideoTakeVideos.takeId, input.trashItem.itemId))
-      .run();
-    snapshot.ownedAssetIds.forEach((assetId) =>
-      restoreAssetRecordAndFiles({
-        ...input,
-        trashItem: { ...input.trashItem, itemId: assetId },
-      })
-    );
-    return warnings;
-  },
-  collectFiles(input) {
-    const snapshot = requireSceneShotVideoTakeSnapshot(
-      input.snapshot,
-      input.trashItem.id
-    );
-    return snapshot.ownedAssetIds.flatMap((assetId) =>
-      collectAssetFiles(input, assetId)
-    );
-  },
-  resourceKeys() {
-    return ['trash:list'];
-  },
-  restoredChanges(input) {
-    return [{ type: 'sceneShotVideoTake.restored', takeId: input.itemId }];
-  },
-};
-
-const sceneShotReferenceAssetDefinition: TrashObjectDefinition = {
-  itemKind: 'sceneShotReferenceAsset',
-  readTrashItems(input) {
-    const relationship = input.session.db
-      .select({
-        id: sceneShotReferenceAssets.id,
-        sceneId: sceneShotReferenceAssets.sceneId,
-        shotListId: sceneShotReferenceAssets.shotListId,
-        shotId: sceneShotReferenceAssets.shotId,
-        assetId: sceneShotReferenceAssets.assetId,
-        assetFileId: sceneShotReferenceAssets.assetFileId,
-        sortOrder: sceneShotReferenceAssets.sortOrder,
-        title: assets.title,
-      })
-      .from(sceneShotReferenceAssets)
-      .innerJoin(assets, eq(sceneShotReferenceAssets.assetId, assets.id))
-      .where(and(
-        eq(sceneShotReferenceAssets.id, input.itemId),
-        isNull(sceneShotReferenceAssets.discardedAt)
-      ))
-      .get();
-    if (!relationship) {
-      return [];
-    }
-    return [{
-      itemKind: 'sceneShotReferenceAsset',
-      itemId: relationship.id,
-      ownerKind: 'sceneShot',
-      ownerId: relationship.shotId,
-      title: relationship.title,
-      restoreSnapshot: {
-        sceneId: relationship.sceneId,
-        shotListId: relationship.shotListId,
-        shotId: relationship.shotId,
-        assetId: relationship.assetId,
-        assetFileId: relationship.assetFileId,
-        sortOrder: relationship.sortOrder,
-      },
-    }];
-  },
-  applyDiscard(input) {
-    input.session.db
-      .update(sceneShotReferenceAssets)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotReferenceAssets.id, input.itemId))
-      .run();
-  },
-  applyRestore(input) {
-    input.session.db
-      .update(sceneShotReferenceAssets)
-      .set({
-        discardedAt: null,
-        discardOperationId: null,
-        restoredAt: input.now,
-        updatedAt: input.now,
-      })
-      .where(eq(sceneShotReferenceAssets.id, input.trashItem.itemId))
-      .run();
-  },
-  collectFiles() {
-    return [];
-  },
-  resourceKeys(input) {
-    return ['trash:list', `scene-shot:${input.ownerId ?? ''}`];
-  },
-  restoredChanges(input) {
-    return [{
-      type: 'sceneShotReferenceAsset.restored',
-      relationshipId: input.itemId,
-    }];
-  },
-};
-
-const unsupportedKinds = new Set<TrashItemKind>();
-
 const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinition>> = {
   asset: assetDefinition,
   assetRelationship: assetRelationshipDefinition,
   castVoice: castVoiceDefinition,
   sceneDialogueAudioTake: sceneDialogueAudioTakeDefinition,
-  sceneShotReferenceAsset: sceneShotReferenceAssetDefinition,
-  sceneShotVideoTake: sceneShotVideoTakeDefinition,
+
+
   inspirationFolder: inspirationFolderDefinition,
   inspirationImage: inspirationImageDefinition,
   lookbookImage: lookbookImageDefinition,
   lookbookSheet: lookbookSheetDefinition,
 };
-
-for (const kind of unsupportedKinds) {
-  trashObjectDefinitions[kind] = unsupportedDefinition(kind);
-}
-
-function unsupportedDefinition(kind: TrashItemKind): TrashObjectDefinition {
-  return {
-    itemKind: kind,
-    readTrashItems() {
-      throw new ProjectDataError(
-        'PROJECT_DATA267',
-        `Trash object kind is registered but not implemented yet: ${kind}.`
-      );
-    },
-    applyDiscard() {},
-    applyRestore() {},
-    collectFiles() {
-      return [];
-    },
-    resourceKeys() {
-      return ['trash:list'];
-    },
-    restoredChanges(input) {
-      return [{ type: 'trash.restored', itemKind: kind, itemId: input.itemId }];
-    },
-  };
-}
 
 function markLookbookImageDiscarded(input: TrashObjectDiscardContext): void {
   const image = input.session.db
@@ -1083,9 +791,7 @@ function countActiveAssetOwners(
       .all();
     return total + rows.length;
   }, 0);
-  return relationshipOwners +
-    countActiveSceneShotVideoTakeMediaOwners(session, assetId) +
-    countActiveSceneShotReferenceAssetOwners(session, assetId);
+  return relationshipOwners;
 }
 
 function assetTargetId(target: AssetTarget): string | null {
@@ -1148,59 +854,6 @@ function assertAssetRelationshipTargetId(itemId: string, targetId: string): void
     'PROJECT_DATA275',
     `Asset relationship trash id is missing target id: ${itemId}.`
   );
-}
-
-function listExclusiveSceneShotVideoTakeOwnedAssetIds(
-  input: TrashObjectDiscardContext,
-  takeId: string
-): string[] {
-  const ownedMedia = listActiveSceneShotVideoTakeOwnedMedia(
-    input.session,
-    takeId
-  );
-  const conflicts = listSceneShotVideoTakeOwnedMediaConflicts({
-    session: input.session,
-    takeId,
-    media: ownedMedia,
-  });
-  if (conflicts.length > 0) {
-    throw sharedTakeOwnedMediaError(conflicts);
-  }
-  return [...new Set(ownedMedia.map((row) => row.assetId))];
-}
-
-function sharedTakeOwnedMediaError(
-  conflicts: SceneShotVideoTakeOwnedMediaConflict[]
-): ProjectDataError {
-  return new ProjectDataError(
-    'PROJECT_DATA440',
-    `Shot video take-owned media is shared with another active owner: ${conflicts.map((conflict) => `${conflict.assetId}/${conflict.assetFileId} (${conflict.owner})`).join(', ')}.`,
-    {
-      suggestion:
-        'Attach distinct media to every active owner before deleting this Take.',
-    }
-  );
-}
-
-function shouldRestoreSceneShotVideoTakePick(
-  input: TrashObjectRestoreContext,
-  snapshot: { sceneId: string; wasPicked: boolean }
-): boolean {
-  if (!snapshot.wasPicked) {
-    return false;
-  }
-  const activePickedTake = input.session.db
-    .select({ id: sceneShotVideoTakes.id })
-    .from(sceneShotVideoTakes)
-    .where(
-      and(
-        eq(sceneShotVideoTakes.sceneId, snapshot.sceneId),
-        eq(sceneShotVideoTakes.isPicked, true),
-        isNull(sceneShotVideoTakes.discardedAt)
-      )
-    )
-    .get();
-  return !activePickedTake;
 }
 
 function markAssetTreeDiscarded(input: TrashObjectDiscardContext): void {
@@ -1368,44 +1021,6 @@ function requireDialogueTakeSnapshot(
   throw new ProjectDataError(
     'PROJECT_DATA270',
     `Scene Dialogue Audio take trash item snapshot is invalid: ${trashItemId}.`
-  );
-}
-
-function requireSceneShotVideoTakeSnapshot(
-  snapshot: Record<string, unknown>,
-  trashItemId: string
-): { sceneId: string; wasPicked: boolean; ownedAssetIds: string[] } {
-  if (
-    typeof snapshot.sceneId === 'string' &&
-    typeof snapshot.wasPicked === 'boolean' &&
-    isStringArray(snapshot.ownedAssetIds)
-  ) {
-    return {
-      sceneId: snapshot.sceneId,
-      wasPicked: snapshot.wasPicked,
-      ownedAssetIds: [...snapshot.ownedAssetIds],
-    };
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA271',
-    `Scene Shot Video Take trash item snapshot is invalid: ${trashItemId}.`
-  );
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
-}
-
-function restoreConflictWarning(input: {
-  path: string[];
-  message: string;
-  suggestion: string;
-}): DiagnosticIssue {
-  return createDiagnosticWarning(
-    'PROJECT_DATA279',
-    input.message,
-    { path: input.path },
-    input.suggestion
   );
 }
 

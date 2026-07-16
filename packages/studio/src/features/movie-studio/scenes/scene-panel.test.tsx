@@ -1,81 +1,68 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
+  SceneBeatSheetResourceResponse,
   SceneNarrativeResourceResponse,
-  SceneShotListResourceResponse,
 } from '@/services/studio-project-contracts';
 import {
+  readSceneBeatSheetResource,
   readSceneNarrativeResource,
-  readSceneShotListResource,
 } from '@/services/studio-screenplay-api';
-import { listShotVideoTakes } from '@/services/studio-shot-video-takes-api';
 import { ScenePanel } from './scene-panel';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
+  readSceneBeatSheetResource: vi.fn(),
   readSceneNarrativeResource: vi.fn(),
-  readSceneShotListResource: vi.fn(),
-}));
-
-vi.mock('@/services/studio-shot-video-takes-api', () => ({
-  createShotVideoTake: vi.fn(),
-  listShotVideoTakes: vi.fn(),
 }));
 
 describe('ScenePanel', () => {
   beforeEach(() => {
     vi.mocked(readSceneNarrativeResource).mockReset();
-    vi.mocked(readSceneShotListResource).mockReset();
-    vi.mocked(listShotVideoTakes).mockReset();
-    vi.mocked(listShotVideoTakes).mockResolvedValue({
-      takes: [],
-    });
+    vi.mocked(readSceneBeatSheetResource).mockReset();
+    vi.mocked(readSceneNarrativeResource).mockResolvedValue(sceneNarrative());
+    vi.mocked(readSceneBeatSheetResource).mockResolvedValue(sceneBeatSheet());
   });
 
-  it('opens the Takes tab when the same scene receives a shot deep link', async () => {
-    vi.mocked(readSceneNarrativeResource).mockResolvedValue(sceneNarrative());
-    vi.mocked(readSceneShotListResource).mockResolvedValue(sceneShotList());
-
-    const { rerender } = render(
+  it('opens the Beats tab for a Beat deep link', async () => {
+    render(
       <ScenePanel
         projectName='constantinople'
         sceneId='scene_hook'
+        beatId='beat_001'
         onSelect={vi.fn()}
       />
     );
 
-    await screen.findByText('Workers prepare the city walls before sunrise.');
     expect(
-      screen.getByRole('tab', { name: 'Narrative' }).getAttribute('aria-selected')
+      (await screen.findByRole('tab', { name: 'Beats' })).getAttribute(
+        'aria-selected'
+      )
     ).toBe('true');
+    expect(await screen.findAllByText('The city prepares')).toHaveLength(2);
+  });
 
-    rerender(
+  it('renders an inert New Shot control', async () => {
+    const onSelect = vi.fn();
+    render(
       <ScenePanel
         projectName='constantinople'
         sceneId='scene_hook'
-        shotId='shot_001'
-        onSelect={vi.fn()}
+        sceneTab='shots'
+        onSelect={onSelect}
       />
     );
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('tab', { name: 'Takes' }).getAttribute('aria-selected')
-      ).toBe('true');
-    });
-    await screen.findByText('No shot list yet.');
+    fireEvent.click(await screen.findByRole('button', { name: 'New Shot' }));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(readSceneBeatSheetResource).not.toHaveBeenCalled();
   });
 });
 
 function sceneNarrative(): SceneNarrativeResourceResponse {
   return {
-    act: {
-      id: 'act_one',
-      title: 'The Offer',
-      sequenceCount: 1,
-      sceneCount: 1,
-    },
+    act: { id: 'act_one', title: 'The Offer', sequenceCount: 1, sceneCount: 1 },
     sequence: {
       id: 'seq_offer',
       actId: 'act_one',
@@ -87,24 +74,10 @@ function sceneNarrative(): SceneNarrativeResourceResponse {
     scene: {
       id: 'scene_hook',
       title: 'The Sound That Opens Stone',
-      setting: {
-        interiorExterior: 'EXT',
-        locationIds: [],
-        timeOfDay: 'DAWN',
-      },
-      blocks: [
-        {
-          type: 'action',
-          text: 'Workers prepare the city walls before sunrise.',
-        },
-      ],
+      setting: { interiorExterior: 'EXT', locationIds: [], timeOfDay: 'DAWN' },
+      blocks: [{ type: 'action', text: 'Workers prepare the city walls.' }],
     },
-    blocks: [
-      {
-        type: 'action',
-        text: 'Workers prepare the city walls before sunrise.',
-      },
-    ],
+    blocks: [{ type: 'action', text: 'Workers prepare the city walls.' }],
     castMemberLabels: {},
     castMemberImages: {},
     locationLabels: {},
@@ -113,16 +86,8 @@ function sceneNarrative(): SceneNarrativeResourceResponse {
     dialogueAudio: {
       purpose: 'scene.dialogue-audio',
       target: { kind: 'scene', sceneId: 'scene_hook' },
-      project: {
-        name: 'constantinople',
-        title: 'Constantinople',
-        baseLanguageCode: null,
-      },
-      scene: {
-        id: 'scene_hook',
-        title: 'The Sound That Opens Stone',
-        settingLabel: 'EXT DAWN',
-      },
+      project: { name: 'constantinople', title: 'Constantinople', baseLanguageCode: null },
+      scene: { id: 'scene_hook', title: 'The Sound That Opens Stone', settingLabel: 'EXT DAWN' },
       dialogues: [],
       castMemberLabels: {},
       castVoicesByCastMemberId: {},
@@ -139,30 +104,31 @@ function sceneNarrative(): SceneNarrativeResourceResponse {
   };
 }
 
-function sceneShotList(): SceneShotListResourceResponse {
+function sceneBeatSheet(): SceneBeatSheetResourceResponse {
   return {
-    scene: {
-      id: 'scene_hook',
-      sequenceId: 'seq_offer',
-      title: 'The Sound That Opens Stone',
-    },
-    sequence: {
-      id: 'seq_offer',
-      actId: 'act_one',
-      number: 1,
-      title: 'The Offer',
-      sceneCount: 1,
-    },
-    act: {
-      id: 'act_one',
-      title: 'The Offer',
-      sequenceCount: 1,
-      sceneCount: 1,
-    },
+    scene: { id: 'scene_hook', sequenceId: 'seq_offer', title: 'The Sound That Opens Stone' },
+    sequence: { id: 'seq_offer', actId: 'act_one', number: 1, title: 'The Offer', sceneCount: 1 },
+    act: { id: 'act_one', title: 'The Offer', sequenceCount: 1, sceneCount: 1 },
     projectAspectRatio: '16:9',
-    activeShotListId: null,
-    activeShotList: null,
-    storyboardImagesByShotId: {},
+    activeBeatSheetId: 'scene_beat_sheet_001',
+    activeBeatSheet: {
+      kind: 'sceneBeatSheet',
+      sceneId: 'scene_hook',
+      title: 'Opening Beats',
+      summary: 'The city prepares.',
+      narrativeProgression: 'The threat becomes immediate.',
+      beats: [{
+        id: 'beat_001',
+        title: 'The city prepares',
+        description: 'Workers ready the walls.',
+        narrativeDevelopment: 'The threat becomes immediate.',
+        narrativePurpose: 'Establish collective urgency.',
+        castMemberIds: [],
+        locationIds: [],
+        screenplayBlockIndexes: [0],
+      }],
+    },
+    storyboardImagesByBeatId: {},
     castMemberLabels: {},
     castMemberImages: {},
     locationLabels: {},

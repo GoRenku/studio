@@ -6,12 +6,12 @@ import {
 
 test('opens media preview, updates profile pick, and refreshes after resource change', async ({
   page,
-  shotVideoTakeProject,
+  movieProject,
   studioE2eRuntime,
 }) => {
   const movieStudio = new MovieStudioPage(page);
 
-  await movieStudio.gotoCastMember(shotVideoTakeProject);
+  await movieStudio.gotoCastMember(movieProject);
   await movieStudio.openCastAssetsTab();
 
   await movieStudio.openProfileImagePreview({
@@ -22,10 +22,10 @@ test('opens media preview, updates profile pick, and refreshes after resource ch
 
   await importAdditionalCastProfileImage({
     runtime: studioE2eRuntime,
-    project: shotVideoTakeProject,
+    project: movieProject,
     relativePath: 'generated/media/urban-refreshed-profile.png',
     title: 'urban-refreshed-profile',
   });
-  await movieStudio.publishCastAssetResourceChange(shotVideoTakeProject);
+  await movieStudio.publishCastAssetResourceChange(movieProject);
   await movieStudio.expectProfileImageVisible('Urban Refreshed Profile');
 });

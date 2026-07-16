@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import type {
+  StudioE2eMovieProject,
   StudioE2eProject,
-  StudioE2eShotVideoTakeProject,
 } from '../fixtures/studio-e2e-project';
 
 export class MovieStudioPage {
@@ -58,17 +58,13 @@ export class MovieStudioPage {
     await this.page.goto(`/projects/${encodeURIComponent(project.projectName)}`);
   }
 
-  async gotoScene(project: StudioE2eShotVideoTakeProject): Promise<void> {
-    await this.page.goto(sceneRoute(project));
-  }
-
-  async gotoAct(project: StudioE2eShotVideoTakeProject): Promise<void> {
+  async gotoAct(project: StudioE2eMovieProject): Promise<void> {
     await this.page.goto(
       `/projects/${encodeURIComponent(project.projectName)}/acts/${encodeURIComponent(project.actId)}`
     );
   }
 
-  async gotoSequence(project: StudioE2eShotVideoTakeProject): Promise<void> {
+  async gotoSequence(project: StudioE2eMovieProject): Promise<void> {
     await this.page.goto(
       `/projects/${encodeURIComponent(project.projectName)}/sequences/${encodeURIComponent(project.sequenceId)}`
     );
@@ -78,7 +74,7 @@ export class MovieStudioPage {
     await expect(
       this.page.getByRole('button', { name: 'The Bombardment', exact: true })
     ).toBeVisible();
-    await expect(this.page.getByText('1 scenes · 2 shots')).toBeVisible();
+    await expect(this.page.getByText('1 scenes · 2 beats')).toBeVisible();
   }
 
   async expectSequenceVisible(): Promise<void> {
@@ -87,150 +83,10 @@ export class MovieStudioPage {
     await expect(this.page.getByText('EXT / DAY')).toBeVisible();
   }
 
-  async gotoTakeEditor(
-    project: StudioE2eShotVideoTakeProject,
-    input: { shotId?: string; tab?: SceneShotDetailTab } = {}
-  ): Promise<void> {
-    await this.page.goto(takeEditorRoute(project, input));
-  }
-
-  async gotoCastMember(project: StudioE2eShotVideoTakeProject): Promise<void> {
+  async gotoCastMember(project: StudioE2eMovieProject): Promise<void> {
     await this.page.goto(
       `/projects/${encodeURIComponent(project.projectName)}/cast/${encodeURIComponent(project.castMemberId)}`
     );
-  }
-
-  async expectSceneVisible(): Promise<void> {
-    await expect(
-      this.page.getByRole('heading', { name: 'Ceremony Becomes Physics' })
-    ).toBeVisible();
-  }
-
-  async expectTakeEditorVisible(): Promise<void> {
-    await expect(
-      this.page.getByRole('button', { name: 'Shot 1 — Gate pressure' })
-    ).toBeVisible();
-    await expect(
-      this.page.getByRole('tab', { name: 'Composition' })
-    ).toBeVisible();
-  }
-
-  async openShotDetailTab(tab: SceneShotDetailTab): Promise<void> {
-    await this.page.getByRole('tab', { name: tabLabel(tab) }).click();
-  }
-
-  async expectSeededCompositionVisible(): Promise<void> {
-    await this.openShotDetailTab('composition');
-    await expect(
-      this.page.getByRole('button', { name: 'Close-Up', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      this.page.getByRole('button', { name: 'Single', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      this.page.getByRole('button', { name: 'Low Angle', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      this.page.getByRole('button', { name: 'Left', exact: true }).first()
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(this.page.getByLabel('Lens millimeters')).toHaveValue('85');
-    await expect(
-      this.page.getByPlaceholder('Custom composition...')
-    ).toHaveValue('The gate fills the frame with severe pressure.');
-  }
-
-  async expectSeededMotionVisible(): Promise<void> {
-    await this.openShotDetailTab('motion');
-    await expect(
-      this.page.getByRole('button', { name: 'Push In', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      this.page.getByRole('button', { name: 'Forward', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      this.page.getByRole('button', { name: 'Straight', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      this.page.getByRole('button', { name: 'Dolly', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(this.page.getByPlaceholder('Custom motion…')).toHaveValue(
-      'A slow push tightens the pressure on the gate.'
-    );
-  }
-
-  async expectSeededReferencesVisible(): Promise<void> {
-    await this.openShotDetailTab('references');
-    await expect(
-      this.page.getByRole('button', {
-        name: 'Imperial Wound Sheet',
-        exact: true,
-      })
-    ).toBeVisible();
-    await expect(
-      this.page.getByRole('button', {
-        name: 'Urban',
-        exact: true,
-      })
-    ).toBeVisible();
-    await expect(
-      this.page.getByRole('button', {
-        name: 'Gate Location Sheet',
-        exact: true,
-      })
-    ).toBeVisible();
-  }
-
-  async expectSeededDialogsVisible(): Promise<void> {
-    await this.openShotDetailTab('dialogs');
-    await expect(this.page.getByText('Hold the gate.')).toBeVisible();
-    await expect(this.page.getByText('Urban', { exact: true })).toBeVisible();
-  }
-
-  async expectSeededAiProductionVisible(): Promise<void> {
-    await this.openShotDetailTab('ai-production');
-    await expect(
-      this.page.getByRole('button', { name: 'Text only', exact: true })
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      this.page.getByText('Seedance 2.0', { exact: true }).first()
-    ).toBeVisible();
-  }
-
-  async closeTakeWorkspace(): Promise<void> {
-    await this.page.getByLabel('Close take workspace').click();
-  }
-
-  async openTakeCard(title: string): Promise<void> {
-    await this.page.getByRole('button', { name: title, exact: true }).click();
-    await this.expectTakeEditorVisible();
-  }
-
-  async selectFirstShot(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Shot 1 — Gate pressure' }).click();
-  }
-
-  async addSecondShotToCurrentTake(): Promise<void> {
-    await this.page
-      .getByRole('button', { name: 'Expand Select for Shot 2' })
-      .click({ force: true });
-    await this.page.getByRole('button', { name: 'Edit Mode' }).click();
-    await expect(
-      this.page.getByRole('dialog', { name: 'Edit Mode' })
-    ).toBeVisible();
-    await this.page.getByRole('button', { name: 'Apply' }).click();
-    await expect(
-      this.page.getByRole('dialog', { name: 'Edit Mode' })
-    ).toBeHidden();
-    await this.page
-      .getByRole('button', { name: 'Shot 2 — Crew reaction' })
-      .click();
-  }
-
-  async expectCurrentTakeIncludesTwoShots(): Promise<void> {
-    await expect(this.page.getByText('2 shots')).toBeVisible();
-    await expect(
-      this.page.getByRole('button', { name: 'Shot 2 — Crew reaction' })
-    ).toBeVisible();
   }
 
   async openCastAssetsTab(): Promise<void> {
@@ -264,7 +120,7 @@ export class MovieStudioPage {
   }
 
   async publishCastAssetResourceChange(
-    project: StudioE2eShotVideoTakeProject
+    project: StudioE2eMovieProject
   ): Promise<void> {
     await this.page.evaluate(
       ({ projectName, castMemberId }) => {
@@ -282,42 +138,5 @@ export class MovieStudioPage {
         castMemberId: project.castMemberId,
       }
     );
-  }
-}
-
-type SceneShotDetailTab =
-  | 'description'
-  | 'composition'
-  | 'motion'
-  | 'dialogs'
-  | 'references'
-  | 'ai-production';
-
-function sceneRoute(project: StudioE2eShotVideoTakeProject): string {
-  return `/projects/${encodeURIComponent(project.projectName)}/scenes/${encodeURIComponent(project.sceneId)}`;
-}
-
-function takeEditorRoute(
-  project: StudioE2eShotVideoTakeProject,
-  input: { shotId?: string; tab?: SceneShotDetailTab } = {}
-): string {
-  const search = new URLSearchParams({
-    sceneTab: 'takes',
-    takeMode: 'edit',
-    take: project.take.takeId,
-    shot: input.shotId ?? project.firstShotId,
-  });
-  if (input.tab) {
-    search.set('shotTab', input.tab);
-  }
-  return `${sceneRoute(project)}?${search.toString()}`;
-}
-
-function tabLabel(tab: SceneShotDetailTab): string {
-  switch (tab) {
-    case 'ai-production':
-      return 'AI Production';
-    default:
-      return tab.charAt(0).toUpperCase() + tab.slice(1);
   }
 }

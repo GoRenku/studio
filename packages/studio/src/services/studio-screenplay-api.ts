@@ -7,7 +7,7 @@ import type {
   LocationResourceResponse,
   SceneNarrativeResourceResponse,
   SceneNavigationPageResponse,
-  SceneShotListResourceResponse,
+  SceneBeatSheetResourceResponse,
   SequenceNavigationPageResponse,
   SequenceResourceResponse,
   StoryArcResourceResponse,
@@ -152,12 +152,12 @@ export async function readSceneNarrativeResource(
   };
 }
 
-export async function readSceneShotListResource(
+export async function readSceneBeatSheetResource(
   projectName: string,
   sceneId: string
-): Promise<SceneShotListResourceResponse> {
+): Promise<SceneBeatSheetResourceResponse> {
   return readResource(
-    screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/shot-list`)
+    screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/beat-sheet`)
   );
 }
 

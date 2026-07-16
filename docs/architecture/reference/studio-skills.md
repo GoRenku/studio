@@ -85,7 +85,7 @@ operational companions that teach agents how to use those contracts.
 - Preserves stable guide placement ids and separately assigns every included
   exact reference to a real provider media field.
 - Treats `facts.contextText` as opaque authored source context and keeps
-  continuity relevance, Shot batching, and creative fallback decisions in the
+  continuity relevance, Beat batching, and creative fallback decisions in the
   agent workflow.
 - Uses exact registered `asset-file` references or normalized `project-file`
   references; it never invents asset identities or provenance.
@@ -93,21 +93,16 @@ operational companions that teach agents how to use those contracts.
   explicit enough to review.
 - Estimates cost and runs only approved specs.
 - Imports finished files only through current focused attachment purposes.
-- For `shot.video-take`, reads the exact Core purpose context for `take:<id>`,
-  places exact Shot/Lookbook/Cast/Location/dialogue references in stable guide
-  slots, and assigns them to real provider fields before validation.
-- For ad hoc Shot reference images, authors separate generic `image.create`
-  specs and reuses the exact output path as a `project-file` reference until a
-  current focused destination attaches it. External media uses the same exact
-  file contract without a synthetic spec or receipt.
+- Does not create Shot Video Takes, Take-owned media, or Shot video generation
+  specs. Those contracts were removed by Decision 0052.
 - Treats Lookbook Image import and Lookbook section/point placement as separate
   owning commands.
 - Shows one or more ordinary requests in the Generation Preview Dialog with
   repeated `--file` values for transient specs or repeated `--spec` values for
   saved specs. Multi-request display never combines estimates, approvals, or
   runs.
-- For `scene.storyboard-sheet`, reads the exact Scene Shot List, batches one to
-  four Shots, inspects and includes the project Storyboard Lookbook,
+- For `scene.storyboard-sheet`, reads the exact Scene Beat Sheet, batches one
+  to four Beats, inspects and includes the project Storyboard Lookbook,
   Cast, and Location references, and stops for user direction when needed
   continuity media is unavailable.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
@@ -116,26 +111,26 @@ operational companions that teach agents how to use those contracts.
 `movie-director`
 
 - Coordinates screenplay, analysis, visual language, cast, production design,
-  shot design, media generation, and production readiness workflows.
+  Beat design, media generation, and production readiness workflows.
 - Starts broad or cross-department requests with `renku director context`.
 - Dispatches durable artifact work to specialist skills instead of writing
   department documents directly.
 - Routes cast work to `casting-director`, production-design/location work to
-  `production-designer`, shot coverage to `scene-shot-designer`, and media
+  `production-designer`, Beat design to `scene-beat-designer`, and media
   generation to `media-producer`.
 
-`scene-shot-designer`
+`scene-beat-designer`
 
-- Designs and persists Scene Shot Lists for individual screenplay scenes.
-- Uses `renku screenplay shot-list context` to read screenplay blocks,
+- Designs and persists Scene Beat Sheets for individual screenplay scenes.
+- Uses `renku screenplay beat-sheet context` to read screenplay blocks,
   referenced cast, referenced locations, Production Lookbook guidance, and
-  active shot list history.
-- Writes validated `kind: "sceneShotList"` JSON through the CLI.
-- Hands storyboard image requests to `media-producer` after a valid Scene Shot
-  List exists and uses the Storyboard Lookbook when available. The
+  active Beat Sheet history.
+- Writes validated `kind: "sceneBeatSheet"` JSON through the CLI.
+- Hands storyboard image requests to `media-producer` after a valid Scene Beat
+  Sheet exists and uses the Storyboard Lookbook when available. The
   media-producer skill owns
   non-blocking Storyboard Lookbook Sheet guidance, `scene.storyboard-sheet`
-  generation specs, visual inspection, slicing, and per-shot storyboard image
+  generation specs, visual inspection, slicing, and per-Beat storyboard image
   import.
 
 ## Skill Rules
@@ -152,9 +147,9 @@ Skills must not:
 - store absolute paths in authored JSON documents;
 - run paid generation without estimate review and explicit live provider approval;
 - override user-selected generation controls.
-- store generated storyboard image paths inside Scene Shot List JSON;
-- add analog shooting logistics such as setup minutes, crew assignments, or
-  call-sheet timing to Scene Shot List documents.
+- store generated storyboard image paths inside Scene Beat Sheet JSON;
+- add framing, lens, camera movement, coverage, analog shooting logistics, or
+  call-sheet timing to Scene Beat Sheet documents.
 - mutate Cast Members or Locations through screenplay operation documents;
 - store generated media paths inside Cast Design or Location Design JSON;
 - treat costume variants, props, or set dressing as media targets until those

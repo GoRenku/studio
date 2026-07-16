@@ -100,15 +100,19 @@ export function studioSceneShotsResourceKey(sceneId: string): string {
   return `surface:scene:${sceneId}:shots`;
 }
 
-export function studioSceneShotListResourceKey(shotListId: string): string {
-  return `scene-shot-list:${shotListId}`;
+export function studioSceneBeatsResourceKey(sceneId: string): string {
+  return `surface:scene:${sceneId}:beats`;
 }
 
-export function studioSceneShotResourceKey(
-  shotListId: string,
-  shotId: string
+export function studioSceneBeatSheetResourceKey(beatSheetId: string): string {
+  return `scene-beat-sheet:${beatSheetId}`;
+}
+
+export function studioBeatResourceKey(
+  beatSheetId: string,
+  beatId: string
 ): string {
-  return `scene-shot-list:${shotListId}:shot:${shotId}`;
+  return `scene-beat-sheet:${beatSheetId}:beat:${beatId}`;
 }
 
 export function studioAssetResourceKey(target: AssetTarget): string {

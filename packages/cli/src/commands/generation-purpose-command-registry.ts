@@ -39,7 +39,6 @@ const targetParsers: Record<GenerationTarget['kind'], (value: string, purpose: G
   location: (value) => ({ kind: 'location', id: parseLocationTarget(value, 'Location generation') }),
   scene: (value) => ({ kind: 'scene', id: parseSceneTarget(value, 'Scene generation') }),
   sceneDialogue: (value) => ({ kind: 'sceneDialogue', id: parseSceneDialogueTarget(value, 'Dialogue generation').dialogueId }),
-  sceneShotVideoTake: (value, purpose) => ({ kind: 'sceneShotVideoTake', id: parsePrefixedTarget(value, 'take', purpose) }),
 };
 
 function parsePrefixedTarget(value: string, prefix: string, purpose: GenerationPurpose): string {

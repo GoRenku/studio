@@ -360,8 +360,6 @@ function focusSummary(current: StudioCurrent): string | null {
     return [
       `Scene ${context.title}`,
       context.sceneTab.label,
-      context.shot?.label,
-      context.shot?.activeTab.label,
     ]
       .filter(Boolean)
       .join(' > ');

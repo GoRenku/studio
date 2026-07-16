@@ -11,8 +11,8 @@ import type {
 } from './screenplay.js';
 import type { ScreenplayAnalysisDocument } from './screenplay-analysis.js';
 import type {
-  SceneShotListDocument,
-} from './scene-shot-list.js';
+  SceneBeatSheetDocument,
+} from './scene-beat-sheet.js';
 import type {
   ProjectCounts,
   ProjectCoverImage,
@@ -166,9 +166,9 @@ export interface SequenceSceneRow extends SceneNavigationRow {
 }
 
 export interface SequenceSceneStoryboardPreview {
-  shotListId: string;
+  beatSheetId: string;
   images: Array<{
-    shotId: string;
+    beatId: string;
     image: ScreenplayImageReference | null;
   }>;
 }
@@ -179,14 +179,14 @@ export interface SequenceResource {
   scenes: PageResponse<SequenceSceneRow>;
 }
 
-export interface SceneShotListResource {
+export interface SceneBeatSheetResource {
   scene: SceneNavigationRow;
   sequence: SequenceNavigationRow;
   act: ActNavigationRow;
   projectAspectRatio: string | null;
-  activeShotListId: string | null;
-  activeShotList: SceneShotListDocument | null;
-  storyboardImagesByShotId: Record<string, ScreenplayImageReference>;
+  activeBeatSheetId: string | null;
+  activeBeatSheet: SceneBeatSheetDocument | null;
+  storyboardImagesByBeatId: Record<string, ScreenplayImageReference>;
   castMemberLabels: Record<string, string>;
   castMemberImages: Record<string, ScreenplayImageReference>;
   locationLabels: Record<string, string>;
@@ -204,12 +204,12 @@ export interface ActStoryboardSequence {
 
 export interface ActStoryboardScene {
   scene: SceneNavigationRow;
-  shots: ActStoryboardShot[]; // empty -> render one scene placeholder slot
+  beats: ActStoryboardBeat[]; // empty -> render one scene placeholder slot
 }
 
-export interface ActStoryboardShot {
-  shotId: string;
-  label: string; // app-derived ('Shot 1')
+export interface ActStoryboardBeat {
+  beatId: string;
+  label: string; // app-derived ('Beat 1')
   title: string;
   image: ScreenplayImageReference | null;
 }
@@ -342,23 +342,17 @@ export interface DirectorProductionDesignReadiness {
 
 export interface DirectorSceneReadiness {
   sceneId: string;
-  shotId: string | null;
-  activeShotListId: string | null;
-  shotCount: number;
+  beatId: string | null;
+  activeBeatSheetId: string | null;
+  beatCount: number;
   storyboardStatus:
     | {
         available: false;
-        missingShotIds: [];
+        missingBeatIds: [];
       }
     | {
         available: true;
-        missingShotIds: string[];
-  };
-  shotVideo: {
-    generationAvailable: boolean;
-    selectedTakeId: string | null;
-    selectedTakeMode: 'continuous' | 'multi-cut' | null;
-    selectedShotIds: string[];
+        missingBeatIds: string[];
   };
 }
 
@@ -369,9 +363,8 @@ export type DirectorNextStepId =
   | 'author-storyboard-lookbook'
   | 'design-cast'
   | 'design-production'
-  | 'design-shot-list'
-  | 'generate-storyboards'
-  | 'generate-shot-video';
+  | 'design-beat-sheet'
+  | 'generate-storyboards';
 
 export interface DirectorNextStep {
   id: DirectorNextStepId;
@@ -394,20 +387,7 @@ export type StudioSelectionContextResult =
       diagnostics: DiagnosticIssue[];
 };
 
-export type ScenePanelTab = 'narrative' | 'shots' | 'takes';
-
-export type SceneTakeWorkspaceMode = 'list' | 'new' | 'edit';
-
-export type SceneShotDetailTab =
-  | 'description'
-  | 'lookbook'
-  | 'composition'
-  | 'motion'
-  | 'dialogs'
-  | 'cast'
-  | 'location'
-  | 'references'
-  | 'ai-production';
+export type ScenePanelTab = 'narrative' | 'beats' | 'shots';
 
 export type StudioSelection =
   | { type: 'projectInformation' }
@@ -425,10 +405,7 @@ export type StudioSelection =
       type: 'scene';
       id: string;
       sceneTab?: ScenePanelTab;
-      shotId?: string;
-      takeWorkspaceMode?: SceneTakeWorkspaceMode;
-      takeId?: string;
-      shotTab?: SceneShotDetailTab;
+      beatId?: string;
     };
 
 export type StudioSelectionContext =

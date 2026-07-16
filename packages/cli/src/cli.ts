@@ -19,7 +19,6 @@ import { runLocationCommand } from './commands/location-command.js';
 import { runMediaCommand } from './commands/media-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
-import { runProductionCommand } from './commands/production-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runStudioCommand } from './commands/studio-command.js';
@@ -61,7 +60,6 @@ Commands
   director context     Show director readiness for the current movie project
   location             Author location facts
   production-design    Author Location Design documents
-  production export    Export picked Shot Video Take media
   info show            Show project information
   info set             Update project information
   info clear           Clear optional project information fields
@@ -111,15 +109,15 @@ Options
   --revision           Screenplay revision id
   --scene              Scene id for scene-owned commands
   --dialogue           Scene dialogue id
-  --take               Scene Dialogue Audio take id or Shot Video Take id
-  --shot-list          Scene Shot List id
-  --shots              Comma-separated shot ids for take creation or storyboard imports
-  --kind               Lookbook role or Shot video take input kind
+  --take               Scene Dialogue Audio take id
+  --beat-sheet         Scene Beat Sheet id
+  --beats              Comma-separated Beat ids for storyboard imports
+  --kind               Lookbook role
   --selection          Media import selection: select or take
                        Director context selection: Studio selection JSON
   --replace-selected   Replace the currently selected prepared input in the same slot
   --include-visual-references
-                       Include selected visual references in shot-list context
+                       Include selected visual references in Beat Sheet context
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
   --lookbook           Lookbook id
@@ -130,10 +128,8 @@ Options
   --name               Inspiration folder name
   --sections           Comma-separated Lookbook section keys
   --anchor             Production Lookbook point id for Lookbook image placement
-  --all-locales        Export every locale with production selects
-  --dry-run            Report production export operations without writing
+  --dry-run            Validate an operation without writing
   --simulate           Run generation without calling a paid provider
-  --fresh              Rebuild production export manifest
   --title              Project title
   --aspect-ratio       Project aspect ratio
   --logline            Project logline
@@ -262,10 +258,10 @@ function createCliFlags() {
     take: {
       type: 'string',
     },
-    shotList: {
+    beatSheet: {
       type: 'string',
     },
-    shots: {
+    beats: {
       type: 'string',
     },
     kind: {
@@ -316,19 +312,11 @@ function createCliFlags() {
     anchor: {
       type: 'string',
     },
-    allLocales: {
-      type: 'boolean',
-      default: false,
-    },
     dryRun: {
       type: 'boolean',
       default: false,
     },
     simulate: {
-      type: 'boolean',
-      default: false,
-    },
-    fresh: {
       type: 'boolean',
       default: false,
     },
@@ -501,20 +489,6 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
-      case 'production':
-        return await runProductionCommand({
-          input,
-          flags: {
-            project: cli.flags.project,
-            locale: cli.flags.locale,
-            allLocales: cli.flags.allLocales,
-            dryRun: cli.flags.dryRun,
-            fresh: cli.flags.fresh,
-          },
-          json: cli.flags.json,
-          io,
-          homeDir: options.homeDir,
-        });
       case 'production-design':
         return await runProductionDesignCommand({
           input,
@@ -557,8 +531,6 @@ export async function runRenkuCli(
             file: generationPreviewFlags.file ?? cli.flags.file,
             spec: generationPreviewFlags.spec ?? cli.flags.spec,
             run: cli.flags.run,
-            shotList: cli.flags.shotList,
-            shots: cli.flags.shots,
             scene: cli.flags.scene,
             dialogue: cli.flags.dialogue,
             take: cli.flags.take,
@@ -604,8 +576,8 @@ export async function runRenkuCli(
             anchor: cli.flags.anchor,
             receipt: cli.flags.receipt,
             sourceSheet: cli.flags.sourceSheet,
-            shotList: cli.flags.shotList,
-            shots: cli.flags.shots,
+            beatSheet: cli.flags.beatSheet,
+            beats: cli.flags.beats,
             take: cli.flags.take,
             kind: cli.flags.kind,
             selection: cli.flags.selection,
@@ -645,7 +617,7 @@ export async function runRenkuCli(
             analysis: cli.flags.analysis,
             revision: cli.flags.revision,
             scene: cli.flags.scene,
-            shotList: cli.flags.shotList,
+            beatSheet: cli.flags.beatSheet,
             includeVisualReferences: cli.flags.includeVisualReferences,
             sequence: cli.flags.sequence,
             dryRun: cli.flags.dryRun,

@@ -5,7 +5,6 @@ export type {
   ProjectMediaKind,
   ProjectReferenceFileValidation,
   ProjectTemporaryFileDestination,
-  ShotVideoTakeMediaRole,
 } from './types.js';
 export {
   commitProjectAssetFileWriteSet,
@@ -15,8 +14,6 @@ export {
 } from './write-set.js';
 export { validateProjectReferenceFileInput } from './reference-validation.js';
 export {
-  copyTakeOwnedProjectAssetFile,
-  copyTakeOwnedProjectAssetFileSync,
   persistProjectAssetFile,
   persistProjectAssetFileSync,
   removeCopiedProjectAssetFile,
@@ -28,8 +25,4 @@ export {
   writeProjectTemporaryFile,
 } from './temporary-files.js';
 export { allocateImageEditOutputNames } from './destinations/image-edit.js';
-export { persistSceneStoryboardShotFilesSync } from './destinations/scene-storyboard.js';
-export {
-  resolveShotVideoTakeMediaFolder,
-  resolveShotVideoTakeMediaFolderSync,
-} from './destinations/shot-video-take.js';
+export { persistSceneStoryboardBeatFilesSync } from './destinations/scene-storyboard.js';

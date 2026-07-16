@@ -12,9 +12,7 @@ import type {
 import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 import {
   SCENE_PANEL_TABS,
-  SCENE_SHOT_DETAIL_TABS,
   type ScenePanelTab,
-  type SceneShotDetailTab,
 } from '@/features/movie-studio/movie-studio-selection';
 
 type StudioRoute =
@@ -374,22 +372,8 @@ function readStudioRoute(): StudioRoute {
   if (sceneRoute?.[1] && sceneRoute[2]) {
     const search = new URLSearchParams(window.location.search);
     const sceneTabParam = search.get('sceneTab');
-    const shotParam = search.get('shot');
-    const shotTabParam = search.get('shotTab');
-    const takeWorkspaceModeParam = search.get('takeMode');
-    const takeParam = search.get('take');
-    const sceneTab = sceneTabParam
-      ? readScenePanelTab(sceneTabParam)
-      : shotParam || shotTabParam
-        ? 'takes'
-        : undefined;
-    const shotTab = shotTabParam
-      ? readSceneShotDetailTab(shotTabParam)
-      : undefined;
-    const takeWorkspaceMode =
-      takeWorkspaceModeParam === 'new' || takeWorkspaceModeParam === 'edit'
-        ? takeWorkspaceModeParam
-        : undefined;
+    const beatParam = search.get('beat');
+    const sceneTab = sceneTabParam ? readScenePanelTab(sceneTabParam) : undefined;
     if (sceneTabParam && !sceneTab) {
       return {
         screen: 'movieStudio',
@@ -398,31 +382,19 @@ function readStudioRoute(): StudioRoute {
         routeError: `Unknown scene tab: ${sceneTabParam}`,
       };
     }
-    if (shotTabParam && !shotTab) {
+    if (beatParam && sceneTab !== 'beats') {
       return {
         screen: 'movieStudio',
         projectName: decodeURIComponent(sceneRoute[1]),
         selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
-        routeError: `Unknown shot tab: ${shotTabParam}`,
+        routeError: 'Beat route state requires sceneTab=beats.',
       };
     }
-    if (sceneTab === 'narrative' && (shotParam || shotTabParam)) {
-      return {
-        screen: 'movieStudio',
-        projectName: decodeURIComponent(sceneRoute[1]),
-        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
-        routeError: 'Shot route state requires sceneTab=takes.',
-      };
-    }
-    const shotId = shotParam || undefined;
     const selection: StudioSelection = {
       type: 'scene',
       id: decodeURIComponent(sceneRoute[2]),
       ...(sceneTab ? { sceneTab } : {}),
-      ...(shotId ? { shotId } : {}),
-      ...(takeWorkspaceMode ? { takeWorkspaceMode } : {}),
-      ...(takeParam ? { takeId: takeParam } : {}),
-      ...(shotTab ? { shotTab } : {}),
+      ...(beatParam ? { beatId: beatParam } : {}),
     };
     return {
       screen: 'movieStudio',
@@ -650,25 +622,12 @@ function studioSelectionRoutePath(
   if (selection.type === 'scene') {
     const base = `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;
     const params = new URLSearchParams();
-    const effectiveSceneTab =
-      selection.sceneTab ??
-      (selection.shotId || selection.shotTab || selection.takeId
-        ? 'takes'
-        : 'narrative');
+    const effectiveSceneTab = selection.sceneTab ?? 'narrative';
     if (effectiveSceneTab !== 'narrative') {
       params.set('sceneTab', effectiveSceneTab);
     }
-    if (selection.shotId) {
-      params.set('shot', selection.shotId);
-    }
-    if (selection.takeWorkspaceMode && selection.takeWorkspaceMode !== 'list') {
-      params.set('takeMode', selection.takeWorkspaceMode);
-    }
-    if (selection.takeId) {
-      params.set('take', selection.takeId);
-    }
-    if (selection.shotTab && selection.shotTab !== 'description') {
-      params.set('shotTab', selection.shotTab);
+    if (selection.beatId) {
+      params.set('beat', selection.beatId);
     }
     const query = params.toString();
     return query ? `${base}?${query}` : base;
@@ -694,11 +653,5 @@ function currentRoutePath(): string {
 function readScenePanelTab(value: string): ScenePanelTab | null {
   return SCENE_PANEL_TABS.includes(value as ScenePanelTab)
     ? (value as ScenePanelTab)
-    : null;
-}
-
-function readSceneShotDetailTab(value: string): SceneShotDetailTab | null {
-  return SCENE_SHOT_DETAIL_TABS.includes(value as SceneShotDetailTab)
-    ? (value as SceneShotDetailTab)
     : null;
 }

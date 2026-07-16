@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 
 const serverRoot = path.dirname(fileURLToPath(import.meta.url));
 const routeRoot = path.join(serverRoot, 'routes');
-const httpRoot = path.join(serverRoot, 'http');
 
 interface ForbiddenSourcePattern {
   label: string;
@@ -20,38 +19,6 @@ interface ArchitectureFinding {
   pattern: string;
   reason: string;
 }
-
-const routeForbiddenPatterns: ForbiddenSourcePattern[] = [
-  {
-    label: 'durable take state type',
-    pattern: /\bSceneShotVideoTakeState\b/,
-    reason: 'routes must not accept or assemble durable take state',
-  },
-  {
-    label: 'state patch payload',
-    pattern: /\bstatePatch\b/,
-    reason: 'routes must not assemble durable take state patches',
-  },
-  {
-    label: 'durable take direction map',
-    pattern: /\bdirectionsByShotId\b/,
-    reason: 'routes must not inspect durable take direction maps',
-  },
-];
-
-const httpForbiddenPatterns: ForbiddenSourcePattern[] = [
-  {
-    label: 'durable take state type',
-    pattern: /\bSceneShotVideoTakeState\b/,
-    reason: 'HTTP helpers must not accept or assemble durable take state',
-  },
-  {
-    label: 'state patch payload',
-    pattern: /\bstatePatch\b/,
-    reason:
-      'HTTP helpers may parse request fields but must not build durable state patches',
-  },
-];
 
 const routeForbiddenImports: ForbiddenSourcePattern[] = [
   {
@@ -77,34 +44,6 @@ const routeForbiddenImports: ForbiddenSourcePattern[] = [
 ];
 
 describe('Studio server architecture', () => {
-  it('keeps take reference-selection mutation out of route files', async () => {
-    const files = await listTypeScriptFiles(routeRoot);
-    const findings = await findForbiddenPatterns(files, routeRoot, routeForbiddenPatterns);
-
-    expect(
-      findings,
-      [
-        'Studio routes must stay thin: read HTTP params/body, call focused core commands, and serialize the response.',
-        'Take reference-selection ownership, scene membership, and generation-reference scope rules belong in packages/core.',
-        'Resolve these failures in 0077 by adding focused core commands, not by adding route-local validation or allowlists.',
-      ].join(' ')
-    ).toEqual([]);
-  });
-
-  it('keeps HTTP request helpers from building durable take state patches', async () => {
-    const files = await listTypeScriptFiles(httpRoot);
-    const findings = await findForbiddenPatterns(files, httpRoot, httpForbiddenPatterns);
-
-    expect(
-      findings,
-      [
-        'HTTP helpers may mention request field names while translating JSON into typed command input.',
-        'They must not construct statePatch payloads or call project-data mutation methods.',
-        'Durable take-state mutation must be owned by focused core commands added during 0077.',
-      ].join(' ')
-    ).toEqual([]);
-  });
-
   it('keeps route files away from project database internals', async () => {
     const files = await listTypeScriptFiles(routeRoot);
     const findings = await findForbiddenImports(files, routeRoot, routeForbiddenImports);
@@ -118,28 +57,6 @@ describe('Studio server architecture', () => {
     ).toEqual([]);
   });
 });
-
-async function findForbiddenPatterns(
-  files: string[],
-  root: string,
-  forbiddenPatterns: ForbiddenSourcePattern[]
-): Promise<ArchitectureFinding[]> {
-  const findings = await Promise.all(
-    files.map(async (file) => {
-      const source = await fs.readFile(file, 'utf8');
-      const relativeFile = path.relative(root, file);
-      return forbiddenPatterns.flatMap((forbiddenPattern) =>
-        findPatternLines(source, forbiddenPattern.pattern).map((line) => ({
-          file: relativeFile,
-          line,
-          pattern: forbiddenPattern.label,
-          reason: forbiddenPattern.reason,
-        }))
-      );
-    })
-  );
-  return findings.flat();
-}
 
 async function findForbiddenImports(
   files: string[],
@@ -168,12 +85,6 @@ async function findForbiddenImports(
     })
   );
   return findings.flat();
-}
-
-function findPatternLines(source: string, pattern: RegExp): number[] {
-  return source
-    .split('\n')
-    .flatMap((line, index) => (pattern.test(line) ? [index + 1] : []));
 }
 
 function extractImportSources(source: string): string[] {

@@ -2,7 +2,8 @@
 
 Date: 2026-07-12
 
-Status: current
+Status: historical implementation evidence; Shot/Take inventory superseded by
+Decision `0052`
 
 Role: implementation and cutover evidence for Plans `0134` and `0136`; Plan
 `0136` consolidates the retained Plan `0135` requirements

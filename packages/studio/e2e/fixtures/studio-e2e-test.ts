@@ -2,10 +2,10 @@ import { test as base, expect, type Page } from '@playwright/test';
 import { ProjectLibraryPage } from '../pages/project-library-page';
 import {
   cleanStudioE2eProject,
+  createBeatSheetMovieProject,
   createMinimalMovieProject,
-  createShotVideoTakeMovieProject,
   createStudioE2eProjectName,
-  type StudioE2eShotVideoTakeProject,
+  type StudioE2eMovieProject,
   type StudioE2eProject,
 } from './studio-e2e-project';
 import {
@@ -15,8 +15,7 @@ import {
 
 interface StudioE2eFixtures {
   minimalMovieProject: StudioE2eProject;
-  shotVideoTakeProject: StudioE2eShotVideoTakeProject;
-  trashProject: StudioE2eShotVideoTakeProject;
+  movieProject: StudioE2eMovieProject;
   projectLibraryPage: ProjectLibraryPage;
 }
 
@@ -55,40 +54,17 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
     }
   },
 
-  shotVideoTakeProject: async ({ studioE2eRuntime }, use, testInfo) => {
+  movieProject: async ({ studioE2eRuntime }, use, testInfo) => {
     const projectName = createStudioE2eProjectName({
-      prefix: 'e2e-shot-video-take',
+      prefix: 'e2e-beat-sheet',
       workerIndex: testInfo.workerIndex,
       testIndex: testInfo.testId.length,
       title: testInfo.title,
     });
-    const project = await createShotVideoTakeMovieProject({
+    const project = await createBeatSheetMovieProject({
       runtime: studioE2eRuntime,
       projectName,
-      title: `E2E Shot Video Take ${projectName}`,
-    });
-
-    await use(project);
-
-    if (
-      !studioE2eRuntime.keepArtifacts &&
-      testInfo.status === testInfo.expectedStatus
-    ) {
-      await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
-    }
-  },
-
-  trashProject: async ({ studioE2eRuntime }, use, testInfo) => {
-    const projectName = createStudioE2eProjectName({
-      prefix: 'e2e-trash',
-      workerIndex: testInfo.workerIndex,
-      testIndex: testInfo.testId.length,
-      title: testInfo.title,
-    });
-    const project = await createShotVideoTakeMovieProject({
-      runtime: studioE2eRuntime,
-      projectName,
-      title: `E2E Trash ${projectName}`,
+      title: `E2E Beat Sheet ${projectName}`,
     });
 
     await use(project);

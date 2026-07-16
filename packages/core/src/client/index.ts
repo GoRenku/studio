@@ -66,19 +66,14 @@ export type {
   Scene,
   Sequence,
 } from './screenplay-projection.js';
-export type {
-  ProductionExportInput,
-  ProductionExportSummary,
-  ProductionExportVariant,
-  ProductionExportVariantSummary,
-} from './production-export.js';
 export type * from './trash.js';
 export type * from './agent-media.js';
 export type * from './generation.js';
 export type * from './generation-preview-resource.js';
 export type * from './image-revision-workflow.js';
 export type * from './scene-dialogue-audio-workspace.js';
-export * from './shot-video-take-workspace.js';
+export type * from './scene-beat-sheet.js';
+export * from './shot-authoring.js';
 export {
   REFERENCE_IMAGE_MEDIA_PURPOSE,
 } from './assets.js';
@@ -109,12 +104,12 @@ export type {
   LookbookResource,
   SceneDesignResource,
   SceneNarrativeResource,
-  SceneShotListResource,
+  SceneBeatSheetResource,
   SequenceSceneStoryboardPreview,
   ActStoryboardResource,
   ActStoryboardSequence,
   ActStoryboardScene,
-  ActStoryboardShot,
+  ActStoryboardBeat,
   ScreenplayNavigation,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
@@ -123,8 +118,6 @@ export type {
   ProjectShell,
   ProjectShellNavigation,
   ScenePanelTab,
-  SceneTakeWorkspaceMode,
-  SceneShotDetailTab,
   SceneNavigationRow,
   SequenceNavigationRow,
   SequenceResource,
@@ -170,48 +163,6 @@ export type {
   SuggestedSceneAddition,
   SuggestedScenePlacement,
 } from './screenplay-analysis.js';
-export type {
-  CameraAngleId,
-  FocusId,
-  LensId,
-  MoveDirectionId,
-  MoveTrackId,
-  RigId,
-  SceneShot,
-  SceneShotDialogueReference,
-  ShotLensSpecs,
-  ShotMovementId,
-  ShotSizeId,
-  SubjectFramingId,
-  SceneShotListChange,
-  SceneShotListCommandReport,
-  SceneShotListContextAct,
-  SceneShotListContextCastMember,
-  SceneShotListContextLocation,
-  SceneShotListContextLookbook,
-  SceneShotListContextReport,
-  SceneShotListContextScene,
-  SceneShotListContextScreenplay,
-  SceneShotListDocument,
-  SceneShotListApplyChange,
-  SceneShotListApplyReport,
-  SceneShotListListReport,
-  SceneShotListOperation,
-  SceneShotListOperationDocument,
-  SceneShotListProjectReport,
-  SceneShotListReadReport,
-  SceneShotListStoryboardPolicy,
-  SceneShotListStoryboardShotStatus,
-  SceneShotListStoryboardStatus,
-  SceneShotListSummary,
-  SceneShotListValidationReport,
-  SceneShotListVisualReferences,
-  SceneShotListWriteReport,
-  SceneStoryboardImagesImportDocument,
-  SceneStoryboardImagesImportReport,
-  SceneStoryboardImagesImportShot,
-  SceneStoryboardImagesImportedFile,
-} from './scene-shot-list.js';
 export {
   CAMERA_ANGLE_LABELS,
   FOCUS_LABELS,
@@ -307,10 +258,10 @@ export {
   screenplayAnalysisDocumentSchema,
 } from './screenplay-analysis-json-schemas.js';
 export {
-  sceneShotListDocumentSchema,
-  sceneShotListOperationDocumentSchema,
+  sceneBeatSheetDocumentSchema,
+  sceneBeatSheetOperationDocumentSchema,
   sceneStoryboardImagesImportDocumentSchema,
-} from './scene-shot-list-json-schemas.js';
+} from './scene-beat-sheet-json-schemas.js';
 export {
   cameraSectionSchema as visualLanguageCameraSectionSchema,
   inspirationAnalysisDocumentSchema,
