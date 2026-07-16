@@ -29,15 +29,16 @@ interface GenerationRequestEditorProps {
   errorTitle: string;
   pending: boolean;
   readOnly?: boolean;
+  referencesReadOnly?: boolean;
   controls?: GenerationEditorControl[];
   onTabChange: (tab: GenerationRequestEditorTab) => void;
   onAuthoredTextChange: (value: string) => void;
   onNegativeTextChange: (value: string) => void;
-  onReferenceChoose: (
+  onReferenceChoose?: (
     slot: GenerationPreviewReferenceSlot,
     reference: GenerationPreviewResourceReference | null
   ) => void;
-  onGenericReferencesChange: (
+  onGenericReferencesChange?: (
     references: GenerationPreviewResourceReference[],
   ) => void;
   onControlChange?: (
@@ -57,6 +58,7 @@ export function GenerationRequestEditor({
   errorTitle,
   pending,
   readOnly = false,
+  referencesReadOnly = false,
   controls = [],
   onTabChange,
   onAuthoredTextChange,
@@ -113,7 +115,7 @@ export function GenerationRequestEditor({
               preview={preview}
               draft={draft}
               updating={pending || readOnly}
-              editable={!readOnly}
+              editable={!readOnly && !referencesReadOnly}
               onReferenceChoose={onReferenceChoose}
               onGenericReferencesChange={onGenericReferencesChange}
             />

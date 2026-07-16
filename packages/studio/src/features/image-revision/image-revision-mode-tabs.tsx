@@ -1,14 +1,19 @@
-import type { ImageRevisionMode } from '@gorenku/studio-core/client';
 import { TabsList, TabsTrigger } from '@/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/ui/tooltip';
 
 interface ImageRevisionModeTabsProps {
-  mode: ImageRevisionMode;
   regenerateAvailable: boolean;
+  regenerateUnavailableReason?: string;
   disabled: boolean;
 }
 
 export function ImageRevisionModeTabs({
   regenerateAvailable,
+  regenerateUnavailableReason,
   disabled,
 }: ImageRevisionModeTabsProps) {
   return (
@@ -30,6 +35,16 @@ export function ImageRevisionModeTabs({
       >
         Edit
       </TabsTrigger>
+      {!regenerateAvailable && regenerateUnavailableReason ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className='ml-auto flex h-full cursor-help items-center text-xs text-muted-foreground'>
+              Regenerate unavailable
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{regenerateUnavailableReason}</TooltipContent>
+        </Tooltip>
+      ) : null}
     </TabsList>
   );
 }

@@ -59,14 +59,26 @@ describe('image revision workflow', () => {
     if (context.edit.state !== 'available') {
       return;
     }
-    expect(context.edit.preview.references.slots).toEqual(expect.arrayContaining([
+    expect(context.edit.preview.references.slots).toEqual([
       expect.objectContaining({
+        label: 'Source Image',
         current: expect.objectContaining({
           assetId: asset.assetId,
           assetFileId: asset.files[0]!.id,
           selected: true,
         }),
+        eligibleCandidates: [],
       }),
-    ]));
+    ]);
+    expect(context.edit.preview.references.additional).toEqual([]);
+    expect(context.regenerate).toEqual(expect.objectContaining({
+      state: 'unavailable',
+      diagnostics: [
+        expect.objectContaining({
+          message:
+            'Regenerate is unavailable because this image was imported and has no original generation request.',
+        }),
+      ],
+    }));
   });
 });

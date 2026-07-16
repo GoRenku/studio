@@ -30,8 +30,10 @@ typed candidates supplied by the active purpose guide. No Shot or Take-specific
 slot family exists in the current generation contract.
 
 Each Draft typed slot has `current: null` or one exact persisted choice plus
-subject-filtered eligible candidates. A sole candidate is visible but unchecked
-when current is null. Purpose guides may add empty suggestions and candidate
+subject-filtered eligible candidates. In an editable Preview, a sole candidate
+is visible but unchecked when current is null. Read-only Preview surfaces show
+only exact current references; they do not present unselected candidates as if
+the request uses them. Purpose guides may add empty suggestions and candidate
 facts; they cannot erase an exact persisted selection. An unavailable selection
 is shown as unavailable without substitution.
 
@@ -44,9 +46,14 @@ relationships and never use this all-project catalog.
 
 A focused nullable typed-slot selection command sets or clears one exact
 choice. Ordered generic-reference authoring updates the separate collection.
-Both AI Production and Generation Preview persist through the same spec state;
-Image Revision uses the same contracts rather than parallel defaults or a
-no-op picker.
+Both AI Production and Generation Preview persist through the same spec state.
+
+Image Revision reuses the shared prompt, reference-display, and configuration
+composition but does not expose reference authoring. `Edit` projects exactly
+one fixed source image. `Regenerate` projects the exact references from the
+completed source run. Its draft owns prompt text and generation controls only,
+so the shared UI cannot turn current purpose-guide candidates into revision
+inputs.
 
 Core validates safe envelope structure and Draft lifecycle only. It does not
 validate guide placement, candidate membership, typed ownership, provider-field
@@ -76,5 +83,6 @@ media.
 ## Verification
 
 Keep Prompt, References, Config, diagnostics, estimate, saved/editable,
-unsaved/read-only, pending, failure, latest-response-wins, typed-slot, and
-unchecked-sole-candidate coverage.
+unsaved/read-only, pending, failure, latest-response-wins, typed-slot,
+unchecked-sole-candidate, fixed image-edit source, and exact-only read-only
+reference coverage.

@@ -5,8 +5,6 @@ import type {
   ImageRevisionMode,
   ImageRevisionTarget,
   GenerationPreviewResource,
-  GenerationPreviewReferenceSlot,
-  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import {
   estimateImageRevisionDraft,
@@ -113,8 +111,6 @@ export function useImageRevisionEditor(
       const next = createGenerationPreviewDraft(preview);
       next.promptDraft.authoredText = draft.authoredText;
       next.promptDraft.negativeText = draft.negativeText;
-      next.slotSelections = draft.slotSelections;
-      next.genericReferences = preview.references.additional;
       return next;
     }
     return {
@@ -124,7 +120,7 @@ export function useImageRevisionEditor(
           ? { negativeText: draft.negativeText }
           : {}),
       },
-      slotSelections: draft.slotSelections,
+      slotSelections: [],
       genericReferences: [],
     };
   }, [draft, preview]);
@@ -148,56 +144,6 @@ export function useImageRevisionEditor(
           )
         : [...current.generationControls, { controlId, value }],
     }));
-  };
-
-  const updateReference = (
-    slot: GenerationPreviewReferenceSlot,
-    reference: GenerationPreviewResourceReference | null,
-  ) => {
-    updateDraft((current) => ({
-      ...current,
-      slotSelections: [
-        ...current.slotSelections.filter((selection) =>
-          referencePlacementKey(selection.placement) !== referencePlacementKey(slot.placement)
-        ),
-        {
-          placement: slot.placement,
-          reference: reference
-            ? {
-                kind: 'asset-file' as const,
-                assetId: reference.assetId,
-                assetFileId: reference.assetFileId,
-              }
-            : null,
-          ...(reference?.providerToken
-            ? { providerField: reference.providerToken }
-            : {}),
-        },
-      ],
-    }));
-  };
-
-  const updateGenericReferences = (
-    references: GenerationPreviewResourceReference[],
-  ) => {
-    updateDraft((current) => ({
-      ...current,
-      genericReferences: references.map((reference) => ({
-        id: `image-revision-additional:${reference.assetId}:${reference.assetFileId}`,
-        placement: { kind: 'additional' as const },
-        reference: {
-          kind: 'asset-file' as const,
-          assetId: reference.assetId,
-          assetFileId: reference.assetFileId,
-        },
-      })),
-    }));
-    setPreview((current) => current
-      ? {
-          ...current,
-          references: { ...current.references, additional: references },
-        }
-      : current);
   };
 
   const run = async () => {
@@ -249,19 +195,6 @@ export function useImageRevisionEditor(
     updateNegativeText: (negativeText: string) =>
       updateDraft((current) => ({ ...current, negativeText })),
     updateControl,
-    updateReference,
-    updateGenericReferences,
     run,
   };
-}
-
-function referencePlacementKey(
-  placement: GenerationPreviewReferenceSlot['placement']
-): string {
-  return [
-    placement.sectionId,
-    placement.slotId,
-    placement.subject?.kind ?? '',
-    placement.subject?.id ?? '',
-  ].join(':');
 }

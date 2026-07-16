@@ -59,6 +59,7 @@ export function GenerationPreviewRequestPanel({
         errorTitle='Preview Update Failed'
         pending={editor.updatePending}
         readOnly={!preview.generationSpecId}
+        referencesReadOnly={preview.purpose === 'image.edit'}
         tabRowTrailing={tabRowTrailing}
         onTabChange={onTabChange}
         onAuthoredTextChange={editor.updateAuthoredText}

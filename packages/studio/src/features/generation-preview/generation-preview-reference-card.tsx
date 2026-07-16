@@ -51,7 +51,7 @@ export function GenerationPreviewReferenceCard({
             )
           : undefined
       }
-      onOpen={onOpen ?? (() => {})}
+      onOpen={onOpen}
     />
   );
 }

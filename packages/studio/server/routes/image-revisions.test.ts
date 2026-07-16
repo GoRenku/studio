@@ -120,8 +120,6 @@ function imageRevisionContext(): ImageRevisionEditorContext {
       draft: {
         mode: 'edit',
         authoredText: '',
-        slotSelections: [],
-        genericReferences: [],
         generationControls: [],
       },
       preview: {

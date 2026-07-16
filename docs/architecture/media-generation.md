@@ -48,8 +48,9 @@ experiences:
 
 - `generation-preview-resource` projects and updates the saved or draft
   Preview experience;
-- `image-revision-workflow` owns Regenerate/Edit source ownership, generic
-  `image.edit` execution, and destination attachment;
+- `image-revision-workflow` owns Regenerate/Edit source ownership, immutable
+  revision references, generic `image.edit` execution, and destination
+  attachment;
 - `scene-dialogue-audio-workspace` owns dialogue setup, generic audio
   generation, takes, playback metadata, and recoverable deletion;
 - `scene-beat-sheet` owns Beat history, active selection, storyboard status,
@@ -150,3 +151,11 @@ focused modules in `packages/core/src/server/generation`:
 The Core server entrypoint also exports focused Preview, Image Revision,
 Dialogue Audio, Scene Beat Sheet, and storyboard attachment commands. CLI and
 HTTP callers remain thin projections of these Core-owned contracts.
+
+Image Revision deliberately narrows the generic authoring contract. `Edit`
+always uses exactly one fixed source-image reference: the AssetFile being
+edited. `Regenerate` preserves the exact references from the completed source
+run. An Image Revision draft can change prompt text and exposed generation
+controls, but it cannot add, remove, or replace references. Imported images
+without a completed source run have no original request to regenerate; Studio
+must explain that state instead of inventing provenance or a fallback prompt.

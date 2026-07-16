@@ -1,7 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
-  GenerationReferenceSelection,
-  GenerationReferenceSlotSelectionInput,
   GenerationRun,
   GenerationSpecRecord,
 } from './generation.js';
@@ -45,8 +43,6 @@ export interface ImageRevisionDraft {
   mode: ImageRevisionMode;
   authoredText: string;
   negativeText?: string;
-  slotSelections: GenerationReferenceSlotSelectionInput[];
-  genericReferences: GenerationReferenceSelection[];
   generationControls: Array<{
     controlId: string;
     value: GenerationPreviewConfigurationValue;

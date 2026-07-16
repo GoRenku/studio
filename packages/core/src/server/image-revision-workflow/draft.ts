@@ -8,12 +8,12 @@ import type {
   GenerationContext,
   GenerationModelDescriptor,
   GenerationPreview,
+  GenerationReferenceGuide,
   GenerationReferenceSelection,
   GenerationSpec,
 } from '../../client/generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { buildGenerationPreview } from '../generation/previews.js';
-import { applyGenerationReferenceSlotSelection } from '../generation/references.js';
 import { readGenerationPurpose } from '../generation/purposes.js';
 import { applyFixedGenerationSettings } from '../generation/purpose-settings.js';
 import { validateGenerationSpecForExecution } from '../generation/validation.js';
@@ -42,7 +42,7 @@ export async function createImageRevisionModeDefinition(input: {
   });
   return {
     spec,
-    draft: draftFromPreview(input.mode, preview, spec),
+    draft: draftFromPreview(input.mode, preview),
     preview,
     controls: controlsFromPreview(preview),
   };
@@ -82,16 +82,10 @@ export async function buildImageRevisionSpec(input: {
   if (negativeField && input.draft.negativeText !== undefined) {
     values[negativeField.name] = input.draft.negativeText;
   }
-  let spec: GenerationSpec = {
+  const spec: GenerationSpec = {
     ...definition.spec,
     values,
-    references: input.draft.genericReferences.filter(
-      (selection) => selection.placement.kind === 'additional'
-    ),
   };
-  for (const selection of input.draft.slotSelections) {
-    spec = applyGenerationReferenceSlotSelection(spec, selection);
-  }
   return spec;
 }
 
@@ -116,7 +110,10 @@ export async function buildImageRevisionPreview(input: {
   const preview: GenerationPreview = {
     ...(await buildGenerationPreview({
       spec: authoredSpec,
-      referenceGuide: context.referenceGuide,
+      referenceGuide: exactReferenceGuide(
+        context.referenceGuide,
+        authoredSpec.references,
+      ),
       session: input.session,
       projectFolder: input.projectFolder,
       validatedRequest: validation.valid ? validation.request : undefined,
@@ -130,6 +127,12 @@ export async function buildImageRevisionPreview(input: {
 function requireRegenerationSpec(source: ResolvedImageRevisionSource): GenerationSpec {
   const spec = source.generationRun?.specSnapshot;
   if (!spec || source.generationRun?.status !== 'completed') {
+    if (source.asset.origin === 'imported') {
+      throw new ProjectDataError(
+        'CORE_IMAGE_REVISION_REGENERATE_PROVENANCE_REQUIRED',
+        'Regenerate is unavailable because this image was imported and has no original generation request.'
+      );
+    }
     throw new ProjectDataError(
       'CORE_IMAGE_REVISION_REGENERATE_PROVENANCE_REQUIRED',
       'Regenerate requires exact completed generation provenance for the source AssetFile.'
@@ -217,8 +220,7 @@ function recommendedModel(context: GenerationContext): GenerationModelDescriptor
 
 function draftFromPreview(
   mode: ImageRevisionMode,
-  preview: GenerationPreviewResourceData,
-  spec: GenerationSpec
+  preview: GenerationPreviewResourceData
 ): ImageRevisionDraft {
   return {
     mode,
@@ -226,23 +228,54 @@ function draftFromPreview(
     ...(preview.finalPrompt.negativeText !== undefined
       ? { negativeText: preview.finalPrompt.negativeText }
       : {}),
-    slotSelections: spec.references.flatMap((selection) =>
-      selection.placement.kind === 'slot'
-        ? [{
-            placement: selection.placement,
-            reference: selection.reference,
-            ...(selection.providerField ? { providerField: selection.providerField } : {}),
-          }]
-        : []
-    ),
-    genericReferences: spec.references.filter(
-      (selection) => selection.placement.kind === 'additional'
-    ),
     generationControls: controlsFromPreview(preview).map((control) => ({
       controlId: control.controlId,
       value: control.value,
     })),
   };
+}
+
+function exactReferenceGuide(
+  guide: GenerationReferenceGuide,
+  references: GenerationReferenceSelection[],
+): GenerationReferenceGuide {
+  const selectedPlacements = new Set(
+    references.flatMap((selection) =>
+      selection.placement.kind === 'slot'
+        ? [referencePlacementKey(selection.placement)]
+        : []
+    ),
+  );
+  return {
+    sections: guide.sections.flatMap((section) => {
+      const slots = section.slots
+        .filter((slot) =>
+          selectedPlacements.has(referencePlacementKey({
+            kind: 'slot',
+            sectionId: section.id,
+            slotId: slot.id,
+            ...(slot.subject ? { subject: slot.subject } : {}),
+          }))
+        )
+        .map((slot) => ({ ...slot, eligibleCandidates: [] }));
+      return slots.length ? [{ ...section, slots }] : [];
+    }),
+    notices: guide.notices,
+  };
+}
+
+function referencePlacementKey(
+  placement: Extract<
+    GenerationReferenceSelection['placement'],
+    { kind: 'slot' }
+  >,
+): string {
+  return [
+    placement.sectionId,
+    placement.slotId,
+    placement.subject?.kind ?? '',
+    placement.subject?.id ?? '',
+  ].join(':');
 }
 
 function controlsFromPreview(preview: GenerationPreviewResourceData): GenerationEditorControl[] {

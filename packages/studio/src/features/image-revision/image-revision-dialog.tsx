@@ -36,6 +36,10 @@ export function ImageRevisionDialog({
     useState<GenerationRequestEditorTab>('prompt');
   const editor = useImageRevisionEditor(request, () => onOpenChange(false));
   const regenerateAvailable = editor.context?.regenerate.state === 'available';
+  const regenerateUnavailableReason =
+    editor.context?.regenerate.state === 'unavailable'
+      ? editor.context.regenerate.diagnostics[0]?.message
+      : undefined;
   const controls =
     editor.mode === 'edit' && editor.modeContext?.state === 'available'
       ? editor.modeContext.controls.map((control) =>
@@ -81,8 +85,8 @@ export function ImageRevisionDialog({
           className='contents'
         >
           <ImageRevisionModeTabs
-            mode={editor.mode}
             regenerateAvailable={regenerateAvailable}
+            regenerateUnavailableReason={regenerateUnavailableReason}
             disabled={editor.runPending}
           />
         </Tabs>
@@ -100,12 +104,11 @@ export function ImageRevisionDialog({
             error={editor.error}
             errorTitle='Image Revision Failed'
             pending={editor.runPending}
+            referencesReadOnly
             controls={controls}
             onTabChange={setEditorTab}
             onAuthoredTextChange={editor.updateAuthoredText}
             onNegativeTextChange={editor.updateNegativeText}
-            onReferenceChoose={editor.updateReference}
-            onGenericReferencesChange={editor.updateGenericReferences}
             onControlChange={editor.updateControl}
             authoredPlaceholder={
               editor.mode === 'edit'

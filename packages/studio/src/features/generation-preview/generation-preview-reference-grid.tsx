@@ -19,11 +19,11 @@ interface GenerationPreviewReferenceGridProps {
   draft: GenerationPreviewDraft;
   updating: boolean;
   editable?: boolean;
-  onReferenceChoose: (
+  onReferenceChoose?: (
     slot: GenerationPreviewReferenceSlot,
     reference: GenerationPreviewResourceReference | null
   ) => void;
-  onGenericReferencesChange: (
+  onGenericReferencesChange?: (
     references: GenerationPreviewResourceReference[],
   ) => void;
 }
@@ -38,8 +38,12 @@ export function GenerationPreviewReferenceGrid({
 }: GenerationPreviewReferenceGridProps) {
   const [openSlot, setOpenSlot] = useState<GenerationPreviewReferenceSlot | null>(null);
   const [genericPickerOpen, setGenericPickerOpen] = useState(false);
-  const canEdit = editable ?? Boolean(preview.generationSpecId);
-  const hasReferences = preview.references.slots.length > 0 ||
+  const canEdit = (editable ?? Boolean(preview.generationSpecId)) &&
+    Boolean(onReferenceChoose && onGenericReferencesChange);
+  const visibleSlots = preview.references.slots.filter(
+    (slot) => canEdit || Boolean(slot.current),
+  );
+  const hasReferences = visibleSlots.length > 0 ||
     draft.genericReferences.length > 0 || canEdit;
   if (!hasReferences) {
     return <p className='text-sm text-muted-foreground'>No references are attached to this preview.</p>;
@@ -48,13 +52,15 @@ export function GenerationPreviewReferenceGrid({
   return (
     <>
       <div className='space-y-6'>
-        {preview.references.slots.map((slot) => {
+        {visibleSlots.map((slot) => {
           const selected = [slot.current, ...slot.eligibleCandidates].filter(
             (reference): reference is GenerationPreviewResourceReference => Boolean(reference)
           ).find((reference) =>
             generationPreviewReferenceSelected(slot, reference, draft)
           ) ?? null;
-          const soleCandidate = !selected && slot.eligibleCandidates.length === 1
+          const soleCandidate = canEdit &&
+            !selected &&
+            slot.eligibleCandidates.length === 1
             ? slot.eligibleCandidates[0]!
             : null;
           return (
@@ -65,7 +71,11 @@ export function GenerationPreviewReferenceGrid({
                   <GenerationPreviewReferenceCard
                     reference={(selected ?? soleCandidate)!}
                     selected={Boolean(selected)}
-                    onOpen={() => canEdit && !updating && setOpenSlot(slot)}
+                    onOpen={
+                      canEdit && !updating
+                        ? () => setOpenSlot(slot)
+                        : undefined
+                    }
                   />
                 ) : (
                   <Button
@@ -99,12 +109,16 @@ export function GenerationPreviewReferenceGrid({
             {draft.genericReferences.length ? (
               <div className='grid grid-cols-3 gap-3'>
                 {draft.genericReferences.map((reference) => (
-                <GenerationPreviewReferenceCard
-                  key={`${reference.assetId}:${reference.assetFileId}`}
-                  reference={reference}
-                  selected
-                  onOpen={() => canEdit && !updating && setGenericPickerOpen(true)}
-                />
+                  <GenerationPreviewReferenceCard
+                    key={`${reference.assetId}:${reference.assetFileId}`}
+                    reference={reference}
+                    selected
+                    onOpen={
+                      canEdit && !updating
+                        ? () => setGenericPickerOpen(true)
+                        : undefined
+                    }
+                  />
                 ))}
               </div>
             ) : (
@@ -132,7 +146,7 @@ export function GenerationPreviewReferenceGrid({
                   `${candidate.assetId}:${candidate.assetFileId}` === candidateId
                 ) ?? null
               : null;
-            onReferenceChoose(openSlot, reference);
+            onReferenceChoose?.(openSlot, reference);
             setOpenSlot(null);
           }}
         />
@@ -152,7 +166,7 @@ export function GenerationPreviewReferenceGrid({
             browserUrl: reference.browserUrl,
           }))}
           onOpenChange={setGenericPickerOpen}
-          onChange={(values) => onGenericReferencesChange(
+          onChange={(values) => onGenericReferencesChange?.(
             values.map(genericPickerValueToPreviewReference)
           )}
         />

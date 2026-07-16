@@ -21,7 +21,7 @@ interface ImageOverlayCardProps {
   topRightActionClassName?: string;
   topRightActionPersistent?: boolean;
   bottomRightActions?: ReactNode;
-  onOpen: () => void;
+  onOpen?: () => void;
 }
 
 export function ImageOverlayCard({
@@ -52,6 +52,23 @@ export function ImageOverlayCard({
     typeof previewContent === 'function'
       ? previewContent({ active: previewActive })
       : previewContent;
+  const media = renderedPreviewContent ? (
+    renderedPreviewContent
+  ) : imageUrl ? (
+    <img
+      src={imageUrl}
+      alt={imageAlt}
+      className={cn(
+        'h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]',
+        imageClassName
+      )}
+      onLoad={detectImageAspectRatio ? onImageLoad : undefined}
+    />
+  ) : (
+    <span className='flex h-full w-full items-center justify-center text-muted-foreground'>
+      <ImageOff className='h-5 w-5' />
+    </span>
+  );
 
   return (
     <Card
@@ -64,35 +81,25 @@ export function ImageOverlayCard({
       )}
       style={aspectRatioStyle}
     >
-      <Button
-        type='button'
-        variant='ghost'
-        aria-label={title ?? imageAlt}
-        className='absolute inset-0 h-full w-full overflow-hidden rounded-[inherit] p-0 text-left hover:bg-transparent'
-        onClick={onOpen}
-        onPointerEnter={() => setPreviewActive(true)}
-        onPointerLeave={() => setPreviewActive(false)}
-        onFocus={() => setPreviewActive(true)}
-        onBlur={() => setPreviewActive(false)}
-      >
-        {renderedPreviewContent ? (
-          renderedPreviewContent
-        ) : imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={imageAlt}
-            className={cn(
-              'h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]',
-              imageClassName
-            )}
-            onLoad={detectImageAspectRatio ? onImageLoad : undefined}
-          />
-        ) : (
-          <span className='flex h-full w-full items-center justify-center text-muted-foreground'>
-            <ImageOff className='h-5 w-5' />
-          </span>
-        )}
-      </Button>
+      {onOpen ? (
+        <Button
+          type='button'
+          variant='ghost'
+          aria-label={title ?? imageAlt}
+          className='absolute inset-0 h-full w-full overflow-hidden rounded-[inherit] p-0 text-left hover:bg-transparent'
+          onClick={onOpen}
+          onPointerEnter={() => setPreviewActive(true)}
+          onPointerLeave={() => setPreviewActive(false)}
+          onFocus={() => setPreviewActive(true)}
+          onBlur={() => setPreviewActive(false)}
+        >
+          {media}
+        </Button>
+      ) : (
+        <div className='absolute inset-0 overflow-hidden rounded-[inherit]'>
+          {media}
+        </div>
+      )}
       {hasCopy || bottomRightActions ? (
         <div
           className={cn(

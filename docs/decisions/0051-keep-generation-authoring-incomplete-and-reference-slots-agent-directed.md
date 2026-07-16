@@ -88,8 +88,11 @@ assembling an executable payload.
 
 ## Consequences
 
-- AI Production, Generation Preview, and Image Revision edit the same exact
-  spec state and shared picker contract.
+- AI Production and Generation Preview edit the same exact spec state and
+  shared picker contract.
+- Image Revision is a focused exception: Edit fixes the current AssetFile as
+  its only source reference, Regenerate preserves the completed source run's
+  exact references, and neither mode authors reference selections.
 - Empty slots and provider-incomplete drafts are ordinary authoring states.
 - Agents and users deliberately author reference choices; Studio supplies
   factual candidates but no creative defaults or fallbacks.

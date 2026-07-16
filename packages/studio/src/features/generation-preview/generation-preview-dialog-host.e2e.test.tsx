@@ -183,6 +183,29 @@ describe('GenerationPreviewDialogHost', () => {
     expect(screen.queryByText('Estimated total')).toBeNull();
   });
 
+  it('keeps the source reference fixed for saved image-edit previews', async () => {
+    render(<GenerationPreviewDialogHost />);
+
+    await dispatchPreview(
+      previewFixture({
+        purpose: 'image.edit',
+        title: 'Image Edit Preview',
+        referenceLabel: 'Mara Character Sheet',
+        saved: true,
+      })
+    );
+
+    await act(async () => {
+      selectTab('References');
+    });
+
+    expect(await screen.findByText('Mara Character Sheet')).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Mara Character Sheet' }),
+    ).toBeNull();
+    expect(screen.queryByText('Additional Media')).toBeNull();
+  });
+
   it('renders estimate in the dialog footer instead of the Config tab', async () => {
     render(<GenerationPreviewDialogHost />);
 
@@ -585,18 +608,29 @@ function previewFixture(input: {
           sectionId: 'visual-language',
           slotId: 'lookbook',
         },
-        current: null,
+        current: (input.selected ?? true) ? {
+          kind: 'image',
+          role: 'style',
+          label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
+          providerToken: '@Reference1',
+          assetId: 'asset_style',
+          assetFileId: 'asset_file_style',
+          sourcePurpose: 'lookbook.storyboard-sheet',
+          selected: true,
+          browserUrl:
+            '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
+        } : null,
         eligibleCandidates: [{
-        kind: 'image',
-        role: 'style',
-        label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
-        providerToken: '@Reference1',
-        assetId: 'asset_style',
-        assetFileId: 'asset_file_style',
-        sourcePurpose: 'lookbook.storyboard-sheet',
-        selected: input.selected ?? true,
-        browserUrl:
-          '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
+          kind: 'image',
+          role: 'style',
+          label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
+          providerToken: '@Reference1',
+          assetId: 'asset_style',
+          assetFileId: 'asset_file_style',
+          sourcePurpose: 'lookbook.storyboard-sheet',
+          selected: false,
+          browserUrl:
+            '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
         }],
       }],
       additional: [],
