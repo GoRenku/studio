@@ -197,8 +197,12 @@ export async function createShotVideoTakeMovieProject(input: {
     sceneId: ids.sceneId,
     takeId: take.takeId,
   });
-  const dialogueReference = workspace.generation?.references.dialogueAudio[0];
-  if (!dialogueReference) {
+  const references = workspace.generation.references;
+  const dialogueReference = references.kind === 'draft'
+    ? references.dialogueAudio[0]
+    : undefined;
+  const dialogueSelection = dialogueReference?.availableTakes[0]?.selection;
+  if (!dialogueSelection) {
     throw new Error('Shot video take E2E fixture could not find dialogue audio guidance.');
   }
   await projectData.setShotVideoTakeGenerationReference({
@@ -206,8 +210,7 @@ export async function createShotVideoTakeMovieProject(input: {
     projectName: input.projectName,
     sceneId: ids.sceneId,
     takeId: take.takeId,
-    selectionId: dialogueReference.selectionId,
-    included: true,
+    selection: dialogueSelection,
   });
 
   return {

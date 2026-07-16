@@ -13,7 +13,7 @@ const MODELS: ShotVideoTakeModelReport[] = [
       provider: 'fal-ai',
       model: 'xai/grok-imagine-video-1.5',
       supportedInputModes: ['first-frame'],
-      duration: { supported: true, values: [6], default: 6 },
+      duration: { supported: true, values: [6] },
       parameters: [],
     },
     {
@@ -22,7 +22,7 @@ const MODELS: ShotVideoTakeModelReport[] = [
       provider: 'fal-ai',
       model: 'veo3.1',
       supportedInputModes: ['first-last-frame'],
-      duration: { supported: true, values: [4, 6, 8], default: 6 },
+      duration: { supported: true, values: [4, 6, 8] },
       parameters: [],
     },
 ];
@@ -92,7 +92,7 @@ describe('buildInputModeOptions', () => {
             'reference',
             'source-video-reference',
           ],
-          duration: { supported: true, values: [5, 10], default: 5 },
+          duration: { supported: true, values: [5, 10] },
           parameters: [],
         },
       ];

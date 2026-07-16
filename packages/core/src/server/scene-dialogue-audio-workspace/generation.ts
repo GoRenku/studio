@@ -74,16 +74,11 @@ export async function generateSceneDialogueAudioTake(input: {
   const setup = requireSceneDialogueAudioSetup(input);
   const spec = await buildSceneDialogueAudioSpec({ ...input, setup });
   const purpose = readGenerationPurpose('scene.dialogue-audio');
-  const guide = await purpose.buildReferenceGuide({
-    target: spec.target,
-    session: input.session,
-    projectFolder: input.projectFolder,
-  });
   const specId = input.idGenerator.next('media_generation_spec');
   const record = createGenerationSpec({
     id: specId,
     spec,
-    purpose: { ...purpose, referenceGuide: guide },
+    purpose,
     session: input.session,
     now: input.now,
   });

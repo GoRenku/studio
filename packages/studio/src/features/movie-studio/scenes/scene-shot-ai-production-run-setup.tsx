@@ -68,7 +68,7 @@ export function SceneShotAiProductionRunSetup({
               key={parameter.name}
               parameter={parameter}
               value={
-                (values[parameter.name] ?? parameter.defaultValue) as
+                values[parameter.name] as
                   | GenerationParameterControlValue
                   | undefined
               }

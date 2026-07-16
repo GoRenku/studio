@@ -1,5 +1,6 @@
 import type {
-  GenerationPreviewReferenceChange,
+  GenerationReference,
+  GenerationReferenceSlotSelectionInput,
   GenerationPreviewResource,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
@@ -11,7 +12,8 @@ export interface UpdateGenerationPreviewResourceSpecInput {
     authoredText: string;
     negativeText?: string | null;
   };
-  referenceChanges: GenerationPreviewReferenceChange[];
+  slotSelections: GenerationReferenceSlotSelectionInput[];
+  genericReferences: GenerationReference[];
 }
 
 export async function updateGenerationPreviewResource(
@@ -24,7 +26,8 @@ export async function updateGenerationPreviewResource(
       headers: jsonHeaders(),
       body: JSON.stringify({
         prompt: input.prompt,
-        referenceChanges: input.referenceChanges,
+        slotSelections: input.slotSelections,
+        genericReferences: input.genericReferences,
       }),
     }
   );

@@ -1,5 +1,5 @@
 import type {
-  GenerationPreviewReferenceChange,
+  GenerationReferenceSlotSelectionInput,
   GenerationPreviewReferenceSlot,
   GenerationPreviewResource,
   GenerationPreviewResourceReference,
@@ -11,7 +11,8 @@ export interface GenerationPreviewDraft {
     authoredText: string;
     negativeText?: string;
   };
-  referenceChanges: GenerationPreviewReferenceChange[];
+  slotSelections: GenerationReferenceSlotSelectionInput[];
+  genericReferences: GenerationPreviewResourceReference[];
 }
 
 export function createGenerationPreviewDraft(
@@ -24,7 +25,8 @@ export function createGenerationPreviewDraft(
         ? { negativeText: preview.finalPrompt.negativeText }
         : {}),
     },
-    referenceChanges: [],
+    slotSelections: [],
+    genericReferences: preview.references.additional,
   };
 }
 
@@ -33,14 +35,14 @@ export function generationPreviewReferenceSelected(
   reference: GenerationPreviewResourceReference,
   draft: GenerationPreviewDraft
 ): boolean {
-  const change = draft.referenceChanges.find((candidate) =>
+  const change = draft.slotSelections.find((candidate) =>
     placementKey(candidate.placement) === placementKey(slot.placement)
   );
   if (!change) {
-    return reference.selected;
+    return slot.current?.assetId === reference.assetId &&
+      slot.current.assetFileId === reference.assetFileId;
   }
-  return change.kind === 'replace' &&
-    change.reference.kind === 'asset-file' &&
+  return change.reference?.kind === 'asset-file' &&
     change.reference.assetId === reference.assetId &&
     change.reference.assetFileId === reference.assetFileId;
 }
@@ -51,28 +53,31 @@ export function changeGenerationPreviewReference(
   reference: GenerationPreviewResourceReference | null
 ): GenerationPreviewDraft {
   const key = placementKey(slot.placement);
-  const referenceChanges = draft.referenceChanges.filter(
+  const slotSelections = draft.slotSelections.filter(
     (change) => placementKey(change.placement) !== key
   );
-  referenceChanges.push(reference
-    ? {
-        kind: 'replace',
-        placement: slot.placement,
-        reference: {
+  slotSelections.push({
+    placement: slot.placement,
+    reference: reference
+      ? {
           kind: 'asset-file',
           assetId: reference.assetId,
           assetFileId: reference.assetFileId,
-        },
-      }
-    : { kind: 'clear', placement: slot.placement });
-  return { ...draft, referenceChanges };
+        }
+      : null,
+    ...(reference?.providerToken
+      ? { providerField: reference.providerToken }
+      : {}),
+  });
+  return { ...draft, slotSelections };
 }
 
 export function generationPreviewDraftIsDirty(
   preview: GenerationPreviewResource,
   draft: GenerationPreviewDraft
 ): boolean {
-  return draft.referenceChanges.length > 0 ||
+  return draft.slotSelections.length > 0 ||
+    !referenceCollectionsEqual(draft.genericReferences, preview.references.additional) ||
     draft.promptDraft.authoredText !== preview.finalPrompt.authoredText ||
     draft.promptDraft.negativeText !== preview.finalPrompt.negativeText;
 }
@@ -80,7 +85,7 @@ export function generationPreviewDraftIsDirty(
 export function buildGenerationPreviewUpdateRequest(
   preview: GenerationPreviewResource,
   draft: GenerationPreviewDraft
-): Pick<UpdateGenerationPreviewResourceSpecInput, 'prompt' | 'referenceChanges'> {
+): Pick<UpdateGenerationPreviewResourceSpecInput, 'prompt' | 'slotSelections' | 'genericReferences'> {
   return {
     prompt: {
       authoredText: draft.promptDraft.authoredText,
@@ -92,8 +97,24 @@ export function buildGenerationPreviewUpdateRequest(
           }
         : {}),
     },
-    referenceChanges: draft.referenceChanges,
+    slotSelections: draft.slotSelections,
+    genericReferences: draft.genericReferences.map((reference) => ({
+      kind: 'asset-file',
+      assetId: reference.assetId,
+      assetFileId: reference.assetFileId,
+    })),
   };
+}
+
+function referenceCollectionsEqual(
+  left: GenerationPreviewResourceReference[],
+  right: GenerationPreviewResourceReference[],
+): boolean {
+  return left.length === right.length && left.every((reference, index) => {
+    const candidate = right[index];
+    return candidate?.assetId === reference.assetId &&
+      candidate.assetFileId === reference.assetFileId;
+  });
 }
 
 function placementKey(
@@ -102,8 +123,6 @@ function placementKey(
   return [
     placement.sectionId,
     placement.slotId,
-    placement.scope?.kind ?? '',
-    placement.scope?.id ?? '',
     placement.subject?.kind ?? '',
     placement.subject?.id ?? '',
   ].join(':');

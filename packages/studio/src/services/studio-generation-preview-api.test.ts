@@ -29,16 +29,17 @@ describe('studio generation preview API', () => {
           authoredText: 'Updated prompt.\nSecond line.',
           negativeText: null,
         },
-        referenceChanges: [
+        slotSelections: [
           {
-            kind: 'clear',
             placement: {
               kind: 'slot',
               sectionId: 'visual-language',
               slotId: 'lookbook',
             },
+            reference: null,
           },
         ],
+        genericReferences: [],
       })
     ).resolves.toBe(preview);
 
@@ -55,16 +56,17 @@ describe('studio generation preview API', () => {
             authoredText: 'Updated prompt.\nSecond line.',
             negativeText: null,
           },
-          referenceChanges: [
+          slotSelections: [
             {
-              kind: 'clear',
               placement: {
                 kind: 'slot',
                 sectionId: 'visual-language',
                 slotId: 'lookbook',
               },
+              reference: null,
             },
           ],
+          genericReferences: [],
         }),
       }
     );
@@ -85,7 +87,8 @@ describe('studio generation preview API', () => {
         projectName: 'constantinople',
         specId: 'media_generation_spec_test',
         prompt: { authoredText: 'Updated prompt.' },
-        referenceChanges: [],
+        slotSelections: [],
+        genericReferences: [],
       })
     ).rejects.toMatchObject({
       code: 'CORE_TEST',

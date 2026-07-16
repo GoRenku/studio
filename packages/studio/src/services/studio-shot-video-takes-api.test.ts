@@ -9,6 +9,7 @@ import {
   replaceShotVideoTakeShots,
   setShotVideoTakeDirection,
   setShotVideoTakeGenerationReference,
+  setShotVideoTakeGenerationGenericReferences,
   setShotVideoTakeGenerationSpec,
   setShotVideoTakePicked,
   setShotVideoTakeStructure,
@@ -129,8 +130,10 @@ describe('studio Shot Video Take API', () => {
       'scene_test',
       'take_test',
       {
-        selectionId: 'candidate:shot_002:first-frame:file_002',
-        included: true,
+        selection: {
+          placement: { kind: 'slot', sectionId: 'take-media', slotId: 'first-frame' },
+          reference: { kind: 'asset-file', assetId: 'asset_002', assetFileId: 'file_002' },
+        },
         selectedShotId: 'shot_002',
       }
     );
@@ -141,20 +144,25 @@ describe('studio Shot Video Take API', () => {
         method: 'PATCH',
         headers: headers(),
         body: JSON.stringify({
-          selectionId: 'candidate:shot_002:first-frame:file_002',
-          included: true,
+          selection: {
+            placement: { kind: 'slot', sectionId: 'take-media', slotId: 'first-frame' },
+            reference: { kind: 'asset-file', assetId: 'asset_002', assetFileId: 'file_002' },
+          },
           selectedShotId: 'shot_002',
         }),
       }
     );
   });
 
-  it('updates exact generic reference selections', async () => {
+  it('updates exact typed and generic reference selections', async () => {
     await setShotVideoTakeGenerationReference(
       'constantinople',
       'scene_test',
       'take_test',
-      { selectionId: 'candidate:shared:first-frame:file_001', included: true }
+      { selection: {
+        placement: { kind: 'slot', sectionId: 'take-media', slotId: 'first-frame' },
+        reference: { kind: 'asset-file', assetId: 'asset_001', assetFileId: 'file_001' },
+      } }
     );
     expect(global.fetch).toHaveBeenCalledWith(
       `${TAKE}/generation/references`,
@@ -162,8 +170,37 @@ describe('studio Shot Video Take API', () => {
         method: 'PATCH',
         headers: headers(),
         body: JSON.stringify({
-          selectionId: 'candidate:shared:first-frame:file_001',
-          included: true,
+          selection: {
+            placement: { kind: 'slot', sectionId: 'take-media', slotId: 'first-frame' },
+            reference: { kind: 'asset-file', assetId: 'asset_001', assetFileId: 'file_001' },
+          },
+        }),
+      }
+    );
+
+    await setShotVideoTakeGenerationGenericReferences(
+      'constantinople',
+      'scene_test',
+      'take_test',
+      {
+        references: [{
+          kind: 'asset-file',
+          assetId: 'asset_audio',
+          assetFileId: 'file_audio',
+        }],
+      }
+    );
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      `${TAKE}/generation/generic-references`,
+      {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({
+          references: [{
+            kind: 'asset-file',
+            assetId: 'asset_audio',
+            assetFileId: 'file_audio',
+          }],
         }),
       }
     );

@@ -33,19 +33,24 @@ One persisted `GenerationSpec` stores:
 - purpose and exact target;
 - optional actual provider/model endpoint identity;
 - explicitly authored non-media provider values;
-- ordered exact project references, their UI guide placement, explicit
-  include/exclude state, and optional actual provider media-field assignment;
+- ordered exact project references, their optional UI guide placement, and
+  optional authored provider media-field assignment;
 - optional authored title.
 
 The saved contract represents incomplete editing state as well as executable
-state. Create and update validate only the durable envelope and guide placement
-structure. They do not invoke provider validation, insert provider defaults,
+state. Presence in the reference list means inclusion. Create and update
+validate only the durable envelope and structurally readable placement. Current
+purpose guides and candidate lists are presentation projections, not persistence
+validation. Core does not invoke provider validation, insert provider defaults,
 repair values, assign media fields, select references, or switch models.
 
 Estimates consume pricing inputs only: provider, model, output media kind,
-schema-derived generation settings, and intended input-media counts. Estimation
+explicitly authored pricing values, provider-owned pricing defaults where the
+pricing contract supplies them, and intended input-media counts. Estimation
 does not resolve files, require creative prompts or references, assemble an
-executable provider payload, or invoke execution validation.
+executable provider payload, or invoke execution validation. Missing pricing
+facts produce an ordinary price-unavailable diagnostic without mutating the
+spec.
 
 Before provider-payload preview or execution, Core resolves every included
 exact file without substitution. Engines classifies actual provider fields,
@@ -59,11 +64,16 @@ request. Outputs are attached through focused domain import commands; a run
 never plans or imports another generation.
 
 Purpose descriptors own target/output identity, context, product presentation,
-and reference guides. Guides have presentation cardinality but no provider
-field, required, default-selection, generation-purpose, or cost semantics.
-Every purpose permits ordered Additional References. Generic provider
-validation never reads context, guide sections, candidates, selections, or slot
-occupancy.
+and optional typed reference guides. Every guide slot is one nullable UI choice
+and has no provider field, requiredness, default-selection, generation-purpose,
+or cost semantics. Every purpose permits ordered Additional References.
+Generic provider validation never reads context, guide sections, candidates,
+selections, or slot occupancy.
+
+Provider values are absent until authored. In particular, duration has no
+Studio default: `Unspecified` presents authored absence and is not an `Auto`
+value. Provider omission behavior belongs to the provider contract, while
+Engines reports schema-invalid omission only during payload preview or run.
 
 Engines continues to own the actual provider/model catalog, JSON schemas,
 provider field metadata, media cardinality, product-setting field

@@ -4,7 +4,7 @@ import type {
   SceneShotVideoTake,
   SceneShotVideoTakeStructureMode,
 } from '@gorenku/studio-core/client';
-import { Film, Route } from 'lucide-react';
+import { Film, Loader2, Route } from 'lucide-react';
 import { Button } from '@/ui/button';
 import {
   Dialog,
@@ -58,6 +58,7 @@ interface SceneShotDetailProps {
   locationLabels: Record<string, string>;
   onTabChange?: (tab: SceneShotDetailTab) => void;
   onCreateTake?: () => Promise<void>;
+  onCreateTakeFromTake?: () => Promise<void>;
   createTakePending?: boolean;
   onTakeMutation?: (workspace: ShotVideoTakeWorkspaceResponse) => void;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
@@ -85,6 +86,7 @@ export function SceneShotDetail({
   locationLabels,
   onTabChange = () => {},
   onCreateTake,
+  onCreateTakeFromTake,
   createTakePending = false,
   onTakeMutation,
   onSaveNotificationChange,
@@ -94,10 +96,12 @@ export function SceneShotDetail({
     setDetailSaveNotificationSlot,
   } = useDetailSaveNotificationSlots();
   const editableTake = isShotEditable ? take : null;
-  const visibleTabs = isShotEditable
+  const completedTake = take?.status.editability.state === 'read-only';
+  const visibleTabs = useMemo(() => isShotEditable
     ? DESIGN_TABS
-    : DESIGN_TABS.filter((tab) => tab.value === 'description');
-  const visibleActiveTab = isShotEditable ? activeTab : 'description';
+    : DESIGN_TABS.filter((tab) => tab.value === 'description' || (completedTake && tab.value === 'references')),
+  [completedTake, isShotEditable]);
+  const visibleActiveTab = visibleTabs.some((tab) => tab.value === activeTab) ? activeTab : 'description';
   const takeTag = useMemo(
     () =>
       editableTake && editableTake.shotIds.length > 1
@@ -108,7 +112,7 @@ export function SceneShotDetail({
   const production = useShotVideoTakeProduction({
     projectName,
     sceneId,
-    takeId: editableTake?.takeId,
+    takeId: take?.takeId,
     selectedShotId: shot.shotId,
     onMutationSaved: (result) => {
       onTakeMutation?.(result.workspace);
@@ -146,10 +150,10 @@ export function SceneShotDetail({
   }, [onSaveNotificationChange, saveNotification]);
 
   useEffect(() => {
-    if (!isShotEditable && activeTab !== 'description') {
+    if (!visibleTabs.some((tab) => tab.value === activeTab)) {
       onTabChange('description');
     }
-  }, [activeTab, isShotEditable, onTabChange]);
+  }, [activeTab, onTabChange, visibleTabs]);
 
   const handleTakeMutation = useCallback(
     (result: ShotVideoTakeWorkspaceMutation) => {
@@ -222,7 +226,7 @@ export function SceneShotDetail({
           className='p-4'
         >
           <SceneShotVideoStage
-            video={editableTake?.video ?? null}
+            video={take?.video ?? null}
           />
         </ResizablePanel>
         <ResizableHandle withHandle />
@@ -246,9 +250,15 @@ export function SceneShotDetail({
               className='flex h-full min-h-0 min-w-0 flex-col gap-0'
               items={visibleTabs.map((tab) => ({ ...tab }))}
               trailing={
-                takeTag ? (
+                takeTag || completedTake ? (
                   <div className='flex items-center gap-2'>
-                    <SceneShotAiProductionTakeTag label={takeTag} />
+                    {takeTag ? <SceneShotAiProductionTakeTag label={takeTag} /> : null}
+                    {completedTake ? (
+                      <Button type='button' variant='outline' disabled={createTakePending} onClick={() => void onCreateTakeFromTake?.()}>
+                        {createTakePending ? <Loader2 className='animate-spin' /> : null}
+                        New Take
+                      </Button>
+                    ) : null}
                     {editableTake ? (
                       <ShotVideoTakeStructureToggle
                         mode={editableTake.state.structure.mode}
@@ -285,8 +295,10 @@ export function SceneShotDetail({
                         sceneId={sceneId}
                         castMemberImages={castMemberImages}
                         take={production.take}
-                        references={production.workspace?.generation.references ?? null}
-                        onSetReference={production.setReferenceIncluded}
+                        references={production.workspace?.generation.references.kind === 'draft'
+                          ? production.workspace.generation.references
+                          : null}
+                        onSetReference={production.setReferenceSelection}
                         onSaveNotificationChange={handleDialogsSaveNotificationChange}
                       />
                     </LineTabsContent>
@@ -297,7 +309,8 @@ export function SceneShotDetail({
                         take={production.take}
                         references={production.workspace?.generation.references ?? null}
                         diagnostics={production.workspace?.generation.diagnostics}
-                        onSetReference={production.setReferenceIncluded}
+                        onSetReference={production.setReferenceSelection}
+                        onSetGenericReferences={production.setGenericReferences}
                         onSaveNotificationChange={handleReferencesSaveNotificationChange}
                       />
                     </LineTabsContent>
@@ -309,6 +322,20 @@ export function SceneShotDetail({
                       />
                     </LineTabsContent>
                   </>
+                ) : null}
+                {completedTake ? (
+                  <LineTabsContent value='references'>
+                    <SceneShotReferencesTab
+                      projectName={projectName}
+                      sceneId={sceneId}
+                      take={production.take}
+                      references={production.workspace?.generation.references ?? null}
+                      diagnostics={production.workspace?.generation.diagnostics}
+                      onSetReference={production.setReferenceSelection}
+                      onSetGenericReferences={production.setGenericReferences}
+                      onSaveNotificationChange={handleReferencesSaveNotificationChange}
+                    />
+                  </LineTabsContent>
                 ) : null}
               </div>
             </LineTabs>

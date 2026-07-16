@@ -8,6 +8,14 @@ import type {
 import type { ShotVideoTakeWorkspaceResponse } from '@/services/studio-shot-video-takes-api';
 import { SceneShotReferencesTab } from './scene-shot-references-tab';
 
+const generationReferencesApi = vi.hoisted(() => ({
+  listStudioGenerationReferences: vi.fn(),
+}));
+
+vi.mock('@/services/studio-generation-references-api', () =>
+  generationReferencesApi
+);
+
 vi.mock('@/features/image-revision/use-image-revision-dialog', () => ({
   useImageRevisionDialog: () => ({ openImageRevision: vi.fn() }),
 }));
@@ -43,10 +51,7 @@ describe('SceneShotReferencesTab', () => {
       screen.getByRole('button', { name: /Exclude First Frame/i })
     );
     await waitFor(() =>
-      expect(onSetReference).toHaveBeenCalledWith(
-        'selection_first_frame',
-        false
-      )
+      expect(onSetReference).toHaveBeenCalledWith(expect.objectContaining({ reference: null }))
     );
   });
 
@@ -86,10 +91,45 @@ describe('SceneShotReferencesTab', () => {
       )
     );
   });
+
+  it('adds media-generic references through the shared picker', async () => {
+    generationReferencesApi.listStudioGenerationReferences.mockResolvedValue({
+      items: [{
+        reference: {
+          kind: 'asset-file',
+          assetId: 'asset_ambience',
+          assetFileId: 'file_ambience',
+        },
+        label: 'Courtyard ambience',
+        mediaKind: 'audio',
+        mimeType: 'audio/wav',
+        sizeBytes: 100,
+        width: null,
+        height: null,
+        durationSeconds: 12,
+        role: 'imported-media',
+        provenance: { origin: 'imported' },
+        browserUrl: '/ambience.wav',
+      }],
+      nextCursor: null,
+    });
+    const onSetGenericReferences = vi.fn().mockResolvedValue(undefined);
+    renderTab({ onSetGenericReferences });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Media' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Courtyard ambience' }));
+
+    await waitFor(() => expect(onSetGenericReferences).toHaveBeenCalledWith([{
+      kind: 'asset-file',
+      assetId: 'asset_ambience',
+      assetFileId: 'file_ambience',
+    }]));
+  });
 });
 
 function renderTab(overrides: {
-  onSetReference?: (selectionId: string, included: boolean) => Promise<void>;
+  onSetReference?: (selection: import('@gorenku/studio-core/client').GenerationReferenceSlotSelectionInput) => Promise<void>;
+  onSetGenericReferences?: (references: import('@gorenku/studio-core/client').GenerationReference[]) => Promise<void>;
   onSaveNotificationChange?: ReturnType<typeof vi.fn>;
   diagnostics?: Array<{ code: string; message: string }>;
 } = {}) {
@@ -101,6 +141,7 @@ function renderTab(overrides: {
       references={references()}
       diagnostics={overrides.diagnostics}
       onSetReference={overrides.onSetReference ?? vi.fn().mockResolvedValue(undefined)}
+      onSetGenericReferences={overrides.onSetGenericReferences ?? vi.fn().mockResolvedValue(undefined)}
       onSaveNotificationChange={overrides.onSaveNotificationChange}
     />
   );
@@ -155,8 +196,13 @@ function references(): ShotVideoTakeWorkspaceResponse['generation']['references'
       url: '/studio-api/projects/constantinople/assets/asset_first_frame/files/file_first_frame',
     }],
     diagnostics: [],
+    selection: {
+      placement: { kind: 'slot' as const, sectionId: 'take-media', slotId: 'first-frame' },
+      reference: { kind: 'asset-file' as const, assetId: 'asset_first_frame', assetFileId: 'file_first_frame' },
+    },
   };
   return {
+    kind: 'draft',
     general: [{
       id: 'selection_first_frame',
       kind: 'first-frame',
@@ -164,6 +210,7 @@ function references(): ShotVideoTakeWorkspaceResponse['generation']['references'
       selected: true,
       card,
     }],
+    genericReferences: [],
     lookbook: [],
     dialogueAudio: [],
     dialogueAudioCapability: {

@@ -15,6 +15,7 @@ import {
 import type { GenerationPurposeContract } from './purpose-contract.js';
 import { estimateGeneration } from './estimates.js';
 import { validateGenerationSpecForExecution } from './validation.js';
+import { requireSceneShotVideoTakeAuthoringOpen } from '../database/access/shot-video-take-media.js';
 
 export async function runGeneration(input: {
   id: string;
@@ -29,6 +30,12 @@ export async function runGeneration(input: {
   outputProjectRelativeRoot?: string;
   now: string;
 }): Promise<GenerationRunReport> {
+  if (input.spec.purpose === 'shot.video-take' && input.spec.target.kind === 'sceneShotVideoTake') {
+    requireSceneShotVideoTakeAuthoringOpen({
+      session: input.session,
+      takeId: input.spec.target.id,
+    });
+  }
   const estimateReport = await estimateGeneration({
     spec: input.spec,
     purpose: input.purpose,
@@ -74,7 +81,11 @@ export async function runGeneration(input: {
     });
     const run = insertGenerationRunRecord(input.session, {
         ...baseRun,
-        status: input.mode === 'simulated' ? 'simulated' : 'completed',
+        status: input.mode === 'simulated'
+          ? 'simulated'
+          : input.spec.purpose === 'shot.video-take' && input.spec.target.kind === 'sceneShotVideoTake'
+            ? 'awaiting-attachment'
+            : 'completed',
         outputs: result.outputs.map((output) => ({
           artifactId: output.artifactId,
           ...(output.mimeType ? { mimeType: output.mimeType } : {}),

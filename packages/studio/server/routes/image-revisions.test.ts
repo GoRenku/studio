@@ -63,7 +63,7 @@ describe('Image Revision routes', () => {
           preview: {
             references: {
               slots: [{
-                candidates: [{
+                eligibleCandidates: [{
                   browserUrl:
                     '/studio-api/projects/constantinople/assets/asset_test/files/asset_file_test',
                 }],
@@ -120,7 +120,8 @@ function imageRevisionContext(): ImageRevisionEditorContext {
       draft: {
         mode: 'edit',
         authoredText: '',
-        referenceSelections: [],
+        slotSelections: [],
+        genericReferences: [],
         generationControls: [],
       },
       preview: {
@@ -132,7 +133,8 @@ function imageRevisionContext(): ImageRevisionEditorContext {
               sectionId: 'source',
               slotId: 'source-image',
             },
-            candidates: [{
+            current: null,
+            eligibleCandidates: [{
               kind: 'image',
               role: 'source',
               label: 'Reference image',

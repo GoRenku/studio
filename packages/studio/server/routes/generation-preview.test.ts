@@ -20,7 +20,11 @@ function createMountedGenerationPreviewRoute(
         references: {
           slots: preview.references.slots.map((slot) => ({
             ...slot,
-            candidates: slot.candidates.map((reference) => ({
+            current: slot.current ? {
+              ...slot.current,
+              browserUrl: '/studio-api/projects/constantinople/assets/current/files/current',
+            } : null,
+            eligibleCandidates: slot.eligibleCandidates.map((reference) => ({
               ...reference,
               browserUrl:
                 '/studio-api/projects/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference',
@@ -58,16 +62,17 @@ describe('generation preview Hono route', () => {
             authoredText: 'Updated character sheet prompt.',
             negativeText: null,
           },
-          referenceChanges: [
+          slotSelections: [
             {
-              kind: 'clear',
               placement: {
                 kind: 'slot',
                 sectionId: 'continuity',
                 slotId: 'cast',
               },
+              reference: null,
             },
           ],
+          genericReferences: [],
         }),
       }
     );
@@ -87,16 +92,17 @@ describe('generation preview Hono route', () => {
         authoredText: 'Updated character sheet prompt.',
         negativeText: null,
       },
-      referenceChanges: [
+      slotSelections: [
         {
-          kind: 'clear',
           placement: {
             kind: 'slot',
             sectionId: 'continuity',
             slotId: 'cast',
           },
+          reference: null,
         },
       ],
+      genericReferences: [],
     });
   });
 
@@ -109,7 +115,7 @@ describe('generation preview Hono route', () => {
         method: 'PATCH',
         body: JSON.stringify({
           prompt: { authoredText: 'Updated prompt.' },
-          referenceChanges: [{ kind: 'clear', placement: { kind: 'bad' } }],
+          slotSelections: [{ placement: { kind: 'bad' }, reference: null }],
         }),
       },
     );

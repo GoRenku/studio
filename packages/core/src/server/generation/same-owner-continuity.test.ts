@@ -49,11 +49,11 @@ describe('same-owner generation continuity slots', () => {
     });
     const slot = context.referenceGuide.sections
       .find((section) => section.id === 'cast')!.slots[0]!;
-    expect(slot.candidates.map((candidate) => candidate.reference)).toEqual(expect.arrayContaining([
+    expect(slot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual(expect.arrayContaining([
       { kind: 'asset-file', assetId: first.assetId, assetFileId: first.files[0]!.id },
       { kind: 'asset-file', assetId: second.assetId, assetFileId: second.files[0]!.id },
     ]));
-    expect(slot.candidates.some((candidate) =>
+    expect(slot.eligibleCandidates.some((candidate) =>
       candidate.reference.kind === 'asset-file' && candidate.reference.assetId === unavailable.assetId
     )).toBe(false);
     expect('selections' in slot).toBe(false);
@@ -70,7 +70,7 @@ describe('same-owner generation continuity slots', () => {
     });
     const slot = context.referenceGuide.sections
       .find((section) => section.id === 'location')!.slots[0]!;
-    expect(slot.candidates).toEqual([]);
+    expect(slot.eligibleCandidates).toEqual([]);
   });
 
   async function addAsset(

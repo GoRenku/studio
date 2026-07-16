@@ -764,7 +764,19 @@ describe('renku CLI', () => {
           { kind: 'quality', value: 'medium' },
         ]),
       },
-      referenceGuide: { sections: [], additionalReferences: [] },
+      referenceGuide: {
+        sections: [
+          {
+            id: 'visual-language',
+            slots: [
+              {
+                id: 'production-lookbook-sheet',
+                eligibleCandidates: [],
+              },
+            ],
+          },
+        ],
+      },
     });
 
     stdout = [];
@@ -816,7 +828,7 @@ describe('renku CLI', () => {
           { kind: 'quality', value: 'high' },
         ]),
       },
-      referenceGuide: { sections: [], additionalReferences: [] },
+      referenceGuide: { sections: [] },
     });
 
     stdout = [];
@@ -2323,6 +2335,9 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(storyboardSheetImportExitCode).toBe(0);
+    const storyboardSheetImport = JSON.parse(stdout.join('\n')) as {
+      asset: { assetId: string; files: Array<{ id: string }> };
+    };
 
     stdout = [];
     stderr = [];
@@ -2404,20 +2419,25 @@ describe('renku CLI', () => {
       )
     ).toBe(false);
 
-    const imageCreateSpecPath = path.join(homeDir, 'image-create-reference-spec.json');
+    const imageEditSpecPath = path.join(homeDir, 'image-edit-reference-spec.json');
     await fs.writeFile(
-      imageCreateSpecPath,
+      imageEditSpecPath,
       JSON.stringify(
         {
-          purpose: 'image.create',
-          target: { kind: 'project' },
-          model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },
+          purpose: 'image.edit',
+          target: { kind: 'asset', id: storyboardSheetImport.asset.assetId },
+          model: { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' },
           values: { prompt: 'A still first frame for Urban studying the bronze.' },
           references: [
             {
-              kind: 'asset-file',
-              assetId: 'asset_missing_reference',
-              assetFileId: 'asset_file_missing_reference',
+              id: 'storyboard-lookbook-reference',
+              placement: { kind: 'additional' },
+              providerField: 'image_urls',
+              reference: {
+                kind: 'asset-file',
+                assetId: storyboardSheetImport.asset.assetId,
+                assetFileId: storyboardSheetImport.asset.files[0]!.id,
+              },
             },
           ],
           title: 'Foundry reference frame',
@@ -2430,19 +2450,29 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const imageCreateValidateExitCode = await runRenkuCli(
-      ['generation', 'validate', '--file', imageCreateSpecPath, '--json'],
+    const imageEditValidateExitCode = await runRenkuCli(
+      ['generation', 'validate', '--file', imageEditSpecPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(imageCreateValidateExitCode).toBe(0);
-    const imageCreateValidationOutput =
+    expect(imageEditValidateExitCode).toBe(0);
+    const imageEditValidationOutput =
       stdout.join('\n').trim() || stderr.join('\n').trim();
-    expect(JSON.parse(imageCreateValidationOutput)).toMatchObject({
+    const imageEditValidation = JSON.parse(imageEditValidationOutput);
+    expect(
+      imageEditValidation.valid,
+      JSON.stringify(imageEditValidation, null, 2)
+    ).toBe(true);
+    expect(imageEditValidation).toMatchObject({
       valid: true,
       spec: {
-        purpose: 'image.create',
+        purpose: 'image.edit',
         references: [
-          expect.objectContaining({ assetId: 'asset_missing_reference' }),
+          expect.objectContaining({
+            id: 'storyboard-lookbook-reference',
+            reference: expect.objectContaining({
+              assetId: storyboardSheetImport.asset.assetId,
+            }),
+          }),
         ],
       },
     });

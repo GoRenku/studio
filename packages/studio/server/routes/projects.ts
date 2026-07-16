@@ -16,6 +16,7 @@ import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
+import { createGenerationReferencesRoute } from './generation-references.js';
 import { createImageRevisionsRoute } from './image-revisions.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
@@ -59,6 +60,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'deleteSceneDialogueAudioTake'
   | 'readSceneShotListResource'
   | 'createShotVideoTake'
+  | 'createSceneShotVideoTakeFromTake'
   | 'readShotVideoTakeWorkspace'
   | 'listShotVideoTakes'
   | 'discardShotVideoTake'
@@ -68,6 +70,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'setShotVideoTakeStructure'
   | 'setShotVideoTakeGenerationSpec'
   | 'setShotVideoTakeGenerationReference'
+  | 'setShotVideoTakeGenerationGenericReferences'
+  | 'listGenerationReferences'
   | 'estimateShotVideoTakeGeneration'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
@@ -166,6 +170,10 @@ export function createProjectsRoute(
     .route(
       '/:projectName',
       createGenerationPreviewRoute({ requireToken })
+    )
+    .route(
+      '/:projectName',
+      createGenerationReferencesRoute({ projectData, requireToken })
     )
     .route('/:projectName', createImageRevisionsRoute({ requireToken }))
     .route('/:projectName', createTrashRoute({ projectData, requireToken }))

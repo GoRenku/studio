@@ -2,7 +2,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 import {
   assetFiles,
   assets,
-  mediaGenerationSpecs,
+  mediaGenerationRuns,
   projectLocales,
   projects,
   sceneDialogueAudio,
@@ -119,16 +119,44 @@ export function readProductionExportMediaRows(
   return rows;
 }
 
+export function assertPickedTakesHaveReadyVideos(
+  session: DatabaseSession,
+  mediaRows: ProductionExportMediaRow[]
+): void {
+  const pickedTakes = session.db
+    .select({ id: sceneShotVideoTakes.id, title: sceneShotVideoTakes.title })
+    .from(sceneShotVideoTakes)
+    .where(and(
+      eq(sceneShotVideoTakes.isPicked, true),
+      isNull(sceneShotVideoTakes.discardedAt)
+    ))
+    .all();
+  const exportedTakeIds = new Set(
+    mediaRows
+      .filter((row) => row.role === 'shot-video')
+      .map((row) => row.takeId)
+  );
+  const missing = pickedTakes.filter((take) => !exportedTakeIds.has(take.id));
+  if (missing.length === 0) {
+    return;
+  }
+  throw new ProjectDataError(
+    'CORE_PRODUCTION_EXPORT_TAKE_VIDEO_MISSING',
+    `Production export requires a current ready video for every picked Take. Missing: ${missing.map((take) => `${take.title} (${take.id})`).join(', ')}.`
+  );
+}
+
 function readDialogueRows(
   session: DatabaseSession,
   video: Omit<ProductionExportMediaRow, 'relationshipId' | 'localeId' | 'role' | 'mediaKind' | 'dialogueId'>
 ): ProductionExportMediaRow[] {
-  const records = session.db.select({ referencesJson: mediaGenerationSpecs.referencesJson })
-    .from(mediaGenerationSpecs)
+  const records = session.db.select({ specSnapshotJson: mediaGenerationRuns.specSnapshotJson })
+    .from(mediaGenerationRuns)
     .where(and(
-      eq(mediaGenerationSpecs.purpose, 'shot.video-take'),
-      eq(mediaGenerationSpecs.targetKind, 'sceneShotVideoTake'),
-      eq(mediaGenerationSpecs.targetId, video.takeId)
+      eq(mediaGenerationRuns.purpose, 'shot.video-take'),
+      eq(mediaGenerationRuns.targetKind, 'sceneShotVideoTake'),
+      eq(mediaGenerationRuns.targetId, video.takeId),
+      eq(mediaGenerationRuns.status, 'completed')
     )).all();
   if (records.length === 0) {
     return [];
@@ -140,9 +168,9 @@ function readDialogueRows(
     );
   }
   const record = records[0]!;
-  const references = JSON.parse(record.referencesJson) as GenerationSpec['references'];
+  const references = (JSON.parse(record.specSnapshotJson) as GenerationSpec).references;
   return references.flatMap((reference) => {
-    if (!reference.included || reference.placement.kind !== 'slot' ||
+    if (reference.placement.kind !== 'slot' ||
       reference.placement.slotId !== 'dialogue-audio' ||
       reference.reference.kind !== 'asset-file') {
       return [];

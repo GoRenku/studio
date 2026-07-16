@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  GenerationReference,
   GenerationCostEstimateReport,
+  GenerationReferenceSlotSelectionInput,
   ShotVideoTakeGenerationSetup,
   ShotVideoTakeInputModeId,
   ShotVideoTakeModelChoice,
@@ -20,6 +22,7 @@ import {
   estimateShotVideoTakeGeneration,
   readShotVideoTakeWorkspace,
   setShotVideoTakeGenerationReference,
+  setShotVideoTakeGenerationGenericReferences,
   setShotVideoTakeGenerationSpec,
   type ShotVideoTakeWorkspaceMutation,
   type ShotVideoTakeWorkspaceResponse,
@@ -56,7 +59,8 @@ export interface UseShotVideoTakeProductionResult {
   estimateState: 'idle' | 'loading' | 'error';
   estimateError: string | null;
   refreshWorkspace: () => Promise<void>;
-  setReferenceIncluded: (selectionId: string, included: boolean) => Promise<void>;
+  setReferenceSelection: (selection: GenerationReferenceSlotSelectionInput) => Promise<void>;
+  setGenericReferences: (references: GenerationReference[]) => Promise<void>;
 }
 
 export function useShotVideoTakeProduction(
@@ -217,20 +221,33 @@ export function useShotVideoTakeProduction(
     return () => window.clearTimeout(timer);
   }, [projectName, sceneId, selectedModel, setup, takeId]);
 
-  const setReferenceIncluded = useCallback(async (
-    selectionId: string,
-    included: boolean
+  const setReferenceSelection = useCallback(async (
+    selection: GenerationReferenceSlotSelectionInput
   ) => {
-    if (!takeId || workspace?.take.status.editability.state !== 'editable') return;
+    if (!takeId || workspace?.generation.authoringState.kind !== 'draft') return;
     const result = await setShotVideoTakeGenerationReference(
       projectName,
       sceneId,
       takeId,
-      { selectionId, included, ...(selectedShotId ? { selectedShotId } : {}) }
+      { selection, ...(selectedShotId ? { selectedShotId } : {}) }
     );
     applyWorkspace(result.workspace);
     onMutationSaved?.(result);
-  }, [applyWorkspace, onMutationSaved, projectName, sceneId, selectedShotId, takeId, workspace?.take.status.editability.state]);
+  }, [applyWorkspace, onMutationSaved, projectName, sceneId, selectedShotId, takeId, workspace?.generation.authoringState.kind]);
+
+  const setGenericReferences = useCallback(async (
+    references: GenerationReference[]
+  ) => {
+    if (!takeId || workspace?.generation.authoringState.kind !== 'draft') return;
+    const result = await setShotVideoTakeGenerationGenericReferences(
+      projectName,
+      sceneId,
+      takeId,
+      { references, ...(selectedShotId ? { selectedShotId } : {}) }
+    );
+    applyWorkspace(result.workspace);
+    onMutationSaved?.(result);
+  }, [applyWorkspace, onMutationSaved, projectName, sceneId, selectedShotId, takeId, workspace?.generation.authoringState.kind]);
 
   useStudioResourceRefresh({
     projectName,
@@ -247,7 +264,7 @@ export function useShotVideoTakeProduction(
     workspace,
     models,
     take: workspace?.take ?? null,
-    isEditable: workspace?.take.status.editability.state === 'editable',
+    isEditable: workspace?.generation.authoringState.kind === 'draft',
     selectedInputMode,
     selectedModel,
     setup,
@@ -259,7 +276,8 @@ export function useShotVideoTakeProduction(
     estimateState,
     estimateError,
     refreshWorkspace,
-    setReferenceIncluded,
+    setReferenceSelection,
+    setGenericReferences,
   }), [
     autosave,
     estimate,
@@ -274,7 +292,8 @@ export function useShotVideoTakeProduction(
     setInputMode,
     setModel,
     setParameter,
-    setReferenceIncluded,
+    setReferenceSelection,
+    setGenericReferences,
     setup,
     workspace,
   ]);

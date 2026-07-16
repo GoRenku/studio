@@ -1,27 +1,23 @@
-import type { GenerationPreviewResource } from '@gorenku/studio-core/server';
-
-type CoreGenerationPreviewResource = Omit<
+import type {
   GenerationPreviewResource,
-  'references'
-> & {
-  references: {
-    slots: Array<Omit<GenerationPreviewResource['references']['slots'][number], 'candidates'> & {
-      candidates: Array<Omit<GenerationPreviewResource['references']['slots'][number]['candidates'][number], 'browserUrl'>>;
-    }>;
-    additional: Array<Omit<GenerationPreviewResource['references']['additional'][number], 'browserUrl'>>;
-  };
-};
+  GenerationPreviewResourceData,
+} from '@gorenku/studio-core/client';
 
 export async function buildGenerationPreviewResource(input: {
   projectName: string;
-  preview: CoreGenerationPreviewResource;
+  preview: GenerationPreviewResourceData;
 }): Promise<GenerationPreviewResource> {
   return {
     ...input.preview,
     references: {
       slots: input.preview.references.slots.map((slot) => ({
         ...slot,
-        candidates: slot.candidates.map((reference) => withBrowserUrl(input.projectName, reference)),
+        current: slot.current
+          ? withBrowserUrl(input.projectName, slot.current)
+          : null,
+        eligibleCandidates: slot.eligibleCandidates.map((reference) =>
+          withBrowserUrl(input.projectName, reference)
+        ),
       })),
       additional: input.preview.references.additional.map((reference) =>
         withBrowserUrl(input.projectName, reference)

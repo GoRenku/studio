@@ -43,7 +43,7 @@ export function ImageRevisionDialog({
         )
       : [];
   const canRun = Boolean(
-    editor.draft?.authoredText.trim() &&
+    editor.draft &&
       editor.modeContext?.state === 'available' &&
       !editor.loading,
   );
@@ -104,7 +104,8 @@ export function ImageRevisionDialog({
             onTabChange={setEditorTab}
             onAuthoredTextChange={editor.updateAuthoredText}
             onNegativeTextChange={editor.updateNegativeText}
-            onReferenceChoose={() => {}}
+            onReferenceChoose={editor.updateReference}
+            onGenericReferencesChange={editor.updateGenericReferences}
             onControlChange={editor.updateControl}
             authoredPlaceholder={
               editor.mode === 'edit'

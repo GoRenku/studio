@@ -6,6 +6,7 @@ import type {
 } from '../../client/index.js';
 import {
   assertProductionExportLocaleExists,
+  assertPickedTakesHaveReadyVideos,
   readProductionProjectInfo,
   readProductionExportMediaRows,
   type ProductionExportMediaRow,
@@ -39,6 +40,7 @@ export async function exportProductionAssets(
   try {
     const project = readProductionProjectInfo(session);
     const mediaRows = readProductionExportMediaRows(session);
+    assertPickedTakesHaveReadyVideos(session, mediaRows);
     const variants = readRequestedVariants(session, mediaRows, input.variants);
     const previousManifest = input.fresh
       ? null

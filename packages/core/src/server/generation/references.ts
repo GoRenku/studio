@@ -5,6 +5,9 @@ import type {
   GenerationReference,
   GenerationReferenceCatalogItem,
   GenerationReferenceCatalogPage,
+  GenerationReferenceSelection,
+  GenerationReferenceSlotSelectionInput,
+  GenerationSpec,
 } from '../../client/generation.js';
 import type { ProjectRelativePath } from '../../client/project.js';
 import {
@@ -17,6 +20,8 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import { isPathInside } from '../files/project-paths.js';
+import { readGenerationPurpose } from './purposes.js';
+import { readGenerationSpec, updateGenerationSpec } from './specs.js';
 
 export interface ListGenerationReferencesInput {
   session: DatabaseSession;
@@ -38,9 +43,6 @@ export function listGenerationReferences(
     .flatMap((record): GenerationReferenceCatalogItem[] => {
       const { asset, file, owner, generationRunId } = record;
       if (!isGenerationMediaKind(file.mediaKind)) {
-        return [];
-      }
-      if (asset.origin === 'external' && !input.owner && !input.assetId && !input.assetFileIds) {
         return [];
       }
       const role = owner?.role ?? file.role;
@@ -116,6 +118,73 @@ export function listGenerationReferences(
   };
 }
 
+export function setGenerationReferenceSlotSelection(input: {
+  specId: string;
+  selection: GenerationReferenceSlotSelectionInput;
+  session: DatabaseSession;
+  now: string;
+}) {
+  const record = readGenerationSpec({ id: input.specId, session: input.session });
+  return updateGenerationSpec({
+    id: record.id,
+    spec: applyGenerationReferenceSlotSelection(record.spec, input.selection),
+    purpose: readGenerationPurpose(record.spec.purpose),
+    session: input.session,
+    now: input.now,
+  });
+}
+
+export function applyGenerationReferenceSlotSelection(
+  spec: GenerationSpec,
+  input: GenerationReferenceSlotSelectionInput
+): GenerationSpec {
+  const current = spec.references.find((selection) =>
+    placementsEqual(selection.placement, input.placement)
+  );
+  const references = spec.references.filter((selection) =>
+    !placementsEqual(selection.placement, input.placement)
+  );
+  if (!input.reference) {
+    return { ...spec, references };
+  }
+  const providerField = input.providerField === undefined
+    ? current?.providerField
+    : input.providerField ?? undefined;
+  references.push({
+    id: current?.id ?? `slot:${placementKey(input.placement)}`,
+    placement: input.placement,
+    ...(providerField ? { providerField } : {}),
+    reference: input.reference,
+  });
+  return { ...spec, references };
+}
+
+export function applyGenerationGenericReferences(
+  spec: GenerationSpec,
+  genericReferences: GenerationReference[]
+): GenerationSpec {
+  const current = new Map(
+    spec.references
+      .filter((selection) => selection.placement.kind === 'additional')
+      .map((selection) => [referenceKey(selection.reference), selection])
+  );
+  const references = spec.references.filter(
+    (selection) => selection.placement.kind !== 'additional'
+  );
+  for (const reference of genericReferences) {
+    const existing = current.get(referenceKey(reference));
+    references.push({
+      id: existing?.id ?? `additional:${referenceKey(reference)}`,
+      placement: { kind: 'additional' },
+      ...(existing?.providerField
+        ? { providerField: existing.providerField }
+        : {}),
+      reference,
+    });
+  }
+  return { ...spec, references };
+}
+
 export async function resolveGenerationReference(input: {
   session: DatabaseSession;
   projectFolder: string;
@@ -187,6 +256,25 @@ function referenceKey(reference: GenerationReference): string {
   return reference.kind === 'asset-file'
     ? `${reference.assetId}:${reference.assetFileId}`
     : reference.projectRelativePath;
+}
+
+function placementsEqual(
+  left: GenerationReferenceSelection['placement'],
+  right: GenerationReferenceSelection['placement']
+): boolean {
+  return left.kind === 'slot' && right.kind === 'slot' &&
+    placementKey(left) === placementKey(right);
+}
+
+function placementKey(
+  placement: Extract<GenerationReferenceSelection['placement'], { kind: 'slot' }>
+): string {
+  return [
+    placement.sectionId,
+    placement.slotId,
+    placement.subject?.kind ?? '',
+    placement.subject?.id ?? '',
+  ].join(':');
 }
 
 function itemCursor(item: GenerationReferenceCatalogItem): string {

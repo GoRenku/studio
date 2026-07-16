@@ -83,7 +83,8 @@ export interface GenerationPreviewReferenceSlot {
     GenerationReferenceSelection['placement'],
     { kind: 'slot' }
   >;
-  candidates: GenerationPreviewResourceReference[];
+  current: GenerationPreviewResourceReference | null;
+  eligibleCandidates: GenerationPreviewResourceReference[];
 }
 
 export type GenerationPreviewResourceData = Omit<
@@ -91,23 +92,13 @@ export type GenerationPreviewResourceData = Omit<
   'references'
 > & {
   references: {
-    slots: Array<Omit<GenerationPreviewReferenceSlot, 'candidates'> & {
-      candidates: Array<Omit<GenerationPreviewResourceReference, 'browserUrl'>>;
+    slots: Array<Omit<GenerationPreviewReferenceSlot, 'current' | 'eligibleCandidates'> & {
+      current: Omit<GenerationPreviewResourceReference, 'browserUrl'> | null;
+      eligibleCandidates: Array<Omit<GenerationPreviewResourceReference, 'browserUrl'>>;
     }>;
     additional: Array<Omit<GenerationPreviewResourceReference, 'browserUrl'>>;
   };
 };
-
-export type GenerationPreviewReferenceChange =
-  | {
-      kind: 'replace';
-      placement: Extract<GenerationReferenceSelection['placement'], { kind: 'slot' }>;
-      reference: import('./generation.js').GenerationReference;
-    }
-  | {
-      kind: 'clear';
-      placement: Extract<GenerationReferenceSelection['placement'], { kind: 'slot' }>;
-    };
 
 export type GenerationPreviewConfigurationValue =
   | string

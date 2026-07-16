@@ -20,11 +20,9 @@ import { projectShotVideoTakeReferences } from './references.js';
 import {
   durationSeconds,
   isShotVideoTakeGenerationParameter,
-  normalizeShotVideoTakeParameterValues,
   orderShotVideoTakeGenerationParameters,
   shotVideoTakeParameterAllowedValues,
-  shotVideoTakeParameterDefaultValue,
-} from './generation-parameters.js';
+} from './generation-parameter-presentation.js';
 
 export async function buildShotVideoTakeGenerationSession(input: {
   session: DatabaseSession;
@@ -44,9 +42,11 @@ export async function buildShotVideoTakeGenerationSession(input: {
     target,
   })[0] ?? null;
   const activeModel = findActiveModel(context, spec);
-  const run = spec
-    ? listGenerationRunRecords(input.session, { specId: spec.id })[0] ?? null
-    : null;
+  const runs = spec
+    ? listGenerationRunRecords(input.session, { specId: spec.id })
+    : [];
+  const run = runs[0] ?? null;
+  const successfulRun = runs.find((candidate) => candidate.status === 'completed');
   return {
     context,
     spec,
@@ -58,11 +58,18 @@ export async function buildShotVideoTakeGenerationSession(input: {
       parameterValues: parameterValues(spec?.spec ?? null, activeModel),
     },
     models: context.models.map(projectModel),
+    authoringState: successfulRun
+      ? { kind: 'completed', successfulRunId: successfulRun.id }
+      : {
+          kind: 'draft',
+          failedAttemptCount: runs.filter((candidate) => candidate.status === 'failed').length,
+        },
     references: projectShotVideoTakeReferences({
       session: input.session,
       guide: context.referenceGuide,
       spec: spec?.spec ?? null,
       model: activeModel,
+      successfulRun,
       ...(input.selectedShotId ? { selectedShotId: input.selectedShotId } : {}),
     }),
     finalPrompt: promptDraft(spec?.spec ?? null, activeModel),
@@ -105,9 +112,6 @@ function projectModel(model: GenerationModelDescriptor): ShotVideoTakeModelRepor
         return duration === null ? [] : [duration];
       })
     : undefined;
-  const defaultDuration = durationSeconds(
-    durationField ? shotVideoTakeParameterDefaultValue(durationField) : undefined
-  );
   return {
     modelChoice: modelChoice(model.provider, model.model),
     provider: model.provider,
@@ -122,9 +126,6 @@ function projectModel(model: GenerationModelDescriptor): ShotVideoTakeModelRepor
             : {}),
           ...(durationField.minimum !== undefined ? { minimum: durationField.minimum } : {}),
           ...(durationField.maximum !== undefined ? { maximum: durationField.maximum } : {}),
-          ...(defaultDuration !== null
-            ? { default: defaultDuration }
-            : {}),
         }
       : { supported: false },
     parameters: orderShotVideoTakeGenerationParameters(model.fields)
@@ -135,9 +136,6 @@ function projectModel(model: GenerationModelDescriptor): ShotVideoTakeModelRepor
             name: field.name,
             label: field.label,
             required: field.required,
-            ...(parameterValue(shotVideoTakeParameterDefaultValue(field)) !== undefined
-              ? { defaultValue: parameterValue(shotVideoTakeParameterDefaultValue(field))! }
-              : {}),
             ...(shotVideoTakeParameterAllowedValues(field)
               ? { allowedValues: shotVideoTakeParameterAllowedValues(field)! }
               : {}),
@@ -185,7 +183,7 @@ function inputModeForSpec(
   }
   const slots = new Set(
     spec.references
-      .filter((selection) => selection.included && selection.placement.kind === 'slot')
+      .filter((selection) => selection.placement.kind === 'slot')
       .map((selection) => selection.placement.kind === 'slot' ? selection.placement.slotId : '')
   );
   if (slots.has('source-video')) {
@@ -205,7 +203,6 @@ function inputModeForSpec(
     ) ?? []
   );
   if (spec.references.some((selection) =>
-    selection.included &&
     !(selection.placement.kind === 'slot' && selection.placement.slotId === 'dialogue-audio') &&
     !(selection.providerField && audioFields.has(selection.providerField))
   )) {
@@ -226,12 +223,9 @@ function parameterValues(
       .filter((field) => !field.media && field.semantic?.kind !== 'authored-text')
       .map((field) => field.name)
   );
-  return normalizeShotVideoTakeParameterValues({
-    fields: model.fields,
-    values: Object.fromEntries(
-      Object.entries(spec?.values ?? {}).filter(([name]) => parameterNames.has(name))
-    ),
-  });
+  return Object.fromEntries(
+    Object.entries(spec?.values ?? {}).filter(([name]) => parameterNames.has(name))
+  );
 }
 
 function promptDraft(
@@ -260,32 +254,4 @@ function promptDraft(
 
 function modelChoice(provider: string, model: string): string {
   return `${provider}/${model}`;
-}
-
-function parameterValue(
-  value: GenerationModelDescriptor['fields'][number]['defaultValue']
-) {
-  if (
-    value === undefined ||
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
-    return value;
-  }
-  if (
-    Array.isArray(value) &&
-    (
-      value.every((entry) => typeof entry === 'string') ||
-      value.every((entry) => typeof entry === 'number') ||
-      value.every((entry) => typeof entry === 'boolean')
-    )
-  ) {
-    return value as string[] | number[] | boolean[];
-  }
-  if (!Array.isArray(value)) {
-    return value;
-  }
-  return undefined;
 }

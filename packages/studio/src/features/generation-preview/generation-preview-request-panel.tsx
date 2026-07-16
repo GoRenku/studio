@@ -64,6 +64,7 @@ export function GenerationPreviewRequestPanel({
         onAuthoredTextChange={editor.updateAuthoredText}
         onNegativeTextChange={editor.updateNegativeText}
         onReferenceChoose={editor.chooseReference}
+        onGenericReferencesChange={editor.chooseGenericReferences}
       />
       <DialogFooter className='items-end gap-4'>
         <div className='mr-auto min-w-0'>

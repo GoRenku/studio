@@ -15,7 +15,6 @@ describe('generic generation preview', () => {
         references: [{
           id: 'missing-reference',
           placement: { kind: 'additional' },
-          included: false,
           reference: {
             kind: 'project-file',
             projectRelativePath: 'missing/reference.png' as never,
@@ -33,7 +32,6 @@ describe('generic generation preview', () => {
     expect(preview.references).toEqual([
       expect.objectContaining({
         id: 'missing-reference',
-        included: false,
         resolved: null,
       }),
     ]);

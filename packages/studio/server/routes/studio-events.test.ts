@@ -152,7 +152,7 @@ describe('studio events Hono route', () => {
       },
       references: {
         slots: [{
-          candidates: [{
+          eligibleCandidates: [{
             browserUrl:
               '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',
           }],
@@ -648,7 +648,8 @@ function coreGenerationPreviewResourceFixture() {
           sectionId: 'visual-language',
           slotId: 'lookbook',
         },
-        candidates: [{
+        current: null,
+        eligibleCandidates: [{
           kind: 'image' as const,
           role: 'style',
           label: 'Storyboard Lookbook Sheet',
@@ -671,7 +672,8 @@ function studioGenerationPreviewFixture(): GenerationPreviewResource {
     references: {
       slots: preview.references.slots.map((slot) => ({
         ...slot,
-        candidates: slot.candidates.map((reference) => ({
+        current: null,
+        eligibleCandidates: slot.eligibleCandidates.map((reference) => ({
           ...reference,
           browserUrl:
             '/studio-api/projects/constantinople/assets/asset_style/files/asset_file_style',

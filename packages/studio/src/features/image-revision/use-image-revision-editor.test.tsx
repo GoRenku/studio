@@ -24,12 +24,7 @@ describe('useImageRevisionEditor', () => {
     };
     const preview = {
       finalPrompt: { authoredText: '' },
-      references: [{
-        assetId: 'asset_source',
-        assetFileId: 'file_source',
-        browserUrl: '/source-image',
-        selected: true,
-      }],
+      references: { slots: [], additional: [] },
     } as never;
     imageRevisionApi.readImageRevisionContext.mockResolvedValue({
       target: {
@@ -54,13 +49,18 @@ describe('useImageRevisionEditor', () => {
         draft: {
           mode: 'edit',
           authoredText: '',
-          referenceSelections: [],
+          slotSelections: [],
+          genericReferences: [],
           generationControls: [],
         },
         preview,
         controls: [],
         diagnostics: [],
       },
+    });
+    imageRevisionApi.estimateImageRevisionDraft.mockResolvedValue({
+      preview,
+      estimatedUsd: null,
     });
     const { result } = renderHook(() =>
       useImageRevisionEditor(request, vi.fn())
@@ -75,5 +75,53 @@ describe('useImageRevisionEditor', () => {
     act(() => result.current.updateAuthoredText(''));
 
     expect(result.current.preview).toBe(preview);
+
+    const slot = {
+      label: 'Style reference',
+      placement: {
+        kind: 'slot' as const,
+        sectionId: 'continuity',
+        slotId: 'style',
+      },
+      current: null,
+      eligibleCandidates: [],
+    };
+    const selectedReference = {
+      kind: 'image' as const,
+      role: 'style',
+      label: 'Basilica style',
+      assetId: 'asset_style',
+      assetFileId: 'file_style',
+      selected: true,
+      browserUrl: '/style.png',
+    };
+    act(() => result.current.updateReference(slot, selectedReference));
+    expect(result.current.draft?.slotSelections).toEqual([
+      expect.objectContaining({
+        placement: slot.placement,
+        reference: {
+          kind: 'asset-file',
+          assetId: 'asset_style',
+          assetFileId: 'file_style',
+        },
+      }),
+    ]);
+    act(() => result.current.updateReference(slot, null));
+    expect(result.current.draft?.slotSelections[0]?.reference).toBeNull();
+
+    act(() => result.current.updateGenericReferences([selectedReference]));
+    expect(result.current.draft?.genericReferences).toEqual([
+      expect.objectContaining({
+        placement: { kind: 'additional' },
+        reference: {
+          kind: 'asset-file',
+          assetId: 'asset_style',
+          assetFileId: 'file_style',
+        },
+      }),
+    ]);
+    expect(result.current.editorDraft?.genericReferences).toEqual([
+      selectedReference,
+    ]);
   });
 });

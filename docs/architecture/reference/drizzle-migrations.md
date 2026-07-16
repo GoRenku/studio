@@ -256,6 +256,16 @@ pnpm drizzle-kit generate --config drizzle.config.ts --custom --name <name>
 Then add the `PRAGMA user_version = <generation>;` statement to the generated SQL
 file and apply it through the normal Drizzle Kit migration command.
 
+Migration 0058 has one documented custom preservation step after schema generation.
+Drizzle Kit must rebuild `scene_shot_video_take` to remove its self-referencing
+`regenerated_from_take_id` column, and SQLite cascades that parent drop into the Take
+Shot/image/video child rows even when the generated migration requests foreign keys
+off inside the transaction. The migration snapshots all three child tables before
+the generated rebuild and restores them afterward. A direct `DROP COLUMN` is not
+valid because the retired column participates in a foreign key. The preservation
+step is verified on a backup copy with row counts, `foreign_key_check`, and
+`quick_check` before any real-project migration.
+
 ## Shipped Project Upgrades
 
 Once Renku Studio is used for durable user projects, projects created by a

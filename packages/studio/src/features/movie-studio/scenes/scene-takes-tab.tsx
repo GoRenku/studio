@@ -14,6 +14,7 @@ import { readSceneShotListResource } from '@/services/studio-screenplay-api';
 import { restoreTrashItem } from '@/services/studio-trash-api';
 import {
   createShotVideoTake,
+  createSceneShotVideoTakeFromTake,
   discardShotVideoTake,
   listShotVideoTakes,
   readShotVideoTakeWorkspace,
@@ -720,15 +721,42 @@ export function SceneTakesTab({
   );
   const selectedShot = selectedIndex >= 0 ? shots[selectedIndex] : shots[0];
   const selectedShotLabel = shotLabel(selectedIndex >= 0 ? selectedIndex : 0);
-  const isFocusedShotEditable = Boolean(
+  const isFocusedShotInTake = Boolean(
     displayedActiveTake &&
       selectedShot &&
       displayedActiveTake.shotIds.includes(selectedShot.shotId)
   );
+  const isFocusedShotEditable = Boolean(
+    isFocusedShotInTake &&
+      displayedActiveTake?.status.editability.state === 'editable'
+  );
   const selectedTake =
-    isFocusedShotEditable && displayedActiveTake
+    isFocusedShotInTake && displayedActiveTake
       ? displayedActiveTake
       : null;
+  const handleCreateFromTake = async () => {
+    if (!displayedActiveTake || createTakePendingRef.current) return;
+    createTakePendingRef.current = true;
+    setCreateTakePending(true);
+    try {
+      const report = await createSceneShotVideoTakeFromTake(
+        projectName,
+        sceneId,
+        displayedActiveTake.takeId
+      );
+      setTakeOverviews((current) => orderSceneShotVideoTakeOverviews([...current, report.overview]));
+      onSelect({
+        type: 'scene', id: sceneId, sceneTab: 'takes', takeWorkspaceMode: 'edit',
+        takeId: report.overview.take.takeId,
+        shotId: report.overview.take.shotIds[0], shotTab: activeShotTab,
+      });
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Unable to create a New Take.');
+    } finally {
+      createTakePendingRef.current = false;
+      setCreateTakePending(false);
+    }
+  };
   const handleCreateTake = async () => {
     if (
       !resource.activeShotListId ||
@@ -868,6 +896,7 @@ export function SceneTakesTab({
             locationLabels={resource.locationLabels}
             onTabChange={handleSelectShotTab}
             onCreateTake={handleCreateTake}
+            onCreateTakeFromTake={handleCreateFromTake}
             createTakePending={createTakePending}
             onTakeMutation={handleTakeWorkspace}
             onSaveNotificationChange={reportDetailSaveNotification}

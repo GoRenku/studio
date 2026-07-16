@@ -2,12 +2,6 @@ import type { AssetTarget, RecoverableMutationReport } from '../../client/index.
 import {
   readAssetRelationship,
 } from '../database/access/asset-relationships/index.js';
-import {
-  sceneShotVideoTakes,
-  sceneShotVideoTakeImages,
-  sceneShotVideoTakeVideos,
-} from '../schema/index.js';
-import { and, eq, isNull } from 'drizzle-orm';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { assertAssetIsNotCastVoiceSample } from './cast-voice-commands.js';
 import { readProjectRecord } from '../database/access/project.js';
@@ -15,7 +9,8 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import { assetRelationshipTrashItemId } from '../trash/trash-object-registry.js';
-import { listGenerationSpecRecords } from '../database/access/media-generation.js';
+import { countActiveSceneShotReferenceAssetOwners } from '../database/access/scene-shot-reference-assets.js';
+import { countActiveSceneShotVideoTakeMediaOwners } from '../database/access/shot-video-take-media.js';
 
 export async function discardAsset(
   input: {
@@ -64,50 +59,9 @@ function assertAssetNotReferencedByTakeMedia(
   session: Awaited<ReturnType<typeof openProjectSession>>['session'],
   assetId: string
 ): void {
-  const reference = listGenerationSpecRecords(session, {
-    purpose: 'shot.video-take',
-  }).find((record) =>
-    record.spec.target.kind === 'sceneShotVideoTake' &&
-    record.spec.references.some((selection) =>
-      selection.reference.kind === 'asset-file' &&
-      selection.reference.assetId === assetId
-    ) &&
-    session.db
-      .select({ id: sceneShotVideoTakes.id })
-      .from(sceneShotVideoTakes)
-      .where(and(
-        eq(sceneShotVideoTakes.id, record.spec.target.id),
-        isNull(sceneShotVideoTakes.discardedAt)
-      ))
-      .get() !== undefined
-  );
-  const video = session.db
-    .select({ takeId: sceneShotVideoTakeVideos.takeId })
-    .from(sceneShotVideoTakeVideos)
-    .innerJoin(
-      sceneShotVideoTakes,
-      eq(sceneShotVideoTakeVideos.takeId, sceneShotVideoTakes.id)
-    )
-    .where(and(
-      eq(sceneShotVideoTakeVideos.assetId, assetId),
-      isNull(sceneShotVideoTakeVideos.discardedAt),
-      isNull(sceneShotVideoTakes.discardedAt)
-    ))
-    .get();
-  const image = session.db
-    .select({ takeId: sceneShotVideoTakeImages.takeId })
-    .from(sceneShotVideoTakeImages)
-    .innerJoin(
-      sceneShotVideoTakes,
-      eq(sceneShotVideoTakeImages.takeId, sceneShotVideoTakes.id)
-    )
-    .where(and(
-      eq(sceneShotVideoTakeImages.assetId, assetId),
-      isNull(sceneShotVideoTakeImages.discardedAt),
-      isNull(sceneShotVideoTakes.discardedAt)
-    ))
-    .get();
-  if (reference || image || video) {
+  const ownerCount = countActiveSceneShotReferenceAssetOwners(session, assetId) +
+    countActiveSceneShotVideoTakeMediaOwners(session, assetId);
+  if (ownerCount > 0) {
     throw new ProjectDataError(
       'PROJECT_DATA429',
       `Asset ${assetId} is referenced by active Shot take media.`

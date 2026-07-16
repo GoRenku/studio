@@ -60,6 +60,7 @@ export {
   updateGenerationSpec,
 } from './generation/specs.js';
 export {
+  applyGenerationGenericReferences,
   listGenerationReferences,
   resolveGenerationReference,
   type ListGenerationReferencesInput,
@@ -73,12 +74,15 @@ export {
 export type {
   GenerationPurposeContract,
   GenerationPurposeDescriptor,
-  GenerationPurposeEditingContract,
 } from './generation/purpose-contract.js';
 export { applyFixedGenerationSettings } from './generation/purpose-settings.js';
 export { attachGenerationMedia, type AttachGenerationMediaInput, type GenerationMediaAttachmentReport } from './generation/attachments.js';
 export { attachSceneStoryboardImages } from './generation/scene-storyboard-attachments.js';
 export { createShotVideoTake, deleteShotVideoTake, listShotVideoTakes, readShotVideoTake } from './generation/shot-video-takes.js';
+export {
+  discardSceneShotGenericReferenceAsset,
+  registerSceneShotGenericReferenceAsset,
+} from './commands/scene-shot-reference-asset-commands.js';
 export { validateGenerationSpec } from './generation/validation.js';
 export { buildGenerationPreview } from './generation/previews.js';
 export {

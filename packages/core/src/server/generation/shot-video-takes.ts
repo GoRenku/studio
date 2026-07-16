@@ -33,7 +33,7 @@ export function createShotVideoTake(input: { session: DatabaseSession; sceneId: 
   const id = input.idGenerator.next('scene_shot_video_take');
   const title = `Take ${listShotVideoTakes({ session: input.session, sceneId: input.sceneId }).length + 1}`;
   input.session.db.transaction((tx) => {
-    tx.insert(sceneShotVideoTakes).values({ id, sceneId: input.sceneId, sourceShotListId: input.shotListId, title, stateJson: '{"version":3}', isPicked: false, regeneratedFromTakeId: null, mediaFolderProjectRelativePath: null, historySnapshot: '{}', createdAt: input.now, updatedAt: input.now }).run();
+    tx.insert(sceneShotVideoTakes).values({ id, sceneId: input.sceneId, sourceShotListId: input.shotListId, title, stateJson: '{"version":3}', isPicked: false, mediaFolderProjectRelativePath: null, historySnapshot: '{}', createdAt: input.now, updatedAt: input.now }).run();
     for (const [index, shot] of shots.entries()) {
       tx.insert(sceneShotVideoTakeShots).values({ takeId: id, shotId: shot!.shotId, shotOrder: index, shotContentFingerprint: JSON.stringify(shot), storyboardImageId: null, storyboardAssetFileId: null, storyboardContentFingerprint: 'unavailable' }).run();
     }

@@ -1,20 +1,25 @@
-import type { GenerationSpec } from '../../client/generation.js';
-import type { GenerationPreviewReferenceChange } from '../../client/generation-preview-resource.js';
+import type {
+  GenerationReference,
+  GenerationReferenceSlotSelectionInput,
+  GenerationSpec,
+} from '../../client/generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { buildGenerationPreview } from '../generation/previews.js';
 import type { GenerationPurposeDescriptor } from '../generation/purpose-contract.js';
 import { readGenerationSpec, updateGenerationSpec } from '../generation/specs.js';
 import { validateGenerationSpecForExecution } from '../generation/validation.js';
-import { addRequestGuideNotices } from '../generation/purpose-guide.js';
 import { projectGenerationPreviewResource } from './projection.js';
-import { applyGenerationSpecReferenceChanges } from '../generation/spec-reference-edits.js';
-import { bindGenerationReferenceFields } from '../generation/reference-field-binding.js';
+import {
+  applyGenerationGenericReferences,
+  applyGenerationReferenceSlotSelection,
+} from '../generation/references.js';
 
 export async function updateGenerationPreviewResource(input: {
   specId: string;
   prompt: { authoredText: string; negativeText?: string | null };
-  referenceChanges: GenerationPreviewReferenceChange[];
+  slotSelections: GenerationReferenceSlotSelectionInput[];
+  genericReferences: GenerationReference[];
   purpose: GenerationPurposeDescriptor;
   session: DatabaseSession;
   projectFolder: string;
@@ -63,26 +68,16 @@ export async function updateGenerationPreviewResource(input: {
     }
   }
   const guide = context.referenceGuide;
-  spec = applyGenerationSpecReferenceChanges({
-    spec,
-    changes: input.referenceChanges,
-  });
-  spec = bindGenerationReferenceFields({
-    spec,
-    guide,
-    models: context.models,
-  });
+  for (const selection of input.slotSelections) {
+    spec = applyGenerationReferenceSlotSelection(spec, selection);
+  }
+  spec = applyGenerationGenericReferences(spec, input.genericReferences);
   const updated = updateGenerationSpec({
     id: input.specId,
     spec,
-    purpose: { ...input.purpose, referenceGuide: guide },
+    purpose: input.purpose,
     session: input.session,
     now: input.now,
-  });
-  const referenceGuide = addRequestGuideNotices({
-    guide,
-    spec: updated.spec,
-    models: context.models,
   });
   const validation = await validateGenerationSpecForExecution({
     spec: updated.spec,
@@ -92,7 +87,7 @@ export async function updateGenerationPreviewResource(input: {
   });
   const preview = await buildGenerationPreview({
     spec: updated.spec,
-    referenceGuide,
+    referenceGuide: guide,
     session: input.session,
     projectFolder: input.projectFolder,
     ...(validation.valid ? { validatedRequest: validation.request } : {}),

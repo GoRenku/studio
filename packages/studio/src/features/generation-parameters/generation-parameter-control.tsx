@@ -107,7 +107,7 @@ export function GenerationParameterSelect({
         }}
       >
         <SelectTrigger id={id} size='sm' className='w-full'>
-          <SelectValue placeholder='Select' />
+          <SelectValue placeholder='Unspecified' />
         </SelectTrigger>
         <SelectContent>
           {allowed.map((option) => (

@@ -58,6 +58,16 @@ export function useGenerationPreviewEditor(
     setUpdateError(null);
   };
 
+  const chooseGenericReferences = (
+    references: GenerationPreviewResourceReference[],
+  ) => {
+    if (!preview.generationSpecId || updatePending) {
+      return;
+    }
+    setDraft((current) => ({ ...current, genericReferences: references }));
+    setUpdateError(null);
+  };
+
   const update = async () => {
     if (!preview.generationSpecId || updatePending) {
       return;
@@ -100,6 +110,7 @@ export function useGenerationPreviewEditor(
     updateAuthoredText,
     updateNegativeText,
     chooseReference,
+    chooseGenericReferences,
     update,
   };
 }

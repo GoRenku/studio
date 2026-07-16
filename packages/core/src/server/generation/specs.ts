@@ -1,5 +1,4 @@
 import type {
-  GenerationReferenceGuide,
   GenerationReferenceSelection,
   GenerationSpec,
   GenerationSpecRecord,
@@ -14,8 +13,8 @@ import {
   updateGenerationSpecRecord,
 } from '../database/access/media-generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import type { GenerationPurposeEditingContract } from './purpose-contract.js';
-import { requireShotVideoTakeAuthoringMutable } from '../database/access/shot-video-take-media.js';
+import type { GenerationPurposeContract } from './purpose-contract.js';
+import { requireSceneShotVideoTakeAuthoringOpen } from '../database/access/shot-video-take-media.js';
 
 const SINGLETON_TAKE_PURPOSES = new Set<GenerationSpec['purpose']>([
   'shot.first-frame',
@@ -27,7 +26,7 @@ const SINGLETON_TAKE_PURPOSES = new Set<GenerationSpec['purpose']>([
 export function createGenerationSpec(input: {
   id: string;
   spec: GenerationSpec;
-  purpose: GenerationPurposeEditingContract;
+  purpose: GenerationPurposeContract;
   session: DatabaseSession;
   now: string;
 }): GenerationSpecRecord {
@@ -44,12 +43,13 @@ export function createGenerationSpec(input: {
 export function updateGenerationSpec(input: {
   id: string;
   spec: GenerationSpec;
-  purpose: GenerationPurposeEditingContract;
+  purpose: GenerationPurposeContract;
   session: DatabaseSession;
   now: string;
 }): GenerationSpecRecord {
   const current = readGenerationSpec({ id: input.id, session: input.session });
-  assertTakeSpecCanBeEdited(input);
+  assertGenerationSpecIdentity(current.spec, input.spec);
+  assertTakeSpecCanBeEdited({ ...input, currentSpec: current.spec });
   assertGenerationSpecEditingEnvelope(input.spec, input.purpose);
   return updateGenerationSpecRecord(input.session, {
     id: input.id,
@@ -66,7 +66,7 @@ function assertTakeSpecCanBeCreated(input: {
   if (!isSingletonTakeSpec(input.spec)) {
     return;
   }
-  requireShotVideoTakeAuthoringMutable({
+  requireSceneShotVideoTakeAuthoringOpen({
     session: input.session,
     takeId: input.spec.target.id,
   });
@@ -84,14 +84,15 @@ function assertTakeSpecCanBeCreated(input: {
 function assertTakeSpecCanBeEdited(input: {
   id: string;
   spec: GenerationSpec;
+  currentSpec: GenerationSpec;
   session: DatabaseSession;
 }): void {
-  if (!isSingletonTakeSpec(input.spec)) {
+  if (!isSingletonTakeSpec(input.currentSpec)) {
     return;
   }
-  requireShotVideoTakeAuthoringMutable({
+  requireSceneShotVideoTakeAuthoringOpen({
     session: input.session,
-    takeId: input.spec.target.id,
+    takeId: input.currentSpec.target.id,
   });
   const duplicates = listGenerationSpecRecords(input.session, {
     purpose: input.spec.purpose,
@@ -139,7 +140,7 @@ export function listGenerationSpecs(input: {
 
 function assertGenerationSpecEditingEnvelope(
   spec: GenerationSpec,
-  purpose: GenerationPurposeEditingContract
+  purpose: GenerationPurposeContract
 ): void {
   if (spec.purpose !== purpose.purpose) {
     throw new ProjectDataError(
@@ -188,73 +189,48 @@ function assertGenerationSpecEditingEnvelope(
         );
       }
     }
-    const slot = findGuideSlot(purpose.referenceGuide, selection);
-    if (!slot) {
-      continue;
-    }
-    if (!slot.candidates.some((candidate) => referencesEqual(
-      candidate.reference,
-      selection.reference
-    ))) {
-      throw new ProjectDataError(
-        'CORE_GENERATION_SELECTION_INVALID',
-        `Generation reference is not a current candidate for guide slot ${slot.id}.`
-      );
-    }
-    const key = selectionPlacementKey(selection);
-    const count = (oneSlotSelections.get(key) ?? 0) + 1;
-    oneSlotSelections.set(key, count);
-    if (count > 1) {
-      throw new ProjectDataError(
-        'CORE_GENERATION_SELECTION_INVALID',
-        `Generation guide slot ${slot.id} accepts one selection.`
-      );
+    if (selection.placement.kind === 'slot') {
+      assertSlotPlacement(selection);
+      const key = selectionPlacementKey(selection);
+      const count = (oneSlotSelections.get(key) ?? 0) + 1;
+      oneSlotSelections.set(key, count);
+      if (count > 1) {
+        throw new ProjectDataError(
+          'CORE_GENERATION_SELECTION_INVALID',
+          `Generation reference slot ${selection.placement.sectionId}/${selection.placement.slotId} accepts one current selection.`
+        );
+      }
     }
   }
 }
 
-function referencesEqual(
-  left: GenerationReferenceSelection['reference'],
-  right: GenerationReferenceSelection['reference']
-): boolean {
-  return left.kind === 'asset-file' && right.kind === 'asset-file'
-    ? left.assetId === right.assetId && left.assetFileId === right.assetFileId
-    : left.kind === 'project-file' && right.kind === 'project-file'
-      ? left.projectRelativePath === right.projectRelativePath
-      : false;
-}
-
-function findGuideSlot(
-  guide: GenerationReferenceGuide,
-  selection: GenerationReferenceSelection
-) {
-  if (selection.placement.kind === 'additional') {
-    return null;
-  }
+function assertSlotPlacement(selection: GenerationReferenceSelection): void {
   const placement = selection.placement;
-  const section = guide.sections.find(
-    (candidate) =>
-      candidate.id === placement.sectionId &&
-      subjectsEqual(candidate.scope, placement.scope)
-  );
-  const slot = section?.slots.find((candidate) =>
-    candidate.id === placement.slotId &&
-    subjectsEqual(candidate.subject, placement.subject)
-  );
-  if (!slot) {
+  if (placement.kind !== 'slot') {
+    return;
+  }
+  if (!placement.sectionId.trim() || !placement.slotId.trim() ||
+      (placement.subject && (!placement.subject.kind.trim() || !placement.subject.id.trim()))) {
     throw new ProjectDataError(
       'CORE_GENERATION_SELECTION_INVALID',
-      `Generation reference placement does not exist in the purpose guide: ${placement.sectionId}/${placement.slotId}.`
+      `Generation reference slot placement must identify a non-empty section, slot, and optional subject: ${selection.id}.`
     );
   }
-  return slot;
 }
 
-function subjectsEqual(
-  left: { kind: string; id: string } | undefined,
-  right: { kind: string; id: string } | undefined
-): boolean {
-  return left?.kind === right?.kind && left?.id === right?.id;
+function assertGenerationSpecIdentity(current: GenerationSpec, updated: GenerationSpec): void {
+  if (current.purpose !== updated.purpose) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_PURPOSE_IMMUTABLE',
+      'A persisted generation spec cannot change purpose.'
+    );
+  }
+  if (current.target.kind !== updated.target.kind || current.target.id !== updated.target.id) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_TARGET_IMMUTABLE',
+      'A persisted generation spec cannot change target.'
+    );
+  }
 }
 
 function selectionPlacementKey(selection: GenerationReferenceSelection): string {
@@ -265,8 +241,6 @@ function selectionPlacementKey(selection: GenerationReferenceSelection): string 
   return [
     selection.placement.sectionId,
     selection.placement.slotId,
-    selection.placement.scope?.kind ?? '',
-    selection.placement.scope?.id ?? '',
     subject?.kind ?? '',
     subject?.id ?? '',
   ].join('\0');

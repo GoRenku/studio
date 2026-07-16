@@ -30,8 +30,3 @@ export type GenerationPurposeContract = Pick<
   GenerationPurposeDescriptor,
   'purpose' | 'targetKind' | 'outputMediaKind'
 >;
-
-export type GenerationPurposeEditingContract = Pick<
-  GenerationPurposeDescriptor,
-  'purpose' | 'targetKind' | 'outputMediaKind'
-> & { referenceGuide: GenerationReferenceGuide };

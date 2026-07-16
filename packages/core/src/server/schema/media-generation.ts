@@ -60,5 +60,8 @@ export const mediaGenerationRuns = sqliteTable(
       table.targetId,
       table.startedAt
     ),
+    uniqueIndex('media_generation_run_take_success_idx')
+      .on(table.targetId)
+      .where(sql`${table.purpose} = 'shot.video-take' and ${table.targetKind} = 'sceneShotVideoTake' and ${table.status} = 'completed'`),
   ]
 );

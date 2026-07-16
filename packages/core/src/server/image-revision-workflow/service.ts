@@ -158,14 +158,7 @@ export async function runImageRevision(input: ProjectInput & {
     const record = createGenerationSpec({
       id: ids.next('media_generation_spec'),
       spec,
-      purpose: {
-        ...purpose,
-        referenceGuide: await purpose.buildReferenceGuide({
-          target: spec.target,
-          session,
-          projectFolder,
-        }),
-      },
+      purpose,
       session,
       now,
     });

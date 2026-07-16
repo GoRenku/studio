@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import type {
+  GenerationReference,
   SceneShotVideoTake,
+  GenerationReferenceSlotSelectionInput,
   ShotVideoTakeGeneralReferenceChoice,
   ShotVideoTakeReferenceImagePreview,
 } from '@gorenku/studio-core/client';
@@ -24,6 +27,9 @@ import {
 import { SceneShotReferenceSection } from './scene-shot-reference-section';
 import { useTakeEditorMutationStatus } from './use-take-editor-mutation-status';
 import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
+import { GenericReferencePickerDialog } from '@/features/reference-picker/reference-picker-dialog';
+import { Button } from '@/ui/button';
+import { ImageOverlayCard } from '@/ui/image-overlay-card';
 
 interface SceneShotReferencesTabProps {
   projectName: string;
@@ -31,7 +37,8 @@ interface SceneShotReferencesTabProps {
   take: SceneShotVideoTake | null;
   references: ShotVideoTakeWorkspaceResponse['generation']['references'] | null;
   diagnostics?: Array<{ code: string; message: string }>;
-  onSetReference: (selectionId: string, included: boolean) => Promise<void>;
+  onSetReference: (selection: GenerationReferenceSlotSelectionInput) => Promise<void>;
+  onSetGenericReferences: (references: GenerationReference[]) => Promise<void>;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -42,9 +49,11 @@ export function SceneShotReferencesTab({
   references,
   diagnostics = [],
   onSetReference,
+  onSetGenericReferences,
   onSaveNotificationChange,
 }: SceneShotReferencesTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
+  const [genericPickerOpen, setGenericPickerOpen] = useState(false);
   const mutationStatus = useTakeEditorMutationStatus({
     failureMessage: 'References could not be saved.',
   });
@@ -55,6 +64,10 @@ export function SceneShotReferencesTab({
     return () => onSaveNotificationChange?.(idleSaveNotification);
   }, [mutationStatus.status, onSaveNotificationChange]);
 
+  if (references?.kind === 'completed') {
+    return <CompletedTakeReferences references={references.usedReferences} />;
+  }
+
   const updateReferenceInclusion = async (
     selectionId: string,
     included: boolean
@@ -62,8 +75,15 @@ export function SceneShotReferencesTab({
     if (!take) {
       return;
     }
+    const card = findReferenceCard(references, selectionId);
+    if (!card?.selection) {
+      return;
+    }
+    const selection = included
+      ? card.selection
+      : { ...card.selection, reference: null };
     await mutationStatus.runTakeEditorMutation(async () => {
-      await onSetReference(selectionId, included);
+      await onSetReference(selection);
     });
   };
 
@@ -151,9 +171,7 @@ export function SceneShotReferencesTab({
                         (candidate) => candidate.selected
                       );
                       if (current) {
-                        await mutationStatus.runTakeEditorMutation(async () => {
-                          await onSetReference(current.card.selectionId, false);
-                        });
+                        await updateReferenceInclusion(current.card.selectionId, false);
                       }
                       return;
                     }
@@ -161,9 +179,7 @@ export function SceneShotReferencesTab({
                       (candidate) => candidate.castMemberId === castMemberId && candidate.assetId === assetId
                     );
                     if (!choice) return;
-                    await mutationStatus.runTakeEditorMutation(async () => {
-                      await onSetReference(choice.card.selectionId, true);
-                    });
+                    await updateReferenceInclusion(choice.card.selectionId, true);
                   }}
                 />
               ))}
@@ -192,15 +208,65 @@ export function SceneShotReferencesTab({
                       (candidate) => candidate.locationId === locationId && candidate.assetId === assetId
                     );
                     if (!choice) return;
-                    await mutationStatus.runTakeEditorMutation(async () => {
-                      await onSetReference(choice.card.selectionId, !selected);
-                    });
+                    await updateReferenceInclusion(choice.card.selectionId, !selected);
                   }}
                 />
               ))}
             </SceneShotReferenceCardGrid>
           ) : (
             <p className='text-sm text-muted-foreground'>No scene location available.</p>
+          )}
+        </SceneShotReferenceSection>
+
+        <SceneShotReferenceSection title='Additional Media' defaultOpen>
+          <div className='mb-3'>
+            <Button
+              type='button'
+              variant='outline'
+              disabled={!take}
+              onClick={() => setGenericPickerOpen(true)}
+            >
+              Add Media
+            </Button>
+          </div>
+          {references?.genericReferences.length ? (
+            <SceneShotReferenceCardGrid>
+              {references.genericReferences.map((reference) => (
+                <ImageOverlayCard
+                  key={reference.selectionId}
+                  title={reference.title}
+                  description={reference.mediaKind[0]!.toUpperCase() + reference.mediaKind.slice(1)}
+                  imageUrl={reference.mediaKind === 'image'
+                    ? reference.browserUrl ?? null
+                    : null}
+                  imageAlt={reference.title}
+                  selected
+                  topRightAction={(
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon'
+                      aria-label={`Remove ${reference.title}`}
+                      onClick={() => {
+                        void mutationStatus.runTakeEditorMutation(async () => {
+                          await onSetGenericReferences(
+                            references.genericReferences
+                              .filter((candidate) => candidate.selectionId !== reference.selectionId)
+                              .map((candidate) => candidate.reference)
+                          );
+                        });
+                      }}
+                    >
+                      <X className='h-4 w-4' />
+                    </Button>
+                  )}
+                  topRightActionPersistent
+                  onOpen={() => setGenericPickerOpen(true)}
+                />
+              ))}
+            </SceneShotReferenceCardGrid>
+          ) : (
+            <p className='text-sm text-muted-foreground'>No additional media selected.</p>
           )}
         </SceneShotReferenceSection>
 
@@ -222,8 +288,90 @@ export function SceneShotReferencesTab({
         currentIndex={0}
         onOpenChange={(open) => !open && setPreviewImage(null)}
       />
+      {references?.kind === 'draft' ? (
+        <GenericReferencePickerDialog
+          open={genericPickerOpen}
+          projectName={projectName}
+          selected={references.genericReferences.map((reference) => ({
+            reference: reference.reference,
+            label: reference.title,
+            mediaKind: reference.mediaKind,
+            ...(reference.browserUrl ? { browserUrl: reference.browserUrl } : {}),
+          }))}
+          onOpenChange={setGenericPickerOpen}
+          onChange={(nextReferences) => {
+            void mutationStatus.runTakeEditorMutation(async () => {
+              await onSetGenericReferences(
+                nextReferences.map((reference) => reference.reference)
+              );
+            });
+          }}
+        />
+      ) : null}
     </>
   );
+}
+
+function findReferenceCard(
+  references: Extract<NonNullable<SceneShotReferencesTabProps['references']>, { kind: 'draft' }> | null,
+  selectionId: string
+) {
+  if (!references) {
+    return null;
+  }
+  const cards = [
+    ...references.general.map((choice) => choice.card),
+    ...references.lookbook.map((choice) => choice.card),
+    ...references.castMembers.flatMap((group) => group.characterSheets.map((choice) => choice.card)),
+    ...references.locations.flatMap((group) => group.environmentSheets.map((choice) => choice.card)),
+  ];
+  return cards.find((card) => card.selectionId === selectionId) ?? null;
+}
+
+function CompletedTakeReferences({
+  references,
+}: {
+  references: Extract<NonNullable<SceneShotReferencesTabProps['references']>, { kind: 'completed' }>['usedReferences'];
+}) {
+  const groups = new Map<string, typeof references>();
+  for (const reference of references) {
+    const key = reference.sectionId ?? 'Additional';
+    groups.set(key, [...(groups.get(key) ?? []), reference]);
+  }
+  return (
+    <div className='flex flex-col gap-6 py-4'>
+      {[...groups].map(([section, used]) => (
+        <SceneShotReferenceSection key={section} title={sectionLabel(section)} defaultOpen>
+          <SceneShotReferenceCardGrid>
+            {used.map((reference) => (
+              <div key={reference.selectionId} className='overflow-hidden rounded-md border bg-card'>
+                {reference.browserUrl && reference.mediaKind === 'image' ? (
+                  <img
+                    src={reference.browserUrl}
+                    alt={reference.title}
+                    className='aspect-video w-full object-cover'
+                  />
+                ) : null}
+                <p className='px-3 py-2 text-sm'>{reference.title}</p>
+              </div>
+            ))}
+          </SceneShotReferenceCardGrid>
+        </SceneShotReferenceSection>
+      ))}
+      {references.length === 0 ? (
+        <p className='text-sm text-muted-foreground'>No references were used by this completed request.</p>
+      ) : null}
+    </div>
+  );
+}
+
+function sectionLabel(section: string): string {
+  if (section === 'take-media') return 'General';
+  if (section === 'visual-language') return 'Lookbook';
+  if (section === 'cast') return 'Cast Character Sheets';
+  if (section === 'location') return 'Location Sheets';
+  if (section === 'dialogue') return 'Dialogue Audio';
+  return section;
 }
 
 function isReferenceDiagnosticIssue(issue: { code: string }): boolean {

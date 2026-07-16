@@ -132,7 +132,8 @@ function productionResult(
     estimateState: 'idle',
     estimateError: null,
     refreshWorkspace,
-    setReferenceIncluded: vi.fn(async () => {}),
+    setReferenceSelection: vi.fn(async () => {}),
+    setGenericReferences: vi.fn(async () => {}),
   };
 }
 

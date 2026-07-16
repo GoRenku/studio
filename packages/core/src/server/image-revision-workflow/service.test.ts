@@ -61,11 +61,11 @@ describe('image revision workflow', () => {
     }
     expect(context.edit.preview.references.slots).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        candidates: [expect.objectContaining({
+        current: expect.objectContaining({
           assetId: asset.assetId,
           assetFileId: asset.files[0]!.id,
           selected: true,
-        })],
+        }),
       }),
     ]));
   });

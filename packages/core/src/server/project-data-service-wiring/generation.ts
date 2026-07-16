@@ -1,4 +1,4 @@
-import type { GenerationPreview, GenerationPurpose, GenerationSpec, GenerationTarget } from '../../client/generation.js';
+import type { GenerationPreview, GenerationPurpose, GenerationReference, GenerationSpec, GenerationTarget } from '../../client/generation.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { estimateGeneration } from '../generation/estimates.js';
 import { buildGenerationPreview } from '../generation/previews.js';
@@ -10,7 +10,6 @@ import { applyFixedGenerationSettings } from '../generation/purpose-settings.js'
 import { createGenerationSpec, listGenerationSpecs, readGenerationSpec, updateGenerationSpec } from '../generation/specs.js';
 import { validateGenerationSpec, validateGenerationSpecForExecution } from '../generation/validation.js';
 import { attachGenerationMedia } from '../generation/attachments.js';
-import { addRequestGuideNotices } from '../generation/purpose-guide.js';
 import { preparePurposeExecutionSpec } from '../generation/purpose-execution.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { readProjectRecord } from '../database/access/project.js';
@@ -27,6 +26,7 @@ import { listShotVideoTakeOverviews } from '../shot-video-take-workspace/queries
 import { readShotVideoTakeWorkspace } from '../shot-video-take-workspace/workspace.js';
 import {
   createShotVideoTake,
+  createSceneShotVideoTakeFromTake,
   discardShotVideoTake,
   replaceShotVideoTakeShots,
   setShotVideoTakePicked,
@@ -37,13 +37,17 @@ import {
 } from '../shot-video-take-workspace/design-commands.js';
 import {
   estimateShotVideoTakeGeneration,
+  setShotVideoTakeGenerationGenericReferences,
   setShotVideoTakeGenerationReference,
   setShotVideoTakeGenerationSpec,
 } from '../shot-video-take-workspace/generation-commands.js';
 import { attachShotVideoTakeOutput } from '../shot-video-take-workspace/outputs.js';
 import { resolveGenerationRunOutputRoot } from '../project-asset-files/index.js';
-import { bindGenerationReferenceFields } from '../generation/reference-field-binding.js';
-import type { GenerationPreviewReferenceChange } from '../../client/generation-preview-resource.js';
+import type { GenerationReferenceSlotSelectionInput } from '../../client/generation.js';
+import {
+  discardSceneShotGenericReferenceAsset,
+  registerSceneShotGenericReferenceAsset,
+} from '../commands/scene-shot-reference-asset-commands.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 
@@ -64,6 +68,12 @@ export function createGenerationServiceWiring() {
     async listGenerationReferences(input: ProjectInput & { mediaKind?: 'image' | 'audio' | 'video'; owner?: { kind: string; id: string }; assetId?: string; assetRole?: string; search?: string; cursor?: string | null; limit?: number }) {
       return withGenerationProject(input, ({ session }) => listGenerationReferences({ ...input, session }));
     },
+    async registerSceneShotGenericReferenceAsset(input: ProjectInput & { sceneId: string; shotListId: string; shotId: string; assetId: string; assetFileId: string }) {
+      return withGenerationProject(input, ({ session }) => registerSceneShotGenericReferenceAsset({ ...input, session, idGenerator: createRandomIdGenerator(), now: new Date().toISOString() }));
+    },
+    async discardSceneShotGenericReferenceAsset(input: ProjectInput & { relationshipId: string }) {
+      return withGenerationProject(input, ({ session, projectFolder }) => discardSceneShotGenericReferenceAsset({ ...input, session, projectFolder }));
+    },
     async validateGenerationSpec(input: ProjectInput & { spec: GenerationSpec }) {
       return withGenerationProject(input, async ({ session, projectFolder }) => {
         const purpose = readGenerationPurpose(input.spec.purpose);
@@ -75,18 +85,14 @@ export function createGenerationServiceWiring() {
       return withGenerationProject(input, async ({ session, projectFolder }) => {
         const purpose = readGenerationPurpose(input.spec.purpose);
         const authored = await applyFixedGenerationSettings({ spec: input.spec, purpose });
-        const context = await purpose.buildContext({ target: authored.target, session, projectFolder });
-        const spec = bindGenerationReferenceFields({ spec: authored, guide: context.referenceGuide, models: context.models });
-        return createGenerationSpec({ id: createRandomIdGenerator().next('media_generation_spec'), spec, purpose: { ...purpose, referenceGuide: context.referenceGuide }, session, now: new Date().toISOString() });
+        return createGenerationSpec({ id: createRandomIdGenerator().next('media_generation_spec'), spec: authored, purpose, session, now: new Date().toISOString() });
       });
     },
     async updateGenerationSpec(input: ProjectInput & { specId: string; spec: GenerationSpec }) {
       return withGenerationProject(input, async ({ session, projectFolder }) => {
         const purpose = readGenerationPurpose(input.spec.purpose);
         const authored = await applyFixedGenerationSettings({ spec: input.spec, purpose });
-        const context = await purpose.buildContext({ target: authored.target, session, projectFolder });
-        const spec = bindGenerationReferenceFields({ spec: authored, guide: context.referenceGuide, models: context.models });
-        return updateGenerationSpec({ id: input.specId, spec, purpose: { ...purpose, referenceGuide: context.referenceGuide }, session, now: new Date().toISOString() });
+        return updateGenerationSpec({ id: input.specId, spec: authored, purpose, session, now: new Date().toISOString() });
       });
     },
     async readGenerationSpec(input: ProjectInput & { specId: string }) {
@@ -102,9 +108,8 @@ export function createGenerationServiceWiring() {
         const authoredSpec = await applyFixedGenerationSettings({ spec: rawSpec, purpose });
         const spec = await preparePurposeExecutionSpec({ spec: rawSpec, purpose, projectAspectRatio: projectAspectRatio(session) });
         const context = await purpose.buildContext({ target: authoredSpec.target, session, projectFolder });
-        const referenceGuide = addRequestGuideNotices({ guide: context.referenceGuide, spec: authoredSpec, models: context.models });
         const validation = await validateGenerationSpecForExecution({ spec, purpose, session, projectFolder });
-        const preview = await buildGenerationPreview({ spec: authoredSpec, referenceGuide, session, projectFolder, validatedRequest: validation.valid ? validation.request : undefined });
+        const preview = await buildGenerationPreview({ spec: authoredSpec, referenceGuide: context.referenceGuide, session, projectFolder, validatedRequest: validation.valid ? validation.request : undefined });
         const enriched = { ...preview, settings: context.settings, models: context.models };
         return 'specId' in input ? { ...enriched, specId: input.specId } : enriched;
       });
@@ -117,7 +122,8 @@ export function createGenerationServiceWiring() {
     async updateGenerationPreviewResource(input: ProjectInput & {
       specId: string;
       prompt: { authoredText: string; negativeText?: string | null };
-      referenceChanges: GenerationPreviewReferenceChange[];
+      slotSelections: GenerationReferenceSlotSelectionInput[];
+      genericReferences: GenerationReference[];
     }) {
       return withGenerationProject(input, ({ session, projectFolder }) => {
         const record = readGenerationSpec({ id: input.specId, session });
@@ -228,6 +234,9 @@ export function createGenerationServiceWiring() {
     async createShotVideoTake(input: ProjectInput & { sceneId: string; shotListId: string; shotIds: string[]; title?: string }) {
       return withGenerationProject(input, ({ session }) => createShotVideoTake({ ...input, session, idGenerator: createRandomIdGenerator(), now: new Date().toISOString() }));
     },
+    async createSceneShotVideoTakeFromTake(input: ProjectInput & { sceneId: string; sourceTakeId: string }) {
+      return withGenerationProject(input, ({ session, projectFolder }) => createSceneShotVideoTakeFromTake({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator(), now: new Date().toISOString() }));
+    },
     async discardShotVideoTake(input: ProjectInput & { sceneId: string; takeId: string }) {
       return withGenerationProject(input, ({ session, projectFolder }) => discardShotVideoTake({ ...input, session, projectFolder }));
     },
@@ -246,8 +255,11 @@ export function createGenerationServiceWiring() {
     async setShotVideoTakeGenerationSpec(input: ProjectInput & { sceneId: string; takeId: string; selectedShotId?: string; setup: import('../../client/shot-video-take-workspace.js').ShotVideoTakeGenerationSetup }) {
       return withGenerationProject(input, ({ session, projectFolder }) => setShotVideoTakeGenerationSpec({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator(), now: new Date().toISOString() }));
     },
-    async setShotVideoTakeGenerationReference(input: ProjectInput & { sceneId: string; takeId: string; selectedShotId?: string; selectionId: string; included: boolean }) {
+    async setShotVideoTakeGenerationReference(input: ProjectInput & { sceneId: string; takeId: string; selectedShotId?: string; selection: GenerationReferenceSlotSelectionInput }) {
       return withGenerationProject(input, ({ session, projectFolder }) => setShotVideoTakeGenerationReference({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator(), now: new Date().toISOString() }));
+    },
+    async setShotVideoTakeGenerationGenericReferences(input: ProjectInput & { sceneId: string; takeId: string; selectedShotId?: string; references: GenerationReference[] }) {
+      return withGenerationProject(input, ({ session, projectFolder }) => setShotVideoTakeGenerationGenericReferences({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator(), now: new Date().toISOString() }));
     },
     async estimateShotVideoTakeGeneration(input: ProjectInput & { sceneId: string; takeId: string; setup?: import('../../client/shot-video-take-workspace.js').ShotVideoTakeGenerationSetup }) {
       return estimateShotVideoTakeGeneration({ setup: input.setup });

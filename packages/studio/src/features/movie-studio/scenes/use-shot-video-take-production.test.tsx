@@ -92,7 +92,7 @@ describe('useShotVideoTakeProduction', () => {
     expect(setShotVideoTakeGenerationSpec).not.toHaveBeenCalled();
   });
 
-  it('estimates the resolved minimum duration as soon as the workspace loads', async () => {
+  it('estimates the exact authored duration as soon as the workspace loads', async () => {
     vi.mocked(estimateShotVideoTakeGeneration).mockResolvedValue({
       valid: true,
       diagnostics: [],
@@ -134,7 +134,7 @@ describe('useShotVideoTakeProduction', () => {
     );
   });
 
-  it('resets Run Setup to the new model minimum before estimating a model change', async () => {
+  it('leaves provider values unspecified when estimating a model change', async () => {
     render(<Harness />);
     await screen.findByText('Seedance 2.0');
     fireEvent.click(screen.getByRole('button', { name: 'Select alternate model' }));
@@ -146,7 +146,7 @@ describe('useShotVideoTakeProduction', () => {
         'take_001',
         expect.objectContaining({
           modelChoice: 'fal-ai/alternate-video-model',
-          parameterValues: { duration: 4, resolution: '720p' },
+          parameterValues: {},
         })
       )
     );
@@ -243,6 +243,7 @@ function workspace() {
     displayShots: [],
     storyboardImages: [],
     generation: {
+      authoringState: { kind: 'draft' as const, failedAttemptCount: 0 },
       context: {
         purpose: 'shot.video-take',
         target: { kind: 'sceneShotVideoTake', id: 'take_001' },
@@ -250,7 +251,7 @@ function workspace() {
         facts: {},
         settings: { fixed: [], recommended: [] },
         models: [],
-        referenceGuide: { sections: [], additionalReferences: [], notices: [] },
+        referenceGuide: { sections: [], notices: [] },
       },
       spec: null,
       setup: {
@@ -264,12 +265,11 @@ function workspace() {
         model: 'bytedance/seedance-2.0',
         label: 'Seedance 2.0',
         supportedInputModes: ['text-only'],
-        duration: { supported: true, values: [5, 8], default: 5 },
+        duration: { supported: true, values: [5, 8] },
         parameters: [{
           name: 'duration',
           label: 'Duration',
           required: false,
-          defaultValue: 5,
           allowedValues: [5, 8],
         }],
       }, {
@@ -278,23 +278,23 @@ function workspace() {
         model: 'alternate-video-model',
         label: 'Alternate model',
         supportedInputModes: ['text-only'],
-        duration: { supported: true, values: [4, 6, 8], default: 4 },
+        duration: { supported: true, values: [4, 6, 8] },
         parameters: [{
           name: 'duration',
           label: 'Duration',
           required: false,
-          defaultValue: 4,
           allowedValues: [4, 6, 8],
         }, {
           name: 'resolution',
           label: 'Resolution',
           required: false,
-          defaultValue: '720p',
           allowedValues: ['720p'],
         }],
       }],
       references: {
+        kind: 'draft' as const,
         general: [],
+        genericReferences: [],
         lookbook: [],
         dialogueAudio: [],
         dialogueAudioCapability: {

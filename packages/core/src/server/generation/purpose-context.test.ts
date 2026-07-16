@@ -40,14 +40,47 @@ describe('Scene generation context', () => {
     expect(context.facts.sceneCastMemberIds).toEqual([castMemberId]);
     expect(context.facts.sceneLocationIds).toEqual([locationId]);
     const castSlot = context.referenceGuide.sections.find((section) => section.id === 'cast')!.slots[0]!;
-    expect(castSlot.candidates.map((candidate) => candidate.reference)).toEqual(expect.arrayContaining([
+    expect(castSlot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual(expect.arrayContaining([
       { kind: 'asset-file', assetId: 'asset_cast_selected', assetFileId: 'asset_file_cast_selected' },
       { kind: 'asset-file', assetId: 'asset_cast_take', assetFileId: 'asset_file_cast_take' },
     ]));
+    expect(castSlot.eligibleCandidates.some((candidate) =>
+      candidate.reference.kind === 'asset-file' &&
+      candidate.reference.assetId === 'asset_generic_reference'
+    )).toBe(false);
     const locationSlot = context.referenceGuide.sections.find((section) => section.id === 'location')!.slots[0]!;
-    expect(locationSlot.candidates.map((candidate) => candidate.reference)).toEqual([
+    expect(locationSlot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual([
       { kind: 'asset-file', assetId: 'asset_location_selected', assetFileId: 'asset_file_location_selected' },
     ]);
+
+    const session = openProjectStore({ projectFolder: created.projectPath, create: false });
+    try {
+      session.db.insert(castAssets).values(
+        relationship(
+          'cast_asset_generic_reference',
+          'asset_generic_reference',
+          castMemberId,
+          'character-sheet',
+          '2026-07-14T10:00:00.000Z'
+        )
+      ).run();
+    } finally {
+      session.close();
+    }
+    const focusedContext = await projectData.buildGenerationContext({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'scene.storyboard-sheet',
+      target: { kind: 'scene', id: scene.id! },
+    });
+    const focusedCastSlot = focusedContext.referenceGuide.sections
+      .find((section) => section.id === 'cast')!.slots[0]!;
+    expect(focusedCastSlot.eligibleCandidates.map((candidate) => candidate.reference))
+      .toContainEqual({
+        kind: 'asset-file',
+        assetId: 'asset_generic_reference',
+        assetFileId: 'asset_file_generic_reference',
+      });
   });
 });
 
@@ -62,11 +95,13 @@ function seedContinuityAssets(
       asset('asset_cast_selected', 'Selected Cast Sheet', now),
       asset('asset_cast_take', 'Cast Take', now),
       asset('asset_location_selected', 'Selected Location Sheet', now),
+      asset('asset_generic_reference', 'Generic Maria Reference', now),
     ]).run();
     session.db.insert(assetFiles).values([
       assetFile('asset_file_cast_selected', 'asset_cast_selected', 'cast-selected.png', now),
       assetFile('asset_file_cast_take', 'asset_cast_take', 'cast-take.png', now),
       assetFile('asset_file_location_selected', 'asset_location_selected', 'location-selected.png', now),
+      assetFile('asset_file_generic_reference', 'asset_generic_reference', 'generic-reference.png', now),
     ]).run();
     session.db.insert(castAssets).values([
       relationship('cast_asset_selected', 'asset_cast_selected', ids.castMemberId, 'character-sheet', now),

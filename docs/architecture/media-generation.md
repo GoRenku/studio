@@ -58,20 +58,23 @@ experiences:
 ## Generic Lifecycle
 
 A `GenerationSpec` is the one saved editing and execution shape. It can be
-incomplete. Create and update validate only its durable JSON envelope, target,
-and guide placement structure. They do not validate provider readiness, insert
-defaults, assign media fields, select references, or repair authored values.
+incomplete. Create and update validate its durable JSON envelope, immutable
+purpose/target identity, structurally readable slot placement, and owning Take
+lifecycle. They do not validate current guide placement, candidate membership,
+typed ownership, provider readiness, insert defaults, assign media fields,
+select references, or repair authored values.
 
 An estimate consumes pricing inputs only: provider, model, output media kind,
-schema-derived generation settings, and intended input-media counts. Estimation
-does not resolve files, require prompts or references, assemble an executable
-payload, or invoke execution validation. Provider defaults may supply pricing
-inputs, except Shot Video Take duration, which always resolves to an explicit
-duration and defaults to the lowest duration allowed by the selected model.
+explicitly authored pricing settings, provider-owned pricing defaults where
+available, and intended input-media counts. Estimation does not resolve files,
+require prompts or references, assemble an executable payload, or invoke
+execution validation. Duration is an ordinary optional provider value: absent
+means `Unspecified`, and Studio never writes `Auto`, an enum choice, a schema
+minimum, or another default.
 
 Before preview with a provider payload or run:
 
-1. Core resolves every included exact file without substitution.
+1. Core resolves every exact selected file without substitution.
 2. Engines reads the selected provider/model endpoint.
 3. Engines combines authored provider fields with ordered exact media
    assignments.
@@ -83,8 +86,9 @@ inputs. Changing creative prompt text or file contents does not invalidate an
 unchanged price approval. Run compares the current estimate first, then performs
 full execution validation as a separate operation.
 
-Excluded references and included references without a provider assignment remain
-valid editing state. They do not enter the provider payload.
+References without a provider assignment remain valid editing state. Presence
+in `GenerationSpec.references` means inclusion; inactive alternatives are not
+persisted. Unassigned references do not enter the provider payload.
 
 Every run has immediate inputs and outputs only. There is no dependency graph,
 recursive estimate, automatic child generation, provider fallback, value
@@ -92,14 +96,21 @@ clamping, semantic retry, or automatic import.
 
 ## Context And Guidance
 
-A `GenerationReferenceGuide` is presentation guidance. Sections and slots may
-carry scope, subject, label, cardinality, exact candidates, initial selections,
-and guidance copy. They never carry provider fields, hard provider
-requirements, generation purposes, cost, or provider rules.
+A `GenerationReferenceGuide` is Draft presentation guidance. Sections and slots
+carry placement, subject, label, exact eligible candidates, and optional
+guidance copy. Every slot is one nullable UI choice. Guides never carry
+provider roles/fields, hard provider requirements, generation purposes, cost,
+or provider rules, and they never validate saved selections.
 
-All purposes can expose ordered Additional References. A user or agent may use
-any compatible exact project media regardless of its original purpose. Creative
-prompts and media remain opaque under Decision `0041`.
+All purposes can expose separate ordered Additional References. Generic catalog
+search is media-generic, while typed pickers list only explicitly registered
+assets for their exact domain subject. A generic reference is never promoted
+into a typed slot automatically. Creative prompts and media remain opaque under
+Decision `0041`.
+
+Draft Shot Video Take typed slots use complete Scene Cast/Location context, one
+Production Lookbook slot, and three fixed supporting-media slots. Completed
+Takes show only exact references from their successful immutable run snapshot.
 
 ## Persistence
 
@@ -121,6 +132,11 @@ migrated from generation 41 to generation 42. It contains 13 migrated Shot
 specs with 31 exact selections; SQLite `quick_check` is `ok` and
 `foreign_key_check` returns no rows. The same migration was replayed
 successfully against a copy of the verified pre-migration backup.
+
+Current schema changes continue to use Drizzle Kit's code-first generation and
+backup-gated migration flow. The accepted current schema adds explicit Shot
+generic-reference ownership, removes persisted Take lineage, and constrains one
+successful materializing run per Take.
 
 The generated `0053_drop-obsolete-shot-media-inputs.sql` migration then removes
 the two obsolete Shot media-input tables and updates the take-state default to

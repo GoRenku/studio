@@ -40,7 +40,7 @@ describe('generation command handlers', () => {
   });
 
   it('delivers ordered generic previews to Studio through the single-input path', async () => {
-    const preview = { spec: { purpose: 'image.create', target: { kind: 'project', id: 'project' }, values: {}, references: [] }, referenceGuide: { sections: [], additionalReferences: [], notices: [] }, references: [], diagnostics: [] };
+    const preview = { spec: { purpose: 'image.create', target: { kind: 'project', id: 'project' }, values: {}, references: [] }, referenceGuide: { sections: [], notices: [] }, references: [], diagnostics: [] };
     vi.mocked(notifyStudioGenerationPreviews).mockResolvedValue({ status: 'delivered' });
     const buildGenerationPreview = vi.fn()
       .mockResolvedValueOnce({ ...preview, specId: 'spec_1' })

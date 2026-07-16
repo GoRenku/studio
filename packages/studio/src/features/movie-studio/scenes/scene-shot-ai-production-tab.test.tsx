@@ -101,7 +101,7 @@ function production(
       'first-last-frame' as const,
       'reference' as const,
     ],
-    duration: { supported: true, values: [4, 5, 6], default: 5 },
+    duration: { supported: true, values: [4, 5, 6] },
     parameters: [],
   }];
   return {
@@ -144,7 +144,8 @@ function production(
     estimateState: 'idle',
     estimateError: null,
     refreshWorkspace: vi.fn(),
-    setReferenceIncluded: vi.fn(),
+    setReferenceSelection: vi.fn(),
+    setGenericReferences: vi.fn(),
     ...overrides,
   };
 }

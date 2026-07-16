@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { Pause, Play } from 'lucide-react';
 import type {
   SceneShotVideoTake,
+  GenerationReferenceSlotSelectionInput,
   ShotVideoTakeDialogueAudioReferenceChoice,
-  ShotVideoTakeReferenceSections,
+  ShotVideoTakeDraftReferenceSections,
 } from '@gorenku/studio-core/client';
 import type {
   SceneShotListResourceResponse,
@@ -43,8 +44,8 @@ interface SceneShotDialogsTabProps {
   sceneId: string;
   castMemberImages: NonNullable<SceneShotListResourceResponse['castMemberImages']>;
   take: SceneShotVideoTake | null;
-  references: ShotVideoTakeReferenceSections | null;
-  onSetReference: (selectionId: string, included: boolean) => Promise<void>;
+  references: ShotVideoTakeDraftReferenceSections | null;
+  onSetReference: (selection: GenerationReferenceSlotSelectionInput) => Promise<void>;
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
 }
 
@@ -109,8 +110,14 @@ export function SceneShotDialogsTab({
     if (!take) {
       return;
     }
+    const choice = choices.find((candidate) => candidate.card.selectionId === selectionId);
+    if (!choice?.card.selection) {
+      return;
+    }
     await mutationStatus.runTakeEditorMutation(async () => {
-      await onSetReference(selectionId, included);
+      await onSetReference(included
+        ? choice.card.selection!
+        : { ...choice.card.selection!, reference: null });
     });
   };
 
@@ -124,7 +131,7 @@ export function SceneShotDialogsTab({
         const choice = choices.find((candidate) => candidate.dialogueId === dialogueId);
         const available = choice?.availableTakes.find((candidate) => candidate.takeId === takeId);
         if (!available) return;
-        await onSetReference(available.selectionId, true);
+        await onSetReference(available.selection);
         const context = await readSceneDialogueAudioWorkspace(
           projectName,
           sceneId
@@ -177,7 +184,7 @@ function DialogueAudioCapabilityRow({
   capability,
 }: {
   capability: NonNullable<
-    ShotVideoTakeReferenceSections['dialogueAudioCapability']
+    ShotVideoTakeDraftReferenceSections['dialogueAudioCapability']
   >;
 }) {
   const warning = capability.state === 'unsupported' || capability.state === 'over-limit';

@@ -86,9 +86,6 @@ export async function validateGenerationSpecForExecution(input: {
   const referenceContentDigests: string[] = [];
   const providerReferences = [];
   for (const [index, selection] of input.spec.references.entries()) {
-    if (!selection.included) {
-      continue;
-    }
     const resolved = await resolveGenerationReference({
       session: input.session,
       projectFolder: input.projectFolder,

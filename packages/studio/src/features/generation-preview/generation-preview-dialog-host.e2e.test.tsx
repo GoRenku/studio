@@ -288,7 +288,7 @@ describe('GenerationPreviewDialogHost', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(
       await screen.findByRole('button', {
-        name: 'Choose Visual language',
+        name: 'Storyboard Lookbook Sheet',
       }),
     ).toBeTruthy();
 
@@ -303,16 +303,17 @@ describe('GenerationPreviewDialogHost', () => {
             prompt: {
               authoredText: 'Updated production prompt.\nSecond line.',
             },
-            referenceChanges: [
+            slotSelections: [
               {
-                kind: 'clear',
                 placement: {
                   kind: 'slot',
                   sectionId: 'visual-language',
                   slotId: 'lookbook',
                 },
+                reference: null,
               },
             ],
+            genericReferences: [],
           }),
         })
       );
@@ -584,7 +585,8 @@ function previewFixture(input: {
           sectionId: 'visual-language',
           slotId: 'lookbook',
         },
-        candidates: [{
+        current: null,
+        eligibleCandidates: [{
         kind: 'image',
         role: 'style',
         label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',

@@ -38,11 +38,7 @@ export function buildGenerationContext(input: {
 function assertReferenceGuideStructure(guide: GenerationReferenceGuide): void {
   const sectionIds = new Set<string>();
   for (const section of guide.sections) {
-    const sectionKey = [
-      section.id,
-      section.scope?.kind ?? '',
-      section.scope?.id ?? '',
-    ].join('\0');
+    const sectionKey = section.id;
     if (!section.id || sectionIds.has(sectionKey)) {
       throw new ProjectDataError(
         'CORE_GENERATION_GUIDE_INVALID',
@@ -55,10 +51,7 @@ function assertReferenceGuideStructure(guide: GenerationReferenceGuide): void {
       const subjectKey = slot.subject
         ? `${slot.subject.kind}:${slot.subject.id}`
         : '';
-      const scopeKey = section.scope
-        ? `${section.scope.kind}:${section.scope.id}`
-        : '';
-      const slotKey = `${scopeKey}\0${slot.id}\0${subjectKey}`;
+      const slotKey = `${slot.id}\0${subjectKey}`;
       if (!slot.id || slotKeys.has(slotKey)) {
         throw new ProjectDataError(
           'CORE_GENERATION_GUIDE_INVALID',

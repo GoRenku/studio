@@ -13,7 +13,7 @@ import type {
 } from '../../client/generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { buildGenerationPreview } from '../generation/previews.js';
-import { addRequestGuideNotices } from '../generation/purpose-guide.js';
+import { applyGenerationReferenceSlotSelection } from '../generation/references.js';
 import { readGenerationPurpose } from '../generation/purposes.js';
 import { applyFixedGenerationSettings } from '../generation/purpose-settings.js';
 import { validateGenerationSpecForExecution } from '../generation/validation.js';
@@ -42,7 +42,7 @@ export async function createImageRevisionModeDefinition(input: {
   });
   return {
     spec,
-    draft: draftFromPreview(input.mode, preview),
+    draft: draftFromPreview(input.mode, preview, spec),
     preview,
     controls: controlsFromPreview(preview),
   };
@@ -78,27 +78,21 @@ export async function buildImageRevisionSpec(input: {
   }
   const promptField = field(model, 'authored-text', 'prompt');
   const negativeField = field(model, 'authored-text', 'negative-prompt');
-  if (!input.draft.authoredText.trim()) {
-    throw new ProjectDataError(
-      'CORE_IMAGE_REVISION_DRAFT_INVALID',
-      'Image Revision instructions must not be empty.'
-    );
-  }
   values[promptField.name] = input.draft.authoredText;
   if (negativeField && input.draft.negativeText !== undefined) {
     values[negativeField.name] = input.draft.negativeText;
   }
-  const selectedById = new Map(
-    input.draft.referenceSelections.map((selection) => [selection.selectionId, selection.selected])
-  );
-  return {
+  let spec: GenerationSpec = {
     ...definition.spec,
     values,
-    references: definition.spec.references.map((selection) => ({
-      ...selection,
-      included: selectedById.get(selection.id) ?? selection.included,
-    })),
+    references: input.draft.genericReferences.filter(
+      (selection) => selection.placement.kind === 'additional'
+    ),
   };
+  for (const selection of input.draft.slotSelections) {
+    spec = applyGenerationReferenceSlotSelection(spec, selection);
+  }
+  return spec;
 }
 
 export async function buildImageRevisionPreview(input: {
@@ -113,11 +107,6 @@ export async function buildImageRevisionPreview(input: {
     session: input.session,
     projectFolder: input.projectFolder,
   });
-  const referenceGuide = addRequestGuideNotices({
-    guide: context.referenceGuide,
-    spec: authoredSpec,
-    models: context.models,
-  });
   const validation = await validateGenerationSpecForExecution({
     spec: authoredSpec,
     purpose,
@@ -127,7 +116,7 @@ export async function buildImageRevisionPreview(input: {
   const preview: GenerationPreview = {
     ...(await buildGenerationPreview({
       spec: authoredSpec,
-      referenceGuide,
+      referenceGuide: context.referenceGuide,
       session: input.session,
       projectFolder: input.projectFolder,
       validatedRequest: validation.valid ? validation.request : undefined,
@@ -175,8 +164,6 @@ async function createImageEditSpec(input: {
   const selection: GenerationReferenceSelection = {
     id: `image-revision-source:${input.source.file.id}`,
     placement: { kind: 'slot', sectionId: 'source', slotId: 'source-image' },
-    included: true,
-    providerField: sourceField.name,
     reference: {
       kind: 'asset-file',
       assetId: input.source.asset.id,
@@ -230,7 +217,8 @@ function recommendedModel(context: GenerationContext): GenerationModelDescriptor
 
 function draftFromPreview(
   mode: ImageRevisionMode,
-  preview: GenerationPreviewResourceData
+  preview: GenerationPreviewResourceData,
+  spec: GenerationSpec
 ): ImageRevisionDraft {
   return {
     mode,
@@ -238,7 +226,18 @@ function draftFromPreview(
     ...(preview.finalPrompt.negativeText !== undefined
       ? { negativeText: preview.finalPrompt.negativeText }
       : {}),
-    referenceSelections: [],
+    slotSelections: spec.references.flatMap((selection) =>
+      selection.placement.kind === 'slot'
+        ? [{
+            placement: selection.placement,
+            reference: selection.reference,
+            ...(selection.providerField ? { providerField: selection.providerField } : {}),
+          }]
+        : []
+    ),
+    genericReferences: spec.references.filter(
+      (selection) => selection.placement.kind === 'additional'
+    ),
     generationControls: controlsFromPreview(preview).map((control) => ({
       controlId: control.controlId,
       value: control.value,

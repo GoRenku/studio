@@ -91,6 +91,7 @@ describe('migrate database command', () => {
           'screenplay_revision',
           'scene_shot_list',
           'scene_shot_list_state',
+          'scene_shot_reference_asset',
           'scene_shot_storyboard_image',
           'scene_shot_video_take',
           'scene_shot_video_take_shot',
@@ -124,9 +125,16 @@ describe('migrate database command', () => {
           'scene_shot_storyboard_image_asset_idx'
         )
       ).toMatchObject({ isUnique: 0 });
-      expect(readColumnNames(sqlite, 'scene_shot_video_take')).toEqual(
-        expect.arrayContaining(['regenerated_from_take_id'])
+      expect(readColumnNames(sqlite, 'scene_shot_video_take')).not.toContain(
+        'regenerated_from_take_id'
       );
+      expect(
+        readIndexForTable(
+          sqlite,
+          'media_generation_run',
+          'media_generation_run_take_success_idx'
+        )
+      ).toMatchObject({ isUnique: 1 });
       expect(
         readIndexForTable(
           sqlite,

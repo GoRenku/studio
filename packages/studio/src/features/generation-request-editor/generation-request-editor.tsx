@@ -37,6 +37,9 @@ interface GenerationRequestEditorProps {
     slot: GenerationPreviewReferenceSlot,
     reference: GenerationPreviewResourceReference | null
   ) => void;
+  onGenericReferencesChange: (
+    references: GenerationPreviewResourceReference[],
+  ) => void;
   onControlChange?: (
     controlId: string,
     value: GenerationPreviewConfigurationValue,
@@ -59,6 +62,7 @@ export function GenerationRequestEditor({
   onAuthoredTextChange,
   onNegativeTextChange,
   onReferenceChoose,
+  onGenericReferencesChange,
   onControlChange = () => {},
   authoredPlaceholder,
   tabRowTrailing,
@@ -111,6 +115,7 @@ export function GenerationRequestEditor({
               updating={pending || readOnly}
               editable={!readOnly}
               onReferenceChoose={onReferenceChoose}
+              onGenericReferencesChange={onGenericReferencesChange}
             />
           ) : (
             <p className='text-sm text-muted-foreground'>

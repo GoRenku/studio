@@ -2,26 +2,30 @@
 
 Date: 2026-07-14
 
-Status: accepted
+Status: superseded by Decisions 0050 and 0051
 
 ## Decision
+
+The request-scoped exact-choice principle below remains accepted. Decisions
+0050 and 0051 supersede this document's candidate-eligibility,
+provider-field-binding, guide-validation, and Take-freezing rules.
 
 Generation reference choices belong to one persisted `GenerationSpec`. A
 purpose guide exposes current exact candidates in cardinality-one slots, but it
 does not store a choice, initialize the first candidate, or read generic asset
 selection state. The saved spec is the sole source of the current choice.
 
-Core owns candidate eligibility, exact asset/file membership, cardinality,
-provider-field binding, and persistence. The agent or user owns creative
-suitability. Prompt text and media contents remain opaque to Studio runtime
-code.
+Core owns exact persistence and trustworthy Draft candidate projection. Current
+candidate membership does not authorize or invalidate saved authoring, and Core
+does not bind or validate provider fields. The agent or user owns the exact
+choice and creative suitability. Prompt text and media contents remain opaque
+to Studio runtime code.
 
-Generation Preview groups candidates by slot. Its existing spec update accepts
-replace/clear intent, rebuilds current context, validates the chosen exact file,
-binds it to one unambiguous model media field, and persists prompt and reference
-changes in the same spec transaction. Empty optional slots remain visible to
-agents in context but are omitted from Preview when they have no candidate and
-no saved choice. Additional references remain a universal opaque spec feature.
+Generation Preview groups optional candidates by slot. Its focused selection
+command accepts replace/clear intent and persists exact choices without guide
+membership or provider compatibility validation. Draft slots may remain empty;
+Completed Takes show only successful-snapshot selections. Additional references
+remain a separate universal opaque spec feature.
 
 ## Focused Display Choices
 
@@ -40,9 +44,10 @@ First Frame, Last Frame, and Video Prompt Image use direct purposes:
 
 They target one `sceneShotVideoTake` and attach to one focused Take image role.
 The final video remains uniquely owned by the Take. Each of these four purposes
-has at most one current spec per Take. Once any generated Take image or final
-video is attached, Core rejects in-place authoring changes; a revised request
-must use the existing new-Take/regeneration workflow.
+has at most one current spec per Take. Supporting Take images do not freeze
+authoring. The first successful materializing final-video generation freezes
+the Take; every later edit uses the history-empty **New Take** workflow defined
+by Decision 0050.
 
 ## Production Export
 

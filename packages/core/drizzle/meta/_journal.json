@@ -407,6 +407,13 @@
       "when": 1784049758769,
       "tag": "0057_request-scoped-generation-references-and-take-media",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "6",
+      "when": 1784135389728,
+      "tag": "0058_flexible_generation_authoring",
+      "breakpoints": true
     }
   ]
 }

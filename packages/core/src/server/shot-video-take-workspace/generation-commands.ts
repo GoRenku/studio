@@ -6,7 +6,9 @@ import {
 import type {
   GenerationCostEstimateReport,
   GenerationModelDescriptor,
+  GenerationReference,
   GenerationReferenceSelection,
+  GenerationReferenceSlotSelectionInput,
   GenerationSpec,
   GenerationSpecRecord,
   JsonValue,
@@ -16,13 +18,17 @@ import type {
   ShotVideoTakeWorkspaceMutationReport,
 } from '../../client/shot-video-take-workspace.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { requireShotVideoTakeAuthoringMutable } from '../database/access/shot-video-take-media.js';
+import { requireSceneShotVideoTakeAuthoringOpen } from '../database/access/shot-video-take-media.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import {
   estimateGenerationCost,
   requiredInputMediaCounts,
 } from '../generation/estimates.js';
 import { readGenerationPurpose } from '../generation/purposes.js';
+import {
+  applyGenerationGenericReferences,
+  applyGenerationReferenceSlotSelection,
+} from '../generation/references.js';
 import {
   createGenerationSpec,
   listGenerationSpecs,
@@ -34,12 +40,10 @@ import { resourceKeys } from './lifecycle-commands.js';
 import {
   requireShotVideoTakeSelectionContext,
 } from './queries.js';
-import { setShotVideoTakeReferenceSelection } from './references.js';
 import { readShotVideoTakeWorkspace } from './workspace.js';
 import {
   isShotVideoTakeGenerationParameter,
-  normalizeShotVideoTakeParameterValues,
-} from './generation-parameters.js';
+} from './generation-parameter-presentation.js';
 
 export async function setShotVideoTakeGenerationSpec(input: {
   session: DatabaseSession;
@@ -52,7 +56,7 @@ export async function setShotVideoTakeGenerationSpec(input: {
   now: string;
 }): Promise<ShotVideoTakeWorkspaceMutationReport> {
   requireShotVideoTakeSelectionContext(input);
-  requireShotVideoTakeAuthoringMutable(input);
+  requireSceneShotVideoTakeAuthoringOpen(input);
   const context = await readGenerationPurpose('shot.video-take').buildContext({
     target: { kind: 'sceneShotVideoTake', id: input.takeId },
     session: input.session,
@@ -73,10 +77,7 @@ export async function setShotVideoTakeGenerationSpec(input: {
     references: current?.spec.references ?? [],
     takeId: input.takeId,
   });
-  const purpose = {
-    ...readGenerationPurpose('shot.video-take'),
-    referenceGuide: context.referenceGuide,
-  };
+  const purpose = readGenerationPurpose('shot.video-take');
   if (current) {
     updateGenerationSpec({
       id: current.id,
@@ -104,41 +105,26 @@ export async function setShotVideoTakeGenerationReference(input: {
   sceneId: string;
   takeId: string;
   selectedShotId?: string;
-  selectionId: string;
-  included: boolean;
+  selection: GenerationReferenceSlotSelectionInput;
   idGenerator: ProjectIdGenerator;
   now: string;
 }): Promise<ShotVideoTakeWorkspaceMutationReport> {
   requireShotVideoTakeSelectionContext(input);
-  requireShotVideoTakeAuthoringMutable(input);
+  requireSceneShotVideoTakeAuthoringOpen(input);
   const current = currentSpec(input.session, input.takeId);
   const purpose = readGenerationPurpose('shot.video-take');
-  const context = await purpose.buildContext({
-    target: { kind: 'sceneShotVideoTake', id: input.takeId },
-    session: input.session,
-    projectFolder: input.projectFolder,
-  });
   const base = current?.spec ?? {
     purpose: 'shot.video-take' as const,
     target: { kind: 'sceneShotVideoTake' as const, id: input.takeId },
     values: {},
     references: [],
   };
-  const references = setShotVideoTakeReferenceSelection({
-    guide: context.referenceGuide,
-    selections: base.references,
-    selectionId: input.selectionId,
-    included: input.included,
-  });
-  const spec = base.model?.provider && base.model.model
-    ? await bindReferenceFields({ ...base, references }, context.models)
-    : { ...base, references };
-  const editingPurpose = { ...purpose, referenceGuide: context.referenceGuide };
+  const spec = applyGenerationReferenceSlotSelection(base, input.selection);
   if (current) {
     updateGenerationSpec({
       id: current.id,
       spec,
-      purpose: editingPurpose,
+      purpose,
       session: input.session,
       now: input.now,
     });
@@ -146,7 +132,49 @@ export async function setShotVideoTakeGenerationReference(input: {
     createGenerationSpec({
       id: input.idGenerator.next('media_generation_spec'),
       spec,
-      purpose: editingPurpose,
+      purpose,
+      session: input.session,
+      now: input.now,
+    });
+  }
+  const workspace = await readShotVideoTakeWorkspace(input);
+  return { workspace, resourceKeys: resourceKeys(input.sceneId, input.takeId) };
+}
+
+export async function setShotVideoTakeGenerationGenericReferences(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  sceneId: string;
+  takeId: string;
+  selectedShotId?: string;
+  references: GenerationReference[];
+  idGenerator: ProjectIdGenerator;
+  now: string;
+}): Promise<ShotVideoTakeWorkspaceMutationReport> {
+  requireShotVideoTakeSelectionContext(input);
+  requireSceneShotVideoTakeAuthoringOpen(input);
+  const current = currentSpec(input.session, input.takeId);
+  const purpose = readGenerationPurpose('shot.video-take');
+  const base = current?.spec ?? {
+    purpose: 'shot.video-take' as const,
+    target: { kind: 'sceneShotVideoTake' as const, id: input.takeId },
+    values: {},
+    references: [],
+  };
+  const spec = applyGenerationGenericReferences(base, input.references);
+  if (current) {
+    updateGenerationSpec({
+      id: current.id,
+      spec,
+      purpose,
+      session: input.session,
+      now: input.now,
+    });
+  } else {
+    createGenerationSpec({
+      id: input.idGenerator.next('media_generation_spec'),
+      spec,
+      purpose,
       session: input.session,
       now: input.now,
     });
@@ -185,14 +213,11 @@ export async function estimateShotVideoTakeGeneration(input: {
       .filter(isShotVideoTakeGenerationParameter)
       .map((field) => field.name)
   );
-  const values = normalizeShotVideoTakeParameterValues({
-    fields: descriptor.fields,
-    values: Object.fromEntries(
-      Object.entries(input.setup.parameterValues).filter(([name]) =>
-        supportedParameters.has(name)
-      )
-    ) as Record<string, JsonValue>,
-  });
+  const values = Object.fromEntries(
+    Object.entries(input.setup.parameterValues).filter(([name]) =>
+      supportedParameters.has(name)
+    )
+  ) as Record<string, JsonValue>;
   return estimateGenerationCost({
     provider: selectedModel.provider,
     model: selectedModel.model,
@@ -233,75 +258,23 @@ async function buildSetupSpec(input: {
       .filter(isShotVideoTakeGenerationParameter)
       .map((field) => field.name)
   );
-  const parameterValues = normalizeShotVideoTakeParameterValues({
-    fields: descriptor.fields,
-    values: Object.fromEntries(
-      Object.entries(input.setup.parameterValues).filter(([name]) =>
-        supportedParameters.has(name)
-      )
-    ) as Record<string, JsonValue>,
-  });
+  const parameterValues = Object.fromEntries(
+    Object.entries(input.setup.parameterValues).filter(([name]) =>
+      supportedParameters.has(name)
+    )
+  ) as Record<string, JsonValue>;
   const values = {
     ...semanticValues,
     ...parameterValues,
   } as GenerationSpec['values'];
-  return bindReferenceFields({
+  return {
     purpose: 'shot.video-take',
     target: { kind: 'sceneShotVideoTake', id: input.takeId },
     model: { provider: input.model.provider, model: input.model.model },
     values,
     references: input.references,
     title: input.current?.title,
-  }, [input.model]);
-}
-
-async function bindReferenceFields(
-  spec: GenerationSpec,
-  models: GenerationModelDescriptor[]
-): Promise<GenerationSpec> {
-  const model = models.find((candidate) =>
-    candidate.provider === spec.model?.provider && candidate.model === spec.model?.model
-  );
-  if (!model) {
-    return spec;
-  }
-  const fieldFor = (selection: GenerationReferenceSelection) => {
-    if (selection.placement.kind !== 'slot') {
-      return mediaField(model, 'reference-image');
-    }
-    const slot = selection.placement.slotId;
-    if (slot === 'first-frame') {
-      return mediaField(model, 'first-frame') ?? mediaField(model, 'source-image');
-    }
-    if (slot === 'last-frame') {
-      return mediaField(model, 'last-frame');
-    }
-    if (slot === 'dialogue-audio') {
-      return mediaField(model, 'audio');
-    }
-    return mediaField(model, 'reference-image') ?? mediaField(model, 'source-image');
   };
-  return {
-    ...spec,
-    references: spec.references.map((selection) => {
-      const field = fieldFor(selection);
-      return field
-        ? { ...selection, providerField: field.name }
-        : (({ providerField: _providerField, ...rest }) => rest)(selection);
-    }),
-  };
-}
-
-function mediaField(
-  model: GenerationModelDescriptor,
-  role: Extract<
-    NonNullable<GenerationModelDescriptor['fields'][number]['semantic']>,
-    { kind: 'media' }
-  >['role']
-) {
-  return model.fields.find(
-    (field) => field.semantic?.kind === 'media' && field.semantic.role === role
-  );
 }
 
 function authoredValue(

@@ -8,6 +8,7 @@ import {
   castMembers,
   castVoices,
   mediaGenerationSpecs,
+  mediaGenerationRuns,
   sceneDialogueAudio,
   sceneDialogueAudioTakes,
   sceneShotLists,
@@ -25,7 +26,7 @@ describe('export production assets', () => {
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
   });
 
-  it('exports only picked Take video and its exact included Dialogue Audio Take', async () => {
+  it('exports only the picked Take video and its exact successful-snapshot Dialogue Audio Take', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -83,17 +84,28 @@ describe('export production assets', () => {
         takeId: 'take_export', assetId: video.assetId, assetFileId: video.files[0]!.id,
         createdAt: now, updatedAt: now,
       }).run();
+      const references = [{
+        id: 'dialogue-reference',
+        placement: {
+          kind: 'slot' as const, sectionId: 'dialogue', slotId: 'dialogue-audio',
+          subject: { kind: 'sceneDialogue', id: 'dialogue_export' },
+        },
+        reference: { kind: 'asset-file' as const, assetId: dialogue.assetId, assetFileId: dialogue.files[0]!.id },
+      }];
       session.db.insert(mediaGenerationSpecs).values({
         id: 'spec_export', purpose: 'shot.video-take', targetKind: 'sceneShotVideoTake',
         targetId: 'take_export', provider: 'test', model: 'video', valuesJson: '{}',
-        referencesJson: JSON.stringify([{
-          id: 'dialogue-reference', included: true,
-          placement: {
-            kind: 'slot', sectionId: 'dialogue', slotId: 'dialogue-audio',
-            subject: { kind: 'sceneDialogue', id: 'dialogue_export' },
-          },
-          reference: { kind: 'asset-file', assetId: dialogue.assetId, assetFileId: dialogue.files[0]!.id },
-        }]), createdAt: now, updatedAt: now,
+        referencesJson: JSON.stringify(references), createdAt: now, updatedAt: now,
+      }).run();
+      session.db.insert(mediaGenerationRuns).values({
+        id: 'run_export', specId: 'spec_export', purpose: 'shot.video-take',
+        targetKind: 'sceneShotVideoTake', targetId: 'take_export', provider: 'test',
+        model: 'video', specSnapshotJson: JSON.stringify({
+          purpose: 'shot.video-take', target: { kind: 'sceneShotVideoTake', id: 'take_export' },
+          model: { provider: 'test', model: 'video' }, values: {}, references,
+        }), providerPayloadJson: '{}', estimateJson: '{}', approvalToken: 'token',
+        status: 'completed', outputsJson: '[]', receiptJson: null,
+        diagnosticsJson: '[]', startedAt: now, completedAt: now,
       }).run();
     } finally {
       session.close();
@@ -115,6 +127,35 @@ describe('export production assets', () => {
     expect(files.some((file) => file.endsWith('/dialogue-export.wav'))).toBe(true);
     expect(files.some((file) => file.endsWith('.png'))).toBe(false);
   }, 10000);
+
+  it('fails before writing when any picked Take lacks a ready video', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const session = openProjectStore({ projectFolder: created.projectPath, create: false });
+    const now = '2026-07-14T10:00:00.000Z';
+    try {
+      const shotListId = 'shot_list_missing_video';
+      session.db.insert(sceneShotLists).values({
+        id: shotListId, sceneId: 'scene_test0001', title: 'Export shots',
+        document: JSON.stringify({ kind: 'sceneShotList', sceneId: 'scene_test0001', shots: [] }),
+        createdAt: now, updatedAt: now,
+      }).run();
+      session.db.insert(sceneShotVideoTakes).values({
+        id: 'take_missing_video', sceneId: 'scene_test0001', sourceShotListId: shotListId,
+        title: 'Missing video', isPicked: true, historySnapshot: '{}', createdAt: now, updatedAt: now,
+      }).run();
+    } finally {
+      session.close();
+    }
+
+    await expect(projectData.exportProductionAssets({
+      projectName: 'constantinople', homeDir,
+    })).rejects.toMatchObject({ code: 'CORE_PRODUCTION_EXPORT_TAKE_VIDEO_MISSING' });
+    await expect(fs.access(path.join(created.projectPath, 'production-assets'))).rejects.toThrow();
+  });
 
 });
 

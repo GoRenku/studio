@@ -1,9 +1,13 @@
 import {
   createProjectDataService,
-  type GenerationPreviewResource,
-  type GenerationPreviewReferenceChange,
   type ProjectDataService,
 } from '@gorenku/studio-core/server';
+import type {
+  GenerationPreviewResource,
+  GenerationReference,
+  GenerationReferenceSlotSelectionInput,
+  ProjectRelativePath,
+} from '@gorenku/studio-core/client';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
@@ -40,7 +44,8 @@ export function createGenerationPreviewRoute(
           projectName,
           specId,
           prompt: body.prompt,
-          referenceChanges: body.referenceChanges,
+          slotSelections: body.slotSelections,
+          genericReferences: body.genericReferences,
         });
         return c.json({
           preview: await projectGenerationPreview({
@@ -57,7 +62,8 @@ export function createGenerationPreviewRoute(
 
 function readGenerationPreviewUpdateBody(value: unknown): {
   prompt: { authoredText: string; negativeText?: string | null };
-  referenceChanges: GenerationPreviewReferenceChange[];
+  slotSelections: GenerationReferenceSlotSelectionInput[];
+  genericReferences: GenerationReference[];
 } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw requestError('Request body must be an object.');
@@ -83,8 +89,11 @@ function readGenerationPreviewUpdateBody(value: unknown): {
       'Request body prompt.negativeText must be a string or null when provided.',
     );
   }
-  if (!Array.isArray(body.referenceChanges)) {
-    throw requestError('Request body referenceChanges must be an array.');
+  if (!Array.isArray(body.slotSelections)) {
+    throw requestError('Request body slotSelections must be an array.');
+  }
+  if (!Array.isArray(body.genericReferences)) {
+    throw requestError('Request body genericReferences must be an array.');
   }
   return {
     prompt: {
@@ -93,58 +102,86 @@ function readGenerationPreviewUpdateBody(value: unknown): {
         ? { negativeText: prompt.negativeText as string | null }
         : {}),
     },
-    referenceChanges: body.referenceChanges.map((change, index) =>
-      readReferenceChange(change, index),
+    slotSelections: body.slotSelections.map((selection, index) =>
+      readReferenceSelection(selection, index),
+    ),
+    genericReferences: body.genericReferences.map((reference, index) =>
+      readExactGenericReference(reference, index),
     ),
   };
 }
 
-function readReferenceChange(
+function readExactGenericReference(
   value: unknown,
   index: number,
-): GenerationPreviewReferenceChange {
+): GenerationReference {
+  const reference = readExactReference(value, index);
+  if (!reference) {
+    throw requestError(`Request body genericReferences[${index}] must be an exact project reference.`);
+  }
+  return reference;
+}
+
+function readReferenceSelection(
+  value: unknown,
+  index: number,
+): GenerationReferenceSlotSelectionInput {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw requestError(
-      `Request body referenceChanges[${index}] must be an object.`,
+      `Request body slotSelections[${index}] must be an object.`,
     );
   }
-  const change = value as Record<string, unknown>;
-  if (change.kind !== 'replace' && change.kind !== 'clear') {
-    throw requestError(`Request body referenceChanges[${index}].kind is invalid.`);
-  }
-  const placement = readSlotPlacement(change.placement, index);
-  if (change.kind === 'clear') {
-    return { kind: 'clear', placement };
-  }
-  const reference = change.reference as Record<string, unknown> | undefined;
-  if (!reference || reference.kind !== 'asset-file' ||
-    typeof reference.assetId !== 'string' || typeof reference.assetFileId !== 'string') {
-    throw requestError(`Request body referenceChanges[${index}].reference must identify an exact asset file.`);
+  const selection = value as Record<string, unknown>;
+  const placement = readSlotPlacement(selection.placement, index);
+  const reference = readExactReference(selection.reference, index);
+  if (selection.providerField !== undefined && selection.providerField !== null &&
+      typeof selection.providerField !== 'string') {
+    throw requestError(`Request body slotSelections[${index}].providerField is invalid.`);
   }
   return {
-    kind: 'replace',
     placement,
-    reference: { kind: 'asset-file', assetId: reference.assetId, assetFileId: reference.assetFileId },
+    reference,
+    ...(selection.providerField !== undefined
+      ? { providerField: selection.providerField as string | null }
+      : {}),
   };
+}
+
+function readExactReference(value: unknown, index: number): GenerationReferenceSlotSelectionInput['reference'] {
+  if (value === null) {
+    return null;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw requestError(`Request body slotSelections[${index}].reference is invalid.`);
+  }
+  const reference = value as Record<string, unknown>;
+  if (reference.kind === 'asset-file' && typeof reference.assetId === 'string' &&
+      typeof reference.assetFileId === 'string') {
+    return { kind: 'asset-file', assetId: reference.assetId, assetFileId: reference.assetFileId };
+  }
+  if (reference.kind === 'project-file' && typeof reference.projectRelativePath === 'string') {
+    return { kind: 'project-file', projectRelativePath: reference.projectRelativePath as ProjectRelativePath };
+  }
+  throw requestError(`Request body slotSelections[${index}].reference must be null or an exact project reference.`);
 }
 
 function readSlotPlacement(value: unknown, index: number) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw requestError(`Request body referenceChanges[${index}].placement must be an object.`);
+    throw requestError(`Request body slotSelections[${index}].placement must be an object.`);
   }
   const placement = value as Record<string, unknown>;
   if (placement.kind !== 'slot' || typeof placement.sectionId !== 'string' ||
     typeof placement.slotId !== 'string') {
-    throw requestError(`Request body referenceChanges[${index}].placement must identify a slot.`);
+    throw requestError(`Request body slotSelections[${index}].placement must identify a slot.`);
   }
   const readSubject = (subject: unknown) => {
     if (subject === undefined) return undefined;
     if (!subject || typeof subject !== 'object' || Array.isArray(subject)) {
-      throw requestError(`Request body referenceChanges[${index}] has an invalid subject.`);
+      throw requestError(`Request body slotSelections[${index}] has an invalid subject.`);
     }
     const record = subject as Record<string, unknown>;
     if (typeof record.kind !== 'string' || typeof record.id !== 'string') {
-      throw requestError(`Request body referenceChanges[${index}] has an invalid subject.`);
+      throw requestError(`Request body slotSelections[${index}] has an invalid subject.`);
     }
     return { kind: record.kind, id: record.id };
   };
@@ -152,7 +189,6 @@ function readSlotPlacement(value: unknown, index: number) {
     kind: 'slot' as const,
     sectionId: placement.sectionId,
     slotId: placement.slotId,
-    ...(placement.scope !== undefined ? { scope: readSubject(placement.scope) } : {}),
     ...(placement.subject !== undefined ? { subject: readSubject(placement.subject) } : {}),
   };
 }

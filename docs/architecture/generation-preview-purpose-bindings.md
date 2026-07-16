@@ -1,6 +1,5 @@
 # Generation Preview Resource
-
-Date: 2026-07-12
+Date: 2026-07-15
 
 Status: current
 
@@ -8,9 +7,9 @@ Role: architecture reference
 
 ## Purpose
 
-Generation Preview lets the user inspect and edit one exact generic
-`GenerationSpec` before estimate or execution. Decision `0047` supersedes the
-former purpose-specific preview-binding architecture.
+Generation Preview lets the user inspect and edit one exact, possibly
+incomplete `GenerationSpec`. Decision `0051` separates trustworthy typed-slot
+presentation from provider execution validity.
 
 ## Ownership
 
@@ -26,64 +25,64 @@ packages/core/src/server/generation-preview-resource/
   update.ts
 ```
 
-The resource projects:
+The resource projects exact persisted current choices separately from optional
+typed candidates. For a Draft Shot Video Take, Character Sheet and Location
+Sheet slots come from the complete Scene context, one Production Lookbook slot
+is always present, and First Frame, Last Frame, and Video Prompt Image slots are
+always present regardless of selected-model fields.
 
-- purpose, exact target, title, and saved spec id;
-- selected direct provider/model endpoint;
-- authored prompt and optional negative prompt fields identified by Engines
-  semantics;
-- grouped cardinality-one reference slots, every safe exact candidate, and the
-  current saved spec choice;
-- opaque additional references stored directly by the spec;
-- schema-derived configuration controls;
-- the direct estimate for the selected model and pricing settings;
-- safe provider payload preview data;
-- structured diagnostics.
+Each Draft typed slot has `current: null` or one exact persisted choice plus
+subject-filtered eligible candidates. A sole candidate is visible but unchecked
+when current is null. Purpose guides may add empty suggestions and candidate
+facts; they cannot erase an exact persisted selection. An unavailable selection
+is shown as unavailable without substitution.
 
-Core projects a draft preview and a saved preview through the same path. A
-saved preview can update prompt text and replace or clear slot choices together
-through the generic spec command. Core rebuilds current context, validates exact
-candidate membership, and binds the selected model field before persistence.
-An unsaved preview remains read-only.
+Generic references are a separate ordered collection. Their catalog is
+searchable, paginated, and media-generic across image, audio, and video,
+including imported/external assets. Typed pickers use focused domain
+relationships and never use this all-project catalog.
 
-## Layer Boundaries
-
-Engines owns provider field schemas, semantics, payload assembly, validation,
-and pricing. Core owns target context, exact file resolution, generic spec
-persistence, and the Preview resource. The Studio server adds browser-safe file
-URLs and translates structured errors. React owns only draft interaction state,
-request ordering, and rendering.
-
-No Studio route or feature may:
-
-- choose a purpose-specific prompt field;
-- classify reference eligibility;
-- insert provider defaults;
-- estimate candidate or downstream work;
-- construct child specs;
-- semantically validate prompt or media contents.
+Completed Take References use only the successful materializing run's immutable
+`specSnapshot`. They do not query current candidates, show empty suggestion
+slots, or expose editing controls.
 
 ## Update Semantics
 
-Preview updates are latest-request-wins in the browser. A stale response cannot
-replace a newer draft. Structured update failure leaves the dialog open and
-preserves the authored draft so the user can correct or retry it.
+A focused nullable typed-slot selection command sets or clears one exact
+choice. Ordered generic-reference authoring updates the separate collection.
+Both AI Production and Generation Preview persist through the same spec state;
+Image Revision uses the same contracts rather than parallel defaults or a
+no-op picker.
 
-Only the selected model and its pricing settings receive an estimate. Prompts,
-reference availability, and execution readiness do not gate that estimate.
-Reference provenance is display context; it is never traversed for cost or
-execution planning.
+Core validates safe envelope structure and Draft lifecycle only. It does not
+validate guide placement, candidate membership, typed ownership, provider-field
+compatibility, creative suitability, or readiness. Exact optional
+`providerField` strings are preserved as authored.
 
-The guide contains candidates, not defaults. The current card is derived only
-from `GenerationSpec.references`. Preview omits a slot only when it has no
-candidate and no saved choice. React uses the shared reference picker used by
-Shot Take choices; it sends replace/clear intent and never decides eligibility
-or provider binding.
+Configuration controls project absence as `Unspecified`. They do not write
+provider defaults, including duration. Estimate uses only pricing facts; payload
+preview and run separately resolve exact files and invoke Engines request
+assembly.
+
+Preview updates remain latest-request-wins in the browser. Failure leaves the
+dialog open and preserves authored state for correction.
+
+## Layer Boundaries
+
+Engines owns provider schemas, payload assembly, validation, and pricing. Core
+owns target context, safe exact-reference projection, spec persistence, and
+focused typed candidate queries. The Studio server adds browser-safe media URLs
+and translates structured errors. React owns temporary draft interaction state
+and rendering.
+
+No route or feature may choose references, insert defaults, infer typed
+ownership, classify provider compatibility, or semantically inspect prompts or
+media.
 
 ## Verification
 
-Keep the existing Prompt, References, Config, diagnostics, negative-prompt,
-footer-estimate, saved/editable, unsaved/read-only, pending, failure, and
-latest-response-wins assertions. The locked desktop Playwright compatibility
-suite verifies that the current resource replacement does not change the
-dialog experience.
+Keep Prompt, References, Config, diagnostics, estimate, saved/editable,
+unsaved/read-only, pending, failure, and latest-response-wins coverage. Desktop
+coverage must also prove complete-Scene Draft slots, fixed supporting slots,
+unchecked sole candidates, exact successful-snapshot Completed references, and
+absence of completed-Take editing controls.

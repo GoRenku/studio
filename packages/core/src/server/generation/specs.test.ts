@@ -8,7 +8,7 @@ import {
   readGenerationSpec,
   updateGenerationSpec,
 } from './specs.js';
-import type { GenerationPurposeEditingContract } from './purpose-contract.js';
+import type { GenerationPurposeContract } from './purpose-contract.js';
 
 describe('generic generation spec editing persistence', () => {
   it('round-trips partial and provider-invalid authored state unchanged', () => {
@@ -25,7 +25,6 @@ describe('generic generation spec editing persistence', () => {
           sectionId: 'source',
           slotId: 'source-image',
         },
-        included: false,
         reference: {
           kind: 'project-file',
           projectRelativePath: 'assets/missing.png' as never,
@@ -45,7 +44,7 @@ describe('generic generation spec editing persistence', () => {
 
     const updated = structuredClone(spec);
     updated.model = undefined;
-    updated.references[0]!.included = true;
+    updated.references[0]!.providerField = 'image_urls';
     updateGenerationSpec({
       id: 'spec-1',
       spec: updated,
@@ -74,7 +73,7 @@ describe('generic generation spec editing persistence', () => {
       purpose: purposeContract(),
       session,
       now: '2026-07-12T10:00:00.000Z',
-    })).toThrow(/accepts one selection/);
+    })).toThrow(/accepts one current selection/);
   });
 });
 
@@ -86,7 +85,6 @@ function selection(id: string) {
       sectionId: 'source',
       slotId: 'source-image',
     },
-    included: true,
     reference: {
       kind: 'project-file' as const,
       projectRelativePath: `assets/${id}.png` as never,
@@ -94,43 +92,11 @@ function selection(id: string) {
   };
 }
 
-function purposeContract(): GenerationPurposeEditingContract {
+function purposeContract(): GenerationPurposeContract {
   return {
     purpose: 'image.edit',
     targetKind: 'asset' as const,
     outputMediaKind: 'image' as const,
-    referenceGuide: {
-      notices: [],
-      sections: [{
-        id: 'source',
-        label: 'Source',
-        slots: [{
-          id: 'source-image',
-          label: 'Source image',
-          cardinality: 'one' as const,
-          providerRole: 'source-image',
-          candidates: [
-            ...['missing.png', 'first.png', 'second.png'].map((filename) => ({
-              role: 'source',
-              label: filename,
-              mediaKind: 'image' as const,
-              mimeType: 'image/png',
-              sizeBytes: null,
-              width: null,
-              height: null,
-              durationSeconds: null,
-              owner: null,
-              provenance: { origin: 'project-file' },
-              projectRelativePath: `assets/${filename}` as never,
-              reference: {
-                kind: 'project-file' as const,
-                projectRelativePath: `assets/${filename}` as never,
-              },
-            })),
-          ],
-        }],
-      }],
-    },
   };
 }
 

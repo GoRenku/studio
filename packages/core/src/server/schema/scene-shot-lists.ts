@@ -4,7 +4,6 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
-  type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 import { assetFiles, assets } from './assets.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
@@ -97,10 +96,6 @@ export const sceneShotVideoTakes = sqliteTable(
     isPicked: integer('is_picked', { mode: 'boolean' })
       .notNull()
       .default(false),
-    regeneratedFromTakeId: text('regenerated_from_take_id').references(
-      (): AnySQLiteColumn => sceneShotVideoTakes.id,
-      { onDelete: 'set null' }
-    ),
     mediaFolderProjectRelativePath: text('media_folder_project_relative_path'),
     historySnapshot: text('history_snapshot_json').notNull(),
     createdAt: text('created_at').notNull(),

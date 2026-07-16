@@ -14,6 +14,7 @@ import type {
   GenerationContext,
   GenerationCostEstimate,
   GenerationReferenceSelection,
+  GenerationReferenceSlotSelectionInput,
   GenerationRun,
   GenerationSpecRecord,
   JsonScalar,
@@ -178,6 +179,7 @@ export interface ShotVideoTakeReferenceCard {
   required: boolean;
   previews: ShotVideoTakeReferenceImagePreview[];
   diagnostics: DiagnosticIssue[];
+  selection?: GenerationReferenceSlotSelectionInput;
 }
 export interface ShotVideoTakeGeneralReferenceChoice {
   id: string;
@@ -185,6 +187,13 @@ export interface ShotVideoTakeGeneralReferenceChoice {
   title: string;
   selected: boolean;
   card: ShotVideoTakeReferenceCard;
+}
+export interface ShotVideoTakeGenericReference {
+  selectionId: string;
+  reference: GenerationReferenceSelection['reference'];
+  title: string;
+  mediaKind: 'image' | 'audio' | 'video';
+  available: boolean;
 }
 export interface ShotVideoTakeLookbookReferenceChoice {
   id: string;
@@ -243,6 +252,7 @@ export interface ShotVideoTakeDialogueAudioReferenceChoice {
   availableTakes: Array<{
     takeId: string;
     selectionId: string;
+    selection: GenerationReferenceSlotSelectionInput;
   }>;
   takeCount: number;
   defaultIncluded: boolean;
@@ -260,8 +270,10 @@ export interface ShotVideoTakeDialogueAudioCapabilityReport {
   message: string;
   diagnostics: DiagnosticIssue[];
 }
-export interface ShotVideoTakeReferenceSections {
+export interface ShotVideoTakeDraftReferenceSections {
+  kind: 'draft';
   general: ShotVideoTakeGeneralReferenceChoice[];
+  genericReferences: ShotVideoTakeGenericReference[];
   lookbook: ShotVideoTakeLookbookReferenceChoice[];
   dialogueAudio: ShotVideoTakeDialogueAudioReferenceChoice[];
   dialogueAudioCapability: ShotVideoTakeDialogueAudioCapabilityReport;
@@ -269,11 +281,37 @@ export interface ShotVideoTakeReferenceSections {
   locations: ShotVideoTakeLocationReferenceGroup[];
 }
 
+export interface ShotVideoTakeCompletedReference {
+  selectionId: string;
+  sectionId: string | null;
+  slotId: string | null;
+  subject?: { kind: string; id: string };
+  title: string;
+  mediaKind: 'image' | 'audio' | 'video';
+  assetId: string | null;
+  assetFileId: string | null;
+  providerField?: string;
+  projectRelativePath: ProjectRelativePath | null;
+  available: boolean;
+  browserUrl?: string;
+}
+
+export type SceneShotVideoTakeReferenceWorkspace =
+  | ShotVideoTakeDraftReferenceSections
+  | {
+      kind: 'completed';
+      successfulRunId: string;
+      usedReferences: ShotVideoTakeCompletedReference[];
+    };
+
+export type SceneShotVideoTakeAuthoringState =
+  | { kind: 'draft'; failedAttemptCount: number }
+  | { kind: 'completed'; successfulRunId: string };
+
 export interface ShotVideoTakeParameterReport {
   name: string;
   label: string;
   required: boolean;
-  defaultValue?: ShotVideoTakeParameterValue;
   allowedValues?: ShotVideoTakeParameterValue[];
   minimum?: number;
   maximum?: number;
@@ -289,7 +327,6 @@ export interface ShotVideoTakeModelReport {
     values?: number[];
     minimum?: number;
     maximum?: number;
-    default?: number;
   };
   parameters: ShotVideoTakeParameterReport[];
 }
@@ -309,13 +346,7 @@ export function selectShotVideoTakeGenerationModel(
   return {
     ...setup,
     modelChoice: model.modelChoice,
-    parameterValues: Object.fromEntries(
-      model.parameters.flatMap((parameter) =>
-        parameter.defaultValue === undefined
-          ? []
-          : [[parameter.name, parameter.defaultValue]]
-      )
-    ),
+    parameterValues: {},
   };
 }
 export interface ShotVideoTakeGenerationSession {
@@ -323,7 +354,8 @@ export interface ShotVideoTakeGenerationSession {
   spec: GenerationSpecRecord | null;
   setup: ShotVideoTakeGenerationSetup;
   models: ShotVideoTakeModelReport[];
-  references: ShotVideoTakeReferenceSections;
+  authoringState: SceneShotVideoTakeAuthoringState;
+  references: SceneShotVideoTakeReferenceWorkspace;
   finalPrompt: ShotVideoTakePromptDraft | null;
   estimate: GenerationCostEstimate | null;
   run: GenerationRun | null;

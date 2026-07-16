@@ -1674,7 +1674,7 @@ Behavior:
 
 ## `renku production export`
 
-Export picked Shot Video Take final video and its exact included Dialogue Audio
+Export picked Shot Video Take final video and its exact Dialogue Audio
 Takes. Visual/design media, display choices, frames, and Video Prompt images are
 excluded.
 
@@ -1698,6 +1698,10 @@ Behavior:
 
 - Fails with `CLI061` when `--locale` and `--all-locales` are both provided.
 - Fails with `CLI062` when `--project` is missing.
+- Preflights the complete picked-Take set before projecting any export rows.
+- Fails with structured `CORE_PRODUCTION_EXPORT_TAKE_VIDEO_MISSING` issues for
+  every picked Take without one current active, ready video AssetFile.
+- Never silently omits a picked Take or writes a partial production tree.
 
 ## `renku studio current`
 

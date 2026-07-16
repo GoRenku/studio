@@ -684,6 +684,22 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: workspace.resourceKeys,
       };
     },
+    async createSceneShotVideoTakeFromTake(input) {
+      const workspace = makeShotVideoTakeWorkspace({
+        sceneId: input.sceneId,
+        takeId: 'scene_shot_video_take_new',
+      });
+      return {
+        overview: {
+          take: workspace.take,
+          sourceShotList: workspace.sourceShotList,
+          displayShots: workspace.displayShots,
+          overviewShotIds: workspace.take.shotIds,
+          storyboardImages: workspace.storyboardImages,
+        },
+        resourceKeys: workspace.resourceKeys,
+      };
+    },
     async readShotVideoTakeWorkspace(input) {
       return makeShotVideoTakeWorkspace({
         sceneId: input.sceneId,
@@ -787,6 +803,18 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
+    async setShotVideoTakeGenerationGenericReferences(input) {
+      return {
+        workspace: makeShotVideoTakeWorkspace({
+          sceneId: input.sceneId,
+          takeId: input.takeId,
+        }),
+        resourceKeys: [],
+      };
+    },
+    async listGenerationReferences() {
+      return { items: [], nextCursor: null };
+    },
     async estimateShotVideoTakeGeneration(_input) {
       return {
         valid: true,
@@ -888,6 +916,7 @@ function makeShotVideoTakeWorkspace(input: {
     displayShots: shots,
     storyboardImages: [],
     generation: {
+      authoringState: { kind: 'draft', failedAttemptCount: 0 },
       context: {
         purpose: 'shot.video-take',
         target: { kind: 'sceneShotVideoTake', id: take.takeId },
@@ -905,11 +934,13 @@ function makeShotVideoTakeWorkspace(input: {
         model: 'bytedance/seedance-2.0',
         label: 'Seedance 2.0',
         supportedInputModes: ['text-only', 'first-frame', 'first-last-frame', 'reference'],
-        duration: { supported: true, values: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], default: 5 },
+        duration: { supported: true, values: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
         parameters: [],
       }],
       references: {
+        kind: 'draft',
         general: [],
+        genericReferences: [],
         lookbook: [],
         dialogueAudio: [],
         dialogueAudioCapability: {

@@ -19,6 +19,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   sceneShotStoryboardImages,
+  mediaGenerationRuns,
   sceneShotVideoTakes,
   sceneShotVideoTakeShots,
   sceneShotVideoTakeVideos,
@@ -88,6 +89,16 @@ export function readShotVideoTakeDomain(input: {
   const state = parseShotVideoTakeState({ value: record.stateJson, shotIds });
   const activeShotListId = readActiveSceneShotListId(input.session, record.sceneId);
   const historyChanged = activeShotListId !== record.sourceShotListId;
+  const successfulRun = input.session.db
+    .select({ id: mediaGenerationRuns.id })
+    .from(mediaGenerationRuns)
+    .where(and(
+      eq(mediaGenerationRuns.purpose, 'shot.video-take'),
+      eq(mediaGenerationRuns.targetKind, 'sceneShotVideoTake'),
+      eq(mediaGenerationRuns.targetId, record.id),
+      eq(mediaGenerationRuns.status, 'completed')
+    ))
+    .get();
   return {
     takeId: record.id,
     sceneId: record.sceneId,
@@ -99,9 +110,11 @@ export function readShotVideoTakeDomain(input: {
     state,
     status: {
       editability: {
-        state: 'editable',
+        state: successfulRun ? 'read-only' : 'editable',
         diagnostics: [],
-        message: 'This take is editable.',
+        message: successfulRun
+          ? 'This completed Take is read-only. Create a New Take to continue authoring.'
+          : 'This Draft Take is editable.',
       },
       resolvability: {
         state: 'resolvable',

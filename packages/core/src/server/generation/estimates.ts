@@ -109,7 +109,7 @@ function generationSpecInputMediaCounts(
   }
   const selectedCounts = { image: 0, audio: 0, video: 0 };
   for (const selection of spec.references) {
-    if (!selection.included || !selection.providerField) {
+    if (!selection.providerField) {
       continue;
     }
     const field = descriptor.fields.find(

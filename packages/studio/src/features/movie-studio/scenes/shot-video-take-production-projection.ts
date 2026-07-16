@@ -107,10 +107,7 @@ function durationLabel(model: ShotVideoTakeModelReport): string {
   ) {
     return `${model.duration.minimum}-${model.duration.maximum}s`;
   }
-  if (model.duration.default !== undefined) {
-    return `${model.duration.default}s`;
-  }
-  return '—';
+  return 'Unspecified';
 }
 
 function formatDurationValues(values: number[]): string {

@@ -5,6 +5,8 @@ import type {
   ImageRevisionMode,
   ImageRevisionTarget,
   GenerationPreviewResource,
+  GenerationPreviewReferenceSlot,
+  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import {
   estimateImageRevisionDraft,
@@ -37,14 +39,16 @@ export function useImageRevisionEditor(
   const [runPending, setRunPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editorRevision, setEditorRevision] = useState(0);
-  const requestRevision = useRef(0);
+  const loadRevision = useRef(0);
+  const estimateRevision = useRef(0);
 
   useEffect(() => {
-    requestRevision.current += 1;
-    const revision = requestRevision.current;
+    loadRevision.current += 1;
+    estimateRevision.current += 1;
+    const revision = loadRevision.current;
     void readImageRevisionContext(request)
       .then((nextContext) => {
-        if (requestRevision.current !== revision) return;
+        if (loadRevision.current !== revision) return;
         setContext(nextContext);
         const nextMode =
           nextContext.regenerate.state === 'available' ? 'regenerate' : 'edit';
@@ -56,12 +60,12 @@ export function useImageRevisionEditor(
         setEditorRevision((current) => current + 1);
       })
       .catch((nextError) => {
-        if (requestRevision.current === revision) {
+        if (loadRevision.current === revision) {
           setError(nextError instanceof Error ? nextError.message : String(nextError));
         }
       })
       .finally(() => {
-        if (requestRevision.current === revision) setLoading(false);
+        if (loadRevision.current === revision) setLoading(false);
       });
   }, [request]);
 
@@ -77,27 +81,27 @@ export function useImageRevisionEditor(
   };
 
   useEffect(() => {
-    if (!request || !draft || !draft.authoredText.trim() || runPending) {
+    if (!request || !draft || runPending) {
       return;
     }
-    const revision = requestRevision.current + 1;
-    requestRevision.current = revision;
+    const revision = estimateRevision.current + 1;
+    estimateRevision.current = revision;
     const timer = window.setTimeout(() => {
       setEstimatePending(true);
       setError(null);
       void estimateImageRevisionDraft({ ...request, draft })
         .then((report) => {
-          if (requestRevision.current !== revision) return;
+          if (estimateRevision.current !== revision) return;
           setPreview(report.preview);
           setEstimatedUsd(report.estimatedUsd);
         })
         .catch((nextError) => {
-          if (requestRevision.current === revision) {
+          if (estimateRevision.current === revision) {
             setError(nextError instanceof Error ? nextError.message : String(nextError));
           }
         })
         .finally(() => {
-          if (requestRevision.current === revision) setEstimatePending(false);
+          if (estimateRevision.current === revision) setEstimatePending(false);
         });
     }, 450);
     return () => window.clearTimeout(timer);
@@ -109,7 +113,8 @@ export function useImageRevisionEditor(
       const next = createGenerationPreviewDraft(preview);
       next.promptDraft.authoredText = draft.authoredText;
       next.promptDraft.negativeText = draft.negativeText;
-      next.referenceChanges = [];
+      next.slotSelections = draft.slotSelections;
+      next.genericReferences = preview.references.additional;
       return next;
     }
     return {
@@ -119,7 +124,8 @@ export function useImageRevisionEditor(
           ? { negativeText: draft.negativeText }
           : {}),
       },
-      referenceChanges: [],
+      slotSelections: draft.slotSelections,
+      genericReferences: [],
     };
   }, [draft, preview]);
 
@@ -144,9 +150,59 @@ export function useImageRevisionEditor(
     }));
   };
 
+  const updateReference = (
+    slot: GenerationPreviewReferenceSlot,
+    reference: GenerationPreviewResourceReference | null,
+  ) => {
+    updateDraft((current) => ({
+      ...current,
+      slotSelections: [
+        ...current.slotSelections.filter((selection) =>
+          referencePlacementKey(selection.placement) !== referencePlacementKey(slot.placement)
+        ),
+        {
+          placement: slot.placement,
+          reference: reference
+            ? {
+                kind: 'asset-file' as const,
+                assetId: reference.assetId,
+                assetFileId: reference.assetFileId,
+              }
+            : null,
+          ...(reference?.providerToken
+            ? { providerField: reference.providerToken }
+            : {}),
+        },
+      ],
+    }));
+  };
+
+  const updateGenericReferences = (
+    references: GenerationPreviewResourceReference[],
+  ) => {
+    updateDraft((current) => ({
+      ...current,
+      genericReferences: references.map((reference) => ({
+        id: `image-revision-additional:${reference.assetId}:${reference.assetFileId}`,
+        placement: { kind: 'additional' as const },
+        reference: {
+          kind: 'asset-file' as const,
+          assetId: reference.assetId,
+          assetFileId: reference.assetFileId,
+        },
+      })),
+    }));
+    setPreview((current) => current
+      ? {
+          ...current,
+          references: { ...current.references, additional: references },
+        }
+      : current);
+  };
+
   const run = async () => {
-    if (!draft || !draft.authoredText.trim() || runPending) return;
-    requestRevision.current += 1;
+    if (!draft || runPending) return;
+    estimateRevision.current += 1;
     setRunPending(true);
     setError(null);
     try {
@@ -184,7 +240,7 @@ export function useImageRevisionEditor(
     changeMode,
     updateAuthoredText: (authoredText: string) => {
       if (!authoredText.trim()) {
-        requestRevision.current += 1;
+        estimateRevision.current += 1;
         setEstimatePending(false);
         setEstimatedUsd(null);
       }
@@ -193,6 +249,19 @@ export function useImageRevisionEditor(
     updateNegativeText: (negativeText: string) =>
       updateDraft((current) => ({ ...current, negativeText })),
     updateControl,
+    updateReference,
+    updateGenericReferences,
     run,
   };
+}
+
+function referencePlacementKey(
+  placement: GenerationPreviewReferenceSlot['placement']
+): string {
+  return [
+    placement.sectionId,
+    placement.slotId,
+    placement.subject?.kind ?? '',
+    placement.subject?.id ?? '',
+  ].join(':');
 }

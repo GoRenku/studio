@@ -2,7 +2,12 @@ import {
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
 } from '@gorenku/studio-core/server';
-import type { ShotVideoTakeGenerationSetup } from '@gorenku/studio-core/client';
+import type {
+  GenerationReference,
+  GenerationReferenceSlotSelectionInput,
+  ProjectRelativePath,
+  ShotVideoTakeGenerationSetup,
+} from '@gorenku/studio-core/client';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
@@ -414,6 +419,25 @@ export function createScreenplayRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .post(
+      '/screenplay/scenes/:sceneId/takes/:takeId/new',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const report = await projectData.createSceneShotVideoTakeFromTake({
+            projectName,
+            sceneId,
+            sourceTakeId: takeId,
+          });
+          return c.json(toSceneShotVideoTakeCreateReportResponse(projectName, report));
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
     .delete(
       '/screenplay/scenes/:sceneId/takes/:takeId',
       requireToken,
@@ -626,12 +650,39 @@ export function createScreenplayRoute({
             projectName,
             sceneId,
             takeId,
-            selectionId: request.selectionId,
-            included: request.included,
+            selection: request.selection,
             ...(request.selectedShotId
               ? { selectedShotId: request.selectedShotId }
               : {}),
           });
+          return c.json({
+            workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
+            resourceKeys: report.resourceKeys,
+          });
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      }
+    )
+    .patch(
+      '/screenplay/scenes/:sceneId/takes/:takeId/generation/generic-references',
+      requireToken,
+      async (c) => {
+        try {
+          const projectName = c.req.param('projectName') as string;
+          const sceneId = c.req.param('sceneId') as string;
+          const takeId = c.req.param('takeId') as string;
+          const request = readGenerationGenericReferenceUpdate(await c.req.json());
+          const report =
+            await projectData.setShotVideoTakeGenerationGenericReferences({
+              projectName,
+              sceneId,
+              takeId,
+              references: request.references,
+              ...(request.selectedShotId
+                ? { selectedShotId: request.selectedShotId }
+                : {}),
+            });
           return c.json({
             workspace: toShotVideoTakeWorkspaceResponse(projectName, report.workspace),
             resourceKeys: report.resourceKeys,
@@ -685,19 +736,99 @@ function readGenerationSetup(value: unknown): ShotVideoTakeGenerationSetup {
 }
 
 function readGenerationReferenceUpdate(value: unknown): {
-  selectionId: string;
-  included: boolean;
+  selection: GenerationReferenceSlotSelectionInput;
   selectedShotId?: string;
 } {
   const body = requireRecord(value, 'Request body');
-  if (typeof body.selectionId !== 'string' || typeof body.included !== 'boolean') {
-    throw requestError('Generation reference update requires selectionId and included.');
-  }
+  const selection = readReferenceSlotSelection(body.selection);
   const selectedShotId = readOptionalSelectedShotId(body);
   return {
-    selectionId: body.selectionId,
-    included: body.included,
+    selection,
     ...(selectedShotId ? { selectedShotId } : {}),
+  };
+}
+
+function readGenerationGenericReferenceUpdate(value: unknown): {
+  references: GenerationReference[];
+  selectedShotId?: string;
+} {
+  const body = requireRecord(value, 'Request body');
+  if (!Array.isArray(body.references)) {
+    throw requestError('references must be an array.');
+  }
+  const references = body.references.map((reference, index) =>
+    readExactGenerationReference(reference, `references[${index}]`)
+  );
+  const selectedShotId = readOptionalSelectedShotId(body);
+  return {
+    references,
+    ...(selectedShotId ? { selectedShotId } : {}),
+  };
+}
+
+function readExactGenerationReference(
+  value: unknown,
+  label: string,
+): GenerationReference {
+  const reference = requireRecord(value, label);
+  if (reference.kind === 'asset-file' && typeof reference.assetId === 'string' &&
+      typeof reference.assetFileId === 'string') {
+    return {
+      kind: 'asset-file',
+      assetId: reference.assetId,
+      assetFileId: reference.assetFileId,
+    };
+  }
+  if (reference.kind === 'project-file' &&
+      typeof reference.projectRelativePath === 'string') {
+    return {
+      kind: 'project-file',
+      projectRelativePath: reference.projectRelativePath as ProjectRelativePath,
+    };
+  }
+  throw requestError(`${label} must be an exact project reference.`);
+}
+
+function readReferenceSlotSelection(value: unknown): GenerationReferenceSlotSelectionInput {
+  const selection = requireRecord(value, 'selection');
+  const placement = requireRecord(selection.placement, 'selection.placement');
+  if (placement.kind !== 'slot' || typeof placement.sectionId !== 'string' ||
+      typeof placement.slotId !== 'string') {
+    throw requestError('selection.placement must identify a slot section and id.');
+  }
+  const subject = placement.subject === undefined
+    ? undefined
+    : requireRecord(placement.subject, 'selection.placement.subject');
+  if (subject && (typeof subject.kind !== 'string' || typeof subject.id !== 'string')) {
+    throw requestError('selection.placement.subject must identify a kind and id.');
+  }
+  let reference: GenerationReferenceSlotSelectionInput['reference'] = null;
+  if (selection.reference !== null) {
+    const exact = requireRecord(selection.reference, 'selection.reference');
+    if (exact.kind === 'asset-file' && typeof exact.assetId === 'string' &&
+        typeof exact.assetFileId === 'string') {
+      reference = { kind: 'asset-file', assetId: exact.assetId, assetFileId: exact.assetFileId };
+    } else if (exact.kind === 'project-file' && typeof exact.projectRelativePath === 'string') {
+      reference = { kind: 'project-file', projectRelativePath: exact.projectRelativePath as ProjectRelativePath };
+    } else {
+      throw requestError('selection.reference must be null or an exact project reference.');
+    }
+  }
+  if (selection.providerField !== undefined && selection.providerField !== null &&
+      typeof selection.providerField !== 'string') {
+    throw requestError('selection.providerField must be a string or null.');
+  }
+  return {
+    placement: {
+      kind: 'slot',
+      sectionId: placement.sectionId,
+      slotId: placement.slotId,
+      ...(subject ? { subject: { kind: subject.kind as string, id: subject.id as string } } : {}),
+    },
+    reference,
+    ...(selection.providerField !== undefined
+      ? { providerField: selection.providerField as string | null }
+      : {}),
   };
 }
 

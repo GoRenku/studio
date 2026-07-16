@@ -1,88 +1,98 @@
 # Shot Video Take-Owned Media Ownership
+Date: 2026-07-15
 
-Date: 2026-07-12
-
-Status: accepted
+Status: current
 
 Role: architecture decision
 
 ## Decision
 
 Shot Video Take-owned media and reusable project references have different
-lifecycle ownership.
+lifecycle ownership. Ownership is conferred only by focused relationship
+tables; a generation spec reference records usage and never transfers
+ownership.
 
 Take-owned media consists of:
 
-- one optional First Frame image;
-- one optional Last Frame image;
-- one optional Video Prompt image;
-- the final video attached through the focused `shot.video-take` command;
-- an exact generated reference revision stored only in the Take generic spec
-  when that asset has no Cast, Location, Lookbook, Scene, Sequence, or Project
-  relationship.
+- one optional current First Frame image;
+- one optional current Last Frame image;
+- one optional current Video Prompt image;
+- one insert-once final video attached by the successful materializing
+  `shot.video-take` command.
 
-Reusable references remain owned by their existing domains:
+Reusable references remain owned by their focused domains, including Cast
+Character Sheets, Location Sheets, Lookbook Sheets, Dialogue Audio Takes, and
+Shot-owned generic references registered through
+`scene_shot_reference_asset`.
 
-- Cast Character Sheets;
-- Location Sheets;
-- Lookbook Sheets;
-- Scene Dialogue Audio takes;
-- other exact assets with an active project-domain relationship.
+## Authoring And Materialization
 
-The active `shot.video-take` spec stores reference selection and inclusion. It
-does not transfer ownership of a reusable domain asset to the Take.
+Supporting images are Draft authoring inputs. They may be set or replaced while
+the Take has no successful materializing `shot.video-take` run. Their presence
+does not freeze Shot membership, structure, direction, model setup, prompt,
+provider values, or references.
+
+The first successful final Take generation atomically stores its immutable run
+snapshot and attaches the final video. That success completes and freezes the
+Take. A second successful run, replacement final video, or later authoring
+mutation fails before writes or provider execution.
+
+Failed materializing attempts do not freeze the Take. Supporting-image
+generation histories belong to their generated assets and are not displayed as
+Shot Video Take run history.
+
+Completed references resolve only the successful run's immutable
+`specSnapshot`. Current Scene candidates and purpose guides cannot change that
+record.
+
+## New Take
+
+Editing a Completed Take creates a history-empty Draft through the focused
+**New Take** command. It copies authored values and reusable exact selections.
+For each source Take-owned First Frame, Last Frame, or Video Prompt image, it
+also creates an independent Asset, AssetFile, stored file, and focused Take
+image relationship, then rewrites copied spec selections to those new ids.
+
+The new Draft shares no mutable Take-owned supporting media with its source and
+receives no final video, run, receipt, approval token, provider payload,
+diagnostics, generation provenance, or persisted lineage. The source Take and
+its successful snapshot remain unchanged.
 
 ## Persistence
 
-Image ownership is recorded by `scene_shot_video_take_image` with role
-`first-frame`, `last-frame`, or `video-prompt`. Final video ownership is
-recorded by `scene_shot_video_take_video`. Exact
-generation references are recorded in `media_generation_spec.references_json`.
-The pre-cutover Shot media-input tables were consumed by migration 0052 and
-removed by migration 0053; current runtime code does not recognize or write
-them.
+`scene_shot_video_take_image` records current Take image ownership by role.
+`scene_shot_video_take_video` records the current final-video ownership.
+`scene_shot_reference_asset` records explicit Shot ownership for generic
+reference media. `media_generation_spec.references_json` records exact request
+usage only.
 
-Final video attachment creates the Asset and AssetFile without a synthetic
-Scene relationship. A matching Renku receipt preserves the real generation run
-as provenance. An external final video has no synthetic run or provenance.
+An external video attachment does not receive a synthetic successful run or
+materialize a Shot Video Take. Imported media may be used as generic/reference
+media unless a future accepted workflow defines imported completed Takes.
 
-The direct `shot.first-frame`, `shot.last-frame`, and `shot.video-prompt`
-purposes create the matching focused Take image attachment. Each role and the
-final video are unique per Take; duplicate attempts fail through structured
-Core diagnostics before a database constraint is exposed.
+## Trash And Garbage Collection
 
-Once any Take-owned generated image or final video exists, authoring that Take
-is immutable. Shot membership, structure, direction, model setup, and reference
-changes require a new Take through the regeneration/copy workflow.
+Discarding a Take snapshots and discards its Shot membership and every focused
+Take image/video relationship. Core collects exclusively owned assets and files
+only after checking all active focused owners, including Take images, Take
+videos, and Shot generic-reference relationships. Restore reinstates the same
+focused rows and conflict-free exclusively owned media.
 
-Image Revision of an exact Shot reference creates a new exclusive Asset and
-AssetFile, updates the exact spec selection, and preserves the actual revision
-run. It does not create a broad Scene asset relationship.
+Generic spec usage is not a lifecycle owner and does not cause a Take cascade.
+`scene_shot_reference_asset` is a lifecycle owner and participates in Shot
+reference discard, restore, owner counts, shared-owner checks, and garbage
+collection. Its focused relationship command owns that lifecycle; generic spec
+usage does not.
 
-## Trash Rules
-
-Discarding a Take is recoverable. Core discards:
-
-- the Take row and ordered Shot membership;
-- the final-video ownership row;
-- final video files exclusively owned by that Take;
-- exact no-owner reference assets used only by that Take spec.
-
-Core does not discard reusable references with another domain owner. If an
-exclusive asset/file is referenced by another active Take spec or final-video
-row, deletion fails with a structured ownership diagnostic before changing
-durable state. There is no repair compatibility command; invalid shared
-take-owned state must be corrected by attaching distinct current media.
-
-Restore reinstates the same Take, membership, conflict-free picked state, final
-video, and exclusive files. Empty Trash can then move only files with no active
-owner.
+Supporting-image replacement transfers the active focused ownership pointer in
+one transaction. Lifecycle commands collect all conflicts before durable
+changes, so failure leaves rows and files unchanged.
 
 ## Ownership Boundary
 
-These rules belong in Core. Studio routes and CLI handlers call focused Core
-commands; React and Skills do not classify ownership, copy canonical media, or
-decide what deletion may cascade to.
+These rules belong in focused Core commands and database access modules. Studio
+routes and CLI handlers call those commands; React and skills do not classify
+ownership, copy canonical media, or decide what deletion may cascade to.
 
-Project file paths remain governed by
+Project file paths and atomic file/database write sets remain governed by
 `project-asset-storage-conventions.md`.

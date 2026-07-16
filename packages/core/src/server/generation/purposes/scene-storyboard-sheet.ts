@@ -15,10 +15,6 @@ export const sceneStoryboardSheetPurpose = defineGenerationPurpose({
     for (const id of sceneLocationIds) {
       slots.push(locationSheetSlot({ context, locationId: id }));
     }
-    const guide = buildReferenceGuide({ context, slots });
-    if (guide.sections[0]?.slots[0]?.candidates.length === 0) {
-      guide.notices.push({ code: 'CORE_GENERATION_STORYBOARD_LOOKBOOK_RECOMMENDED', message: 'No Storyboard Lookbook Sheet is available.', suggestion: 'Create a Storyboard Lookbook Sheet for consistent storyboard generations.' });
-    }
-    return guide;
+    return buildReferenceGuide({ context, slots });
   },
 });

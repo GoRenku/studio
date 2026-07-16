@@ -4,11 +4,14 @@ import type {
   SceneShotVideoTakeDirection,
   SceneShotVideoTakeStructureMode,
   GenerationCostEstimateReport,
+  GenerationReference,
+  GenerationReferenceSlotSelectionInput,
   RecoverableMutationReport,
   SceneShotVideoTakeListReport,
   SceneShotVideoTakeOverview,
   ShotVideoTakeGenerationSetup,
-  ShotVideoTakeReferenceSections,
+  SceneShotVideoTakeReferenceWorkspace,
+  ShotVideoTakeDraftReferenceSections,
   ShotVideoTakeStoryboardImageReference,
   ShotVideoTakeWorkspace,
   SceneShotVideoTakeVideo,
@@ -60,23 +63,30 @@ export type ShotVideoTakeWorkspaceResponse = Omit<
   take: SceneShotVideoTakeWithHttp;
   storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
   generation: Omit<ShotVideoTakeWorkspace['generation'], 'references'> & {
-    references: ShotVideoTakeReferenceSectionsWithHttp;
+    references: ShotVideoTakeReferenceWorkspaceWithHttp;
   };
 };
 
-type ShotVideoTakeReferenceSectionsWithHttp = Omit<
-  ShotVideoTakeReferenceSections,
-  'general' | 'lookbook' | 'castMembers' | 'locations'
+type ShotVideoTakeDraftReferenceSectionsWithHttp = Omit<
+  ShotVideoTakeDraftReferenceSections,
+  'general' | 'genericReferences' | 'lookbook' | 'castMembers' | 'locations'
 > & {
-  general: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['general'][number]>>;
-  lookbook: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['lookbook'][number]>>;
-  castMembers: Array<Omit<ShotVideoTakeReferenceSections['castMembers'][number], 'characterSheets'> & {
-    characterSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['castMembers'][number]['characterSheets'][number]>>;
+  general: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['general'][number]>>;
+  genericReferences: Array<ShotVideoTakeDraftReferenceSections['genericReferences'][number] & {
+    browserUrl?: string;
   }>;
-  locations: Array<Omit<ShotVideoTakeReferenceSections['locations'][number], 'environmentSheets'> & {
-    environmentSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['locations'][number]['environmentSheets'][number]>>;
+  lookbook: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['lookbook'][number]>>;
+  castMembers: Array<Omit<ShotVideoTakeDraftReferenceSections['castMembers'][number], 'characterSheets'> & {
+    characterSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['castMembers'][number]['characterSheets'][number]>>;
+  }>;
+  locations: Array<Omit<ShotVideoTakeDraftReferenceSections['locations'][number], 'environmentSheets'> & {
+    environmentSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['locations'][number]['environmentSheets'][number]>>;
   }>;
 };
+
+type ShotVideoTakeReferenceWorkspaceWithHttp =
+  | ShotVideoTakeDraftReferenceSectionsWithHttp
+  | Extract<SceneShotVideoTakeReferenceWorkspace, { kind: 'completed' }>;
 
 type ReferenceChoiceWithHttp<T extends { card: { previews: unknown[] } }> = Omit<T, 'card'> & {
   card: Omit<T['card'], 'previews'> & {
@@ -143,6 +153,18 @@ export async function discardShotVideoTake(
   return sendMutation<SceneShotVideoTakeDeleteMutation>(
     productionPath(projectName, sceneId, takeId),
     'DELETE',
+    {}
+  );
+}
+
+export async function createSceneShotVideoTakeFromTake(
+  projectName: string,
+  sceneId: string,
+  takeId: string
+): Promise<SceneShotVideoTakeCreateReportResponse> {
+  return sendMutation<SceneShotVideoTakeCreateReportResponse>(
+    `${productionPath(projectName, sceneId, takeId)}/new`,
+    'POST',
     {}
   );
 }
@@ -263,10 +285,23 @@ export async function setShotVideoTakeGenerationReference(
   projectName: string,
   sceneId: string,
   takeId: string,
-  input: { selectionId: string; included: boolean; selectedShotId?: string }
+  input: { selection: GenerationReferenceSlotSelectionInput; selectedShotId?: string }
 ): Promise<ShotVideoTakeWorkspaceMutation> {
   return sendTakeMutation(
     `${productionPath(projectName, sceneId, takeId)}/generation/references`,
+    'PATCH',
+    input
+  );
+}
+
+export async function setShotVideoTakeGenerationGenericReferences(
+  projectName: string,
+  sceneId: string,
+  takeId: string,
+  input: { references: GenerationReference[]; selectedShotId?: string }
+): Promise<ShotVideoTakeWorkspaceMutation> {
+  return sendTakeMutation(
+    `${productionPath(projectName, sceneId, takeId)}/generation/generic-references`,
     'PATCH',
     input
   );

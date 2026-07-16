@@ -4,7 +4,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneShotVideoTake,
-  ShotVideoTakeReferenceSections,
+  GenerationReferenceSlotSelectionInput,
+  ShotVideoTakeDraftReferenceSections,
 } from '@gorenku/studio-core/client';
 import { readSceneDialogueAudioWorkspace } from '@/services/studio-scene-dialogue-audio-api';
 import { SceneShotDialogsTab } from './scene-shot-dialogs-tab';
@@ -54,10 +55,7 @@ describe('SceneShotDialogsTab', () => {
     );
 
     await waitFor(() =>
-      expect(onSetReference).toHaveBeenCalledWith(
-        'selection_dialogue_take_001',
-        false
-      )
+      expect(onSetReference).toHaveBeenCalledWith(expect.objectContaining({ reference: null }))
     );
   });
 
@@ -117,8 +115,8 @@ describe('SceneShotDialogsTab', () => {
 });
 
 function renderTab(overrides: {
-  references?: ShotVideoTakeReferenceSections;
-  onSetReference?: (selectionId: string, included: boolean) => Promise<void>;
+  references?: ShotVideoTakeDraftReferenceSections;
+  onSetReference?: (selection: GenerationReferenceSlotSelectionInput) => Promise<void>;
   onSaveNotificationChange?: ReturnType<typeof vi.fn>;
 } = {}) {
   return render(
@@ -166,9 +164,11 @@ function take(): SceneShotVideoTake {
   };
 }
 
-function references(): ShotVideoTakeReferenceSections {
+function references(): ShotVideoTakeDraftReferenceSections {
   return {
+    kind: 'draft',
     general: [],
+    genericReferences: [],
     lookbook: [],
     castMembers: [],
     locations: [],
@@ -189,6 +189,10 @@ function references(): ShotVideoTakeReferenceSections {
       availableTakes: [{
         takeId: 'dialogue_take_001',
         selectionId: 'selection_dialogue_take_001',
+        selection: {
+          placement: { kind: 'slot', sectionId: 'dialogue', slotId: 'dialogue-audio', subject: { kind: 'sceneDialogue', id: 'dialogue_001' } },
+          reference: { kind: 'asset-file', assetId: 'asset_dialogue_001', assetFileId: 'file_dialogue_001' },
+        },
       }],
       takeCount: 1,
       defaultIncluded: true,
@@ -203,6 +207,10 @@ function references(): ShotVideoTakeReferenceSections {
         required: false,
         previews: [],
         diagnostics: [],
+        selection: {
+          placement: { kind: 'slot', sectionId: 'dialogue', slotId: 'dialogue-audio', subject: { kind: 'sceneDialogue', id: 'dialogue_001' } },
+          reference: { kind: 'asset-file', assetId: 'asset_dialogue_001', assetFileId: 'file_dialogue_001' },
+        },
       },
     }],
     dialogueAudioCapability: {

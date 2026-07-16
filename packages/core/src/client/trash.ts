@@ -11,6 +11,7 @@ export type TrashItemKind =
   | 'lookbookImage'
   | 'lookbookSheet'
   | 'sceneDialogueAudioTake'
+  | 'sceneShotReferenceAsset'
   | 'sceneShotVideoTake';
 
 export interface TrashProjectReport {

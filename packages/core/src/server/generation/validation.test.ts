@@ -47,7 +47,7 @@ describe('generic generation execution validation', () => {
     expect(report).toEqual({ valid: true, spec, diagnostics: [] });
   });
 
-  it('ignores excluded and provider-unassigned references', async () => {
+  it('validates every present reference', async () => {
     const projectFolder = await createProjectFolder();
     const spec: GenerationSpec = {
       purpose: 'image.create',
@@ -57,7 +57,6 @@ describe('generic generation execution validation', () => {
       references: [{
         id: 'excluded',
         placement: { kind: 'additional' },
-        included: false,
         reference: {
           kind: 'project-file',
           projectRelativePath: 'missing/reference.png' as never,
@@ -72,7 +71,7 @@ describe('generic generation execution validation', () => {
       projectFolder,
     });
 
-    expect(report.valid).toBe(true);
+    expect(report.valid).toBe(false);
   });
 
   it('rejects an exact image assigned to a text-only endpoint', async () => {
@@ -109,7 +108,6 @@ function imageEditSpec(projectRelativePath: string): GenerationSpec {
     references: [{
       id: 'reference-1',
       placement: { kind: 'additional' },
-      included: true,
       providerField: 'image_urls',
       reference: {
         kind: 'project-file',

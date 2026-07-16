@@ -15,8 +15,8 @@ import { insertLookbookSheetRecord, nextLookbookSheetSortOrder } from '../databa
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
 import { readAssetFileRecord } from '../database/access/asset-files.js';
 import {
-  insertShotVideoTakeImage,
-  insertShotVideoTakeVideo,
+  setSceneShotVideoTakeImage,
+  attachSuccessfulSceneShotVideoTakeVideo,
   type ShotVideoTakeImageRole,
 } from '../database/access/shot-video-take-media.js';
 
@@ -46,6 +46,12 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
 }): GenerationMediaAttachmentReport {
   const attachment = attachmentDestination(input);
   const generationRunId = validateGenerationProvenance(input);
+  if (input.purpose === 'shot.video-take' && !generationRunId) {
+    throw new ProjectDataError(
+      'CORE_SHOT_VIDEO_TAKE_SUCCESSFUL_RUN_REQUIRED',
+      'A final Shot Video Take video must be attached from its exact successful Renku generation run.'
+    );
+  }
   const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
   const relationshipId = attachment.owner
@@ -126,9 +132,9 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
         }
       }
       if (attachment.takeId && attachment.takeImageRole) {
-        insertShotVideoTakeImage({ session, takeId: attachment.takeId, role: attachment.takeImageRole, assetId, assetFileId, now });
+        setSceneShotVideoTakeImage({ session, takeId: attachment.takeId, role: attachment.takeImageRole, assetId, assetFileId, now });
       } else if (attachment.takeId) {
-        insertShotVideoTakeVideo({ session, takeId: attachment.takeId, assetId, assetFileId, now });
+        attachSuccessfulSceneShotVideoTakeVideo({ session, takeId: attachment.takeId, generationRunId: generationRunId!, assetId, assetFileId, now });
       }
       if (generationRunId) {
         recordImportedAssetFileGenerationProvenanceInSession({ session, assetFileId, receipt: input.receipt });

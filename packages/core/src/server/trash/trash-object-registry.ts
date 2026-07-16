@@ -3,7 +3,7 @@ import {
   createDiagnosticWarning,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
-import { and, eq, isNull, ne, or } from 'drizzle-orm';
+import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { AssetTarget, TrashItemKind } from '../../client/index.js';
 import {
   discardAssetRelationshipRecord,
@@ -25,6 +25,8 @@ import {
   projectAssets,
   sceneAssets,
   sceneDialogueAudioTakes,
+  sceneShotVideoTakeImages,
+  sceneShotReferenceAssets,
   sceneShotVideoTakeVideos,
   sceneShotVideoTakeShots,
   sceneShotVideoTakes,
@@ -37,8 +39,14 @@ import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
-import { listGenerationSpecRecords } from '../database/access/media-generation.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { countActiveSceneShotReferenceAssetOwners } from '../database/access/scene-shot-reference-assets.js';
+import {
+  countActiveSceneShotVideoTakeMediaOwners,
+  listActiveSceneShotVideoTakeOwnedMedia,
+  listSceneShotVideoTakeOwnedMediaConflicts,
+  type SceneShotVideoTakeOwnedMediaConflict,
+} from '../database/access/shot-video-take-media.js';
 import type {
   TrashFileDraft,
   TrashObjectDefinition,
@@ -670,6 +678,16 @@ const sceneShotVideoTakeDefinition: TrashObjectDefinition = {
       .where(eq(sceneShotVideoTakeShots.takeId, input.itemId))
       .run();
     input.session.db
+      .update(sceneShotVideoTakeImages)
+      .set({
+        discardedAt: input.now,
+        discardOperationId: input.operationId,
+        restoredAt: null,
+        updatedAt: input.now,
+      })
+      .where(eq(sceneShotVideoTakeImages.takeId, input.itemId))
+      .run();
+    input.session.db
       .update(sceneShotVideoTakeVideos)
       .set({
         discardedAt: input.now,
@@ -718,6 +736,16 @@ const sceneShotVideoTakeDefinition: TrashObjectDefinition = {
       .where(eq(sceneShotVideoTakeShots.takeId, input.trashItem.itemId))
       .run();
     input.session.db
+      .update(sceneShotVideoTakeImages)
+      .set({
+        discardedAt: null,
+        discardOperationId: null,
+        restoredAt: input.now,
+        updatedAt: input.now,
+      })
+      .where(eq(sceneShotVideoTakeImages.takeId, input.trashItem.itemId))
+      .run();
+    input.session.db
       .update(sceneShotVideoTakeVideos)
       .set({
         discardedAt: null,
@@ -752,6 +780,84 @@ const sceneShotVideoTakeDefinition: TrashObjectDefinition = {
   },
 };
 
+const sceneShotReferenceAssetDefinition: TrashObjectDefinition = {
+  itemKind: 'sceneShotReferenceAsset',
+  readTrashItems(input) {
+    const relationship = input.session.db
+      .select({
+        id: sceneShotReferenceAssets.id,
+        sceneId: sceneShotReferenceAssets.sceneId,
+        shotListId: sceneShotReferenceAssets.shotListId,
+        shotId: sceneShotReferenceAssets.shotId,
+        assetId: sceneShotReferenceAssets.assetId,
+        assetFileId: sceneShotReferenceAssets.assetFileId,
+        sortOrder: sceneShotReferenceAssets.sortOrder,
+        title: assets.title,
+      })
+      .from(sceneShotReferenceAssets)
+      .innerJoin(assets, eq(sceneShotReferenceAssets.assetId, assets.id))
+      .where(and(
+        eq(sceneShotReferenceAssets.id, input.itemId),
+        isNull(sceneShotReferenceAssets.discardedAt)
+      ))
+      .get();
+    if (!relationship) {
+      return [];
+    }
+    return [{
+      itemKind: 'sceneShotReferenceAsset',
+      itemId: relationship.id,
+      ownerKind: 'sceneShot',
+      ownerId: relationship.shotId,
+      title: relationship.title,
+      restoreSnapshot: {
+        sceneId: relationship.sceneId,
+        shotListId: relationship.shotListId,
+        shotId: relationship.shotId,
+        assetId: relationship.assetId,
+        assetFileId: relationship.assetFileId,
+        sortOrder: relationship.sortOrder,
+      },
+    }];
+  },
+  applyDiscard(input) {
+    input.session.db
+      .update(sceneShotReferenceAssets)
+      .set({
+        discardedAt: input.now,
+        discardOperationId: input.operationId,
+        restoredAt: null,
+        updatedAt: input.now,
+      })
+      .where(eq(sceneShotReferenceAssets.id, input.itemId))
+      .run();
+  },
+  applyRestore(input) {
+    input.session.db
+      .update(sceneShotReferenceAssets)
+      .set({
+        discardedAt: null,
+        discardOperationId: null,
+        restoredAt: input.now,
+        updatedAt: input.now,
+      })
+      .where(eq(sceneShotReferenceAssets.id, input.trashItem.itemId))
+      .run();
+  },
+  collectFiles() {
+    return [];
+  },
+  resourceKeys(input) {
+    return ['trash:list', `scene-shot:${input.ownerId ?? ''}`];
+  },
+  restoredChanges(input) {
+    return [{
+      type: 'sceneShotReferenceAsset.restored',
+      relationshipId: input.itemId,
+    }];
+  },
+};
+
 const unsupportedKinds = new Set<TrashItemKind>();
 
 const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinition>> = {
@@ -759,6 +865,7 @@ const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinitio
   assetRelationship: assetRelationshipDefinition,
   castVoice: castVoiceDefinition,
   sceneDialogueAudioTake: sceneDialogueAudioTakeDefinition,
+  sceneShotReferenceAsset: sceneShotReferenceAssetDefinition,
   sceneShotVideoTake: sceneShotVideoTakeDefinition,
   inspirationFolder: inspirationFolderDefinition,
   inspirationImage: inspirationImageDefinition,
@@ -976,22 +1083,9 @@ function countActiveAssetOwners(
       .all();
     return total + rows.length;
   }, 0);
-  const videoOwners = session.db
-    .select({ takeId: sceneShotVideoTakeVideos.takeId })
-    .from(sceneShotVideoTakeVideos)
-    .innerJoin(
-      sceneShotVideoTakes,
-      eq(sceneShotVideoTakeVideos.takeId, sceneShotVideoTakes.id)
-    )
-    .where(
-      and(
-        eq(sceneShotVideoTakeVideos.assetId, assetId),
-        isNull(sceneShotVideoTakeVideos.discardedAt),
-        isNull(sceneShotVideoTakes.discardedAt)
-      )
-    )
-    .all().length;
-  return relationshipOwners + videoOwners;
+  return relationshipOwners +
+    countActiveSceneShotVideoTakeMediaOwners(session, assetId) +
+    countActiveSceneShotReferenceAssetOwners(session, assetId);
 }
 
 function assetTargetId(target: AssetTarget): string | null {
@@ -1060,137 +1154,30 @@ function listExclusiveSceneShotVideoTakeOwnedAssetIds(
   input: TrashObjectDiscardContext,
   takeId: string
 ): string[] {
-  const assetIds = new Set<string>();
-  listGenerationSpecRecords(input.session, {
-    purpose: 'shot.video-take',
-    target: { kind: 'sceneShotVideoTake', id: takeId },
-  })
-    .flatMap((record) => record.spec.references)
-    .flatMap((selection) =>
-      selection.reference.kind === 'asset-file'
-        ? [{
-            assetId: selection.reference.assetId,
-            assetFileId: selection.reference.assetFileId,
-          }]
-        : []
-    )
-    .filter(
-      (reference) =>
-        readAssetOwnerTargets(input.session, reference.assetId).length === 0
-    )
-    .forEach((reference) => {
-      assertTakeOwnedAssetExclusive(input, { takeId, ...reference });
-      assetIds.add(reference.assetId);
-    });
-  input.session.db
-    .select({
-      assetId: sceneShotVideoTakeVideos.assetId,
-      assetFileId: sceneShotVideoTakeVideos.assetFileId,
-    })
-    .from(sceneShotVideoTakeVideos)
-    .where(
-      and(
-        eq(sceneShotVideoTakeVideos.takeId, takeId),
-        isNull(sceneShotVideoTakeVideos.discardedAt)
-      )
-    )
-    .all()
-    .filter(
-      (row) => readAssetOwnerTargets(input.session, row.assetId).length === 0
-    )
-    .forEach((row) => {
-      assertTakeOwnedAssetExclusive(input, {
-        takeId,
-        assetId: row.assetId,
-        assetFileId: row.assetFileId,
-      });
-      assetIds.add(row.assetId);
-    });
-  return [...assetIds];
-}
-
-function assertTakeOwnedAssetExclusive(
-  input: TrashObjectDiscardContext,
-  ownedAsset: { takeId: string; assetId: string; assetFileId: string }
-): void {
-  const sharedReference = listGenerationSpecRecords(input.session, {
-    purpose: 'shot.video-take',
-  }).find((record) =>
-    record.spec.target.kind === 'sceneShotVideoTake' &&
-    record.spec.target.id !== ownedAsset.takeId &&
-    record.spec.references.some((selection) =>
-      selection.reference.kind === 'asset-file' &&
-      (selection.reference.assetId === ownedAsset.assetId ||
-        selection.reference.assetFileId === ownedAsset.assetFileId)
-    ) &&
-    input.session.db
-      .select({ id: sceneShotVideoTakes.id })
-      .from(sceneShotVideoTakes)
-      .where(and(
-        eq(sceneShotVideoTakes.id, record.spec.target.id),
-        isNull(sceneShotVideoTakes.discardedAt)
-      ))
-      .get() !== undefined
-  );
-  if (sharedReference) {
-    throw sharedTakeOwnedMediaError({
-      assetId: ownedAsset.assetId,
-      assetFileId: ownedAsset.assetFileId,
-      owner: `media_generation_spec ${sharedReference.id}`,
-    });
-  }
-
-  const sharedVideo = input.session.db
-    .select({ takeId: sceneShotVideoTakeVideos.takeId })
-    .from(sceneShotVideoTakeVideos)
-    .innerJoin(
-      sceneShotVideoTakes,
-      eq(sceneShotVideoTakeVideos.takeId, sceneShotVideoTakes.id)
-    )
-    .where(
-      and(
-        or(
-          eq(sceneShotVideoTakeVideos.assetId, ownedAsset.assetId),
-          eq(sceneShotVideoTakeVideos.assetFileId, ownedAsset.assetFileId)
-        ),
-        isNull(sceneShotVideoTakeVideos.discardedAt),
-        isNull(sceneShotVideoTakes.discardedAt),
-        ne(sceneShotVideoTakeVideos.takeId, ownedAsset.takeId)
-      )
-    )
-    .get();
-  if (sharedVideo) {
-    throw sharedTakeOwnedMediaError({
-      assetId: ownedAsset.assetId,
-      assetFileId: ownedAsset.assetFileId,
-      owner: `scene_shot_video_take_video ${sharedVideo.takeId}`,
-    });
-  }
-
-  const relationshipOwners = readAssetOwnerTargets(
+  const ownedMedia = listActiveSceneShotVideoTakeOwnedMedia(
     input.session,
-    ownedAsset.assetId
+    takeId
   );
-  if (relationshipOwners.length > 0) {
-    throw sharedTakeOwnedMediaError({
-      assetId: ownedAsset.assetId,
-      assetFileId: ownedAsset.assetFileId,
-      owner: 'active asset relationship',
-    });
+  const conflicts = listSceneShotVideoTakeOwnedMediaConflicts({
+    session: input.session,
+    takeId,
+    media: ownedMedia,
+  });
+  if (conflicts.length > 0) {
+    throw sharedTakeOwnedMediaError(conflicts);
   }
+  return [...new Set(ownedMedia.map((row) => row.assetId))];
 }
 
-function sharedTakeOwnedMediaError(input: {
-  assetId: string;
-  assetFileId: string;
-  owner: string;
-}): ProjectDataError {
+function sharedTakeOwnedMediaError(
+  conflicts: SceneShotVideoTakeOwnedMediaConflict[]
+): ProjectDataError {
   return new ProjectDataError(
     'PROJECT_DATA440',
-    `Shot video take-owned media is shared with another active owner: ${input.assetId}/${input.assetFileId}.`,
+    `Shot video take-owned media is shared with another active owner: ${conflicts.map((conflict) => `${conflict.assetId}/${conflict.assetFileId} (${conflict.owner})`).join(', ')}.`,
     {
       suggestion:
-        `Attach a distinct final video to each Take before deleting it. Active owner: ${input.owner}.`,
+        'Attach distinct media to every active owner before deleting this Take.',
     }
   );
 }

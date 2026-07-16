@@ -176,22 +176,25 @@ describe('current Shot Video Take state persistence e2e', () => {
       fixture.ids.sceneId,
       take.takeId
     );
+    const references = withSpec.generation.references;
+    if (references.kind !== 'draft') throw new Error('Expected Draft references.');
     const reference = [
-      ...withSpec.generation.references.general,
-      ...withSpec.generation.references.lookbook,
-      ...withSpec.generation.references.castMembers.flatMap(
+      ...references.general,
+      ...references.lookbook,
+      ...references.castMembers.flatMap(
         (member) => member.characterSheets
       ),
-      ...withSpec.generation.references.locations.flatMap(
+      ...references.locations.flatMap(
         (location) => location.environmentSheets
       ),
-    ][0];
+    ].find((candidate) => candidate.card.selection);
+    const chosenSelection = reference?.card.selection;
     if (reference) {
       await setShotVideoTakeGenerationReference(
         fixture.projectName,
         fixture.ids.sceneId,
         take.takeId,
-        { selectionId: reference.card.selectionId, included: true }
+        { selection: reference.card.selection! }
       );
     }
 
@@ -208,17 +211,19 @@ describe('current Shot Video Take state persistence e2e', () => {
     expect(reloaded.take.state.structure).not.toHaveProperty(
       'referenceSelections'
     );
-    if (reference) {
-      expect(
-        reloaded.generation.spec?.spec.references.some(
-          (selection) =>
-            selection.id === reference.card.selectionId && selection.included
-        )
-      ).toBe(true);
+    if (chosenSelection) {
+      expect(reloaded.generation.spec?.spec.references).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            placement: chosenSelection.placement,
+            reference: chosenSelection.reference,
+          }),
+        ])
+      );
     }
   });
 
-  it('estimates an unsaved current setup without creating a durable spec', async () => {
+  it('reports unavailable pricing for an incomplete setup without creating a durable spec', async () => {
     const take = await fixture.createTake({
       shotIds: ['shot_001'],
       title: 'Estimate-only take',
@@ -228,7 +233,9 @@ describe('current Shot Video Take state persistence e2e', () => {
       fixture.ids.sceneId,
       take.takeId
     );
-    const model = workspace.generation.models[0]!;
+    const model = workspace.generation.models.find(
+      (candidate) => candidate.duration.supported
+    )!;
 
     const report = await estimateShotVideoTakeGeneration(
       fixture.projectName,
@@ -240,7 +247,12 @@ describe('current Shot Video Take state persistence e2e', () => {
         parameterValues: {},
       }
     );
-    expect(report.valid).toBe(true);
+    expect(report.valid).toBe(false);
+    if (!report.valid) {
+      expect(report.diagnostics).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: 'CORE_GENERATION_PRICE_UNAVAILABLE' }),
+      ]));
+    }
 
     const reloaded = await readShotVideoTakeWorkspace(
       fixture.projectName,

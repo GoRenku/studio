@@ -180,11 +180,28 @@ describe('shot video take routes', () => {
     },
     {
       suffix: '/generation/references',
-      body: { selectionId: 'candidate:shared:first-frame:file_001', included: true },
+      body: { selection: { placement: { kind: 'slot', sectionId: 'take-media', slotId: 'first-frame' }, reference: null } },
       method: 'setShotVideoTakeGenerationReference' as const,
       expected: {
-        selectionId: 'candidate:shared:first-frame:file_001',
-        included: true,
+        selection: { placement: { kind: 'slot', sectionId: 'take-media', slotId: 'first-frame' }, reference: null },
+      },
+    },
+    {
+      suffix: '/generation/generic-references',
+      body: {
+        references: [{
+          kind: 'asset-file',
+          assetId: 'asset_ambience',
+          assetFileId: 'file_ambience',
+        }],
+      },
+      method: 'setShotVideoTakeGenerationGenericReferences' as const,
+      expected: {
+        references: [{
+          kind: 'asset-file',
+          assetId: 'asset_ambience',
+          assetFileId: 'file_ambience',
+        }],
       },
     },
   ])('delegates $suffix through the current workspace contract', async ({

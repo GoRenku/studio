@@ -23,8 +23,8 @@ interface GenerationSpec {
 
 `values` contains actual non-media provider field names and authored values.
 Optional provider-defaulted fields remain absent until explicitly authored.
-Media fields are not stored in `values`; an included exact reference receives
-an optional actual `providerField` assignment.
+Media fields are not stored in `values`; an exact reference may receive an
+optional authored `providerField` assignment.
 
 A reference is either an exact registered `assetId + assetFileId` pair or a
 normalized project-relative file path. Resolution never chooses another file.
@@ -37,11 +37,9 @@ interface GenerationReferenceSelection {
         kind: "slot";
         sectionId: string;
         slotId: string;
-        scope?: { kind: string; id: string };
         subject?: { kind: string; id: string };
       }
     | { kind: "additional" };
-  included: boolean;
   providerField?: string;
   reference: GenerationReference;
 }
@@ -57,22 +55,26 @@ own any additional context lookup.
 `createGenerationSpec` and `updateGenerationSpec` accept partial state. They
 validate:
 
-- purpose and target-kind agreement with the supplied purpose contract;
+- purpose and target-kind agreement with the supplied purpose contract on
+  creation and exact immutable purpose/target identity on update;
 - JSON-safe authored values;
 - unique non-empty selection ids;
 - normalized project-relative paths or complete exact asset/file ids;
-- real guide placements and presentation cardinality.
+- structurally complete slot placement and at most one current choice per exact
+  slot.
 
 They do not require provider/model identity, provider-required values, file
-availability, or provider-field assignments.
+availability, provider-field assignments, current purpose-guide placement,
+candidate membership, or typed domain ownership.
 
-`validateGenerationSpec` performs execution readiness. It resolves included
-and provider-assigned references, verifies exact file availability, asks Engines
+`validateGenerationSpec` performs execution readiness. It resolves exact
+provider-assigned references, verifies file availability, asks Engines
 to assemble the provider request, and returns all predictable provider-schema
 and media-envelope issues without executing or writing a run.
 
-Excluded references and unassigned references do not enter the provider
-payload. Validation never reads context, guide candidates, or slot occupancy.
+Presence means inclusion; inactive reference alternatives are not persisted.
+Unassigned references do not enter the provider payload. Validation never reads
+context, guide candidates, or slot occupancy.
 
 ## Provider Model Descriptors
 
@@ -94,11 +96,16 @@ display, and includes a provider payload only when readiness validation
 succeeds.
 
 `estimateGenerationCost` consumes pricing inputs only: provider, model, output
-media kind, generation settings, and intended input-media counts. It does not
+media kind, available authored/provider pricing facts, and intended input-media
+counts. It does not
 resolve files, require prompts or references, assemble a provider payload, or
 invoke execution validation. `estimateGeneration` adds a price approval token
 for generic run flows; the token is based on provider, model, and estimated
 price rather than creative prompt or file contents.
+
+Absent provider values remain absent. Studio presents absent duration as
+`Unspecified`, never authors `Auto` or a default value, and returns price
+unavailable when exact pricing facts are insufficient.
 
 `runGeneration`:
 

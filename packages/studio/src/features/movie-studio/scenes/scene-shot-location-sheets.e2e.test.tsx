@@ -32,16 +32,23 @@ describe('Shot Location Sheet references e2e', () => {
       fixture.ids.sceneId,
       take.takeId
     );
+    const references = workspace.generation.references;
+    expect(references.kind).toBe('draft');
+    if (references.kind !== 'draft') throw new Error('Expected Draft references.');
 
-    const location = workspace.generation.references.locations.find(
+    const location = references.locations.find(
       (candidate) => candidate.locationId === fixture.ids.locationId
     );
-    expect(workspace.generation.references.general).toEqual([]);
-    expect(workspace.generation.references.lookbook).toEqual([
+    expect(references.general).toEqual([
+      expect.objectContaining({ kind: 'first-frame', selected: false }),
+      expect.objectContaining({ kind: 'last-frame', selected: false }),
+      expect.objectContaining({ kind: 'video-prompt', selected: false }),
+    ]);
+    expect(references.lookbook).toEqual([
       expect.objectContaining({ title: 'Imperial Wound Sheet' }),
     ]);
     expect(
-      workspace.generation.references.castMembers.find(
+      references.castMembers.find(
         (candidate) => candidate.castMemberId === fixture.ids.castMemberId
       )?.characterSheets
     ).toEqual([
@@ -75,7 +82,9 @@ describe('Shot Location Sheet references e2e', () => {
       fixture.ids.sceneId,
       take.takeId
     );
-    const choice = workspace.generation.references.locations
+    const references = workspace.generation.references;
+    if (references.kind !== 'draft') throw new Error('Expected Draft references.');
+    const choice = references.locations
       .find((location) => location.locationId === fixture.ids.locationId)
       ?.environmentSheets[0];
     expect(choice).toBeDefined();
@@ -84,7 +93,7 @@ describe('Shot Location Sheet references e2e', () => {
       fixture.projectName,
       fixture.ids.sceneId,
       take.takeId,
-      { selectionId: choice!.card.selectionId, included: true }
+      { selection: choice!.card.selection! }
     );
     const reloaded = await readShotVideoTakeWorkspace(
       fixture.projectName,
@@ -93,7 +102,7 @@ describe('Shot Location Sheet references e2e', () => {
     );
 
     expect(
-      reloaded.generation.references.locations
+      reloaded.generation.references.kind === 'draft' && reloaded.generation.references.locations
         .find((location) => location.locationId === fixture.ids.locationId)
         ?.environmentSheets[0]?.selected
     ).toBe(true);
@@ -102,7 +111,7 @@ describe('Shot Location Sheet references e2e', () => {
       fixture.projectName,
       fixture.ids.sceneId,
       take.takeId,
-      { selectionId: choice!.card.selectionId, included: false }
+      { selection: { ...choice!.card.selection!, reference: null } }
     );
     const cleared = await readShotVideoTakeWorkspace(
       fixture.projectName,
@@ -110,7 +119,7 @@ describe('Shot Location Sheet references e2e', () => {
       take.takeId
     );
     expect(
-      cleared.generation.references.locations
+      cleared.generation.references.kind === 'draft' && cleared.generation.references.locations
         .find((location) => location.locationId === fixture.ids.locationId)
         ?.environmentSheets[0]?.selected
     ).toBe(false);

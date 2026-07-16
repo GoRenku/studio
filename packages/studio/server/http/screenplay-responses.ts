@@ -19,7 +19,8 @@ import type {
   SequenceResource,
   SequenceSceneRow,
   ShotVideoTakeWorkspace,
-  ShotVideoTakeReferenceSections,
+  SceneShotVideoTakeReferenceWorkspace,
+  ShotVideoTakeDraftReferenceSections,
   ShotVideoTakeStoryboardImageReference,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
@@ -147,23 +148,30 @@ export type ShotVideoTakeWorkspaceResponse = Omit<
   take: SceneShotVideoTakeWithHttp;
   storyboardImages: ShotVideoTakeStoryboardImageReferenceWithHttp[];
   generation: Omit<ShotVideoTakeWorkspace['generation'], 'references'> & {
-    references: ShotVideoTakeReferenceSectionsWithHttp;
+    references: ShotVideoTakeReferenceWorkspaceWithHttp;
   };
 };
 
-type ShotVideoTakeReferenceSectionsWithHttp = Omit<
-  ShotVideoTakeReferenceSections,
-  'general' | 'lookbook' | 'castMembers' | 'locations'
+type ShotVideoTakeDraftReferenceSectionsWithHttp = Omit<
+  ShotVideoTakeDraftReferenceSections,
+  'general' | 'genericReferences' | 'lookbook' | 'castMembers' | 'locations'
 > & {
-  general: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['general'][number]>>;
-  lookbook: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['lookbook'][number]>>;
-  castMembers: Array<Omit<ShotVideoTakeReferenceSections['castMembers'][number], 'characterSheets'> & {
-    characterSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['castMembers'][number]['characterSheets'][number]>>;
+  general: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['general'][number]>>;
+  genericReferences: Array<ShotVideoTakeDraftReferenceSections['genericReferences'][number] & {
+    browserUrl?: string;
   }>;
-  locations: Array<Omit<ShotVideoTakeReferenceSections['locations'][number], 'environmentSheets'> & {
-    environmentSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeReferenceSections['locations'][number]['environmentSheets'][number]>>;
+  lookbook: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['lookbook'][number]>>;
+  castMembers: Array<Omit<ShotVideoTakeDraftReferenceSections['castMembers'][number], 'characterSheets'> & {
+    characterSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['castMembers'][number]['characterSheets'][number]>>;
+  }>;
+  locations: Array<Omit<ShotVideoTakeDraftReferenceSections['locations'][number], 'environmentSheets'> & {
+    environmentSheets: Array<ReferenceChoiceWithHttp<ShotVideoTakeDraftReferenceSections['locations'][number]['environmentSheets'][number]>>;
   }>;
 };
+
+type ShotVideoTakeReferenceWorkspaceWithHttp =
+  | ShotVideoTakeDraftReferenceSectionsWithHttp
+  | Extract<SceneShotVideoTakeReferenceWorkspace, { kind: 'completed' }>;
 
 type ReferenceChoiceWithHttp<T extends { card: { previews: unknown[] } }> = Omit<T, 'card'> & {
   card: Omit<T['card'], 'previews'> & {
@@ -467,9 +475,22 @@ function withShotVideoTakeVideoUrl(
 
 function withReferenceUrls(
   projectName: string,
-  references: ShotVideoTakeReferenceSections
-): ShotVideoTakeReferenceSectionsWithHttp {
-  const withChoice = <T extends { card: ShotVideoTakeReferenceSections['general'][number]['card'] }>(choice: T) => ({
+  references: SceneShotVideoTakeReferenceWorkspace
+): ShotVideoTakeReferenceWorkspaceWithHttp {
+  if (references.kind === 'completed') {
+    return {
+      ...references,
+      usedReferences: references.usedReferences.map((reference) => ({
+        ...reference,
+        ...(reference.assetId && reference.assetFileId
+          ? {
+              browserUrl: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(reference.assetId)}/files/${encodeURIComponent(reference.assetFileId)}`,
+            }
+          : {}),
+      })),
+    };
+  }
+  const withChoice = <T extends { card: ShotVideoTakeDraftReferenceSections['general'][number]['card'] }>(choice: T) => ({
     ...choice,
     card: {
       ...choice.card,
@@ -481,6 +502,14 @@ function withReferenceUrls(
   });
   return {
     ...references,
+    genericReferences: references.genericReferences.map((reference) => ({
+      ...reference,
+      ...(reference.reference.kind === 'asset-file'
+        ? {
+            browserUrl: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(reference.reference.assetId)}/files/${encodeURIComponent(reference.reference.assetFileId)}`,
+          }
+        : {}),
+    })),
     general: references.general.map(withChoice),
     lookbook: references.lookbook.map(withChoice),
     castMembers: references.castMembers.map((group) => ({

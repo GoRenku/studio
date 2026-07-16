@@ -6,6 +6,7 @@ import {
   projectAssets,
   projects,
   sceneAssets,
+  sceneShotReferenceAssets,
   sequenceAssets,
 } from '../../schema/index.js';
 import { listAssetFileRecords, readAssetFileRecord } from './asset-files.js';
@@ -107,6 +108,13 @@ function readAssetOwners(session: DatabaseSession): Map<
       id: row.sceneId,
       role: row.role,
     })),
+    session.db.select().from(sceneShotReferenceAssets)
+      .where(isNull(sceneShotReferenceAssets.discardedAt)).all().map((row) => ({
+        assetId: row.assetId,
+        kind: 'sceneShot',
+        id: row.shotId,
+        role: 'generic-reference',
+      })),
   ];
   for (const relationships of relationshipGroups) {
     for (const relationship of relationships) {

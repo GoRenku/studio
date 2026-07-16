@@ -17,7 +17,7 @@ describe('generation preview draft', () => {
     expect(
       generationPreviewReferenceSelected(
         preview.references.slots[0]!,
-        preview.references.slots[0]!.candidates[0]!,
+        preview.references.slots[0]!.current!,
         draft
       )
     ).toBe(true);
@@ -37,16 +37,17 @@ describe('generation preview draft', () => {
     expect(generationPreviewDraftIsDirty(preview, changed)).toBe(true);
     expect(buildGenerationPreviewUpdateRequest(preview, changed)).toEqual({
       prompt: { authoredText: 'Updated prompt.\nSecond line.' },
-      referenceChanges: [
+      slotSelections: [
         {
-          kind: 'clear',
           placement: {
             kind: 'slot',
             sectionId: 'continuity',
             slotId: 'style',
           },
+          reference: null,
         },
       ],
+      genericReferences: [],
     });
   });
 
@@ -54,12 +55,12 @@ describe('generation preview draft', () => {
     const preview = previewFixture();
     const draft = createGenerationPreviewDraft(preview);
     const replacement = {
-      ...preview.references.slots[0]!.candidates[0]!,
+      ...preview.references.slots[0]!.eligibleCandidates[0]!,
       assetId: 'asset_replacement',
       assetFileId: 'asset_file_replacement',
       selected: false,
     };
-    preview.references.slots[0]!.candidates.push(replacement);
+    preview.references.slots[0]!.eligibleCandidates.push(replacement);
     const changed = changeGenerationPreviewReference(
       draft,
       preview.references.slots[0]!,
@@ -85,6 +86,27 @@ describe('generation preview draft', () => {
       authoredText: 'Original prompt.',
       negativeText: null,
     });
+  });
+
+  it('persists ordered generic reference additions separately from typed slots', () => {
+    const preview = previewFixture();
+    const draft = createGenerationPreviewDraft(preview);
+    draft.genericReferences = [{
+      kind: 'audio',
+      role: 'generic-reference',
+      label: 'Courtyard ambience',
+      assetId: 'asset_ambience',
+      assetFileId: 'file_ambience',
+      selected: true,
+      browserUrl: '/ambience.wav',
+    }];
+
+    expect(generationPreviewDraftIsDirty(preview, draft)).toBe(true);
+    expect(buildGenerationPreviewUpdateRequest(preview, draft).genericReferences).toEqual([{
+      kind: 'asset-file',
+      assetId: 'asset_ambience',
+      assetFileId: 'file_ambience',
+    }]);
   });
 });
 
@@ -115,7 +137,7 @@ function previewFixture(): GenerationPreviewResource {
           sectionId: 'continuity',
           slotId: 'style',
         },
-        candidates: [{
+        current: {
           kind: 'image',
           role: 'style',
           label: 'Style sheet',
@@ -123,6 +145,11 @@ function previewFixture(): GenerationPreviewResource {
           assetFileId: 'asset_file_style',
           browserUrl: '/style.png',
           selected: true,
+        },
+        eligibleCandidates: [{
+          kind: 'image', role: 'style', label: 'Style sheet',
+          assetId: 'asset_style', assetFileId: 'asset_file_style',
+          browserUrl: '/style.png', selected: false,
         }],
       }],
       additional: [],

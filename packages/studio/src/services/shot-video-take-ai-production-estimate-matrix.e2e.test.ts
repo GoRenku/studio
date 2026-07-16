@@ -51,14 +51,7 @@ describe('Shot Video Take model estimate matrix e2e', () => {
       );
       if (duration) {
         expect(duration.allowedValues ?? []).not.toContain('auto');
-        expect(duration.defaultValue).not.toBe('auto');
-        if (duration.allowedValues?.length) {
-          expect(Number(duration.defaultValue)).toBe(
-            Math.min(...duration.allowedValues.map(Number))
-          );
-        } else if (duration.minimum !== undefined) {
-          expect(duration.defaultValue).toBe(duration.minimum);
-        }
+        expect(duration).not.toHaveProperty('defaultValue');
       }
     }
     const activeModel = workspace.generation.models.find(
@@ -68,8 +61,8 @@ describe('Shot Video Take model estimate matrix e2e', () => {
       (parameter) => parameter.name === 'duration'
     );
     if (activeDuration) {
-      expect(workspace.generation.setup.parameterValues.duration).toBe(
-        activeDuration.defaultValue
+      expect(workspace.generation.setup.parameterValues).not.toHaveProperty(
+        activeDuration.name
       );
     }
   });
@@ -121,7 +114,7 @@ describe('Shot Video Take model estimate matrix e2e', () => {
     }
   });
 
-  it('provides a model-only estimate for every model shown in AI Production', async () => {
+  it('reports unavailable pricing when a model needs authored pricing inputs', async () => {
     const take = await fixture.createTake({
       shotIds: ['shot_001'],
       title: 'Every model estimate take',
@@ -141,24 +134,19 @@ describe('Shot Video Take model estimate matrix e2e', () => {
           {
             inputModeId: model.supportedInputModes[0]!,
             modelChoice: model.modelChoice,
-            parameterValues: Object.fromEntries(
-              model.parameters.flatMap((parameter) =>
-                parameter.defaultValue === undefined
-                  ? []
-                  : [[parameter.name, parameter.defaultValue]]
-              )
-            ),
+            parameterValues: {},
           }
         ),
       }))
     );
-    const failures = reports.flatMap(({ model, report }) =>
-      report.valid
-        ? []
-        : [`${model.label}: ${report.diagnostics.map((issue) => issue.message).join('; ')}`]
-    );
-
-    expect(failures).toEqual([]);
+    const unavailableReports = reports.filter(({ report }) => !report.valid);
+    expect(unavailableReports.length).toBeGreaterThan(0);
+    for (const { report } of unavailableReports) {
+      if (report.valid) continue;
+      expect(report.diagnostics).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: 'CORE_GENERATION_PRICE_UNAVAILABLE' }),
+      ]));
+    }
   }, 30_000);
 
   it('keeps candidate and guide projections free of price fields', async () => {

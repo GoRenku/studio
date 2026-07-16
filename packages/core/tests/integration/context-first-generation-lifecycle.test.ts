@@ -96,7 +96,7 @@ describe('context-first generation lifecycle', () => {
     ]));
   });
 
-  it('keeps an external attachment target-owned and out of the reusable catalog', async () => {
+  it('keeps an external attachment target-owned while exposing it in the generic catalog', async () => {
     const current = await projectData.readCurrentProject({ homeDir });
     if (!current) throw new Error('Expected current project.');
     const source = 'tmp/media/external-profile.png';
@@ -125,7 +125,7 @@ describe('context-first generation lifecycle', () => {
     expect(reusable.items.some((item) =>
       item.reference.kind === 'asset-file' &&
       item.reference.assetId === attachment.asset.assetId
-    )).toBe(false);
+    )).toBe(true);
 
     const owned = await projectData.listGenerationReferences({
       homeDir,

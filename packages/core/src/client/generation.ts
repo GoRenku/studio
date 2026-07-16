@@ -54,11 +54,9 @@ export interface GenerationReferenceSelection {
         kind: 'slot';
         sectionId: string;
         slotId: string;
-        scope?: { kind: string; id: string };
         subject?: { kind: string; id: string };
       }
     | { kind: 'additional' };
-  included: boolean;
   providerField?: string;
   reference: GenerationReference;
 }
@@ -66,6 +64,12 @@ export interface GenerationReferenceSelection {
 export type GenerationReference =
   | { kind: 'asset-file'; assetId: string; assetFileId: string }
   | { kind: 'project-file'; projectRelativePath: ProjectRelativePath };
+
+export interface GenerationReferenceSlotSelectionInput {
+  placement: Extract<GenerationReferenceSelection['placement'], { kind: 'slot' }>;
+  reference: GenerationReference | null;
+  providerField?: string | null;
+}
 
 export interface GenerationReferenceGuide {
   sections: GenerationReferenceGuideSection[];
@@ -75,21 +79,15 @@ export interface GenerationReferenceGuide {
 export interface GenerationReferenceGuideSection {
   id: string;
   label: string;
-  scope?: { kind: string; id: string };
   slots: GenerationReferenceGuideSlot[];
 }
 
 export interface GenerationReferenceGuideSlot {
   id: string;
   label: string;
-  cardinality: 'one';
   subject?: { kind: string; id: string };
   guidance?: string;
-  providerRole: Extract<
-    NonNullable<GenerationModelFieldDescriptor['semantic']>,
-    { kind: 'media' }
-  >['role'];
-  candidates: GenerationReferenceCatalogItem[];
+  eligibleCandidates: GenerationReferenceCatalogItem[];
 }
 
 export interface GenerationGuideNotice {
@@ -255,7 +253,7 @@ export interface GenerationRun {
   model: string;
   providerPayload: Record<string, JsonValue>;
   estimate: GenerationEstimate;
-  status: 'simulated' | 'completed' | 'failed';
+  status: 'simulated' | 'awaiting-attachment' | 'completed' | 'failed';
   outputs: Array<{
     artifactId: string;
     mimeType?: string;

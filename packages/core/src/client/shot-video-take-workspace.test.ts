@@ -6,7 +6,7 @@ import type {
 import { selectShotVideoTakeGenerationModel } from './shot-video-take-workspace.js';
 
 describe('Shot Video Take generation model selection', () => {
-  it('materializes the selected model defaults and drops prior-model parameters', () => {
+  it('leaves provider values absent and drops prior-model parameters', () => {
     const setup: ShotVideoTakeGenerationSetup = {
       inputModeId: 'text-only',
       modelChoice: 'fal-ai/old-model',
@@ -15,8 +15,8 @@ describe('Shot Video Take generation model selection', () => {
     const model = {
       modelChoice: 'fal-ai/new-model',
       parameters: [
-        { name: 'duration', label: 'Duration', required: false, defaultValue: 4 },
-        { name: 'resolution', label: 'Resolution', required: false, defaultValue: '720p' },
+        { name: 'duration', label: 'Duration', required: false },
+        { name: 'resolution', label: 'Resolution', required: false },
         { name: 'seed', label: 'Seed', required: false },
       ],
     } as ShotVideoTakeModelReport;
@@ -24,7 +24,7 @@ describe('Shot Video Take generation model selection', () => {
     expect(selectShotVideoTakeGenerationModel(setup, model)).toEqual({
       inputModeId: 'text-only',
       modelChoice: 'fal-ai/new-model',
-      parameterValues: { duration: 4, resolution: '720p' },
+      parameterValues: {},
     });
   });
 
