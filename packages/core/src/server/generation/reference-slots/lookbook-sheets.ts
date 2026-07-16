@@ -10,7 +10,6 @@ export function productionLookbookSheetSlot(
     slotId: 'production-lookbook-sheet',
     slotLabel: 'Production Lookbook Sheet',
     assetFileIds: lookbookSheetFileIds(context, 'production'),
-    roles: ['video-lookbook-sheet'],
   };
 }
 
@@ -23,6 +22,5 @@ export function storyboardLookbookSheetSlot(
     slotId: 'storyboard-lookbook-sheet',
     slotLabel: 'Storyboard Lookbook Sheet',
     assetFileIds: lookbookSheetFileIds(context, 'storyboard'),
-    roles: ['storyboard-lookbook-sheet'],
   };
 }

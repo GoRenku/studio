@@ -120,8 +120,13 @@ export function useImageRevisionEditor(
           ? { negativeText: draft.negativeText }
           : {}),
       },
+      model: {
+        provider: '',
+        modelId: '',
+      },
+      parameterValues: {},
+      authoredParameterNames: [],
       slotSelections: [],
-      genericReferences: [],
     };
   }, [draft, preview]);
 

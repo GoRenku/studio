@@ -29,6 +29,13 @@ describe('studio generation preview API', () => {
           authoredText: 'Updated prompt.\nSecond line.',
           negativeText: null,
         },
+        model: {
+          provider: 'fal-ai',
+          model: 'openai/gpt-image-2/edit',
+        },
+        parameterValues: {
+          image_size: 'landscape_16_9',
+        },
         slotSelections: [
           {
             placement: {
@@ -39,7 +46,6 @@ describe('studio generation preview API', () => {
             reference: null,
           },
         ],
-        genericReferences: [],
       })
     ).resolves.toBe(preview);
 
@@ -56,6 +62,13 @@ describe('studio generation preview API', () => {
             authoredText: 'Updated prompt.\nSecond line.',
             negativeText: null,
           },
+          model: {
+            provider: 'fal-ai',
+            model: 'openai/gpt-image-2/edit',
+          },
+          parameterValues: {
+            image_size: 'landscape_16_9',
+          },
           slotSelections: [
             {
               placement: {
@@ -66,7 +79,6 @@ describe('studio generation preview API', () => {
               reference: null,
             },
           ],
-          genericReferences: [],
         }),
       }
     );
@@ -87,8 +99,12 @@ describe('studio generation preview API', () => {
         projectName: 'constantinople',
         specId: 'media_generation_spec_test',
         prompt: { authoredText: 'Updated prompt.' },
+        model: {
+          provider: 'fal-ai',
+          model: 'openai/gpt-image-2',
+        },
+        parameterValues: {},
         slotSelections: [],
-        genericReferences: [],
       })
     ).rejects.toMatchObject({
       code: 'CORE_TEST',

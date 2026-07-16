@@ -103,11 +103,12 @@ guidance copy. Every slot is one nullable UI choice. Guides never carry
 provider roles/fields, hard provider requirements, generation purposes, cost,
 or provider rules, and they never validate saved selections.
 
-All purposes can expose separate ordered Additional References. Generic catalog
-search is media-generic, while typed pickers list only explicitly registered
-assets for their exact domain subject. A generic reference is never promoted
-into a typed slot automatically. Creative prompts and media remain opaque under
-Decision `0041`.
+All purposes can carry separate ordered Additional References authored by an
+agent or CLI caller. Generation Preview displays those exact references but
+does not provide a generic Add Media action or project-media picker. Typed
+controls list only explicitly registered assets for their exact domain subject.
+A generic reference is never promoted into a typed slot automatically. Creative
+prompts and media remain opaque under Decision `0041`.
 
 The reset intentionally defines no Shot video generation purpose, Shot-owned
 reference guide, or durable Shot production lifecycle. Future Shot generation

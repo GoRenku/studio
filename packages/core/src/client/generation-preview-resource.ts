@@ -32,6 +32,7 @@ export interface GenerationPreviewResource {
   finalPrompt: GenerationPreviewPrompt;
   references: GenerationPreviewReferences;
   configuration: GenerationPreviewConfiguration;
+  authoring: GenerationPreviewAuthoring;
   providerPreview?: GenerationPreviewProviderPreview;
   estimate?: GenerationPreviewEstimate;
   diagnostics: DiagnosticIssue[];
@@ -114,6 +115,8 @@ export type GenerationEditorControl =
       kind: 'readonly';
       label: string;
       value: GenerationPreviewConfigurationValue;
+      authored?: boolean;
+      recommended?: boolean;
     }
   | {
       controlId: string;
@@ -121,6 +124,8 @@ export type GenerationEditorControl =
       label: string;
       value: GenerationPreviewConfigurationValue;
       required: boolean;
+      authored?: boolean;
+      recommended?: boolean;
       options: Array<{
         label: string;
         value: GenerationPreviewConfigurationValue;
@@ -130,12 +135,43 @@ export type GenerationEditorControl =
       controlId: string;
       kind: 'number';
       label: string;
-      value: number;
+      value: number | null;
       required: boolean;
+      authored?: boolean;
+      recommended?: boolean;
       min?: number;
       max?: number;
       step?: number;
+    }
+  | {
+      controlId: string;
+      kind: 'toggle';
+      label: string;
+      value: boolean;
+      required: boolean;
+      authored?: boolean;
+      recommended?: boolean;
+    }
+  | {
+      controlId: string;
+      kind: 'text';
+      label: string;
+      value: string | null;
+      required: boolean;
+      authored?: boolean;
+      recommended?: boolean;
     };
+
+export interface GenerationPreviewAuthoring {
+  models: GenerationPreviewAuthoringModel[];
+}
+
+export interface GenerationPreviewAuthoringModel {
+  provider: string;
+  modelId: string;
+  label: string;
+  controls: GenerationEditorControl[];
+}
 
 export type GenerationPreviewConfigurationValueSource =
   | 'spec'

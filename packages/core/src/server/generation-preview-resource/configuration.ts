@@ -5,6 +5,8 @@ import type {
   JsonValue,
 } from '../../client/generation.js';
 import type {
+  GenerationEditorControl,
+  GenerationPreviewAuthoring,
   GenerationPreviewConfiguration,
   GenerationPreviewConfigurationRow,
   GenerationPreviewConfigurationValue,
@@ -51,6 +53,124 @@ export function projectGenerationPreviewConfiguration(input: {
         : []),
     ],
   };
+}
+
+export function projectGenerationPreviewAuthoring(
+  preview: GenerationPreview,
+): GenerationPreviewAuthoring {
+  return {
+    models: (preview.models ?? []).map((model) => ({
+      provider: model.provider,
+      modelId: model.model,
+      label: model.label,
+      controls: model.fields.flatMap((field) =>
+        editorControl(preview, model, field)
+      ),
+    })),
+  };
+}
+
+function editorControl(
+  preview: GenerationPreview,
+  model: GenerationModelDescriptor,
+  field: GenerationModelFieldDescriptor,
+): GenerationEditorControl[] {
+  if (field.media || field.semantic?.kind === 'authored-text') {
+    return [];
+  }
+  const currentModel =
+    preview.spec.model?.provider === model.provider &&
+    preview.spec.model?.model === model.model;
+  const authored =
+    currentModel && preview.spec.values[field.name] !== undefined;
+  const recommendation = recommendedValue(preview, field);
+  const recommended = !authored && recommendation !== undefined;
+  const value = authored
+    ? configurationValue(preview.spec.values[field.name]) ?? null
+    : recommendation ??
+      configurationValue(field.defaultValue) ??
+      null;
+  if (field.allowedValues?.length) {
+    return [{
+      controlId: field.name,
+      kind: 'select',
+      label: field.label,
+      value,
+      required: field.required,
+      authored,
+      recommended,
+      options: field.allowedValues.map((option) => ({
+        label: String(option),
+        value: option,
+      })),
+    }];
+  }
+  if (
+    field.kind === 'integer' ||
+    field.kind === 'number' ||
+    typeof value === 'number'
+  ) {
+    return [{
+      controlId: field.name,
+      kind: 'number',
+      label: field.label,
+      value: typeof value === 'number' ? value : null,
+      required: field.required,
+      authored,
+      recommended,
+      ...(field.minimum !== undefined ? { min: field.minimum } : {}),
+      ...(field.maximum !== undefined ? { max: field.maximum } : {}),
+    }];
+  }
+  if (field.kind === 'boolean' || typeof value === 'boolean') {
+    return [{
+      controlId: field.name,
+      kind: 'toggle',
+      label: field.label,
+      value: typeof value === 'boolean' ? value : false,
+      required: field.required,
+      authored,
+      recommended,
+    }];
+  }
+  if (
+    field.kind === 'string' ||
+    typeof value === 'string'
+  ) {
+    return [{
+      controlId: field.name,
+      kind: 'text',
+      label: field.label,
+      value: typeof value === 'string' ? value : null,
+      required: field.required,
+      authored,
+      recommended,
+    }];
+  }
+  return [{
+    controlId: field.name,
+    kind: 'readonly',
+    label: field.label,
+    value,
+    authored,
+    recommended,
+  }];
+}
+
+function recommendedValue(
+  preview: GenerationPreview,
+  field: GenerationModelFieldDescriptor,
+): GenerationPreviewConfigurationValue | undefined {
+  if (!field.productSettingKind || !field.productSettingValues) {
+    return undefined;
+  }
+  const setting = preview.settings?.recommended.find(
+    (candidate) => candidate.kind === field.productSettingKind
+  );
+  if (typeof setting?.value !== 'string') {
+    return undefined;
+  }
+  return configurationValue(field.productSettingValues[setting.value]);
 }
 
 function configurationRow(

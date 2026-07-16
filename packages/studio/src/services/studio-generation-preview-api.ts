@@ -1,7 +1,8 @@
 import type {
-  GenerationReference,
+  GenerationModelIdentity,
   GenerationReferenceSlotSelectionInput,
   GenerationPreviewResource,
+  JsonValue,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
@@ -12,8 +13,9 @@ export interface UpdateGenerationPreviewResourceSpecInput {
     authoredText: string;
     negativeText?: string | null;
   };
+  model: Required<GenerationModelIdentity>;
+  parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
-  genericReferences: GenerationReference[];
 }
 
 export async function updateGenerationPreviewResource(
@@ -26,8 +28,9 @@ export async function updateGenerationPreviewResource(
       headers: jsonHeaders(),
       body: JSON.stringify({
         prompt: input.prompt,
+        model: input.model,
+        parameterValues: input.parameterValues,
         slotSelections: input.slotSelections,
-        genericReferences: input.genericReferences,
       }),
     }
   );

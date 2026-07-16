@@ -1,4 +1,4 @@
-import type { GenerationPreview, GenerationPurpose, GenerationReference, GenerationReferenceSlotSelectionInput, GenerationSpec, GenerationTarget } from '../../client/generation.js';
+import type { GenerationModelIdentity, GenerationPreview, GenerationPurpose, GenerationReferenceSlotSelectionInput, GenerationSpec, GenerationTarget, JsonValue } from '../../client/generation.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { estimateGeneration } from '../generation/estimates.js';
 import { buildGenerationPreview } from '../generation/previews.js';
@@ -91,8 +91,9 @@ export function createGenerationServiceWiring() {
     async updateGenerationPreviewResource(input: ProjectInput & {
       specId: string;
       prompt: { authoredText: string; negativeText?: string | null };
+      model: Required<GenerationModelIdentity>;
+      parameterValues: Record<string, JsonValue>;
       slotSelections: GenerationReferenceSlotSelectionInput[];
-      genericReferences: GenerationReference[];
     }) {
       return withGenerationProject(input, ({ session, projectFolder }) => {
         const record = readGenerationSpec({ id: input.specId, session });

@@ -167,7 +167,8 @@ describe('GenerationPreviewDialogHost', () => {
       selectTab('Config');
     });
 
-    expect(await screen.findByText('Model inputs')).toBeTruthy();
+    expect(await screen.findByText('Generation')).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Model' })).toBeTruthy();
     expect(await screen.findAllByText('Image size')).toHaveLength(1);
     expect(screen.getByText('landscape_16_9')).toBeTruthy();
     expect(screen.queryByText('IMAGE SIZE')).toBeNull();
@@ -228,7 +229,7 @@ describe('GenerationPreviewDialogHost', () => {
       selectTab('Config');
     });
 
-    const configPanel = screen.getByText('Model inputs').closest('[role="tabpanel"]');
+    const configPanel = screen.getByText('Generation').closest('[role="tabpanel"]');
     expect(configPanel?.textContent).not.toContain('Estimated total');
   });
 
@@ -304,14 +305,13 @@ describe('GenerationPreviewDialogHost', () => {
     });
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Storyboard Lookbook Sheet',
+        name: 'Exclude Storyboard Lookbook Sheet',
       })
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'None' }));
     expect(fetchMock).not.toHaveBeenCalled();
     expect(
       await screen.findByRole('button', {
-        name: 'Storyboard Lookbook Sheet',
+        name: 'Include Storyboard Lookbook Sheet',
       }),
     ).toBeTruthy();
 
@@ -326,6 +326,13 @@ describe('GenerationPreviewDialogHost', () => {
             prompt: {
               authoredText: 'Updated production prompt.\nSecond line.',
             },
+            model: {
+              provider: 'fal-ai',
+              model: 'fal-ai/openai/gpt-image-2',
+            },
+            parameterValues: {
+              image_size: 'landscape_16_9',
+            },
             slotSelections: [
               {
                 placement: {
@@ -336,7 +343,6 @@ describe('GenerationPreviewDialogHost', () => {
                 reference: null,
               },
             ],
-            genericReferences: [],
           }),
         })
       );
@@ -397,7 +403,7 @@ describe('GenerationPreviewDialogHost', () => {
     expect(screen.getByText('Character Sheet Generation Preview')).toBeTruthy();
   });
 
-  it('keeps unsaved and required-reference previews non-editable', async () => {
+  it('keeps unsaved previews non-editable', async () => {
     render(<GenerationPreviewDialogHost />);
 
     await dispatchPreview(
@@ -413,23 +419,6 @@ describe('GenerationPreviewDialogHost', () => {
         .hasAttribute('readonly'),
     ).toBe(true);
 
-    await dispatchPreview(
-      previewFixture({
-        purpose: 'cast.character-sheet',
-        title: 'Required Reference Preview',
-        editableReference: true,
-        requiredReference: true,
-      }),
-    );
-    await act(async () => {
-      selectTab('References');
-    });
-    expect(screen.getByText('Storyboard Lookbook Sheet')).toBeTruthy();
-    expect(
-      screen.queryByRole('button', {
-        name: 'Exclude Storyboard Lookbook Sheet',
-      }),
-    ).toBeNull();
   });
 
   it('shows a model-supported negative prompt in a smaller editor', async () => {
@@ -652,6 +641,29 @@ function previewFixture(input: {
               required: false,
               source: 'spec',
               presentation: 'parameter-control',
+            },
+          ],
+        },
+      ],
+    },
+    authoring: {
+      models: [
+        {
+          provider: 'fal-ai',
+          modelId: 'fal-ai/openai/gpt-image-2',
+          label: 'GPT Image 2',
+          controls: [
+            {
+              controlId: 'image_size',
+              kind: 'select',
+              label: 'Image size',
+              value: 'landscape_16_9',
+              required: false,
+              authored: true,
+              options: [
+                { label: 'landscape_4_3', value: 'landscape_4_3' },
+                { label: 'landscape_16_9', value: 'landscape_16_9' },
+              ],
             },
           ],
         },

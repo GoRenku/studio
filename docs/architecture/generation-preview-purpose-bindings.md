@@ -17,6 +17,7 @@ Core owns the experience resource under:
 
 ```text
 packages/core/src/server/generation-preview-resource/
+  authoring.ts
   projection.ts
   prompt.ts
   references.ts
@@ -37,16 +38,26 @@ the request uses them. Purpose guides may add empty suggestions and candidate
 facts; they cannot erase an exact persisted selection. An unavailable selection
 is shown as unavailable without substitution.
 
-Generic references are a separate ordered collection. Their catalog is
-searchable, paginated, and media-generic across image, audio, and video,
-including imported/external assets. Typed pickers use focused domain
-relationships and never use this all-project catalog.
+Generic references are a separate ordered collection authored through the
+agent/CLI `GenerationSpec` contract. Generation Preview displays exact attached
+generic references in their own read-only section. Studio does not expose an
+Add Media action, generic project-media browser, or generic-reference mutation
+path. Typed reference controls use focused domain relationships only.
 
 ## Update Semantics
 
 A focused nullable typed-slot selection command sets or clears one exact
-choice. Ordered generic-reference authoring updates the separate collection.
-Both AI Production and Generation Preview persist through the same spec state.
+choice. A sole eligible candidate renders directly as the shared selectable
+media card; it does not open a picker dialog or expose a `None` button.
+Agent-authored generic references remain unchanged when Studio updates the
+saved request. Both AI Production and Generation Preview persist through the
+same spec state.
+
+Saved Preview updates may change the selected purpose-compatible model and the
+non-media provider inputs projected from Core model descriptors. Current
+authored values remain authored. Purpose recommendations become authored when a
+user switches models and accepts the displayed recommended controls. Untouched
+provider defaults remain absent.
 
 Image Revision reuses the shared prompt, reference-display, and configuration
 composition but does not expose reference authoring. `Edit` projects exactly
@@ -55,15 +66,17 @@ completed source run. Its draft owns prompt text and generation controls only,
 so the shared UI cannot turn current purpose-guide candidates into revision
 inputs.
 
-Core validates safe envelope structure and Draft lifecycle only. It does not
-validate guide placement, candidate membership, typed ownership, provider-field
-compatibility, creative suitability, or readiness. Exact optional
-`providerField` strings are preserved as authored.
+Core validates the selected model and configurable field names against the
+purpose context. When an exact reference has no valid provider assignment and
+the selected model exposes exactly one compatible media field, the focused
+Preview update command assigns that field. Ambiguous or unsupported mappings
+remain unassigned for structured execution diagnostics. Core does not validate
+creative suitability.
 
-Configuration controls project absence as `Unspecified`. They do not write
-provider defaults, including duration. Estimate uses only pricing facts; payload
-preview and run separately resolve exact files and invoke Engines request
-assembly.
+Configuration controls project authored values, purpose recommendations, and
+provider defaults distinctly. Provider defaults are display-only until the
+user changes that control. Estimate uses only pricing facts; payload preview
+and run separately resolve exact files and invoke Engines request assembly.
 
 Preview updates remain latest-request-wins in the browser. Failure leaves the
 dialog open and preserves authored state for correction.
@@ -71,12 +84,13 @@ dialog open and preserves authored state for correction.
 ## Layer Boundaries
 
 Engines owns provider schemas, payload assembly, validation, and pricing. Core
-owns target context, safe exact-reference projection, spec persistence, and
-focused typed candidate queries. The Studio server adds browser-safe media URLs
+owns target context, safe exact-reference projection, model/control projection,
+spec persistence, focused typed candidate queries, and focused Preview update
+rules. The Studio server parses the HTTP envelope, adds browser-safe media URLs,
 and translates structured errors. React owns temporary draft interaction state
 and rendering.
 
-No route or feature may choose references, insert defaults, infer typed
+No route or React feature may choose references, insert defaults, infer typed
 ownership, classify provider compatibility, or semantically inspect prompts or
 media.
 
@@ -84,5 +98,6 @@ media.
 
 Keep Prompt, References, Config, diagnostics, estimate, saved/editable,
 unsaved/read-only, pending, failure, latest-response-wins, typed-slot,
-unchecked-sole-candidate, fixed image-edit source, and exact-only read-only
-reference coverage.
+unchecked-sole-candidate, inline singleton selection, read-only generic
+references, model/input authoring, fixed image-edit source, and exact-only
+read-only reference coverage.

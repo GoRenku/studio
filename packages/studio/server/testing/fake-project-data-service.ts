@@ -871,6 +871,7 @@ function generationPreviewResource(): GenerationPreviewResourceData {
     },
     references: { slots: [], additional: [] },
     configuration: { sections: [] },
+    authoring: { models: [] },
     diagnostics: [],
   };
 }

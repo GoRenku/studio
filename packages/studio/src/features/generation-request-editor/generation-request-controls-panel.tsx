@@ -10,10 +10,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/ui/select';
+import { Switch } from '@/ui/switch';
 
 interface GenerationRequestControlsPanelProps {
   controls: GenerationEditorControl[];
   disabled: boolean;
+  model?: {
+    value: string;
+    options: Array<{ value: string; label: string }>;
+    onChange: (value: string) => void;
+  };
   onChange: (
     controlId: string,
     value: GenerationPreviewConfigurationValue,
@@ -23,9 +29,10 @@ interface GenerationRequestControlsPanelProps {
 export function GenerationRequestControlsPanel({
   controls,
   disabled,
+  model,
   onChange,
 }: GenerationRequestControlsPanelProps) {
-  if (!controls.length) {
+  if (!controls.length && !model) {
     return <p className='text-sm text-muted-foreground'>No settings.</p>;
   }
   return (
@@ -34,6 +41,27 @@ export function GenerationRequestControlsPanel({
         Generation
       </h3>
       <div className='divide-y divide-border/20'>
+        {model ? (
+          <div className='grid grid-cols-[minmax(0,1fr)_minmax(180px,0.8fr)] items-center gap-4 px-4 py-2.5'>
+            <span className='text-xs text-muted-foreground'>Model</span>
+            <Select
+              value={model.value}
+              disabled={disabled}
+              onValueChange={model.onChange}
+            >
+              <SelectTrigger aria-label='Model'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {model.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
         {controls.map((control) => (
           <div
             key={control.controlId}
@@ -44,9 +72,18 @@ export function GenerationRequestControlsPanel({
             </span>
             {control.kind === 'select' ? (
               <Select
-                value={String(control.value)}
+                value={
+                  control.value === null ? undefined : String(control.value)
+                }
                 disabled={disabled}
-                onValueChange={(value) => onChange(control.controlId, value)}
+                onValueChange={(value) =>
+                  onChange(
+                    control.controlId,
+                    control.options.find(
+                      (option) => String(option.value) === value
+                    )?.value ?? value
+                  )
+                }
               >
                 <SelectTrigger aria-label={control.label}>
                   <SelectValue />
@@ -66,13 +103,35 @@ export function GenerationRequestControlsPanel({
               <Input
                 aria-label={control.label}
                 type='number'
-                value={control.value}
+                value={control.value ?? ''}
                 min={control.min}
                 max={control.max}
                 step={control.step}
                 disabled={disabled}
                 onChange={(event) =>
-                  onChange(control.controlId, Number(event.target.value))
+                  onChange(
+                    control.controlId,
+                    event.target.value === '' ? null : Number(event.target.value)
+                  )
+                }
+              />
+            ) : control.kind === 'toggle' ? (
+              <Switch
+                aria-label={control.label}
+                checked={control.value}
+                disabled={disabled}
+                onCheckedChange={(checked) =>
+                  onChange(control.controlId, checked)
+                }
+              />
+            ) : control.kind === 'text' ? (
+              <Input
+                aria-label={control.label}
+                type='text'
+                value={control.value ?? ''}
+                disabled={disabled}
+                onChange={(event) =>
+                  onChange(control.controlId, event.target.value)
                 }
               />
             ) : (

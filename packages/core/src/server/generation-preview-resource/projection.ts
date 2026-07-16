@@ -12,7 +12,10 @@ import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { scenes } from '../schema/index.js';
-import { projectGenerationPreviewConfiguration } from './configuration.js';
+import {
+  projectGenerationPreviewAuthoring,
+  projectGenerationPreviewConfiguration,
+} from './configuration.js';
 import { projectGenerationPreviewPrompt } from './prompt.js';
 import { projectGenerationPreviewReferences } from './references.js';
 
@@ -58,6 +61,7 @@ export function projectGenerationPreviewResource(input: {
       preview: input.preview,
       model,
     }),
+    authoring: projectGenerationPreviewAuthoring(input.preview),
     ...(input.preview.providerPayload
       ? {
           providerPreview: {

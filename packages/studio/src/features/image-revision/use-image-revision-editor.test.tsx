@@ -23,8 +23,13 @@ describe('useImageRevisionEditor', () => {
       },
     };
     const preview = {
+      model: {
+        provider: 'fal-ai',
+        modelId: 'openai/gpt-image-2/edit',
+      },
       finalPrompt: { authoredText: '' },
       references: { slots: [], additional: [] },
+      authoring: { models: [] },
     } as never;
     imageRevisionApi.readImageRevisionContext.mockResolvedValue({
       target: {
@@ -74,6 +79,6 @@ describe('useImageRevisionEditor', () => {
 
     expect(result.current.preview).toBe(preview);
     expect(result.current.editorDraft?.slotSelections).toEqual([]);
-    expect(result.current.editorDraft?.genericReferences).toEqual([]);
+    expect(result.current.editorDraft?.parameterValues).toEqual({});
   });
 });

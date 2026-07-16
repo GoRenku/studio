@@ -37,6 +37,15 @@ describe('generation preview draft', () => {
     expect(generationPreviewDraftIsDirty(preview, changed)).toBe(true);
     expect(buildGenerationPreviewUpdateRequest(preview, changed)).toEqual({
       prompt: { authoredText: 'Updated prompt.\nSecond line.' },
+      model: {
+        provider: 'fal-ai',
+        model: 'openai/gpt-image-2/edit',
+      },
+      parameterValues: {
+        image_size: 'landscape_16_9',
+        quality: 'high',
+        num_images: 1,
+      },
       slotSelections: [
         {
           placement: {
@@ -47,7 +56,6 @@ describe('generation preview draft', () => {
           reference: null,
         },
       ],
-      genericReferences: [],
     });
   });
 
@@ -88,25 +96,33 @@ describe('generation preview draft', () => {
     });
   });
 
-  it('persists ordered generic reference additions separately from typed slots', () => {
+  it('changes the selected model and its configurable values', () => {
     const preview = previewFixture();
     const draft = createGenerationPreviewDraft(preview);
-    draft.genericReferences = [{
-      kind: 'audio',
-      role: 'generic-reference',
-      label: 'Courtyard ambience',
-      assetId: 'asset_ambience',
-      assetFileId: 'file_ambience',
-      selected: true,
-      browserUrl: '/ambience.wav',
-    }];
+    draft.model = {
+      provider: 'fal-ai',
+      modelId: 'nano-banana-2',
+    };
+    draft.parameterValues = {
+      aspect_ratio: '16:9',
+      enable_web_search: true,
+    };
+    draft.authoredParameterNames = [
+      'aspect_ratio',
+      'enable_web_search',
+    ];
 
     expect(generationPreviewDraftIsDirty(preview, draft)).toBe(true);
-    expect(buildGenerationPreviewUpdateRequest(preview, draft).genericReferences).toEqual([{
-      kind: 'asset-file',
-      assetId: 'asset_ambience',
-      assetFileId: 'file_ambience',
-    }]);
+    expect(buildGenerationPreviewUpdateRequest(preview, draft)).toMatchObject({
+      model: {
+        provider: 'fal-ai',
+        model: 'nano-banana-2',
+      },
+      parameterValues: {
+        aspect_ratio: '16:9',
+        enable_web_search: true,
+      },
+    });
   });
 });
 
@@ -155,6 +171,45 @@ function previewFixture(): GenerationPreviewResource {
       additional: [],
     },
     configuration: { sections: [] },
+    authoring: {
+      models: [
+        {
+          provider: 'fal-ai',
+          modelId: 'openai/gpt-image-2/edit',
+          label: 'GPT Image 2',
+          controls: [
+            {
+              controlId: 'image_size',
+              kind: 'select',
+              label: 'Image Size',
+              value: 'landscape_16_9',
+              required: false,
+              authored: true,
+              options: [
+                { label: 'landscape_16_9', value: 'landscape_16_9' },
+              ],
+            },
+            {
+              controlId: 'quality',
+              kind: 'select',
+              label: 'Quality',
+              value: 'high',
+              required: false,
+              authored: true,
+              options: [{ label: 'high', value: 'high' }],
+            },
+            {
+              controlId: 'num_images',
+              kind: 'number',
+              label: 'Number of Images',
+              value: 1,
+              required: false,
+              authored: true,
+            },
+          ],
+        },
+      ],
+    },
     diagnostics: [],
   };
 }

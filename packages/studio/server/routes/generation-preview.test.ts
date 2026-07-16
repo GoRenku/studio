@@ -62,6 +62,13 @@ describe('generation preview Hono route', () => {
             authoredText: 'Updated character sheet prompt.',
             negativeText: null,
           },
+          model: {
+            provider: 'fal-ai',
+            model: 'openai/gpt-image-2/edit',
+          },
+          parameterValues: {
+            image_size: 'landscape_16_9',
+          },
           slotSelections: [
             {
               placement: {
@@ -72,7 +79,6 @@ describe('generation preview Hono route', () => {
               reference: null,
             },
           ],
-          genericReferences: [],
         }),
       }
     );
@@ -92,6 +98,13 @@ describe('generation preview Hono route', () => {
         authoredText: 'Updated character sheet prompt.',
         negativeText: null,
       },
+      model: {
+        provider: 'fal-ai',
+        model: 'openai/gpt-image-2/edit',
+      },
+      parameterValues: {
+        image_size: 'landscape_16_9',
+      },
       slotSelections: [
         {
           placement: {
@@ -102,7 +115,6 @@ describe('generation preview Hono route', () => {
           reference: null,
         },
       ],
-      genericReferences: [],
     });
   });
 
@@ -115,6 +127,11 @@ describe('generation preview Hono route', () => {
         method: 'PATCH',
         body: JSON.stringify({
           prompt: { authoredText: 'Updated prompt.' },
+          model: {
+            provider: 'fal-ai',
+            model: 'openai/gpt-image-2/edit',
+          },
+          parameterValues: {},
           slotSelections: [{ placement: { kind: 'bad' }, reference: null }],
         }),
       },

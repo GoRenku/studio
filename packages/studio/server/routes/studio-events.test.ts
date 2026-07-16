@@ -661,6 +661,7 @@ function coreGenerationPreviewResourceFixture() {
       additional: [],
     },
     configuration: { sections: [] },
+    authoring: { models: [] },
     diagnostics: [],
   };
 }

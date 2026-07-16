@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import type {
+  GenerationEditorControl,
+  GenerationPreviewConfigurationValue,
   GenerationPreviewResource,
   GenerationPreviewReferenceSlot,
   GenerationPreviewResourceReference,
@@ -7,6 +9,8 @@ import type {
 import { updateGenerationPreviewResource } from '@/services/studio-generation-preview-api';
 import {
   buildGenerationPreviewUpdateRequest,
+  changeGenerationPreviewModel,
+  changeGenerationPreviewParameter,
   createGenerationPreviewDraft,
   generationPreviewDraftIsDirty,
   changeGenerationPreviewReference,
@@ -58,13 +62,31 @@ export function useGenerationPreviewEditor(
     setUpdateError(null);
   };
 
-  const chooseGenericReferences = (
-    references: GenerationPreviewResourceReference[],
+  const chooseModel = (modelKey: string) => {
+    if (!preview.generationSpecId || updatePending) {
+      return;
+    }
+    const model = preview.authoring.models.find(
+      (candidate) =>
+        `${candidate.provider}/${candidate.modelId}` === modelKey
+    );
+    if (!model) {
+      return;
+    }
+    setDraft((current) => changeGenerationPreviewModel(current, model));
+    setUpdateError(null);
+  };
+
+  const chooseParameter = (
+    controlId: string,
+    value: GenerationPreviewConfigurationValue,
   ) => {
     if (!preview.generationSpecId || updatePending) {
       return;
     }
-    setDraft((current) => ({ ...current, genericReferences: references }));
+    setDraft((current) =>
+      changeGenerationPreviewParameter(current, controlId, value)
+    );
     setUpdateError(null);
   };
 
@@ -100,6 +122,23 @@ export function useGenerationPreviewEditor(
     }
   };
 
+  const modelKey = `${draft.model.provider}/${draft.model.modelId}`;
+  const selectedModel = preview.authoring.models.find(
+    (model) =>
+      model.provider === draft.model.provider &&
+      model.modelId === draft.model.modelId
+  );
+  const controls: GenerationEditorControl[] = (selectedModel?.controls ?? [])
+    .map((control) => {
+      if (control.kind === 'readonly') {
+        return control;
+      }
+      return {
+        ...control,
+        value: draft.parameterValues[control.controlId] ?? control.value,
+      } as GenerationEditorControl;
+    });
+
   return {
     preview,
     draft,
@@ -107,10 +146,13 @@ export function useGenerationPreviewEditor(
     updatePending,
     updateError,
     updateDirty: generationPreviewDraftIsDirty(preview, draft),
+    modelKey,
+    controls,
     updateAuthoredText,
     updateNegativeText,
     chooseReference,
-    chooseGenericReferences,
+    chooseModel,
+    chooseParameter,
     update,
   };
 }

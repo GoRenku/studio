@@ -140,7 +140,17 @@ function applyDraftControlValue(
   )?.value;
   if (draftValue === undefined) return control;
   if (control.kind === 'number') {
-    return typeof draftValue === 'number'
+    return typeof draftValue === 'number' || draftValue === null
+      ? { ...control, value: draftValue }
+      : control;
+  }
+  if (control.kind === 'toggle') {
+    return typeof draftValue === 'boolean'
+      ? { ...control, value: draftValue }
+      : control;
+  }
+  if (control.kind === 'text') {
+    return typeof draftValue === 'string' || draftValue === null
       ? { ...control, value: draftValue }
       : control;
   }

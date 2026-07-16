@@ -82,14 +82,18 @@ assembling an executable payload.
   Sheet workflow creates and registers the typed asset.
 - A saved reference absent from today's purpose guide remains inspectable and
   editable. Core does not raise a guide-placement diagnostic.
-- A model change may make an authored provider field invalid for execution.
-  The draft remains saved, and Engines reports the real issue during payload
-  preview or run without rewriting it.
+- A model change may make an authored provider field invalid for execution. A
+  focused Preview update reassigns it only when the new model exposes exactly
+  one compatible media field. Ambiguous mappings remain incomplete, and
+  Engines reports the real issue during payload preview or run.
 
 ## Consequences
 
 - AI Production and Generation Preview edit the same exact spec state and
   shared picker contract.
+- Studio users author typed slot choices. Agent-authored Additional References
+  are displayed in Preview but are not created or changed through a generic
+  Studio media picker.
 - Image Revision is a focused exception: Edit fixes the current AssetFile as
   its only source reference, Regenerate preserves the completed source run's
   exact references, and neither mode authors reference selections.

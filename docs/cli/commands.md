@@ -1445,7 +1445,6 @@ Exact references use stable guide placements:
     "sectionId": "source",
     "slotId": "source-image"
   },
-  "included": true,
   "reference": {
     "kind": "asset-file",
     "assetId": "asset_source",

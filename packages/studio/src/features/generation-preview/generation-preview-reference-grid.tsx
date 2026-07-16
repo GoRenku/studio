@@ -8,11 +8,7 @@ import type { GenerationPreviewDraft } from './generation-preview-draft';
 import { generationPreviewReferenceSelected } from './generation-preview-draft';
 import { GenerationPreviewReferenceCard } from './generation-preview-reference-card';
 import { Button } from '@/ui/button';
-import {
-  GenericReferencePickerDialog,
-  ReferencePickerDialog,
-  type GenericReferencePickerValue,
-} from '@/features/reference-picker/reference-picker-dialog';
+import { ReferencePickerDialog } from '@/features/reference-picker/reference-picker-dialog';
 
 interface GenerationPreviewReferenceGridProps {
   preview: GenerationPreviewResource;
@@ -23,9 +19,6 @@ interface GenerationPreviewReferenceGridProps {
     slot: GenerationPreviewReferenceSlot,
     reference: GenerationPreviewResourceReference | null
   ) => void;
-  onGenericReferencesChange?: (
-    references: GenerationPreviewResourceReference[],
-  ) => void;
 }
 
 export function GenerationPreviewReferenceGrid({
@@ -34,17 +27,15 @@ export function GenerationPreviewReferenceGrid({
   updating,
   editable,
   onReferenceChoose,
-  onGenericReferencesChange,
 }: GenerationPreviewReferenceGridProps) {
   const [openSlot, setOpenSlot] = useState<GenerationPreviewReferenceSlot | null>(null);
-  const [genericPickerOpen, setGenericPickerOpen] = useState(false);
   const canEdit = (editable ?? Boolean(preview.generationSpecId)) &&
-    Boolean(onReferenceChoose && onGenericReferencesChange);
+    Boolean(onReferenceChoose);
   const visibleSlots = preview.references.slots.filter(
     (slot) => canEdit || Boolean(slot.current),
   );
   const hasReferences = visibleSlots.length > 0 ||
-    draft.genericReferences.length > 0 || canEdit;
+    preview.references.additional.length > 0 || canEdit;
   if (!hasReferences) {
     return <p className='text-sm text-muted-foreground'>No references are attached to this preview.</p>;
   }
@@ -72,12 +63,22 @@ export function GenerationPreviewReferenceGrid({
                     reference={(selected ?? soleCandidate)!}
                     selected={Boolean(selected)}
                     onOpen={
-                      canEdit && !updating
+                      canEdit &&
+                      !updating &&
+                      slot.eligibleCandidates.length > 1
                         ? () => setOpenSlot(slot)
                         : undefined
                     }
+                    onToggleSelected={
+                      canEdit && !updating
+                        ? () => onReferenceChoose?.(
+                            slot,
+                            selected ? null : soleCandidate
+                          )
+                        : undefined
+                    }
                   />
-                ) : (
+                ) : slot.eligibleCandidates.length > 0 ? (
                   <Button
                     type='button'
                     variant='outline'
@@ -86,44 +87,27 @@ export function GenerationPreviewReferenceGrid({
                   >
                     Choose {slot.label}
                   </Button>
+                ) : (
+                  <p className='text-sm text-muted-foreground'>
+                    No {slot.label} is available.
+                  </p>
                 )}
               </div>
             </section>
           );
         })}
-        {draft.genericReferences.length || canEdit ? (
+        {preview.references.additional.length ? (
           <section className='space-y-2'>
-            <div className='flex items-center justify-between gap-3'>
-              <h3 className='text-sm font-semibold'>Additional Media</h3>
-              {canEdit ? (
-                <Button
-                  type='button'
-                  variant='outline'
-                  disabled={updating}
-                  onClick={() => setGenericPickerOpen(true)}
-                >
-                  {draft.genericReferences.length ? 'Manage Media' : 'Add Media'}
-                </Button>
-              ) : null}
+            <h3 className='text-sm font-semibold'>Additional Media</h3>
+            <div className='grid grid-cols-3 gap-3'>
+              {preview.references.additional.map((reference) => (
+                <GenerationPreviewReferenceCard
+                  key={`${reference.assetId}:${reference.assetFileId}`}
+                  reference={reference}
+                  selected
+                />
+              ))}
             </div>
-            {draft.genericReferences.length ? (
-              <div className='grid grid-cols-3 gap-3'>
-                {draft.genericReferences.map((reference) => (
-                  <GenerationPreviewReferenceCard
-                    key={`${reference.assetId}:${reference.assetFileId}`}
-                    reference={reference}
-                    selected
-                    onOpen={
-                      canEdit && !updating
-                        ? () => setGenericPickerOpen(true)
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className='text-sm text-muted-foreground'>No additional media selected.</p>
-            )}
           </section>
         ) : null}
       </div>
@@ -141,55 +125,16 @@ export function GenerationPreviewReferenceGrid({
             selected: generationPreviewReferenceSelected(openSlot, reference, draft),
           }))}
           onChoose={(candidateId) => {
-            const reference = candidateId
-              ? openSlot.eligibleCandidates.find((candidate) =>
-                  `${candidate.assetId}:${candidate.assetFileId}` === candidateId
-                ) ?? null
-              : null;
+            const reference = openSlot.eligibleCandidates.find((candidate) =>
+              `${candidate.assetId}:${candidate.assetFileId}` === candidateId
+            ) ?? null;
             onReferenceChoose?.(openSlot, reference);
             setOpenSlot(null);
           }}
         />
       ) : null}
-      {canEdit ? (
-        <GenericReferencePickerDialog
-          open={genericPickerOpen}
-          projectName={preview.project.name}
-          selected={draft.genericReferences.map((reference) => ({
-            reference: {
-              kind: 'asset-file',
-              assetId: reference.assetId,
-              assetFileId: reference.assetFileId,
-            },
-            label: reference.label,
-            mediaKind: reference.kind,
-            browserUrl: reference.browserUrl,
-          }))}
-          onOpenChange={setGenericPickerOpen}
-          onChange={(values) => onGenericReferencesChange?.(
-            values.map(genericPickerValueToPreviewReference)
-          )}
-        />
-      ) : null}
     </>
   );
-}
-
-function genericPickerValueToPreviewReference(
-  value: GenericReferencePickerValue,
-): GenerationPreviewResourceReference {
-  if (value.reference.kind !== 'asset-file') {
-    throw new Error('Studio generic media must identify an AssetFile.');
-  }
-  return {
-    kind: value.mediaKind,
-    role: 'generic-reference',
-    label: value.label,
-    assetId: value.reference.assetId,
-    assetFileId: value.reference.assetFileId,
-    selected: true,
-    browserUrl: value.browserUrl ?? '',
-  };
 }
 
 function slotKey(slot: GenerationPreviewReferenceSlot): string {

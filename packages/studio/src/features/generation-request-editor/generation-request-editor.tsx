@@ -31,6 +31,10 @@ interface GenerationRequestEditorProps {
   readOnly?: boolean;
   referencesReadOnly?: boolean;
   controls?: GenerationEditorControl[];
+  modelControl?: {
+    value: string;
+    options: Array<{ value: string; label: string }>;
+  };
   onTabChange: (tab: GenerationRequestEditorTab) => void;
   onAuthoredTextChange: (value: string) => void;
   onNegativeTextChange: (value: string) => void;
@@ -38,9 +42,7 @@ interface GenerationRequestEditorProps {
     slot: GenerationPreviewReferenceSlot,
     reference: GenerationPreviewResourceReference | null
   ) => void;
-  onGenericReferencesChange?: (
-    references: GenerationPreviewResourceReference[],
-  ) => void;
+  onModelChange?: (value: string) => void;
   onControlChange?: (
     controlId: string,
     value: GenerationPreviewConfigurationValue,
@@ -60,11 +62,12 @@ export function GenerationRequestEditor({
   readOnly = false,
   referencesReadOnly = false,
   controls = [],
+  modelControl,
   onTabChange,
   onAuthoredTextChange,
   onNegativeTextChange,
   onReferenceChoose,
-  onGenericReferencesChange,
+  onModelChange = () => {},
   onControlChange = () => {},
   authoredPlaceholder,
   tabRowTrailing,
@@ -117,7 +120,6 @@ export function GenerationRequestEditor({
               updating={pending || readOnly}
               editable={!readOnly && !referencesReadOnly}
               onReferenceChoose={onReferenceChoose}
-              onGenericReferencesChange={onGenericReferencesChange}
             />
           ) : (
             <p className='text-sm text-muted-foreground'>
@@ -126,10 +128,15 @@ export function GenerationRequestEditor({
           )}
         </LineTabsContent>
         <LineTabsContent value='config' className='mt-0 min-h-0 overflow-auto'>
-          {controls.length ? (
+          {controls.length || modelControl ? (
             <GenerationRequestControlsPanel
               controls={controls}
               disabled={pending || readOnly}
+              model={
+                modelControl
+                  ? { ...modelControl, onChange: onModelChange }
+                  : undefined
+              }
               onChange={onControlChange}
             />
           ) : preview ? (

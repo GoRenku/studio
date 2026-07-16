@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import React from 'react';
 import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { GenerationPreviewReferenceGrid } from './generation-preview-reference-grid';
 
 describe('GenerationPreviewReferenceGrid', () => {
@@ -12,8 +12,13 @@ describe('GenerationPreviewReferenceGrid', () => {
         preview={previewFixture()}
         draft={{
           promptDraft: { authoredText: 'Edit the source image.' },
+          model: {
+            provider: 'fal-ai',
+            modelId: 'openai/gpt-image-2/edit',
+          },
+          parameterValues: {},
+          authoredParameterNames: [],
           slotSelections: [],
-          genericReferences: [],
         }}
         updating={false}
         editable={false}
@@ -27,6 +32,80 @@ describe('GenerationPreviewReferenceGrid', () => {
     ).toBeNull();
     expect(screen.queryByText('Character Sheet')).toBeNull();
     expect(screen.queryByText('Additional Media')).toBeNull();
+  });
+
+  it('toggles a sole typed candidate directly on the reusable card', () => {
+    const preview = previewFixture();
+    const slot = preview.references.slots[1]!;
+    const onReferenceChoose = vi.fn();
+    render(
+      <GenerationPreviewReferenceGrid
+        preview={preview}
+        draft={{
+          promptDraft: { authoredText: 'Create a character sheet.' },
+          model: {
+            provider: 'fal-ai',
+            modelId: 'openai/gpt-image-2/edit',
+          },
+          parameterValues: {},
+          authoredParameterNames: [],
+          slotSelections: [],
+        }}
+        updating={false}
+        editable
+        onReferenceChoose={onReferenceChoose}
+      />
+    );
+
+    expect(screen.queryByText('None')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Choose Character Sheet' })
+    ).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Include Constantine Character Sheet',
+      })
+    );
+    expect(onReferenceChoose).toHaveBeenCalledWith(
+      slot,
+      slot.eligibleCandidates[0]
+    );
+  });
+
+  it('shows agent-authored additional media without Studio add controls', () => {
+    const preview = previewFixture();
+    preview.references.additional = [{
+      kind: 'image',
+      role: 'additional',
+      label: 'Costume study',
+      assetId: 'asset_costume',
+      assetFileId: 'asset_file_costume',
+      selected: true,
+      browserUrl: '/costume.png',
+    }];
+    render(
+      <GenerationPreviewReferenceGrid
+        preview={preview}
+        draft={{
+          promptDraft: { authoredText: 'Create a character sheet.' },
+          model: {
+            provider: 'fal-ai',
+            modelId: 'openai/gpt-image-2/edit',
+          },
+          parameterValues: {},
+          authoredParameterNames: [],
+          slotSelections: [],
+        }}
+        updating={false}
+        editable
+        onReferenceChoose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Additional Media')).toBeTruthy();
+    expect(screen.getByText('Costume study')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add Media' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Manage Media' })).toBeNull();
   });
 });
 
@@ -107,6 +186,7 @@ function previewFixture(): GenerationPreviewResource {
     configuration: {
       sections: [],
     },
+    authoring: { models: [] },
     diagnostics: [],
   };
 }

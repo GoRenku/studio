@@ -1,18 +1,21 @@
 import type { GenerationPreviewResourceReference } from '@gorenku/studio-core/client';
 import { AudioPreview } from '@/ui/audio-preview';
 import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { ImageSelectionControl } from '@/ui/image-selection-control';
 import { VideoPreview } from '@/ui/video-preview';
 
 interface GenerationPreviewReferenceCardProps {
   reference: GenerationPreviewResourceReference;
   selected: boolean;
   onOpen?: () => void;
+  onToggleSelected?: () => void | Promise<void>;
 }
 
 export function GenerationPreviewReferenceCard({
   reference,
   selected,
   onOpen,
+  onToggleSelected,
 }: GenerationPreviewReferenceCardProps) {
   const title = referenceDisplayTitle(reference);
 
@@ -51,6 +54,17 @@ export function GenerationPreviewReferenceCard({
             )
           : undefined
       }
+      topRightAction={
+        onToggleSelected ? (
+          <ImageSelectionControl
+            selected={selected}
+            selectedLabel={`Exclude ${title ?? 'reference'}`}
+            unselectedLabel={`Include ${title ?? 'reference'}`}
+            onToggleSelected={async () => onToggleSelected()}
+          />
+        ) : undefined
+      }
+      topRightActionPersistent={Boolean(onToggleSelected)}
       onOpen={onOpen}
     />
   );
@@ -74,6 +88,9 @@ function referenceDisplayTitle(
     return undefined;
   }
   if (/^(asset|asset_file|file|reference)[-_][a-z0-9_-]+$/i.test(label)) {
+    return undefined;
+  }
+  if (/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(label)) {
     return undefined;
   }
   return label;

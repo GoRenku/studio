@@ -1,7 +1,8 @@
 import type {
-  GenerationReference,
+  GenerationModelIdentity,
   GenerationReferenceSlotSelectionInput,
   GenerationSpec,
+  JsonValue,
 } from '../../client/generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -11,15 +12,20 @@ import { readGenerationSpec, updateGenerationSpec } from '../generation/specs.js
 import { validateGenerationSpecForExecution } from '../generation/validation.js';
 import { projectGenerationPreviewResource } from './projection.js';
 import {
-  applyGenerationGenericReferences,
   applyGenerationReferenceSlotSelection,
 } from '../generation/references.js';
+import {
+  readGenerationPreviewModel,
+  routeGenerationPreviewReferences,
+  validatedGenerationPreviewParameterValues,
+} from './authoring.js';
 
 export async function updateGenerationPreviewResource(input: {
   specId: string;
   prompt: { authoredText: string; negativeText?: string | null };
+  model: Required<GenerationModelIdentity>;
+  parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
-  genericReferences: GenerationReference[];
   purpose: GenerationPurposeDescriptor;
   session: DatabaseSession;
   projectFolder: string;
@@ -31,11 +37,10 @@ export async function updateGenerationPreviewResource(input: {
     session: input.session,
     projectFolder: input.projectFolder,
   });
-  const model = context.models.find(
-    (candidate) =>
-      candidate.provider === record.spec.model?.provider &&
-      candidate.model === record.spec.model?.model
-  );
+  const model = readGenerationPreviewModel({
+    models: context.models,
+    identity: input.model,
+  });
   const promptField = model?.fields.find(
     (field) =>
       field.semantic?.kind === 'authored-text' &&
@@ -59,11 +64,16 @@ export async function updateGenerationPreviewResource(input: {
     );
   }
   let spec: GenerationSpec = structuredClone(record.spec);
-  spec.values[promptField.name] = input.prompt.authoredText;
+  spec.model = input.model;
+  spec.values = {
+    [promptField.name]: input.prompt.authoredText,
+    ...validatedGenerationPreviewParameterValues(
+      model,
+      input.parameterValues
+    ),
+  };
   if (negativeField && input.prompt.negativeText !== undefined) {
-    if (input.prompt.negativeText === null) {
-      delete spec.values[negativeField.name];
-    } else {
+    if (input.prompt.negativeText !== null) {
       spec.values[negativeField.name] = input.prompt.negativeText;
     }
   }
@@ -71,7 +81,12 @@ export async function updateGenerationPreviewResource(input: {
   for (const selection of input.slotSelections) {
     spec = applyGenerationReferenceSlotSelection(spec, selection);
   }
-  spec = applyGenerationGenericReferences(spec, input.genericReferences);
+  spec = await routeGenerationPreviewReferences({
+    spec,
+    model,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
   const updated = updateGenerationSpec({
     id: input.specId,
     spec,

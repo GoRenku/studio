@@ -65,7 +65,16 @@ export function GenerationPreviewRequestPanel({
         onAuthoredTextChange={editor.updateAuthoredText}
         onNegativeTextChange={editor.updateNegativeText}
         onReferenceChoose={editor.chooseReference}
-        onGenericReferencesChange={editor.chooseGenericReferences}
+        controls={editor.controls}
+        modelControl={{
+          value: editor.modelKey,
+          options: preview.authoring.models.map((model) => ({
+            value: `${model.provider}/${model.modelId}`,
+            label: `${model.label} — ${model.modelId}`,
+          })),
+        }}
+        onModelChange={editor.chooseModel}
+        onControlChange={editor.chooseParameter}
       />
       <DialogFooter className='items-end gap-4'>
         <div className='mr-auto min-w-0'>

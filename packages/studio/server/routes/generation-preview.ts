@@ -4,8 +4,8 @@ import {
 } from '@gorenku/studio-core/server';
 import type {
   GenerationPreviewResource,
-  GenerationReference,
   GenerationReferenceSlotSelectionInput,
+  JsonValue,
   ProjectRelativePath,
 } from '@gorenku/studio-core/client';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
@@ -44,8 +44,9 @@ export function createGenerationPreviewRoute(
           projectName,
           specId,
           prompt: body.prompt,
+          model: body.model,
+          parameterValues: body.parameterValues,
           slotSelections: body.slotSelections,
-          genericReferences: body.genericReferences,
         });
         return c.json({
           preview: await projectGenerationPreview({
@@ -62,8 +63,9 @@ export function createGenerationPreviewRoute(
 
 function readGenerationPreviewUpdateBody(value: unknown): {
   prompt: { authoredText: string; negativeText?: string | null };
+  model: { provider: string; model: string };
+  parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
-  genericReferences: GenerationReference[];
 } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw requestError('Request body must be an object.');
@@ -92,9 +94,8 @@ function readGenerationPreviewUpdateBody(value: unknown): {
   if (!Array.isArray(body.slotSelections)) {
     throw requestError('Request body slotSelections must be an array.');
   }
-  if (!Array.isArray(body.genericReferences)) {
-    throw requestError('Request body genericReferences must be an array.');
-  }
+  const model = readModel(body.model);
+  const parameterValues = readParameterValues(body.parameterValues);
   return {
     prompt: {
       authoredText: prompt.authoredText,
@@ -102,24 +103,57 @@ function readGenerationPreviewUpdateBody(value: unknown): {
         ? { negativeText: prompt.negativeText as string | null }
         : {}),
     },
+    model,
+    parameterValues,
     slotSelections: body.slotSelections.map((selection, index) =>
       readReferenceSelection(selection, index),
-    ),
-    genericReferences: body.genericReferences.map((reference, index) =>
-      readExactGenericReference(reference, index),
     ),
   };
 }
 
-function readExactGenericReference(
-  value: unknown,
-  index: number,
-): GenerationReference {
-  const reference = readExactReference(value, index);
-  if (!reference) {
-    throw requestError(`Request body genericReferences[${index}] must be an exact project reference.`);
+function readModel(value: unknown): { provider: string; model: string } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw requestError('Request body model must be an object.');
   }
-  return reference;
+  const model = value as Record<string, unknown>;
+  if (typeof model.provider !== 'string' || typeof model.model !== 'string') {
+    throw requestError('Request body model must identify a provider and model.');
+  }
+  return { provider: model.provider, model: model.model };
+}
+
+function readParameterValues(value: unknown): Record<string, JsonValue> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw requestError('Request body parameterValues must be an object.');
+  }
+  const result: Record<string, JsonValue> = {};
+  for (const [name, parameterValue] of Object.entries(value)) {
+    result[name] = readJsonValue(parameterValue, `parameterValues.${name}`);
+  }
+  return result;
+}
+
+function readJsonValue(value: unknown, path: string): JsonValue {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'boolean' ||
+    (typeof value === 'number' && Number.isFinite(value))
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => readJsonValue(entry, `${path}.${index}`));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([name, entry]) => [
+        name,
+        readJsonValue(entry, `${path}.${name}`),
+      ])
+    );
+  }
+  throw requestError(`Request body ${path} must be valid JSON.`);
 }
 
 function readReferenceSelection(
