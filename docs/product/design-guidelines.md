@@ -338,15 +338,27 @@ Dialog sizes:
 
 ### Cards
 
-**MediaCard** (the primary card):
-```
-rounded-xl border bg-card overflow-hidden flex flex-col transition-all shadow-lg
-```
-- Default border: `border-border`
-- Selected: `border-primary ring-2 ring-primary/40 shadow-xl -translate-y-1`
-- Pinned: `border-amber-500 ring-2 ring-amber-500/40 shadow-xl -translate-y-1`
-- Clickable hover: `hover:border-primary/70 hover:shadow-xl hover:-translate-y-1`
-- Footer: `border-t border-border/60 bg-muted/50 px-4 py-3`
+**MediaCard** is the single visual-card system for the included Studio media
+surfaces. It has four bounded treatments:
+
+- `overlay` for image-led cards with optional quiet bottom copy;
+- `thumbnail` for storyboard, mosaic, and Shot Design options;
+- `evidence` for Lookbook report images and feature evidence;
+- `summary` for Project Library cards.
+
+Each treatment preserves the size, fit, copy, border, radius, shadow, and hover
+language of its current surface. Do not collapse the four treatments into one
+generic look.
+
+The action anatomy is consistent across all four:
+
+- selection is persistent at lower-right;
+- Edit follows selection at lower-right;
+- delete uses the shared top-right treatment;
+- whole-card activation is behind those sibling controls.
+
+Use typed `MediaCard` contracts. Do not add arbitrary visual, body, action, or
+class-name slots.
 
 **PropertyRow** (2-column grid card):
 ```
@@ -437,18 +449,15 @@ Count badge: text-xs font-medium text-primary-foreground bg-primary px-2.5 py-0.
 
 ### MediaGrid
 
-Responsive grid layout for media cards:
-```
-grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5
-```
+Use `MediaCardGrid` for included repeated-card surfaces. Each caller supplies
+its existing minimum card width and one of the bounded compact, standard, or
+roomy gaps so consolidation does not silently change layout.
 
 ### Media Selection Controls
 
-Use the shared circular `ImageSelectionControl` for include/exclude or pick/clear
-actions on visual media cards. The control may be disabled or marked busy while a
-selection mutation is in flight; in that state it keeps the same circular visual
-shape, prevents duplicate clicks, and exposes an updating label to assistive
-technology.
+Use the selection control built into `MediaCard` for include/exclude or
+pick/clear actions. It remains visible at lower-right, toggles in both
+directions, and exposes `aria-pressed` with a meaningful accessible label.
 
 ### Forms
 

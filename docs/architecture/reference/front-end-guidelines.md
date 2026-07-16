@@ -22,6 +22,7 @@ Decision history:
 - `../../decisions/0015-use-feature-service-ui-layering-for-the-studio-frontend.md`
 - `../../decisions/0023-use-domain-neutral-ui-primitives-for-shared-frontend-patterns.md`
 - `../../decisions/0030-use-unified-studio-resource-refresh-components.md`
+- `../../decisions/0053-use-one-configurable-studio-media-card.md`
 
 Current implementation steps belong in `plans/active/`. This document should
 remain useful after the first refactor is complete.
@@ -488,54 +489,65 @@ Rules:
 - When promoting a shared pattern, move the real implementation, update all
   callers directly, and delete the obsolete feature-owned component.
 
-For example, Cast should not import a Visual Language image card to get the
-Lookbook card treatment. The shared image-card treatment belongs in `src/ui`;
-Cast and Visual Language should both compose that primitive with their own
+For example, Cast should not import a Visual Language media card to get the
+Lookbook card treatment. The shared treatment belongs in `src/ui/media-card`;
+Cast and Visual Language should both configure that module with their own
 product data.
 
 Feature components are allowed only when they add real product meaning. A
 `CastAssetSection` that filters assets by role and wires Cast callbacks is a
-feature component. A `CastImageCard` that only renames a generic image card is
-not.
+feature component. A component that only renames or restyles `MediaCard` is not.
 
-## Reusable Image Card Contracts
+## Shared Media Card Contracts
 
-Media-heavy surfaces must use consistent image-card anatomy across the app.
-This includes Cast profile images, Cast character sheets, Inspiration folders,
-Inspiration grabs, Lookbooks, and future generated take surfaces.
+Use `src/ui/media-card` for the current included visual-card surfaces:
 
-Reusable image-card primitives should expose explicit props for:
+- Cast and Location overview cards and asset galleries;
+- Inspiration folders and grabs;
+- Production and Storyboard Lookbook evidence, hero, and assets;
+- Scene, Act, and Sequence storyboard cards;
+- Project Library;
+- Generation Preview and Image Revision references;
+- Reference Picker candidates;
+- Shot Design Composition and Motion options.
 
-- the image URL and alt text;
-- the intended display aspect ratio;
-- optional runtime image aspect-ratio detection;
-- image fitting and cropping behavior;
-- optional overlay title and description;
-- selected state;
-- a top-right action slot;
-- a lower-right control slot;
-- opening the shared image preview dialog.
+Do not use it for pure presentation media:
 
-Use the same slot positions consistently:
+- Cast or Location detail feature images;
+- the Studio sidebar cover or logo;
+- preview-dialog media;
+- standalone video players;
+- tooltip portraits;
+- upload or dropzone visuals;
+- audio cards;
+- non-media report widgets.
 
-- top-right is for actions such as delete;
-- lower-right is for pick, active, or selected-state controls;
-- text overlays should stay quiet and should not overwhelm the image.
+The module supports only the four current presentations: overlay, thumbnail,
+evidence, and summary. Its contracts are typed for current image, video, fixed
+2x2 mosaic, frame, activation, selection, Edit, delete, and empty-state needs.
+Do not add arbitrary render slots, caller-owned action nodes, class overrides,
+domain variants, or generic mosaic layouts.
 
-Selection controls on image cards should use one app-wide control, tooltip, and
-pressed-state treatment. The control must toggle both directions. Clicking an
-unselected item selects it; clicking the current selected item clears it.
+Action placement is fixed:
 
-Delete actions on image cards should use a trash icon, the shared confirmation
-dialog, and concise generic copy when no meaningful product name exists.
+- selection is always persistent in the lower-right;
+- Edit appears after selection in the lower-right;
+- delete is always top-right with the shared treatment and confirmation dialog;
+- whole-card activation sits behind sibling controls, never around them.
 
-Do not fill image cards with raw filenames, asset ids, producer identifiers,
-generated role names, or kebab-case labels. If there is no meaningful
-product/domain label, leave the card without visible copy.
+Selection must toggle both ways, expose `aria-pressed`, and keep a meaningful
+accessible label.
+
+Feature code owns product data, labels, preview/navigation behavior, and
+mutations. The UI module owns only card presentation and interaction anatomy.
+
+Keep card copy sparse. Do not show raw filenames, asset ids, producer
+identifiers, generated role names, or kebab-case labels unless they are
+meaningful product text.
 
 ## Image Aspect Ratios
 
-Aspect ratio is part of the image-card contract. Callers must pass the intended
+Aspect ratio is part of the media-card contract. Callers must pass the intended
 numeric aspect ratio when using a reusable image card.
 
 Examples:

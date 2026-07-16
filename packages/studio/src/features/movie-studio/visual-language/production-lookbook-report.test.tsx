@@ -90,7 +90,7 @@ describe('Production Lookbook report', () => {
     expect(screen.getByAltText('lineage-frame.png inspiration grab')).not.toBeNull();
     expect(screen.queryByText('Palette frame')).toBeNull();
 
-    fireEvent.click(screen.getByAltText('palette-frame.png inspiration grab'));
+    fireEvent.click(screen.getByRole('button', { name: 'Palette frame' }));
     expect(screen.getByRole('dialog', { name: 'Palette frame' })).not.toBeNull();
   });
 

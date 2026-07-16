@@ -18,7 +18,7 @@ describe('ActStoryboardPanel', () => {
   it('groups scenes by sequence and renders Beats in order', async () => {
     vi.mocked(readActStoryboardResource).mockResolvedValue(actResource());
 
-    render(
+    const { container } = render(
       <ActStoryboardPanel
         projectName='constantinople'
         actId='act_one'
@@ -33,6 +33,11 @@ describe('ActStoryboardPanel', () => {
       'Beat 1 — Map study',
       'Beat 2 — Council reaction',
     ]);
+    expect(
+      container.querySelectorAll(
+        '[data-media-card-presentation="overlay"]'
+      )
+    ).toHaveLength(2);
   });
 
   it('renders exactly one placeholder slot for scenes without storyboards', async () => {

@@ -1,7 +1,7 @@
 import type { InspirationResource } from '@gorenku/studio-core/client';
+import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 import { EmptyState } from './empty-state';
 import { InspirationFolderCard } from './inspiration-folder-card';
-import { VisualLanguageCardGrid } from './visual-language-card-grid';
 
 interface InspirationFoldersPanelProps {
   projectName: string;
@@ -22,7 +22,7 @@ export function InspirationFoldersPanel({
 
   return (
     <div className='p-4 sm:p-5 lg:p-6'>
-    <VisualLanguageCardGrid>
+      <MediaCardGrid minimumCardWidthPx={240} gap='roomy'>
         {resource.folders.items.map((item) => (
           <InspirationFolderCard
             key={item.folder.id}
@@ -32,7 +32,7 @@ export function InspirationFoldersPanel({
             onDelete={() => onDeleteFolder(item.folder.id)}
           />
         ))}
-    </VisualLanguageCardGrid>
+      </MediaCardGrid>
     </div>
   );
 }

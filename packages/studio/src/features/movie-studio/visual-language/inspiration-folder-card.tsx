@@ -1,8 +1,5 @@
 import type { InspirationFolderListItem } from '@gorenku/studio-core/client';
-import { Trash2 } from 'lucide-react';
-import { Button } from '@/ui/button';
-import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { MediaCard } from '@/ui/media-card/media-card';
 import { inspirationImageUrl } from './visual-language-image-urls';
 
 interface InspirationFolderCardProps {
@@ -25,30 +22,37 @@ export function InspirationFolderCard({
     item.imageCount === 1 ? '1 image' : `${item.imageCount} images`;
 
   return (
-    <ImageOverlayCard
-      title={item.folder.name}
-      description={imageCountLabel}
-      imageUrl={imageUrl}
-      imageAlt={`${item.folder.name} inspiration card image`}
-      onOpen={onOpen}
-      topRightAction={
-        <DeleteConfirmDialog
-          title='Delete Folder?'
-          message={`Remove "${item.folder.name}" and its saved grabs.`}
-          onDelete={onDelete}
-          trigger={
-            <Button
-              type='button'
-              size='icon'
-              variant='ghost'
-              className='h-7 w-7 text-white/75 hover:bg-destructive/80 hover:text-white'
-              aria-label={`Delete ${item.folder.name}`}
-            >
-              <Trash2 className='h-4 w-4' />
-            </Button>
-          }
-        />
+    <MediaCard
+      media={
+        imageUrl
+          ? {
+              kind: 'image',
+              src: imageUrl,
+              alt: `${item.folder.name} inspiration card image`,
+              fit: 'cover',
+              effect: 'zoom-on-hover',
+            }
+          : null
       }
+      frame={{ kind: 'ratio', aspectRatio: 16 / 10 }}
+      presentation={{
+        kind: 'overlay',
+        copy: {
+          title: item.folder.name,
+          description: imageCountLabel,
+        },
+      }}
+      activation={{
+        label: item.folder.name,
+        onActivate: onOpen,
+      }}
+      deleteAction={{
+        label: `Delete ${item.folder.name}`,
+        confirmationTitle: 'Delete Folder?',
+        confirmationMessage: `Remove "${item.folder.name}" and its saved grabs.`,
+        onDelete,
+      }}
+      emptyState={{ kind: 'image' }}
     />
   );
 }

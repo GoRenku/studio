@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const studioSourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const uiSourceRoot = path.join(studioSourceRoot, 'ui');
+const mediaCardSourceRoot = path.join(uiSourceRoot, 'media-card');
 
 interface ForbiddenSourcePattern {
   label: string;
@@ -74,6 +75,29 @@ const rawControlPatterns = [
     pattern: /<dialog\b/,
     label: '<dialog',
     reason: 'feature code must use the local Dialog primitive from src/ui',
+  },
+];
+
+const mediaCardForbiddenImports: ForbiddenSourcePattern[] = [
+  {
+    label: 'feature import',
+    pattern: /^@\/features(?:\/|$)/,
+    reason: 'the shared media-card UI module must not depend on feature domains',
+  },
+  {
+    label: 'service import',
+    pattern: /^@\/services(?:\/|$)/,
+    reason: 'the shared media-card UI module must not call Studio services',
+  },
+  {
+    label: 'server import',
+    pattern: /^@\/server(?:\/|$)|^@gorenku\/studio-core\/server(?:\/|$)/,
+    reason: 'the shared media-card UI module must remain browser-only',
+  },
+  {
+    label: 'Core domain import',
+    pattern: /^@gorenku\/studio-core(?:\/|$)/,
+    reason: 'the shared media-card UI module must remain domain-neutral',
   },
 ];
 
@@ -155,6 +179,19 @@ describe('Studio frontend architecture', () => {
     ).toEqual([]);
   });
 
+  it('keeps the shared media-card module independent of feature and service domains', async () => {
+    const files = (await listTypeScriptFiles(mediaCardSourceRoot)).filter(
+      (file) => !isTestFile(file)
+    );
+
+    expect(
+      await findForbiddenImports(files, mediaCardForbiddenImports),
+      [
+        'The media-card module owns bounded visual-card presentation only.',
+        'Feature behavior, Studio services, server code, and Core domain contracts must stay outside it.',
+      ].join(' ')
+    ).toEqual([]);
+  });
 });
 
 async function listTypeScriptFiles(root: string): Promise<string[]> {

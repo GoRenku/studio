@@ -5,7 +5,8 @@ import {
   matchesLocationOverviewResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { MediaCard } from '@/ui/media-card/media-card';
+import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 import type { StudioSelection } from '../movie-studio-selection';
 
 interface LocationOverviewPanelProps {
@@ -53,20 +54,40 @@ export function LocationOverviewPanel({
   }
 
   return (
-    <div className='grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4'>
-      {resource.locations.items.map((location) => (
-        <ImageOverlayCard
-          key={location.id}
-          title={location.name}
-          description={location.timePeriod}
-          imageUrl={location.firstImage?.url ?? null}
-          imageAlt={`${location.name} location hero image`}
-          aspectClassName='aspect-[4/3]'
-          aspectRatio={4 / 3}
-          imageClassName='object-cover'
-          onOpen={() => onSelect({ type: 'location', id: location.id })}
-        />
-      ))}
-    </div>
+    <MediaCardGrid minimumCardWidthPx={260} gap='roomy'>
+      {resource.locations.items.map((location) => {
+        const imageAlt = `${location.name} location hero image`;
+        return (
+          <MediaCard
+            key={location.id}
+            media={
+              location.firstImage
+                ? {
+                    kind: 'image',
+                    src: location.firstImage.url,
+                    alt: imageAlt,
+                    fit: 'cover',
+                    effect: 'zoom-on-hover',
+                  }
+                : null
+            }
+            frame={{ kind: 'ratio', aspectRatio: 4 / 3 }}
+            presentation={{
+              kind: 'overlay',
+              copy: {
+                title: location.name,
+                description: location.timePeriod,
+              },
+            }}
+            activation={{
+              label: location.name,
+              onActivate: () =>
+                onSelect({ type: 'location', id: location.id }),
+            }}
+            emptyState={{ kind: 'image' }}
+          />
+        );
+      })}
+    </MediaCardGrid>
   );
 }

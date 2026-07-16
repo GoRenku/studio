@@ -5,9 +5,9 @@ import {
   matchesCastOverviewResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { MediaCard } from '@/ui/media-card/media-card';
+import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 import type { StudioSelection } from '../movie-studio-selection';
-import { VoiceOverProfilePreview } from '../voice-over-profile-preview';
 
 interface CastOverviewPanelProps {
   projectName: string;
@@ -51,24 +51,45 @@ export function CastOverviewPanel({ projectName, onSelect }: CastOverviewPanelPr
   }
 
   return (
-    <div className='grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4'>
-      {resource.cast.items.map((castMember) => (
-        <ImageOverlayCard
-          key={castMember.id}
-          title={castMember.name}
-          description={castMember.role ?? 'Cast member'}
-          imageUrl={castMember.firstImage?.url ?? null}
-          imageAlt={`${castMember.name} profile image`}
-          previewContent={
-            castMember.isVoiceOver && !castMember.firstImage ? (
-              <VoiceOverProfilePreview />
-            ) : undefined
-          }
-          aspectClassName='aspect-square'
-          aspectRatio={1}
-          onOpen={() => onSelect({ type: 'castMember', id: castMember.id })}
-        />
-      ))}
-    </div>
+    <MediaCardGrid minimumCardWidthPx={260} gap='roomy'>
+      {resource.cast.items.map((castMember) => {
+        const imageAlt = `${castMember.name} profile image`;
+        return (
+          <MediaCard
+            key={castMember.id}
+            media={
+              castMember.firstImage
+                ? {
+                    kind: 'image',
+                    src: castMember.firstImage.url,
+                    alt: imageAlt,
+                    fit: 'cover',
+                    effect: 'zoom-on-hover',
+                  }
+                : null
+            }
+            frame={{ kind: 'ratio', aspectRatio: 1 }}
+            presentation={{
+              kind: 'overlay',
+              copy: {
+                title: castMember.name,
+                description: castMember.role ?? 'Cast member',
+              },
+            }}
+            activation={{
+              label: castMember.name,
+              onActivate: () =>
+                onSelect({ type: 'castMember', id: castMember.id }),
+            }}
+            emptyState={{
+              kind:
+                castMember.isVoiceOver && !castMember.firstImage
+                  ? 'waveform'
+                  : 'image',
+            }}
+          />
+        );
+      })}
+    </MediaCardGrid>
   );
 }

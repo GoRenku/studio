@@ -18,7 +18,7 @@ describe('SequencePanel', () => {
   it('reloads when one of its scene storyboard resources changes', async () => {
     vi.mocked(readSequenceResource).mockResolvedValue(sequenceResource());
 
-    render(
+    const { container } = render(
       <SequencePanel
         projectName='constantinople'
         sequenceId='seq_offer'
@@ -27,6 +27,12 @@ describe('SequencePanel', () => {
     );
 
     await screen.findByRole('button', { name: /The Sound That Opens Stone/ });
+    expect(
+      container
+        .querySelector('[data-media-card]')
+        ?.getAttribute('data-media-card-presentation')
+    ).toBe('overlay');
+    expect(screen.getByText('INT / NIGHT')).not.toBeNull();
 
     act(() => {
       window.dispatchEvent(

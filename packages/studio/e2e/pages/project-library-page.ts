@@ -25,7 +25,9 @@ export class ProjectLibraryPage {
     project: Pick<StudioE2eProject, 'title' | 'projectName'>
   ): Promise<void> {
     await expect(this.projectCard(project)).toBeVisible();
-    await expect(this.projectCard(project)).toContainText(project.projectName);
+    await expect(
+      this.projectCard(project).locator('xpath=ancestor::*[@data-media-card]')
+    ).toContainText(project.projectName);
   }
 
   async openProject(

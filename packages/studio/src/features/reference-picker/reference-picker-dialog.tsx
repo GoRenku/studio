@@ -5,7 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/ui/dialog';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { MediaCard } from '@/ui/media-card/media-card';
+import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 
 export interface ReferencePickerCandidate {
   id: string;
@@ -38,18 +39,37 @@ export function ReferencePickerDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className='max-h-[65vh] overflow-y-auto px-5 py-5'>
-          <div className='grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3'>
+          <MediaCardGrid minimumCardWidthPx={220}>
             {candidates.map((candidate) => (
-              <ImageOverlayCard
+              <MediaCard
                 key={candidate.id}
-                title={candidate.title}
-                imageUrl={candidate.imageUrl}
-                imageAlt={candidate.imageAlt}
+                media={
+                  candidate.imageUrl
+                    ? {
+                        kind: 'image',
+                        src: candidate.imageUrl,
+                        alt: candidate.imageAlt,
+                        fit: 'cover',
+                        effect: 'zoom-on-hover',
+                      }
+                    : null
+                }
+                frame={{ kind: 'ratio', aspectRatio: 16 / 10 }}
+                presentation={{
+                  kind: 'overlay',
+                  copy: candidate.title
+                    ? { title: candidate.title }
+                    : undefined,
+                }}
                 selected={candidate.selected}
-                onOpen={() => onChoose(candidate.id)}
+                activation={{
+                  label: candidate.title ?? candidate.imageAlt,
+                  onActivate: () => void onChoose(candidate.id),
+                }}
+                emptyState={{ kind: 'image' }}
               />
             ))}
-          </div>
+          </MediaCardGrid>
         </div>
       </DialogContent>
     </Dialog>

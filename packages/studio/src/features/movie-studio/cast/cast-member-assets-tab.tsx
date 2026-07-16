@@ -4,13 +4,11 @@ import type {
   CastMemberResourceResponse,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
-import { ImageCollectionSection } from '@/ui/image-collection-section';
-import { ImageCardGrid } from '@/ui/image-card-grid';
+import { MediaCollectionSection } from '@/ui/media-collection-section';
 import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
-import { ImageSelectionControl } from '@/ui/image-selection-control';
 import {
   CAST_CHARACTER_SHEET_ROLES,
   CAST_PROFILE_ROLE,
@@ -22,7 +20,6 @@ import {
 } from './cast-member-assets';
 import { humanizeReferenceName } from './cast-reference-labels';
 import { CastVoiceSampleCard } from './cast-voice-sample-card';
-import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
 import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
 
 interface CastMemberAssetsTabProps {
@@ -63,14 +60,14 @@ export function CastMemberAssetsTab({
           <CastAssetSection
             title='Profile Images'
             roleLabel='profile image'
-            aspectClassName='aspect-square'
             fallbackAspectRatio={1}
+            fit='cover'
+            minimumCardWidthPx={240}
             projectName={projectName}
             castMemberId={castMemberId}
             assets={profileAssets}
             selectedAssetId={displayProfileAssetId}
             emptyTitle='No profile images yet.'
-            gridClassName='grid-cols-[repeat(auto-fill,minmax(240px,1fr))]'
             onOpenImage={setPreviewImage}
             onTogglePick={onTogglePick}
             onDeleteAsset={async (asset) => {
@@ -83,14 +80,13 @@ export function CastMemberAssetsTab({
           <CastAssetSection
             title='Character Sheets'
             roleLabel='character sheet'
-            aspectClassName='aspect-[4/3]'
             fallbackAspectRatio={4 / 3}
-            imageClassName='object-contain'
+            fit='contain'
+            minimumCardWidthPx={384}
             projectName={projectName}
             castMemberId={castMemberId}
             assets={characterSheetAssets}
             emptyTitle='No character sheets yet.'
-            gridClassName='grid-cols-[repeat(auto-fill,minmax(384px,1fr))]'
             onOpenImage={setPreviewImage}
             onEditImage={(asset) => {
               const file = asset.files.find(
@@ -132,10 +128,9 @@ export function CastMemberAssetsTab({
 function CastAssetSection({
   title,
   roleLabel,
-  aspectClassName,
   fallbackAspectRatio,
-  imageClassName,
-  gridClassName,
+  fit,
+  minimumCardWidthPx,
   projectName,
   castMemberId,
   assets,
@@ -148,10 +143,9 @@ function CastAssetSection({
 }: {
   title: string;
   roleLabel: string;
-  aspectClassName: string;
   fallbackAspectRatio: number;
-  imageClassName?: string;
-  gridClassName: string;
+  fit: 'cover' | 'contain';
+  minimumCardWidthPx: number;
   projectName: string;
   castMemberId: string;
   assets: StudioAssetResponse[];
@@ -176,47 +170,72 @@ function CastAssetSection({
       : undefined;
     return {
       id: asset.assetId,
-      imageUrl,
-      imageAlt: selected ? `Current ${roleLabel} pick` : roleLabel,
-      title,
-      description: asset.purpose ?? undefined,
-      aspectClassName,
-      aspectRatio: castImageAssetAspectRatio(asset, fallbackAspectRatio),
-      detectImageAspectRatio: true,
-      imageClassName,
-      selected: selectable ? selected : false,
-      onOpen: () => previewImage && onOpenImage(previewImage),
-      bottomRightActions:
-        selectable || onEditImage ? (
-          <>
-            {selectable && onTogglePick ? (
-              <ImageSelectionControl
-                selected={selected}
-                selectedLabel={`Clear ${roleLabel} pick`}
-                unselectedLabel={`Set ${roleLabel} pick`}
-                onToggleSelected={() => onTogglePick(asset)}
-              />
-            ) : null}
-            {onEditImage ? (
-              <ImageRevisionCardAction onEdit={() => onEditImage(asset)} />
-            ) : null}
-          </>
-        ) : undefined,
-      deleteAction: {
-        label: 'Delete image',
-        title: 'Delete Image?',
-        message: 'Remove this image from this cast member. This cannot be undone.',
-        onDelete: () => onDeleteAsset(asset),
+      card: {
+        media: imageUrl
+          ? {
+              kind: 'image' as const,
+              src: imageUrl,
+              alt: selected ? `Current ${roleLabel} pick` : roleLabel,
+              fit,
+              effect: 'zoom-on-hover' as const,
+            }
+          : null,
+        frame: {
+          kind: 'ratio' as const,
+          aspectRatio: castImageAssetAspectRatio(asset, fallbackAspectRatio),
+          detectFromImage: true,
+        },
+        presentation: {
+          kind: 'overlay' as const,
+          copy:
+            title || asset.purpose
+              ? {
+                  title,
+                  description: asset.purpose ?? undefined,
+                }
+              : undefined,
+        },
+        activation: {
+          label: title ?? (selected ? `Current ${roleLabel} pick` : roleLabel),
+          onActivate: () => {
+            if (previewImage) {
+              onOpenImage(previewImage);
+            }
+          },
+        },
+        selection:
+          selectable && onTogglePick
+            ? {
+                selected,
+                selectedLabel: `Clear ${roleLabel} pick`,
+                unselectedLabel: `Set ${roleLabel} pick`,
+                onToggle: () => onTogglePick(asset),
+              }
+            : undefined,
+        editAction: onEditImage
+          ? {
+              label: 'Edit image',
+              onEdit: () => onEditImage(asset),
+            }
+          : undefined,
+        deleteAction: {
+          label: 'Delete image',
+          confirmationTitle: 'Delete Image?',
+          confirmationMessage:
+            'Remove this image from this cast member. This cannot be undone.',
+          onDelete: () => onDeleteAsset(asset),
+        },
+        emptyState: { kind: 'image' as const },
       },
     };
   });
 
   return (
-    <ImageCollectionSection
+    <MediaCollectionSection
       title={title}
       emptyTitle={emptyTitle}
       items={items}
-      gridClassName={gridClassName}
+      minimumCardWidthPx={minimumCardWidthPx}
     />
   );
 }
@@ -243,7 +262,12 @@ function VoiceSamplesSection({
         </span>
       </div>
       {voices.length ? (
-        <ImageCardGrid className='grid-cols-[repeat(auto-fill,minmax(320px,1fr))]'>
+        <div
+          className='grid gap-3'
+          style={{
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          }}
+        >
           {voices.map((voice) => (
             <CastVoiceSampleCard
               key={voice.id}
@@ -251,7 +275,7 @@ function VoiceSamplesSection({
               onDelete={onDeleteVoice}
             />
           ))}
-        </ImageCardGrid>
+        </div>
       ) : (
         <div className='flex min-h-40 flex-col items-center justify-center rounded-md border border-dashed border-border/50 bg-muted/15 p-6 text-center'>
           <VolumeX className='mb-3 h-5 w-5 text-muted-foreground' />

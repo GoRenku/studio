@@ -4,12 +4,11 @@ import type {
   LookbookResource,
   LookbookSheet,
 } from '@gorenku/studio-core/client';
-import { ImageCollectionSection } from '@/ui/image-collection-section';
+import { MediaCollectionSection } from '@/ui/media-collection-section';
 import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
-import { ImageRevisionCardAction } from '@/features/image-revision/image-revision-card-action';
 import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
 import {
   lookbookImageFileUrl,
@@ -52,7 +51,7 @@ export function LookbookVisualContentTab({
     <>
       <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
         <div className='space-y-8'>
-          <ImageCollectionSection
+          <MediaCollectionSection
             title='Sample Images'
             emptyTitle='No sample images yet.'
             items={resource.images.map((image) => {
@@ -60,17 +59,32 @@ export function LookbookVisualContentTab({
                 projectName,
                 image
               );
+              const imageUrl = previewImagesForImage[0]?.src ?? null;
               return {
                 id: image.id,
-                imageUrl: previewImagesForImage[0]?.src ?? null,
-                imageAlt: image.asset.title,
-                aspectClassName: 'aspect-[16/10]',
-                aspectRatio: lookbookImageAspectRatio(image, 16 / 10),
-                detectImageAspectRatio: true,
-                onOpen: () => openPreview(previewImagesForImage),
-                bottomRightActions: (
-                  <ImageRevisionCardAction
-                    onEdit={() => {
+                card: {
+                  media: imageUrl
+                    ? {
+                        kind: 'image' as const,
+                        src: imageUrl,
+                        alt: image.asset.title,
+                        fit: 'cover' as const,
+                        effect: 'zoom-on-hover' as const,
+                      }
+                    : null,
+                  frame: {
+                    kind: 'ratio' as const,
+                    aspectRatio: lookbookImageAspectRatio(image, 16 / 10),
+                    detectFromImage: true,
+                  },
+                  presentation: { kind: 'overlay' as const },
+                  activation: {
+                    label: image.asset.title,
+                    onActivate: () => openPreview(previewImagesForImage),
+                  },
+                  editAction: {
+                    label: 'Edit image',
+                    onEdit: () => {
                       const file = image.asset.files.find(
                         (candidate) => candidate.mediaKind === 'image'
                       );
@@ -85,24 +99,25 @@ export function LookbookVisualContentTab({
                           assetFileId: file.id,
                         },
                       });
-                    }}
-                  />
-                ),
-                deleteAction: {
-                  label: 'Delete image',
-                  title: 'Delete Image?',
-                  message:
-                    'Remove this image from the lookbook. This cannot be undone.',
-                  onDelete: async () => {
-                    await onDeleteImage(image.id);
-                    closePreviewForResourceId(image.id);
+                    },
                   },
+                  deleteAction: {
+                    label: 'Delete image',
+                    confirmationTitle: 'Delete Image?',
+                    confirmationMessage:
+                      'Remove this image from the lookbook. This cannot be undone.',
+                    onDelete: async () => {
+                      await onDeleteImage(image.id);
+                      closePreviewForResourceId(image.id);
+                    },
+                  },
+                  emptyState: { kind: 'image' as const },
                 },
               };
             })}
-            gridClassName='grid-cols-[repeat(auto-fill,minmax(300px,1fr))]'
+            minimumCardWidthPx={300}
           />
-          <ImageCollectionSection
+          <MediaCollectionSection
             title='Lookbook Sheets'
             emptyTitle='No lookbook sheets yet.'
             items={resource.sheets.map((sheet) => {
@@ -110,18 +125,32 @@ export function LookbookVisualContentTab({
                 projectName,
                 sheet
               );
+              const imageUrl = previewImagesForSheet[0]?.src ?? null;
               return {
                 id: sheet.id,
-                imageUrl: previewImagesForSheet[0]?.src ?? null,
-                imageAlt: 'Lookbook sheet',
-                aspectClassName: 'aspect-[4/3]',
-                aspectRatio: lookbookSheetAspectRatio(sheet, 4 / 3),
-                detectImageAspectRatio: true,
-                imageClassName: 'object-contain',
-                onOpen: () => openPreview(previewImagesForSheet),
-                bottomRightActions: (
-                  <ImageRevisionCardAction
-                    onEdit={() => {
+                card: {
+                  media: imageUrl
+                    ? {
+                        kind: 'image' as const,
+                        src: imageUrl,
+                        alt: 'Lookbook sheet',
+                        fit: 'contain' as const,
+                        effect: 'zoom-on-hover' as const,
+                      }
+                    : null,
+                  frame: {
+                    kind: 'ratio' as const,
+                    aspectRatio: lookbookSheetAspectRatio(sheet, 4 / 3),
+                    detectFromImage: true,
+                  },
+                  presentation: { kind: 'overlay' as const },
+                  activation: {
+                    label: 'Lookbook sheet',
+                    onActivate: () => openPreview(previewImagesForSheet),
+                  },
+                  editAction: {
+                    label: 'Edit image',
+                    onEdit: () => {
                       const file = sheet.asset.files.find(
                         (candidate) => candidate.mediaKind === 'image'
                       );
@@ -136,22 +165,23 @@ export function LookbookVisualContentTab({
                           assetFileId: file.id,
                         },
                       });
-                    }}
-                  />
-                ),
-                deleteAction: {
-                  label: 'Delete lookbook sheet',
-                  title: 'Delete Lookbook Sheet?',
-                  message:
-                    'Remove this lookbook sheet from the lookbook. This cannot be undone.',
-                  onDelete: async () => {
-                    await onDeleteSheet(sheet.id);
-                    closePreviewForResourceId(sheet.id);
+                    },
                   },
+                  deleteAction: {
+                    label: 'Delete lookbook sheet',
+                    confirmationTitle: 'Delete Lookbook Sheet?',
+                    confirmationMessage:
+                      'Remove this lookbook sheet from the lookbook. This cannot be undone.',
+                    onDelete: async () => {
+                      await onDeleteSheet(sheet.id);
+                      closePreviewForResourceId(sheet.id);
+                    },
+                  },
+                  emptyState: { kind: 'image' as const },
                 },
               };
             })}
-            gridClassName='grid-cols-[repeat(auto-fill,minmax(480px,1fr))]'
+            minimumCardWidthPx={480}
           />
         </div>
       </div>

@@ -38,10 +38,10 @@ generation work, or calculate cost.
 Reusable frontend behavior belongs to the layer that owns its meaning.
 
 Domain-neutral design-system behavior belongs in `src/ui`. Examples include
-buttons, dialogs, tabs, tooltips, image preview dialogs, image-card grids,
-overlay image cards, image selection controls, and the token-themed
-`SyntaxTextEditor` wrapper for embedded Markdown or JSON editing. Feature code
-must consume that wrapper instead of importing `prism-react-editor` directly.
+buttons, dialogs, tabs, tooltips, image preview dialogs, the shared
+`src/ui/media-card` module, and the token-themed `SyntaxTextEditor` wrapper for
+embedded Markdown or JSON editing. Feature code must consume that wrapper
+instead of importing `prism-react-editor` directly.
 
 Product-specific composition belongs in `src/features`. A Cast component can
 prepare Cast data, choose which asset role to show, and pass Cast-specific
@@ -77,13 +77,35 @@ These surfaces should feel like one application.
 
 Shared media surfaces should use the same conventions:
 
-- image cards use the shared overlay card primitive;
-- repeated media cards use the shared image-card grid primitive;
+- included visual-card surfaces use `MediaCard`;
+- repeated included cards use `MediaCardGrid`;
 - image previews use the shared image preview dialog;
 - destructive image actions use the shared delete confirmation dialog;
-- pick or active controls use the shared image selection control;
-- top-right card space is reserved for actions such as delete;
-- lower-right overlay space is reserved for pick or active-state controls.
+- selection is persistent in the lower-right corner;
+- Edit follows selection in the lower-right corner;
+- delete uses the one shared top-right treatment;
+- whole-card activation is a sibling layer behind the action controls, so the
+  DOM never nests interactive controls.
+
+`MediaCard` has four bounded presentations: overlay, thumbnail, evidence, and
+summary. It supports the media and frame shapes used by current Studio cards;
+it is not a generic render-slot container.
+
+The included surfaces are:
+
+- Cast and Location overview cards and asset galleries;
+- Inspiration folders and grabs;
+- Production and Storyboard Lookbook evidence, hero, and asset cards;
+- Scene, Act, and Sequence storyboard cards;
+- Project Library cards;
+- Generation Preview and Image Revision reference cards;
+- Reference Picker candidates;
+- Shot Design Composition and Motion options.
+
+Pure presentation media remains outside `MediaCard`: Cast and Location detail
+feature images, the Studio sidebar cover and logo, preview-dialog media,
+standalone video players, tooltip portraits, upload/dropzone visuals, audio
+cards, and non-media report widgets.
 
 Text on image cards should be sparse and useful. The app should not surface raw
 filenames, asset ids, producer identifiers, or kebab-case labels as visible
@@ -170,3 +192,6 @@ For media surfaces, verification should check:
   the shared resource-refresh system used by browser surfaces.
 - `../decisions/0037-use-playwright-for-studio-browser-e2e.md` defines the
   Studio browser E2E test infrastructure and AI-assisted testing boundaries.
+- `../decisions/0053-use-one-configurable-studio-media-card.md` defines the
+  included card surfaces, exclusions, bounded presentations, and shared action
+  placement.

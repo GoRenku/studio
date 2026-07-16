@@ -6,8 +6,9 @@ import {
   matchesSequenceResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
+import { MediaCard } from '@/ui/media-card/media-card';
+import type { MediaCardMosaicCell } from '@/ui/media-card/media-card-contract';
 import type { StudioSelection } from '../movie-studio-selection';
 import { SEQUENCE_STORYBOARD_LAYOUT } from './sequence-storyboard-layout';
 
@@ -104,38 +105,41 @@ function SequenceStoryboardPreviewCard({
   images,
   onClick,
 }: SequenceStoryboardPreviewCardProps) {
-  const cells = Array.from({ length: 4 }, (_, index) => images[index] ?? null);
   return (
-    <Button
-      type='button'
-      variant='ghost'
-      onClick={onClick}
-      className='group h-auto min-w-0 flex-col overflow-hidden rounded-md border border-border/40 bg-card p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-item-active-border hover:bg-card'
-    >
-      <span className='grid aspect-[4/3] w-full grid-cols-2 grid-rows-2 gap-px overflow-hidden bg-border/50'>
-        {cells.map((cell, index) => (
-          <span
-            key={cell?.beatId ?? `empty-${index}`}
-            className='block min-h-0 bg-muted'
-          >
-            {cell?.image ? (
-              <img
-                src={cell.image.url}
-                alt={title}
-                className='h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]'
-              />
-            ) : null}
-          </span>
-        ))}
-      </span>
-      <span className='flex w-full flex-col gap-1 px-3 py-3'>
-        <span className='truncate text-sm font-semibold text-foreground'>
-          {title}
-        </span>
-        {metadata ? (
-          <span className='truncate text-xs text-muted-foreground'>{metadata}</span>
-        ) : null}
-      </span>
-    </Button>
+    <MediaCard
+      media={{
+        kind: 'mosaic',
+        cells: [
+          mosaicCell(images[0], title, 0),
+          mosaicCell(images[1], title, 1),
+          mosaicCell(images[2], title, 2),
+          mosaicCell(images[3], title, 3),
+        ],
+      }}
+      frame={{ kind: 'ratio', aspectRatio: 4 / 3 }}
+      presentation={{
+        kind: 'overlay',
+        copy: {
+          title,
+          description: metadata,
+        },
+      }}
+      activation={{
+        label: title,
+        onActivate: onClick,
+      }}
+    />
   );
+}
+
+function mosaicCell(
+  item: SequenceStoryboardPreviewCardProps['images'][number] | undefined,
+  title: string,
+  index: number
+): MediaCardMosaicCell {
+  return {
+    id: item?.beatId ?? `empty-${index}`,
+    src: item?.image?.url,
+    alt: title,
+  };
 }

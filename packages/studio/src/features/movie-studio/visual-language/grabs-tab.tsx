@@ -1,14 +1,13 @@
 import { useState, type DragEvent } from 'react';
 import type { InspirationFolderResource } from '@gorenku/studio-core/client';
-import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import { FileUploadDropzone } from '@/ui/file-upload-dropzone';
 import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
-import { ImageCardGrid } from '@/ui/image-card-grid';
+import { MediaCard } from '@/ui/media-card/media-card';
+import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 import { cn } from '@/lib/utils';
-import { GrabCard } from './grab-card';
 import { inspirationImageUrl } from './visual-language-image-urls';
 
 interface GrabsTabProps {
@@ -27,7 +26,6 @@ export function GrabsTab({
   const images = resource.images;
   const [draggingFiles, setDraggingFiles] = useState(false);
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
-  const [deleteFileName, setDeleteFileName] = useState<string | null>(null);
   const uploadDroppedFiles = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDraggingFiles(false);
@@ -68,7 +66,7 @@ export function GrabsTab({
         onDrop={uploadDroppedFiles}
       >
         {images.length ? (
-          <ImageCardGrid>
+          <MediaCardGrid minimumCardWidthPx={180}>
             {images.map((image) => {
               const src = inspirationImageUrl(
                 projectName,
@@ -76,23 +74,43 @@ export function GrabsTab({
                 image.fileName
               );
               return (
-                <GrabCard
+                <MediaCard
                   key={image.fileName}
-                  src={src}
-                  fileName={image.fileName}
-                  onOpen={() =>
-                    setPreviewImage({
-                      src,
-                      alt: `${image.fileName} inspiration grab`,
-                      title: image.fileName,
-                    })
-                  }
-                  onDelete={() => setDeleteFileName(image.fileName)}
+                  media={{
+                    kind: 'image',
+                    src,
+                    alt: `${image.fileName} inspiration grab`,
+                    fit: 'cover',
+                    effect: 'zoom-on-hover',
+                  }}
+                  frame={{ kind: 'ratio', aspectRatio: 16 / 10 }}
+                  presentation={{ kind: 'overlay' }}
+                  activation={{
+                    label: `${image.fileName} inspiration grab`,
+                    onActivate: () =>
+                      setPreviewImage({
+                        src,
+                        alt: `${image.fileName} inspiration grab`,
+                        title: image.fileName,
+                      }),
+                  }}
+                  deleteAction={{
+                    label: `Delete ${image.fileName}`,
+                    confirmationTitle: 'Delete Image?',
+                    confirmationMessage:
+                      'Remove this grab from the folder. This cannot be undone.',
+                    onDelete: async () => {
+                      await onDeleteImage(image.fileName);
+                      setPreviewImage((current) =>
+                        current?.src === src ? null : current
+                      );
+                    },
+                  }}
                 />
               );
             })}
             <FileButton onFiles={(files) => void onUpload(files)} />
-          </ImageCardGrid>
+          </MediaCardGrid>
         ) : (
           <FileUploadDropzone
             accept='image/*'
@@ -107,17 +125,6 @@ export function GrabsTab({
         images={previewImage ? [previewImage] : []}
         currentIndex={0}
         onOpenChange={(open) => !open && setPreviewImage(null)}
-      />
-      <DeleteConfirmDialog
-        open={Boolean(deleteFileName)}
-        onOpenChange={(open) => !open && setDeleteFileName(null)}
-        title='Delete Image?'
-        message='Remove this grab from the folder. This cannot be undone.'
-        onDelete={async () => {
-          if (!deleteFileName) return;
-          await onDeleteImage(deleteFileName);
-          setDeleteFileName(null);
-        }}
       />
     </>
   );

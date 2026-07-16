@@ -41,7 +41,7 @@ interface ProductionLookbookReportProps {
   sections: ProductionVisualLanguageSections;
   source: LookbookReportSource;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }
 
 export function ProductionLookbookReport({
@@ -49,7 +49,7 @@ export function ProductionLookbookReport({
   sections,
   source,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: ProductionLookbookReportProps) {
   const themeColors = sections.palette.colors.map((color) => color.hex);
   const thesisImages = imagesForSection(
@@ -78,7 +78,7 @@ export function ProductionLookbookReport({
             images={thesisImages}
             size='feature'
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
           {sections.thesis.principles.length ? (
             <PrincipleList principles={sections.thesis.principles} />
@@ -99,13 +99,13 @@ export function ProductionLookbookReport({
             projectName={projectName}
             source={source}
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
           <EvidenceGrid
             images={imagesForSection(projectName, source, 'palette')}
             size='feature'
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
         </div>
       </SectionWideContent>
@@ -137,7 +137,7 @@ export function ProductionLookbookReport({
             images={toneImages}
             size='feature'
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
         </div>
       </SectionWideContent>
@@ -151,7 +151,7 @@ export function ProductionLookbookReport({
         projectName={projectName}
         source={source}
         onOpenImage={onOpenImage}
-        onRequestDeleteImage={onRequestDeleteImage}
+        onDeleteImage={onDeleteImage}
       />
 
       <PatternReportSection
@@ -163,7 +163,7 @@ export function ProductionLookbookReport({
         projectName={projectName}
         source={source}
         onOpenImage={onOpenImage}
-        onRequestDeleteImage={onRequestDeleteImage}
+        onDeleteImage={onDeleteImage}
       />
 
       <LookbookReportSection number='06' kicker='Surface' title='Texture'>
@@ -178,13 +178,13 @@ export function ProductionLookbookReport({
             projectName={projectName}
             source={source}
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
           <EvidenceGrid
             images={imagesForSection(projectName, source, 'texture')}
             size='feature'
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
         </div>
       </SectionWideContent>
@@ -205,7 +205,7 @@ export function ProductionLookbookReport({
               projectName={projectName}
               source={source}
               onOpenImage={onOpenImage}
-              onRequestDeleteImage={onRequestDeleteImage}
+              onDeleteImage={onDeleteImage}
             />
             <PatternDeck
               title='Motion'
@@ -213,7 +213,7 @@ export function ProductionLookbookReport({
               projectName={projectName}
               source={source}
               onOpenImage={onOpenImage}
-              onRequestDeleteImage={onRequestDeleteImage}
+              onDeleteImage={onDeleteImage}
             />
             <PatternDeck
               title='Framing'
@@ -221,13 +221,13 @@ export function ProductionLookbookReport({
               projectName={projectName}
               source={source}
               onOpenImage={onOpenImage}
-              onRequestDeleteImage={onRequestDeleteImage}
+              onDeleteImage={onDeleteImage}
             />
             <EvidenceGrid
               images={imagesForSection(projectName, source, 'camera')}
               size='feature'
               onOpenImage={onOpenImage}
-              onRequestDeleteImage={onRequestDeleteImage}
+              onDeleteImage={onDeleteImage}
             />
           </div>
         </SectionWideContent>
@@ -252,7 +252,7 @@ export function ProductionLookbookReport({
               projectName={projectName}
               source={source}
               onOpenImage={onOpenImage}
-              onRequestDeleteImage={onRequestDeleteImage}
+              onDeleteImage={onDeleteImage}
             />
           </div>
         </SectionWideContent>
@@ -335,7 +335,7 @@ function PatternReportSection({
   projectName,
   source,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   number: string;
   kicker: string;
@@ -345,7 +345,7 @@ function PatternReportSection({
   projectName: string;
   source: LookbookReportSource;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   return (
     <>
@@ -361,13 +361,13 @@ function PatternReportSection({
             projectName={projectName}
             source={source}
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
           <EvidenceGrid
             images={imagesForSection(projectName, source, sectionKey)}
             size='feature'
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
         </div>
       </SectionWideContent>
@@ -381,14 +381,14 @@ function PatternDeck({
   projectName,
   source,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   title?: string;
   patterns: Pattern[];
   projectName: string;
   source: LookbookReportSource;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!patterns.length) return null;
   const cards = patterns.map((pattern) => ({
@@ -408,7 +408,7 @@ function PatternDeck({
             pattern={pattern}
             images={images}
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
         ))}
       </div>
@@ -420,12 +420,12 @@ function PatternCard({
   pattern,
   images,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   pattern: Pattern;
   images: ReportImage[];
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   const displayImages = images.slice(0, LookbookEvidenceDisplayLimit);
   const layout = evidenceLayoutForCount(displayImages.length);
@@ -436,7 +436,7 @@ function PatternCard({
         title={pattern.name}
         description={pattern.description}
         onOpenImage={onOpenImage}
-        onRequestDeleteImage={onRequestDeleteImage}
+        onDeleteImage={onDeleteImage}
       />
     );
   }
@@ -465,7 +465,7 @@ function PatternCard({
             images={displayImages}
             size='compact'
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
         </div>
       ) : (
@@ -487,13 +487,13 @@ function ObservationDeck({
   projectName,
   source,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   observations: Observation[];
   projectName: string;
   source: LookbookReportSource;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!observations.length) return null;
   return (
@@ -504,7 +504,7 @@ function ObservationDeck({
           observation={observation}
           images={imagesForNestedReferences(projectName, source, observation)}
           onOpenImage={onOpenImage}
-          onRequestDeleteImage={onRequestDeleteImage}
+          onDeleteImage={onDeleteImage}
         />
       ))}
     </div>
@@ -515,12 +515,12 @@ function ObservationCard({
   observation,
   images,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   observation: Observation;
   images: ReportImage[];
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   const displayImages = images.slice(0, LookbookEvidenceDisplayLimit);
   const layout = evidenceLayoutForCount(displayImages.length);
@@ -530,7 +530,7 @@ function ObservationCard({
         image={displayImages[0]}
         description={observation.text}
         onOpenImage={onOpenImage}
-        onRequestDeleteImage={onRequestDeleteImage}
+        onDeleteImage={onDeleteImage}
       />
     );
   }
@@ -557,7 +557,7 @@ function ObservationCard({
           images={displayImages}
           size='compact'
           onOpenImage={onOpenImage}
-          onRequestDeleteImage={onRequestDeleteImage}
+          onDeleteImage={onDeleteImage}
         />
       </div>
     </div>
@@ -569,13 +569,13 @@ function LineageGrid({
   projectName,
   source,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   section: InspiredBySection;
   projectName: string;
   source: LookbookReportSource;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!section.items.length) return null;
   return (
@@ -602,7 +602,7 @@ function LineageGrid({
             size='compact'
             className='mt-4'
             onOpenImage={onOpenImage}
-            onRequestDeleteImage={onRequestDeleteImage}
+            onDeleteImage={onDeleteImage}
           />
         </div>
       ))}

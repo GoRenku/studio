@@ -51,8 +51,9 @@ describe('App', () => {
 
     renderApp();
 
-    const projectTitle = await screen.findByText('Preparation of the Siege');
-    fireEvent.click(projectTitle.closest('button')!);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Preparation of the Siege' })
+    );
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/projects/constantinople');

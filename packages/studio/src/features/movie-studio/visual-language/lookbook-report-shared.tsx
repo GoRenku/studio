@@ -1,13 +1,7 @@
 import type { ReactNode } from 'react';
-import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/ui/tooltip';
 import type { PreviewImage } from '@/ui/image-preview-dialog';
+import { MediaCard } from '@/ui/media-card/media-card';
 import {
   readableImageTitle,
   type ReportImage,
@@ -113,13 +107,13 @@ export function EvidenceGrid({
   size,
   className,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   images: ReportImage[];
   size: 'feature' | 'compact';
   className?: string;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!images.length) return null;
   return (
@@ -132,25 +126,48 @@ export function EvidenceGrid({
         className
       )}
     >
-      {images.map((image) => (
-        <EvidenceImage
-          key={image.id}
-          image={image}
-          size={size}
-          onOpen={() =>
-            onOpenImage({
+      {images.map((image) => {
+        const title = readableImageTitle(image);
+        return (
+          <MediaCard
+            key={image.id}
+            media={{
+              kind: 'image',
               src: image.src,
               alt: image.alt,
-              title: readableImageTitle(image),
-            })
-          }
-          onRequestDelete={
-            image.lookbookImageId && onRequestDeleteImage
-              ? () => onRequestDeleteImage(image)
-              : undefined
-          }
-        />
-      ))}
+              fit: 'cover',
+              effect: 'none',
+            }}
+            frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+            presentation={{
+              kind: 'evidence',
+              copy: image.lookbookImageId
+                ? { kind: 'label', label: title }
+                : undefined,
+            }}
+            activation={{
+              label: title,
+              onActivate: () =>
+                onOpenImage({
+                  src: image.src,
+                  alt: image.alt,
+                  title,
+                }),
+            }}
+            deleteAction={
+              image.lookbookImageId && onDeleteImage
+                ? {
+                    label: `Delete ${title}`,
+                    confirmationTitle: 'Delete Image?',
+                    confirmationMessage:
+                      'Remove this image from the lookbook. This cannot be undone.',
+                    onDelete: () => onDeleteImage(image),
+                  }
+                : undefined
+            }
+          />
+        );
+      })}
     </div>
   );
 }
@@ -160,128 +177,55 @@ export function EvidenceFeatureCard({
   title,
   description,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   image: ReportImage;
   title?: string;
   description: string;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
+  const readableTitle = readableImageTitle(image);
   return (
-    <figure
-      className='group relative min-h-[320px] overflow-hidden rounded-md border border-border/40 bg-card shadow-[0_18px_45px_rgba(0,0,0,0.32)]'
-      title={image.title}
-      data-lookbook-evidence-layout='single'
-    >
-      <Button
-        type='button'
-        variant='ghost'
-        className='block h-full min-h-[320px] w-full rounded-none p-0 hover:bg-transparent'
-        onClick={() =>
-          onOpenImage({
-            src: image.src,
-            alt: image.alt,
-            title: readableImageTitle(image),
-          })
+    <div data-lookbook-evidence-layout='single'>
+      <MediaCard
+        media={{
+          kind: 'image',
+          src: image.src,
+          alt: image.alt,
+          fit: 'cover',
+          effect: 'none',
+        }}
+        frame={{ kind: 'minimum-height', minimumHeightPx: 320 }}
+        presentation={{
+          kind: 'evidence',
+          copy: {
+            kind: 'feature',
+            title,
+            description,
+          },
+        }}
+        activation={{
+          label: readableTitle,
+          onActivate: () =>
+            onOpenImage({
+              src: image.src,
+              alt: image.alt,
+              title: readableTitle,
+            }),
+        }}
+        deleteAction={
+          onDeleteImage && image.lookbookImageId
+            ? {
+                label: `Delete ${readableTitle}`,
+                confirmationTitle: 'Delete Image?',
+                confirmationMessage:
+                  'Remove this image from the lookbook. This cannot be undone.',
+                onDelete: () => onDeleteImage(image),
+              }
+            : undefined
         }
-      >
-        <img
-          src={image.src}
-          alt={image.alt}
-          className='h-full min-h-[320px] w-full object-cover'
-        />
-      </Button>
-      <figcaption className='pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/62 to-transparent px-5 pb-5 pt-20 text-white'>
-        {title ? (
-          <h3 className='text-lg font-black leading-tight text-white'>{title}</h3>
-        ) : null}
-        <p className='mt-2 max-w-[720px] text-sm font-semibold leading-6 text-white/82'>
-          {description}
-        </p>
-      </figcaption>
-      {onRequestDeleteImage && image.lookbookImageId ? (
-        <span className='absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type='button'
-                size='icon'
-                variant='ghost'
-                className='h-7 w-7 bg-black/50 text-white shadow-sm hover:bg-destructive hover:text-destructive-foreground'
-                aria-label={`Delete ${readableImageTitle(image)}`}
-                onClick={() => onRequestDeleteImage(image)}
-              >
-                <Trash2 className='h-3.5 w-3.5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete image</TooltipContent>
-          </Tooltip>
-        </span>
-      ) : null}
-    </figure>
-  );
-}
-
-function EvidenceImage({
-  image,
-  size,
-  onOpen,
-  onRequestDelete,
-}: {
-  image: ReportImage;
-  size: 'feature' | 'compact';
-  onOpen: () => void;
-  onRequestDelete?: () => void;
-}) {
-  return (
-    <figure
-      className={cn(
-        'group relative overflow-hidden rounded-md border border-border/40 bg-card shadow-[0_18px_45px_rgba(0,0,0,0.3)]',
-        size === 'feature' ? 'min-h-0' : 'min-h-0'
-      )}
-      title={image.title}
-    >
-      <Button
-        type='button'
-        variant='ghost'
-        className='block h-auto w-full rounded-none p-0 hover:bg-transparent'
-        onClick={onOpen}
-      >
-        <span className='block aspect-video'>
-          <img
-            src={image.src}
-            alt={image.alt}
-            className='h-full w-full object-cover'
-          />
-        </span>
-      </Button>
-      {image.lookbookImageId ? (
-        <figcaption className='pointer-events-none absolute bottom-2 left-2 right-2 flex justify-start'>
-          <span className='max-w-full overflow-hidden rounded-sm border border-border/20 bg-panel-bg/70 px-2 py-1 text-[10px] font-medium leading-4 text-foreground/65 shadow-sm backdrop-blur-sm transition-opacity group-hover:text-foreground/85 group-focus-within:text-foreground/85 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]'>
-            {readableImageTitle(image)}
-          </span>
-        </figcaption>
-      ) : null}
-      {onRequestDelete ? (
-        <span className='absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type='button'
-                size='icon'
-                variant='ghost'
-                className='h-7 w-7 bg-black/50 text-white shadow-sm hover:bg-destructive hover:text-destructive-foreground'
-                aria-label={`Delete ${readableImageTitle(image)}`}
-                onClick={onRequestDelete}
-              >
-                <Trash2 className='h-3.5 w-3.5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete image</TooltipContent>
-          </Tooltip>
-        </span>
-      ) : null}
-    </figure>
+      />
+    </div>
   );
 }

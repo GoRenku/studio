@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
+import { MediaCard } from '@/ui/media-card/media-card';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneBeatSheetResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneBeatSheetResource } from '@/services/studio-screenplay-api';
@@ -119,23 +119,39 @@ export function SceneBeatsTab({
             const label = beatLabel(index);
             const image = resource.storyboardImagesByBeatId[beat.id];
             return (
-              <ImageOverlayCard
+              <MediaCard
                 key={beat.id}
-                title={beat.title}
-                description={label}
-                imageUrl={image?.url ?? null}
-                imageAlt={`${label} - ${beat.title}`}
-                aspectClassName='aspect-video'
-                aspectRatio={16 / 9}
-                selected={beat.id === selectedBeatId}
-                onOpen={() =>
-                  onSelect({
-                    type: 'scene',
-                    id: sceneId,
-                    sceneTab: 'beats',
-                    beatId: beat.id,
-                  })
+                media={
+                  image
+                    ? {
+                        kind: 'image',
+                        src: image.url,
+                        alt: `${label} - ${beat.title}`,
+                        fit: 'cover',
+                        effect: 'zoom-on-hover',
+                      }
+                    : null
                 }
+                frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+                presentation={{
+                  kind: 'overlay',
+                  copy: {
+                    title: beat.title,
+                    description: label,
+                  },
+                }}
+                selected={beat.id === selectedBeatId}
+                activation={{
+                  label: `${label} - ${beat.title}`,
+                  onActivate: () =>
+                    onSelect({
+                      type: 'scene',
+                      id: sceneId,
+                      sceneTab: 'beats',
+                      beatId: beat.id,
+                    }),
+                }}
+                emptyState={{ kind: 'image' }}
               />
             );
           })}

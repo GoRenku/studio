@@ -1,8 +1,6 @@
 import type { GenerationPreviewResourceReference } from '@gorenku/studio-core/client';
 import { AudioPreview } from '@/ui/audio-preview';
-import { ImageOverlayCard } from '@/ui/image-overlay-card';
-import { ImageSelectionControl } from '@/ui/image-selection-control';
-import { VideoPreview } from '@/ui/video-preview';
+import { MediaCard } from '@/ui/media-card/media-card';
 
 interface GenerationPreviewReferenceCardProps {
   reference: GenerationPreviewResourceReference;
@@ -37,35 +35,47 @@ export function GenerationPreviewReferenceCard({
   }
 
   return (
-    <ImageOverlayCard
-      title={title}
-      imageUrl={reference.browserUrl}
-      imageAlt={title ?? 'Generation preview reference'}
-      selected={selected}
-      previewContent={
+    <MediaCard
+      media={
         reference.kind === 'video'
-          ? ({ active }) => (
-              <VideoPreview
-                src={reference.browserUrl}
-                title={reference.label}
-                active={active}
-                className='h-full w-full object-cover'
-              />
-            )
+          ? {
+              kind: 'video',
+              src: reference.browserUrl,
+              title: reference.label,
+              playback: onOpen ? 'hover-muted' : 'still',
+            }
+          : {
+              kind: 'image',
+              src: reference.browserUrl,
+              alt: title ?? 'Generation preview reference',
+              fit: 'cover',
+              effect: 'zoom-on-hover',
+            }
+      }
+      frame={{ kind: 'ratio', aspectRatio: 16 / 10 }}
+      presentation={{
+        kind: 'overlay',
+        copy: title ? { title } : undefined,
+      }}
+      selected={selected}
+      selection={
+        onToggleSelected
+          ? {
+              selected,
+              selectedLabel: `Exclude ${title ?? 'reference'}`,
+              unselectedLabel: `Include ${title ?? 'reference'}`,
+              onToggle: onToggleSelected,
+            }
           : undefined
       }
-      topRightAction={
-        onToggleSelected ? (
-          <ImageSelectionControl
-            selected={selected}
-            selectedLabel={`Exclude ${title ?? 'reference'}`}
-            unselectedLabel={`Include ${title ?? 'reference'}`}
-            onToggleSelected={async () => onToggleSelected()}
-          />
-        ) : undefined
+      activation={
+        onOpen
+          ? {
+              label: title ?? reference.label,
+              onActivate: onOpen,
+            }
+          : undefined
       }
-      topRightActionPersistent={Boolean(onToggleSelected)}
-      onOpen={onOpen}
     />
   );
 }

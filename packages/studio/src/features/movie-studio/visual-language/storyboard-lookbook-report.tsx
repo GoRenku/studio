@@ -7,15 +7,10 @@ import type {
   StoryboardStyleBriefSection,
   StoryboardValueAndAccentSection,
 } from '@gorenku/studio-core/client';
-import { Ban, Check, Trash2 } from 'lucide-react';
+import { Ban, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/ui/button';
 import type { PreviewImage } from '@/ui/image-preview-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/ui/tooltip';
+import { MediaCard } from '@/ui/media-card/media-card';
 import {
   EvidenceGrid,
 } from './lookbook-report-shared';
@@ -31,7 +26,7 @@ interface StoryboardLookbookReportProps {
   sections: StoryboardLookbookDefinition;
   source: LookbookReportSource;
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }
 
 export function StoryboardLookbookReport({
@@ -39,7 +34,7 @@ export function StoryboardLookbookReport({
   sections,
   source,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: StoryboardLookbookReportProps) {
   const styleBriefImages = imagesForSection(projectName, source, 'styleBrief');
   const heroImage = styleBriefImages[0];
@@ -60,18 +55,37 @@ export function StoryboardLookbookReport({
     <>
       <StoryboardSection number='01' title='Style brief'>
         {heroImage ? (
-          <StoryboardHero
-            image={heroImage}
-            onOpen={() =>
-              onOpenImage({
-                src: heroImage.src,
-                alt: heroImage.alt,
-                title: readableImageTitle(heroImage),
-              })
-            }
-            onRequestDelete={
-              heroImage.lookbookImageId && onRequestDeleteImage
-                ? () => onRequestDeleteImage(heroImage)
+          <MediaCard
+            media={{
+              kind: 'image',
+              src: heroImage.src,
+              alt: heroImage.alt,
+              fit: 'cover',
+              effect: 'none',
+            }}
+            frame={{ kind: 'intrinsic' }}
+            presentation={{
+              kind: 'evidence',
+              copy: { kind: 'label', label: 'Overall style' },
+            }}
+            activation={{
+              label: readableImageTitle(heroImage),
+              onActivate: () =>
+                onOpenImage({
+                  src: heroImage.src,
+                  alt: heroImage.alt,
+                  title: readableImageTitle(heroImage),
+                }),
+            }}
+            deleteAction={
+              heroImage.lookbookImageId && onDeleteImage
+                ? {
+                    label: 'Delete hero image',
+                    confirmationTitle: 'Delete Image?',
+                    confirmationMessage:
+                      'Remove this image from the lookbook. This cannot be undone.',
+                    onDelete: () => onDeleteImage(heroImage),
+                  }
                 : undefined
             }
           />
@@ -86,7 +100,7 @@ export function StoryboardLookbookReport({
               images={supportingStyleBriefImages}
               size='feature'
               onOpenImage={onOpenImage}
-              onRequestDeleteImage={onRequestDeleteImage}
+              onDeleteImage={onDeleteImage}
             />
           </div>
         ) : null}
@@ -102,7 +116,7 @@ export function StoryboardLookbookReport({
           text={sections.lineAndFinish.text}
           images={lineAndFinishImages}
           onOpenImage={onOpenImage}
-          onRequestDeleteImage={onRequestDeleteImage}
+          onDeleteImage={onDeleteImage}
         />
       </StoryboardSection>
       <StoryboardSection number='03' title='Value and accent'>
@@ -116,7 +130,7 @@ export function StoryboardLookbookReport({
           text={sections.valueAndAccent.text}
           images={valueAndAccentImages}
           onOpenImage={onOpenImage}
-          onRequestDeleteImage={onRequestDeleteImage}
+          onDeleteImage={onDeleteImage}
         />
       </StoryboardSection>
       <StoryboardSection number='04' title='Guardrails'>
@@ -130,7 +144,7 @@ export function StoryboardLookbookReport({
               images={guardrailImages}
               size='feature'
               onOpenImage={onOpenImage}
-              onRequestDeleteImage={onRequestDeleteImage}
+              onDeleteImage={onDeleteImage}
             />
           </div>
         ) : null}
@@ -186,13 +200,13 @@ function StoryboardSpecimenBody({
   text,
   images,
   onOpenImage,
-  onRequestDeleteImage,
+  onDeleteImage,
 }: {
   widget: ReactNode | null;
   text: string;
   images: ReportImage[];
   onOpenImage: (image: PreviewImage) => void;
-  onRequestDeleteImage?: (image: ReportImage) => void;
+  onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   return (
     <>
@@ -210,66 +224,10 @@ function StoryboardSpecimenBody({
           size='feature'
           className='mt-6'
           onOpenImage={onOpenImage}
-          onRequestDeleteImage={onRequestDeleteImage}
+          onDeleteImage={onDeleteImage}
         />
       ) : null}
     </>
-  );
-}
-
-function StoryboardHero({
-  image,
-  onOpen,
-  onRequestDelete,
-}: {
-  image: ReportImage;
-  onOpen: () => void;
-  onRequestDelete?: () => void;
-}) {
-  return (
-    <figure
-      className='group relative overflow-hidden rounded-md border border-border/40 bg-card shadow-[0_18px_45px_rgba(0,0,0,0.3)]'
-      title={image.title}
-    >
-      <Button
-        type='button'
-        variant='ghost'
-        className='block h-auto w-full rounded-none p-0 hover:bg-transparent'
-        onClick={onOpen}
-      >
-        <span className='block'>
-          <img
-            src={image.src}
-            alt={image.alt}
-            className='block h-auto w-full'
-          />
-        </span>
-      </Button>
-      <figcaption className='pointer-events-none absolute bottom-2 left-2 flex justify-start'>
-        <span className='rounded-sm border border-border/20 bg-panel-bg/70 px-2 py-1 text-[10px] font-medium leading-4 text-foreground/70 shadow-sm backdrop-blur-sm'>
-          Overall style
-        </span>
-      </figcaption>
-      {onRequestDelete ? (
-        <span className='absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type='button'
-                size='icon'
-                variant='ghost'
-                className='h-7 w-7 bg-black/50 text-white shadow-sm hover:bg-destructive hover:text-destructive-foreground'
-                aria-label='Delete hero image'
-                onClick={onRequestDelete}
-              >
-                <Trash2 className='h-3.5 w-3.5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete image</TooltipContent>
-          </Tooltip>
-        </span>
-      ) : null}
-    </figure>
   );
 }
 

@@ -11,6 +11,7 @@ import {
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
+import { MediaCard } from '@/ui/media-card/media-card';
 import { cn } from '@/lib/utils';
 import type { StudioSelection } from '../movie-studio-selection';
 import { ACT_STORYBOARD_LAYOUT } from './act-storyboard-layout';
@@ -195,40 +196,38 @@ function BeatThumbnail({
   onSelect: (selection: StudioSelection) => void;
 }) {
   return (
-    <Button
-      type='button'
-      variant='ghost'
-      onClick={() =>
-        onSelect({
-          type: 'scene',
-          id: sceneId,
-          sceneTab: 'beats',
-          beatId: beat.beatId,
-        })
+    <MediaCard
+      media={
+        beat.image
+          ? {
+              kind: 'image',
+              src: beat.image.url,
+              alt: `${beat.label} — ${beat.title}`,
+              fit: 'cover',
+              effect: 'zoom-on-hover',
+            }
+          : null
       }
-      aria-label={`${beat.label} — ${beat.title}`}
-      className='group h-auto min-w-0 flex-col items-stretch gap-1.5 overflow-hidden rounded-md border border-border/40 bg-card p-0 text-left hover:border-item-active-border hover:bg-card'
-    >
-      <span className='aspect-[4/3] w-full overflow-hidden bg-muted'>
-        {beat.image ? (
-          <img
-            src={beat.image.url}
-            alt={`${beat.label} — ${beat.title}`}
-            className='h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]'
-          />
-        ) : (
-          <span className='flex h-full items-center justify-center text-muted-foreground'>
-            <ImageOff className='h-4 w-4' />
-          </span>
-        )}
-      </span>
-      <span className='flex w-full flex-col gap-0.5 px-2 pb-2'>
-        <span className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-          {beat.label}
-        </span>
-        <span className='truncate text-xs text-foreground/85'>{beat.title}</span>
-      </span>
-    </Button>
+      frame={{ kind: 'ratio', aspectRatio: 4 / 3 }}
+      presentation={{
+        kind: 'overlay',
+        copy: {
+          title: beat.title,
+          description: beat.label,
+        },
+      }}
+      activation={{
+        label: `${beat.label} — ${beat.title}`,
+        onActivate: () =>
+          onSelect({
+            type: 'scene',
+            id: sceneId,
+            sceneTab: 'beats',
+            beatId: beat.beatId,
+          }),
+      }}
+      emptyState={{ kind: 'image' }}
+    />
   );
 }
 

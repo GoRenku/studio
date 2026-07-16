@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import type { StoryboardLookbookDefinition } from '@gorenku/studio-core/client';
-import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import {
   ImagePreviewDialog,
   type PreviewImage,
@@ -41,11 +40,16 @@ export function VisualLanguageReport({
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(
     null
   );
-  const [deleteImage, setDeleteImage] = useState<ReportImage | null>(null);
   const canDeleteLookbookImages =
     source.kind === 'lookbook' && Boolean(onDeleteLookbookImage);
-  const onRequestDeleteImage = canDeleteLookbookImages
-    ? setDeleteImage
+  const onDeleteImage = canDeleteLookbookImages
+    ? async (image: ReportImage) => {
+        if (!image.lookbookImageId || !onDeleteLookbookImage) return;
+        await onDeleteLookbookImage(image.lookbookImageId);
+        if (previewImage?.src === image.src) {
+          setPreviewImage(null);
+        }
+      }
     : undefined;
 
   return (
@@ -61,7 +65,7 @@ export function VisualLanguageReport({
           sections={sections}
           source={source}
           onOpenImage={setPreviewImage}
-          onRequestDeleteImage={onRequestDeleteImage}
+          onDeleteImage={onDeleteImage}
         />
       ) : (
         <ProductionLookbookReport
@@ -69,27 +73,13 @@ export function VisualLanguageReport({
           sections={sections}
           source={source}
           onOpenImage={setPreviewImage}
-          onRequestDeleteImage={onRequestDeleteImage}
+          onDeleteImage={onDeleteImage}
         />
       )}
       <ImagePreviewDialog
         images={previewImage ? [previewImage] : []}
         currentIndex={0}
         onOpenChange={(open) => !open && setPreviewImage(null)}
-      />
-      <DeleteConfirmDialog
-        open={Boolean(deleteImage)}
-        onOpenChange={(open) => !open && setDeleteImage(null)}
-        title='Delete Image?'
-        message='Remove this image from the lookbook. This cannot be undone.'
-        onDelete={async () => {
-          if (!deleteImage?.lookbookImageId || !onDeleteLookbookImage) return;
-          await onDeleteLookbookImage(deleteImage.lookbookImageId);
-          setDeleteImage(null);
-          if (previewImage?.src === deleteImage.src) {
-            setPreviewImage(null);
-          }
-        }}
       />
     </LookbookReportFrame>
   );
