@@ -45,12 +45,12 @@ export async function createMinimalMovieProject(input: {
     logline: 'A deterministic browser E2E project.',
     summary: 'Created through core-owned project commands for Playwright tests.',
     aspectRatio: '16:9',
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     idGenerator: createDeterministicIdGenerator(),
   });
   await projectData.openCurrentProject({
     projectName: input.projectName,
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
   });
 
   return {
@@ -69,7 +69,7 @@ export async function createBeatSheetMovieProject(input: {
   const project = await createMinimalMovieProject(input);
 
   await projectData.applyCastOperations({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     document: {
       kind: 'castOperations',
       operations: [
@@ -88,7 +88,7 @@ export async function createBeatSheetMovieProject(input: {
     idGenerator: createDeterministicIdGenerator(),
   });
   await projectData.applyLocationOperations({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     document: {
       kind: 'locationOperations',
       operations: [
@@ -106,17 +106,17 @@ export async function createBeatSheetMovieProject(input: {
     idGenerator: createDeterministicIdGenerator(),
   });
   await projectData.createScreenplay({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     document: sampleScreenplayCreateDocument(),
     idGenerator: createDeterministicIdGenerator(),
   });
 
   const ids = await readSampleIds({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectData,
   });
   const beatSheet = await projectData.writeSceneBeatSheet({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     document: sampleBeatSheet(ids),
     idGenerator: createDeterministicIdGenerator(),
   });
@@ -180,7 +180,10 @@ export function assertProjectIsInsideStorageRoot(input: {
   runtime: StudioE2eRuntime;
   project: StudioE2eProject;
 }): void {
-  const relative = path.relative(input.runtime.storageRoot, input.project.projectPath);
+  const relative = path.relative(
+    input.runtime.projectStorageRoot,
+    input.project.projectPath
+  );
   if (relative.startsWith('..') || path.isAbsolute(relative) || relative === '') {
     throw new Error(
       `Project path is not inside Studio E2E storage root: ${input.project.projectPath}`
@@ -334,37 +337,37 @@ async function seedProjectMedia(input: {
   const idGenerator = createDeterministicIdGenerator();
   await writeProjectFile({
     projectData: input.projectData,
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/media/urban-profile.png',
     contents: samplePng(),
   });
   await writeProjectFile({
     projectData: input.projectData,
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/media/urban-character-sheet.png',
     contents: samplePng(),
   });
   await writeProjectFile({
     projectData: input.projectData,
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/media/gate-location-sheet.png',
     contents: samplePng(),
   });
   await writeProjectFile({
     projectData: input.projectData,
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/media/lookbook-sheet.png',
     contents: samplePng(),
   });
   await writeProjectFile({
     projectData: input.projectData,
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/audio/urban-sample.mp3',
     contents: Buffer.from('urban voice sample'),
   });
 
   const profile = await input.projectData.attachGenerationMedia({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     purpose: 'cast.profile',
     target: { kind: 'castMember', id: input.ids.castMemberId },
@@ -372,7 +375,7 @@ async function seedProjectMedia(input: {
     title: 'Urban profile',
   });
   await input.projectData.updateAssetReference({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
     assetId: profile.asset.assetId,
@@ -381,13 +384,13 @@ async function seedProjectMedia(input: {
     purpose: 'Browser E2E selectable profile image.',
   });
   await input.projectData.setCastProfileDisplayAsset({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     castMemberId: input.ids.castMemberId,
     assetId: profile.asset.assetId,
   });
   const characterSheet = await input.projectData.attachGenerationMedia({
-      homeDir: input.runtime.homeDir,
+      homeDir: input.runtime.isolatedHomeDirectory,
       projectName: input.projectName,
       purpose: 'cast.character-sheet',
       target: { kind: 'castMember', id: input.ids.castMemberId },
@@ -395,7 +398,7 @@ async function seedProjectMedia(input: {
       title: 'Urban character sheet',
   });
   await input.projectData.updateAssetReference({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
     assetId: characterSheet.asset.assetId,
@@ -405,7 +408,7 @@ async function seedProjectMedia(input: {
   });
   const locationSheet =
     await input.projectData.attachGenerationMedia({
-      homeDir: input.runtime.homeDir,
+      homeDir: input.runtime.isolatedHomeDirectory,
       projectName: input.projectName,
       purpose: 'location.sheet',
       target: { kind: 'location', id: input.ids.locationId },
@@ -413,7 +416,7 @@ async function seedProjectMedia(input: {
       title: 'Gate Location Sheet',
     });
   await input.projectData.updateAssetReference({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     target: { kind: 'location', locationId: input.ids.locationId },
     assetId: locationSheet.asset.assetId,
@@ -424,12 +427,12 @@ async function seedProjectMedia(input: {
   });
   const lookbook = await input.projectData.writeProductionLookbook({
     projectName: input.projectName,
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     document: lookbookDocument(),
     idGenerator,
   });
   const lookbookSheet = await input.projectData.attachGenerationMedia({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     purpose: 'lookbook.video-sheet',
     target: { kind: 'lookbook', id: lookbook.lookbook.id },
@@ -437,7 +440,7 @@ async function seedProjectMedia(input: {
     title: 'Imperial Wound Sheet',
   });
   const voice = await input.projectData.attachCastVoice({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     document: {
       kind: 'castVoiceAttachment',
@@ -455,7 +458,7 @@ async function seedProjectMedia(input: {
     },
   });
   await input.projectData.generateSceneDialogueAudioTake({
-    homeDir: input.runtime.homeDir,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     sceneId: input.ids.sceneId,
     dialogueId: input.ids.dialogueId,

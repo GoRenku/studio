@@ -78,8 +78,15 @@ describe('Studio dev server runtime', () => {
   });
 
   it('configures Vite E2E mode to use the isolated browser-test port', async () => {
-    const previous = process.env.RENKU_STUDIO_E2E;
-    process.env.RENKU_STUDIO_E2E = '1';
+    const originalStudioE2eServerEnabled =
+      process.env.RENKU_STUDIO_E2E_SERVER_ENABLED;
+    const originalStudioE2eIsolatedHomeDirectory =
+      process.env.RENKU_STUDIO_E2E_ISOLATED_HOME_DIR;
+    process.env.RENKU_STUDIO_E2E_SERVER_ENABLED = '1';
+    process.env.RENKU_STUDIO_E2E_ISOLATED_HOME_DIR = path.join(
+      tempDir,
+      'studio-e2e-isolated-home'
+    );
     try {
       const config =
         typeof viteConfig === 'function'
@@ -92,11 +99,43 @@ describe('Studio dev server runtime', () => {
         strictPort: true,
       });
     } finally {
-      if (previous === undefined) {
-        delete process.env.RENKU_STUDIO_E2E;
-      } else {
-        process.env.RENKU_STUDIO_E2E = previous;
-      }
+      restoreEnvironmentVariable(
+        'RENKU_STUDIO_E2E_SERVER_ENABLED',
+        originalStudioE2eServerEnabled
+      );
+      restoreEnvironmentVariable(
+        'RENKU_STUDIO_E2E_ISOLATED_HOME_DIR',
+        originalStudioE2eIsolatedHomeDirectory
+      );
+    }
+  });
+
+  it('rejects Vite E2E server mode without an isolated home directory', async () => {
+    const originalStudioE2eServerEnabled =
+      process.env.RENKU_STUDIO_E2E_SERVER_ENABLED;
+    const originalStudioE2eIsolatedHomeDirectory =
+      process.env.RENKU_STUDIO_E2E_ISOLATED_HOME_DIR;
+    process.env.RENKU_STUDIO_E2E_SERVER_ENABLED = '1';
+    process.env.RENKU_STUDIO_E2E_ISOLATED_HOME_DIR = '';
+    try {
+      await expect(
+        Promise.resolve().then(() =>
+          typeof viteConfig === 'function'
+            ? viteConfig({ command: 'serve', mode: 'development' })
+            : viteConfig
+        )
+      ).rejects.toThrow(
+        'RENKU_STUDIO_E2E_ISOLATED_HOME_DIR is required for the E2E Studio runtime.'
+      );
+    } finally {
+      restoreEnvironmentVariable(
+        'RENKU_STUDIO_E2E_SERVER_ENABLED',
+        originalStudioE2eServerEnabled
+      );
+      restoreEnvironmentVariable(
+        'RENKU_STUDIO_E2E_ISOLATED_HOME_DIR',
+        originalStudioE2eIsolatedHomeDirectory
+      );
     }
   });
 
@@ -150,3 +189,11 @@ describe('Studio dev server runtime', () => {
     expect(contents).not.toContain('studioApiToken');
   });
 });
+
+function restoreEnvironmentVariable(name: string, originalValue: string | undefined): void {
+  if (originalValue === undefined) {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = originalValue;
+}

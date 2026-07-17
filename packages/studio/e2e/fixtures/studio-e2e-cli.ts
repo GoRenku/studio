@@ -40,7 +40,7 @@ export async function runStudioE2eMediaImport(input: {
     ],
     {
       cwd: input.runtime.workspaceRoot,
-      env: { ...process.env, HOME: input.runtime.homeDir },
+      env: { ...process.env, HOME: input.runtime.isolatedHomeDirectory },
     }
   );
 }

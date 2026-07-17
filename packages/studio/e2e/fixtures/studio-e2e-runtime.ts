@@ -8,8 +8,8 @@ export interface StudioE2eRuntime {
   workspaceRoot: string;
   runId: string;
   runRoot: string;
-  homeDir: string;
-  storageRoot: string;
+  isolatedHomeDirectory: string;
+  projectStorageRoot: string;
   serverUrl: string;
   keepArtifacts: boolean;
 }
@@ -22,36 +22,36 @@ export function prepareStudioE2eRuntime(input: {
     process.env.RENKU_STUDIO_E2E_RUN_ID ??
     `${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`;
   const runRoot =
-    process.env.RENKU_STUDIO_E2E_ROOT ??
+    process.env.RENKU_STUDIO_E2E_RUN_ROOT ??
     path.join(workspaceRoot, 'tmp', 'studio-e2e', runId);
-  const homeDir =
-    process.env.RENKU_STUDIO_E2E_HOME ?? path.join(runRoot, 'home');
-  const storageRoot =
-    process.env.RENKU_STUDIO_E2E_STORAGE_ROOT ??
-    path.join(homeDir, 'projects');
+  const isolatedHomeDirectory =
+    process.env.RENKU_STUDIO_E2E_ISOLATED_HOME_DIR ?? path.join(runRoot, 'home');
+  const projectStorageRoot =
+    process.env.RENKU_STUDIO_E2E_PROJECT_STORAGE_ROOT ??
+    path.join(isolatedHomeDirectory, 'projects');
   const runtime: StudioE2eRuntime = {
     packageRoot: input.packageRoot,
     workspaceRoot,
     runId,
     runRoot,
-    homeDir,
-    storageRoot,
+    isolatedHomeDirectory,
+    projectStorageRoot,
     serverUrl: STUDIO_E2E_SERVER_URL,
     keepArtifacts: process.env.RENKU_STUDIO_E2E_KEEP_ARTIFACTS === '1',
   };
 
-  fs.mkdirSync(path.join(homeDir, '.config', 'renku'), { recursive: true });
-  fs.mkdirSync(storageRoot, { recursive: true });
+  fs.mkdirSync(path.join(isolatedHomeDirectory, '.config', 'renku'), { recursive: true });
+  fs.mkdirSync(projectStorageRoot, { recursive: true });
   fs.writeFileSync(
-    path.join(homeDir, '.config', 'renku', 'config.yaml'),
-    `version: 0.1.0\nstorageRoot: ${storageRoot}\n`,
+    path.join(isolatedHomeDirectory, '.config', 'renku', 'config.yaml'),
+    `version: 0.1.0\nstorageRoot: ${projectStorageRoot}\n`,
     'utf8'
   );
 
   process.env.RENKU_STUDIO_E2E_RUN_ID = runtime.runId;
-  process.env.RENKU_STUDIO_E2E_ROOT = runtime.runRoot;
-  process.env.RENKU_STUDIO_E2E_HOME = runtime.homeDir;
-  process.env.RENKU_STUDIO_E2E_STORAGE_ROOT = runtime.storageRoot;
+  process.env.RENKU_STUDIO_E2E_RUN_ROOT = runtime.runRoot;
+  process.env.RENKU_STUDIO_E2E_ISOLATED_HOME_DIR = runtime.isolatedHomeDirectory;
+  process.env.RENKU_STUDIO_E2E_PROJECT_STORAGE_ROOT = runtime.projectStorageRoot;
 
   return runtime;
 }
@@ -59,16 +59,16 @@ export function prepareStudioE2eRuntime(input: {
 export function readStudioE2eRuntime(): StudioE2eRuntime {
   const packageRoot = path.resolve(studioE2eRuntimeModuleDir(), '..', '..');
   const workspaceRoot = path.resolve(packageRoot, '..', '..');
-  const runRoot = requiredEnv('RENKU_STUDIO_E2E_ROOT');
-  const homeDir = requiredEnv('RENKU_STUDIO_E2E_HOME');
-  const storageRoot = requiredEnv('RENKU_STUDIO_E2E_STORAGE_ROOT');
+  const runRoot = requiredEnv('RENKU_STUDIO_E2E_RUN_ROOT');
+  const isolatedHomeDirectory = requiredEnv('RENKU_STUDIO_E2E_ISOLATED_HOME_DIR');
+  const projectStorageRoot = requiredEnv('RENKU_STUDIO_E2E_PROJECT_STORAGE_ROOT');
   return {
     packageRoot,
     workspaceRoot,
     runId: requiredEnv('RENKU_STUDIO_E2E_RUN_ID'),
     runRoot,
-    homeDir,
-    storageRoot,
+    isolatedHomeDirectory,
+    projectStorageRoot,
     serverUrl: STUDIO_E2E_SERVER_URL,
     keepArtifacts: process.env.RENKU_STUDIO_E2E_KEEP_ARTIFACTS === '1',
   };

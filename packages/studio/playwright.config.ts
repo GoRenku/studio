@@ -50,13 +50,15 @@ export default defineConfig({
     stderr: 'pipe',
     env: {
       ...process.env,
-      HOME: runtime.homeDir,
-      RENKU_MOVIE_STUDIO_ROOT: runtime.storageRoot,
-      RENKU_STUDIO_E2E: '1',
+      HOME: runtime.isolatedHomeDirectory,
+      RENKU_MOVIE_STUDIO_ROOT: runtime.projectStorageRoot,
+      RENKU_STUDIO_E2E_SERVER_ENABLED: '1',
     },
   },
 });
 
-if (!fs.existsSync(runtime.storageRoot)) {
-  throw new Error(`Expected Studio E2E storage root to exist: ${runtime.storageRoot}`);
+if (!fs.existsSync(runtime.projectStorageRoot)) {
+  throw new Error(
+    `Expected Studio E2E project storage root to exist: ${runtime.projectStorageRoot}`
+  );
 }
