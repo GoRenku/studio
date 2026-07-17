@@ -623,16 +623,42 @@ than direct `window` listeners. Current examples include:
 - `project-shell`;
 - `project-information`;
 - `navigation:cast`;
-- `surface:cast-design:<castMemberId>`;
-- `surface:clip-design:<clipId>`;
-- `assets:castMember:<castMemberId>`;
-- `assets:clip:<clipId>`;
-- `markdown:<assetId>:<assetFileId>`.
+- `navigation:locations`;
+- `surface:castMember:<castMemberId>`;
+- `surface:location:<locationId>`;
+- `surface:visual-language:lookbook:<lookbookId>`;
+- `surface:scene:<sceneId>:beats`;
+- `surface:scene:<sceneId>:dialogue-audio`.
+
+Durable media attachments invalidate their current owner surface:
+
+| Attachment workflow | Resource key |
+| --- | --- |
+| Lookbook image, Video Lookbook Sheet, or Storyboard Lookbook Sheet | `surface:visual-language:lookbook:<lookbookId>` |
+| Cast Character Sheet, Profile, Voice sample, or eligible Image Revision | `surface:castMember:<castMemberId>` |
+| Location Sheet, Hero, or eligible Image Revision | `surface:location:<locationId>` |
+| Scene Beat storyboard image | `surface:scene:<sceneId>:beats` |
+| Scene Dialogue Audio | `surface:scene:<sceneId>:dialogue-audio` |
+
+There are no generic `assets:*` keys. Cast and Location Assets tabs are part of
+their owner surfaces, and Studio has no generic project, Sequence, or Scene
+Assets projection. Attaching ordinary `image.create` or `image.edit` output is
+also not implicit; an owning workflow must persist a durable attachment before
+it reports a project resource change.
+
+For CLI mutations, Core returns the durable project identity and resource keys
+in the successful mutation report. The CLI forwards that report once to the
+running Studio server, the server appends `studio.projectResourcesChanged`, and
+the browser coordination poller publishes the event locally. The mounted panel
+matches the key through the shared resource-refresh hook and reloads its
+authoritative API projection. Studio server mutation routes likewise serialize
+Core reports unchanged; adapters do not reconstruct attachment keys.
 
 Use ADR 0017 for the authoritative project shell, lazy resource loading,
 pagination, and scoped invalidation rules. Use ADR 0030 for the required
 unified resource-refresh components and the rule against feature-local refresh
-systems.
+systems. Use ADR 0054 for the accepted string-key vocabulary and projection
+ownership rules.
 
 ### `studio.focusRequested`
 

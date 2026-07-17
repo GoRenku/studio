@@ -10,6 +10,7 @@ import { readProjectRecord } from '../database/access/project.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { studioSceneDialogueAudioSurfaceResourceKey } from '../studio-coordination/resource-keys.js';
 import {
   assetFileGenerations,
   sceneDialogueAudio,
@@ -180,7 +181,7 @@ export function readSceneDialogueAudioWorkspace(input: {
       languageCode: null,
       voiceSettings: DEFAULT_VOICE_SETTINGS,
     },
-    resourceKeys: [`scene:${input.sceneId}:dialogue-audio`],
+    resourceKeys: [studioSceneDialogueAudioSurfaceResourceKey(input.sceneId)],
   };
 }
 

@@ -1,4 +1,5 @@
-import { importAdditionalLocationSheet } from '../../fixtures/studio-e2e-project';
+import { runStudioE2eMediaImport } from '../../fixtures/studio-e2e-cli';
+import { writeStudioE2eImageSource } from '../../fixtures/studio-e2e-project';
 import { test } from '../../fixtures/studio-e2e-test';
 import { MediaSurfacePage } from '../../pages/media-surface-page';
 
@@ -13,14 +14,23 @@ test('previews location media and refreshes after a resource change', async ({
   await mediaSurface.openLocationVisualContent();
   await mediaSurface.previewLocationSheet();
 
-  await importAdditionalLocationSheet({
+  const source = 'generated/media/gate-refreshed-location-sheet.png';
+  await writeStudioE2eImageSource({
     runtime: studioE2eRuntime,
     project: movieProject,
-    relativePath: 'generated/media/gate-refreshed-location-sheet.png',
+    relativePath: source,
+  });
+  const refreshed = mediaSurface.waitForResourcePoll(
+    `surface:location:${movieProject.locationId}`
+  );
+  await runStudioE2eMediaImport({
+    runtime: studioE2eRuntime,
+    projectName: movieProject.projectName,
+    purpose: 'location.sheet',
+    target: `location:${movieProject.locationId}`,
+    source,
     title: 'Gate Refreshed Location Sheet',
   });
-  await mediaSurface.publishLocationResourceChange(movieProject);
-  await mediaSurface.expectLocationSheetVisible(
-    'Gate Refreshed Location Sheet location sheet for browser E2E.'
-  );
+  await refreshed;
+  await mediaSurface.expectLocationSheetVisible('Location sheet');
 });

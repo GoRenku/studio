@@ -45,6 +45,12 @@ export default defineConfig(({ mode }) => {
     env.RENKU_MOVIE_STUDIO_ROOT ?? process.env.RENKU_MOVIE_STUDIO_ROOT
   );
   const e2eServer = env.RENKU_STUDIO_E2E === '1';
+  const e2eHomeDir = e2eServer
+    ? env.RENKU_STUDIO_E2E_HOME ?? process.env.RENKU_STUDIO_E2E_HOME
+    : undefined;
+  if (e2eServer && !e2eHomeDir) {
+    throw new Error('RENKU_STUDIO_E2E_HOME is required for the E2E Studio runtime.');
+  }
   const studioServerHost = e2eServer
     ? STUDIO_E2E_SERVER_HOST
     : STUDIO_DEV_SERVER_HOST;
@@ -92,27 +98,32 @@ export default defineConfig(({ mode }) => {
             void appendStudioDevServerLog(
               `listening Studio dev server url=${studioServerUrl} actualPort=${port} pid=${process.pid}`
             );
-            if (e2eServer) {
-              void appendStudioDevServerLog(
-                `skipping runtime descriptor claim for Studio E2E server url=${studioServerUrl} pid=${process.pid}`
-              );
-              return;
-            }
-            void claimRequiredStudioDevRuntime({
-              port,
-              cliNotificationToken,
-              claimRuntimeDescriptor: claimStudioRuntimeDescriptor,
-              closeServer: async () => {
-                await server.close();
-              },
-            })
+            const claim = e2eServer
+              ? claimStudioRuntimeDescriptor({
+                  homeDir: e2eHomeDir,
+                  host: studioServerHost,
+                  port,
+                  serverUrl: studioServerUrl,
+                  cliNotificationToken,
+                })
+              : claimRequiredStudioDevRuntime({
+                  port,
+                  cliNotificationToken,
+                  claimRuntimeDescriptor: claimStudioRuntimeDescriptor,
+                  closeServer: async () => {
+                    await server.close();
+                  },
+                });
+            void claim
               .then((nextDescriptor) => {
                 descriptor = nextDescriptor;
                 heartbeat = setInterval(() => {
                   if (!descriptor) {
                     return;
                   }
-                  void heartbeatStudioRuntimeDescriptor(descriptor)
+                  void heartbeatStudioRuntimeDescriptor(descriptor, {
+                    homeDir: e2eHomeDir,
+                  })
                     .then((updatedDescriptor) => {
                       descriptor = updatedDescriptor;
                     })
@@ -140,7 +151,9 @@ export default defineConfig(({ mode }) => {
               heartbeat = null;
             }
             if (descriptor) {
-              void releaseStudioRuntimeDescriptor(descriptor).catch((error) => {
+              void releaseStudioRuntimeDescriptor(descriptor, {
+                homeDir: e2eHomeDir,
+              }).catch((error) => {
                 const message =
                   error instanceof Error ? error.message : String(error);
                 server.config.logger.error(message);

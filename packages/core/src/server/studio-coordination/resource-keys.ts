@@ -24,28 +24,12 @@ export function studioCastMemberSurfaceResourceKey(castMemberId: string): string
   return `surface:castMember:${castMemberId}`;
 }
 
-export function studioCastMemberAssetsResourceKey(castMemberId: string): string {
-  return `assets:castMember:${castMemberId}`;
-}
-
-export function studioCastDesignResourceKey(castMemberId: string): string {
-  return `surface:castDesign:${castMemberId}`;
-}
-
 export function studioLocationNavigationResourceKey(): string {
   return 'navigation:locations';
 }
 
 export function studioLocationSurfaceResourceKey(locationId: string): string {
   return `surface:location:${locationId}`;
-}
-
-export function studioLocationAssetsResourceKey(locationId: string): string {
-  return `assets:location:${locationId}`;
-}
-
-export function studioLocationDesignResourceKey(locationId: string): string {
-  return `surface:locationDesign:${locationId}`;
 }
 
 export function studioVisualLanguageInspirationResourceKey(): string {
@@ -104,6 +88,10 @@ export function studioSceneBeatsResourceKey(sceneId: string): string {
   return `surface:scene:${sceneId}:beats`;
 }
 
+export function studioSceneDialogueAudioSurfaceResourceKey(sceneId: string): string {
+  return `surface:scene:${sceneId}:dialogue-audio`;
+}
+
 export function studioSceneBeatSheetResourceKey(beatSheetId: string): string {
   return `scene-beat-sheet:${beatSheetId}`;
 }
@@ -115,39 +103,15 @@ export function studioBeatResourceKey(
   return `scene-beat-sheet:${beatSheetId}:beat:${beatId}`;
 }
 
-export function studioAssetResourceKey(target: AssetTarget): string {
-  switch (target.kind) {
-    case 'project':
-      return 'assets:project';
-    case 'castMember':
-      return studioCastMemberAssetsResourceKey(target.castMemberId);
-    case 'location':
-      return studioLocationAssetsResourceKey(target.locationId);
-    case 'sequence':
-      return `assets:sequence:${target.sequenceId}`;
-    case 'scene':
-      return `assets:scene:${target.sceneId}`;
-  }
-}
-
-export function studioSurfaceResourceKeyForAssetTarget(
-  target: AssetTarget
-): string | null {
+export function studioAssetTargetSurfaceResourceKeys(target: AssetTarget): string[] {
   switch (target.kind) {
     case 'castMember':
-      return studioCastMemberSurfaceResourceKey(target.castMemberId);
+      return [studioCastMemberSurfaceResourceKey(target.castMemberId)];
     case 'location':
-      return studioLocationSurfaceResourceKey(target.locationId);
+      return [studioLocationSurfaceResourceKey(target.locationId)];
     case 'project':
     case 'sequence':
     case 'scene':
-      return null;
+      return [];
   }
-}
-
-export function studioResourceKeysForAssetTarget(target: AssetTarget): string[] {
-  return [
-    studioAssetResourceKey(target),
-    studioSurfaceResourceKeyForAssetTarget(target),
-  ].filter((key): key is string => key !== null);
 }

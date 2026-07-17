@@ -106,7 +106,7 @@ export function fakeProjectDataService(): NonNullable<
             voiceId: input.voiceIdOrName,
           },
         ],
-        resourceKeys: [`assets:castMember:${input.castMemberId}`],
+        resourceKeys: [`surface:castMember:${input.castMemberId}`],
       };
     },
     async listAssetPage() {
@@ -148,16 +148,6 @@ export function fakeProjectDataService(): NonNullable<
           },
         ],
         nextCursor: null,
-      };
-    },
-    async readCastDesignResource() {
-      return {
-        castMember: project.cast[0],
-        assetPage: {
-          items: [makeAsset('asset_cast_reference')],
-          nextCursor: null,
-        },
-        countsByRole: [],
       };
     },
     async readSceneDesignResource() {
@@ -385,13 +375,57 @@ export function fakeProjectDataService(): NonNullable<
       };
     },
     async setCastProfileDisplayAsset(input) {
-      return makeAsset(input.assetId);
+      return {
+        valid: true,
+        warnings: [],
+        project: {
+          id: project.identity.id,
+          name: project.identity.name,
+          projectFolder: project.identity.folderPath,
+        },
+        asset: makeAsset(input.assetId),
+        resourceKeys: [`surface:castMember:${input.castMemberId}`],
+      };
     },
-    async clearCastProfileDisplayAsset() {},
+    async clearCastProfileDisplayAsset(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: {
+          id: project.identity.id,
+          name: project.identity.name,
+          projectFolder: project.identity.folderPath,
+        },
+        asset: null,
+        resourceKeys: [`surface:castMember:${input.castMemberId}`],
+      };
+    },
     async setLocationHeroDisplayAsset(input) {
-      return makeAsset(input.assetId);
+      return {
+        valid: true,
+        warnings: [],
+        project: {
+          id: project.identity.id,
+          name: project.identity.name,
+          projectFolder: project.identity.folderPath,
+        },
+        asset: makeAsset(input.assetId),
+        resourceKeys: [`surface:location:${input.locationId}`],
+      };
     },
-    async clearLocationHeroDisplayAsset() {},
+    async clearLocationHeroDisplayAsset(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: {
+          id: project.identity.id,
+          name: project.identity.name,
+          projectFolder: project.identity.folderPath,
+        },
+        asset: null,
+        resourceKeys: [`surface:location:${input.locationId}`],
+      };
+    },
     async discardAsset(input) {
       return makeRecoverableMutationReport({
         changeType: 'asset.discarded',

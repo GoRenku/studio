@@ -42,7 +42,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'listSequenceNavigation'
   | 'listSceneNavigation'
   | 'listAssetPage'
-  | 'readCastDesignResource'
   | 'readSceneDesignResource'
   | 'readCastOverviewResource'
   | 'readCastMemberResource'

@@ -2,8 +2,9 @@ import type { Locator } from '@playwright/test';
 import { MovieStudioPage } from '../../pages/movie-studio-page';
 import { expect, test } from '../../fixtures/studio-e2e-test';
 import {
-  importAdditionalCastProfileImage,
+  writeStudioE2eImageSource,
 } from '../../fixtures/studio-e2e-project';
+import { runStudioE2eMediaImport } from '../../fixtures/studio-e2e-cli';
 
 test('opens media preview, updates profile pick, and refreshes after resource change', async ({
   page,
@@ -46,14 +47,25 @@ test('opens media preview, updates profile pick, and refreshes after resource ch
   await page.getByLabel('Set profile image pick').click();
   await expect(page.getByLabel('Clear profile image pick')).toBeVisible();
 
-  await importAdditionalCastProfileImage({
+  const source = 'generated/media/urban-refreshed-profile.png';
+  await writeStudioE2eImageSource({
     runtime: studioE2eRuntime,
     project: movieProject,
-    relativePath: 'generated/media/urban-refreshed-profile.png',
-    title: 'urban-refreshed-profile',
+    relativePath: source,
   });
-  await movieStudio.publishCastAssetResourceChange(movieProject);
-  await movieStudio.expectProfileImageVisible('Urban Refreshed Profile');
+  const refreshed = movieStudio.waitForResourcePoll(
+    `surface:castMember:${movieProject.castMemberId}`
+  );
+  await runStudioE2eMediaImport({
+    runtime: studioE2eRuntime,
+    projectName: movieProject.projectName,
+    purpose: 'cast.profile',
+    target: `cast:${movieProject.castMemberId}`,
+    source,
+    title: 'Urban Refreshed Profile',
+  });
+  await refreshed;
+  await movieStudio.expectProfileImageVisible('profile image');
 });
 
 async function expectControlInCorner(input: {

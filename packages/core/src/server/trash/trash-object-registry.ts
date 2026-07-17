@@ -26,7 +26,8 @@ import {
   sequenceAssets,
 } from '../schema/index.js';
 import {
-  studioCastMemberAssetsResourceKey,
+  studioAssetTargetSurfaceResourceKeys,
+  studioCastMemberSurfaceResourceKey,
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbookResourceKey,
@@ -356,7 +357,7 @@ const assetDefinition: TrashObjectDefinition = {
     return collectAssetFiles(input, input.trashItem.itemId);
   },
   resourceKeys() {
-    return ['assets:list'];
+    return [];
   },
   restoredChanges(input) {
     return [{ type: 'asset.restored', assetId: input.itemId }];
@@ -433,8 +434,10 @@ const assetRelationshipDefinition: TrashObjectDefinition = {
     );
     return snapshot.discardedAsset ? collectAssetFiles(input, snapshot.assetId) : [];
   },
-  resourceKeys() {
-    return ['assets:list'];
+  resourceKeys(input) {
+    return studioAssetTargetSurfaceResourceKeys(
+      parseAssetRelationshipTrashItemId(input.itemId).target
+    );
   },
   restoredChanges(input) {
     const parsed = parseAssetRelationshipTrashItemId(input.itemId);
@@ -522,7 +525,7 @@ const castVoiceDefinition: TrashObjectDefinition = {
   },
   resourceKeys(input) {
     return [
-      studioCastMemberAssetsResourceKey(requireTrashOwnerId(input, 'castVoice')),
+      studioCastMemberSurfaceResourceKey(requireTrashOwnerId(input, 'castVoice')),
     ];
   },
   restoredChanges(input) {

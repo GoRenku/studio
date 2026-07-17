@@ -27,9 +27,11 @@ refreshes. ADR 0030 defines the uniform implementation shape: core owns the
 resource-key catalog, CLI commands notify the running Studio server through one
 resource-change notifier, Studio server mutation routes preserve returned
 resource keys, and browser surfaces subscribe through one shared
-resource-refresh hook or module. ADR 0031 defines the delivery boundary: the
-Studio server appends live coordination events, and closed Studio sessions do
-not accumulate offline resource-refresh backlogs.
+resource-refresh hook or module. ADR 0054 defines the string resource-key
+vocabulary and the `surface:` and `navigation:` projection namespaces.
+ADR 0031 defines the delivery boundary: the Studio server appends live
+coordination events, and closed Studio sessions do not accumulate offline
+resource-refresh backlogs.
 `studio.projectRefreshRequested` remains available for the narrower project
 information and project library refresh cases.
 
@@ -69,3 +71,4 @@ Decision history:
 - `../decisions/0017-use-scalable-studio-resource-loading.md`
 - `../decisions/0030-use-unified-studio-resource-refresh-components.md`
 - `../decisions/0031-use-studio-server-owned-coordination-delivery.md`
+- `../decisions/0054-use-string-resource-keys-for-studio-projection-invalidation.md`

@@ -113,6 +113,10 @@ describe('department design commands', () => {
       document: castDesign,
     });
     expect(castWrite.activeDesignId).toBe(castWrite.designId);
+    expect(castWrite.resourceKeys).toEqual([
+      'navigation:cast',
+      `surface:castMember:${castMemberId}`,
+    ]);
     await expect(
       projectData.readCastContext({ homeDir, castMemberId })
     ).resolves.toMatchObject({
@@ -128,6 +132,10 @@ describe('department design commands', () => {
       document: locationDesign,
     });
     expect(locationWrite.activeDesignId).toBe(locationWrite.designId);
+    expect(locationWrite.resourceKeys).toEqual([
+      'navigation:locations',
+      `surface:location:${locationId}`,
+    ]);
     await expect(
       projectData.readLocationContext({ homeDir, locationId })
     ).resolves.toMatchObject({

@@ -63,7 +63,6 @@ export function matchesCastOverviewResource(resourceKeys: string[]): boolean {
   return resourceKeys.some(
     (resourceKey) =>
       resourceKey === 'navigation:cast' ||
-      resourceKey.startsWith('assets:castMember:') ||
       resourceKey.startsWith('surface:castMember:')
   );
 }
@@ -74,9 +73,7 @@ export function matchesCastMemberResource(
 ): boolean {
   return resourceKeys.some(
     (resourceKey) =>
-      resourceKey === `assets:castMember:${castMemberId}` ||
-      resourceKey === `surface:castMember:${castMemberId}` ||
-      resourceKey === `surface:castDesign:${castMemberId}`
+      resourceKey === `surface:castMember:${castMemberId}`
   );
 }
 
@@ -84,7 +81,6 @@ export function matchesLocationOverviewResource(resourceKeys: string[]): boolean
   return resourceKeys.some(
     (resourceKey) =>
       resourceKey === 'navigation:locations' ||
-      resourceKey.startsWith('assets:location:') ||
       resourceKey.startsWith('surface:location:')
   );
 }
@@ -95,9 +91,7 @@ export function matchesLocationResource(
 ): boolean {
   return resourceKeys.some(
     (resourceKey) =>
-      resourceKey === `assets:location:${locationId}` ||
-      resourceKey === `surface:location:${locationId}` ||
-      resourceKey === `surface:locationDesign:${locationId}`
+      resourceKey === `surface:location:${locationId}`
   );
 }
 

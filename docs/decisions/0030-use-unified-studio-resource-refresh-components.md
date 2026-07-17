@@ -7,6 +7,7 @@ Status: accepted
 Updated by:
 
 - `0031-use-studio-server-owned-coordination-delivery.md`
+- `0054-use-string-resource-keys-for-studio-projection-invalidation.md`
 
 ## Context
 

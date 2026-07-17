@@ -1,5 +1,6 @@
 import type {
   Asset,
+  AssetReferenceUpdateReport,
   AssetTarget,
   UpdateAssetReferenceInput,
 } from '../../client/index.js';
@@ -9,15 +10,17 @@ import {
   updateAssetRelationshipReferenceMetadata,
 } from '../database/access/asset-relationships/index.js';
 import { updateAssetRecordMetadata } from '../database/access/assets.js';
+import { readProjectRecord } from '../database/access/project.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import { studioAssetTargetSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 
 export async function updateAssetReference(
   input: UpdateAssetReferenceInput & RenkuConfigPathOptions
-): Promise<Asset> {
+): Promise<AssetReferenceUpdateReport> {
   const normalizedInput = normalizeUpdateAssetReferenceInput(input);
-  const { session } = await openProjectSession(normalizedInput);
+  const { projectFolder, session } = await openProjectSession(normalizedInput);
   try {
     const row = readAssetRelationshipRecord(session, {
       target: normalizedInput.target,
@@ -45,7 +48,24 @@ export async function updateAssetReference(
       });
     });
 
-    return readAssetOrThrow(session, normalizedInput.target, normalizedInput.assetId);
+    const project = readProjectRecord(session);
+    if (!project) {
+      throw new ProjectDataError(
+        'PROJECT_DATA021',
+        `Project database has no project row: ${session.databasePath}.`
+      );
+    }
+    return {
+      valid: true,
+      warnings: [],
+      project: { id: project.id, name: project.name, projectFolder },
+      asset: readAssetOrThrow(
+        session,
+        normalizedInput.target,
+        normalizedInput.assetId
+      ),
+      resourceKeys: studioAssetTargetSurfaceResourceKeys(normalizedInput.target),
+    };
   } finally {
     session.close();
   }

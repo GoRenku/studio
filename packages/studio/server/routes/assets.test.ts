@@ -93,11 +93,9 @@ describe('assets Hono route', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      assetId: 'asset_cast_reference',
-      resourceKeys: [
-        'assets:castMember:cast_narrator',
-        'surface:castMember:cast_narrator',
-      ],
+      valid: true,
+      recovery: { restorable: true },
+      resourceKeys: [],
     });
   });
 
@@ -222,7 +220,7 @@ describe('assets Hono route', () => {
           trashItemId: 'trash_item_test0001',
         },
       },
-      resourceKeys: [],
+      resourceKeys: ['surface:location:location_gate'],
     }));
     const locationAsset = {
       ...makeAsset('asset_location_reference'),
@@ -255,10 +253,31 @@ describe('assets Hono route', () => {
           },
           async setLocationHeroDisplayAsset(input) {
             expect(input.locationId).toBe('location_gate');
-            return locationAsset;
+            return {
+              valid: true as const,
+              warnings: [],
+              project: {
+                id: 'project_test0001',
+                name: 'constantinople',
+                projectFolder: '/tmp/renku/constantinople',
+              },
+              asset: locationAsset,
+              resourceKeys: ['surface:location:location_gate'],
+            };
           },
           async clearLocationHeroDisplayAsset(input) {
             expect(input.locationId).toBe('location_gate');
+            return {
+              valid: true as const,
+              warnings: [],
+              project: {
+                id: 'project_test0001',
+                name: 'constantinople',
+                projectFolder: '/tmp/renku/constantinople',
+              },
+              asset: null,
+              resourceKeys: ['surface:location:location_gate'],
+            };
           },
           discardAsset,
           async resolveProjectAssetFile(input) {
@@ -314,7 +333,6 @@ describe('assets Hono route', () => {
     await expect(selected.json()).resolves.toMatchObject({
       asset: { assetId: 'asset_location_reference' },
       resourceKeys: [
-        'assets:location:location_gate',
         'surface:location:location_gate',
       ],
     });
@@ -329,11 +347,9 @@ describe('assets Hono route', () => {
       assetId: 'asset_location_reference',
     });
     await expect(deleted.json()).resolves.toMatchObject({
-      assetId: 'asset_location_reference',
-      resourceKeys: [
-        'assets:location:location_gate',
-        'surface:location:location_gate',
-      ],
+      valid: true,
+      recovery: { restorable: true },
+      resourceKeys: ['surface:location:location_gate'],
     });
     expect(file.status).toBe(200);
     expect(file.headers.get('Content-Type')).toBe('image/png');

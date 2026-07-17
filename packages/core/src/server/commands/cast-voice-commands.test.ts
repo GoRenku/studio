@@ -82,6 +82,9 @@ describe('Cast Voice commands', () => {
         ],
       },
     });
+    expect(attached.resourceKeys).toEqual([
+      `surface:castMember:${castMemberId}`,
+    ]);
 
     await expect(
       projectData.listCastVoices({
@@ -122,6 +125,9 @@ describe('Cast Voice commands', () => {
       voiceId: attached.voice.id,
       sampleAssetId: attached.voice.sample.assetId,
     });
+    expect(removed.resourceKeys).toEqual([
+      `surface:castMember:${castMemberId}`,
+    ]);
     expect(removed.recovery?.trashItemIds).toHaveLength(1);
     await expect(
       fs.access(path.join(projectPath, 'cast/mehmed-ii/voice-samples/normal-voice.mp3'))
@@ -197,6 +203,9 @@ describe('Cast Voice commands', () => {
       capabilities: ['dialogue-audio-tts'],
       sourceSampleAssetId: attached.voice.sample.assetId,
     });
+    expect(created.resourceKeys).toEqual([
+      `surface:castMember:${castMemberId}`,
+    ]);
     expect(created.voice.providerRegistrations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

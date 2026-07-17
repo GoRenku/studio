@@ -138,69 +138,18 @@ export async function createBeatSheetMovieProject(input: {
   };
 }
 
-export async function importAdditionalCastProfileImage(input: {
+export async function writeStudioE2eImageSource(input: {
   runtime: StudioE2eRuntime;
   project: StudioE2eMovieProject;
   relativePath: string;
-  title: string;
 }): Promise<void> {
-  const projectData = createProjectDataService();
-  await writeProjectFile({
-    projectData,
-    homeDir: input.runtime.homeDir,
-    projectRelativePath: input.relativePath,
-    contents: samplePng(),
-  });
-  const attachment = await projectData.attachGenerationMedia({
-    homeDir: input.runtime.homeDir,
-    projectName: input.project.projectName,
-    purpose: 'cast.profile',
-    target: { kind: 'castMember', id: input.project.castMemberId },
-    sourceProjectRelativePath: input.relativePath,
-    title: input.title,
-  });
-  await projectData.updateAssetReference({
-    homeDir: input.runtime.homeDir,
-    projectName: input.project.projectName,
-    target: { kind: 'castMember', castMemberId: input.project.castMemberId },
-    assetId: attachment.asset.assetId,
-    title: input.title,
-    referenceName: input.title,
-    purpose: `${input.title} profile image for browser E2E.`,
-  });
-}
-
-export async function importAdditionalLocationSheet(input: {
-  runtime: StudioE2eRuntime;
-  project: StudioE2eMovieProject;
-  relativePath: string;
-  title: string;
-}): Promise<void> {
-  const projectData = createProjectDataService();
-  await writeProjectFile({
-    projectData,
-    homeDir: input.runtime.homeDir,
-    projectRelativePath: input.relativePath,
-    contents: samplePng(),
-  });
-  const attachment = await projectData.attachGenerationMedia({
-    homeDir: input.runtime.homeDir,
-    projectName: input.project.projectName,
-    purpose: 'location.sheet',
-    target: { kind: 'location', id: input.project.locationId },
-    sourceProjectRelativePath: input.relativePath,
-    title: input.title,
-  });
-  await projectData.updateAssetReference({
-    homeDir: input.runtime.homeDir,
-    projectName: input.project.projectName,
-    target: { kind: 'location', locationId: input.project.locationId },
-    assetId: attachment.asset.assetId,
-    title: input.title,
-    oneLineSummary: `${input.title} location sheet for browser E2E.`,
-    referenceName: input.title,
-    purpose: `${input.title} location sheet for browser E2E.`,
-  });
+  const absolutePath = path.resolve(input.project.projectPath, input.relativePath);
+  const relative = path.relative(input.project.projectPath, absolutePath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`E2E image source must be inside the project: ${input.relativePath}`);
+  }
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  await fs.writeFile(absolutePath, samplePng());
 }
 
 export async function cleanStudioE2eProject(input: {

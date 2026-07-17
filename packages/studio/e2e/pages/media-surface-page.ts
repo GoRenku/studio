@@ -39,27 +39,28 @@ export class MediaSurfacePage {
   }
 
   async expectLocationSheetVisible(title: string): Promise<void> {
-    await expect(this.page.getByRole('button', { name: title })).toBeVisible();
+    await expect(this.page.getByRole('button', { name: title, exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
-  async publishLocationResourceChange(
-    project: StudioE2eMovieProject
-  ): Promise<void> {
-    await this.page.evaluate(
-      ({ projectName, locationId }) => {
-        window.dispatchEvent(
-          new CustomEvent('renku:studio-resource-changed', {
-            detail: {
-              projectName,
-              resourceKeys: [`assets:location:${locationId}`],
-            },
-          })
-        );
+  async waitForResourcePoll(resourceKey: string): Promise<void> {
+    await this.page.waitForResponse(
+      async (response) => {
+        if (
+          response.request().method() !== 'GET' ||
+          !response.url().includes('/studio-api/studio/events?after=')
+        ) {
+          return false;
+        }
+        const body = (await response.json()) as {
+          events?: Array<{ resourceKeys?: string[] }>;
+        };
+        return body.events?.some((event) =>
+          event.resourceKeys?.includes(resourceKey)
+        ) ?? false;
       },
-      {
-        projectName: project.projectName,
-        locationId: project.locationId,
-      }
+      { timeout: 15_000 }
     );
   }
 

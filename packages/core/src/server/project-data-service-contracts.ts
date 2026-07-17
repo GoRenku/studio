@@ -2,13 +2,14 @@ import type {
   Asset,
   AssetFile,
   AssetLocaleContext,
+  AssetReferenceUpdateReport,
   AssetTarget,
   ActNavigationRow,
   CastMemberResource,
   CastOverviewResource,
-  CastDesignResource,
   CastNavigationRow,
   DirectorContextReport,
+  DisplayAssetMutationReport,
   CastDesignContextReport,
   CastDesignDocument,
   CastDesignListReport,
@@ -147,9 +148,6 @@ export interface ProjectDataService {
     input: ListSceneNavigationInput
   ): Promise<PageResponse<SceneNavigationRow>>;
   listAssetPage(input: ListAssetPageInput): Promise<PageResponse<Asset>>;
-  readCastDesignResource(
-    input: ReadCastDesignResourceInput
-  ): Promise<CastDesignResource>;
   readSceneDesignResource(
     input: ReadSceneDesignResourceInput
   ): Promise<SceneDesignResource>;
@@ -190,26 +188,26 @@ export interface ProjectDataService {
   resolveProjectAssetFileById(
     input: ResolveProjectAssetFileByIdInput
   ): Promise<ResolvedProjectAssetFileById>;
-  updateAssetReference(input: UpdateAssetReferenceInput & RenkuConfigPathOptions): Promise<Asset>;
+  updateAssetReference(input: UpdateAssetReferenceInput & RenkuConfigPathOptions): Promise<AssetReferenceUpdateReport>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
   setCastProfileDisplayAsset(input: RenkuConfigPathOptions & {
     projectName: string;
     castMemberId: string;
     assetId: string;
-  }): Promise<Asset>;
+  }): Promise<DisplayAssetMutationReport>;
   clearCastProfileDisplayAsset(input: RenkuConfigPathOptions & {
     projectName: string;
     castMemberId: string;
-  }): Promise<void>;
+  }): Promise<DisplayAssetMutationReport>;
   setLocationHeroDisplayAsset(input: RenkuConfigPathOptions & {
     projectName: string;
     locationId: string;
     assetId: string;
-  }): Promise<Asset>;
+  }): Promise<DisplayAssetMutationReport>;
   clearLocationHeroDisplayAsset(input: RenkuConfigPathOptions & {
     projectName: string;
     locationId: string;
-  }): Promise<void>;
+  }): Promise<DisplayAssetMutationReport>;
   discardAsset(input: DiscardAssetInput): Promise<RecoverableMutationReport>;
   restoreAsset(input: RestoreAssetInput): Promise<RecoverableMutationReport>;
   listTrash(input: ListTrashInput): Promise<TrashListReport>;
@@ -782,15 +780,6 @@ export interface ListAssetPageInput extends RenkuConfigPathOptions {
   locale?: AssetLocaleContext;
   role?: string;
   mediaKind?: string;
-  limit?: number;
-  cursor?: string | null;
-}
-
-export interface ReadCastDesignResourceInput
-  extends RenkuConfigPathOptions {
-  projectName: string;
-  castMemberId: string;
-  activeRole?: string;
   limit?: number;
   cursor?: string | null;
 }

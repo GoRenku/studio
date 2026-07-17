@@ -26,22 +26,6 @@ export function createNavigationRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .get('/cast/:castMemberId/design', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const castMemberId = c.req.param('castMemberId') as string;
-        const query = c.req.query();
-        const resource = await projectData.readCastDesignResource({
-          projectName,
-          castMemberId,
-          activeRole: readOptionalQueryString(query.role),
-          ...readPageRequest(query),
-        });
-        return c.json({ resource });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
     .get('/sequences', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

@@ -11,7 +11,7 @@ import { createUniqueIdAllocator, type ProjectIdGenerator } from '../entity-ids.
 import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
 import { commitProjectAssetFileWriteSet, createProjectAssetFileWriteSet, persistSceneStoryboardBeatFilesSync, rollbackProjectAssetFileWriteSetSync } from '../project-asset-files/index.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { sceneBeatSheetResourceKeys } from '../scene-beat-sheet/storyboard-status.js';
+import { studioSceneBeatsResourceKey } from '../studio-coordination/resource-keys.js';
 
 export function attachSceneStoryboardImages(input: {
   session: DatabaseSession;
@@ -91,5 +91,5 @@ export function attachSceneStoryboardImages(input: {
   if (!project) {
     throw new ProjectDataError('CORE_GENERATION_CONTEXT_UNAVAILABLE', 'Project metadata is required to attach storyboard images.');
   }
-  return { valid: true, warnings: [], project: { id: project.id, name: project.name, projectFolder: input.projectFolder }, changes: [{ type: 'scene.storyboardImagesImported', sceneId: input.sceneId, beatSheetId: input.beatSheetId }], purpose: 'scene.storyboard-sheet', target: { kind: 'scene', id: input.sceneId }, beatSheetId: input.beatSheetId, storyboardImageIds, imported: assets, files, resourceKeys: sceneBeatSheetResourceKeys({ sceneId: input.sceneId, beatSheetId: input.beatSheetId, beatIds: normalized.map((file) => file.beatId) }) };
+  return { valid: true, warnings: [], project: { id: project.id, name: project.name, projectFolder: input.projectFolder }, changes: [{ type: 'scene.storyboardImagesImported', sceneId: input.sceneId, beatSheetId: input.beatSheetId }], purpose: 'scene.storyboard-sheet', target: { kind: 'scene', id: input.sceneId }, beatSheetId: input.beatSheetId, storyboardImageIds, imported: assets, files, resourceKeys: [studioSceneBeatsResourceKey(input.sceneId)] };
 }

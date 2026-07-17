@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "e2e:build-deps": "pnpm --dir ../.. --filter @gorenku/studio-core... build",
+    "e2e:build-deps": "pnpm --dir ../.. --filter @gorenku/studio-core... --filter @gorenku/studio-cli... build",
     "pretest:e2e": "pnpm run e2e:build-deps",
     "test:e2e": "playwright test",
     "pretest:e2e:compat": "pnpm run e2e:build-deps",

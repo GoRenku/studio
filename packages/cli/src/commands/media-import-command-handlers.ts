@@ -1,4 +1,3 @@
-import type { GenerationMediaAttachmentReport } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import { parseGenerationPurpose, parseGenerationTarget } from './generation-purpose-command-registry.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
@@ -58,21 +57,6 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
     return report;
   },
 };
-
-export function listMediaImportPurposeHandlers(): ReadonlyArray<{
-  purpose: GenerationMediaAttachmentReport['purpose'];
-}> {
-  return [
-    { purpose: 'lookbook.image' },
-    { purpose: 'lookbook.video-sheet' },
-    { purpose: 'lookbook.storyboard-sheet' },
-    { purpose: 'cast.character-sheet' },
-    { purpose: 'cast.profile' },
-    { purpose: 'location.sheet' },
-    { purpose: 'location.hero' },
-    { purpose: 'scene.storyboard-sheet' },
-  ];
-}
 
 function requiredSingleBeat(value: string | undefined): string {
   const beats = value?.split(',').map((beat) => beat.trim()).filter(Boolean) ?? [];

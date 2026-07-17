@@ -1,5 +1,4 @@
 import type {
-  CastDesignResourceResponse,
   SceneDesignResourceResponse,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
@@ -18,11 +17,6 @@ interface StudioAssetApiResponse {
   resourceKeys?: string[];
 }
 
-interface StudioAssetDeleteResponse {
-  assetId: string;
-  resourceKeys?: string[];
-}
-
 interface StudioCastVoiceDeleteResponse {
   removed: {
     castMemberId: string;
@@ -30,10 +24,6 @@ interface StudioCastVoiceDeleteResponse {
     sampleAssetId: string;
   };
   resourceKeys?: string[];
-}
-
-interface CastDesignResourceApiResponse {
-  resource: CastDesignResourceResponse | null;
 }
 
 interface SceneDesignResourceApiResponse {
@@ -84,33 +74,6 @@ export async function readLocationAssets(
     cursor = body.page.nextCursor;
   } while (cursor);
   return assets;
-}
-
-export async function readCastDesignResource(
-  projectName: string,
-  castMemberId: string,
-  role = 'character-sheet'
-): Promise<CastDesignResourceResponse> {
-  const response = await fetch(
-    `${castDesignResourceUrl(projectName, castMemberId)}?role=${encodeURIComponent(role)}`
-  );
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-
-  const body = (await response.json()) as CastDesignResourceApiResponse;
-  if (!body.resource) {
-    throw new Error('Renku Studio API returned no cast design resource.');
-  }
-  return body.resource;
-}
-
-export function invalidateCastDesignResource(
-  projectName: string,
-  castMemberId: string
-): void {
-  void projectName;
-  void castMemberId;
 }
 
 export async function readSceneDesignResource(
@@ -194,8 +157,8 @@ export async function deleteCastAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as StudioAssetDeleteResponse;
-  return body.assetId;
+  await response.json();
+  return assetId;
 }
 
 export async function deleteCastVoice(
@@ -279,8 +242,8 @@ export async function deleteLocationAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as StudioAssetDeleteResponse;
-  return body.assetId;
+  await response.json();
+  return assetId;
 }
 
 export function castAssetFileUrl(
@@ -308,13 +271,6 @@ export function sceneAssetFileUrl(
   assetFileId: string
 ): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
-}
-
-function castDesignResourceUrl(
-  projectName: string,
-  castMemberId: string
-): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/cast/${encodeURIComponent(castMemberId)}/design`;
 }
 
 function castAssetsUrl(projectName: string, castMemberId: string): string {

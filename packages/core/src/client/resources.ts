@@ -227,17 +227,6 @@ export interface SceneNarrativeResource {
   dialogueAudio: SceneDialogueAudioWorkspace;
 }
 
-export interface CastDesignResource {
-  castMember: CastMember;
-  assetPage: PageResponse<Asset>;
-  countsByRole: CastDesignAssetRoleCount[];
-}
-
-export interface CastDesignAssetRoleCount {
-  role: string;
-  count: number;
-}
-
 export interface SceneDesignResource {
   scene: SceneNavigationRow;
   sequence: SequenceNavigationRow;

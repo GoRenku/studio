@@ -40,8 +40,14 @@ describe('focused display asset commands', () => {
       projectName: 'constantinople', homeDir, castMemberId: 'cast_test0001', assetId: sheet.assetId,
     })).rejects.toMatchObject({ code: 'CORE_DISPLAY_ASSET_INVALID' });
 
-    await projectData.setCastProfileDisplayAsset({
+    const selected = await projectData.setCastProfileDisplayAsset({
       projectName: 'constantinople', homeDir, castMemberId: 'cast_test0001', assetId: profile.assetId,
+    });
+    expect(selected).toMatchObject({
+      valid: true,
+      project: { name: 'constantinople', projectFolder: created.projectPath },
+      asset: { assetId: profile.assetId },
+      resourceKeys: ['surface:castMember:cast_test0001'],
     });
     const session = openProjectStore({ projectFolder: created.projectPath, create: false });
     try {
@@ -53,8 +59,12 @@ describe('focused display asset commands', () => {
     await expect(projectData.setCastProfileDisplayAsset({
       projectName: 'constantinople', homeDir, castMemberId: 'cast_test0001', assetId: profile.assetId,
     })).rejects.toMatchObject({ code: 'CORE_DISPLAY_ASSET_INVALID' });
-    await projectData.clearCastProfileDisplayAsset({
+    const clearReport = await projectData.clearCastProfileDisplayAsset({
       projectName: 'constantinople', homeDir, castMemberId: 'cast_test0001',
+    });
+    expect(clearReport).toMatchObject({
+      asset: null,
+      resourceKeys: ['surface:castMember:cast_test0001'],
     });
     const cleared = openProjectStore({ projectFolder: created.projectPath, create: false });
     try {
@@ -74,8 +84,13 @@ describe('focused display asset commands', () => {
       target: { kind: 'location', locationId: 'location_test0001' },
       role: 'hero', title: 'Hero', filename: 'hero.png',
     });
-    await projectData.setLocationHeroDisplayAsset({
+    const selected = await projectData.setLocationHeroDisplayAsset({
       projectName: 'constantinople', homeDir, locationId: 'location_test0001', assetId: hero.assetId,
+    });
+    expect(selected).toMatchObject({
+      valid: true,
+      asset: { assetId: hero.assetId },
+      resourceKeys: ['surface:location:location_test0001'],
     });
     const session = openProjectStore({ projectFolder: created.projectPath, create: false });
     try {

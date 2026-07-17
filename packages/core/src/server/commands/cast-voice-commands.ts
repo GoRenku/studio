@@ -60,7 +60,7 @@ import {
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
-import { studioResourceKeysForAssetTarget } from '../studio-coordination/resource-keys.js';
+import { studioAssetTargetSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import {
   commitProjectAssetFileWriteSet,
@@ -210,7 +210,7 @@ export async function createCastVoiceProviderRegistration(
         castVoiceId: record.id,
         registrationId,
       }),
-      resourceKeys: studioResourceKeysForAssetTarget({
+      resourceKeys: studioAssetTargetSurfaceResourceKeys({
         kind: 'castMember',
         castMemberId: input.castMemberId,
       }),
@@ -242,7 +242,7 @@ export async function removeCastVoiceProviderRegistration(
         castVoiceId: record.id,
         registrationId: input.registrationId,
       },
-      resourceKeys: studioResourceKeysForAssetTarget({
+      resourceKeys: studioAssetTargetSurfaceResourceKeys({
         kind: 'castMember',
         castMemberId: input.castMemberId,
       }),
@@ -293,7 +293,7 @@ export async function attachCastVoice(
       voiceIdOrName: inserted.voiceId,
     });
     const voice = toCastVoice(session, record);
-    const resourceKeys = studioResourceKeysForAssetTarget(inserted.target);
+    const resourceKeys = studioAssetTargetSurfaceResourceKeys(inserted.target);
     return {
       valid: true,
       warnings: [],
@@ -374,7 +374,7 @@ export async function removeCastVoice(
         },
       ],
       recovery: report.recovery,
-      resourceKeys: studioResourceKeysForAssetTarget(target),
+      resourceKeys: studioAssetTargetSurfaceResourceKeys(target),
     };
   });
 }

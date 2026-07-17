@@ -1,4 +1,3 @@
-import { studioResourceKeysForAssetTarget } from '@gorenku/studio-core/server';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readAssetPageRequest } from '../http/asset-request.js';
@@ -110,16 +109,12 @@ export function createAssetsRoute({
           const projectName = c.req.param('projectName') as string;
           const castMemberId = c.req.param('castMemberId') as string;
           const assetId = c.req.param('assetId') as string;
-          const asset = await projectData.setCastProfileDisplayAsset({
+          const report = await projectData.setCastProfileDisplayAsset({
             projectName,
             castMemberId,
             assetId,
           });
-          const resourceKeys = studioResourceKeysForAssetTarget({
-            kind: 'castMember',
-            castMemberId,
-          });
-          return c.json({ asset, resourceKeys });
+          return c.json(report);
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -132,15 +127,11 @@ export function createAssetsRoute({
         try {
           const projectName = c.req.param('projectName') as string;
           const castMemberId = c.req.param('castMemberId') as string;
-          await projectData.clearCastProfileDisplayAsset({
+          const report = await projectData.clearCastProfileDisplayAsset({
             projectName,
             castMemberId,
           });
-          const resourceKeys = studioResourceKeysForAssetTarget({
-            kind: 'castMember',
-            castMemberId,
-          });
-          return c.json({ resourceKeys });
+          return c.json(report);
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -156,11 +147,7 @@ export function createAssetsRoute({
           target: { kind: 'castMember', castMemberId },
           assetId,
         });
-        const resourceKeys = studioResourceKeysForAssetTarget({
-          kind: 'castMember',
-          castMemberId,
-        });
-        return c.json({ assetId, recovery: report.recovery, resourceKeys });
+        return c.json(report);
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -200,16 +187,12 @@ export function createAssetsRoute({
         const projectName = c.req.param('projectName') as string;
         const locationId = c.req.param('locationId') as string;
         const assetId = c.req.param('assetId') as string;
-        const asset = await projectData.setLocationHeroDisplayAsset({
+        const report = await projectData.setLocationHeroDisplayAsset({
           projectName,
           locationId,
           assetId,
         });
-        const resourceKeys = studioResourceKeysForAssetTarget({
-          kind: 'location',
-          locationId,
-        });
-        return c.json({ asset, resourceKeys });
+        return c.json(report);
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -218,15 +201,11 @@ export function createAssetsRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const locationId = c.req.param('locationId') as string;
-        await projectData.clearLocationHeroDisplayAsset({
+        const report = await projectData.clearLocationHeroDisplayAsset({
           projectName,
           locationId,
         });
-        const resourceKeys = studioResourceKeysForAssetTarget({
-          kind: 'location',
-          locationId,
-        });
-        return c.json({ resourceKeys });
+        return c.json(report);
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -241,11 +220,7 @@ export function createAssetsRoute({
           target: { kind: 'location', locationId },
           assetId,
         });
-        const resourceKeys = studioResourceKeysForAssetTarget({
-          kind: 'location',
-          locationId,
-        });
-        return c.json({ assetId, recovery: report.recovery, resourceKeys });
+        return c.json(report);
       } catch (error) {
         return projectErrorResponse(c, error);
       }

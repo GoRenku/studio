@@ -5,7 +5,6 @@ import type {
   CastOverviewResource,
   LocationOverviewResource,
   LocationResource,
-  CastDesignResource,
   InspirationFolder,
   InspirationFolderResource,
   InspirationResource,
@@ -67,8 +66,6 @@ export interface ProjectInformationLanguageUpdateRequest {
 
 
 export type StudioAssetResponse = Asset;
-
-export type CastDesignResourceResponse = CastDesignResource;
 
 export type SceneDesignResourceResponse = SceneDesignResource;
 

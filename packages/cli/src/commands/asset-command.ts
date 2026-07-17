@@ -6,14 +6,12 @@ import {
 } from '@gorenku/studio-diagnostics';
 import {
   createProjectDataService,
-  studioResourceKeysForAssetTarget,
   type Asset,
   type AssetTarget,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 import {
   appendStudioResourceChangedEvent,
-  type StudioResourceChangedReport,
 } from './studio-resource-event-command.js';
 
 export interface RunAssetCommandOptions {
@@ -73,12 +71,7 @@ async function updateAssetReference(
   const referenceName = requiredFlag(options, 'referenceName');
   const referencePurpose = optionalTrimmed(options.flags.referencePurpose);
   const projectData = createProjectDataService();
-  const eventProject = await readAssetEventProject(
-    projectData,
-    projectName,
-    options.homeDir
-  );
-  const asset = await projectData.updateAssetReference({
+  const report = await projectData.updateAssetReference({
     projectName,
     target,
     assetId: requiredAssetId(assetId),
@@ -88,13 +81,12 @@ async function updateAssetReference(
     purpose: referencePurpose,
     homeDir: options.homeDir,
   });
-  const resourceKeys = studioResourceKeysForAssetTarget(target);
   await appendStudioResourceChangedEvent({
     runtime: cliRuntime(options, projectData),
-    report: { project: eventProject, resourceKeys },
+    report,
     command: 'asset reference-update',
   });
-  const warnings: DiagnosticIssue[] = [];
+  const warnings: DiagnosticIssue[] = [...report.warnings];
   if (!referencePurpose) {
     warnings.push(
       createDiagnosticWarning(
@@ -107,9 +99,9 @@ async function updateAssetReference(
   }
   writeAssetResult(
     options,
-    asset,
-    `Updated asset reference: ${asset.assetId}`,
-    resourceKeys,
+    report.asset,
+    `Updated asset reference: ${report.asset.assetId}`,
+    report.resourceKeys,
     warnings
   );
   return 0;
@@ -172,18 +164,6 @@ function cliRuntime(
     json: options.json,
     io: options.io,
     projectDataService,
-  };
-}
-
-async function readAssetEventProject(
-  projectDataService: ReturnType<typeof createProjectDataService>,
-  projectName: string,
-  homeDir?: string
-): Promise<StudioResourceChangedReport['project']> {
-  const project = await projectDataService.readProjectShell({ projectName, homeDir });
-  return {
-    name: project.identity.name,
-    id: project.identity.id,
   };
 }
 

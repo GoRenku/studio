@@ -49,7 +49,6 @@ import {
 } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
 import {
-  studioCastDesignResourceKey,
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
 } from '../studio-coordination/resource-keys.js';
@@ -310,7 +309,6 @@ export function castResourceKeys(castMemberId?: string): string[] {
     ...(castMemberId
       ? [
           studioCastMemberSurfaceResourceKey(castMemberId),
-          studioCastDesignResourceKey(castMemberId),
         ]
       : []),
   ];

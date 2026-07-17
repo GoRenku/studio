@@ -116,27 +116,28 @@ export class MovieStudioPage {
   }
 
   async expectProfileImageVisible(title: string): Promise<void> {
-    await expect(this.page.getByRole('button', { name: title })).toBeVisible();
+    await expect(this.page.getByRole('button', { name: title, exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
-  async publishCastAssetResourceChange(
-    project: StudioE2eMovieProject
-  ): Promise<void> {
-    await this.page.evaluate(
-      ({ projectName, castMemberId }) => {
-        window.dispatchEvent(
-          new CustomEvent('renku:studio-resource-changed', {
-            detail: {
-              projectName,
-              resourceKeys: [`assets:castMember:${castMemberId}`],
-            },
-          })
-        );
+  async waitForResourcePoll(resourceKey: string): Promise<void> {
+    await this.page.waitForResponse(
+      async (response) => {
+        if (
+          response.request().method() !== 'GET' ||
+          !response.url().includes('/studio-api/studio/events?after=')
+        ) {
+          return false;
+        }
+        const body = (await response.json()) as {
+          events?: Array<{ resourceKeys?: string[] }>;
+        };
+        return body.events?.some((event) =>
+          event.resourceKeys?.includes(resourceKey)
+        ) ?? false;
       },
-      {
-        projectName: project.projectName,
-        castMemberId: project.castMemberId,
-      }
+      { timeout: 15_000 }
     );
   }
 }

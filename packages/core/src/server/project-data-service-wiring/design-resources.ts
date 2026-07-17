@@ -1,4 +1,3 @@
-import { readCastDesignResource } from '../resources/cast-design.js';
 import { readSceneDesignResource } from '../resources/scene-design.js';
 import {
   readCastMemberResource,
@@ -16,7 +15,6 @@ import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createDesignResourceServiceWiring(): Pick<
   ProjectDataService,
-  | 'readCastDesignResource'
   | 'readSceneDesignResource'
   | 'readCastOverviewResource'
   | 'readCastMemberResource'
@@ -30,7 +28,6 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readStudioSelectionContext'
 > {
   return {
-    readCastDesignResource,
     readSceneDesignResource,
     readCastOverviewResource,
     readCastMemberResource,

@@ -43,7 +43,6 @@ import {
   replaceLocationAuthoringRecords,
 } from '../database/access/locations.js';
 import {
-  studioLocationDesignResourceKey,
   studioLocationNavigationResourceKey,
   studioLocationSurfaceResourceKey,
 } from '../studio-coordination/resource-keys.js';
@@ -263,7 +262,6 @@ export function locationResourceKeys(locationId?: string): string[] {
     ...(locationId
       ? [
           studioLocationSurfaceResourceKey(locationId),
-          studioLocationDesignResourceKey(locationId),
         ]
       : []),
   ];

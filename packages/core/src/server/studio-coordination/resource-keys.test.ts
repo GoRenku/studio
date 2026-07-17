@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  studioCastDesignResourceKey,
-  studioCastMemberAssetsResourceKey,
+  studioAssetTargetSurfaceResourceKeys,
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
-  studioLocationAssetsResourceKey,
-  studioLocationDesignResourceKey,
   studioLocationNavigationResourceKey,
   studioLocationSurfaceResourceKey,
   studioProjectInformationResourceKey,
@@ -15,6 +12,7 @@ import {
   studioSceneBeatSheetResourceKey,
   studioBeatResourceKey,
   studioSceneBeatsResourceKey,
+  studioSceneDialogueAudioSurfaceResourceKey,
   studioSceneShotsResourceKey,
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
@@ -39,24 +37,12 @@ describe('Studio resource key catalog', () => {
     );
   });
 
-  it('builds accepted surface and asset resource keys', () => {
+  it('builds accepted surface resource keys', () => {
     expect(studioCastMemberSurfaceResourceKey('cast_urban')).toBe(
       'surface:castMember:cast_urban'
     );
-    expect(studioCastMemberAssetsResourceKey('cast_urban')).toBe(
-      'assets:castMember:cast_urban'
-    );
-    expect(studioCastDesignResourceKey('cast_urban')).toBe(
-      'surface:castDesign:cast_urban'
-    );
     expect(studioLocationSurfaceResourceKey('location_gate')).toBe(
       'surface:location:location_gate'
-    );
-    expect(studioLocationAssetsResourceKey('location_gate')).toBe(
-      'assets:location:location_gate'
-    );
-    expect(studioLocationDesignResourceKey('location_gate')).toBe(
-      'surface:locationDesign:location_gate'
     );
     expect(studioSceneNarrativeResourceKey('scene_gate')).toBe('scene:scene_gate');
     expect(studioSceneShotsResourceKey('scene_gate')).toBe(
@@ -65,12 +51,37 @@ describe('Studio resource key catalog', () => {
     expect(studioSceneBeatsResourceKey('scene_gate')).toBe(
       'surface:scene:scene_gate:beats'
     );
+    expect(studioSceneDialogueAudioSurfaceResourceKey('scene_gate')).toBe(
+      'surface:scene:scene_gate:dialogue-audio'
+    );
     expect(studioSceneBeatSheetResourceKey('beat_sheet_gate')).toBe(
       'scene-beat-sheet:beat_sheet_gate'
     );
     expect(studioBeatResourceKey('beat_sheet_gate', 'beat_arrival')).toBe(
       'scene-beat-sheet:beat_sheet_gate:beat:beat_arrival'
     );
+  });
+
+  it('maps Asset owners only to current owner surfaces', () => {
+    expect(
+      studioAssetTargetSurfaceResourceKeys({
+        kind: 'castMember',
+        castMemberId: 'cast_urban',
+      })
+    ).toEqual(['surface:castMember:cast_urban']);
+    expect(
+      studioAssetTargetSurfaceResourceKeys({
+        kind: 'location',
+        locationId: 'location_gate',
+      })
+    ).toEqual(['surface:location:location_gate']);
+    expect(studioAssetTargetSurfaceResourceKeys({ kind: 'project' })).toEqual([]);
+    expect(
+      studioAssetTargetSurfaceResourceKeys({ kind: 'sequence', sequenceId: 'seq_1' })
+    ).toEqual([]);
+    expect(
+      studioAssetTargetSurfaceResourceKeys({ kind: 'scene', sceneId: 'scene_1' })
+    ).toEqual([]);
   });
 
   it('builds accepted visual-language resource keys', () => {

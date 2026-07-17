@@ -20,7 +20,6 @@ import type {
   StudioPendingRequest,
   StudioProjectRef,
 } from '@/services/studio-current-contracts';
-import { invalidateCastDesignResource } from '@/services/studio-project-assets-api';
 import { matchesProjectShellResource } from '@/hooks/use-studio-resource-refresh';
 
 const BROWSER_SESSION_KEY = 'renku.studio.browserSessionId';
@@ -290,7 +289,6 @@ async function applyStudioEventBatch(input: {
         input.currentProjectRef.current?.identity.id ===
         resourceEvent.projectRef.id
       ) {
-        invalidateChangedResources(resourceEvent);
         publishChangedResources(resourceEvent);
         if (matchesProjectShellResource(resourceEvent.resourceKeys)) {
           const project = await input.projectSessionRef.current.refreshProject(
@@ -346,18 +344,6 @@ function publishGenerationPreview(
   );
 }
 
-function invalidateChangedResources(event: {
-  projectRef: StudioProjectRef;
-  resourceKeys: string[];
-}): void {
-  for (const resourceKey of event.resourceKeys) {
-    const castDesignId = castDesignResourceId(resourceKey);
-    if (castDesignId) {
-      invalidateCastDesignResource(event.projectRef.name, castDesignId);
-    }
-  }
-}
-
 function publishChangedResources(event: {
   projectRef: StudioProjectRef;
   resourceKeys: string[];
@@ -370,18 +356,6 @@ function publishChangedResources(event: {
       },
     })
   );
-}
-
-function castDesignResourceId(resourceKey: string): string | null {
-  const surfacePrefix = 'surface:cast-design:';
-  if (resourceKey.startsWith(surfacePrefix)) {
-    return resourceKey.slice(surfacePrefix.length);
-  }
-  const assetsPrefix = 'assets:castMember:';
-  if (resourceKey.startsWith(assetsPrefix)) {
-    return resourceKey.slice(assetsPrefix.length);
-  }
-  return null;
 }
 
 function latestFocusRequestIn(

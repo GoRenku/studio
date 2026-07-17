@@ -16,14 +16,9 @@ export {
   type StudioEventStoreSummary,
 } from './event-store.js';
 export {
-  studioAssetResourceKey,
   studioActSurfaceResourceKey,
-  studioCastDesignResourceKey,
-  studioCastMemberAssetsResourceKey,
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
-  studioLocationAssetsResourceKey,
-  studioLocationDesignResourceKey,
   studioLocationNavigationResourceKey,
   studioLocationSurfaceResourceKey,
   studioProjectLibraryResourceKey,
@@ -37,8 +32,6 @@ export {
   studioSequenceScenesNavigationResourceKey,
   studioSequenceSurfaceResourceKey,
   studioStoryArcSurfaceResourceKey,
-  studioResourceKeysForAssetTarget,
-  studioSurfaceResourceKeyForAssetTarget,
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbookResourceKey,

@@ -1,4 +1,4 @@
-import type { Asset } from '../../client/assets.js';
+import type { Asset, DisplayAssetMutationReport } from '../../client/assets.js';
 import {
   clearCastProfileDisplayAssetRecord,
   clearLocationHeroDisplayAssetRecord,
@@ -6,9 +6,14 @@ import {
   writeLocationHeroDisplayAsset,
 } from '../database/access/display-assets.js';
 import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
+import { readProjectRecord } from '../database/access/project.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
+import {
+  studioCastMemberSurfaceResourceKey,
+  studioLocationSurfaceResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 interface DisplayAssetInput extends RenkuConfigPathOptions {
   projectName: string;
@@ -17,8 +22,8 @@ interface DisplayAssetInput extends RenkuConfigPathOptions {
 
 export async function setCastProfileDisplayAsset(
   input: DisplayAssetInput & { castMemberId: string }
-): Promise<Asset> {
-  const { session } = await openProjectSession(input);
+): Promise<DisplayAssetMutationReport> {
+  const { projectFolder, session } = await openProjectSession(input);
   try {
     const asset = requireDisplayAsset(session, {
       target: { kind: 'castMember', castMemberId: input.castMemberId },
@@ -31,7 +36,9 @@ export async function setCastProfileDisplayAsset(
       assetId: input.assetId,
       now: new Date().toISOString(),
     });
-    return asset;
+    return displayAssetReport(session, projectFolder, asset, [
+      studioCastMemberSurfaceResourceKey(input.castMemberId),
+    ]);
   } finally {
     session.close();
   }
@@ -39,10 +46,13 @@ export async function setCastProfileDisplayAsset(
 
 export async function clearCastProfileDisplayAsset(
   input: Omit<DisplayAssetInput, 'assetId'> & { castMemberId: string }
-): Promise<void> {
-  const { session } = await openProjectSession(input);
+): Promise<DisplayAssetMutationReport> {
+  const { projectFolder, session } = await openProjectSession(input);
   try {
     clearCastProfileDisplayAssetRecord(session, input.castMemberId);
+    return displayAssetReport(session, projectFolder, null, [
+      studioCastMemberSurfaceResourceKey(input.castMemberId),
+    ]);
   } finally {
     session.close();
   }
@@ -50,8 +60,8 @@ export async function clearCastProfileDisplayAsset(
 
 export async function setLocationHeroDisplayAsset(
   input: DisplayAssetInput & { locationId: string }
-): Promise<Asset> {
-  const { session } = await openProjectSession(input);
+): Promise<DisplayAssetMutationReport> {
+  const { projectFolder, session } = await openProjectSession(input);
   try {
     const asset = requireDisplayAsset(session, {
       target: { kind: 'location', locationId: input.locationId },
@@ -64,7 +74,9 @@ export async function setLocationHeroDisplayAsset(
       assetId: input.assetId,
       now: new Date().toISOString(),
     });
-    return asset;
+    return displayAssetReport(session, projectFolder, asset, [
+      studioLocationSurfaceResourceKey(input.locationId),
+    ]);
   } finally {
     session.close();
   }
@@ -72,13 +84,38 @@ export async function setLocationHeroDisplayAsset(
 
 export async function clearLocationHeroDisplayAsset(
   input: Omit<DisplayAssetInput, 'assetId'> & { locationId: string }
-): Promise<void> {
-  const { session } = await openProjectSession(input);
+): Promise<DisplayAssetMutationReport> {
+  const { projectFolder, session } = await openProjectSession(input);
   try {
     clearLocationHeroDisplayAssetRecord(session, input.locationId);
+    return displayAssetReport(session, projectFolder, null, [
+      studioLocationSurfaceResourceKey(input.locationId),
+    ]);
   } finally {
     session.close();
   }
+}
+
+function displayAssetReport(
+  session: Parameters<typeof readProjectRecord>[0],
+  projectFolder: string,
+  asset: Asset | null,
+  resourceKeys: string[]
+): DisplayAssetMutationReport {
+  const project = readProjectRecord(session);
+  if (!project) {
+    throw new ProjectDataError(
+      'PROJECT_DATA021',
+      `Project database has no project row: ${session.databasePath}.`
+    );
+  }
+  return {
+    valid: true,
+    warnings: [],
+    project: { id: project.id, name: project.name, projectFolder },
+    asset,
+    resourceKeys,
+  };
 }
 
 function requireDisplayAsset(
