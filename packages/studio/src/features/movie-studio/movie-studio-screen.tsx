@@ -22,11 +22,13 @@ import { PanelShell } from './panel-shell';
 import { ProjectInformationPanel } from './project-information/project-information-panel';
 import { ActStoryboardPanel } from './acts/act-storyboard-panel';
 import { ScenePanel } from './scenes/scene-panel';
-import { SequencePanel } from './sequences/sequence-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
 import { TrashPanel } from './trash/trash-panel';
-import { useScreenplayNavigation } from './use-screenplay-navigation';
+import {
+  useScreenplayNavigation,
+  type ScreenplayNavigationState,
+} from './use-screenplay-navigation';
 import { useStudioSelectionResolution } from './use-movie-studio-selection-resolution';
 import type { StudioSelection } from './movie-studio-selection';
 import { InspirationFolderCreateDialog } from './visual-language/inspiration-folder-create-dialog';
@@ -178,6 +180,16 @@ export function MovieStudioScreen({
     sceneHeaderTitle.title
       ? sceneHeaderTitle.title
       : resolvedSelection.kicker;
+  const selectedSequenceActId =
+    selection.type === 'sequence'
+      ? resolvedSelection.sequence?.actId ??
+        actIdFromSelectionContext(
+          screenplayNavigation.selectionContext,
+          selection.id
+        )
+      : null;
+  const storyboardActId =
+    selection.type === 'act' ? selection.id : selectedSequenceActId;
   const activeSceneId = selection.type === 'scene' ? selection.id : null;
   const handleSceneHeaderActionChange = useCallback(
     (sceneId: string, action: ReactNode | null) => {
@@ -352,20 +364,22 @@ export function MovieStudioScreen({
                 <StoryArcPanel projectName={project.identity.name} />
               ) : selection.type === 'trash' ? (
                 <TrashPanel projectName={project.identity.name} />
-              ) : selection.type === 'sequence' ? (
-                <SequencePanel
-                  key={selection.id}
-                  projectName={project.identity.name}
-                  sequenceId={selection.id}
-                  onSelect={selectMovieStudioSurface}
-                />
-              ) : selection.type === 'act' ? (
-                <ActStoryboardPanel
-                  key={selection.id}
-                  projectName={project.identity.name}
-                  actId={selection.id}
-                  onSelect={selectMovieStudioSurface}
-                />
+              ) : selection.type === 'act' || selection.type === 'sequence' ? (
+                storyboardActId ? (
+                  <ActStoryboardPanel
+                    key={storyboardActId}
+                    projectName={project.identity.name}
+                    actId={storyboardActId}
+                    selectedSequenceId={
+                      selection.type === 'sequence' ? selection.id : undefined
+                    }
+                    onSelect={selectMovieStudioSurface}
+                  />
+                ) : (
+                  <p className='text-sm text-muted-foreground'>
+                    Loading sequence...
+                  </p>
+                )
               ) : (
                 <ScenePanel
                   key={selection.id}
@@ -391,6 +405,16 @@ export function MovieStudioScreen({
   );
 }
 
+function actIdFromSelectionContext(
+  context: ScreenplayNavigationState['selectionContext'],
+  sequenceId: string
+): string | null {
+  return context &&
+    'sequence' in context &&
+    context.sequence.id === sequenceId
+    ? context.act.id
+    : null;
+}
 
 function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean {
   return (

@@ -19,12 +19,14 @@ import { ACT_STORYBOARD_LAYOUT } from './act-storyboard-layout';
 interface ActStoryboardPanelProps {
   projectName: string;
   actId: string;
+  selectedSequenceId?: string;
   onSelect: (selection: StudioSelection) => void;
 }
 
 export function ActStoryboardPanel({
   projectName,
   actId,
+  selectedSequenceId,
   onSelect,
 }: ActStoryboardPanelProps) {
   const [resource, setResource] =
@@ -96,6 +98,7 @@ export function ActStoryboardPanel({
           <SequenceSection
             key={sequence.sequence.id}
             sequence={sequence}
+            selected={sequence.sequence.id === selectedSequenceId}
             onSelect={onSelect}
           />
         ))}
@@ -106,9 +109,11 @@ export function ActStoryboardPanel({
 
 function SequenceSection({
   sequence,
+  selected,
   onSelect,
 }: {
   sequence: ActStoryboardSequenceResponse;
+  selected: boolean;
   onSelect: (selection: StudioSelection) => void;
 }) {
   const beatCount = sequence.scenes.reduce(
@@ -116,7 +121,15 @@ function SequenceSection({
     0
   );
   return (
-    <section className='space-y-5'>
+    <section
+      data-sequence-id={sequence.sequence.id}
+      data-selected={selected ? 'true' : undefined}
+      className={cn(
+        'space-y-5',
+        selected &&
+          '-mx-4 rounded-lg bg-muted/20 px-4 py-4 ring-1 ring-inset ring-border/30'
+      )}
+    >
       <div className='flex flex-wrap items-end justify-between gap-3 border-b border-border/40 pb-3'>
         <Button
           type='button'

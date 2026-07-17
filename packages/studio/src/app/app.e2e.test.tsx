@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './app';
 import { ThemeProvider } from './theme-provider';
@@ -103,7 +103,7 @@ describe('App', () => {
       },
       {
         path: '/projects/constantinople/sequences/seq_opening',
-        expectedText: 'Opening Scene',
+        expectedText: 'Opening storyboard beat',
       },
       {
         path: '/projects/constantinople/scenes/scene_1_1',
@@ -203,10 +203,10 @@ describe('App', () => {
       }
       if (
         url ===
-        '/studio-api/projects/constantinople/screenplay/sequences/seq_late'
+        '/studio-api/projects/constantinople/screenplay/acts/act_late/storyboard'
       ) {
         return jsonResponse({
-          resource: makeSequenceResource({
+          resource: makeActStoryboardResource({
             actId: 'act_late',
             actTitle: 'Late Act',
             sequenceId: 'seq_late',
@@ -235,12 +235,82 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Late Sequence').length).toBeGreaterThan(0);
     });
+    await waitFor(() => {
+      expect(
+        document.querySelector(
+          '[data-sequence-id="seq_late"][data-selected="true"]'
+        )
+      ).not.toBeNull();
+    });
     expect(fetchLog).toContain(
       '/studio-api/projects/constantinople/movie-studio-selection/context'
+    );
+    expect(fetchLog).toContain(
+      '/studio-api/projects/constantinople/screenplay/acts/act_late/storyboard'
+    );
+    expect(fetchLog).not.toContain(
+      '/studio-api/projects/constantinople/screenplay/sequences/seq_late'
     );
     expect(window.location.pathname).toBe(
       '/projects/constantinople/sequences/seq_late'
     );
+  });
+
+  it('keeps the Act storyboard mounted when a sequence is selected', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/projects/constantinople/acts/act_opening'
+    );
+    const fetchLog = mockStudioFetch({
+      library: makeLibrary([makeProjectSummary()]),
+      project: makeProject(),
+    });
+
+    const { container } = renderApp();
+
+    await screen.findByText('Opening storyboard beat');
+    await waitFor(() => {
+      expect(screen.getAllByText('Opening').length).toBeGreaterThan(1);
+    });
+    await screen.findByLabelText('Expand Opening');
+    const sequenceSection = container.querySelector(
+      '[data-sequence-id="seq_opening"]'
+    );
+    expect(sequenceSection).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Opening Act' }));
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Expand Opening')).toBeNull();
+    });
+    const storyboardReadsBeforeSelection = fetchLog.filter(
+      (url) =>
+        url ===
+        '/studio-api/projects/constantinople/screenplay/acts/act_opening/storyboard'
+    ).length;
+    fireEvent.click(
+      within(sequenceSection as HTMLElement).getByRole('button', {
+        name: 'Opening',
+      })
+    );
+
+    await waitFor(() => {
+      expect(
+        container.querySelector(
+          '[data-sequence-id="seq_opening"][data-selected="true"]'
+        )
+      ).not.toBeNull();
+    });
+    await screen.findByLabelText('Collapse Opening');
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/sequences/seq_opening'
+    );
+    expect(
+      fetchLog.filter(
+        (url) =>
+          url ===
+          '/studio-api/projects/constantinople/screenplay/acts/act_opening/storyboard'
+      )
+    ).toHaveLength(storyboardReadsBeforeSelection);
   });
 
   it('loads a direct scene route through selection context without eager shell children', async () => {
@@ -336,8 +406,7 @@ describe('App', () => {
     fireEvent.click(screen.getByLabelText('Expand Acts'));
     await screen.findByText('Opening Act');
     fireEvent.click(screen.getByText('Opening Act'));
-    await screen.findByText('Opening');
-    fireEvent.click(screen.getByLabelText('Expand Opening'));
+    fireEvent.click(await screen.findByLabelText('Expand Opening'));
 
     await screen.findByText('Opening Scene');
     expect(screen.getByText('1 scenes')).toBeTruthy();
@@ -1386,6 +1455,14 @@ function mockStudioFetch(input: {
         resource: makeSequenceResource(),
       });
     }
+    if (
+      url ===
+      '/studio-api/projects/constantinople/screenplay/acts/act_opening/storyboard'
+    ) {
+      return jsonResponse({
+        resource: makeActStoryboardResource(),
+      });
+    }
     if (url === '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1') {
       return jsonResponse({
         resource: makeSceneNarrativeResource(),
@@ -1467,6 +1544,22 @@ function makeSelectionContextResponse(selection: StudioSelection) {
         },
       },
       resourceKeys: [`surface:castMember:${selection.id}`],
+    };
+  }
+  if (selection.type === 'act') {
+    return {
+      valid: true,
+      selection,
+      context: {
+        surface: 'act',
+        act: {
+          id: selection.id,
+          title: 'Opening Act',
+          sequenceCount: 1,
+          sceneCount: 1,
+        },
+      },
+      resourceKeys: ['screenplay:acts'],
     };
   }
   if (selection.type === 'sequence') {
@@ -1733,6 +1826,71 @@ function makeSequenceResource(
       items: scenes,
       nextCursor: null,
     },
+  };
+}
+
+function makeActStoryboardResource(
+  options: {
+    actId?: string;
+    actTitle?: string;
+    sequenceId?: string;
+    sequenceTitle?: string;
+    scenes?: Array<{
+      scene: {
+        id: string;
+        sequenceId: string;
+        title: string;
+      };
+      beats: Array<{
+        beatId: string;
+        label: string;
+        title: string;
+        image: null;
+      }>;
+    }>;
+  } = {}
+) {
+  const actId = options.actId ?? 'act_opening';
+  const sequenceId = options.sequenceId ?? 'seq_opening';
+  const scenes =
+    options.scenes ??
+    [
+      {
+        scene: {
+          id: 'scene_1_1',
+          sequenceId,
+          title: 'Opening Scene',
+        },
+        beats: [
+          {
+            beatId: 'beat_001',
+            label: 'Beat 1',
+            title: 'Opening storyboard beat',
+            image: null,
+          },
+        ],
+      },
+    ];
+  return {
+    act: {
+      id: actId,
+      title: options.actTitle ?? 'Opening Act',
+      purpose: 'Establish the siege preparations.',
+      sequenceCount: 1,
+      sceneCount: scenes.length,
+    },
+    sequences: [
+      {
+        sequence: {
+          id: sequenceId,
+          actId,
+          number: 1,
+          title: options.sequenceTitle ?? 'Opening',
+          sceneCount: scenes.length,
+        },
+        scenes,
+      },
+    ],
   };
 }
 

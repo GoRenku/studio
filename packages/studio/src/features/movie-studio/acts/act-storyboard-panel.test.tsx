@@ -78,6 +78,31 @@ describe('ActStoryboardPanel', () => {
     });
   });
 
+  it('highlights the selected sequence without changing the storyboard layout', async () => {
+    vi.mocked(readActStoryboardResource).mockResolvedValue(actResource());
+
+    const { container } = render(
+      <ActStoryboardPanel
+        projectName='constantinople'
+        actId='act_one'
+        selectedSequenceId='seq_offer'
+        onSelect={vi.fn()}
+      />
+    );
+
+    await screen.findByRole('button', { name: 'Beat 1 — Map study' });
+    expect(
+      container.querySelector(
+        '[data-sequence-id="seq_offer"][data-selected="true"]'
+      )
+    ).not.toBeNull();
+    expect(
+      container.querySelectorAll(
+        '[data-media-card-presentation="overlay"]'
+      )
+    ).toHaveLength(2);
+  });
+
   it('reloads when a scene storyboard resource changes', async () => {
     vi.mocked(readActStoryboardResource).mockResolvedValue(actResource());
 

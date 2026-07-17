@@ -128,33 +128,71 @@ export function StudioSidebar({
     ) {
       sections.push('acts');
     }
+    if (selection.type === 'sequence') {
+      sequences.push(selection.id);
+      const actId = actIdForSequence(
+        screenplayNavigation.sequencesByActId,
+        selection.id
+      );
+      if (actId) {
+        acts.push(actId);
+      }
+    }
     if (context) {
       if ('act' in context) acts.push(context.act.id);
       if ('sequence' in context) sequences.push(context.sequence.id);
     }
     return { sections, acts, sequences };
-  }, [screenplayNavigation.selectionContext, selection.type]);
+  }, [
+    screenplayNavigation.selectionContext,
+    screenplayNavigation.sequencesByActId,
+    selection,
+  ]);
+  const forceSelectedScreenplayPathOpen =
+    selection.type === 'sequence' || selection.type === 'scene';
 
-  const visibleExpandedSections = useMemo(
-    () =>
-      subtractValues(
-        addValues(expandedSections, autoExpand.sections),
-        collapsedAutoSections
-      ),
-    [autoExpand.sections, collapsedAutoSections, expandedSections]
-  );
-  const visibleExpandedActs = useMemo(
-    () => subtractValues(addValues(expandedActs, autoExpand.acts), collapsedAutoActs),
-    [autoExpand.acts, collapsedAutoActs, expandedActs]
-  );
-  const visibleExpandedSequences = useMemo(
-    () =>
-      subtractValues(
-        addValues(expandedSequences, autoExpand.sequences),
-        collapsedAutoSequences
-      ),
-    [autoExpand.sequences, collapsedAutoSequences, expandedSequences]
-  );
+  const visibleExpandedSections = useMemo(() => {
+    const visible = subtractValues(
+      addValues(expandedSections, autoExpand.sections),
+      collapsedAutoSections
+    );
+    return forceSelectedScreenplayPathOpen
+      ? addValues(visible, ['acts'])
+      : visible;
+  }, [
+    autoExpand.sections,
+    collapsedAutoSections,
+    expandedSections,
+    forceSelectedScreenplayPathOpen,
+  ]);
+  const visibleExpandedActs = useMemo(() => {
+    const visible = subtractValues(
+      addValues(expandedActs, autoExpand.acts),
+      collapsedAutoActs
+    );
+    return forceSelectedScreenplayPathOpen
+      ? addValues(visible, autoExpand.acts)
+      : visible;
+  }, [
+    autoExpand.acts,
+    collapsedAutoActs,
+    expandedActs,
+    forceSelectedScreenplayPathOpen,
+  ]);
+  const visibleExpandedSequences = useMemo(() => {
+    const visible = subtractValues(
+      addValues(expandedSequences, autoExpand.sequences),
+      collapsedAutoSequences
+    );
+    return forceSelectedScreenplayPathOpen
+      ? addValues(visible, autoExpand.sequences)
+      : visible;
+  }, [
+    autoExpand.sequences,
+    collapsedAutoSequences,
+    expandedSequences,
+    forceSelectedScreenplayPathOpen,
+  ]);
 
   const toggleSection = (section: string) => {
     const expanded = visibleExpandedSections.has(section);
@@ -459,6 +497,18 @@ function subtractValues<T>(current: Set<T>, values: ReadonlySet<T>): Set<T> {
     }
   }
   return changed ? next : current;
+}
+
+function actIdForSequence(
+  sequencesByActId: Map<string, SequenceNavigationRow[]>,
+  sequenceId: string
+): string | null {
+  for (const [actId, sequences] of sequencesByActId) {
+    if (sequences.some((sequence) => sequence.id === sequenceId)) {
+      return actId;
+    }
+  }
+  return null;
 }
 
 function ProjectCard({
