@@ -26,6 +26,7 @@ describe('generation purpose settings', () => {
   it('does not materialize recommendations or provider defaults', async () => {
     const spec = await applyFixedGenerationSettings({
       spec: {
+        executionKind: 'renku-managed',
         purpose: 'lookbook.image',
         target: { kind: 'lookbook', id: 'lookbook-1' },
         model: { provider: 'fal-ai', model: 'nano-banana-2' },
@@ -41,6 +42,7 @@ describe('generation purpose settings', () => {
 
 function storyboardSpec(values: GenerationSpec['values']): GenerationSpec {
   return {
+    executionKind: 'renku-managed',
     purpose: 'scene.storyboard-sheet',
     target: { kind: 'scene', id: 'scene-1' },
     model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },

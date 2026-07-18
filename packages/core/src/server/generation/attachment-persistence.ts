@@ -5,6 +5,7 @@ import {
   nextAssetRelationshipSortOrder,
 } from '../database/access/asset-relationships/index.js';
 import { insertAssetRecord } from '../database/access/assets.js';
+import { setAssetFileSourceGenerationSpec } from '../database/access/asset-files.js';
 import {
   insertLookbookImageRecord,
   nextLookbookImageSortOrder,
@@ -15,6 +16,7 @@ import {
 } from '../database/access/lookbook-sheets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
+import { ProjectDataError } from '../project-data-error.js';
 import {
   createProjectAssetFileWriteSet,
   persistProjectAssetFileSync,
@@ -39,6 +41,7 @@ export interface PersistGeneratedMediaAttachmentInput {
   fileRole: string;
   relationshipRole: string;
   provenanceReceipt?: unknown;
+  sourceSpecId?: string;
 }
 
 export interface PersistedGeneratedMediaAttachment {
@@ -54,6 +57,12 @@ export interface PersistedGeneratedMediaAttachment {
 export function persistGeneratedMediaAttachment(
   input: PersistGeneratedMediaAttachmentInput
 ): PersistedGeneratedMediaAttachment {
+  if (input.provenanceReceipt !== undefined && input.sourceSpecId) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
+      'Generated media attachment accepts one generation source.',
+    );
+  }
   const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
   const relationshipId = input.idGenerator.next(
@@ -136,6 +145,12 @@ export function persistGeneratedMediaAttachment(
           session,
           assetFileId,
           receipt: input.provenanceReceipt,
+        });
+      }
+      if (input.sourceSpecId) {
+        setAssetFileSourceGenerationSpec(session, {
+          assetFileId,
+          sourceGenerationSpecId: input.sourceSpecId,
         });
       }
     });

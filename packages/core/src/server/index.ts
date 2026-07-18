@@ -95,13 +95,9 @@ export {
   runImageRevision,
 } from './image-revision-workflow/service.js';
 
-export {
-  copyAssetFileGenerationProvenance,
-  recordAssetFileGenerationProvenance,
-} from './asset-file-generation/commands.js';
+export { recordAssetFileGenerationProvenance } from './asset-file-generation/commands.js';
 export { readAssetFileGenerationProvenance } from './asset-file-generation/queries.js';
 export type {
-  CopyAssetFileGenerationProvenanceInput,
   ReadAssetFileGenerationProvenanceInput,
   RecordAssetFileGenerationProvenanceInput,
 } from './asset-file-generation/types.js';

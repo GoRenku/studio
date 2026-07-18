@@ -597,6 +597,7 @@ function makeProject(): Project {
 function generationPreviewFixture(): GenerationPreview {
   return {
     spec: {
+      executionKind: 'renku-managed',
       purpose: 'image.create',
       target: { kind: 'project', id: 'project_test0001' },
       model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },

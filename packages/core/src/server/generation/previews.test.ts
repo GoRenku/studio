@@ -9,11 +9,11 @@ describe('generic generation preview', () => {
   it('renders incomplete editing state without provider readiness', async () => {
     const preview = await buildGenerationPreview({
       spec: {
+        executionKind: 'renku-managed',
         purpose: 'image.create',
         target: { kind: 'project', id: 'project-1' },
         values: {},
         references: [{
-          id: 'missing-reference',
           placement: { kind: 'additional' },
           reference: {
             kind: 'project-file',
@@ -31,7 +31,6 @@ describe('generic generation preview', () => {
     expect(preview.spec.model).toBeUndefined();
     expect(preview.references).toEqual([
       expect.objectContaining({
-        id: 'missing-reference',
         resolved: null,
       }),
     ]);

@@ -60,7 +60,15 @@ export async function buildImageRevisionSpec(input: {
     session: input.session,
     projectFolder: input.projectFolder,
   });
-  const model = await modelForSpec(definition.spec, input.session, input.projectFolder);
+  const specWithSelectedModel: GenerationSpec = {
+    ...definition.spec,
+    model: input.draft.model,
+  };
+  const model = await modelForSpec(
+    specWithSelectedModel,
+    input.session,
+    input.projectFolder,
+  );
   const supportedControls = new Set(
     model.fields
       .filter((field) => !field.media && field.semantic?.kind !== 'authored-text')
@@ -83,7 +91,7 @@ export async function buildImageRevisionSpec(input: {
     values[negativeField.name] = input.draft.negativeText;
   }
   const spec: GenerationSpec = {
-    ...definition.spec,
+    ...specWithSelectedModel,
     values,
   };
   return spec;
@@ -165,7 +173,6 @@ async function createImageEditSpec(input: {
     );
   }
   const selection: GenerationReferenceSelection = {
-    id: `image-revision-source:${input.source.file.id}`,
     placement: { kind: 'slot', sectionId: 'source', slotId: 'source-image' },
     reference: {
       kind: 'asset-file',
@@ -176,6 +183,7 @@ async function createImageEditSpec(input: {
   return {
     purpose: 'image.edit',
     target: { kind: 'asset', id: input.source.asset.id },
+    executionKind: 'renku-managed',
     model: { provider: model.provider, model: model.model },
     values: {},
     references: [
@@ -224,6 +232,10 @@ function draftFromPreview(
 ): ImageRevisionDraft {
   return {
     mode,
+    model: {
+      provider: preview.model.provider,
+      model: preview.model.modelId,
+    },
     authoredText: preview.finalPrompt.authoredText,
     ...(preview.finalPrompt.negativeText !== undefined
       ? { negativeText: preview.finalPrompt.negativeText }

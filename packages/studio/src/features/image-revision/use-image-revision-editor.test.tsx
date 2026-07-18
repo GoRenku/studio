@@ -29,7 +29,28 @@ describe('useImageRevisionEditor', () => {
       },
       finalPrompt: { authoredText: '' },
       references: { slots: [], additional: [] },
-      authoring: { models: [] },
+      authoring: {
+        models: [{
+          provider: 'fal-ai',
+          modelId: 'openai/gpt-image-2/edit',
+          label: 'GPT Image 2 Edit',
+          controls: [],
+        }, {
+          provider: 'fal-ai',
+          modelId: 'nano-banana-2/edit',
+          label: 'Nano Banana 2 Edit',
+          controls: [{
+            controlId: 'quality',
+            kind: 'select',
+            label: 'Quality',
+            value: 'high',
+            required: false,
+            authored: false,
+            recommended: true,
+            options: [{ label: 'High', value: 'high' }],
+          }],
+        }],
+      },
     } as never;
     imageRevisionApi.readImageRevisionContext.mockResolvedValue({
       target: {
@@ -43,6 +64,7 @@ describe('useImageRevisionEditor', () => {
         assetId: 'asset_source',
         assetFileId: 'file_source',
       },
+      sourceGenerationRequest: null,
       regenerate: {
         state: 'unavailable',
         mode: 'regenerate',
@@ -53,6 +75,10 @@ describe('useImageRevisionEditor', () => {
         mode: 'edit',
         draft: {
           mode: 'edit',
+          model: {
+            provider: 'fal-ai',
+            model: 'openai/gpt-image-2/edit',
+          },
           authoredText: '',
           generationControls: [],
         },
@@ -80,5 +106,12 @@ describe('useImageRevisionEditor', () => {
     expect(result.current.preview).toBe(preview);
     expect(result.current.editorDraft?.slotSelections).toEqual([]);
     expect(result.current.editorDraft?.parameterValues).toEqual({});
+
+    act(() => result.current.chooseModel('fal-ai/nano-banana-2/edit'));
+
+    expect(result.current.draft).toMatchObject({
+      model: { provider: 'fal-ai', model: 'nano-banana-2/edit' },
+      generationControls: [{ controlId: 'quality', value: 'high' }],
+    });
   });
 });

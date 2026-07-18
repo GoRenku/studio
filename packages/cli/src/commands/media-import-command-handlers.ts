@@ -17,6 +17,7 @@ export interface MediaCommandFlags {
   sections?: string;
   anchor?: string;
   receipt?: string;
+  sourceSpec?: string;
   sourceSheet?: string;
   beatSheet?: string;
   beats?: string;
@@ -48,6 +49,7 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       sourceProjectRelativePath: requiredFlag(flags.source, '--source'),
       title: flags.title,
       ...(flags.receipt ? { receipt: await readReceipt(flags.receipt) } : {}),
+      ...(flags.sourceSpec ? { sourceSpecId: flags.sourceSpec } : {}),
     });
     await appendStudioResourceChangedEvent({
       runtime,

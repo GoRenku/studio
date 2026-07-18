@@ -31,6 +31,9 @@ export async function validateGenerationSpec(input: {
   session: DatabaseSession;
   projectFolder: string;
 }): Promise<GenerationValidationReport> {
+  if (input.spec.executionKind === 'agent-external') {
+    return { valid: true, spec: input.spec, diagnostics: [] };
+  }
   const prepared = await validateGenerationSpecForExecution(input);
   return prepared.valid
     ? { valid: true, spec: input.spec, diagnostics: [] }
@@ -46,6 +49,17 @@ export async function validateGenerationSpecForExecution(input: {
   | { valid: true; request: ValidatedGenerationRequest; diagnostics: [] }
   | { valid: false; diagnostics: DiagnosticIssue[] }
 > {
+  if (input.spec.executionKind === 'agent-external') {
+    return {
+      valid: false,
+      diagnostics: [createDiagnosticError(
+        'CORE_GENERATION_EXTERNAL_EXECUTION_REQUIRED',
+        'This generation request is executed by the agent, not Renku Engines.',
+        { path: ['executionKind'] },
+        'Use the agent workflow to execute this saved request.'
+      )],
+    };
+  }
   const diagnostics: DiagnosticIssue[] = [];
   if (input.spec.purpose !== input.purpose.purpose) {
     diagnostics.push(createDiagnosticError(

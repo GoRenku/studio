@@ -77,9 +77,15 @@ export function createGenerationServiceWiring() {
         const authoredSpec = await applyFixedGenerationSettings({ spec: rawSpec, purpose });
         const spec = await preparePurposeExecutionSpec({ spec: rawSpec, purpose, projectAspectRatio: projectAspectRatio(session) });
         const context = await purpose.buildContext({ target: authoredSpec.target, session, projectFolder });
-        const validation = await validateGenerationSpecForExecution({ spec, purpose, session, projectFolder });
-        const preview = await buildGenerationPreview({ spec: authoredSpec, referenceGuide: context.referenceGuide, session, projectFolder, validatedRequest: validation.valid ? validation.request : undefined });
-        const enriched = { ...preview, settings: context.settings, models: context.models };
+        const validation = rawSpec.executionKind === 'renku-managed'
+          ? await validateGenerationSpecForExecution({ spec, purpose, session, projectFolder })
+          : null;
+        const preview = await buildGenerationPreview({ spec: authoredSpec, referenceGuide: context.referenceGuide, session, projectFolder, validatedRequest: validation?.valid ? validation.request : undefined });
+        const enriched = {
+          ...preview,
+          settings: context.settings,
+          models: rawSpec.executionKind === 'renku-managed' ? context.models : [],
+        };
         return 'specId' in input ? { ...enriched, specId: input.specId } : enriched;
       });
     },
@@ -185,7 +191,7 @@ export function createGenerationServiceWiring() {
     async readGenerationRun(input: ProjectInput & { runId: string }) {
       return withGenerationProject(input, ({ session }) => readGenerationRun({ id: input.runId, session }));
     },
-    async attachGenerationMedia(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; sourceProjectRelativePath: string; title?: string; receipt?: unknown }) {
+    async attachGenerationMedia(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; sourceProjectRelativePath: string; title?: string; receipt?: unknown; sourceSpecId?: string }) {
       return withGenerationProject(input, ({ session, projectFolder }) => attachGenerationMedia({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator() }));
     },
     async attachSceneStoryboardImages(input: ProjectInput & { sceneId: string; beatSheetId: string; document: SceneStoryboardImagesImportDocument }) {

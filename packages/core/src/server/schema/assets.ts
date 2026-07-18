@@ -11,7 +11,7 @@ import { projectLocales } from './project-locales.js';
 import { scenes } from './scenes.js';
 import { sequences } from './sequences.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
-import { mediaGenerationRuns } from './media-generation.js';
+import { mediaGenerationRuns, mediaGenerationSpecs } from './media-generation.js';
 
 export const assets = sqliteTable('asset', {
   id: text('id').primaryKey(),
@@ -42,6 +42,8 @@ export const assetFiles = sqliteTable(
     width: integer('width'),
     height: integer('height'),
     durationSeconds: real('duration_seconds'),
+    sourceGenerationSpecId: text('source_generation_spec_id')
+      .references(() => mediaGenerationSpecs.id),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
     ...discardLifecycleColumns(),

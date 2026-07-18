@@ -80,7 +80,11 @@ function projectSavedReference(
   selection: GenerationPreview['references'][number]
 ): ProjectedReference {
   if (selection.reference.kind !== 'asset-file') {
-    throw unavailable(selection.id);
+    throw unavailable(
+      selection.placement.kind === 'slot'
+        ? `${selection.placement.sectionId}/${selection.placement.slotId}`
+        : 'additional reference'
+    );
   }
   const resolved = selection.resolved;
   return {

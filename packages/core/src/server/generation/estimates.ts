@@ -61,6 +61,17 @@ export async function estimateGeneration(input: {
   spec: GenerationSpec;
   purpose: GenerationPurposeContract;
 }): Promise<GenerationEstimateReport> {
+  if (input.spec.executionKind === 'agent-external') {
+    return {
+      valid: false,
+      diagnostics: [createDiagnosticError(
+        'CORE_GENERATION_EXTERNAL_EXECUTION_REQUIRED',
+        'Agent-external generation cannot be estimated by Renku.',
+        { path: ['executionKind'] },
+        'Execute this request through the agent workflow.'
+      )],
+    };
+  }
   const provider = input.spec.model?.provider?.trim();
   const model = input.spec.model?.model?.trim();
   if (!provider || !model) {

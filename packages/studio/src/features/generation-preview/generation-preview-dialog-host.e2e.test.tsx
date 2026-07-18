@@ -184,6 +184,67 @@ describe('GenerationPreviewDialogHost', () => {
     expect(screen.queryByText('Estimated total')).toBeNull();
   });
 
+  it('keeps a saved external request editable without an empty model selector', async () => {
+    const preview = previewFixture({
+      purpose: 'location.sheet',
+      title: 'Location Sheet Preview',
+      referenceLabel: 'Production Lookbook Sheet',
+      saved: true,
+      authoredText: '## Goal\n\nCreate a readable Location Sheet.',
+    });
+    preview.model = {
+      provider: 'codex',
+      modelId: 'gpt-image-2',
+      mediaKind: 'image',
+      executionPath: 'agent-external',
+    };
+    preview.authoring.models = [];
+    preview.configuration.sections = [
+      {
+        key: 'model',
+        label: 'Model',
+        rows: [{
+          key: 'model',
+          label: 'Model',
+          value: 'codex/gpt-image-2',
+          source: 'spec',
+        }],
+      },
+      {
+        key: 'inputs',
+        label: 'Saved values',
+        rows: [{
+          key: 'quality',
+          label: 'quality',
+          value: 'high',
+          source: 'spec',
+        }],
+      },
+    ];
+
+    render(<GenerationPreviewDialogHost />);
+    await dispatchPreview(preview);
+
+    expect(
+      screen
+        .getByRole('textbox', { name: 'Generation prompt' })
+        .hasAttribute('readonly'),
+    ).toBe(false);
+    expect(screen.getByRole('button', { name: 'Update' })).toBeTruthy();
+
+    await act(async () => selectTab('References'));
+    expect(
+      screen.getByRole('button', {
+        name: 'Exclude Production Lookbook Sheet',
+      }),
+    ).toBeTruthy();
+
+    await act(async () => selectTab('Config'));
+    expect(screen.queryByRole('combobox', { name: 'Model' })).toBeNull();
+    expect(screen.getByText('codex/gpt-image-2')).toBeTruthy();
+    expect(screen.getByText('high')).toBeTruthy();
+  });
+
   it('keeps the source reference fixed for saved image-edit previews', async () => {
     render(<GenerationPreviewDialogHost />);
 

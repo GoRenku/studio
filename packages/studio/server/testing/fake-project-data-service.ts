@@ -293,6 +293,7 @@ export function fakeProjectDataService(): NonNullable<
     async estimateSceneDialogueAudioDraft(input) {
       return {
         spec: {
+          executionKind: 'renku-managed',
           purpose: input.spec.purpose,
           target: { kind: 'sceneDialogue', id: input.spec.target.dialogueId },
           model: {

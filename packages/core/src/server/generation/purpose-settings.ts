@@ -7,6 +7,9 @@ export async function applyFixedGenerationSettings(input: {
   spec: GenerationSpec;
   purpose: GenerationPurposeDescriptor;
 }): Promise<GenerationSpec> {
+  if (input.spec.executionKind === 'agent-external') {
+    return structuredClone(input.spec);
+  }
   if (input.purpose.settings.fixed.length === 0 || !input.spec.model?.provider || !input.spec.model.model) {
     return structuredClone(input.spec);
   }

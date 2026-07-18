@@ -12,6 +12,7 @@ describe('generic generation execution validation', () => {
     const projectFolder = await createProjectFolder();
     const report = await validateGenerationSpec({
       spec: {
+        executionKind: 'renku-managed',
         purpose: 'image.edit',
         target: { kind: 'asset', id: 'asset-1' },
         model: { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' },
@@ -50,12 +51,12 @@ describe('generic generation execution validation', () => {
   it('validates every present reference', async () => {
     const projectFolder = await createProjectFolder();
     const spec: GenerationSpec = {
+      executionKind: 'renku-managed',
       purpose: 'image.create',
       target: { kind: 'project', id: 'project-1' },
       model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },
       values: { prompt: 'Keep this prompt exactly.' },
       references: [{
-        id: 'excluded',
         placement: { kind: 'additional' },
         reference: {
           kind: 'project-file',
@@ -101,12 +102,12 @@ describe('generic generation execution validation', () => {
 
 function imageEditSpec(projectRelativePath: string): GenerationSpec {
   return {
+    executionKind: 'renku-managed',
     purpose: 'cast.profile',
     target: { kind: 'castMember', id: 'cast-1' },
     model: { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' },
     values: { prompt: 'Preserve this exact prompt.' },
     references: [{
-      id: 'reference-1',
       placement: { kind: 'additional' },
       providerField: 'image_urls',
       reference: {

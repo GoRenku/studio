@@ -1,5 +1,6 @@
 import type {
   GenerationRun,
+  GenerationSpec,
   ImageRevisionTarget,
 } from '../../client/index.js';
 import { readAssetFileGenerationRecord } from '../database/access/asset-file-generations.js';
@@ -9,7 +10,7 @@ import {
 } from '../database/access/asset-files.js';
 import { readAssetRecord, type AssetRecord } from '../database/access/assets.js';
 import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
-import { readGenerationRunRecord } from '../database/access/media-generation.js';
+import { readGenerationRunRecord, readGenerationSpecRecord } from '../database/access/media-generation.js';
 import { requireLookbookImageRecord } from '../database/access/lookbook-images.js';
 import { requireLookbookSheetRecord } from '../database/access/lookbook-sheets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -20,6 +21,7 @@ export interface ResolvedImageRevisionSource {
   asset: AssetRecord;
   file: AssetFileRecord;
   generationRun: GenerationRun | null;
+  sourceGenerationSpec: GenerationSpec | null;
   ownerRole?: string;
 }
 
@@ -47,13 +49,18 @@ export function resolveImageRevisionSource(
   assertOwnership(session, target);
   const ownerRole = readOwnerRole(session, target);
   const provenance = readAssetFileGenerationRecord(session, file.id);
+  const generationRun = provenance?.mediaGenerationRunId
+    ? readGenerationRunRecord(session, provenance.mediaGenerationRunId)
+    : null;
+  const sourceGenerationSpec = file.sourceGenerationSpecId
+    ? readGenerationSpecRecord(session, file.sourceGenerationSpecId)?.spec ?? null
+    : null;
   return {
     target,
     asset,
     file,
-    generationRun: provenance
-      ? readGenerationRunRecord(session, provenance.mediaGenerationRunId)
-      : null,
+    generationRun,
+    sourceGenerationSpec,
     ...(ownerRole ? { ownerRole } : {}),
   };
 }

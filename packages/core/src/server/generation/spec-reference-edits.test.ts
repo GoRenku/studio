@@ -57,16 +57,17 @@ describe('Generation Preview reference edits', () => {
 
 function spec(): GenerationSpec {
   return {
+    executionKind: 'renku-managed',
     purpose: 'cast.character-sheet',
     target: { kind: 'castMember', id: 'cast-1' },
     values: {},
     references: [
       {
-        id: 'old', placement,
+        placement,
         reference: { kind: 'asset-file', assetId: 'asset-old', assetFileId: 'file-old' },
       },
       {
-        id: 'additional', placement: { kind: 'additional' },
+        placement: { kind: 'additional' },
         reference: { kind: 'project-file', projectRelativePath: 'research/extra.png' as never },
       },
     ],

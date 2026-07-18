@@ -50,7 +50,7 @@ export interface GenerationPreviewModel {
   provider: string;
   modelId: string;
   route?: string;
-  executionPath?: 'renku-managed' | 'codex-external' | 'external';
+  executionPath?: 'renku-managed' | 'agent-external';
   mediaKind: 'image' | 'audio' | 'video';
 }
 

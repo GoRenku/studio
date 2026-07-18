@@ -12,6 +12,7 @@ The browser-safe source is `packages/core/src/client/generation.ts`.
 
 ```ts
 interface GenerationSpec {
+  executionKind: "renku-managed" | "agent-external";
   purpose: string;
   target: GenerationTarget;
   model?: { provider?: string; model?: string };
@@ -31,7 +32,6 @@ normalized project-relative file path. Resolution never chooses another file.
 
 ```ts
 interface GenerationReferenceSelection {
-  id: string;
   placement:
     | {
         kind: "slot";
@@ -49,6 +49,11 @@ The stable target kinds are `project`, `asset`, `lookbook`, `castMember`,
 `location`, `scene`, and `sceneDialogue`. Every target is `{ kind, id }`;
 purpose descriptors own any additional context lookup.
 
+`renku-managed` specs use Engines for validation, estimate, and execution.
+`agent-external` specs preserve a request executed by the agent, such as a
+Codex image request. They are saved and previewed normally but do not create a
+Renku estimate, run, receipt, provider payload, or approval token.
+
 ## Editing And Validation
 
 `createGenerationSpec` and `updateGenerationSpec` accept partial state. They
@@ -57,7 +62,6 @@ validate:
 - purpose and target-kind agreement with the supplied purpose contract on
   creation and exact immutable purpose/target identity on update;
 - JSON-safe authored values;
-- unique non-empty selection ids;
 - normalized project-relative paths or complete exact asset/file ids;
 - structurally complete slot placement and at most one current choice per exact
   slot.
@@ -66,7 +70,7 @@ They do not require provider/model identity, provider-required values, file
 availability, provider-field assignments, current purpose-guide placement,
 candidate membership, or typed domain ownership.
 
-`validateGenerationSpec` performs execution readiness. It resolves exact
+For a Renku-managed spec, `validateGenerationSpec` performs execution readiness. It resolves exact
 provider-assigned references, verifies file availability, asks Engines
 to assemble the provider request, and returns all predictable provider-schema
 and media-envelope issues without executing or writing a run.
@@ -92,7 +96,8 @@ model-mode contract.
 
 `buildGenerationPreview` preserves the exact spec, resolves its references for
 display, and includes a provider payload only when readiness validation
-succeeds.
+succeeds. Agent-external Preview displays the saved prompt, values, references,
+provider, and model without invoking Engines.
 
 `estimateGenerationCost` consumes pricing inputs only: provider, model, output
 media kind, available authored/provider pricing facts, and intended input-media
@@ -118,12 +123,12 @@ unavailable when exact pricing facts are insufficient.
 A provider failure after execution begins is a persisted failed run. A
 predictable validation or approval failure is not.
 
-## Database Generation 46
+## Database Generation 60
 
 `media_generation_spec` columns:
 
 ```text
-id, purpose, target_kind, target_id, provider, model, title,
+id, purpose, target_kind, target_id, execution_kind, provider, model, title,
 values_json, references_json, created_at, updated_at
 ```
 
@@ -140,5 +145,11 @@ Shot Video Take generation purposes, targets, specs, runs, provenance, and
 Take-owned assets. The current generation runtime has no compatibility reader,
 target parser, attachment route, or fallback for those contracts.
 
+`asset_file_generation` remains the Renku-run provenance record. An AssetFile
+may separately link to the agent-external GenerationSpec that produced it.
+Image Revision reads that saved spec and uses the current image as the source
+for a separate, Renku-managed `image.edit` request.
+
 Decision history is recorded in
-`../../decisions/0047-use-context-first-provider-valid-generation.md`.
+`../../decisions/0047-use-context-first-provider-valid-generation.md` and
+`../../decisions/0055-preserve-agent-external-generation-specs-on-images.md`.

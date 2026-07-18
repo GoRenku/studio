@@ -62,6 +62,11 @@ export async function readImageRevisionContext(input: ProjectInput & {
         assetId: source.asset.id,
         assetFileId: source.file.id,
       },
+      sourceGenerationRequest: source.sourceGenerationSpec
+        ? structuredClone(source.sourceGenerationSpec)
+        : source.generationRun?.specSnapshot
+          ? structuredClone(source.generationRun.specSnapshot)
+          : null,
       regenerate,
       edit: {
         state: 'available',

@@ -111,10 +111,15 @@ async function runPreviewShow(input: Input) {
       source: { kind: 'cli', command: 'generation preview show' },
     },
   });
-  if (delivery.status !== 'delivered') {
+  if (delivery.status === 'deliveryFailed') {
     throw previewDeliveryError(delivery);
   }
-  return { valid: true, requestCount: previews.length, studio: { delivery: 'delivered' } };
+  return {
+    valid: true,
+    requestCount: previews.length,
+    previews,
+    studio: { delivery: delivery.status },
+  };
 }
 async function runEstimate(input: Input) {
   return input.runtime.projectDataService.estimateGeneration({ ...projectInput(input), specId: requiredFlag(singleFlag(input.flags.spec), '--spec') });

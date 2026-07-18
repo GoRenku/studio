@@ -132,6 +132,17 @@ export function updateAssetFileRecordMetadata(
     .run();
 }
 
+export function setAssetFileSourceGenerationSpec(
+  session: DatabaseSession,
+  input: { assetFileId: string; sourceGenerationSpecId: string },
+): void {
+  session.db
+    .update(assetFiles)
+    .set({ sourceGenerationSpecId: input.sourceGenerationSpecId })
+    .where(eq(assetFiles.id, input.assetFileId))
+    .run();
+}
+
 export function deleteAssetFileRecordsForAsset(
   session: DatabaseSession,
   assetId: string

@@ -30,6 +30,7 @@ export function updateGenerationSpecRecord(
       purpose: row.purpose,
       targetKind: row.targetKind,
       targetId: row.targetId,
+      executionKind: row.executionKind,
       provider: row.provider,
       model: row.model,
       title: row.title,
@@ -119,7 +120,10 @@ export function readGenerationRunRecord(
   return {
     id: row.id,
     specId: row.specId,
-    specSnapshot,
+    specSnapshot: {
+      ...specSnapshot,
+      executionKind: 'renku-managed',
+    },
     provider: row.provider,
     model: row.model,
     providerPayload: JSON.parse(row.providerPayloadJson) as Record<string, JsonValue>,
@@ -167,6 +171,7 @@ function toSpecRow(record: GenerationSpecRecord) {
     purpose: record.spec.purpose,
     targetKind: record.spec.target.kind,
     targetId: generationTargetId(record.spec.target),
+    executionKind: record.spec.executionKind,
     provider: record.spec.model?.provider ?? null,
     model: record.spec.model?.model ?? null,
     title: record.spec.title ?? null,
@@ -188,6 +193,7 @@ function toSpecRecord(
     spec: {
       purpose: row.purpose,
       target: generationTarget(row.targetKind, row.targetId),
+      executionKind: row.executionKind as GenerationSpec['executionKind'],
       ...(row.provider !== null || row.model !== null
         ? {
             model: {

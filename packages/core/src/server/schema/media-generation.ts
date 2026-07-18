@@ -7,6 +7,7 @@ export const mediaGenerationSpecs = sqliteTable(
     purpose: text('purpose').notNull(),
     targetKind: text('target_kind').notNull(),
     targetId: text('target_id').notNull(),
+    executionKind: text('execution_kind').notNull().default('renku-managed'),
     provider: text('provider'),
     model: text('model'),
     title: text('title'),

@@ -18,7 +18,7 @@ export function projectGenerationPreviewConfiguration(input: {
 }): GenerationPreviewConfiguration {
   const model = input.model;
   if (!model) {
-    return { sections: [] };
+    return externalConfiguration(input.preview);
   }
   const rows = model.fields.flatMap((field) => {
     if (field.media || field.semantic?.kind === 'authored-text') {
@@ -53,6 +53,76 @@ export function projectGenerationPreviewConfiguration(input: {
         : []),
     ],
   };
+}
+
+function externalConfiguration(
+  preview: GenerationPreview,
+): GenerationPreviewConfiguration {
+  const modelIdentity = [
+    preview.spec.model?.provider,
+    preview.spec.model?.model,
+  ].filter(Boolean).join('/');
+  const rows: GenerationPreviewConfigurationRow[] = Object.entries(
+    preview.spec.values,
+  ).flatMap(([key, value]) => {
+    if (key === 'prompt') {
+      return [];
+    }
+    return [{
+      key,
+      label: externalValueLabel(key),
+      value: displayValue(value),
+      providerField: key,
+      source: 'spec' as const,
+      emphasis: 'primary' as const,
+    }];
+  });
+  return {
+    sections: [
+      ...(modelIdentity
+        ? [{
+            key: 'model',
+            label: 'Model',
+            rows: [{
+              key: 'model',
+              label: 'Model',
+              value: modelIdentity,
+              source: 'spec' as const,
+              emphasis: 'primary' as const,
+            }],
+          }]
+        : []),
+      ...(rows.length
+        ? [{ key: 'inputs', label: 'Saved values', rows }]
+        : []),
+    ],
+  };
+}
+
+function displayValue(value: JsonValue): GenerationPreviewConfigurationValue {
+  if (
+    !Array.isArray(value) &&
+    typeof value === 'object' &&
+    value !== null &&
+    Object.keys(value).length === 2 &&
+    typeof value.width === 'number' &&
+    typeof value.height === 'number'
+  ) {
+    return {
+      kind: 'dimensions',
+      width: value.width,
+      height: value.height,
+    };
+  }
+  return configurationValue(value) ?? JSON.stringify(value);
+}
+
+function externalValueLabel(key: string): string {
+  const label = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  return label ? `${label[0]!.toUpperCase()}${label.slice(1)}` : key;
 }
 
 export function projectGenerationPreviewAuthoring(

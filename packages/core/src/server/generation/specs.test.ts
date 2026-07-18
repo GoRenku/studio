@@ -14,12 +14,12 @@ describe('generic generation spec editing persistence', () => {
   it('round-trips partial and provider-invalid authored state unchanged', () => {
     const session = createMemorySession();
     const spec: GenerationSpec = {
+      executionKind: 'renku-managed',
       purpose: 'image.edit',
       target: { kind: 'asset', id: 'asset-1' },
       model: { provider: 'missing-provider' },
       values: { prompt: '', quality: 'authored-provider-value' },
       references: [{
-        id: 'selection-1',
         placement: {
           kind: 'slot',
           sectionId: 'source',
@@ -58,6 +58,7 @@ describe('generic generation spec editing persistence', () => {
   it('rejects only invalid guide placement structure', () => {
     const session = createMemorySession();
     const spec: GenerationSpec = {
+      executionKind: 'renku-managed',
       purpose: 'image.edit',
       target: { kind: 'asset', id: 'asset-1' },
       values: {},
@@ -79,7 +80,6 @@ describe('generic generation spec editing persistence', () => {
 
 function selection(id: string) {
   return {
-    id,
     placement: {
       kind: 'slot' as const,
       sectionId: 'source',
@@ -108,6 +108,7 @@ function createMemorySession(): DatabaseSession {
       purpose text not null,
       target_kind text not null,
       target_id text not null,
+      execution_kind text not null,
       provider text,
       model text,
       title text,

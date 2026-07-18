@@ -36,6 +36,7 @@ export interface GenerationModelIdentity {
 export interface GenerationSpec {
   purpose: GenerationPurpose;
   target: GenerationTarget;
+  executionKind: 'renku-managed' | 'agent-external';
   model?: GenerationModelIdentity;
   values: Record<string, JsonValue>;
   references: GenerationReferenceSelection[];
@@ -43,7 +44,6 @@ export interface GenerationSpec {
 }
 
 export interface GenerationReferenceSelection {
-  id: string;
   placement:
     | {
         kind: 'slot';

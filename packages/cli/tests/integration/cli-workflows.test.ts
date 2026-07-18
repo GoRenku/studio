@@ -2418,7 +2418,6 @@ describe('renku CLI', () => {
           values: { prompt: 'A still first frame for Urban studying the bronze.' },
           references: [
             {
-              id: 'storyboard-lookbook-reference',
               placement: { kind: 'additional' },
               providerField: 'image_urls',
               reference: {
@@ -2456,7 +2455,6 @@ describe('renku CLI', () => {
         purpose: 'image.edit',
         references: [
           expect.objectContaining({
-            id: 'storyboard-lookbook-reference',
             reference: expect.objectContaining({
               assetId: storyboardSheetImport.asset.assetId,
             }),

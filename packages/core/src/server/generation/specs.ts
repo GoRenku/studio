@@ -78,6 +78,15 @@ function assertGenerationSpecEditingEnvelope(
   spec: GenerationSpec,
   purpose: GenerationPurposeContract
 ): void {
+  if (
+    spec.executionKind !== 'renku-managed' &&
+    spec.executionKind !== 'agent-external'
+  ) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_EXECUTION_INVALID',
+      'Generation spec executionKind must be renku-managed or agent-external.'
+    );
+  }
   if (spec.purpose !== purpose.purpose) {
     throw new ProjectDataError(
       'CORE_GENERATION_PURPOSE_INVALID',
@@ -90,28 +99,20 @@ function assertGenerationSpecEditingEnvelope(
       `Generation purpose ${purpose.purpose} requires target kind ${purpose.targetKind}, received ${spec.target.kind}.`
     );
   }
-  const selectionIds = new Set<string>();
   const oneSlotSelections = new Map<string, number>();
   assertJsonRecord(spec.values, 'values');
   for (const selection of spec.references) {
-    if (!selection.id || selectionIds.has(selection.id)) {
-      throw new ProjectDataError(
-        'CORE_GENERATION_SELECTION_INVALID',
-        `Generation reference selection ids must be non-empty and unique: ${selection.id}.`
-      );
-    }
-    selectionIds.add(selection.id);
     if (selection.providerField !== undefined && !selection.providerField.trim()) {
       throw new ProjectDataError(
         'CORE_GENERATION_SELECTION_INVALID',
-        `Generation reference providerField must be omitted or non-empty: ${selection.id}.`
+        'Generation reference providerField must be omitted or non-empty.'
       );
     }
     if (selection.reference.kind === 'asset-file') {
       if (!selection.reference.assetId || !selection.reference.assetFileId) {
         throw new ProjectDataError(
           'CORE_GENERATION_SELECTION_INVALID',
-          `Generation asset-file references require exact asset and file ids: ${selection.id}.`
+          'Generation asset-file references require exact asset and file ids.'
         );
       }
     } else {
@@ -121,7 +122,7 @@ function assertGenerationSpecEditingEnvelope(
       if (normalized !== selection.reference.projectRelativePath) {
         throw new ProjectDataError(
           'CORE_GENERATION_SELECTION_INVALID',
-          `Generation project-file references must already use normalized project-relative paths: ${selection.id}.`
+          'Generation project-file references must already use normalized project-relative paths.'
         );
       }
     }
@@ -149,7 +150,7 @@ function assertSlotPlacement(selection: GenerationReferenceSelection): void {
       (placement.subject && (!placement.subject.kind.trim() || !placement.subject.id.trim()))) {
     throw new ProjectDataError(
       'CORE_GENERATION_SELECTION_INVALID',
-      `Generation reference slot placement must identify a non-empty section, slot, and optional subject: ${selection.id}.`
+      'Generation reference slot placement must identify a non-empty section, slot, and optional subject.'
     );
   }
 }

@@ -151,7 +151,6 @@ export function applyGenerationReferenceSlotSelection(
     ? current?.providerField
     : input.providerField ?? undefined;
   references.push({
-    id: current?.id ?? `slot:${placementKey(input.placement)}`,
     placement: input.placement,
     ...(providerField ? { providerField } : {}),
     reference: input.reference,
@@ -174,7 +173,6 @@ export function applyGenerationGenericReferences(
   for (const reference of genericReferences) {
     const existing = current.get(referenceKey(reference));
     references.push({
-      id: existing?.id ?? `additional:${referenceKey(reference)}`,
       placement: { kind: 'additional' },
       ...(existing?.providerField
         ? { providerField: existing.providerField }

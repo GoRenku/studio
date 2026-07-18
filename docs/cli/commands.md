@@ -1420,6 +1420,7 @@ A generic `GenerationSpec` has this shape:
 
 ```json
 {
+  "executionKind": "renku-managed",
   "purpose": "location.sheet",
   "target": { "kind": "location", "id": "location_sea_walls" },
   "model": { "provider": "fal-ai", "model": "openai/gpt-image-2" },
@@ -1439,7 +1440,6 @@ Exact references use stable guide placements:
 
 ```json
 {
-  "id": "selected-source",
   "placement": {
     "kind": "slot",
     "sectionId": "source",
@@ -1502,7 +1502,24 @@ Behavior:
   storyboard attachment command.
 - Generation output is not attached automatically. Inspect the output, then use
   the focused `renku media import` purpose with the run receipt. Omit the
-  receipt for external files so Core records no synthetic provenance.
+  receipt for external files. A Codex-generated image can instead retain its
+  saved agent-external spec through `--source-spec`.
+
+For Codex image generation, save the exact request before invoking Codex:
+
+```json
+{
+  "executionKind": "agent-external",
+  "purpose": "cast.profile",
+  "target": { "kind": "castMember", "id": "cast_..." },
+  "model": { "provider": "codex", "model": "<actual-model>" },
+  "values": { "prompt": "Exact prompt sent to Codex." },
+  "references": []
+}
+```
+
+Create and preview this spec normally. Preview returns its data in JSON even
+when Studio is not running. Do not estimate or run an agent-external spec.
 
 ## `renku media import`
 
@@ -1530,8 +1547,11 @@ renku media import \
   --source <project-relative-path> \
   --title <title> \
   --receipt <generation-run-json> \
+  --source-spec <agent-external-spec-id> \
   --json
 ```
+
+`--receipt` and `--source-spec` are alternatives; do not pass both.
 
 Examples:
 
@@ -1546,10 +1566,10 @@ renku media import --purpose location.hero --target location:<location-id> --sou
 ```
 
 Pass `--receipt` only for an exact output from a Renku run whose purpose and
-target match the focused attachment. Core records the real earlier run as
-provenance. Omit `--receipt` for uploaded, downloaded, manually created, or
-Codex-generated media; Core records it as external target-owned media with no
-synthetic generation spec or provenance.
+target match the focused attachment. Pass `--source-spec` for a Codex-generated
+image after saving the matching agent-external request. Omit both for uploaded,
+downloaded, manually created, or other external media with no saved generation
+request.
 
 Scene Storyboard Sheet uses the focused cropped-image attachment:
 

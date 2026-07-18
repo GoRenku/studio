@@ -19,7 +19,9 @@ export function projectGenerationPreviewPrompt(input: {
       field.semantic.role === 'negative-prompt'
   );
   const authoredText = stringValue(
-    promptField ? input.preview.spec.values[promptField.name] : undefined
+    promptField
+      ? input.preview.spec.values[promptField.name]
+      : input.preview.spec.values.prompt
   );
   const providerText = stringValue(
     promptField ? input.preview.providerPayload?.[promptField.name] : undefined

@@ -69,6 +69,7 @@ const videoPurpose = {
 
 function seedanceSpec(values: Record<string, string>): GenerationSpec {
   return {
+    executionKind: 'renku-managed',
     purpose: 'image.create',
     target: { kind: 'project', id: 'project' },
     model: {

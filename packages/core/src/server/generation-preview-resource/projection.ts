@@ -50,6 +50,7 @@ export function projectGenerationPreviewResource(input: {
     model: {
       provider,
       modelId,
+      executionPath: input.preview.spec.executionKind,
       mediaKind: model?.mediaKind ?? 'image',
     },
     finalPrompt: projectGenerationPreviewPrompt({

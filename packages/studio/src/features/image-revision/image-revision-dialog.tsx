@@ -16,6 +16,7 @@ import {
 import { Tabs } from '@/ui/tabs';
 import { ImageRevisionDialogFooter } from './image-revision-dialog-footer';
 import { ImageRevisionModeTabs } from './image-revision-mode-tabs';
+import { ImageRevisionSourceRequest } from './image-revision-source-request';
 import {
   useImageRevisionEditor,
   type ImageRevisionEditorRequest,
@@ -42,7 +43,7 @@ export function ImageRevisionDialog({
       : undefined;
   const controls =
     editor.mode === 'edit' && editor.modeContext?.state === 'available'
-      ? editor.modeContext.controls.map((control) =>
+      ? editor.controls.map((control) =>
           applyDraftControlValue(control, editor.draft),
         )
       : [];
@@ -79,6 +80,9 @@ export function ImageRevisionDialog({
             Regenerate from the original request or describe a targeted image edit.
           </DialogDescription>
         </DialogHeader>
+        <ImageRevisionSourceRequest
+          spec={editor.context?.sourceGenerationRequest ?? null}
+        />
         <Tabs
           value={editor.mode}
           onValueChange={(value) => editor.changeMode(value as never)}
@@ -106,10 +110,22 @@ export function ImageRevisionDialog({
             pending={editor.runPending}
             referencesReadOnly
             controls={controls}
+            modelControl={
+              editor.mode === 'edit' && editor.draft && editor.preview
+                ? {
+                    value: `${editor.draft.model.provider}/${editor.draft.model.model}`,
+                    options: editor.preview.authoring.models.map((model) => ({
+                      value: `${model.provider}/${model.modelId}`,
+                      label: `${model.label} — ${model.modelId}`,
+                    })),
+                  }
+                : undefined
+            }
             onTabChange={setEditorTab}
             onAuthoredTextChange={editor.updateAuthoredText}
             onNegativeTextChange={editor.updateNegativeText}
             onControlChange={editor.updateControl}
+            onModelChange={editor.chooseModel}
             authoredPlaceholder={
               editor.mode === 'edit'
                 ? 'Describe the changes to make to this image.'

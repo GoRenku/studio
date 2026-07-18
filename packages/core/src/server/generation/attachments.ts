@@ -5,7 +5,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { generationRunIdFromReceipt } from '../asset-file-generation/import-provenance.js';
-import { readGenerationRunRecord } from '../database/access/media-generation.js';
+import { readGenerationRunRecord, readGenerationSpecRecord } from '../database/access/media-generation.js';
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
 import {
   castCharacterSheetAttachmentDestination,
@@ -24,6 +24,7 @@ export interface AttachGenerationMediaInput {
   sourceProjectRelativePath: string;
   title?: string;
   receipt?: unknown;
+  sourceSpecId?: string;
 }
 
 export interface GenerationMediaAttachmentReport {
@@ -31,7 +32,10 @@ export interface GenerationMediaAttachmentReport {
   purpose: GenerationPurpose;
   target: GenerationTarget;
   asset: Asset | { assetId: string; assetFileId: string; projectRelativePath: string };
-  provenance: { generationRunId: string } | null;
+  provenance:
+    | { generationRunId: string }
+    | { generationSpecId: string }
+    | null;
   resourceKeys: string[];
   project: { name: string; id: string; projectFolder: string };
   ownerRecord?: { kind: 'lookbookImage' | 'lookbookSheet'; id: string };
@@ -43,7 +47,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
   const attachment = attachmentDestination(input);
-  const generationRunId = validateGenerationProvenance(input);
+  const provenance = validateGenerationProvenance(input);
   validateLookbookKind(input);
   const persisted = persistGeneratedMediaAttachment({
     session: input.session,
@@ -56,11 +60,16 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       type: attachment.assetType,
       mediaKind: 'image',
       title: input.title?.trim() || attachment.label,
-      origin: generationRunId ? 'generated' : 'external',
+      origin: provenance ? 'generated' : 'external',
     },
     fileRole: 'primary',
     relationshipRole: attachment.relationshipRole,
-    ...(generationRunId ? { provenanceReceipt: input.receipt } : {}),
+    ...(provenance?.kind === 'renku-managed'
+      ? { provenanceReceipt: input.receipt }
+      : {}),
+    ...(provenance?.kind === 'agent-external'
+      ? { sourceSpecId: provenance.generationSpecId }
+      : {}),
   });
   const project = readProjectRecord(input.session);
   const attached = readAssetRelationship(input.session, {
@@ -75,14 +84,48 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     purpose: input.purpose,
     target: input.target,
     asset: attached,
-    provenance: generationRunId ? { generationRunId } : null,
+    provenance: provenance?.kind === 'renku-managed'
+      ? { generationRunId: provenance.generationRunId }
+      : provenance?.kind === 'agent-external'
+        ? { generationSpecId: provenance.generationSpecId }
+        : null,
     resourceKeys: attachment.resourceKeys,
     project: { name: project.name, id: project.id, projectFolder: input.projectFolder },
     ...(persisted.ownerRecord ? { ownerRecord: persisted.ownerRecord } : {}),
   };
 }
 
-function validateGenerationProvenance(input: AttachGenerationMediaInput & { session: DatabaseSession }): string | null {
+function validateGenerationProvenance(input: AttachGenerationMediaInput & {
+  session: DatabaseSession;
+}):
+  | { kind: 'renku-managed'; generationRunId: string }
+  | { kind: 'agent-external'; generationSpecId: string }
+  | null {
+  if (input.receipt !== undefined && input.sourceSpecId) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
+      'Generation media attachment accepts either a receipt or a source spec, not both.',
+    );
+  }
+  if (input.sourceSpecId) {
+    const record = readGenerationSpecRecord(input.session, input.sourceSpecId);
+    if (
+      !record ||
+      record.spec.executionKind !== 'agent-external' ||
+      record.spec.purpose !== input.purpose ||
+      record.spec.target.kind !== input.target.kind ||
+      record.spec.target.id !== input.target.id
+    ) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_ATTACHMENT_SOURCE_SPEC_INVALID',
+        'The source spec must be an agent-external request for the same purpose and target.',
+      );
+    }
+    return {
+      kind: 'agent-external',
+      generationSpecId: record.id,
+    };
+  }
   if (input.receipt === undefined) {
     return null;
   }
@@ -97,7 +140,7 @@ function validateGenerationProvenance(input: AttachGenerationMediaInput & { sess
   if (!run.outputs.some((output) => output.projectRelativePath === input.sourceProjectRelativePath)) {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'The attached source must be an exact output of the supplied generation run.');
   }
-  return generationRunId;
+  return { kind: 'renku-managed', generationRunId };
 }
 
 function attachmentDestination(input: AttachGenerationMediaInput): {

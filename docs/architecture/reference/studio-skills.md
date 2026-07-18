@@ -82,7 +82,7 @@ operational companions that teach agents how to use those contracts.
 - Generates purpose-specific media from Renku context.
 - Authors one generic `GenerationSpec` from Core context and Engines-owned
   provider field descriptors.
-- Preserves stable guide placement ids and separately assigns every included
+- Preserves exact guide placement and separately assigns every included
   exact reference to a real provider media field.
 - Treats `facts.contextText` as opaque authored source context and keeps
   continuity relevance, Beat batching, and creative fallback decisions in the

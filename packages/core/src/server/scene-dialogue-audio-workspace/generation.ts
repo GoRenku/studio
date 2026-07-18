@@ -174,6 +174,7 @@ async function buildSceneDialogueAudioSpec(input: {
   return {
     purpose: 'scene.dialogue-audio',
     target: { kind: 'sceneDialogue', id: input.setup.target.dialogueId },
+    executionKind: 'renku-managed',
     model: { provider: 'elevenlabs', model: providerModel },
     values: bindGenerationSemanticValues({
       descriptor,

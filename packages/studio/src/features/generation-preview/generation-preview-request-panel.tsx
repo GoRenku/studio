@@ -66,13 +66,15 @@ export function GenerationPreviewRequestPanel({
         onNegativeTextChange={editor.updateNegativeText}
         onReferenceChoose={editor.chooseReference}
         controls={editor.controls}
-        modelControl={{
-          value: editor.modelKey,
-          options: preview.authoring.models.map((model) => ({
-            value: `${model.provider}/${model.modelId}`,
-            label: `${model.label} — ${model.modelId}`,
-          })),
-        }}
+        modelControl={preview.authoring.models.length > 0
+          ? {
+              value: editor.modelKey,
+              options: preview.authoring.models.map((model) => ({
+                value: `${model.provider}/${model.modelId}`,
+                label: `${model.label} — ${model.modelId}`,
+              })),
+            }
+          : undefined}
         onModelChange={editor.chooseModel}
         onControlChange={editor.chooseParameter}
       />

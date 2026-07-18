@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { GenerationPreview } from '../../client/generation.js';
-import { projectGenerationPreviewAuthoring } from './configuration.js';
+import {
+  projectGenerationPreviewAuthoring,
+  projectGenerationPreviewConfiguration,
+} from './configuration.js';
 
 describe('generation preview authoring projection', () => {
   it('projects selectable models and configurable non-media inputs', () => {
@@ -58,11 +61,38 @@ describe('generation preview authoring projection', () => {
       },
     ]);
   });
+
+  it('presents saved external properties with readable labels and dimensions', () => {
+    const preview = previewFixture();
+    preview.spec = {
+      ...preview.spec,
+      executionKind: 'agent-external',
+      model: { provider: 'codex', model: 'gpt-image-2' },
+      values: {
+        prompt: 'Create a location sheet.',
+        aspect_ratio: '16:9',
+        resolution: { width: 1672, height: 941 },
+        output_format: 'png',
+      },
+    };
+
+    const configuration = projectGenerationPreviewConfiguration({ preview });
+
+    expect(configuration.sections[1]?.rows).toEqual([
+      expect.objectContaining({ label: 'Aspect ratio', value: '16:9' }),
+      expect.objectContaining({
+        label: 'Resolution',
+        value: { kind: 'dimensions', width: 1672, height: 941 },
+      }),
+      expect.objectContaining({ label: 'Output format', value: 'png' }),
+    ]);
+  });
 });
 
 function previewFixture(): GenerationPreview {
   return {
     spec: {
+      executionKind: 'renku-managed',
       purpose: 'cast.character-sheet',
       target: { kind: 'castMember', id: 'cast_test' },
       model: { provider: 'fal-ai', model: 'nano-banana-2' },

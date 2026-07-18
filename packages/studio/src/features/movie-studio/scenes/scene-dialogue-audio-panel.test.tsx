@@ -216,6 +216,7 @@ function estimateReport(): SceneDialogueAudioEstimateReport {
   };
   return {
     spec: {
+      executionKind: 'renku-managed',
       purpose: 'scene.dialogue-audio',
       target: { kind: 'sceneDialogue', id: 'dialogue_urban' },
       model: { provider: 'elevenlabs', model: 'eleven_v3' },

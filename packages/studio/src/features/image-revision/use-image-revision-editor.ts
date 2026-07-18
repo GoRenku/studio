@@ -130,6 +130,12 @@ export function useImageRevisionEditor(
     };
   }, [draft, preview]);
 
+  const selectedModel = preview?.authoring.models.find((candidate) =>
+    candidate.provider === draft?.model.provider &&
+    candidate.modelId === draft?.model.model
+  );
+  const controls = selectedModel?.controls ?? [];
+
   const updateDraft = (update: (current: ImageRevisionDraft) => ImageRevisionDraft) => {
     setDraft((current) => (current ? update(current) : current));
     setError(null);
@@ -148,6 +154,23 @@ export function useImageRevisionEditor(
             control.controlId === controlId ? { ...control, value } : control,
           )
         : [...current.generationControls, { controlId, value }],
+    }));
+  };
+
+  const chooseModel = (modelKey: string) => {
+    const model = preview?.authoring.models.find(
+      (candidate) => `${candidate.provider}/${candidate.modelId}` === modelKey,
+    );
+    if (!model) return;
+    updateDraft((current) => ({
+      ...current,
+      model: { provider: model.provider, model: model.modelId },
+      generationControls: model.controls
+        .filter((control) => control.kind !== 'readonly' && control.recommended)
+        .map((control) => ({
+          controlId: control.controlId,
+          value: control.value,
+        })),
     }));
   };
 
@@ -188,6 +211,7 @@ export function useImageRevisionEditor(
     runPending,
     error,
     editorRevision,
+    controls,
     changeMode,
     updateAuthoredText: (authoredText: string) => {
       if (!authoredText.trim()) {
@@ -200,6 +224,7 @@ export function useImageRevisionEditor(
     updateNegativeText: (negativeText: string) =>
       updateDraft((current) => ({ ...current, negativeText })),
     updateControl,
+    chooseModel,
     run,
   };
 }

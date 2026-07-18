@@ -197,6 +197,7 @@ function insertSuccessfulGenerationRun(
   contentHash: string
 ): GenerationRun {
   const spec: GenerationSpec = {
+    executionKind: 'renku-managed',
     purpose: 'lookbook.image',
     target: { kind: 'lookbook', id: lookbookId },
     model: { provider: 'test', model: 'test-image' },

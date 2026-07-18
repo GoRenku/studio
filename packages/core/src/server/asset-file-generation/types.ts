@@ -13,10 +13,3 @@ export interface RecordAssetFileGenerationProvenanceInput
   outputArtifactId?: string | null;
   idGenerator?: ProjectIdGenerator;
 }
-
-export interface CopyAssetFileGenerationProvenanceInput
-  extends RenkuConfigPathOptions {
-  projectName?: string;
-  sourceAssetFileId: string;
-  targetAssetFileId: string;
-}

@@ -7,6 +7,9 @@ export async function preparePurposeExecutionSpec(input: {
   purpose: GenerationPurposeDescriptor;
   projectAspectRatio: string;
 }): Promise<GenerationSpec> {
+  if (input.spec.executionKind === 'agent-external') {
+    return structuredClone(input.spec);
+  }
   const spec = await applyFixedGenerationSettings(input);
   if (spec.purpose !== 'scene.storyboard-sheet' || typeof spec.values.prompt !== 'string') {
     return spec;

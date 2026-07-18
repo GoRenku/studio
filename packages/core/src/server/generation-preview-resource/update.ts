@@ -37,6 +37,40 @@ export async function updateGenerationPreviewResource(input: {
     session: input.session,
     projectFolder: input.projectFolder,
   });
+  if (record.spec.executionKind === 'agent-external') {
+    let spec: GenerationSpec = {
+      ...structuredClone(record.spec),
+      values: {
+        ...record.spec.values,
+        prompt: input.prompt.authoredText,
+      },
+    };
+    for (const selection of input.slotSelections) {
+      spec = applyGenerationReferenceSlotSelection(spec, selection);
+    }
+    const updated = updateGenerationSpec({
+      id: input.specId,
+      spec,
+      purpose: input.purpose,
+      session: input.session,
+      now: input.now,
+    });
+    const preview = await buildGenerationPreview({
+      spec: updated.spec,
+      referenceGuide: context.referenceGuide,
+      session: input.session,
+      projectFolder: input.projectFolder,
+    });
+    return projectGenerationPreviewResource({
+      preview: {
+        ...preview,
+        specId: input.specId,
+        settings: context.settings,
+        models: [],
+      },
+      session: input.session,
+    });
+  }
   const model = readGenerationPreviewModel({
     models: context.models,
     identity: input.model,

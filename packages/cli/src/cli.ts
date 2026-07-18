@@ -97,6 +97,7 @@ Options
   --run                Media Generation Run id
   --approval-token     Approval token returned by generation estimate
   --receipt            Generation Receipt JSON file
+  --source-spec        Agent-external Generation Spec id for an imported image
   --role               Asset relationship role
   --file-role          Asset file role
   --locale             Project locale id
@@ -208,6 +209,9 @@ function createCliFlags() {
       type: 'string',
     },
     receipt: {
+      type: 'string',
+    },
+    sourceSpec: {
       type: 'string',
     },
     sourceSheet: {

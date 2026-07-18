@@ -2,7 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createProjectDataService } from '../../src/server/index.js';
+import {
+  createProjectDataService,
+  readImageRevisionContext,
+} from '../../src/server/index.js';
 import { writeConfig } from '../../src/server/testing/project-data-fixtures.js';
 import { createIsolatedSampleMovieProjectFromTemplate } from '../../src/server/testing/movie-project-template-fixtures.js';
 
@@ -39,6 +42,7 @@ describe('context-first generation lifecycle', () => {
       homeDir,
       projectName,
       spec: {
+        executionKind: 'renku-managed',
         purpose: 'cast.profile',
         target: { kind: 'castMember', id: 'cast_test0002' },
         model: { provider: 'fal-ai', model: 'nano-banana-2' },
@@ -81,7 +85,9 @@ describe('context-first generation lifecycle', () => {
       sourceProjectRelativePath: output.projectRelativePath,
       receipt: { run: run.run },
     });
-    expect(attachment.provenance).toEqual({ generationRunId: run.run.id });
+    expect(attachment.provenance).toEqual({
+      generationRunId: run.run.id,
+    });
 
     const reusable = await projectData.listGenerationReferences({
       homeDir,
@@ -94,6 +100,140 @@ describe('context-first generation lifecycle', () => {
         provenance: { origin: 'generated', generationRunId: run.run.id },
       }),
     ]));
+  });
+
+  it('saves a Codex request on its image and shows that request in Image Revision', async () => {
+    const current = await projectData.readCurrentProject({ homeDir });
+    if (!current) throw new Error('Expected current project.');
+    const originalPrompt = 'Keep the exact authored Codex prompt.';
+    const spec = {
+      executionKind: 'agent-external' as const,
+      purpose: 'cast.character-sheet' as const,
+      target: { kind: 'castMember' as const, id: 'cast_test0002' },
+      model: { provider: 'codex', model: 'gpt-image-2' },
+      values: {
+        prompt: originalPrompt,
+        size: '1536x1024',
+        quality: 'high',
+      },
+      references: [],
+      title: 'Codex character sheet',
+    };
+    const saved = await projectData.createGenerationSpec({
+      homeDir,
+      projectName,
+      spec,
+    });
+    expect(saved.spec).toEqual(spec);
+
+    const preview = await projectData.buildGenerationPreview({
+      homeDir,
+      projectName,
+      specId: saved.id,
+    });
+    expect(preview).toMatchObject({
+      spec: {
+        executionKind: 'agent-external',
+        model: { provider: 'codex', model: 'gpt-image-2' },
+        values: { prompt: originalPrompt, size: '1536x1024', quality: 'high' },
+      },
+    });
+    expect(preview).not.toHaveProperty('providerPayload');
+
+    const updatedPrompt = 'Use the prompt saved from the editable Preview.';
+    const updatedPreview = await projectData.updateGenerationPreviewResource({
+      homeDir,
+      projectName,
+      specId: saved.id,
+      prompt: { authoredText: updatedPrompt },
+      model: { provider: 'codex', model: 'gpt-image-2' },
+      parameterValues: {},
+      slotSelections: [],
+    });
+    expect(updatedPreview).toMatchObject({
+      generationSpecId: saved.id,
+      finalPrompt: { authoredText: updatedPrompt },
+      model: {
+        provider: 'codex',
+        modelId: 'gpt-image-2',
+        executionPath: 'agent-external',
+      },
+      authoring: { models: [] },
+    });
+    expect(
+      await projectData.readGenerationSpec({
+        homeDir,
+        projectName,
+        specId: saved.id,
+      })
+    ).toMatchObject({
+      spec: {
+        values: {
+          prompt: updatedPrompt,
+          size: '1536x1024',
+          quality: 'high',
+        },
+      },
+    });
+
+    const source = 'tmp/media/codex-character-sheet.png';
+    const absoluteSource = path.join(current.projectFolder, source);
+    await fs.mkdir(path.dirname(absoluteSource), { recursive: true });
+    await fs.writeFile(absoluteSource, Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+      'base64'
+    ));
+    const attachment = await projectData.attachGenerationMedia({
+      homeDir,
+      projectName,
+      purpose: spec.purpose,
+      target: spec.target,
+      sourceProjectRelativePath: source,
+      title: spec.title,
+      sourceSpecId: saved.id,
+    });
+    expect(attachment.provenance).toEqual({
+      generationSpecId: saved.id,
+    });
+    if (!('files' in attachment.asset)) {
+      throw new Error('Expected an attached Asset.');
+    }
+
+    const revision = await readImageRevisionContext({
+      homeDir,
+      projectName,
+      target: {
+        kind: 'castCharacterSheet',
+        castMemberId: spec.target.id,
+        assetId: attachment.asset.assetId,
+        assetFileId: attachment.asset.files[0]!.id,
+      },
+    });
+    expect(revision.sourceGenerationRequest).toEqual({
+      ...spec,
+      values: { ...spec.values, prompt: updatedPrompt },
+    });
+    expect(revision.regenerate.state).toBe('unavailable');
+    expect(revision.edit).toMatchObject({
+      state: 'available',
+      draft: {
+        mode: 'edit',
+        model: { provider: 'fal-ai', model: expect.any(String) },
+      },
+      preview: {
+        purpose: 'image.edit',
+        model: { executionPath: 'renku-managed' },
+        references: {
+          slots: [expect.objectContaining({
+            current: expect.objectContaining({
+              assetId: attachment.asset.assetId,
+              assetFileId: attachment.asset.files[0]!.id,
+              selected: true,
+            }),
+          })],
+        },
+      },
+    });
   });
 
   it('keeps an external attachment target-owned while exposing it in the generic catalog', async () => {

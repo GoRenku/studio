@@ -46,9 +46,42 @@ describe('generation command handlers', () => {
       .mockResolvedValueOnce({ ...preview, specId: 'spec_1' })
       .mockResolvedValueOnce({ ...preview, specId: 'spec_2' });
     const readProject = vi.fn().mockResolvedValue({ identity: { id: 'project_1', name: 'movie', folderPath: '/tmp/movie' } });
-    await expect(handler('preview show').run(input({ spec: ['spec_1', 'spec_2'] }, { buildGenerationPreview, readProject }))).resolves.toEqual({ valid: true, requestCount: 2, studio: { delivery: 'delivered' } });
+    await expect(handler('preview show').run(input({ spec: ['spec_1', 'spec_2'] }, { buildGenerationPreview, readProject }))).resolves.toEqual({
+      valid: true,
+      requestCount: 2,
+      previews: [{ ...preview, specId: 'spec_1' }, { ...preview, specId: 'spec_2' }],
+      studio: { delivery: 'delivered' },
+    });
     expect(buildGenerationPreview.mock.calls.map(([value]) => value.specId)).toEqual(['spec_1', 'spec_2']);
     expect(notifyStudioGenerationPreviews).toHaveBeenCalledWith(expect.objectContaining({ notification: expect.objectContaining({ previews: [{ ...preview, specId: 'spec_1' }, { ...preview, specId: 'spec_2' }] }) }));
+  });
+
+  it('returns Preview data when Studio is not running', async () => {
+    const preview = {
+      spec: {
+        executionKind: 'agent-external',
+        purpose: 'cast.profile',
+        target: { kind: 'castMember', id: 'hero' },
+        model: { provider: 'codex', model: 'gpt-image-2' },
+        values: { prompt: 'Exact prompt.' },
+        references: [],
+      },
+      references: [],
+      diagnostics: [],
+    };
+    vi.mocked(notifyStudioGenerationPreviews).mockResolvedValue({ status: 'notRunning' });
+    const buildGenerationPreview = vi.fn().mockResolvedValue(preview);
+    const readProject = vi.fn().mockResolvedValue({ identity: { id: 'project_1', name: 'movie', folderPath: '/tmp/movie' } });
+
+    await expect(handler('preview show').run(input({ spec: 'spec_1' }, {
+      buildGenerationPreview,
+      readProject,
+    }))).resolves.toEqual({
+      valid: true,
+      requestCount: 1,
+      previews: [preview],
+      studio: { delivery: 'notRunning' },
+    });
   });
 
   it('reads repeated transient files in order without saving them', async () => {

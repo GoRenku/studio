@@ -8,10 +8,7 @@ import { readGenerationRunRecord } from '../database/access/media-generation.js'
 import { withProjectDatabaseSession } from '../database/lifecycle/project-operation.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { matchingMediaGenerationOutputs } from './output-match.js';
-import type {
-  CopyAssetFileGenerationProvenanceInput,
-  RecordAssetFileGenerationProvenanceInput,
-} from './types.js';
+import type { RecordAssetFileGenerationProvenanceInput } from './types.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export async function recordAssetFileGenerationProvenance(
@@ -86,48 +83,4 @@ export function recordAssetFileGenerationProvenanceInSession(
   };
   insertAssetFileGenerationRecord(session, record);
   return record;
-}
-
-export async function copyAssetFileGenerationProvenance(
-  input: CopyAssetFileGenerationProvenanceInput,
-): Promise<AssetFileGenerationProvenance | null> {
-  return withProjectDatabaseSession(input, (session) => {
-    const source = readAssetFileGenerationRecord(
-      session,
-      input.sourceAssetFileId,
-    );
-    if (!source) {
-      return null;
-    }
-    const target = readAssetFileRecordByIdIncludingDiscarded(
-      session,
-      input.targetAssetFileId,
-    );
-    if (!target || target.discardedAt) {
-      throw new ProjectDataError(
-        'CORE_ASSET_FILE_GENERATION_PROVENANCE_MISSING',
-        `Active target AssetFile was not found: ${input.targetAssetFileId}.`,
-      );
-    }
-    const existing = readAssetFileGenerationRecord(session, target.id);
-    if (existing) {
-      if (
-        existing.mediaGenerationRunId !== source.mediaGenerationRunId ||
-        existing.outputArtifactId !== source.outputArtifactId
-      ) {
-        throw new ProjectDataError(
-          'CORE_ASSET_FILE_GENERATION_PROVENANCE_CONFLICT',
-          `Target AssetFile ${target.id} already has different generation provenance.`,
-        );
-      }
-      return existing;
-    }
-    const record = {
-      ...source,
-      assetFileId: target.id,
-      createdAt: new Date().toISOString(),
-    };
-    insertAssetFileGenerationRecord(session, record);
-    return record;
-  });
 }

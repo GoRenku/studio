@@ -15,6 +15,7 @@ describe('generic generation runs', () => {
       id: 'run-1',
       specId: 'spec-1',
       spec: {
+        executionKind: 'renku-managed',
         purpose: 'image.create',
         target: { kind: 'project', id: 'project-1' },
         model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },
@@ -43,6 +44,7 @@ describe('generic generation runs', () => {
     const { session } = createMemorySession();
     const projectFolder = await mkdtemp(path.join(os.tmpdir(), 'renku-generation-run-'));
     const spec: GenerationSpec = {
+      executionKind: 'renku-managed',
       purpose: 'image.create',
       target: { kind: 'project' as const, id: 'project-1' },
       model: { provider: 'fal-ai', model: 'openai/gpt-image-2' },

@@ -14,6 +14,22 @@ describe('media import command handler', () => {
     expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'cast.profile', target: { kind: 'castMember', id: 'hero' }, sourceProjectRelativePath: 'tmp/profile.png' }));
   });
 
+  it('passes the saved agent-external spec id to Core', async () => {
+    const attachGenerationMedia = vi.fn().mockResolvedValue({ valid: true, purpose: 'cast.profile', provenance: { generationSpecId: 'spec_codex' }, project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
+    await mediaImportCommandHandler.run({
+      flags: {
+        purpose: 'cast.profile',
+        target: 'cast:hero',
+        source: 'tmp/profile.png',
+        sourceSpec: 'spec_codex',
+      },
+      runtime: { projectName: 'movie', projectDataService: { attachGenerationMedia } },
+    } as never);
+    expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({
+      sourceSpecId: 'spec_codex',
+    }));
+  });
+
   it('passes an agent-cropped Storyboard image to the focused Scene attachment command', async () => {
     const attachSceneStoryboardImages = vi.fn().mockResolvedValue({ valid: true, purpose: 'scene.storyboard-sheet', project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
     await mediaImportCommandHandler.run({

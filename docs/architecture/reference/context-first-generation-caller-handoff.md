@@ -23,7 +23,7 @@ No compatibility export or temporary adapter was added.
 | purpose validate/estimate/run methods | `validateGenerationSpec`, `estimateGeneration`, and `runGeneration` |
 | dependency slots, inventory, plans, recursive estimates, and preflight | purpose reference guides, exact selections, guide notices, and provider validation |
 | Shot input mode/route/model mapping | direct provider/model endpoint and actual provider fields |
-| Shot reference selection mutations in take state | generic spec reference selections with stable guide placement ids and `included` |
+| Shot reference selection mutations in take state | generic spec reference selections whose presence means inclusion |
 | Image Revision service contracts | the `image.edit` purpose through generic preview/estimate/run |
 | purpose-specific import methods | focused domain attachment/import commands created in the owning purpose integration slice |
 | singular generation Preview event | `studio.generationPreviewsRequested` with an ordered array of ordinary Preview resources |

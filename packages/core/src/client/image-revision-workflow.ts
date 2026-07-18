@@ -1,6 +1,8 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
+  GenerationModelIdentity,
   GenerationRun,
+  GenerationSpec,
   GenerationSpecRecord,
 } from './generation.js';
 import type {
@@ -41,6 +43,7 @@ export type ImageRevisionMode = 'regenerate' | 'edit';
 
 export interface ImageRevisionDraft {
   mode: ImageRevisionMode;
+  model: Required<GenerationModelIdentity>;
   authoredText: string;
   negativeText?: string;
   generationControls: Array<{
@@ -71,6 +74,7 @@ export interface ImageRevisionEditorContext {
     assetId: string;
     assetFileId: string;
   };
+  sourceGenerationRequest: GenerationSpec | null;
   regenerate: ImageRevisionModeContext;
   edit: ImageRevisionModeContext;
 }
