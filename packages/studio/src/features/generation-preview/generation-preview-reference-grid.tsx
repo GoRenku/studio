@@ -29,7 +29,7 @@ export function GenerationPreviewReferenceGrid({
   onReferenceChoose,
 }: GenerationPreviewReferenceGridProps) {
   const [openSlot, setOpenSlot] = useState<GenerationPreviewReferenceSlot | null>(null);
-  const canEdit = (editable ?? Boolean(preview.generationSpecId)) &&
+  const canEdit = (editable ?? preview.generationSpec?.frozenAt === null) &&
     Boolean(onReferenceChoose);
   const visibleSlots = preview.references.slots.filter(
     (slot) => canEdit || Boolean(slot.current),

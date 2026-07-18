@@ -44,7 +44,12 @@ export async function projectStudioCurrent(
   for (const event of input.events) {
     if (event.type === 'studio.browserSessionActive') {
       sessionActivity.set(event.browserSessionId, event);
-      if (event.focus) {
+      const existingFocus = sessionFocus.get(event.browserSessionId);
+      // Passive activity proves liveness without changing which session the user engaged last.
+      if (
+        event.focus &&
+        (!existingFocus || event.activityKind === 'focused')
+      ) {
         sessionFocus.set(event.browserSessionId, {
           browserSessionId: event.browserSessionId,
           createdAt: event.createdAt,

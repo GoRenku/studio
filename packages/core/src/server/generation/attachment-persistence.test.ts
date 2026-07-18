@@ -207,6 +207,7 @@ function insertSuccessfulGenerationRun(
   insertGenerationSpecRecord(session, {
     id: 'media_generation_spec_persistence',
     spec,
+    frozenAt: null,
     createdAt: '2026-07-17T09:59:30.000Z',
     updatedAt: '2026-07-17T09:59:30.000Z',
   });

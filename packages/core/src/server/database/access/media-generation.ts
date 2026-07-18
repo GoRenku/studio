@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import type {
   GenerationRun,
   GenerationSpec,
@@ -41,6 +41,36 @@ export function updateGenerationSpecRecord(
     .where(eq(mediaGenerationSpecs.id, record.id))
     .run();
   return record;
+}
+
+export function freezeGenerationSpecRecord(
+  session: DatabaseSession,
+  input: { record: GenerationSpecRecord; frozenAt: string }
+): boolean {
+  const expected = toSpecRow(input.record);
+  const result = session.db
+    .update(mediaGenerationSpecs)
+    .set({ frozenAt: input.frozenAt })
+    .where(and(
+      eq(mediaGenerationSpecs.id, input.record.id),
+      eq(mediaGenerationSpecs.purpose, expected.purpose),
+      eq(mediaGenerationSpecs.targetKind, expected.targetKind),
+      eq(mediaGenerationSpecs.targetId, expected.targetId),
+      eq(mediaGenerationSpecs.executionKind, expected.executionKind),
+      nullableEquality(mediaGenerationSpecs.provider, expected.provider),
+      nullableEquality(mediaGenerationSpecs.model, expected.model),
+      nullableEquality(mediaGenerationSpecs.title, expected.title),
+      eq(mediaGenerationSpecs.valuesJson, expected.valuesJson),
+      eq(mediaGenerationSpecs.referencesJson, expected.referencesJson),
+      eq(mediaGenerationSpecs.updatedAt, expected.updatedAt),
+      isNull(mediaGenerationSpecs.frozenAt)
+    ))
+    .run();
+  return result.changes === 1;
+}
+
+function nullableEquality(column: Parameters<typeof eq>[0], value: string | null): SQL {
+  return value === null ? isNull(column) : eq(column, value);
 }
 
 export function readGenerationSpecRecord(
@@ -177,6 +207,7 @@ function toSpecRow(record: GenerationSpecRecord) {
     title: record.spec.title ?? null,
     valuesJson: JSON.stringify(record.spec.values),
     referencesJson: JSON.stringify(record.spec.references),
+    frozenAt: record.frozenAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -206,6 +237,7 @@ function toSpecRecord(
       references: JSON.parse(row.referencesJson) as GenerationSpec['references'],
       ...(row.title !== null ? { title: row.title } : {}),
     },
+    frozenAt: row.frozenAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

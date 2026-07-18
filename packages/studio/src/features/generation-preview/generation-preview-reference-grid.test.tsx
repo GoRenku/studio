@@ -113,7 +113,7 @@ function previewFixture(): GenerationPreviewResource {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
-    generationSpecId: 'generation_spec_test',
+    generationSpec: { id: 'generation_spec_test', frozenAt: null },
     purpose: 'image.edit',
     project: {
       id: 'project_test',

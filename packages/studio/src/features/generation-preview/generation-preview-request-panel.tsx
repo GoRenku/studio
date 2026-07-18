@@ -58,7 +58,7 @@ export function GenerationPreviewRequestPanel({
         error={editor.updateError}
         errorTitle='Preview Update Failed'
         pending={editor.updatePending}
-        readOnly={!preview.generationSpecId}
+        readOnly={!preview.generationSpec || preview.generationSpec.frozenAt !== null}
         referencesReadOnly={preview.purpose === 'image.edit'}
         tabRowTrailing={tabRowTrailing}
         onTabChange={onTabChange}
@@ -82,7 +82,7 @@ export function GenerationPreviewRequestPanel({
         <div className='mr-auto min-w-0'>
           <GenerationPreviewEstimateFooter preview={preview} />
         </div>
-        {preview.generationSpecId ? (
+        {preview.generationSpec?.frozenAt === null ? (
           <Button
             onClick={editor.update}
             disabled={!editor.updateDirty || editor.updatePending}

@@ -13,6 +13,7 @@ export const mediaGenerationSpecs = sqliteTable(
     title: text('title'),
     valuesJson: text('values_json').notNull(),
     referencesJson: text('references_json').notNull(),
+    frozenAt: text('frozen_at'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

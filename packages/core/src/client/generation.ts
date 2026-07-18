@@ -192,6 +192,7 @@ export interface GenerationReferenceCatalogPage {
 export interface GenerationSpecRecord {
   id: string;
   spec: GenerationSpec;
+  frozenAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -201,7 +202,10 @@ export interface GenerationPreviewReference extends GenerationReferenceSelection
 }
 
 export interface GenerationPreview {
-  specId?: string;
+  generationSpec?: {
+    id: string;
+    frozenAt: string | null;
+  };
   spec: GenerationSpec;
   referenceGuide: GenerationReferenceGuide;
   references: GenerationPreviewReference[];

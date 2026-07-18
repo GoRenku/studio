@@ -56,7 +56,7 @@ export function generationResourceChangedReport(
   result: unknown,
 ): StudioResourceChangedReport | null {
   const mutationPath = commandPath.join(' ');
-  if (mutationPath !== 'spec create' && mutationPath !== 'spec update' && mutationPath !== 'run') {
+  if (mutationPath !== 'spec create' && mutationPath !== 'spec update' && mutationPath !== 'spec freeze' && mutationPath !== 'run') {
     return null;
   }
   return resourceChangedReportFromResult(result);
@@ -126,6 +126,6 @@ function unknownGenerationCommand(
     code: 'CLI019',
     message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,
     suggestion:
-      'Use generation context, generation reference list, generation model list, generation validate, generation preview show, generation spec create/update/show/list, generation estimate, generation run, or generation run show.',
+      'Use generation context, generation reference list, generation model list, generation validate, generation preview show, generation spec create/update/freeze/show/list, generation estimate, generation run, or generation run show.',
   });
 }

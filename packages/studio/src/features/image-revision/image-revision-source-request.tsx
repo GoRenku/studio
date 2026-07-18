@@ -1,7 +1,7 @@
-import type { GenerationSpec, JsonValue } from '@gorenku/studio-core/client';
+import type { ImageRevisionSourceRequest as SourceRequest, JsonValue } from '@gorenku/studio-core/client';
 
 interface ImageRevisionSourceRequestProps {
-  spec: GenerationSpec | null;
+  spec: SourceRequest | null;
 }
 
 export function ImageRevisionSourceRequest({
@@ -15,9 +15,7 @@ export function ImageRevisionSourceRequest({
   const modelIdentity = [spec.model?.provider, spec.model?.model]
     .filter(Boolean)
     .join(' / ');
-  const identity = [spec.executionKind, modelIdentity]
-    .filter(Boolean)
-    .join(' · ');
+  const identity = modelIdentity;
   return (
     <section className='mx-6 mb-3 max-h-44 overflow-auto rounded-xl border border-border/40 bg-muted/30 px-4 py-3'>
       <div className='flex items-baseline justify-between gap-4'>
@@ -47,10 +45,10 @@ export function ImageRevisionSourceRequest({
           ))}
         </dl>
       ) : null}
-      {spec.references.length ? (
+      {spec.referenceLabels.length ? (
         <div className='mt-3 text-xs text-muted-foreground'>
           References:{' '}
-          {spec.references.map(referenceLabel).join(', ')}
+          {spec.referenceLabels.join(', ')}
         </div>
       ) : null}
     </section>
@@ -59,12 +57,4 @@ export function ImageRevisionSourceRequest({
 
 function formatValue(value: JsonValue): string {
   return typeof value === 'string' ? value : JSON.stringify(value);
-}
-
-function referenceLabel(
-  selection: GenerationSpec['references'][number],
-): string {
-  return selection.reference.kind === 'project-file'
-    ? selection.reference.projectRelativePath
-    : `${selection.reference.assetId} / ${selection.reference.assetFileId}`;
 }

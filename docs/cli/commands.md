@@ -1463,6 +1463,7 @@ Manage specs and Preview:
 renku generation validate --file <spec-json> --json
 renku generation spec create --file <spec-json> --json
 renku generation spec update --spec <spec-id> --file <spec-json> --json
+renku generation spec freeze --spec <spec-id> --json
 renku generation spec show --spec <spec-id> --json
 renku generation spec list --purpose <purpose> --json
 renku generation preview show --file <spec-json> --json
@@ -1482,7 +1483,8 @@ renku generation run show --run <run-id> --json
 
 The approval token comes from the exact estimate and becomes invalid when the
 request changes. Simulation validates and records the same request without a
-paid provider call.
+paid provider call or freezing the draft. Live managed run freezes the exact
+saved revision before provider execution.
 
 Behavior:
 
@@ -1519,7 +1521,10 @@ For Codex image generation, save the exact request before invoking Codex:
 ```
 
 Create and preview this spec normally. Preview returns its data in JSON even
-when Studio is not running. Do not estimate or run an agent-external spec.
+when Studio is not running. After approval, show the final saved spec, freeze it
+with `generation spec freeze`, and pass the frozen record's exact
+`spec.values.prompt` to Codex unchanged. Attach the accepted output with the
+frozen id through `--source-spec`. Do not estimate or run an agent-external spec.
 
 ## `renku media import`
 

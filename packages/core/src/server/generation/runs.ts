@@ -3,7 +3,7 @@ import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
   GenerationRun,
   GenerationRunReport,
-  GenerationSpec,
+  GenerationSpecRecord,
   JsonValue,
 } from '../../client/generation.js';
 import type { ProjectRelativePath } from '../../client/project.js';
@@ -12,15 +12,17 @@ import {
   insertGenerationRunRecord,
   readGenerationRunRecord,
 } from '../database/access/media-generation.js';
-import type { GenerationPurposeContract } from './purpose-contract.js';
+import type { GenerationPurposeDescriptor } from './purpose-contract.js';
 import { estimateGeneration } from './estimates.js';
 import { validateGenerationSpecForExecution } from './validation.js';
+import { freezeManagedGenerationSpec } from './spec-lifecycle.js';
+import { preparePurposeExecutionSpec } from './purpose-execution.js';
 
 export async function runGeneration(input: {
   id: string;
-  specId: string;
-  spec: GenerationSpec;
-  purpose: GenerationPurposeContract;
+  specRecord: GenerationSpecRecord;
+  purpose: GenerationPurposeDescriptor;
+  projectAspectRatio: string;
   approvalToken: string;
   mode: 'simulated' | 'live';
   session: DatabaseSession;
@@ -29,8 +31,13 @@ export async function runGeneration(input: {
   outputProjectRelativeRoot?: string;
   now: string;
 }): Promise<GenerationRunReport> {
+  const spec = await preparePurposeExecutionSpec({
+    spec: input.specRecord.spec,
+    purpose: input.purpose,
+    projectAspectRatio: input.projectAspectRatio,
+  });
   const estimateReport = await estimateGeneration({
-    spec: input.spec,
+    spec,
     purpose: input.purpose,
   });
   if (!estimateReport.valid) {
@@ -48,15 +55,22 @@ export async function runGeneration(input: {
     };
   }
 
-  const validation = await validateGenerationSpecForExecution(input);
+  const validation = await validateGenerationSpecForExecution({ ...input, spec });
   if (!validation.valid) {
     return validation;
+  }
+  if (input.mode === 'live') {
+    freezeManagedGenerationSpec({
+      record: input.specRecord,
+      session: input.session,
+      now: input.now,
+    });
   }
   const { assembly } = validation.request;
   const baseRun = {
     id: input.id,
-    specId: input.specId,
-    specSnapshot: structuredClone(input.spec),
+    specId: input.specRecord.id,
+    specSnapshot: structuredClone(spec),
     provider: assembly.policy.provider,
     model: assembly.policy.model,
     providerPayload: assembly.payload as Record<string, JsonValue>,

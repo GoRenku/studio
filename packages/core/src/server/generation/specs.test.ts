@@ -114,6 +114,7 @@ function createMemorySession(): DatabaseSession {
       title text,
       values_json text not null,
       references_json text not null,
+      frozen_at text,
       created_at text not null,
       updated_at text not null
     );

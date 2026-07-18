@@ -482,6 +482,18 @@ describe('GenerationPreviewDialogHost', () => {
 
   });
 
+  it('keeps frozen saved previews non-editable', async () => {
+    render(<GenerationPreviewDialogHost />);
+    await dispatchPreview(previewFixture({
+      purpose: 'image.create',
+      title: 'Frozen Preview',
+      saved: true,
+      frozen: true,
+    }));
+    expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Generation prompt' }).hasAttribute('readonly')).toBe(true);
+  });
+
   it('shows a model-supported negative prompt in a smaller editor', async () => {
     render(<GenerationPreviewDialogHost />);
 
@@ -604,6 +616,7 @@ function previewFixture(input: {
   editableReference?: boolean;
   requiredReference?: boolean;
   saved?: boolean;
+  frozen?: boolean;
   authoredText?: string;
   negativeText?: string;
   providerPreview?: GenerationPreviewResource['providerPreview'];
@@ -613,8 +626,11 @@ function previewFixture(input: {
   return {
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
-    generationSpecId: input.saved || input.editableReference
-      ? 'generation_spec_test'
+    generationSpec: input.saved || input.editableReference
+      ? {
+          id: 'generation_spec_test',
+          frozenAt: input.frozen ? '2026-07-18T10:00:00.000Z' : null,
+        }
       : undefined,
     purpose: input.purpose,
     project: {

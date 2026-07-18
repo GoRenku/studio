@@ -113,8 +113,6 @@ describe('context-first generation lifecycle', () => {
       model: { provider: 'codex', model: 'gpt-image-2' },
       values: {
         prompt: originalPrompt,
-        size: '1536x1024',
-        quality: 'high',
       },
       references: [],
       title: 'Codex character sheet',
@@ -135,7 +133,7 @@ describe('context-first generation lifecycle', () => {
       spec: {
         executionKind: 'agent-external',
         model: { provider: 'codex', model: 'gpt-image-2' },
-        values: { prompt: originalPrompt, size: '1536x1024', quality: 'high' },
+        values: { prompt: originalPrompt },
       },
     });
     expect(preview).not.toHaveProperty('providerPayload');
@@ -151,7 +149,7 @@ describe('context-first generation lifecycle', () => {
       slotSelections: [],
     });
     expect(updatedPreview).toMatchObject({
-      generationSpecId: saved.id,
+      generationSpec: { id: saved.id, frozenAt: null },
       finalPrompt: { authoredText: updatedPrompt },
       model: {
         provider: 'codex',
@@ -170,8 +168,6 @@ describe('context-first generation lifecycle', () => {
       spec: {
         values: {
           prompt: updatedPrompt,
-          size: '1536x1024',
-          quality: 'high',
         },
       },
     });
@@ -183,6 +179,21 @@ describe('context-first generation lifecycle', () => {
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
       'base64'
     ));
+    await expect(projectData.attachGenerationMedia({
+      homeDir,
+      projectName,
+      purpose: spec.purpose,
+      target: spec.target,
+      sourceProjectRelativePath: source,
+      title: spec.title,
+      sourceSpecId: saved.id,
+    })).rejects.toMatchObject({ code: 'CORE_GENERATION_ATTACHMENT_SOURCE_SPEC_MUTABLE' });
+    const frozen = await projectData.freezeGenerationSpec({
+      homeDir,
+      projectName,
+      specId: saved.id,
+    });
+    expect(frozen.frozenAt).toEqual(expect.any(String));
     const attachment = await projectData.attachGenerationMedia({
       homeDir,
       projectName,
@@ -210,8 +221,9 @@ describe('context-first generation lifecycle', () => {
       },
     });
     expect(revision.sourceGenerationRequest).toEqual({
-      ...spec,
-      values: { ...spec.values, prompt: updatedPrompt },
+      model: spec.model,
+      values: { prompt: updatedPrompt },
+      referenceLabels: [],
     });
     expect(revision.regenerate.state).toBe('unavailable');
     expect(revision.edit).toMatchObject({

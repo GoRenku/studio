@@ -34,6 +34,7 @@ export const generationCommandHandlers = [
   { path: ['validate'], run: runValidate },
   { path: ['spec', 'create'], run: runSpecCreate },
   { path: ['spec', 'update'], run: runSpecUpdate },
+  { path: ['spec', 'freeze'], run: runSpecFreeze },
   { path: ['spec', 'show'], run: runSpecShow },
   { path: ['spec', 'list'], run: runSpecList },
   { path: ['preview', 'show'], run: runPreviewShow },
@@ -76,6 +77,9 @@ async function runSpecCreate(input: Input) {
 }
 async function runSpecUpdate(input: Input) {
   return input.runtime.projectDataService.updateGenerationSpec({ ...projectInput(input), specId: requiredFlag(singleFlag(input.flags.spec), '--spec'), spec: await readSpec(requiredFlag(singleFlag(input.flags.file), '--file')) });
+}
+async function runSpecFreeze(input: Input) {
+  return input.runtime.projectDataService.freezeGenerationSpec({ ...projectInput(input), specId: requiredFlag(singleFlag(input.flags.spec), '--spec') });
 }
 async function runSpecShow(input: Input) {
   return input.runtime.projectDataService.readGenerationSpec({ ...projectInput(input), specId: requiredFlag(singleFlag(input.flags.spec), '--spec') });

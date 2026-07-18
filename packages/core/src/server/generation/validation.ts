@@ -17,6 +17,7 @@ import { resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { GenerationPurposeContract } from './purpose-contract.js';
 import { resolveGenerationReference } from './references.js';
+import { validateGenerationSpecEnvelope } from './spec-envelope.js';
 
 export interface ValidatedGenerationRequest {
   spec: GenerationSpec;
@@ -31,6 +32,10 @@ export async function validateGenerationSpec(input: {
   session: DatabaseSession;
   projectFolder: string;
 }): Promise<GenerationValidationReport> {
+  const envelopeDiagnostics = validateGenerationSpecEnvelope(input);
+  if (envelopeDiagnostics.length > 0) {
+    return { valid: false, diagnostics: envelopeDiagnostics };
+  }
   if (input.spec.executionKind === 'agent-external') {
     return { valid: true, spec: input.spec, diagnostics: [] };
   }
@@ -49,6 +54,10 @@ export async function validateGenerationSpecForExecution(input: {
   | { valid: true; request: ValidatedGenerationRequest; diagnostics: [] }
   | { valid: false; diagnostics: DiagnosticIssue[] }
 > {
+  const envelopeDiagnostics = validateGenerationSpecEnvelope(input);
+  if (envelopeDiagnostics.length > 0) {
+    return { valid: false, diagnostics: envelopeDiagnostics };
+  }
   if (input.spec.executionKind === 'agent-external') {
     return {
       valid: false,
@@ -61,22 +70,6 @@ export async function validateGenerationSpecForExecution(input: {
     };
   }
   const diagnostics: DiagnosticIssue[] = [];
-  if (input.spec.purpose !== input.purpose.purpose) {
-    diagnostics.push(createDiagnosticError(
-      'CORE_GENERATION_ENVELOPE_INVALID',
-      `Generation purpose ${input.spec.purpose} does not match ${input.purpose.purpose}.`,
-      { path: ['purpose'] },
-      `Use purpose ${input.purpose.purpose} for this command.`
-    ));
-  }
-  if (input.spec.target.kind !== input.purpose.targetKind) {
-    diagnostics.push(createDiagnosticError(
-      'CORE_GENERATION_ENVELOPE_INVALID',
-      `Generation purpose ${input.purpose.purpose} requires target kind ${input.purpose.targetKind}, received ${input.spec.target.kind}.`,
-      { path: ['target', 'kind'] },
-      `Use a ${input.purpose.targetKind} target.`
-    ));
-  }
   const provider = input.spec.model?.provider?.trim();
   const model = input.spec.model?.model?.trim();
   if (!provider) {

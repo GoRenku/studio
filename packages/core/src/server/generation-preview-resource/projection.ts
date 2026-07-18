@@ -35,8 +35,8 @@ export function projectGenerationPreviewResource(input: {
   return {
     kind: 'generationPreview',
     previewId: `generation-preview-${randomUUID()}`,
-    ...(input.preview.specId
-      ? { generationSpecId: input.preview.specId }
+    ...(input.preview.generationSpec
+      ? { generationSpec: input.preview.generationSpec }
       : {}),
     purpose: input.preview.spec.purpose as GenerationPreviewResource['purpose'],
     project: {

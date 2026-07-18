@@ -2,9 +2,9 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
   GenerationModelIdentity,
   GenerationRun,
-  GenerationSpec,
   GenerationSpecRecord,
 } from './generation.js';
+import type { JsonValue } from './generation.js';
 import type {
   GenerationEditorControl,
   GenerationPreviewConfigurationValue,
@@ -74,9 +74,15 @@ export interface ImageRevisionEditorContext {
     assetId: string;
     assetFileId: string;
   };
-  sourceGenerationRequest: GenerationSpec | null;
+  sourceGenerationRequest: ImageRevisionSourceRequest | null;
   regenerate: ImageRevisionModeContext;
   edit: ImageRevisionModeContext;
+}
+
+export interface ImageRevisionSourceRequest {
+  model?: GenerationModelIdentity;
+  values: Record<string, JsonValue>;
+  referenceLabels: string[];
 }
 
 export interface ImageRevisionEstimateReport {

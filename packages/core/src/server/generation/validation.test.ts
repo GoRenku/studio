@@ -8,6 +8,48 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { validateGenerationSpec } from './validation.js';
 
 describe('generic generation execution validation', () => {
+  it('validates the external envelope without invoking Engines', async () => {
+    const projectFolder = await createProjectFolder();
+    const spec: GenerationSpec = {
+      executionKind: 'agent-external',
+      purpose: 'location.sheet',
+      target: { kind: 'location', id: 'location-1' },
+      model: { provider: 'codex', model: 'gpt-image-2' },
+      values: { prompt: 'Exact 16:9 prompt.', arbitrary: { nested: [true, 3] } },
+      references: [],
+    };
+    const report = await validateGenerationSpec({
+      spec,
+      purpose: {
+        purpose: 'location.sheet', targetKind: 'location', outputMediaKind: 'image',
+      },
+      session: unusedSession(),
+      projectFolder,
+    });
+    expect(report).toEqual({ valid: true, spec, diagnostics: [] });
+  });
+
+  it('collects independent purpose and target errors for an external spec', async () => {
+    const report = await validateGenerationSpec({
+      spec: {
+        executionKind: 'agent-external', purpose: 'cast.profile',
+        target: { kind: 'project', id: 'project-1' }, values: {}, references: [],
+      },
+      purpose: {
+        purpose: 'location.sheet', targetKind: 'location', outputMediaKind: 'image',
+      },
+      session: unusedSession(),
+      projectFolder: await createProjectFolder(),
+    });
+    expect(report.valid).toBe(false);
+    if (!report.valid) {
+      expect(report.diagnostics.map((issue) => issue.code)).toEqual([
+        'CORE_GENERATION_PURPOSE_INVALID',
+        'CORE_GENERATION_TARGET_INVALID',
+      ]);
+    }
+  });
+
   it('collects independent provider value and media issues', async () => {
     const projectFolder = await createProjectFolder();
     const report = await validateGenerationSpec({

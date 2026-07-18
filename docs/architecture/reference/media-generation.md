@@ -54,10 +54,15 @@ purpose descriptors own any additional context lookup.
 Codex image request. They are saved and previewed normally but do not create a
 Renku estimate, run, receipt, provider payload, or approval token.
 
+The persisted record adds `frozenAt: string | null`. Draft records are editable.
+Live submission freezes the exact saved revision permanently. Managed run does
+this automatically; external execution uses `freezeGenerationSpec`. Estimate
+and simulation do not freeze.
+
 ## Editing And Validation
 
-`createGenerationSpec` and `updateGenerationSpec` accept partial state. They
-validate:
+Create, update, freeze, and standalone validate share one Core-owned durable
+envelope validator. Create and update accept partial state. The validator checks:
 
 - purpose and target-kind agreement with the supplied purpose contract on
   creation and exact immutable purpose/target identity on update;
@@ -115,21 +120,22 @@ unavailable when exact pricing facts are insufficient.
 
 1. estimates and compares the supplied token with the current price;
 2. repeats full execution validation;
-3. makes no provider call and writes no run for predictable failure;
-4. executes once through Engines;
-5. persists an immutable success, simulation, or provider-failure run with
+3. conditionally freezes the exact saved revision for a live run;
+4. makes no provider call and writes no run for predictable validation or freeze failure;
+5. executes once through Engines;
+6. persists an immutable success, simulation, or provider-failure run with
    outputs, receipt, and diagnostics.
 
 A provider failure after execution begins is a persisted failed run. A
 predictable validation or approval failure is not.
 
-## Database Generation 60
+## Database Generation 48
 
 `media_generation_spec` columns:
 
 ```text
 id, purpose, target_kind, target_id, execution_kind, provider, model, title,
-values_json, references_json, created_at, updated_at
+values_json, references_json, frozen_at, created_at, updated_at
 ```
 
 `media_generation_run` columns:
@@ -150,6 +156,14 @@ may separately link to the agent-external GenerationSpec that produced it.
 Image Revision reads that saved spec and uses the current image as the source
 for a separate, Renku-managed `image.edit` request.
 
+Generation Preview projects saved record context as
+`generationSpec?: { id, frozenAt }`. File-only previews omit it. Frozen saved
+previews are read-only. Image Revision projects original request context as
+`{ model?, values, referenceLabels }`, resolving labels only from active Asset
+titles and never exposing raw reference ids, paths, or filenames.
+
 Decision history is recorded in
 `../../decisions/0047-use-context-first-provider-valid-generation.md` and
 `../../decisions/0055-preserve-agent-external-generation-specs-on-images.md`.
+The irreversible lifecycle is recorded in
+`../../decisions/0056-freeze-generation-specs-at-live-execution.md`.

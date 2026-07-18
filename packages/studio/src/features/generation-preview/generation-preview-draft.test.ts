@@ -130,7 +130,7 @@ function previewFixture(): GenerationPreviewResource {
   return {
     kind: 'generationPreview',
     previewId: 'generation-preview:test',
-    generationSpecId: 'media_generation_spec_test',
+    generationSpec: { id: 'media_generation_spec_test', frozenAt: null },
     purpose: 'cast.character-sheet',
     project: { id: 'project_test', name: 'constantinople' },
     subject: { projectLabel: 'Constantinople' },

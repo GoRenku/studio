@@ -181,7 +181,8 @@ provider-facing `finalPrompt.providerText`. Editing a saved preview does not
 mutate the coordination event. The browser sends the authored prompt and final
 editable reference selections to the saved-preview update endpoint; Core
 persists the media generation spec and rebuilds a fresh preview for the still
-open dialog. Draft previews without a `generationSpecId` remain read-only.
+open dialog. Draft previews without `generationSpec` and saved previews whose
+`generationSpec.frozenAt` is non-null remain read-only.
 
 It must not be consumed by project data services, used to reconstruct generation
 history, or stored as a substitute for media generation specs, estimates, runs,
@@ -366,10 +367,17 @@ activity observations when a tab receives focus, becomes visible, or receives
 direct user input such as pointer or keyboard activity. The server-side
 projection should ignore browser sessions whose heartbeat has expired.
 
+Focused activity and explicit `studio.focusChanged` observations identify the
+most recently engaged Studio view. Visible and heartbeat activity keep a browser
+session live, but they must not replace that engagement order. Otherwise, when
+multiple Studio windows remain visible after the user switches to another app,
+the window whose heartbeat timer happens to fire last would incorrectly become
+the current Studio target.
+
 This is not a hard guarantee that the OS user is visually looking at that exact
 pixel at the moment the command runs. It is a local product rule: the best
 available current Studio target is the live browser session with the newest
-trusted activity observation. If there is no non-stale live browser session,
+engagement observation. If there is no non-stale live browser session,
 `renku studio current --json` returns no actionable selection.
 
 ## Layering
@@ -807,14 +815,17 @@ Example:
 
 ### `studio.browserSessionActive`
 
-Written by Studio when a browser tab becomes the most recently active Studio UI
-session.
+Written by Studio to report browser-session liveness and activity.
 
 This event supports the "most recently active tab" rule for
 `renku studio current --json`. Studio should emit it when a tab becomes visible,
 receives focus, or receives direct user input. The browser should debounce these
 events so ordinary pointer movement or typing does not flood the coordination
 store.
+
+The projection uses `focused` activity as an engagement observation. `visible`
+and `heartbeat` activity prove only that the session is still live; repeated
+passive activity must not reorder otherwise live tabs or windows.
 
 ```ts
 export interface StudioBrowserSessionActiveEvent extends StudioEventBase {

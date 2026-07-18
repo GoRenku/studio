@@ -428,6 +428,13 @@
       "when": 1784303959289,
       "tag": "0060_right_random",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "6",
+      "when": 1784374530645,
+      "tag": "0061_freeze_generation_specs",
+      "breakpoints": true
     }
   ]
 }

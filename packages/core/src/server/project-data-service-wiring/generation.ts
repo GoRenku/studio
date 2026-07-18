@@ -23,6 +23,7 @@ import { estimateSceneDialogueAudioDraft, generateSceneDialogueAudioTake } from 
 import { updateSceneDialogueAudioSetup } from '../scene-dialogue-audio-workspace/setup.js';
 import { discardSceneDialogueAudioTake } from '../scene-dialogue-audio-workspace/takes.js';
 import { resolveGenerationRunOutputRoot } from '../project-asset-files/index.js';
+import { freezeGenerationSpec } from '../generation/spec-lifecycle.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 
@@ -67,12 +68,24 @@ export function createGenerationServiceWiring() {
     async readGenerationSpec(input: ProjectInput & { specId: string }) {
       return withGenerationProject(input, ({ session }) => readGenerationSpec({ id: input.specId, session }));
     },
+    async freezeGenerationSpec(input: ProjectInput & { specId: string }) {
+      return withGenerationProject(input, ({ session }) => {
+        const record = readGenerationSpec({ id: input.specId, session });
+        return freezeGenerationSpec({
+          id: record.id,
+          purpose: readGenerationPurpose(record.spec.purpose),
+          session,
+          now: new Date().toISOString(),
+        });
+      });
+    },
     async listGenerationSpecs(input: ProjectInput & { purpose?: string; target?: GenerationTarget }) {
       return withGenerationProject(input, ({ session }) => listGenerationSpecs({ session, purpose: input.purpose, target: input.target }));
     },
     async buildGenerationPreview(input: ProjectInput & ({ specId: string } | { spec: GenerationSpec })) {
       return withGenerationProject(input, async ({ session, projectFolder }) => {
-        const rawSpec = 'specId' in input ? readGenerationSpec({ id: input.specId, session }).spec : input.spec;
+        const record = 'specId' in input ? readGenerationSpec({ id: input.specId, session }) : null;
+        const rawSpec = 'specId' in input ? record!.spec : input.spec;
         const purpose = readGenerationPurpose(rawSpec.purpose);
         const authoredSpec = await applyFixedGenerationSettings({ spec: rawSpec, purpose });
         const spec = await preparePurposeExecutionSpec({ spec: rawSpec, purpose, projectAspectRatio: projectAspectRatio(session) });
@@ -86,7 +99,9 @@ export function createGenerationServiceWiring() {
           settings: context.settings,
           models: rawSpec.executionKind === 'renku-managed' ? context.models : [],
         };
-        return 'specId' in input ? { ...enriched, specId: input.specId } : enriched;
+        return record
+          ? { ...enriched, generationSpec: { id: record.id, frozenAt: record.frozenAt } }
+          : enriched;
       });
     },
     async buildGenerationPreviewResource(input: ProjectInput & { preview: GenerationPreview }) {
@@ -185,7 +200,7 @@ export function createGenerationServiceWiring() {
           runId: id,
           purpose: purpose.purpose,
         });
-        return runGeneration({ id, specId: record.id, spec: await preparePurposeExecutionSpec({ spec: record.spec, purpose, projectAspectRatio: projectAspectRatio(session) }), purpose, approvalToken: input.approvalToken, mode: input.mode, session, projectFolder, outputRoot: outputRoot.absoluteRoot, outputProjectRelativeRoot: outputRoot.projectRelativeRoot, now: new Date().toISOString() });
+        return runGeneration({ id, specRecord: record, purpose, projectAspectRatio: projectAspectRatio(session), approvalToken: input.approvalToken, mode: input.mode, session, projectFolder, outputRoot: outputRoot.absoluteRoot, outputProjectRelativeRoot: outputRoot.projectRelativeRoot, now: new Date().toISOString() });
       });
     },
     async readGenerationRun(input: ProjectInput & { runId: string }) {

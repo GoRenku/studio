@@ -372,7 +372,7 @@ describe('StudioCoordinationService', () => {
     });
   });
 
-  it('keeps the newest live focus when another session reports a later heartbeat', async () => {
+  it('keeps the most recently engaged focus when passive activity reports arrive later', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);
     const projectData = createProjectDataService();
@@ -449,7 +449,58 @@ describe('StudioCoordinationService', () => {
     await coordination.appendStudioEvent({
       type: 'studio.browserSessionActive',
       browserSessionId: 'studio_browser_old',
-      activityKind: 'heartbeat',
+      activityKind: 'visible',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: { type: 'projectInformation' },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_old',
+      },
+      createdAt: new Date(now - 2_000).toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_scene',
+      activityKind: 'visible',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'scene',
+          id: scene.id as string,
+          sceneTab: 'shots',
+        },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_scene',
+      },
+      createdAt: new Date(now - 1_500).toISOString(),
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_old',
+      activityKind: 'visible',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: { type: 'projectInformation' },
+      },
       source: {
         kind: 'studio',
         browserSessionId: 'studio_browser_old',

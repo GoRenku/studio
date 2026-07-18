@@ -64,7 +64,7 @@ export async function updateGenerationPreviewResource(input: {
     return projectGenerationPreviewResource({
       preview: {
         ...preview,
-        specId: input.specId,
+        generationSpec: { id: updated.id, frozenAt: updated.frozenAt },
         settings: context.settings,
         models: [],
       },
@@ -144,7 +144,7 @@ export async function updateGenerationPreviewResource(input: {
   return projectGenerationPreviewResource({
     preview: {
       ...preview,
-      specId: input.specId,
+      generationSpec: { id: updated.id, frozenAt: updated.frozenAt },
       settings: context.settings,
       models: context.models,
     },

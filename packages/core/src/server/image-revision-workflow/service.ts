@@ -22,6 +22,9 @@ import {
 } from './draft.js';
 import { attachImageRevisionOutput } from './attachment.js';
 import { resolveImageRevisionSource } from './source.js';
+import { projectImageRevisionSourceRequest } from './source-request.js';
+import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
+import { readProjectRecord } from '../database/access/project.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 
@@ -62,11 +65,10 @@ export async function readImageRevisionContext(input: ProjectInput & {
         assetId: source.asset.id,
         assetFileId: source.file.id,
       },
-      sourceGenerationRequest: source.sourceGenerationSpec
-        ? structuredClone(source.sourceGenerationSpec)
-        : source.generationRun?.specSnapshot
-          ? structuredClone(source.generationRun.specSnapshot)
-          : null,
+      sourceGenerationRequest: projectImageRevisionSourceRequest({
+        spec: source.sourceGenerationSpec ?? source.generationRun?.specSnapshot ?? null,
+        session,
+      }),
       regenerate,
       edit: {
         state: 'available',
@@ -169,9 +171,9 @@ export async function runImageRevision(input: ProjectInput & {
     });
     const run = await runGeneration({
       id: ids.next('media_generation_run'),
-      specId: record.id,
-      spec,
+      specRecord: record,
       purpose,
+      projectAspectRatio: effectiveProjectAspectRatio(readProjectRecord(session)?.aspectRatio),
       approvalToken: estimate.estimate.approvalToken,
       mode: 'live',
       session,

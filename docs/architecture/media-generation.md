@@ -65,6 +65,13 @@ lifecycle. They do not validate current guide placement, candidate membership,
 typed ownership, provider readiness, insert defaults, assign media fields,
 select references, or repair authored values.
 
+A saved spec is mutable only while `frozenAt` is null. Live managed submission
+conditionally freezes the exact saved revision before Engines is called;
+agent-external execution uses the focused freeze command immediately before the
+external tool call. Estimate and simulation do not freeze. Frozen specs remain
+readable, previewable, retryable unchanged, and attachable, but every mutation
+is rejected by Core.
+
 An estimate consumes pricing inputs only: provider, model, output media kind,
 explicitly authored pricing settings, provider-owned pricing defaults where
 available, and intended input-media counts. Estimation does not resolve files,
@@ -118,7 +125,7 @@ contracts.
 ## Persistence
 
 `media_generation_spec` stores purpose, target, nullable provider/model,
-title, authored values JSON, ordered references JSON, and timestamps. It does
+title, authored values JSON, ordered references JSON, `frozen_at`, and timestamps. It does
 not store a mirrored complete spec JSON blob.
 
 `media_generation_run` stores the immutable spec snapshot, exact provider
@@ -142,7 +149,7 @@ focused modules in `packages/core/src/server/generation`:
 - `buildGenerationContext`;
 - `listGenerationReferences`;
 - `listGenerationModels`;
-- `createGenerationSpec`, `updateGenerationSpec`,
+- `createGenerationSpec`, `updateGenerationSpec`, `freezeGenerationSpec`,
   `readGenerationSpec`, and `listGenerationSpecs`;
 - `validateGenerationSpec`;
 - `buildGenerationPreview`;
@@ -160,3 +167,7 @@ run. An Image Revision draft can change prompt text and exposed generation
 controls, but it cannot add, remove, or replace references. Imported images
 without a completed source run have no original request to regenerate; Studio
 must explain that state instead of inventing provenance or a fallback prompt.
+
+Image Revision projects original requests to model identity, unchanged authored
+values, and ordered meaningful Asset-title reference labels. It does not expose
+raw references, project paths, filenames, Asset ids, or AssetFile ids.

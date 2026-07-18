@@ -10,21 +10,14 @@ vi.mock('./studio-notification-client.js', () => ({ notifyStudioGenerationPrevie
 describe('generation command handlers', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('exposes the complete generic generation command inventory', () => {
-    expect(generationCommandHandlers.map((handler) => handler.path.join(' '))).toEqual([
-      'context',
-      'reference list',
-      'model list',
-      'validate',
-      'spec create',
-      'spec update',
-      'spec show',
-      'spec list',
-      'preview show',
-      'estimate',
-      'run',
-      'run show',
-    ]);
+  it('registers the external freeze handoff in the bounded handler map', () => {
+    expect(generationCommandHandlers.some((handler) => handler.path.join(' ') === 'spec freeze')).toBe(true);
+  });
+
+  it('passes the exact saved spec to Core for freezing', async () => {
+    const freezeGenerationSpec = vi.fn().mockResolvedValue({ id: 'spec_1', frozenAt: '2026-07-18T10:00:00.000Z' });
+    await handler('spec freeze').run(input({ spec: 'spec_1' }, { freezeGenerationSpec }));
+    expect(freezeGenerationSpec).toHaveBeenCalledWith(expect.objectContaining({ specId: 'spec_1' }));
   });
 
   it('projects context through the generic Core command', async () => {

@@ -59,6 +59,7 @@ export {
   readGenerationSpec,
   updateGenerationSpec,
 } from './generation/specs.js';
+export { freezeGenerationSpec } from './generation/spec-lifecycle.js';
 export {
   applyGenerationGenericReferences,
   listGenerationReferences,

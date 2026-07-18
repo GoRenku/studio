@@ -121,6 +121,13 @@ function validateGenerationProvenance(input: AttachGenerationMediaInput & {
         'The source spec must be an agent-external request for the same purpose and target.',
       );
     }
+    if (record.frozenAt === null) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_ATTACHMENT_SOURCE_SPEC_MUTABLE',
+        'The agent-external source spec must be frozen before generated media can be attached.',
+        { suggestion: 'Freeze the final reviewed request immediately before external generation.' }
+      );
+    }
     return {
       kind: 'agent-external',
       generationSpecId: record.id,

@@ -14,7 +14,10 @@ export type GenerationPreviewPurpose = Exclude<
 export interface GenerationPreviewResource {
   kind: 'generationPreview';
   previewId: string;
-  generationSpecId?: string;
+  generationSpec?: {
+    id: string;
+    frozenAt: string | null;
+  };
   purpose: GenerationPreviewPurpose;
   project: {
     id: string;

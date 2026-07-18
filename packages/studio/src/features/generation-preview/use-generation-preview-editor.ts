@@ -55,7 +55,7 @@ export function useGenerationPreviewEditor(
     slot: GenerationPreviewReferenceSlot,
     reference: GenerationPreviewResourceReference | null
   ) => {
-    if (!preview.generationSpecId || updatePending) {
+    if (preview.generationSpec?.frozenAt !== null || updatePending) {
       return;
     }
     setDraft((current) => changeGenerationPreviewReference(current, slot, reference));
@@ -63,7 +63,7 @@ export function useGenerationPreviewEditor(
   };
 
   const chooseModel = (modelKey: string) => {
-    if (!preview.generationSpecId || updatePending) {
+    if (preview.generationSpec?.frozenAt !== null || updatePending) {
       return;
     }
     const model = preview.authoring.models.find(
@@ -81,7 +81,7 @@ export function useGenerationPreviewEditor(
     controlId: string,
     value: GenerationPreviewConfigurationValue,
   ) => {
-    if (!preview.generationSpecId || updatePending) {
+    if (preview.generationSpec?.frozenAt !== null || updatePending) {
       return;
     }
     setDraft((current) =>
@@ -91,7 +91,7 @@ export function useGenerationPreviewEditor(
   };
 
   const update = async () => {
-    if (!preview.generationSpecId || updatePending) {
+    if (preview.generationSpec?.frozenAt !== null || updatePending) {
       return;
     }
     const request = buildGenerationPreviewUpdateRequest(preview, draft);
@@ -102,7 +102,7 @@ export function useGenerationPreviewEditor(
     try {
       const nextPreview = await updateGenerationPreviewResource({
         projectName: session.projectName,
-        specId: preview.generationSpecId,
+        specId: preview.generationSpec.id,
         ...request,
       });
       if (requestRevision.current !== currentRevision) {

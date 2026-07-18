@@ -22,6 +22,8 @@ import { estimateGeneration } from '../generation/estimates.js';
 import { readGenerationPurpose } from '../generation/purposes.js';
 import { runGeneration } from '../generation/runs.js';
 import { resolveGenerationRunOutputRoot } from '../project-asset-files/index.js';
+import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
+import { readProjectRecord } from '../database/access/project.js';
 import { createGenerationSpec } from '../generation/specs.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
@@ -101,9 +103,9 @@ export async function generateSceneDialogueAudioTake(input: {
   });
   const report = await runGeneration({
     id: runId,
-    specId,
-    spec: record.spec,
+    specRecord: record,
     purpose,
+    projectAspectRatio: effectiveProjectAspectRatio(readProjectRecord(input.session)?.aspectRatio),
     approvalToken: estimate.estimate.approvalToken,
     mode: input.simulate ? 'simulated' : 'live',
     session: input.session,

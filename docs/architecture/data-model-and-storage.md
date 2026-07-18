@@ -72,7 +72,8 @@ Use the focused documents below for current direction.
   state or Storyboard-to-Production source relationship.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
-  attaches them as assets.
+  attaches them as assets. A saved spec is mutable while `frozen_at` is null and
+  permanently frozen when live execution begins.
 - Durable generated and imported asset files live under the folder for the
   domain object that owns them. Current asset paths must not start with
   `generated/`; temporary agent/debug files belong under top-level `tmp/`;
