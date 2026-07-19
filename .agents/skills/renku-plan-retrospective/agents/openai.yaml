@@ -1,0 +1,4 @@
+interface:
+  display_name: "Renku Plan Retrospective"
+  short_description: "Remember feedback from Studio plan reviews"
+  default_prompt: "Use $renku-plan-retrospective to record my plan-review feedback for future Renku Studio plans."

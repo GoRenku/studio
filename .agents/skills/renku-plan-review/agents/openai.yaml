@@ -1,0 +1,4 @@
+interface:
+  display_name: "Renku Plan Reviewer"
+  short_description: "Balance Studio plans against product needs"
+  default_prompt: "Use $renku-plan-review to audit this Renku Studio plan for overengineering, duplication, and architectural shortcuts."

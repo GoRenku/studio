@@ -1,0 +1,4 @@
+interface:
+  display_name: "Renku Plan"
+  short_description: "Create and independently review Studio plans"
+  default_prompt: "Use $renku-plan to create a Renku Studio implementation plan and review it to convergence."
