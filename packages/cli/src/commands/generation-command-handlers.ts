@@ -99,18 +99,22 @@ async function runPreviewShow(input: Input) {
   if (files.length === 0 && specIds.length === 0) {
     requiredFlag(undefined, '--file or --spec');
   }
+  const projectRef = await input.runtime.projectDataService.resolveStudioProjectRef(projectInput(input));
+  const resolvedProjectInput = {
+    projectName: projectRef.name,
+    homeDir: input.runtime.homeDir,
+  };
   const previews = specIds.length > 0
     ? await Promise.all(specIds.map((specId) =>
-        input.runtime.projectDataService.buildGenerationPreview({ ...projectInput(input), specId })
+        input.runtime.projectDataService.buildGenerationPreview({ ...resolvedProjectInput, specId })
       ))
     : await Promise.all(files.map(async (file) =>
-        input.runtime.projectDataService.buildGenerationPreview({ ...projectInput(input), spec: await readSpec(file) })
+        input.runtime.projectDataService.buildGenerationPreview({ ...resolvedProjectInput, spec: await readSpec(file) })
       ));
-  const project = await input.runtime.projectDataService.readProject({ projectName: requiredProjectName(input) });
   const delivery = await notifyStudioGenerationPreviews({
     homeDir: input.runtime.homeDir,
     notification: {
-      projectRef: { name: project.identity.name, id: project.identity.id, storageRoot: project.identity.folderPath },
+      projectRef,
       previews,
       source: { kind: 'cli', command: 'generation preview show' },
     },
@@ -142,7 +146,6 @@ async function runGenerationShow(input: Input) {
 
 async function readSpec(file: string): Promise<GenerationSpec> { return await readJsonFile(file) as GenerationSpec; }
 function projectInput(input: Input) { return { projectName: input.runtime.projectName, homeDir: input.runtime.homeDir }; }
-function requiredProjectName(input: Input) { return requiredFlag(input.runtime.projectName, '--project'); }
 function parseMediaKind(value?: string): 'image' | 'audio' | 'video' | undefined {
   if (!value) {
     return undefined;

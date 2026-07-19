@@ -118,7 +118,10 @@ import type {
 } from '../client/screenplay.js';
 import type { CurrentProjectReport } from './database/lifecycle/current-project.js';
 import type { ProjectDatabasePreMigrationBackupReport } from './database/lifecycle/project-database-backups.js';
-import type { StudioCurrent } from './studio-coordination/events.js';
+import type {
+  StudioCurrent,
+  StudioProjectRef,
+} from './studio-coordination/events.js';
 import type { RenkuConfigPathOptions } from './renku-config.js';
 import type { ProjectIdGenerator } from './entity-ids.js';
 
@@ -219,6 +222,9 @@ export interface ProjectDataService {
   openCurrentProject(input: OpenCurrentProjectInput): Promise<CurrentProjectReport>;
   readCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
   closeCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
+  resolveStudioProjectRef(
+    input: RenkuConfigPathOptions & { projectName?: string }
+  ): Promise<StudioProjectRef>;
   listCastMembers(input?: RenkuConfigPathOptions): Promise<import('../client/cast-members.js').CastMember[]>;
   readCastMember(input: ReadCastMemberInput): Promise<import('../client/cast-members.js').CastMember>;
   listCastVoices(input: ListCastVoicesInput): Promise<CastVoiceListReport>;

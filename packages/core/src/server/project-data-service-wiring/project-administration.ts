@@ -14,6 +14,7 @@ import { readProject } from '../resources/full-project.js';
 import { readProjectInformationResourceForProject } from '../resources/project-information.js';
 import { listLibrary, resolveCoverImage } from '../resources/project-library.js';
 import { readProjectShell } from '../resources/project-shell.js';
+import { resolveStudioProjectRef } from '../studio-coordination/project-reference.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createProjectAdministrationServiceWiring(): Pick<
@@ -31,6 +32,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'openCurrentProject'
   | 'readCurrentProject'
   | 'closeCurrentProject'
+  | 'resolveStudioProjectRef'
 > {
   return {
     createMovieProject,
@@ -46,5 +48,6 @@ export function createProjectAdministrationServiceWiring(): Pick<
     openCurrentProject,
     readCurrentProject,
     closeCurrentProject,
+    resolveStudioProjectRef,
   };
 }

@@ -38,8 +38,7 @@ describe('generation command handlers', () => {
     const buildGenerationPreview = vi.fn()
       .mockResolvedValueOnce({ ...preview, specId: 'spec_1' })
       .mockResolvedValueOnce({ ...preview, specId: 'spec_2' });
-    const readProject = vi.fn().mockResolvedValue({ identity: { id: 'project_1', name: 'movie', folderPath: '/tmp/movie' } });
-    await expect(handler('preview show').run(input({ spec: ['spec_1', 'spec_2'] }, { buildGenerationPreview, readProject }))).resolves.toEqual({
+    await expect(handler('preview show').run(input({ spec: ['spec_1', 'spec_2'] }, { buildGenerationPreview }))).resolves.toEqual({
       valid: true,
       requestCount: 2,
       previews: [{ ...preview, specId: 'spec_1' }, { ...preview, specId: 'spec_2' }],
@@ -47,6 +46,41 @@ describe('generation command handlers', () => {
     });
     expect(buildGenerationPreview.mock.calls.map(([value]) => value.specId)).toEqual(['spec_1', 'spec_2']);
     expect(notifyStudioGenerationPreviews).toHaveBeenCalledWith(expect.objectContaining({ notification: expect.objectContaining({ previews: [{ ...preview, specId: 'spec_1' }, { ...preview, specId: 'spec_2' }] }) }));
+  });
+
+  it('resolves Preview against the current project when --project is omitted', async () => {
+    const projectRef = {
+      name: 'current-movie',
+      id: 'project_current',
+      storageRoot: '/tmp/projects',
+    };
+    const resolveStudioProjectRef = vi.fn().mockResolvedValue(projectRef);
+    const preview = {
+      spec: { purpose: 'image.create', target: { kind: 'project', id: 'project' }, values: {}, references: [] },
+      references: [],
+      diagnostics: [],
+    };
+    const buildGenerationPreview = vi.fn().mockResolvedValue(preview);
+    vi.mocked(notifyStudioGenerationPreviews).mockResolvedValue({ status: 'delivered' });
+
+    await handler('preview show').run(input(
+      { spec: 'spec_1' },
+      { resolveStudioProjectRef, buildGenerationPreview },
+      {},
+    ));
+
+    expect(resolveStudioProjectRef).toHaveBeenCalledWith({
+      projectName: undefined,
+      homeDir: '/tmp/home',
+    });
+    expect(buildGenerationPreview).toHaveBeenCalledWith({
+      projectName: 'current-movie',
+      homeDir: '/tmp/home',
+      specId: 'spec_1',
+    });
+    expect(notifyStudioGenerationPreviews).toHaveBeenCalledWith(expect.objectContaining({
+      notification: expect.objectContaining({ projectRef }),
+    }));
   });
 
   it('returns Preview data when Studio is not running', async () => {
@@ -64,11 +98,9 @@ describe('generation command handlers', () => {
     };
     vi.mocked(notifyStudioGenerationPreviews).mockResolvedValue({ status: 'notRunning' });
     const buildGenerationPreview = vi.fn().mockResolvedValue(preview);
-    const readProject = vi.fn().mockResolvedValue({ identity: { id: 'project_1', name: 'movie', folderPath: '/tmp/movie' } });
 
     await expect(handler('preview show').run(input({ spec: 'spec_1' }, {
       buildGenerationPreview,
-      readProject,
     }))).resolves.toEqual({
       valid: true,
       requestCount: 1,
@@ -83,8 +115,7 @@ describe('generation command handlers', () => {
     await Promise.all(files.map((file, index) => writeFile(file, JSON.stringify({ purpose: 'image.create', target: { kind: 'project', id: `project-${index + 1}` }, values: {}, references: [] }))));
     vi.mocked(notifyStudioGenerationPreviews).mockResolvedValue({ status: 'delivered' });
     const buildGenerationPreview = vi.fn().mockImplementation(async ({ spec }) => ({ spec, references: [], diagnostics: [] }));
-    const readProject = vi.fn().mockResolvedValue({ identity: { id: 'project_1', name: 'movie', folderPath: '/tmp/movie' } });
-    await handler('preview show').run(input({ file: files }, { buildGenerationPreview, readProject }));
+    await handler('preview show').run(input({ file: files }, { buildGenerationPreview }));
     expect(notifyStudioGenerationPreviews).toHaveBeenCalledTimes(1);
     expect(vi.mocked(notifyStudioGenerationPreviews).mock.calls[0]![0].notification.previews.map((preview) => preview.spec.target.id)).toEqual(['project-1', 'project-2']);
   });
@@ -107,6 +138,24 @@ function handler(path: string) {
   return value;
 }
 
-function input(flags: Record<string, unknown>, projectDataService: Record<string, unknown>) {
-  return { flags, runtime: { projectName: 'movie', homeDir: '/tmp/home', projectDataService } } as never;
+function input(
+  flags: Record<string, unknown>,
+  projectDataService: Record<string, unknown>,
+  runtime: { projectName?: string } = { projectName: 'movie' },
+) {
+  return {
+    flags,
+    runtime: {
+      projectName: runtime.projectName,
+      homeDir: '/tmp/home',
+      projectDataService: {
+        resolveStudioProjectRef: vi.fn().mockResolvedValue({
+          name: runtime.projectName ?? 'movie',
+          id: 'project_1',
+          storageRoot: '/tmp/projects',
+        }),
+        ...projectDataService,
+      },
+    },
+  } as never;
 }
