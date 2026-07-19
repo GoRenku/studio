@@ -1,10 +1,9 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
-  GenerationModelIdentity,
   GenerationRun,
+  GenerationReferenceSlotSelectionInput,
   GenerationSpecRecord,
 } from './generation.js';
-import type { JsonValue } from './generation.js';
 import type {
   GenerationEditorControl,
   GenerationPreviewConfigurationValue,
@@ -43,13 +42,14 @@ export type ImageRevisionMode = 'regenerate' | 'edit';
 
 export interface ImageRevisionDraft {
   mode: ImageRevisionMode;
-  model: Required<GenerationModelIdentity>;
+  modelFamilyId: string;
   authoredText: string;
   negativeText?: string;
   generationControls: Array<{
     controlId: string;
     value: GenerationPreviewConfigurationValue;
   }>;
+  slotSelections: GenerationReferenceSlotSelectionInput[];
 }
 
 export type ImageRevisionModeContext =
@@ -74,15 +74,8 @@ export interface ImageRevisionEditorContext {
     assetId: string;
     assetFileId: string;
   };
-  sourceGenerationRequest: ImageRevisionSourceRequest | null;
   regenerate: ImageRevisionModeContext;
   edit: ImageRevisionModeContext;
-}
-
-export interface ImageRevisionSourceRequest {
-  model?: GenerationModelIdentity;
-  values: Record<string, JsonValue>;
-  referenceLabels: string[];
 }
 
 export interface ImageRevisionEstimateReport {

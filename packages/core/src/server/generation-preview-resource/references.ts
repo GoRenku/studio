@@ -28,6 +28,7 @@ export function projectGenerationPreviewReferences(
     }
     slots.set(placementKey(selection.placement), {
       label: selection.placement.slotId,
+      locked: referenceSlotLocked(preview.spec.purpose, selection.placement),
       placement: selection.placement,
       current: projectSavedReference(selection),
       eligibleCandidates: [],
@@ -45,6 +46,7 @@ export function projectGenerationPreviewReferences(
       const persisted = slots.get(key);
       slots.set(key, {
         label: slot.label,
+        locked: referenceSlotLocked(preview.spec.purpose, placement),
         placement,
         current: persisted?.current ?? null,
         eligibleCandidates: slot.eligibleCandidates.map(projectCatalogItem),
@@ -57,6 +59,15 @@ export function projectGenerationPreviewReferences(
       .filter((selection) => selection.placement.kind === 'additional')
       .map(projectSavedReference),
   };
+}
+
+function referenceSlotLocked(
+  purpose: GenerationPreview['spec']['purpose'],
+  placement: Extract<GenerationReferenceSelection['placement'], { kind: 'slot' }>,
+): boolean {
+  return purpose === 'image.edit' &&
+    placement.sectionId === 'source' &&
+    placement.slotId === 'source-image';
 }
 
 function projectCatalogItem(
@@ -91,7 +102,7 @@ function projectSavedReference(
     kind: resolved?.mediaKind ?? 'image',
     role: resolved?.role ?? 'unavailable',
     label: resolved?.label ?? 'Unavailable reference',
-    ...(selection.providerField ? { providerToken: selection.providerField } : {}),
+    ...(selection.promptMention ? { promptMention: selection.promptMention } : {}),
     assetId: selection.reference.assetId,
     assetFileId: selection.reference.assetFileId,
     ...(resolved ? { sourcePurpose: resolved.provenance.origin } : {}),

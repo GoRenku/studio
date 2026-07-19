@@ -1002,6 +1002,7 @@ describe('renku CLI', () => {
       specPath,
       JSON.stringify(
         {
+          executionKind: 'renku-managed',
           purpose: 'lookbook.image',
           target: { kind: 'lookbook', id: report.lookbook.id },
           model: { provider: 'fal-ai', model: 'nano-banana-2' },
@@ -1099,6 +1100,7 @@ describe('renku CLI', () => {
       characterSheetSpecPath,
       JSON.stringify(
         {
+          executionKind: 'renku-managed',
           purpose: 'cast.character-sheet',
           target: { kind: 'castMember', id: castMemberId },
           model: { provider: 'fal-ai', model: 'nano-banana-2' },
@@ -1183,6 +1185,7 @@ describe('renku CLI', () => {
       profileSpecPath,
       JSON.stringify(
         {
+          executionKind: 'renku-managed',
           purpose: 'cast.profile',
           target: { kind: 'castMember', id: castMemberId },
           model: { provider: 'fal-ai', model: 'nano-banana-2' },
@@ -1318,6 +1321,7 @@ describe('renku CLI', () => {
       locationSpecPath,
       JSON.stringify(
         {
+          executionKind: 'renku-managed',
           purpose: 'location.sheet',
           target: { kind: 'location', id: locationId },
           model: { provider: 'fal-ai', model: 'nano-banana-2' },
@@ -1421,6 +1425,7 @@ describe('renku CLI', () => {
       locationHeroSpecPath,
       JSON.stringify(
         {
+          executionKind: 'renku-managed',
           purpose: 'location.hero',
           target: { kind: 'location', id: locationId },
           model: { provider: 'fal-ai', model: 'nano-banana-2' },
@@ -1576,7 +1581,7 @@ describe('renku CLI', () => {
         role: 'profile',
         files: [expect.objectContaining({ role: 'primary' })],
       },
-      resourceKeys: [`cast:${castMemberId}`],
+      resourceKeys: [`surface:castMember:${castMemberId}`],
     });
     expect(stderr).toEqual([]);
   });
@@ -2412,6 +2417,7 @@ describe('renku CLI', () => {
       imageEditSpecPath,
       JSON.stringify(
         {
+          executionKind: 'renku-managed',
           purpose: 'image.edit',
           target: { kind: 'asset', id: storyboardSheetImport.asset.assetId },
           model: { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' },
@@ -2468,6 +2474,7 @@ describe('renku CLI', () => {
       specPath,
       JSON.stringify(
         {
+          executionKind: 'renku-managed',
           purpose: 'scene.storyboard-sheet',
           target: { kind: 'scene', id: sceneId },
           model: { provider: 'fal-ai', model: 'nano-banana-2' },

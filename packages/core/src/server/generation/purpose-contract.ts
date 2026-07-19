@@ -20,7 +20,6 @@ export interface GenerationPurposeDescriptor {
   purpose: GenerationPurpose;
   targetKind: GenerationTarget['kind'];
   outputMediaKind: GenerationOutputMediaKind;
-  modelUse: 'create' | 'edit' | 'any';
   settings: GenerationPurposeSettings;
   buildReferenceGuide(input: BuildGenerationPurposeInput): Promise<GenerationReferenceGuide>;
   buildContext(input: BuildGenerationPurposeInput): Promise<GenerationContext>;

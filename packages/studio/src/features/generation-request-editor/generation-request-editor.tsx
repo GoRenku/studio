@@ -8,15 +8,15 @@ import type {
 import { AlertCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { GenerationPreviewDraft } from '@/features/generation-preview/generation-preview-draft';
-import { GenerationPreviewConfigPanel } from '@/features/generation-preview/generation-preview-config-panel';
-import { GenerationPreviewDiagnosticsBanner } from '@/features/generation-preview/generation-preview-diagnostics-banner';
-import { GenerationPreviewPromptPanel } from '@/features/generation-preview/generation-preview-prompt-panel';
-import { GenerationPreviewReferenceGrid } from '@/features/generation-preview/generation-preview-reference-grid';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { LineTabBar } from '@/ui/line-tab-bar';
 import { LineTabsContent } from '@/ui/line-tabs';
 import { Tabs } from '@/ui/tabs';
 import { GenerationRequestControlsPanel } from './generation-request-controls-panel';
+import { GenerationRequestPromptPanel } from './generation-request-prompt-panel';
+import { GenerationRequestConfigPanel } from './generation-request-config-panel';
+import { GenerationRequestDiagnostics } from './generation-request-diagnostics';
+import { GenerationRequestReferenceGrid } from './generation-request-reference-grid';
 
 export type GenerationRequestEditorTab = 'prompt' | 'references' | 'config';
 
@@ -29,7 +29,6 @@ interface GenerationRequestEditorProps {
   errorTitle: string;
   pending: boolean;
   readOnly?: boolean;
-  referencesReadOnly?: boolean;
   controls?: GenerationEditorControl[];
   modelControl?: {
     value: string;
@@ -60,7 +59,6 @@ export function GenerationRequestEditor({
   errorTitle,
   pending,
   readOnly = false,
-  referencesReadOnly = false,
   controls = [],
   modelControl,
   onTabChange,
@@ -84,24 +82,25 @@ export function GenerationRequestEditor({
         items={generationRequestEditorTabItems}
         trailing={tabRowTrailing}
       />
-      <div className='flex min-h-0 flex-col overflow-hidden px-6 py-4'>
+      <div className='flex min-h-0 flex-col overflow-hidden px-6'>
         {error ? (
-          <Alert variant='destructive' className='mb-4 shrink-0'>
+          <Alert variant='destructive' className='mt-4 mb-4 shrink-0'>
             <AlertCircle />
             <AlertTitle>{errorTitle}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        <GenerationPreviewDiagnosticsBanner
+        <GenerationRequestDiagnostics
           diagnostics={preview?.diagnostics ?? []}
         />
         <LineTabsContent
           value='prompt'
           className='mt-0 min-h-0 overflow-hidden'
         >
-          <GenerationPreviewPromptPanel
+          <GenerationRequestPromptPanel
             authoredText={draft.promptDraft.authoredText}
             negativeText={draft.promptDraft.negativeText}
+            preview={preview}
             editorRevision={editorRevision}
             readOnly={readOnly || pending}
             onAuthoredTextChange={onAuthoredTextChange}
@@ -114,11 +113,11 @@ export function GenerationRequestEditor({
           className='mt-0 min-h-0 overflow-auto'
         >
           {preview ? (
-            <GenerationPreviewReferenceGrid
+            <GenerationRequestReferenceGrid
               preview={preview}
               draft={draft}
               updating={pending || readOnly}
-              editable={!readOnly && !referencesReadOnly}
+              editable={!readOnly}
               onReferenceChoose={onReferenceChoose}
             />
           ) : (
@@ -140,7 +139,7 @@ export function GenerationRequestEditor({
               onChange={onControlChange}
             />
           ) : preview ? (
-            <GenerationPreviewConfigPanel preview={preview} />
+            <GenerationRequestConfigPanel preview={preview} />
           ) : (
             <p className='text-sm text-muted-foreground'>No settings.</p>
           )}

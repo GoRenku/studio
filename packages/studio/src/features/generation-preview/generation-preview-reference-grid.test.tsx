@@ -3,19 +3,16 @@ import React from 'react';
 import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { GenerationPreviewReferenceGrid } from './generation-preview-reference-grid';
+import { GenerationRequestReferenceGrid } from '@/features/generation-request-editor/generation-request-reference-grid';
 
 describe('GenerationPreviewReferenceGrid', () => {
   it('shows only exact selected references when reference editing is disabled', () => {
     render(
-      <GenerationPreviewReferenceGrid
+      <GenerationRequestReferenceGrid
         preview={previewFixture()}
         draft={{
           promptDraft: { authoredText: 'Edit the source image.' },
-          model: {
-            provider: 'fal-ai',
-            modelId: 'openai/gpt-image-2/edit',
-          },
+          modelFamilyId: 'gpt-image-2',
           parameterValues: {},
           authoredParameterNames: [],
           slotSelections: [],
@@ -39,14 +36,11 @@ describe('GenerationPreviewReferenceGrid', () => {
     const slot = preview.references.slots[1]!;
     const onReferenceChoose = vi.fn();
     render(
-      <GenerationPreviewReferenceGrid
+      <GenerationRequestReferenceGrid
         preview={preview}
         draft={{
           promptDraft: { authoredText: 'Create a character sheet.' },
-          model: {
-            provider: 'fal-ai',
-            modelId: 'openai/gpt-image-2/edit',
-          },
+          modelFamilyId: 'gpt-image-2',
           parameterValues: {},
           authoredParameterNames: [],
           slotSelections: [],
@@ -60,6 +54,9 @@ describe('GenerationPreviewReferenceGrid', () => {
     expect(screen.queryByText('None')).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Choose Character Sheet' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Exclude Mara Character Sheet' })
     ).toBeNull();
     fireEvent.click(
       screen.getByRole('button', {
@@ -84,14 +81,11 @@ describe('GenerationPreviewReferenceGrid', () => {
       browserUrl: '/costume.png',
     }];
     render(
-      <GenerationPreviewReferenceGrid
+      <GenerationRequestReferenceGrid
         preview={preview}
         draft={{
           promptDraft: { authoredText: 'Create a character sheet.' },
-          model: {
-            provider: 'fal-ai',
-            modelId: 'openai/gpt-image-2/edit',
-          },
+          modelFamilyId: 'gpt-image-2',
           parameterValues: {},
           authoredParameterNames: [],
           slotSelections: [],
@@ -140,6 +134,7 @@ function previewFixture(): GenerationPreviewResource {
       slots: [
         {
           label: 'Source Image',
+          locked: true,
           placement: {
             kind: 'slot',
             sectionId: 'source',
@@ -158,6 +153,7 @@ function previewFixture(): GenerationPreviewResource {
         },
         {
           label: 'Character Sheet',
+          locked: false,
           placement: {
             kind: 'slot',
             sectionId: 'cast',
@@ -186,7 +182,7 @@ function previewFixture(): GenerationPreviewResource {
     configuration: {
       sections: [],
     },
-    authoring: { models: [] },
+    authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     diagnostics: [],
   };
 }

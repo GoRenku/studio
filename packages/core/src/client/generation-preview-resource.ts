@@ -67,7 +67,7 @@ export interface GenerationPreviewResourceReference {
   kind: 'image' | 'audio' | 'video';
   role: string;
   label: string;
-  providerToken?: string;
+  promptMention?: string;
   assetId: string;
   assetFileId: string;
   dialogueId?: string;
@@ -83,6 +83,7 @@ export interface GenerationPreviewReferences {
 
 export interface GenerationPreviewReferenceSlot {
   label: string;
+  locked: boolean;
   placement: Extract<
     GenerationReferenceSelection['placement'],
     { kind: 'slot' }
@@ -166,13 +167,11 @@ export type GenerationEditorControl =
     };
 
 export interface GenerationPreviewAuthoring {
-  models: GenerationPreviewAuthoringModel[];
-}
-
-export interface GenerationPreviewAuthoringModel {
-  provider: string;
-  modelId: string;
-  label: string;
+  selectedModelFamilyId: string;
+  modelFamilies: Array<{
+    familyId: string;
+    label: string;
+  }>;
   controls: GenerationEditorControl[];
 }
 
@@ -204,6 +203,7 @@ export interface GenerationPreviewConfigurationRow {
   schemaDefault?: GenerationPreviewConfigurationValue;
   schemaDefaultLabel?: string;
   allowedValues?: GenerationPreviewConfigurationValue[];
+  allowedValueLabels?: Record<string, string>;
   minimum?: number;
   maximum?: number;
   required?: boolean;

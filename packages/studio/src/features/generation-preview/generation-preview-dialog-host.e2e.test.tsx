@@ -35,6 +35,13 @@ describe('GenerationPreviewDialogHost', () => {
     expect(
       await screen.findByText('Image Create Generation Preview')
     ).toBeTruthy();
+    expect(screen.getByRole('dialog').className).toContain('h-[760px]');
+    expect(screen.getByRole('dialog').className).toContain('w-[1120px]');
+    expect(
+      screen.getByText('Image Create Generation Preview').closest(
+        '[data-slot="dialog-header"]',
+      )?.className,
+    ).toContain('h-[54px]');
     expect(screen.getByText('Create a production reference image.')).toBeTruthy();
     expect(screen.queryByText('Image Create Preview')).toBeNull();
     expect(screen.queryByText('Preparation of the Siege')).toBeNull();
@@ -181,7 +188,7 @@ describe('GenerationPreviewDialogHost', () => {
     expect(screen.queryByText('Execution path')).toBeNull();
     expect(screen.queryByText('Provider Payload')).toBeNull();
     expect(screen.queryByText('Reference count')).toBeNull();
-    expect(screen.queryByText('Estimated total')).toBeNull();
+    expect(screen.queryByText('Estimate:')).toBeNull();
   });
 
   it('keeps a saved external request editable without an empty model selector', async () => {
@@ -198,7 +205,7 @@ describe('GenerationPreviewDialogHost', () => {
       mediaKind: 'image',
       executionPath: 'agent-external',
     };
-    preview.authoring.models = [];
+    preview.authoring = { selectedModelFamilyId: '', modelFamilies: [], controls: [] };
     preview.configuration.sections = [
       {
         key: 'model',
@@ -283,7 +290,7 @@ describe('GenerationPreviewDialogHost', () => {
       })
     );
 
-    expect(await screen.findByText('Estimated total')).toBeTruthy();
+    expect(await screen.findByText('Estimate:')).toBeTruthy();
     expect(screen.getByText('$0.12')).toBeTruthy();
 
     await act(async () => {
@@ -291,7 +298,7 @@ describe('GenerationPreviewDialogHost', () => {
     });
 
     const configPanel = screen.getByText('Generation').closest('[role="tabpanel"]');
-    expect(configPanel?.textContent).not.toContain('Estimated total');
+    expect(configPanel?.textContent).not.toContain('Estimate:');
   });
 
   it('renders Core diagnostics as a banner without an Issues tab', async () => {
@@ -316,7 +323,7 @@ describe('GenerationPreviewDialogHost', () => {
     expect(
       await screen.findByText('Image Create Generation Preview')
     ).toBeTruthy();
-    expect(screen.getByText('Generation Preview Notes')).toBeTruthy();
+    expect(screen.getByText('Request diagnostics')).toBeTruthy();
     const alert = screen.getByRole('alert');
     expect(alert.textContent).toContain('GENERATION_PREVIEW_TEST');
     expect(alert.textContent).toContain('The preview includes a warning from Core.');
@@ -387,10 +394,7 @@ describe('GenerationPreviewDialogHost', () => {
             prompt: {
               authoredText: 'Updated production prompt.\nSecond line.',
             },
-            model: {
-              provider: 'fal-ai',
-              model: 'fal-ai/openai/gpt-image-2',
-            },
+            modelFamilyId: 'gpt-image-2',
             parameterValues: {
               image_size: 'landscape_16_9',
             },
@@ -669,16 +673,17 @@ function previewFixture(input: {
     references: {
       slots: [{
         label: 'Visual language',
+        locked: input.purpose === 'image.edit',
         placement: {
           kind: 'slot',
-          sectionId: 'visual-language',
-          slotId: 'lookbook',
+          sectionId: input.purpose === 'image.edit' ? 'source' : 'visual-language',
+          slotId: input.purpose === 'image.edit' ? 'source-image' : 'lookbook',
         },
         current: (input.selected ?? true) ? {
           kind: 'image',
           role: 'style',
           label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
-          providerToken: '@Reference1',
+          promptMention: '@Reference1',
           assetId: 'asset_style',
           assetFileId: 'asset_file_style',
           sourcePurpose: 'lookbook.storyboard-sheet',
@@ -690,7 +695,7 @@ function previewFixture(input: {
           kind: 'image',
           role: 'style',
           label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
-          providerToken: '@Reference1',
+          promptMention: '@Reference1',
           assetId: 'asset_style',
           assetFileId: 'asset_file_style',
           sourcePurpose: 'lookbook.storyboard-sheet',
@@ -724,12 +729,9 @@ function previewFixture(input: {
       ],
     },
     authoring: {
-      models: [
-        {
-          provider: 'fal-ai',
-          modelId: 'fal-ai/openai/gpt-image-2',
-          label: 'GPT Image 2',
-          controls: [
+      selectedModelFamilyId: 'gpt-image-2',
+      modelFamilies: [{ familyId: 'gpt-image-2', label: 'GPT Image 2' }],
+      controls: [
             {
               controlId: 'image_size',
               kind: 'select',
@@ -742,8 +744,6 @@ function previewFixture(input: {
                 { label: 'landscape_16_9', value: 'landscape_16_9' },
               ],
             },
-          ],
-        },
       ],
     },
     providerPreview: input.providerPreview,

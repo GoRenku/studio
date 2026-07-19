@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Renku image generation review dialogs</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --canvas: #151515;
+        --overlay: rgba(0, 0, 0, 0.58);
+        --dialog: #202124;
+        --header: #252629;
+        --tabbar: #222326;
+        --content: #1c1d20;
+        --footer: #222326;
+        --editor-fg: #e8e8e6;
+        --foreground: #f1efe8;
+        --muted: #a6a8ae;
+        --faint: #747780;
+        --border: #3a3b3f;
+        --soft-border: #313237;
+        --primary: #d6a92f;
+        --primary-hover: #e1b844;
+        --primary-fg: #171717;
+        --heading: #e0c36f;
+        --marker: #8eb5ee;
+        --reference: #7bd4c4;
+        --selection: rgba(96, 141, 220, 0.28);
+        --radius: 10px;
+        --shadow: 0 36px 96px rgba(0, 0, 0, 0.62), 0 10px 28px rgba(0, 0, 0, 0.36);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--canvas);
+        color: var(--foreground);
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+      }
+
+      button { font: inherit; }
+
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background:
+          radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.035), transparent 34%),
+          var(--overlay);
+      }
+
+      .dialog {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-rows: 54px 46px minmax(0, 1fr) 72px;
+        width: 1120px;
+        height: 760px;
+        overflow: hidden;
+        border: 1px solid #414247;
+        border-radius: var(--radius);
+        background: var(--dialog);
+        box-shadow: var(--shadow);
+      }
+
+      .dialog.revision {
+        grid-template-rows: 72px 46px minmax(0, 1fr) 72px;
+        height: 760px;
+      }
+
+      .dialog-header {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-width: 0;
+        padding: 0 20px 0 22px;
+        border-bottom: 1px solid var(--soft-border);
+        background: var(--header);
+      }
+
+      .source-thumb {
+        width: 78px;
+        height: 48px;
+        flex: 0 0 auto;
+        overflow: hidden;
+        border: 1px solid #4a4c52;
+        border-radius: 5px;
+        background: #111;
+      }
+
+      .source-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .title-block { min-width: 0; }
+
+      .dialog-title {
+        overflow: hidden;
+        color: #f4f2ea;
+        font-size: 11px;
+        font-weight: 650;
+        line-height: 1;
+        letter-spacing: 0.12em;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .header-spacer { flex: 1; }
+
+      .mode-switch {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0;
+        padding: 2px;
+        border: 1px solid #3d3f44;
+        border-radius: 6px;
+        background: #1d1e20;
+      }
+
+      .mode-button {
+        height: 28px;
+        padding: 0 8px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
+      .mode-button.active {
+        background: #34353a;
+        color: #f6f3e9;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      }
+
+      .close-button {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 auto;
+        place-items: center;
+        margin-left: 4px;
+        padding: 0;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: #aeb0b6;
+      }
+
+      .close-button svg { width: 17px; height: 17px; }
+
+      .lucide-icon {
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tabs {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--soft-border);
+        background: var(--tabbar);
+      }
+
+      .tab {
+        position: relative;
+        min-width: 0;
+        padding: 0 12px;
+        border: 0;
+        background: transparent;
+        color: #9d9fa6;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
+      .tab.active {
+        background: rgba(189, 139, 43, 0.2);
+        color: #f2f0e9;
+      }
+
+      .tab.active::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 2px;
+        border-radius: 2px 2px 0 0;
+        background: var(--primary);
+        content: "";
+      }
+
+      .dialog-body {
+        min-height: 0;
+        overflow: hidden;
+        background: var(--content);
+      }
+
+      .panel {
+        display: none;
+        width: 100%;
+        height: 100%;
+      }
+
+      .panel.active { display: block; }
+
+      .prompt-panel {
+        overflow: auto;
+        padding: 0 48px;
+      }
+
+      .prompt-doc {
+        width: min(790px, 100%);
+        min-height: 100%;
+        margin: 0 auto;
+        padding: 36px 0 56px;
+        border: 0;
+        background: transparent;
+        caret-color: var(--primary);
+        color: var(--editor-fg);
+        font-size: 15px;
+        font-weight: 400;
+        line-height: 1.72;
+        outline: none;
+        white-space: normal;
+        word-break: normal;
+      }
+
+      .prompt-doc:focus {
+        box-shadow: -2px 0 0 rgba(214, 169, 47, 0.78);
+      }
+
+      .prompt-doc p { margin: 0 0 20px; }
+      .prompt-doc p:last-child { margin-bottom: 0; }
+      .prompt-doc .heading-line { margin: 5px 0 9px; }
+      .prompt-doc .heading-line + p { margin-top: 0; }
+      .prompt-doc .md-marker {
+        color: #858993;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-weight: 600;
+      }
+      .prompt-doc .md-heading { color: var(--heading); font-weight: 700; }
+      .prompt-doc .md-list {
+        color: var(--marker);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-weight: 650;
+      }
+      .prompt-doc .md-strong { color: #fff; font-weight: 700; }
+      .prompt-doc .md-reference {
+        border-radius: 3px;
+        color: var(--reference);
+        font-weight: 650;
+        cursor: default;
+      }
+
+      .prompt-doc .md-reference:hover,
+      .prompt-doc .md-reference.reference-active {
+        background: rgba(123, 212, 196, 0.1);
+      }
+
+      .prompt-doc .md-reference-query {
+        color: var(--reference);
+        font-weight: 650;
+      }
+
+      .mention-popover {
+        position: absolute;
+        z-index: 8;
+        overflow: hidden;
+        border: 1px solid #4a4c52;
+        border-radius: 8px;
+        background: #292a2e;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.28);
+      }
+
+      .mention-menu {
+        width: 356px;
+        padding: 5px;
+      }
+
+      .mention-option {
+        display: grid;
+        width: 100%;
+        min-width: 0;
+        grid-template-columns: 64px minmax(0, 1fr);
+        align-items: center;
+        gap: 11px;
+        padding: 7px;
+        border: 0;
+        border-radius: 5px;
+        background: #35363b;
+        color: var(--foreground);
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .mention-option:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: -2px;
+      }
+
+      .mention-option-image {
+        width: 64px;
+        height: 40px;
+        display: block;
+        object-fit: cover;
+        border: 1px solid #55575e;
+        border-radius: 4px;
+        background: #111;
+      }
+
+      .mention-option-title {
+        min-width: 0;
+        color: #f0eee8;
+        font-size: 12px;
+        font-weight: 620;
+        line-height: 1.35;
+      }
+
+      .mention-option-copy {
+        display: grid;
+        min-width: 0;
+        gap: 3px;
+      }
+
+      .mention-option-token {
+        color: var(--reference);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .mention-preview {
+        width: 328px;
+        padding: 7px;
+      }
+
+      .mention-preview-image {
+        width: 312px;
+        height: 174px;
+        display: block;
+        object-fit: contain;
+        border-radius: 5px;
+        background: #111;
+      }
+
+      .mention-preview-title {
+        padding: 10px 6px 5px;
+        overflow: hidden;
+        color: #f1efe9;
+        font-size: 12px;
+        font-weight: 620;
+        line-height: 1.35;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .references-panel {
+        overflow: auto;
+        padding: 38px 48px 48px;
+      }
+
+      .reference-content {
+        width: min(900px, 100%);
+        margin: 0 auto;
+      }
+
+      .section-title {
+        margin: 0 0 15px;
+        color: #aeb0b7;
+        font-size: 10px;
+        font-weight: 650;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .reference-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 420px));
+        gap: 20px;
+      }
+
+      .reference-section + .reference-section { margin-top: 30px; }
+
+      .reference-card {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 16 / 10;
+        border: 1px solid #44464d;
+        border-radius: 7px;
+        background: #121315;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+      }
+
+      .reference-card img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .reference-card .card-gradient {
+        position: absolute;
+        inset: 45% 0 0;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.88));
+      }
+
+      .reference-card .card-title {
+        position: absolute;
+        right: 48px;
+        bottom: 14px;
+        left: 14px;
+        overflow: hidden;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .selected-control,
+      .locked-control {
+        position: absolute;
+        right: 12px;
+        bottom: 11px;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 999px;
+        background: rgba(214, 169, 47, 0.94);
+        color: #171717;
+      }
+
+      .locked-control {
+        border-color: rgba(255, 255, 255, 0.35);
+        background: rgba(22, 23, 26, 0.84);
+        color: #ddd;
+      }
+
+      .config-panel {
+        overflow: auto;
+        padding: 38px 48px 48px;
+      }
+
+      .config-list {
+        display: grid;
+        width: min(538px, 100%);
+        margin: 0 auto;
+        gap: 18px;
+      }
+
+      .config-row {
+        display: grid;
+        grid-template-columns: 150px 360px;
+        align-items: center;
+        gap: 28px;
+        min-height: 36px;
+      }
+
+      .config-label {
+        color: #b8bac0;
+        font-size: 12px;
+        font-weight: 560;
+      }
+
+      .select-control {
+        display: flex;
+        height: 36px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        border: 1px solid #4b4d55;
+        border-radius: 6px;
+        background: #27282d;
+        color: #f1f1f2;
+        font-size: 13px;
+      }
+
+      .select-control { width: 360px; }
+      .chevron { display: grid; place-items: center; color: #92959d; }
+
+      .dialog-footer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px 22px;
+        border-top: 1px solid var(--soft-border);
+        background: var(--footer);
+      }
+
+      .estimate {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-right: auto;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .estimate-label {
+        color: #a5a6aa;
+        font-size: 10px;
+        font-weight: 650;
+        letter-spacing: 0.12em;
+      }
+
+      .estimate-value {
+        color: #e5e3dd;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .button {
+        height: 36px;
+        padding: 0 16px;
+        border: 1px solid #4a4c52;
+        border-radius: 6px;
+        background: #2b2c30;
+        color: #e7e7e8;
+        font-size: 14px;
+        font-weight: 550;
+      }
+
+      .button.primary {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: var(--primary-fg);
+      }
+
+      .button.primary:hover { background: var(--primary-hover); }
+
+      @media (max-width: 1180px), (max-height: 820px) {
+        .dialog {
+          width: calc(100vw - 48px);
+          height: calc(100vh - 48px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <main id="dialog" class="dialog" aria-label="Image generation dialog rendering">
+      <header class="dialog-header" id="dialog-header"></header>
+
+      <nav class="tabs" aria-label="Generation request tabs">
+        <button class="tab" data-tab="prompt">PROMPT</button>
+        <button class="tab" data-tab="references">REFERENCES</button>
+        <button class="tab" data-tab="config">CONFIG</button>
+      </nav>
+
+      <section class="dialog-body">
+        <div class="panel prompt-panel" data-panel="prompt">
+          <article class="prompt-doc" id="prompt-doc" contenteditable="true" spellcheck="true" aria-label="Generation prompt"></article>
+        </div>
+
+        <div class="panel references-panel" data-panel="references" id="references-panel"></div>
+
+        <div class="panel config-panel" data-panel="config">
+          <div class="config-list" id="config-list"></div>
+        </div>
+      </section>
+
+      <div id="mention-overlay"></div>
+
+      <footer class="dialog-footer" id="dialog-footer"></footer>
+    </main>
+
+    <script>
+      const sourceImage = 'file:///Users/keremk/renku-movies/urban-basilica/tmp/legacy-generated/media/imperial-council-chamber-environment-sheet.png';
+      const lookbookImage = 'file:///Users/keremk/renku-movies/urban-basilica/visual-language/lookbook/imperial-wound-lookbook-sheet.png';
+      const params = new URLSearchParams(window.location.search);
+      const dialogKind = params.get('dialog') === 'revision' ? 'revision' : 'preview';
+      const mentionState = ['menu', 'hover'].includes(params.get('mention')) ? params.get('mention') : null;
+      let mode = params.get('mode') === 'edit' ? 'edit' : 'regenerate';
+      let activeTab = ['prompt', 'references', 'config'].includes(params.get('tab')) ? params.get('tab') : 'prompt';
+
+      const closeIcon = `
+        <button class="close-button" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>`;
+      const checkIcon = '<svg class="lucide-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+      const lockIcon = '<svg class="lucide-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+      const chevronDownIcon = '<svg class="lucide-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+      const previewPrompt = `
+        <p class="heading-line"><span class="md-marker"># </span><span class="md-heading">Imperial Council Chamber — Location Sheet</span></p>
+        <p>Create one polished <span class="md-strong">16:9 production reference board</span> for the Imperial Council Chamber in Constantinople, late 1452. Stage the daytime meeting in which Urban presents his cannon design to Emperor Constantine XI and Loukas Notaras. This is a production-design and spatial-continuity document, not a poster.</p>
+
+        <p class="heading-line"><span class="md-marker">## </span><span class="md-heading">Reference direction</span></p>
+        <p>Use <span class="md-reference" data-reference-mention="@Reference1">@Reference1</span> only for its depleted Byzantine palette, cold gray daylight, insufficient amber practical light, tactile historical surfaces, frontal symmetry, and restrained illustrated-cinematic finish. Do not copy its title, captions, panel arrangement, Ottoman tent, cannon, siege wall, or unrelated imagery.</p>
+
+        <p class="heading-line"><span class="md-marker">## </span><span class="md-heading">Hero view</span></p>
+        <p>Make the largest panel a square-on, human-eye-level establishing view of the same diminished but dignified chamber: a long scarred decision table, soot-dulled icons and gold leaf, worn stone and flaking plaster, high seaward windows admitting cold Bosporus winter light, and small pools of candle or oil-lamp amber. The room feels underheated, over-counted, and short of money rather than ruined or lavish.</p>
+
+        <p class="heading-line"><span class="md-marker">## </span><span class="md-heading">Supporting views</span></p>
+        <p><span class="md-list">1.</span> Reverse angle from the emperor’s side of the table toward the entrance and Urban’s presentation position.<br><span class="md-list">2.</span> Diagonal corner view clarifying the window and doorway walls.<br><span class="md-list">3.</span> Top-down layout showing the table, primary seats, entrance, windows, circulation paths, and presentation space.<br><span class="md-list">4.</span> Materials and palette: cold stone, repaired dark wood, rubbed icon edges, soot, parchment, wax, dim imperial gold, and Bosporus winter gray.<br><span class="md-list">5.</span> Lighting study contrasting cold lateral daylight with insufficient holy amber.<br><span class="md-list">6.</span> Props and scale: maps, unpaid ledgers, an almost-empty coin tray, broken arrowheads, wax seals, modest chairs, and one restrained human silhouette.</p>
+
+        <p class="heading-line"><span class="md-marker">## </span><span class="md-heading">Continuity</span></p>
+        <p>Keep every view consistent in architecture, table placement, entrances, windows, materials, palette, lighting direction, and scale. Use frontal ceremonial order for the hero view, interrupted by visible evidence of scarcity. Keep labels small, simple, and confined to the margins.</p>
+
+        <p class="heading-line"><span class="md-marker">## </span><span class="md-heading">Exclude</span></p>
+        <p>Modern fittings, Renaissance or Ottoman palace luxury, glossy fantasy-medieval decoration, abundant treasure, pristine gold, electric light, modern maps or typography, unrelated weapons, battle imagery, crowds, decorative poster lettering, UI, debug marks, and crop guides.</p>`;
+
+      const editPrompt = `
+        <p class="heading-line"><span class="md-marker"># </span><span class="md-heading">Change</span></p>
+        <p><span class="md-list">-</span> Replace the four equal-angle panels with one dominant square-on hero view and six smaller production studies.<br><span class="md-list">-</span> Reduce intact gold and ceremonial wealth. Make the chamber visibly depleted but still dignified.<br><span class="md-list">-</span> Add the almost-empty coin tray, unpaid ledgers, broken arrowheads, wax seals, and Urban’s unfurled cannon drawing.<br><span class="md-list">-</span> Keep labels small and outside the imagery.</p>
+
+        <p class="heading-line"><span class="md-marker"># </span><span class="md-heading">Preserve</span></p>
+        <p><span class="md-list">-</span> Preserve the same late-Byzantine chamber, seaward windows, cold winter daylight, table geometry, worn stone, repaired wood, soot-darkened plaster, and restrained amber practical light.<br><span class="md-list">-</span> Preserve the frontal ceremonial symmetry and the existing room scale.</p>
+
+        <p class="heading-line"><span class="md-marker"># </span><span class="md-heading">Exclude</span></p>
+        <p>New architecture, Ottoman command-tent motifs, modern objects, fantasy ornament, poster typography, UI, crop marks, and debug overlays.</p>`;
+
+      function render() {
+        const dialog = document.getElementById('dialog');
+        dialog.classList.toggle('revision', dialogKind === 'revision');
+        renderHeader();
+        renderTabs();
+        renderPrompt();
+        renderReferences();
+        renderConfig();
+        renderFooter();
+      }
+
+      function renderHeader() {
+        const header = document.getElementById('dialog-header');
+        if (dialogKind === 'preview') {
+          header.innerHTML = `
+            <div class="title-block">
+              <div class="dialog-title">Location Environment Sheet Generation Preview</div>
+            </div>
+            <div class="header-spacer"></div>
+            ${closeIcon}`;
+          return;
+        }
+        header.innerHTML = `
+          <div class="source-thumb"><img src="${sourceImage}" alt="Imperial Council Chamber Environment Sheet" /></div>
+          <div class="title-block">
+            <div class="dialog-title">Revise Imperial Council Chamber Environment Sheet</div>
+          </div>
+          <div class="header-spacer"></div>
+          <div class="mode-switch" role="tablist" aria-label="Revision mode">
+            <button class="mode-button ${mode === 'regenerate' ? 'active' : ''}" data-mode="regenerate">REGENERATE</button>
+            <button class="mode-button ${mode === 'edit' ? 'active' : ''}" data-mode="edit">EDIT</button>
+          </div>
+          ${closeIcon}`;
+        header.querySelectorAll('[data-mode]').forEach((button) => {
+          button.addEventListener('click', () => {
+            mode = button.dataset.mode;
+            render();
+          });
+        });
+      }
+
+      function renderTabs() {
+        document.querySelectorAll('[data-tab]').forEach((tab) => {
+          tab.classList.toggle('active', tab.dataset.tab === activeTab);
+          tab.onclick = () => {
+            activeTab = tab.dataset.tab;
+            render();
+          };
+        });
+        document.querySelectorAll('[data-panel]').forEach((panel) => {
+          panel.classList.toggle('active', panel.dataset.panel === activeTab);
+        });
+      }
+
+      function renderPrompt() {
+        const prompt = document.getElementById('prompt-doc');
+        const source = dialogKind === 'revision' && mode === 'edit' ? editPrompt : previewPrompt;
+        prompt.innerHTML = mentionState === 'menu'
+          ? source.replace('<span class="md-reference" data-reference-mention="@Reference1">@Reference1</span>', '<span class="md-reference-query" data-reference-query>@</span>')
+          : source;
+        bindMentionExperience(prompt);
+      }
+
+      function bindMentionExperience(prompt) {
+        const reference = prompt.querySelector('[data-reference-mention]');
+        const forcedQuery = prompt.querySelector('[data-reference-query]');
+        if (forcedQuery) {
+          requestAnimationFrame(() => showMentionMenu(forcedQuery.getBoundingClientRect()));
+        } else if (mentionState === 'hover' && reference) {
+          requestAnimationFrame(() => showMentionPreview(reference));
+        }
+
+        prompt.addEventListener('keyup', (event) => {
+          if (event.key !== '@') return;
+          const selection = window.getSelection();
+          if (!selection || selection.rangeCount === 0) return;
+          showMentionMenu(selection.getRangeAt(0).getBoundingClientRect());
+        });
+
+        prompt.addEventListener('keydown', (event) => {
+          const option = document.querySelector('.mention-option');
+          if (!option) return;
+          if (event.key === 'Enter' || event.key === 'Tab') {
+            event.preventDefault();
+            insertMentionCompletion();
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            clearMentionOverlay();
+          }
+        });
+
+        prompt.querySelectorAll('[data-reference-mention]').forEach((token) => {
+          token.addEventListener('mouseenter', () => showMentionPreview(token));
+          token.addEventListener('mouseleave', (event) => {
+            if (mentionState !== 'hover' && !event.relatedTarget?.closest?.('.mention-preview')) {
+              clearMentionOverlay();
+            }
+          });
+        });
+      }
+
+      function showMentionMenu(anchorRect) {
+        const overlay = document.getElementById('mention-overlay');
+        overlay.innerHTML = `
+          <div class="mention-popover mention-menu" role="listbox" aria-label="Reference mentions">
+            <button class="mention-option" role="option" aria-selected="true">
+              <img class="mention-option-image" src="${lookbookImage}" alt="" />
+              <span class="mention-option-copy">
+                <span class="mention-option-title">Imperial Wound Production Lookbook Sheet</span>
+                <span class="mention-option-token">@Reference1</span>
+              </span>
+            </button>
+          </div>`;
+        placeMentionPopover(overlay.firstElementChild, anchorRect, 8);
+        overlay.querySelector('.mention-option').addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          insertMentionCompletion();
+        });
+      }
+
+      function showMentionPreview(token) {
+        document.querySelectorAll('[data-reference-mention]').forEach((candidate) => {
+          candidate.classList.toggle('reference-active', candidate === token);
+        });
+        const overlay = document.getElementById('mention-overlay');
+        overlay.innerHTML = `
+          <aside class="mention-popover mention-preview" aria-label="Imperial Wound Production Lookbook Sheet">
+            <img class="mention-preview-image" src="${lookbookImage}" alt="Imperial Wound Production Lookbook Sheet" />
+            <div class="mention-preview-title">Imperial Wound Production Lookbook Sheet</div>
+          </aside>`;
+        placeMentionPopover(overlay.firstElementChild, token.getBoundingClientRect(), 9);
+        overlay.firstElementChild.addEventListener('mouseleave', () => {
+          if (mentionState !== 'hover') clearMentionOverlay();
+        });
+      }
+
+      function placeMentionPopover(popover, anchorRect, gap) {
+        const dialogRect = document.getElementById('dialog').getBoundingClientRect();
+        const left = Math.min(
+          Math.max(18, anchorRect.left - dialogRect.left),
+          dialogRect.width - popover.offsetWidth - 18
+        );
+        const below = anchorRect.bottom - dialogRect.top + gap;
+        const top = below + popover.offsetHeight <= dialogRect.height - 72
+          ? below
+          : anchorRect.top - dialogRect.top - popover.offsetHeight - gap;
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+      }
+
+      function insertMentionCompletion() {
+        document.getElementById('prompt-doc').focus();
+        document.execCommand('insertText', false, 'Reference1');
+        clearMentionOverlay();
+      }
+
+      function clearMentionOverlay() {
+        document.getElementById('mention-overlay').innerHTML = '';
+        document.querySelectorAll('[data-reference-mention]').forEach((token) => {
+          token.classList.remove('reference-active');
+        });
+      }
+
+      function renderReferences() {
+        const panel = document.getElementById('references-panel');
+        if (dialogKind === 'revision' && mode === 'edit') {
+          panel.innerHTML = referenceSection('Source image', sourceImage, 'Imperial Council Chamber Environment Sheet', false);
+          return;
+        }
+        panel.innerHTML = referenceSection('Production Lookbook', lookbookImage, 'Imperial Wound Production Lookbook Sheet', true);
+      }
+
+      function referenceSection(title, image, label, selected) {
+        return `
+          <div class="reference-content">
+            <section class="reference-section">
+              <h2 class="section-title">${title}</h2>
+              <div class="reference-grid">
+                <article class="reference-card">
+                  <img src="${image}" alt="${label}" />
+                  <div class="card-gradient"></div>
+                  <div class="card-title">${label}</div>
+                  ${selected ? `<div class="selected-control" aria-label="Selected">${checkIcon}</div>` : `<div class="locked-control" aria-label="Required">${lockIcon}</div>`}
+                </article>
+              </div>
+            </section>
+          </div>`;
+      }
+
+      function renderConfig() {
+        const edit = dialogKind === 'revision' && mode === 'edit';
+        const rows = [
+          ['Model', 'GPT Image 2'],
+          ['Image size', edit ? 'Match source' : 'Landscape · 16:9'],
+          ['Quality', 'High'],
+        ];
+        document.getElementById('config-list').innerHTML = rows.map(([label, value]) => `
+          <div class="config-row">
+            <div class="config-label">${label}</div>
+            <div class="select-control"><span>${value}</span><span class="chevron">${chevronDownIcon}</span></div>
+          </div>`).join('');
+      }
+
+      function renderFooter() {
+        const footer = document.getElementById('dialog-footer');
+        if (dialogKind === 'preview') {
+          footer.innerHTML = `
+            <div class="estimate"><span class="estimate-label">ESTIMATE:</span><span class="estimate-value">$0.04</span></div>
+            <button class="button">Close</button>
+            <button class="button primary">Update</button>`;
+          return;
+        }
+        footer.innerHTML = `
+          <div class="estimate"><span class="estimate-label">ESTIMATE:</span><span class="estimate-value">$0.04</span></div>
+          <button class="button">Cancel</button>
+          <button class="button primary">${mode === 'edit' ? 'Edit' : 'Regenerate'}</button>`;
+      }
+
+      render();
+    </script>
+  </body>
+</html>

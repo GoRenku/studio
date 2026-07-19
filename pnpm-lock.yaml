@@ -163,6 +163,9 @@ importers:
 
   packages/engines:
     dependencies:
+      '@gorenku/studio-diagnostics':
+        specifier: workspace:*
+        version: link:../diagnostics
       '@ai-sdk/openai':
         specifier: ^3.0.1
         version: 3.0.60(zod@4.4.3)

@@ -1,5 +1,4 @@
 import type {
-  GenerationPreviewAuthoringModel,
   GenerationPreviewConfigurationValue,
   GenerationReferenceSlotSelectionInput,
   GenerationPreviewReferenceSlot,
@@ -14,10 +13,7 @@ export interface GenerationPreviewDraft {
     authoredText: string;
     negativeText?: string;
   };
-  model: {
-    provider: string;
-    modelId: string;
-  };
+  modelFamilyId: string;
   parameterValues: Record<string, GenerationPreviewConfigurationValue>;
   authoredParameterNames: string[];
   slotSelections: GenerationReferenceSlotSelectionInput[];
@@ -33,16 +29,8 @@ export function createGenerationPreviewDraft(
         ? { negativeText: preview.finalPrompt.negativeText }
         : {}),
     },
-    model: {
-      provider: preview.model.provider,
-      modelId: preview.model.modelId,
-    },
-    ...parameterDraftForModel(
-      preview.authoring.models.find((model) =>
-        model.provider === preview.model.provider &&
-        model.modelId === preview.model.modelId
-      )
-    ),
+    modelFamilyId: preview.authoring.selectedModelFamilyId,
+    ...parameterDraftForControls(preview.authoring.controls),
     slotSelections: [],
   };
 }
@@ -82,9 +70,6 @@ export function changeGenerationPreviewReference(
           assetFileId: reference.assetFileId,
         }
       : null,
-    ...(reference?.providerToken
-      ? { providerField: reference.providerToken }
-      : {}),
   });
   return { ...draft, slotSelections };
 }
@@ -94,25 +79,14 @@ export function generationPreviewDraftIsDirty(
   draft: GenerationPreviewDraft
 ): boolean {
   return draft.slotSelections.length > 0 ||
-    draft.model.provider !== preview.model.provider ||
-    draft.model.modelId !== preview.model.modelId ||
+    draft.modelFamilyId !== preview.authoring.selectedModelFamilyId ||
     !configurationValuesEqual(
       draft.parameterValues,
-      parameterDraftForModel(
-        preview.authoring.models.find((model) =>
-          model.provider === preview.model.provider &&
-          model.modelId === preview.model.modelId
-        )
-      ).parameterValues
+      parameterDraftForControls(preview.authoring.controls).parameterValues
     ) ||
     !stringCollectionsEqual(
       draft.authoredParameterNames,
-      parameterDraftForModel(
-        preview.authoring.models.find((model) =>
-          model.provider === preview.model.provider &&
-          model.modelId === preview.model.modelId
-        )
-      ).authoredParameterNames
+      parameterDraftForControls(preview.authoring.controls).authoredParameterNames
     ) ||
     draft.promptDraft.authoredText !== preview.finalPrompt.authoredText ||
     draft.promptDraft.negativeText !== preview.finalPrompt.negativeText;
@@ -123,7 +97,7 @@ export function buildGenerationPreviewUpdateRequest(
   draft: GenerationPreviewDraft
 ): Pick<
   UpdateGenerationPreviewResourceSpecInput,
-  'prompt' | 'model' | 'parameterValues' | 'slotSelections'
+  'prompt' | 'modelFamilyId' | 'parameterValues' | 'slotSelections'
 > {
   return {
     prompt: {
@@ -136,10 +110,7 @@ export function buildGenerationPreviewUpdateRequest(
           }
         : {}),
     },
-    model: {
-      provider: draft.model.provider,
-      model: draft.model.modelId,
-    },
+    modelFamilyId: draft.modelFamilyId,
     parameterValues: Object.fromEntries(
       draft.authoredParameterNames.map((name) => [
         name,
@@ -152,15 +123,13 @@ export function buildGenerationPreviewUpdateRequest(
 
 export function changeGenerationPreviewModel(
   draft: GenerationPreviewDraft,
-  model: GenerationPreviewAuthoringModel,
+  modelFamilyId: string,
+  controls: GenerationPreviewResource['authoring']['controls'],
 ): GenerationPreviewDraft {
   return {
     ...draft,
-    model: {
-      provider: model.provider,
-      modelId: model.modelId,
-    },
-    ...parameterDraftForModel(model, true),
+    modelFamilyId,
+    ...parameterDraftForControls(controls, true),
   };
 }
 
@@ -181,12 +150,12 @@ export function changeGenerationPreviewParameter(
   };
 }
 
-function parameterDraftForModel(
-  model: GenerationPreviewAuthoringModel | undefined,
+function parameterDraftForControls(
+  inputControls: GenerationPreviewResource['authoring']['controls'],
   modelSelection = false,
 ): Pick<GenerationPreviewDraft, 'parameterValues' | 'authoredParameterNames'> {
-  const controls = (model?.controls ?? [])
-      .filter((control) => control.kind !== 'readonly')
+  const controls = inputControls
+    .filter((control) => control.kind !== 'readonly');
   return {
     parameterValues: Object.fromEntries(
       controls.map((control) => [control.controlId, control.value])

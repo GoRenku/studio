@@ -104,7 +104,6 @@ describe('Image Revision routes', () => {
 function imageRevisionContext(): ImageRevisionEditorContext {
   return {
     target,
-    sourceGenerationRequest: null,
     source: {
       title: 'Reference image',
       assetId: target.assetId,
@@ -120,9 +119,10 @@ function imageRevisionContext(): ImageRevisionEditorContext {
       mode: 'edit',
       draft: {
         mode: 'edit',
-        model: { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' },
+        modelFamilyId: 'gpt-image-2',
         authoredText: '',
         generationControls: [],
+        slotSelections: [],
       },
       preview: {
         references: {

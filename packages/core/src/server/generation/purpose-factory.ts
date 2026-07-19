@@ -25,7 +25,6 @@ export function defineGenerationPurpose(input: Omit<GenerationPurposeDescriptor,
       const models = await import('./purposes.js').then(({ listGenerationModels }) =>
         listGenerationModels({
           outputMediaKind: descriptor.outputMediaKind,
-          use: descriptor.modelUse,
           fixedSettings: settings.fixed,
         })
       );

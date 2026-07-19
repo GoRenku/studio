@@ -1,26 +1,13 @@
 import type { GenerationMediaKind } from './contracts.js';
 import { listGenerationModels } from './catalog/model-discovery.js';
-
-export type StudioGenerationUse = 'create' | 'edit' | 'any';
+import { listStudioImageModelFamilies } from './studio-image-model-catalog.js';
 
 export interface StudioModelAvailability {
   provider: string;
   model: string;
   label: string;
   mediaKind: GenerationMediaKind;
-  use: StudioGenerationUse;
 }
-
-const CURATED_IMAGE_MODELS: StudioModelAvailability[] = [
-  { provider: 'fal-ai', model: 'openai/gpt-image-2', label: 'GPT Image 2', mediaKind: 'image', use: 'create' },
-  { provider: 'fal-ai', model: 'openai/gpt-image-2/edit', label: 'GPT Image 2', mediaKind: 'image', use: 'edit' },
-  { provider: 'fal-ai', model: 'nano-banana-2', label: 'Nano Banana 2', mediaKind: 'image', use: 'create' },
-  { provider: 'fal-ai', model: 'nano-banana-2/edit', label: 'Nano Banana 2', mediaKind: 'image', use: 'edit' },
-  { provider: 'fal-ai', model: 'nano-banana-pro', label: 'Nano Banana Pro', mediaKind: 'image', use: 'create' },
-  { provider: 'fal-ai', model: 'nano-banana-pro/edit', label: 'Nano Banana Pro', mediaKind: 'image', use: 'edit' },
-  { provider: 'fal-ai', model: 'xai/grok-imagine-image', label: 'Grok Imagine Image 1.5', mediaKind: 'image', use: 'create' },
-  { provider: 'fal-ai', model: 'xai/grok-imagine-image/edit', label: 'Grok Imagine Image 1.5', mediaKind: 'image', use: 'edit' },
-];
 
 const CURATED_VIDEO_MODEL_PREFIXES = [
   { prefix: 'bytedance/seedance-2.0/mini/', label: 'Seedance 2.0 Mini', order: 1 },
@@ -38,13 +25,15 @@ const CURATED_VIDEO_MODEL_PREFIXES = [
 
 export async function listStudioModelAvailability(input: {
   mediaKind?: GenerationMediaKind;
-  use?: StudioGenerationUse;
 } = {}): Promise<StudioModelAvailability[]> {
   if (!input.mediaKind || input.mediaKind === 'image') {
-    return CURATED_IMAGE_MODELS.filter((model) =>
-      (!input.mediaKind || model.mediaKind === input.mediaKind) &&
-      (!input.use || input.use === 'any' || model.use === 'any' || model.use === input.use)
-    );
+    const families = await listStudioImageModelFamilies();
+    return families.flatMap((family) => family.routes.map((route) => ({
+      provider: route.provider,
+      model: route.model,
+      label: family.label,
+      mediaKind: 'image' as const,
+    })));
   }
   const models = await listGenerationModels({ mediaKind: input.mediaKind });
   return models
@@ -64,7 +53,6 @@ export async function listStudioModelAvailability(input: {
               model: model.model,
               label: curated.label,
               mediaKind: model.mediaKind,
-              use: 'any',
             }]
           : [];
       }
@@ -76,7 +64,6 @@ export async function listStudioModelAvailability(input: {
       model: model.model,
       label: model.model,
       mediaKind: model.mediaKind,
-      use: 'any',
       }];
     })
     .sort((left, right) =>

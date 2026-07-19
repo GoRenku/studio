@@ -36,20 +36,17 @@ export function GenerationRequestControlsPanel({
     return <p className='text-sm text-muted-foreground'>No settings.</p>;
   }
   return (
-    <section className='overflow-hidden rounded-xl border border-border/40 bg-muted/40'>
-      <h3 className='border-b border-border/40 bg-panel-header-bg px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-        Generation
-      </h3>
-      <div className='divide-y divide-border/20'>
+    <section className='mx-auto grid w-full max-w-[538px] gap-[18px] pt-[38px] pb-12'>
+      <div className='contents'>
         {model ? (
-          <div className='grid grid-cols-[minmax(0,1fr)_minmax(180px,0.8fr)] items-center gap-4 px-4 py-2.5'>
-            <span className='text-xs text-muted-foreground'>Model</span>
+          <div className='grid min-h-9 grid-cols-[150px_360px] items-center gap-7'>
+            <span className='text-xs font-medium text-muted-foreground'>Model</span>
             <Select
               value={model.value}
               disabled={disabled}
               onValueChange={model.onChange}
             >
-              <SelectTrigger aria-label='Model'>
+              <SelectTrigger aria-label='Model' className='w-full'>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -65,9 +62,9 @@ export function GenerationRequestControlsPanel({
         {controls.map((control) => (
           <div
             key={control.controlId}
-            className='grid grid-cols-[minmax(0,1fr)_minmax(180px,0.8fr)] items-center gap-4 px-4 py-2.5'
+            className='grid min-h-9 grid-cols-[150px_360px] items-center gap-7'
           >
-            <span className='text-xs text-muted-foreground'>
+            <span className='text-xs font-medium text-muted-foreground'>
               {control.label}
             </span>
             {control.kind === 'select' ? (
@@ -85,7 +82,7 @@ export function GenerationRequestControlsPanel({
                   )
                 }
               >
-                <SelectTrigger aria-label={control.label}>
+                <SelectTrigger aria-label={control.label} className='w-full'>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

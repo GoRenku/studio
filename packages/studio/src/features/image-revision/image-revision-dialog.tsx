@@ -16,7 +16,6 @@ import {
 import { Tabs } from '@/ui/tabs';
 import { ImageRevisionDialogFooter } from './image-revision-dialog-footer';
 import { ImageRevisionModeTabs } from './image-revision-mode-tabs';
-import { ImageRevisionSourceRequest } from './image-revision-source-request';
 import {
   useImageRevisionEditor,
   type ImageRevisionEditorRequest,
@@ -41,16 +40,18 @@ export function ImageRevisionDialog({
     editor.context?.regenerate.state === 'unavailable'
       ? editor.context.regenerate.diagnostics[0]?.message
       : undefined;
-  const controls =
-    editor.mode === 'edit' && editor.modeContext?.state === 'available'
-      ? editor.controls.map((control) =>
-          applyDraftControlValue(control, editor.draft),
-        )
-      : [];
+  const controls = editor.modeContext?.state === 'available'
+    ? editor.controls.map((control) =>
+        applyDraftControlValue(control, editor.draft),
+      )
+    : [];
   const canRun = Boolean(
     editor.draft &&
       editor.modeContext?.state === 'available' &&
       !editor.loading,
+  );
+  const sourceTitle = meaningfulRevisionSourceTitle(
+    editor.context?.source.title,
   );
 
   return (
@@ -62,7 +63,7 @@ export function ImageRevisionDialog({
       }}
     >
       <DialogContent
-        className='h-[760px] w-[1120px] max-h-[calc(100vh-6rem)] max-w-[calc(100vw-6rem)] grid-rows-[auto_auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0'
+        className='generation-request-dialog h-[760px] w-[1120px] max-h-[calc(100vh-6rem)] max-w-[calc(100vw-6rem)] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0'
         onEscapeKeyDown={(event) => {
           if (editor.runPending) event.preventDefault();
         }}
@@ -70,69 +71,66 @@ export function ImageRevisionDialog({
           if (editor.runPending) event.preventDefault();
         }}
       >
-        <DialogHeader className='pr-12'>
-          <DialogTitle>
-            {editor.context?.source.title
-              ? `Revise ${editor.context.source.title}`
-              : 'Revise Image'}
-          </DialogTitle>
-          <DialogDescription>
-            Regenerate from the original request or describe a targeted image edit.
-          </DialogDescription>
-        </DialogHeader>
-        <ImageRevisionSourceRequest
-          spec={editor.context?.sourceGenerationRequest ?? null}
-        />
         <Tabs
           value={editor.mode}
           onValueChange={(value) => editor.changeMode(value as never)}
           className='contents'
         >
-          <ImageRevisionModeTabs
-            regenerateAvailable={regenerateAvailable}
-            regenerateUnavailableReason={regenerateUnavailableReason}
-            disabled={editor.runPending}
-          />
+          <DialogHeader className='h-[72px] flex-row items-center gap-4 py-0 pr-12'>
+            <div className='min-w-0'>
+              <DialogTitle className='truncate'>
+                {sourceTitle ? `Revise ${sourceTitle}` : 'Revise Image'}
+              </DialogTitle>
+              <DialogDescription className='sr-only'>
+                Review the image revision prompt, references, and configuration.
+              </DialogDescription>
+            </div>
+            <ImageRevisionModeTabs
+              regenerateAvailable={regenerateAvailable}
+              regenerateUnavailableReason={regenerateUnavailableReason}
+              disabled={editor.runPending}
+            />
+          </DialogHeader>
+          {editor.loading || !editor.editorDraft ? (
+            <div className='flex min-h-0 items-center justify-center bg-panel-bg text-sm text-muted-foreground'>
+              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              Loading image revision...
+            </div>
+          ) : (
+            <GenerationRequestEditor
+              preview={editor.preview}
+              draft={editor.editorDraft}
+              editorRevision={editor.editorRevision}
+              tab={editorTab}
+              error={editor.error}
+              errorTitle='Image Revision Failed'
+              pending={editor.runPending}
+              controls={controls}
+              modelControl={
+                editor.draft && editor.preview
+                  ? {
+                      value: editor.draft.modelFamilyId,
+                      options: editor.preview.authoring.modelFamilies.map((family) => ({
+                        value: family.familyId,
+                        label: family.label,
+                      })),
+                    }
+                  : undefined
+              }
+              onTabChange={setEditorTab}
+              onAuthoredTextChange={editor.updateAuthoredText}
+              onNegativeTextChange={editor.updateNegativeText}
+              onReferenceChoose={editor.chooseReference}
+              onControlChange={editor.updateControl}
+              onModelChange={editor.chooseModel}
+              authoredPlaceholder={
+                editor.mode === 'edit'
+                  ? 'Describe the changes to make to this image.'
+                  : undefined
+              }
+            />
+          )}
         </Tabs>
-        {editor.loading || !editor.editorDraft ? (
-          <div className='flex min-h-0 items-center justify-center bg-panel-bg text-sm text-muted-foreground'>
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            Loading image revision...
-          </div>
-        ) : (
-          <GenerationRequestEditor
-            preview={editor.preview}
-            draft={editor.editorDraft}
-            editorRevision={editor.editorRevision}
-            tab={editorTab}
-            error={editor.error}
-            errorTitle='Image Revision Failed'
-            pending={editor.runPending}
-            referencesReadOnly
-            controls={controls}
-            modelControl={
-              editor.mode === 'edit' && editor.draft && editor.preview
-                ? {
-                    value: `${editor.draft.model.provider}/${editor.draft.model.model}`,
-                    options: editor.preview.authoring.models.map((model) => ({
-                      value: `${model.provider}/${model.modelId}`,
-                      label: `${model.label} — ${model.modelId}`,
-                    })),
-                  }
-                : undefined
-            }
-            onTabChange={setEditorTab}
-            onAuthoredTextChange={editor.updateAuthoredText}
-            onNegativeTextChange={editor.updateNegativeText}
-            onControlChange={editor.updateControl}
-            onModelChange={editor.chooseModel}
-            authoredPlaceholder={
-              editor.mode === 'edit'
-                ? 'Describe the changes to make to this image.'
-                : undefined
-            }
-          />
-        )}
         <ImageRevisionDialogFooter
           mode={editor.mode}
           estimatedUsd={editor.estimatedUsd}
@@ -145,6 +143,16 @@ export function ImageRevisionDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function meaningfulRevisionSourceTitle(title: string | undefined): string | null {
+  const value = title?.trim();
+  if (!value || /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(value) ||
+      /\.[a-z0-9]{2,5}$/i.test(value) ||
+      /^(asset|asset_file|file|reference)[-_][a-z0-9_-]+$/i.test(value)) {
+    return null;
+  }
+  return value;
 }
 
 function applyDraftControlValue(

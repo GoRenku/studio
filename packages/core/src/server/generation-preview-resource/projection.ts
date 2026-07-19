@@ -19,11 +19,11 @@ import {
 import { projectGenerationPreviewPrompt } from './prompt.js';
 import { projectGenerationPreviewReferences } from './references.js';
 
-export function projectGenerationPreviewResource(input: {
+export async function projectGenerationPreviewResource(input: {
   preview: GenerationPreview;
   session: DatabaseSession;
   estimate?: GenerationEstimate;
-}): import('../../client/generation-preview-resource.js').GenerationPreviewResourceData {
+}): Promise<import('../../client/generation-preview-resource.js').GenerationPreviewResourceData> {
   const project = readProjectRecord(input.session);
   const model = input.preview.models?.find(
     (candidate) =>
@@ -32,6 +32,10 @@ export function projectGenerationPreviewResource(input: {
   );
   const provider = input.preview.spec.model?.provider ?? '';
   const modelId = input.preview.spec.model?.model ?? '';
+  const authoring = await projectGenerationPreviewAuthoring({
+    preview: input.preview,
+    model,
+  });
   return {
     kind: 'generationPreview',
     previewId: `generation-preview-${randomUUID()}`,
@@ -60,9 +64,9 @@ export function projectGenerationPreviewResource(input: {
     references: projectGenerationPreviewReferences(input.preview),
     configuration: projectGenerationPreviewConfiguration({
       preview: input.preview,
-      model,
+      authoring,
     }),
-    authoring: projectGenerationPreviewAuthoring(input.preview),
+    authoring,
     ...(input.preview.providerPayload
       ? {
           providerPreview: {

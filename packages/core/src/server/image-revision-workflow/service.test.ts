@@ -12,6 +12,7 @@ import {
   writeConfig,
 } from '../testing/project-data-fixtures.js';
 import { attachImageRevisionOutput } from './attachment.js';
+import { createImageRevisionModeDefinition } from './draft.js';
 import { readImageRevisionContext } from './service.js';
 import { resolveImageRevisionSource } from './source.js';
 
@@ -79,12 +80,18 @@ describe('image revision workflow', () => {
     expect(context.edit.preview.references.slots).toEqual([
       expect.objectContaining({
         label: 'Source Image',
+        locked: true,
         current: expect.objectContaining({
           assetId: asset.assetId,
           assetFileId: asset.files[0]!.id,
           selected: true,
         }),
-        eligibleCandidates: [],
+        eligibleCandidates: [
+          expect.objectContaining({
+            assetId: asset.assetId,
+            assetFileId: asset.files[0]!.id,
+          }),
+        ],
       }),
     ]);
     expect(context.edit.preview.references.additional).toEqual([]);
@@ -173,6 +180,85 @@ describe('image revision workflow', () => {
           }),
         })
       );
+    } finally {
+      session.close();
+    }
+  });
+
+  it('preserves image.edit purpose and target when regenerating its source request', async () => {
+    const created = await createSampleMovieProject({
+      projectData: createProjectDataService(),
+      homeDir,
+    });
+    if (!created) {
+      return;
+    }
+    const projectRelativePath =
+      'cast/urban/character-sheets/edited-source.png' as ProjectRelativePath;
+    const absolutePath = path.join(created.projectPath, projectRelativePath);
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+    await fs.writeFile(absolutePath, 'edited source image');
+    const asset = await createTestAssetFixture({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'castMember', castMemberId: 'cast_test0001' },
+      type: 'cast_character_sheet',
+      mediaKind: 'image',
+      title: 'Edited Urban Character Sheet',
+      projectRelativePath,
+      fileRole: 'character-sheet',
+      role: 'character-sheet',
+    });
+    const target = {
+      kind: 'castCharacterSheet' as const,
+      castMemberId: 'cast_test0001',
+      assetId: asset.assetId,
+      assetFileId: asset.files[0]!.id,
+    };
+    const { session } = await openProjectSession({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    try {
+      const source = resolveImageRevisionSource(session, target);
+      const definition = await createImageRevisionModeDefinition({
+        mode: 'regenerate',
+        source: {
+          ...source,
+          sourceGenerationSpec: {
+            executionKind: 'agent-external',
+            purpose: 'image.edit',
+            target: { kind: 'asset', id: asset.assetId },
+            model: { provider: 'codex', model: 'gpt-image-2' },
+            values: { prompt: 'Preserve this exact edit request.' },
+            references: [{
+              placement: {
+                kind: 'slot',
+                sectionId: 'source',
+                slotId: 'source-image',
+              },
+              reference: {
+                kind: 'asset-file',
+                assetId: asset.assetId,
+                assetFileId: asset.files[0]!.id,
+              },
+            }],
+          },
+        },
+        session,
+        projectFolder: created.projectPath,
+      });
+
+      expect(definition.spec).toMatchObject({
+        executionKind: 'renku-managed',
+        purpose: 'image.edit',
+        target: { kind: 'asset', id: asset.assetId },
+      });
+      expect(definition.preview).toMatchObject({
+        purpose: 'image.edit',
+        target: { kind: 'asset', id: asset.assetId },
+        finalPrompt: { authoredText: 'Preserve this exact edit request.' },
+      });
     } finally {
       session.close();
     }

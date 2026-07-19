@@ -1,5 +1,4 @@
 import type {
-  GenerationModelIdentity,
   GenerationReferenceSlotSelectionInput,
   GenerationPreviewResource,
   JsonValue,
@@ -13,7 +12,7 @@ export interface UpdateGenerationPreviewResourceSpecInput {
     authoredText: string;
     negativeText?: string | null;
   };
-  model: Required<GenerationModelIdentity>;
+  modelFamilyId: string;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
 }
@@ -28,7 +27,7 @@ export async function updateGenerationPreviewResource(
       headers: jsonHeaders(),
       body: JSON.stringify({
         prompt: input.prompt,
-        model: input.model,
+        modelFamilyId: input.modelFamilyId,
         parameterValues: input.parameterValues,
         slotSelections: input.slotSelections,
       }),

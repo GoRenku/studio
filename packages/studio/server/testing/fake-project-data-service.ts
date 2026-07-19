@@ -906,7 +906,7 @@ function generationPreviewResource(): GenerationPreviewResourceData {
     },
     references: { slots: [], additional: [] },
     configuration: { sections: [] },
-    authoring: { models: [] },
+    authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     diagnostics: [],
   };
 }

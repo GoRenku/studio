@@ -40,9 +40,18 @@ export {
 } from './catalog/model-input-descriptors.js';
 export {
   listStudioModelAvailability,
-  type StudioGenerationUse,
   type StudioModelAvailability,
 } from './studio-model-availability.js';
+export {
+  deriveStudioImageInputAvailability,
+  listStudioImageModelFamilies,
+  readStudioImageModelFamily,
+  readStudioImageModelRouteProfile,
+  type StudioImageInputAvailability,
+  type StudioImageModelFamily,
+  type StudioImageModelRouteProfile,
+  type StudioModelConfigurableParameter,
+} from './studio-image-model-catalog.js';
 export {
   bindGenerationProductSettings,
   bindGenerationSemanticValues,

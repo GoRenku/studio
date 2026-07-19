@@ -153,6 +153,7 @@ export function applyGenerationReferenceSlotSelection(
   references.push({
     placement: input.placement,
     ...(providerField ? { providerField } : {}),
+    ...(current?.promptMention ? { promptMention: current.promptMention } : {}),
     reference: input.reference,
   });
   return { ...spec, references };
@@ -177,10 +178,48 @@ export function applyGenerationGenericReferences(
       ...(existing?.providerField
         ? { providerField: existing.providerField }
         : {}),
+      ...(existing?.promptMention
+        ? { promptMention: existing.promptMention }
+        : {}),
       reference,
     });
   }
   return { ...spec, references };
+}
+
+export function allocateGenerationReferencePromptMention(input: {
+  spec: GenerationSpec;
+  placement: GenerationReferenceSelection['placement'];
+}): GenerationSpec {
+  const index = input.spec.references.findIndex((selection) =>
+    placementsEqual(selection.placement, input.placement)
+  );
+  const selection = input.spec.references[index];
+  if (!selection || selection.promptMention) {
+    return input.spec;
+  }
+  const nextPromptMentionNumber = effectiveNextPromptMentionNumber(input.spec);
+  const references = [...input.spec.references];
+  references[index] = {
+    ...selection,
+    promptMention: `@Reference${nextPromptMentionNumber}`,
+  };
+  return {
+    ...input.spec,
+    references,
+    nextPromptMentionNumber: nextPromptMentionNumber + 1,
+  };
+}
+
+function effectiveNextPromptMentionNumber(spec: GenerationSpec): number {
+  if (spec.nextPromptMentionNumber !== undefined) {
+    return spec.nextPromptMentionNumber;
+  }
+  const largest = spec.references.reduce((maximum, selection) => {
+    const match = /^@Reference([1-9]\d*)$/.exec(selection.promptMention ?? '');
+    return match ? Math.max(maximum, Number(match[1])) : maximum;
+  }, 0);
+  return largest + 1;
 }
 
 export async function resolveGenerationReference(input: {

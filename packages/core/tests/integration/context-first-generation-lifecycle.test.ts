@@ -4,6 +4,7 @@ import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   createProjectDataService,
+  previewImageRevisionDraft,
   readImageRevisionContext,
 } from '../../src/server/index.js';
 import { writeConfig } from '../../src/server/testing/project-data-fixtures.js';
@@ -144,7 +145,7 @@ describe('context-first generation lifecycle', () => {
       projectName,
       specId: saved.id,
       prompt: { authoredText: updatedPrompt },
-      model: { provider: 'codex', model: 'gpt-image-2' },
+      modelFamilyId: 'gpt-image-2',
       parameterValues: {},
       slotSelections: [],
     });
@@ -156,7 +157,7 @@ describe('context-first generation lifecycle', () => {
         modelId: 'gpt-image-2',
         executionPath: 'agent-external',
       },
-      authoring: { models: [] },
+      authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     });
     expect(
       await projectData.readGenerationSpec({
@@ -220,17 +221,23 @@ describe('context-first generation lifecycle', () => {
         assetFileId: attachment.asset.files[0]!.id,
       },
     });
-    expect(revision.sourceGenerationRequest).toEqual({
-      model: spec.model,
-      values: { prompt: updatedPrompt },
-      referenceLabels: [],
+    expect(revision.regenerate).toMatchObject({
+      state: 'available',
+      draft: {
+        mode: 'regenerate',
+        authoredText: updatedPrompt,
+        modelFamilyId: expect.any(String),
+      },
+      preview: {
+        purpose: 'cast.character-sheet',
+        target: spec.target,
+      },
     });
-    expect(revision.regenerate.state).toBe('unavailable');
     expect(revision.edit).toMatchObject({
       state: 'available',
       draft: {
         mode: 'edit',
-        model: { provider: 'fal-ai', model: expect.any(String) },
+        modelFamilyId: expect.any(String),
       },
       preview: {
         purpose: 'image.edit',
@@ -246,6 +253,30 @@ describe('context-first generation lifecycle', () => {
         },
       },
     });
+    if (revision.edit.state !== 'available') {
+      throw new Error('Expected Image Revision Edit to be available.');
+    }
+    await expect(previewImageRevisionDraft({
+      homeDir,
+      projectName,
+      target: {
+        kind: 'castCharacterSheet',
+        castMemberId: spec.target.id,
+        assetId: attachment.asset.assetId,
+        assetFileId: attachment.asset.files[0]!.id,
+      },
+      draft: {
+        ...revision.edit.draft,
+        slotSelections: [{
+          placement: {
+            kind: 'slot',
+            sectionId: 'source',
+            slotId: 'source-image',
+          },
+          reference: null,
+        }],
+      },
+    })).rejects.toMatchObject({ code: 'CORE_IMAGE_REVISION_SOURCE_REQUIRED' });
   });
 
   it('keeps an external attachment target-owned while exposing it in the generic catalog', async () => {

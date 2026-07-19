@@ -20,6 +20,6 @@ describe('ImageRevisionModeTabs', () => {
     expect(
       screen.getByRole('tab', { name: 'Regenerate' }).hasAttribute('disabled'),
     ).toBe(true);
-    expect(screen.getByText('Regenerate unavailable')).toBeTruthy();
+    expect(screen.getByText('Why Regenerate is unavailable')).toBeTruthy();
   });
 });

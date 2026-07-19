@@ -18,28 +18,27 @@ export function ImageRevisionModeTabs({
 }: ImageRevisionModeTabsProps) {
   return (
     <TabsList
-      variant='line'
-      className='!h-[45px] w-full justify-start gap-0 rounded-none border-b border-border/40 bg-panel-bg px-4 py-0'
+      className='ml-auto h-8 shrink-0 gap-0.5 rounded-md border border-border/60 bg-background/60 p-0.5'
     >
       <TabsTrigger
         value='regenerate'
         disabled={!regenerateAvailable || disabled}
-        className='h-full flex-none rounded-none border-0 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] data-[state=active]:after:bg-primary'
+        className='h-7 flex-none rounded px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em]'
       >
         Regenerate
       </TabsTrigger>
       <TabsTrigger
         value='edit'
         disabled={disabled}
-        className='h-full flex-none rounded-none border-0 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] data-[state=active]:after:bg-primary'
+        className='h-7 flex-none rounded px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em]'
       >
         Edit
       </TabsTrigger>
       {!regenerateAvailable && regenerateUnavailableReason ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className='ml-auto flex h-full cursor-help items-center text-xs text-muted-foreground'>
-              Regenerate unavailable
+            <span className='sr-only cursor-help'>
+              Why Regenerate is unavailable
             </span>
           </TooltipTrigger>
           <TooltipContent>{regenerateUnavailableReason}</TooltipContent>

@@ -37,14 +37,10 @@ describe('generation preview draft', () => {
     expect(generationPreviewDraftIsDirty(preview, changed)).toBe(true);
     expect(buildGenerationPreviewUpdateRequest(preview, changed)).toEqual({
       prompt: { authoredText: 'Updated prompt.\nSecond line.' },
-      model: {
-        provider: 'fal-ai',
-        model: 'openai/gpt-image-2/edit',
-      },
+      modelFamilyId: 'gpt-image-2',
       parameterValues: {
         image_size: 'landscape_16_9',
         quality: 'high',
-        num_images: 1,
       },
       slotSelections: [
         {
@@ -99,10 +95,7 @@ describe('generation preview draft', () => {
   it('changes the selected model and its configurable values', () => {
     const preview = previewFixture();
     const draft = createGenerationPreviewDraft(preview);
-    draft.model = {
-      provider: 'fal-ai',
-      modelId: 'nano-banana-2',
-    };
+    draft.modelFamilyId = 'nano-banana-2';
     draft.parameterValues = {
       aspect_ratio: '16:9',
       enable_web_search: true,
@@ -114,10 +107,7 @@ describe('generation preview draft', () => {
 
     expect(generationPreviewDraftIsDirty(preview, draft)).toBe(true);
     expect(buildGenerationPreviewUpdateRequest(preview, draft)).toMatchObject({
-      model: {
-        provider: 'fal-ai',
-        model: 'nano-banana-2',
-      },
+      modelFamilyId: 'nano-banana-2',
       parameterValues: {
         aspect_ratio: '16:9',
         enable_web_search: true,
@@ -148,6 +138,7 @@ function previewFixture(): GenerationPreviewResource {
     references: {
       slots: [{
         label: 'Style reference',
+        locked: false,
         placement: {
           kind: 'slot',
           sectionId: 'continuity',
@@ -172,12 +163,12 @@ function previewFixture(): GenerationPreviewResource {
     },
     configuration: { sections: [] },
     authoring: {
-      models: [
-        {
-          provider: 'fal-ai',
-          modelId: 'openai/gpt-image-2/edit',
-          label: 'GPT Image 2',
-          controls: [
+      selectedModelFamilyId: 'gpt-image-2',
+      modelFamilies: [
+        { familyId: 'gpt-image-2', label: 'GPT Image 2' },
+        { familyId: 'nano-banana-2', label: 'Nano Banana 2' },
+      ],
+      controls: [
             {
               controlId: 'image_size',
               kind: 'select',
@@ -198,16 +189,6 @@ function previewFixture(): GenerationPreviewResource {
               authored: true,
               options: [{ label: 'high', value: 'high' }],
             },
-            {
-              controlId: 'num_images',
-              kind: 'number',
-              label: 'Number of Images',
-              value: 1,
-              required: false,
-              authored: true,
-            },
-          ],
-        },
       ],
     },
     diagnostics: [],

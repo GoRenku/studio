@@ -29,10 +29,7 @@ describe('studio generation preview API', () => {
           authoredText: 'Updated prompt.\nSecond line.',
           negativeText: null,
         },
-        model: {
-          provider: 'fal-ai',
-          model: 'openai/gpt-image-2/edit',
-        },
+        modelFamilyId: 'gpt-image-2',
         parameterValues: {
           image_size: 'landscape_16_9',
         },
@@ -62,10 +59,7 @@ describe('studio generation preview API', () => {
             authoredText: 'Updated prompt.\nSecond line.',
             negativeText: null,
           },
-          model: {
-            provider: 'fal-ai',
-            model: 'openai/gpt-image-2/edit',
-          },
+          modelFamilyId: 'gpt-image-2',
           parameterValues: {
             image_size: 'landscape_16_9',
           },
@@ -99,10 +93,7 @@ describe('studio generation preview API', () => {
         projectName: 'constantinople',
         specId: 'media_generation_spec_test',
         prompt: { authoredText: 'Updated prompt.' },
-        model: {
-          provider: 'fal-ai',
-          model: 'openai/gpt-image-2',
-        },
+        modelFamilyId: 'gpt-image-2',
         parameterValues: {},
         slotSelections: [],
       })

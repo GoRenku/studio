@@ -22,7 +22,6 @@ import {
 } from './draft.js';
 import { attachImageRevisionOutput } from './attachment.js';
 import { resolveImageRevisionSource } from './source.js';
-import { projectImageRevisionSourceRequest } from './source-request.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { readProjectRecord } from '../database/access/project.js';
 
@@ -65,10 +64,6 @@ export async function readImageRevisionContext(input: ProjectInput & {
         assetId: source.asset.id,
         assetFileId: source.file.id,
       },
-      sourceGenerationRequest: projectImageRevisionSourceRequest({
-        spec: source.sourceGenerationSpec ?? source.generationRun?.specSnapshot ?? null,
-        session,
-      }),
       regenerate,
       edit: {
         state: 'available',

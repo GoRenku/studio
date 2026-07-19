@@ -10,7 +10,7 @@ import {
   GenerationRequestEditor,
   type GenerationRequestEditorTab,
 } from '@/features/generation-request-editor/generation-request-editor';
-import { GenerationPreviewEstimateFooter } from './generation-preview-estimate-footer';
+import { GenerationRequestEstimate } from '@/features/generation-request-editor/generation-request-estimate';
 import { generationPreviewTitle } from './generation-preview-title';
 import {
   useGenerationPreviewEditor,
@@ -43,7 +43,7 @@ export function GenerationPreviewRequestPanel({
 
   return (
     <>
-      <DialogHeader className='pr-12'>
+      <DialogHeader className='h-[54px] justify-center py-0 pr-12'>
         <DialogTitle>{generationPreviewTitle(preview.purpose)}</DialogTitle>
         <DialogDescription className='sr-only'>
           Review the generation prompt, references, configuration, and
@@ -59,19 +59,18 @@ export function GenerationPreviewRequestPanel({
         errorTitle='Preview Update Failed'
         pending={editor.updatePending}
         readOnly={!preview.generationSpec || preview.generationSpec.frozenAt !== null}
-        referencesReadOnly={preview.purpose === 'image.edit'}
         tabRowTrailing={tabRowTrailing}
         onTabChange={onTabChange}
         onAuthoredTextChange={editor.updateAuthoredText}
         onNegativeTextChange={editor.updateNegativeText}
         onReferenceChoose={editor.chooseReference}
         controls={editor.controls}
-        modelControl={preview.authoring.models.length > 0
+        modelControl={preview.authoring.modelFamilies.length > 0
           ? {
               value: editor.modelKey,
-              options: preview.authoring.models.map((model) => ({
-                value: `${model.provider}/${model.modelId}`,
-                label: `${model.label} — ${model.modelId}`,
+              options: preview.authoring.modelFamilies.map((family) => ({
+                value: family.familyId,
+                label: family.label,
               })),
             }
           : undefined}
@@ -80,7 +79,7 @@ export function GenerationPreviewRequestPanel({
       />
       <DialogFooter className='items-end gap-4'>
         <div className='mr-auto min-w-0'>
-          <GenerationPreviewEstimateFooter preview={preview} />
+          <GenerationRequestEstimate estimate={preview.estimate} />
         </div>
         {preview.generationSpec?.frozenAt === null ? (
           <Button

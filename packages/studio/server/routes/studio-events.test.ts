@@ -644,6 +644,7 @@ function coreGenerationPreviewResourceFixture() {
     references: {
       slots: [{
         label: 'Visual language',
+        locked: false,
         placement: {
           kind: 'slot' as const,
           sectionId: 'visual-language',
@@ -662,7 +663,7 @@ function coreGenerationPreviewResourceFixture() {
       additional: [],
     },
     configuration: { sections: [] },
-    authoring: { models: [] },
+    authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     diagnostics: [],
   };
 }

@@ -4,14 +4,18 @@ import { bindGenerationProductSettings } from './setting-fields.js';
 import { listStudioModelAvailability } from './studio-model-availability.js';
 
 describe('Studio generation model availability', () => {
-  it('exposes only the accepted image create allowlist', async () => {
-    const models = await listStudioModelAvailability({ mediaKind: 'image', use: 'create' });
+  it('exposes every accepted image route from the family catalog', async () => {
+    const models = await listStudioModelAvailability({ mediaKind: 'image' });
 
     expect(models.map((model) => model.model)).toEqual([
       'openai/gpt-image-2',
+      'openai/gpt-image-2/edit',
       'nano-banana-2',
+      'nano-banana-2/edit',
       'nano-banana-pro',
+      'nano-banana-pro/edit',
       'xai/grok-imagine-image',
+      'xai/grok-imagine-image/edit',
     ]);
     expect(models.some((model) => model.model.includes('seedream'))).toBe(false);
   });

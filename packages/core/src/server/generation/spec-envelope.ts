@@ -1,5 +1,5 @@
 import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { GenerationReferenceSelection, GenerationSpec } from '../../client/generation.js';
+import type { GenerationSpec } from '../../client/generation.js';
 import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
 import type { GenerationPurposeContract } from './purpose-contract.js';
 
@@ -19,7 +19,7 @@ export function validateGenerationSpecEnvelope(input: {
   }
   validateJsonRecord(input.spec.values, ['values'], diagnostics);
   validateModel(input.spec, diagnostics);
-  validateReferences(input.spec.references, diagnostics);
+  validateReferences(input.spec, diagnostics);
   return diagnostics;
 }
 
@@ -32,12 +32,31 @@ function validateModel(spec: GenerationSpec, diagnostics: DiagnosticIssue[]): vo
   }
 }
 
-function validateReferences(references: GenerationReferenceSelection[], diagnostics: DiagnosticIssue[]): void {
+function validateReferences(spec: GenerationSpec, diagnostics: DiagnosticIssue[]): void {
+  const references = spec.references;
   const slotSelections = new Map<string, number>();
+  const promptMentions = new Map<string, number>();
+  let largestStudioMention = 0;
   references.forEach((selection, index) => {
     const path = ['references', String(index)];
     if (selection.providerField !== undefined && !selection.providerField.trim()) {
       diagnostics.push(issue('CORE_GENERATION_SELECTION_INVALID', 'Generation reference providerField must be omitted or non-empty.', [...path, 'providerField']));
+    }
+    if (selection.promptMention !== undefined) {
+      const mention = selection.promptMention.trim();
+      if (!mention) {
+        diagnostics.push(issue('CORE_GENERATION_SELECTION_INVALID', 'Generation reference promptMention must be omitted or non-empty.', [...path, 'promptMention']));
+      } else {
+        const count = (promptMentions.get(mention) ?? 0) + 1;
+        promptMentions.set(mention, count);
+        if (count > 1) {
+          diagnostics.push(issue('CORE_GENERATION_SELECTION_INVALID', `Generation reference promptMention ${mention} must be unique.`, [...path, 'promptMention']));
+        }
+        const match = /^@Reference([1-9]\d*)$/.exec(mention);
+        if (match) {
+          largestStudioMention = Math.max(largestStudioMention, Number(match[1]));
+        }
+      }
     }
     if (selection.reference.kind === 'asset-file') {
       if (!selection.reference.assetId.trim() || !selection.reference.assetFileId.trim()) {
@@ -68,6 +87,15 @@ function validateReferences(references: GenerationReferenceSelection[], diagnost
       diagnostics.push(issue('CORE_GENERATION_SELECTION_INVALID', `Generation reference slot ${placement.sectionId}/${placement.slotId} accepts one current selection.`, [...path, 'placement']));
     }
   });
+  if (spec.nextPromptMentionNumber !== undefined &&
+      (!Number.isInteger(spec.nextPromptMentionNumber) ||
+       spec.nextPromptMentionNumber <= largestStudioMention)) {
+    diagnostics.push(issue(
+      'CORE_GENERATION_SELECTION_INVALID',
+      'Generation nextPromptMentionNumber must be a positive integer greater than every allocated Studio reference mention.',
+      ['nextPromptMentionNumber'],
+    ));
+  }
 }
 
 function validateJsonRecord(value: unknown, path: string[], diagnostics: DiagnosticIssue[]): void {

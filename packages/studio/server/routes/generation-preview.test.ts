@@ -62,10 +62,7 @@ describe('generation preview Hono route', () => {
             authoredText: 'Updated character sheet prompt.',
             negativeText: null,
           },
-          model: {
-            provider: 'fal-ai',
-            model: 'openai/gpt-image-2/edit',
-          },
+          modelFamilyId: 'gpt-image-2',
           parameterValues: {
             image_size: 'landscape_16_9',
           },
@@ -98,10 +95,7 @@ describe('generation preview Hono route', () => {
         authoredText: 'Updated character sheet prompt.',
         negativeText: null,
       },
-      model: {
-        provider: 'fal-ai',
-        model: 'openai/gpt-image-2/edit',
-      },
+      modelFamilyId: 'gpt-image-2',
       parameterValues: {
         image_size: 'landscape_16_9',
       },

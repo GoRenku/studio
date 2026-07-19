@@ -6,59 +6,45 @@ import {
 } from './configuration.js';
 
 describe('generation preview authoring projection', () => {
-  it('projects selectable models and configurable non-media inputs', () => {
-    const authoring = projectGenerationPreviewAuthoring(previewFixture());
+  it('projects model families and only catalog-declared controls', async () => {
+    const preview = previewFixture();
+    const authoring = await projectGenerationPreviewAuthoring({
+      preview,
+      model: preview.models![0],
+    });
 
-    expect(authoring.models).toEqual([
-      {
-        provider: 'fal-ai',
-        modelId: 'nano-banana-2',
-        label: 'Nano Banana 2',
-        controls: [
-          {
-            controlId: 'num_images',
-            kind: 'number',
-            label: 'Number of Images',
-            value: 2,
-            required: false,
-            authored: true,
-            recommended: false,
-            min: 1,
-            max: 4,
-          },
+    expect(authoring.selectedModelFamilyId).toBe('nano-banana-2');
+    expect(authoring.modelFamilies).toEqual([
+      { familyId: 'nano-banana-2', label: 'Nano Banana 2' },
+    ]);
+    expect(authoring.controls).toEqual([
           {
             controlId: 'aspect_ratio',
             kind: 'select',
-            label: 'Aspect Ratio',
+            label: 'Aspect ratio',
             value: '16:9',
             required: false,
             authored: false,
             recommended: true,
             options: [
-              { label: '1:1', value: '1:1' },
-              { label: '16:9', value: '16:9' },
+              { label: 'Square · 1:1', value: '1:1' },
+              { label: 'Landscape · 16:9', value: '16:9' },
             ],
           },
           {
-            controlId: 'enable_web_search',
-            kind: 'toggle',
-            label: 'Enable Web Search',
-            value: false,
+            controlId: 'resolution',
+            kind: 'select',
+            label: 'Resolution',
+            value: '1K',
             required: false,
             authored: false,
             recommended: false,
+            options: [
+              { label: '1K', value: '1K' },
+              { label: '2K', value: '2K' },
+              { label: '4K', value: '4K' },
+            ],
           },
-          {
-            controlId: 'seed',
-            kind: 'number',
-            label: 'Seed',
-            value: null,
-            required: false,
-            authored: false,
-            recommended: false,
-          },
-        ],
-      },
     ]);
   });
 
@@ -76,7 +62,10 @@ describe('generation preview authoring projection', () => {
       },
     };
 
-    const configuration = projectGenerationPreviewConfiguration({ preview });
+    const configuration = projectGenerationPreviewConfiguration({
+      preview,
+      authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+    });
 
     expect(configuration.sections[1]?.rows).toEqual([
       expect.objectContaining({ label: 'Aspect ratio', value: '16:9' }),
@@ -167,6 +156,14 @@ function previewFixture(): GenerationPreview {
             label: 'Seed',
             kind: 'integer',
             required: false,
+          },
+          {
+            name: 'resolution',
+            label: 'Resolution',
+            kind: 'enum',
+            required: false,
+            defaultValue: '1K',
+            allowedValues: ['1K', '2K', '4K'],
           },
         ],
       },

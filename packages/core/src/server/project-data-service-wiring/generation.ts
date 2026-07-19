@@ -1,4 +1,4 @@
-import type { GenerationModelIdentity, GenerationPreview, GenerationPurpose, GenerationReferenceSlotSelectionInput, GenerationSpec, GenerationTarget, JsonValue } from '../../client/generation.js';
+import type { GenerationPreview, GenerationPurpose, GenerationReferenceSlotSelectionInput, GenerationSpec, GenerationTarget, JsonValue } from '../../client/generation.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { estimateGeneration } from '../generation/estimates.js';
 import { buildGenerationPreview } from '../generation/previews.js';
@@ -37,7 +37,7 @@ export function createGenerationServiceWiring() {
     async listGenerationModels(input: ProjectInput & { purpose?: GenerationPurpose; outputMediaKind?: 'image' | 'audio' | 'video' }) {
       if (input.purpose) {
         const purpose = readGenerationPurpose(input.purpose);
-        return listGenerationModels({ outputMediaKind: purpose.outputMediaKind, use: purpose.modelUse, fixedSettings: purpose.settings.fixed });
+        return listGenerationModels({ outputMediaKind: purpose.outputMediaKind, fixedSettings: purpose.settings.fixed });
       }
       return listGenerationModels({ outputMediaKind: input.outputMediaKind });
     },
@@ -112,7 +112,7 @@ export function createGenerationServiceWiring() {
     async updateGenerationPreviewResource(input: ProjectInput & {
       specId: string;
       prompt: { authoredText: string; negativeText?: string | null };
-      model: Required<GenerationModelIdentity>;
+      modelFamilyId: string;
       parameterValues: Record<string, JsonValue>;
       slotSelections: GenerationReferenceSlotSelectionInput[];
     }) {

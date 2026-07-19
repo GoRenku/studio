@@ -44,7 +44,7 @@ export function createGenerationPreviewRoute(
           projectName,
           specId,
           prompt: body.prompt,
-          model: body.model,
+          modelFamilyId: body.modelFamilyId,
           parameterValues: body.parameterValues,
           slotSelections: body.slotSelections,
         });
@@ -63,7 +63,7 @@ export function createGenerationPreviewRoute(
 
 function readGenerationPreviewUpdateBody(value: unknown): {
   prompt: { authoredText: string; negativeText?: string | null };
-  model: { provider: string; model: string };
+  modelFamilyId: string;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
 } {
@@ -94,7 +94,9 @@ function readGenerationPreviewUpdateBody(value: unknown): {
   if (!Array.isArray(body.slotSelections)) {
     throw requestError('Request body slotSelections must be an array.');
   }
-  const model = readModel(body.model);
+  if (typeof body.modelFamilyId !== 'string' || !body.modelFamilyId.trim()) {
+    throw requestError('Request body modelFamilyId must be a non-empty string.');
+  }
   const parameterValues = readParameterValues(body.parameterValues);
   return {
     prompt: {
@@ -103,23 +105,12 @@ function readGenerationPreviewUpdateBody(value: unknown): {
         ? { negativeText: prompt.negativeText as string | null }
         : {}),
     },
-    model,
+    modelFamilyId: body.modelFamilyId,
     parameterValues,
     slotSelections: body.slotSelections.map((selection, index) =>
       readReferenceSelection(selection, index),
     ),
   };
-}
-
-function readModel(value: unknown): { provider: string; model: string } {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw requestError('Request body model must be an object.');
-  }
-  const model = value as Record<string, unknown>;
-  if (typeof model.provider !== 'string' || typeof model.model !== 'string') {
-    throw requestError('Request body model must identify a provider and model.');
-  }
-  return { provider: model.provider, model: model.model };
 }
 
 function readParameterValues(value: unknown): Record<string, JsonValue> {

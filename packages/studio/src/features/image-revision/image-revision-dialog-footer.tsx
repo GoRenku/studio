@@ -1,6 +1,7 @@
 import type { ImageRevisionMode } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import { DialogFooter } from '@/ui/dialog';
+import { GenerationRequestEstimate } from '@/features/generation-request-editor/generation-request-estimate';
 
 const actionCopy = {
   regenerate: { idle: 'Regenerate', pending: 'Regenerating...' },
@@ -29,12 +30,14 @@ export function ImageRevisionDialogFooter({
   const copy = actionCopy[mode];
   return (
     <DialogFooter className='items-center gap-3'>
-      <div className='mr-auto text-sm text-muted-foreground'>
-        {estimatePending
-          ? 'Estimating...'
-          : estimatedUsd !== null
-            ? `Estimated cost $${estimatedUsd.toFixed(2)}`
-            : 'Cost unavailable'}
+      <div className='mr-auto'>
+        <GenerationRequestEstimate
+          pending={estimatePending}
+          estimate={estimatedUsd === null ? undefined : {
+            state: 'estimated',
+            estimatedCostUsd: estimatedUsd,
+          }}
+        />
       </div>
       <Button variant='outline' onClick={onCancel} disabled={runPending}>
         Cancel

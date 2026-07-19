@@ -5,21 +5,38 @@ import type {
   ImageRevisionMode,
 } from '../../client/index.js';
 import type {
-  GenerationContext,
   GenerationModelDescriptor,
   GenerationPreview,
-  GenerationReferenceGuide,
-  GenerationReferenceSelection,
+  GenerationReferenceSlotSelectionInput,
   GenerationSpec,
+  JsonValue,
 } from '../../client/generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { buildGenerationPreview } from '../generation/previews.js';
 import { readGenerationPurpose } from '../generation/purposes.js';
 import { applyFixedGenerationSettings } from '../generation/purpose-settings.js';
+import {
+  allocateGenerationReferencePromptMention,
+  applyGenerationReferenceSlotSelection,
+  resolveGenerationReference,
+} from '../generation/references.js';
+import {
+  recommendedStudioImageModelFamilyId,
+  readStudioImageModelFamilyId,
+  resolveStudioImageRoute,
+} from '../generation/image-model-authoring.js';
+import { validatedStudioImageParameterValues } from '../generation/image-configurable-values.js';
 import { validateGenerationSpecForExecution } from '../generation/validation.js';
 import { projectGenerationPreviewResource } from '../generation-preview-resource/projection.js';
+import { routeGenerationPreviewReferences } from '../generation-preview-resource/authoring.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ResolvedImageRevisionSource } from './source.js';
+
+const SOURCE_IMAGE_PLACEMENT = {
+  kind: 'slot' as const,
+  sectionId: 'source',
+  slotId: 'source-image',
+};
 
 export async function createImageRevisionModeDefinition(input: {
   mode: ImageRevisionMode;
@@ -33,7 +50,7 @@ export async function createImageRevisionModeDefinition(input: {
   controls: GenerationEditorControl[];
 }> {
   const spec = input.mode === 'regenerate'
-    ? requireRegenerationSpec(input.source)
+    ? await createRegenerationSpec(input)
     : await createImageEditSpec(input);
   const preview = await buildImageRevisionPreview({
     spec,
@@ -44,7 +61,7 @@ export async function createImageRevisionModeDefinition(input: {
     spec,
     draft: draftFromPreview(input.mode, preview),
     preview,
-    controls: controlsFromPreview(preview),
+    controls: preview.authoring.controls,
   };
 }
 
@@ -60,41 +77,63 @@ export async function buildImageRevisionSpec(input: {
     session: input.session,
     projectFolder: input.projectFolder,
   });
-  const specWithSelectedModel: GenerationSpec = {
-    ...definition.spec,
-    model: input.draft.model,
-  };
-  const model = await modelForSpec(
-    specWithSelectedModel,
-    input.session,
-    input.projectFolder,
-  );
-  const supportedControls = new Set(
-    model.fields
-      .filter((field) => !field.media && field.semantic?.kind !== 'authored-text')
-      .map((field) => field.name)
-  );
-  const values = { ...definition.spec.values };
-  for (const control of input.draft.generationControls) {
-    if (!supportedControls.has(control.controlId)) {
-      throw new ProjectDataError(
-        'CORE_IMAGE_REVISION_CONTROL_UNSUPPORTED',
-        `Unsupported Image Revision control: ${control.controlId}.`
-      );
-    }
-    values[control.controlId] = control.value;
+  let spec = structuredClone(definition.spec);
+  for (const selection of input.draft.slotSelections) {
+    assertImageEditSourceIsLocked(input.draft.mode, selection);
+    spec = applyGenerationReferenceSlotSelection(spec, selection);
+    spec = await allocateImageMention({
+      spec,
+      selection,
+      session: input.session,
+      projectFolder: input.projectFolder,
+    });
   }
-  const promptField = field(model, 'authored-text', 'prompt');
-  const negativeField = field(model, 'authored-text', 'negative-prompt');
-  values[promptField.name] = input.draft.authoredText;
-  if (negativeField && input.draft.negativeText !== undefined) {
-    values[negativeField.name] = input.draft.negativeText;
-  }
-  const spec: GenerationSpec = {
-    ...specWithSelectedModel,
-    values,
+  assertExactEditSource(spec, input.source, input.draft.mode);
+  const purpose = readGenerationPurpose(spec.purpose);
+  const context = await purpose.buildContext({
+    target: spec.target,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
+  const resolvedRoute = await resolveStudioImageRoute({
+    modelFamilyId: input.draft.modelFamilyId,
+    hasSelectedImageReferences: await hasSelectedImages({
+      spec,
+      session: input.session,
+      projectFolder: input.projectFolder,
+    }),
+    availableModels: context.models,
+  });
+  const promptField = requirePromptField(resolvedRoute.model);
+  const negativeField = negativePromptField(resolvedRoute.model);
+  const parameterValues = Object.fromEntries(
+    input.draft.generationControls.map((control) => [
+      control.controlId,
+      control.value as JsonValue,
+    ]),
+  );
+  spec.model = {
+    provider: resolvedRoute.route.provider,
+    model: resolvedRoute.route.model,
   };
-  return spec;
+  spec.values = {
+    [promptField.name]: input.draft.authoredText,
+    ...validatedStudioImageParameterValues({
+      route: resolvedRoute.route,
+      model: resolvedRoute.model,
+      parameterValues,
+    }),
+    ...(negativeField && input.draft.negativeText !== undefined
+      ? { [negativeField.name]: input.draft.negativeText }
+      : {}),
+  };
+  spec = await routeGenerationPreviewReferences({
+    spec,
+    model: resolvedRoute.model,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
+  return applyFixedGenerationSettings({ spec, purpose });
 }
 
 export async function buildImageRevisionPreview(input: {
@@ -118,10 +157,7 @@ export async function buildImageRevisionPreview(input: {
   const preview: GenerationPreview = {
     ...(await buildGenerationPreview({
       spec: authoredSpec,
-      referenceGuide: exactReferenceGuide(
-        context.referenceGuide,
-        authoredSpec.references,
-      ),
+      referenceGuide: context.referenceGuide,
       session: input.session,
       projectFolder: input.projectFolder,
       validatedRequest: validation.valid ? validation.request : undefined,
@@ -132,21 +168,79 @@ export async function buildImageRevisionPreview(input: {
   return projectGenerationPreviewResource({ preview, session: input.session });
 }
 
-function requireRegenerationSpec(source: ResolvedImageRevisionSource): GenerationSpec {
-  const spec = source.generationRun?.specSnapshot;
-  if (!spec || source.generationRun?.status !== 'completed') {
-    if (source.asset.origin === 'imported') {
-      throw new ProjectDataError(
-        'CORE_IMAGE_REVISION_REGENERATE_PROVENANCE_REQUIRED',
-        'Regenerate is unavailable because this image was imported and has no original generation request.'
-      );
-    }
-    throw new ProjectDataError(
-      'CORE_IMAGE_REVISION_REGENERATE_PROVENANCE_REQUIRED',
-      'Regenerate requires exact completed generation provenance for the source AssetFile.'
-    );
+async function createRegenerationSpec(input: {
+  source: ResolvedImageRevisionSource;
+  session: DatabaseSession;
+  projectFolder: string;
+}): Promise<GenerationSpec> {
+  const sourceSpec = regenerationSourceSpec(input.source);
+  let spec: GenerationSpec = {
+    ...structuredClone(sourceSpec),
+    executionKind: 'renku-managed',
+  };
+  for (const selection of spec.references) {
+    spec = await allocateImageMention({
+      spec,
+      selection: { placement: selection.placement, reference: selection.reference },
+      session: input.session,
+      projectFolder: input.projectFolder,
+    });
   }
-  return structuredClone(spec);
+  const purpose = readGenerationPurpose(spec.purpose);
+  const context = await purpose.buildContext({
+    target: spec.target,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
+  const hasImages = await hasSelectedImages({
+    spec,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
+  const sourceFamilyId = await readStudioImageModelFamilyId(sourceSpec.model);
+  const modelFamilyId = sourceFamilyId && await familyCanResolve({
+    modelFamilyId: sourceFamilyId,
+    hasSelectedImageReferences: hasImages,
+    availableModels: context.models,
+  })
+    ? sourceFamilyId
+    : await recommendedStudioImageModelFamilyId({
+        recommendedModel: context.settings.recommendedModel,
+        availableModels: context.models,
+        hasSelectedImageReferences: hasImages,
+      });
+  const resolvedRoute = await resolveStudioImageRoute({
+    modelFamilyId,
+    hasSelectedImageReferences: hasImages,
+    availableModels: context.models,
+  });
+  const prompt = sourcePrompt(sourceSpec, context.models);
+  const promptField = requirePromptField(resolvedRoute.model);
+  const negativeField = negativePromptField(resolvedRoute.model);
+  const sourceNegativeText = sourceNegativePrompt(sourceSpec, context.models);
+  const parameterValues = supportedSourceValues({
+    sourceSpec,
+    route: resolvedRoute.route,
+    model: resolvedRoute.model,
+  });
+  spec.model = {
+    provider: resolvedRoute.route.provider,
+    model: resolvedRoute.route.model,
+  };
+  spec.values = {
+    [promptField.name]: prompt,
+    ...parameterValues,
+    ...(negativeField && sourceNegativeText !== undefined
+      ? { [negativeField.name]: sourceNegativeText }
+      : {}),
+  };
+  spec = await routeGenerationPreviewReferences({
+    spec,
+    model: resolvedRoute.model,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
+  return applyFixedGenerationSettings({ spec, purpose });
 }
 
 async function createImageEditSpec(input: {
@@ -155,201 +249,229 @@ async function createImageEditSpec(input: {
   projectFolder: string;
 }): Promise<GenerationSpec> {
   const purpose = readGenerationPurpose('image.edit');
+  const target = { kind: 'asset' as const, id: input.source.asset.id };
   const context = await purpose.buildContext({
-    target: { kind: 'asset', id: input.source.asset.id },
+    target,
     session: input.session,
     projectFolder: input.projectFolder,
   });
-  const model = recommendedModel(context);
-  const sourceField = model.fields.find(
-    (candidate) => candidate.semantic?.kind === 'media' && candidate.semantic.role === 'source-image'
-  ) ?? model.fields.find(
-    (candidate) => candidate.semantic?.kind === 'media' && candidate.semantic.role === 'reference-image'
-  );
-  if (!sourceField) {
-    throw new ProjectDataError(
-      'CORE_IMAGE_REVISION_MODEL_UNAVAILABLE',
-      'No available image-edit model accepts a source image.'
-    );
-  }
-  const selection: GenerationReferenceSelection = {
-    placement: { kind: 'slot', sectionId: 'source', slotId: 'source-image' },
-    reference: {
-      kind: 'asset-file',
-      assetId: input.source.asset.id,
-      assetFileId: input.source.file.id,
-    },
-  };
-  return {
-    purpose: 'image.edit',
-    target: { kind: 'asset', id: input.source.asset.id },
-    executionKind: 'renku-managed',
-    model: { provider: model.provider, model: model.model },
-    values: {},
-    references: [
-      selection,
-    ],
-  };
-}
-
-async function modelForSpec(
-  spec: GenerationSpec,
-  session: DatabaseSession,
-  projectFolder: string
-): Promise<GenerationModelDescriptor> {
-  const context = await readGenerationPurpose(spec.purpose).buildContext({
-    target: spec.target,
-    session,
-    projectFolder,
+  const modelFamilyId = await recommendedStudioImageModelFamilyId({
+    recommendedModel: context.settings.recommendedModel,
+    availableModels: context.models,
+    hasSelectedImageReferences: true,
   });
-  const model = context.models.find((candidate) =>
-    candidate.provider === spec.model?.provider && candidate.model === spec.model?.model
-  );
-  if (!model) {
-    throw new ProjectDataError(
-      'CORE_IMAGE_REVISION_MODEL_UNAVAILABLE',
-      'The source model is not currently available for Image Revision.'
-    );
-  }
-  return model;
+  const resolvedRoute = await resolveStudioImageRoute({
+    modelFamilyId,
+    hasSelectedImageReferences: true,
+    availableModels: context.models,
+  });
+  let spec: GenerationSpec = {
+    purpose: 'image.edit',
+    target,
+    executionKind: 'renku-managed',
+    model: {
+      provider: resolvedRoute.route.provider,
+      model: resolvedRoute.route.model,
+    },
+    values: { [requirePromptField(resolvedRoute.model).name]: '' },
+    references: [{
+      placement: SOURCE_IMAGE_PLACEMENT,
+      promptMention: '@Reference1',
+      reference: {
+        kind: 'asset-file',
+        assetId: input.source.asset.id,
+        assetFileId: input.source.file.id,
+      },
+    }],
+    nextPromptMentionNumber: 2,
+  };
+  spec = await routeGenerationPreviewReferences({
+    spec,
+    model: resolvedRoute.model,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
+  return applyFixedGenerationSettings({ spec, purpose });
 }
 
-function recommendedModel(context: GenerationContext): GenerationModelDescriptor {
-  return context.models.find((candidate) =>
-    candidate.provider === context.settings.recommendedModel?.provider &&
-    candidate.model === context.settings.recommendedModel?.model
-  ) ?? context.models[0] ?? (() => {
-    throw new ProjectDataError(
-      'CORE_IMAGE_REVISION_MODEL_UNAVAILABLE',
-      'No image-edit model is currently available.'
-    );
-  })();
+function regenerationSourceSpec(source: ResolvedImageRevisionSource): GenerationSpec {
+  if (source.generationRun?.status === 'completed') {
+    return source.generationRun.specSnapshot;
+  }
+  if (source.sourceGenerationSpec) {
+    return source.sourceGenerationSpec;
+  }
+  throw new ProjectDataError(
+    'CORE_IMAGE_REVISION_REGENERATE_PROVENANCE_REQUIRED',
+    source.asset.origin === 'imported'
+      ? 'Regenerate is unavailable because this image was imported and has no original generation request.'
+      : 'Regenerate requires a completed generation run or frozen attached source request.',
+  );
 }
 
 function draftFromPreview(
   mode: ImageRevisionMode,
-  preview: GenerationPreviewResourceData
+  preview: GenerationPreviewResourceData,
 ): ImageRevisionDraft {
   return {
     mode,
-    model: {
-      provider: preview.model.provider,
-      model: preview.model.modelId,
-    },
+    modelFamilyId: preview.authoring.selectedModelFamilyId,
     authoredText: preview.finalPrompt.authoredText,
     ...(preview.finalPrompt.negativeText !== undefined
       ? { negativeText: preview.finalPrompt.negativeText }
       : {}),
-    generationControls: controlsFromPreview(preview).map((control) => ({
-      controlId: control.controlId,
-      value: control.value,
-    })),
+    generationControls: preview.authoring.controls
+      .filter((control) => control.kind !== 'readonly')
+      .map((control) => ({ controlId: control.controlId, value: control.value })),
+    slotSelections: [],
   };
 }
 
-function exactReferenceGuide(
-  guide: GenerationReferenceGuide,
-  references: GenerationReferenceSelection[],
-): GenerationReferenceGuide {
-  const selectedPlacements = new Set(
-    references.flatMap((selection) =>
-      selection.placement.kind === 'slot'
-        ? [referencePlacementKey(selection.placement)]
-        : []
-    ),
-  );
-  return {
-    sections: guide.sections.flatMap((section) => {
-      const slots = section.slots
-        .filter((slot) =>
-          selectedPlacements.has(referencePlacementKey({
-            kind: 'slot',
-            sectionId: section.id,
-            slotId: slot.id,
-            ...(slot.subject ? { subject: slot.subject } : {}),
-          }))
-        )
-        .map((slot) => ({ ...slot, eligibleCandidates: [] }));
-      return slots.length ? [{ ...section, slots }] : [];
-    }),
-    notices: guide.notices,
-  };
+async function allocateImageMention(input: {
+  spec: GenerationSpec;
+  selection: GenerationReferenceSlotSelectionInput | GenerationSpec['references'][number];
+  session: DatabaseSession;
+  projectFolder: string;
+}): Promise<GenerationSpec> {
+  if (!input.selection.reference) {
+    return input.spec;
+  }
+  const resolved = await resolveGenerationReference({
+    session: input.session,
+    projectFolder: input.projectFolder,
+    reference: input.selection.reference,
+  });
+  return resolved?.mediaKind === 'image'
+    ? allocateGenerationReferencePromptMention({
+        spec: input.spec,
+        placement: input.selection.placement,
+      })
+    : input.spec;
 }
 
-function referencePlacementKey(
-  placement: Extract<
-    GenerationReferenceSelection['placement'],
-    { kind: 'slot' }
-  >,
-): string {
-  return [
-    placement.sectionId,
-    placement.slotId,
-    placement.subject?.kind ?? '',
-    placement.subject?.id ?? '',
-  ].join(':');
-}
-
-function controlsFromPreview(preview: GenerationPreviewResourceData): GenerationEditorControl[] {
-  return preview.configuration.sections.flatMap((section) =>
-    section.rows.flatMap((row): GenerationEditorControl[] => {
-      if (row.presentation !== 'parameter-control') {
-        return [];
-      }
-      if (row.allowedValues) {
-        return [{
-          controlId: row.key,
-          kind: 'select',
-          label: row.label,
-          value: row.value,
-          required: row.required ?? false,
-          options: row.allowedValues.map((value) => ({ label: String(value), value })),
-        }];
-      }
-      if (typeof row.value === 'number') {
-        return [{
-          controlId: row.key,
-          kind: 'number',
-          label: row.label,
-          value: row.value,
-          required: row.required ?? false,
-          ...(row.minimum !== undefined ? { min: row.minimum } : {}),
-          ...(row.maximum !== undefined ? { max: row.maximum } : {}),
-        }];
-      }
-      return [{
-        controlId: row.key,
-        kind: 'readonly',
-        label: row.label,
-        value: row.value,
-      }];
+async function hasSelectedImages(input: {
+  spec: GenerationSpec;
+  session: DatabaseSession;
+  projectFolder: string;
+}): Promise<boolean> {
+  const resolved = await Promise.all(input.spec.references.map((selection) =>
+    resolveGenerationReference({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      reference: selection.reference,
     })
-  );
+  ));
+  return resolved.some((reference) => reference?.mediaKind === 'image');
 }
 
-function field(
-  model: GenerationModelDescriptor,
-  kind: 'authored-text',
-  role: 'prompt'
-): GenerationModelDescriptor['fields'][number];
-function field(
-  model: GenerationModelDescriptor,
-  kind: 'authored-text',
-  role: 'negative-prompt'
-): GenerationModelDescriptor['fields'][number] | undefined;
-function field(
-  model: GenerationModelDescriptor,
-  kind: 'authored-text',
-  role: 'prompt' | 'negative-prompt'
-) {
-  const result = model.fields.find(
-    (candidate) => candidate.semantic?.kind === kind && candidate.semantic.role === role
+async function familyCanResolve(input: Parameters<typeof resolveStudioImageRoute>[0]): Promise<boolean> {
+  try {
+    await resolveStudioImageRoute(input);
+    return true;
+  } catch (error) {
+    if (error instanceof ProjectDataError &&
+        (error.code === 'CORE_GENERATION_IMAGE_MODEL_FAMILY_INVALID' ||
+         error.code === 'CORE_GENERATION_IMAGE_MODEL_ROUTE_UNAVAILABLE')) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function supportedSourceValues(input: {
+  sourceSpec: GenerationSpec;
+  route: Parameters<typeof validatedStudioImageParameterValues>[0]['route'];
+  model: GenerationModelDescriptor;
+}): Record<string, JsonValue> {
+  const candidates = Object.fromEntries(input.route.userConfigurableParameters.flatMap(
+    (parameter) => input.sourceSpec.values[parameter.field] === undefined
+      ? []
+      : [[parameter.field, input.sourceSpec.values[parameter.field]!]],
+  ));
+  return validatedStudioImageParameterValues({
+    route: input.route,
+    model: input.model,
+    parameterValues: candidates,
+  });
+}
+
+function sourcePrompt(spec: GenerationSpec, models: GenerationModelDescriptor[]): string {
+  const model = exactModel(spec, models);
+  const field = model ? requirePromptField(model) : null;
+  const value = field ? spec.values[field.name] : spec.values.prompt;
+  return typeof value === 'string' ? value : '';
+}
+
+function sourceNegativePrompt(
+  spec: GenerationSpec,
+  models: GenerationModelDescriptor[],
+): string | undefined {
+  const model = exactModel(spec, models);
+  const field = model ? negativePromptField(model) : null;
+  const value = field ? spec.values[field.name] : undefined;
+  return typeof value === 'string' ? value : undefined;
+}
+
+function exactModel(
+  spec: GenerationSpec,
+  models: GenerationModelDescriptor[],
+): GenerationModelDescriptor | undefined {
+  return models.find((model) => model.provider === spec.model?.provider &&
+    model.model === spec.model?.model);
+}
+
+function requirePromptField(model: GenerationModelDescriptor) {
+  const field = model.fields.find((candidate) =>
+    candidate.semantic?.kind === 'authored-text' && candidate.semantic.role === 'prompt'
   );
-  if (!result && role === 'prompt') {
+  if (!field) {
     throw new ProjectDataError(
-      'CORE_IMAGE_REVISION_MODEL_UNAVAILABLE',
-      'Image Revision model does not expose authored prompt text.'
+      'CORE_GENERATION_IMAGE_MODEL_ROUTE_UNAVAILABLE',
+      'The resolved Studio image route has no authored prompt field.',
     );
   }
-  return result;
+  return field;
+}
+
+function negativePromptField(model: GenerationModelDescriptor) {
+  return model.fields.find((candidate) =>
+    candidate.semantic?.kind === 'authored-text' &&
+    candidate.semantic.role === 'negative-prompt'
+  );
+}
+
+function assertImageEditSourceIsLocked(
+  mode: ImageRevisionMode,
+  selection: GenerationReferenceSlotSelectionInput,
+): void {
+  if (mode === 'edit' && selection.placement.sectionId === SOURCE_IMAGE_PLACEMENT.sectionId &&
+      selection.placement.slotId === SOURCE_IMAGE_PLACEMENT.slotId) {
+    throw new ProjectDataError(
+      'CORE_IMAGE_REVISION_SOURCE_REQUIRED',
+      'The exact source image selection is locked for Image Revision Edit.',
+    );
+  }
+}
+
+function assertExactEditSource(
+  spec: GenerationSpec,
+  source: ResolvedImageRevisionSource,
+  mode: ImageRevisionMode,
+): void {
+  if (mode !== 'edit') {
+    return;
+  }
+  const selection = spec.references.find((candidate) =>
+    candidate.placement.kind === 'slot' &&
+    candidate.placement.sectionId === SOURCE_IMAGE_PLACEMENT.sectionId &&
+    candidate.placement.slotId === SOURCE_IMAGE_PLACEMENT.slotId
+  );
+  if (selection?.reference.kind !== 'asset-file' ||
+      selection.reference.assetId !== source.asset.id ||
+      selection.reference.assetFileId !== source.file.id) {
+    throw new ProjectDataError(
+      'CORE_IMAGE_REVISION_SOURCE_REQUIRED',
+      'Image Revision Edit requires the exact source image.',
+    );
+  }
 }

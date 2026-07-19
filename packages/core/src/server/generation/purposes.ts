@@ -1,5 +1,5 @@
 import type { GenerationModelDescriptor, GenerationOutputMediaKind, GenerationPurpose } from '../../client/generation.js';
-import { bindGenerationProductSettings, describeGenerationModelInputs, listStudioModelAvailability, type StudioGenerationUse } from '@gorenku/studio-engines';
+import { bindGenerationProductSettings, describeGenerationModelInputs, listStudioModelAvailability } from '@gorenku/studio-engines';
 import { ProjectDataError } from '../project-data-error.js';
 import type { GenerationPurposeDescriptor } from './purpose-contract.js';
 import { imageCreatePurpose } from './purposes/image-create.js';
@@ -28,8 +28,8 @@ export function readGenerationPurpose(purpose: GenerationPurpose): GenerationPur
 }
 export function isGenerationPurpose(value: string): value is GenerationPurpose { return descriptorByPurpose.has(value as GenerationPurpose); }
 
-export async function listGenerationModels(input: { outputMediaKind?: GenerationOutputMediaKind; use?: StudioGenerationUse; fixedSettings?: GenerationPurposeDescriptor['settings']['fixed'] } = {}): Promise<GenerationModelDescriptor[]> {
-  const availability = await listStudioModelAvailability({ mediaKind: input.outputMediaKind, use: input.use });
+export async function listGenerationModels(input: { outputMediaKind?: GenerationOutputMediaKind; fixedSettings?: GenerationPurposeDescriptor['settings']['fixed'] } = {}): Promise<GenerationModelDescriptor[]> {
+  const availability = await listStudioModelAvailability({ mediaKind: input.outputMediaKind });
   const models = await Promise.all(availability.map(async (available) => {
     const descriptor = await describeGenerationModelInputs(available);
     return descriptor ? { descriptor, label: available.label } : null;

@@ -1,5 +1,4 @@
 import type {
-  GenerationModelIdentity,
   GenerationReferenceSlotSelectionInput,
   GenerationSpec,
   JsonValue,
@@ -13,17 +12,20 @@ import { validateGenerationSpecForExecution } from '../generation/validation.js'
 import { projectGenerationPreviewResource } from './projection.js';
 import {
   applyGenerationReferenceSlotSelection,
+  allocateGenerationReferencePromptMention,
+  resolveGenerationReference,
 } from '../generation/references.js';
 import {
-  readGenerationPreviewModel,
   routeGenerationPreviewReferences,
-  validatedGenerationPreviewParameterValues,
 } from './authoring.js';
+import { resolveStudioImageRoute } from '../generation/image-model-authoring.js';
+import { validatedStudioImageParameterValues } from '../generation/image-configurable-values.js';
+import { applyFixedGenerationSettings } from '../generation/purpose-settings.js';
 
 export async function updateGenerationPreviewResource(input: {
   specId: string;
   prompt: { authoredText: string; negativeText?: string | null };
-  model: Required<GenerationModelIdentity>;
+  modelFamilyId: string;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
   purpose: GenerationPurposeDescriptor;
@@ -71,10 +73,39 @@ export async function updateGenerationPreviewResource(input: {
       session: input.session,
     });
   }
-  const model = readGenerationPreviewModel({
-    models: context.models,
-    identity: input.model,
+  let spec: GenerationSpec = structuredClone(record.spec);
+  for (const selection of input.slotSelections) {
+    spec = applyGenerationReferenceSlotSelection(spec, selection);
+    if (!selection.reference) {
+      continue;
+    }
+    const resolved = await resolveGenerationReference({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      reference: selection.reference,
+    });
+    if (resolved?.mediaKind === 'image') {
+      spec = allocateGenerationReferencePromptMention({
+        spec,
+        placement: selection.placement,
+      });
+    }
+  }
+  const resolvedReferences = await Promise.all(spec.references.map((selection) =>
+    resolveGenerationReference({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      reference: selection.reference,
+    })
+  ));
+  const resolvedRoute = await resolveStudioImageRoute({
+    modelFamilyId: input.modelFamilyId,
+    hasSelectedImageReferences: resolvedReferences.some(
+      (reference) => reference?.mediaKind === 'image',
+    ),
+    availableModels: context.models,
   });
+  const model = resolvedRoute.model;
   const promptField = model?.fields.find(
     (field) =>
       field.semantic?.kind === 'authored-text' &&
@@ -97,14 +128,17 @@ export async function updateGenerationPreviewResource(input: {
       'The selected generation model does not expose a negative prompt field.'
     );
   }
-  let spec: GenerationSpec = structuredClone(record.spec);
-  spec.model = input.model;
+  spec.model = {
+    provider: resolvedRoute.route.provider,
+    model: resolvedRoute.route.model,
+  };
   spec.values = {
     [promptField.name]: input.prompt.authoredText,
-    ...validatedGenerationPreviewParameterValues(
+    ...validatedStudioImageParameterValues({
+      route: resolvedRoute.route,
       model,
-      input.parameterValues
-    ),
+      parameterValues: input.parameterValues,
+    }),
   };
   if (negativeField && input.prompt.negativeText !== undefined) {
     if (input.prompt.negativeText !== null) {
@@ -112,15 +146,13 @@ export async function updateGenerationPreviewResource(input: {
     }
   }
   const guide = context.referenceGuide;
-  for (const selection of input.slotSelections) {
-    spec = applyGenerationReferenceSlotSelection(spec, selection);
-  }
   spec = await routeGenerationPreviewReferences({
     spec,
     model,
     session: input.session,
     projectFolder: input.projectFolder,
   });
+  spec = await applyFixedGenerationSettings({ spec, purpose: input.purpose });
   const updated = updateGenerationSpec({
     id: input.specId,
     spec,

@@ -40,6 +40,7 @@ export interface GenerationSpec {
   model?: GenerationModelIdentity;
   values: Record<string, JsonValue>;
   references: GenerationReferenceSelection[];
+  nextPromptMentionNumber?: number;
   title?: string;
 }
 
@@ -53,6 +54,7 @@ export interface GenerationReferenceSelection {
       }
     | { kind: 'additional' };
   providerField?: string;
+  promptMention?: string;
   reference: GenerationReference;
 }
 

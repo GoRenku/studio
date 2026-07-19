@@ -5,6 +5,8 @@ import type {
   ImageRevisionMode,
   ImageRevisionTarget,
   GenerationPreviewResource,
+  GenerationPreviewReferenceSlot,
+  GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
 import {
   estimateImageRevisionDraft,
@@ -14,6 +16,7 @@ import {
 } from '@/services/studio-image-revisions-api';
 import {
   createGenerationPreviewDraft,
+  changeGenerationPreviewReference,
   type GenerationPreviewDraft,
 } from '@/features/generation-preview/generation-preview-draft';
 
@@ -111,6 +114,8 @@ export function useImageRevisionEditor(
       const next = createGenerationPreviewDraft(preview);
       next.promptDraft.authoredText = draft.authoredText;
       next.promptDraft.negativeText = draft.negativeText;
+      next.modelFamilyId = draft.modelFamilyId;
+      next.slotSelections = draft.slotSelections;
       return next;
     }
     return {
@@ -120,21 +125,16 @@ export function useImageRevisionEditor(
           ? { negativeText: draft.negativeText }
           : {}),
       },
-      model: {
-        provider: '',
-        modelId: '',
-      },
+      modelFamilyId: draft.modelFamilyId,
       parameterValues: {},
       authoredParameterNames: [],
       slotSelections: [],
     };
   }, [draft, preview]);
 
-  const selectedModel = preview?.authoring.models.find((candidate) =>
-    candidate.provider === draft?.model.provider &&
-    candidate.modelId === draft?.model.model
-  );
-  const controls = selectedModel?.controls ?? [];
+  const controls = preview && preview.authoring.selectedModelFamilyId === draft?.modelFamilyId
+    ? preview.authoring.controls
+    : [];
 
   const updateDraft = (update: (current: ImageRevisionDraft) => ImageRevisionDraft) => {
     setDraft((current) => (current ? update(current) : current));
@@ -158,19 +158,33 @@ export function useImageRevisionEditor(
   };
 
   const chooseModel = (modelKey: string) => {
-    const model = preview?.authoring.models.find(
-      (candidate) => `${candidate.provider}/${candidate.modelId}` === modelKey,
+    const family = preview?.authoring.modelFamilies.find(
+      (candidate) => candidate.familyId === modelKey,
     );
-    if (!model) return;
+    if (!family) return;
     updateDraft((current) => ({
       ...current,
-      model: { provider: model.provider, model: model.modelId },
-      generationControls: model.controls
+      modelFamilyId: family.familyId,
+      generationControls: family.familyId === preview?.authoring.selectedModelFamilyId
+        ? preview.authoring.controls
         .filter((control) => control.kind !== 'readonly' && control.recommended)
         .map((control) => ({
           controlId: control.controlId,
           value: control.value,
-        })),
+        }))
+        : [],
+    }));
+  };
+
+  const chooseReference = (
+    slot: GenerationPreviewReferenceSlot,
+    reference: GenerationPreviewResourceReference | null,
+  ) => {
+    if (!editorDraft || slot.locked) return;
+    const next = changeGenerationPreviewReference(editorDraft, slot, reference);
+    updateDraft((current) => ({
+      ...current,
+      slotSelections: next.slotSelections,
     }));
   };
 
@@ -225,6 +239,7 @@ export function useImageRevisionEditor(
       updateDraft((current) => ({ ...current, negativeText })),
     updateControl,
     chooseModel,
+    chooseReference,
     run,
   };
 }

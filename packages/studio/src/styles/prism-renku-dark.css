@@ -1,9 +1,9 @@
 .dark .prism-dark .prism-code-editor {
-  --pce-bg: var(--editor-bg);
-  --pce-cursor: var(--editor-fg);
-  --pce-selection: hsl(30 12% 28%);
-  --pce-bg-highlight: hsl(42 58% 50% / 0.08);
-  --pce-selection-match: hsl(42 30% 45% / 0.35);
+  --pce-bg: var(--background);
+  --pce-cursor: var(--foreground);
+  --pce-selection: hsl(215 45% 45% / 0.45);
+  --pce-bg-highlight: transparent;
+  --pce-selection-match: hsl(215 45% 55% / 0.3);
   --pce-line-number: var(--muted-foreground);
   --pce-scrollbar: 30, 7%, 35%;
   --pce-guide-indent: hsl(48 45% 88% / 0.15);
@@ -18,7 +18,7 @@
   --pce-widget-bg-active: hsl(42 75% 48% / 0.3);
   --pce-widget-focus: var(--ring);
   --pce-search-match: hsl(42 75% 48% / 0.25);
-  color: var(--editor-fg);
+  color: var(--foreground);
   color-scheme: dark;
 }
 
@@ -54,6 +54,14 @@
 .dark .prism-dark .token.char,
 .dark .prism-dark .token.url {
   color: hsl(70 28% 55%);
+}
+.dark .prism-dark .token.title.important {
+  color: #e0c36f;
+  font-weight: 700;
+}
+.dark .prism-dark .token.title.important > .token.punctuation {
+  color: #858993;
+  font-weight: 600;
 }
 .dark .prism-dark .token.bold {
   font-weight: 700;

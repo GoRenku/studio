@@ -74,7 +74,6 @@ describe('generic generation model listing', () => {
   it('filters fixed-setting models mechanically', async () => {
     const models = await listGenerationModels({
       outputMediaKind: 'image',
-      use: 'any',
       fixedSettings: [{ kind: 'quality', value: 'high' }],
     });
 

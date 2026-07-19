@@ -66,14 +66,19 @@ export function useGenerationPreviewEditor(
     if (preview.generationSpec?.frozenAt !== null || updatePending) {
       return;
     }
-    const model = preview.authoring.models.find(
-      (candidate) =>
-        `${candidate.provider}/${candidate.modelId}` === modelKey
+    const family = preview.authoring.modelFamilies.find(
+      (candidate) => candidate.familyId === modelKey
     );
-    if (!model) {
+    if (!family) {
       return;
     }
-    setDraft((current) => changeGenerationPreviewModel(current, model));
+    setDraft((current) => changeGenerationPreviewModel(
+      current,
+      family.familyId,
+      family.familyId === preview.authoring.selectedModelFamilyId
+        ? preview.authoring.controls
+        : [],
+    ));
     setUpdateError(null);
   };
 
@@ -122,13 +127,12 @@ export function useGenerationPreviewEditor(
     }
   };
 
-  const modelKey = `${draft.model.provider}/${draft.model.modelId}`;
-  const selectedModel = preview.authoring.models.find(
-    (model) =>
-      model.provider === draft.model.provider &&
-      model.modelId === draft.model.modelId
-  );
-  const controls: GenerationEditorControl[] = (selectedModel?.controls ?? [])
+  const modelKey = draft.modelFamilyId;
+  const controls: GenerationEditorControl[] = (
+    draft.modelFamilyId === preview.authoring.selectedModelFamilyId
+      ? preview.authoring.controls
+      : []
+  )
     .map((control) => {
       if (control.kind === 'readonly') {
         return control;
