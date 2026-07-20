@@ -24,5 +24,4 @@ export {
   resolveTemporaryFileRoot,
   writeProjectTemporaryFile,
 } from './temporary-files.js';
-export { allocateImageEditOutputNames } from './destinations/image-edit.js';
 export { persistSceneStoryboardBeatFilesSync } from './destinations/scene-storyboard.js';

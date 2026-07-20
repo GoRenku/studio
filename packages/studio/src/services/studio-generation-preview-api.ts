@@ -12,7 +12,7 @@ export interface UpdateGenerationPreviewResourceSpecInput {
     authoredText: string;
     negativeText?: string | null;
   };
-  modelFamilyId: string;
+  modelFamilyId?: string;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
 }
@@ -27,7 +27,7 @@ export async function updateGenerationPreviewResource(
       headers: jsonHeaders(),
       body: JSON.stringify({
         prompt: input.prompt,
-        modelFamilyId: input.modelFamilyId,
+        ...(input.modelFamilyId ? { modelFamilyId: input.modelFamilyId } : {}),
         parameterValues: input.parameterValues,
         slotSelections: input.slotSelections,
       }),

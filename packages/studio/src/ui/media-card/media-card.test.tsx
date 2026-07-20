@@ -177,7 +177,7 @@ describe('MediaCard', () => {
   it('keeps activation behind meaningful sibling controls without nested buttons', async () => {
     const onActivate = vi.fn();
     const onToggle = vi.fn();
-    const onEdit = vi.fn();
+    const onInspect = vi.fn();
     const onDelete = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
       <MediaCard
@@ -191,7 +191,7 @@ describe('MediaCard', () => {
           unselectedLabel: 'Select reference',
           onToggle,
         }}
-        editAction={{ label: 'Edit image', onEdit }}
+        inspectionAction={{ label: 'View generation request', onInspect }}
         deleteAction={{
           label: 'Delete image',
           confirmationTitle: 'Delete this image?',
@@ -206,9 +206,9 @@ describe('MediaCard', () => {
     expect(onActivate).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Select reference' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit image' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View generation request' }));
     expect(onToggle).toHaveBeenCalledTimes(1);
-    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onInspect).toHaveBeenCalledTimes(1);
     expect(onActivate).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete image' }));
@@ -219,7 +219,7 @@ describe('MediaCard', () => {
     expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
-  it('places persistent selection and Edit lower-right and delete top-right', () => {
+  it('places persistent selection and Inspection lower-right and delete top-right', () => {
     const { container } = render(
       <MediaCard
         media={image('Actions')}
@@ -231,7 +231,7 @@ describe('MediaCard', () => {
           unselectedLabel: 'Select reference',
           onToggle: vi.fn(),
         }}
-        editAction={{ label: 'Edit image', onEdit: vi.fn() }}
+        inspectionAction={{ label: 'View generation request', onInspect: vi.fn() }}
         deleteAction={{
           label: 'Delete image',
           confirmationTitle: 'Delete?',
@@ -249,7 +249,7 @@ describe('MediaCard', () => {
       Array.from(lowerActions?.querySelectorAll('button') ?? []).map((button) =>
         button.getAttribute('aria-label')
       )
-    ).toEqual(['Remove reference', 'Edit image']);
+    ).toEqual(['Remove reference', 'View generation request']);
     expect(
       screen
         .getByRole('button', { name: 'Remove reference' })

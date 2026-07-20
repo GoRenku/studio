@@ -63,18 +63,32 @@ export interface GenerationPreviewPrompt {
   negativeText?: string;
 }
 
-export interface GenerationPreviewResourceReference {
+interface GenerationPreviewResourceReferenceBase {
   kind: 'image' | 'audio' | 'video';
   role: string;
   label: string;
   promptMention?: string;
-  assetId: string;
-  assetFileId: string;
   dialogueId?: string;
   sourcePurpose?: string;
   selected: boolean;
   browserUrl: string;
 }
+
+export type GenerationPreviewResourceReference =
+  GenerationPreviewResourceReferenceBase & {
+    identity:
+      | { kind: 'asset-file'; assetId: string; assetFileId: string }
+      | { kind: 'project-file' };
+  };
+
+export type GenerationPreviewResourceDataReference = Omit<
+  GenerationPreviewResourceReferenceBase,
+  'browserUrl'
+> & {
+  identity:
+    | { kind: 'asset-file'; assetId: string; assetFileId: string }
+    | { kind: 'project-file'; projectRelativePath: string };
+};
 
 export interface GenerationPreviewReferences {
   slots: GenerationPreviewReferenceSlot[];
@@ -98,10 +112,10 @@ export type GenerationPreviewResourceData = Omit<
 > & {
   references: {
     slots: Array<Omit<GenerationPreviewReferenceSlot, 'current' | 'eligibleCandidates'> & {
-      current: Omit<GenerationPreviewResourceReference, 'browserUrl'> | null;
-      eligibleCandidates: Array<Omit<GenerationPreviewResourceReference, 'browserUrl'>>;
+      current: GenerationPreviewResourceDataReference | null;
+      eligibleCandidates: GenerationPreviewResourceDataReference[];
     }>;
-    additional: Array<Omit<GenerationPreviewResourceReference, 'browserUrl'>>;
+    additional: GenerationPreviewResourceDataReference[];
   };
 };
 

@@ -196,7 +196,7 @@ export interface LocationDesignDocument {
     atmosphere: string[];
     propsAndRecurringObjects: ProductionDesignProp[];
     continuity: string[];
-    environmentSheetGuidance: string[];
+    locationSheetGuidance: string[];
     generationGuidance: string[];
   };
   openQuestions?: string[];
@@ -270,7 +270,7 @@ export interface LocationDesignSummary {
   architecture: string[];
   setDressing: string[];
   props: string[];
-  environmentSheetGuidance: string[];
+  locationSheetGuidance: string[];
   generationGuidance: string[];
 }
 
@@ -323,7 +323,7 @@ export interface ProductionDesignLocationContextReport extends DepartmentCommand
   assets: Asset[];
   assetRoleCounts: Array<{ role: string; count: number }>;
   generationReadiness: {
-    environmentSheet: boolean;
+    locationSheet: boolean;
     notes: string[];
   };
 }

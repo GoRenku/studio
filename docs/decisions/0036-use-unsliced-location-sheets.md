@@ -4,6 +4,9 @@ Date: 2026-06-23
 
 Status: accepted
 
+Notice: Decision [0059](0059-use-location-sheet-as-the-only-current-contract.md)
+supersedes current Environment Sheet naming clauses in this decision.
+
 Amended by:
 
 - `0039-use-uniform-shot-video-take-sheet-reference-selection.md` makes Shot

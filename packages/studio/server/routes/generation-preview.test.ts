@@ -136,4 +136,34 @@ describe('generation preview Hono route', () => {
       error: { code: 'STUDIO_SERVER083' },
     });
   });
+
+  it('forwards an external Preview update without a model family', async () => {
+    const updateGenerationPreviewResource = vi.fn(
+      fakeGenerationPreviewCommands().updateGenerationPreviewResource,
+    );
+    const app = createMountedGenerationPreviewRoute({
+      updateGenerationPreviewResource,
+    });
+
+    const response = await app.request(
+      '/constantinople/generation-previews/specs/media_generation_spec_test',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          prompt: { authoredText: 'Updated external prompt.' },
+          parameterValues: {},
+          slotSelections: [],
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(updateGenerationPreviewResource).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      specId: 'media_generation_spec_test',
+      prompt: { authoredText: 'Updated external prompt.' },
+      parameterValues: {},
+      slotSelections: [],
+    });
+  });
 });

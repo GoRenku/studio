@@ -507,7 +507,7 @@ Use `src/ui/media-card` for the current included visual-card surfaces:
 - Production and Storyboard Lookbook evidence, hero, and assets;
 - Scene, Act, and Sequence storyboard cards;
 - Project Library;
-- Generation Preview and Image Revision references;
+- Generation Preview and Generation Request inspector references;
 - Reference Picker candidates;
 - Shot Design Composition and Motion options.
 

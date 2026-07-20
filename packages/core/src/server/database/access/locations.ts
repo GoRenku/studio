@@ -40,7 +40,7 @@ export interface LocationDeleteDependencySummary {
   assetCount: number;
   designCount: number;
   activeDesignStateCount: number;
-  environmentSheetCount: number;
+  locationSheetCount: number;
 }
 
 export function replaceLocationAuthoringRecords(
@@ -108,13 +108,13 @@ export function readLocationDeleteDependencySummary(
       .from(locationDesignState)
       .where(eq(locationDesignState.locationId, locationId))
       .all().length,
-    environmentSheetCount: session.db
+    locationSheetCount: session.db
       .select({ id: locationAssets.id })
       .from(locationAssets)
       .where(
         and(
           eq(locationAssets.locationId, locationId),
-          eq(locationAssets.role, 'environment_sheet')
+          eq(locationAssets.role, 'location-sheet')
         )
       )
       .all().length,

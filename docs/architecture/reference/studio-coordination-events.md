@@ -643,8 +643,8 @@ Durable media attachments invalidate their current owner surface:
 | Attachment workflow | Resource key |
 | --- | --- |
 | Lookbook image, Video Lookbook Sheet, or Storyboard Lookbook Sheet | `surface:visual-language:lookbook:<lookbookId>` |
-| Cast Character Sheet, Profile, Voice sample, or eligible Image Revision | `surface:castMember:<castMemberId>` |
-| Location Sheet, Hero, or eligible Image Revision | `surface:location:<locationId>` |
+| Cast Character Sheet, Profile, Voice sample, or accepted image edit | `surface:castMember:<castMemberId>` |
+| Location Sheet, Hero, or accepted image edit | `surface:location:<locationId>` |
 | Scene Beat storyboard image | `surface:scene:<sceneId>:beats` |
 | Scene Dialogue Audio | `surface:scene:<sceneId>:dialogue-audio` |
 

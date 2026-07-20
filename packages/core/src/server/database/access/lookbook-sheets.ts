@@ -95,6 +95,21 @@ export function readLookbookSheetRecord(
   );
 }
 
+export function readLookbookSheetRecordByAsset(
+  session: DatabaseSession,
+  input: { lookbookId: string; assetId: string },
+): LookbookSheetRecord | null {
+  return session.db
+    .select()
+    .from(lookbookSheets)
+    .where(and(
+      eq(lookbookSheets.lookbookId, input.lookbookId),
+      eq(lookbookSheets.assetId, input.assetId),
+      isNull(lookbookSheets.discardedAt),
+    ))
+    .get() ?? null;
+}
+
 export function requireLookbookSheetRecord(
   session: DatabaseSession,
   sheetId: string

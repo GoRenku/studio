@@ -278,7 +278,7 @@ describe('department design commands', () => {
       mediaKind: 'text',
       title: 'Workshop reference',
       fileRole: 'source',
-      role: 'environment-sheet',
+      role: 'location-sheet',
     });
     await projectData.writeLocationDesign({
       homeDir,
@@ -468,7 +468,7 @@ function locationDesignDocument(locationId: string): LocationDesignDocument {
         },
       ],
       continuity: ['Map remains central to table geography'],
-      environmentSheetGuidance: ['Show cramped room geometry and map table'],
+      locationSheetGuidance: ['Show cramped room geometry and map table'],
       generationGuidance: ['Ottoman planning chamber', 'lamplit tactical room'],
     },
   };

@@ -4,6 +4,9 @@ Date: 2026-07-03
 
 Status: accepted
 
+Notice: Decision [0059](0059-use-location-sheet-as-the-only-current-contract.md)
+supersedes current Environment Sheet naming clauses in this decision.
+
 ## Context
 
 Renku Studio is built around AI-assisted filmmaking. The product needs to move

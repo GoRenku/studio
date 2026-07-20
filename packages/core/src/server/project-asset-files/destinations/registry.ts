@@ -10,13 +10,6 @@ import {
   resolveCastDestinationRootSync,
 } from './cast.js';
 import {
-  resolveImageEditDestinationFile,
-  resolveImageEditDestinationFileSync,
-  resolveImageEditDestinationOutputNames,
-  resolveImageEditDestinationRoot,
-  resolveImageEditDestinationRootSync,
-} from './image-edit.js';
-import {
   resolveLocationDestinationFile,
   resolveLocationDestinationFileSync,
   resolveLocationDestinationOutputNames,
@@ -46,7 +39,7 @@ import type {
 const castCharacterSheetResolver = castResolver<'cast.characterSheet'>();
 const castProfileResolver = castResolver<'cast.profile'>();
 const castVoiceSampleResolver = castResolver<'cast.voiceSample'>();
-const locationEnvironmentSheetResolver = locationResolver<'location.environmentSheet'>();
+const locationSheetResolver = locationResolver<'location.sheet'>();
 const locationHeroResolver = locationResolver<'location.hero'>();
 const lookbookImageResolver = lookbookResolver<'visualLanguage.lookbookImage'>();
 const lookbookSheetResolver = lookbookResolver<'visualLanguage.lookbookSheet'>();
@@ -55,7 +48,7 @@ const destinationResolvers = {
   'cast.characterSheet': castCharacterSheetResolver,
   'cast.profile': castProfileResolver,
   'cast.voiceSample': castVoiceSampleResolver,
-  'location.environmentSheet': locationEnvironmentSheetResolver,
+  'location.sheet': locationSheetResolver,
   'location.hero': locationHeroResolver,
   'visualLanguage.lookbookImage': lookbookImageResolver,
   'visualLanguage.lookbookSheet': lookbookSheetResolver,
@@ -65,13 +58,6 @@ const destinationResolvers = {
     resolveRoot: resolveSceneDialogueAudioDestinationRoot,
     resolveRootSync: resolveSceneDialogueAudioDestinationRootSync,
     resolveOutputNames: resolveSceneDialogueAudioDestinationOutputNames,
-  },
-  'image.editOutput': {
-    resolveFile: resolveImageEditDestinationFile,
-    resolveFileSync: resolveImageEditDestinationFileSync,
-    resolveRoot: resolveImageEditDestinationRoot,
-    resolveRootSync: resolveImageEditDestinationRootSync,
-    resolveOutputNames: resolveImageEditDestinationOutputNames,
   },
 } satisfies DestinationResolverRegistry;
 
@@ -140,7 +126,7 @@ function castResolver<K extends 'cast.characterSheet' | 'cast.profile' | 'cast.v
   } as unknown as DestinationResolver<K>;
 }
 
-function locationResolver<K extends 'location.environmentSheet' | 'location.hero'>(): DestinationResolver<K> {
+function locationResolver<K extends 'location.sheet' | 'location.hero'>(): DestinationResolver<K> {
   return {
     resolveFile: resolveLocationDestinationFile,
     resolveFileSync: resolveLocationDestinationFileSync,

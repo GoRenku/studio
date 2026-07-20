@@ -20,6 +20,7 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import { isPathInside } from '../files/project-paths.js';
+import { ProjectDataError } from '../project-data-error.js';
 import { readGenerationPurpose } from './purposes.js';
 import { readGenerationSpec, updateGenerationSpec } from './specs.js';
 
@@ -228,32 +229,28 @@ export async function resolveGenerationReference(input: {
   reference: GenerationReference;
 }): Promise<GenerationReferenceCatalogItem | null> {
   if (input.reference.kind === 'project-file') {
-    const projectRelativePath = normalizeProjectRelativePath(
-      input.reference.projectRelativePath
-    );
-    const mediaKind = mediaKindForPath(projectRelativePath);
-    if (!mediaKind) {
+    let projectFile;
+    try {
+      projectFile = await resolveGenerationReferenceProjectFile({
+        projectFolder: input.projectFolder,
+        projectRelativePath: input.reference.projectRelativePath,
+      });
+    } catch {
       return null;
     }
-    if (!(await projectFileIsAvailable(input.projectFolder, projectRelativePath))) {
-      return null;
-    }
-    const fileStats = await stat(
-      resolveProjectRelativePath(input.projectFolder, projectRelativePath)
-    );
     return {
       reference: input.reference,
-      label: path.posix.basename(projectRelativePath),
-      mediaKind,
-      mimeType: mimeTypeForPath(projectRelativePath),
-      sizeBytes: fileStats.size,
+      label: path.posix.basename(projectFile.projectRelativePath),
+      mediaKind: projectFile.mediaKind,
+      mimeType: projectFile.mimeType,
+      sizeBytes: projectFile.sizeBytes,
       width: null,
       height: null,
       durationSeconds: null,
       owner: null,
       role: 'project-file',
       provenance: { origin: 'project-file' },
-      projectRelativePath,
+      projectRelativePath: projectFile.projectRelativePath,
     };
   }
 
@@ -364,16 +361,73 @@ function mimeTypeForPath(projectRelativePath: ProjectRelativePath): string | nul
   }
 }
 
-async function projectFileIsAvailable(
-  projectFolder: string,
-  projectRelativePath: ProjectRelativePath
-): Promise<boolean> {
+export async function resolveGenerationReferenceProjectFile(input: {
+  projectFolder: string;
+  projectRelativePath: string;
+}): Promise<{
+  absolutePath: string;
+  projectRelativePath: ProjectRelativePath;
+  mediaKind: GenerationOutputMediaKind;
+  mimeType: string;
+  sizeBytes: number;
+}> {
+  const projectRelativePath = normalizeProjectRelativePath(
+    input.projectRelativePath
+  );
+  const mediaKind = mediaKindForPath(projectRelativePath);
+  const mimeType = mimeTypeForPath(projectRelativePath);
+  if (!mediaKind || !mimeType) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_REFERENCE_FILE_MEDIA_UNSUPPORTED',
+      'Generation reference files must use a supported image, audio, or video format.'
+    );
+  }
   try {
     const [realProjectFolder, realFilePath] = await Promise.all([
-      realpath(path.resolve(projectFolder)),
-      realpath(resolveProjectRelativePath(projectFolder, projectRelativePath)),
+      realpath(path.resolve(input.projectFolder)),
+      realpath(resolveProjectRelativePath(input.projectFolder, projectRelativePath)),
     ]);
-    return isPathInside(realProjectFolder, realFilePath);
+    if (!isPathInside(realProjectFolder, realFilePath)) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_REFERENCE_FILE_OUTSIDE_PROJECT',
+        'Generation reference files must resolve inside the project.'
+      );
+    }
+    const fileStats = await stat(realFilePath);
+    if (!fileStats.isFile()) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_REFERENCE_FILE_NOT_FOUND',
+        'Generation reference file was not found.'
+      );
+    }
+    return {
+      absolutePath: realFilePath,
+      projectRelativePath,
+      mediaKind,
+      mimeType,
+      sizeBytes: fileStats.size,
+    };
+  } catch (error) {
+    if (error instanceof ProjectDataError) {
+      throw error;
+    }
+    throw new ProjectDataError(
+      'CORE_GENERATION_REFERENCE_FILE_NOT_FOUND',
+      'Generation reference file was not found inside the project.'
+    );
+  }
+}
+
+async function projectFileIsAvailable(
+  projectFolder: string,
+  projectRelativePath: ProjectRelativePath,
+): Promise<boolean> {
+  try {
+    await resolveGenerationReferenceProjectFile({
+      projectFolder,
+      projectRelativePath,
+    });
+    return true;
   } catch {
     return false;
   }

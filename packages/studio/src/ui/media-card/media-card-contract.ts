@@ -5,7 +5,7 @@ export interface MediaCardProps {
   activation?: MediaCardActivation;
   selected?: boolean;
   selection?: MediaCardSelection;
-  editAction?: MediaCardEditAction;
+  inspectionAction?: MediaCardInspectionAction;
   deleteAction?: MediaCardDeleteAction;
   emptyState?: MediaCardEmptyState;
 }
@@ -130,9 +130,9 @@ export interface MediaCardSelection {
   onToggle: () => void | Promise<void>;
 }
 
-export interface MediaCardEditAction {
+export interface MediaCardInspectionAction {
   label: string;
-  onEdit: () => void;
+  onInspect: () => void;
 }
 
 export interface MediaCardDeleteAction {

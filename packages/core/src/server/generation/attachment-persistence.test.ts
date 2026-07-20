@@ -122,6 +122,11 @@ describe('generated media attachment persistence', () => {
         lookbookId,
         assetId: 'asset_lookbook',
       });
+      expect(lookbookAttachment.relationshipId).toBeUndefined();
+      expect(readAssetRelationship(session, {
+        target: { kind: 'project' },
+        assetId: lookbookAttachment.assetId,
+      })).toBeNull();
       expect(
         readAssetFileGenerationRecord(session, 'asset_file_lookbook')
       ).toMatchObject({

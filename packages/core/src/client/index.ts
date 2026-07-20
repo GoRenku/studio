@@ -71,7 +71,6 @@ export type * from './trash.js';
 export type * from './agent-media.js';
 export type * from './generation.js';
 export type * from './generation-preview-resource.js';
-export type * from './image-revision-workflow.js';
 export type * from './scene-dialogue-audio-workspace.js';
 export type * from './scene-beat-sheet.js';
 export * from './shot-authoring.js';

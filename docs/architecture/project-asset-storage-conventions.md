@@ -62,7 +62,7 @@ cast/<cast-handle>/character-sheets/
 cast/<cast-handle>/profiles/
 cast/<cast-handle>/voice-samples/
 
-locations/<location-handle>/environment-sheets/
+locations/<location-handle>/location-sheets/
 locations/<location-handle>/heroes/
 
 visual-language/lookbook/
@@ -95,14 +95,14 @@ cast/<cast-handle>/profiles/<asset-slug>.<ext>
 cast/<cast-handle>/voice-samples/<asset-slug>.<ext>
 ```
 
-Location Environment Sheets are flat files under `environment-sheets/`:
+Location Sheets are flat files under `location-sheets/`:
 
 ```text
-locations/<location-handle>/environment-sheets/<sheet-slug>.<ext>
-locations/<location-handle>/environment-sheets/<sheet-slug>-v01.<ext>
+locations/<location-handle>/location-sheets/<sheet-slug>.<ext>
+locations/<location-handle>/location-sheets/<sheet-slug>-v01.<ext>
 ```
 
-Renku Studio must not create one folder per Location Environment Sheet.
+Renku Studio must not create one folder per Location Sheet.
 
 Location Hero Images are flat files under `heroes/`:
 
@@ -253,7 +253,7 @@ Shot, or Take, and changing selection state. The project asset-file module owns
 the durable file destination and the `asset_file.project_relative_path` write.
 Its durable destination contract is owner-aware, for example
 `cast.characterSheet`, `cast.voiceSample`, `location.hero`,
-`visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or `image.editOutput`.
+`location.sheet`, `visualLanguage.lookbookSheet`, or `scene.dialogueAudio`.
 Scene Storyboard imports use a batch storage API so all Beats in one import
 share one iteration folder. The module must not accept
 arbitrary caller-provided destination folders.
@@ -295,8 +295,8 @@ This decision supersedes older current or plan text that recommends:
 
 - `generated/media/` as the normal staging directory for imported assets;
 - `screenplay/storyboards/` for durable storyboard images;
-- `locations/<handle>/environment-sheets/<sheet-slug>/` for Location
-  Environment Sheets;
+- nested folders beneath `locations/<handle>/location-sheets/` for Location
+  Sheets;
 - registering `research/` files as asset files.
 - using generic `reference.image` imports to model one-off generation reference
   inputs as durable project assets.

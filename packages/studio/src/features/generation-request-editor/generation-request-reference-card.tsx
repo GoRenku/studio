@@ -57,7 +57,9 @@ function referenceDisplayTitle(
 ): string | undefined {
   const label = reference.label.trim();
   if (!label || /^(image|video|audio)\s*\d+$/i.test(label) ||
-      label === reference.assetId || label === reference.assetFileId ||
+      (reference.identity.kind === 'asset-file' &&
+        (label === reference.identity.assetId ||
+          label === reference.identity.assetFileId)) ||
       label === reference.promptMention ||
       /^(asset|asset_file|file|reference)[-_][a-z0-9_-]+$/i.test(label) ||
       /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(label)) {

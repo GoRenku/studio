@@ -59,12 +59,11 @@ authored values remain authored. Purpose recommendations become authored when a
 user switches models and accepts the displayed recommended controls. Untouched
 provider defaults remain absent.
 
-Image Revision reuses the shared prompt, reference-display, and configuration
-composition but does not expose reference authoring. `Edit` projects exactly
-one fixed source image. `Regenerate` projects the exact references from the
-completed source run. Its draft owns prompt text and generation controls only,
-so the shared UI cannot turn current purpose-guide candidates into revision
-inputs.
+Generation Request inspection reuses the shared prompt, reference-display, and
+configuration composition in read-only mode. It projects only the exact
+references selected in the saved managed run snapshot or frozen external source
+spec. It exposes no candidates, authoring controls, model changes, estimate, or
+execution action.
 
 Core validates the selected model and configurable field names against the
 purpose context. When an exact reference has no valid provider assignment and

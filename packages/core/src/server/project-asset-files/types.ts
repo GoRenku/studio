@@ -15,7 +15,7 @@ export type ProjectAssetFileDestination =
       castVoiceId: string;
       referenceName: string;
     }
-  | { kind: 'location.environmentSheet'; locationId: string; titleHint?: string }
+  | { kind: 'location.sheet'; locationId: string; titleHint?: string }
   | { kind: 'location.hero'; locationId: string; heroName?: string }
   | { kind: 'visualLanguage.lookbookImage'; titleHint?: string }
   | { kind: 'visualLanguage.lookbookSheet'; titleHint?: string }
@@ -25,8 +25,7 @@ export type ProjectAssetFileDestination =
       dialogueId: string;
       sceneDialogueAudioId: string;
       dialogueAudioTakeId: string;
-    }
-  | { kind: 'image.editOutput'; sourceAssetId: string; sourceAssetFileId?: string };
+    };
 
 export type ProjectTemporaryFileDestination =
   | { kind: 'generation.media'; purpose: GenerationPurpose }

@@ -27,6 +27,6 @@ export function locationSheetSlot(input: {
     slotLabel: 'Location Sheet',
     subject: { kind: 'location', id: input.locationId },
     owner: { kind: 'location', id: input.locationId },
-    roles: ['location-sheet', 'environment-sheet'],
+    roles: ['location-sheet'],
   };
 }

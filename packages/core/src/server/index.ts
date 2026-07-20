@@ -64,8 +64,14 @@ export {
   applyGenerationGenericReferences,
   listGenerationReferences,
   resolveGenerationReference,
+  resolveGenerationReferenceProjectFile,
   type ListGenerationReferencesInput,
 } from './generation/references.js';
+export {
+  readAssetFileGenerationRequest,
+  readGenerationReferenceProjectFile,
+  type ReadAssetFileGenerationRequestInput,
+} from './asset-file-generation-request.js';
 export {
   listGenerationModels,
   listGenerationPurposes,
@@ -89,12 +95,6 @@ export {
 export { readGenerationRun, runGeneration } from './generation/runs.js';
 export type * from '../client/generation.js';
 export type * from '../client/generation-preview-resource.js';
-export {
-  estimateImageRevisionDraft,
-  previewImageRevisionDraft,
-  readImageRevisionContext,
-  runImageRevision,
-} from './image-revision-workflow/service.js';
 
 export { recordAssetFileGenerationProvenance } from './asset-file-generation/commands.js';
 export { readAssetFileGenerationProvenance } from './asset-file-generation/queries.js';

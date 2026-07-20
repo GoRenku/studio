@@ -516,7 +516,7 @@ The prompt builder should consider:
 - shot description;
 - Composition selections;
 - Camera Motion selections;
-- Location selections and environment-sheet views;
+- Location selections and Location Sheet views;
 - cast member context and character sheets;
 - active Lookbook;
 - visual-language reference sheets;

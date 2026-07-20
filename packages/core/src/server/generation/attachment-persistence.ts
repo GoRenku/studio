@@ -47,7 +47,7 @@ export interface PersistGeneratedMediaAttachmentInput {
 export interface PersistedGeneratedMediaAttachment {
   assetId: string;
   assetFileId: string;
-  relationshipId: string;
+  relationshipId?: string;
   ownerRecord?: {
     kind: 'lookbookImage' | 'lookbookSheet';
     id: string;
@@ -65,10 +65,10 @@ export function persistGeneratedMediaAttachment(
   }
   const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
-  const relationshipId = input.idGenerator.next(
-    assetRelationshipIdPrefix(input.destination.target)
-  );
   const membership = input.destination.lookbookMembership;
+  const relationshipId = membership
+    ? undefined
+    : input.idGenerator.next(assetRelationshipIdPrefix(input.destination.target));
   const ownerRecord = membership
     ? {
         kind: membership.kind === 'image' ? 'lookbookImage' as const : 'lookbookSheet' as const,
@@ -109,18 +109,20 @@ export function persistGeneratedMediaAttachment(
         mediaKind: input.asset.mediaKind,
         now: input.now,
       });
-      insertAssetRelationshipRecord(session, input.destination.target, {
-        relationshipId,
-        assetId,
-        localeId: null,
-        role: input.relationshipRole,
-        sortOrder: nextAssetRelationshipSortOrder(session, {
-          target: input.destination.target,
-          role: input.relationshipRole,
+      if (relationshipId) {
+        insertAssetRelationshipRecord(session, input.destination.target, {
+          relationshipId,
+          assetId,
           localeId: null,
-        }),
-        now: input.now,
-      });
+          role: input.relationshipRole,
+          sortOrder: nextAssetRelationshipSortOrder(session, {
+            target: input.destination.target,
+            role: input.relationshipRole,
+            localeId: null,
+          }),
+          now: input.now,
+        });
+      }
 
       if (membership && ownerRecord?.kind === 'lookbookImage') {
         insertLookbookImageRecord(session, {
@@ -163,7 +165,7 @@ export function persistGeneratedMediaAttachment(
   return {
     assetId,
     assetFileId,
-    relationshipId,
+    ...(relationshipId ? { relationshipId } : {}),
     ...(ownerRecord ? { ownerRecord } : {}),
   };
 }

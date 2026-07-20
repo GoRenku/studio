@@ -43,7 +43,7 @@ export function locationSheetAttachmentDestination(
   titleHint?: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'location.environmentSheet', locationId, titleHint },
+    file: { kind: 'location.sheet', locationId, titleHint },
     target: { kind: 'location', locationId },
     resourceKeys: [studioLocationSurfaceResourceKey(locationId)],
   };

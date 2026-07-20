@@ -174,7 +174,6 @@ describe('GenerationPreviewDialogHost', () => {
       selectTab('Config');
     });
 
-    expect(await screen.findByText('Generation')).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Model' })).toBeTruthy();
     expect(await screen.findAllByText('Image size')).toHaveLength(1);
     expect(screen.getByText('landscape_16_9')).toBeTruthy();
@@ -297,8 +296,7 @@ describe('GenerationPreviewDialogHost', () => {
       selectTab('Config');
     });
 
-    const configPanel = screen.getByText('Generation').closest('[role="tabpanel"]');
-    expect(configPanel?.textContent).not.toContain('Estimate:');
+    expect(screen.getByRole('tabpanel').textContent).not.toContain('Estimate:');
   });
 
   it('renders Core diagnostics as a banner without an Issues tab', async () => {
@@ -684,8 +682,11 @@ function previewFixture(input: {
           role: 'style',
           label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
           promptMention: '@Reference1',
-          assetId: 'asset_style',
-          assetFileId: 'asset_file_style',
+          identity: {
+            kind: 'asset-file',
+            assetId: 'asset_style',
+            assetFileId: 'asset_file_style',
+          },
           sourcePurpose: 'lookbook.storyboard-sheet',
           selected: true,
           browserUrl:
@@ -696,8 +697,11 @@ function previewFixture(input: {
           role: 'style',
           label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
           promptMention: '@Reference1',
-          assetId: 'asset_style',
-          assetFileId: 'asset_file_style',
+          identity: {
+            kind: 'asset-file',
+            assetId: 'asset_style',
+            assetFileId: 'asset_file_style',
+          },
           sourcePurpose: 'lookbook.storyboard-sheet',
           selected: false,
           browserUrl:

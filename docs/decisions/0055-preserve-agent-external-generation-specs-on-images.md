@@ -4,6 +4,9 @@ Date: 2026-07-17
 
 Status: accepted
 
+Notice: Decision [0058](0058-make-studio-image-editing-agent-owned.md)
+supersedes this decision's Image Revision and Studio-managed editing clauses.
+
 ## Context
 
 Codex can generate an image outside Renku Engines. The request previously lived

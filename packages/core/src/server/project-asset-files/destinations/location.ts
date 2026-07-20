@@ -13,7 +13,7 @@ import type {
   DestinationRootInput,
 } from './types.js';
 
-type LocationDestinationKind = 'location.environmentSheet' | 'location.hero';
+type LocationDestinationKind = 'location.sheet' | 'location.hero';
 
 export async function resolveLocationDestinationFile(
   input: DestinationFileInput<LocationDestinationKind>
@@ -46,8 +46,8 @@ export function resolveLocationDestinationRootSync(
 ): ProjectRelativePath {
   const location = requireLocation(input.session, input.destination.locationId);
   const folder =
-    input.destination.kind === 'location.environmentSheet'
-      ? 'environment-sheets'
+    input.destination.kind === 'location.sheet'
+      ? 'location-sheets'
       : 'heroes';
   return joinProjectRelativePath(LOCATIONS_ROOT, location.handle, folder);
 }
@@ -70,8 +70,8 @@ function locationFileName(
 ): { baseName: string; extension: string } {
   return {
     baseName:
-      input.destination.kind === 'location.environmentSheet'
-        ? input.destination.titleHint ?? 'environment-sheet'
+      input.destination.kind === 'location.sheet'
+        ? input.destination.titleHint ?? 'location-sheet'
         : input.destination.heroName ?? 'hero',
     extension: extensionForMediaSource(input.sourceProjectRelativePath),
   };

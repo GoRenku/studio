@@ -243,7 +243,7 @@ export const locationDesignSchema = {
         'atmosphere',
         'propsAndRecurringObjects',
         'continuity',
-        'environmentSheetGuidance',
+        'locationSheetGuidance',
         'generationGuidance',
       ],
       {
@@ -261,7 +261,7 @@ export const locationDesignSchema = {
           }),
         },
         continuity: stringArray,
-        environmentSheetGuidance: stringArray,
+        locationSheetGuidance: stringArray,
         generationGuidance: stringArray,
       }
     ),

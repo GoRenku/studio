@@ -44,12 +44,9 @@ export function generationPreviewReferenceSelected(
     placementKey(candidate.placement) === placementKey(slot.placement)
   );
   if (!change) {
-    return slot.current?.assetId === reference.assetId &&
-      slot.current.assetFileId === reference.assetFileId;
+    return referenceIdentityEqual(slot.current?.identity, reference.identity);
   }
-  return change.reference?.kind === 'asset-file' &&
-    change.reference.assetId === reference.assetId &&
-    change.reference.assetFileId === reference.assetFileId;
+  return generationReferenceIdentityEqual(change.reference, reference.identity);
 }
 
 export function changeGenerationPreviewReference(
@@ -63,15 +60,39 @@ export function changeGenerationPreviewReference(
   );
   slotSelections.push({
     placement: slot.placement,
-    reference: reference
-      ? {
-          kind: 'asset-file',
-          assetId: reference.assetId,
-          assetFileId: reference.assetFileId,
-        }
-      : null,
+    reference: reference ? previewReferenceIdentity(reference.identity) : null,
   });
   return { ...draft, slotSelections };
+}
+
+function previewReferenceIdentity(
+  identity: GenerationPreviewResourceReference['identity'],
+): GenerationReferenceSlotSelectionInput['reference'] {
+  if (identity.kind === 'project-file') {
+    throw new Error('Project-file references are saved-request display values, not picker candidates.');
+  }
+  return identity;
+}
+
+function referenceIdentityEqual(
+  left: GenerationPreviewResourceReference['identity'] | undefined,
+  right: GenerationPreviewResourceReference['identity'],
+): boolean {
+  if (!left || left.kind !== right.kind) return false;
+  return left.kind === 'project-file' ||
+    (right.kind === 'asset-file' && left.assetId === right.assetId &&
+      left.assetFileId === right.assetFileId);
+}
+
+function generationReferenceIdentityEqual(
+  left: GenerationReferenceSlotSelectionInput['reference'],
+  right: GenerationPreviewResourceReference['identity'],
+): boolean {
+  if (!left || left.kind !== right.kind) return false;
+  return left.kind === 'project-file'
+    ? right.kind === 'project-file'
+    : right.kind === 'asset-file' && left.assetId === right.assetId &&
+      left.assetFileId === right.assetFileId;
 }
 
 export function generationPreviewDraftIsDirty(

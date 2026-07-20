@@ -12,11 +12,11 @@ import {
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
 import { LocationPanel } from './location-panel';
-import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
+import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(
-    <ImageRevisionDialogProvider>{ui}</ImageRevisionDialogProvider>,
+    <GenerationRequestInspectorProvider>{ui}</GenerationRequestInspectorProvider>,
   );
 }
 
@@ -100,7 +100,7 @@ describe('LocationPanel', () => {
     expect(await screen.findByText('No location hero image yet')).toBeTruthy();
     expect(
       screen.queryByRole('button', {
-        name: /Gate environment sheet/i,
+        name: /Gate Location Sheet/i,
       })
     ).toBeNull();
   });
@@ -120,7 +120,7 @@ describe('LocationPanel', () => {
 
     expect(
       await screen.findByRole('img', {
-        name: /Gate environment sheet/i,
+        name: /Gate Location Sheet/i,
       })
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Show next image' })).toBeNull();
@@ -211,9 +211,9 @@ function locationSheetAsset({
 } = {}): StudioAssetResponse {
   return locationAsset({
     assetId,
-    type: 'location_environment_sheet',
-    role: 'environment_sheet',
-    title: 'Gate environment sheet',
+    type: 'location-sheet',
+    role: 'location-sheet',
+    title: 'Gate Location Sheet',
     oneLineSummary: 'Council chamber layout',
     fileRole: 'primary',
     selected: false,

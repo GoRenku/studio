@@ -17,7 +17,7 @@ import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
 import { createGenerationReferencesRoute } from './generation-references.js';
-import { createImageRevisionsRoute } from './image-revisions.js';
+import { createGenerationRequestsRoute } from './generation-requests.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
 import { createProjectInformationRoute } from './project-information.js';
@@ -159,7 +159,7 @@ export function createProjectsRoute(
       '/:projectName',
       createGenerationReferencesRoute({ projectData, requireToken })
     )
-    .route('/:projectName', createImageRevisionsRoute({ requireToken }))
+    .route('/:projectName', createGenerationRequestsRoute({ requireToken }))
     .route('/:projectName', createTrashRoute({ projectData, requireToken }))
     .route(
       '/:projectName',

@@ -112,7 +112,7 @@ export function createGenerationServiceWiring() {
     async updateGenerationPreviewResource(input: ProjectInput & {
       specId: string;
       prompt: { authoredText: string; negativeText?: string | null };
-      modelFamilyId: string;
+      modelFamilyId?: string;
       parameterValues: Record<string, JsonValue>;
       slotSelections: GenerationReferenceSlotSelectionInput[];
     }) {

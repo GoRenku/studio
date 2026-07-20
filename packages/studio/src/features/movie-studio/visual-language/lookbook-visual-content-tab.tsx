@@ -9,7 +9,7 @@ import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
-import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
+import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
 import {
   lookbookImageFileUrl,
   lookbookSheetFileUrl,
@@ -30,7 +30,7 @@ export function LookbookVisualContentTab({
 }: LookbookVisualContentTabProps) {
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const { openImageRevision } = useImageRevisionDialog();
+  const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
 
   const openPreview = (images: PreviewImage[]) => {
     if (!images.length) return;
@@ -82,22 +82,17 @@ export function LookbookVisualContentTab({
                     label: image.asset.title,
                     onActivate: () => openPreview(previewImagesForImage),
                   },
-                  editAction: {
-                    label: 'Edit image',
-                    onEdit: () => {
+                  inspectionAction: {
+                    label: 'View generation request',
+                    onInspect: () => {
                       const file = image.asset.files.find(
                         (candidate) => candidate.mediaKind === 'image'
                       );
                       if (!file) return;
-                      openImageRevision({
+                      openGenerationRequestInspector({
                         projectName,
-                        target: {
-                          kind: 'lookbookImage',
-                          lookbookId: resource.lookbook.id,
-                          imageId: image.id,
-                          assetId: image.asset.assetId,
-                          assetFileId: file.id,
-                        },
+                        assetId: image.asset.assetId,
+                        assetFileId: file.id,
                       });
                     },
                   },
@@ -148,22 +143,17 @@ export function LookbookVisualContentTab({
                     label: 'Lookbook sheet',
                     onActivate: () => openPreview(previewImagesForSheet),
                   },
-                  editAction: {
-                    label: 'Edit image',
-                    onEdit: () => {
+                  inspectionAction: {
+                    label: 'View generation request',
+                    onInspect: () => {
                       const file = sheet.asset.files.find(
                         (candidate) => candidate.mediaKind === 'image'
                       );
                       if (!file) return;
-                      openImageRevision({
+                      openGenerationRequestInspector({
                         projectName,
-                        target: {
-                          kind: 'lookbookSheet',
-                          lookbookId: resource.lookbook.id,
-                          sheetId: sheet.id,
-                          assetId: sheet.asset.assetId,
-                          assetFileId: file.id,
-                        },
+                        assetId: sheet.asset.assetId,
+                        assetFileId: file.id,
                       });
                     },
                   },

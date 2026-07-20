@@ -44,7 +44,7 @@ export function createGenerationPreviewRoute(
           projectName,
           specId,
           prompt: body.prompt,
-          modelFamilyId: body.modelFamilyId,
+          ...(body.modelFamilyId ? { modelFamilyId: body.modelFamilyId } : {}),
           parameterValues: body.parameterValues,
           slotSelections: body.slotSelections,
         });
@@ -63,7 +63,7 @@ export function createGenerationPreviewRoute(
 
 function readGenerationPreviewUpdateBody(value: unknown): {
   prompt: { authoredText: string; negativeText?: string | null };
-  modelFamilyId: string;
+  modelFamilyId?: string;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
 } {
@@ -94,8 +94,9 @@ function readGenerationPreviewUpdateBody(value: unknown): {
   if (!Array.isArray(body.slotSelections)) {
     throw requestError('Request body slotSelections must be an array.');
   }
-  if (typeof body.modelFamilyId !== 'string' || !body.modelFamilyId.trim()) {
-    throw requestError('Request body modelFamilyId must be a non-empty string.');
+  if (body.modelFamilyId !== undefined &&
+      (typeof body.modelFamilyId !== 'string' || !body.modelFamilyId.trim())) {
+    throw requestError('Request body modelFamilyId must be a non-empty string when provided.');
   }
   const parameterValues = readParameterValues(body.parameterValues);
   return {
@@ -105,7 +106,9 @@ function readGenerationPreviewUpdateBody(value: unknown): {
         ? { negativeText: prompt.negativeText as string | null }
         : {}),
     },
-    modelFamilyId: body.modelFamilyId,
+    ...(typeof body.modelFamilyId === 'string'
+      ? { modelFamilyId: body.modelFamilyId }
+      : {}),
     parameterValues,
     slotSelections: body.slotSelections.map((selection, index) =>
       readReferenceSelection(selection, index),

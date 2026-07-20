@@ -353,7 +353,7 @@ generic look.
 The action anatomy is consistent across all four:
 
 - selection is persistent at lower-right;
-- Edit follows selection at lower-right;
+- an optional inspection action follows selection at lower-right;
 - delete uses the shared top-right treatment;
 - whole-card activation is behind those sibling controls.
 

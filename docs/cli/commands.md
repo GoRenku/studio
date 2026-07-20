@@ -246,7 +246,7 @@ Behavior:
   none is open.
 - Summarizes screenplay, active Screenplay Analysis, Inspiration folders,
   authored Production and Storyboard Lookbooks, selected cast visuals, selected
-  location environment sheets, and selected-scene Beat readiness.
+  Location Sheets, and selected-scene Beat readiness.
 - Reports structured director diagnostics for missing screenplay state, missing
   Production or Storyboard Lookbooks, missing selected visual media, missing
   active Beat Sheets, and missing storyboard images.
@@ -471,7 +471,7 @@ Behavior:
 
 - Requires a current authoring project.
 - `context` returns the Location, scenes that use it, active Location Design
-  summary, selected environment-sheet media, asset role counts, Production
+  summary, selected Location Sheet media, asset role counts, Production
   Lookbook summary, and generation readiness for `location.sheet`.
 - `validate` checks a tagged `kind: "locationOperations"` document without
   writing.
@@ -525,7 +525,7 @@ Behavior:
 
 - Location Design is location-level production design: spatial thesis,
   architecture, set dressing, materials, atmosphere, props, continuity, and
-  environment-sheet guidance.
+  Location Sheet guidance in `locationSheetGuidance`.
 - `context` commands return the relevant screenplay hierarchy, the Production
   Lookbook summary, active design summary when present, selected media, and
   downstream readiness signals.

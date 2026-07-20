@@ -15,11 +15,11 @@ import {
   readProjectLookbooks,
 } from '@/services/studio-visual-language-api';
 import { LookbookPanel } from './lookbook-panel';
-import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
+import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(
-    <ImageRevisionDialogProvider>{ui}</ImageRevisionDialogProvider>,
+    <GenerationRequestInspectorProvider>{ui}</GenerationRequestInspectorProvider>,
   );
 }
 

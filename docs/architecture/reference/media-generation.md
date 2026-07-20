@@ -153,14 +153,15 @@ target parser, attachment route, or fallback for those contracts.
 
 `asset_file_generation` remains the Renku-run provenance record. An AssetFile
 may separately link to the agent-external GenerationSpec that produced it.
-Image Revision reads that saved spec and uses the current image as the source
-for a separate, Renku-managed `image.edit` request.
+Generation Request inspection reads the exact managed run snapshot or frozen
+external source spec recorded for that AssetFile.
 
 Generation Preview projects saved record context as
 `generationSpec?: { id, frozenAt }`. File-only previews omit it. Frozen saved
-previews are read-only. Image Revision projects original request context as
-`{ model?, values, referenceLabels }`, resolving labels only from active Asset
-titles and never exposing raw reference ids, paths, or filenames.
+previews are read-only. Generation Request inspection projects original request
+context as read-only Prompt, selected References, and static Config tabs by
+reusing the same resource. Image editing is an agent-owned new `image.edit`
+request with the exact source AssetFile locked in `source/source-image`.
 
 Decision history is recorded in
 `../../decisions/0047-use-context-first-provider-valid-generation.md` and

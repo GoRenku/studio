@@ -62,7 +62,7 @@ export async function projectGenerationPreviewResource(input: {
       model,
     }),
     references: projectGenerationPreviewReferences(input.preview),
-    configuration: projectGenerationPreviewConfiguration({
+    configuration: await projectGenerationPreviewConfiguration({
       preview: input.preview,
       authoring,
     }),

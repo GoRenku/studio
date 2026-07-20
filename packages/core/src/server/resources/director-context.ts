@@ -222,7 +222,7 @@ function readProductionDesignReadiness(
   const locations = listScreenplayLocationsFromSession(session);
   const missingEnvironmentSheetLocationIds: string[] = [];
   const missingActiveLocationDesignLocationIds: string[] = [];
-  let environmentSheetCount = 0;
+  let locationSheetCount = 0;
   let activeLocationDesignCount = 0;
 
   for (const location of locations) {
@@ -236,10 +236,10 @@ function readProductionDesignReadiness(
     }
     const assets = listAssetRelationshipPage(session, {
       target: { kind: 'location', locationId: location.id },
-      role: 'environment_sheet',
+      role: 'location-sheet',
       limit: MAX_RESOURCE_PAGE_LIMIT,
     }).items;
-    environmentSheetCount += assets.length;
+    locationSheetCount += assets.length;
     if (assets.length === 0) {
       missingEnvironmentSheetLocationIds.push(location.id);
     }
@@ -249,7 +249,7 @@ function readProductionDesignReadiness(
     locationCount: locations.length,
     activeLocationDesignCount,
     missingActiveLocationDesignLocationIds,
-    environmentSheetCount,
+    locationSheetCount,
     missingEnvironmentSheetLocationIds,
     everyLocationHasEnvironmentSheet:
       locations.length > 0 &&
@@ -431,9 +431,9 @@ function readinessDiagnostics(input: {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT006',
-        'One or more locations do not have environment-sheet media.',
+        'One or more locations do not have Location Sheet media.',
         ['productionDesign', 'missingEnvironmentSheetLocationIds'],
-        'Generate or select location environment sheets before relying on location visuals.'
+        'Generate or select Location Sheets before relying on location visuals.'
       )
     );
   }
@@ -522,7 +522,7 @@ function buildNextSteps(input: {
       id: 'design-production',
       title: 'Establish location visuals',
       specialistSkill: 'media-producer',
-      reason: 'Locations need available environment sheets before shots rely on location visuals.',
+      reason: 'Locations need available Location Sheets before shots rely on location visuals.',
       command: 'renku generation context --purpose location.sheet --target location:<location-id> --json',
     });
   }

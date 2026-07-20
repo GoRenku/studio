@@ -42,7 +42,7 @@ The coordinated cutover must preserve:
 - Generation Preview Prompt, References, and Config tabs;
 - incomplete editing, diagnostics, schema-derived controls, preview, estimate,
   exact approval, and run feedback;
-- Regenerate/Edit source context and Image Revision actions;
+- read-only source Generation Request inspection and agent-owned image editing;
 - Shot General, Lookbook, Cast, Location, and dialogue reference organization;
 - reference cards, alternate pickers, previews, audio/video playback, inclusion
   controls, per-Shot scope, and save status;

@@ -5,11 +5,10 @@ import type {
 } from '../../client/generation.js';
 import type {
   GenerationPreviewReferenceSlot,
-  GenerationPreviewResourceReference,
+  GenerationPreviewResourceDataReference,
 } from '../../client/generation-preview-resource.js';
-import { ProjectDataError } from '../project-data-error.js';
 
-type ProjectedReference = Omit<GenerationPreviewResourceReference, 'browserUrl'>;
+type ProjectedReference = GenerationPreviewResourceDataReference;
 type ProjectedSlot = Omit<
   GenerationPreviewReferenceSlot,
   'current' | 'eligibleCandidates'
@@ -73,15 +72,20 @@ function referenceSlotLocked(
 function projectCatalogItem(
   candidate: GenerationReferenceCatalogItem
 ): ProjectedReference {
-  if (candidate.reference.kind !== 'asset-file') {
-    throw unavailable(candidate.label);
-  }
   return {
     kind: candidate.mediaKind,
     role: candidate.role,
     label: candidate.label,
-    assetId: candidate.reference.assetId,
-    assetFileId: candidate.reference.assetFileId,
+    identity: candidate.reference.kind === 'asset-file'
+      ? {
+          kind: 'asset-file',
+          assetId: candidate.reference.assetId,
+          assetFileId: candidate.reference.assetFileId,
+        }
+      : {
+          kind: 'project-file',
+          projectRelativePath: candidate.projectRelativePath,
+        },
     sourcePurpose: candidate.provenance.origin,
     selected: false,
   };
@@ -90,21 +94,22 @@ function projectCatalogItem(
 function projectSavedReference(
   selection: GenerationPreview['references'][number]
 ): ProjectedReference {
-  if (selection.reference.kind !== 'asset-file') {
-    throw unavailable(
-      selection.placement.kind === 'slot'
-        ? `${selection.placement.sectionId}/${selection.placement.slotId}`
-        : 'additional reference'
-    );
-  }
   const resolved = selection.resolved;
   return {
     kind: resolved?.mediaKind ?? 'image',
     role: resolved?.role ?? 'unavailable',
     label: resolved?.label ?? 'Unavailable reference',
     ...(selection.promptMention ? { promptMention: selection.promptMention } : {}),
-    assetId: selection.reference.assetId,
-    assetFileId: selection.reference.assetFileId,
+    identity: selection.reference.kind === 'asset-file'
+      ? {
+          kind: 'asset-file',
+          assetId: selection.reference.assetId,
+          assetFileId: selection.reference.assetFileId,
+        }
+      : {
+          kind: 'project-file',
+          projectRelativePath: selection.reference.projectRelativePath,
+        },
     ...(resolved ? { sourcePurpose: resolved.provenance.origin } : {}),
     selected: true,
   };
@@ -119,11 +124,4 @@ function placementKey(
     placement.subject?.kind ?? '',
     placement.subject?.id ?? '',
   ].join('\0');
-}
-
-function unavailable(identity: string): ProjectDataError {
-  return new ProjectDataError(
-    'CORE_GENERATION_PREVIEW_REFERENCE_UNAVAILABLE',
-    `Generation preview reference is not an available exact asset file: ${identity}.`
-  );
 }

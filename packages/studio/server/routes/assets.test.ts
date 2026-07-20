@@ -204,7 +204,7 @@ describe('assets Hono route', () => {
     expect(body).not.toContain('/tmp/renku');
   });
 
-  it('lists, selects, unselects, deletes, and serves grouped location environment sheet files through ProjectDataService', async () => {
+  it('lists, selects, unselects, deletes, and serves grouped Location Sheet files through ProjectDataService', async () => {
     vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('location bytes'));
     const discardAsset = vi.fn(async () => ({
       valid: true as const,
@@ -226,16 +226,16 @@ describe('assets Hono route', () => {
       ...makeAsset('asset_location_reference'),
       relationshipId: 'location_asset_test0001',
       target: { kind: 'location' as const, locationId: 'location_gate' },
-      type: 'location_environment_sheet',
-      role: 'environment_sheet',
-      title: 'Gate environment sheet',
+      type: 'location-sheet',
+      role: 'location-sheet',
+      title: 'Gate Location Sheet',
       files: [
         {
           ...makeAsset('asset_location_reference').files[0]!,
           id: 'asset_file_location_primary',
           role: 'primary',
           projectRelativePath:
-            'locations/gate/environment-sheets/gate/sheet.png' as Asset['files'][number]['projectRelativePath'],
+            'locations/gate/location-sheets/gate/sheet.png' as Asset['files'][number]['projectRelativePath'],
         },
       ],
     };
@@ -289,7 +289,7 @@ describe('assets Hono route', () => {
               asset: locationAsset,
               file: locationAsset.files[0]!,
               absolutePath:
-                '/tmp/renku/constantinople/locations/gate/environment-sheets/gate/sheet.png',
+                '/tmp/renku/constantinople/locations/gate/location-sheets/gate/sheet.png',
             };
           },
         },
@@ -322,8 +322,8 @@ describe('assets Hono route', () => {
     await expect(listed.json()).resolves.toMatchObject({
       assets: [
         {
-          type: 'location_environment_sheet',
-          role: 'environment_sheet',
+          type: 'location-sheet',
+          role: 'location-sheet',
           target: { kind: 'location', locationId: 'location_gate' },
           files: [{ role: 'primary' }],
         },

@@ -270,7 +270,7 @@ provider credentials.
 Examples of Tier 3 coverage:
 
 - Core context-first generation lifecycle integration.
-- Core focused Preview, Image Revision, Dialogue Audio, and Shot workspace
+- Core focused Preview, Generation Request inspection, Dialogue Audio, and Shot workspace
   integration.
 - Studio in-process AI Production estimate matrix.
 - Studio take-state persistence through service/API paths.
@@ -527,7 +527,7 @@ Fast coverage should exist for:
 - fixed setting enforcement and untouched provider defaults;
 - generic spec, preview, validation, direct estimate, approval, and run behavior;
 - focused attachment ownership and provenance;
-- Preview, Image Revision, Dialogue Audio, and Scene Beat Sheet use cases;
+- Preview, Generation Request inspection, Dialogue Audio, and Scene Beat Sheet use cases;
 - structured diagnostics for invalid state;
 - persistence-free Shot authoring component behavior.
 

@@ -7,7 +7,7 @@ const GENERATION_PREVIEW_TITLES = {
   'lookbook.storyboard-sheet': 'Lookbook Sheet Generation Preview',
   'cast.character-sheet': 'Character Sheet Generation Preview',
   'cast.profile': 'Cast Profile Generation Preview',
-  'location.sheet': 'Location Environment Sheet Generation Preview',
+  'location.sheet': 'Location Sheet Generation Preview',
   'location.hero': 'Location Hero Generation Preview',
   'scene.storyboard-sheet': 'Scene Storyboard Sheet Generation Preview',
   'image.create': 'Image Create Generation Preview',

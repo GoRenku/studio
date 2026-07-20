@@ -20,7 +20,7 @@ import {
 } from './cast-member-assets';
 import { humanizeReferenceName } from './cast-reference-labels';
 import { CastVoiceSampleCard } from './cast-voice-sample-card';
-import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
+import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
 
 interface CastMemberAssetsTabProps {
   projectName: string;
@@ -46,7 +46,7 @@ export function CastMemberAssetsTab({
   onDeleteVoice,
 }: CastMemberAssetsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
-  const { openImageRevision } = useImageRevisionDialog();
+  const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
   const profileAssets = castImageAssetsForRole(assets, CAST_PROFILE_ROLE);
   const characterSheetAssets = castImageAssetsForRoles(
     assets,
@@ -88,19 +88,15 @@ export function CastMemberAssetsTab({
             assets={characterSheetAssets}
             emptyTitle='No character sheets yet.'
             onOpenImage={setPreviewImage}
-            onEditImage={(asset) => {
+            onInspectImage={(asset) => {
               const file = asset.files.find(
                 (candidate) => candidate.mediaKind === 'image'
               );
               if (!file) return;
-              openImageRevision({
+              openGenerationRequestInspector({
                 projectName,
-                target: {
-                  kind: 'castCharacterSheet',
-                  castMemberId,
-                  assetId: asset.assetId,
-                  assetFileId: file.id,
-                },
+                assetId: asset.assetId,
+                assetFileId: file.id,
               });
             }}
             onDeleteAsset={async (asset) => {
@@ -138,7 +134,7 @@ function CastAssetSection({
   emptyTitle,
   onOpenImage,
   onTogglePick,
-  onEditImage,
+  onInspectImage,
   onDeleteAsset,
 }: {
   title: string;
@@ -153,7 +149,7 @@ function CastAssetSection({
   emptyTitle: string;
   onOpenImage: (image: PreviewImage) => void;
   onTogglePick?: (asset: StudioAssetResponse) => Promise<void>;
-  onEditImage?: (asset: StudioAssetResponse) => void;
+  onInspectImage?: (asset: StudioAssetResponse) => void;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
 }) {
   const selectable = Boolean(onTogglePick);
@@ -212,10 +208,10 @@ function CastAssetSection({
                 onToggle: () => onTogglePick(asset),
               }
             : undefined,
-        editAction: onEditImage
+        inspectionAction: onInspectImage
           ? {
-              label: 'Edit image',
-              onEdit: () => onEditImage(asset),
+              label: 'View generation request',
+              onInspect: () => onInspectImage(asset),
             }
           : undefined,
         deleteAction: {

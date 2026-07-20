@@ -26,17 +26,25 @@ export async function buildGenerationPreviewResource(input: {
   };
 }
 
-function withBrowserUrl<T extends { assetId: string; assetFileId: string }>(
+function withBrowserUrl(
   projectName: string,
-  reference: T
-): T & { browserUrl: string } {
+  reference: GenerationPreviewResourceData['references']['additional'][number]
+): GenerationPreviewResource['references']['additional'][number] {
+  if (reference.identity.kind === 'asset-file') {
+    return {
+      ...reference,
+      browserUrl: studioAssetFileUrl({
+        projectName,
+        assetId: reference.identity.assetId,
+        assetFileId: reference.identity.assetFileId,
+      }),
+    };
+  }
+  const { projectRelativePath, ...identity } = reference.identity;
   return {
     ...reference,
-    browserUrl: studioAssetFileUrl({
-      projectName,
-      assetId: reference.assetId,
-      assetFileId: reference.assetFileId,
-    }),
+    identity,
+    browserUrl: `/studio-api/projects/${encodeURIComponent(projectName)}/generation-reference-file?path=${encodeURIComponent(projectRelativePath)}`,
   };
 }
 

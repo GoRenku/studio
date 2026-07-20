@@ -4,6 +4,9 @@ Date: 2026-06-28
 
 Status: superseded by Decision 0052
 
+Notice: Decision [0059](0059-use-location-sheet-as-the-only-current-contract.md)
+supersedes current Environment Sheet naming clauses in this decision.
+
 ## Context
 
 Shot Video Take references currently treat Character Sheets and Location Sheets

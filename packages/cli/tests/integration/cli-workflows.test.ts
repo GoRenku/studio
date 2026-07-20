@@ -1329,7 +1329,7 @@ describe('renku CLI', () => {
             prompt: 'A simulated full-image Location Sheet for the council chamber.',
           },
           references: [],
-          title: 'Council Chamber Environment Sheet',
+          title: 'Council Chamber Location Sheet',
         },
         null,
         2
@@ -1390,7 +1390,7 @@ describe('renku CLI', () => {
         '--source',
         locationRun.run.outputs[0]!.projectRelativePath,
         '--title',
-        'Council Chamber Environment Sheet',
+        'Council Chamber Location Sheet',
         '--summary',
         'Council chamber production reference showing table layout, torchlight, and wall texture.',
         '--json',
@@ -2329,7 +2329,7 @@ describe('renku CLI', () => {
     );
     expect(storyboardSheetImportExitCode).toBe(0);
     const storyboardSheetImport = JSON.parse(stdout.join('\n')) as {
-      asset: { assetId: string; files: Array<{ id: string }> };
+      asset: { assetId: string; assetFileId: string };
     };
 
     stdout = [];
@@ -2424,12 +2424,16 @@ describe('renku CLI', () => {
           values: { prompt: 'A still first frame for Urban studying the bronze.' },
           references: [
             {
-              placement: { kind: 'additional' },
+              placement: {
+                kind: 'slot',
+                sectionId: 'source',
+                slotId: 'source-image',
+              },
               providerField: 'image_urls',
               reference: {
                 kind: 'asset-file',
                 assetId: storyboardSheetImport.asset.assetId,
-                assetFileId: storyboardSheetImport.asset.files[0]!.id,
+                assetFileId: storyboardSheetImport.asset.assetFileId,
               },
             },
           ],

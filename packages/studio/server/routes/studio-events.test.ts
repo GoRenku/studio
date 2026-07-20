@@ -655,8 +655,11 @@ function coreGenerationPreviewResourceFixture() {
           kind: 'image' as const,
           role: 'style',
           label: 'Storyboard Lookbook Sheet',
-          assetId: 'asset_style',
-          assetFileId: 'asset_file_style',
+          identity: {
+            kind: 'asset-file' as const,
+            assetId: 'asset_style',
+            assetFileId: 'asset_file_style',
+          },
           selected: true,
         }],
       }],

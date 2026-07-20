@@ -71,7 +71,7 @@ The Cast Voice record, not the filename, supplies the provider voice identity,
 reference name, purpose, and structured `sampleSource` provenance.
 
 A **Location Sheet** is a full-image production reference board attached to a
-location with the `environment_sheet` role. It has one primary image file and a
+location with the `location-sheet` role. It has one primary image file and a
 persisted description. A Location can have many Location Sheets; future Shot
 workflows may reference specific sheet assets.
 
@@ -96,8 +96,8 @@ Durable asset-file persistence is centralized in
 `packages/core/src/server/project-asset-files/`. Runtime callers import public
 APIs from `packages/core/src/server/project-asset-files/index.ts`, pass a source
 project-relative path and an owner-aware destination such as a Cast Character
-Sheet, Cast Voice Sample, Location Environment Sheet, Location Hero, Lookbook
-Image, Lookbook Sheet, Scene Dialogue Audio take, or Image Edit output. The
+Sheet, Cast Voice Sample, Location Sheet, Location Hero, Lookbook Image,
+Lookbook Sheet, or Scene Dialogue Audio take. The
 destination and generation-output submodules are private
 implementation details that own path allocation by domain family and purpose
 family.
@@ -221,9 +221,9 @@ Folder responsibilities:
   files may have entered the project as custom local files, generated voice
   sample outputs, or existing ElevenLabs provider samples fetched during
   `renku cast voice attach`.
-- `locations/<handle>/environment-sheets/` contains imported or generated
+- `locations/<handle>/location-sheets/` contains imported or generated
   Location Sheets as flat image files. Do not create one subfolder per
-  environment sheet.
+  Location Sheet.
 - `locations/<handle>/heroes/` contains imported or generated Location Hero
   Images as flat files, such as `hero.png` and `hero-v01.png`. Do not create
   one subfolder per hero image.

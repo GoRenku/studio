@@ -90,7 +90,7 @@ Use this page as the map:
     removal of the legacy Take domain.
   - `project-asset-storage-conventions.md`
     for current filesystem placement rules that supersede older
-    `generated/media/`, nested Location Environment Sheet, and
+    `generated/media/`, nested Location Sheet, and
     `screenplay/storyboards/` guidance.
 
 ## Studio App, Server, Routes, And Coordination

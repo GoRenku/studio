@@ -324,7 +324,7 @@ export interface DirectorProductionDesignReadiness {
   locationCount: number;
   activeLocationDesignCount: number;
   missingActiveLocationDesignLocationIds: string[];
-  environmentSheetCount: number;
+  locationSheetCount: number;
   missingEnvironmentSheetLocationIds: string[];
   everyLocationHasEnvironmentSheet: boolean;
 }

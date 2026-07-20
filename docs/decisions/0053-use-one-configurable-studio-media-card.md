@@ -3,6 +3,9 @@
 Status: accepted
 Date: 2026-07-16
 
+Notice: Decision [0058](0058-make-studio-image-editing-agent-owned.md)
+supersedes this decision's Image Revision and Edit-action clauses.
+
 ## Context
 
 Studio visual media cards had grown into several independent implementations.

@@ -48,7 +48,7 @@ describe('generation preview authoring projection', () => {
     ]);
   });
 
-  it('presents saved external properties with readable labels and dimensions', () => {
+  it('presents saved external properties with readable labels and dimensions', async () => {
     const preview = previewFixture();
     preview.spec = {
       ...preview.spec,
@@ -62,7 +62,7 @@ describe('generation preview authoring projection', () => {
       },
     };
 
-    const configuration = projectGenerationPreviewConfiguration({
+    const configuration = await projectGenerationPreviewConfiguration({
       preview,
       authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     });
@@ -75,6 +75,84 @@ describe('generation preview authoring projection', () => {
       }),
       expect.objectContaining({ label: 'Output format', value: 'png' }),
     ]);
+  });
+
+  it('presents exact saved managed values with catalog labels and no defaults', async () => {
+    const preview = previewFixture();
+    preview.models = [];
+    preview.spec.model = { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' };
+    preview.spec.values = {
+      prompt: 'Keep the exact prompt.',
+      image_size: 'landscape_16_9',
+      quality: 'high',
+      seed: 42,
+    };
+    const authoring = await projectGenerationPreviewAuthoring({ preview });
+
+    expect(await projectGenerationPreviewConfiguration({ preview, authoring }))
+      .toEqual({
+        sections: [
+          {
+            key: 'model',
+            label: 'Model',
+            rows: [expect.objectContaining({
+              value: 'fal-ai/openai/gpt-image-2/edit',
+              valueLabel: 'GPT Image 2',
+              source: 'spec',
+            })],
+          },
+          {
+            key: 'inputs',
+            label: 'Saved values',
+            rows: [
+              expect.objectContaining({
+                label: 'Image size',
+                value: 'landscape_16_9',
+                valueLabel: 'Landscape · 16:9',
+              }),
+              expect.objectContaining({
+                label: 'Quality',
+                value: 'high',
+                valueLabel: 'High',
+              }),
+            ],
+          },
+        ],
+      });
+  });
+
+  it('presents exact saved managed values when the model is no longer available', async () => {
+    const preview = previewFixture();
+    preview.models = [];
+    preview.spec.model = { provider: 'retired-provider', model: 'retired-model' };
+    preview.spec.values = {
+      prompt: 'Keep the exact prompt.',
+      aspect_ratio: '4:3',
+      seed: 42,
+    };
+    const authoring = await projectGenerationPreviewAuthoring({ preview });
+
+    expect(await projectGenerationPreviewConfiguration({ preview, authoring }))
+      .toEqual({
+        sections: [
+          {
+            key: 'model',
+            label: 'Model',
+            rows: [expect.objectContaining({
+              value: 'retired-provider/retired-model',
+              source: 'spec',
+            })],
+          },
+          {
+            key: 'inputs',
+            label: 'Saved values',
+            rows: [
+              expect.objectContaining({ label: 'Aspect ratio', value: '4:3' }),
+              expect.objectContaining({ label: 'Seed', value: 42 }),
+            ],
+          },
+        ],
+      });
   });
 });
 

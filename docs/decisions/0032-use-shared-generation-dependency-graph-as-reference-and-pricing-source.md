@@ -4,6 +4,9 @@ Date: 2026-06-11
 
 Status: superseded
 
+Notice: Decision [0059](0059-use-location-sheet-as-the-only-current-contract.md)
+supersedes current Environment Sheet naming clauses in this decision.
+
 Superseded by: `plans/active/0063-generation-dependency-inventory-rewrite.md`
 
 Note: the current architecture uses a dependency inventory/checklist/estimate

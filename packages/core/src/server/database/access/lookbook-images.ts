@@ -98,6 +98,21 @@ export function readLookbookImageRecord(
   );
 }
 
+export function readLookbookImageRecordByAsset(
+  session: DatabaseSession,
+  input: { lookbookId: string; assetId: string },
+): LookbookImageRecord | null {
+  return session.db
+    .select()
+    .from(lookbookImages)
+    .where(and(
+      eq(lookbookImages.lookbookId, input.lookbookId),
+      eq(lookbookImages.assetId, input.assetId),
+      isNull(lookbookImages.discardedAt),
+    ))
+    .get() ?? null;
+}
+
 export function requireLookbookImageRecord(
   session: DatabaseSession,
   imageId: string

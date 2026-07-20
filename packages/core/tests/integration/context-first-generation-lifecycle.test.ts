@@ -4,11 +4,11 @@ import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   createProjectDataService,
-  previewImageRevisionDraft,
-  readImageRevisionContext,
+  readAssetFileGenerationRequest,
 } from '../../src/server/index.js';
 import { writeConfig } from '../../src/server/testing/project-data-fixtures.js';
 import { createIsolatedSampleMovieProjectFromTemplate } from '../../src/server/testing/movie-project-template-fixtures.js';
+import { normalizeProjectRelativePath } from '../../src/server/files/project-relative-paths.js';
 
 describe('context-first generation lifecycle', () => {
   let homeDir: string;
@@ -53,6 +53,16 @@ describe('context-first generation lifecycle', () => {
     });
     expect(created.spec.values).toMatchObject({ aspect_ratio: '1:1' });
     expect(created.spec.values).not.toHaveProperty('resolution');
+    await expect(projectData.updateGenerationPreviewResource({
+      homeDir,
+      projectName,
+      specId: created.id,
+      prompt: { authoredText: 'Updated managed prompt.' },
+      parameterValues: {},
+      slotSelections: [],
+    })).rejects.toMatchObject({
+      code: 'CORE_GENERATION_PREVIEW_MODEL_REQUIRED',
+    });
 
     const estimate = await projectData.estimateGeneration({
       homeDir,
@@ -89,6 +99,23 @@ describe('context-first generation lifecycle', () => {
     expect(attachment.provenance).toEqual({
       generationRunId: run.run.id,
     });
+    if (!('files' in attachment.asset)) {
+      throw new Error('Expected an attached Cast Profile Asset.');
+    }
+    const managedRequest = await readAssetFileGenerationRequest({
+      homeDir,
+      projectName,
+      assetId: attachment.asset.assetId,
+      assetFileId: attachment.asset.files[0]!.id,
+    });
+    expect(managedRequest).toMatchObject({
+      purpose: 'cast.profile',
+      finalPrompt: { authoredText: 'An exact opaque profile prompt.' },
+      model: { executionPath: 'renku-managed' },
+    });
+    expect(managedRequest.configuration.sections[0]?.rows[0])
+      .toMatchObject({ value: 'fal-ai/nano-banana-2' });
+    expect(managedRequest).not.toHaveProperty('providerPreview');
 
     const reusable = await projectData.listGenerationReferences({
       homeDir,
@@ -103,9 +130,11 @@ describe('context-first generation lifecycle', () => {
     ]));
   });
 
-  it('saves a Codex request on its image and shows that request in Image Revision', async () => {
+  it('saves a Codex request on its image and exposes the exact read-only request', async () => {
     const current = await projectData.readCurrentProject({ homeDir });
     if (!current) throw new Error('Expected current project.');
+    await fs.mkdir(path.join(current.projectFolder, 'research'), { recursive: true });
+    await fs.writeFile(path.join(current.projectFolder, 'research', 'helmet.jpg'), 'reference');
     const originalPrompt = 'Keep the exact authored Codex prompt.';
     const spec = {
       executionKind: 'agent-external' as const,
@@ -115,7 +144,13 @@ describe('context-first generation lifecycle', () => {
       values: {
         prompt: originalPrompt,
       },
-      references: [],
+      references: [{
+        placement: { kind: 'additional' as const },
+        reference: {
+          kind: 'project-file' as const,
+          projectRelativePath: normalizeProjectRelativePath('research/helmet.jpg'),
+        },
+      }],
       title: 'Codex character sheet',
     };
     const saved = await projectData.createGenerationSpec({
@@ -140,12 +175,21 @@ describe('context-first generation lifecycle', () => {
     expect(preview).not.toHaveProperty('providerPayload');
 
     const updatedPrompt = 'Use the prompt saved from the editable Preview.';
+    await expect(projectData.updateGenerationPreviewResource({
+      homeDir,
+      projectName,
+      specId: saved.id,
+      prompt: { authoredText: updatedPrompt },
+      parameterValues: { quality: 'high' },
+      slotSelections: [],
+    })).rejects.toMatchObject({
+      code: 'CORE_GENERATION_PREVIEW_EXTERNAL_PARAMETERS_UNSUPPORTED',
+    });
     const updatedPreview = await projectData.updateGenerationPreviewResource({
       homeDir,
       projectName,
       specId: saved.id,
       prompt: { authoredText: updatedPrompt },
-      modelFamilyId: 'gpt-image-2',
       parameterValues: {},
       slotSelections: [],
     });
@@ -211,72 +255,31 @@ describe('context-first generation lifecycle', () => {
       throw new Error('Expected an attached Asset.');
     }
 
-    const revision = await readImageRevisionContext({
+    const request = await readAssetFileGenerationRequest({
       homeDir,
       projectName,
-      target: {
-        kind: 'castCharacterSheet',
-        castMemberId: spec.target.id,
-        assetId: attachment.asset.assetId,
-        assetFileId: attachment.asset.files[0]!.id,
-      },
+      assetId: attachment.asset.assetId,
+      assetFileId: attachment.asset.files[0]!.id,
     });
-    expect(revision.regenerate).toMatchObject({
-      state: 'available',
-      draft: {
-        mode: 'regenerate',
-        authoredText: updatedPrompt,
-        modelFamilyId: expect.any(String),
+    expect(request).toMatchObject({
+      purpose: 'cast.character-sheet',
+      target: spec.target,
+      finalPrompt: { authoredText: updatedPrompt },
+      model: {
+        provider: 'codex',
+        modelId: 'gpt-image-2',
+        executionPath: 'agent-external',
       },
-      preview: {
-        purpose: 'cast.character-sheet',
-        target: spec.target,
-      },
-    });
-    expect(revision.edit).toMatchObject({
-      state: 'available',
-      draft: {
-        mode: 'edit',
-        modelFamilyId: expect.any(String),
-      },
-      preview: {
-        purpose: 'image.edit',
-        model: { executionPath: 'renku-managed' },
-        references: {
-          slots: [expect.objectContaining({
-            current: expect.objectContaining({
-              assetId: attachment.asset.assetId,
-              assetFileId: attachment.asset.files[0]!.id,
-              selected: true,
-            }),
-          })],
-        },
-      },
-    });
-    if (revision.edit.state !== 'available') {
-      throw new Error('Expected Image Revision Edit to be available.');
-    }
-    await expect(previewImageRevisionDraft({
-      homeDir,
-      projectName,
-      target: {
-        kind: 'castCharacterSheet',
-        castMemberId: spec.target.id,
-        assetId: attachment.asset.assetId,
-        assetFileId: attachment.asset.files[0]!.id,
-      },
-      draft: {
-        ...revision.edit.draft,
-        slotSelections: [{
-          placement: {
-            kind: 'slot',
-            sectionId: 'source',
-            slotId: 'source-image',
+      references: {
+        additional: [{
+          identity: {
+            kind: 'project-file',
+            projectRelativePath: 'research/helmet.jpg',
           },
-          reference: null,
+          selected: true,
         }],
       },
-    })).rejects.toMatchObject({ code: 'CORE_IMAGE_REVISION_SOURCE_REQUIRED' });
+    });
   });
 
   it('keeps an external attachment target-owned while exposing it in the generic catalog', async () => {

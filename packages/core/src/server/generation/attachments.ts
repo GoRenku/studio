@@ -1,5 +1,6 @@
 import type { Asset, GenerationPurpose, GenerationTarget } from '../../client/index.js';
 import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
+import { readAssetFileRecord } from '../database/access/asset-files.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -17,6 +18,7 @@ import {
   type GeneratedMediaAttachmentDestination,
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
+import { validateImageEditAttachment } from './image-edit-attachment.js';
 
 export interface AttachGenerationMediaInput {
   purpose: GenerationPurpose;
@@ -47,7 +49,10 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
   const attachment = attachmentDestination(input);
-  const provenance = validateGenerationProvenance(input);
+  const provenance = validateGenerationProvenance({
+    ...input,
+    destinationRelationshipRole: attachment.relationshipRole,
+  });
   validateLookbookKind(input);
   const persisted = persistGeneratedMediaAttachment({
     session: input.session,
@@ -72,10 +77,16 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       : {}),
   });
   const project = readProjectRecord(input.session);
-  const attached = readAssetRelationship(input.session, {
-    target: attachment.destination.target,
-    assetId: persisted.assetId,
-  });
+  const attached = attachment.destination.lookbookMembership
+    ? {
+        assetId: persisted.assetId,
+        assetFileId: persisted.assetFileId,
+        projectRelativePath: persistedProjectRelativePath(input.session, persisted),
+      }
+    : readAssetRelationship(input.session, {
+        target: attachment.destination.target,
+        assetId: persisted.assetId,
+      });
   if (!project || !attached) {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_FAILED', 'Generation media attachment was not persisted.');
   }
@@ -97,6 +108,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
 
 function validateGenerationProvenance(input: AttachGenerationMediaInput & {
   session: DatabaseSession;
+  destinationRelationshipRole: string;
 }):
   | { kind: 'renku-managed'; generationRunId: string }
   | { kind: 'agent-external'; generationSpecId: string }
@@ -109,16 +121,10 @@ function validateGenerationProvenance(input: AttachGenerationMediaInput & {
   }
   if (input.sourceSpecId) {
     const record = readGenerationSpecRecord(input.session, input.sourceSpecId);
-    if (
-      !record ||
-      record.spec.executionKind !== 'agent-external' ||
-      record.spec.purpose !== input.purpose ||
-      record.spec.target.kind !== input.target.kind ||
-      record.spec.target.id !== input.target.id
-    ) {
+    if (!record || record.spec.executionKind !== 'agent-external') {
       throw new ProjectDataError(
-        'CORE_GENERATION_ATTACHMENT_SOURCE_SPEC_INVALID',
-        'The source spec must be an agent-external request for the same purpose and target.',
+      'CORE_GENERATION_ATTACHMENT_SOURCE_SPEC_INVALID',
+        'The source spec must be an agent-external request for this attachment.',
       );
     }
     if (record.frozenAt === null) {
@@ -128,6 +134,7 @@ function validateGenerationProvenance(input: AttachGenerationMediaInput & {
         { suggestion: 'Freeze the final reviewed request immediately before external generation.' }
       );
     }
+    validateAttachmentRequestMatch(input, record.spec);
     return {
       kind: 'agent-external',
       generationSpecId: record.id,
@@ -141,13 +148,49 @@ function validateGenerationProvenance(input: AttachGenerationMediaInput & {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'Generation receipt does not identify a Renku generation run.');
   }
   const run = readGenerationRunRecord(input.session, generationRunId);
-  if (!run || run.specSnapshot.purpose !== input.purpose || run.specSnapshot.target.kind !== input.target.kind || run.specSnapshot.target.id !== input.target.id) {
+  if (!run) {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'Generation run purpose and target must match the focused attachment.');
   }
+  validateAttachmentRequestMatch(input, run.specSnapshot);
   if (!run.outputs.some((output) => output.projectRelativePath === input.sourceProjectRelativePath)) {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'The attached source must be an exact output of the supplied generation run.');
   }
   return { kind: 'renku-managed', generationRunId };
+}
+
+function validateAttachmentRequestMatch(
+  input: AttachGenerationMediaInput & {
+    session: DatabaseSession;
+    destinationRelationshipRole: string;
+  },
+  spec: import('../../client/generation.js').GenerationSpec,
+): void {
+  if (spec.purpose === input.purpose &&
+      spec.target.kind === input.target.kind &&
+      spec.target.id === input.target.id) {
+    return;
+  }
+  validateImageEditAttachment({
+    session: input.session,
+    spec,
+    destinationPurpose: input.purpose,
+    destinationTarget: input.target,
+    destinationRelationshipRole: input.destinationRelationshipRole,
+  });
+}
+
+function persistedProjectRelativePath(
+  session: DatabaseSession,
+  persisted: { assetId: string; assetFileId: string },
+): string {
+  const file = readAssetFileRecord(session, persisted);
+  if (!file) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_FAILED',
+      'Generation media AssetFile was not persisted.'
+    );
+  }
+  return file.projectRelativePath;
 }
 
 function attachmentDestination(input: AttachGenerationMediaInput): {

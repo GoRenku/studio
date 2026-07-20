@@ -132,3 +132,78 @@ No actionable P0, P1, or P2 visual differences remain.
 - Studio and Studio Skills diffs passed `git diff --check`.
 
 final result: passed
+
+---
+
+# Design QA — Read-Only Generation Request Inspector Regression Repair
+
+## Scope And Evidence
+
+- Source visual truth:
+  `plans/active/assets/0149-image-generation-review-design/prototype.html` and
+  the approved pre-regression Chrome capture
+  `/Users/keremk/.codex/visualizations/2026/07/18/019f76c1-a102-7b72-8e4d-e14ae19409de/location-preview-config-final-approved.png`.
+- Browser-rendered implementation:
+  `/Users/keremk/.codex/visualizations/2026/07/20/019f7e79-e80b-7d52-942e-06159db996d3/generation-request-dialog-audit/04-final-config.png`,
+  `05-final-references.png`, and `06-final-prompt.png`.
+- Desktop viewport: 1708×1251. Dialog: 1120×760.
+- State: dark theme, exact saved Cast Character Sheet request, all three tabs.
+- Full-view comparison evidence:
+  `/Users/keremk/.codex/visualizations/2026/07/20/019f7e79-e80b-7d52-942e-06159db996d3/generation-request-dialog-audit/07-config-approved-current-comparison.png`.
+- Focused Config comparison evidence:
+  `/Users/keremk/.codex/visualizations/2026/07/20/019f7e79-e80b-7d52-942e-06159db996d3/generation-request-dialog-audit/10-config-focus-comparison.png`.
+
+## Comparison History
+
+### Pass 1 — blocked
+
+- **P1 — four dialog regions were placed into three grid rows.** The 46px tab
+  bar consumed the flexible row, forcing Prompt, References, and Config toward
+  the footer. This clipped the request tabs, made Config appear absent, and
+  created the large false top margin in References.
+- **P1 — saved Config discarded the approved presentation.** The inspector
+  exposed provider ids and enum tokens in grouped data boxes instead of the
+  compact label/value rhythm and human-readable catalog labels.
+
+### Corrections
+
+- Declared the explicit 54px header, 46px tab row, flexible content row, and
+  footer row used by the approved dialog.
+- Restored the centered 538px Config grid with 150px labels, 360px composed
+  static value surfaces, and 18px row rhythm. It contains no inputs, selects,
+  switches, or other form controls.
+- Kept catalog and provider interpretation in Core. Known saved routes now
+  project `GPT Image 2`, `Landscape · 16:9`, and `High`; removed or unknown
+  routes still fall back to their exact saved identity and values.
+
+### Pass 2 — passed
+
+- Browser measurements confirm a 1120×760 dialog, 54px header, 46px tab row,
+  589px visible panel, and 69px footer. The active Config panel contains zero
+  interactive controls.
+- Prompt, References, and Config navigation passed. Prompt remains read-only;
+  References shows the selected image without a chooser or toggle; Config uses
+  static values; both close controls remain present.
+- Chrome reported no warning or error logs during the final flow.
+
+## Required Fidelity Surfaces
+
+- **Fonts and typography:** inherited Renku dialog typography matches the
+  approved capture; labels, values, tabs, and title retain the same sizes,
+  weights, casing, and line heights.
+- **Spacing and layout rhythm:** header, tabs, content, footer, 38px panel top
+  spacing, reference-card position, and Config row geometry match the approved
+  desktop design.
+- **Colors and visual tokens:** existing dialog-scoped neutral graphite tokens,
+  muted labels, gold selected tab, and bordered value surfaces are preserved.
+  Static values intentionally remain legible instead of inheriting disabled
+  control opacity.
+- **Image quality:** References uses the exact saved production image with the
+  existing MediaCard crop; no placeholder or reconstructed asset is present.
+- **Copy and content:** the title remains `Generation Request`; catalog-backed
+  user-facing labels replace machine identifiers while exact unknown saved
+  values remain available as the Core fallback.
+
+No actionable P0, P1, or P2 differences remain.
+
+final result: passed

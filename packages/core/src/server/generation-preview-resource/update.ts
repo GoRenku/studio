@@ -25,7 +25,7 @@ import { applyFixedGenerationSettings } from '../generation/purpose-settings.js'
 export async function updateGenerationPreviewResource(input: {
   specId: string;
   prompt: { authoredText: string; negativeText?: string | null };
-  modelFamilyId: string;
+  modelFamilyId?: string;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
   purpose: GenerationPurposeDescriptor;
@@ -40,6 +40,12 @@ export async function updateGenerationPreviewResource(input: {
     projectFolder: input.projectFolder,
   });
   if (record.spec.executionKind === 'agent-external') {
+    if (Object.keys(input.parameterValues).length > 0) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_PREVIEW_EXTERNAL_PARAMETERS_UNSUPPORTED',
+        'External generation Preview updates support prompt and reference changes only.'
+      );
+    }
     let spec: GenerationSpec = {
       ...structuredClone(record.spec),
       values: {
@@ -74,6 +80,12 @@ export async function updateGenerationPreviewResource(input: {
     });
   }
   let spec: GenerationSpec = structuredClone(record.spec);
+  if (!input.modelFamilyId) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_PREVIEW_MODEL_REQUIRED',
+      'Managed generation Preview updates require a model family.'
+    );
+  }
   for (const selection of input.slotSelections) {
     spec = applyGenerationReferenceSlotSelection(spec, selection);
     if (!selection.reference) {

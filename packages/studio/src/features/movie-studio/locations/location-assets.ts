@@ -3,8 +3,8 @@ import { imageAspectRatioFromDimensions } from '@/ui/image-aspect-ratio';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
 import { locationAssetFileUrl } from '@/services/studio-project-assets-api';
 
-export const LOCATION_SHEET_ROLES = ['environment_sheet', 'location-sheet'] as const;
-export const LOCATION_SHEET_TYPES = ['location_environment_sheet', 'location-sheet'] as const;
+export const LOCATION_SHEET_ROLES = ['location-sheet'] as const;
+export const LOCATION_SHEET_TYPES = ['location-sheet'] as const;
 export const LOCATION_HERO_ROLE = 'hero';
 export const LOCATION_HERO_TYPE = 'location_hero';
 
@@ -44,7 +44,7 @@ export function primaryImageFile(asset: StudioAssetResponse) {
   );
 }
 
-export function locationEnvironmentSheetCompositeUrl(
+export function locationSheetCompositeUrl(
   projectName: string,
   locationId: string,
   asset: StudioAssetResponse
@@ -55,7 +55,7 @@ export function locationEnvironmentSheetCompositeUrl(
     : null;
 }
 
-export function locationEnvironmentSheetAspectRatio(
+export function locationSheetAspectRatio(
   asset: StudioAssetResponse,
   fallbackAspectRatio: number
 ): number {
@@ -67,7 +67,7 @@ export function locationEnvironmentSheetAspectRatio(
   );
 }
 
-export function locationEnvironmentSheetPreviewImages(
+export function locationSheetPreviewImages(
   projectName: string,
   locationId: string,
   asset: StudioAssetResponse

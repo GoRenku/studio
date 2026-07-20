@@ -4,6 +4,9 @@ Date: 2026-05-29
 
 Status: accepted
 
+Notice: Decision [0059](0059-use-location-sheet-as-the-only-current-contract.md)
+supersedes current Environment Sheet naming clauses in this decision.
+
 ## Context
 
 Renku Studio uses compound visual assets in several workflows. A model may

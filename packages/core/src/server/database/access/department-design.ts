@@ -263,7 +263,7 @@ export function toLocationDesignSummary(input: {
     architecture: input.document.design.architecture,
     setDressing: input.document.design.setDressing,
     props: input.document.design.propsAndRecurringObjects.map((prop) => prop.name),
-    environmentSheetGuidance: input.document.design.environmentSheetGuidance,
+    locationSheetGuidance: input.document.design.locationSheetGuidance,
     generationGuidance: input.document.design.generationGuidance,
   };
 }

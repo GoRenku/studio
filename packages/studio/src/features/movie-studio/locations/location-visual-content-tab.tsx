@@ -6,13 +6,13 @@ import {
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
 import {
-  locationEnvironmentSheetAspectRatio,
+  locationSheetAspectRatio,
   locationSheetAssets,
-  locationEnvironmentSheetCompositeUrl,
-  locationEnvironmentSheetPreviewImages,
+  locationSheetCompositeUrl,
+  locationSheetPreviewImages,
   locationHeroAssets,
 } from './location-assets';
-import { useImageRevisionDialog } from '@/features/image-revision/use-image-revision-dialog';
+import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
 
 interface LocationVisualContentTabProps {
   projectName: string;
@@ -33,12 +33,12 @@ export function LocationVisualContentTab({
 }: LocationVisualContentTabProps) {
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const { openImageRevision } = useImageRevisionDialog();
+  const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
   const sheetAssets = locationSheetAssets(assets);
   const heroAssets = locationHeroAssets(assets);
 
   const openSheetPreview = (asset: StudioAssetResponse) => {
-    const images = locationEnvironmentSheetPreviewImages(
+    const images = locationSheetPreviewImages(
       projectName,
       locationId,
       asset
@@ -49,7 +49,7 @@ export function LocationVisualContentTab({
   };
 
   const items = sheetAssets.map((asset) => {
-    const imageUrl = locationEnvironmentSheetCompositeUrl(
+    const imageUrl = locationSheetCompositeUrl(
       projectName,
       locationId,
       asset
@@ -68,7 +68,7 @@ export function LocationVisualContentTab({
           : null,
         frame: {
           kind: 'ratio' as const,
-          aspectRatio: locationEnvironmentSheetAspectRatio(asset, 4 / 3),
+          aspectRatio: locationSheetAspectRatio(asset, 4 / 3),
           detectFromImage: true,
         },
         presentation: {
@@ -81,19 +81,15 @@ export function LocationVisualContentTab({
           label: asset.oneLineSummary ?? 'Location sheet',
           onActivate: () => openSheetPreview(asset),
         },
-        editAction: {
-          label: 'Edit image',
-          onEdit: () => {
+        inspectionAction: {
+          label: 'View generation request',
+          onInspect: () => {
             const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
             if (!file) return;
-            openImageRevision({
+            openGenerationRequestInspector({
               projectName,
-              target: {
-                kind: 'locationEnvironmentSheet',
-                locationId,
-                assetId: asset.assetId,
-                assetFileId: file.id,
-              },
+              assetId: asset.assetId,
+              assetFileId: file.id,
             });
           },
         },
@@ -119,7 +115,7 @@ export function LocationVisualContentTab({
   });
   const heroItems = heroAssets.map((asset) => {
     const selected = asset.assetId === displayHeroAssetId;
-    const imageUrl = locationEnvironmentSheetCompositeUrl(
+    const imageUrl = locationSheetCompositeUrl(
       projectName,
       locationId,
       asset
@@ -138,7 +134,7 @@ export function LocationVisualContentTab({
           : null,
         frame: {
           kind: 'ratio' as const,
-          aspectRatio: locationEnvironmentSheetAspectRatio(asset, 16 / 9),
+          aspectRatio: locationSheetAspectRatio(asset, 16 / 9),
           detectFromImage: true,
         },
         presentation: { kind: 'overlay' as const },

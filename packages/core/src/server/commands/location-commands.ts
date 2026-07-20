@@ -98,7 +98,7 @@ export async function readLocationContext(
       assets: [],
       assetRoleCounts: roleCounts(assets),
       generationReadiness: {
-        environmentSheet: true,
+        locationSheet: true,
         notes: ['Use media-producer for location.sheet generation.'],
       },
     };
@@ -413,7 +413,7 @@ function locationDeleteDependencyIssue(input: {
     'PROJECT_DATA217',
     `Location has dependent ${joinDependencyLabels(input.dependencyLabels)}.`,
     { path: input.path },
-    'Remove or reassign dependent Location assets, Location Designs, and environment sheets before deleting this location.'
+    'Remove or reassign dependent Location assets, Location Designs, and Location Sheets before deleting this location.'
   );
 }
 
@@ -428,10 +428,10 @@ function locationDeleteDependencyLabels(
       ? pluralizeDependency('Location Design', dependencies.designCount)
       : null,
     dependencies.activeDesignStateCount > 0 ? 'active Location Design state' : null,
-    dependencies.environmentSheetCount > 0
+    dependencies.locationSheetCount > 0
       ? pluralizeDependency(
-          'location environment sheet',
-          dependencies.environmentSheetCount
+          'Location Sheet',
+          dependencies.locationSheetCount
         )
       : null,
   ].filter(isString);

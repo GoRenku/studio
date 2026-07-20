@@ -4,6 +4,9 @@ Date: 2026-07-18
 
 Status: accepted
 
+Notice: Decision [0058](0058-make-studio-image-editing-agent-owned.md)
+supersedes this decision's Image Revision, Regenerate, and Edit workflow clauses.
+
 ## Context
 
 Renku Studio reviews the exact authored request before image generation. The

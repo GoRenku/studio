@@ -81,7 +81,7 @@ Use the focused documents below for current direction.
   files. Generation specs may still name a `research/` file as a one-off
   reference input when the file is not reusable project state.
 - Location Sheets are durable image assets attached to Locations with role
-  `environment_sheet`. Each sheet has one `primary` image file and a concise
+  `location-sheet`. Each sheet has one `primary` image file and a concise
   persisted description. A Location can have many Location Sheets. A Shot
   Video Take direction stores one selected Location Sheet asset id per
   referenced Location when that sheet is needed for generation.

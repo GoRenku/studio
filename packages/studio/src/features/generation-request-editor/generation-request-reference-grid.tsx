@@ -93,7 +93,7 @@ export function GenerationRequestReferenceGrid({
             <div className='grid grid-cols-[repeat(2,minmax(0,420px))] gap-5'>
               {preview.references.additional.map((reference) => (
                 <GenerationRequestReferenceCard
-                  key={`${reference.assetId}:${reference.assetFileId}`}
+                  key={referenceIdentityKey(reference)}
                   reference={reference}
                   selected
                 />
@@ -109,7 +109,7 @@ export function GenerationRequestReferenceGrid({
           title={openSlot.label}
           description={`Choose the exact ${openSlot.label} for this generation request.`}
           candidates={openSlot.eligibleCandidates.map((reference) => ({
-            id: `${reference.assetId}:${reference.assetFileId}`,
+            id: referenceIdentityKey(reference),
             title: reference.label,
             imageUrl: reference.kind === 'image' ? reference.browserUrl : null,
             imageAlt: reference.label,
@@ -117,7 +117,7 @@ export function GenerationRequestReferenceGrid({
           }))}
           onChoose={(candidateId) => {
             const reference = openSlot.eligibleCandidates.find((candidate) =>
-              `${candidate.assetId}:${candidate.assetFileId}` === candidateId
+              referenceIdentityKey(candidate) === candidateId
             ) ?? null;
             onReferenceChoose?.(openSlot, reference);
             setOpenSlot(null);
@@ -126,6 +126,14 @@ export function GenerationRequestReferenceGrid({
       ) : null}
     </>
   );
+}
+
+function referenceIdentityKey(
+  reference: GenerationPreviewResourceReference,
+): string {
+  return reference.identity.kind === 'asset-file'
+    ? `${reference.identity.assetId}:${reference.identity.assetFileId}`
+    : `project-file:${reference.browserUrl}`;
 }
 
 function slotKey(slot: GenerationPreviewReferenceSlot): string {

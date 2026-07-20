@@ -1,4 +1,4 @@
-import { Check, CircleDot, Pencil, Trash2 } from 'lucide-react';
+import { Check, CircleDot, FileSearch, Trash2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import {
@@ -8,30 +8,30 @@ import {
 } from '@/ui/tooltip';
 import type {
   MediaCardDeleteAction,
-  MediaCardEditAction,
+  MediaCardInspectionAction,
   MediaCardSelection,
 } from './media-card-contract';
 
 interface MediaCardActionsProps {
   selection?: MediaCardSelection;
-  editAction?: MediaCardEditAction;
+  inspectionAction?: MediaCardInspectionAction;
   deleteAction?: MediaCardDeleteAction;
 }
 
 export function MediaCardActions({
   selection,
-  editAction,
+  inspectionAction,
   deleteAction,
 }: MediaCardActionsProps) {
   return (
     <>
-      {selection || editAction ? (
+      {selection || inspectionAction ? (
         <div
           data-media-card-lower-actions=''
           className='pointer-events-auto absolute bottom-2 right-2 z-30 flex items-center gap-2'
         >
           {selection ? <MediaCardSelectionControl selection={selection} /> : null}
-          {editAction ? <MediaCardEditControl action={editAction} /> : null}
+          {inspectionAction ? <MediaCardInspectionControl action={inspectionAction} /> : null}
         </div>
       ) : null}
       {deleteAction ? (
@@ -87,7 +87,7 @@ function MediaCardSelectionControl({
   );
 }
 
-function MediaCardEditControl({ action }: { action: MediaCardEditAction }) {
+function MediaCardInspectionControl({ action }: { action: MediaCardInspectionAction }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -97,9 +97,9 @@ function MediaCardEditControl({ action }: { action: MediaCardEditAction }) {
           variant='secondary'
           className='h-8 w-8 rounded-full border border-white/20 bg-black/60 text-white shadow-sm backdrop-blur-sm hover:bg-black/75 hover:text-white'
           aria-label={action.label}
-          onClick={action.onEdit}
+          onClick={action.onInspect}
         >
-          <Pencil className='h-3.5 w-3.5' />
+          <FileSearch className='h-3.5 w-3.5' />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{action.label}</TooltipContent>

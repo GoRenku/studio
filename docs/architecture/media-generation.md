@@ -48,9 +48,11 @@ experiences:
 
 - `generation-preview-resource` projects and updates the saved or draft
   Preview experience;
-- `image-revision-workflow` owns Regenerate/Edit source ownership, immutable
-  revision references, generic `image.edit` execution, and destination
-  attachment;
+- `asset-file-generation-request` projects the exact saved request for one
+  AssetFile into the shared read-only inspector resource;
+- `generation/image-edit-attachment` owns the narrow rule that an accepted
+  agent-owned `image.edit` output may return to the current owner of its exact
+  locked source AssetFile;
 - `scene-dialogue-audio-workspace` owns dialogue setup, generic audio
   generation, takes, playback metadata, and recoverable deletion;
 - `scene-beat-sheet` owns Beat history, active selection, storyboard status,
@@ -156,18 +158,19 @@ focused modules in `packages/core/src/server/generation`:
 - `estimateGenerationCost` and `estimateGeneration`;
 - `runGeneration` and `readGenerationRun`.
 
-The Core server entrypoint also exports focused Preview, Image Revision,
-Dialogue Audio, Scene Beat Sheet, and storyboard attachment commands. CLI and
-HTTP callers remain thin projections of these Core-owned contracts.
+The Core server entrypoint also exports focused Preview, exact AssetFile
+Generation Request inspection, Dialogue Audio, Scene Beat Sheet, and storyboard
+attachment commands. CLI and HTTP callers remain thin projections of these
+Core-owned contracts.
 
-Image Revision deliberately narrows the generic authoring contract. `Edit`
-always uses exactly one fixed source-image reference: the AssetFile being
-edited. `Regenerate` preserves the exact references from the completed source
-run. An Image Revision draft can change prompt text and exposed generation
-controls, but it cannot add, remove, or replace references. Imported images
-without a completed source run have no original request to regenerate; Studio
-must explain that state instead of inventing provenance or a fallback prompt.
+Generation Request inspection reads the immutable managed run snapshot or exact
+frozen external source spec recorded for the displayed AssetFile. It reuses the
+Generation Preview resource to show the exact prompt, selected references, and
+saved configuration as read-only data. Project-file paths remain Core/server
+data and are projected to authenticated browser URLs.
 
-Image Revision projects original requests to model identity, unchanged authored
-values, and ordered meaningful Asset-title reference labels. It does not expose
-raw references, project paths, filenames, Asset ids, or AssetFile ids.
+Image editing is agent-owned through a new generic `image.edit` spec with the
+exact source AssetFile locked in `source/source-image`. Preview reviews the
+request; a managed receipt or frozen external source spec proves execution; and
+the accepted result is imported through the source owner's real focused
+destination. Studio inspection never edits, executes, or attaches output.

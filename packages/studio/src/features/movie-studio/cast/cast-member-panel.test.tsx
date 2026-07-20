@@ -14,11 +14,11 @@ import {
 } from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-screenplay-api';
 import { CastMemberPanel } from './cast-member-panel';
-import { ImageRevisionDialogProvider } from '@/features/image-revision/image-revision-dialog-provider';
+import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(
-    <ImageRevisionDialogProvider>{ui}</ImageRevisionDialogProvider>,
+    <GenerationRequestInspectorProvider>{ui}</GenerationRequestInspectorProvider>,
   );
 }
 

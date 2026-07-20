@@ -1,4 +1,7 @@
-import { readStudioImageModelRouteProfile } from '@gorenku/studio-engines';
+import {
+  readStudioImageModelFamily,
+  readStudioImageModelRouteProfile,
+} from '@gorenku/studio-engines';
 import type {
   GenerationModelDescriptor,
   GenerationPreview,
@@ -16,16 +19,19 @@ import {
 } from '../generation/image-model-authoring.js';
 import { projectStudioImageControls } from '../generation/image-configurable-values.js';
 
-export function projectGenerationPreviewConfiguration(input: {
+export async function projectGenerationPreviewConfiguration(input: {
   preview: GenerationPreview;
   authoring: GenerationPreviewAuthoring;
-}): GenerationPreviewConfiguration {
+}): Promise<GenerationPreviewConfiguration> {
   if (input.preview.spec.executionKind === 'agent-external') {
-    return externalConfiguration(input.preview);
+    return await savedConfiguration(input.preview);
   }
   const family = input.authoring.modelFamilies.find((candidate) =>
     candidate.familyId === input.authoring.selectedModelFamilyId
   );
+  if (!family && !input.authoring.selectedModelFamilyId) {
+    return await savedConfiguration(input.preview);
+  }
   return {
     sections: [
       {
@@ -112,22 +118,54 @@ function configurationRow(
   };
 }
 
-function externalConfiguration(
+async function savedConfiguration(
   preview: GenerationPreview,
-): GenerationPreviewConfiguration {
+): Promise<GenerationPreviewConfiguration> {
+  const routeIdentity = preview.spec.model?.provider && preview.spec.model.model
+    ? {
+        provider: preview.spec.model.provider,
+        model: preview.spec.model.model,
+      }
+    : null;
+  const [modelFamilyId, route] = await Promise.all([
+    readStudioImageModelFamilyId(preview.spec.model),
+    routeIdentity
+      ? readStudioImageModelRouteProfile(routeIdentity)
+      : Promise.resolve(null),
+  ]);
+  const family = modelFamilyId
+    ? await readStudioImageModelFamily(modelFamilyId)
+    : null;
   const modelIdentity = [preview.spec.model?.provider, preview.spec.model?.model]
     .filter(Boolean)
     .join('/');
-  const rows: GenerationPreviewConfigurationRow[] = Object.entries(
-    preview.spec.values,
-  ).flatMap(([key, value]) => key === 'prompt' ? [] : [{
-    key,
-    label: externalValueLabel(key),
-    value: displayValue(value),
-    providerField: key,
-    source: 'spec' as const,
-    emphasis: 'primary' as const,
-  }]);
+  const rows: GenerationPreviewConfigurationRow[] = route
+    ? route.userConfigurableParameters.flatMap((parameter) => {
+        const value = preview.spec.values[parameter.field];
+        if (value === undefined) {
+          return [];
+        }
+        const valueLabel = parameter.valueLabels?.[String(value)];
+        return [{
+          key: parameter.field,
+          label: parameter.label,
+          value: displayValue(value),
+          ...(valueLabel ? { valueLabel } : {}),
+          providerField: parameter.field,
+          source: 'spec' as const,
+          emphasis: 'primary' as const,
+        }];
+      })
+    : Object.entries(preview.spec.values).flatMap(([key, value]) =>
+        key === 'prompt' ? [] : [{
+          key,
+          label: externalValueLabel(key),
+          value: displayValue(value),
+          providerField: key,
+          source: 'spec' as const,
+          emphasis: 'primary' as const,
+        }]
+      );
   return {
     sections: [
       ...(modelIdentity ? [{
@@ -137,6 +175,7 @@ function externalConfiguration(
           key: 'model',
           label: 'Model',
           value: modelIdentity,
+          ...(family ? { valueLabel: family.label } : {}),
           source: 'spec' as const,
           emphasis: 'primary' as const,
         }],

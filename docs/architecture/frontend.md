@@ -98,7 +98,7 @@ The included surfaces are:
 - Production and Storyboard Lookbook evidence, hero, and asset cards;
 - Scene, Act, and Sequence storyboard cards;
 - Project Library cards;
-- Generation Preview and Image Revision reference cards;
+- Generation Preview and Generation Request inspector reference cards;
 - Reference Picker candidates;
 - Shot Design Composition and Motion options.
 
