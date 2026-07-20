@@ -1,7 +1,8 @@
 import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
+import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { GenerationRequestPromptEditor } from './generation-request-prompt-editor';
-import type { GenerationPromptReferenceMention } from './generation-request-prompt-mentions';
+import { PromptEditor } from './prompt-editor';
+import type { GenerationPromptReferenceMention } from './prompt-mentions';
 
 interface GenerationRequestPromptPanelProps {
   authoredText: string;
@@ -24,7 +25,7 @@ export function GenerationRequestPromptPanel({
   onNegativeTextChange,
   authoredPlaceholder,
 }: GenerationRequestPromptPanelProps) {
-  const mentions = selectedImageMentions(preview);
+  const mentions = useMemo(() => selectedImageMentions(preview), [preview]);
   return (
     <div className={cn(
       'mx-auto grid h-full min-h-0 w-full max-w-[790px] gap-4',
@@ -32,7 +33,7 @@ export function GenerationRequestPromptPanel({
         ? 'grid-rows-[minmax(0,1fr)]'
         : 'grid-rows-[minmax(0,3fr)_minmax(0,1fr)]',
     )}>
-      <GenerationRequestPromptEditor
+      <PromptEditor
         key={`authored-prompt:${editorRevision}`}
         value={authoredText}
         onValueChange={onAuthoredTextChange}
@@ -46,7 +47,7 @@ export function GenerationRequestPromptPanel({
           <h2 className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
             Negative Prompt
           </h2>
-          <GenerationRequestPromptEditor
+          <PromptEditor
             key={`negative-prompt:${editorRevision}`}
             value={negativeText}
             onValueChange={onNegativeTextChange}

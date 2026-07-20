@@ -39,9 +39,18 @@ Reusable frontend behavior belongs to the layer that owns its meaning.
 
 Domain-neutral design-system behavior belongs in `src/ui`. Examples include
 buttons, dialogs, tabs, tooltips, image preview dialogs, the shared
-`src/ui/media-card` module, and the token-themed `SyntaxTextEditor` wrapper for
-embedded Markdown or JSON editing. Feature code must consume that wrapper
-instead of importing `prism-react-editor` directly.
+`src/ui/media-card` module, and narrow local adapters around third-party
+interactive controls. The local `CodeMirrorEditor` owns only mechanical editor
+lifecycle, exact controlled-text synchronization, read-only state, and
+accessibility. It does not own Markdown, autocomplete, mentions, previews,
+images, or product styling.
+
+The Generation Request feature owns the sole `PromptEditor` composition and all
+prompt-specific presentation behavior. Its Markdown highlighting, selected
+reference completion, mention decoration, rich reference preview, and document
+theme stay in that feature and treat prompt content as an exact opaque string.
+Other features should not turn `CodeMirrorEditor` into a generic rich-editor
+framework or import CodeMirror directly to bypass the local-control boundary.
 
 Product-specific composition belongs in `src/features`. A Cast component can
 prepare Cast data, choose which asset role to show, and pass Cast-specific

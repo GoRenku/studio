@@ -142,6 +142,7 @@ export async function writeStudioE2eImageSource(input: {
   runtime: StudioE2eRuntime;
   project: StudioE2eMovieProject;
   relativePath: string;
+  contents?: Uint8Array;
 }): Promise<void> {
   const absolutePath = path.resolve(input.project.projectPath, input.relativePath);
   const relative = path.relative(input.project.projectPath, absolutePath);
@@ -149,7 +150,7 @@ export async function writeStudioE2eImageSource(input: {
     throw new Error(`E2E image source must be inside the project: ${input.relativePath}`);
   }
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-  await fs.writeFile(absolutePath, samplePng());
+  await fs.writeFile(absolutePath, input.contents ?? samplePng());
 }
 
 export async function cleanStudioE2eProject(input: {

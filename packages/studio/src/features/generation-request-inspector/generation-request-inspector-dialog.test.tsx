@@ -32,8 +32,16 @@ describe('Generation Request inspector', () => {
 
     expect(await screen.findByRole('dialog')).not.toBeNull();
     expect(screen.getByText('Generation Request')).not.toBeNull();
-    const prompt = await screen.findByDisplayValue('Keep this exact authored prompt.');
-    expect(prompt.hasAttribute('readonly')).toBe(true);
+    const prompt = await screen.findByRole('textbox', { name: 'Generation prompt' });
+    expect(prompt.getAttribute('aria-readonly')).toBe('true');
+    expect(prompt.textContent).toBe('Keep this exact authored prompt.');
+    prompt.focus();
+    fireEvent.keyDown(prompt, { key: 'x' });
+    fireEvent.paste(prompt, {
+      clipboardData: { getData: () => 'changed' },
+    });
+    expect(document.activeElement).toBe(prompt);
+    expect(prompt.textContent).toBe('Keep this exact authored prompt.');
 
     const referencesTab = screen.getByRole('tab', { name: 'References' });
     activateTab(referencesTab);
@@ -100,10 +108,10 @@ describe('Generation Request inspector', () => {
     fireEvent.click(openSecond);
 
     await act(async () => resolveSecond(previewFixture('Second exact prompt.')));
-    expect(await screen.findByDisplayValue('Second exact prompt.')).not.toBeNull();
+    const prompt = await screen.findByRole('textbox', { name: 'Generation prompt' });
+    await waitFor(() => expect(prompt.textContent).toBe('Second exact prompt.'));
     await act(async () => resolveFirst(previewFixture('Stale first prompt.')));
-    expect(screen.queryByDisplayValue('Stale first prompt.')).toBeNull();
-    expect(screen.getByDisplayValue('Second exact prompt.')).not.toBeNull();
+    expect(prompt.textContent).toBe('Second exact prompt.');
   });
 
   it('closes through Escape, outside click, and the header close control', async () => {

@@ -1,6 +1,10 @@
 import { test as base, expect, type Page } from '@playwright/test';
 import { ProjectLibraryPage } from '../pages/project-library-page';
 import {
+  createStudioE2eGenerationPromptProject,
+  type StudioE2eGenerationPromptProject,
+} from './studio-e2e-generation-preview';
+import {
   cleanStudioE2eProject,
   createBeatSheetMovieProject,
   createMinimalMovieProject,
@@ -16,6 +20,7 @@ import {
 interface StudioE2eFixtures {
   minimalMovieProject: StudioE2eProject;
   movieProject: StudioE2eMovieProject;
+  generationPromptProject: StudioE2eGenerationPromptProject;
   projectLibraryPage: ProjectLibraryPage;
 }
 
@@ -75,6 +80,16 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
     ) {
       await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
     }
+  },
+
+  generationPromptProject: async ({
+    studioE2eRuntime,
+    movieProject,
+  }, use) => {
+    await use(await createStudioE2eGenerationPromptProject({
+      runtime: studioE2eRuntime,
+      project: movieProject,
+    }));
   },
 
   projectLibraryPage: async ({ page }, use) => {
