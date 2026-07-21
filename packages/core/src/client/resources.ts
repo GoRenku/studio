@@ -95,6 +95,7 @@ export interface SequenceNavigationRow {
 export interface SceneNavigationRow {
   id: string;
   sequenceId: string;
+  productionNumber: string;
   title: string;
   setting?: Scene['setting'];
 }
@@ -217,6 +218,7 @@ export interface ActStoryboardBeat {
 export interface SceneNarrativeResource {
   act: ActNavigationRow;
   sequence: SequenceNavigationRow;
+  productionNumber: string;
   scene: Scene;
   blocks: Block[];
   castMemberLabels: Record<string, string>;

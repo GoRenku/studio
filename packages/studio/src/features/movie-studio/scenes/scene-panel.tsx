@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { formatSceneProductionNumber } from '@gorenku/studio-core/client';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
@@ -82,9 +83,13 @@ export function ScenePanel({
   });
 
   useEffect(() => {
-    onHeaderTitleChange?.(resource?.scene.title ?? null);
+    onHeaderTitleChange?.(
+      resource
+        ? `${formatSceneProductionNumber(resource.productionNumber)} - ${resource.scene.title}`
+        : null
+    );
     return () => onHeaderTitleChange?.(null);
-  }, [onHeaderTitleChange, resource?.scene.title]);
+  }, [onHeaderTitleChange, resource]);
 
   useEffect(() => {
     onHeaderActionChange?.(null);

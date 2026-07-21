@@ -45,6 +45,13 @@ Use the focused documents below for current direction.
   agent-authored narrative breakdown history as tagged JSON in
   `scene_beat_sheet`, with one active Beat Sheet per scene tracked in
   `scene_beat_sheet_state`.
+- Production Scene Numbers are stable human-facing references stored in the
+  separate `scene_production_number` registry. Scene ids remain the durable
+  identity used by screenplay JSON, relationships, URLs, and existing command
+  inputs. Registry rows remain after a Scene is removed, so omitted status is
+  derived from current Scene existence and reserved numbers are never reused.
+  The registry intentionally has no Scene foreign key; Core commands enforce
+  that every current Scene has exactly one canonical reservation.
 - A Beat is a non-camera narrative unit with exactly eight authored fields:
   `id`, `title`, `description`, `narrativeDevelopment`, `narrativePurpose`,
   `castMemberIds`, `locationIds`, and `screenplayBlockIndexes`. Beat order is

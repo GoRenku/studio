@@ -171,6 +171,7 @@ function actResource(): ActStoryboardResourceResponse {
             scene: {
               id: 'scene_hook',
               sequenceId: 'seq_offer',
+              productionNumber: '1',
               title: 'The Sound That Opens Stone',
             },
             beats: [
@@ -192,6 +193,7 @@ function actResource(): ActStoryboardResourceResponse {
             scene: {
               id: 'scene_offer',
               sequenceId: 'seq_offer',
+              productionNumber: '2',
               title: 'The Emperor Without Coin',
             },
             beats: [],

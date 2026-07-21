@@ -8,6 +8,7 @@ export * from './media-generation.js';
 export * from './project.js';
 export * from './project-locales.js';
 export * from './scene-locations.js';
+export * from './scene-production-numbers.js';
 export * from './scene-beat-sheets.js';
 export * from './display-assets.js';
 export * from './scene-dialogue-audio.js';

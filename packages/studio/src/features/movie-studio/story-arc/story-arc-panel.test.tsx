@@ -209,6 +209,7 @@ function storyArcResource(
               {
                 id: 'scene_hook',
                 sequenceId: 'seq_offer',
+                productionNumber: '1',
                 title: 'The Sound That Opens Stone',
                 setting: { locationIds: [] },
                 storyFunction: ['Urban reveals the cannon and offers it to Byzantium.'],
@@ -216,6 +217,7 @@ function storyArcResource(
               {
                 id: 'scene_offer',
                 sequenceId: 'seq_offer',
+                productionNumber: '2',
                 title: 'The Emperor Without Coin',
                 setting: { locationIds: [] },
                 storyFunction: ['The emperor cannot pay what Urban asks.'],
@@ -240,6 +242,7 @@ function storyArcResource(
               {
                 id: 'scene_midpoint',
                 sequenceId: 'seq_patron',
+                productionNumber: '3',
                 title: 'Bronze Remembers',
                 setting: { locationIds: [] },
                 storyFunction: ['The cannon finally holds together.'],

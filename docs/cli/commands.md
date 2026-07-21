@@ -964,6 +964,33 @@ Behavior:
 
 - Requires a current authoring project.
 
+## `renku screenplay scene-number`
+
+List current Production Scene Numbers or resolve a user-facing number to its
+durable Scene id.
+
+```bash
+renku screenplay scene-number list --json
+renku screenplay scene-number resolve --number 22A --json
+```
+
+Options:
+
+- `--number`: required for `scene-number resolve`. Leading zeroes and lowercase
+  suffixes are accepted and normalized, so `01` resolves canonical number `1`
+  and `22a` resolves `22A`.
+
+Behavior:
+
+- Requires a current authoring project.
+- List output follows current screenplay order and includes the canonical
+  production number, durable Scene id, and current title.
+- Resolution returns the same three references for one current Scene.
+- A reserved number whose Scene is currently omitted reports a structured
+  omitted-scene diagnostic instead of being reused.
+- Existing `screenplay scene` commands and all existing `--scene` options
+  continue to accept durable Scene ids.
+
 ## `renku info show`
 
 Show project information.

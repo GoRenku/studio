@@ -3,6 +3,15 @@
 Status: proposed
 Date: 2026-06-17
 
+Coordination notice (2026-07-21):
+`0153-stable-production-scene-numbers.md` now owns the Core production scene
+number contract. This plan must consume its registry, resolver, formatter, and
+omission semantics; draft/locked/manual scene-number modes and a second
+scene-number implementation are no longer part of this plan. Every later
+scene-number contract, command, test, and checklist item in this document is
+superseded by 0153; only this plan's shot/take use of the resolved durable scene
+id remains actionable.
+
 ## Summary
 
 This plan captures only the remaining work after the partial implementation of

@@ -15,7 +15,10 @@ export class SceneDetailPage {
 
   async expectNarrativeVisible(): Promise<void> {
     await expect(
-      this.page.getByRole('heading', { name: 'Ceremony Becomes Physics' })
+      this.page.getByRole('heading', { name: '01 - Ceremony Becomes Physics' })
+    ).toBeVisible();
+    await expect(
+      this.page.getByRole('button', { name: /01 - Ceremony Becomes Physics/ })
     ).toBeVisible();
     await expect(this.page.getByText('Urban stands near the cannon')).toBeVisible();
     await expect(this.page.getByText('Hold the gate.')).toBeVisible();

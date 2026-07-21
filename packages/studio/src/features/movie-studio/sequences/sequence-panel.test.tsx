@@ -72,6 +72,7 @@ function sequenceResource(): SequenceResourceResponse {
         {
           id: 'scene_hook',
           sequenceId: 'seq_offer',
+          productionNumber: '1',
           title: 'The Sound That Opens Stone',
           setting: {
             interiorExterior: 'INT',

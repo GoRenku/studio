@@ -177,16 +177,16 @@ That helps both film people and normal users.
 
 This is where the story becomes filmable.
 
-Example for Sequence 5:
+Example for a Sequence whose Scenes begin at production number 22:
 
 ```text
-Scene 5.1: The Weapon Is Too Heavy for War
-Scene 5.2: Edirne: The Foundry at Night
-Scene 5.3: Roads for a Monster
-Scene 5.4: The Cannon Begins to Move
-Scene 5.5: Villages Hear the Earth Shake
-Scene 5.6: The Long Road to Constantinople
-Scene 5.7: First Sight of the Walls
+22 - The Weapon Is Too Heavy for War
+23 - Edirne: The Foundry at Night
+24 - Roads for a Monster
+25 - The Cannon Begins to Move
+26 - Villages Hear the Earth Shake
+27 - The Long Road to Constantinople
+28 - First Sight of the Walls
 ```
 
 **Contains per scene:**
@@ -226,7 +226,7 @@ A beat is not just a moment. It is a **change**.
 Example:
 
 ```text
-Scene 5.4: The Cannon Begins to Move
+25 - The Cannon Begins to Move
 
 Beat 1: The cannon is revealed as impossibly large.
 Beat 2: Engineers and workers prepare the transport.

@@ -144,6 +144,7 @@ export function fakeProjectDataService(): NonNullable<
           {
             id: 'scene_opening',
             sequenceId: 'seq_opening',
+            productionNumber: '1',
             title: 'Opening Scene',
           },
         ],
@@ -155,6 +156,7 @@ export function fakeProjectDataService(): NonNullable<
         scene: {
           id: 'scene_opening',
           sequenceId: 'seq_opening',
+          productionNumber: '1',
           title: 'Opening Scene',
           setting: { locationIds: [] },
         },
@@ -217,6 +219,7 @@ export function fakeProjectDataService(): NonNullable<
                   {
                     id: 'scene_opening',
                     sequenceId: 'seq_opening',
+                    productionNumber: '1',
                     title: 'Opening Scene',
                     setting: { locationIds: [] },
                     storyFunction: ['Establish the siege preparations.'],
@@ -249,6 +252,7 @@ export function fakeProjectDataService(): NonNullable<
             {
               id: 'scene_opening',
               sequenceId: 'seq_opening',
+              productionNumber: '1',
               title: 'Opening Scene',
               setting: { locationIds: [] },
             },
@@ -272,6 +276,7 @@ export function fakeProjectDataService(): NonNullable<
           title: 'Opening',
           sceneCount: 1,
         },
+        productionNumber: '1',
         scene: {
           id: 'scene_opening',
           title: 'Opening Scene',
@@ -339,6 +344,7 @@ export function fakeProjectDataService(): NonNullable<
         scene: {
           id: 'scene_opening',
           sequenceId: 'seq_opening',
+          productionNumber: '1',
           title: 'Opening Scene',
           setting: { locationIds: [] },
         },

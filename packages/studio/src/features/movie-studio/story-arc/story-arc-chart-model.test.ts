@@ -60,6 +60,7 @@ function storyArcResource(): StoryArcResource {
               {
                 id: 'scene_hook',
                 sequenceId: 'seq_offer',
+                productionNumber: '1',
                 title: 'The Sound That Opens Stone',
                 setting: { locationIds: [] },
                 storyFunction: ['Urban reveals the cannon.'],

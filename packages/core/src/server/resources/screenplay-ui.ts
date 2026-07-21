@@ -367,6 +367,7 @@ export async function readSceneNarrativeResource(
     return {
       act,
       sequence: context.sequence,
+      productionNumber: context.scene.productionNumber,
       scene,
       blocks: scene.blocks,
       castMemberLabels: Object.fromEntries(

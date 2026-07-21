@@ -58,9 +58,44 @@ describe('ScenePanel', () => {
     expect(onSelect).not.toHaveBeenCalled();
     expect(readSceneBeatSheetResource).not.toHaveBeenCalled();
   });
+
+  it('reports the production-numbered scene title to the panel header', async () => {
+    const onHeaderTitleChange = vi.fn();
+    render(
+      <ScenePanel
+        projectName='constantinople'
+        sceneId='scene_hook'
+        onSelect={vi.fn()}
+        onHeaderTitleChange={onHeaderTitleChange}
+      />
+    );
+
+    await screen.findByText('Workers prepare the city walls.');
+    expect(onHeaderTitleChange).toHaveBeenCalledWith(
+      '01 - The Sound That Opens Stone'
+    );
+  });
+
+  it('displays an inserted production-number suffix without a Scene prefix', async () => {
+    vi.mocked(readSceneNarrativeResource).mockResolvedValue(sceneNarrative('22A'));
+    const onHeaderTitleChange = vi.fn();
+    render(
+      <ScenePanel
+        projectName='constantinople'
+        sceneId='scene_hook'
+        onSelect={vi.fn()}
+        onHeaderTitleChange={onHeaderTitleChange}
+      />
+    );
+
+    await screen.findByText('Workers prepare the city walls.');
+    expect(onHeaderTitleChange).toHaveBeenCalledWith(
+      '22A - The Sound That Opens Stone'
+    );
+  });
 });
 
-function sceneNarrative(): SceneNarrativeResourceResponse {
+function sceneNarrative(productionNumber = '1'): SceneNarrativeResourceResponse {
   return {
     act: { id: 'act_one', title: 'The Offer', sequenceCount: 1, sceneCount: 1 },
     sequence: {
@@ -71,6 +106,7 @@ function sceneNarrative(): SceneNarrativeResourceResponse {
       purpose: 'Open with the bargain.',
       sceneCount: 1,
     },
+    productionNumber,
     scene: {
       id: 'scene_hook',
       title: 'The Sound That Opens Stone',
@@ -106,7 +142,7 @@ function sceneNarrative(): SceneNarrativeResourceResponse {
 
 function sceneBeatSheet(): SceneBeatSheetResourceResponse {
   return {
-    scene: { id: 'scene_hook', sequenceId: 'seq_offer', title: 'The Sound That Opens Stone' },
+    scene: { id: 'scene_hook', sequenceId: 'seq_offer', productionNumber: '1', title: 'The Sound That Opens Stone' },
     sequence: { id: 'seq_offer', actId: 'act_one', number: 1, title: 'The Offer', sceneCount: 1 },
     act: { id: 'act_one', title: 'The Offer', sequenceCount: 1, sceneCount: 1 },
     projectAspectRatio: '16:9',

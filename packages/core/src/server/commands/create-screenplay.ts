@@ -27,6 +27,10 @@ import {
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import {
+  applyScreenplaySceneProductionNumbers,
+  planScreenplaySceneProductionNumbers,
+} from '../scene-production-numbers/synchronization.js';
 
 export async function createScreenplay(
   input: RenkuConfigPathOptions & {
@@ -70,6 +74,11 @@ export async function createScreenplay(
       idGenerator: input.idGenerator,
       mode: 'create',
     });
+    const sceneNumberAllocations = planScreenplaySceneProductionNumbers({
+      session,
+      before: null,
+      after: resolved.document,
+    });
     if (!input.dryRun) {
       const now = new Date().toISOString();
       const ids = createUniqueIdAllocator(
@@ -78,6 +87,10 @@ export async function createScreenplay(
       session.db.transaction((tx) => {
         const txSession = { ...session, db: tx };
         replaceScreenplayDocument(txSession, resolved.document);
+        applyScreenplaySceneProductionNumbers({
+          session: txSession,
+          allocations: sceneNumberAllocations,
+        });
         insertScreenplayRevisionRecord({
           session: txSession,
           id: ids('screenplay_revision'),

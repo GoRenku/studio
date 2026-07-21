@@ -109,6 +109,7 @@ Options
   --analysis           Screenplay Analysis id
   --revision           Screenplay revision id
   --scene              Scene id for scene-owned commands
+  --number             Production scene number for scene-number resolve
   --dialogue           Scene dialogue id
   --take               Scene Dialogue Audio take id
   --beat-sheet         Scene Beat Sheet id
@@ -254,6 +255,9 @@ function createCliFlags() {
       type: 'string',
     },
     scene: {
+      type: 'string',
+    },
+    number: {
       type: 'string',
     },
     dialogue: {
@@ -621,6 +625,7 @@ export async function runRenkuCli(
             analysis: cli.flags.analysis,
             revision: cli.flags.revision,
             scene: cli.flags.scene,
+            number: cli.flags.number,
             beatSheet: cli.flags.beatSheet,
             includeVisualReferences: cli.flags.includeVisualReferences,
             sequence: cli.flags.sequence,

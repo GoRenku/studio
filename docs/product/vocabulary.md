@@ -14,6 +14,7 @@ code, schema, CLI commands, UI copy, and prompts.
 | Episode | A movie-like production unit inside a series. |
 | Sequence | A meaningful group of scenes that forms a larger dramatic or production beat. |
 | Scene | A story unit inside a sequence. |
+| Production Scene Number | A stable continuous reference for a Scene, displayed as `01`, `22A`, and so on. It does not replace the Scene's durable id. |
 | Clip | The v1 production unit used for visual design, generation, takes, and review. |
 | Visual Language | The top-level creative direction system for generation. |
 | Generation Recipe | The editable generation setup users and agents work with. |

@@ -159,6 +159,7 @@ export type {
   ReadScreenplayCastMemberInput,
   ReadScreenplayLocationInput,
   ReadScreenplaySceneInput,
+  ResolveSceneProductionNumberInput,
   ReadScreenplaySequenceInput,
   RemoveCastVoiceProviderRegistrationInput,
   RemoveCastVoiceInput,

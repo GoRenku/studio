@@ -80,7 +80,9 @@ export class MovieStudioPage {
   async expectSequenceVisible(): Promise<void> {
     await expect(this.page.getByText('Ceremony Becomes Physics').first())
       .toBeVisible();
-    await expect(this.page.getByText('EXT / DAY')).toBeVisible();
+    await expect(
+      this.page.getByRole('button', { name: /01 - Ceremony Becomes Physics/ })
+    ).toBeVisible();
   }
 
   async gotoCastMember(project: StudioE2eMovieProject): Promise<void> {

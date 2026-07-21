@@ -59,6 +59,8 @@ import type {
   SceneDesignResource,
   ProductionDesignLocationContextReport,
   SceneNarrativeResource,
+  SceneProductionNumberListReport,
+  SceneProductionNumberResolveReport,
   ScreenplayAnalysisContextReport,
   ScreenplayAnalysisDocument,
   ScreenplayAnalysisListReport,
@@ -269,6 +271,8 @@ export interface ProjectDataService {
   readScreenplaySequence(input: ReadScreenplaySequenceInput): Promise<ScreenplaySequence>;
   listScreenplayScenesForSequence(input: ListScreenplayScenesForSequenceInput): Promise<ScreenplayScene[]>;
   readScreenplayScene(input: ReadScreenplaySceneInput): Promise<ScreenplayScene>;
+  listSceneProductionNumbers(input?: RenkuConfigPathOptions): Promise<SceneProductionNumberListReport>;
+  resolveSceneProductionNumber(input: ResolveSceneProductionNumberInput): Promise<SceneProductionNumberResolveReport>;
   validateScreenplayJson(input: ValidateScreenplayJsonInput): Promise<ScreenplayCommandReport>;
   createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayCommandReport>;
   applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayCommandReport>;
@@ -544,6 +548,10 @@ export interface ListScreenplayScenesForSequenceInput extends RenkuConfigPathOpt
 
 export interface ReadScreenplaySceneInput extends RenkuConfigPathOptions {
   sceneId: string;
+}
+
+export interface ResolveSceneProductionNumberInput extends RenkuConfigPathOptions {
+  productionNumber: string;
 }
 
 export interface ValidateScreenplayJsonInput extends RenkuConfigPathOptions {

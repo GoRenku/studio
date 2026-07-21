@@ -538,6 +538,7 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
         scene: {
           id: 'scene_test0001',
           sequenceId: 'sequence_test0001',
+          productionNumber: '1',
           title: 'Opening council',
         },
         sequence: {

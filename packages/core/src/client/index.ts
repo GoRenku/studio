@@ -274,6 +274,14 @@ export {
 export type {
   Block,
 } from './screenplay.js';
+export {
+  formatSceneProductionNumber,
+} from './scene-production-numbers.js';
+export type {
+  SceneProductionNumberListReport,
+  SceneProductionNumberReference,
+  SceneProductionNumberResolveReport,
+} from './scene-production-numbers.js';
 export type {
   ReadVisualLanguageCatalogEntryInput,
   ReadVisualLanguageCatalogInput,

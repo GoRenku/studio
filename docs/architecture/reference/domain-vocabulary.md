@@ -84,6 +84,10 @@ Related terms:
 - **Scene Beat Sheet** is a scene-owned narrative breakdown document. It is
   stored as validated project data with history and one active Beat Sheet per
   scene.
+- **Production Scene Number** is the stable human-facing reference for a Scene,
+  such as `01` or `22A`. It is separate from the durable Scene id, survives
+  moves, remains reserved when a Scene is omitted, and is not stored inside
+  creative screenplay documents.
 - **Beat** is one non-camera narrative unit inside a Scene Beat Sheet. Beats
   are ordered by their array position and contain exactly the accepted
   eight-field Beat shape.

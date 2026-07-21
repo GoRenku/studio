@@ -27,7 +27,7 @@ test('selects Scene Beat cards and keeps the Shots placeholder inert', async ({
   await page.goto(`${sceneRoute}?sceneTab=beats&beat=${movieProject.firstBeatId}`);
   await expect(page.getByText('Gate pressure', { exact: true }).first())
     .toBeVisible();
-  await page.getByText('Crew reaction', { exact: true }).first().click();
+  await page.getByRole('button', { name: 'Beat 2 - Crew reaction' }).click();
   await expect(page).toHaveURL(
     `${sceneRoute}?sceneTab=beats&beat=${movieProject.secondBeatId}`
   );

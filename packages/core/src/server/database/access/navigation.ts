@@ -4,6 +4,7 @@ import {
   acts,
   locations,
   sceneLocations,
+  sceneProductionNumbers,
   scenes,
   sequences,
 } from '../../schema/index.js';
@@ -15,6 +16,7 @@ import type {
   SceneNavigationRow,
   SequenceNavigationRow,
 } from '../../../client/index.js';
+import { normalizeSceneProductionNumber } from '../../../client/scene-production-numbers.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import {
@@ -173,11 +175,13 @@ export function listSceneNavigationPage(
           id: scenes.id,
           sequenceId: scenes.sequenceId,
           title: scenes.title,
+          productionNumber: sceneProductionNumbers.productionNumber,
           interiorExterior: scenes.interiorExterior,
           timeOfDay: scenes.timeOfDay,
           position: scenes.position,
         })
         .from(scenes)
+        .leftJoin(sceneProductionNumbers, eq(sceneProductionNumbers.sceneId, scenes.id))
         .where(and(eq(scenes.sequenceId, input.sequenceId), cursorCondition))
         .orderBy(asc(scenes.position), asc(scenes.id))
         .limit(limit)
@@ -188,6 +192,7 @@ export function listSceneNavigationPage(
       id: row.id,
       sequenceId: row.sequenceId,
       title: row.title,
+      productionNumber: requireProductionNumber(row.id, row.productionNumber),
       setting: {
         interiorExterior: nullable(row.interiorExterior),
         timeOfDay: nullable(row.timeOfDay),
@@ -245,7 +250,17 @@ export function readSceneNavigationContext(
       sequence: SequenceNavigationRow;
     }
   | null {
-  const scene = session.db.select().from(scenes).where(eq(scenes.id, sceneId)).get();
+  const scene = session.db
+    .select({
+      id: scenes.id,
+      sequenceId: scenes.sequenceId,
+      title: scenes.title,
+      productionNumber: sceneProductionNumbers.productionNumber,
+    })
+    .from(scenes)
+    .leftJoin(sceneProductionNumbers, eq(sceneProductionNumbers.sceneId, scenes.id))
+    .where(eq(scenes.id, sceneId))
+    .get();
   if (!scene) {
     return null;
   }
@@ -257,6 +272,7 @@ export function readSceneNavigationContext(
     scene: {
       id: scene.id,
       sequenceId: scene.sequenceId,
+      productionNumber: requireProductionNumber(scene.id, scene.productionNumber),
       title: scene.title,
     },
     sequence: sequence.sequence,
@@ -387,6 +403,31 @@ function countScenesForAct(session: DatabaseSession, actId: string): number {
       total + countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
     0
   );
+}
+
+function requireProductionNumber(
+  sceneId: string,
+  productionNumber: string | null
+): string {
+  if (!productionNumber) {
+    throw new ProjectDataError(
+      'PROJECT_DATA450',
+      `Current scene ${sceneId} has no production number reservation.`,
+      {
+        suggestion: 'Run project validation and repair production scene-number reservations through Core.',
+      }
+    );
+  }
+  if (normalizeSceneProductionNumber(productionNumber) !== productionNumber) {
+    throw new ProjectDataError(
+      'PROJECT_DATA450',
+      `Scene ${sceneId} has noncanonical production number ${productionNumber}.`,
+      {
+        suggestion: 'Run project validation and repair production scene-number reservations through Core.',
+      }
+    );
+  }
+  return productionNumber;
 }
 
 export function listSceneLocationIds(

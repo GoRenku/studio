@@ -35,6 +35,10 @@ import {
   readScreenplaySequence,
 } from '../resources/screenplay.js';
 import { readScreenplayStatus } from '../resources/screenplay-status.js';
+import {
+  listSceneProductionNumbers,
+  resolveSceneProductionNumber,
+} from '../scene-production-numbers/queries.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createScreenplayServiceWiring(): Pick<
@@ -45,6 +49,7 @@ export function createScreenplayServiceWiring(): Pick<
   | 'listScreenplayActs' | 'readScreenplayAct'
   | 'listScreenplaySequencesForAct' | 'readScreenplaySequence'
   | 'listScreenplayScenesForSequence' | 'readScreenplayScene'
+  | 'listSceneProductionNumbers' | 'resolveSceneProductionNumber'
   | 'validateScreenplayJson' | 'createScreenplay' | 'applyScreenplayOperations'
   | 'reviseScreenplayScene' | 'listScreenplayRevisions'
   | 'readScreenplayRevision' | 'restoreScreenplayRevision'
@@ -63,6 +68,7 @@ export function createScreenplayServiceWiring(): Pick<
     listScreenplayActs, readScreenplayAct,
     listScreenplaySequencesForAct, readScreenplaySequence,
     listScreenplayScenesForSequence, readScreenplayScene,
+    listSceneProductionNumbers, resolveSceneProductionNumber,
     validateScreenplayJson, createScreenplay, applyScreenplayOperations,
     reviseScreenplayScene, listScreenplayRevisions,
     readScreenplayRevision, restoreScreenplayRevision,

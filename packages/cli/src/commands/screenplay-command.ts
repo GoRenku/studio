@@ -15,6 +15,7 @@ import {
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
+import { runScreenplaySceneNumberCommand } from './screenplay-scene-number-command.js';
 
 export async function runScreenplayCommand(options: {
   input: string[];
@@ -27,6 +28,7 @@ export async function runScreenplayCommand(options: {
     scene?: string;
     beatSheet?: string;
     includeVisualReferences?: boolean;
+    number?: string;
     sequence?: string;
     dryRun?: boolean;
   };
@@ -36,6 +38,19 @@ export async function runScreenplayCommand(options: {
 }): Promise<number> {
   const [subcommand, nested, id] = options.input;
   const service = createProjectDataService();
+
+  if (subcommand === 'scene-number') {
+    writeJson(
+      options.io,
+      await runScreenplaySceneNumberCommand({
+        subcommand: nested,
+        productionNumber: options.flags.number,
+        homeDir: options.homeDir,
+        service,
+      })
+    );
+    return 0;
+  }
 
   if (subcommand === 'analyze') {
     if (nested === 'context') {
@@ -390,7 +405,7 @@ export async function runScreenplayCommand(options: {
         'CLI081',
         'Unknown screenplay command.',
         { path: ['screenplay', subcommand ?? ''] },
-        'Use status, show, validate, create, apply, analyze, beat-sheet, cast, location, act, sequence, or scene.'
+        'Use status, show, validate, create, apply, analyze, beat-sheet, scene-number, cast, location, act, sequence, or scene.'
       ),
     ],
     suggestion: 'Use a supported screenplay command.',

@@ -19,6 +19,7 @@ import type {
   SceneNavigationRow,
   SequenceNavigationRow,
 } from '@gorenku/studio-core/client';
+import { formatSceneProductionNumber } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import { cn } from '@/lib/utils';
 import {
@@ -667,7 +668,7 @@ function SequenceTree({
               key={scene.id}
               active={selection.type === 'scene' && selection.id === scene.id}
               icon={<FileText className='h-4 w-4' />}
-              label={scene.title}
+              label={`${formatSceneProductionNumber(scene.productionNumber)} - ${scene.title}`}
               detail='Scene'
               compact
               onClick={() => onSelect({ type: 'scene', id: scene.id })}
