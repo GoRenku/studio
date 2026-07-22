@@ -1,6 +1,6 @@
 ---
 name: renku-plan-review
-description: Review Renku Studio implementation plans for the balanced, architecture-correct response to current product needs. Use when the user asks to review, audit, critique, validate, or approve a plan in plans/active; asks whether a plan is overengineered, speculative, duplicative, underengineered, hacky, or incorrectly layered; or when renku-plan dispatches an independent reviewer subagent. Review plans rather than implementation diffs and work read-only unless the user explicitly asks to revise the plan.
+description: Review decision-complete Renku Studio implementation plans for the balanced, architecture-correct response to current product needs, and stop before review when a plan still contains questions requiring user decisions. Use when the user asks to review, audit, critique, validate, or approve a plan in plans/active; asks whether a plan is overengineered, speculative, duplicative, underengineered, hacky, or incorrectly layered; or when renku-plan dispatches an independent reviewer subagent. Review plans rather than implementation diffs and work read-only unless the user explicitly asks to revise the plan.
 ---
 
 # Renku Plan Review
@@ -13,10 +13,64 @@ Do not equate architectural correctness with more layers, and do not equate
 simplicity with fewer files. Judge concepts, ownership, duplication, state,
 change amplification, and evidence.
 
+## Hard Stop: Review Readiness Gate
+
+Do not review a plan while it contains any unresolved question that requires a
+user decision. Apply this gate before loading the plan template, review
+references, product or architecture documents, implementation code, tests,
+sample project data, or overlapping plans.
+
+After resolving the repository root and reading `AGENTS.md`, search the plan for
+readiness markers such as `Open Questions`, `Decision Gate`, `Decision
+required`, `Unresolved`, `TBD`, `needs user decision`, `must be answered`, and
+explicit alternatives awaiting a choice. Read enough surrounding plan text to
+classify every candidate. If the search does not find a blocker, read the entire
+plan and confirm that it contains no other unresolved user decision before
+starting the review workflow.
+
+Treat a question as unresolved when the plan:
+
+- asks the user to choose between product behavior, contract, naming, scope,
+  lifecycle, storage, migration, or implementation options;
+- presents a recommendation, default, or preferred answer that the user has not
+  explicitly accepted;
+- says a decision is non-blocking, can be deferred, or has an architecture-
+  consistent answer but still leaves the choice to the user; or
+- identifies an inconsistency, ambiguity, missing requirement, or decision gate
+  that only the user can settle.
+
+A reviewer must not answer, recommend an answer to, narrow, dismiss, convert
+into a finding, or review around an unresolved user question. Repository
+evidence that appears to favor one option does not authorize the reviewer to
+make the product decision. A recommendation written by the plan author and a
+checked item claiming that questions were resolved are not evidence of a user
+decision by themselves.
+
+Treat a question as resolved only when the plan records the user's accepted
+answer concretely or cites an accepted product document or decision that
+already settles it. Do not treat rhetorical questions, template prompts that
+the plan answers concretely, or questions quoted only as historical context as
+open decisions.
+
+When any unresolved user question exists, stop immediately and return only:
+
+```text
+REVIEW BLOCKED — user decisions required
+
+- <question or decision, with a tight plan line reference>
+
+Answer these questions and record the accepted decisions in the plan before requesting review again.
+```
+
+List the unresolved questions faithfully and concisely. Do not inspect the
+implementation, apply the review tests, produce findings or category counts,
+give `CHANGES REQUIRED`, give `APPROVED`, or revise the plan. This blocked state
+is a readiness result, not a review verdict.
+
 ## Review Workflow
 
-1. Resolve the repository root and plan path. Work read-only by default.
-2. Read `AGENTS.md`, `plans/PLAN_TEMPLATE.md`, and the entire plan.
+1. Pass the Review Readiness Gate. Work read-only by default.
+2. Read `plans/PLAN_TEMPLATE.md`.
 3. Read `references/review-memory.md` for lessons from prior user reviews.
 4. Read `references/product-fit-and-complexity.md` completely.
 5. Read `references/reuse-and-architecture.md` completely.
