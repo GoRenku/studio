@@ -1,13 +1,14 @@
 ---
 name: renku-plan
-description: Create, revise, and finalize Renku Studio implementation plans in plans/active using the repository plan template, current product documentation, architecture boundaries, implementation evidence, and an independent subagent review loop. Use when the user asks to plan a Studio product or engineering change, write a formal implementation plan, turn an investigation into an active plan, repair a plan that does not follow the current format, or prepare a plan for implementation. Do not use for a lightweight conversational task list or for implementing an already accepted plan.
+description: Create, revise, and finalize Renku Studio implementation plans in plans/active using the repository plan template, current product documentation, architecture boundaries, and implementation evidence. Use when the user asks to plan a Studio product or engineering change, write a formal implementation plan, turn an investigation into an active plan, repair a plan that does not follow the current format, or prepare a plan for implementation. Do not use for a lightweight conversational task list or for implementing an already accepted plan.
 ---
 
 # Renku Plan
 
-Create an evidence-based active implementation plan, then run an independent
-review loop until the plan has no actionable findings. Optimize for the smallest
-architecture-correct response to the current product need.
+Create an evidence-based active implementation plan. Optimize for the smallest
+architecture-correct response to the current product need. Plan review is a
+separate, user-controlled action and is never part of this skill's automatic
+workflow.
 
 Do not implement production code while using this skill unless the user
 separately asks for implementation after accepting the plan.
@@ -170,38 +171,17 @@ add only a concise notice near the top of the affected older ADR linking to the
 new decision and stating whether it supersedes or narrows it. Do not rewrite the
 older ADR's original reasoning as if the new decision had always applied.
 
-### 5. Run The Independent Review Loop
+### 5. Leave Review Under User Control
 
-After the complete draft exists on disk, create a dedicated subagent. Give it
-only the repository root, plan path, and this task:
+Do not create a reviewer subagent, invoke `renku-plan-review`, or start a review
+loop while creating or revising a plan. The plan author may perform one bounded
+consistency and simplification pass against the user's requirements, repository
+evidence, template, and working-tree diff, but must stop after completing that
+pass.
 
-```text
-Use $renku-plan-review at
-<repo>/.agents/skills/renku-plan-review/SKILL.md to review <plan-path>.
-Work read-only. Inspect the repository evidence and canonical documentation.
-Return actionable findings or the skill's exact approval verdict.
-```
-
-Do not prime the reviewer with the author's conclusions or suspected weak
-spots. Do not substitute self-review for this step.
-
-For every review response:
-
-1. verify each finding against the source files;
-2. revise the plan for valid findings;
-3. when a finding is unsupported, answer the reviewer with concrete source
-   evidence and ask it to reconsider;
-4. ask the same reviewer to reopen the revised plan from disk and review it
-   again from the full source context;
-5. continue until it returns `APPROVED — no actionable findings`.
-
-Do not weaken a requirement merely to obtain approval. If the loop exposes a
-genuine product decision or an irreconcilable conflict in accepted documents,
-pause, ask the user, then resume the review after the decision.
-
-If subagents are unavailable, report that the required independent review is
-blocked. Leave the plan proposed and do not claim that this skill's workflow is
-complete.
+Run `renku-plan-review` only when the user explicitly asks for a review. Do not
+automatically apply review feedback or request repeated review passes. The user
+decides which findings to accept and when another review should run.
 
 ### 6. Complete The Planning Task
 
@@ -225,4 +205,4 @@ Before reporting completion:
 - confirm the plan follows `plans/PLAN_TEMPLATE.md` and contains the complete
   checklist;
 - inspect `git diff --stat` and the plan diff without touching unrelated files;
-- include the reviewer's final approval verdict in the handoff.
+- state in the handoff that no automatic plan review was run.

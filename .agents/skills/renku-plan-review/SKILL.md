@@ -1,6 +1,6 @@
 ---
 name: renku-plan-review
-description: Review decision-complete Renku Studio implementation plans for the balanced, architecture-correct response to current product needs, and stop before review when a plan still contains questions requiring user decisions. Use when the user asks to review, audit, critique, validate, or approve a plan in plans/active; asks whether a plan is overengineered, speculative, duplicative, underengineered, hacky, or incorrectly layered; or when renku-plan dispatches an independent reviewer subagent. Review plans rather than implementation diffs and work read-only unless the user explicitly asks to revise the plan.
+description: Review decision-complete Renku Studio implementation plans for the balanced, architecture-correct response to current product needs, and stop before review when a plan still contains questions requiring user decisions. Use only when the user explicitly asks to review, audit, critique, validate, or approve a plan in plans/active, including asking whether a plan is overengineered, speculative, duplicative, underengineered, hacky, or incorrectly layered. Review plans rather than implementation diffs and work read-only unless the user explicitly asks to revise the plan.
 ---
 
 # Renku Plan Review
@@ -12,6 +12,10 @@ change that fully serves the known product need.
 Do not equate architectural correctness with more layers, and do not equate
 simplicity with fewer files. Judge concepts, ownership, duplication, state,
 change amplification, and evidence.
+
+This skill is user-invoked. `renku-plan` must not dispatch it automatically,
+and a completed review must not start another review pass unless the user
+explicitly asks.
 
 ## Hard Stop: Review Readiness Gate
 
