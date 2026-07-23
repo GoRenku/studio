@@ -19,6 +19,7 @@ import {
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { validateImageEditAttachment } from './image-edit-attachment.js';
+import { attachShotPlanVideo } from '../shot-plans/video-attachment.js';
 
 export interface AttachGenerationMediaInput {
   purpose: GenerationPurpose;
@@ -48,6 +49,18 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   projectFolder: string;
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
+  if (input.purpose === 'shot-plan.video') {
+    assertTarget(input, 'shotPlan');
+    const provenance = validateGenerationProvenance({
+      ...input,
+      destinationRelationshipRole: 'shot-plan-video',
+    });
+    return attachShotPlanVideo({
+      ...input,
+      target: input.target,
+      provenance,
+    });
+  }
   const attachment = attachmentDestination(input);
   const provenance = validateGenerationProvenance({
     ...input,
@@ -106,13 +119,20 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   };
 }
 
-function validateGenerationProvenance(input: AttachGenerationMediaInput & {
+export type ValidatedGenerationProvenance =
+  | {
+      kind: 'renku-managed';
+      generationRunId: string;
+      generationSpecId: string;
+      outputArtifactId: string;
+    }
+  | { kind: 'agent-external'; generationSpecId: string }
+  | null;
+
+export function validateGenerationProvenance(input: AttachGenerationMediaInput & {
   session: DatabaseSession;
   destinationRelationshipRole: string;
-}):
-  | { kind: 'renku-managed'; generationRunId: string }
-  | { kind: 'agent-external'; generationSpecId: string }
-  | null {
+}): ValidatedGenerationProvenance {
   if (input.receipt !== undefined && input.sourceSpecId) {
     throw new ProjectDataError(
       'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
@@ -152,10 +172,18 @@ function validateGenerationProvenance(input: AttachGenerationMediaInput & {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'Generation run purpose and target must match the focused attachment.');
   }
   validateAttachmentRequestMatch(input, run.specSnapshot);
-  if (!run.outputs.some((output) => output.projectRelativePath === input.sourceProjectRelativePath)) {
+  const selectedOutput = run.outputs.find(
+    (output) => output.projectRelativePath === input.sourceProjectRelativePath
+  );
+  if (!selectedOutput) {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'The attached source must be an exact output of the supplied generation run.');
   }
-  return { kind: 'renku-managed', generationRunId };
+  return {
+    kind: 'renku-managed',
+    generationRunId,
+    generationSpecId: run.specId,
+    outputArtifactId: selectedOutput.artifactId,
+  };
 }
 
 function validateAttachmentRequestMatch(
@@ -299,7 +327,12 @@ function validateLookbookKind(
   }
 }
 
-function assertTarget(input: AttachGenerationMediaInput, kind: GenerationTarget['kind']): void {
+function assertTarget<K extends GenerationTarget['kind']>(
+  input: AttachGenerationMediaInput,
+  kind: K
+): asserts input is AttachGenerationMediaInput & {
+  target: Extract<GenerationTarget, { kind: K }>;
+} {
   if (input.target.kind !== kind) {
     throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `${input.purpose} cannot attach media to ${input.target.kind}.`);
   }

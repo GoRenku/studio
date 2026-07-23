@@ -95,6 +95,15 @@ import type {
   GarbageCollectionReport,
   RecoverableMutationReport,
   TrashListReport,
+  CreateShotPlanInput,
+  UpdateShotPlanInput,
+  SetShotPlanGenerationSpecInput,
+  CopyShotPlanInput,
+  ReadShotPlanInput,
+  ListSceneShotPlansInput,
+  ShotPlanReport,
+  ShotPlanListReport,
+  DeleteShotPlanInput,
 } from '../client/index.js';
 import type {
   InspirationAnalysisDocument,
@@ -221,6 +230,19 @@ export interface ProjectDataService {
     input: PreviewGarbageCollectionInput
   ): Promise<GarbageCollectionPreview>;
   emptyTrash(input: EmptyTrashInput): Promise<GarbageCollectionReport>;
+  createShotPlan(input: CreateShotPlanInput): Promise<ShotPlanReport>;
+  updateShotPlan(input: UpdateShotPlanInput): Promise<ShotPlanReport>;
+  setShotPlanGenerationSpec(
+    input: SetShotPlanGenerationSpecInput
+  ): Promise<ShotPlanReport>;
+  copyShotPlan(input: CopyShotPlanInput): Promise<ShotPlanReport>;
+  readShotPlan(input: ReadShotPlanInput): Promise<ShotPlanReport>;
+  listSceneShotPlans(
+    input: ListSceneShotPlansInput
+  ): Promise<ShotPlanListReport>;
+  deleteShotPlan(
+    input: DeleteShotPlanInput
+  ): Promise<RecoverableMutationReport>;
   openCurrentProject(input: OpenCurrentProjectInput): Promise<CurrentProjectReport>;
   readCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
   closeCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;

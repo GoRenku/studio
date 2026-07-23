@@ -9,6 +9,7 @@ import { createProjectAdministrationServiceWiring } from './project-data-service
 import { createScreenplayServiceWiring } from './project-data-service-wiring/screenplay.js';
 import { createTrashServiceWiring } from './project-data-service-wiring/trash.js';
 import { createGenerationServiceWiring } from './project-data-service-wiring/generation.js';
+import { createShotPlanServiceWiring } from './project-data-service-wiring/shot-plans.js';
 
 export function createProjectDataService() {
   return {
@@ -23,6 +24,7 @@ export function createProjectDataService() {
     ...createLookbookServiceWiring(),
     ...createTrashServiceWiring(),
     ...createGenerationServiceWiring(),
+    ...createShotPlanServiceWiring(),
   };
 }
 

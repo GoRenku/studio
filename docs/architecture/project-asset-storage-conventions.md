@@ -46,9 +46,9 @@ Path segments are labels only. SQLite remains the source of truth for:
 - asset ids;
 - asset-file ids;
 - owner relationships;
-- scene, shot, and take membership;
+- Scene and Shot Plan ownership;
 - generation specs and runs;
-- selects and active state;
+- current GenerationSpec links and direct Shot Plan video links;
 - file availability and trash state.
 
 Code must not infer business relationships from folder names.
@@ -69,7 +69,7 @@ visual-language/lookbook/
 
 storyboards/<sequence-name>/<scene-name>/
 
-shots/<sequence-name>/<scene-name>/<take-name>-<nn>/
+shots/<sequence-name>/<scene-name>/<shot-plan-id>/video.<ext>
 ```
 
 Temporary project files use:
@@ -150,29 +150,20 @@ generation, insertion, or deletion changes the current scene array position.
 
 The take number is the next unused zero-based two-digit suffix for that
 dialogue filename prefix. Scene-owned Dialogue Audio must not be stored under
-`storyboards/`. The current architecture has no Shot-owned media destination.
+`storyboards/`.
 
-The take number is two digits and scene-local. Folder and file names use
-kebab-case. Example:
+A Shot Plan's one final video is stored at:
 
 ```text
-shots/the-sound-that-opens-stone/bombardment/city-smoke-before-the-wall-01/
+shots/the-sound-that-opens-stone/bombardment/shot_plan_abcd1234/video.mp4
 ```
 
-Take-owned files include generated or imported media whose lifecycle belongs to
-one take:
-
-- video prompt sheets;
-- first frames;
-- last frames;
-- ad hoc reference images;
-- generated shot/take dialogue audio when it is take-owned production media;
-- final generated take videos.
-
-When a new take is based on an old take, Core must copy take-owned files into
-the new take folder and create new asset/file ownership for the new take.
-Shared project references such as Cast Character Sheets, Location Sheets,
-Lookbook Sheets, and other non-owned references stay with their original owner.
+The folder label is not ownership metadata; SQLite's
+`shot_plan.video_asset_id` remains authoritative. First Frame, Last Frame,
+video-storyboard, previs, dialogue audio, Character Sheets, Location Sheets,
+and Lookbook Sheets remain exact GenerationSpec references under their existing
+owners. Copying a Shot Plan copies those exact reference identities into the
+new Spec but does not copy or retain their files.
 
 `image.edit` writes edited outputs beside the source image with a version
 suffix:
@@ -242,18 +233,19 @@ the durable filesystem folder themselves.
 - asset-file path updates;
 - validation that new durable asset paths do not start with `generated/`;
 - validation that durable asset files are not registered under `research/`;
-- take-owned media copy behavior;
+- Shot Plan final-video placement;
 - storyboard iteration allocation;
 - write-set cleanup for copied files when a later database relationship or
   selection write fails.
 
 Purpose modules remain responsible for product semantics such as creating the
-`asset` row, attaching the asset to a Cast Member, Location, Lookbook, Scene,
-Shot, or Take, and changing selection state. The project asset-file module owns
+`asset` row and attaching the asset to a Cast Member, Location, Lookbook,
+Scene, or Shot Plan. The project asset-file module owns
 the durable file destination and the `asset_file.project_relative_path` write.
 Its durable destination contract is owner-aware, for example
 `cast.characterSheet`, `cast.voiceSample`, `location.hero`,
-`location.sheet`, `visualLanguage.lookbookSheet`, or `scene.dialogueAudio`.
+`location.sheet`, `visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or
+`shotPlan.video`.
 Scene Storyboard imports use a batch storage API so all Beats in one import
 share one iteration folder. The module must not accept
 arbitrary caller-provided destination folders.

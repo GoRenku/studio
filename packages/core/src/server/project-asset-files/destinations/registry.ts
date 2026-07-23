@@ -30,6 +30,13 @@ import {
   resolveSceneDialogueAudioDestinationRoot,
   resolveSceneDialogueAudioDestinationRootSync,
 } from './scene-dialogue-audio.js';
+import {
+  resolveShotPlanVideoDestinationFile,
+  resolveShotPlanVideoDestinationFileSync,
+  resolveShotPlanVideoDestinationOutputNames,
+  resolveShotPlanVideoDestinationRoot,
+  resolveShotPlanVideoDestinationRootSync,
+} from './shot-plan-video.js';
 import type {
   DestinationKind,
   DestinationResolver,
@@ -58,6 +65,13 @@ const destinationResolvers = {
     resolveRoot: resolveSceneDialogueAudioDestinationRoot,
     resolveRootSync: resolveSceneDialogueAudioDestinationRootSync,
     resolveOutputNames: resolveSceneDialogueAudioDestinationOutputNames,
+  },
+  'shotPlan.video': {
+    resolveFile: resolveShotPlanVideoDestinationFile,
+    resolveFileSync: resolveShotPlanVideoDestinationFileSync,
+    resolveRoot: resolveShotPlanVideoDestinationRoot,
+    resolveRootSync: resolveShotPlanVideoDestinationRootSync,
+    resolveOutputNames: resolveShotPlanVideoDestinationOutputNames,
   },
 } satisfies DestinationResolverRegistry;
 

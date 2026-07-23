@@ -4,6 +4,10 @@ Date: 2026-07-18
 
 Status: accepted
 
+Decision 0061 adds one focused copy path owned by atomic Shot Plan copying. It
+creates a new mutable GenerationSpec for the copied plan without cloning Runs
+or changing the original frozen Spec.
+
 ## Context
 
 A saved generation request remained editable while a managed provider or Codex

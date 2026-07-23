@@ -73,6 +73,7 @@ export type * from './generation.js';
 export type * from './generation-preview-resource.js';
 export type * from './scene-dialogue-audio-workspace.js';
 export type * from './scene-beat-sheet.js';
+export type * from './shot-plans.js';
 export * from './shot-authoring.js';
 export type {
   ProjectLanguage,
@@ -257,6 +258,10 @@ export {
   sceneBeatSheetOperationDocumentSchema,
   sceneStoryboardImagesImportDocumentSchema,
 } from './scene-beat-sheet-json-schemas.js';
+export {
+  shotBriefSchema,
+  shotPlanCoverageSchema,
+} from './shot-plan-json-schemas.js';
 export {
   cameraSectionSchema as visualLanguageCameraSectionSchema,
   inspirationAnalysisDocumentSchema,

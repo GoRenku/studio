@@ -136,19 +136,6 @@ export function storyboardTemporarySheetRoot(input: {
   );
 }
 
-export function shotVideoTakeFolder(input: {
-  sequenceTitle: string;
-  sceneTitle: string;
-  takeTitle: string;
-}): ProjectRelativePath {
-  return joinProjectRelativePath(
-    SHOTS_ROOT,
-    kebabCasePathSegment(input.sequenceTitle, 'sequence'),
-    kebabCasePathSegment(input.sceneTitle, 'scene'),
-    kebabCasePathSegment(input.takeTitle, 'take')
-  );
-}
-
 async function projectPathExists(
   projectFolder: string,
   projectRelativePath: ProjectRelativePath

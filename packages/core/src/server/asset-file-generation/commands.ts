@@ -84,3 +84,58 @@ export function recordAssetFileGenerationProvenanceInSession(
   insertAssetFileGenerationRecord(session, record);
   return record;
 }
+
+export function recordSelectedGenerationOutputProvenanceInSession(
+  session: DatabaseSession,
+  input: {
+    assetFileId: string;
+    mediaGenerationRunId: string;
+    outputArtifactId: string;
+    sourceProjectRelativePath: string;
+    createdAt: string;
+  }
+): AssetFileGenerationProvenance {
+  const file = readAssetFileRecordByIdIncludingDiscarded(
+    session,
+    input.assetFileId
+  );
+  if (!file || file.discardedAt) {
+    throw new ProjectDataError(
+      'CORE_ASSET_FILE_GENERATION_PROVENANCE_MISSING',
+      `Active AssetFile was not found: ${input.assetFileId}.`
+    );
+  }
+  const run = readGenerationRunRecord(session, input.mediaGenerationRunId);
+  const output = run?.outputs.find(
+    (candidate) =>
+      candidate.artifactId === input.outputArtifactId &&
+      candidate.projectRelativePath === input.sourceProjectRelativePath
+  );
+  if (!run || !output) {
+    throw new ProjectDataError(
+      'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
+      `Selected output ${input.outputArtifactId} does not belong to Media Generation Run ${input.mediaGenerationRunId}.`
+    );
+  }
+  const existing = readAssetFileGenerationRecord(session, file.id);
+  if (existing) {
+    if (
+      existing.mediaGenerationRunId !== run.id ||
+      existing.outputArtifactId !== output.artifactId
+    ) {
+      throw new ProjectDataError(
+        'CORE_ASSET_FILE_GENERATION_PROVENANCE_CONFLICT',
+        `AssetFile ${file.id} already has different generation provenance.`
+      );
+    }
+    return existing;
+  }
+  const record = {
+    assetFileId: file.id,
+    mediaGenerationRunId: run.id,
+    outputArtifactId: output.artifactId,
+    createdAt: input.createdAt,
+  };
+  insertAssetFileGenerationRecord(session, record);
+  return record;
+}

@@ -1,4 +1,5 @@
 import { recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
+import { recordSelectedGenerationOutputProvenanceInSession } from '../asset-file-generation/commands.js';
 import {
   assetRelationshipIdPrefix,
   insertAssetRelationshipRecord,
@@ -23,6 +24,10 @@ import {
   rollbackProjectAssetFileWriteSetSync,
 } from '../project-asset-files/index.js';
 import type { GeneratedMediaAttachmentDestination } from './attachment-destinations.js';
+import type {
+  ProjectAssetFileDestination,
+  ProjectAssetFileWriteSet,
+} from '../project-asset-files/index.js';
 
 export interface PersistGeneratedMediaAttachmentInput {
   session: DatabaseSession;
@@ -52,6 +57,89 @@ export interface PersistedGeneratedMediaAttachment {
     kind: 'lookbookImage' | 'lookbookSheet';
     id: string;
   };
+}
+
+export interface PersistGeneratedMediaAssetInSessionInput {
+  session: DatabaseSession;
+  projectFolder: string;
+  writeSet: ProjectAssetFileWriteSet;
+  assetId: string;
+  assetFileId: string;
+  now: string;
+  sourceProjectRelativePath: string;
+  destination: ProjectAssetFileDestination;
+  asset: PersistGeneratedMediaAttachmentInput['asset'];
+  fileRole: string;
+  provenanceReceipt?: unknown;
+  selectedGenerationOutput?: {
+    generationRunId: string;
+    outputArtifactId: string;
+  };
+  sourceSpecId?: string;
+}
+
+export function persistGeneratedMediaAssetInSession(
+  input: PersistGeneratedMediaAssetInSessionInput
+): void {
+  const provenanceSourceCount = [
+    input.provenanceReceipt !== undefined,
+    input.selectedGenerationOutput !== undefined,
+    input.sourceSpecId !== undefined,
+  ].filter(Boolean).length;
+  if (provenanceSourceCount > 1) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
+      'Generated media attachment accepts one generation source.'
+    );
+  }
+  insertAssetRecord(input.session, {
+    id: input.assetId,
+    type: input.asset.type,
+    mediaKind: input.asset.mediaKind,
+    title: input.asset.title,
+    ...(input.asset.oneLineSummary
+      ? { oneLineSummary: input.asset.oneLineSummary }
+      : {}),
+    origin: input.asset.origin,
+    availability: 'ready',
+    createdAt: input.now,
+    updatedAt: input.now,
+  });
+  persistProjectAssetFileSync({
+    session: input.session,
+    projectFolder: input.projectFolder,
+    writeSet: input.writeSet,
+    assetId: input.assetId,
+    assetFileId: input.assetFileId,
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    destination: input.destination,
+    fileRole: input.fileRole,
+    mediaKind: input.asset.mediaKind,
+    now: input.now,
+  });
+  if (input.provenanceReceipt !== undefined) {
+    recordImportedAssetFileGenerationProvenanceInSession({
+      session: input.session,
+      assetFileId: input.assetFileId,
+      receipt: input.provenanceReceipt,
+    });
+  }
+  if (input.selectedGenerationOutput) {
+    recordSelectedGenerationOutputProvenanceInSession(input.session, {
+      assetFileId: input.assetFileId,
+      mediaGenerationRunId:
+        input.selectedGenerationOutput.generationRunId,
+      outputArtifactId: input.selectedGenerationOutput.outputArtifactId,
+      sourceProjectRelativePath: input.sourceProjectRelativePath,
+      createdAt: input.now,
+    });
+  }
+  if (input.sourceSpecId) {
+    setAssetFileSourceGenerationSpec(input.session, {
+      assetFileId: input.assetFileId,
+      sourceGenerationSpecId: input.sourceSpecId,
+    });
+  }
 }
 
 export function persistGeneratedMediaAttachment(
@@ -84,30 +172,21 @@ export function persistGeneratedMediaAttachment(
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
-      insertAssetRecord(session, {
-        id: assetId,
-        type: input.asset.type,
-        mediaKind: input.asset.mediaKind,
-        title: input.asset.title,
-        ...(input.asset.oneLineSummary
-          ? { oneLineSummary: input.asset.oneLineSummary }
-          : {}),
-        origin: input.asset.origin,
-        availability: 'ready',
-        createdAt: input.now,
-        updatedAt: input.now,
-      });
-      persistProjectAssetFileSync({
+      persistGeneratedMediaAssetInSession({
         session,
         projectFolder: input.projectFolder,
         writeSet,
         assetId,
         assetFileId,
+        now: input.now,
         sourceProjectRelativePath: input.sourceProjectRelativePath,
         destination: input.destination.file,
+        asset: input.asset,
         fileRole: input.fileRole,
-        mediaKind: input.asset.mediaKind,
-        now: input.now,
+        ...(input.provenanceReceipt !== undefined
+          ? { provenanceReceipt: input.provenanceReceipt }
+          : {}),
+        ...(input.sourceSpecId ? { sourceSpecId: input.sourceSpecId } : {}),
       });
       if (relationshipId) {
         insertAssetRelationshipRecord(session, input.destination.target, {
@@ -140,19 +219,6 @@ export function persistGeneratedMediaAttachment(
           assetId,
           sortOrder: nextLookbookSheetSortOrder(session, membership.lookbookId),
           now: input.now,
-        });
-      }
-      if (input.provenanceReceipt !== undefined) {
-        recordImportedAssetFileGenerationProvenanceInSession({
-          session,
-          assetFileId,
-          receipt: input.provenanceReceipt,
-        });
-      }
-      if (input.sourceSpecId) {
-        setAssetFileSourceGenerationSpec(session, {
-          assetFileId,
-          sourceGenerationSpecId: input.sourceSpecId,
         });
       }
     });

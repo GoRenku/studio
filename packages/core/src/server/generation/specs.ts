@@ -73,6 +73,29 @@ export function listGenerationSpecs(input: {
   });
 }
 
+export function copyGenerationSpecToTarget(input: {
+  sourceSpecId: string;
+  newSpecId: string;
+  target: GenerationTarget;
+  session: DatabaseSession;
+  now: string;
+}): GenerationSpecRecord {
+  const source = readGenerationSpec({
+    id: input.sourceSpecId,
+    session: input.session,
+  });
+  return insertGenerationSpecRecord(input.session, {
+    id: input.newSpecId,
+    spec: {
+      ...cloneGenerationSpec(source.spec),
+      target: structuredClone(input.target),
+    },
+    frozenAt: null,
+    createdAt: input.now,
+    updatedAt: input.now,
+  });
+}
+
 function assertGenerationSpecEnvelope(
   spec: GenerationSpec,
   purpose: GenerationPurposeContract

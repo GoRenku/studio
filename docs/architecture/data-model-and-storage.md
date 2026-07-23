@@ -58,10 +58,16 @@ Use the focused documents below for current direction.
   the JSON array order.
   Beat descriptions and the other authored fields must not encode framing,
   lenses, camera movement, composition, coverage, or production instructions.
-- Shot authoring is a separate, currently persistence-free UI capability. The
-  Shots tab is an inert placeholder, and the preserved composition, motion,
-  dialogue, and AI Production controls have no project service or durable
-  write contract.
+- Shot Plans are Scene-owned mutable authoring aggregates with ordered Shots.
+  A plan is edited in place until one final video Asset is attached, then
+  `video_asset_id` alone makes it read-only. Further iteration copies the plan,
+  its Shots, and its optional current GenerationSpec into new mutable records.
+  Core stores no Shot Plan authoring history, revision, status, output table,
+  owned references, or dependency graph.
+- Shot `description` is an intentional SQLite `TEXT` exception for opaque
+  Markdown-capable authored text. Shot `brief` and Shot Plan Beat `coverage`
+  are strict AJV-validated JSON text. Coverage is optional context whose
+  missing or stale references produce warnings rather than invalid state.
 - Cast Design and Location Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
   `cast_design` and `location_design`, with one active document per owner
@@ -81,6 +87,10 @@ Use the focused documents below for current direction.
   files remain filesystem content until an explicit media import registers and
   attaches them as assets. A saved spec is mutable while `frozen_at` is null and
   permanently frozen when live execution begins.
+- A Shot Plan identifies zero or one current GenerationSpec. Generation model,
+  provider values, prompt values, and exact references remain only in that
+  Spec. Copying a plan creates a new mutable same-purpose Spec with the same
+  exact reference identities; it does not copy or retain the referenced media.
 - Durable generated and imported asset files live under the folder for the
   domain object that owns them. Current asset paths must not start with
   `generated/`; temporary agent/debug files belong under top-level `tmp/`;
@@ -89,16 +99,20 @@ Use the focused documents below for current direction.
   reference input when the file is not reusable project state.
 - Location Sheets are durable image assets attached to Locations with role
   `location-sheet`. Each sheet has one `primary` image file and a concise
-  persisted description. A Location can have many Location Sheets. A Shot
-  Video Take direction stores one selected Location Sheet asset id per
-  referenced Location when that sheet is needed for generation.
+  persisted description. A Location can have many Location Sheets. Shot Plan
+  video requests select exact Location Sheet files through GenerationSpec
+  references without adding Shot-owned relationships.
 - Location Hero Images are separate display assets attached to Locations with
   role `hero`. The selected hero asset drives overview/detail imagery and does
   not become a shot-generation reference.
 - Scene dialogue audio takes are durable scene dialogue media assets. They
-  remain available for future Shot authoring through the public
-  `scene-dialogue` subject kind, but the current reset defines no Shot-owned
-  selection or generation contract.
+  are optional exact references for Shot Plan video requests through the
+  public `scene-dialogue` subject kind; Shot Plans do not own or retain them.
+- A final Shot Plan video is an ordinary `shot-plan-video` Asset linked
+  directly by `shot_plan.video_asset_id`. It has one primary video AssetFile
+  under the Shot Plan folder and existing Generation provenance when
+  applicable. Direct Shot Plan deletion and restoration reuse Trash and affect
+  only the plan plus the video Asset/File discarded by that operation.
 - Scene storyboard images are durable per-Beat Assets. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
   sheet for batch prompting, but import stores only the cropped shot images as
@@ -149,6 +163,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0028-use-durable-department-design-documents.md`
 - `docs/decisions/0029-use-cast-voice-as-durable-project-data.md`
 - `docs/decisions/0036-use-unsliced-location-sheets.md`
+- `docs/decisions/0061-use-mutable-copy-and-freeze-shot-plans.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

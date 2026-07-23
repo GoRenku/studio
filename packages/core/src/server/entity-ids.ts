@@ -35,6 +35,8 @@ export type EntityIdPrefix =
   | 'media_generation_run'
   | 'scene_beat_sheet'
   | 'scene_beat_storyboard_image'
+  | 'shot_plan'
+  | 'shot'
   | 'scene_dialogue_audio'
   | 'scene_dialogue_audio_take'
   | 'trash_operation'

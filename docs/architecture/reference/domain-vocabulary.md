@@ -58,17 +58,19 @@ Renku Studio should use this canonical hierarchy for v1:
 Standalone movie project
   -> Sequence
     -> Scene
-      -> Clip
       -> Scene Beat Sheet
         -> Beat
+      -> Shot Plan
+        -> Shot
 
 Series project
   -> Episode
     -> Sequence
       -> Scene
-        -> Clip
         -> Scene Beat Sheet
           -> Beat
+        -> Shot Plan
+          -> Shot
 ```
 
 `Sequence` is a film and screenwriting term for a meaningful group of scenes
@@ -91,11 +93,14 @@ Related terms:
 - **Beat** is one non-camera narrative unit inside a Scene Beat Sheet. Beats
   are ordered by their array position and contain exactly the accepted
   eight-field Beat shape.
-- **Shot** is a future camera-authored unit. It is deliberately separate from
-  Beats; the current reset preserves a persistence-free Shot authoring kit but
-  defines no durable Shot record.
-- **Clip** remains a structural unit in the existing project hierarchy. Do not
-  use Clip as a synonym for Shot when describing scene coverage.
+- **Shot Plan** is one mutable Scene-owned camera plan containing ordered Shots,
+  optional Beat coverage, zero or one current Generation Spec, and zero or one
+  final video Asset. The video Asset freezes the plan; copying starts another
+  editable iteration.
+- **Shot** is one ordered camera-authored unit inside a Shot Plan. It has an
+  opaque description and a structured brief. It is deliberately separate from
+  narrative Beats.
+- **Clip** is not the current Shot authoring or final-video model.
 
 ## Creative Direction
 
@@ -111,7 +116,8 @@ Related terms:
 | Screenplay Analysis           | A validated critique of the current screenplay structure, scene energy, evidence, and suggested additions.                               | Stored as history through `renku screenplay analyze`; suggestions do not mutate screenplay rows.            |
 | Scene Beat Sheet              | A validated scene-owned narrative breakdown made of ordered Beats.                                                                        | Stored as history through `renku screenplay beat-sheet`; one active Beat Sheet can be selected per Scene.   |
 | Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus title, description, narrative development, narrative purpose, cast/location ids, and screenplay block indexes. |
-| Shot                          | A future camera-authored unit derived from scene and Beat context.                                                                         | No durable Shot contract exists in the reset; current Shot controls are persistence-free UI components.     |
+| Shot Plan                     | One mutable Scene-owned plan for ordered Shots and one optional final video.                                                               | Directly edited until `video_asset_id` is attached, then copied for further iteration. It has no revision history or status. |
+| Shot                          | One ordered camera-authored unit inside a Shot Plan.                                                                                       | Stores opaque `description` text and a strict structured `brief`; Beat coverage belongs to the plan. |
 | Lookbook                      | One of the two project-owned visual direction roles.                                                                                       | A project has at most one Production Lookbook and one Storyboard Lookbook. The role is permanent and cannot be discarded. |
 | Production Lookbook           | The project Lookbook for final-video visual language: palette, lighting, texture, composition, camera, and tone/mood.                      | Read directly for movie, cast, location, and future Shot visual-language guidance; it is never selected from alternatives. |
 | Storyboard Lookbook           | The project Lookbook for storyboard drawing language: style brief, line/finish, value/accent, notation, continuity, and guardrails.        | Read directly for `scene.storyboard-sheet`; it has no stored pointer to the Production Lookbook. |

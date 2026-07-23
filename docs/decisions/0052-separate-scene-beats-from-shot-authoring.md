@@ -3,6 +3,10 @@
 Status: accepted
 Date: 2026-07-16
 
+Decision 0061 now defines the durable Shot Plan and Shot model. This decision
+remains authoritative for separating narrative Beats from camera-authored
+Shots and for rejecting the former Shot Video Take aggregate.
+
 ## Context
 
 Renku Studio currently stores a Scene Shot List whose entries mix narrative

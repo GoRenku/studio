@@ -31,7 +31,7 @@ This means SQLite stores facts such as:
 
 - project identity;
 - supported languages;
-- sequence, scene, and clip records;
+- sequence, scene, Shot Plan, and Shot records;
 - cast member records;
 - continuity reference records;
 - visual language category records;
@@ -45,6 +45,7 @@ This means SQLite stores facts such as:
 - Lookbooks, source Inspiration relationships, and Lookbook image placement;
 - task, generation, provider run, budget, and cost records;
 - media generation specs and media generation runs;
+- optional Shot Plan Beat coverage and Shot briefs as validated JSON text;
 - validation state and structured diagnostics.
 
 The filesystem stores content such as:
@@ -75,6 +76,11 @@ Good SQLite candidates:
 - cast member role;
 - short one-line descriptions;
 - one-line summaries when they are intentionally compact.
+
+Shot `description` is a deliberate exception. It is opaque SQLite `TEXT` and
+may contain Markdown for presentation, but Core never tokenizes it for
+validation, generation, coverage, or other decisions. It has no authoring
+revision history.
 
 Use Markdown assets for text that is:
 
