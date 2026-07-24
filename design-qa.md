@@ -135,6 +135,70 @@ final result: passed
 
 ---
 
+# Design QA — Website Header GitHub Action
+
+## Scope And Evidence
+
+- Source visual truth: Codex conversation attachment
+  `Google Chrome Appshot 2026-07-24T08-16-58.750Z.png`, with the user's
+  instruction to remove the visible GitHub label.
+- Browser-rendered implementation:
+  `/private/tmp/renku-header-final-942.png`.
+- Reference attachment dimensions: 942×768 pixels.
+- Implementation viewport: 942×691 CSS pixels at device pixel ratio 1.
+- Implementation focused header capture: 942×100 pixels.
+- State: dark website header, fonts loaded, pointer outside the GitHub action.
+- Full-view comparison: the supplied page screenshot and live Chrome render
+  were compared at the same 942px page width.
+- Focused comparison: the header capture was used because the requested change
+  affects only the GitHub action and its alignment.
+
+## Comparison History
+
+### Pass 1 — blocked
+
+- **P2 — visible label crowded the header.** The GitHub wordmark introduced a
+  second compact text style between navigation and the primary CTA, making the
+  action cluster visually noisy and exposing baseline misalignment.
+
+### Correction
+
+- Removed the visible label.
+- Replaced the handcrafted inline path with GitHub's official 24px Primer
+  Octicon asset.
+- Centered the 20px mark in a fixed 32×32px action target and kept the action
+  group non-shrinking.
+- Restored the original 640px navigation breakpoint now that the label no
+  longer consumes horizontal space.
+
+### Pass 2 — passed
+
+- The GitHub action and Download Studio CTA share the same optical center:
+  33.984px and 33.992px respectively.
+- The icon remains visible after fonts load and has no visible text.
+- The link retains its accessible name and points to
+  `https://github.com/GoRenku/studio` in a new tab.
+
+## Required Fidelity Surfaces
+
+- **Fonts and typography:** no new visible type remains; the existing brand,
+  navigation, and CTA typography are unchanged.
+- **Spacing and layout rhythm:** the mark is centered in a 32×32px target with
+  12px between it and the CTA. Existing header height and navigation spacing
+  are unchanged.
+- **Colors and visual tokens:** the white mark uses 78% resting opacity and a
+  quiet translucent hover surface consistent with the dark header.
+- **Image quality and asset fidelity:** the official vector Primer Octicon is
+  rendered at 20×20px; no inline or approximate icon drawing remains.
+- **Copy and content:** the visible `GitHub` label is removed. The
+  `Renku Studio on GitHub` accessible name remains for assistive technology.
+
+No actionable P0, P1, or P2 differences remain.
+
+final result: passed
+
+---
+
 # Design QA — Read-Only Generation Request Inspector Regression Repair
 
 ## Scope And Evidence

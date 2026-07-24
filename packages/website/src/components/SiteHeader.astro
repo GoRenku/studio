@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 
+import githubMark from '../assets/icons/github-mark.svg';
 import logo from '../assets/renku-logo.svg';
 import { site } from '../data/site';
 ---
@@ -16,7 +17,18 @@ import { site } from '../data/site';
       <a href="#workflow">Workflow</a>
       <a href="#audience">Who it’s for</a>
     </nav>
-    <a href={site.studioUrl} class="btn btn-primary header-cta">Open Studio</a>
+    <div class="header-actions">
+      <a
+        href={site.githubUrl}
+        class="github-link"
+        aria-label="Renku Studio on GitHub"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <Image src={githubMark} alt="" width="20" height="20" loading="eager" />
+      </a>
+      <a href={site.studioUrl} class="btn btn-primary header-cta">Download Studio</a>
+    </div>
   </div>
 </header>
 
@@ -66,6 +78,38 @@ import { site } from '../data/site';
 
   .site-nav a:hover {
     color: var(--amber-400);
+  }
+
+  .header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .github-link {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    opacity: 0.78;
+    transition:
+      opacity 0.2s ease,
+      background 0.2s ease;
+  }
+
+  .github-link:hover {
+    opacity: 1;
+    background: rgba(244, 239, 230, 0.08);
+  }
+
+  .github-link img {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   .header-cta {

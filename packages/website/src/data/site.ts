@@ -15,7 +15,8 @@ export const site = {
   tagline: 'See your film before you shoot a single frame.',
   description:
     'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, narrative Beat Sheets, and storyboards — one cinematic workspace.',
-  studioUrl: 'http://localhost:5173',
+  githubUrl: 'https://github.com/GoRenku/studio',
+  studioUrl: 'http://github.com/GoRenku/studio',
 };
 
 export interface Feature {
