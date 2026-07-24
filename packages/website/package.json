@@ -6,7 +6,7 @@
   "description": "Marketing website for Renku — the previs studio for filmmakers.",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/prepare-sites-build.mjs",
     "preview": "astro preview",
     "check": "astro check",
     "type-check": "astro check"

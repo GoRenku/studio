@@ -4,6 +4,7 @@ import { defineConfig } from 'astro/config';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://gorenku.com',
+  outDir: './dist/client',
   server: {
     port: 4321,
   },
