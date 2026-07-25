@@ -1,10 +1,11 @@
 import type {
   CopyShotPlanInput,
+  CreateNextShotPlanGenerationSpecInput,
   CreateShotPlanInput,
   DeleteShotPlanInput,
   ListSceneShotPlansInput,
   ReadShotPlanInput,
-  SetShotPlanGenerationSpecInput,
+  SetShotPlanLastGenerationSpecInput,
   ShotPlanListReport,
   ShotPlanReport,
   UpdateShotPlanInput,
@@ -14,11 +15,12 @@ import { withGenerationProject } from '../generation/project-operation.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
-  associateShotPlanGenerationSpec,
+  associateShotPlanLastGenerationSpec,
   createShotPlanAuthoring,
   updateShotPlanAuthoring,
 } from '../shot-plans/authoring.js';
 import { copyShotPlanAuthoring } from '../shot-plans/copying.js';
+import { createNextShotPlanGenerationSpecAuthoring } from '../shot-plans/generation-spec.js';
 import {
   projectSceneShotPlanListReport,
   projectShotPlanReport,
@@ -55,12 +57,29 @@ export async function updateShotPlan(
   });
 }
 
-export async function setShotPlanGenerationSpec(
-  input: SetShotPlanGenerationSpecInput
+export async function setShotPlanLastGenerationSpec(
+  input: SetShotPlanLastGenerationSpecInput
 ): Promise<ShotPlanReport> {
   return withGenerationProject(input, ({ session, projectFolder }) => {
-    associateShotPlanGenerationSpec({
+    associateShotPlanLastGenerationSpec({
       command: input,
+      session,
+      now: new Date().toISOString(),
+    });
+    return projectShotPlanReport({
+      session,
+      projectFolder,
+      shotPlanId: input.shotPlanId,
+    });
+  });
+}
+
+export async function createNextShotPlanGenerationSpec(
+  input: CreateNextShotPlanGenerationSpecInput
+): Promise<ShotPlanReport> {
+  return withGenerationProject(input, ({ session, projectFolder }) => {
+    createNextShotPlanGenerationSpecAuthoring({
+      shotPlanId: input.shotPlanId,
       session,
       now: new Date().toISOString(),
     });

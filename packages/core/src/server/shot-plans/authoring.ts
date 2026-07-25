@@ -1,6 +1,6 @@
 import type {
   CreateShotPlanInput,
-  SetShotPlanGenerationSpecInput,
+  SetShotPlanLastGenerationSpecInput,
   UpdateShotPlanInput,
 } from '../../client/shot-plans.js';
 import {
@@ -8,7 +8,7 @@ import {
   insertShotRecords,
   replaceShotPlanAuthoring,
   requireShotPlanRecord,
-  setShotPlanGenerationSpecId,
+  setShotPlanLastGenerationSpecId,
 } from '../database/access/shot-plans.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
@@ -73,9 +73,7 @@ export function updateShotPlanAuthoring(input: {
   );
   input.session.db.transaction((tx) => {
     const session = { ...input.session, db: tx };
-    assertShotPlanEditable(
-      requireShotPlanRecord(session, input.command.shotPlanId)
-    );
+    requireShotPlanRecord(session, input.command.shotPlanId);
     replaceShotPlanAuthoring(session, {
       shotPlanId: input.command.shotPlanId,
       title: authored.title,
@@ -90,8 +88,8 @@ export function updateShotPlanAuthoring(input: {
   });
 }
 
-export function associateShotPlanGenerationSpec(input: {
-  command: SetShotPlanGenerationSpecInput;
+export function associateShotPlanLastGenerationSpec(input: {
+  command: SetShotPlanLastGenerationSpecInput;
   session: DatabaseSession;
   now: string;
 }): void {
@@ -101,43 +99,27 @@ export function associateShotPlanGenerationSpec(input: {
       session,
       input.command.shotPlanId
     );
-    assertShotPlanEditable(shotPlan);
-    if (input.command.generationSpecId !== null) {
-      const spec = readGenerationSpec({
-        id: input.command.generationSpecId,
-        session,
-      });
-      if (
-        spec.spec.purpose !== 'shot-plan.video' ||
-        spec.spec.target.kind !== 'shotPlan' ||
-        spec.spec.target.id !== shotPlan.id
-      ) {
-        throw new ProjectDataError(
-          'CORE_SHOT_PLAN_GENERATION_SPEC_INVALID',
-          `Generation Spec ${spec.id} does not belong to Shot Plan ${shotPlan.id}.`
-        );
-      }
+    const spec = readGenerationSpec({
+      id: input.command.lastGenerationSpecId,
+      session,
+    });
+    if (
+      spec.spec.purpose !== 'video.create' ||
+      spec.spec.target.kind !== 'project' ||
+      spec.spec.authoredFrom?.kind !== 'shotPlan' ||
+      spec.spec.authoredFrom.id !== shotPlan.id
+    ) {
+      throw new ProjectDataError(
+        'CORE_SHOT_PLAN_GENERATION_SPEC_INVALID',
+        `Generation Spec ${spec.id} is not authored from Shot Plan ${shotPlan.id}.`
+      );
     }
-    setShotPlanGenerationSpecId(session, {
+    setShotPlanLastGenerationSpecId(session, {
       shotPlanId: shotPlan.id,
-      generationSpecId: input.command.generationSpecId,
+      lastGenerationSpecId: input.command.lastGenerationSpecId,
       now: input.now,
     });
   });
-}
-
-export function assertShotPlanEditable(
-  shotPlan: { id: string; videoAssetId: string | null }
-): void {
-  if (shotPlan.videoAssetId !== null) {
-    throw new ProjectDataError(
-      'CORE_SHOT_PLAN_FROZEN',
-      `Shot Plan is frozen because a final video is attached: ${shotPlan.id}.`,
-      {
-        suggestion: 'Copy the Shot Plan to begin another editable iteration.',
-      }
-    );
-  }
 }
 
 export function requireScene(session: DatabaseSession, sceneId: string): void {

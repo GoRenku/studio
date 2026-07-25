@@ -46,9 +46,9 @@ Path segments are labels only. SQLite remains the source of truth for:
 - asset ids;
 - asset-file ids;
 - owner relationships;
-- Scene and Shot Plan ownership;
+- Scene ownership;
 - generation specs and runs;
-- current GenerationSpec links and direct Shot Plan video links;
+- Shot Plan last-GenerationSpec links;
 - file availability and trash state.
 
 Code must not infer business relationships from folder names.
@@ -69,7 +69,7 @@ visual-language/lookbook/
 
 storyboards/<sequence-name>/<scene-name>/
 
-shots/<sequence-name>/<scene-name>/<shot-plan-id>/video.<ext>
+videos/<video-slug>.<ext>
 ```
 
 Temporary project files use:
@@ -152,18 +152,18 @@ The take number is the next unused zero-based two-digit suffix for that
 dialogue filename prefix. Scene-owned Dialogue Audio must not be stored under
 `storyboards/`.
 
-A Shot Plan's one final video is stored at:
+A generated project video is stored at:
 
 ```text
-shots/the-sound-that-opens-stone/bombardment/shot_plan_abcd1234/video.mp4
+videos/bombardment-wide.mp4
+videos/bombardment-wide-2.mp4
 ```
 
-The folder label is not ownership metadata; SQLite's
-`shot_plan.video_asset_id` remains authoritative. First Frame, Last Frame,
-video-storyboard, previs, dialogue audio, Character Sheets, Location Sheets,
-and Lookbook Sheets remain exact GenerationSpec references under their existing
-owners. Copying a Shot Plan copies those exact reference identities into the
-new Spec but does not copy or retain their files.
+The path is not Shot Plan ownership metadata. A `video.create` output is an
+independent Project Asset whose Asset File retains exact generation provenance.
+Optional `authoredFrom` context on the Spec is information-only. Copying a Shot
+Plan or continuing from its frozen last Spec copies the exact reference
+identities into a new mutable Spec but does not copy or retain their files.
 
 `image.edit` writes edited outputs beside the source image with a version
 suffix:
@@ -233,19 +233,19 @@ the durable filesystem folder themselves.
 - asset-file path updates;
 - validation that new durable asset paths do not start with `generated/`;
 - validation that durable asset files are not registered under `research/`;
-- Shot Plan final-video placement;
+- project-video placement;
 - storyboard iteration allocation;
 - write-set cleanup for copied files when a later database relationship or
   selection write fails.
 
 Purpose modules remain responsible for product semantics such as creating the
-`asset` row and attaching the asset to a Cast Member, Location, Lookbook,
-Scene, or Shot Plan. The project asset-file module owns
+`asset` row and attaching the asset to a Project, Cast Member, Location,
+Lookbook, or Scene. The project asset-file module owns
 the durable file destination and the `asset_file.project_relative_path` write.
 Its durable destination contract is owner-aware, for example
 `cast.characterSheet`, `cast.voiceSample`, `location.hero`,
 `location.sheet`, `visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or
-`shotPlan.video`.
+`project.video`.
 Scene Storyboard imports use a batch storage API so all Beats in one import
 share one iteration folder. The module must not accept
 arbitrary caller-provided destination folders.

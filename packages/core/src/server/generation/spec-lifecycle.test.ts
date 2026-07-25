@@ -89,6 +89,7 @@ function createMemorySession(): DatabaseSession {
       purpose text not null,
       target_kind text not null,
       target_id text not null,
+      authored_from_shot_plan_id text,
       execution_kind text not null,
       provider text,
       model text,

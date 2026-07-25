@@ -1405,6 +1405,7 @@ Current purposes:
 ```text
 image.create
 image.edit
+video.create
 lookbook.image
 lookbook.video-sheet
 lookbook.storyboard-sheet
@@ -1448,20 +1449,24 @@ A generic `GenerationSpec` has this shape:
 ```json
 {
   "executionKind": "renku-managed",
-  "purpose": "location.sheet",
-  "target": { "kind": "location", "id": "location_sea_walls" },
-  "model": { "provider": "fal-ai", "model": "openai/gpt-image-2" },
+  "purpose": "video.create",
+  "target": { "kind": "project", "id": "project" },
+  "authoredFrom": { "kind": "shotPlan", "id": "shot_plan_bombardment" },
+  "model": {
+    "provider": "fal-ai",
+    "model": "bytedance/seedance-2.0/text-to-video"
+  },
   "values": {
-    "prompt": "A Location Sheet for the sea walls...",
-    "image_size": "landscape_16_9",
-    "quality": "high",
-    "num_images": 1,
-    "output_format": "png"
+    "prompt": "A wide bombardment shot..."
   },
   "references": [],
-  "title": "Sea walls Location Sheet"
+  "title": "Bombardment wide"
 }
 ```
+
+`authoredFrom` is optional information-only context. It does not change the
+project target, require the Shot Plan to exist, attach output to that plan, or
+include current Shot Plan contents in request inspection.
 
 Exact references use stable guide placements:
 
@@ -1523,6 +1528,8 @@ Behavior:
 - Estimates cover only the current provider request; they never walk references
   or construct child work.
 - `image.create` has Additional References only and no named slot.
+- `video.create` is project-scoped, has no Shot Plan facts or inferred slots,
+  and imports accepted outputs as independent Project Assets.
 - `image.edit` targets the exact source asset and uses the
   `source/source-image` slot plus optional exact Cast, Location, and
   Lookbook candidates.
@@ -1568,6 +1575,7 @@ cast.character-sheet
 cast.profile
 location.sheet
 location.hero
+video.create
 ```
 
 General form:
@@ -1595,11 +1603,14 @@ renku media import --purpose cast.character-sheet --target cast:<cast-member-id>
 renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --json
 renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
 renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --json
+renku media import --purpose video.create --target project --source tmp/media/bombardment-wide.mp4 --title "Bombardment wide" --receipt tmp/receipts/video-run.json --json
 ```
 
 Pass `--receipt` only for an exact output from a Renku run whose purpose and
 target match the focused attachment. Pass `--source-spec` for a Codex-generated
-image after saving the matching agent-external request. Omit both for uploaded,
+output after saving and freezing the matching agent-external request.
+`video.create` requires one of these exact provenance forms; it is not a manual
+video import purpose. Other supported purposes may omit both for uploaded,
 downloaded, manually created, or other external media with no saved generation
 request.
 

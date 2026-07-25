@@ -16,6 +16,16 @@ export interface GeneratedMediaAttachmentDestination {
   resourceKeys: string[];
 }
 
+export function projectVideoAttachmentDestination(
+  titleHint?: string
+): GeneratedMediaAttachmentDestination {
+  return {
+    file: { kind: 'project.video', titleHint },
+    target: { kind: 'project' },
+    resourceKeys: [],
+  };
+}
+
 export function castCharacterSheetAttachmentDestination(
   castMemberId: string,
   titleHint?: string

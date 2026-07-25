@@ -106,15 +106,40 @@ export function recordSelectedGenerationOutputProvenanceInSession(
     );
   }
   const run = readGenerationRunRecord(session, input.mediaGenerationRunId);
-  const output = run?.outputs.find(
+  if (!run) {
+    throw new ProjectDataError(
+      'CORE_ASSET_FILE_GENERATION_PROVENANCE_MISSING',
+      `Generation run was not found: ${input.mediaGenerationRunId}.`
+    );
+  }
+  if (run.status !== 'completed' && run.status !== 'simulated') {
+    throw new ProjectDataError(
+      'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
+      `Media Generation Run ${run.id} has no successful output.`
+    );
+  }
+  const output = run.outputs.find(
     (candidate) =>
       candidate.artifactId === input.outputArtifactId &&
       candidate.projectRelativePath === input.sourceProjectRelativePath
   );
-  if (!run || !output) {
+  if (!output) {
     throw new ProjectDataError(
       'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
       `Selected output ${input.outputArtifactId} does not belong to Media Generation Run ${input.mediaGenerationRunId}.`
+    );
+  }
+  const matches = matchingMediaGenerationOutputs(run, file).filter(
+    (candidate) => candidate.artifactId === output.artifactId
+  );
+  if (matches.length !== 1) {
+    throw new ProjectDataError(
+      'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
+      `AssetFile ${file.id} does not match selected output ${output.artifactId} from Media Generation Run ${run.id}.`,
+      {
+        suggestion:
+          'Import the exact generated output without replacing or modifying its contents.',
+      }
     );
   }
   const existing = readAssetFileGenerationRecord(session, file.id);

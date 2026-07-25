@@ -7,6 +7,7 @@ export const mediaGenerationSpecs = sqliteTable(
     purpose: text('purpose').notNull(),
     targetKind: text('target_kind').notNull(),
     targetId: text('target_id').notNull(),
+    authoredFromShotPlanId: text('authored_from_shot_plan_id'),
     executionKind: text('execution_kind').notNull().default('renku-managed'),
     provider: text('provider'),
     model: text('model'),
@@ -23,6 +24,12 @@ export const mediaGenerationSpecs = sqliteTable(
       table.targetKind,
       table.targetId,
       table.updatedAt
+    ),
+    index('media_generation_spec_authored_from_idx').on(
+      table.purpose,
+      table.authoredFromShotPlanId,
+      table.createdAt,
+      table.id
     ),
   ]
 );

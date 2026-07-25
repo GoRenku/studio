@@ -1,4 +1,9 @@
-import type { GenerationSpec, GenerationSpecRecord, GenerationTarget } from '../../client/generation.js';
+import type {
+  GenerationSpec,
+  GenerationSpecAuthoredFrom,
+  GenerationSpecRecord,
+  GenerationTarget,
+} from '../../client/generation.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   insertGenerationSpecRecord,
@@ -66,17 +71,19 @@ export function listGenerationSpecs(input: {
   session: DatabaseSession;
   purpose?: string;
   target?: GenerationTarget;
+  authoredFrom?: GenerationSpecAuthoredFrom;
 }): GenerationSpecRecord[] {
   return listGenerationSpecRecords(input.session, {
     purpose: input.purpose,
     target: input.target,
+    authoredFrom: input.authoredFrom,
   });
 }
 
-export function copyGenerationSpecToTarget(input: {
+export function copyGenerationSpecForAuthoring(input: {
   sourceSpecId: string;
   newSpecId: string;
-  target: GenerationTarget;
+  authoredFrom: GenerationSpecAuthoredFrom;
   session: DatabaseSession;
   now: string;
 }): GenerationSpecRecord {
@@ -88,7 +95,7 @@ export function copyGenerationSpecToTarget(input: {
     id: input.newSpecId,
     spec: {
       ...cloneGenerationSpec(source.spec),
-      target: structuredClone(input.target),
+      authoredFrom: structuredClone(input.authoredFrom),
     },
     frozenAt: null,
     createdAt: input.now,

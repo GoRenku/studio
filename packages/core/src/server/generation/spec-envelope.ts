@@ -18,9 +18,30 @@ export function validateGenerationSpecEnvelope(input: {
     diagnostics.push(issue('CORE_GENERATION_TARGET_INVALID', `Generation purpose ${input.purpose.purpose} requires target kind ${input.purpose.targetKind}, received ${input.spec.target.kind}.`, ['target', 'kind']));
   }
   validateJsonRecord(input.spec.values, ['values'], diagnostics);
+  validateAuthoredFrom(input.spec, diagnostics);
   validateModel(input.spec, diagnostics);
   validateReferences(input.spec, diagnostics);
   return diagnostics;
+}
+
+function validateAuthoredFrom(
+  spec: GenerationSpec,
+  diagnostics: DiagnosticIssue[]
+): void {
+  if (spec.authoredFrom === undefined) {
+    return;
+  }
+  if (
+    spec.authoredFrom.kind !== 'shotPlan' ||
+    typeof spec.authoredFrom.id !== 'string' ||
+    !spec.authoredFrom.id.trim()
+  ) {
+    diagnostics.push(issue(
+      'CORE_GENERATION_SPEC_INVALID',
+      'Generation authoredFrom must identify a non-empty Shot Plan id.',
+      ['authoredFrom']
+    ));
+  }
 }
 
 function validateModel(spec: GenerationSpec, diagnostics: DiagnosticIssue[]): void {

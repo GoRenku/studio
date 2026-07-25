@@ -1,10 +1,11 @@
 import {
   copyShotPlan,
+  createNextShotPlanGenerationSpec,
   createShotPlan,
   deleteShotPlan,
   listSceneShotPlans,
   readShotPlan,
-  setShotPlanGenerationSpec,
+  setShotPlanLastGenerationSpec,
   updateShotPlan,
 } from '../commands/shot-plan-commands.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
@@ -13,7 +14,8 @@ export function createShotPlanServiceWiring(): Pick<
   ProjectDataService,
   | 'createShotPlan'
   | 'updateShotPlan'
-  | 'setShotPlanGenerationSpec'
+  | 'setShotPlanLastGenerationSpec'
+  | 'createNextShotPlanGenerationSpec'
   | 'copyShotPlan'
   | 'readShotPlan'
   | 'listSceneShotPlans'
@@ -22,7 +24,8 @@ export function createShotPlanServiceWiring(): Pick<
   return {
     createShotPlan,
     updateShotPlan,
-    setShotPlanGenerationSpec,
+    setShotPlanLastGenerationSpec,
+    createNextShotPlanGenerationSpec,
     copyShotPlan,
     readShotPlan,
     listSceneShotPlans,

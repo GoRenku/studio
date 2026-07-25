@@ -1,4 +1,4 @@
-import type { GenerationPreview, GenerationPurpose, GenerationReferenceSlotSelectionInput, GenerationSpec, GenerationTarget, JsonValue } from '../../client/generation.js';
+import type { GenerationPreview, GenerationPurpose, GenerationReferenceSlotSelectionInput, GenerationSpec, GenerationSpecAuthoredFrom, GenerationTarget, JsonValue } from '../../client/generation.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { estimateGeneration } from '../generation/estimates.js';
 import { buildGenerationPreview } from '../generation/previews.js';
@@ -79,8 +79,8 @@ export function createGenerationServiceWiring() {
         });
       });
     },
-    async listGenerationSpecs(input: ProjectInput & { purpose?: string; target?: GenerationTarget }) {
-      return withGenerationProject(input, ({ session }) => listGenerationSpecs({ session, purpose: input.purpose, target: input.target }));
+    async listGenerationSpecs(input: ProjectInput & { purpose?: string; target?: GenerationTarget; authoredFrom?: GenerationSpecAuthoredFrom }) {
+      return withGenerationProject(input, ({ session }) => listGenerationSpecs({ session, purpose: input.purpose, target: input.target, authoredFrom: input.authoredFrom }));
     },
     async buildGenerationPreview(input: ProjectInput & ({ specId: string } | { spec: GenerationSpec })) {
       return withGenerationProject(input, async ({ session, projectFolder }) => {

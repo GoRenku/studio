@@ -6,10 +6,10 @@ Status: reference
 
 Current implementation note: this document preserves capability research, not
 the active runtime contract. The schema-first Engines catalog exposes each
-provider route directly. Decision 0052 removed the legacy Take runtime, and the
-current persistence-free Shot authoring kit does not project or execute these
-routes. The illustrative normalized `modelChoice` interface below is not a
-current API.
+provider route directly, and project-scoped `video.create` uses that catalog
+without the normalized `modelChoice` interface below. Decision 0052 removed the
+legacy Take runtime. The illustrative AI Production aggregate remains
+non-current.
 
 ## Purpose
 

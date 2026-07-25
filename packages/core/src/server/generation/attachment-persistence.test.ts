@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { GenerationRun, GenerationSpec } from '../../client/index.js';
 import { readAssetFileGenerationRecord } from '../database/access/asset-file-generations.js';
@@ -23,6 +24,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { mediaGenerationRuns } from '../schema/index.js';
 import {
   castCharacterSheetAttachmentDestination,
   castProfileAttachmentDestination,
@@ -133,6 +135,44 @@ describe('generated media attachment persistence', () => {
         mediaGenerationRunId: run.id,
         outputArtifactId: 'artifact_image',
       });
+
+      session.db
+        .update(mediaGenerationRuns)
+        .set({ status: 'failed' })
+        .where(eq(mediaGenerationRuns.id, run.id))
+        .run();
+      const filesBeforeRejectedProvenance = await listFiles(created.projectPath);
+      expect(() =>
+        persistGeneratedMediaAttachment({
+          session,
+          projectFolder: created.projectPath,
+          idGenerator: fixedIdGenerator('failed-provenance'),
+          now: '2026-07-17T10:00:45.000Z',
+          sourceProjectRelativePath: 'tmp/source.png',
+          destination: castProfileAttachmentDestination(
+            'cast_test0002',
+            'Rejected Profile'
+          ),
+          asset: {
+            type: 'profile',
+            mediaKind: 'image',
+            title: 'Rejected Profile',
+            origin: 'generated',
+          },
+          fileRole: 'primary',
+          relationshipRole: 'profile',
+          selectedGenerationOutput: {
+            generationRunId: run.id,
+            outputArtifactId: 'artifact_image',
+          },
+        })
+      ).toThrow(expect.objectContaining({
+        code: 'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
+      }));
+      expect(readAssetRecord(session, 'asset_failed-provenance')).toBeNull();
+      expect(await listFiles(created.projectPath)).toEqual(
+        filesBeforeRejectedProvenance
+      );
 
       const filesBeforeFailure = await listFiles(created.projectPath);
       expect(() =>

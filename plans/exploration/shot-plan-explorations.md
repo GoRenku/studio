@@ -1,0 +1,7 @@
+We will now build the UI for the shot plan. You need to use your UI design skills, pay attention to the spacing, fonts, common patterns, style guides. 
+The shot plans are going to be in the Shots section. They will be created through a conversation with the AI agent (skills). Definition of a shot plan, the generation of it  and then finally attaching the results of that generated asset are distinct stages, that we need to plan some CLI commands for and then teach the skills the AI Agent.
+We will start with the shot definition in this plan.
+The shots are defined within a shot plan and the plan can have only one shot or more. 
+Each shot will have a description and a brief and will also be optionally attached an image that describes that shot. The image is by default created with Codex GPT-Image-2 but like other images users can choose Renku generation and other models (same as other image generation purposes) This will be its own purpose called shot image and will use the same exact mechanism as other image generation purposes. Nothing should be reinvented here, we should show the preview generation dialog and also it should be available for viewing by the button at bottom right (same components for displaying the image as well) 
+In a shot plan 
+ 

@@ -8,7 +8,6 @@ import {
   projectAssets,
   sceneAssets,
   sequenceAssets,
-  shotPlans,
 } from '../schema/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
@@ -226,17 +225,7 @@ function countActiveAssetOwners(
       .all();
     return total + rows.length;
   }, 0);
-  const shotPlanOwnerCount = session.db
-    .select({ id: shotPlans.id })
-    .from(shotPlans)
-    .where(
-      and(
-        eq(shotPlans.videoAssetId, assetId),
-        isNull(shotPlans.discardedAt)
-      )
-    )
-    .all().length;
-  return relationshipOwnerCount + shotPlanOwnerCount;
+  return relationshipOwnerCount;
 }
 
 function garbageCollectionBlocker(input: {

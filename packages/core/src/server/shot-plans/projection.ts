@@ -3,14 +3,11 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import { eq } from 'drizzle-orm';
-import type { AssetFile } from '../../client/assets.js';
 import type {
   ShotPlan,
   ShotPlanListReport,
   ShotPlanReport,
 } from '../../client/shot-plans.js';
-import { readAssetRecord } from '../database/access/assets.js';
-import { listAssetFileRecordsForAsset } from '../database/access/asset-files.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   listSceneShotPlanRecords,
@@ -87,7 +84,6 @@ function projectShotPlan(
   record: ShotPlanRecord
 ): { shotPlan: ShotPlan; warnings: DiagnosticIssue[] } {
   const coverage = parseStoredShotPlanCoverage(record.coverage, record.id);
-  const video = projectVideoFile(session, record);
   return {
     shotPlan: {
       id: record.id,
@@ -100,58 +96,12 @@ function projectShotPlan(
         description: shot.description,
         brief: parseStoredShotBrief(shot.brief, shot.id),
       })),
-      generationSpec:
-        record.generationSpecId === null
+      lastGenerationSpec:
+        record.lastGenerationSpecId === null
           ? null
-          : readGenerationSpec({ id: record.generationSpecId, session }),
-      videoAssetId: record.videoAssetId,
-      videoAssetFile: video.file,
-      videoAttachedAt: record.videoAttachedAt,
+          : readGenerationSpec({ id: record.lastGenerationSpecId, session }),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
-    },
-    warnings: video.warnings,
-  };
-}
-
-function projectVideoFile(
-  session: DatabaseSession,
-  record: ShotPlanRecord
-): { file: AssetFile | null; warnings: DiagnosticIssue[] } {
-  if (record.videoAssetId === null) {
-    return { file: null, warnings: [] };
-  }
-  const asset = readAssetRecord(session, record.videoAssetId);
-  const file =
-    asset && asset.discardedAt === null
-      ? listAssetFileRecordsForAsset(session, asset.id).find(
-          (candidate) => candidate.role === 'primary'
-        ) ?? null
-      : null;
-  if (!file) {
-    return {
-      file: null,
-      warnings: [
-        createDiagnosticWarning(
-          'CORE_SHOT_PLAN_VIDEO_UNAVAILABLE',
-          `Shot Plan video Asset is unavailable: ${record.videoAssetId}.`,
-          { path: ['shotPlan', record.id, 'videoAssetId'] }
-        ),
-      ],
-    };
-  }
-  return {
-    file: {
-      id: file.id,
-      role: file.role,
-      projectRelativePath: file.projectRelativePath as AssetFile['projectRelativePath'],
-      mediaKind: file.mediaKind,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes,
-      contentHash: file.contentHash,
-      width: file.width,
-      height: file.height,
-      durationSeconds: file.durationSeconds,
     },
     warnings: [],
   };

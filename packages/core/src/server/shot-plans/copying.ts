@@ -4,7 +4,7 @@ import {
   insertShotRecords,
   listShotRecords,
   requireShotPlanRecord,
-  setShotPlanGenerationSpecId,
+  setShotPlanLastGenerationSpecId,
 } from '../database/access/shot-plans.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
@@ -12,7 +12,7 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../entity-ids.js';
-import { copyGenerationSpecToTarget } from '../generation/specs.js';
+import { copyGenerationSpecForAuthoring } from '../generation/specs.js';
 import { parseStoredShotBrief, parseStoredShotPlanCoverage } from './validation.js';
 import { requireScene } from './authoring.js';
 
@@ -50,18 +50,18 @@ export function copyShotPlanAuthoring(input: {
       })),
       now: input.now,
     });
-    if (source.generationSpecId !== null) {
+    if (source.lastGenerationSpecId !== null) {
       const generationSpecId = ids('media_generation_spec');
-      copyGenerationSpecToTarget({
-        sourceSpecId: source.generationSpecId,
+      copyGenerationSpecForAuthoring({
+        sourceSpecId: source.lastGenerationSpecId,
         newSpecId: generationSpecId,
-        target: { kind: 'shotPlan', id: shotPlanId },
+        authoredFrom: { kind: 'shotPlan', id: shotPlanId },
         session,
         now: input.now,
       });
-      setShotPlanGenerationSpecId(session, {
+      setShotPlanLastGenerationSpecId(session, {
         shotPlanId,
-        generationSpecId,
+        lastGenerationSpecId: generationSpecId,
         now: input.now,
       });
     }

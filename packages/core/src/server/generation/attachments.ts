@@ -15,11 +15,11 @@ import {
   locationSheetAttachmentDestination,
   lookbookImageAttachmentDestination,
   lookbookSheetAttachmentDestination,
+  projectVideoAttachmentDestination,
   type GeneratedMediaAttachmentDestination,
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { validateImageEditAttachment } from './image-edit-attachment.js';
-import { attachShotPlanVideo } from '../shot-plans/video-attachment.js';
 
 export interface AttachGenerationMediaInput {
   purpose: GenerationPurpose;
@@ -49,23 +49,17 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   projectFolder: string;
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
-  if (input.purpose === 'shot-plan.video') {
-    assertTarget(input, 'shotPlan');
-    const provenance = validateGenerationProvenance({
-      ...input,
-      destinationRelationshipRole: 'shot-plan-video',
-    });
-    return attachShotPlanVideo({
-      ...input,
-      target: input.target,
-      provenance,
-    });
-  }
   const attachment = attachmentDestination(input);
   const provenance = validateGenerationProvenance({
     ...input,
     destinationRelationshipRole: attachment.relationshipRole,
   });
+  if (input.purpose === 'video.create' && provenance === null) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_PROVENANCE_REQUIRED',
+      'Generated video import requires an exact managed Run or frozen external Generation Spec.'
+    );
+  }
   validateLookbookKind(input);
   const persisted = persistGeneratedMediaAttachment({
     session: input.session,
@@ -76,14 +70,19 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     destination: attachment.destination,
     asset: {
       type: attachment.assetType,
-      mediaKind: 'image',
+      mediaKind: attachment.mediaKind,
       title: input.title?.trim() || attachment.label,
       origin: provenance ? 'generated' : 'external',
     },
     fileRole: 'primary',
     relationshipRole: attachment.relationshipRole,
     ...(provenance?.kind === 'renku-managed'
-      ? { provenanceReceipt: input.receipt }
+      ? {
+          selectedGenerationOutput: {
+            generationRunId: provenance.generationRunId,
+            outputArtifactId: provenance.outputArtifactId,
+          },
+        }
       : {}),
     ...(provenance?.kind === 'agent-external'
       ? { sourceSpecId: provenance.generationSpecId }
@@ -226,9 +225,20 @@ function attachmentDestination(input: AttachGenerationMediaInput): {
   relationshipRole: string;
   label: string;
   assetType: string;
+  mediaKind: 'image' | 'video';
   resourceKeys: string[];
 } {
   switch (input.purpose) {
+    case 'video.create': {
+      assertTarget(input, 'project');
+      return attachmentDetails(
+        projectVideoAttachmentDestination(input.title),
+        'generated-video',
+        'Generated Video',
+        'generated-video',
+        'video'
+      );
+    }
     case 'lookbook.image': {
       assertTarget(input, 'lookbook');
       return attachmentDetails(
@@ -296,13 +306,15 @@ function attachmentDetails(
   destination: GeneratedMediaAttachmentDestination,
   relationshipRole: string,
   label: string,
-  assetType = relationshipRole
+  assetType = relationshipRole,
+  mediaKind: 'image' | 'video' = 'image'
 ) {
   return {
     destination,
     relationshipRole,
     label,
     assetType,
+    mediaKind,
     resourceKeys: destination.resourceKeys,
   };
 }

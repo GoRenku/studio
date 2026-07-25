@@ -46,6 +46,10 @@ export interface PersistGeneratedMediaAttachmentInput {
   fileRole: string;
   relationshipRole: string;
   provenanceReceipt?: unknown;
+  selectedGenerationOutput?: {
+    generationRunId: string;
+    outputArtifactId: string;
+  };
   sourceSpecId?: string;
 }
 
@@ -145,7 +149,12 @@ export function persistGeneratedMediaAssetInSession(
 export function persistGeneratedMediaAttachment(
   input: PersistGeneratedMediaAttachmentInput
 ): PersistedGeneratedMediaAttachment {
-  if (input.provenanceReceipt !== undefined && input.sourceSpecId) {
+  const provenanceSourceCount = [
+    input.provenanceReceipt !== undefined,
+    input.selectedGenerationOutput !== undefined,
+    input.sourceSpecId !== undefined,
+  ].filter(Boolean).length;
+  if (provenanceSourceCount > 1) {
     throw new ProjectDataError(
       'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
       'Generated media attachment accepts one generation source.',
@@ -185,6 +194,9 @@ export function persistGeneratedMediaAttachment(
         fileRole: input.fileRole,
         ...(input.provenanceReceipt !== undefined
           ? { provenanceReceipt: input.provenanceReceipt }
+          : {}),
+        ...(input.selectedGenerationOutput
+          ? { selectedGenerationOutput: input.selectedGenerationOutput }
           : {}),
         ...(input.sourceSpecId ? { sourceSpecId: input.sourceSpecId } : {}),
       });

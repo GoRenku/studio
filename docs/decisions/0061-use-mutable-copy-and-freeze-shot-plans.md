@@ -4,6 +4,11 @@ Date: 2026-07-23
 
 Status: accepted
 
+Decision 0062 supersedes this decision's final-video ownership,
+attachment-driven freeze, and coupled Trash behavior. It retains durable
+mutable Shot Plans, ordered Shots, soft Beat context, the last-Spec convenience
+pointer, and Shot Plan duplication.
+
 ## Context
 
 Decision 0052 removed the old Shot Video Take aggregate so the next Shot model

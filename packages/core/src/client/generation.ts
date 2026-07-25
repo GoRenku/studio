@@ -17,7 +17,7 @@ export type GenerationPurpose =
   | 'location.sheet'
   | 'location.hero'
   | 'scene.storyboard-sheet'
-  | 'shot-plan.video';
+  | 'video.create';
 export type GenerationOutputMediaKind = 'image' | 'audio' | 'video';
 
 export type GenerationTarget =
@@ -27,8 +27,12 @@ export type GenerationTarget =
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
   | { kind: 'scene'; id: string }
-  | { kind: 'sceneDialogue'; id: string }
-  | { kind: 'shotPlan'; id: string };
+  | { kind: 'sceneDialogue'; id: string };
+
+export type GenerationSpecAuthoredFrom = {
+  kind: 'shotPlan';
+  id: string;
+};
 
 export interface GenerationModelIdentity {
   provider?: string;
@@ -38,6 +42,7 @@ export interface GenerationModelIdentity {
 export interface GenerationSpec {
   purpose: GenerationPurpose;
   target: GenerationTarget;
+  authoredFrom?: GenerationSpecAuthoredFrom;
   executionKind: 'renku-managed' | 'agent-external';
   model?: GenerationModelIdentity;
   values: Record<string, JsonValue>;

@@ -26,7 +26,7 @@ export type ProjectAssetFileDestination =
       sceneDialogueAudioId: string;
       dialogueAudioTakeId: string;
     }
-  | { kind: 'shotPlan.video'; shotPlanId: string };
+  | { kind: 'project.video'; titleHint?: string };
 
 export type ProjectTemporaryFileDestination =
   | { kind: 'generation.media'; purpose: GenerationPurpose }

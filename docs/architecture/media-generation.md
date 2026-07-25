@@ -62,10 +62,11 @@ experiences:
 
 A `GenerationSpec` is the one saved editing and execution shape. It can be
 incomplete. Create and update validate its durable JSON envelope, immutable
-purpose/target identity, structurally readable slot placement, and owning Take
-lifecycle. They do not validate current guide placement, candidate membership,
-typed ownership, provider readiness, insert defaults, assign media fields,
-select references, or repair authored values.
+purpose/target identity, optional structurally valid `authoredFrom` context,
+structurally readable slot placement, and owning Take lifecycle. They do not
+validate current guide placement, candidate membership, typed ownership,
+provider readiness, insert defaults, assign media fields, select references, or
+repair authored values.
 
 A saved spec is mutable only while `frozenAt` is null. Live managed submission
 conditionally freezes the exact saved revision before Engines is called;
@@ -119,16 +120,24 @@ controls list only explicitly registered assets for their exact domain subject.
 A generic reference is never promoted into a typed slot automatically. Creative
 prompts and media remain opaque under Decision `0041`.
 
-The reset intentionally defines no Shot video generation purpose, Shot-owned
-reference guide, or durable Shot production lifecycle. Future Shot generation
-must be designed from the new Shot domain rather than reusing removed Take
-contracts.
+`video.create` is a project-scoped video purpose. It defines no Shot-owned
+reference guide or durable Shot production lifecycle. A Spec may retain
+information-only `authoredFrom: { kind: 'shotPlan', id }` context, but Core does
+not resolve that context into purpose facts or use it as a target, owner, or
+execution requirement.
+
+A Shot Plan remains mutable and keeps at most one `lastGenerationSpec` as the
+request configuration to continue from, regardless of Run success or failure.
+Frozen Specs are retried unchanged; changed attempts copy the last frozen Spec
+into a new mutable Spec. Generated videos are independent Project Assets with
+existing exact provenance. Shot Plan and Asset Trash lifecycles are independent.
 
 ## Persistence
 
 `media_generation_spec` stores purpose, target, nullable provider/model,
-title, authored values JSON, ordered references JSON, `frozen_at`, and timestamps. It does
-not store a mirrored complete spec JSON blob.
+title, authored values JSON, ordered references JSON, optional soft Shot Plan
+authoring context, `frozen_at`, and timestamps. It does not store a mirrored
+complete spec JSON blob.
 
 `media_generation_run` stores the immutable spec snapshot, exact provider
 payload, estimate and approval token, outputs, receipt, diagnostics, status, and

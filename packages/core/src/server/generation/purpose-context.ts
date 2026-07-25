@@ -7,7 +7,6 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { renderScreenplaySceneContextText } from '../screenplay-scene-context-text.js';
-import { requireShotPlanRecord } from '../database/access/shot-plans.js';
 
 export function buildGenerationPurposeFacts(input: {
   target: GenerationTarget;
@@ -22,65 +21,7 @@ export function buildGenerationPurposeFacts(input: {
       authored: input.authored,
     }, projectAspectRatio);
   }
-  if (input.target.kind === 'shotPlan') {
-    return buildShotPlanGenerationFacts(
-      {
-        target: input.target,
-        session: input.session,
-        authored: input.authored,
-      },
-      projectAspectRatio
-    );
-  }
   return { projectAspectRatio, ...(input.authored ?? {}) };
-}
-
-function buildShotPlanGenerationFacts(
-  input: {
-    target: Extract<GenerationTarget, { kind: 'shotPlan' }>;
-    session: DatabaseSession;
-    authored?: Record<string, JsonValue>;
-  },
-  projectAspectRatio: string
-): Record<string, JsonValue> {
-  const shotPlan = requireShotPlanRecord(input.session, input.target.id);
-  const screenplay = readScreenplayDocumentFromSession(input.session);
-  const scene = screenplay?.acts
-    .flatMap((act) => act.sequences)
-    .flatMap((sequence) => sequence.scenes)
-    .find((candidate) => candidate.id === shotPlan.sceneId);
-  if (!screenplay || !scene) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_TARGET_NOT_FOUND',
-      `Shot Plan Scene was not found: ${shotPlan.sceneId}.`
-    );
-  }
-  const sceneCastMemberIds = orderedUnique(
-    scene.blocks.flatMap((block) => [
-      ...(block.type === 'dialogue' && block.castMemberId
-        ? [block.castMemberId]
-        : []),
-      ...(block.castMemberIds ?? []),
-    ])
-  ).filter(
-    (castMemberId) =>
-      !screenplay.cast.find((member) => member.id === castMemberId)?.isVoiceOver
-  );
-  const sceneLocationIds = orderedUnique([
-    ...(scene.setting.locationIds ?? []),
-    ...listSceneLocationIds(input.session, shotPlan.sceneId),
-    ...scene.blocks.flatMap((block) => block.locationIds ?? []),
-  ]);
-  const sceneDialogueIds = scene.blocks.flatMap((block) =>
-    block.type === 'dialogue' && block.dialogueId ? [block.dialogueId] : []
-  );
-  return {
-    projectAspectRatio,
-    sceneCastMemberIds,
-    sceneLocationIds,
-    sceneDialogueIds,
-    ...(input.authored ?? {}),
-  };
 }
 
 function buildSceneGenerationFacts(

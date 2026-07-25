@@ -31,12 +31,12 @@ import {
   resolveSceneDialogueAudioDestinationRootSync,
 } from './scene-dialogue-audio.js';
 import {
-  resolveShotPlanVideoDestinationFile,
-  resolveShotPlanVideoDestinationFileSync,
-  resolveShotPlanVideoDestinationOutputNames,
-  resolveShotPlanVideoDestinationRoot,
-  resolveShotPlanVideoDestinationRootSync,
-} from './shot-plan-video.js';
+  resolveProjectVideoDestinationFile,
+  resolveProjectVideoDestinationFileSync,
+  resolveProjectVideoDestinationOutputNames,
+  resolveProjectVideoDestinationRoot,
+  resolveProjectVideoDestinationRootSync,
+} from './project-video.js';
 import type {
   DestinationKind,
   DestinationResolver,
@@ -66,12 +66,12 @@ const destinationResolvers = {
     resolveRootSync: resolveSceneDialogueAudioDestinationRootSync,
     resolveOutputNames: resolveSceneDialogueAudioDestinationOutputNames,
   },
-  'shotPlan.video': {
-    resolveFile: resolveShotPlanVideoDestinationFile,
-    resolveFileSync: resolveShotPlanVideoDestinationFileSync,
-    resolveRoot: resolveShotPlanVideoDestinationRoot,
-    resolveRootSync: resolveShotPlanVideoDestinationRootSync,
-    resolveOutputNames: resolveShotPlanVideoDestinationOutputNames,
+  'project.video': {
+    resolveFile: resolveProjectVideoDestinationFile,
+    resolveFileSync: resolveProjectVideoDestinationFileSync,
+    resolveRoot: resolveProjectVideoDestinationRoot,
+    resolveRootSync: resolveProjectVideoDestinationRootSync,
+    resolveOutputNames: resolveProjectVideoDestinationOutputNames,
   },
 } satisfies DestinationResolverRegistry;
 

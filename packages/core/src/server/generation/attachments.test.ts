@@ -244,6 +244,8 @@ describe('generation media attachment', () => {
     if (!output) {
       throw new Error('Expected a simulated image-edit output.');
     }
+    const outputPath = path.join(created.projectPath, output);
+    const generatedContents = await fs.readFile(outputPath);
     await fs.writeFile(path.join(created.projectPath, 'tmp', 'wrong-output.png'), 'wrong');
     await expect(projectData.attachGenerationMedia({
       projectName: 'constantinople',
@@ -255,6 +257,19 @@ describe('generation media attachment', () => {
     })).rejects.toMatchObject({
       code: 'CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID',
     });
+
+    await fs.writeFile(outputPath, 'replacement');
+    await expect(projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'cast.character-sheet',
+      target: { kind: 'castMember', id: 'cast_test0001' },
+      sourceProjectRelativePath: output,
+      receipt: { run: run.run },
+    })).rejects.toMatchObject({
+      code: 'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
+    });
+    await fs.writeFile(outputPath, generatedContents);
 
     const edited = await projectData.attachGenerationMedia({
       projectName: 'constantinople',

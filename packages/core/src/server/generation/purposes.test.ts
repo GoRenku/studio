@@ -35,7 +35,7 @@ describe('generic generation model listing', () => {
       'location.sheet',
       'location.hero',
       'scene.storyboard-sheet',
-      'shot-plan.video',
+      'video.create',
     ]);
     expect(readGenerationPurpose('cast.profile').settings).toMatchObject({
       fixed: [{ kind: 'aspect-ratio', value: '1:1' }],
@@ -69,7 +69,7 @@ describe('generic generation model listing', () => {
       purpose('location.sheet', 'location', 'image', [], [aspectRatio('16:9'), quality('high')], gptImage2),
       purpose('location.hero', 'location', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
       purpose('scene.storyboard-sheet', 'scene', 'image', [aspectRatio('4:3'), quality('high')], [], gptImage2),
-      purpose('shot-plan.video', 'shotPlan', 'video', [], [aspectRatio('project')]),
+      purpose('video.create', 'project', 'video', [], [aspectRatio('project')]),
     ]);
   });
 

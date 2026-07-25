@@ -1,11 +1,6 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import { assets, shotPlans } from '../schema/index.js';
+import { shotPlans } from '../schema/index.js';
 import { studioSceneShotsResourceKey } from '../studio-coordination/resource-keys.js';
-import {
-  collectAssetFiles,
-  markAssetRecordAndFilesDiscarded,
-  restoreAssetRecordAndFiles,
-} from '../trash/asset-tree-lifecycle.js';
 import type { TrashObjectDefinition } from '../trash/trash-object-definition.js';
 import { ProjectDataError } from '../project-data-error.js';
 
@@ -22,17 +17,6 @@ export const shotPlanTrashDefinition: TrashObjectDefinition = {
     if (!shotPlan) {
       return [];
     }
-    const videoAsset =
-      shotPlan.videoAssetId === null
-        ? null
-        : input.session.db
-            .select({
-              id: assets.id,
-              discardedAt: assets.discardedAt,
-            })
-            .from(assets)
-            .where(eq(assets.id, shotPlan.videoAssetId))
-            .get();
     return [
       {
         itemKind: 'shotPlan',
@@ -42,11 +26,6 @@ export const shotPlanTrashDefinition: TrashObjectDefinition = {
         title: shotPlan.title,
         restoreSnapshot: {
           sceneId: shotPlan.sceneId,
-          videoAssetId: shotPlan.videoAssetId,
-          discardedVideoAsset:
-            videoAsset !== null &&
-            videoAsset !== undefined &&
-            videoAsset.discardedAt === null,
         },
       },
     ];
@@ -70,26 +49,8 @@ export const shotPlanTrashDefinition: TrashObjectDefinition = {
       })
       .where(eq(shotPlans.id, input.itemId))
       .run();
-    if (shotPlan.videoAssetId === null) {
-      return;
-    }
-    const asset = input.session.db
-      .select({ discardedAt: assets.discardedAt })
-      .from(assets)
-      .where(eq(assets.id, shotPlan.videoAssetId))
-      .get();
-    if (asset?.discardedAt === null) {
-      markAssetRecordAndFilesDiscarded({
-        ...input,
-        itemId: shotPlan.videoAssetId,
-      });
-    }
   },
   applyRestore(input) {
-    const snapshot = requireShotPlanTrashSnapshot(
-      input.snapshot,
-      input.trashItem.id
-    );
     input.session.db
       .update(shotPlans)
       .set({
@@ -105,32 +66,9 @@ export const shotPlanTrashDefinition: TrashObjectDefinition = {
         )
       )
       .run();
-    if (!snapshot.discardedVideoAsset || snapshot.videoAssetId === null) {
-      return;
-    }
-    const asset = input.session.db
-      .select({ discardOperationId: assets.discardOperationId })
-      .from(assets)
-      .where(eq(assets.id, snapshot.videoAssetId))
-      .get();
-    if (asset?.discardOperationId === input.trashItem.operationId) {
-      restoreAssetRecordAndFiles({
-        ...input,
-        trashItem: {
-          ...input.trashItem,
-          itemId: snapshot.videoAssetId,
-        },
-      });
-    }
   },
-  collectFiles(input) {
-    const snapshot = requireShotPlanTrashSnapshot(
-      input.snapshot,
-      input.trashItem.id
-    );
-    return snapshot.discardedVideoAsset && snapshot.videoAssetId !== null
-      ? collectAssetFiles(input, snapshot.videoAssetId)
-      : [];
+  collectFiles() {
+    return [];
   },
   resourceKeys(input) {
     if (!input.ownerId) {
@@ -145,29 +83,3 @@ export const shotPlanTrashDefinition: TrashObjectDefinition = {
     return [{ type: 'shotPlan.restored', shotPlanId: input.itemId }];
   },
 };
-
-function requireShotPlanTrashSnapshot(
-  snapshot: Record<string, unknown>,
-  trashItemId: string
-): {
-  sceneId: string;
-  videoAssetId: string | null;
-  discardedVideoAsset: boolean;
-} {
-  if (
-    typeof snapshot.sceneId === 'string' &&
-    (typeof snapshot.videoAssetId === 'string' ||
-      snapshot.videoAssetId === null) &&
-    typeof snapshot.discardedVideoAsset === 'boolean'
-  ) {
-    return {
-      sceneId: snapshot.sceneId,
-      videoAssetId: snapshot.videoAssetId,
-      discardedVideoAsset: snapshot.discardedVideoAsset,
-    };
-  }
-  throw new ProjectDataError(
-    'CORE_SHOT_PLAN_STORAGE_INVALID',
-    `Shot Plan Trash snapshot is invalid: ${trashItemId}.`
-  );
-}

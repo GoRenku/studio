@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import type {
   GenerationRun,
   GenerationSpec,
+  GenerationSpecAuthoredFrom,
   GenerationSpecRecord,
   GenerationTarget,
   JsonValue,
@@ -30,6 +31,7 @@ export function updateGenerationSpecRecord(
       purpose: row.purpose,
       targetKind: row.targetKind,
       targetId: row.targetId,
+      authoredFromShotPlanId: row.authoredFromShotPlanId,
       executionKind: row.executionKind,
       provider: row.provider,
       model: row.model,
@@ -56,6 +58,10 @@ export function freezeGenerationSpecRecord(
       eq(mediaGenerationSpecs.purpose, expected.purpose),
       eq(mediaGenerationSpecs.targetKind, expected.targetKind),
       eq(mediaGenerationSpecs.targetId, expected.targetId),
+      nullableEquality(
+        mediaGenerationSpecs.authoredFromShotPlanId,
+        expected.authoredFromShotPlanId
+      ),
       eq(mediaGenerationSpecs.executionKind, expected.executionKind),
       nullableEquality(mediaGenerationSpecs.provider, expected.provider),
       nullableEquality(mediaGenerationSpecs.model, expected.model),
@@ -87,7 +93,11 @@ export function readGenerationSpecRecord(
 
 export function listGenerationSpecRecords(
   session: DatabaseSession,
-  input: { purpose?: string; target?: GenerationTarget }
+  input: {
+    purpose?: string;
+    target?: GenerationTarget;
+    authoredFrom?: GenerationSpecAuthoredFrom;
+  }
 ): GenerationSpecRecord[] {
   const conditions = [];
   if (input.purpose) {
@@ -97,6 +107,11 @@ export function listGenerationSpecRecords(
     conditions.push(
       eq(mediaGenerationSpecs.targetKind, input.target.kind),
       eq(mediaGenerationSpecs.targetId, generationTargetId(input.target))
+    );
+  }
+  if (input.authoredFrom) {
+    conditions.push(
+      eq(mediaGenerationSpecs.authoredFromShotPlanId, input.authoredFrom.id)
     );
   }
   return session.db
@@ -201,6 +216,7 @@ function toSpecRow(record: GenerationSpecRecord) {
     purpose: record.spec.purpose,
     targetKind: record.spec.target.kind,
     targetId: generationTargetId(record.spec.target),
+    authoredFromShotPlanId: record.spec.authoredFrom?.id ?? null,
     executionKind: record.spec.executionKind,
     provider: record.spec.model?.provider ?? null,
     model: record.spec.model?.model ?? null,
@@ -224,6 +240,7 @@ function toSpecRecord(
     spec: {
       purpose: row.purpose,
       target: generationTarget(row.targetKind, row.targetId),
+      ...generationSpecAuthoredFrom(row.authoredFromShotPlanId),
       executionKind: row.executionKind as GenerationSpec['executionKind'],
       ...(row.provider !== null || row.model !== null
         ? {
@@ -251,8 +268,7 @@ function generationTarget(kind: string, id: string): GenerationTarget {
     kind === 'castMember' ||
     kind === 'location' ||
     kind === 'scene' ||
-    kind === 'sceneDialogue' ||
-    kind === 'shotPlan'
+    kind === 'sceneDialogue'
   ) {
     return { kind, id };
   }
@@ -264,4 +280,19 @@ function generationTarget(kind: string, id: string): GenerationTarget {
 
 function generationTargetId(target: GenerationTarget): string {
   return target.id;
+}
+
+function generationSpecAuthoredFrom(
+  shotPlanId: string | null
+): { authoredFrom?: GenerationSpecAuthoredFrom } {
+  if (shotPlanId === null) {
+    return {};
+  }
+  if (shotPlanId.trim()) {
+    return { authoredFrom: { kind: 'shotPlan', id: shotPlanId } };
+  }
+  throw new ProjectDataError(
+    'CORE_GENERATION_SPEC_INVALID',
+    'Stored generation authored-from context is invalid.'
+  );
 }

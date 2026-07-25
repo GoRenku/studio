@@ -59,11 +59,9 @@ Use the focused documents below for current direction.
   Beat descriptions and the other authored fields must not encode framing,
   lenses, camera movement, composition, coverage, or production instructions.
 - Shot Plans are Scene-owned mutable authoring aggregates with ordered Shots.
-  A plan is edited in place until one final video Asset is attached, then
-  `video_asset_id` alone makes it read-only. Further iteration copies the plan,
-  its Shots, and its optional current GenerationSpec into new mutable records.
+  A plan remains editable regardless of generation, Run, or Asset history.
   Core stores no Shot Plan authoring history, revision, status, output table,
-  owned references, or dependency graph.
+  owned Assets, owned references, or dependency graph.
 - Shot `description` is an intentional SQLite `TEXT` exception for opaque
   Markdown-capable authored text. Shot `brief` and Shot Plan Beat `coverage`
   are strict AJV-validated JSON text. Coverage is optional context whose
@@ -87,10 +85,12 @@ Use the focused documents below for current direction.
   files remain filesystem content until an explicit media import registers and
   attaches them as assets. A saved spec is mutable while `frozen_at` is null and
   permanently frozen when live execution begins.
-- A Shot Plan identifies zero or one current GenerationSpec. Generation model,
-  provider values, prompt values, and exact references remain only in that
-  Spec. Copying a plan creates a new mutable same-purpose Spec with the same
-  exact reference identities; it does not copy or retain the referenced media.
+- A Shot Plan identifies zero or one `lastGenerationSpec`: the most recently
+  associated request configuration to continue from, regardless of Run success
+  or failure. Run and Asset lifecycle events never move or clear it. A mutable
+  last Spec is edited directly; a changed attempt after freezing copies it into
+  a new mutable Spec. Copying a plan may likewise copy its last Spec. Neither
+  flow copies Runs, Assets, Asset Files, provenance, or referenced media.
 - Durable generated and imported asset files live under the folder for the
   domain object that owns them. Current asset paths must not start with
   `generated/`; temporary agent/debug files belong under top-level `tmp/`;
@@ -99,20 +99,20 @@ Use the focused documents below for current direction.
   reference input when the file is not reusable project state.
 - Location Sheets are durable image assets attached to Locations with role
   `location-sheet`. Each sheet has one `primary` image file and a concise
-  persisted description. A Location can have many Location Sheets. Shot Plan
-  video requests select exact Location Sheet files through GenerationSpec
-  references without adding Shot-owned relationships.
+  persisted description. A Location can have many Location Sheets. Video
+  requests may select exact Location Sheet files through GenerationSpec
+  references without adding Shot Plan relationships.
 - Location Hero Images are separate display assets attached to Locations with
   role `hero`. The selected hero asset drives overview/detail imagery and does
   not become a shot-generation reference.
-- Scene dialogue audio takes are durable scene dialogue media assets. They
-  are optional exact references for Shot Plan video requests through the
-  public `scene-dialogue` subject kind; Shot Plans do not own or retain them.
-- A final Shot Plan video is an ordinary `shot-plan-video` Asset linked
-  directly by `shot_plan.video_asset_id`. It has one primary video AssetFile
-  under the Shot Plan folder and existing Generation provenance when
-  applicable. Direct Shot Plan deletion and restoration reuse Trash and affect
-  only the plan plus the video Asset/File discarded by that operation.
+- Scene dialogue audio takes are durable scene dialogue media assets. They may
+  be selected as exact GenerationSpec references; Shot Plans do not own or
+  retain them.
+- `video.create` outputs are ordinary Project Assets under `videos/`. Their
+  Asset Files retain exact managed-Run or frozen agent-external-Spec
+  provenance. Optional `authoredFrom` context is information-only and never
+  creates Shot Plan ownership. Shot Plan and Asset Trash lifecycles are
+  independent.
 - Scene storyboard images are durable per-Beat Assets. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
   sheet for batch prompting, but import stores only the cropped shot images as

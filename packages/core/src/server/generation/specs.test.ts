@@ -5,6 +5,7 @@ import type { GenerationSpec } from '../../client/generation.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   createGenerationSpec,
+  listGenerationSpecs,
   readGenerationSpec,
   updateGenerationSpec,
 } from './specs.js';
@@ -76,6 +77,71 @@ describe('generic generation spec editing persistence', () => {
       now: '2026-07-12T10:00:00.000Z',
     })).toThrow(/accepts one current selection/);
   });
+
+  it('round-trips and filters soft Shot Plan authoring context', () => {
+    const session = createMemorySession();
+    const purpose = {
+      purpose: 'video.create' as const,
+      targetKind: 'project' as const,
+      outputMediaKind: 'video' as const,
+    };
+    createGenerationSpec({
+      id: 'spec-shot-plan',
+      spec: {
+        purpose: 'video.create',
+        target: { kind: 'project', id: 'project-1' },
+        authoredFrom: { kind: 'shotPlan', id: 'shot-plan-missing' },
+        executionKind: 'agent-external',
+        values: {},
+        references: [],
+      },
+      purpose,
+      session,
+      now: '2026-07-24T10:00:00.000Z',
+    });
+    createGenerationSpec({
+      id: 'spec-project',
+      spec: {
+        purpose: 'video.create',
+        target: { kind: 'project', id: 'project-1' },
+        executionKind: 'agent-external',
+        values: {},
+        references: [],
+      },
+      purpose,
+      session,
+      now: '2026-07-24T10:01:00.000Z',
+    });
+
+    expect(readGenerationSpec({
+      id: 'spec-shot-plan',
+      session,
+    }).spec.authoredFrom).toEqual({
+      kind: 'shotPlan',
+      id: 'shot-plan-missing',
+    });
+    expect(listGenerationSpecs({
+      session,
+      authoredFrom: { kind: 'shotPlan', id: 'shot-plan-missing' },
+    }).map((record) => record.id)).toEqual(['spec-shot-plan']);
+
+    expect(() => createGenerationSpec({
+      id: 'spec-invalid-origin',
+      spec: {
+        purpose: 'video.create',
+        target: { kind: 'project', id: 'project-1' },
+        authoredFrom: { kind: 'shotPlan', id: ' ' },
+        executionKind: 'agent-external',
+        values: {},
+        references: [],
+      },
+      purpose,
+      session,
+      now: '2026-07-24T10:02:00.000Z',
+    })).toThrow(expect.objectContaining({
+      code: 'CORE_GENERATION_SPEC_INVALID',
+    }));
+  });
 });
 
 function selection(id: string) {
@@ -108,6 +174,7 @@ function createMemorySession(): DatabaseSession {
       purpose text not null,
       target_kind text not null,
       target_id text not null,
+      authored_from_shot_plan_id text,
       execution_kind text not null,
       provider text,
       model text,

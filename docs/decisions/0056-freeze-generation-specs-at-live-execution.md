@@ -4,9 +4,10 @@ Date: 2026-07-18
 
 Status: accepted
 
-Decision 0061 adds one focused copy path owned by atomic Shot Plan copying. It
-creates a new mutable GenerationSpec for the copied plan without cloning Runs
-or changing the original frozen Spec.
+Decisions 0061 and 0062 add two focused Shot Plan copy paths: duplicating a
+Shot Plan may copy its last Spec, and continuing from a frozen last Spec creates
+a new mutable Spec for the same plan. Neither path clones Runs or changes the
+original frozen Spec.
 
 ## Context
 

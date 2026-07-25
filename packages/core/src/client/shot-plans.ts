@@ -1,5 +1,4 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { AssetFile } from './assets.js';
 import type { GenerationSpecRecord } from './generation.js';
 
 export interface ShotPlanCoverage {
@@ -41,10 +40,7 @@ export interface ShotPlan {
   title: string;
   coverage: ShotPlanCoverage | null;
   shots: Shot[];
-  generationSpec: GenerationSpecRecord | null;
-  videoAssetId: string | null;
-  videoAssetFile: AssetFile | null;
-  videoAttachedAt: string | null;
+  lastGenerationSpec: GenerationSpecRecord | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,9 +70,15 @@ export interface UpdateShotPlanInput extends ShotPlanProjectInput {
   shots: ShotInput[];
 }
 
-export interface SetShotPlanGenerationSpecInput extends ShotPlanProjectInput {
+export interface SetShotPlanLastGenerationSpecInput
+  extends ShotPlanProjectInput {
   shotPlanId: string;
-  generationSpecId: string | null;
+  lastGenerationSpecId: string;
+}
+
+export interface CreateNextShotPlanGenerationSpecInput
+  extends ShotPlanProjectInput {
+  shotPlanId: string;
 }
 
 export interface CopyShotPlanInput extends ShotPlanProjectInput {

@@ -211,37 +211,18 @@ export function replaceShotPlanAuthoring(
   }
 }
 
-export function setShotPlanGenerationSpecId(
+export function setShotPlanLastGenerationSpecId(
   session: DatabaseSession,
   input: {
     shotPlanId: string;
-    generationSpecId: string | null;
+    lastGenerationSpecId: string;
     now: string;
   }
 ): void {
   session.db
     .update(shotPlans)
     .set({
-      generationSpecId: input.generationSpecId,
-      updatedAt: input.now,
-    })
-    .where(eq(shotPlans.id, input.shotPlanId))
-    .run();
-}
-
-export function attachShotPlanVideoAsset(
-  session: DatabaseSession,
-  input: {
-    shotPlanId: string;
-    videoAssetId: string;
-    now: string;
-  }
-): void {
-  session.db
-    .update(shotPlans)
-    .set({
-      videoAssetId: input.videoAssetId,
-      videoAttachedAt: input.now,
+      lastGenerationSpecId: input.lastGenerationSpecId,
       updatedAt: input.now,
     })
     .where(eq(shotPlans.id, input.shotPlanId))

@@ -86,6 +86,11 @@ top-level `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`.
 Temporary storyboard sheets generated for slicing or review live under that
 scene storyboard folder's `tmp/` subfolder and are not assets.
 
+A **Generated Project Video** is an independent Project Asset stored under
+`videos/`. Its primary Asset File records exact managed-Run or frozen
+agent-external-Spec provenance. Optional Shot Plan authoring context remains on
+the Spec for information and grouping only; it is not Asset ownership.
+
 The **Research folder** is user-owned scratch space for external references.
 Files in `research/` are not asset files. A generation spec may reference a
 `research/` file as a one-off input when the file is only evidence for that
@@ -235,8 +240,7 @@ Folder responsibilities:
 - `storyboards/<sequence-name>/<scene-name>/` contains durable storyboard
   image iteration folders and a scene-local `tmp/` folder for temporary
   storyboard sheets.
-- `shots/<sequence-name>/<scene-name>/<take-name>-<nn>/` contains
-  take-owned shot-video production inputs and generated take videos.
+- `videos/` contains independent generated Project video Assets.
 - `research/` contains user-owned scratch references. Renku may read these
   files when instructed, and generation specs may use them as one-off reference
   inputs. Renku must not register them as SQLite asset files.

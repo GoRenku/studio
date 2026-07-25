@@ -94,9 +94,9 @@ Related terms:
   are ordered by their array position and contain exactly the accepted
   eight-field Beat shape.
 - **Shot Plan** is one mutable Scene-owned camera plan containing ordered Shots,
-  optional Beat coverage, zero or one current Generation Spec, and zero or one
-  final video Asset. The video Asset freezes the plan; copying starts another
-  editable iteration.
+  optional Beat coverage, and zero or one last Generation Spec used as the
+  starting point for continued generation authoring. Generation and Asset
+  history never freeze the plan, and the plan owns no generated media.
 - **Shot** is one ordered camera-authored unit inside a Shot Plan. It has an
   opaque description and a structured brief. It is deliberately separate from
   narrative Beats.
@@ -116,7 +116,7 @@ Related terms:
 | Screenplay Analysis           | A validated critique of the current screenplay structure, scene energy, evidence, and suggested additions.                               | Stored as history through `renku screenplay analyze`; suggestions do not mutate screenplay rows.            |
 | Scene Beat Sheet              | A validated scene-owned narrative breakdown made of ordered Beats.                                                                        | Stored as history through `renku screenplay beat-sheet`; one active Beat Sheet can be selected per Scene.   |
 | Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus title, description, narrative development, narrative purpose, cast/location ids, and screenplay block indexes. |
-| Shot Plan                     | One mutable Scene-owned plan for ordered Shots and one optional final video.                                                               | Directly edited until `video_asset_id` is attached, then copied for further iteration. It has no revision history or status. |
+| Shot Plan                     | One mutable Scene-owned plan for ordered Shots and one optional last Generation Spec.                                                      | Remains editable regardless of Run or Asset history. The last Spec is a reusable request starting point, not a successful result or owned video. |
 | Shot                          | One ordered camera-authored unit inside a Shot Plan.                                                                                       | Stores opaque `description` text and a strict structured `brief`; Beat coverage belongs to the plan. |
 | Lookbook                      | One of the two project-owned visual direction roles.                                                                                       | A project has at most one Production Lookbook and one Storyboard Lookbook. The role is permanent and cannot be discarded. |
 | Production Lookbook           | The project Lookbook for final-video visual language: palette, lighting, texture, composition, camera, and tone/mood.                      | Read directly for movie, cast, location, and future Shot visual-language guidance; it is never selected from alternatives. |

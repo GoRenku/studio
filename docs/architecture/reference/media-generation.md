@@ -15,6 +15,7 @@ interface GenerationSpec {
   executionKind: "renku-managed" | "agent-external";
   purpose: string;
   target: GenerationTarget;
+  authoredFrom?: { kind: "shotPlan"; id: string };
   model?: { provider?: string; model?: string };
   values: Record<string, JsonValue>;
   references: GenerationReferenceSelection[];
@@ -46,8 +47,13 @@ interface GenerationReferenceSelection {
 ```
 
 The stable target kinds are `project`, `asset`, `lookbook`, `castMember`,
-`location`, `scene`, `sceneDialogue`, and `shotPlan`. Every target is
+`location`, `scene`, and `sceneDialogue`. Every target is
 `{ kind, id }`; purpose descriptors own any additional context lookup.
+
+`authoredFrom` is optional information-only workflow context. Its recognized
+shape currently identifies a Shot Plan by non-empty id. Core does not require
+that plan to exist, use it as a target or owner, resolve its current contents,
+or couple its lifecycle to validation, execution, import, or inspection.
 
 `renku-managed` specs use Engines for validation, estimate, and execution.
 `agent-external` specs preserve a request executed by the agent, such as a
@@ -129,37 +135,38 @@ unavailable when exact pricing facts are insufficient.
 A provider failure after execution begins is a persisted failed run. A
 predictable validation or approval failure is not.
 
-## Shot Plan Video
+## Project Video And Shot Plan Authoring
 
-`shot-plan.video` is a video purpose targeting one Shot Plan. Its purpose facts
-contain only project aspect ratio and structural Scene subject ids used to
-build optional reference candidates. They never include Beat content, coverage,
-Shot descriptions, Shot briefs, or generated prompt text.
+`video.create` is a video purpose targeting the Project. It has no Shot Plan
+facts, inferred reference slots, prompt synthesis, or Shot-content validation.
+The agent may read a mutable Shot Plan separately, choose exact references, and
+author the request.
 
-Its optional guide slots include Production and Storyboard Lookbook Sheets,
-structural Scene Character and Location Sheets, Scene dialogue audio, First
-Frame, Last Frame, video-storyboard, and previs. Additional exact references
-remain unrestricted.
+A Shot Plan stores only its zero-or-one `lastGenerationSpec`. It is the request
+configuration to continue from regardless of whether its Runs have failed,
+succeeded, or have not started. Run and Asset lifecycle events never move or
+clear the pointer.
 
-A Shot Plan stores only its zero-or-one current GenerationSpec id. Model,
-provider values, prompt values, and exact references remain exclusively in the
-Spec. Atomic Shot Plan copying creates a new mutable same-purpose Spec targeting
-the copied plan while preserving exact reference identities. It copies no Run,
-Asset, AssetFile, or reference media.
+A mutable last Spec is edited directly. A frozen Spec remains retryable
+unchanged; a changed attempt copies it into a new mutable Spec for the same
+plan. Copying a Shot Plan may also copy its last Spec. Both copy paths preserve
+the request and exact reference identities, replace `authoredFrom` as needed,
+and copy no Run, Asset, Asset File, provenance, or media.
 
-Managed and agent-external final-video attachment requires provenance from the
-plan's current Spec. The caller selects one exact output path; attachment does
-not require one provider output, inspect Run status, or inspect video contents.
-Manual attachment creates no synthetic Spec or Run. The ordinary final video
-Asset links directly from `shot_plan.video_asset_id`.
+Imported `video.create` outputs require exact managed-Run or frozen
+agent-external-Spec provenance and become independent Project Assets under
+`videos/`. Multiple Assets may come from one or more Specs. Shot Plan and Asset
+Trash lifecycles remain independent, and request inspection reads only the
+frozen Spec or Run snapshot recorded for the Asset File.
 
-## Database Generation 50
+## Database Generation 51
 
 `media_generation_spec` columns:
 
 ```text
 id, purpose, target_kind, target_id, execution_kind, provider, model, title,
-values_json, references_json, frozen_at, created_at, updated_at
+values_json, references_json, authored_from_shot_plan_id, frozen_at, created_at,
+updated_at
 ```
 
 `media_generation_run` columns:
@@ -175,9 +182,11 @@ Shot Video Take generation purposes, targets, specs, runs, provenance, and
 Take-owned assets. The current generation runtime has no compatibility reader,
 target parser, attachment route, or fallback for those contracts.
 
-Migration `0064_shot_plans.sql` adds the current `shot_plan` and `shot` model
-and registers `shot-plan.video`. This is a new purpose and target, not a
-compatibility reader for Shot Video Take, generic AI Take, or Clip contracts.
+Migration `0065_detach_shot_plans_from_generated_video_assets.sql` removes Shot
+Plan video ownership, adds the soft authored-from column, and advances the
+database to generation 51. It performs no purpose translation, JSON rewrite,
+Asset reassignment, or other data conversion because Shot Plans had no
+persisted use.
 
 `asset_file_generation` remains the Renku-run provenance record. An AssetFile
 may separately link to the agent-external GenerationSpec that produced it.
@@ -196,5 +205,6 @@ Decision history is recorded in
 `../../decisions/0055-preserve-agent-external-generation-specs-on-images.md`.
 The irreversible lifecycle is recorded in
 `../../decisions/0056-freeze-generation-specs-at-live-execution.md`.
-Shot Plan copy-and-freeze behavior is recorded in
-`../../decisions/0061-use-mutable-copy-and-freeze-shot-plans.md`.
+Mutable Shot Plans, last-Spec continuation, and independent generated video
+Assets are recorded in
+`../../decisions/0062-detach-shot-plans-from-generated-video-assets.md`.
