@@ -165,6 +165,16 @@ Optional `authoredFrom` context on the Spec is information-only. Copying a Shot
 Plan or continuing from its frozen last Spec copies the exact reference
 identities into a new mutable Spec but does not copy or retain their files.
 
+A Shot planning image is stored at:
+
+```text
+shot-plans/shot_plan_bombardment/shots/shot_window/images/window-shockwave.png
+```
+
+This path is allocated by Core. Ownership and representative selection remain
+in `shot_asset` and `shot_representative_display_asset`; callers must not infer
+either from the folder.
+
 `image.edit` writes edited outputs beside the source image with a version
 suffix:
 

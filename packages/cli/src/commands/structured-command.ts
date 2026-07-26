@@ -32,6 +32,7 @@ export async function dispatchCliCommand<
   handlers: readonly CliCommandHandler<Flags, Runtime>[];
   unknownCommand: (commandPath: readonly string[]) => StructuredError;
 }): Promise<unknown> {
+  assertUniqueCommandPaths(input.handlers);
   const handler = input.handlers.find((candidate) =>
     matchesCommandPath(candidate.path, input.commandPath)
   );
@@ -39,6 +40,23 @@ export async function dispatchCliCommand<
     throw input.unknownCommand(input.commandPath);
   }
   return handler.run({ flags: input.flags, runtime: input.runtime });
+}
+
+export function assertUniqueCommandPaths(
+  handlers: readonly Pick<CliCommandHandler<unknown>, 'path'>[]
+): void {
+  const paths = handlers.map((handler) => handler.path.join(' '));
+  const duplicate = paths.find(
+    (path, index) => path.trim().length === 0 || paths.indexOf(path) !== index
+  );
+  if (duplicate !== undefined) {
+    throw new StructuredError({
+      code: 'CLI006',
+      message: duplicate
+        ? `CLI command handler path is duplicated: ${duplicate}.`
+        : 'CLI command handler path must not be empty.',
+    });
+  }
 }
 
 export function requiredFlag(value: string | undefined, flag: string): string {

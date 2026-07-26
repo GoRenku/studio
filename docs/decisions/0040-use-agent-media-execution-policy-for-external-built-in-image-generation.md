@@ -4,6 +4,12 @@ Date: 2026-06-30
 
 Status: accepted
 
+Decision 0063 narrows the current default for `shot.image`: when the user has
+not selected an execution route, the Shot planning workflow proposes Codex
+built-in GPT-Image-2 while retaining saved Preview, approval, provenance,
+inspection, import, and explicit-selection steps. The historical decision below
+otherwise remains unchanged.
+
 ## Context
 
 Codex can generate images through a built-in tool that is not a Renku provider

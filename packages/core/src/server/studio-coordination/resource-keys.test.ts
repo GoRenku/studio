@@ -13,7 +13,7 @@ import {
   studioBeatResourceKey,
   studioSceneBeatsResourceKey,
   studioSceneDialogueAudioSurfaceResourceKey,
-  studioSceneShotsResourceKey,
+  studioSceneShotPlansResourceKey,
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
   studioSequenceScenesNavigationResourceKey,
@@ -45,8 +45,8 @@ describe('Studio resource key catalog', () => {
       'surface:location:location_gate'
     );
     expect(studioSceneNarrativeResourceKey('scene_gate')).toBe('scene:scene_gate');
-    expect(studioSceneShotsResourceKey('scene_gate')).toBe(
-      'surface:scene:scene_gate:shots'
+    expect(studioSceneShotPlansResourceKey('scene_gate')).toBe(
+      'surface:scene:scene_gate:shot-plans'
     );
     expect(studioSceneBeatsResourceKey('scene_gate')).toBe(
       'surface:scene:scene_gate:beats'

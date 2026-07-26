@@ -21,6 +21,7 @@ import { runProjectInformationCommand } from './commands/project-information-com
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
+import { runShotPlanCommand } from './commands/shot-plan-command.js';
 import { runStudioCommand } from './commands/studio-command.js';
 import { runTrashCommand } from './commands/trash-command.js';
 
@@ -74,6 +75,7 @@ Commands
   project select       Request Studio to select a project
   project migrate      Apply pending project database migrations
   screenplay           Inspect, validate, create, and revise screenplay JSON
+  shot-plan            Author and inspect Scene Shot Plans
   studio current       Show current Studio focus and context
   studio server status Show canonical local Studio server status
   trash                List, restore, preview, and empty Trash
@@ -113,6 +115,10 @@ Options
   --dialogue           Scene dialogue id
   --take               Scene Dialogue Audio take id
   --beat-sheet         Scene Beat Sheet id
+  --shot-plan          Shot Plan id
+  --shot               Shot id
+  --asset              Asset id
+  --position           One-based Shot position
   --beats              Comma-separated Beat ids for storyboard imports
   --kind               Lookbook role
   --selection          Media import selection: select or take
@@ -268,6 +274,18 @@ function createCliFlags() {
     },
     beatSheet: {
       type: 'string',
+    },
+    shotPlan: {
+      type: 'string',
+    },
+    shot: {
+      type: 'string',
+    },
+    asset: {
+      type: 'string',
+    },
+    position: {
+      type: 'number',
     },
     beats: {
       type: 'string',
@@ -583,6 +601,7 @@ export async function runRenkuCli(
             sections: cli.flags.sections,
             anchor: cli.flags.anchor,
             receipt: cli.flags.receipt,
+            sourceSpec: cli.flags.sourceSpec,
             sourceSheet: cli.flags.sourceSheet,
             beatSheet: cli.flags.beatSheet,
             beats: cli.flags.beats,
@@ -630,6 +649,22 @@ export async function runRenkuCli(
             includeVisualReferences: cli.flags.includeVisualReferences,
             sequence: cli.flags.sequence,
             dryRun: cli.flags.dryRun,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'shot-plan':
+        return await runShotPlanCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            file: cli.flags.file,
+            scene: cli.flags.scene,
+            shotPlan: cli.flags.shotPlan,
+            shot: cli.flags.shot,
+            asset: cli.flags.asset,
+            position: cli.flags.position,
           },
           json: cli.flags.json,
           io,

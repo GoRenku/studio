@@ -6,7 +6,8 @@ export type AssetTarget =
   | { kind: 'castMember'; castMemberId: string }
   | { kind: 'location'; locationId: string }
   | { kind: 'sequence'; sequenceId: string }
-  | { kind: 'scene'; sceneId: string };
+  | { kind: 'scene'; sceneId: string }
+  | { kind: 'shot'; shotId: string };
 
 export interface AssetLocaleContext {
   localeId?: string | null;

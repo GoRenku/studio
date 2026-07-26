@@ -26,7 +26,7 @@ export {
   studioProjectShellResourceKey,
   studioSceneNarrativeResourceKey,
   studioSceneBeatSheetResourceKey,
-  studioSceneShotsResourceKey,
+  studioSceneShotPlansResourceKey,
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
   studioSequenceScenesNavigationResourceKey,

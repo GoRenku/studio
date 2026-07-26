@@ -20,6 +20,12 @@ export type ProjectAssetFileDestination =
   | { kind: 'visualLanguage.lookbookImage'; titleHint?: string }
   | { kind: 'visualLanguage.lookbookSheet'; titleHint?: string }
   | {
+      kind: 'shot.image';
+      shotPlanId: string;
+      shotId: string;
+      titleHint?: string;
+    }
+  | {
       kind: 'scene.dialogueAudio';
       sceneId: string;
       dialogueId: string;

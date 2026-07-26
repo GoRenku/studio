@@ -529,7 +529,8 @@ Fast coverage should exist for:
 - focused attachment ownership and provenance;
 - Preview, Generation Request inspection, Dialogue Audio, and Scene Beat Sheet use cases;
 - structured diagnostics for invalid state;
-- persistence-free Shot authoring component behavior.
+- focused Shot Plan authoring, Shot order/membership, representative-image
+  selection, selected-only copy, and recoverable multi-owner lifecycle.
 
 Core integration should remain for:
 

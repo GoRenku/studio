@@ -2,8 +2,11 @@ import {
   createDiagnosticWarning,
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
-import type { Beat } from '../../client/scene-beat-sheet.js';
-import type { ShotPlanCoverage } from '../../client/shot-plans.js';
+import type {
+  ShotPlanCoverage,
+  ShotPlanCoveredBeat,
+} from '../../client/shot-plans.js';
+import { readLatestSceneBeatStoryboardImage } from '../database/access/scene-beat-storyboard-images.js';
 import {
   readActiveSceneBeatSheetId,
   readSceneBeatSheetDocument,
@@ -16,9 +19,9 @@ export function resolveShotPlanBeatContext(input: {
   session: DatabaseSession;
   sceneId: string;
   coverage: ShotPlanCoverage | null;
-}): { resolvedBeats: Beat[]; warnings: DiagnosticIssue[] } {
+}): { coveredBeats: ShotPlanCoveredBeat[]; warnings: DiagnosticIssue[] } {
   if (input.coverage === null) {
-    return { resolvedBeats: [], warnings: [] };
+    return { coveredBeats: [], warnings: [] };
   }
   const beatSheet = readSceneBeatSheetRecord(
     input.session,
@@ -26,7 +29,7 @@ export function resolveShotPlanBeatContext(input: {
   );
   if (!beatSheet) {
     return {
-      resolvedBeats: [],
+      coveredBeats: [],
       warnings: [
         warning(
           'CORE_SHOT_PLAN_BEAT_SHEET_MISSING',
@@ -58,7 +61,7 @@ export function resolveShotPlanBeatContext(input: {
   const screenplay = readScreenplayDocumentFromSession(input.session);
   if (!screenplay) {
     return {
-      resolvedBeats: [],
+      coveredBeats: [],
       warnings: [
         ...warnings,
         warning(
@@ -73,11 +76,25 @@ export function resolveShotPlanBeatContext(input: {
     screenplay,
   });
   const beatsById = new Map(document.beats.map((beat) => [beat.id, beat]));
-  const resolvedBeats: Beat[] = [];
-  input.coverage.beatIds.forEach((beatId) => {
+  const coveredBeats: ShotPlanCoveredBeat[] = [];
+  input.coverage.beatIds.forEach((beatId, position) => {
     const beat = beatsById.get(beatId);
     if (beat) {
-      resolvedBeats.push(beat);
+      const storyboardImage = readLatestSceneBeatStoryboardImage({
+        session: input.session,
+        beatSheetId: beatSheet.id,
+        beatId,
+      });
+      coveredBeats.push({
+        beat,
+        position,
+        storyboardImage: storyboardImage
+          ? {
+              assetId: storyboardImage.assetId,
+              assetFileId: storyboardImage.assetFileId,
+            }
+          : null,
+      });
     } else {
       warnings.push(
         warning(
@@ -87,7 +104,7 @@ export function resolveShotPlanBeatContext(input: {
       );
     }
   });
-  return { resolvedBeats, warnings };
+  return { coveredBeats, warnings };
 }
 
 function warning(code: string, message: string): DiagnosticIssue {

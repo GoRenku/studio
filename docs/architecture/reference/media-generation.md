@@ -159,6 +159,25 @@ agent-external-Spec provenance and become independent Project Assets under
 Trash lifecycles remain independent, and request inspection reads only the
 frozen Spec or Run snapshot recorded for the Asset File.
 
+## Shot Representative Images
+
+`shot.image` is an image purpose targeting `{ kind: "shot", id }`. Core
+resolves the exact Shot and owning Scene, projects opaque Shot facts, and
+recommends the current project aspect ratio. It does not inspect Shot prose or
+pixels.
+
+Focused import writes a `shot-image` relationship and the Core-owned path
+`shot-plans/<plan-id>/shots/<shot-id>/images/`. It never changes the separate
+representative selection. Managed imports require an exact matching Run;
+external Codex imports require the exact frozen agent-external Spec.
+
+## Database Generation 52
+
+Migration `0066_concerned_the_fury.sql` adds Shot title and lifecycle columns,
+`shot_asset`, and `shot_representative_display_asset`, then advances the
+project database to generation 52. There is no brief compatibility reader or
+creative-data rewrite.
+
 ## Database Generation 51
 
 `media_generation_spec` columns:

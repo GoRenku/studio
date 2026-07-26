@@ -268,6 +268,7 @@ function generationTarget(kind: string, id: string): GenerationTarget {
     kind === 'castMember' ||
     kind === 'location' ||
     kind === 'scene' ||
+    kind === 'shot' ||
     kind === 'sceneDialogue'
   ) {
     return { kind, id };

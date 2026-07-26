@@ -8,18 +8,20 @@ import type {
   ShotPlanListReport,
   ShotPlanReport,
 } from '../../client/shot-plans.js';
+import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   listSceneShotPlanRecords,
-  listShotRecords,
   requireShotPlanRecord,
   type ShotPlanRecord,
-} from '../database/access/shot-plans.js';
+} from '../database/access/shot-plans/plan-records.js';
+import { readShotRepresentativeAssetId } from '../database/access/shot-plans/image-records.js';
+import { listShotRecords } from '../database/access/shot-plans/shot-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readGenerationSpec } from '../generation/specs.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { scenes } from '../schema/index.js';
-import { studioSceneShotsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioSceneShotPlansResourceKey } from '../studio-coordination/resource-keys.js';
 import { resolveShotPlanBeatContext } from './beat-context.js';
 import {
   parseStoredShotBrief,
@@ -42,13 +44,13 @@ export function projectShotPlanReport(input: {
     valid: true,
     project: projectReport(input),
     shotPlan: projection.shotPlan,
-    resolvedBeats: beatContext.resolvedBeats,
+    coveredBeats: beatContext.coveredBeats,
     warnings: [
       ...projection.warnings,
       ...beatContext.warnings,
       ...sceneWarnings(input.session, record.sceneId),
     ],
-    resourceKeys: [studioSceneShotsResourceKey(record.sceneId)],
+    resourceKeys: [studioSceneShotPlansResourceKey(record.sceneId)],
   };
 }
 
@@ -58,24 +60,29 @@ export function projectSceneShotPlanListReport(input: {
   sceneId: string;
 }): ShotPlanListReport {
   const projected = listSceneShotPlanRecords(input.session, input.sceneId).map(
-    (record) => projectShotPlan(input.session, record)
+    (record) => {
+      const projection = projectShotPlan(input.session, record);
+      const beatContext = resolveShotPlanBeatContext({
+        session: input.session,
+        sceneId: record.sceneId,
+        coverage: projection.shotPlan.coverage,
+      });
+      return { ...projection, beatContext };
+    }
   );
   return {
     valid: true,
     project: projectReport(input),
-    shotPlans: projected.map((item) => item.shotPlan),
+    shotPlans: projected.map((item) => ({
+      shotPlan: item.shotPlan,
+      coveredBeats: item.beatContext.coveredBeats,
+    })),
     warnings: [
       ...projected.flatMap((item) => item.warnings),
-      ...projected.flatMap((item) =>
-        resolveShotPlanBeatContext({
-          session: input.session,
-          sceneId: item.shotPlan.sceneId,
-          coverage: item.shotPlan.coverage,
-        }).warnings
-      ),
+      ...projected.flatMap((item) => item.beatContext.warnings),
       ...sceneWarnings(input.session, input.sceneId),
     ],
-    resourceKeys: [studioSceneShotsResourceKey(input.sceneId)],
+    resourceKeys: [studioSceneShotPlansResourceKey(input.sceneId)],
   };
 }
 
@@ -93,8 +100,10 @@ function projectShotPlan(
       shots: listShotRecords(session, record.id).map((shot) => ({
         id: shot.id,
         position: shot.position,
+        title: shot.title,
         description: shot.description,
         brief: parseStoredShotBrief(shot.brief, shot.id),
+        representativeImage: projectRepresentativeImage(session, shot.id),
       })),
       lastGenerationSpec:
         record.lastGenerationSpecId === null
@@ -105,6 +114,27 @@ function projectShotPlan(
     },
     warnings: [],
   };
+}
+
+function projectRepresentativeImage(
+  session: DatabaseSession,
+  shotId: string
+) {
+  const assetId = readShotRepresentativeAssetId(session, shotId);
+  if (!assetId) {
+    return null;
+  }
+  const asset = readAssetRelationship(session, {
+    target: { kind: 'shot', shotId },
+    assetId,
+  });
+  if (!asset || asset.role !== 'shot-image') {
+    throw new ProjectDataError(
+      'CORE_SHOT_PLAN_STORAGE_INVALID',
+      `Shot ${shotId} selects Asset ${assetId}, but it is not an active shot-image candidate.`
+    );
+  }
+  return asset;
 }
 
 function projectReport(input: {

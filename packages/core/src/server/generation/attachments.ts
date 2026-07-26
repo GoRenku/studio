@@ -8,16 +8,7 @@ import type { ProjectIdGenerator } from '../entity-ids.js';
 import { generationRunIdFromReceipt } from '../asset-file-generation/import-provenance.js';
 import { readGenerationRunRecord, readGenerationSpecRecord } from '../database/access/media-generation.js';
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
-import {
-  castCharacterSheetAttachmentDestination,
-  castProfileAttachmentDestination,
-  locationHeroAttachmentDestination,
-  locationSheetAttachmentDestination,
-  lookbookImageAttachmentDestination,
-  lookbookSheetAttachmentDestination,
-  projectVideoAttachmentDestination,
-  type GeneratedMediaAttachmentDestination,
-} from './attachment-destinations.js';
+import { resolveGeneratedMediaAttachment } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { validateImageEditAttachment } from './image-edit-attachment.js';
 
@@ -49,7 +40,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   projectFolder: string;
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
-  const attachment = attachmentDestination(input);
+  const attachment = resolveGeneratedMediaAttachment(input);
   const provenance = validateGenerationProvenance({
     ...input,
     destinationRelationshipRole: attachment.relationshipRole,
@@ -220,104 +211,6 @@ function persistedProjectRelativePath(
   return file.projectRelativePath;
 }
 
-function attachmentDestination(input: AttachGenerationMediaInput): {
-  destination: GeneratedMediaAttachmentDestination;
-  relationshipRole: string;
-  label: string;
-  assetType: string;
-  mediaKind: 'image' | 'video';
-  resourceKeys: string[];
-} {
-  switch (input.purpose) {
-    case 'video.create': {
-      assertTarget(input, 'project');
-      return attachmentDetails(
-        projectVideoAttachmentDestination(input.title),
-        'generated-video',
-        'Generated Video',
-        'generated-video',
-        'video'
-      );
-    }
-    case 'lookbook.image': {
-      assertTarget(input, 'lookbook');
-      return attachmentDetails(
-        lookbookImageAttachmentDestination(input.target.id, input.title),
-        'lookbook-image',
-        'Lookbook Image'
-      );
-    }
-    case 'lookbook.video-sheet': {
-      assertTarget(input, 'lookbook');
-      return attachmentDetails(
-        lookbookSheetAttachmentDestination(input.target.id, input.title),
-        'video-lookbook-sheet',
-        'Video Lookbook Sheet'
-      );
-    }
-    case 'lookbook.storyboard-sheet': {
-      assertTarget(input, 'lookbook');
-      return attachmentDetails(
-        lookbookSheetAttachmentDestination(input.target.id, input.title),
-        'storyboard-lookbook-sheet',
-        'Storyboard Lookbook Sheet'
-      );
-    }
-    case 'cast.character-sheet': {
-      assertTarget(input, 'castMember');
-      return attachmentDetails(
-        castCharacterSheetAttachmentDestination(input.target.id, input.title),
-        'character-sheet',
-        'Character Sheet',
-        'character_sheet'
-      );
-    }
-    case 'cast.profile': {
-      assertTarget(input, 'castMember');
-      return attachmentDetails(
-        castProfileAttachmentDestination(input.target.id, input.title),
-        'profile',
-        'Profile'
-      );
-    }
-    case 'location.sheet': {
-      assertTarget(input, 'location');
-      return attachmentDetails(
-        locationSheetAttachmentDestination(input.target.id, input.title),
-        'location-sheet',
-        'Location Sheet'
-      );
-    }
-    case 'location.hero': {
-      assertTarget(input, 'location');
-      return attachmentDetails(
-        locationHeroAttachmentDestination(input.target.id, input.title),
-        'hero',
-        'Location Hero',
-        'location-hero'
-      );
-    }
-    default:
-      throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_UNSUPPORTED', `Focused media attachment is not available for ${input.purpose}.`);
-  }
-}
-
-function attachmentDetails(
-  destination: GeneratedMediaAttachmentDestination,
-  relationshipRole: string,
-  label: string,
-  assetType = relationshipRole,
-  mediaKind: 'image' | 'video' = 'image'
-) {
-  return {
-    destination,
-    relationshipRole,
-    label,
-    assetType,
-    mediaKind,
-    resourceKeys: destination.resourceKeys,
-  };
-}
 
 function validateLookbookKind(
   input: AttachGenerationMediaInput & { session: DatabaseSession }
@@ -336,16 +229,5 @@ function validateLookbookKind(
       'CORE_LOOKBOOK_TARGET_KIND_INVALID',
       `${input.purpose} requires the current ${requiredKind} Lookbook.`
     );
-  }
-}
-
-function assertTarget<K extends GenerationTarget['kind']>(
-  input: AttachGenerationMediaInput,
-  kind: K
-): asserts input is AttachGenerationMediaInput & {
-  target: Extract<GenerationTarget, { kind: K }>;
-} {
-  if (input.target.kind !== kind) {
-    throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `${input.purpose} cannot attach media to ${input.target.kind}.`);
   }
 }

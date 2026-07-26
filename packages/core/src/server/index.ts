@@ -95,6 +95,7 @@ export {
 export { readGenerationRun, runGeneration } from './generation/runs.js';
 export type * from '../client/generation.js';
 export type * from '../client/generation-preview-resource.js';
+export type * from '../client/shot-plans.js';
 
 export { recordAssetFileGenerationProvenance } from './asset-file-generation/commands.js';
 export { readAssetFileGenerationProvenance } from './asset-file-generation/queries.js';
@@ -405,7 +406,7 @@ export {
   studioProjectShellResourceKey,
   studioSceneNarrativeResourceKey,
   studioSceneBeatSheetResourceKey,
-  studioSceneShotsResourceKey,
+  studioSceneShotPlansResourceKey,
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
   studioSequenceScenesNavigationResourceKey,

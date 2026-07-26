@@ -80,8 +80,8 @@ export function studioSceneNarrativeResourceKey(sceneId: string): string {
   return `scene:${sceneId}`;
 }
 
-export function studioSceneShotsResourceKey(sceneId: string): string {
-  return `surface:scene:${sceneId}:shots`;
+export function studioSceneShotPlansResourceKey(sceneId: string): string {
+  return `surface:scene:${sceneId}:shot-plans`;
 }
 
 export function studioSceneBeatsResourceKey(sceneId: string): string {
@@ -109,6 +109,8 @@ export function studioAssetTargetSurfaceResourceKeys(target: AssetTarget): strin
       return [studioCastMemberSurfaceResourceKey(target.castMemberId)];
     case 'location':
       return [studioLocationSurfaceResourceKey(target.locationId)];
+    case 'shot':
+      return [];
     case 'project':
     case 'sequence':
     case 'scene':

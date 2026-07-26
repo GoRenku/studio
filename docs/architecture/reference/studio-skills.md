@@ -111,13 +111,25 @@ operational companions that teach agents how to use those contracts.
 `movie-director`
 
 - Coordinates screenplay, analysis, visual language, cast, production design,
-  Beat design, media generation, and production readiness workflows.
+  Beat design, Shot planning, media generation, and production readiness
+  workflows.
 - Starts broad or cross-department requests with `renku director context`.
 - Dispatches durable artifact work to specialist skills instead of writing
   department documents directly.
 - Routes cast work to `casting-director`, production-design/location work to
-  `production-designer`, Beat design to `scene-beat-designer`, and media
-  generation to `media-producer`.
+  `production-designer`, Beat design to `scene-beat-designer`, Shot planning to
+  `shot-planner`, and media generation to `media-producer`.
+
+`shot-planner`
+
+- Creates and revises Scene-owned Shot Plans through focused `renku shot-plan`
+  commands.
+- Resolves exact plan/Shot ids and one-based user-facing Shot numbers without
+  whole-plan replacement.
+- Keeps descriptions opaque, briefs concise, and status/timeline concepts out
+  of the workflow.
+- Hands `shot.image` generation to `media-producer`, then imports and selects
+  the accepted representative in separate steps.
 
 `scene-beat-designer`
 

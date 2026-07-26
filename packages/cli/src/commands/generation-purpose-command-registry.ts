@@ -38,6 +38,10 @@ const targetParsers: Record<GenerationTarget['kind'], (value: string, purpose: G
   castMember: (value) => ({ kind: 'castMember', id: parseCastTarget(value, 'Cast generation') }),
   location: (value) => ({ kind: 'location', id: parseLocationTarget(value, 'Location generation') }),
   scene: (value) => ({ kind: 'scene', id: parseSceneTarget(value, 'Scene generation') }),
+  shot: (value, purpose) => ({
+    kind: 'shot',
+    id: parsePrefixedTarget(value, 'shot', purpose),
+  }),
   sceneDialogue: (value) => ({ kind: 'sceneDialogue', id: parseSceneDialogueTarget(value, 'Dialogue generation').dialogueId }),
 };
 

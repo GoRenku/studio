@@ -7,6 +7,9 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { renderScreenplaySceneContextText } from '../screenplay-scene-context-text.js';
+import { requireShotInPlan, requireShotRecord } from '../database/access/shot-plans/shot-records.js';
+import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
+import { parseStoredShotBrief } from '../shot-plans/validation.js';
 
 export function buildGenerationPurposeFacts(input: {
   target: GenerationTarget;
@@ -20,6 +23,29 @@ export function buildGenerationPurposeFacts(input: {
       session: input.session,
       authored: input.authored,
     }, projectAspectRatio);
+  }
+  if (input.target.kind === 'shot') {
+    const shot = requireShotRecord(input.session, input.target.id);
+    const shotPlan = requireShotPlanRecord(input.session, shot.shotPlanId);
+    requireShotInPlan(input.session, {
+      shotPlanId: shotPlan.id,
+      shotId: shot.id,
+    });
+    return {
+      ...buildSceneGenerationFacts(
+        {
+          target: { kind: 'scene', id: shotPlan.sceneId },
+          session: input.session,
+          authored: input.authored,
+        },
+        projectAspectRatio
+      ),
+      shotPlanId: shotPlan.id,
+      shotId: shot.id,
+      shotTitle: shot.title,
+      shotDescription: shot.description,
+      shotBrief: parseStoredShotBrief(shot.brief, shot.id) as JsonValue,
+    };
   }
   return { projectAspectRatio, ...(input.authored ?? {}) };
 }

@@ -8,6 +8,7 @@ import {
   projectAssets,
   sceneAssets,
   sequenceAssets,
+  shotAssets,
 } from '../schema/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
@@ -27,6 +28,7 @@ export function markAssetTreeDiscarded(
     locationAssets,
     sequenceAssets,
     sceneAssets,
+    shotAssets,
   ]) {
     input.session.db
       .update(table)
@@ -71,6 +73,7 @@ export function restoreAssetTree(input: TrashObjectRestoreContext): void {
     locationAssets,
     sequenceAssets,
     sceneAssets,
+    shotAssets,
   ]) {
     input.session.db
       .update(table)
@@ -113,7 +116,10 @@ export function collectAssetFiles(
   assetId: string
 ): TrashFileDraft[] {
   const asset = input.session.db
-    .select({ discardedAt: assets.discardedAt })
+    .select({
+      discardedAt: assets.discardedAt,
+      discardOperationId: assets.discardOperationId,
+    })
     .from(assets)
     .where(eq(assets.id, assetId))
     .get();
@@ -145,6 +151,9 @@ export function collectAssetFiles(
       suggestion:
         'Discard or detach every active owner before emptying Trash.',
     });
+  }
+  if (asset.discardOperationId !== input.trashItem.operationId) {
+    return [];
   }
   const files = input.session.db
     .select()
@@ -217,6 +226,7 @@ function countActiveAssetOwners(
     locationAssets,
     sequenceAssets,
     sceneAssets,
+    shotAssets,
   ].reduce((total, table) => {
     const rows = session.db
       .select({ id: table.id })

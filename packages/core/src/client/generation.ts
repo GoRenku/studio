@@ -17,6 +17,7 @@ export type GenerationPurpose =
   | 'location.sheet'
   | 'location.hero'
   | 'scene.storyboard-sheet'
+  | 'shot.image'
   | 'video.create';
 export type GenerationOutputMediaKind = 'image' | 'audio' | 'video';
 
@@ -27,6 +28,7 @@ export type GenerationTarget =
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
   | { kind: 'scene'; id: string }
+  | { kind: 'shot'; id: string }
   | { kind: 'sceneDialogue'; id: string };
 
 export type GenerationSpecAuthoredFrom = {

@@ -378,6 +378,7 @@ export function readAssetOwnerTargets(
     ...readScopedAssetOwnerTargets(session, assetId, 'location'),
     ...readScopedAssetOwnerTargets(session, assetId, 'sequence'),
     ...readScopedAssetOwnerTargets(session, assetId, 'scene'),
+    ...readScopedAssetOwnerTargets(session, assetId, 'shot'),
   ];
 }
 
@@ -579,6 +580,7 @@ function readScopedAssetOwnerTargets(
     | 'location'
     | 'sequence'
     | 'scene'
+    | 'shot'
 ): AssetTarget[] {
   const target = placeholderTarget(kind);
   const config = assetRelationshipTableConfig(target);
@@ -600,6 +602,7 @@ function placeholderTarget(
     | 'location'
     | 'sequence'
     | 'scene'
+    | 'shot'
 ): AssetTarget {
   switch (kind) {
     case 'castMember':
@@ -610,6 +613,8 @@ function placeholderTarget(
       return { kind, sequenceId: '' };
     case 'scene':
       return { kind, sceneId: '' };
+    case 'shot':
+      return { kind, shotId: '' };
   }
 }
 
@@ -618,7 +623,8 @@ function targetFromKind(
     | 'castMember'
     | 'location'
     | 'sequence'
-    | 'scene',
+    | 'scene'
+    | 'shot',
   targetId: string
 ): AssetTarget {
   switch (kind) {
@@ -630,5 +636,7 @@ function targetFromKind(
       return { kind, sequenceId: targetId };
     case 'scene':
       return { kind, sceneId: targetId };
+    case 'shot':
+      return { kind, shotId: targetId };
   }
 }

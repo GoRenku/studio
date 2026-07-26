@@ -2,36 +2,25 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { castVoiceCommandHandlers } from './cast-voice-command-handlers.js';
-import { generationCommandHandlers } from './generation-command-handlers.js';
+import { assertUniqueCommandPaths } from './structured-command.js';
 
 const commandDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('CLI command architecture', () => {
-  it('keeps generation command paths unique in one handler registry', () => {
-    expectUniqueHandlerPaths(generationCommandHandlers);
-  });
-
-  it('keeps Cast Voice command paths unique in one handler registry', () => {
-    expectUniqueHandlerPaths(castVoiceCommandHandlers);
-  });
-
-  it('does not deep-import core media-generation internals from CLI commands', async () => {
-    const commandSources = await Promise.all(
-      [
-        'media-command.ts',
-        'media-import-command-handlers.ts',
-        'generation-command.ts',
-        'generation-command-handlers.ts',
-        'generation-purpose-command-registry.ts',
-      ].map((fileName) => fs.readFile(path.join(commandDir, fileName), 'utf8'))
-    );
-
-    expect(commandSources.join('\n')).not.toContain(
-      '@gorenku/studio-core/server/media-generation'
-    );
-    expect(commandSources.join('\n')).not.toContain(
-      'media-generation/lifecycle/purpose-lifecycle-registry'
+  it('enforces non-empty unique paths at the structured-command boundary', () => {
+    expect(() =>
+      assertUniqueCommandPaths([
+        { path: ['alpha'] },
+        { path: ['beta', 'show'] },
+      ])
+    ).not.toThrow();
+    expect(() =>
+      assertUniqueCommandPaths([
+        { path: ['same'] },
+        { path: ['same'] },
+      ])
+    ).toThrowError(
+      expect.objectContaining({ code: 'CLI006' })
     );
   });
 
@@ -74,16 +63,6 @@ describe('CLI command architecture', () => {
     ).toEqual([]);
   });
 });
-
-function expectUniqueHandlerPaths(
-  handlers: Array<{ path: string[] }>
-): void {
-  const commandPaths = handlers.map((handler) => handler.path.join(' '));
-  expect(
-    commandPaths.filter((commandPath) => commandPath.trim().length === 0)
-  ).toEqual([]);
-  expect(new Set(commandPaths).size).toBe(commandPaths.length);
-}
 
 async function readCommandSources(): Promise<Array<{ file: string; source: string }>> {
   const files = (await listTypeScriptFiles(commandDir)).filter(

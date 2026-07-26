@@ -91,6 +91,12 @@ A **Generated Project Video** is an independent Project Asset stored under
 agent-external-Spec provenance. Optional Shot Plan authoring context remains on
 the Spec for information and grouping only; it is not Asset ownership.
 
+A **Shot Image Candidate** is an image Asset attached to one Shot with role
+`shot-image`. A Shot may own several candidates and explicitly select zero or
+one representative. Import and selection are separate. Candidate files live
+under `shot-plans/<plan-id>/shots/<shot-id>/images/`; SQLite relationships, not
+path segments, define ownership.
+
 The **Research folder** is user-owned scratch space for external references.
 Files in `research/` are not asset files. A generation spec may reference a
 `research/` file as a one-off input when the file is only evidence for that
@@ -102,7 +108,7 @@ Durable asset-file persistence is centralized in
 APIs from `packages/core/src/server/project-asset-files/index.ts`, pass a source
 project-relative path and an owner-aware destination such as a Cast Character
 Sheet, Cast Voice Sample, Location Sheet, Location Hero, Lookbook Image,
-Lookbook Sheet, or Scene Dialogue Audio take. The
+Lookbook Sheet, Scene Dialogue Audio take, or Shot image. The
 destination and generation-output submodules are private
 implementation details that own path allocation by domain family and purpose
 family.
@@ -196,11 +202,11 @@ at the project root. There is no `working-assets/` root and no
 
   research/
 
-  shotlist/
+  shot-plans/
 
   production-assets/
     master/
-      shotlist/
+      shot-plans/
       shared/
 
     localized/
@@ -246,7 +252,7 @@ Folder responsibilities:
   inputs. Renku must not register them as SQLite asset files.
 - `tmp/` contains generated JSON snapshots, receipts, operation files, QA
   pictures, and other non-durable agent/debug files.
-- `shotlist/` contains shot planning files and shot-owned assets.
+- `shot-plans/` contains shot planning files and shot-owned assets.
 - `production-assets/` contains clean post-production handoff files.
 
 Project creation may create only the folders needed by the current project

@@ -1,7 +1,8 @@
 import {
   requireShotPlanRecord,
   setShotPlanLastGenerationSpecId,
-} from '../database/access/shot-plans.js';
+} from '../database/access/shot-plans/plan-records.js';
+import type { SetShotPlanLastGenerationSpecInput } from '../../client/shot-plans.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   createRandomIdGenerator,
@@ -61,4 +62,38 @@ export function createNextShotPlanGenerationSpecAuthoring(input: {
     });
   });
   return generationSpecId;
+}
+
+export function associateShotPlanLastGenerationSpec(input: {
+  command: SetShotPlanLastGenerationSpecInput;
+  session: DatabaseSession;
+  now: string;
+}): void {
+  input.session.db.transaction((tx) => {
+    const session = { ...input.session, db: tx };
+    const shotPlan = requireShotPlanRecord(
+      session,
+      input.command.shotPlanId
+    );
+    const spec = readGenerationSpec({
+      id: input.command.lastGenerationSpecId,
+      session,
+    });
+    if (
+      spec.spec.purpose !== 'video.create' ||
+      spec.spec.target.kind !== 'project' ||
+      spec.spec.authoredFrom?.kind !== 'shotPlan' ||
+      spec.spec.authoredFrom.id !== shotPlan.id
+    ) {
+      throw new ProjectDataError(
+        'CORE_SHOT_PLAN_GENERATION_SPEC_INVALID',
+        `Generation Spec ${spec.id} is not authored from Shot Plan ${shotPlan.id}.`
+      );
+    }
+    setShotPlanLastGenerationSpecId(session, {
+      shotPlanId: shotPlan.id,
+      lastGenerationSpecId: input.command.lastGenerationSpecId,
+      now: input.now,
+    });
+  });
 }

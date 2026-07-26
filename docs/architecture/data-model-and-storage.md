@@ -61,11 +61,13 @@ Use the focused documents below for current direction.
 - Shot Plans are Scene-owned mutable authoring aggregates with ordered Shots.
   A plan remains editable regardless of generation, Run, or Asset history.
   Core stores no Shot Plan authoring history, revision, status, output table,
-  owned Assets, owned references, or dependency graph.
+  owned video output, owned references, or dependency graph.
 - Shot `description` is an intentional SQLite `TEXT` exception for opaque
-  Markdown-capable authored text. Shot `brief` and Shot Plan Beat `coverage`
-  are strict AJV-validated JSON text. Coverage is optional context whose
-  missing or stale references produce warnings rather than invalid state.
+  Markdown-capable authored text. Each Shot also stores a non-empty title.
+  Shot `brief` contains optional Framing, Camera, Motion, Optics, Lighting, and
+  approximate duration facts; Shot Plan Beat `coverage` stores soft Beat
+  context. Both are strict AJV-validated JSON text. Missing or stale coverage
+  references produce warnings rather than invalid state.
 - Cast Design and Location Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
   `cast_design` and `location_design`, with one active document per owner
@@ -113,6 +115,11 @@ Use the focused documents below for current direction.
   provenance. Optional `authoredFrom` context is information-only and never
   creates Shot Plan ownership. Shot Plan and Asset Trash lifecycles are
   independent.
+- `shot.image` outputs are Shot-owned planning image candidates related through
+  `shot_asset`. A separate representative-display row selects zero or one
+  candidate. Import never selects. Plan copy shares only selected
+  representatives; Shot/plan Trash uses active-owner counts before discarding
+  an Asset tree.
 - Scene storyboard images are durable per-Beat Assets. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
   sheet for batch prompting, but import stores only the cropped shot images as

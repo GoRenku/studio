@@ -1395,6 +1395,58 @@ Behavior:
 - To inspect Inspiration images, use `renku inspiration show` to get the folder
   path, then use normal shell commands such as `find` or `ls`.
 
+## `renku shot-plan`
+
+Shot Plans are mutable Scene-owned camera plans. JSON authoring files are
+temporary tagged inputs; SQLite remains the durable source of truth.
+
+Read:
+
+```bash
+renku shot-plan list --scene <scene-id> --json
+renku shot-plan show --shot-plan <shot-plan-id> --json
+```
+
+Create or update plan details:
+
+```bash
+renku shot-plan validate --file <shot-plan-create-or-update.json> --json
+renku shot-plan create --file <shot-plan-create.json> --json
+renku shot-plan update --shot-plan <shot-plan-id> --file <shot-plan-update.json> --json
+renku shot-plan copy --shot-plan <shot-plan-id> --json
+renku shot-plan delete --shot-plan <shot-plan-id> --json
+```
+
+Iterate one Shot:
+
+```bash
+renku shot-plan shot add --shot-plan <shot-plan-id> --file <shot.json> --json
+renku shot-plan shot update --shot-plan <shot-plan-id> --shot <shot-id> --file <shot.json> --json
+renku shot-plan shot move --shot-plan <shot-plan-id> --shot <shot-id> --position <one-based-position> --json
+renku shot-plan shot remove --shot-plan <shot-plan-id> --shot <shot-id> --json
+```
+
+`--position 1` means the first Shot. Core stores zero-based positions and
+rejects negative, zero, fractional, and out-of-range requested positions.
+
+Representative images remain explicit:
+
+```bash
+renku asset list --project <project> --target shot:<shot-id> --json
+renku shot-plan shot image select --shot-plan <plan-id> --shot <shot-id> --asset <asset-id> --json
+renku shot-plan shot image clear --shot-plan <plan-id> --shot <shot-id> --json
+renku shot-plan shot image discard --shot-plan <plan-id> --shot <shot-id> --asset <asset-id> --json
+```
+
+Importing a `shot.image` candidate never selects it. The selected candidate
+must be changed or cleared before discard.
+
+Current document tags are `shotPlanCreate`, `shotPlanUpdate`, and `shot`. Shot
+documents contain only `title`, exact Markdown `description`, and `brief`.
+Brief subjects are Framing, Camera, Motion, Optics, Lighting, plus optional
+positive `durationSeconds`. No document contains ids, position, status, media
+paths, prompts, or provider settings.
+
 ## `renku generation`
 
 Use the generic Core generation lifecycle for one explicit provider request.
@@ -1416,6 +1468,7 @@ scene.dialogue-audio
 location.sheet
 location.hero
 scene.storyboard-sheet
+shot.image
 ```
 
 Target formats are derived from the purpose contract:
@@ -1428,6 +1481,7 @@ cast:<cast-member-id>
 scene:<scene-id>:dialogue:<scene-dialogue-id>
 location:<location-id>
 scene:<scene-id>
+shot:<shot-id>
 ```
 
 Read the Core-owned context, reusable catalog, and model descriptors:
@@ -1536,6 +1590,9 @@ Behavior:
 - `scene.storyboard-sheet` keeps the deterministic 2x2 composite workflow.
   The agent inspects and splits the returned sheet, then uses the focused
   storyboard attachment command.
+- `shot.image` resolves one exact Shot and owning Scene, recommends the project
+  aspect ratio, and imports an unselected `shot-image` candidate under the
+  Core-owned Shot path.
 - Generation output is not attached automatically. Inspect the output, then use
   the focused `renku media import` purpose with the run receipt. Omit the
   receipt for external files. A Codex-generated image can instead retain its

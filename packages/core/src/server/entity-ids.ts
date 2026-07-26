@@ -37,6 +37,7 @@ export type EntityIdPrefix =
   | 'scene_beat_storyboard_image'
   | 'shot_plan'
   | 'shot'
+  | 'shot_asset'
   | 'scene_dialogue_audio'
   | 'scene_dialogue_audio_take'
   | 'trash_operation'

@@ -187,6 +187,8 @@ function readTarget(options: RunAssetCommandOptions): AssetTarget {
       return { kind: 'sequence', sequenceId: id };
     case 'scene':
       return { kind: 'scene', sceneId: id };
+    case 'shot':
+      return { kind: 'shot', shotId: id };
     default:
       throw invalidTarget(target);
   }
@@ -250,7 +252,7 @@ function invalidTarget(target: string): StructuredError {
         'CLI044',
         'Asset target must be project or kind:id.',
         { path: ['--target'], context: 'renku CLI arguments' },
-        'Use project, cast:<id>, location:<id>, sequence:<id>, or scene:<id>.'
+        'Use project, cast:<id>, location:<id>, sequence:<id>, scene:<id>, or shot:<id>.'
       ),
     ],
   });
@@ -272,5 +274,7 @@ function formatTarget(target: AssetTarget): string {
       return `sequence:${target.sequenceId}`;
     case 'scene':
       return `scene:${target.sceneId}`;
+    case 'shot':
+      return `shot:${target.shotId}`;
   }
 }

@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import type {
   Beat,
   SceneBeatSheetDocument,
@@ -112,7 +112,8 @@ export function readLatestSceneBeatStoryboardImage(input: {
       .where(
         and(
           eq(sceneBeatStoryboardImages.beatSheetId, input.beatSheetId),
-          eq(sceneBeatStoryboardImages.beatId, input.beatId)
+          eq(sceneBeatStoryboardImages.beatId, input.beatId),
+          isNull(sceneBeatStoryboardImages.discardedAt)
         )
       )
       .orderBy(

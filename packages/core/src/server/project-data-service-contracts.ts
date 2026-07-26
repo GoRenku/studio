@@ -97,13 +97,21 @@ import type {
   TrashListReport,
   CreateShotPlanInput,
   CreateNextShotPlanGenerationSpecInput,
-  UpdateShotPlanInput,
+  UpdateShotPlanDetailsInput,
+  AddShotToPlanInput,
+  UpdateShotInPlanInput,
+  MoveShotInPlanInput,
+  RemoveShotFromPlanInput,
+  SetShotRepresentativeImageInput,
+  ClearShotRepresentativeImageInput,
+  DiscardShotImageCandidateInput,
   SetShotPlanLastGenerationSpecInput,
   CopyShotPlanInput,
   ReadShotPlanInput,
   ListSceneShotPlansInput,
   ShotPlanReport,
   ShotPlanListReport,
+  ShotPlanValidationReport,
   DeleteShotPlanInput,
 } from '../client/index.js';
 import type {
@@ -232,7 +240,18 @@ export interface ProjectDataService {
   ): Promise<GarbageCollectionPreview>;
   emptyTrash(input: EmptyTrashInput): Promise<GarbageCollectionReport>;
   createShotPlan(input: CreateShotPlanInput): Promise<ShotPlanReport>;
-  updateShotPlan(input: UpdateShotPlanInput): Promise<ShotPlanReport>;
+  validateShotPlanDocument(input: {
+    document: unknown;
+  }): Promise<ShotPlanValidationReport>;
+  updateShotPlanDetails(
+    input: UpdateShotPlanDetailsInput
+  ): Promise<ShotPlanReport>;
+  addShotToPlan(input: AddShotToPlanInput): Promise<ShotPlanReport>;
+  updateShotInPlan(input: UpdateShotInPlanInput): Promise<ShotPlanReport>;
+  moveShotInPlan(input: MoveShotInPlanInput): Promise<ShotPlanReport>;
+  removeShotFromPlan(
+    input: RemoveShotFromPlanInput
+  ): Promise<RecoverableMutationReport>;
   setShotPlanLastGenerationSpec(
     input: SetShotPlanLastGenerationSpecInput
   ): Promise<ShotPlanReport>;
@@ -246,6 +265,15 @@ export interface ProjectDataService {
   ): Promise<ShotPlanListReport>;
   deleteShotPlan(
     input: DeleteShotPlanInput
+  ): Promise<RecoverableMutationReport>;
+  setShotRepresentativeImage(
+    input: SetShotRepresentativeImageInput
+  ): Promise<ShotPlanReport>;
+  clearShotRepresentativeImage(
+    input: ClearShotRepresentativeImageInput
+  ): Promise<ShotPlanReport>;
+  discardShotImageCandidate(
+    input: DiscardShotImageCandidateInput
   ): Promise<RecoverableMutationReport>;
   openCurrentProject(input: OpenCurrentProjectInput): Promise<CurrentProjectReport>;
   readCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;

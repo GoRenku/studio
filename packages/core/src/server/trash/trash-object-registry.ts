@@ -15,6 +15,8 @@ import {
   lookbookImages,
   lookbookSheets,
   sceneDialogueAudioTakes,
+  shotPlans,
+  shots,
 } from '../schema/index.js';
 import {
   studioAssetTargetSurfaceResourceKeys,
@@ -23,6 +25,7 @@ import {
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
+  studioSceneShotPlansResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
@@ -40,6 +43,7 @@ import {
   restoreAssetTree,
 } from './asset-tree-lifecycle.js';
 import { shotPlanTrashDefinition } from '../shot-plans/trash.js';
+import { shotTrashDefinition } from '../shot-plans/shot-trash.js';
 
 export function inspirationImageTrashItemId(input: {
   folderId: string;
@@ -378,8 +382,7 @@ const assetRelationshipDefinition: TrashObjectDefinition = {
       {
         itemKind: 'assetRelationship',
         itemId: input.itemId,
-        ownerKind: parsed.target.kind,
-        ownerId: assetTargetId(parsed.target),
+        ...assetRelationshipTrashOwner(input.session, parsed.target),
         title: relationship.title,
         restoreSnapshot: {
           assetId: parsed.assetId,
@@ -413,7 +416,12 @@ const assetRelationshipDefinition: TrashObjectDefinition = {
       input.snapshot,
       input.trashItem.id
     );
-    if (snapshot.discardedAsset) {
+    const asset = input.session.db
+      .select({ discardedAt: assets.discardedAt })
+      .from(assets)
+      .where(eq(assets.id, snapshot.assetId))
+      .get();
+    if (asset?.discardedAt) {
       restoreAssetRecordAndFiles({
         ...input,
         trashItem: { ...input.trashItem, itemId: snapshot.assetId },
@@ -430,18 +438,41 @@ const assetRelationshipDefinition: TrashObjectDefinition = {
       input.snapshot,
       input.trashItem.id
     );
-    return snapshot.discardedAsset ? collectAssetFiles(input, snapshot.assetId) : [];
+    return collectAssetFiles(input, snapshot.assetId);
   },
   resourceKeys(input) {
-    return studioAssetTargetSurfaceResourceKeys(
-      parseAssetRelationshipTrashItemId(input.itemId).target
-    );
+    const target = parseAssetRelationshipTrashItemId(input.itemId).target;
+    return target.kind === 'shot' && input.ownerId
+      ? [studioSceneShotPlansResourceKey(input.ownerId)]
+      : studioAssetTargetSurfaceResourceKeys(target);
   },
   restoredChanges(input) {
     const parsed = parseAssetRelationshipTrashItemId(input.itemId);
     return [{ type: 'assetRelationship.restored', assetId: parsed.assetId }];
   },
 };
+
+function assetRelationshipTrashOwner(
+  session: TrashObjectDiscardContext['session'],
+  target: AssetTarget
+): { ownerKind: string; ownerId: string | null } {
+  if (target.kind !== 'shot') {
+    return {
+      ownerKind: target.kind,
+      ownerId: assetTargetId(target),
+    };
+  }
+  const owner = session.db
+    .select({ sceneId: shotPlans.sceneId })
+    .from(shots)
+    .innerJoin(shotPlans, eq(shotPlans.id, shots.shotPlanId))
+    .where(eq(shots.id, target.shotId))
+    .get();
+  return {
+    ownerKind: 'scene',
+    ownerId: owner?.sceneId ?? null,
+  };
+}
 
 const castVoiceDefinition: TrashObjectDefinition = {
   itemKind: 'castVoice',
@@ -601,6 +632,7 @@ const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinitio
   assetRelationship: assetRelationshipDefinition,
   castVoice: castVoiceDefinition,
   sceneDialogueAudioTake: sceneDialogueAudioTakeDefinition,
+  shot: shotTrashDefinition,
   shotPlan: shotPlanTrashDefinition,
 
 
@@ -702,6 +734,8 @@ function assetTargetId(target: AssetTarget): string | null {
       return target.sequenceId;
     case 'scene':
       return target.sceneId;
+    case 'shot':
+      return target.shotId;
   }
 }
 
@@ -734,6 +768,9 @@ function parseAssetRelationshipTrashItemId(itemId: string): {
     case 'scene':
       assertAssetRelationshipTargetId(itemId, targetId);
       return { assetId, target: { kind, sceneId: targetId } };
+    case 'shot':
+      assertAssetRelationshipTargetId(itemId, targetId);
+      return { assetId, target: { kind, shotId: targetId } };
     default:
       throw new ProjectDataError(
         'PROJECT_DATA273',
@@ -789,6 +826,8 @@ function isAssetTarget(value: unknown): value is AssetTarget {
       return typeof target.sequenceId === 'string';
     case 'scene':
       return typeof target.sceneId === 'string';
+    case 'shot':
+      return typeof target.shotId === 'string';
     default:
       return false;
   }

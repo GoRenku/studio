@@ -9,6 +9,8 @@ import {
   projectLocales,
   sceneAssets,
   scenes,
+  shotAssets,
+  shots,
   sequenceAssets,
   sequences,
 } from '../../../schema/index.js';
@@ -107,6 +109,17 @@ export function assetRelationshipTableConfig(
         targetId: target.sceneId,
         targetEntityTable: scenes,
         targetEntityIdColumn: scenes.id,
+      };
+    case 'shot':
+      return {
+        target,
+        table: shotAssets,
+        idPrefix: 'shot_asset',
+        targetValueKey: 'shotId',
+        targetColumn: shotAssets.shotId,
+        targetId: target.shotId,
+        targetEntityTable: shots,
+        targetEntityIdColumn: shots.id,
       };
   }
 }

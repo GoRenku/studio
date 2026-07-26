@@ -6,11 +6,16 @@ import {
 import type {
   ShotBrief,
   ShotInput,
+  ShotPlanAuthoringDocument,
   ShotPlanCoverage,
+  ShotPlanValidationReport,
 } from '../../client/shot-plans.js';
 import {
   shotBriefSchema,
+  shotDocumentSchema,
+  shotPlanCreateDocumentSchema,
   shotPlanCoverageSchema,
+  shotPlanUpdateDocumentSchema,
 } from '../../client/shot-plan-json-schemas.js';
 import { ProjectDataError } from '../project-data-error.js';
 
@@ -25,59 +30,98 @@ const ajv = new Ajv2020({
 
 const validateCoverage = ajv.compile(shotPlanCoverageSchema);
 const validateBrief = ajv.compile(shotBriefSchema);
+const validateCreateDocument = ajv.compile(shotPlanCreateDocumentSchema);
+const validateUpdateDocument = ajv.compile(shotPlanUpdateDocumentSchema);
+const validateShotDocument = ajv.compile(shotDocumentSchema);
 
-export function validateShotPlanAuthoring(input: {
+export function validateShotPlanDocument(
+  document: unknown
+): ShotPlanValidationReport {
+  const kind =
+    typeof document === 'object' &&
+    document !== null &&
+    'kind' in document &&
+    typeof document.kind === 'string'
+      ? document.kind
+      : null;
+  const validator =
+    kind === 'shotPlanCreate'
+      ? validateCreateDocument
+      : kind === 'shotPlanUpdate'
+        ? validateUpdateDocument
+        : kind === 'shot'
+          ? validateShotDocument
+          : null;
+  if (!validator) {
+    throw new ProjectDataError(
+      'CORE_SHOT_PLAN_INVALID',
+      'Shot Plan authoring document kind is invalid.',
+      {
+        issues: [
+          error(
+            'Document kind must be shotPlanCreate, shotPlanUpdate, or shot.',
+            ['kind']
+          ),
+        ],
+      }
+    );
+  }
+  if (!validator(document)) {
+    throw new ProjectDataError(
+      'CORE_SHOT_PLAN_INVALID',
+      'Shot Plan authoring document failed validation.',
+      {
+        issues: ajvIssues(validator.errors ?? [], []),
+        suggestion:
+          'Use the documented current Shot Plan authoring document contract.',
+      }
+    );
+  }
+  return {
+    valid: true,
+    document: document as ShotPlanAuthoringDocument,
+    warnings: [],
+  };
+}
+
+export function validateShotPlanDetails(input: {
   title: string;
   coverage: ShotPlanCoverage | null;
-  shots: ShotInput[];
-  allowShotIds: boolean;
 }): {
   title: string;
   coverage: ShotPlanCoverage | null;
-  shots: ShotInput[];
 } {
   const issues: DiagnosticIssue[] = [];
   const title = requireTrimmedText(input.title, ['title'], issues);
   if (input.coverage !== null && !validateCoverage(input.coverage)) {
     issues.push(...ajvIssues(validateCoverage.errors ?? [], ['coverage']));
   }
-  const seenShotIds = new Set<string>();
-  input.shots.forEach((shot, index) => {
-    const path = ['shots', String(index)];
-    if (typeof shot.description !== 'string') {
-      issues.push(
-        error('Shot description must be text.', [...path, 'description'])
-      );
-    }
-    if (!validateBrief(shot.brief)) {
-      issues.push(...ajvIssues(validateBrief.errors ?? [], [...path, 'brief']));
-    }
-    if (shot.id !== undefined) {
-      const id = requireTrimmedText(shot.id, [...path, 'id'], issues);
-      if (!input.allowShotIds) {
-        issues.push(
-          error(
-            'New Shot Plan shots must not provide ids.',
-            [...path, 'id'],
-            'Omit Shot ids when creating a Shot Plan.'
-          )
-        );
-      } else if (seenShotIds.has(id)) {
-        issues.push(
-          error(
-            `Shot id is duplicated in the submitted list: ${id}.`,
-            [...path, 'id']
-          )
-        );
-      }
-      seenShotIds.add(id);
-    }
-  });
   throwIfIssues(issues);
   return {
     title,
     coverage: input.coverage,
-    shots: input.shots,
+  };
+}
+
+export function validateShotInput(
+  shot: ShotInput,
+  path: string[] = ['shot']
+): ShotInput {
+  const issues: DiagnosticIssue[] = [];
+  const title = requireTrimmedText(shot.title, [...path, 'title'], issues);
+  if (typeof shot.description !== 'string') {
+    issues.push(
+      error('Shot description must be text.', [...path, 'description'])
+    );
+  }
+  if (!validateBrief(shot.brief)) {
+    issues.push(...ajvIssues(validateBrief.errors ?? [], [...path, 'brief']));
+  }
+  throwIfIssues(issues);
+  return {
+    title,
+    description: shot.description,
+    brief: shot.brief,
   };
 }
 

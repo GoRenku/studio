@@ -42,6 +42,13 @@ import type {
   DestinationResolver,
   DestinationResolverRegistry,
 } from './types.js';
+import {
+  resolveShotDestinationFile,
+  resolveShotDestinationFileSync,
+  resolveShotDestinationOutputNames,
+  resolveShotDestinationRoot,
+  resolveShotDestinationRootSync,
+} from './shot.js';
 
 const castCharacterSheetResolver = castResolver<'cast.characterSheet'>();
 const castProfileResolver = castResolver<'cast.profile'>();
@@ -72,6 +79,13 @@ const destinationResolvers = {
     resolveRoot: resolveProjectVideoDestinationRoot,
     resolveRootSync: resolveProjectVideoDestinationRootSync,
     resolveOutputNames: resolveProjectVideoDestinationOutputNames,
+  },
+  'shot.image': {
+    resolveFile: resolveShotDestinationFile,
+    resolveFileSync: resolveShotDestinationFileSync,
+    resolveRoot: resolveShotDestinationRoot,
+    resolveRootSync: resolveShotDestinationRootSync,
+    resolveOutputNames: resolveShotDestinationOutputNames,
   },
 } satisfies DestinationResolverRegistry;
 
