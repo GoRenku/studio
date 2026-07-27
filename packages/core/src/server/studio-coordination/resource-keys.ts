@@ -1,4 +1,4 @@
-import type { AssetTarget } from '../../client/index.js';
+import type { AssetOwner } from '../../client/index.js';
 
 export function studioProjectShellResourceKey(): string {
   return 'project-shell';
@@ -103,12 +103,16 @@ export function studioBeatResourceKey(
   return `scene-beat-sheet:${beatSheetId}:beat:${beatId}`;
 }
 
-export function studioAssetTargetSurfaceResourceKeys(target: AssetTarget): string[] {
-  switch (target.kind) {
+export function studioAssetOwnerSurfaceResourceKeys(owner: AssetOwner): string[] {
+  switch (owner.kind) {
     case 'castMember':
-      return [studioCastMemberSurfaceResourceKey(target.castMemberId)];
+      return [studioCastMemberSurfaceResourceKey(owner.id)];
     case 'location':
-      return [studioLocationSurfaceResourceKey(target.locationId)];
+      return [studioLocationSurfaceResourceKey(owner.id)];
+    case 'lookbook':
+      return [studioVisualLanguageLookbookResourceKey(owner.id)];
+    case 'sceneBeat':
+      return [studioSceneBeatsResourceKey(owner.sceneId)];
     case 'shot':
       return [];
     case 'project':

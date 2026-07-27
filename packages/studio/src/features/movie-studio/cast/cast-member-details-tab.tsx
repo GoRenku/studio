@@ -24,30 +24,30 @@ import {
 
 interface CastMemberDetailsTabProps {
   projectName: string;
-  castMemberId: string;
   resource: CastMemberResourceResponse;
   assets: StudioAssetResponse[];
+  selectedProfileAssetId: string | null;
   onVoiceOverChange: (isVoiceOver: boolean) => Promise<void>;
 }
 
 export function CastMemberDetailsTab({
   projectName,
-  castMemberId,
   resource,
   assets,
+  selectedProfileAssetId,
   onVoiceOverChange,
 }: CastMemberDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const castMember = resource.castMember;
   const profileAsset = assets.find(
-    (asset) => asset.assetId === resource.firstImage?.assetId
+    (asset) => asset.id === selectedProfileAssetId
   ) ?? null;
   const firstVoice = resource.voices[0] ?? null;
   const firstVoiceFile = firstVoice?.sample.files[0] ?? null;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [voicePlaying, setVoicePlaying] = useState(false);
   const profilePreview = profileAsset
-    ? castPreviewImageForAsset(projectName, castMemberId, profileAsset)
+    ? castPreviewImageForAsset(projectName, profileAsset)
     : null;
   const profileAspectRatio = profileAsset
     ? castImageAssetAspectRatio(profileAsset, 1)

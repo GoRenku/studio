@@ -1,6 +1,10 @@
 # 0052 Separate Scene Beats From Shot Authoring
 
 Status: accepted
+
+Decision 0064 supersedes only the Storyboard association and Shot-image
+ownership implementation described below. The separation between narrative
+Scene Beats and camera-authored Shots remains accepted.
 Date: 2026-07-16
 
 Decision 0061 now defines the durable Shot Plan and Shot model. This decision

@@ -24,7 +24,7 @@ describe('assets Hono route', () => {
     const app = createMountedAssetsRoute();
 
     const response = await app.request(
-      '/constantinople/assets?targetKind=castMember&targetId=cast_narrator'
+      '/constantinople/assets?ownerKind=castMember&ownerId=cast_narrator'
     );
 
     expect(response.status).toBe(200);
@@ -32,8 +32,8 @@ describe('assets Hono route', () => {
       page: {
         items: [
           {
-            assetId: 'asset_cast_reference',
-            target: { kind: 'castMember', castMemberId: 'cast_narrator' },
+            id: 'asset_cast_reference',
+            owner: { kind: 'castMember', id: 'cast_narrator' },
           },
         ],
       },
@@ -51,31 +51,29 @@ describe('assets Hono route', () => {
     await expect(response.json()).resolves.toMatchObject({
       assets: [
         {
-          assetId: 'asset_cast_reference',
-          target: { kind: 'castMember', castMemberId: 'cast_narrator' },
+          id: 'asset_cast_reference',
+          owner: { kind: 'castMember', id: 'cast_narrator' },
           title: 'Narrator reference',
         },
       ],
     });
   });
 
-  it('sets and clears the Cast Profile display asset through ProjectDataService', async () => {
+  it('selects and clears the Cast Profile through ProjectDataService', async () => {
     const app = createMountedAssetsRoute();
 
     const selected = await app.request(
-      '/constantinople/cast/cast_narrator/display-profile/asset_cast_reference',
+      '/constantinople/cast/cast_narrator/selected-profile/asset_cast_reference',
       { method: 'POST' }
     );
     const unselected = await app.request(
-      '/constantinople/cast/cast_narrator/display-profile',
+      '/constantinople/cast/cast_narrator/selected-profile',
       { method: 'DELETE' }
     );
 
     expect(selected.status).toBe(200);
     await expect(selected.json()).resolves.toMatchObject({
-      asset: {
-        assetId: 'asset_cast_reference',
-      },
+      selectedAssetId: 'asset_cast_reference',
     });
     expect(unselected.status).toBe(200);
     await expect(unselected.json()).resolves.toMatchObject({
@@ -104,7 +102,7 @@ describe('assets Hono route', () => {
     const app = createMountedAssetsRoute();
 
     const response = await app.request(
-      '/constantinople/cast/cast_narrator/assets/asset_cast_reference/files/asset_file_cast_reference'
+      '/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference'
     );
 
     expect(response.status).toBe(200);
@@ -224,10 +222,8 @@ describe('assets Hono route', () => {
     }));
     const locationAsset = {
       ...makeAsset('asset_location_reference'),
-      relationshipId: 'location_asset_test0001',
-      target: { kind: 'location' as const, locationId: 'location_gate' },
-      type: 'location-sheet',
-      role: 'location-sheet',
+      owner: { kind: 'location' as const, id: 'location_gate' },
+      type: 'location_sheet',
       title: 'Gate Location Sheet',
       files: [
         {
@@ -245,14 +241,21 @@ describe('assets Hono route', () => {
         projectData: {
           ...fakeProjectDataService(),
           async listAssetPage(input) {
+            expect(input.owner).toEqual({
+              kind: 'location',
+              id: 'location_gate',
+            });
+            return {
+              items: [locationAsset],
+              nextCursor: null,
+              selectedAssetId: 'asset_location_reference',
+            };
+          },
+          async selectAsset(input) {
             expect(input.target).toEqual({
               kind: 'location',
-              locationId: 'location_gate',
+              id: 'location_gate',
             });
-            return { items: [locationAsset], nextCursor: null };
-          },
-          async setLocationHeroDisplayAsset(input) {
-            expect(input.locationId).toBe('location_gate');
             return {
               valid: true as const,
               warnings: [],
@@ -261,12 +264,16 @@ describe('assets Hono route', () => {
                 name: 'constantinople',
                 projectFolder: '/tmp/renku/constantinople',
               },
-              asset: locationAsset,
+              target: input.target,
+              selectedAssetId: input.assetId,
               resourceKeys: ['surface:location:location_gate'],
             };
           },
-          async clearLocationHeroDisplayAsset(input) {
-            expect(input.locationId).toBe('location_gate');
+          async clearAssetSelection(input) {
+            expect(input.target).toEqual({
+              kind: 'location',
+              id: 'location_gate',
+            });
             return {
               valid: true as const,
               warnings: [],
@@ -275,18 +282,16 @@ describe('assets Hono route', () => {
                 name: 'constantinople',
                 projectFolder: '/tmp/renku/constantinople',
               },
-              asset: null,
+              target: input.target,
+              selectedAssetId: null,
               resourceKeys: ['surface:location:location_gate'],
             };
           },
           discardAsset,
-          async resolveProjectAssetFile(input) {
-            expect(input.target).toEqual({
-              kind: 'location',
-              locationId: 'location_gate',
-            });
+          async resolveProjectAssetFileById(_input) {
             return {
-              asset: locationAsset,
+              assetId: locationAsset.id,
+              assetMediaKind: locationAsset.mediaKind,
               file: locationAsset.files[0]!,
               absolutePath:
                 '/tmp/renku/constantinople/locations/gate/location-sheets/gate/sheet.png',
@@ -303,11 +308,11 @@ describe('assets Hono route', () => {
       '/constantinople/locations/location_gate/assets'
     );
     const selected = await app.request(
-      '/constantinople/locations/location_gate/display-hero/asset_location_reference',
+      '/constantinople/locations/location_gate/selected-hero/asset_location_reference',
       { method: 'POST' }
     );
     const unselected = await app.request(
-      '/constantinople/locations/location_gate/display-hero',
+      '/constantinople/locations/location_gate/selected-hero',
       { method: 'DELETE' }
     );
     const deleted = await app.request(
@@ -315,23 +320,22 @@ describe('assets Hono route', () => {
       { method: 'DELETE' }
     );
     const file = await app.request(
-      '/constantinople/locations/location_gate/assets/asset_location_reference/files/asset_file_location_primary'
+      '/constantinople/assets/asset_location_reference/files/asset_file_location_primary'
     );
 
     expect(listed.status).toBe(200);
     await expect(listed.json()).resolves.toMatchObject({
       assets: [
         {
-          type: 'location-sheet',
-          role: 'location-sheet',
-          target: { kind: 'location', locationId: 'location_gate' },
+          type: 'location_sheet',
+          owner: { kind: 'location', id: 'location_gate' },
           files: [{ role: 'primary' }],
         },
       ],
     });
     expect(selected.status).toBe(200);
     await expect(selected.json()).resolves.toMatchObject({
-      asset: { assetId: 'asset_location_reference' },
+      selectedAssetId: 'asset_location_reference',
       resourceKeys: [
         'surface:location:location_gate',
       ],
@@ -343,7 +347,7 @@ describe('assets Hono route', () => {
     expect(deleted.status).toBe(200);
     expect(discardAsset).toHaveBeenCalledWith({
       projectName: 'constantinople',
-      target: { kind: 'location', locationId: 'location_gate' },
+      owner: { kind: 'location', id: 'location_gate' },
       assetId: 'asset_location_reference',
     });
     await expect(deleted.json()).resolves.toMatchObject({
@@ -360,9 +364,8 @@ describe('assets Hono route', () => {
     vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('shot bytes'));
     const sceneAsset = {
       ...makeAsset('asset_scene_storyboard'),
-      target: { kind: 'scene' as const, sceneId: 'scene_hook' },
+      owner: { kind: 'scene' as const, id: 'scene_hook' },
       type: 'scene_storyboard_image',
-      role: 'storyboard_image',
       files: [
         {
           ...makeAsset('asset_scene_storyboard').files[0]!,
@@ -378,14 +381,11 @@ describe('assets Hono route', () => {
       createAssetsRoute({
         projectData: {
           ...fakeProjectDataService(),
-          async resolveProjectAssetFile(input) {
-            expect(input.target).toEqual({
-              kind: 'scene',
-              sceneId: 'scene_hook',
-            });
+          async resolveProjectAssetFileById(input) {
             expect(input.assetFileId).toBe('asset_file_shot_001');
             return {
-              asset: sceneAsset,
+              assetId: sceneAsset.id,
+              assetMediaKind: sceneAsset.mediaKind,
               file: sceneAsset.files[0]!,
               absolutePath:
                 '/tmp/renku/constantinople/generated/storyboards/scene_hook/shot-001.png',
@@ -399,7 +399,7 @@ describe('assets Hono route', () => {
     );
 
     const response = await app.request(
-      '/constantinople/scenes/scene_hook/assets/asset_scene_storyboard/files/asset_file_shot_001'
+      '/constantinople/assets/asset_scene_storyboard/files/asset_file_shot_001'
     );
 
     expect(response.status).toBe(200);
@@ -411,7 +411,7 @@ describe('assets Hono route', () => {
     const app = createMountedAssetsRoute();
 
     const targetResponse = await app.request(
-      '/constantinople/assets?targetKind=castMember'
+      '/constantinople/assets?ownerKind=castMember'
     );
 
     expect(targetResponse.status).toBe(400);

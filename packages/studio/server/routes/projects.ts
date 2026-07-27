@@ -1,9 +1,6 @@
 import fs from 'node:fs/promises';
 import {
   createProjectDataService,
-  type Asset,
-  type AssetFile,
-  type AssetTarget,
   type ProjectDataService,
 } from '@gorenku/studio-core/server';
 import { Hono, type MiddlewareHandler } from 'hono';
@@ -64,10 +61,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'resolveCoverImage'
   | 'listAssets'
   | 'resolveProjectAssetFileById'
-  | 'setCastProfileDisplayAsset'
-  | 'clearCastProfileDisplayAsset'
-  | 'setLocationHeroDisplayAsset'
-  | 'clearLocationHeroDisplayAsset'
+  | 'selectAsset'
+  | 'clearAssetSelection'
   | 'discardAsset'
   | 'listTrash'
   | 'restoreTrashItem'
@@ -96,24 +91,11 @@ export type ProjectsRouteProjectData = Pick<
   | 'writeStoryboardLookbook'
   | 'setLookbookSourceInspirations'
   | 'listLookbookSourceInspirations'
-  | 'setLookbookCardImage'
-  | 'clearLookbookCardImage'
   | 'attachGenerationMedia'
   | 'deleteLookbookImage'
   | 'deleteLookbookSheet'
   | 'setLookbookImagePlacement'
-> & {
-  resolveProjectAssetFile(input: {
-    projectName: string;
-    target: AssetTarget;
-    assetId: string;
-    assetFileId: string;
-  }): Promise<{
-    asset: Asset;
-    file: AssetFile;
-    absolutePath: string;
-  }>;
-};
+>;
 
 export function createProjectsRoute(
   options: CreateProjectsRouteOptions = {}

@@ -100,6 +100,7 @@ export function discardTrashObject(
     resourceKeys:
       input.resourceKeys ??
       definition.resourceKeys({
+        session: input.session,
         itemId: input.itemId,
         ownerKind: primaryDraft?.ownerKind ?? null,
         ownerId: primaryDraft?.ownerId ?? null,
@@ -187,6 +188,7 @@ function restoreTrashItemRow(input: TrashProjectContext & {
     trashItemIds: [item.id],
     changes: definition.restoredChanges({ itemId: item.itemId }),
     resourceKeys: definition.resourceKeys({
+      session: input.session,
       itemId: item.itemId,
       ownerKind: item.ownerKind,
       ownerId: item.ownerId,

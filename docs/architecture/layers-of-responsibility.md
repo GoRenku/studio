@@ -186,7 +186,7 @@ The server should not own:
 - schema definitions;
 - project mutation logic;
 - validation rules;
-- generation reference eligibility, focused display choices, and Take media
+- generation reference eligibility, canonical Asset selection, and Take media
   ownership rules;
 - cast pinning or clip binding behavior;
 - queue transition rules.

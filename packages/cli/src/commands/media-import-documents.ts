@@ -17,11 +17,16 @@ export async function readSceneStoryboardImagesImportDocument(
     throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   const beats = parsed.beats;
-  if (!Array.isArray(beats) || typeof parsed.beatSheetId !== 'string') {
+  if (
+    !Array.isArray(beats)
+    || typeof parsed.beatSheetId !== 'string'
+    || typeof parsed.select !== 'boolean'
+  ) {
     throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   return {
     kind: 'sceneStoryboardImagesImport',
+    select: parsed.select,
     ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
     beatSheetId: parsed.beatSheetId,
     beats: beats.map((beat) => readSceneStoryboardImagesImportBeat(beat, filePath)),
@@ -62,7 +67,7 @@ function invalidSceneStoryboardImagesImportFile(
     code: 'CLI029',
     message: `Invalid Scene storyboard image import file: ${filePath}.`,
     suggestion:
-      'Provide JSON with kind "sceneStoryboardImagesImport", beatSheetId, and beats[] entries containing beatId and source.',
+      'Provide JSON with kind "sceneStoryboardImagesImport", beatSheetId, boolean select, and beats[] entries containing beatId and source.',
   });
 }
 

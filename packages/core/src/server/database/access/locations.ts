@@ -1,11 +1,13 @@
 import { and, asc, eq, notInArray } from 'drizzle-orm';
 import {
-  locationAssets,
+  assetMemberships,
+  assets,
   locationDesigns,
   locationDesignState,
   locations,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import { assetOwnerKey } from '../../assets/owner-keys.js';
 
 export type LocationRecord = typeof locations.$inferSelect;
 
@@ -80,11 +82,12 @@ export function replaceLocationAuthoringRecords(
 export function listLocationAssetRoleRecords(
   session: DatabaseSession,
   locationId: string
-): Array<{ role: string }> {
+): Array<{ type: string }> {
   return session.db
-    .select({ role: locationAssets.role })
-    .from(locationAssets)
-    .where(eq(locationAssets.locationId, locationId))
+    .select({ type: assets.type })
+    .from(assetMemberships)
+    .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
+    .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'location', id: locationId })))
     .all();
 }
 
@@ -94,9 +97,9 @@ export function readLocationDeleteDependencySummary(
 ): LocationDeleteDependencySummary {
   return {
     assetCount: session.db
-      .select({ id: locationAssets.id })
-      .from(locationAssets)
-      .where(eq(locationAssets.locationId, locationId))
+      .select({ id: assetMemberships.assetId })
+      .from(assetMemberships)
+      .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'location', id: locationId })))
       .all().length,
     designCount: session.db
       .select({ id: locationDesigns.id })
@@ -109,12 +112,13 @@ export function readLocationDeleteDependencySummary(
       .where(eq(locationDesignState.locationId, locationId))
       .all().length,
     locationSheetCount: session.db
-      .select({ id: locationAssets.id })
-      .from(locationAssets)
+      .select({ id: assets.id })
+      .from(assetMemberships)
+      .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
       .where(
         and(
-          eq(locationAssets.locationId, locationId),
-          eq(locationAssets.role, 'location-sheet')
+          eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'location', id: locationId })),
+          eq(assets.type, 'location_sheet')
         )
       )
       .all().length,

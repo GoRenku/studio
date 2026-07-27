@@ -30,20 +30,28 @@ describe('discard Asset', () => {
     const asset = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'location', locationId: 'location_test0001' },
-      type: 'location-sheet',
+      owner: { kind: 'location', id: 'location_test0001' },
+      type: 'location_sheet',
       mediaKind: 'image',
       title: 'Location Sheet',
       projectRelativePath,
       fileRole: 'primary',
-      role: 'location-sheet',
+    });
+
+    await expect(projectData.discardAsset({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'project' },
+      assetId: asset.id,
+    })).rejects.toMatchObject({
+      code: 'CORE_ASSET_OWNER_MISMATCH',
     });
 
     const report = await projectData.discardAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'location', locationId: 'location_test0001' },
-      assetId: asset.assetId,
+      owner: { kind: 'location', id: 'location_test0001' },
+      assetId: asset.id,
     });
     expect(report).toMatchObject({
       valid: true,

@@ -4,7 +4,7 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import type { LookbookSheet, LookbookKind } from '@gorenku/studio-core/server';
+import type { LookbookKind } from '@gorenku/studio-core/server';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -240,92 +240,30 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .put('/visual-language/lookbooks/:lookbookId/card-image', async (c) => {
+    .post('/visual-language/lookbooks/:lookbookId/selected-image/:assetId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
-        const body = await c.req.json<{ imageId?: string }>();
-        const report = await projectData.setLookbookCardImage({
+        const assetId = c.req.param('assetId') as string;
+        const report = await projectData.selectAsset({
           projectName,
-          lookbookId,
-          imageId: body.imageId ?? '',
+          target: { kind: 'lookbook', id: lookbookId },
+          assetId,
         });
-        return c.json({ image: report.image, resourceKeys: report.resourceKeys });
+        return c.json(report);
       } catch (error) {
         return projectErrorResponse(c, error);
       }
     })
-    .get('/visual-language/lookbooks/images/:imageId/files/:assetFileId', async (c) => {
+    .delete('/visual-language/lookbooks/:lookbookId/selected-image', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const imageId = c.req.param('imageId') as string;
-        const assetFileId = c.req.param('assetFileId') as string;
-        const lookbooks = await projectData.readProjectLookbooks({ projectName });
-        const resources = [lookbooks.production, lookbooks.storyboard].filter(
-          (resource): resource is NonNullable<typeof resource> => resource !== null
-        );
-        let image = resources
-          .map((resource) => resource.cardImage)
-          .find((candidate) => candidate?.id === imageId) ?? null;
-        image ??= resources
-          .flatMap((resource) => resource.images)
-          .find((item) => item.id === imageId) ?? null;
-        const file = image?.asset.files.find((candidate) => candidate.id === assetFileId);
-        if (!image || !file) {
-          throw createStructuredError({
-            code: 'STUDIO_SERVER037',
-            message: `Lookbook image file was not found: ${assetFileId}.`,
-            issues: [
-              createDiagnosticError(
-                'STUDIO_SERVER037',
-                `Lookbook image file was not found: ${assetFileId}.`,
-                { path: ['assetFileId'], context: 'Lookbook image file request' },
-                'Request an existing Lookbook image file.'
-              ),
-            ],
-            suggestion: 'Request an existing Lookbook image file.',
-          });
-        }
-        const project = await projectData.readProject({ projectName });
-        return await readProjectRelativeImageResponse(
-          project.identity.folderPath,
-          file.projectRelativePath
-        );
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/visual-language/lookbooks/sheets/:sheetId/files/:assetFileId', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const sheetId = c.req.param('sheetId') as string;
-        const assetFileId = c.req.param('assetFileId') as string;
-        const lookbooks = await projectData.readProjectLookbooks({ projectName });
-        const sheet: LookbookSheet | null = [lookbooks.production, lookbooks.storyboard]
-          .filter((resource): resource is NonNullable<typeof resource> => resource !== null)
-          .flatMap((resource) => resource.sheets)
-          .find((item) => item.id === sheetId) ?? null;
-        const file = sheet?.asset.files.find((candidate) => candidate.id === assetFileId);
-        if (!sheet || !file) {
-          throw createStructuredError({
-            code: 'STUDIO_SERVER352',
-            message: `Lookbook sheet file was not found: ${assetFileId}.`,
-            issues: [
-              createDiagnosticError(
-                'STUDIO_SERVER352',
-                `Lookbook sheet file was not found: ${assetFileId}.`,
-                { path: ['assetFileId'], context: 'Lookbook sheet file request' },
-                'Request an existing Lookbook sheet file.'
-              ),
-            ],
-            suggestion: 'Request an existing Lookbook sheet file.',
-          });
-        }
-        const project = await projectData.readProject({ projectName });
-        return await readProjectRelativeImageResponse(
-          project.identity.folderPath,
-          file.projectRelativePath
-        );
+        const lookbookId = c.req.param('lookbookId') as string;
+        const report = await projectData.clearAssetSelection({
+          projectName,
+          target: { kind: 'lookbook', id: lookbookId },
+        });
+        return c.json(report);
       } catch (error) {
         return projectErrorResponse(c, error);
       }

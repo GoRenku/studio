@@ -76,7 +76,7 @@ function lookbookImagesToReportImages(
     return [
       {
         id: image.id,
-        src: lookbookImageFileUrl(projectName, image.id, file.id),
+        src: lookbookImageFileUrl(projectName, image.asset.id, file.id),
         alt: image.asset.title,
         title: image.asset.title,
         lookbookImageId: image.id,

@@ -1,5 +1,5 @@
 import type {
-  AssetTarget,
+  AssetOwner,
   Asset,
   CastVoiceProviderCapability,
   CastVoiceProviderRegistration,
@@ -27,14 +27,7 @@ import {
   readActiveScreenplayAnalysisRecord,
   readScreenplayAnalysisDocument,
 } from '../database/access/screenplay-analysis.js';
-import {
-  listAssetRelationshipPage,
-  readAssetRelationship,
-} from '../database/access/asset-relationships/index.js';
-import {
-  readCastProfileDisplayAssetId,
-  readLocationHeroDisplayAssetId,
-} from '../database/access/display-assets.js';
+import { listAssetPageInSession, readOwnedAsset } from '../assets/projection.js';
 import {
   listCastVoiceProviderRegistrationRecords,
   listCastVoiceRecords,
@@ -87,11 +80,11 @@ export async function readCastMemberResource(
       ),
       firstImage: firstImageForTarget(session, {
         kind: 'castMember',
-        castMemberId: input.castMemberId,
+        id: input.castMemberId,
       }),
       voices: listCastVoiceRecords(session, input.castMemberId).map((voice) => {
-        const sample = readAssetRelationship(session, {
-          target: { kind: 'castMember', castMemberId: input.castMemberId },
+        const sample = readOwnedAsset(session, {
+          owner: { kind: 'castMember', id: input.castMemberId },
           assetId: voice.sampleAssetId,
         });
         if (!sample) {
@@ -237,7 +230,7 @@ export async function readLocationOverviewResource(
           ...location,
           firstImage: firstImageForTarget(session, {
             kind: 'location',
-            locationId: location.id,
+            id: location.id,
           }),
         })),
       },
@@ -258,7 +251,7 @@ export async function readLocationResource(
       ),
       firstImage: firstImageForTarget(session, {
         kind: 'location',
-        locationId: input.locationId,
+        id: input.locationId,
       }),
     };
   } finally {
@@ -380,7 +373,7 @@ export async function readSceneNarrativeResource(
           }
           const image = firstImageForTarget(session, {
             kind: 'castMember',
-            castMemberId: castMember.id,
+            id: castMember.id,
           });
           return image ? [[castMember.id, image]] : [];
         })
@@ -433,7 +426,7 @@ function mapCastImages(
       ...castMember,
       firstImage: firstImageForTarget(session, {
         kind: 'castMember',
-        castMemberId: castMember.id,
+        id: castMember.id,
       }),
     })),
   };
@@ -441,33 +434,24 @@ function mapCastImages(
 
 function firstImageForTarget(
   session: DatabaseSession,
-  target: AssetTarget
+  owner: AssetOwner
 ): ScreenplayImageReference | undefined {
-  const asset = firstPreferredImageAsset(session, target);
+  const asset = firstPreferredImageAsset(session, owner);
   return asset ? toScreenplayImageReference(asset) : undefined;
 }
 
 function firstPreferredImageAsset(
   session: DatabaseSession,
-  target: AssetTarget
+  owner: AssetOwner
 ): Asset | undefined {
-  if (target.kind === 'castMember') {
-    const assetId = readCastProfileDisplayAssetId(session, target.castMemberId);
-    return assetId
-      ? readAssetRelationship(session, { target, assetId }) ?? undefined
-      : undefined;
-  }
-  if (target.kind === 'location') {
-    const assetId = readLocationHeroDisplayAssetId(session, target.locationId);
-    return assetId
-      ? readAssetRelationship(session, { target, assetId }) ?? undefined
-      : undefined;
-  }
-  return listAssetRelationshipPage(session, {
-    target,
+  const page = listAssetPageInSession(session, {
+    owner,
     mediaKind: 'image',
-    limit: 1,
-  }).items[0];
+  });
+  if (owner.kind === 'castMember' || owner.kind === 'location') {
+    return page.items.find((asset) => asset.id === page.selectedAssetId);
+  }
+  return page.items[0];
 }
 
 function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | undefined {
@@ -479,8 +463,7 @@ function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | un
     return undefined;
   }
   return {
-    assetId: asset.assetId,
-    relationshipId: asset.relationshipId,
+    assetId: asset.id,
     assetFileId: file.id,
     title: asset.title,
     fileRole: file.role,

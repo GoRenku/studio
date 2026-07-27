@@ -374,21 +374,15 @@ async function seedProjectMedia(input: {
     target: { kind: 'castMember', id: input.ids.castMemberId },
     sourceProjectRelativePath: 'generated/media/urban-profile.png',
     title: 'Urban profile',
+    select: true,
   });
-  await input.projectData.updateAssetReference({
+  await input.projectData.updateAsset({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
-    target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
-    assetId: profile.asset.assetId,
+    assetId: profile.asset.id,
     title: 'Urban profile',
     referenceName: 'urban-profile',
     purpose: 'Browser E2E selectable profile image.',
-  });
-  await input.projectData.setCastProfileDisplayAsset({
-    homeDir: input.runtime.isolatedHomeDirectory,
-    projectName: input.projectName,
-    castMemberId: input.ids.castMemberId,
-    assetId: profile.asset.assetId,
   });
   const characterSheet = await input.projectData.attachGenerationMedia({
       homeDir: input.runtime.isolatedHomeDirectory,
@@ -398,11 +392,10 @@ async function seedProjectMedia(input: {
       sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
       title: 'Urban character sheet',
   });
-  await input.projectData.updateAssetReference({
+  await input.projectData.updateAsset({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
-    target: { kind: 'castMember', castMemberId: input.ids.castMemberId },
-    assetId: characterSheet.asset.assetId,
+    assetId: characterSheet.asset.id,
     title: 'Urban character sheet',
     referenceName: 'urban-character-sheet',
     purpose: 'Browser E2E character sheet reference.',
@@ -416,11 +409,10 @@ async function seedProjectMedia(input: {
       sourceProjectRelativePath: 'generated/media/gate-location-sheet.png',
       title: 'Gate Location Sheet',
     });
-  await input.projectData.updateAssetReference({
+  await input.projectData.updateAsset({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
-    target: { kind: 'location', locationId: input.ids.locationId },
-    assetId: locationSheet.asset.assetId,
+    assetId: locationSheet.asset.id,
     title: 'Gate Location Sheet',
     oneLineSummary: 'The gate, approach, and defensive masonry.',
     referenceName: 'gate-location-sheet',
@@ -476,8 +468,8 @@ async function seedProjectMedia(input: {
 
   return {
     lookbookId: lookbook.lookbook.id,
-    profileAssetId: profile.asset.assetId,
-    locationSheetAssetId: locationSheet.asset.assetId,
+    profileAssetId: profile.asset.id,
+    locationSheetAssetId: locationSheet.asset.id,
     lookbookSheetId: lookbookSheet.ownerRecord!.id,
   };
 }

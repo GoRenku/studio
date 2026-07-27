@@ -32,8 +32,8 @@ those filenames against files in the folder before writing.
 
 Lookbooks are durable project direction. They are schema-validated tagged JSON
 documents with source Inspiration relationships. They do not embed image
-filenames. Example images are registered assets attached through Lookbook image
-relationships and placed in sections by relationship rows.
+filenames. Example images are Lookbook-owned Assets; focused Lookbook detail
+rows preserve authored order and section/point placement.
 
 Studio refresh uses scoped resource keys returned by mutations, matching the
 resource loading architecture.
@@ -57,4 +57,3 @@ Skills must not write SQLite directly or preserve obsolete command shapes.
 - `../decisions/0018-use-project-native-visual-language-inspiration-analysis.md`
 - `../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
-

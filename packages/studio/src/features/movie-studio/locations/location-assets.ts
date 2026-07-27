@@ -1,23 +1,19 @@
 import type { PreviewImage } from '@/ui/image-preview-dialog';
 import { imageAspectRatioFromDimensions } from '@/ui/image-aspect-ratio';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { locationAssetFileUrl } from '@/services/studio-project-assets-api';
+import { projectAssetFileUrl } from '@/services/studio-project-assets-api';
 
-export const LOCATION_SHEET_ROLES = ['location-sheet'] as const;
-export const LOCATION_SHEET_TYPES = ['location-sheet'] as const;
-export const LOCATION_HERO_ROLE = 'hero';
+export const LOCATION_SHEET_TYPES = ['location_sheet'] as const;
 export const LOCATION_HERO_TYPE = 'location_hero';
 
 export function locationSheetAssets(
   assets: StudioAssetResponse[]
 ): StudioAssetResponse[] {
-  const roles = new Set<string>(LOCATION_SHEET_ROLES);
   const types = new Set<string>(LOCATION_SHEET_TYPES);
   return sortLocationAssets(
     assets.filter(
       (asset) =>
         types.has(asset.type) &&
-        roles.has(asset.role) &&
         Boolean(primaryImageFile(asset))
     )
   );
@@ -30,7 +26,6 @@ export function locationHeroAssets(
     assets.filter(
       (asset) =>
         asset.type === LOCATION_HERO_TYPE &&
-        asset.role === LOCATION_HERO_ROLE &&
         Boolean(primaryImageFile(asset))
     )
   );
@@ -46,12 +41,11 @@ export function primaryImageFile(asset: StudioAssetResponse) {
 
 export function locationSheetCompositeUrl(
   projectName: string,
-  locationId: string,
   asset: StudioAssetResponse
 ): string | null {
   const file = primaryImageFile(asset);
   return file
-    ? locationAssetFileUrl(projectName, locationId, asset.assetId, file.id)
+    ? projectAssetFileUrl(projectName, asset.id, file.id)
     : null;
 }
 
@@ -69,14 +63,13 @@ export function locationSheetAspectRatio(
 
 export function locationSheetPreviewImages(
   projectName: string,
-  locationId: string,
   asset: StudioAssetResponse
 ): PreviewImage[] {
   const file = primaryImageFile(asset);
   if (!file) return [];
   return [
     {
-      src: locationAssetFileUrl(projectName, locationId, asset.assetId, file.id),
+      src: projectAssetFileUrl(projectName, asset.id, file.id),
       alt: readableLocationSheetTitle(asset),
       title: readableLocationSheetTitle(asset),
     },
@@ -92,13 +85,13 @@ function sortLocationAssets(
   assets: StudioAssetResponse[]
 ): StudioAssetResponse[] {
   return [...assets].sort((left, right) => {
-    const sortDifference = left.sortOrder - right.sortOrder;
-    if (sortDifference !== 0) return sortDifference;
+    const createdDifference = right.createdAt.localeCompare(left.createdAt);
+    if (createdDifference !== 0) return createdDifference;
 
     const titleDifference = left.title.localeCompare(right.title);
     if (titleDifference !== 0) return titleDifference;
 
-    return left.assetId.localeCompare(right.assetId);
+    return left.id.localeCompare(right.id);
   });
 }
 

@@ -31,6 +31,13 @@ import {
   resolveSceneDialogueAudioDestinationRootSync,
 } from './scene-dialogue-audio.js';
 import {
+  resolveSceneStoryboardDestinationFile,
+  resolveSceneStoryboardDestinationFileSync,
+  resolveSceneStoryboardDestinationOutputNames,
+  resolveSceneStoryboardDestinationRoot,
+  resolveSceneStoryboardDestinationRootSync,
+} from './scene-storyboard.js';
+import {
   resolveProjectVideoDestinationFile,
   resolveProjectVideoDestinationFileSync,
   resolveProjectVideoDestinationOutputNames,
@@ -72,6 +79,13 @@ const destinationResolvers = {
     resolveRoot: resolveSceneDialogueAudioDestinationRoot,
     resolveRootSync: resolveSceneDialogueAudioDestinationRootSync,
     resolveOutputNames: resolveSceneDialogueAudioDestinationOutputNames,
+  },
+  'scene.storyboardImage': {
+    resolveFile: resolveSceneStoryboardDestinationFile,
+    resolveFileSync: resolveSceneStoryboardDestinationFileSync,
+    resolveRoot: resolveSceneStoryboardDestinationRoot,
+    resolveRootSync: resolveSceneStoryboardDestinationRootSync,
+    resolveOutputNames: resolveSceneStoryboardDestinationOutputNames,
   },
   'project.video': {
     resolveFile: resolveProjectVideoDestinationFile,

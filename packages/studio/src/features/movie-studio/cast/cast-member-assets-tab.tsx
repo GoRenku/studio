@@ -24,10 +24,9 @@ import { useGenerationRequestInspectorDialog } from '@/features/generation-reque
 
 interface CastMemberAssetsTabProps {
   projectName: string;
-  castMemberId: string;
   resource: CastMemberResourceResponse;
   assets: StudioAssetResponse[];
-  displayProfileAssetId: string | null;
+  selectedProfileAssetId: string | null;
   onTogglePick: (asset: StudioAssetResponse) => Promise<void>;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
   onDeleteVoice: (
@@ -37,10 +36,9 @@ interface CastMemberAssetsTabProps {
 
 export function CastMemberAssetsTab({
   projectName,
-  castMemberId,
   resource,
   assets,
-  displayProfileAssetId,
+  selectedProfileAssetId,
   onTogglePick,
   onDeleteAsset,
   onDeleteVoice,
@@ -64,9 +62,8 @@ export function CastMemberAssetsTab({
             fit='cover'
             minimumCardWidthPx={240}
             projectName={projectName}
-            castMemberId={castMemberId}
             assets={profileAssets}
-            selectedAssetId={displayProfileAssetId}
+            selectedAssetId={selectedProfileAssetId}
             emptyTitle='No profile images yet.'
             onOpenImage={setPreviewImage}
             onTogglePick={onTogglePick}
@@ -84,7 +81,6 @@ export function CastMemberAssetsTab({
             fit='contain'
             minimumCardWidthPx={384}
             projectName={projectName}
-            castMemberId={castMemberId}
             assets={characterSheetAssets}
             emptyTitle='No character sheets yet.'
             onOpenImage={setPreviewImage}
@@ -95,7 +91,7 @@ export function CastMemberAssetsTab({
               if (!file) return;
               openGenerationRequestInspector({
                 projectName,
-                assetId: asset.assetId,
+                assetId: asset.id,
                 assetFileId: file.id,
               });
             }}
@@ -128,7 +124,6 @@ function CastAssetSection({
   fit,
   minimumCardWidthPx,
   projectName,
-  castMemberId,
   assets,
   selectedAssetId,
   emptyTitle,
@@ -143,7 +138,6 @@ function CastAssetSection({
   fit: 'cover' | 'contain';
   minimumCardWidthPx: number;
   projectName: string;
-  castMemberId: string;
   assets: StudioAssetResponse[];
   selectedAssetId?: string | null;
   emptyTitle: string;
@@ -156,16 +150,15 @@ function CastAssetSection({
   const items = assets.map((asset) => {
     const previewImage = castPreviewImageForAsset(
       projectName,
-      castMemberId,
       asset
     );
-    const selected = asset.assetId === selectedAssetId;
-    const imageUrl = castImageAssetUrl(projectName, castMemberId, asset);
+    const selected = asset.id === selectedAssetId;
+    const imageUrl = castImageAssetUrl(projectName, asset);
     const title = asset.referenceName
       ? humanizeReferenceName(asset.referenceName)
       : undefined;
     return {
-      id: asset.assetId,
+      id: asset.id,
       card: {
         media: imageUrl
           ? {

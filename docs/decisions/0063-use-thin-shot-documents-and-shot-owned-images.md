@@ -4,6 +4,11 @@ Date: 2026-07-26
 
 Status: accepted
 
+Decision 0064 supersedes the Shot relationship table, representative naming,
+shared-copy behavior, selected-Asset discard guard, and active-owner counting
+described below. Thin Shot authoring and the `shot.image` purpose remain
+accepted; Shot candidates now use exclusive membership and common selection.
+
 ## Context
 
 Scene-owned mutable Shot Plans already separate cinematic Shot authoring from

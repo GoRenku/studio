@@ -1,4 +1,5 @@
 import type { GenerationPreview, GenerationPurpose, GenerationReferenceSlotSelectionInput, GenerationSpec, GenerationSpecAuthoredFrom, GenerationTarget, JsonValue } from '../../client/generation.js';
+import type { AssetOwner } from '../../client/assets.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { estimateGeneration } from '../generation/estimates.js';
 import { buildGenerationPreview } from '../generation/previews.js';
@@ -41,7 +42,7 @@ export function createGenerationServiceWiring() {
       }
       return listGenerationModels({ outputMediaKind: input.outputMediaKind });
     },
-    async listGenerationReferences(input: ProjectInput & { mediaKind?: 'image' | 'audio' | 'video'; owner?: { kind: string; id: string }; assetId?: string; assetRole?: string; search?: string; cursor?: string | null; limit?: number }) {
+    async listGenerationReferences(input: ProjectInput & { mediaKind?: 'image' | 'audio' | 'video'; owner?: AssetOwner; assetId?: string; assetType?: string; search?: string; cursor?: string | null; limit?: number }) {
       return withGenerationProject(input, ({ session }) => listGenerationReferences({ ...input, session }));
     },
     async validateGenerationSpec(input: ProjectInput & { spec: GenerationSpec }) {
@@ -206,7 +207,7 @@ export function createGenerationServiceWiring() {
     async readGenerationRun(input: ProjectInput & { runId: string }) {
       return withGenerationProject(input, ({ session }) => readGenerationRun({ id: input.runId, session }));
     },
-    async attachGenerationMedia(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; sourceProjectRelativePath: string; title?: string; receipt?: unknown; sourceSpecId?: string }) {
+    async attachGenerationMedia(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; sourceProjectRelativePath: string; title?: string; receipt?: unknown; sourceSpecId?: string; select?: boolean }) {
       return withGenerationProject(input, ({ session, projectFolder }) => attachGenerationMedia({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator() }));
     },
     async attachSceneStoryboardImages(input: ProjectInput & { sceneId: string; beatSheetId: string; document: SceneStoryboardImagesImportDocument }) {

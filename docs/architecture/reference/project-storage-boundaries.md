@@ -117,7 +117,7 @@ decided case by case.
 
 Visual Language prompt and guidance prose belongs in Markdown assets, not in
 SQLite text columns. SQLite owns the entry identity, category, priority,
-ordering, and asset relationships.
+ordering, exclusive Asset membership, and focused domain links.
 
 The system Visual Language Catalog is outside project SQLite. Catalog entries
 live under the Renku config visual-language catalog folder and are copied into a
@@ -134,8 +134,8 @@ useful inside the Markdown file itself.
 Frontmatter must not contain:
 
 - Renku IDs;
-- owner relationships;
-- asset relationships;
+- owner links;
+- Asset membership or selection;
 - status;
 - ordering;
 - selected/picked state;

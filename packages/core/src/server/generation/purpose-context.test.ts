@@ -4,7 +4,7 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProjectDataService } from '../index.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
-import { assetFiles, assets, castAssets, locationAssets } from '../schema/index.js';
+import { assetFiles, assetMemberships, assets } from '../schema/index.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 
 describe('Scene generation context', () => {
@@ -53,34 +53,6 @@ describe('Scene generation context', () => {
       { kind: 'asset-file', assetId: 'asset_location_selected', assetFileId: 'asset_file_location_selected' },
     ]);
 
-    const session = openProjectStore({ projectFolder: created.projectPath, create: false });
-    try {
-      session.db.insert(castAssets).values(
-        relationship(
-          'cast_asset_generic_reference',
-          'asset_generic_reference',
-          castMemberId,
-          'character-sheet',
-          '2026-07-14T10:00:00.000Z'
-        )
-      ).run();
-    } finally {
-      session.close();
-    }
-    const focusedContext = await projectData.buildGenerationContext({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'scene.storyboard-sheet',
-      target: { kind: 'scene', id: scene.id! },
-    });
-    const focusedCastSlot = focusedContext.referenceGuide.sections
-      .find((section) => section.id === 'cast')!.slots[0]!;
-    expect(focusedCastSlot.eligibleCandidates.map((candidate) => candidate.reference))
-      .toContainEqual({
-        kind: 'asset-file',
-        assetId: 'asset_generic_reference',
-        assetFileId: 'asset_file_generic_reference',
-      });
   });
 });
 
@@ -92,10 +64,10 @@ function seedContinuityAssets(
   const now = '2026-07-14T10:00:00.000Z';
   try {
     session.db.insert(assets).values([
-      asset('asset_cast_selected', 'Selected Cast Sheet', now),
-      asset('asset_cast_take', 'Cast Take', now),
-      asset('asset_location_selected', 'Selected Location Sheet', now),
-      asset('asset_generic_reference', 'Generic Maria Reference', now),
+      asset('asset_cast_selected', 'character_sheet', 'Selected Cast Sheet', now),
+      asset('asset_cast_take', 'character_sheet', 'Cast Take', now),
+      asset('asset_location_selected', 'location_sheet', 'Selected Location Sheet', now),
+      asset('asset_generic_reference', 'reference', 'Generic Maria Reference', now),
     ]).run();
     session.db.insert(assetFiles).values([
       assetFile('asset_file_cast_selected', 'asset_cast_selected', 'cast-selected.png', now),
@@ -103,26 +75,25 @@ function seedContinuityAssets(
       assetFile('asset_file_location_selected', 'asset_location_selected', 'location-selected.png', now),
       assetFile('asset_file_generic_reference', 'asset_generic_reference', 'generic-reference.png', now),
     ]).run();
-    session.db.insert(castAssets).values([
-      relationship('cast_asset_selected', 'asset_cast_selected', ids.castMemberId, 'character-sheet', now),
-      relationship('cast_asset_take', 'asset_cast_take', ids.castMemberId, 'character-sheet', now),
+    session.db.insert(assetMemberships).values([
+      membership('asset_cast_selected', `castMember:${ids.castMemberId}`, now),
+      membership('asset_cast_take', `castMember:${ids.castMemberId}`, now),
+      membership('asset_location_selected', `location:${ids.locationId}`, now),
+      membership('asset_generic_reference', 'project', now),
     ]).run();
-    session.db.insert(locationAssets).values(
-      relationship('location_asset_selected', 'asset_location_selected', ids.locationId, 'location-sheet', now)
-    ).run();
   } finally {
     session.close();
   }
 }
 
-function asset(id: string, title: string, now: string) {
-  return { id, type: 'reference', mediaKind: 'image', title, origin: 'generated', availability: 'ready', createdAt: now, updatedAt: now };
+function asset(id: string, type: string, title: string, now: string) {
+  return { id, type, mediaKind: 'image', title, origin: 'generated', availability: 'ready', createdAt: now, updatedAt: now };
 }
 
 function assetFile(id: string, assetId: string, filename: string, now: string) {
   return { id, assetId, role: 'primary', projectRelativePath: `references/${filename}`, mediaKind: 'image', mimeType: 'image/png', createdAt: now, updatedAt: now };
 }
 
-function relationship(id: string, assetId: string, ownerId: string, role: string, now: string) {
-  return { id, assetId, castMemberId: ownerId, locationId: ownerId, role, sortOrder: 1, createdAt: now, updatedAt: now };
+function membership(assetId: string, ownerKey: string, now: string) {
+  return { assetId, ownerKey, createdAt: now, updatedAt: now };
 }

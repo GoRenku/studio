@@ -1335,15 +1335,13 @@ Behavior:
 
 ## `renku lookbook image`
 
-Edit generated or imported Lookbook image relationships.
+Edit generated or imported Lookbook image placement and lifecycle.
 
 ```bash
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera,texture --json
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera --anchor <lookbook-point-id> --json
 renku lookbook image set-placement --image <lookbook-image-id> --sections thesis,texture --anchor <texture-point-id> --json
 renku lookbook image discard --image <lookbook-image-id> --json
-renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
-renku lookbook card-image clear --lookbook <lookbook-id> --json
 ```
 
 Behavior:
@@ -1367,7 +1365,12 @@ Behavior:
   `lighting`, `texture`, and `camera`.
 - Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
 - Use `renku media import --purpose lookbook.image` to attach a new generated,
-  uploaded, or downloaded file to a Lookbook.
+  uploaded, or downloaded file to a Lookbook. Add `--select` when that same
+  accepted intent should also make it the Lookbook's canonical image.
+- To choose an existing candidate, use `renku asset list --owner
+  lookbook:<lookbook-id>` followed by `renku asset select --target
+  lookbook:<lookbook-id> --asset <asset-id>`. Use `asset clear-selection` to
+  clear the canonical image.
 
 ## `renku lookbook inspiration`
 
@@ -1429,17 +1432,18 @@ renku shot-plan shot remove --shot-plan <shot-plan-id> --shot <shot-id> --json
 `--position 1` means the first Shot. Core stores zero-based positions and
 rejects negative, zero, fractional, and out-of-range requested positions.
 
-Representative images remain explicit:
+Shot image selection remains explicit:
 
 ```bash
-renku asset list --project <project> --target shot:<shot-id> --json
-renku shot-plan shot image select --shot-plan <plan-id> --shot <shot-id> --asset <asset-id> --json
-renku shot-plan shot image clear --shot-plan <plan-id> --shot <shot-id> --json
+renku asset list --project <project> --owner shot:<shot-id> --json
+renku asset select --project <project> --target shot:<shot-id> --asset <asset-id> --json
+renku asset clear-selection --project <project> --target shot:<shot-id> --json
 renku shot-plan shot image discard --shot-plan <plan-id> --shot <shot-id> --asset <asset-id> --json
 ```
 
-Importing a `shot.image` candidate never selects it. The selected candidate
-must be changed or cleared before discard.
+Importing a `shot.image` candidate with `--select` persists import and selection
+as one accepted intent. Use `asset select` only when choosing an existing
+candidate. Discarding the selected candidate clears that Shot's selection.
 
 Current document tags are `shotPlanCreate`, `shotPlanUpdate`, and `shot`. Shot
 documents contain only `title`, exact Markdown `description`, and `brief`.
@@ -1645,21 +1649,24 @@ renku media import \
   --title <title> \
   --receipt <generation-run-json> \
   --source-spec <agent-external-spec-id> \
+  --select \
   --json
 ```
 
 `--receipt` and `--source-spec` are alternatives; do not pass both.
+`--select` is supported only by canonical Profile, Hero, Lookbook Image, Shot
+Image, and Scene Storyboard Image imports.
 
 Examples:
 
 ```bash
-renku media import --purpose lookbook.image --target lookbook:<lookbook-id> --source tmp/media/lookbook-image.png --title "Lookbook image" --json
+renku media import --purpose lookbook.image --target lookbook:<lookbook-id> --source tmp/media/lookbook-image.png --title "Lookbook image" --select --json
 renku media import --purpose lookbook.video-sheet --target lookbook:<lookbook-id> --source tmp/media/video-lookbook-sheet.png --title "Video Lookbook Sheet" --json
 renku media import --purpose lookbook.storyboard-sheet --target lookbook:<lookbook-id> --source tmp/media/storyboard-lookbook-sheet.png --title "Storyboard Lookbook Sheet" --json
 renku media import --purpose cast.character-sheet --target cast:<cast-member-id> --source tmp/media/character-sheet.png --title "Character Sheet" --json
-renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --json
+renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --select --json
 renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
-renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --json
+renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --select --json
 renku media import --purpose video.create --target project --source tmp/media/bombardment-wide.mp4 --title "Bombardment wide" --receipt tmp/receipts/video-run.json --json
 ```
 
@@ -1697,6 +1704,7 @@ Grouped document:
   "kind": "sceneStoryboardImagesImport",
   "beatSheetId": "scene_beat_sheet_control_room_v1",
   "title": "Control room storyboard images",
+  "select": true,
   "beats": [
     {
       "beatId": "beat_001",
@@ -1713,27 +1721,46 @@ Grouped document:
 ```
 
 The agent owns visual inspection and splitting of the deterministic composite;
-Core owns Beat and file ownership validation plus durable attachment. No runtime
+Core owns Beat and file ownership validation plus durable attachment. The
+required `select` boolean either selects every imported Beat candidate
+atomically or leaves every existing Beat selection unchanged. No runtime
 automatic splitting or creative-content validation occurs.
 
 Every successful import reports Studio resource keys. The CLI appends a Studio
 resource-change event so the existing Cast, Location, Lookbook, Scene, dialogue,
 and Take surfaces refresh without a browser reload.
 
-## `renku asset list`
+## `renku asset`
 
-List assets for a target.
+List or update Assets, and select or clear canonical owner-scoped imagery.
 
 ```bash
-renku asset list --project <project-name> --target <target>
-renku asset list --project <project-name> --target <target> --json
+renku asset list --project <project-name> --owner <owner> --json
+renku asset update <asset-id> --project <project-name> --title <title> --summary <summary> --reference-name <name> --reference-purpose <purpose> --locale <locale-id> --json
+renku asset select --project <project-name> --target <selection-target> --asset <asset-id> --json
+renku asset clear-selection --project <project-name> --target <selection-target> --json
 ```
 
 Options:
 
 - `--project`: required project name.
-- `--target`: required asset target.
-- `--locale`: optional locale id.
+- `--owner`: Asset listing owner. Supported forms are `project`, `cast:<id>`,
+  `location:<id>`, `sequence:<id>`, `scene:<id>`, `lookbook:<id>`,
+  `shot:<id>`, and `beat:<scene-id>:<beat-id>`.
+- `--target`: selection target for `select` and `clear-selection`. Supported
+  forms are Cast, Location, Lookbook, Shot, and Scene Beat only.
+- `--asset`: required by `select`.
+- `--type`, `--media-kind`, and `--locale`: optional listing filters.
+- `--title`, `--summary`, `--reference-name`, `--reference-purpose`, and
+  `--locale`: Asset-owned metadata updates.
+
+Character Sheets, Location Sheets, Lookbook Sheets, and Dialogue Audio Takes
+have no global selection command. Their exact choices belong to the consuming
+GenerationSpec references.
+
+JSON listing returns an `AssetPage` with `items`, `nextCursor`, and
+`selectedAssetId`, so callers receive the owner’s current canonical choice with
+the candidate collection.
 
 ## `renku trash`
 

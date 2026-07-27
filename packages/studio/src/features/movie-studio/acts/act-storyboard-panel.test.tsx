@@ -136,7 +136,6 @@ describe('ActStoryboardPanel', () => {
 function image(suffix: string) {
   return {
     assetId: `asset_${suffix}`,
-    relationshipId: `rel_${suffix}`,
     assetFileId: `file_${suffix}`,
     title: 'Storyboard',
     fileRole: 'shot',

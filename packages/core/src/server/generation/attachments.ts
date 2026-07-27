@@ -1,6 +1,5 @@
 import type { Asset, GenerationPurpose, GenerationTarget } from '../../client/index.js';
-import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
-import { readAssetFileRecord } from '../database/access/asset-files.js';
+import { readOwnedAsset } from '../assets/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -19,13 +18,14 @@ export interface AttachGenerationMediaInput {
   title?: string;
   receipt?: unknown;
   sourceSpecId?: string;
+  select?: boolean;
 }
 
 export interface GenerationMediaAttachmentReport {
   valid: true;
   purpose: GenerationPurpose;
   target: GenerationTarget;
-  asset: Asset | { assetId: string; assetFileId: string; projectRelativePath: string };
+  asset: Asset;
   provenance:
     | { generationRunId: string }
     | { generationSpecId: string }
@@ -43,7 +43,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   const attachment = resolveGeneratedMediaAttachment(input);
   const provenance = validateGenerationProvenance({
     ...input,
-    destinationRelationshipRole: attachment.relationshipRole,
+    destinationAssetType: attachment.assetType,
   });
   if (input.purpose === 'video.create' && provenance === null) {
     throw new ProjectDataError(
@@ -66,7 +66,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       origin: provenance ? 'generated' : 'external',
     },
     fileRole: 'primary',
-    relationshipRole: attachment.relationshipRole,
+    select: input.select,
     ...(provenance?.kind === 'renku-managed'
       ? {
           selectedGenerationOutput: {
@@ -80,16 +80,10 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       : {}),
   });
   const project = readProjectRecord(input.session);
-  const attached = attachment.destination.lookbookMembership
-    ? {
-        assetId: persisted.assetId,
-        assetFileId: persisted.assetFileId,
-        projectRelativePath: persistedProjectRelativePath(input.session, persisted),
-      }
-    : readAssetRelationship(input.session, {
-        target: attachment.destination.target,
-        assetId: persisted.assetId,
-      });
+  const attached = readOwnedAsset(input.session, {
+    owner: attachment.destination.owner,
+    assetId: persisted.assetId,
+  });
   if (!project || !attached) {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_FAILED', 'Generation media attachment was not persisted.');
   }
@@ -121,7 +115,7 @@ export type ValidatedGenerationProvenance =
 
 export function validateGenerationProvenance(input: AttachGenerationMediaInput & {
   session: DatabaseSession;
-  destinationRelationshipRole: string;
+  destinationAssetType: string;
 }): ValidatedGenerationProvenance {
   if (input.receipt !== undefined && input.sourceSpecId) {
     throw new ProjectDataError(
@@ -179,7 +173,7 @@ export function validateGenerationProvenance(input: AttachGenerationMediaInput &
 function validateAttachmentRequestMatch(
   input: AttachGenerationMediaInput & {
     session: DatabaseSession;
-    destinationRelationshipRole: string;
+    destinationAssetType: string;
   },
   spec: import('../../client/generation.js').GenerationSpec,
 ): void {
@@ -193,24 +187,9 @@ function validateAttachmentRequestMatch(
     spec,
     destinationPurpose: input.purpose,
     destinationTarget: input.target,
-    destinationRelationshipRole: input.destinationRelationshipRole,
+    destinationAssetType: input.destinationAssetType,
   });
 }
-
-function persistedProjectRelativePath(
-  session: DatabaseSession,
-  persisted: { assetId: string; assetFileId: string },
-): string {
-  const file = readAssetFileRecord(session, persisted);
-  if (!file) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_ATTACHMENT_FAILED',
-      'Generation media AssetFile was not persisted.'
-    );
-  }
-  return file.projectRelativePath;
-}
-
 
 function validateLookbookKind(
   input: AttachGenerationMediaInput & { session: DatabaseSession }

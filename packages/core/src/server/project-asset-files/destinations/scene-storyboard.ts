@@ -3,36 +3,26 @@ import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { STORYBOARDS_ROOT, extensionForMediaSource, kebabCasePathSegment } from '../../files/asset-paths.js';
 import {
   joinProjectRelativePath,
-  normalizeProjectRelativePath,
-  resolveProjectRelativePath,
 } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import { statProjectFileSync, projectPathExistsSync } from '../file-operations.js';
+import { projectPathExistsSync } from '../file-operations.js';
 import { requireSceneHierarchy } from '../owner-lookups.js';
 import { allocateProjectRelativeFolderPathSync } from '../path-allocation.js';
-import { assertResolvedPathInsideProject } from '../path-guards.js';
-import { persistProjectAssetFileAtDestinationSync } from '../persistence.js';
-import type { ProjectAssetFileWriteSet } from '../types.js';
+import type {
+  DestinationFileInput,
+  DestinationOutputNamesInput,
+  DestinationRootInput,
+} from './types.js';
 
-export function persistSceneStoryboardBeatFilesSync(input: {
-  session: DatabaseSession;
+type SceneStoryboardDestinationKind = 'scene.storyboardImage';
+
+export function allocateSceneStoryboardIterationFolderSync(input: {
+  session: DestinationRootInput<SceneStoryboardDestinationKind>['session'];
   projectFolder: string;
-  writeSet?: ProjectAssetFileWriteSet;
   sceneId: string;
-  files: Array<{
-    assetId: string;
-    assetFileId: string;
-    beatId: string;
-    beatOrdinal: number;
-    sourceProjectRelativePath: ProjectRelativePath;
-  }>;
-  now: string;
-}): Array<{
-  beatId: string;
-  assetFile: ReturnType<typeof persistProjectAssetFileAtDestinationSync>;
-}> {
+}): ProjectRelativePath {
   const hierarchy = requireSceneHierarchy(input.session, input.sceneId);
-  const iterationFolder = allocateProjectRelativeFolderPathSync({
+  return allocateProjectRelativeFolderPathSync({
     projectFolder: input.projectFolder,
     parent: joinProjectRelativePath(
       STORYBOARDS_ROOT,
@@ -41,40 +31,54 @@ export function persistSceneStoryboardBeatFilesSync(input: {
     ),
     baseName: `${String(nextStoryboardIterationNumber(input.projectFolder, input.session, input.sceneId)).padStart(2, '0')}-iteration`,
   });
-  return input.files.map((file) => {
-    const sourceProjectRelativePath = normalizeProjectRelativePath(
-      file.sourceProjectRelativePath
-    );
-    const destination = joinProjectRelativePath(
-      iterationFolder,
-      `beat-${String(file.beatOrdinal).padStart(2, '0')}${extensionForMediaSource(sourceProjectRelativePath)}`
-    );
-    const sourcePath = resolveProjectRelativePath(
-      input.projectFolder,
-      sourceProjectRelativePath
-    );
-    assertResolvedPathInsideProject(input.projectFolder, sourcePath);
-    statProjectFileSync(sourcePath, {
-      code: 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND',
-      message: `Storyboard source file was not found: ${sourceProjectRelativePath}.`,
-    });
-    return {
-      beatId: file.beatId,
-      assetFile: persistProjectAssetFileAtDestinationSync({
-        session: input.session,
-        projectFolder: input.projectFolder,
-        assetId: file.assetId,
-        assetFileId: file.assetFileId,
-        sourceProjectRelativePath,
-        sourcePath,
-        destinationProjectRelativePath: destination,
-        fileRole: 'storyboard_image',
-        mediaKind: 'image',
-        now: input.now,
-        writeSet: input.writeSet,
-      }),
-    };
-  });
+}
+
+export async function resolveSceneStoryboardDestinationFile(
+  input: DestinationFileInput<SceneStoryboardDestinationKind>
+): Promise<ProjectRelativePath> {
+  return resolveSceneStoryboardDestinationFileSync(input);
+}
+
+export function resolveSceneStoryboardDestinationFileSync(
+  input: DestinationFileInput<SceneStoryboardDestinationKind>
+): ProjectRelativePath {
+  requireSceneHierarchy(input.session, input.destination.sceneId);
+  return joinProjectRelativePath(
+    input.destination.iterationFolder,
+    storyboardBeatFileName(input.destination.beatOrdinal, input.sourceProjectRelativePath)
+  );
+}
+
+export async function resolveSceneStoryboardDestinationRoot(
+  input: DestinationRootInput<SceneStoryboardDestinationKind>
+): Promise<ProjectRelativePath> {
+  return resolveSceneStoryboardDestinationRootSync(input);
+}
+
+export function resolveSceneStoryboardDestinationRootSync(
+  input: DestinationRootInput<SceneStoryboardDestinationKind>
+): ProjectRelativePath {
+  requireSceneHierarchy(input.session, input.destination.sceneId);
+  return input.destination.iterationFolder;
+}
+
+export async function resolveSceneStoryboardDestinationOutputNames(
+  input: DestinationOutputNamesInput<SceneStoryboardDestinationKind>
+): Promise<string[]> {
+  return Array.from(
+    { length: input.outputCount },
+    (_, index) => storyboardBeatFileName(
+      input.destination.beatOrdinal + index,
+      input.sourceProjectRelativePath
+    )
+  );
+}
+
+function storyboardBeatFileName(
+  beatOrdinal: number,
+  sourceProjectRelativePath: ProjectRelativePath
+): string {
+  return `beat-${String(beatOrdinal).padStart(2, '0')}${extensionForMediaSource(sourceProjectRelativePath)}`;
 }
 
 function nextStoryboardIterationNumber(

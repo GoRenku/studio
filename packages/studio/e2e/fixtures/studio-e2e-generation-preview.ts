@@ -107,7 +107,7 @@ export async function createStudioE2eGenerationPromptProject(input: {
       promptMention: '@Reference1',
       reference: {
         kind: 'asset-file' as const,
-        assetId: chamberReference.asset.assetId,
+        assetId: chamberReference.asset.id,
         assetFileId: chamberFile.id,
       },
     },
@@ -116,7 +116,7 @@ export async function createStudioE2eGenerationPromptProject(input: {
       promptMention: '@Reference2',
       reference: {
         kind: 'asset-file' as const,
-        assetId: lookbookReference.asset.assetId,
+        assetId: lookbookReference.asset.id,
         assetFileId: lookbookFile.id,
       },
     },
@@ -176,11 +176,10 @@ export async function createStudioE2eGenerationPromptProject(input: {
     sourceSpecId: inspectorSpec.id,
   });
   const savedFile = firstAssetFile(savedSheet.asset);
-  await projectData.updateAssetReference({
+  await projectData.updateAsset({
     projectName: input.project.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
-    target: { kind: 'castMember', castMemberId: input.project.castMemberId },
-    assetId: savedSheet.asset.assetId,
+    assetId: savedSheet.asset.id,
     title: 'Prompt Editor Saved Character Sheet',
     referenceName: 'prompt-editor-saved-character-sheet',
     purpose: 'Read-only Generation Request prompt editor browser fixture.',
@@ -191,16 +190,16 @@ export async function createStudioE2eGenerationPromptProject(input: {
       projectName: input.project.projectName,
       preview: previewData,
     }),
-    inspectorAssetId: savedSheet.asset.assetId,
+    inspectorAssetId: savedSheet.asset.id,
     inspectorAssetFileId: savedFile.id,
     inspectorCardTitle: 'Prompt Editor Saved Character Sheet',
   };
 }
 
 function firstAssetFile(
-  asset: { files?: Array<{ id: string }>; assetFileId?: string },
+  asset: { files: Array<{ id: string }> },
 ): { id: string } {
-  const id = asset.files?.[0]?.id ?? asset.assetFileId;
+  const id = asset.files[0]?.id;
   if (!id) throw new Error('Expected the E2E attachment to expose an AssetFile.');
   return { id };
 }

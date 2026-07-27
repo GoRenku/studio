@@ -105,7 +105,7 @@ describe('context-first generation lifecycle', () => {
     const managedRequest = await readAssetFileGenerationRequest({
       homeDir,
       projectName,
-      assetId: attachment.asset.assetId,
+      assetId: attachment.asset.id,
       assetFileId: attachment.asset.files[0]!.id,
     });
     expect(managedRequest).toMatchObject({
@@ -124,7 +124,7 @@ describe('context-first generation lifecycle', () => {
     });
     expect(reusable.items).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        reference: expect.objectContaining({ assetId: attachment.asset.assetId }),
+        reference: expect.objectContaining({ assetId: attachment.asset.id }),
         provenance: { origin: 'generated', generationRunId: run.run.id },
       }),
     ]));
@@ -258,7 +258,7 @@ describe('context-first generation lifecycle', () => {
     const request = await readAssetFileGenerationRequest({
       homeDir,
       projectName,
-      assetId: attachment.asset.assetId,
+      assetId: attachment.asset.id,
       assetFileId: attachment.asset.files[0]!.id,
     });
     expect(request).toMatchObject({
@@ -310,7 +310,7 @@ describe('context-first generation lifecycle', () => {
     });
     expect(reusable.items.some((item) =>
       item.reference.kind === 'asset-file' &&
-      item.reference.assetId === attachment.asset.assetId
+      item.reference.assetId === attachment.asset.id
     )).toBe(true);
 
     const owned = await projectData.listGenerationReferences({
@@ -321,7 +321,7 @@ describe('context-first generation lifecycle', () => {
     });
     expect(owned.items).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        reference: expect.objectContaining({ assetId: attachment.asset.assetId }),
+        reference: expect.objectContaining({ assetId: attachment.asset.id }),
         provenance: { origin: 'external' },
       }),
     ]));

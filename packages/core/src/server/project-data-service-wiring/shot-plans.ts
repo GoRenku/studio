@@ -16,11 +16,7 @@ import {
   listSceneShotPlans,
   readShotPlan,
 } from '../commands/shot-plan-read-commands.js';
-import {
-  clearShotRepresentativeImage,
-  discardShotImageCandidate,
-  setShotRepresentativeImage,
-} from '../commands/shot-image-commands.js';
+import { discardShotImageCandidate } from '../commands/shot-image-commands.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 import { validateShotPlanDocument } from '../shot-plans/validation.js';
 
@@ -39,8 +35,6 @@ export function createShotPlanServiceWiring(): Pick<
   | 'readShotPlan'
   | 'listSceneShotPlans'
   | 'deleteShotPlan'
-  | 'setShotRepresentativeImage'
-  | 'clearShotRepresentativeImage'
   | 'discardShotImageCandidate'
 > {
   return {
@@ -59,8 +53,6 @@ export function createShotPlanServiceWiring(): Pick<
     readShotPlan,
     listSceneShotPlans,
     deleteShotPlan,
-    setShotRepresentativeImage,
-    clearShotRepresentativeImage,
     discardShotImageCandidate,
   };
 }

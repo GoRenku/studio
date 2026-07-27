@@ -28,14 +28,13 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/services/studio-project-assets-api', () => ({
   deleteLocationAsset: vi.fn(),
-  locationAssetFileUrl: vi.fn(
+  projectAssetFileUrl: vi.fn(
     (
       projectName: string,
-      locationId: string,
       assetId: string,
       fileId: string
     ) =>
-      `/studio-api/projects/${projectName}/locations/${locationId}/assets/${assetId}/files/${fileId}`
+      `/studio-api/projects/${projectName}/assets/${assetId}/files/${fileId}`
   ),
   readLocationAssets: vi.fn(),
 }));
@@ -56,7 +55,6 @@ describe('LocationPanel', () => {
       ...locationResource(),
       firstImage: {
         assetId: 'asset_location_hero',
-        relationshipId: 'asset_location_hero_relationship',
         assetFileId: 'asset_location_hero_primary',
         title: 'Gate hero image',
         fileRole: 'primary',
@@ -67,10 +65,12 @@ describe('LocationPanel', () => {
         url: '/gate-hero.png',
       },
     });
-    vi.mocked(readLocationAssets).mockResolvedValue([
-      locationSheetAsset(),
-      locationHeroAsset({ selected: true }),
-    ]);
+    vi.mocked(readLocationAssets).mockResolvedValue(
+      assetCollection(
+        [locationSheetAsset(), locationHeroAsset()],
+        'asset_location_hero'
+      )
+    );
 
     render(
       <LocationPanel projectName='constantinople' locationId='location_gate' />
@@ -91,7 +91,9 @@ describe('LocationPanel', () => {
 
   it('does not fall back to a Location Sheet when no hero image exists', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
-    vi.mocked(readLocationAssets).mockResolvedValue([locationSheetAsset()]);
+    vi.mocked(readLocationAssets).mockResolvedValue(
+      assetCollection([locationSheetAsset()])
+    );
 
     render(
       <LocationPanel projectName='constantinople' locationId='location_gate' />
@@ -107,7 +109,9 @@ describe('LocationPanel', () => {
 
   it('opens visual content preview for the full Location Sheet only', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
-    vi.mocked(readLocationAssets).mockResolvedValue([locationSheetAsset()]);
+    vi.mocked(readLocationAssets).mockResolvedValue(
+      assetCollection([locationSheetAsset()])
+    );
 
     render(
       <LocationPanel projectName='constantinople' locationId='location_gate' />
@@ -129,7 +133,10 @@ describe('LocationPanel', () => {
   it('does not show a Location-level pick control for Location Sheets', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
     vi.mocked(readLocationAssets).mockResolvedValue(
-      [locationSheetAsset({ assetId: 'asset_a' }), locationSheetAsset({ assetId: 'asset_b' })]
+      assetCollection([
+        locationSheetAsset({ assetId: 'asset_a' }),
+        locationSheetAsset({ assetId: 'asset_b' }),
+      ])
     );
 
     render(
@@ -154,8 +161,8 @@ describe('LocationPanel', () => {
   it('deletes a location sheet only after confirmation', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
     vi.mocked(readLocationAssets)
-      .mockResolvedValueOnce([locationSheetAsset()])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce(assetCollection([locationSheetAsset()]))
+      .mockResolvedValueOnce(assetCollection([]));
     vi.mocked(deleteLocationAsset).mockResolvedValue('asset_location_sheet');
 
     render(
@@ -191,6 +198,13 @@ async function openVisualContentTab() {
   fireEvent.click(visualContentTab);
 }
 
+function assetCollection(
+  items: StudioAssetResponse[],
+  selectedAssetId: string | null = null
+) {
+  return { items, selectedAssetId };
+}
+
 function locationResource(): LocationResourceResponse {
   return {
     location: {
@@ -211,12 +225,10 @@ function locationSheetAsset({
 } = {}): StudioAssetResponse {
   return locationAsset({
     assetId,
-    type: 'location-sheet',
-    role: 'location-sheet',
+    type: 'location_sheet',
     title: 'Gate Location Sheet',
     oneLineSummary: 'Council chamber layout',
     fileRole: 'primary',
-    selected: false,
     width: 1536,
     height: 1152,
   });
@@ -224,19 +236,15 @@ function locationSheetAsset({
 
 function locationHeroAsset({
   assetId = 'asset_location_hero',
-  selected,
 }: {
   assetId?: string;
-  selected: boolean;
-}): StudioAssetResponse {
+} = {}): StudioAssetResponse {
   return locationAsset({
     assetId,
     type: 'location_hero',
-    role: 'hero',
     title: 'Gate hero image',
     oneLineSummary: 'Gate hero image',
     fileRole: 'primary',
-    selected,
     width: 1600,
     height: 900,
   });
@@ -245,28 +253,23 @@ function locationHeroAsset({
 function locationAsset({
   assetId,
   type,
-  role,
   title,
   oneLineSummary,
   fileRole,
-  selected,
   width,
   height,
 }: {
   assetId: string;
   type: string;
-  role: string;
   title: string;
   oneLineSummary: string | null;
   fileRole: string;
-  selected: boolean;
   width: number;
   height: number;
 }): StudioAssetResponse {
   return {
-    assetId,
-    relationshipId: `${assetId}_relationship`,
-    target: { kind: 'location', locationId: 'location_gate' },
+    id: assetId,
+    owner: { kind: 'location', id: 'location_gate' },
     localeId: null,
     type,
     availability: 'ready',
@@ -274,10 +277,8 @@ function locationAsset({
     title,
     oneLineSummary,
     origin: 'generated',
-    role,
     referenceName: null,
     purpose: null,
-    sortOrder: selected ? 0 : 1,
     files: [
       imageFile(fileRole, `${assetId}_primary`, width, height),
     ],

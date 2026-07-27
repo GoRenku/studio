@@ -7,9 +7,10 @@ import type {
 } from '@/services/studio-project-contracts';
 import {
   deleteLocationAsset,
-  clearLocationHeroDisplayAsset,
+  clearSelectedLocationHero,
   readLocationAssets,
-  setLocationHeroDisplayAsset,
+  selectLocationHeroAsset,
+  type StudioAssetCollection,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-screenplay-api';
 import {
@@ -26,7 +27,8 @@ interface LocationPanelProps {
 
 export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
   const [resource, setResource] = useState<LocationResourceResponse | null>(null);
-  const [assets, setAssets] = useState<StudioAssetResponse[]>([]);
+  const [assetCollection, setAssetCollection] =
+    useState<StudioAssetCollection>({ items: [], selectedAssetId: null });
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
 
@@ -36,7 +38,7 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
       readLocationAssets(projectName, locationId),
     ]);
     setResource(nextResource);
-    setAssets(nextAssets);
+    setAssetCollection(nextAssets);
     setError(null);
   }, [locationId, projectName]);
 
@@ -49,7 +51,7 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
       .then(([nextResource, nextAssets]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setAssets(nextAssets);
+          setAssetCollection(nextAssets);
           setError(null);
         }
       })
@@ -71,7 +73,7 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
 
   const removeAsset = async (asset: StudioAssetResponse) => {
     try {
-      await deleteLocationAsset(projectName, locationId, asset.assetId);
+      await deleteLocationAsset(projectName, locationId, asset.id);
       await refreshLocation();
     } catch (deleteError) {
       toast.error(errorMessage(deleteError));
@@ -80,10 +82,10 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
 
   const toggleHeroDisplay = async (asset: StudioAssetResponse) => {
     try {
-      if (resource?.firstImage?.assetId === asset.assetId) {
-        await clearLocationHeroDisplayAsset(projectName, locationId);
+      if (assetCollection.selectedAssetId === asset.id) {
+        await clearSelectedLocationHero(projectName, locationId);
       } else {
-        await setLocationHeroDisplayAsset(projectName, locationId, asset.assetId);
+        await selectLocationHeroAsset(projectName, locationId, asset.id);
       }
       await refreshLocation();
     } catch (displayError) {
@@ -112,17 +114,16 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
       <LineTabsContent value='details'>
         <LocationDetailsTab
           projectName={projectName}
-          locationId={locationId}
           resource={resource}
-          assets={assets}
+          assets={assetCollection.items}
+          selectedHeroAssetId={assetCollection.selectedAssetId}
         />
       </LineTabsContent>
       <LineTabsContent value='visual'>
         <LocationVisualContentTab
           projectName={projectName}
-          locationId={locationId}
-          assets={assets}
-          displayHeroAssetId={resource.firstImage?.assetId ?? null}
+          assets={assetCollection.items}
+          selectedHeroAssetId={assetCollection.selectedAssetId}
           onToggleHeroDisplay={toggleHeroDisplay}
           onDeleteAsset={removeAsset}
         />

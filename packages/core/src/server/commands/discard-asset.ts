@@ -1,21 +1,17 @@
-import type { AssetTarget, RecoverableMutationReport } from '../../client/index.js';
-import {
-  readAssetRelationship,
-} from '../database/access/asset-relationships/index.js';
+import type { RecoverableMutationReport } from '../../client/index.js';
+import { readAssetRecord } from '../database/access/assets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { assertAssetIsNotCastVoiceSample } from './cast-voice-commands.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
-import { assetRelationshipTrashItemId } from '../trash/trash-object-registry.js';
+import { requireAssetOwner } from '../assets/ownership.js';
+import { assetOwnerKey } from '../assets/owner-keys.js';
+import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import type { DiscardAssetInput } from '../project-data-service-contracts.js';
 
 export async function discardAsset(
-  input: {
-    projectName: string;
-    target: AssetTarget;
-    assetId: string;
-  } & RenkuConfigPathOptions
+  input: DiscardAssetInput
 ): Promise<RecoverableMutationReport> {
   const { projectFolder, session } = await openProjectSession(input);
   try {
@@ -26,12 +22,16 @@ export async function discardAsset(
         `Project database has no project row: ${session.databasePath}.`
       );
     }
-    const asset = readAssetRelationship(session, {
-      target: input.target,
-      assetId: input.assetId,
-    });
-    if (!asset) {
+    const asset = readAssetRecord(session, input.assetId);
+    if (!asset || asset.discardedAt) {
       throw assetNotAttached(input.assetId);
+    }
+    const owner = requireAssetOwner(session, input.assetId);
+    if (assetOwnerKey(owner) !== assetOwnerKey(input.owner)) {
+      throw new ProjectDataError(
+        'CORE_ASSET_OWNER_MISMATCH',
+        `Asset ${input.assetId} is not owned by the requested owner.`
+      );
     }
     assertAssetIsNotCastVoiceSample(session, input.assetId);
 
@@ -39,13 +39,11 @@ export async function discardAsset(
       session,
       project,
       projectFolder,
-      itemKind: 'assetRelationship',
-      itemId: assetRelationshipTrashItemId({
-        target: input.target,
-        assetId: input.assetId,
-      }),
-      commandName: 'assetRelationship.discard',
-      changes: [{ type: 'assetRelationship.discarded', assetId: input.assetId }],
+      itemKind: 'asset',
+      itemId: input.assetId,
+      commandName: 'asset.discard',
+      changes: [{ type: 'asset.discarded', assetId: input.assetId }],
+      resourceKeys: studioAssetOwnerSurfaceResourceKeys(owner),
     });
   } finally {
     session.close();

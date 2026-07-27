@@ -91,7 +91,7 @@ export function LookbookVisualContentTab({
                       if (!file) return;
                       openGenerationRequestInspector({
                         projectName,
-                        assetId: image.asset.assetId,
+                        assetId: image.asset.id,
                         assetFileId: file.id,
                       });
                     },
@@ -152,7 +152,7 @@ export function LookbookVisualContentTab({
                       if (!file) return;
                       openGenerationRequestInspector({
                         projectName,
-                        assetId: sheet.asset.assetId,
+                        assetId: sheet.asset.id,
                         assetFileId: file.id,
                       });
                     },
@@ -197,7 +197,7 @@ function lookbookImagePreviewImages(
   return image.asset.files
     .filter((file) => file.mediaKind === 'image')
     .map((file) => ({
-      src: lookbookImageFileUrl(projectName, image.id, file.id),
+      src: lookbookImageFileUrl(projectName, image.asset.id, file.id),
       alt: image.asset.title,
       title: image.asset.title,
     }));
@@ -210,7 +210,7 @@ function lookbookSheetPreviewImages(
   return sheet.asset.files
     .filter((file) => file.mediaKind === 'image')
     .map((file) => ({
-      src: lookbookSheetFileUrl(projectName, sheet.id, file.id),
+      src: lookbookSheetFileUrl(projectName, sheet.asset.id, file.id),
       alt: sheet.asset.title,
       title: sheet.asset.title,
     }));

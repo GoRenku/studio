@@ -16,18 +16,16 @@ import { useGenerationRequestInspectorDialog } from '@/features/generation-reque
 
 interface LocationVisualContentTabProps {
   projectName: string;
-  locationId: string;
   assets: StudioAssetResponse[];
-  displayHeroAssetId: string | null;
+  selectedHeroAssetId: string | null;
   onToggleHeroDisplay: (asset: StudioAssetResponse) => Promise<void>;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
 }
 
 export function LocationVisualContentTab({
   projectName,
-  locationId,
   assets,
-  displayHeroAssetId,
+  selectedHeroAssetId,
   onToggleHeroDisplay,
   onDeleteAsset,
 }: LocationVisualContentTabProps) {
@@ -40,7 +38,6 @@ export function LocationVisualContentTab({
   const openSheetPreview = (asset: StudioAssetResponse) => {
     const images = locationSheetPreviewImages(
       projectName,
-      locationId,
       asset
     );
     if (!images.length) return;
@@ -51,11 +48,10 @@ export function LocationVisualContentTab({
   const items = sheetAssets.map((asset) => {
     const imageUrl = locationSheetCompositeUrl(
       projectName,
-      locationId,
       asset
     );
     return {
-      id: asset.assetId,
+      id: asset.id,
       card: {
         media: imageUrl
           ? {
@@ -88,7 +84,7 @@ export function LocationVisualContentTab({
             if (!file) return;
             openGenerationRequestInspector({
               projectName,
-              assetId: asset.assetId,
+              assetId: asset.id,
               assetFileId: file.id,
             });
           },
@@ -102,7 +98,7 @@ export function LocationVisualContentTab({
             await onDeleteAsset(asset);
             setPreviewImages((current) =>
               current.some((image) =>
-                image.src.includes(encodeURIComponent(asset.assetId))
+                image.src.includes(encodeURIComponent(asset.id))
               )
                 ? []
                 : current
@@ -114,14 +110,13 @@ export function LocationVisualContentTab({
     };
   });
   const heroItems = heroAssets.map((asset) => {
-    const selected = asset.assetId === displayHeroAssetId;
+    const selected = asset.id === selectedHeroAssetId;
     const imageUrl = locationSheetCompositeUrl(
       projectName,
-      locationId,
       asset
     );
     return {
-      id: asset.assetId,
+      id: asset.id,
       card: {
         media: imageUrl
           ? {
@@ -144,8 +139,8 @@ export function LocationVisualContentTab({
         },
         selection: {
           selected,
-          selectedLabel: 'Clear location hero display',
-          unselectedLabel: 'Use as location hero display',
+          selectedLabel: 'Clear selected location hero',
+          unselectedLabel: 'Use as location hero',
           onToggle: () => onToggleHeroDisplay(asset),
         },
         deleteAction: {

@@ -4,6 +4,10 @@ Date: 2026-07-19
 
 Status: accepted
 
+Decision 0064 supersedes the relationship-role spelling below. Location Sheet
+remains the only product name; its canonical Asset type is `location_sheet`
+and its exact generation use remains request-scoped.
+
 ## Context
 
 The product already called this artifact a Location Sheet, while current

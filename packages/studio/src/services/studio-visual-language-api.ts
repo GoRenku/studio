@@ -2,7 +2,6 @@ import type {
   InspirationFolderResourceResponse,
   InspirationFolderResponse,
   InspirationResourceResponse,
-  LookbookImageResponse,
   LookbookResourceResponse,
   ProjectLookbooksResourceResponse,
 } from './studio-project-contracts';
@@ -29,11 +28,6 @@ interface ProjectLookbooksResourceApiResponse {
 
 interface LookbookResourceApiResponse {
   resource: LookbookResourceResponse;
-}
-
-interface LookbookImageApiResponse {
-  image: LookbookImageResponse;
-  resourceKeys?: string[];
 }
 
 export async function readInspirationResource(
@@ -157,19 +151,6 @@ export async function deleteLookbookSheet(
     'DELETE',
     {}
   );
-}
-
-export async function setLookbookCardImage(
-  projectName: string,
-  lookbookId: string,
-  imageId: string
-): Promise<LookbookImageResponse> {
-  const body = await writeJson<LookbookImageApiResponse>(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/lookbooks/${encodeURIComponent(lookbookId)}/card-image`,
-    'PUT',
-    { imageId }
-  );
-  return body.image;
 }
 
 async function readJson<T>(url: string): Promise<T> {

@@ -13,12 +13,9 @@ import type {
   StudioSelection,
   StudioSelectionContextResult,
 } from '../../client/index.js';
-import {
-  listAssetRelationshipPage,
-  MAX_RESOURCE_PAGE_LIMIT,
-} from '../database/access/asset-relationships/index.js';
+import { listAssetPageInSession } from '../assets/projection.js';
 import { listCastMemberRecords } from '../database/access/cast-members.js';
-import { listInspirationFolderRecords } from '../database/access/inspiration-folders.js';
+import { listAllInspirationFolderRecords } from '../database/access/inspiration-folders.js';
 import {
   listLookbookRecords,
   readLookbookRecordByKind,
@@ -40,9 +37,6 @@ import {
   readActiveSceneBeatSheetRecord,
   readSceneBeatSheetDocument,
 } from '../database/access/scene-beat-sheets.js';
-import {
-  listSceneBeatStoryboardImageRecords,
-} from '../database/access/scene-beat-storyboard-images.js';
 import {
   readActiveCastDesignId,
   readActiveLocationDesignId,
@@ -166,9 +160,7 @@ function readVisualLanguageReadiness(
   const productionLookbookId = readLookbookRecordByKind(session, 'production')?.id ?? null;
   const storyboardLookbookId = readLookbookRecordByKind(session, 'storyboard')?.id ?? null;
   return {
-    inspirationFolderCount: listInspirationFolderRecords(session, {
-      limit: MAX_RESOURCE_PAGE_LIMIT,
-    }).items.length,
+    inspirationFolderCount: listAllInspirationFolderRecords(session).length,
     lookbookCount: listLookbookRecords(session).length,
     productionLookbookId,
     storyboardLookbookId,
@@ -192,11 +184,11 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
     } else {
       missingActiveCastDesignCastMemberIds.push(castMember.id);
     }
-    const assets = listAssetRelationshipPage(session, {
-      target: { kind: 'castMember', castMemberId: castMember.id },
-      limit: MAX_RESOURCE_PAGE_LIMIT,
+    const assets = listAssetPageInSession(session, {
+      owner: { kind: 'castMember', id: castMember.id },
+      limit: 200,
     }).items.filter(
-      (asset) => asset.role === 'character-sheet' || asset.role === 'profile'
+      (asset) => asset.type === 'character_sheet' || asset.type === 'cast_profile'
     );
     visualReferenceCount += assets.length;
     if (assets.length === 0) {
@@ -234,10 +226,10 @@ function readProductionDesignReadiness(
     } else {
       missingActiveLocationDesignLocationIds.push(location.id);
     }
-    const assets = listAssetRelationshipPage(session, {
-      target: { kind: 'location', locationId: location.id },
-      role: 'location-sheet',
-      limit: MAX_RESOURCE_PAGE_LIMIT,
+    const assets = listAssetPageInSession(session, {
+      owner: { kind: 'location', id: location.id },
+      type: 'location_sheet',
+      limit: 200,
     }).items;
     locationSheetCount += assets.length;
     if (assets.length === 0) {
@@ -334,12 +326,18 @@ async function readSelectedSceneReadiness(input: {
     row: activeBeatSheet,
     screenplay,
   });
-  const storyboardImages = listSceneBeatStoryboardImageRecords(session, {
-    beatSheetId: activeBeatSheet.id,
-  });
-  const storyboardBeatIds = new Set(storyboardImages.map((image) => image.beatId));
   const missingBeatIds = document.beats
-    .filter((beat) => !storyboardBeatIds.has(beat.id))
+    .filter((beat) =>
+      listAssetPageInSession(session, {
+        owner: {
+          kind: 'sceneBeat',
+          sceneId: selection.id,
+          beatId: beat.id,
+        },
+        type: 'scene_storyboard_image',
+        limit: 1,
+      }).items.length === 0
+    )
     .map((beat) => beat.id);
 
   if (

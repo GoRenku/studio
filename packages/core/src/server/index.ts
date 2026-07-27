@@ -105,7 +105,6 @@ export type {
 } from './asset-file-generation/types.js';
 
 export type {
-  ClearLookbookCardImageInput,
   CreateMovieProjectInput,
   CreateInspirationFolderInput,
   DiscardAssetInput,
@@ -178,7 +177,6 @@ export type {
   SetActiveCastDesignInput,
   SetActiveLocationDesignInput,
   SetActiveScreenplayAnalysisInput,
-  SetLookbookCardImageInput,
   UpdateProjectInformationInput,
   SetLookbookSourceInspirationsInput,
   ValidateInspirationAnalysisInput,
@@ -270,10 +268,11 @@ export type {
   AssetAvailability,
   AssetFile,
   AssetLocaleContext,
-  AssetReference,
-  AssetReferenceUpdateReport,
-  AssetTarget,
-  DisplayAssetMutationReport,
+  AssetOwner,
+  AssetPage,
+  AssetSelectionReport,
+  AssetSelectionTarget,
+  AssetUpdateReport,
   CameraSection,
   CastMember,
   CastNavigationRow,
@@ -301,12 +300,8 @@ export type {
   Lookbook,
   LookbookKind,
   LookbookImage,
-  LookbookImageAsset,
-  LookbookImageAssetFile,
   LookbookImageMutationReport,
   LookbookSheet,
-  LookbookSheetAsset,
-  LookbookSheetAssetFile,
   LookbookSheetMutationReport,
   CastDesignContextReport,
   CastDesignDocument,
@@ -354,7 +349,9 @@ export type {
   ProjectRelativePath,
   ProjectShell,
   ProjectShellNavigation,
-  UpdateAssetReferenceInput,
+  ClearAssetSelectionInput,
+  SelectAssetInput,
+  UpdateAssetInput,
   Scene,
   SceneDesignResource,
   ScenePanelTab,
@@ -420,11 +417,12 @@ export {
 } from './studio-coordination/index.js';
 export { sceneBeatSheetResourceKeys } from './scene-beat-sheet/storyboard-status.js';
 export {
-  clearCastProfileDisplayAsset,
-  clearLocationHeroDisplayAsset,
-  setCastProfileDisplayAsset,
-  setLocationHeroDisplayAsset,
-} from './commands/display-asset-commands.js';
+  clearAssetSelection,
+  listAssetPage,
+  listAssets,
+  selectAsset,
+  updateAsset,
+} from './assets/index.js';
 export type {
   AppendStudioEventInput,
   ClaimStudioRuntimeDescriptorInput,

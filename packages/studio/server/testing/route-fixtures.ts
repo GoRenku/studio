@@ -6,9 +6,8 @@ import type {
 
 export function makeAsset(assetId: string): Asset {
   return {
-    assetId,
-    relationshipId: 'cast_asset_test0001',
-    target: { kind: 'castMember', castMemberId: 'cast_narrator' },
+    id: assetId,
+    owner: { kind: 'castMember', id: 'cast_narrator' },
     localeId: null,
     type: 'reference',
     availability: 'ready',
@@ -16,10 +15,8 @@ export function makeAsset(assetId: string): Asset {
     title: 'Narrator reference',
     oneLineSummary: null,
     origin: 'imported',
-    role: 'reference',
     referenceName: null,
     purpose: null,
-    sortOrder: 1,
     files: [
       {
         id: 'asset_file_cast_reference',

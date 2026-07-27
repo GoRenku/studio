@@ -8,6 +8,10 @@ Core-owned asset storage remains accepted. The take-driven production export
 contract is removed until a future Shot/select model defines a new export
 source.
 
+Decision 0064 supersedes the relationship-table, relationship-role, ordering,
+and generic take/select implementation described below. Exclusive Asset
+membership and scoped selection are now the accepted storage model.
+
 ## Context
 
 Renku Studio projects mix durable metadata with project files. Assets can belong

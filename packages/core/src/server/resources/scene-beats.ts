@@ -5,9 +5,7 @@ import type {
 } from '../../client/index.js';
 import type { ScreenplayDocument } from '../../client/screenplay.js';
 import { ProjectDataError } from '../project-data-error.js';
-import {
-  listAssetRelationshipPage,
-} from '../database/access/asset-relationships/index.js';
+import { listAssetPageInSession } from '../assets/projection.js';
 import {
   readActNavigationRow,
   readSceneNavigationContext,
@@ -77,25 +75,13 @@ function firstCastMemberImage(
   session: DatabaseSession,
   castMemberId: string
 ): ScreenplayImageReference | undefined {
-  const target = { kind: 'castMember' as const, castMemberId };
-  const asset =
-    listAssetRelationshipPage(session, {
-      target,
-      role: 'profile',
-      mediaKind: 'image',
-      limit: 1,
-    }).items[0] ??
-    listAssetRelationshipPage(session, {
-      target,
-      role: 'character-sheet',
-      mediaKind: 'image',
-      limit: 1,
-    }).items[0] ??
-    listAssetRelationshipPage(session, {
-      target,
-      mediaKind: 'image',
-      limit: 1,
-    }).items[0];
+  const owner = { kind: 'castMember' as const, id: castMemberId };
+  const page = listAssetPageInSession(session, {
+    owner,
+    type: 'cast_profile',
+    mediaKind: 'image',
+  });
+  const asset = page.items.find((candidate) => candidate.id === page.selectedAssetId);
   return asset ? toScreenplayImageReference(asset) : undefined;
 }
 
@@ -107,8 +93,7 @@ function toScreenplayImageReference(
     return undefined;
   }
   return {
-    assetId: asset.assetId,
-    relationshipId: asset.relationshipId,
+    assetId: asset.id,
     assetFileId: file.id,
     title: asset.title,
     fileRole: file.role,

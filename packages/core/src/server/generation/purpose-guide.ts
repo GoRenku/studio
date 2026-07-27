@@ -10,6 +10,7 @@ import type { BuildGenerationPurposeInput } from './purpose-contract.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import { sceneDialogueAudio, sceneDialogueAudioTakes } from '../schema/index.js';
 import type { LookbookKind } from '../../client/index.js';
+import type { AssetOwner } from '../../client/assets.js';
 import { readLookbookRecordByKind } from '../database/access/lookbook.js';
 import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
 import { listGenerationReferenceAssetFileRecords } from '../database/access/generation-references.js';
@@ -21,7 +22,7 @@ export interface GuideSlotDefinition {
   slotLabel: string;
   guidance?: string;
   subject?: { kind: string; id: string };
-  owner?: { kind: string; id: string };
+  owner?: AssetOwner;
   assetId?: string;
   assetFileIds?: string[];
   roles?: string[];
@@ -112,7 +113,7 @@ export function domainAssetGroupsForRoles(
   for (const record of listGenerationReferenceAssetFileRecords(context.session)) {
     if (
       record.owner?.kind !== ownerKind ||
-      !matchesOwnerRole(record.owner.role, roles)
+      !matchesAssetType(record.asset.type, roles)
     ) {
       continue;
     }
@@ -137,7 +138,7 @@ function matchesRole(
   return roles.some((role) => normalized === role.replaceAll('_', '-').toLocaleLowerCase());
 }
 
-function matchesOwnerRole(ownerRole: string, roles: string[]): boolean {
-  const normalized = ownerRole.replaceAll('_', '-').toLocaleLowerCase();
+function matchesAssetType(assetType: string, roles: string[]): boolean {
+  const normalized = assetType.replaceAll('_', '-').toLocaleLowerCase();
   return roles.some((role) => normalized === role.replaceAll('_', '-').toLocaleLowerCase());
 }

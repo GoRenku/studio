@@ -25,11 +25,8 @@ import type {
 } from '../../client/index.js';
 import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
 import { insertAssetRecord } from '../database/access/assets.js';
-import {
-  insertAssetRelationshipRecord,
-  nextAssetRelationshipSortOrder,
-  readAssetRelationship,
-} from '../database/access/asset-relationships/index.js';
+import { createAssetMembership } from '../assets/ownership.js';
+import { readOwnedAsset } from '../assets/projection.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
@@ -60,7 +57,7 @@ import {
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
-import { studioAssetTargetSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import {
   commitProjectAssetFileWriteSet,
@@ -210,9 +207,9 @@ export async function createCastVoiceProviderRegistration(
         castVoiceId: record.id,
         registrationId,
       }),
-      resourceKeys: studioAssetTargetSurfaceResourceKeys({
+      resourceKeys: studioAssetOwnerSurfaceResourceKeys({
         kind: 'castMember',
-        castMemberId: input.castMemberId,
+        id: input.castMemberId,
       }),
     };
   });
@@ -242,9 +239,9 @@ export async function removeCastVoiceProviderRegistration(
         castVoiceId: record.id,
         registrationId: input.registrationId,
       },
-      resourceKeys: studioAssetTargetSurfaceResourceKeys({
+      resourceKeys: studioAssetOwnerSurfaceResourceKeys({
         kind: 'castMember',
-        castMemberId: input.castMemberId,
+        id: input.castMemberId,
       }),
     };
   });
@@ -293,7 +290,7 @@ export async function attachCastVoice(
       voiceIdOrName: inserted.voiceId,
     });
     const voice = toCastVoice(session, record);
-    const resourceKeys = studioAssetTargetSurfaceResourceKeys(inserted.target);
+    const resourceKeys = studioAssetOwnerSurfaceResourceKeys(inserted.target);
     return {
       valid: true,
       warnings: [],
@@ -327,9 +324,9 @@ export async function removeCastVoice(
   return withCastVoiceProjectSession(input, ({ currentProject, projectFolder, session }) => {
     requireCastMember(session, input.castMemberId);
     const record = requireCastVoiceRecord(session, input);
-    const target = { kind: 'castMember' as const, castMemberId: input.castMemberId };
-    const sample = readAssetRelationship(session, {
-      target,
+    const target = { kind: 'castMember' as const, id: input.castMemberId };
+    const sample = readOwnedAsset(session, {
+      owner: target,
       assetId: record.sampleAssetId,
     });
     if (!sample) {
@@ -374,7 +371,7 @@ export async function removeCastVoice(
         },
       ],
       recovery: report.recovery,
-      resourceKeys: studioAssetTargetSurfaceResourceKeys(target),
+      resourceKeys: studioAssetOwnerSurfaceResourceKeys(target),
     };
   });
 }
@@ -394,9 +391,9 @@ export function assertAssetIsNotCastVoiceSample(
   );
 }
 
-function toCastVoice(session: Parameters<typeof readAssetRelationship>[0], record: CastVoiceRecord): CastVoice {
-  const sample = readAssetRelationship(session, {
-    target: { kind: 'castMember', castMemberId: record.castMemberId },
+function toCastVoice(session: DatabaseSession, record: CastVoiceRecord): CastVoice {
+  const sample = readOwnedAsset(session, {
+    owner: { kind: 'castMember', id: record.castMemberId },
     assetId: record.sampleAssetId,
   });
   if (!sample) {
@@ -619,17 +616,16 @@ async function insertCastVoiceWithSampleAsset(input: {
   idGenerator?: ProjectIdGenerator;
 }): Promise<{
   voiceId: string;
-  target: { kind: 'castMember'; castMemberId: string };
+  target: { kind: 'castMember'; id: string };
 }> {
   const now = new Date().toISOString();
   const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
   const target = {
     kind: 'castMember' as const,
-    castMemberId: input.validated.castMember.id,
+    id: input.validated.castMember.id,
   };
   const assetId = ids('asset');
   const assetFileId = ids('asset_file');
-  const relationshipId = ids('cast_asset');
   const voiceId = ids('cast_voice');
   const writeSet = createProjectAssetFileWriteSet({
     projectFolder: input.projectFolder,
@@ -642,6 +638,8 @@ async function insertCastVoiceWithSampleAsset(input: {
         type: 'cast_voice_sample',
         mediaKind: 'audio',
         title: input.validated.sampleTitle,
+        referenceName: input.validated.name,
+        purpose: input.validated.purpose,
         origin: input.prepared.origin,
         availability: 'ready',
         createdAt: now,
@@ -666,18 +664,9 @@ async function insertCastVoiceWithSampleAsset(input: {
         durationSeconds: input.prepared.durationSeconds,
         now,
       });
-      insertAssetRelationshipRecord(txSession, target, {
-        relationshipId,
+      createAssetMembership(txSession, {
         assetId,
-        localeId: null,
-        role: 'voice_sample',
-        referenceName: input.validated.name,
-        purpose: input.validated.purpose,
-        sortOrder: nextAssetRelationshipSortOrder(txSession, {
-          target,
-          role: 'voice_sample',
-          localeId: null,
-        }),
+        owner: target,
         now,
       });
       insertCastVoiceRecord(txSession, {
@@ -818,14 +807,14 @@ function validateProviderRegistrationCreateInput(
 }
 
 function validateProviderRegistrationSourceSample(
-  session: Parameters<typeof readAssetRelationship>[0],
+  session: DatabaseSession,
   input: { castMemberId: string; sourceSampleAssetId: string | null }
 ): void {
   if (!input.sourceSampleAssetId) {
     return;
   }
-  const relationship = readAssetRelationship(session, {
-    target: { kind: 'castMember', castMemberId: input.castMemberId },
+  const relationship = readOwnedAsset(session, {
+    owner: { kind: 'castMember', id: input.castMemberId },
     assetId: input.sourceSampleAssetId,
   });
   if (!relationship || relationship.mediaKind !== 'audio') {

@@ -1,31 +1,25 @@
 import { discardAsset } from '../commands/discard-asset.js';
 import { restoreAsset } from '../commands/restore-asset.js';
-import { updateAssetReference } from '../commands/update-asset-reference.js';
 import {
+  clearAssetSelection,
   listAssetPage,
   listAssets,
   resolveProjectAssetFile,
   resolveProjectAssetFileById,
-} from '../resources/assets.js';
+  selectAsset,
+  updateAsset,
+} from '../assets/index.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
-import {
-  clearCastProfileDisplayAsset,
-  clearLocationHeroDisplayAsset,
-  setCastProfileDisplayAsset,
-  setLocationHeroDisplayAsset,
-} from '../commands/display-asset-commands.js';
 
 export function createAssetServiceWiring(): Pick<
   ProjectDataService,
   | 'listAssetPage'
   | 'resolveProjectAssetFile'
   | 'resolveProjectAssetFileById'
-  | 'updateAssetReference'
+  | 'updateAsset'
   | 'listAssets'
-  | 'setCastProfileDisplayAsset'
-  | 'clearCastProfileDisplayAsset'
-  | 'setLocationHeroDisplayAsset'
-  | 'clearLocationHeroDisplayAsset'
+  | 'selectAsset'
+  | 'clearAssetSelection'
   | 'discardAsset'
   | 'restoreAsset'
 > {
@@ -33,12 +27,10 @@ export function createAssetServiceWiring(): Pick<
     listAssetPage,
     resolveProjectAssetFile,
     resolveProjectAssetFileById,
-    updateAssetReference,
+    updateAsset,
     listAssets,
-    setCastProfileDisplayAsset,
-    clearCastProfileDisplayAsset,
-    setLocationHeroDisplayAsset,
-    clearLocationHeroDisplayAsset,
+    selectAsset,
+    clearAssetSelection,
     discardAsset,
     restoreAsset,
   };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  studioAssetTargetSurfaceResourceKeys,
+  studioAssetOwnerSurfaceResourceKeys,
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
   studioLocationNavigationResourceKey,
@@ -64,23 +64,23 @@ describe('Studio resource key catalog', () => {
 
   it('maps Asset owners only to current owner surfaces', () => {
     expect(
-      studioAssetTargetSurfaceResourceKeys({
+      studioAssetOwnerSurfaceResourceKeys({
         kind: 'castMember',
-        castMemberId: 'cast_urban',
+        id: 'cast_urban',
       })
     ).toEqual(['surface:castMember:cast_urban']);
     expect(
-      studioAssetTargetSurfaceResourceKeys({
+      studioAssetOwnerSurfaceResourceKeys({
         kind: 'location',
-        locationId: 'location_gate',
+        id: 'location_gate',
       })
     ).toEqual(['surface:location:location_gate']);
-    expect(studioAssetTargetSurfaceResourceKeys({ kind: 'project' })).toEqual([]);
+    expect(studioAssetOwnerSurfaceResourceKeys({ kind: 'project' })).toEqual([]);
     expect(
-      studioAssetTargetSurfaceResourceKeys({ kind: 'sequence', sequenceId: 'seq_1' })
+      studioAssetOwnerSurfaceResourceKeys({ kind: 'sequence', id: 'seq_1' })
     ).toEqual([]);
     expect(
-      studioAssetTargetSurfaceResourceKeys({ kind: 'scene', sceneId: 'scene_1' })
+      studioAssetOwnerSurfaceResourceKeys({ kind: 'scene', id: 'scene_1' })
     ).toEqual([]);
   });
 

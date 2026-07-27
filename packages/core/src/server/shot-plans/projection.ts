@@ -8,14 +8,13 @@ import type {
   ShotPlanListReport,
   ShotPlanReport,
 } from '../../client/shot-plans.js';
-import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
+import { listAssetPageInSession } from '../assets/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   listSceneShotPlanRecords,
   requireShotPlanRecord,
   type ShotPlanRecord,
 } from '../database/access/shot-plans/plan-records.js';
-import { readShotRepresentativeAssetId } from '../database/access/shot-plans/image-records.js';
 import { listShotRecords } from '../database/access/shot-plans/shot-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readGenerationSpec } from '../generation/specs.js';
@@ -98,12 +97,12 @@ function projectShotPlan(
       title: record.title,
       coverage,
       shots: listShotRecords(session, record.id).map((shot) => ({
+        ...projectShotImages(session, shot.id),
         id: shot.id,
         position: shot.position,
         title: shot.title,
         description: shot.description,
         brief: parseStoredShotBrief(shot.brief, shot.id),
-        representativeImage: projectRepresentativeImage(session, shot.id),
       })),
       lastGenerationSpec:
         record.lastGenerationSpecId === null
@@ -116,25 +115,18 @@ function projectShotPlan(
   };
 }
 
-function projectRepresentativeImage(
+function projectShotImages(
   session: DatabaseSession,
   shotId: string
-) {
-  const assetId = readShotRepresentativeAssetId(session, shotId);
-  if (!assetId) {
-    return null;
-  }
-  const asset = readAssetRelationship(session, {
-    target: { kind: 'shot', shotId },
-    assetId,
+): Pick<import('../../client/shot-plans.js').Shot, 'images' | 'selectedImageId'> {
+  const page = listAssetPageInSession(session, {
+    owner: { kind: 'shot', id: shotId },
+    type: 'shot_image',
   });
-  if (!asset || asset.role !== 'shot-image') {
-    throw new ProjectDataError(
-      'CORE_SHOT_PLAN_STORAGE_INVALID',
-      `Shot ${shotId} selects Asset ${assetId}, but it is not an active shot-image candidate.`
-    );
-  }
-  return asset;
+  return {
+    images: page.items,
+    selectedImageId: page.selectedAssetId,
+  };
 }
 
 function projectReport(input: {

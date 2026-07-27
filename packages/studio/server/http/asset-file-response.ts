@@ -1,26 +1,6 @@
 import fs from 'node:fs/promises';
-import type { AssetFile, AssetTarget } from '@gorenku/studio-core/server';
+import type { AssetFile } from '@gorenku/studio-core/server';
 import type { ProjectsRouteProjectData } from '../routes/projects.js';
-
-export async function readAssetFileResponse(
-  projectData: ProjectsRouteProjectData,
-  input: {
-    projectName: string;
-    target: AssetTarget;
-    assetId: string;
-    assetFileId: string;
-  }
-): Promise<Response> {
-  const resolved = await projectData.resolveProjectAssetFile(input);
-  const bytes = await fs.readFile(resolved.absolutePath);
-  return new Response(bytes, {
-    status: 200,
-    headers: {
-      'Content-Type': contentTypeForAssetFile(resolved.file),
-      'Cache-Control': 'private, max-age=31536000, immutable',
-    },
-  });
-}
 
 export async function readProjectAssetFileByIdResponse(
   projectData: ProjectsRouteProjectData,

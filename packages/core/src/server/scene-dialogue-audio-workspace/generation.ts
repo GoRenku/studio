@@ -13,8 +13,8 @@ import type {
   SceneDialogueAudioWorkspaceMutationReport,
 } from '../../client/scene-dialogue-audio-workspace.js';
 import { recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
-import { insertAssetRelationshipRecord, nextAssetRelationshipSortOrder } from '../database/access/asset-relationships/index.js';
 import { insertAssetRecord } from '../database/access/assets.js';
+import { createAssetMembership } from '../assets/ownership.js';
 import { listCastVoiceProviderRegistrationRecords, readCastVoiceRecord } from '../database/access/cast-voices.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
@@ -251,8 +251,7 @@ function attachDialogueAudioTake(input: {
   const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
   const takeId = input.idGenerator.next('scene_dialogue_audio_take');
-  const relationshipId = input.idGenerator.next('scene_asset');
-  const owner = { kind: 'scene' as const, sceneId: input.sceneId };
+  const owner = { kind: 'scene' as const, id: input.sceneId };
   const writeSet = createProjectAssetFileWriteSet({
     projectFolder: input.projectFolder,
   });
@@ -261,7 +260,7 @@ function attachDialogueAudioTake(input: {
       const session = { ...input.session, db: tx };
       insertAssetRecord(session, {
         id: assetId,
-        type: 'scene-dialogue-audio',
+        type: 'scene_dialogue_audio',
         mediaKind: 'audio',
         title: `${voice.name} Dialogue`,
         origin: 'generated',
@@ -287,16 +286,9 @@ function attachDialogueAudioTake(input: {
         mediaKind: 'audio',
         now: input.now,
       });
-      insertAssetRelationshipRecord(session, owner, {
-        relationshipId,
+      createAssetMembership(session, {
         assetId,
-        localeId: null,
-        role: 'dialogue-audio',
-        sortOrder: nextAssetRelationshipSortOrder(session, {
-          target: owner,
-          role: 'dialogue-audio',
-          localeId: null,
-        }),
+        owner,
         now: input.now,
       });
       recordImportedAssetFileGenerationProvenanceInSession({

@@ -96,7 +96,7 @@ export async function readLocationContext(
       scenes: screenplay ? locationScenes(screenplay, input.locationId) : [],
       activeLookbook: null,
       assets: [],
-      assetRoleCounts: roleCounts(assets),
+      assetTypeCounts: typeCounts(assets),
       generationReadiness: {
         locationSheet: true,
         notes: ['Use media-producer for location.sheet generation.'],
@@ -390,17 +390,17 @@ function locationScenes(
   return scenes;
 }
 
-function roleCounts(
-  records: Array<{ role: string }>
-): Array<{ role: string; count: number }> {
-  const counts = new Map<string, { role: string; count: number }>();
+function typeCounts(
+  records: Array<{ type: string }>
+): Array<{ type: string; count: number }> {
+  const counts = new Map<string, { type: string; count: number }>();
   records.forEach((record) => {
-    const count = counts.get(record.role) ?? {
-      role: record.role,
+    const count = counts.get(record.type) ?? {
+      type: record.type,
       count: 0,
     };
     count.count += 1;
-    counts.set(record.role, count);
+    counts.set(record.type, count);
   });
   return [...counts.values()];
 }

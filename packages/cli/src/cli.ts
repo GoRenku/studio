@@ -84,10 +84,11 @@ Options
   --file               JSON input file for screenplay commands
   --storage-root       Override configured storage root for this command
   --project            Project name for project information commands
-  --target             Asset attachment target
+  --owner              Asset owner for Asset listing
+  --target             Generation target or Asset selection target
   --purpose            Media purpose key
-  --reference-name     Relationship-scoped Renku reference name
-  --reference-purpose  Relationship-scoped asset purpose text
+  --reference-name     Asset reference name
+  --reference-purpose  Asset purpose text
   --source             Project-relative source file for media import
   --resource           Studio resource key for notify-refresh
   --source-sheet       Source Location Sheet asset id for Location Hero import
@@ -100,8 +101,6 @@ Options
   --approval-token     Approval token returned by generation estimate
   --receipt            Generation Receipt JSON file
   --source-spec        Agent-external Generation Spec id for an imported image
-  --role               Asset relationship role
-  --file-role          Asset file role
   --locale             Project locale id
   --cast               Cast member id for cast commands
   --voice              Cast Voice id or reference name
@@ -124,6 +123,7 @@ Options
   --selection          Media import selection: select or take
                        Director context selection: Studio selection JSON
   --replace-selected   Replace the currently selected prepared input in the same slot
+  --select             Select an imported canonical Asset
   --include-visual-references
                        Include selected visual references in Beat Sheet context
   --sequence           Sequence id for screenplay scene list
@@ -224,10 +224,7 @@ function createCliFlags() {
     sourceSheet: {
       type: 'string',
     },
-    role: {
-      type: 'string',
-    },
-    fileRole: {
+    owner: {
       type: 'string',
     },
     order: {
@@ -297,6 +294,10 @@ function createCliFlags() {
       type: 'string',
     },
     replaceSelected: {
+      type: 'boolean',
+      default: false,
+    },
+    select: {
       type: 'boolean',
       default: false,
     },
@@ -451,12 +452,11 @@ export async function runRenkuCli(
           input,
           flags: {
             project: cli.flags.project,
+            owner: cli.flags.owner,
             target: cli.flags.target,
+            asset: cli.flags.asset,
             type: cli.flags.type,
             mediaKind: cli.flags.mediaKind,
-            role: cli.flags.role,
-            fileRole: cli.flags.fileRole,
-            file: cli.flags.file,
             title: cli.flags.title,
             summary: cli.flags.summary,
             referenceName: cli.flags.referenceName,
@@ -607,6 +607,7 @@ export async function runRenkuCli(
             beats: cli.flags.beats,
             take: cli.flags.take,
             kind: cli.flags.kind,
+            select: cli.flags.select,
             selection: cli.flags.selection,
             replaceSelected: cli.flags.replaceSelected,
           },

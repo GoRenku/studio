@@ -37,7 +37,8 @@ export interface Shot {
   title: string;
   description: string;
   brief: ShotBrief;
-  representativeImage: Asset | null;
+  images: Asset[];
+  selectedImageId: string | null;
 }
 
 export interface ShotPlan {
@@ -93,18 +94,6 @@ export interface MoveShotInPlanInput extends ShotPlanProjectInput {
 }
 
 export interface RemoveShotFromPlanInput extends ShotPlanProjectInput {
-  shotPlanId: string;
-  shotId: string;
-}
-
-export interface SetShotRepresentativeImageInput extends ShotPlanProjectInput {
-  shotPlanId: string;
-  shotId: string;
-  assetId: string;
-}
-
-export interface ClearShotRepresentativeImageInput
-  extends ShotPlanProjectInput {
   shotPlanId: string;
   shotId: string;
 }

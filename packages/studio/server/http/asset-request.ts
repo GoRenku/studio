@@ -2,7 +2,7 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import type { AssetTarget } from '@gorenku/studio-core/server';
+import type { AssetOwner } from '@gorenku/studio-core/server';
 import {
   readOptionalQueryString,
   readPageRequest,
@@ -11,16 +11,16 @@ import {
 export function readAssetPageRequest(
   query: Record<string, string | undefined>
 ): {
-  target: AssetTarget;
-  role?: string;
+  owner: AssetOwner;
+  type?: string;
   mediaKind?: string;
   locale?: { localeId: string | null };
   limit?: number;
   cursor?: string;
 } {
   return {
-    target: readAssetTargetQuery(query),
-    role: readOptionalQueryString(query.role),
+    owner: readAssetOwnerQuery(query),
+    type: readOptionalQueryString(query.type),
     mediaKind: readOptionalQueryString(query.mediaKind),
     locale:
       query.localeId === undefined
@@ -30,68 +30,65 @@ export function readAssetPageRequest(
   };
 }
 
-function readAssetTargetQuery(
+function readAssetOwnerQuery(
   query: Record<string, string | undefined>
-): AssetTarget {
-  switch (query.targetKind) {
+): AssetOwner {
+  switch (query.ownerKind) {
     case 'project':
       return { kind: 'project' };
     case 'castMember':
-      return {
-        kind: 'castMember',
-        castMemberId: readRequiredTargetId(query.targetId, query.targetKind),
-      };
     case 'location':
-      return {
-        kind: 'location',
-        locationId: readRequiredTargetId(query.targetId, query.targetKind),
-      };
     case 'sequence':
-      return {
-        kind: 'sequence',
-        sequenceId: readRequiredTargetId(query.targetId, query.targetKind),
-      };
     case 'scene':
+    case 'lookbook':
+    case 'shot':
       return {
-        kind: 'scene',
-        sceneId: readRequiredTargetId(query.targetId, query.targetKind),
+        kind: query.ownerKind,
+        id: readRequiredOwnerId(query.ownerId, query.ownerKind),
+      };
+    case 'sceneBeat':
+      return {
+        kind: 'sceneBeat',
+        sceneId: readRequiredOwnerId(query.sceneId, 'sceneBeat scene'),
+        beatId: readRequiredOwnerId(query.beatId, 'sceneBeat Beat'),
       };
     default:
       throw createStructuredError({
         code: 'STUDIO_SERVER032',
-        message: 'Unsupported asset target kind.',
+        message: 'Unsupported Asset owner kind.',
         issues: [
           createDiagnosticError(
             'STUDIO_SERVER032',
-            'targetKind must name a supported asset target.',
-            { path: ['targetKind'] },
-            'Use project, castMember, location, sequence, or scene.'
+            'ownerKind must name a supported Asset owner.',
+            { path: ['ownerKind'] },
+            'Use project, castMember, location, sequence, scene, sceneBeat, lookbook, or shot.'
           ),
         ],
-        suggestion: 'Use project, castMember, location, sequence, or scene.',
+        suggestion:
+          'Use a supported Asset owner kind and its required identifier fields.',
       });
   }
 }
 
-function readRequiredTargetId(
-  targetId: string | undefined,
-  targetKind: string
+function readRequiredOwnerId(
+  ownerId: string | undefined,
+  ownerKind: string
 ): string {
-  const id = readOptionalQueryString(targetId);
+  const id = readOptionalQueryString(ownerId);
   if (id) {
     return id;
   }
   throw createStructuredError({
     code: 'STUDIO_SERVER033',
-    message: `targetId is required for ${targetKind} asset pages.`,
+    message: `An identifier is required for ${ownerKind} Asset pages.`,
     issues: [
       createDiagnosticError(
         'STUDIO_SERVER033',
-        `targetId is required for ${targetKind} asset pages.`,
-        { path: ['targetId'] },
-        'Send the target id for this asset page.'
+        `An identifier is required for ${ownerKind} Asset pages.`,
+        { path: ['ownerId'] },
+        'Send the identifier for this Asset owner.'
       ),
     ],
-    suggestion: 'Send the target id for this asset page.',
+    suggestion: 'Send the identifier for this Asset owner.',
   });
 }

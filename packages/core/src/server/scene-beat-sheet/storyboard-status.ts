@@ -1,23 +1,18 @@
 import type {
-  Beat,
   SceneBeatSheetDocument,
-  SceneBeatSheetStoryboardBeatStatus,
   SceneBeatSheetStoryboardStatus,
 } from '../../client/scene-beat-sheet.js';
 import type { ScreenplayDocument } from '../../client/screenplay.js';
 import {
+  readActiveSceneBeatSheetRecord,
   readSceneBeatSheetDocument,
   requireSceneBeatSheetForScene,
 } from '../database/access/scene-beat-sheets.js';
-import {
-  beatContentFingerprint,
-  readLatestSceneBeatStoryboardImage,
-  type SceneBeatStoryboardImageRecord,
-} from '../database/access/scene-beat-storyboard-images.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ReadSceneBeatSheetStoryboardStatusInput } from '../project-data-service-contracts.js';
+import { listAssetPageInSession } from '../assets/projection.js';
 import {
   studioSceneNarrativeResourceKey,
   studioSceneBeatSheetResourceKey,
@@ -49,105 +44,37 @@ export async function readSceneBeatSheetStoryboardStatus(
 }
 
 export function readDryRunSceneBeatSheetStoryboardStatusFromSession(input: {
-  session: Parameters<typeof readLatestSceneBeatStoryboardImage>[0]['session'];
+  session: Parameters<typeof listAssetPageInSession>[0];
   currentProject: { projectName: string; projectId?: string; projectFolder?: string };
   sceneId: string;
-  baseBeatSheetId: string;
   beatSheetId: string;
   document: SceneBeatSheetDocument;
-  preservedBeatIds: string[];
 }): SceneBeatSheetStoryboardStatus {
-  const preserved = new Set(input.preservedBeatIds);
-  return buildSceneBeatSheetStoryboardStatus({
-    currentProject: input.currentProject,
-    sceneId: input.sceneId,
-    beatSheetId: input.beatSheetId,
-    document: input.document,
-    readImageForBeat: (beat) => {
-      if (!preserved.has(beat.id)) {
-        return { image: null };
-      }
-      const image = readCurrentBaseStoryboardImageForBeat({
-        session: input.session,
-        baseBeatSheetId: input.baseBeatSheetId,
-        beat,
-      });
-      return image ? { image, simulated: true } : { image: null };
-    },
-  });
+  return readSceneBeatSheetStoryboardStatusFromSession(input);
 }
 
 export function readSceneBeatSheetStoryboardStatusFromSession(input: {
-  session: Parameters<typeof readLatestSceneBeatStoryboardImage>[0]['session'];
+  session: Parameters<typeof listAssetPageInSession>[0];
   currentProject: { projectName: string; projectId?: string; projectFolder?: string };
   sceneId: string;
   beatSheetId: string;
   document: SceneBeatSheetDocument;
 }): SceneBeatSheetStoryboardStatus {
-  return buildSceneBeatSheetStoryboardStatus({
-    currentProject: input.currentProject,
-    sceneId: input.sceneId,
-    beatSheetId: input.beatSheetId,
-    document: input.document,
-    readImageForBeat: (beat) => ({
-      image: readLatestSceneBeatStoryboardImage({
-        session: input.session,
-        beatSheetId: input.beatSheetId,
-        beatId: beat.id,
-      }),
-    }),
-  });
-}
-
-export function readCurrentBaseStoryboardImageForBeat(input: {
-  session: Parameters<typeof readLatestSceneBeatStoryboardImage>[0]['session'];
-  baseBeatSheetId: string;
-  beat: Beat;
-}): SceneBeatStoryboardImageRecord | null {
-  const image = readLatestSceneBeatStoryboardImage({
-    session: input.session,
-    beatSheetId: input.baseBeatSheetId,
-    beatId: input.beat.id,
-  });
-  if (!image || image.beatContentFingerprint !== beatContentFingerprint(input.beat)) {
-    return null;
-  }
-  return image;
-}
-
-function buildSceneBeatSheetStoryboardStatus(input: {
-  currentProject: { projectName: string; projectId?: string; projectFolder?: string };
-  sceneId: string;
-  beatSheetId: string;
-  document: SceneBeatSheetDocument;
-  readImageForBeat: (beat: Beat) => {
-    image: SceneBeatStoryboardImageRecord | null;
-    simulated?: boolean;
-  };
-}): SceneBeatSheetStoryboardStatus {
-  const beats: SceneBeatSheetStoryboardBeatStatus[] = input.document.beats.map((beat) => {
-    const { image, simulated } = input.readImageForBeat(beat);
-    const currentFingerprint = beatContentFingerprint(beat);
-    const isCurrentForBeat =
-      image?.beatContentFingerprint === currentFingerprint;
+  const currentBeatIds = readCurrentBeatIds(input.session, input.sceneId);
+  const beats = input.document.beats.map((beat) => {
+    const page =
+      !currentBeatIds.has(beat.id)
+        ? { items: [], selectedAssetId: null }
+        : listAssetPageInSession(input.session, {
+            owner: { kind: 'sceneBeat', sceneId: input.sceneId, beatId: beat.id },
+            type: 'scene_storyboard_image',
+          });
     return {
       beatId: beat.id,
-      image: image
-        ? {
-            storyboardImageId: image.id,
-            assetId: image.assetId,
-            assetFileId: image.assetFileId,
-            sourcePurpose: image.sourcePurpose,
-            isCurrentForBeat,
-            ...(simulated ? { simulated } : {}),
-          }
-        : null,
-      needsStoryboardImage: !image || !isCurrentForBeat,
-      ...(!image
-        ? { reason: 'missing' as const }
-        : !isCurrentForBeat
-          ? { reason: 'beat-changed' as const }
-          : {}),
+      images: page.items,
+      selectedImageId: page.selectedAssetId,
+      needsStoryboardImage: page.selectedAssetId === null,
+      ...(page.selectedAssetId === null ? { reason: 'missing' as const } : {}),
     };
   });
   return {
@@ -167,15 +94,28 @@ function buildSceneBeatSheetStoryboardStatus(input: {
     beatSheetId: input.beatSheetId,
     beats,
     missingBeatIds: beats
-      .filter((beat) => beat.reason === 'missing')
-      .map((beat) => beat.beatId),
-    staleBeatIds: beats
-      .filter((beat) => beat.reason === 'beat-changed')
+      .filter((beat) => beat.selectedImageId === null)
       .map((beat) => beat.beatId),
     readyBeatIds: beats
-      .filter((beat) => !beat.needsStoryboardImage)
+      .filter((beat) => beat.selectedImageId !== null)
       .map((beat) => beat.beatId),
   };
+}
+
+function readCurrentBeatIds(
+  session: Parameters<typeof listAssetPageInSession>[0],
+  sceneId: string
+): ReadonlySet<string> {
+  const active = readActiveSceneBeatSheetRecord(session, sceneId);
+  const screenplay = readScreenplayDocumentFromSession(session);
+  if (!active || !screenplay) {
+    return new Set();
+  }
+  return new Set(
+    readSceneBeatSheetDocument({ row: active, screenplay }).beats.map(
+      (beat) => beat.id
+    )
+  );
 }
 
 export function sceneBeatSheetResourceKeys(input: {

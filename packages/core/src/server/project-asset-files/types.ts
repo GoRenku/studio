@@ -32,6 +32,12 @@ export type ProjectAssetFileDestination =
       sceneDialogueAudioId: string;
       dialogueAudioTakeId: string;
     }
+  | {
+      kind: 'scene.storyboardImage';
+      sceneId: string;
+      iterationFolder: ProjectRelativePath;
+      beatOrdinal: number;
+    }
   | { kind: 'project.video'; titleHint?: string };
 
 export type ProjectTemporaryFileDestination =

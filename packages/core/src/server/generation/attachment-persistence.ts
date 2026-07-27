@@ -1,10 +1,8 @@
 import { recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
 import { recordSelectedGenerationOutputProvenanceInSession } from '../asset-file-generation/commands.js';
-import {
-  assetRelationshipIdPrefix,
-  insertAssetRelationshipRecord,
-  nextAssetRelationshipSortOrder,
-} from '../database/access/asset-relationships/index.js';
+import { createAssetMembership } from '../assets/ownership.js';
+import { assetSelectionTargetForOwnerType, selectAssetInSession } from '../assets/selection.js';
+import type { AssetOwner, AssetSelectionTarget } from '../../client/assets.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { setAssetFileSourceGenerationSpec } from '../database/access/asset-files.js';
 import {
@@ -44,7 +42,7 @@ export interface PersistGeneratedMediaAttachmentInput {
     origin: string;
   };
   fileRole: string;
-  relationshipRole: string;
+  select?: boolean;
   provenanceReceipt?: unknown;
   selectedGenerationOutput?: {
     generationRunId: string;
@@ -56,7 +54,6 @@ export interface PersistGeneratedMediaAttachmentInput {
 export interface PersistedGeneratedMediaAttachment {
   assetId: string;
   assetFileId: string;
-  relationshipId?: string;
   ownerRecord?: {
     kind: 'lookbookImage' | 'lookbookSheet';
     id: string;
@@ -72,6 +69,8 @@ export interface PersistGeneratedMediaAssetInSessionInput {
   now: string;
   sourceProjectRelativePath: string;
   destination: ProjectAssetFileDestination;
+  owner: AssetOwner;
+  selectionTarget?: AssetSelectionTarget;
   asset: PersistGeneratedMediaAttachmentInput['asset'];
   fileRole: string;
   provenanceReceipt?: unknown;
@@ -82,9 +81,9 @@ export interface PersistGeneratedMediaAssetInSessionInput {
   sourceSpecId?: string;
 }
 
-export function persistGeneratedMediaAssetInSession(
+export function persistOwnedGeneratedMediaAssetInSession(
   input: PersistGeneratedMediaAssetInSessionInput
-): void {
+): ReturnType<typeof persistProjectAssetFileSync> {
   const provenanceSourceCount = [
     input.provenanceReceipt !== undefined,
     input.selectedGenerationOutput !== undefined,
@@ -109,7 +108,12 @@ export function persistGeneratedMediaAssetInSession(
     createdAt: input.now,
     updatedAt: input.now,
   });
-  persistProjectAssetFileSync({
+  createAssetMembership(input.session, {
+    assetId: input.assetId,
+    owner: input.owner,
+    now: input.now,
+  });
+  const assetFile = persistProjectAssetFileSync({
     session: input.session,
     projectFolder: input.projectFolder,
     writeSet: input.writeSet,
@@ -144,6 +148,14 @@ export function persistGeneratedMediaAssetInSession(
       sourceGenerationSpecId: input.sourceSpecId,
     });
   }
+  if (input.selectionTarget) {
+    selectAssetInSession(input.session, {
+      target: input.selectionTarget,
+      assetId: input.assetId,
+      now: input.now,
+    });
+  }
+  return assetFile;
 }
 
 export function persistGeneratedMediaAttachment(
@@ -162,26 +174,32 @@ export function persistGeneratedMediaAttachment(
   }
   const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
-  const membership = input.destination.lookbookMembership;
-  const relationshipId = membership
-    ? undefined
-    : input.idGenerator.next(assetRelationshipIdPrefix(input.destination.target));
-  const ownerRecord = membership
+  const lookbookDetailKind = input.destination.owner.kind === 'lookbook'
+    ? input.asset.type === 'lookbook_image'
+      ? 'image'
+      : input.asset.type === 'lookbook_sheet'
+        ? 'sheet'
+        : null
+    : null;
+  const ownerRecord = lookbookDetailKind
     ? {
-        kind: membership.kind === 'image' ? 'lookbookImage' as const : 'lookbookSheet' as const,
+        kind: lookbookDetailKind === 'image' ? 'lookbookImage' as const : 'lookbookSheet' as const,
         id: input.idGenerator.next(
-          membership.kind === 'image' ? 'lookbook_image' : 'lookbook_sheet'
+          lookbookDetailKind === 'image' ? 'lookbook_image' : 'lookbook_sheet'
         ),
       }
     : undefined;
   const writeSet = createProjectAssetFileWriteSet({
     projectFolder: input.projectFolder,
   });
+  const selectionTarget = input.select
+    ? assetSelectionTargetForOwnerType(input.destination.owner, input.asset.type)
+    : null;
 
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
-      persistGeneratedMediaAssetInSession({
+      persistOwnedGeneratedMediaAssetInSession({
         session,
         projectFolder: input.projectFolder,
         writeSet,
@@ -190,6 +208,8 @@ export function persistGeneratedMediaAttachment(
         now: input.now,
         sourceProjectRelativePath: input.sourceProjectRelativePath,
         destination: input.destination.file,
+        owner: input.destination.owner,
+        ...(selectionTarget ? { selectionTarget } : {}),
         asset: input.asset,
         fileRole: input.fileRole,
         ...(input.provenanceReceipt !== undefined
@@ -200,36 +220,19 @@ export function persistGeneratedMediaAttachment(
           : {}),
         ...(input.sourceSpecId ? { sourceSpecId: input.sourceSpecId } : {}),
       });
-      if (relationshipId) {
-        insertAssetRelationshipRecord(session, input.destination.target, {
-          relationshipId,
-          assetId,
-          localeId: null,
-          role: input.relationshipRole,
-          sortOrder: nextAssetRelationshipSortOrder(session, {
-            target: input.destination.target,
-            role: input.relationshipRole,
-            localeId: null,
-          }),
-          now: input.now,
-        });
-      }
-
-      if (membership && ownerRecord?.kind === 'lookbookImage') {
+      if (input.destination.owner.kind === 'lookbook' && ownerRecord?.kind === 'lookbookImage') {
         insertLookbookImageRecord(session, {
           id: ownerRecord.id,
-          lookbookId: membership.lookbookId,
           assetId,
-          sortOrder: nextLookbookImageSortOrder(session, membership.lookbookId),
+          sortOrder: nextLookbookImageSortOrder(session, input.destination.owner.id),
           now: input.now,
         });
       }
-      if (membership && ownerRecord?.kind === 'lookbookSheet') {
+      if (input.destination.owner.kind === 'lookbook' && ownerRecord?.kind === 'lookbookSheet') {
         insertLookbookSheetRecord(session, {
           id: ownerRecord.id,
-          lookbookId: membership.lookbookId,
           assetId,
-          sortOrder: nextLookbookSheetSortOrder(session, membership.lookbookId),
+          sortOrder: nextLookbookSheetSortOrder(session, input.destination.owner.id),
           now: input.now,
         });
       }
@@ -243,7 +246,6 @@ export function persistGeneratedMediaAttachment(
   return {
     assetId,
     assetFileId,
-    ...(relationshipId ? { relationshipId } : {}),
     ...(ownerRecord ? { ownerRecord } : {}),
   };
 }

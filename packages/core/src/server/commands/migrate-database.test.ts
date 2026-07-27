@@ -84,6 +84,9 @@ describe('migrate database command', () => {
           'lookbook',
           'lookbook_image',
           'lookbook_image_section',
+          'lookbook_sheet',
+          'asset_membership',
+          'selected_asset',
           'media_generation_spec',
           'media_generation_run',
           'screenplay_analysis',
@@ -91,7 +94,6 @@ describe('migrate database command', () => {
           'screenplay_revision',
           'scene_beat_sheet',
           'scene_beat_sheet_state',
-          'scene_beat_storyboard_image',
           'scene_dialogue_audio',
           'scene_dialogue_audio_take',
           'cast_voice_provider_registration',
@@ -118,16 +120,18 @@ describe('migrate database command', () => {
           'scene_shot_video_take_output',
           'scene_shot_video_take_output_shot',
           'scene_shot_video_take_media_input',
+          'project_asset',
+          'cast_asset',
+          'location_asset',
+          'sequence_asset',
+          'scene_asset',
+          'scene_beat_storyboard_image',
+          'cast_profile_display_asset',
+          'location_hero_display_asset',
+          'lookbook_card_image',
           'scene_shot_video_take_media_input_shot',
         ])
       );
-      expect(
-        readIndexForTable(
-          sqlite,
-          'scene_beat_storyboard_image',
-          'scene_beat_storyboard_image_asset_idx'
-        )
-      ).toMatchObject({ isUnique: 0 });
       expect(
         readIndexForTable(
           sqlite,

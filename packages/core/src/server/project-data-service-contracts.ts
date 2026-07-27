@@ -2,14 +2,16 @@ import type {
   Asset,
   AssetFile,
   AssetLocaleContext,
-  AssetReferenceUpdateReport,
-  AssetTarget,
+  AssetOwner,
+  AssetPage,
+  AssetSelectionReport,
+  AssetSelectionTarget,
+  AssetUpdateReport,
   ActNavigationRow,
   CastMemberResource,
   CastOverviewResource,
   CastNavigationRow,
   DirectorContextReport,
-  DisplayAssetMutationReport,
   CastDesignContextReport,
   CastDesignDocument,
   CastDesignListReport,
@@ -84,7 +86,7 @@ import type {
   ProjectInformationResource,
   ProjectLibrary,
   ProjectShell,
-  UpdateAssetReferenceInput,
+  UpdateAssetInput,
   SceneNavigationRow,
   SequenceNavigationRow,
   SequenceResource,
@@ -102,8 +104,6 @@ import type {
   UpdateShotInPlanInput,
   MoveShotInPlanInput,
   RemoveShotFromPlanInput,
-  SetShotRepresentativeImageInput,
-  ClearShotRepresentativeImageInput,
   DiscardShotImageCandidateInput,
   SetShotPlanLastGenerationSpecInput,
   CopyShotPlanInput,
@@ -170,7 +170,7 @@ export interface ProjectDataService {
   listSceneNavigation(
     input: ListSceneNavigationInput
   ): Promise<PageResponse<SceneNavigationRow>>;
-  listAssetPage(input: ListAssetPageInput): Promise<PageResponse<Asset>>;
+  listAssetPage(input: ListAssetPageInput): Promise<AssetPage>;
   readSceneDesignResource(
     input: ReadSceneDesignResourceInput
   ): Promise<SceneDesignResource>;
@@ -211,26 +211,17 @@ export interface ProjectDataService {
   resolveProjectAssetFileById(
     input: ResolveProjectAssetFileByIdInput
   ): Promise<ResolvedProjectAssetFileById>;
-  updateAssetReference(input: UpdateAssetReferenceInput & RenkuConfigPathOptions): Promise<AssetReferenceUpdateReport>;
+  updateAsset(input: UpdateAssetInput & RenkuConfigPathOptions): Promise<AssetUpdateReport>;
   listAssets(input: ListAssetsInput): Promise<Asset[]>;
-  setCastProfileDisplayAsset(input: RenkuConfigPathOptions & {
+  selectAsset(input: RenkuConfigPathOptions & {
     projectName: string;
-    castMemberId: string;
+    target: AssetSelectionTarget;
     assetId: string;
-  }): Promise<DisplayAssetMutationReport>;
-  clearCastProfileDisplayAsset(input: RenkuConfigPathOptions & {
+  }): Promise<AssetSelectionReport>;
+  clearAssetSelection(input: RenkuConfigPathOptions & {
     projectName: string;
-    castMemberId: string;
-  }): Promise<DisplayAssetMutationReport>;
-  setLocationHeroDisplayAsset(input: RenkuConfigPathOptions & {
-    projectName: string;
-    locationId: string;
-    assetId: string;
-  }): Promise<DisplayAssetMutationReport>;
-  clearLocationHeroDisplayAsset(input: RenkuConfigPathOptions & {
-    projectName: string;
-    locationId: string;
-  }): Promise<DisplayAssetMutationReport>;
+    target: AssetSelectionTarget;
+  }): Promise<AssetSelectionReport>;
   discardAsset(input: DiscardAssetInput): Promise<RecoverableMutationReport>;
   restoreAsset(input: RestoreAssetInput): Promise<RecoverableMutationReport>;
   listTrash(input: ListTrashInput): Promise<TrashListReport>;
@@ -266,12 +257,6 @@ export interface ProjectDataService {
   deleteShotPlan(
     input: DeleteShotPlanInput
   ): Promise<RecoverableMutationReport>;
-  setShotRepresentativeImage(
-    input: SetShotRepresentativeImageInput
-  ): Promise<ShotPlanReport>;
-  clearShotRepresentativeImage(
-    input: ClearShotRepresentativeImageInput
-  ): Promise<ShotPlanReport>;
   discardShotImageCandidate(
     input: DiscardShotImageCandidateInput
   ): Promise<RecoverableMutationReport>;
@@ -370,8 +355,6 @@ export interface ProjectDataService {
   writeStoryboardLookbook(input: WriteStoryboardLookbookInput): Promise<LookbookWriteReport>;
   setLookbookSourceInspirations(input: SetLookbookSourceInspirationsInput): Promise<LookbookWriteReport>;
   listLookbookSourceInspirations(input: ListLookbookSourceInspirationsInput): Promise<LookbookSourceInspirationsReport>;
-  setLookbookCardImage(input: SetLookbookCardImageInput): Promise<LookbookImageMutationReport>;
-  clearLookbookCardImage(input: ClearLookbookCardImageInput): Promise<LookbookImageMutationReport>;
   deleteLookbookImage(input: DeleteLookbookImageInput): Promise<LookbookImageMutationReport>;
   deleteLookbookSheet(input: DeleteLookbookSheetInput): Promise<LookbookSheetMutationReport>;
   setLookbookImagePlacement(input: SetLookbookImagePlacementInput): Promise<LookbookImageMutationReport>;
@@ -804,15 +787,6 @@ export interface ListLookbookSourceInspirationsInput extends VisualLanguageProje
   lookbookId: string;
 }
 
-export interface SetLookbookCardImageInput extends VisualLanguageProjectInput {
-  lookbookId: string;
-  imageId: string;
-}
-
-export interface ClearLookbookCardImageInput extends VisualLanguageProjectInput {
-  lookbookId: string;
-}
-
 export interface DeleteLookbookImageInput extends VisualLanguageProjectInput {
   imageId: string;
 }
@@ -844,9 +818,9 @@ export interface ListSceneNavigationInput extends ListNavigationInput {
 
 export interface ListAssetPageInput extends RenkuConfigPathOptions {
   projectName: string;
-  target: AssetTarget;
+  owner: AssetOwner;
   locale?: AssetLocaleContext;
-  role?: string;
+  type?: string;
   mediaKind?: string;
   limit?: number;
   cursor?: string | null;
@@ -953,7 +927,7 @@ export interface ResolveProjectCoverImageInput extends RenkuConfigPathOptions {
 
 export interface ResolveProjectAssetFileInput extends RenkuConfigPathOptions {
   projectName: string;
-  target: AssetTarget;
+  owner: AssetOwner;
   assetId: string;
   assetFileId: string;
 }
@@ -979,18 +953,19 @@ export interface ResolvedProjectAssetFileById {
 
 export interface ListAssetsInput extends RenkuConfigPathOptions {
   projectName: string;
-  target: AssetTarget;
+  owner: AssetOwner;
   locale?: AssetLocaleContext;
+  type?: string;
+  mediaKind?: string;
 }
 
 export interface DiscardAssetInput extends RenkuConfigPathOptions {
   projectName: string;
-  target: AssetTarget;
+  owner: AssetOwner;
   assetId: string;
 }
 
 export interface RestoreAssetInput extends RenkuConfigPathOptions {
   projectName: string;
-  target: AssetTarget;
   assetId: string;
 }

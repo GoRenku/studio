@@ -1,16 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Asset, AssetTarget, ProjectRelativePath } from '../../client/index.js';
+import type { Asset, AssetOwner, ProjectRelativePath } from '../../client/index.js';
+import { createAssetMembership } from '../assets/ownership.js';
+import { readOwnedAsset } from '../assets/projection.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
-import {
-  assertAssetRelationshipLocaleExists,
-  assertAssetRelationshipTargetExists,
-  assetRelationshipIdPrefix,
-  insertAssetRelationshipRecord,
-  nextAssetRelationshipSortOrder,
-  readAssetRelationship,
-} from '../database/access/asset-relationships/index.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
 import {
@@ -22,7 +16,7 @@ import type { RenkuConfigPathOptions } from '../renku-config.js';
 
 export interface TestAssetFixtureInput extends RenkuConfigPathOptions {
   projectName: string;
-  target: AssetTarget;
+  owner: AssetOwner;
   locale?: { localeId?: string | null };
   type: string;
   mediaKind: string;
@@ -30,7 +24,6 @@ export interface TestAssetFixtureInput extends RenkuConfigPathOptions {
   oneLineSummary?: string | null;
   projectRelativePath: ProjectRelativePath;
   fileRole: string;
-  role: string;
   referenceName?: string | null;
   purpose?: string | null;
 }
@@ -41,9 +34,6 @@ export async function createTestAssetFixture(
   const normalizedInput = normalizeTestAssetFixtureInput(input);
   const { projectFolder, session } = await openProjectSession(normalizedInput);
   try {
-    assertAssetRelationshipTargetExists(session, normalizedInput.target);
-    assertAssetRelationshipLocaleExists(session, normalizedInput.locale?.localeId);
-
     const absolutePath = resolveProjectRelativePath(
       projectFolder,
       normalizedInput.projectRelativePath
@@ -55,18 +45,13 @@ export async function createTestAssetFixture(
     const ids = createUniqueIdAllocator(createRandomIdGenerator());
     const assetId = ids('asset');
     const fileId = ids('asset_file');
-    const relationshipId = ids(assetRelationshipIdPrefix(normalizedInput.target));
     const localeId = normalizedInput.locale?.localeId ?? null;
-    const sortOrder = nextAssetRelationshipSortOrder(session, {
-      target: normalizedInput.target,
-      role: normalizedInput.role,
-      localeId,
-    });
 
     session.db.transaction((tx) => {
       const transactionSession = { ...session, db: tx };
       insertAssetRecord(transactionSession, {
         id: assetId,
+        localeId,
         type: normalizedInput.type,
         mediaKind: normalizedInput.mediaKind,
         title: normalizedInput.title,
@@ -75,6 +60,8 @@ export async function createTestAssetFixture(
         availability: 'ready',
         createdAt: now,
         updatedAt: now,
+        referenceName: normalizedInput.referenceName,
+        purpose: normalizedInput.purpose,
       });
       insertAssetFileRecord(transactionSession, {
         id: fileId,
@@ -86,20 +73,15 @@ export async function createTestAssetFixture(
         createdAt: now,
         updatedAt: now,
       });
-      insertAssetRelationshipRecord(transactionSession, normalizedInput.target, {
-        relationshipId,
+      createAssetMembership(transactionSession, {
         assetId,
-        localeId,
-        role: normalizedInput.role,
-        referenceName: normalizedInput.referenceName,
-        purpose: normalizedInput.purpose,
-        sortOrder,
+        owner: normalizedInput.owner,
         now,
       });
     });
 
-    const asset = readAssetRelationship(session, {
-      target: normalizedInput.target,
+    const asset = readOwnedAsset(session, {
+      owner: normalizedInput.owner,
       assetId,
     });
     if (!asset) {
@@ -125,7 +107,6 @@ function normalizeTestAssetFixtureInput(
     oneLineSummary: optionalTrimmed(input.oneLineSummary),
     projectRelativePath: normalizeProjectRelativePath(input.projectRelativePath),
     fileRole: requiredTrimmed(input.fileRole, 'fileRole'),
-    role: requiredTrimmed(input.role, 'role'),
     referenceName: optionalTrimmed(input.referenceName),
     purpose: optionalTrimmed(input.purpose),
   };

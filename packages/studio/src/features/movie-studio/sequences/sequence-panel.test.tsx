@@ -33,13 +33,16 @@ describe('SequencePanel', () => {
         ?.getAttribute('data-media-card-presentation')
     ).toBe('overlay');
     expect(screen.getByText('INT / NIGHT')).not.toBeNull();
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     act(() => {
       window.dispatchEvent(
         new CustomEvent('renku:studio-resource-changed', {
           detail: {
             projectName: 'constantinople',
-            resourceKeys: ['scene:scene_hook'],
+            resourceKeys: ['surface:scene:scene_hook:beats'],
           },
         })
       );
@@ -86,7 +89,6 @@ function sequenceResource(): SequenceResourceResponse {
                 beatId: 'beat_001',
                 image: {
                   assetId: 'asset_storyboard',
-                  relationshipId: 'scene_asset_storyboard',
                   assetFileId: 'asset_file_image',
                   title: 'Storyboard',
                   fileRole: 'storyboard_image',

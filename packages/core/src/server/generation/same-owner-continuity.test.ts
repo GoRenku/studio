@@ -24,21 +24,21 @@ describe('same-owner generation continuity slots', () => {
       return;
     }
     const first = await addAsset(created.projectPath, {
-      target: { kind: 'castMember', castMemberId: 'cast_test0001' },
+      owner: { kind: 'castMember', id: 'cast_test0001' },
       role: 'character-sheet', filename: 'first.png', title: 'First costume',
     });
     const second = await addAsset(created.projectPath, {
-      target: { kind: 'castMember', castMemberId: 'cast_test0001' },
+      owner: { kind: 'castMember', id: 'cast_test0001' },
       role: 'character-sheet', filename: 'second.png', title: 'Palace costume',
     });
     const unavailable = await addAsset(created.projectPath, {
-      target: { kind: 'castMember', castMemberId: 'cast_test0001' },
+      owner: { kind: 'castMember', id: 'cast_test0001' },
       role: 'character-sheet', filename: 'unavailable.png', title: 'Unavailable costume',
     });
     const session = openProjectStore({ projectFolder: created.projectPath, create: false });
     try {
       session.db.update(assets).set({ availability: 'pending' })
-        .where(eq(assets.id, unavailable.assetId)).run();
+        .where(eq(assets.id, unavailable.id)).run();
     } finally {
       session.close();
     }
@@ -50,11 +50,11 @@ describe('same-owner generation continuity slots', () => {
     const slot = context.referenceGuide.sections
       .find((section) => section.id === 'cast')!.slots[0]!;
     expect(slot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual(expect.arrayContaining([
-      { kind: 'asset-file', assetId: first.assetId, assetFileId: first.files[0]!.id },
-      { kind: 'asset-file', assetId: second.assetId, assetFileId: second.files[0]!.id },
+      { kind: 'asset-file', assetId: first.id, assetFileId: first.files[0]!.id },
+      { kind: 'asset-file', assetId: second.id, assetFileId: second.files[0]!.id },
     ]));
     expect(slot.eligibleCandidates.some((candidate) =>
-      candidate.reference.kind === 'asset-file' && candidate.reference.assetId === unavailable.assetId
+      candidate.reference.kind === 'asset-file' && candidate.reference.assetId === unavailable.id
     )).toBe(false);
     expect('selections' in slot).toBe(false);
   });
@@ -76,7 +76,7 @@ describe('same-owner generation continuity slots', () => {
   async function addAsset(
     projectPath: string,
     input: {
-      target: { kind: 'castMember'; castMemberId: string };
+      owner: { kind: 'castMember'; id: string };
       role: string;
       filename: string;
       title: string;
@@ -86,9 +86,9 @@ describe('same-owner generation continuity slots', () => {
     await fs.mkdir(path.dirname(path.join(projectPath, projectRelativePath)), { recursive: true });
     await fs.writeFile(path.join(projectPath, projectRelativePath), input.title);
     return createTestAssetFixture({
-      projectName: 'constantinople', homeDir, target: input.target,
-      type: input.role, mediaKind: 'image', title: input.title,
-      projectRelativePath, fileRole: 'primary', role: input.role,
+      projectName: 'constantinople', homeDir, owner: input.owner,
+      type: 'character_sheet', mediaKind: 'image', title: input.title,
+      projectRelativePath, fileRole: 'primary',
     });
   }
 });

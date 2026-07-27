@@ -1,25 +1,16 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import type { AssetTarget, TrashItemKind } from '../../client/index.js';
-import {
-  discardAssetRelationshipRecord,
-  readAssetOwnerTargets,
-  readAssetRelationshipRecord,
-  restoreAssetRelationshipRecord,
-} from '../database/access/asset-relationships/index.js';
+import type { TrashItemKind } from '../../client/index.js';
 import {
   assets,
   castVoiceProviderRegistrations,
   castVoices,
   inspirationFolders,
-  lookbookCardImages,
   lookbookImages,
   lookbookSheets,
   sceneDialogueAudioTakes,
-  shotPlans,
-  shots,
 } from '../schema/index.js';
 import {
-  studioAssetTargetSurfaceResourceKeys,
+  studioAssetOwnerSurfaceResourceKeys,
   studioCastMemberSurfaceResourceKey,
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,
@@ -44,25 +35,16 @@ import {
 } from './asset-tree-lifecycle.js';
 import { shotPlanTrashDefinition } from '../shot-plans/trash.js';
 import { shotTrashDefinition } from '../shot-plans/shot-trash.js';
+import { requireAssetOwner } from '../assets/ownership.js';
+import { clearSelectedAssetRecordForAsset } from '../database/access/selected-assets.js';
+import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
+import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 
 export function inspirationImageTrashItemId(input: {
   folderId: string;
   fileName: string;
 }): string {
   return `${input.folderId}/${input.fileName}`;
-}
-
-export function assetRelationshipTrashItemId(input: {
-  target: AssetTarget;
-  assetId: string;
-}): string {
-  return [
-    input.assetId,
-    input.target.kind,
-    assetTargetId(input.target) ?? '',
-  ]
-    .map(encodeURIComponent)
-    .join('/');
 }
 
 export function getTrashObjectDefinition(
@@ -240,15 +222,22 @@ const lookbookImageDefinition: TrashObjectDefinition = {
     if (!image) {
       return [];
     }
+    const owner = requireAssetOwner(input.session, image.assetId);
+    if (owner.kind !== 'lookbook') {
+      throw new ProjectDataError(
+        'CORE_ASSET_STORAGE_INVALID',
+        `Lookbook image ${image.id} has invalid Asset ownership.`
+      );
+    }
     return [
       {
         itemKind: 'lookbookImage',
         itemId: image.id,
         ownerKind: 'lookbook',
-        ownerId: image.lookbookId,
+        ownerId: owner.id,
         title: image.id,
         restoreSnapshot: {
-          lookbookId: image.lookbookId,
+          lookbookId: owner.id,
           assetId: image.assetId,
           sortOrder: image.sortOrder,
         },
@@ -289,15 +278,22 @@ const lookbookSheetDefinition: TrashObjectDefinition = {
     if (!sheet) {
       return [];
     }
+    const owner = requireAssetOwner(input.session, sheet.assetId);
+    if (owner.kind !== 'lookbook') {
+      throw new ProjectDataError(
+        'CORE_ASSET_STORAGE_INVALID',
+        `Lookbook sheet ${sheet.id} has invalid Asset ownership.`
+      );
+    }
     return [
       {
         itemKind: 'lookbookSheet',
         itemId: sheet.id,
         ownerKind: 'lookbook',
-        ownerId: sheet.lookbookId,
+        ownerId: owner.id,
         title: sheet.id,
         restoreSnapshot: {
-          lookbookId: sheet.lookbookId,
+          lookbookId: owner.id,
           assetId: sheet.assetId,
           sortOrder: sheet.sortOrder,
         },
@@ -351,6 +347,7 @@ const assetDefinition: TrashObjectDefinition = {
   },
   applyDiscard(input) {
     markAssetTreeDiscarded(input);
+    clearSelectedAssetRecordForAsset(input.session, input.itemId);
   },
   applyRestore(input) {
     restoreAssetTree(input);
@@ -358,121 +355,28 @@ const assetDefinition: TrashObjectDefinition = {
   collectFiles(input) {
     return collectAssetFiles(input, input.trashItem.itemId);
   },
-  resourceKeys() {
-    return [];
+  resourceKeys(input) {
+    const owner = requireAssetOwner(input.session, input.itemId);
+    if (owner.kind !== 'shot') {
+      return studioAssetOwnerSurfaceResourceKeys(owner);
+    }
+    const shot = readShotRecord(input.session, owner.id);
+    if (!shot) {
+      throw new ProjectDataError(
+        'CORE_ASSET_STORAGE_INVALID',
+        `Shot-owned Asset ${input.itemId} has no Shot: ${owner.id}.`
+      );
+    }
+    return [
+      studioSceneShotPlansResourceKey(
+        requireShotPlanRecord(input.session, shot.shotPlanId).sceneId
+      ),
+    ];
   },
   restoredChanges(input) {
     return [{ type: 'asset.restored', assetId: input.itemId }];
   },
 };
-
-const assetRelationshipDefinition: TrashObjectDefinition = {
-  itemKind: 'assetRelationship',
-  readTrashItems(input) {
-    const parsed = parseAssetRelationshipTrashItemId(input.itemId);
-    const relationship = readAssetRelationshipRecord(input.session, parsed);
-    if (!relationship) {
-      return [];
-    }
-    const activeOwnerCount = readAssetOwnerTargets(
-      input.session,
-      parsed.assetId
-    ).length;
-    return [
-      {
-        itemKind: 'assetRelationship',
-        itemId: input.itemId,
-        ...assetRelationshipTrashOwner(input.session, parsed.target),
-        title: relationship.title,
-        restoreSnapshot: {
-          assetId: parsed.assetId,
-          target: parsed.target,
-          discardedAsset: activeOwnerCount <= 1,
-        },
-      },
-    ];
-  },
-  applyDiscard(input) {
-    const parsed = parseAssetRelationshipTrashItemId(input.itemId);
-    const activeOwnerCount = readAssetOwnerTargets(
-      input.session,
-      parsed.assetId
-    ).length;
-    discardAssetRelationshipRecord(input.session, {
-      target: parsed.target,
-      assetId: parsed.assetId,
-      operationId: input.operationId,
-      now: input.now,
-    });
-    if (activeOwnerCount <= 1) {
-      markAssetRecordAndFilesDiscarded({
-        ...input,
-        itemId: parsed.assetId,
-      });
-    }
-  },
-  applyRestore(input) {
-    const snapshot = requireAssetRelationshipSnapshot(
-      input.snapshot,
-      input.trashItem.id
-    );
-    const asset = input.session.db
-      .select({ discardedAt: assets.discardedAt })
-      .from(assets)
-      .where(eq(assets.id, snapshot.assetId))
-      .get();
-    if (asset?.discardedAt) {
-      restoreAssetRecordAndFiles({
-        ...input,
-        trashItem: { ...input.trashItem, itemId: snapshot.assetId },
-      });
-    }
-    restoreAssetRelationshipRecord(input.session, {
-      target: snapshot.target,
-      assetId: snapshot.assetId,
-      now: input.now,
-    });
-  },
-  collectFiles(input) {
-    const snapshot = requireAssetRelationshipSnapshot(
-      input.snapshot,
-      input.trashItem.id
-    );
-    return collectAssetFiles(input, snapshot.assetId);
-  },
-  resourceKeys(input) {
-    const target = parseAssetRelationshipTrashItemId(input.itemId).target;
-    return target.kind === 'shot' && input.ownerId
-      ? [studioSceneShotPlansResourceKey(input.ownerId)]
-      : studioAssetTargetSurfaceResourceKeys(target);
-  },
-  restoredChanges(input) {
-    const parsed = parseAssetRelationshipTrashItemId(input.itemId);
-    return [{ type: 'assetRelationship.restored', assetId: parsed.assetId }];
-  },
-};
-
-function assetRelationshipTrashOwner(
-  session: TrashObjectDiscardContext['session'],
-  target: AssetTarget
-): { ownerKind: string; ownerId: string | null } {
-  if (target.kind !== 'shot') {
-    return {
-      ownerKind: target.kind,
-      ownerId: assetTargetId(target),
-    };
-  }
-  const owner = session.db
-    .select({ sceneId: shotPlans.sceneId })
-    .from(shots)
-    .innerJoin(shotPlans, eq(shotPlans.id, shots.shotPlanId))
-    .where(eq(shots.id, target.shotId))
-    .get();
-  return {
-    ownerKind: 'scene',
-    ownerId: owner?.sceneId ?? null,
-  };
-}
 
 const castVoiceDefinition: TrashObjectDefinition = {
   itemKind: 'castVoice',
@@ -629,7 +533,6 @@ const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
 
 const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinition>> = {
   asset: assetDefinition,
-  assetRelationship: assetRelationshipDefinition,
   castVoice: castVoiceDefinition,
   sceneDialogueAudioTake: sceneDialogueAudioTakeDefinition,
   shot: shotTrashDefinition,
@@ -657,17 +560,9 @@ function markLookbookImageDiscarded(input: TrashObjectDiscardContext): void {
     })
     .where(eq(lookbookImages.id, input.itemId))
     .run();
-  input.session.db
-    .update(lookbookCardImages)
-    .set({
-      discardedAt: input.now,
-      discardOperationId: input.operationId,
-      restoredAt: null,
-    })
-      .where(eq(lookbookCardImages.imageId, input.itemId))
-    .run();
-  if (image && readAssetOwnerTargets(input.session, image.assetId).length === 0) {
+  if (image) {
     markAssetRecordAndFilesDiscarded({ ...input, itemId: image.assetId });
+    clearSelectedAssetRecordForAsset(input.session, image.assetId);
   }
 }
 
@@ -677,11 +572,6 @@ function restoreLookbookImage(input: TrashObjectRestoreContext): void {
     .update(lookbookImages)
     .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
     .where(eq(lookbookImages.id, input.trashItem.itemId))
-    .run();
-  input.session.db
-    .update(lookbookCardImages)
-    .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-    .where(eq(lookbookCardImages.imageId, input.trashItem.itemId))
     .run();
   restoreAssetRecordAndFiles({
     ...input,
@@ -704,7 +594,7 @@ function markLookbookSheetDiscarded(input: TrashObjectDiscardContext): void {
     })
     .where(eq(lookbookSheets.id, input.itemId))
     .run();
-  if (sheet && readAssetOwnerTargets(input.session, sheet.assetId).length === 0) {
+  if (sheet) {
     markAssetRecordAndFilesDiscarded({ ...input, itemId: sheet.assetId });
   }
 }
@@ -720,117 +610,6 @@ function restoreLookbookSheet(input: TrashObjectRestoreContext): void {
     ...input,
     trashItem: { ...input.trashItem, itemId: snapshot.assetId },
   });
-}
-
-function assetTargetId(target: AssetTarget): string | null {
-  switch (target.kind) {
-    case 'project':
-      return null;
-    case 'castMember':
-      return target.castMemberId;
-    case 'location':
-      return target.locationId;
-    case 'sequence':
-      return target.sequenceId;
-    case 'scene':
-      return target.sceneId;
-    case 'shot':
-      return target.shotId;
-  }
-}
-
-function parseAssetRelationshipTrashItemId(itemId: string): {
-  assetId: string;
-  target: AssetTarget;
-} {
-  const [assetIdPart, kindPart, targetIdPart = ''] = itemId.split('/');
-  const assetId = assetIdPart ? decodeURIComponent(assetIdPart) : '';
-  const kind = kindPart ? decodeURIComponent(kindPart) : '';
-  const targetId = decodeURIComponent(targetIdPart);
-  if (!assetId) {
-    throw new ProjectDataError(
-      'PROJECT_DATA272',
-      `Asset relationship trash id is missing asset id: ${itemId}.`
-    );
-  }
-  switch (kind) {
-    case 'project':
-      return { assetId, target: { kind } };
-    case 'castMember':
-      assertAssetRelationshipTargetId(itemId, targetId);
-      return { assetId, target: { kind, castMemberId: targetId } };
-    case 'location':
-      assertAssetRelationshipTargetId(itemId, targetId);
-      return { assetId, target: { kind, locationId: targetId } };
-    case 'sequence':
-      assertAssetRelationshipTargetId(itemId, targetId);
-      return { assetId, target: { kind, sequenceId: targetId } };
-    case 'scene':
-      assertAssetRelationshipTargetId(itemId, targetId);
-      return { assetId, target: { kind, sceneId: targetId } };
-    case 'shot':
-      assertAssetRelationshipTargetId(itemId, targetId);
-      return { assetId, target: { kind, shotId: targetId } };
-    default:
-      throw new ProjectDataError(
-        'PROJECT_DATA273',
-        `Asset relationship trash target is invalid: ${itemId}.`
-      );
-  }
-}
-
-function assertAssetRelationshipTargetId(itemId: string, targetId: string): void {
-  if (targetId) {
-    return;
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA275',
-    `Asset relationship trash id is missing target id: ${itemId}.`
-  );
-}
-
-function requireAssetRelationshipSnapshot(
-  snapshot: Record<string, unknown>,
-  trashItemId: string
-): { assetId: string; target: AssetTarget; discardedAsset: boolean } {
-  if (
-    typeof snapshot.assetId === 'string' &&
-    typeof snapshot.discardedAsset === 'boolean' &&
-    isAssetTarget(snapshot.target)
-  ) {
-    return {
-      assetId: snapshot.assetId,
-      target: snapshot.target,
-      discardedAsset: snapshot.discardedAsset,
-    };
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA274',
-    `Asset relationship trash item snapshot is invalid: ${trashItemId}.`
-  );
-}
-
-function isAssetTarget(value: unknown): value is AssetTarget {
-  if (!value || typeof value !== 'object' || !('kind' in value)) {
-    return false;
-  }
-  const target = value as Record<string, unknown>;
-  switch (target.kind) {
-    case 'project':
-      return true;
-    case 'castMember':
-      return typeof target.castMemberId === 'string';
-    case 'location':
-      return typeof target.locationId === 'string';
-    case 'sequence':
-      return typeof target.sequenceId === 'string';
-    case 'scene':
-      return typeof target.sceneId === 'string';
-    case 'shot':
-      return typeof target.shotId === 'string';
-    default:
-      return false;
-  }
 }
 
 function requireCastVoiceSnapshot(

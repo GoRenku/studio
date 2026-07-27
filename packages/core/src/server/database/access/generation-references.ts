@@ -1,21 +1,18 @@
-import { eq, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   assetFileGenerations,
-  castAssets,
-  locationAssets,
-  projectAssets,
-  projects,
-  sceneAssets,
-  sequenceAssets,
+  assetMemberships,
 } from '../../schema/index.js';
 import { listAssetFileRecords, readAssetFileRecord } from './asset-files.js';
 import { listAssetRecords, readAssetRecord } from './assets.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import type { AssetOwner } from '../../../client/assets.js';
+import { parseAssetOwnerKey } from '../../assets/owner-keys.js';
 
 export interface GenerationReferenceAssetFileRecord {
   asset: NonNullable<ReturnType<typeof readAssetRecord>>;
   file: NonNullable<ReturnType<typeof readAssetFileRecord>>;
-  owner: { kind: string; id: string; role: string } | null;
+  owner: AssetOwner | null;
   generationRunId: string | null;
 }
 
@@ -72,48 +69,13 @@ export function readGenerationReferenceAssetFileRecord(
 
 function readAssetOwners(session: DatabaseSession): Map<
   string,
-  { kind: string; id: string; role: string }
+  AssetOwner
 > {
-  const projectId = session.db.select({ id: projects.id }).from(projects).get()?.id;
-  const owners = new Map<string, { kind: string; id: string; role: string }>();
-  const relationshipGroups = [
-    session.db.select().from(projectAssets).where(isNull(projectAssets.discardedAt)).all().map((row) => ({
-      assetId: row.assetId,
-      kind: 'project',
-      id: projectId ?? 'project',
-      role: row.role,
-    })),
-    session.db.select().from(castAssets).where(isNull(castAssets.discardedAt)).all().map((row) => ({
-      assetId: row.assetId,
-      kind: 'castMember',
-      id: row.castMemberId,
-      role: row.role,
-    })),
-    session.db.select().from(locationAssets).where(isNull(locationAssets.discardedAt)).all().map((row) => ({
-      assetId: row.assetId,
-      kind: 'location',
-      id: row.locationId,
-      role: row.role,
-    })),
-    session.db.select().from(sequenceAssets).where(isNull(sequenceAssets.discardedAt)).all().map((row) => ({
-      assetId: row.assetId,
-      kind: 'sequence',
-      id: row.sequenceId,
-      role: row.role,
-    })),
-    session.db.select().from(sceneAssets).where(isNull(sceneAssets.discardedAt)).all().map((row) => ({
-      assetId: row.assetId,
-      kind: 'scene',
-      id: row.sceneId,
-      role: row.role,
-    })),
-  ];
-  for (const relationships of relationshipGroups) {
-    for (const relationship of relationships) {
-      if (!owners.has(relationship.assetId)) {
-        owners.set(relationship.assetId, relationship);
-      }
-    }
-  }
-  return owners;
+  return new Map(
+    session.db.select().from(assetMemberships).all()
+      .map((membership) => [
+        membership.assetId,
+        parseAssetOwnerKey(membership.ownerKey),
+      ])
+  );
 }

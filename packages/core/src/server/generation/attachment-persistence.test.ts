@@ -5,8 +5,8 @@ import { createHash } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { GenerationRun, GenerationSpec } from '../../client/index.js';
+import { readOwnedAsset } from '../assets/projection.js';
 import { readAssetFileGenerationRecord } from '../database/access/asset-file-generations.js';
-import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
 import { readAssetRecord } from '../database/access/assets.js';
 import { readLookbookImageRecord } from '../database/access/lookbook-images.js';
 import {
@@ -64,27 +64,25 @@ describe('generated media attachment persistence', () => {
         sourceProjectRelativePath: 'tmp/source.png',
         destination: castProfileAttachmentDestination('cast_test0001', 'Profile'),
         asset: {
-          type: 'profile',
+          type: 'cast_profile',
           mediaKind: 'image',
           title: 'Profile',
           origin: 'external',
         },
         fileRole: 'primary',
-        relationshipRole: 'profile',
       });
       expect(persisted).toEqual({
         assetId: 'asset_success',
         assetFileId: 'asset_file_success',
-        relationshipId: 'cast_asset_success',
       });
       expect(
-        readAssetRelationship(session, {
-          target: { kind: 'castMember', castMemberId: 'cast_test0001' },
+        readOwnedAsset(session, {
+          owner: { kind: 'castMember', id: 'cast_test0001' },
           assetId: persisted.assetId,
         })
       ).toMatchObject({
         title: 'Profile',
-        role: 'profile',
+        type: 'cast_profile',
         files: [{ id: 'asset_file_success', role: 'primary' }],
       });
 
@@ -105,13 +103,12 @@ describe('generated media attachment persistence', () => {
           'Lookbook Image'
         ),
         asset: {
-          type: 'lookbook-image',
+          type: 'lookbook_image',
           mediaKind: 'image',
           title: 'Lookbook Image',
           origin: 'generated',
         },
         fileRole: 'primary',
-        relationshipRole: 'lookbook-image',
         provenanceReceipt: { run },
       });
       expect(lookbookAttachment.ownerRecord).toEqual({
@@ -121,12 +118,10 @@ describe('generated media attachment persistence', () => {
       expect(
         readLookbookImageRecord(session, 'lookbook_image_lookbook')
       ).toMatchObject({
-        lookbookId,
         assetId: 'asset_lookbook',
       });
-      expect(lookbookAttachment.relationshipId).toBeUndefined();
-      expect(readAssetRelationship(session, {
-        target: { kind: 'project' },
+      expect(readOwnedAsset(session, {
+        owner: { kind: 'project' },
         assetId: lookbookAttachment.assetId,
       })).toBeNull();
       expect(
@@ -154,13 +149,12 @@ describe('generated media attachment persistence', () => {
             'Rejected Profile'
           ),
           asset: {
-            type: 'profile',
+            type: 'cast_profile',
             mediaKind: 'image',
             title: 'Rejected Profile',
             origin: 'generated',
           },
           fileRole: 'primary',
-          relationshipRole: 'profile',
           selectedGenerationOutput: {
             generationRunId: run.id,
             outputArtifactId: 'artifact_image',
@@ -181,8 +175,8 @@ describe('generated media attachment persistence', () => {
           projectFolder: created.projectPath,
           idGenerator: {
             next(prefix) {
-              return prefix === 'cast_asset'
-                ? 'cast_asset_success'
+              return prefix === 'asset'
+                ? 'asset_success'
                 : `${prefix}_rollback`;
             },
           },
@@ -199,7 +193,6 @@ describe('generated media attachment persistence', () => {
             origin: 'generated',
           },
           fileRole: 'primary',
-          relationshipRole: 'character-sheet',
         })
       ).toThrow();
       expect(readAssetRecord(session, 'asset_rollback')).toBeNull();

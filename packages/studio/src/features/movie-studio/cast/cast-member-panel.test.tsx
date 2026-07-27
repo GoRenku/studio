@@ -9,8 +9,8 @@ import type {
 import {
   deleteCastVoice,
   readCastAssets,
-  setCastProfileDisplayAsset,
-  clearCastProfileDisplayAsset,
+  selectCastProfileAsset,
+  clearSelectedCastProfile,
 } from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-screenplay-api';
 import { CastMemberPanel } from './cast-member-panel';
@@ -29,20 +29,19 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
-  castAssetFileUrl: vi.fn(
+  projectAssetFileUrl: vi.fn(
     (
       projectName: string,
-      castMemberId: string,
       assetId: string,
       fileId: string
     ) =>
-      `/studio-api/projects/${projectName}/cast/${castMemberId}/assets/${assetId}/files/${fileId}`
+      `/studio-api/projects/${projectName}/assets/${assetId}/files/${fileId}`
   ),
   deleteCastAsset: vi.fn(),
   deleteCastVoice: vi.fn(),
   readCastAssets: vi.fn(),
-  setCastProfileDisplayAsset: vi.fn(),
-  clearCastProfileDisplayAsset: vi.fn(),
+  selectCastProfileAsset: vi.fn(),
+  clearSelectedCastProfile: vi.fn(),
 }));
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -52,8 +51,8 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 describe('CastMemberPanel', () => {
   beforeEach(() => {
     vi.mocked(readCastAssets).mockReset();
-    vi.mocked(setCastProfileDisplayAsset).mockReset();
-    vi.mocked(clearCastProfileDisplayAsset).mockReset();
+    vi.mocked(selectCastProfileAsset).mockReset();
+    vi.mocked(clearSelectedCastProfile).mockReset();
     vi.mocked(deleteCastVoice).mockReset();
     vi.mocked(readCastMemberResource).mockReset();
     vi.spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue();
@@ -65,7 +64,6 @@ describe('CastMemberPanel', () => {
       ...castMemberResource(),
       firstImage: {
         assetId: 'asset_profile',
-        relationshipId: 'asset_relationship_profile',
         assetFileId: 'asset_file_profile',
         title: 'Urban profile',
         fileRole: 'primary',
@@ -77,9 +75,9 @@ describe('CastMemberPanel', () => {
       },
     });
     vi.mocked(readCastAssets)
-      .mockResolvedValueOnce([castProfileAsset()])
-      .mockResolvedValueOnce([castProfileAsset()]);
-    vi.mocked(clearCastProfileDisplayAsset).mockResolvedValue(undefined);
+      .mockResolvedValueOnce(assetCollection([castProfileAsset()], 'asset_profile'))
+      .mockResolvedValueOnce(assetCollection([castProfileAsset()]));
+    vi.mocked(clearSelectedCastProfile).mockResolvedValue(undefined);
 
     render(
       <CastMemberPanel
@@ -99,12 +97,12 @@ describe('CastMemberPanel', () => {
     );
 
     await waitFor(() => {
-      expect(clearCastProfileDisplayAsset).toHaveBeenCalledWith(
+      expect(clearSelectedCastProfile).toHaveBeenCalledWith(
         'constantinople',
         'cast_urban'
       );
     });
-    expect(setCastProfileDisplayAsset).not.toHaveBeenCalled();
+    expect(selectCastProfileAsset).not.toHaveBeenCalled();
   });
 
   it('renders Details narrative facts without visual-anchor copy or a Voice Design tab', async () => {
@@ -114,7 +112,9 @@ describe('CastMemberPanel', () => {
         voiceNotes: 'Low, clipped, dry under pressure.',
       })
     );
-    vi.mocked(readCastAssets).mockResolvedValue([castProfileAsset()]);
+    vi.mocked(readCastAssets).mockResolvedValue(
+      assetCollection([castProfileAsset()], 'asset_profile')
+    );
 
     render(
       <CastMemberPanel
@@ -132,10 +132,12 @@ describe('CastMemberPanel', () => {
 
   it('shows Character Sheet footers without a pick control or raw filename copy', async () => {
     vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
-    vi.mocked(readCastAssets).mockResolvedValue([
-      castProfileAsset(),
-      castCharacterSheetAsset(),
-    ]);
+    vi.mocked(readCastAssets).mockResolvedValue(
+      assetCollection(
+        [castProfileAsset(), castCharacterSheetAsset()],
+        'asset_profile'
+      )
+    );
 
     render(
       <CastMemberPanel
@@ -160,7 +162,7 @@ describe('CastMemberPanel', () => {
     vi.mocked(readCastMemberResource).mockResolvedValue(
       castMemberResource({ voices: [castVoiceSample()] })
     );
-    vi.mocked(readCastAssets).mockResolvedValue([]);
+    vi.mocked(readCastAssets).mockResolvedValue(assetCollection([]));
     vi.mocked(deleteCastVoice).mockResolvedValue({
       castMemberId: 'cast_urban',
       voiceId: 'cast_voice_normal',
@@ -200,6 +202,13 @@ describe('CastMemberPanel', () => {
   });
 });
 
+function assetCollection(
+  items: StudioAssetResponse[],
+  selectedAssetId: string | null = null
+) {
+  return { items, selectedAssetId };
+}
+
 function castMemberResource(
   overrides: Partial<CastMemberResourceResponse['castMember']> & {
     voices?: CastMemberResourceResponse['voices'];
@@ -230,9 +239,8 @@ function activateTab(tab: HTMLElement): void {
 
 function castProfileAsset(): StudioAssetResponse {
   return {
-    assetId: 'asset_profile',
-    relationshipId: 'asset_relationship_profile',
-    target: { kind: 'castMember', castMemberId: 'cast_urban' },
+    id: 'asset_profile',
+    owner: { kind: 'castMember', id: 'cast_urban' },
     localeId: null,
     type: 'cast_profile',
     availability: 'ready',
@@ -240,10 +248,8 @@ function castProfileAsset(): StudioAssetResponse {
     title: 'Urban profile',
     oneLineSummary: null,
     origin: 'generated',
-    role: 'profile',
     referenceName: null,
     purpose: null,
-    sortOrder: 0,
     files: [
       {
         id: 'asset_file_profile',
@@ -266,12 +272,10 @@ function castProfileAsset(): StudioAssetResponse {
 function castCharacterSheetAsset(): StudioAssetResponse {
   return {
     ...castProfileAsset(),
-    assetId: 'asset_character_sheet',
-    relationshipId: 'asset_relationship_character_sheet',
+    id: 'asset_character_sheet',
     type: 'character_sheet',
     mediaKind: 'image',
     title: 'Urban Sheet',
-    role: 'character-sheet',
     referenceName: 'standard-sheet',
     purpose: 'default costume and face reference',
     files: [
@@ -312,9 +316,8 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
       },
     ],
     sample: {
-      assetId: 'asset_voice_sample',
-      relationshipId: 'asset_relationship_voice_sample',
-      target: { kind: 'castMember', castMemberId: 'cast_urban' },
+      id: 'asset_voice_sample',
+      owner: { kind: 'castMember', id: 'cast_urban' },
       localeId: null,
       type: 'cast_voice_sample',
       availability: 'ready',
@@ -322,10 +325,8 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
       title: 'Urban normal voice sample',
       oneLineSummary: null,
       origin: 'generated',
-      role: 'voice_sample',
       referenceName: 'normal-voice',
       purpose: 'calm strategic baseline',
-      sortOrder: 0,
       files: [
         {
           id: 'asset_file_voice_sample',

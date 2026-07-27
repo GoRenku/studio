@@ -4,6 +4,10 @@ Date: 2026-06-08
 
 Status: accepted
 
+Decision 0064 supersedes only duplicated Cast Voice sample ownership described
+below. Cast Voice provider registrations and the playable sample link remain
+accepted domain facts.
+
 ## Context
 
 Cast Design documents already describe performance direction and voice casting

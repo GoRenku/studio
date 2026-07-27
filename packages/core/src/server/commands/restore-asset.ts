@@ -4,7 +4,6 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RestoreAssetInput } from '../project-data-service-contracts.js';
 import { restoreTrashObject } from '../trash/trash-lifecycle-service.js';
-import { assetRelationshipTrashItemId } from '../trash/trash-object-registry.js';
 
 export async function restoreAsset(
   input: RestoreAssetInput
@@ -22,11 +21,8 @@ export async function restoreAsset(
       session,
       project,
       projectFolder,
-      itemKind: 'assetRelationship',
-      itemId: assetRelationshipTrashItemId({
-        target: input.target,
-        assetId: input.assetId,
-      }),
+      itemKind: 'asset',
+      itemId: input.assetId,
     });
   } finally {
     session.close();

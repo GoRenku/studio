@@ -1,15 +1,6 @@
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { and, eq, isNull, ne } from 'drizzle-orm';
-import {
-  assetFiles,
-  assets,
-  castAssets,
-  locationAssets,
-  projectAssets,
-  sceneAssets,
-  sequenceAssets,
-  shotAssets,
-} from '../schema/index.js';
+import { assetFiles, assets } from '../schema/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
   TrashFileDraft,
@@ -22,24 +13,6 @@ export function markAssetTreeDiscarded(
   input: TrashObjectDiscardContext
 ): void {
   markAssetRecordAndFilesDiscarded(input);
-  for (const table of [
-    projectAssets,
-    castAssets,
-    locationAssets,
-    sequenceAssets,
-    sceneAssets,
-    shotAssets,
-  ]) {
-    input.session.db
-      .update(table)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-      })
-      .where(eq(table.assetId, input.itemId))
-      .run();
-  }
 }
 
 export function markAssetRecordAndFilesDiscarded(
@@ -67,24 +40,6 @@ export function markAssetRecordAndFilesDiscarded(
 
 export function restoreAssetTree(input: TrashObjectRestoreContext): void {
   restoreAssetRecordAndFiles(input);
-  for (const table of [
-    projectAssets,
-    castAssets,
-    locationAssets,
-    sequenceAssets,
-    sceneAssets,
-    shotAssets,
-  ]) {
-    input.session.db
-      .update(table)
-      .set({
-        discardedAt: null,
-        discardOperationId: null,
-        restoredAt: input.now,
-      })
-      .where(eq(table.assetId, input.trashItem.itemId))
-      .run();
-  }
 }
 
 export function restoreAssetRecordAndFiles(
@@ -129,27 +84,13 @@ export function collectAssetFiles(
       `Trash garbage collection could not find asset: ${assetId}.`
     );
   }
-  const activeOwners = countActiveAssetOwners(input.session, assetId);
   if (!asset.discardedAt) {
-    if (activeOwners > 0) {
-      return [];
-    }
     throw garbageCollectionBlocker({
       trashItemId: input.trashItem.id,
       assetId,
       message: 'Trash garbage collection cannot collect an active asset row.',
       suggestion:
         'Discard the asset through its owning domain command before emptying Trash.',
-    });
-  }
-  if (activeOwners > 0) {
-    throw garbageCollectionBlocker({
-      trashItemId: input.trashItem.id,
-      assetId,
-      message:
-        'Trash garbage collection cannot collect an asset while it still has active owners.',
-      suggestion:
-        'Discard or detach every active owner before emptying Trash.',
     });
   }
   if (asset.discardOperationId !== input.trashItem.operationId) {
@@ -214,28 +155,6 @@ function readActiveAssetFilePathOwner(
       )
       .get() ?? null
   );
-}
-
-function countActiveAssetOwners(
-  session: TrashObjectGarbageCollectionContext['session'],
-  assetId: string
-): number {
-  const relationshipOwnerCount = [
-    projectAssets,
-    castAssets,
-    locationAssets,
-    sequenceAssets,
-    sceneAssets,
-    shotAssets,
-  ].reduce((total, table) => {
-    const rows = session.db
-      .select({ id: table.id })
-      .from(table)
-      .where(and(eq(table.assetId, assetId), isNull(table.discardedAt)))
-      .all();
-    return total + rows.length;
-  }, 0);
-  return relationshipOwnerCount;
 }
 
 function garbageCollectionBlocker(input: {

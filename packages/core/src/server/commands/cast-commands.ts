@@ -114,7 +114,7 @@ export async function readCastContext(
       scenes: screenplay ? castScenes(screenplay, input.castMemberId) : [],
       activeLookbook: null,
       assets: [],
-      assetRoleCounts: roleCounts(assets),
+      assetTypeCounts: typeCounts(assets),
       generationReadiness: castGenerationReadiness(castMember, assets),
     };
   });
@@ -368,7 +368,7 @@ function toCastMember(input: CastMemberInput): CastMember {
 
 function castGenerationReadiness(
   castMember: CastMember,
-  assets: Array<{ role: string }>
+  assets: Array<{ type: string }>
 ): CastDesignContextReport['generationReadiness'] {
   if (castMember.isVoiceOver) {
     return {
@@ -383,7 +383,7 @@ function castGenerationReadiness(
   }
   return {
     characterSheet: true,
-    profile: assets.some((asset) => asset.role === 'character-sheet'),
+    profile: assets.some((asset) => asset.type === 'character_sheet'),
     notes: [
       'Use media-producer for cast.character-sheet and cast.profile generation.',
       'Costume-variant media and voice media do not have first-class generation targets yet.',
@@ -474,17 +474,17 @@ function castScenes(
   return scenes;
 }
 
-function roleCounts(
-  records: Array<{ role: string }>
-): Array<{ role: string; count: number }> {
-  const counts = new Map<string, { role: string; count: number }>();
+function typeCounts(
+  records: Array<{ type: string }>
+): Array<{ type: string; count: number }> {
+  const counts = new Map<string, { type: string; count: number }>();
   records.forEach((record) => {
-    const count = counts.get(record.role) ?? {
-      role: record.role,
+    const count = counts.get(record.type) ?? {
+      type: record.type,
       count: 0,
     };
     count.count += 1;
-    counts.set(record.role, count);
+    counts.set(record.type, count);
   });
   return [...counts.values()];
 }

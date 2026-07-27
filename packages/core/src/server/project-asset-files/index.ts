@@ -24,4 +24,4 @@ export {
   resolveTemporaryFileRoot,
   writeProjectTemporaryFile,
 } from './temporary-files.js';
-export { persistSceneStoryboardBeatFilesSync } from './destinations/scene-storyboard.js';
+export { allocateSceneStoryboardIterationFolderSync } from './destinations/scene-storyboard.js';

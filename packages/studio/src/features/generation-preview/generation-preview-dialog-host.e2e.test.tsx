@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
+import { EditorView } from '@codemirror/view';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GenerationPreviewDialogHost } from './generation-preview-dialog-host';
@@ -118,9 +119,7 @@ describe('GenerationPreviewDialogHost', () => {
     const previous = screen.getByRole('button', { name: 'Previous generation request' });
     const next = screen.getByRole('button', { name: 'Next generation request' });
     expect(previous.hasAttribute('disabled')).toBe(true);
-    fireEvent.input(screen.getByRole('textbox', { name: 'Generation prompt' }), {
-      target: { value: 'First unsaved draft.' },
-    });
+    await setPromptValue('Generation prompt', 'First unsaved draft.');
     await act(async () => selectTab('References'));
     fireEvent.click(next);
 
@@ -128,13 +127,11 @@ describe('GenerationPreviewDialogHost', () => {
     expect(screen.getByRole('tab', { name: 'References' }).getAttribute('data-state')).toBe('active');
     expect(screen.getByRole('button', { name: 'Next generation request' }).hasAttribute('disabled')).toBe(true);
     await act(async () => selectTab('Prompt'));
-    fireEvent.input(screen.getByRole('textbox', { name: 'Generation prompt' }), {
-      target: { value: 'Second unsaved draft.' },
-    });
+    await setPromptValue('Generation prompt', 'Second unsaved draft.');
     fireEvent.click(screen.getByRole('button', { name: 'Previous generation request' }));
-    expect((screen.getByRole('textbox', { name: 'Generation prompt' }) as HTMLTextAreaElement).value).toBe('First unsaved draft.');
+    expect(promptValue('Generation prompt')).toBe('First unsaved draft.');
     fireEvent.click(screen.getByRole('button', { name: 'Next generation request' }));
-    expect((screen.getByRole('textbox', { name: 'Generation prompt' }) as HTMLTextAreaElement).value).toBe('Second unsaved draft.');
+    expect(promptValue('Generation prompt')).toBe('Second unsaved draft.');
   });
 
   it('keeps the single-preview surface free of request navigation', async () => {
@@ -234,8 +231,8 @@ describe('GenerationPreviewDialogHost', () => {
     expect(
       screen
         .getByRole('textbox', { name: 'Generation prompt' })
-        .hasAttribute('readonly'),
-    ).toBe(false);
+        .getAttribute('aria-readonly'),
+    ).toBe('false');
     expect(screen.getByRole('button', { name: 'Update' })).toBeTruthy();
 
     await act(async () => selectTab('References'));
@@ -358,11 +355,10 @@ describe('GenerationPreviewDialogHost', () => {
       })
     );
 
-    fireEvent.input(
-      await screen.findByRole('textbox', { name: 'Generation prompt' }),
-      {
-        target: { value: 'Updated production prompt.\nSecond line.' },
-      },
+    await screen.findByRole('textbox', { name: 'Generation prompt' });
+    await setPromptValue(
+      'Generation prompt',
+      'Updated production prompt.\nSecond line.',
     );
     expect(fetchMock).not.toHaveBeenCalled();
 
@@ -455,10 +451,8 @@ describe('GenerationPreviewDialogHost', () => {
         editableReference: true,
       }),
     );
-    fireEvent.input(
-      await screen.findByRole('textbox', { name: 'Generation prompt' }),
-      { target: { value: 'A failing update.' } },
-    );
+    await screen.findByRole('textbox', { name: 'Generation prompt' });
+    await setPromptValue('Generation prompt', 'A failing update.');
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
 
     expect(await screen.findByText('Preview Update Failed')).toBeTruthy();
@@ -479,8 +473,8 @@ describe('GenerationPreviewDialogHost', () => {
     expect(
       screen
         .getByRole('textbox', { name: 'Generation prompt' })
-        .hasAttribute('readonly'),
-    ).toBe(true);
+        .getAttribute('aria-readonly'),
+    ).toBe('true');
 
   });
 
@@ -493,7 +487,11 @@ describe('GenerationPreviewDialogHost', () => {
       frozen: true,
     }));
     expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
-    expect(screen.getByRole('textbox', { name: 'Generation prompt' }).hasAttribute('readonly')).toBe(true);
+    expect(
+      screen
+        .getByRole('textbox', { name: 'Generation prompt' })
+        .getAttribute('aria-readonly'),
+    ).toBe('true');
   });
 
   it('shows a model-supported negative prompt in a smaller editor', async () => {
@@ -515,11 +513,7 @@ describe('GenerationPreviewDialogHost', () => {
     expect(promptPanel?.className).toContain(
       'grid-rows-[minmax(0,3fr)_minmax(0,1fr)]'
     );
-    expect(
-      (screen.getByRole('textbox', {
-        name: 'Negative generation prompt',
-      }) as HTMLTextAreaElement).value
-    ).toBe('No camera shake.');
+    expect(promptValue('Negative generation prompt')).toBe('No camera shake.');
   });
 
   it('does not let a superseded update response replace a newer preview', async () => {
@@ -541,10 +535,7 @@ describe('GenerationPreviewDialogHost', () => {
         authoredText: 'First preview prompt.',
       })
     );
-    fireEvent.input(
-      screen.getByRole('textbox', { name: 'Generation prompt' }),
-      { target: { value: 'Pending update prompt.' } }
-    );
+    await setPromptValue('Generation prompt', 'Pending update prompt.');
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
 
     await dispatchPreview(
@@ -570,11 +561,7 @@ describe('GenerationPreviewDialogHost', () => {
     });
 
     await waitFor(() => {
-      expect(
-        (screen.getByRole('textbox', {
-          name: 'Generation prompt',
-        }) as HTMLTextAreaElement).value
-      ).toBe('Newer preview prompt.');
+      expect(promptValue('Generation prompt')).toBe('Newer preview prompt.');
     });
   });
 });
@@ -587,6 +574,30 @@ function selectTab(name: string): void {
   fireEvent.pointerDown(tab, { button: 0, ctrlKey: false });
   fireEvent.pointerUp(tab, { button: 0, ctrlKey: false });
   fireEvent.click(tab);
+}
+
+async function setPromptValue(label: string, value: string): Promise<void> {
+  const view = promptEditorView(label);
+  await act(async () => {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: value },
+      userEvent: 'input',
+    });
+    await Promise.resolve();
+  });
+}
+
+function promptValue(label: string): string {
+  return promptEditorView(label).state.doc.toString();
+}
+
+function promptEditorView(label: string): EditorView {
+  const textbox = screen.getByRole('textbox', { name: label });
+  const view = EditorView.findFromDOM(textbox);
+  if (!view) {
+    throw new Error(`Expected ${label} CodeMirror view.`);
+  }
+  return view;
 }
 
 let previewEventSequence = 0;

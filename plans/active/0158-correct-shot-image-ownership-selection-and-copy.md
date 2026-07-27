@@ -1,7 +1,13 @@
 # 0158 Correct Shot Image Ownership, Selection, And Copy
 
-Status: proposed
+Status: superseded by plan 0159
 Date: 2026-07-26
+
+Plan 0159 replaces this proposed Shot-specific `shot_image` table with the
+accepted project-wide exclusive Asset membership and scoped selection model.
+Its independent-copy requirement remains accepted through the common Asset and
+AssetFile contract. This plan was not partially implemented and is retained
+only as historical design context.
 
 ## Summary
 

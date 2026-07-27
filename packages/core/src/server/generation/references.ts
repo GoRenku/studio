@@ -9,6 +9,7 @@ import type {
   GenerationReferenceSlotSelectionInput,
   GenerationSpec,
 } from '../../client/generation.js';
+import type { AssetOwner } from '../../client/assets.js';
 import type { ProjectRelativePath } from '../../client/project.js';
 import {
   listGenerationReferenceAssetFileRecords,
@@ -29,8 +30,8 @@ export interface ListGenerationReferencesInput {
   assetId?: string;
   assetFileIds?: string[];
   mediaKind?: GenerationOutputMediaKind;
-  owner?: { kind: string; id: string };
-  assetRole?: string;
+  owner?: AssetOwner;
+  assetType?: string;
   search?: string;
   cursor?: string | null;
   limit?: number;
@@ -46,7 +47,7 @@ export function listGenerationReferences(
       if (!isGenerationMediaKind(file.mediaKind)) {
         return [];
       }
-      const role = owner?.role ?? file.role;
+      const role = asset.type;
       const label = asset.title.trim() || file.role;
       if (input.mediaKind && file.mediaKind !== input.mediaKind) {
         return [];
@@ -59,11 +60,11 @@ export function listGenerationReferences(
       }
       if (
         input.owner &&
-        (owner?.kind !== input.owner.kind || owner.id !== input.owner.id)
+        !assetOwnersEqual(owner, input.owner)
       ) {
         return [];
       }
-      if (input.assetRole && role !== input.assetRole) {
+      if (input.assetType && asset.type !== input.assetType) {
         return [];
       }
       if (
@@ -87,7 +88,7 @@ export function listGenerationReferences(
         width: file.width,
         height: file.height,
         durationSeconds: file.durationSeconds,
-        owner: owner ? { kind: owner.kind, id: owner.id } : null,
+        owner,
         role,
         provenance: {
           origin: asset.origin,
@@ -276,8 +277,8 @@ export async function resolveGenerationReference(input: {
     width: file.width,
     height: file.height,
     durationSeconds: file.durationSeconds,
-    owner: owner ? { kind: owner.kind, id: owner.id } : null,
-    role: owner?.role ?? file.role,
+    owner,
+    role: asset.type,
     provenance: {
       origin: asset.origin,
       ...(generationRunId ? { generationRunId } : {}),
@@ -290,6 +291,26 @@ function referenceKey(reference: GenerationReference): string {
   return reference.kind === 'asset-file'
     ? `${reference.assetId}:${reference.assetFileId}`
     : reference.projectRelativePath;
+}
+
+function assetOwnersEqual(
+  left: AssetOwner | null,
+  right: AssetOwner
+): boolean {
+  if (!left || left.kind !== right.kind) {
+    return false;
+  }
+  if (left.kind === 'project' && right.kind === 'project') {
+    return true;
+  }
+  if (left.kind === 'sceneBeat' && right.kind === 'sceneBeat') {
+    return left.sceneId === right.sceneId && left.beatId === right.beatId;
+  }
+  return left.kind !== 'project'
+    && left.kind !== 'sceneBeat'
+    && right.kind !== 'project'
+    && right.kind !== 'sceneBeat'
+    && left.id === right.id;
 }
 
 function placementsEqual(

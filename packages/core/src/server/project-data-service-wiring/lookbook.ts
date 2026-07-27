@@ -1,9 +1,7 @@
 import {
-  clearLookbookCardImage,
   deleteLookbookImage,
   deleteLookbookSheet,
   listLookbookSourceInspirations,
-  setLookbookCardImage,
   setLookbookImagePlacement,
   setLookbookSourceInspirations,
 } from '../commands/lookbook-commands.js';
@@ -33,8 +31,6 @@ export function createLookbookServiceWiring(): Pick<
   | 'writeStoryboardLookbook'
   | 'setLookbookSourceInspirations'
   | 'listLookbookSourceInspirations'
-  | 'clearLookbookCardImage'
-  | 'setLookbookCardImage'
   | 'deleteLookbookImage'
   | 'deleteLookbookSheet'
   | 'setLookbookImagePlacement'
@@ -49,8 +45,6 @@ export function createLookbookServiceWiring(): Pick<
     writeStoryboardLookbook,
     setLookbookSourceInspirations,
     listLookbookSourceInspirations,
-    clearLookbookCardImage,
-    setLookbookCardImage,
     deleteLookbookImage,
     deleteLookbookSheet,
     setLookbookImagePlacement,

@@ -125,7 +125,7 @@ export function toCastOverviewResourceResponse(
       items: resource.cast.items.map((castMember) => ({
         ...castMember,
         firstImage: castMember.firstImage
-          ? withImageUrl(projectName, 'cast', castMember.id, castMember.firstImage)
+          ? withImageUrl(projectName, castMember.firstImage)
           : undefined,
       })),
     },
@@ -139,14 +139,12 @@ export function toCastMemberResourceResponse(
   return {
     ...resource,
     firstImage: resource.firstImage
-      ? withImageUrl(projectName, 'cast', resource.castMember.id, resource.firstImage)
+      ? withImageUrl(projectName, resource.firstImage)
       : undefined,
     voices: resource.voices.map((voice) => ({
       ...voice,
       sample: withAssetFileUrls(
         projectName,
-        'cast',
-        resource.castMember.id,
         voice.sample
       ),
     })),
@@ -163,7 +161,7 @@ export function toLocationOverviewResourceResponse(
       items: resource.locations.items.map((location) => ({
         ...location,
         firstImage: location.firstImage
-          ? withImageUrl(projectName, 'locations', location.id, location.firstImage)
+          ? withImageUrl(projectName, location.firstImage)
           : undefined,
       })),
     },
@@ -177,7 +175,7 @@ export function toLocationResourceResponse(
   return {
     ...resource,
     firstImage: resource.firstImage
-      ? withImageUrl(projectName, 'locations', resource.location.id, resource.firstImage)
+      ? withImageUrl(projectName, resource.firstImage)
       : undefined,
   };
 }
@@ -198,7 +196,7 @@ export function toSequenceResourceResponse(
               images: scene.storyboardPreview.images.map((entry) => ({
                 beatId: entry.beatId,
                 image: entry.image
-                  ? withSceneImageUrl(projectName, scene.id, entry.image)
+                  ? withImageUrl(projectName, entry.image)
                   : null,
               })),
             }
@@ -212,19 +210,18 @@ export function toSceneBeatSheetResourceResponse(
   projectName: string,
   resource: SceneBeatSheetResource
 ): SceneBeatSheetResourceResponse {
-  const sceneId = resource.scene.id;
   return {
     ...resource,
     storyboardImagesByBeatId: Object.fromEntries(
       Object.entries(resource.storyboardImagesByBeatId).map(([beatId, image]) => [
         beatId,
-        withSceneImageUrl(projectName, sceneId, image),
+        withImageUrl(projectName, image),
       ])
     ),
     castMemberImages: Object.fromEntries(
       Object.entries(resource.castMemberImages).map(([castMemberId, image]) => [
         castMemberId,
-        withImageUrl(projectName, 'cast', castMemberId, image),
+        withImageUrl(projectName, image),
       ])
     ),
   };
@@ -239,7 +236,7 @@ export function toSceneNarrativeResourceResponse(
     castMemberImages: Object.fromEntries(
       Object.entries(resource.castMemberImages).map(([castMemberId, image]) => [
         castMemberId,
-        withImageUrl(projectName, 'cast', castMemberId, image),
+        withImageUrl(projectName, image),
       ])
     ),
   };
@@ -258,7 +255,7 @@ export function toActStoryboardResourceResponse(
         beats: scene.beats.map((beat) => ({
           ...beat,
           image: beat.image
-            ? withSceneImageUrl(projectName, scene.scene.id, beat.image)
+            ? withImageUrl(projectName, beat.image)
             : null,
         })),
       })),
@@ -268,38 +265,23 @@ export function toActStoryboardResourceResponse(
 
 function withImageUrl(
   projectName: string,
-  ownerPath: 'cast' | 'locations',
-  ownerId: string,
   image: ScreenplayImageReference
 ): ScreenplayImageReferenceWithHttp {
   return {
     ...image,
-    url: `/studio-api/projects/${encodeURIComponent(projectName)}/${ownerPath}/${encodeURIComponent(ownerId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
+    url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
   };
 }
 
 function withAssetFileUrls(
   projectName: string,
-  ownerPath: 'cast' | 'locations',
-  ownerId: string,
   asset: Asset
 ): AssetWithHttpFiles {
   return {
     ...asset,
     files: asset.files.map((file) => ({
       ...file,
-      url: `/studio-api/projects/${encodeURIComponent(projectName)}/${ownerPath}/${encodeURIComponent(ownerId)}/assets/${encodeURIComponent(asset.assetId)}/files/${encodeURIComponent(file.id)}`,
+      url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(asset.id)}/files/${encodeURIComponent(file.id)}`,
     })),
-  };
-}
-
-function withSceneImageUrl(
-  projectName: string,
-  sceneId: string,
-  image: ScreenplayImageReference
-): ScreenplayImageReferenceWithHttp {
-  return {
-    ...image,
-    url: `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
   };
 }

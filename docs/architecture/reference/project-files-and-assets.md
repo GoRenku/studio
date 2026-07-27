@@ -18,6 +18,7 @@ Decision history:
 - `../../decisions/0019-use-durable-lookbooks-as-project-visual-direction.md`
 - `../../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
 - `../../decisions/0036-use-unsliced-location-sheets.md`
+- `../../decisions/0064-use-exclusive-asset-membership-and-scoped-selection.md`
 - `../project-asset-storage-conventions.md`
 
 ## Asset Vocabulary
@@ -31,11 +32,14 @@ belong together, such as a video plus thumbnail and captions.
 
 A **Take** is a persisted generated or imported candidate only in a focused
 domain that explicitly defines Take behavior. The current example is a Scene
-Dialogue Audio Take. Generic asset relationships do not carry take/select state.
+Dialogue Audio Take. Common Asset membership does not carry Take state.
 
-A **focused display choice** selects one ready Cast Profile or Location Hero for
-Studio presentation. It is stored in a purpose-specific display table and does
-not affect generation.
+An **Asset Owner** is the one Project, Cast Member, Location, Sequence, Scene,
+logical Scene Beat, Lookbook, or Shot that exclusively owns an Asset.
+
+A **canonical selection** chooses at most one ready candidate for a Cast
+Profile, Location Hero, Lookbook card image, Shot image, or Scene Beat
+Storyboard surface. It does not affect generation references.
 
 A **Visual Language Asset** is an asset attached to a project Visual Language
 entry. Initial roles include `guidance`, `prompt`, `reference`, and
@@ -51,37 +55,37 @@ filesystem content inside a Visual Language Inspiration folder. Agents inspect
 these files directly and cite them by folder-local filename in Inspiration
 Analysis JSON.
 
-A **Lookbook Image** is an asset. It is registered and attached to a Lookbook
-through Lookbook image relationships. Section placement belongs in
+A **Lookbook Image** is an Asset exclusively owned by a Lookbook. Section
+placement belongs in
 `lookbook_image_section`, not in Lookbook JSON.
 
-A **Cast Character Sheet** is an image asset attached to a cast member with the
-`character-sheet` role. Imported/generated character sheets are stored under
+A **Cast Character Sheet** is a Cast Member-owned image Asset with canonical
+type `character_sheet`. Imported/generated character sheets are stored under
 `cast/<handle>/character-sheets/`.
 
-A **Cast Profile** is an image asset attached to a cast member with the
-`profile` role. Imported/generated profile images are stored under
+A **Cast Profile** is a Cast Member-owned image Asset with canonical type
+`cast_profile`. Imported/generated profile images are stored under
 `cast/<handle>/profiles/`.
 
-A **Cast Voice Sample** is an audio asset attached to a cast member with the
-`voice_sample` role and linked from exactly one Cast Voice record. Custom audio
+A **Cast Voice Sample** is a Cast Member-owned audio Asset with canonical type
+`cast_voice_sample` and is linked from exactly one Cast Voice record. Custom audio
 files, generated `cast.voice-sample` outputs, and existing ElevenLabs provider
 samples are all stored under `cast/<handle>/voice-samples/` after attachment.
 The Cast Voice record, not the filename, supplies the provider voice identity,
 reference name, purpose, and structured `sampleSource` provenance.
 
-A **Location Sheet** is a full-image production reference board attached to a
-location with the `location-sheet` role. It has one primary image file and a
+A **Location Sheet** is a full-image production reference board owned by a
+Location with canonical type `location_sheet`. It has one primary image file and a
 persisted description. A Location can have many Location Sheets; future Shot
 workflows may reference specific sheet assets.
 
-A **Location Hero Image** is a compact representative image attached to a
-location with the `hero` role. It uses asset type `location_hero` and one
-primary image file. A focused Location display choice drives overview and detail
-display only; it is not a generation reference default.
+A **Location Hero Image** is a compact overview image owned by a Location. It
+uses canonical type `location_hero` and one primary image file. Common
+selection drives overview and detail display only; it is not a generation
+reference default.
 
-A **Scene Storyboard Image** is an image asset attached to a Scene and a
-specific Beat in a Scene Beat Sheet. Durable storyboard images are stored under
+A **Scene Storyboard Image** is an image Asset owned by one logical Scene Beat.
+Durable storyboard images are stored under
 top-level `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`.
 Temporary storyboard sheets generated for slicing or review live under that
 scene storyboard folder's `tmp/` subfolder and are not assets.
@@ -91,11 +95,11 @@ A **Generated Project Video** is an independent Project Asset stored under
 agent-external-Spec provenance. Optional Shot Plan authoring context remains on
 the Spec for information and grouping only; it is not Asset ownership.
 
-A **Shot Image Candidate** is an image Asset attached to one Shot with role
-`shot-image`. A Shot may own several candidates and explicitly select zero or
-one representative. Import and selection are separate. Candidate files live
-under `shot-plans/<plan-id>/shots/<shot-id>/images/`; SQLite relationships, not
-path segments, define ownership.
+A **Shot Image Candidate** is an image Asset exclusively owned by one Shot with
+canonical type `shot_image`. A Shot may own several candidates and explicitly
+select zero or one. Import can atomically select when requested. Candidate
+files live under `shot-plans/<plan-id>/shots/<shot-id>/images/`; SQLite
+membership, not path segments, defines ownership.
 
 The **Research folder** is user-owned scratch space for external references.
 Files in `research/` are not asset files. A generation spec may reference a
@@ -358,22 +362,23 @@ folder structure must not be parsed to infer locale ownership.
 Production export is copy-based. Working media stays in place; export copies
 focused picked-Take video and included Dialogue Audio rows into the handoff
 tree, skips unchanged files, and prunes stale managed files according to the
-manifest. Storyboards, Lookbooks, Cast/Location design media, focused display
+manifest. Storyboards, Lookbooks, Cast/Location design media, canonical selected
 images, Take frames, and Video Prompt images are excluded.
 
-## Files Do Not Define Relationships
+## Files Do Not Define Ownership
 
 The folder structure is for humans.
 
-SQLite owns identity and relationships.
+SQLite owns identity, exclusive Asset membership, focused domain links, and
+canonical selection.
 
 Do not infer IDs, owners, languages, selects, clips, bindings, or
 grouped asset membership from file names or folder names.
 
 For Location Sheets, paths such as `sheet.png` are readable storage names only.
-Runtime code must use the asset relationship, asset type, and `primary` asset
-file role instead of parsing names or inferring meaning from folders.
+Runtime code must use Asset membership, canonical Asset type, and the `primary`
+AssetFile role instead of parsing names or inferring meaning from folders.
 
 The same rule applies to Visual Language folders. A folder name may be a useful
-creative hint for an agent, but Renku relationships come from SQLite rows and
-CLI commands, not parsed names or paths.
+creative hint for an agent, but Renku ownership and focused domain links come
+from SQLite rows and Core commands, not parsed names or paths.

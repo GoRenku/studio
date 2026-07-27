@@ -212,8 +212,6 @@ function trashItemKindLabel(kind: TrashItem['itemKind']): string {
   switch (kind) {
     case 'asset':
       return 'Asset';
-    case 'assetRelationship':
-      return 'Asset Link';
     case 'castVoice':
       return 'Cast Voice';
     case 'inspirationFolder':

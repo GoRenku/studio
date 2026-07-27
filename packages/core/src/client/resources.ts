@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from './assets.js';
+import type { AssetPage } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
@@ -102,7 +102,6 @@ export interface SceneNavigationRow {
 
 export interface ScreenplayImageReference {
   assetId: string;
-  relationshipId: string;
   assetFileId: string;
   title: string;
   fileRole: string;
@@ -232,7 +231,7 @@ export interface SceneNarrativeResource {
 export interface SceneDesignResource {
   scene: SceneNavigationRow;
   sequence: SequenceNavigationRow;
-  assetPage: PageResponse<Asset>;
+  assetPage: AssetPage;
 }
 
 export interface InspirationResource {
@@ -248,7 +247,7 @@ export interface InspirationFolderResource {
 export interface LookbookResource extends VisualLanguageCommandReport {
   lookbook: Lookbook;
   sourceInspirationFolders: InspirationFolderWithResolvedPath[];
-  cardImage: LookbookImage | null;
+  selectedImageId: string | null;
   images: LookbookImage[];
   sheets: LookbookSheet[];
   imagesBySection: Record<LookbookSection, LookbookImage[]>;

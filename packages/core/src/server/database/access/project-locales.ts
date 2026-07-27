@@ -33,6 +33,17 @@ export function listProjectLocaleRecords(
     .all();
 }
 
+export function readProjectLocaleRecord(
+  session: DatabaseSession,
+  localeId: string
+): ProjectLocaleRecord | null {
+  return session.db
+    .select()
+    .from(projectLocales)
+    .where(eq(projectLocales.id, localeId))
+    .get() ?? null;
+}
+
 export function replaceProjectLocaleRecords(
   session: DatabaseSession,
   records: InsertProjectLocaleRecord[]

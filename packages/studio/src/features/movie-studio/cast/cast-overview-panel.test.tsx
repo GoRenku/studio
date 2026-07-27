@@ -74,7 +74,6 @@ describe('CastOverviewPanel', () => {
           isVoiceOver: true,
           firstImage: {
             assetId: 'asset_narrator_profile',
-            relationshipId: 'asset_relationship_narrator_profile',
             assetFileId: 'asset_file_narrator_profile',
             title: 'Narrator profile',
             fileRole: 'primary',

@@ -30,7 +30,6 @@ describe('screenplay Hono route', () => {
   it('serves cast and location resources with HTTP image URLs only added by the response adapter', async () => {
     const firstImage = {
       assetId: 'asset_reference',
-      relationshipId: 'asset_relationship',
       assetFileId: 'asset_file_reference',
       title: 'Reference image',
       fileRole: 'primary',
@@ -93,7 +92,7 @@ describe('screenplay Hono route', () => {
       resource: {
         castMember: { id: 'cast_narrator', name: 'Narrator' },
         firstImage: {
-          url: '/studio-api/projects/constantinople/cast/cast_narrator/assets/asset_reference/files/asset_file_reference',
+          url: '/studio-api/projects/constantinople/assets/asset_reference/files/asset_file_reference',
         },
       },
     });
@@ -102,7 +101,7 @@ describe('screenplay Hono route', () => {
       resource: {
         location: { id: 'location_gate', name: 'The Gate' },
         firstImage: {
-          url: '/studio-api/projects/constantinople/locations/location_gate/assets/asset_reference/files/asset_file_reference',
+          url: '/studio-api/projects/constantinople/assets/asset_reference/files/asset_file_reference',
         },
       },
     });

@@ -6,7 +6,9 @@ import type {
   ShotPlanCoverage,
   ShotPlanCoveredBeat,
 } from '../../client/shot-plans.js';
-import { readLatestSceneBeatStoryboardImage } from '../database/access/scene-beat-storyboard-images.js';
+import { assetOwnerKey } from '../assets/owner-keys.js';
+import { readOwnedAsset } from '../assets/projection.js';
+import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import {
   readActiveSceneBeatSheetId,
   readSceneBeatSheetDocument,
@@ -80,18 +82,26 @@ export function resolveShotPlanBeatContext(input: {
   input.coverage.beatIds.forEach((beatId, position) => {
     const beat = beatsById.get(beatId);
     if (beat) {
-      const storyboardImage = readLatestSceneBeatStoryboardImage({
-        session: input.session,
-        beatSheetId: beatSheet.id,
+      const owner = {
+        kind: 'sceneBeat' as const,
+        sceneId: beatSheet.sceneId,
         beatId,
-      });
+      };
+      const selectedAssetId = readSelectedAssetRecord(
+        input.session,
+        assetOwnerKey(owner)
+      )?.assetId;
+      const storyboardImage = selectedAssetId
+        ? readOwnedAsset(input.session, { owner, assetId: selectedAssetId })
+        : null;
+      const storyboardFile = storyboardImage?.files[0] ?? null;
       coveredBeats.push({
         beat,
         position,
-        storyboardImage: storyboardImage
+        storyboardImage: storyboardImage && storyboardFile
           ? {
-              assetId: storyboardImage.assetId,
-              assetFileId: storyboardImage.assetFileId,
+              assetId: storyboardImage.id,
+              assetFileId: storyboardFile.id,
             }
           : null,
       });

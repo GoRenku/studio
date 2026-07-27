@@ -23,6 +23,7 @@ export interface MediaCommandFlags {
   beats?: string;
   take?: string;
   kind?: string;
+  select?: boolean;
   selection?: string;
   replaceSelected?: boolean;
 }
@@ -36,7 +37,7 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       const beatSheetId = requiredFlag(flags.beatSheet, '--beat-sheet');
       const document = flags.file
         ? await readSceneStoryboardImagesImportDocument(flags.file)
-        : singleStoryboardImageDocument({ beatSheetId, beatId: requiredSingleBeat(flags.beats), source: requiredFlag(flags.source, '--source'), title: flags.title });
+        : singleStoryboardImageDocument({ beatSheetId, beatId: requiredSingleBeat(flags.beats), source: requiredFlag(flags.source, '--source'), title: flags.title, select: flags.select ?? false });
       const report = await runtime.projectDataService.attachSceneStoryboardImages({ projectName: runtime.projectName, homeDir: runtime.homeDir, sceneId: target.id, beatSheetId, document });
       await appendStudioResourceChangedEvent({ runtime, report, command: 'media import' });
       return report;
@@ -48,6 +49,7 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       target: parseGenerationTarget({ purpose, target: requiredFlag(flags.target, '--target') }),
       sourceProjectRelativePath: requiredFlag(flags.source, '--source'),
       title: flags.title,
+      select: flags.select,
       ...(flags.receipt ? { receipt: await readReceipt(flags.receipt) } : {}),
       ...(flags.sourceSpec ? { sourceSpecId: flags.sourceSpec } : {}),
     });
@@ -68,8 +70,8 @@ function requiredSingleBeat(value: string | undefined): string {
   return beats[0]!;
 }
 
-function singleStoryboardImageDocument(input: { beatSheetId: string; beatId: string; source: string; title?: string }) {
-  return { kind: 'sceneStoryboardImagesImport' as const, beatSheetId: input.beatSheetId, ...(input.title ? { title: input.title } : {}), beats: [{ beatId: input.beatId, source: input.source, ...(input.title ? { title: input.title } : {}), sourcePurpose: 'scene.storyboard-sheet' as const }] };
+function singleStoryboardImageDocument(input: { beatSheetId: string; beatId: string; source: string; title?: string; select: boolean }) {
+  return { kind: 'sceneStoryboardImagesImport' as const, beatSheetId: input.beatSheetId, select: input.select, ...(input.title ? { title: input.title } : {}), beats: [{ beatId: input.beatId, source: input.source, ...(input.title ? { title: input.title } : {}), sourcePurpose: 'scene.storyboard-sheet' as const }] };
 }
 
 export function unsupportedMediaPurpose(purpose: string): StructuredError {

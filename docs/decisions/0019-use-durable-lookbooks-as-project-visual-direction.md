@@ -4,6 +4,10 @@ Date: 2026-05-26
 
 Status: accepted
 
+Decision 0064 supersedes only the Lookbook Asset ownership and selected-card
+implementation described below. Lookbook image and sheet detail records retain
+their real ordering and placement facts.
+
 ## Context
 
 Lookbooks turn reference analysis, user direction, screenplay context, and
@@ -65,4 +69,3 @@ explicit card-image relationship.
 - The old `visual-language lookbook ...` command shape, old `read` naming, and
   old `set-card-image --file` shape are obsolete and are not preserved as
   compatibility aliases.
-

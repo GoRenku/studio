@@ -6,10 +6,13 @@ export type AssetRecord = typeof assets.$inferSelect;
 
 export interface InsertAssetRecord {
   id: string;
+  localeId?: string | null;
   type: string;
   mediaKind: string;
   title: string;
   oneLineSummary?: string;
+  referenceName?: string | null;
+  purpose?: string | null;
   origin: string;
   availability: string;
   createdAt: string;
@@ -57,6 +60,9 @@ export function updateAssetRecordMetadata(
     assetId: string;
     title?: string;
     oneLineSummary?: string | null;
+    referenceName?: string | null;
+    purpose?: string | null;
+    localeId?: string | null;
     updatedAt: string;
   }
 ): void {
@@ -68,6 +74,15 @@ export function updateAssetRecordMetadata(
   }
   if (input.oneLineSummary !== undefined) {
     values.oneLineSummary = input.oneLineSummary ?? null;
+  }
+  if (input.referenceName !== undefined) {
+    values.referenceName = input.referenceName;
+  }
+  if (input.purpose !== undefined) {
+    values.purpose = input.purpose;
+  }
+  if (input.localeId !== undefined) {
+    values.localeId = input.localeId;
   }
   session.db.update(assets).set(values).where(eq(assets.id, input.assetId)).run();
 }

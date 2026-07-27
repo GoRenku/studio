@@ -16,15 +16,9 @@ import {
   toSceneBeatSheetSummary,
   writeSceneBeatSheetRecord,
 } from '../database/access/scene-beat-sheets.js';
-import {
-  insertSceneBeatStoryboardImageRecord,
-} from '../database/access/scene-beat-storyboard-images.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
-import {
-  createRandomIdGenerator,
-  createUniqueIdAllocator,
-} from '../entity-ids.js';
+import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ApplySceneBeatSheetOperationsInput } from '../project-data-service-contracts.js';
 import {
@@ -32,7 +26,6 @@ import {
   assertSceneBeatSheetOperationDocument,
 } from './validator.js';
 import {
-  readCurrentBaseStoryboardImageForBeat,
   readDryRunSceneBeatSheetStoryboardStatusFromSession,
   readSceneBeatSheetStoryboardStatusFromSession,
   sceneBeatSheetResourceKeys,
@@ -90,16 +83,6 @@ export async function applySceneBeatSheetOperations(
           now,
           filePath: input.filePath,
         });
-        carryForwardStoryboardImages({
-          session: txSession,
-          baseBeatSheetId: input.document.baseBeatSheetId,
-          createdBeatSheetId,
-          sceneId: input.document.sceneId,
-          beats: nextDocument.beats,
-          preservedBeatIds: operationResult.preservedBeatIds,
-          ids,
-          now,
-        });
         if (input.document.activate) {
           setActiveSceneBeatSheetRecord(txSession, {
             sceneId: input.document.sceneId,
@@ -125,10 +108,8 @@ export async function applySceneBeatSheetOperations(
           session,
           currentProject,
           sceneId: input.document.sceneId,
-          baseBeatSheetId: input.document.baseBeatSheetId,
           beatSheetId: createdBeatSheetId,
           document: nextDocument,
-          preservedBeatIds: operationResult.preservedBeatIds,
         })
       : readSceneBeatSheetStoryboardStatusFromSession({
           session,
@@ -142,7 +123,6 @@ export async function applySceneBeatSheetOperations(
       ...operationResult.removedBeatIds,
       ...operationResult.updatedBeatIds,
       ...storyboard.missingBeatIds,
-      ...storyboard.staleBeatIds,
     ].filter((beatId, index, ids) => ids.indexOf(beatId) === index);
     return {
       valid: true,
@@ -336,43 +316,6 @@ function removeBeatIds(beats: Beat[], beatIds: string[]): void {
       );
     }
     beats.splice(index, 1);
-  }
-}
-
-export function carryForwardStoryboardImages(input: {
-  session: Parameters<typeof readActiveSceneBeatSheetId>[0];
-  baseBeatSheetId: string;
-  createdBeatSheetId: string;
-  sceneId: string;
-  beats: Beat[];
-  preservedBeatIds: string[];
-  ids: ReturnType<typeof createUniqueIdAllocator>;
-  now: string;
-}): void {
-  const preserved = new Set(input.preservedBeatIds);
-  for (const beat of input.beats) {
-    if (!preserved.has(beat.id)) {
-      continue;
-    }
-    const image = readCurrentBaseStoryboardImageForBeat({
-      session: input.session,
-      baseBeatSheetId: input.baseBeatSheetId,
-      beat,
-    });
-    if (!image) {
-      continue;
-    }
-    insertSceneBeatStoryboardImageRecord(input.session, {
-      id: input.ids('scene_beat_storyboard_image'),
-      sceneId: input.sceneId,
-      beatSheetId: input.createdBeatSheetId,
-      beatId: beat.id,
-      assetId: image.assetId,
-      assetFileId: image.assetFileId,
-      sourcePurpose: image.sourcePurpose,
-      beatContentFingerprint: image.beatContentFingerprint,
-      now: input.now,
-    });
   }
 }
 

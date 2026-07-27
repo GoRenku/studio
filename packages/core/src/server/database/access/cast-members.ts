@@ -1,11 +1,13 @@
 import { asc, eq, notInArray } from 'drizzle-orm';
 import {
-  castAssets,
+  assetMemberships,
+  assets,
   castDesigns,
   castDesignState,
   castMembers,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import { assetOwnerKey } from '../../assets/owner-keys.js';
 
 export interface CastMemberRecord {
   id: string;
@@ -161,11 +163,12 @@ export function updateCastMemberVoiceOverRecord(
 export function listCastAssetRoleRecords(
   session: DatabaseSession,
   castMemberId: string
-): Array<{ role: string }> {
+): Array<{ type: string }> {
   return session.db
-    .select({ role: castAssets.role })
-    .from(castAssets)
-    .where(eq(castAssets.castMemberId, castMemberId))
+    .select({ type: assets.type })
+    .from(assetMemberships)
+    .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
+    .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'castMember', id: castMemberId })))
     .all();
 }
 
@@ -175,9 +178,9 @@ export function readCastMemberDeleteDependencySummary(
 ): CastMemberDeleteDependencySummary {
   return {
     assetCount: session.db
-      .select({ id: castAssets.id })
-      .from(castAssets)
-      .where(eq(castAssets.castMemberId, castMemberId))
+      .select({ id: assetMemberships.assetId })
+      .from(assetMemberships)
+      .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'castMember', id: castMemberId })))
       .all().length,
     designCount: session.db
       .select({ id: castDesigns.id })

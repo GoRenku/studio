@@ -171,9 +171,9 @@ A Shot planning image is stored at:
 shot-plans/shot_plan_bombardment/shots/shot_window/images/window-shockwave.png
 ```
 
-This path is allocated by Core. Ownership and representative selection remain
-in `shot_asset` and `shot_representative_display_asset`; callers must not infer
-either from the folder.
+This path is allocated by Core. Exclusive ownership remains in
+`asset_membership` and canonical selection remains in `selected_asset`; callers
+must not infer either from the folder.
 
 `image.edit` writes edited outputs beside the source image with a version
 suffix:

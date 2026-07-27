@@ -17,7 +17,7 @@ describe('Scene storyboard attachment', () => {
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
   });
 
-  it('returns only the affected Scene Beats surface', async () => {
+  it('persists ordinary Beat candidates and changes selection only when requested', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -38,6 +38,44 @@ describe('Scene storyboard attachment', () => {
     await fs.writeFile(path.join(created.projectPath, 'tmp', 'beat.png'), 'image');
 
     const report = await projectData.attachSceneStoryboardImages({
+      homeDir,
+      sceneId: scene!.id!,
+      beatSheetId: beatSheet.activeBeatSheetId,
+      document: {
+        kind: 'sceneStoryboardImagesImport',
+        beatSheetId: beatSheet.activeBeatSheetId,
+        select: true,
+        beats: [{ beatId: 'beat_001', source: 'tmp/beat.png' }],
+      },
+    });
+    expect(report.resourceKeys).toEqual([
+      `surface:scene:${scene!.id}:beats`,
+    ]);
+    expect(report.imported).toHaveLength(1);
+
+    const initiallySelected = await projectData.readSceneBeatSheetStoryboardStatus({
+      homeDir,
+      sceneId: scene!.id!,
+      beatSheetId: beatSheet.activeBeatSheetId,
+    });
+    expect(initiallySelected.beats[0]).toMatchObject({
+      beatId: 'beat_001',
+      selectedImageId: report.imported[0]!.id,
+      images: [expect.objectContaining({
+        id: report.imported[0]!.id,
+        owner: {
+          kind: 'sceneBeat',
+          sceneId: scene!.id!,
+          beatId: 'beat_001',
+        },
+      })],
+    });
+
+    await fs.writeFile(
+      path.join(created.projectPath, 'tmp', 'beat-candidate.png'),
+      'second image'
+    );
+    const unselected = await projectData.attachSceneStoryboardImages({
       projectName: 'constantinople',
       homeDir,
       sceneId: scene!.id!,
@@ -45,12 +83,43 @@ describe('Scene storyboard attachment', () => {
       document: {
         kind: 'sceneStoryboardImagesImport',
         beatSheetId: beatSheet.activeBeatSheetId,
-        beats: [{ beatId: 'beat_001', source: 'tmp/beat.png' }],
+        select: false,
+        beats: [{
+          beatId: 'beat_001',
+          source: 'tmp/beat-candidate.png',
+        }],
       },
     });
-    expect(report.resourceKeys).toEqual([
-      `surface:scene:${scene!.id}:beats`,
-    ]);
+    const afterUnselectedImport =
+      await projectData.readSceneBeatSheetStoryboardStatus({
+        homeDir,
+        sceneId: scene!.id!,
+        beatSheetId: beatSheet.activeBeatSheetId,
+      });
+    expect(afterUnselectedImport.beats[0]!.images).toHaveLength(2);
+    expect(afterUnselectedImport.beats[0]!.selectedImageId).toBe(
+      report.imported[0]!.id
+    );
+
+    await projectData.selectAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: {
+        kind: 'sceneBeat',
+        sceneId: scene!.id!,
+        beatId: 'beat_001',
+      },
+      assetId: unselected.imported[0]!.id,
+    });
+    const afterExplicitSelection =
+      await projectData.readSceneBeatSheetStoryboardStatus({
+        homeDir,
+        sceneId: scene!.id!,
+        beatSheetId: beatSheet.activeBeatSheetId,
+      });
+    expect(afterExplicitSelection.beats[0]!.selectedImageId).toBe(
+      unselected.imported[0]!.id
+    );
   });
 });
 

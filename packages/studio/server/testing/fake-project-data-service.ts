@@ -59,18 +59,10 @@ export function fakeProjectDataService(): NonNullable<
     async resolveCoverImage() {
       return '/tmp/renku/constantinople/cover.png';
     },
-    async resolveProjectAssetFile(input) {
-      const asset = makeAsset(input.assetId);
-      return {
-        asset,
-        file: asset.files[0],
-        absolutePath: '/tmp/renku/constantinople/cast/reference.png',
-      };
-    },
     async resolveProjectAssetFileById(input) {
       const asset = makeAsset(input.assetId);
       return {
-        assetId: asset.assetId,
+        assetId: asset.id,
         assetMediaKind: asset.mediaKind,
         file: {
           ...asset.files[0],
@@ -113,6 +105,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         items: [makeAsset('asset_cast_reference')],
         nextCursor: null,
+        selectedAssetId: null,
       };
     },
     async listCastNavigation() {
@@ -167,7 +160,7 @@ export function fakeProjectDataService(): NonNullable<
           title: 'Opening',
           sceneCount: 1,
         },
-        assetPage: { items: [], nextCursor: null },
+        assetPage: { items: [], nextCursor: null, selectedAssetId: null },
       };
     },
     async readStudioSelectionContext(input) {
@@ -381,7 +374,7 @@ export function fakeProjectDataService(): NonNullable<
         sequences: [],
       };
     },
-    async setCastProfileDisplayAsset(input) {
+    async selectAsset(input) {
       return {
         valid: true,
         warnings: [],
@@ -390,11 +383,12 @@ export function fakeProjectDataService(): NonNullable<
           name: project.identity.name,
           projectFolder: project.identity.folderPath,
         },
-        asset: makeAsset(input.assetId),
-        resourceKeys: [`surface:castMember:${input.castMemberId}`],
+        target: input.target,
+        selectedAssetId: input.assetId,
+        resourceKeys: [],
       };
     },
-    async clearCastProfileDisplayAsset(input) {
+    async clearAssetSelection(input) {
       return {
         valid: true,
         warnings: [],
@@ -403,34 +397,9 @@ export function fakeProjectDataService(): NonNullable<
           name: project.identity.name,
           projectFolder: project.identity.folderPath,
         },
-        asset: null,
-        resourceKeys: [`surface:castMember:${input.castMemberId}`],
-      };
-    },
-    async setLocationHeroDisplayAsset(input) {
-      return {
-        valid: true,
-        warnings: [],
-        project: {
-          id: project.identity.id,
-          name: project.identity.name,
-          projectFolder: project.identity.folderPath,
-        },
-        asset: makeAsset(input.assetId),
-        resourceKeys: [`surface:location:${input.locationId}`],
-      };
-    },
-    async clearLocationHeroDisplayAsset(input) {
-      return {
-        valid: true,
-        warnings: [],
-        project: {
-          id: project.identity.id,
-          name: project.identity.name,
-          projectFolder: project.identity.folderPath,
-        },
-        asset: null,
-        resourceKeys: [`surface:location:${input.locationId}`],
+        target: input.target,
+        selectedAssetId: null,
+        resourceKeys: [],
       };
     },
     async discardAsset(input) {
@@ -661,12 +630,6 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
-    async setLookbookCardImage(input) {
-      return makeLookbookImageMutationReport(input.lookbookId, makeLookbookImage(input.imageId));
-    },
-    async clearLookbookCardImage(input) {
-      return makeLookbookImageMutationReport(input.lookbookId);
-    },
     async attachGenerationMedia(input) {
       const asset = makeAsset('asset_generated');
       return {
@@ -800,7 +763,7 @@ function makeLookbookResource(kind: 'production' | 'storyboard'): LookbookResour
     project: { name: 'test-project' },
     lookbook,
     sourceInspirationFolders: [],
-    cardImage: null,
+    selectedImageId: null,
     images: [],
     sheets: kind === 'production' ? [makeLookbookSheet('lookbook_sheet_test0001')] : [],
     imagesBySection: {
@@ -827,15 +790,11 @@ function makeLookbookImage(id: string) {
     lookbookId: 'lookbook_test0001',
     lookbookKind: 'production' as const,
     asset: {
-      assetId: 'asset_lookbook_image',
+      ...makeAsset('asset_lookbook_image'),
+      owner: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
       type: 'lookbook_image',
-      mediaKind: 'image',
       title: 'Lookbook image',
-      origin: 'generated',
-      availability: 'ready',
       files: [],
-      createdAt: '2026-05-22T00:00:00.000Z',
-      updatedAt: '2026-05-22T00:00:00.000Z',
     },
     sections: [] as LookbookSection[],
   };
@@ -847,12 +806,10 @@ function makeLookbookSheet(id: string) {
     lookbookId: 'lookbook_test0001',
     lookbookKind: 'production' as const,
     asset: {
-      assetId: 'asset_lookbook_sheet',
+      ...makeAsset('asset_lookbook_sheet'),
+      owner: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
       type: 'lookbook_sheet',
-      mediaKind: 'image',
       title: 'Lookbook sheet',
-      origin: 'generated',
-      availability: 'ready',
       files: [
         {
           id: 'asset_file_lookbook_sheet',
@@ -868,8 +825,6 @@ function makeLookbookSheet(id: string) {
           durationSeconds: null,
         },
       ],
-      createdAt: '2026-05-22T00:00:00.000Z',
-      updatedAt: '2026-05-22T00:00:00.000Z',
     },
   };
 }

@@ -20,8 +20,9 @@ Use the focused documents below for current direction.
 
 ## Current Decisions
 
-- SQLite is the source of truth for durable metadata, relationships, ordering,
-  status, selects, task records, cost records, and asset registration.
+- SQLite is the source of truth for durable metadata, exclusive Asset
+  membership, domain ordering, canonical selection, status, task records, cost
+  records, and Asset registration.
 - The filesystem owns content: Markdown, subtitles, transcripts, images, audio,
   video, generated media, and compound asset folders.
 - Markdown files are assets when they are part of the project graph.
@@ -79,10 +80,11 @@ Use the focused documents below for current direction.
 - Lookbooks are durable SQLite-owned project direction. Each project has at
   most one Production Lookbook and at most one Storyboard Lookbook. Lookbook
   owner rows are permanent and cannot enter Trash. The two roles share one
-  internal Lookbook asset model while keeping
-  typed definitions. Source Inspiration folders and Lookbook image placement
-  are relationships, not embedded section JSON. There is no Lookbook selection
-  state or Storyboard-to-Production source relationship.
+  internal Lookbook asset model while keeping typed definitions. Source
+  Inspiration folders and Lookbook image placement are focused domain facts,
+  not embedded section JSON. A Lookbook may select one `lookbook_image` for
+  canonical card imagery; there is no Storyboard-to-Production source
+  relationship.
 - Media generation specs and runs are SQLite-owned records. Generated output
   files remain filesystem content until an explicit media import registers and
   attaches them as assets. A saved spec is mutable while `frozen_at` is null and
@@ -99,14 +101,14 @@ Use the focused documents below for current direction.
   user scratch references under `research/` must not be registered as asset
   files. Generation specs may still name a `research/` file as a one-off
   reference input when the file is not reusable project state.
-- Location Sheets are durable image assets attached to Locations with role
-  `location-sheet`. Each sheet has one `primary` image file and a concise
+- Location Sheets are durable image Assets owned by Locations with canonical
+  type `location_sheet`. Each sheet has one `primary` image file and a concise
   persisted description. A Location can have many Location Sheets. Video
   requests may select exact Location Sheet files through GenerationSpec
   references without adding Shot Plan relationships.
-- Location Hero Images are separate display assets attached to Locations with
-  role `hero`. The selected hero asset drives overview/detail imagery and does
-  not become a shot-generation reference.
+- Location Hero Images are Location-owned Assets with canonical type
+  `location_hero`. Common selection chooses zero or one Hero for
+  overview/detail imagery and does not create a generation reference.
 - Scene dialogue audio takes are durable scene dialogue media assets. They may
   be selected as exact GenerationSpec references; Shot Plans do not own or
   retain them.
@@ -115,29 +117,35 @@ Use the focused documents below for current direction.
   provenance. Optional `authoredFrom` context is information-only and never
   creates Shot Plan ownership. Shot Plan and Asset Trash lifecycles are
   independent.
-- `shot.image` outputs are Shot-owned planning image candidates related through
-  `shot_asset`. A separate representative-display row selects zero or one
-  candidate. Import never selects. Plan copy shares only selected
-  representatives; Shot/plan Trash uses active-owner counts before discarding
-  an Asset tree.
-- Scene storyboard images are durable per-Beat Assets. The
+- `shot.image` outputs are exclusively Shot-owned planning image candidates
+  with canonical type `shot_image`. Common selection chooses zero or one
+  candidate. Import may atomically select when that is the accepted intent.
+  Plan copy creates independent Asset and AssetFile identities for only the
+  selected images.
+- Scene Storyboard Images are ordinary Assets exclusively owned by logical
+  Scene Beats. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
-  sheet for batch prompting, but import stores only the cropped shot images as
-  `scene_storyboard_image` assets and records direct ownership in
-  `scene_shot_storyboard_image`. Core does not store crop boxes, grid cells, or
-  extraction metadata for storyboard slicing.
+  sheet for batch prompting, but import stores only the cropped images as
+  `scene_storyboard_image` Assets with direct Beat membership. Common selection
+  chooses each Beat's current image. Core does not store crop boxes, grid
+  cells, or extraction metadata for storyboard slicing.
 - Cast Voices are durable Cast Member-owned records in `cast_voice`. A Cast
   Voice stores the Renku reference name, editorial purpose, playable sample
   asset, and `sampleSource` provenance. Provider-specific handles live in
   `cast_voice_provider_registration`, so the same Cast Voice can carry an
   ElevenLabs dialogue-audio TTS registration and a Kling video voice-control
   registration without treating either provider id as the Cast Voice itself.
-  The playable sample is still a normal audio Asset related to the cast member
-  with role `voice_sample`; generic asset deletion must reject that sample while
-  the Cast Voice points at it.
-- Asset relationship tables can store relationship-scoped `reference_name` and
-  `purpose`. Use these fields when the same Asset needs different local meaning
-  in different relationships, such as named Character Sheets or Voice Samples.
+  The playable sample is still a normal Cast Member-owned audio Asset with type
+  `cast_voice_sample`; generic Asset deletion must reject that sample while the
+  Cast Voice points at it.
+- Every Asset has exactly one row in `asset_membership`. The Asset row owns
+  title, one-line summary, reference name, purpose, locale, origin, type, and
+  media kind. Internal owner keys are shared with `selected_asset` but never
+  enter public contracts.
+- Canonical selection exists only for Cast Profile, Location Hero, Lookbook
+  card, Shot image, and Scene Beat Storyboard targets. Character Sheets,
+  Location Sheets, Lookbook Sheets, and Dialogue Audio Takes are selected only
+  inside the consuming GenerationSpec references.
 - The canonical project database path is:
 
 ```text
@@ -171,6 +179,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0029-use-cast-voice-as-durable-project-data.md`
 - `docs/decisions/0036-use-unsliced-location-sheets.md`
 - `docs/decisions/0061-use-mutable-copy-and-freeze-shot-plans.md`
+- `docs/decisions/0064-use-exclusive-asset-membership-and-scoped-selection.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

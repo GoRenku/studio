@@ -1,4 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import type { Asset } from './assets.js';
 import type { Block, SceneSetting } from './screenplay.js';
 
 export interface SceneBeatSheetDocument {
@@ -201,26 +202,20 @@ export interface SceneBeatSheetStoryboardStatus
   beatSheetId: string;
   beats: SceneBeatSheetStoryboardBeatStatus[];
   missingBeatIds: string[];
-  staleBeatIds: string[];
   readyBeatIds: string[];
 }
 
 export interface SceneBeatSheetStoryboardBeatStatus {
   beatId: string;
-  image: null | {
-    storyboardImageId: string;
-    assetId: string;
-    assetFileId: string;
-    sourcePurpose: string;
-    isCurrentForBeat: boolean;
-    simulated?: boolean;
-  };
+  images: Asset[];
+  selectedImageId: string | null;
   needsStoryboardImage: boolean;
-  reason?: 'missing' | 'beat-changed' | 'narrative-changed';
+  reason?: 'missing';
 }
 
 export interface SceneStoryboardImagesImportDocument {
   kind: 'sceneStoryboardImagesImport';
+  select: boolean;
   title?: string;
   beatSheetId: string;
   beats: Array<{
@@ -245,7 +240,6 @@ export interface SceneStoryboardImagesImportReport
   purpose: 'scene.storyboard-sheet';
   target: { kind: 'scene'; id: string };
   beatSheetId: string;
-  storyboardImageIds: string[];
   imported: import('./assets.js').Asset[];
   files: SceneStoryboardImagesImportedFile[];
 }

@@ -18,24 +18,24 @@ import {
 
 interface LocationDetailsTabProps {
   projectName: string;
-  locationId: string;
   resource: LocationResourceResponse;
   assets: StudioAssetResponse[];
+  selectedHeroAssetId: string | null;
 }
 
 export function LocationDetailsTab({
   projectName,
-  locationId,
   resource,
   assets,
+  selectedHeroAssetId,
 }: LocationDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const location = resource.location;
   const heroAsset = assets.find(
-    (asset) => asset.assetId === resource.firstImage?.assetId
+    (asset) => asset.id === selectedHeroAssetId
   ) ?? null;
   const heroPreview = heroAsset
-    ? locationSheetPreviewImages(projectName, locationId, heroAsset)[0] ??
+    ? locationSheetPreviewImages(projectName, heroAsset)[0] ??
       null
     : null;
   const heroAspectRatio = heroAsset

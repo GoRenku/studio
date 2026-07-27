@@ -1,9 +1,7 @@
 import type { SceneDesignResource } from '../../client/index.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import {
-  listAssetRelationshipPage,
-} from '../database/access/asset-relationships/index.js';
+import { listAssetPageInSession } from '../assets/projection.js';
 import { readSceneNavigationContext } from '../database/access/navigation.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ReadSceneDesignResourceInput } from '../project-data-service-contracts.js';
@@ -32,13 +30,13 @@ export function readSceneDesignResourceProjection(
   if (!chain) {
     throw new ProjectDataError('PROJECT_DATA114', `Scene was not found: ${input.sceneId}.`);
   }
-  const target = { kind: 'scene' as const, sceneId: input.sceneId };
+  const owner = { kind: 'scene' as const, id: input.sceneId };
   return {
     scene: chain.scene,
     sequence: chain.sequence,
-    assetPage: listAssetRelationshipPage(session, {
-      target,
-      role: input.activeRole,
+    assetPage: listAssetPageInSession(session, {
+      owner,
+      type: input.activeRole,
       limit: input.limit,
       cursor: input.cursor,
     }),

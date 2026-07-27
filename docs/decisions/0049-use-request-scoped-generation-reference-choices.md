@@ -5,6 +5,11 @@ Date: 2026-07-14
 Status: generic request-scoped choices retained; Take-specific clauses
 superseded by Decision 0052
 
+Decision 0064 supersedes only the focused display-table implementation below.
+Request-scoped exact choices remain authoritative for generation references;
+canonical Profile, Hero, Lookbook, Shot, and Scene Beat selection now shares
+one Core-owned selection contract.
+
 ## Decision
 
 The request-scoped exact-choice principle below remains accepted. Decision 0051

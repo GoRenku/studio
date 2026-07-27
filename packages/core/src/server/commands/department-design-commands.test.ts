@@ -202,13 +202,12 @@ describe('department design commands', () => {
     await createTestAssetFixture({
       homeDir,
       projectName: 'blank-movie',
-      target: { kind: 'castMember', castMemberId },
+      owner: { kind: 'castMember', id: castMemberId },
       projectRelativePath: 'ada-reference.txt' as ProjectRelativePath,
       type: 'reference',
       mediaKind: 'text',
       title: 'Ada reference',
       fileRole: 'source',
-      role: 'character-sheet',
     });
     await projectData.writeCastDesign({
       homeDir,
@@ -272,13 +271,12 @@ describe('department design commands', () => {
     await createTestAssetFixture({
       homeDir,
       projectName: 'blank-movie',
-      target: { kind: 'location', locationId },
+      owner: { kind: 'location', id: locationId },
       projectRelativePath: 'workshop-reference.txt' as ProjectRelativePath,
       type: 'reference',
       mediaKind: 'text',
       title: 'Workshop reference',
       fileRole: 'source',
-      role: 'location-sheet',
     });
     await projectData.writeLocationDesign({
       homeDir,

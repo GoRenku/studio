@@ -3,6 +3,13 @@
 Status: complete
 Date: 2026-07-26
 
+Plan 0159 supersedes this plan's Shot image ownership, selection, copy, Trash,
+CLI selection, and agent handoff sections. The completed non-image Shot Plan
+authoring, validation, generation purpose, and focused mutation work remains
+current. The accepted image contract is now `Shot.images`,
+`Shot.selectedImageId`, exclusive Asset membership, common Asset selection,
+and independent Asset/File copy.
+
 ## Summary
 
 Renku Studio already has a scene-owned, mutable `ShotPlan` aggregate in Core,

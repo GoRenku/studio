@@ -354,6 +354,7 @@ describe('App', () => {
             scene: {
               id: 'scene_late',
               sequenceId: 'seq_late',
+              productionNumber: '150',
               title: 'Late Scene',
             },
           },
@@ -1370,6 +1371,7 @@ function mockStudioFetch(input: {
             {
               id: 'scene_1_1',
               sequenceId: 'seq_opening',
+              productionNumber: '1',
               title: 'Opening Scene',
               setting: {
                 interiorExterior: 'EXT',
@@ -1609,6 +1611,7 @@ function makeSelectionContextResponse(selection: StudioSelection) {
         scene: {
           id: selection.id,
           sequenceId: 'seq_opening',
+          productionNumber: '1',
           title: 'Opening Scene',
         },
       },
@@ -1761,6 +1764,7 @@ function makeStoryArcResource() {
               {
                 id: 'scene_1_1',
                 sequenceId: 'seq_opening',
+                productionNumber: '1',
                 title: 'Opening Scene',
                 setting: {
                   interiorExterior: 'EXT',
@@ -1787,6 +1791,7 @@ function makeSequenceResource(
     scenes?: Array<{
       id: string;
       sequenceId: string;
+      productionNumber?: string;
       title: string;
     }>;
   } = {}
@@ -1799,6 +1804,7 @@ function makeSequenceResource(
       {
         id: 'scene_1_1',
         sequenceId,
+        productionNumber: '1',
         title: 'Opening Scene',
         setting: {
           interiorExterior: 'EXT',
@@ -1823,7 +1829,10 @@ function makeSequenceResource(
       sceneCount: scenes.length,
     },
     scenes: {
-      items: scenes,
+      items: scenes.map((scene, index) => ({
+        ...scene,
+        productionNumber: scene.productionNumber ?? String(index + 1),
+      })),
       nextCursor: null,
     },
   };
@@ -1839,6 +1848,7 @@ function makeActStoryboardResource(
       scene: {
         id: string;
         sequenceId: string;
+        productionNumber?: string;
         title: string;
       };
       beats: Array<{
@@ -1859,6 +1869,7 @@ function makeActStoryboardResource(
         scene: {
           id: 'scene_1_1',
           sequenceId,
+          productionNumber: '1',
           title: 'Opening Scene',
         },
         beats: [
@@ -1888,7 +1899,14 @@ function makeActStoryboardResource(
           title: options.sequenceTitle ?? 'Opening',
           sceneCount: scenes.length,
         },
-        scenes,
+        scenes: scenes.map((scene, index) => ({
+          ...scene,
+          scene: {
+            ...scene.scene,
+            productionNumber:
+              scene.scene.productionNumber ?? String(index + 1),
+          },
+        })),
       },
     ],
   };
@@ -1925,6 +1943,7 @@ function makeSceneNarrativeResource(
     scene: {
       id: sceneId,
       sequenceId,
+      productionNumber: '1',
       title: options.sceneTitle ?? 'Opening Scene',
       setting: {
         interiorExterior: 'EXT',
@@ -1950,6 +1969,7 @@ function makeSceneBeatSheetResource() {
     scene: {
       id: 'scene_1_1',
       sequenceId: 'seq_opening',
+      productionNumber: '1',
       title: 'Opening Scene',
     },
     sequence: {
@@ -1978,7 +1998,6 @@ function makeSceneBeatSheetResource() {
 function makeScreenplayImageReference(
   options: {
     assetId?: string;
-    relationshipId?: string;
     assetFileId?: string;
     title?: string;
   } = {}
@@ -1986,7 +2005,6 @@ function makeScreenplayImageReference(
   const assetId = options.assetId ?? 'asset_cast_reference';
   return {
     assetId,
-    relationshipId: options.relationshipId ?? `${assetId}_relationship`,
     assetFileId: options.assetFileId ?? `${assetId}_file`,
     title: options.title ?? 'Narrator reference',
     fileRole: 'primary',
@@ -2005,9 +2023,8 @@ function makeStudioAsset(options: {
   title: string;
 }): StudioAssetResponse {
   return {
-    assetId: options.assetId,
-    relationshipId: `${options.assetId}_relationship`,
-    target: { kind: 'castMember', castMemberId: options.castMemberId },
+    id: options.assetId,
+    owner: { kind: 'castMember', id: options.castMemberId },
     localeId: null,
     type: options.role === 'profile' ? 'cast_profile' : 'character_sheet',
     availability: 'ready',
@@ -2015,10 +2032,8 @@ function makeStudioAsset(options: {
     title: options.title,
     oneLineSummary: null,
     origin: 'imported',
-    role: options.role,
     referenceName: null,
     purpose: null,
-    sortOrder: 1,
     files: [
       {
         id: `${options.assetId}_file`,

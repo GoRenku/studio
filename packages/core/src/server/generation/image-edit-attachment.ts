@@ -3,7 +3,7 @@ import type {
   GenerationSpec,
   GenerationTarget,
 } from '../../client/generation.js';
-import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
+import { readOwnedAsset } from '../assets/projection.js';
 import { readAssetFileRecord } from '../database/access/asset-files.js';
 import { readAssetRecord } from '../database/access/assets.js';
 import { readLookbookImageRecordByAsset } from '../database/access/lookbook-images.js';
@@ -16,7 +16,7 @@ export function validateImageEditAttachment(input: {
   spec: GenerationSpec;
   destinationPurpose: GenerationPurpose;
   destinationTarget: GenerationTarget;
-  destinationRelationshipRole: string;
+  destinationAssetType: string;
 }): void {
   if (input.spec.purpose !== 'image.edit' || input.spec.target.kind !== 'asset') {
     throw mismatch();
@@ -43,14 +43,14 @@ export function validateImageEditAttachment(input: {
   if (input.destinationTarget.kind === 'castMember') {
     assertRelationship(input, {
       kind: 'castMember',
-      castMemberId: input.destinationTarget.id,
+      id: input.destinationTarget.id,
     }, asset.id);
     return;
   }
   if (input.destinationTarget.kind === 'location') {
     assertRelationship(input, {
       kind: 'location',
-      locationId: input.destinationTarget.id,
+      id: input.destinationTarget.id,
     }, asset.id);
     return;
   }
@@ -78,12 +78,12 @@ export function validateImageEditAttachment(input: {
 function assertRelationship(
   input: Parameters<typeof validateImageEditAttachment>[0],
   target:
-    | { kind: 'castMember'; castMemberId: string }
-    | { kind: 'location'; locationId: string },
+    | { kind: 'castMember'; id: string }
+    | { kind: 'location'; id: string },
   assetId: string,
 ): void {
-  const relationship = readAssetRelationship(input.session, { target, assetId });
-  if (!relationship || relationship.role !== input.destinationRelationshipRole) {
+  const asset = readOwnedAsset(input.session, { owner: target, assetId });
+  if (!asset || asset.type !== input.destinationAssetType) {
     throw mismatch();
   }
 }

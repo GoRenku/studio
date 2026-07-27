@@ -16,7 +16,7 @@ import { createDialogueAudioReadyProject } from '../testing/dialogue-audio-templ
 import {
   createProjectAssetFileWriteSet,
   persistProjectAssetFileSync,
-  persistSceneStoryboardBeatFilesSync,
+  allocateSceneStoryboardIterationFolderSync,
   resolveGenerationRunOutputRoot,
   rollbackProjectAssetFileWriteSetSync,
   writeProjectTemporaryFile,
@@ -156,28 +156,51 @@ describe('project asset file storage', () => {
       title: 'Storyboard 1',
     });
 
-    const files = persistSceneStoryboardBeatFilesSync({
+    const iterationFolder = allocateSceneStoryboardIterationFolderSync({
       session,
       projectFolder: projectPath,
       sceneId,
-      files: [
-        {
+    });
+    const files = [
+      {
+        beatId: 'shot_0',
+        assetFile: persistProjectAssetFileSync({
+          session,
+          projectFolder: projectPath,
           assetId: 'asset_storyboard_0',
           assetFileId: 'asset_file_storyboard_0',
-          beatId: 'shot_0',
-          beatOrdinal: 1,
           sourceProjectRelativePath: projectRelativePath('tmp/storyboards/beat-a.png'),
-        },
-        {
+          destination: {
+            kind: 'scene.storyboardImage',
+            sceneId,
+            iterationFolder,
+            beatOrdinal: 1,
+          },
+          fileRole: 'storyboard_image',
+          mediaKind: 'image',
+          now: NOW,
+        }),
+      },
+      {
+        beatId: 'shot_1',
+        assetFile: persistProjectAssetFileSync({
+          session,
+          projectFolder: projectPath,
           assetId: 'asset_storyboard_1',
           assetFileId: 'asset_file_storyboard_1',
-          beatId: 'shot_1',
-          beatOrdinal: 2,
           sourceProjectRelativePath: projectRelativePath('tmp/storyboards/beat-b.png'),
-        },
-      ],
-      now: NOW,
-    });
+          destination: {
+            kind: 'scene.storyboardImage',
+            sceneId,
+            iterationFolder,
+            beatOrdinal: 2,
+          },
+          fileRole: 'storyboard_image',
+          mediaKind: 'image',
+          now: NOW,
+        }),
+      },
+    ];
 
     expect(files.map((file) => file.assetFile.projectRelativePath)).toEqual([
       'storyboards/the-wall/cannon-test/00-iteration/beat-01.png',

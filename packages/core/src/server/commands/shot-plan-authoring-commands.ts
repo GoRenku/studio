@@ -137,6 +137,7 @@ export async function copyShotPlan(
     const shotPlanId = copyShotPlanAuthoring({
       command: input,
       session,
+      projectFolder,
       now: new Date().toISOString(),
     });
     return projectShotPlanReport({ session, projectFolder, shotPlanId });

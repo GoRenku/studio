@@ -276,7 +276,7 @@ export interface LocationDesignSummary {
 
 export interface DepartmentLookbookContext {
   lookbook: Lookbook;
-  cardImage: LookbookImage | null;
+  selectedImage: LookbookImage | null;
   isActive: true;
 }
 
@@ -298,7 +298,7 @@ export interface CastDesignContextReport extends DepartmentCommandReport {
   }>;
   activeLookbook: DepartmentLookbookContext | null;
   assets: Asset[];
-  assetRoleCounts: Array<{ role: string; count: number }>;
+  assetTypeCounts: Array<{ type: string; count: number }>;
   generationReadiness: {
     characterSheet: boolean;
     profile: boolean;
@@ -321,7 +321,7 @@ export interface ProductionDesignLocationContextReport extends DepartmentCommand
   }>;
   activeLookbook: DepartmentLookbookContext | null;
   assets: Asset[];
-  assetRoleCounts: Array<{ role: string; count: number }>;
+  assetTypeCounts: Array<{ type: string; count: number }>;
   generationReadiness: {
     locationSheet: boolean;
     notes: string[];

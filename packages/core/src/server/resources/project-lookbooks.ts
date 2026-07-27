@@ -11,14 +11,13 @@ import {
   type ProjectRecord,
 } from '../database/access/project.js';
 import {
-  listLookbookCardImageIds,
   readLookbookRecordByKind,
   requireLookbookRecordByKind,
   toLookbook,
   type LookbookRecord,
 } from '../database/access/lookbook.js';
 import { listLookbookSourceInspirationFolders } from '../database/access/lookbook-inspirations.js';
-import { listLookbookImages, readLookbookImage } from '../database/access/lookbook-images.js';
+import { listLookbookImages } from '../database/access/lookbook-images.js';
 import { listLookbookSheets } from '../database/access/lookbook-sheets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
@@ -33,6 +32,8 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { lookbookSectionsForType } from '../visual-language-json/validator.js';
+import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
+import { assetOwnerKey } from '../assets/owner-keys.js';
 
 export async function readProjectLookbooksResource(
   input: ReadProjectLookbooksInput
@@ -88,7 +89,10 @@ function buildLookbookResource(
   row: LookbookRecord
 ): LookbookResource {
   const images = listLookbookImages(session, row.id);
-  const cardImageId = listLookbookCardImageIds(session).get(row.id);
+  const selectedImageId = readSelectedAssetRecord(
+    session,
+    assetOwnerKey({ kind: 'lookbook', id: row.id })
+  )?.assetId ?? null;
   return {
     valid: true,
     warnings: [],
@@ -98,9 +102,7 @@ function buildLookbookResource(
       projectFolder,
       lookbookId: row.id,
     }),
-    cardImage: cardImageId
-      ? readLookbookImage(session, cardImageId)
-      : images[0] ?? null,
+    selectedImageId,
     images,
     sheets: listLookbookSheets(session, row.id),
     imagesBySection: buildImagesBySection(row.kind, images),

@@ -80,8 +80,8 @@ Folder names are user-facing labels, not identity.
 
 File names are user-facing labels, not identity.
 
-The database owns identity and relationships through opaque IDs and explicit
-relationship rows.
+The database owns identity, exclusive Asset membership, canonical selection,
+and focused domain links through opaque IDs and explicit rows.
 
 The system must not infer owners, languages, cast members, clips, selects, or
 bindings from path segments.

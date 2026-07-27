@@ -6,7 +6,7 @@ import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import {
-  readAssetFileResponse,
+  readProjectAssetFileByIdResponse,
 } from '../http/asset-file-response.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import {
@@ -333,9 +333,8 @@ export function createScreenplayRoute({
               suggestion: 'Request a file that belongs to the dialogue audio take.',
             });
           }
-          return readAssetFileResponse(projectData, {
+          return readProjectAssetFileByIdResponse(projectData, {
             projectName,
-            target: { kind: 'scene', sceneId },
             assetId: take.assetId,
             assetFileId,
           });

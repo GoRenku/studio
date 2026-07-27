@@ -1,4 +1,4 @@
-import type { AssetTarget } from '../../client/assets.js';
+import type { AssetOwner } from '../../client/assets.js';
 import type {
   GenerationPurpose,
   GenerationTarget,
@@ -17,17 +17,12 @@ import { ProjectDataError } from '../project-data-error.js';
 
 export interface GeneratedMediaAttachmentDestination {
   file: ProjectAssetFileDestination;
-  target: AssetTarget;
-  lookbookMembership?: {
-    kind: 'image' | 'sheet';
-    lookbookId: string;
-  };
+  owner: AssetOwner;
   resourceKeys: string[];
 }
 
 export interface GeneratedMediaAttachmentDetails {
   destination: GeneratedMediaAttachmentDestination;
-  relationshipRole: string;
   label: string;
   assetType: string;
   mediaKind: 'image' | 'video';
@@ -39,7 +34,7 @@ export function projectVideoAttachmentDestination(
 ): GeneratedMediaAttachmentDestination {
   return {
     file: { kind: 'project.video', titleHint },
-    target: { kind: 'project' },
+    owner: { kind: 'project' },
     resourceKeys: [],
   };
 }
@@ -50,7 +45,7 @@ export function castCharacterSheetAttachmentDestination(
 ): GeneratedMediaAttachmentDestination {
   return {
     file: { kind: 'cast.characterSheet', castMemberId, titleHint },
-    target: { kind: 'castMember', castMemberId },
+    owner: { kind: 'castMember', id: castMemberId },
     resourceKeys: [studioCastMemberSurfaceResourceKey(castMemberId)],
   };
 }
@@ -61,7 +56,7 @@ export function castProfileAttachmentDestination(
 ): GeneratedMediaAttachmentDestination {
   return {
     file: { kind: 'cast.profile', castMemberId, titleHint },
-    target: { kind: 'castMember', castMemberId },
+    owner: { kind: 'castMember', id: castMemberId },
     resourceKeys: [studioCastMemberSurfaceResourceKey(castMemberId)],
   };
 }
@@ -72,7 +67,7 @@ export function locationSheetAttachmentDestination(
 ): GeneratedMediaAttachmentDestination {
   return {
     file: { kind: 'location.sheet', locationId, titleHint },
-    target: { kind: 'location', locationId },
+    owner: { kind: 'location', id: locationId },
     resourceKeys: [studioLocationSurfaceResourceKey(locationId)],
   };
 }
@@ -83,7 +78,7 @@ export function locationHeroAttachmentDestination(
 ): GeneratedMediaAttachmentDestination {
   return {
     file: { kind: 'location.hero', locationId, heroName: titleHint },
-    target: { kind: 'location', locationId },
+    owner: { kind: 'location', id: locationId },
     resourceKeys: [studioLocationSurfaceResourceKey(locationId)],
   };
 }
@@ -94,8 +89,7 @@ export function lookbookImageAttachmentDestination(
 ): GeneratedMediaAttachmentDestination {
   return {
     file: { kind: 'visualLanguage.lookbookImage', titleHint },
-    target: { kind: 'project' },
-    lookbookMembership: { kind: 'image', lookbookId },
+    owner: { kind: 'lookbook', id: lookbookId },
     resourceKeys: [studioVisualLanguageLookbookResourceKey(lookbookId)],
   };
 }
@@ -106,8 +100,7 @@ export function lookbookSheetAttachmentDestination(
 ): GeneratedMediaAttachmentDestination {
   return {
     file: { kind: 'visualLanguage.lookbookSheet', titleHint },
-    target: { kind: 'project' },
-    lookbookMembership: { kind: 'sheet', lookbookId },
+    owner: { kind: 'lookbook', id: lookbookId },
     resourceKeys: [studioVisualLanguageLookbookResourceKey(lookbookId)],
   };
 }
@@ -139,37 +132,35 @@ const attachmentBuilders: Partial<
     details(
       requireTarget(input, 'project'),
       projectVideoAttachmentDestination(input.title),
-      'generated-video',
       'Generated Video',
-      'generated-video',
+      'project_video',
       'video'
     ),
   'lookbook.image': (input) =>
     details(
       requireTarget(input, 'lookbook'),
       lookbookImageAttachmentDestination(input.target.id, input.title),
-      'lookbook-image',
-      'Lookbook Image'
+      'Lookbook Image',
+      'lookbook_image'
     ),
   'lookbook.video-sheet': (input) =>
     details(
       requireTarget(input, 'lookbook'),
       lookbookSheetAttachmentDestination(input.target.id, input.title),
-      'video-lookbook-sheet',
-      'Video Lookbook Sheet'
+      'Video Lookbook Sheet',
+      'lookbook_sheet'
     ),
   'lookbook.storyboard-sheet': (input) =>
     details(
       requireTarget(input, 'lookbook'),
       lookbookSheetAttachmentDestination(input.target.id, input.title),
-      'storyboard-lookbook-sheet',
-      'Storyboard Lookbook Sheet'
+      'Storyboard Lookbook Sheet',
+      'lookbook_sheet'
     ),
   'cast.character-sheet': (input) =>
     details(
       requireTarget(input, 'castMember'),
       castCharacterSheetAttachmentDestination(input.target.id, input.title),
-      'character-sheet',
       'Character Sheet',
       'character_sheet'
     ),
@@ -177,23 +168,22 @@ const attachmentBuilders: Partial<
     details(
       requireTarget(input, 'castMember'),
       castProfileAttachmentDestination(input.target.id, input.title),
-      'profile',
-      'Profile'
+      'Profile',
+      'cast_profile'
     ),
   'location.sheet': (input) =>
     details(
       requireTarget(input, 'location'),
       locationSheetAttachmentDestination(input.target.id, input.title),
-      'location-sheet',
-      'Location Sheet'
+      'Location Sheet',
+      'location_sheet'
     ),
   'location.hero': (input) =>
     details(
       requireTarget(input, 'location'),
       locationHeroAttachmentDestination(input.target.id, input.title),
-      'hero',
       'Location Hero',
-      'location-hero'
+      'location_hero'
     ),
   'shot.image': (input) => {
     requireTarget(input, 'shot');
@@ -208,11 +198,11 @@ const attachmentBuilders: Partial<
           shotId: shot.id,
           titleHint: input.title,
         },
-        target: { kind: 'shot', shotId: shot.id },
+        owner: { kind: 'shot', id: shot.id },
         resourceKeys: [studioSceneShotPlansResourceKey(shotPlan.sceneId)],
       },
-      'shot-image',
-      'Shot Image'
+      'Shot Image',
+      'shot_image'
     );
   },
 };
@@ -220,14 +210,12 @@ const attachmentBuilders: Partial<
 function details(
   _input: unknown,
   destination: GeneratedMediaAttachmentDestination,
-  relationshipRole: string,
   label: string,
-  assetType = relationshipRole,
+  assetType: string,
   mediaKind: 'image' | 'video' = 'image'
 ): GeneratedMediaAttachmentDetails {
   return {
     destination,
-    relationshipRole,
     label,
     assetType,
     mediaKind,

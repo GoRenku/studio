@@ -1,29 +1,38 @@
 import type { ProjectRelativePath } from './project.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 
-export type AssetTarget =
+export type AssetOwner =
   | { kind: 'project' }
-  | { kind: 'castMember'; castMemberId: string }
-  | { kind: 'location'; locationId: string }
-  | { kind: 'sequence'; sequenceId: string }
-  | { kind: 'scene'; sceneId: string }
-  | { kind: 'shot'; shotId: string };
+  | { kind: 'castMember'; id: string }
+  | { kind: 'location'; id: string }
+  | { kind: 'sequence'; id: string }
+  | { kind: 'scene'; id: string }
+  | { kind: 'sceneBeat'; sceneId: string; beatId: string }
+  | { kind: 'lookbook'; id: string }
+  | { kind: 'shot'; id: string };
+
+export type AssetSelectionTarget =
+  | { kind: 'castMember'; id: string }
+  | { kind: 'location'; id: string }
+  | { kind: 'lookbook'; id: string }
+  | { kind: 'shot'; id: string }
+  | { kind: 'sceneBeat'; sceneId: string; beatId: string };
 
 export interface AssetLocaleContext {
   localeId?: string | null;
 }
 
-export interface UpdateAssetReferenceInput {
+export interface UpdateAssetInput {
   projectName: string;
-  target: AssetTarget;
   assetId: string;
   title?: string | null;
   oneLineSummary?: string | null;
-  referenceName: string;
+  referenceName?: string | null;
   purpose?: string | null;
+  localeId?: string | null;
 }
 
-export interface AssetReferenceUpdateReport {
+export interface AssetUpdateReport {
   valid: true;
   warnings: DiagnosticIssue[];
   project: {
@@ -35,7 +44,18 @@ export interface AssetReferenceUpdateReport {
   resourceKeys: string[];
 }
 
-export interface DisplayAssetMutationReport {
+export interface SelectAssetInput {
+  projectName: string;
+  target: AssetSelectionTarget;
+  assetId: string;
+}
+
+export interface ClearAssetSelectionInput {
+  projectName: string;
+  target: AssetSelectionTarget;
+}
+
+export interface AssetSelectionReport {
   valid: true;
   warnings: DiagnosticIssue[];
   project: {
@@ -43,17 +63,14 @@ export interface DisplayAssetMutationReport {
     id: string;
     projectFolder: string;
   };
-  asset: Asset | null;
+  target: AssetSelectionTarget;
+  selectedAssetId: string | null;
   resourceKeys: string[];
 }
 
-export interface AssetReference {
-  assetId: string;
-  relationshipId: string;
-  target: AssetTarget;
-}
-
-export type Asset = AssetReference & {
+export interface Asset {
+  id: string;
+  owner: AssetOwner;
   localeId: string | null;
   type: string;
   availability: AssetAvailability;
@@ -61,14 +78,18 @@ export type Asset = AssetReference & {
   title: string;
   oneLineSummary: string | null;
   origin: string;
-  role: string;
   referenceName: string | null;
   purpose: string | null;
-  sortOrder: number;
   files: AssetFile[];
   createdAt: string;
   updatedAt: string;
-};
+}
+
+export interface AssetPage {
+  items: Asset[];
+  nextCursor: string | null;
+  selectedAssetId: string | null;
+}
 
 export type AssetAvailability = 'ready';
 

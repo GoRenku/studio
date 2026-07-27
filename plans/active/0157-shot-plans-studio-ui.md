@@ -3,17 +3,24 @@
 Status: proposed
 Date: 2026-07-26
 
+Plan 0159 and Decision 0064 are hard dependencies for the image portions of
+this future UI. This plan consumes the common `Asset`, `Shot.images`,
+`Shot.selectedImageId`, owner-based Asset pages, common Core selection, and
+independent-copy contracts. It must not reintroduce a Shot-specific image
+relationship or selection service. Decision 0065 is reserved for this plan's
+future bounded-mosaic UI decision.
+
 ## Summary
 
-This plan adds the Shot Plans inspection and representative-image curation
+This plan adds the Shot Plans inspection and selected-image curation
 surface sketched in
 `plans/exploration/shot-plans-ui.md` and the attached rough wireframe. It
 replaces the current `Shots` placeholder with a `Shot Plans` tab, renders
 scene-owned Shot Plans as image mosaics, and opens a desktop inspector with
 covered Beats, a resizable Shot rail, five glanceable brief cards, and the
 canonical Markdown Shot description. Each Shot rail card also opens a focused
-candidate-image dialog where the user can select the representative image or
-move an unselected candidate to Trash.
+candidate-image dialog where the user can select the selected image or
+move any candidate to Trash.
 
 This is deliberately the UI half of a two-plan feature:
 
@@ -21,7 +28,7 @@ This is deliberately the UI half of a two-plan feature:
   and Shot contracts, focused Core commands, Shot image ownership and
   lifecycle, `shot.image`, CLI authoring, and Studio Skills.
 - this plan owns the browser-facing Core selection contract, thin Studio
-  routes, browser service, cards, inspector, focused representative-image
+  routes, browser service, cards, inspector, focused selected-image
   curation, shared visual vocabulary, and desktop interaction and
   accessibility behavior.
 
@@ -44,10 +51,10 @@ local shadcn-style Hover Card primitive.
 | Replace the Scene `Shots` placeholder with `Shot Plans`. | Exploration brief and wireframe | Rename the stable scene tab contract and replace the placeholder feature |
 | Keep `Generations` visible but disabled. | User answer 5 | Disabled `LineTabs` trigger with no selectable tab state, route, request, or content |
 | Show existing Shot Plans in a three-column desktop card grid. | Exploration brief | Existing `MediaCardGrid` on the Scene panel |
-| Do not add a `New Shot Plan` card or general Shot Plan/Shot authoring controls in this slice. | Exploration brief and accepted image-card clarification | Read-mostly list/inspector plus recoverable plan delete and focused representative-image curation |
-| Each Shot Plan card uses its Shots' selected representative images in canonical Shot order. | Exploration brief and plan 0156 | Bounded `MediaCard` mosaic input derived from the Core list projection |
+| Do not add a `New Shot Plan` card or general Shot Plan/Shot authoring controls in this slice. | Exploration brief and accepted image-card clarification | Read-mostly list/inspector plus recoverable plan delete and focused selected-image curation |
+| Each Shot Plan card uses its Shots' selected images in canonical Shot order. | Exploration brief and plan 0156 | Bounded `MediaCard` mosaic input derived from the Core list projection |
 | Mosaic layout is deterministic: one full image, two split, three columns, four 2x2, five through nine in three columns, and more than nine as eight images plus a ninth `+N` tile. | User answer 7 | One reusable bounded mosaic algorithm and focused layout tests |
-| A Shot Plan with no representative images remains quiet and meaningful. | Project UI-copy rule | Existing empty-media treatment with an image icon; no fabricated title, filename, or placeholder art |
+| A Shot Plan with no selected images remains quiet and meaningful. | Project UI-copy rule | Existing empty-media treatment with an image icon; no fabricated title, filename, or placeholder art |
 | The card overlay shows the authored Shot Plan title and covered Beat numbers. | Exploration brief | Meaningful authored/domain copy only |
 | Delete is recoverable and includes the plan's Shot images. | User answer 1 and plan 0156 | Confirmation states that the plan and its images move to Trash; route delegates to Core |
 | Inspect opens a read-mostly modal with header, covered Beats, Shot rail, and Shot details. | Exploration brief and wireframe | Focused dialog feature, no generic inspector framework |
@@ -58,13 +65,13 @@ local shadcn-style Hover Card primitive.
 | Each Shot rail card exposes a bottom-right edit action on hover or keyboard focus. | Accepted image-card clarification | Bounded Pencil action opens the exact Shot's candidate-image dialog |
 | Duration is intent only and appears as a bottom-left image badge with a duration icon and value. | User answer 2 and accepted image-card clarification | Timer badge avoids the lower-right edit action; no ranges, overlaps, track, timeline, or sequencing UI |
 | The candidate-image dialog shows every active image candidate for the exact Shot as cards. | Accepted image-card clarification | Lazy focused Asset query, existing `MediaCardGrid`, and quiet loading/error/empty states |
-| Candidate cards select through a bottom-right selection control and show the active representative persistently. | Accepted image-card clarification | Focused set-representative mutation; selecting does not clear or auto-close |
-| Only unselected candidate cards expose top-right hover/focus delete. Deletion is recoverable. | Accepted image-card clarification and prior delete/restore answer | Focused Core discard command rejects the selected representative and reuses Trash |
+| Candidate cards select through a bottom-right selection control and show the selected image persistently. | Accepted image-card clarification | Focused common Asset selection mutation; selecting does not clear or auto-close |
+| Candidate cards expose top-right hover/focus delete. Deletion is recoverable. | Decision 0064 | Common Asset discard clears selection when the deleted candidate is selected. |
 | Framing shows start/end shot size; Camera shows angle; Motion shows movement. | User answer 3 and Appendix | Shared Shot Design media where known, exact authored text as fallback |
 | Optics and Lighting put creative intent before technical metadata. | User answer 3 and Appendix | Text-led brief cards; optional optics values are secondary |
 | The full authored Shot description is the canonical detail. | Exploration brief and plan 0156 | Read-only CodeMirror Markdown surface preserving exact text |
 | Visual and motion behavior remains accessible on desktop. | Product design audit | Keyboard equivalents, visible focus, reduced-motion handling, semantic labels, independent scrolling |
-| The UI remains a projection consumer. | Architecture hard gate | No Beat, image ownership, copy, discard eligibility, duration, vocabulary, or representative-selection eligibility rules in React |
+| The UI remains a projection consumer. | Architecture hard gate | No Beat, image ownership, copy, discard eligibility, duration, vocabulary, or selection eligibility rules in React |
 
 There are no remaining product questions in this plan. The accepted answers
 above are implementation constraints, not defaults that an implementer may
@@ -106,7 +113,7 @@ Shots, or covered Beats to repair server output.
 
 Each card presents:
 
-- the bounded representative-image mosaic;
+- the bounded selected-image mosaic;
 - the authored Shot Plan title;
 - a compact `Beat 1 · Beat 2 · …` coverage line using the covered Beat
   positions returned by Core;
@@ -116,9 +123,9 @@ Each card presents:
 There is no create card, Shot Plan-card edit action, status badge, generated
 count, raw id, filename, asset role, or inferred label.
 
-### Deterministic representative-image mosaic
+### Deterministic selected-image mosaic
 
-Only selected representative images participate. Missing selections and all
+Only selected images participate. Missing selections and all
 unselected candidates are omitted. Images remain in canonical Shot order.
 
 The visual contract is:
@@ -209,7 +216,7 @@ The dialog body uses the existing horizontal resizable panel primitive:
 Each rail item is a shared `MediaCard`, not a one-off clickable panel. Whole-card
 activation selects the Shot. The card contains:
 
-- the Shot's selected representative image, or a quiet `ImageOff` state;
+- the Shot's selected image, or a quiet `ImageOff` state;
 - a circular `Shot 1`, `Shot 2`, … number badge at the upper left;
 - a bottom-left Timer badge only when `durationSeconds` exists;
 - a value such as `5s` or `2.5s`, without a start time or range;
@@ -237,7 +244,7 @@ It follows the current `ReferencePickerDialog` desktop geometry:
 - a `max-h-[65vh]` independently scrollable card region;
 - `MediaCardGrid` with a 220-pixel minimum card width;
 - the authored Shot title in the dialog header;
-- a concise description that selecting an image changes the representative
+- a concise description that selecting an image changes the selected
   image used by the rail and Shot Plan mosaic.
 
 Only the top dialog traps focus. Closing it returns focus to the rail card's
@@ -245,7 +252,7 @@ Pencil action and leaves the inspector, selected Scene tab, selected Shot Plan,
 and selected Shot unchanged. The dialog is transient UI state and is not added
 to the URL-backed Studio selection contract.
 
-The dialog lazily loads every active `shot-image` candidate owned by the exact
+The dialog lazily loads every active `shot_image` candidate owned by the exact
 Shot in the order returned by Core. It does not sort by filename, infer
 generation quality, or silently omit an eligible candidate. Loading keeps the
 dialog frame stable; structured failure includes Retry; an empty Shot uses a
@@ -255,12 +262,11 @@ Each candidate uses the existing `MediaCard` image treatment with:
 
 - no fabricated title, filename, Asset id, role, or quality label;
 - a bottom-right selection control;
-- the current representative shown with the persistent selected/check state;
-- unselected controls labelled `Select as representative image`;
+- the current selected shown with the persistent selected/check state;
+- unselected controls labelled `Use as selected image`;
 - a persistent selected/check indicator labelled
-  `Selected representative image`, not a browser clear command;
-- a top-right delete action on hover or keyboard focus only when the candidate
-  is not selected.
+  `Selected image`, not a browser clear command;
+- a top-right delete action on hover or keyboard focus.
 
 Selecting an unselected card's control calls the focused Core selection
 command. The gallery remains open, matching the existing in-place media-card
@@ -268,14 +274,12 @@ selection pattern. After the returned Shot Plans resource invalidates, the
 candidate state, Shot rail image, and Shot Plan mosaic all project the new
 selection. React does not optimistically manufacture a replacement `Shot`.
 
-Deleting an unselected candidate uses the current confirmation pattern. The
-message says the image moves to Trash and can be restored. Core verifies exact
-Shot ownership, rejects deletion if the image became selected concurrently,
-and owns relationship, shared-owner, Asset, AssetFile, and packaged-file
-lifecycle. On success the card disappears through the refreshed candidate
-projection while the selected representative remains unchanged. A selected
-candidate never exposes the delete action; the user must first select another
-candidate or clear selection through the CLI contract from plan 0156.
+Deleting a candidate uses the current confirmation pattern. The message says
+the image moves to Trash and can be restored. Core verifies exact Shot
+ownership and owns selection clearing, Asset membership, AssetFile, and
+packaged-file lifecycle. On success the card disappears through the refreshed
+candidate projection. If it was selected, the refreshed projection has no
+selected image.
 
 ### Shot details
 
@@ -340,7 +344,7 @@ This plan does not add:
 - a `New Shot Plan` card;
 - image generation controls or GenerationSpec inspection in this surface;
 - candidate import, candidate creation, or a browser clear-selection command;
-- deletion of the currently selected representative image;
+- deletion of the currently selected image;
 - selectable Generations content;
 - a timeline, time range, overlap, sequencing, track, clip, or edit decision;
 - video generation, Shot video attachment, post-processing, or render state;
@@ -491,7 +495,7 @@ the following file ownership are accepted.
   vocabulary media lookup used by multiple Shot features.
 - `packages/studio/src/ui` owns generic shadcn-style and card primitives.
 - Core remains the only owner of plan membership, Shot order, covered Beat
-  resolution, selected-image eligibility, the selected-candidate discard guard,
+  resolution, selected-image eligibility, selection clearing on discard,
   delete/restore behavior, and Asset ownership.
 
 ### Intended Core coordination layout
@@ -546,11 +550,11 @@ packages/studio/server/
 `shot-plans.ts` contains only focused route handlers and route registration.
 `shot-plan-responses.ts` decorates browser-safe Asset file URLs and serializes
 the accepted list/mutation response. It does not resolve Beat coverage, select
-representative images, derive Shot order, or decide delete/discard scope.
+selected images, derive Shot order, or decide delete/discard scope.
 
 `routes/projects.ts` mounts the focused route and contains no Shot Plan
 behavior. The existing route project-data pick is extended with the exact
-list/delete, representative-selection, candidate-discard, and
+list/delete, selection, candidate-discard, and
 selection-context Core entrypoints. The existing generic Asset page remains the
 candidate-list boundary: `asset-request.ts` adds the `shot` target defined by
 plan 0156, while `assets.ts` keeps delegating to `listAssetPage`. Do not add a
@@ -656,8 +660,8 @@ move to `markdown-code-editor-theme.ts`.
 
 ### Explicitly forbidden code shape
 
-- No plan membership, Beat coverage, representative selection eligibility,
-  selected-candidate discard rule, Shot ordering, or delete-scope rule in
+- No plan membership, Beat coverage, selected-image eligibility,
+  selection-on-discard rule, Shot ordering, or delete-scope rule in
   routes, services, hooks, or React.
 - No raw `<button>`, `<dialog>`, or other raw interactive control in feature
   code.
@@ -678,10 +682,10 @@ move to `markdown-code-editor-theme.ts`.
 Stop implementation and revise the shape if:
 
 - plan 0156's model or report cannot supply canonical Shot order, covered Beat
-  positions, or selected representative Assets;
+  positions, or selected Assets;
 - a route must query the database directly or infer ownership;
 - React must read-modify-write the complete Shot Plan to delete or focus it;
-- candidate deletion can bypass Core's selected-representative guard;
+- candidate deletion can bypass Core's selected-selected guard;
 - `MediaCard` requires Shot Plan-specific fields or business copy;
 - the adaptive mosaic API grows beyond bounded image inputs and overflow
   presentation;
@@ -789,25 +793,25 @@ Add these focused Shot Plan routes:
 ```text
 GET    /studio-api/projects/:projectName/screenplay/scenes/:sceneId/shot-plans
 DELETE /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId
-POST   /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId/shots/:shotId/representative-image/:assetId
+POST   /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId/shots/:shotId/selected-image/:assetId
 DELETE /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId/shots/:shotId/images/:assetId
 ```
 
 Candidate listing reuses the current generic read-only Asset page:
 
 ```text
-GET /studio-api/projects/:projectName/assets?targetKind=shot&targetId=:shotId&role=shot-image&mediaKind=image
+GET /studio-api/projects/:projectName/assets?ownerKind=shot&ownerId=:shotId&type=shot_image&mediaKind=image
 ```
 
-Extend the existing target parser with `shot`; do not add a second candidate
-list route or let the browser choose another role/media kind.
+Use the existing common owner parser; do not add a second candidate list route
+or let the browser choose another Asset type or media kind.
 
 The list route:
 
 1. reads `projectName` and `sceneId`;
 2. calls `listSceneShotPlans`;
 3. serializes the accepted Core list report;
-4. decorates selected representative and storyboard AssetFile ids with the
+4. decorates selected Shot and Storyboard AssetFile ids with the
    existing browser Asset file URL;
 5. returns structured Core warnings and failures.
 
@@ -822,18 +826,18 @@ The delete route:
 There is no request-body delete scope, Scene id on the delete request,
 `cascadeImages` flag, or server-side fallback.
 
-The representative-selection route:
+The selection route:
 
 1. uses the current Studio API token middleware;
 2. reads `projectName`, `shotPlanId`, `shotId`, and `assetId`;
-3. calls `setShotRepresentativeImage`;
+3. calls `selectAsset` with `{ kind: "shot", id: shotId }`;
 4. serializes the accepted Shot Plan mutation result and resource keys;
 5. translates structured errors without deciding image eligibility.
 
 The candidate-delete route follows the same adapter shape and calls
-`discardShotImageCandidate`. It passes no fallback candidate, replacement
-selection, cascade flag, file path, or relationship role. Core rejects the
-currently selected representative and returns the recoverable Trash mutation
+`discardAsset`. It passes no fallback candidate, replacement selection,
+cascade flag, file path, or ownership metadata. Core clears selection when the
+discarded candidate is selected and returns the recoverable Trash mutation
 report.
 
 ### Browser list response
@@ -856,25 +860,14 @@ interface StudioShotPlan extends Omit<ShotPlan, "shots"> {
   shots: StudioShot[];
 }
 
-interface StudioShot extends Omit<Shot, "representativeImage"> {
-  representativeImage: StudioAssetImage | null;
+interface StudioShot extends Omit<Shot, "images"> {
+  images: StudioAssetResponse[];
 }
 
 interface StudioShotPlanCoveredBeat {
   beat: Beat;
   position: number;
-  storyboardImage: StudioAssetImage | null;
-}
-
-interface StudioAssetImage {
-  assetId: string;
-  assetFileId: string;
-  url: string;
-}
-
-interface StudioShotImageCandidate extends StudioAssetImage {
-  width: number | null;
-  height: number | null;
+  storyboardImage: StudioAssetResponse | null;
 }
 ```
 
@@ -882,16 +875,14 @@ Use the repository's existing structured diagnostic and browser Asset media
 types when they already express these fields. Do not create duplicate
 convenience mirrors solely to rename current types.
 
-The Shot Plan-specific browser DTOs add only browser-safe file URLs and image
-dimensions needed for card aspect ratio. They do not expose provider upload
-URLs, local absolute paths, prompts, receipts, or complete Asset relationship
-records.
+The browser reuses the common Asset shape and derives owner-independent file
+URLs from Asset and AssetFile ids. It does not expose provider upload URLs,
+local absolute paths, prompts, or receipts.
 
-The candidate service maps the existing generic Asset page to
-`StudioShotImageCandidate[]` using the active primary image file guaranteed by
-plan 0156's `shot-image` relationship contract and preserves Core page order.
-The selected state remains the current Shot's
-`representativeImage.assetId`; it is not duplicated in the candidate response.
+The candidate service returns the common Asset page, preserves Core page order,
+and resolves each `shot_image` Asset's primary image file for presentation.
+Selected state comes from `AssetPage.selectedAssetId`, which must agree with
+`Shot.selectedImageId`; it is not duplicated on each candidate.
 
 ### Browser API
 
@@ -915,7 +906,7 @@ listStudioShotImageCandidates(input: {
   signal?: AbortSignal;
 }): Promise<StudioShotImageCandidate[]>;
 
-setStudioShotRepresentativeImage(input: {
+setStudioShotSelectedImage(input: {
   projectName: string;
   shotPlanId: string;
   shotId: string;
@@ -934,7 +925,7 @@ These are the accepted public browser-service names. Do not add a class,
 repository, alias, or React-aware service.
 `deleteStudioShotPlan` sends an authenticated `DELETE` request with no body.
 Both image mutations are authenticated and send no body. Candidate listing
-owns the fixed `shot-image`/`image` filters, follows the current Asset-page
+owns the fixed `shot_image`/`image` filters, follows the current Asset-page
 cursor until completion, preserves Core order, and forwards its abort signal.
 
 `StudioShotPlanMutationResponse` is the browser-safe serialization of the
@@ -953,7 +944,7 @@ surface:scene:<scene-id>:shot-plans
 
 The Shot Plans and open candidate queries subscribe to that exact key through
 the existing Studio resource invalidation mechanism. Plan delete,
-representative selection, candidate discard/restore, and later CLI/agent
+selected selection, candidate discard/restore, and later CLI/agent
 mutations refresh the relevant projections. This plan does not add an event bus
 or a Shot-specific cache key.
 
@@ -988,7 +979,7 @@ The variant accepts any count defensively, but displays at most nine cells
 according to the accepted table. The existing single-image, video, and
 four-image `mosaic` variants keep their current contracts.
 
-Alt text is quiet and meaningful, for example `Representative image for Shot
+Alt text is quiet and meaningful, for example `Selected image for Shot
 3`. It must not expose file names or ids. The card's authored title and
 coverage remain visible outside the individual image alt text.
 
@@ -1130,7 +1121,7 @@ and prompt behaviors remain in the prompt feature.
 - The first eight images preserve canonical order at 10+ images.
 - The `+N` tile uses the same neutral media surface with centered subdued text.
 - The overflow tile has sufficient text contrast and an accessible label such
-  as `2 more representative images`.
+  as `2 more selected images`.
 - Missing or failed browser images use the existing broken-media treatment; the
   browser does not substitute an unrelated Shot image.
 
@@ -1204,7 +1195,7 @@ focused commands; closing it uses the standard Dialog close affordance.
 - The selection control is lower-right; the unselected-only delete control is
   upper-right.
 - The selected state remains visible when the pointer leaves so the active
-  representative is never hover-dependent.
+  selected is never hover-dependent.
 - Delete is hover/focus-revealed, with a keyboard-reachable confirmation.
 
 ### Brief-card geometry
@@ -1267,12 +1258,12 @@ The feature explicitly covers:
 - list request failure with structured message and retry;
 - empty Scene;
 - plan with no Shots;
-- Shot with no representative image;
-- plan with no selected representative images;
+- Shot with no selected image;
+- plan with no selected images;
 - covered Beat with no storyboard image;
 - missing optional brief fields;
 - custom brief vocabulary without catalog media;
-- representative or storyboard browser image failure;
+- selected or storyboard browser image failure;
 - candidate-list loading, structured failure/retry, and empty state;
 - candidate image failure;
 - candidate selected or discarded from another surface while the candidate
@@ -1287,9 +1278,9 @@ silently keep a stale aggregate or synthesize a replacement Shot locally.
 
 ### Slice 1: record the UI decision and dependency
 
-- Add Decision 0064 for the bounded adaptive `MediaCard` mosaic and explicitly
+- Add Decision 0065 for the bounded adaptive `MediaCard` mosaic and explicitly
   preserve Decision 0053's Visual Language 2x2 variant.
-- Add a concise narrowing notice to Decision 0053 pointing to Decision 0064;
+- Add a concise narrowing notice to Decision 0053 pointing to Decision 0065;
   do not rewrite its historical content.
 - Cross-link plans 0156 and 0157 and retain their ownership split.
 - Do not begin UI implementation until plan 0156's browser-safe model and
@@ -1315,13 +1306,12 @@ silently keep a stale aggregate or synthesize a replacement Shot locally.
 
 ### Slice 3: add thin list and mutation HTTP/browser boundaries
 
-- Extend the exact project-data pick with `listSceneShotPlans` and
-  `deleteShotPlan`, `setShotRepresentativeImage`, and
-  `discardShotImageCandidate`.
+- Extend the exact project-data pick with `listSceneShotPlans`,
+  `deleteShotPlan`, common `selectAsset`, and common `discardAsset`.
 - Add the four focused Shot Plan routes.
-- Extend the existing generic Asset target parser with `shot` and reuse its
+- Reuse the existing generic Asset owner parser with `shot` and reuse its
   page route for the fixed candidate query.
-- Serialize representative and storyboard images with generic Asset file URLs.
+- Serialize selected and storyboard images with generic Asset file URLs.
 - Add the typed browser contracts and focused plan/candidate request functions.
 - Subscribe the list query to
   `surface:scene:<scene-id>:shot-plans`.
@@ -1337,7 +1327,7 @@ silently keep a stale aggregate or synthesize a replacement Shot locally.
   otherwise unchanged.
 - Add the Shot Plans query hook, loading/error/empty states, and three-column
   scene tab.
-- Map only selected representative images in canonical Shot order.
+- Map only selected images in canonical Shot order.
 - Add meaningful title/coverage overlay, delete, and inspect actions.
 - Add recoverable delete confirmation and post-success invalidation/focus
   cleanup.
@@ -1382,7 +1372,7 @@ silently keep a stale aggregate or synthesize a replacement Shot locally.
 - Exercise no images, 1, 2, 3, 4, 5, 9, 10, and more than 10 selected-image
   mosaics.
 - Exercise a ten-Beat covered header and keyboard preview.
-- Exercise multiple candidates for one Shot, in-dialog representative
+- Exercise multiple candidates for one Shot, in-dialog selected
   selection, unselected candidate delete/restore, and selected-delete
   rejection.
 - Verify delete/restore/invalidation against plan 0156's real Core lifecycle.
@@ -1417,7 +1407,7 @@ Cover:
 
 - the list route passes exact project and Scene ids to Core;
 - the response preserves Core plan, Shot, and covered Beat order;
-- only selected representative images receive browser file URLs;
+- only selected images receive browser file URLs;
 - storyboard previews receive generic Asset file URLs;
 - absent images remain `null`;
 - provider URLs and local absolute paths are never serialized;
@@ -1425,13 +1415,13 @@ Cover:
 - structured Core errors are translated through the current HTTP mechanism;
 - delete passes only the Shot Plan id to Core;
 - delete returns the recoverable mutation report and exact resource key;
-- representative selection passes exact plan, Shot, and Asset ids to Core with
+- selected-image selection passes exact plan, Shot, and Asset ids to Core with
   no body;
 - candidate delete passes the same exact ids to
-  `discardShotImageCandidate`;
+  `discardAsset`;
 - candidate delete returns the recoverable mutation report;
-- `targetKind=shot` maps to the exact Core `AssetTarget`;
-- candidate query fixes `shot-image` and `image` in the browser service;
+- `ownerKind=shot` maps to the exact Core `AssetOwner`;
+- candidate query fixes `shot_image` and `image` in the browser service;
 - routes contain no delete cascade, replacement candidate, ownership,
   membership, or eligibility branch.
 
@@ -1440,11 +1430,11 @@ Cover:
 Cover:
 
 - exact method, path, and encoding for plan list/delete, candidate list,
-  representative selection, and candidate delete;
+  selected selection, and candidate delete;
 - abort signal forwarding for plan and candidate lists;
 - candidate pagination preserves Core order;
 - structured non-success parsing;
-- current browser contracts for selected representative and storyboard media;
+- current browser contracts for selected and storyboard media;
 - no React state or domain normalization in the service.
 
 ### `LineTabs` tests
@@ -1497,7 +1487,7 @@ Cover:
 - loading, failure/retry, empty, and populated states;
 - exactly one card per Core list item;
 - three-column grid uses the existing grid primitive;
-- card mosaic includes selected representative images only;
+- card mosaic includes selected images only;
 - canonical Shot order is preserved;
 - title and covered Beat position copy is meaningful;
 - raw ids, filenames, and relationship roles are absent;
@@ -1524,7 +1514,7 @@ Cover:
 - rail has independent scroll and the accepted resize bounds;
 - rail items use shared card activation and actions;
 - selected Shot uses amber, not green;
-- missing representative image uses the quiet icon state;
+- missing selected image uses the quiet icon state;
 - duration badge appears only when authored;
 - duration badge is lower-left and Pencil action is lower-right;
 - Pencil action is pointer- and keyboard-accessible and opens the exact Shot's
@@ -1543,19 +1533,19 @@ Cover:
   frame;
 - every candidate is a `MediaCard` with meaningful image alt text and no raw
   filename, id, role, or fabricated quality label;
-- the representative card has a persistent, labelled bottom-right selected
+- the selected card has a persistent, labelled bottom-right selected
   indicator that does not look disabled;
 - each unselected card has an actionable bottom-right selection control;
 - selecting calls the exact focused mutation, leaves the gallery open, and
   refreshes candidate, rail, and plan mosaic projections through the Shot Plans
   resource key;
-- only unselected cards expose top-right hover/focus delete;
+- every candidate card exposes top-right hover/focus delete;
 - delete confirmation says the image moves to Trash and can be restored;
 - delete calls the focused recoverable mutation and does not send a replacement
   or cascade scope;
-- successful delete removes the candidate through refreshed Core state without
-  changing the representative;
-- a concurrent selected-image rejection retains the card, refreshes current
+- successful delete removes the candidate through refreshed Core state and
+  clears selection when that candidate was selected;
+- a concurrent delete failure retains the card, refreshes current
   state, and displays the structured diagnostic;
 - candidate close restores focus to the rail Pencil action and leaves the
   inspector and URL-backed focus unchanged;
@@ -1619,7 +1609,7 @@ Do not add mobile viewport tests.
 
 ## Documentation
 
-Add Decision 0064 with:
+Add Decision 0065 with:
 
 - Context: `MediaCard` currently has an accepted Visual Language 2x2 mosaic,
   while Shot Plan cards need a deterministic ordered layout for variable
@@ -1631,7 +1621,7 @@ Add Decision 0064 with:
 - Consequences: consistent variable-count cards, accessible overflow, and a
   small shared primitive rather than plan-local layout.
 
-Add only a concise narrowing notice to Decision 0053 pointing to 0064. Preserve
+Add only a concise narrowing notice to Decision 0053 pointing to 0065. Preserve
 0053's historical decision and accepted Visual Language behavior.
 
 Update current documentation where relevant:
@@ -1675,7 +1665,7 @@ Implementation is complete only after:
    presentation after the generic theme split.
 7. The full desktop E2E journeys pass.
 8. A temporary `urban-basilica` clone verifies the ten-Beat header and
-   representative-image mosaic edge counts without mutating the active project.
+   selected-image mosaic edge counts without mutating the active project.
 9. A visual inspection at the supported desktop viewport confirms:
    - tabs align with current Scene navigation;
    - Generations is visibly disabled;
@@ -1721,7 +1711,7 @@ pnpm check
 
 - [ ] Confirm plan 0156 is accepted as the domain/CLI/skill dependency.
 - [ ] Confirm this plan remains read-mostly apart from recoverable plan/image
-      delete and focused representative-image selection.
+      delete and focused selected-image selection.
 - [ ] Confirm every user clarification is represented in the Requirement
       Ledger and product behavior.
 - [ ] Confirm there are no unresolved product or interface-level questions.
@@ -1752,7 +1742,7 @@ pnpm check
 - [ ] Subscribe to the exact Shot Plans resource key from plan 0156.
 - [ ] Add no generic patch API, server-side delete cascade flag, or React
       membership rule.
-- [ ] Keep selected-candidate discard rejection in Core.
+- [ ] Keep selection clearing on selected-candidate discard in Core.
 
 ### Scene Tabs And Grid
 
@@ -1773,12 +1763,12 @@ pnpm check
 - [ ] Keep the existing exact four-image mosaic behavior unchanged.
 - [ ] Implement 0, 1, 2, 3, 4, 5–9, and 10+ layouts exactly.
 - [ ] Preserve canonical selected-image order.
-- [ ] Render only selected representative images.
+- [ ] Render only selected images.
 - [ ] Render first eight plus a ninth `+N` tile above nine.
 - [ ] Give overflow and image tiles meaningful accessible labels.
 - [ ] Add no arbitrary rows, columns, slots, domain inputs, or caller-provided
       overflow algorithm.
-- [ ] Add Decision 0064 and only a narrowing notice to Decision 0053.
+- [ ] Add Decision 0065 and only a narrowing notice to Decision 0053.
 
 ### MediaCard Actions
 
@@ -1839,7 +1829,7 @@ pnpm check
 - [ ] Keep rail and details independently scrollable.
 - [ ] Use shared `MediaCard` activation, not raw interactive HTML or a one-off
       clickable panel.
-- [ ] Render selected representative image or a quiet `ImageOff` state.
+- [ ] Render selected image or a quiet `ImageOff` state.
 - [ ] Render canonical Shot-number badge.
 - [ ] Render the Timer duration badge lower-left only when authored.
 - [ ] Render the Pencil action lower-right on hover or focus.
@@ -1871,10 +1861,10 @@ pnpm check
       dialog open.
 - [ ] Refresh candidate cards, rail image, and plan mosaic through the exact
       Shot Plans resource key.
-- [ ] Expose top-right hover/focus delete only on unselected candidates.
+- [ ] Expose top-right hover/focus delete on every candidate.
 - [ ] State that candidate delete moves the image to Trash and can be restored.
 - [ ] Send no replacement candidate, relationship role, path, or cascade scope.
-- [ ] Retain and refresh the card on concurrent selected-image rejection.
+- [ ] Retain and refresh the card on concurrent delete failure.
 - [ ] Add no clear, generate, import, search, pagination, or bulk controls.
 
 ### Brief And Description
@@ -1926,7 +1916,7 @@ pnpm check
 
 ### Documentation And ADR
 
-- [ ] Add Decision 0064 with bounded adaptive mosaic ownership and limits.
+- [ ] Add Decision 0065 with bounded adaptive mosaic ownership and limits.
 - [ ] Add only a concise narrowing notice to Decision 0053.
 - [ ] Keep Decisions 0041, 0053, 0061, and 0062 historically intact.
 - [ ] Update current selection, route, design, frontend, and testing docs only

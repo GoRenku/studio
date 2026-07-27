@@ -12,9 +12,7 @@ import type {
   SceneBeatSheetDocument,
 } from '../../client/scene-beat-sheet.js';
 import { ProjectDataError } from '../project-data-error.js';
-import {
-  readAssetRelationship,
-} from '../database/access/asset-relationships/index.js';
+import { listAssetPageInSession } from '../assets/projection.js';
 import {
   listSceneNavigationPage,
   listSequenceNavigationPage,
@@ -24,9 +22,6 @@ import {
   readActiveSceneBeatSheetRecord,
   readSceneBeatSheetDocument,
 } from '../database/access/scene-beat-sheets.js';
-import {
-  listSceneBeatStoryboardImageRecords,
-} from '../database/access/scene-beat-storyboard-images.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -126,22 +121,16 @@ export function readSceneStoryboardProjection(
   const document = readSceneBeatSheetDocument({ row: beatSheetRow, screenplay });
 
   const imagesByBeatId: Record<string, ScreenplayImageReference> = {};
-  for (const image of listSceneBeatStoryboardImageRecords(session, {
-    beatSheetId: beatSheetRow.id,
-  })) {
-    if (imagesByBeatId[image.beatId]) {
-      continue;
-    }
-    const asset = readAssetRelationship(session, {
-      target: { kind: 'scene', sceneId },
-      assetId: image.assetId,
+  for (const beat of document.beats) {
+    const page = listAssetPageInSession(session, {
+      owner: { kind: 'sceneBeat', sceneId, beatId: beat.id },
+      type: 'scene_storyboard_image',
     });
-    if (!asset) {
-      continue;
-    }
-    const reference = toImageReferenceForFile(asset, image.assetFileId);
+    const asset = page.items.find((candidate) => candidate.id === page.selectedAssetId);
+    const file = asset?.files.find((candidate) => candidate.mediaKind === 'image');
+    const reference = asset && file ? toImageReferenceForFile(asset, file.id) : null;
     if (reference) {
-      imagesByBeatId[image.beatId] = reference;
+      imagesByBeatId[beat.id] = reference;
     }
   }
 
@@ -222,8 +211,7 @@ function toImageReferenceForFile(
     return null;
   }
   return {
-    assetId: asset.assetId,
-    relationshipId: asset.relationshipId,
+    assetId: asset.id,
     assetFileId: file.id,
     title: asset.title,
     fileRole: file.role,

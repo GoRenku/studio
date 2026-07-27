@@ -1,5 +1,4 @@
 import type {
-  SceneBeatSheetDocument,
   SceneBeatSheetListReport,
   SceneBeatSheetReadReport,
   SceneBeatSheetValidationReport,
@@ -12,12 +11,10 @@ import {
   readActiveSceneBeatSheetRecord,
   readSceneBeatSheetDocument,
   requireSceneBeatSheetRecord,
-  requireSceneBeatSheetForScene,
   setActiveSceneBeatSheetRecord,
   toSceneBeatSheetSummary,
   writeSceneBeatSheetRecord,
 } from '../database/access/scene-beat-sheets.js';
-import { beatContentFingerprint } from '../database/access/scene-beat-storyboard-images.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import {
@@ -32,7 +29,6 @@ import type {
   ValidateSceneBeatSheetInput,
   WriteSceneBeatSheetInput,
 } from '../project-data-service-contracts.js';
-import { carryForwardStoryboardImages } from './operations.js';
 import { sceneBeatSheetResourceKeys } from './storyboard-status.js';
 import { assertSceneBeatSheetDocument } from './validator.js';
 
@@ -162,16 +158,6 @@ export async function writeSceneBeatSheet(
       screenplay,
       filePath: input.filePath,
     });
-    const baseBeatSheetId = input.document.baseBeatSheetId ?? null;
-    const preservedBeatIds = baseBeatSheetId
-      ? readPreservedBeatIdsForReplacement({
-          session,
-          screenplay,
-          sceneId: input.document.sceneId,
-          baseBeatSheetId,
-          nextDocument: input.document,
-        })
-      : [];
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     const beatSheetId = ids('scene_beat_sheet');
     const now = new Date().toISOString();
@@ -185,18 +171,6 @@ export async function writeSceneBeatSheet(
         now,
         filePath: input.filePath,
       });
-      if (baseBeatSheetId) {
-        carryForwardStoryboardImages({
-          session: txSession,
-          baseBeatSheetId,
-          createdBeatSheetId: beatSheetId,
-          sceneId: input.document.sceneId,
-          beats: input.document.beats,
-          preservedBeatIds,
-          ids,
-          now,
-        });
-      }
       setActiveSceneBeatSheetRecord(txSession, {
         sceneId: input.document.sceneId,
         beatSheetId,
@@ -277,36 +251,6 @@ export async function setActiveSceneBeatSheet(
       ],
     };
   });
-}
-
-function readPreservedBeatIdsForReplacement(input: {
-  session: Parameters<typeof readActiveSceneBeatSheetId>[0];
-  screenplay: ScreenplayDocument;
-  sceneId: string;
-  baseBeatSheetId: string;
-  nextDocument: SceneBeatSheetDocument;
-}): string[] {
-  const baseRow = requireSceneBeatSheetForScene({
-    session: input.session,
-    sceneId: input.sceneId,
-    beatSheetId: input.baseBeatSheetId,
-  });
-  const baseDocument = readSceneBeatSheetDocument({
-    row: baseRow,
-    screenplay: input.screenplay,
-  });
-  const baseFingerprints = new Map(
-    baseDocument.beats.map((beat) => [
-      beat.id,
-      beatContentFingerprint(beat),
-    ])
-  );
-  return input.nextDocument.beats
-    .filter(
-      (beat) =>
-        baseFingerprints.get(beat.id) === beatContentFingerprint(beat)
-    )
-    .map((beat) => beat.id);
 }
 
 function requireScreenplayDocument(

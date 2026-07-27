@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { readAssetRelationship } from '../database/access/asset-relationships/index.js';
 import { readLookbookImageRecordByAsset } from '../database/access/lookbook-images.js';
 import { insertLookbookRecord, readLookbookRecordByKind } from '../database/access/lookbook.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
@@ -85,6 +84,89 @@ describe('generation media attachment', () => {
     }
   });
 
+  it('atomically selects canonical imports and rejects request-scoped selection before writes', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const lookbooks = await ensureLookbooks(homeDir);
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(
+      path.join(created.projectPath, 'tmp', 'selected.png'),
+      'selected image'
+    );
+
+    const cases = [
+      {
+        purpose: 'cast.profile' as const,
+        target: { kind: 'castMember' as const, id: 'cast_test0001' },
+        owner: { kind: 'castMember' as const, id: 'cast_test0001' },
+      },
+      {
+        purpose: 'location.hero' as const,
+        target: { kind: 'location' as const, id: 'location_test0001' },
+        owner: { kind: 'location' as const, id: 'location_test0001' },
+      },
+      {
+        purpose: 'lookbook.image' as const,
+        target: { kind: 'lookbook' as const, id: lookbooks.production },
+        owner: { kind: 'lookbook' as const, id: lookbooks.production },
+      },
+    ];
+
+    for (const attachment of cases) {
+      const report = await projectData.attachGenerationMedia({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: attachment.purpose,
+        target: attachment.target,
+        sourceProjectRelativePath: 'tmp/selected.png',
+        select: true,
+      });
+      const page = await projectData.listAssetPage({
+        projectName: 'constantinople',
+        homeDir,
+        owner: attachment.owner,
+      });
+      expect(page.selectedAssetId).toBe(report.asset.id);
+      expect(page.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: report.asset.id,
+            owner: attachment.owner,
+          }),
+        ])
+      );
+    }
+
+    const before = await projectData.listAssets({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'castMember', id: 'cast_test0001' },
+    });
+    await expect(
+      projectData.attachGenerationMedia({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'cast.character-sheet',
+        target: { kind: 'castMember', id: 'cast_test0001' },
+        sourceProjectRelativePath: 'tmp/selected.png',
+        select: true,
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_ASSET_SELECTION_UNSUPPORTED',
+    });
+    const after = await projectData.listAssets({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'castMember', id: 'cast_test0001' },
+    });
+    expect(after.map((asset) => asset.id)).toEqual(
+      before.map((asset) => asset.id)
+    );
+  });
+
   it('attaches a frozen external image edit to the exact current source owner', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
@@ -103,9 +185,6 @@ describe('generation media attachment', () => {
       sourceProjectRelativePath: 'tmp/source.png',
       title: 'Source Character Sheet',
     });
-    if (!('files' in source.asset)) {
-      throw new Error('Expected a Cast-owned source Asset.');
-    }
     const sourceFile = source.asset.files[0]!;
     const spec = await projectData.createGenerationSpec({
       projectName: 'constantinople',
@@ -113,7 +192,7 @@ describe('generation media attachment', () => {
       spec: {
         executionKind: 'agent-external',
         purpose: 'image.edit',
-        target: { kind: 'asset', id: source.asset.assetId },
+        target: { kind: 'asset', id: source.asset.id },
         model: { provider: 'codex', model: 'gpt-image-2' },
         values: { prompt: 'Preserve the source and change its lighting.' },
         references: [{
@@ -124,7 +203,7 @@ describe('generation media attachment', () => {
           },
           reference: {
             kind: 'asset-file',
-            assetId: source.asset.assetId,
+            assetId: source.asset.id,
             assetFileId: sourceFile.id,
           },
         }],
@@ -168,7 +247,7 @@ describe('generation media attachment', () => {
       sourceSpecId: spec.id,
     });
     expect(edited.provenance).toEqual({ generationSpecId: spec.id });
-    expect(edited.asset.assetId).not.toBe(source.asset.assetId);
+    expect(edited.asset.id).not.toBe(source.asset.id);
     expect(await fs.readFile(
       path.join(created.projectPath, sourceFile.projectRelativePath),
       'utf8',
@@ -192,9 +271,6 @@ describe('generation media attachment', () => {
       sourceProjectRelativePath: 'tmp/managed-source.png',
       title: 'Managed Source Character Sheet',
     });
-    if (!('files' in source.asset)) {
-      throw new Error('Expected a Cast-owned source Asset.');
-    }
     const sourceFile = source.asset.files[0]!;
     const spec = await projectData.createGenerationSpec({
       projectName: 'constantinople',
@@ -202,7 +278,7 @@ describe('generation media attachment', () => {
       spec: {
         executionKind: 'renku-managed',
         purpose: 'image.edit',
-        target: { kind: 'asset', id: source.asset.assetId },
+        target: { kind: 'asset', id: source.asset.id },
         model: { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' },
         values: { prompt: 'Preserve the source and change its lighting.' },
         references: [{
@@ -214,7 +290,7 @@ describe('generation media attachment', () => {
           providerField: 'image_urls',
           reference: {
             kind: 'asset-file',
-            assetId: source.asset.assetId,
+            assetId: source.asset.id,
             assetFileId: sourceFile.id,
           },
         }],
@@ -280,7 +356,7 @@ describe('generation media attachment', () => {
       receipt: { run: run.run },
     });
     expect(edited.provenance).toEqual({ generationRunId: run.run.id });
-    expect(edited.asset.assetId).not.toBe(source.asset.assetId);
+    expect(edited.asset.id).not.toBe(source.asset.id);
   });
 
   it('attaches an external image edit through Lookbook membership only', async () => {
@@ -302,16 +378,13 @@ describe('generation media attachment', () => {
       sourceProjectRelativePath: 'tmp/lookbook-source.png',
       title: 'Source Lookbook Image',
     });
-    if ('files' in source.asset) {
-      throw new Error('Expected membership-owned Lookbook attachment data.');
-    }
     const spec = await projectData.createGenerationSpec({
       projectName: 'constantinople',
       homeDir,
       spec: {
         executionKind: 'agent-external',
         purpose: 'image.edit',
-        target: { kind: 'asset', id: source.asset.assetId },
+        target: { kind: 'asset', id: source.asset.id },
         model: { provider: 'codex', model: 'gpt-image-2' },
         values: { prompt: 'Preserve the source and change its lighting.' },
         references: [{
@@ -322,8 +395,8 @@ describe('generation media attachment', () => {
           },
           reference: {
             kind: 'asset-file',
-            assetId: source.asset.assetId,
-            assetFileId: source.asset.assetFileId,
+            assetId: source.asset.id,
+            assetFileId: source.asset.files[0]!.id,
           },
         }],
       },
@@ -355,7 +428,11 @@ describe('generation media attachment', () => {
     });
     expect(edited.provenance).toEqual({ generationSpecId: spec.id });
     expect(edited.ownerRecord).toMatchObject({ kind: 'lookbookImage' });
-    expect(edited.asset.assetId).not.toBe(source.asset.assetId);
+    expect(edited.asset.id).not.toBe(source.asset.id);
+    expect(edited.asset.owner).toEqual({
+      kind: 'lookbook',
+      id: lookbooks.production,
+    });
 
     const { session } = await openProjectSession({
       projectName: 'constantinople',
@@ -364,12 +441,8 @@ describe('generation media attachment', () => {
     try {
       expect(readLookbookImageRecordByAsset(session, {
         lookbookId: lookbooks.production,
-        assetId: edited.asset.assetId,
+        assetId: edited.asset.id,
       })).not.toBeNull();
-      expect(readAssetRelationship(session, {
-        target: { kind: 'project' },
-        assetId: edited.asset.assetId,
-      })).toBeNull();
     } finally {
       session.close();
     }

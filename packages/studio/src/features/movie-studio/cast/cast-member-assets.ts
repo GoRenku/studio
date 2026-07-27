@@ -1,10 +1,10 @@
 import type { PreviewImage } from '@/ui/image-preview-dialog';
 import { imageAspectRatioFromDimensions } from '@/ui/image-aspect-ratio';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { castAssetFileUrl } from '@/services/studio-project-assets-api';
+import { projectAssetFileUrl } from '@/services/studio-project-assets-api';
 
-export const CAST_PROFILE_ROLE = 'profile';
-export const CAST_CHARACTER_SHEET_ROLES = ['character-sheet'] as const;
+export const CAST_PROFILE_ROLE = 'cast_profile';
+export const CAST_CHARACTER_SHEET_ROLES = ['character_sheet'] as const;
 
 export function castImageAssetsForRole(
   assets: StudioAssetResponse[],
@@ -12,7 +12,7 @@ export function castImageAssetsForRole(
 ): StudioAssetResponse[] {
   return sortCastAssets(
     assets.filter(
-      (asset) => asset.role === role && Boolean(castImageAssetFile(asset))
+      (asset) => asset.type === role && Boolean(castImageAssetFile(asset))
     )
   );
 }
@@ -24,7 +24,7 @@ export function castImageAssetsForRoles(
   const acceptedRoles = new Set(roles);
   return sortCastAssets(
     assets.filter(
-      (asset) => acceptedRoles.has(asset.role) && Boolean(castImageAssetFile(asset))
+      (asset) => acceptedRoles.has(asset.type) && Boolean(castImageAssetFile(asset))
     )
   );
 }
@@ -35,12 +35,11 @@ export function castImageAssetFile(asset: StudioAssetResponse) {
 
 export function castImageAssetUrl(
   projectName: string,
-  castMemberId: string,
   asset: StudioAssetResponse
 ): string | null {
   const file = castImageAssetFile(asset);
   return file
-    ? castAssetFileUrl(projectName, castMemberId, asset.assetId, file.id)
+    ? projectAssetFileUrl(projectName, asset.id, file.id)
     : null;
 }
 
@@ -58,10 +57,9 @@ export function castImageAssetAspectRatio(
 
 export function castPreviewImageForAsset(
   projectName: string,
-  castMemberId: string,
   asset: StudioAssetResponse
 ): PreviewImage | null {
-  const src = castImageAssetUrl(projectName, castMemberId, asset);
+  const src = castImageAssetUrl(projectName, asset);
   if (!src) return null;
   return {
     src,
@@ -73,7 +71,7 @@ export function castPreviewImageForAsset(
 export function readableCastImageTitle(asset: StudioAssetResponse): string {
   const title = asset.title.trim();
   if (title) return humanizeAssetTitle(title);
-  return humanizeAssetRole(asset.role);
+  return asset.type === CAST_PROFILE_ROLE ? 'Profile' : 'Character Sheet';
 }
 
 export function humanizeAssetRole(role: string): string {
@@ -99,12 +97,12 @@ function humanizeAssetTitle(title: string): string {
 
 function sortCastAssets(assets: StudioAssetResponse[]): StudioAssetResponse[] {
   return [...assets].sort((left, right) => {
-    const sortDifference = left.sortOrder - right.sortOrder;
-    if (sortDifference !== 0) return sortDifference;
+    const createdDifference = right.createdAt.localeCompare(left.createdAt);
+    if (createdDifference !== 0) return createdDifference;
 
     const titleDifference = left.title.localeCompare(right.title);
     if (titleDifference !== 0) return titleDifference;
 
-    return left.assetId.localeCompare(right.assetId);
+    return left.id.localeCompare(right.id);
   });
 }

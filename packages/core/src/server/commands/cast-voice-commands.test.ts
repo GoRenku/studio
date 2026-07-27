@@ -66,12 +66,11 @@ describe('Cast Voice commands', () => {
           registrationModel: 'eleven_v3',
           externalVoiceId: 'voice_urban_normal',
           capabilities: ['dialogue-audio-tts'],
-          sourceSampleAssetId: attached.voice.sample.assetId,
+          sourceSampleAssetId: attached.voice.sample.id,
         }),
       ],
       sampleSource: { kind: 'custom_file' },
       sample: {
-        role: 'voice_sample',
         referenceName: 'normal-voice',
         purpose: 'calm strategic baseline',
         files: [
@@ -110,8 +109,8 @@ describe('Cast Voice commands', () => {
       projectData.discardAsset({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'castMember', castMemberId },
-        assetId: attached.voice.sample.assetId,
+        owner: { kind: 'castMember', id: castMemberId },
+        assetId: attached.voice.sample.id,
       })
     ).rejects.toMatchObject({ code: 'PROJECT_DATA353' });
 
@@ -123,7 +122,7 @@ describe('Cast Voice commands', () => {
     });
     expect(removed.removed).toMatchObject({
       voiceId: attached.voice.id,
-      sampleAssetId: attached.voice.sample.assetId,
+      sampleAssetId: attached.voice.sample.id,
     });
     expect(removed.resourceKeys).toEqual([
       `surface:castMember:${castMemberId}`,
@@ -201,7 +200,7 @@ describe('Cast Voice commands', () => {
       registrationModel: 'eleven_multilingual_v2',
       externalVoiceId: 'voice_urban_multilingual',
       capabilities: ['dialogue-audio-tts'],
-      sourceSampleAssetId: attached.voice.sample.assetId,
+      sourceSampleAssetId: attached.voice.sample.id,
     });
     expect(created.resourceKeys).toEqual([
       `surface:castMember:${castMemberId}`,

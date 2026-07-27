@@ -197,16 +197,8 @@ function isShotImageSnapshot(
     value !== null &&
     'shotId' in value &&
     typeof value.shotId === 'string' &&
-    'assets' in value &&
-    Array.isArray(value.assets) &&
-    value.assets.every(
-      (asset) =>
-        typeof asset === 'object' &&
-        asset !== null &&
-        'assetId' in asset &&
-        typeof asset.assetId === 'string' &&
-        'discardedAsset' in asset &&
-        typeof asset.discardedAsset === 'boolean'
-    )
+    'assetIds' in value &&
+    Array.isArray(value.assetIds) &&
+    value.assetIds.every((assetId) => typeof assetId === 'string')
   );
 }

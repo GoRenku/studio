@@ -6,12 +6,7 @@ import type {
   LookbookWriteReport,
   VisualLanguageProjectReport,
 } from '../../client/index.js';
-import {
-  clearLookbookCardImageRecord,
-  requireLookbookRecordById,
-  setLookbookCardImageRecord,
-  toLookbook,
-} from '../database/access/lookbook.js';
+import { requireLookbookRecordById, toLookbook } from '../database/access/lookbook.js';
 import {
   listLookbookSourceInspirationFolders,
   replaceLookbookInspirationRecords,
@@ -40,7 +35,6 @@ import type {
   DeleteLookbookImageInput,
   DeleteLookbookSheetInput,
   ListLookbookSourceInspirationsInput,
-  SetLookbookCardImageInput,
   SetLookbookImagePlacementInput,
   SetLookbookSourceInspirationsInput,
 } from '../project-data-service-contracts.js';
@@ -56,6 +50,7 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
+import { requireAssetOwner } from '../assets/ownership.js';
 
 const lookbookIndexResourceKey = studioVisualLanguageLookbooksResourceKey();
 
@@ -117,61 +112,13 @@ export async function listLookbookSourceInspirations(
   });
 }
 
-export async function setLookbookCardImage(
-  input: SetLookbookCardImageInput
-): Promise<LookbookImageMutationReport> {
-  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
-    requireLookbookRecordById(session, input.lookbookId);
-    const image = requireLookbookImageRecord(session, input.imageId);
-    if (image.lookbookId !== input.lookbookId) {
-      throw new ProjectDataError(
-        'PROJECT_DATA247',
-        `Lookbook image ${input.imageId} does not belong to Lookbook ${input.lookbookId}.`
-      );
-    }
-    setLookbookCardImageRecord(session, {
-      lookbookId: input.lookbookId,
-      imageId: input.imageId,
-      now: new Date().toISOString(),
-    });
-    const lookbookImage = readLookbookImage(session, input.imageId);
-    if (!lookbookImage) {
-      throw new ProjectDataError(
-        'PROJECT_DATA237',
-        `Lookbook image was not found: ${input.imageId}.`
-      );
-    }
-    return imageMutationReport({
-      project,
-      projectFolder,
-      lookbookId: input.lookbookId,
-      image: lookbookImage,
-      changeType: 'lookbook.cardImageSet',
-    });
-  });
-}
-
-export async function clearLookbookCardImage(
-  input: { projectName?: string; homeDir?: string; lookbookId: string }
-): Promise<LookbookImageMutationReport> {
-  return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
-    requireLookbookRecordById(session, input.lookbookId);
-    clearLookbookCardImageRecord(session, input.lookbookId);
-    return imageMutationReport({
-      project,
-      projectFolder,
-      lookbookId: input.lookbookId,
-      changeType: 'lookbook.cardImageCleared',
-    });
-  });
-}
-
 export async function setLookbookImagePlacement(
   input: SetLookbookImagePlacementInput
 ): Promise<LookbookImageMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const imageRecord = requireLookbookImageRecord(session, input.imageId);
-    const lookbookRecord = requireLookbookRecordById(session, imageRecord.lookbookId);
+    const lookbookId = requireLookbookOwnerId(session, imageRecord.assetId);
+    const lookbookRecord = requireLookbookRecordById(session, lookbookId);
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     const now = new Date().toISOString();
     const placements = resolveLookbookImagePlacements({
@@ -180,12 +127,12 @@ export async function setLookbookImagePlacement(
       anchorPointId: input.anchorPointId,
     });
     assertLookbookImagePlacementCapacity(session, {
-      lookbookId: imageRecord.lookbookId,
+      lookbookId,
       imageId: input.imageId,
       placements,
     });
     replaceSingleLookbookImagePlacementSlots(session, {
-      lookbookId: imageRecord.lookbookId,
+      lookbookId,
       imageId: input.imageId,
       placements,
       now,
@@ -206,7 +153,7 @@ export async function setLookbookImagePlacement(
     return imageMutationReport({
       project,
       projectFolder,
-      lookbookId: imageRecord.lookbookId,
+      lookbookId,
       image,
       changeType: 'lookbook.imagePlacementSet',
     });
@@ -218,6 +165,7 @@ export async function deleteLookbookImage(
 ): Promise<LookbookImageMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const image = requireLookbookImageRecord(session, input.imageId);
+    const lookbookId = requireLookbookOwnerId(session, image.assetId);
     const report = discardTrashObject({
       session,
       project,
@@ -226,12 +174,12 @@ export async function deleteLookbookImage(
       itemId: input.imageId,
       commandName: 'lookbook.image.discard',
       changes: [
-        { type: 'lookbook.imageDiscarded', lookbookId: image.lookbookId },
+        { type: 'lookbook.imageDiscarded', lookbookId },
       ],
     });
     return {
       ...report,
-      lookbookId: image.lookbookId,
+      lookbookId,
     };
   });
 }
@@ -241,6 +189,7 @@ export async function deleteLookbookSheet(
 ): Promise<LookbookSheetMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const sheet = requireLookbookSheetRecord(session, input.sheetId);
+    const lookbookId = requireLookbookOwnerId(session, sheet.assetId);
     const report = discardTrashObject({
       session,
       project,
@@ -249,14 +198,28 @@ export async function deleteLookbookSheet(
       itemId: input.sheetId,
       commandName: 'lookbook.sheet.discard',
       changes: [
-        { type: 'lookbook.sheetDiscarded', lookbookId: sheet.lookbookId },
+        { type: 'lookbook.sheetDiscarded', lookbookId },
       ],
     });
     return {
       ...report,
-      lookbookId: sheet.lookbookId,
+      lookbookId,
     };
   });
+}
+
+function requireLookbookOwnerId(
+  session: DatabaseSession,
+  assetId: string
+): string {
+  const owner = requireAssetOwner(session, assetId);
+  if (owner.kind !== 'lookbook') {
+    throw new ProjectDataError(
+      'CORE_ASSET_STORAGE_INVALID',
+      `Lookbook detail Asset has invalid ownership: ${assetId}.`
+    );
+  }
+  return owner.id;
 }
 
 async function withVisualLanguageSession<T>(

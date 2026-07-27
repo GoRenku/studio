@@ -45,6 +45,7 @@ export interface TrashObjectGarbageCollectionContext extends TrashProjectContext
 }
 
 export interface TrashObjectResourceKeyContext {
+  session: DatabaseSession;
   itemId: string;
   ownerKind?: string | null;
   ownerId?: string | null;

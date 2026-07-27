@@ -54,12 +54,6 @@ export async function runLookbookCommand(
   if (action === 'image' && nested === 'discard') {
     return discardImage(options, service);
   }
-  if (action === 'card-image' && nested === 'set') {
-    return setCardImage(options, service);
-  }
-  if (action === 'card-image' && nested === 'clear') {
-    return clearCardImage(options, service);
-  }
   if (action === 'inspiration' && nested === 'list') {
     return listInspirations(options, service);
   }
@@ -142,31 +136,6 @@ async function discardImage(
     imageId: requiredFlag(options.flags.image, '--image'),
   });
   await notify(options, service, report, 'lookbook image discard');
-  return writeJson(options, report);
-}
-
-async function setCardImage(
-  options: LookbookCommandOptions,
-  service: Service
-): Promise<number> {
-  const report = await service.setLookbookCardImage({
-    ...projectInput(options),
-    lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-    imageId: requiredFlag(options.flags.image, '--image'),
-  });
-  await notify(options, service, report, 'lookbook card-image set');
-  return writeJson(options, report);
-}
-
-async function clearCardImage(
-  options: LookbookCommandOptions,
-  service: Service
-): Promise<number> {
-  const report = await service.clearLookbookCardImage({
-    ...projectInput(options),
-    lookbookId: requiredFlag(options.flags.lookbook, '--lookbook'),
-  });
-  await notify(options, service, report, 'lookbook card-image clear');
   return writeJson(options, report);
 }
 
@@ -284,7 +253,7 @@ function unknownCommand(
         'CLI095',
         'Unknown lookbook command.',
         { path: ['lookbook', action ?? '', nested ?? '', operation ?? ''] },
-        'Use show/validate/apply, image set-placement/discard, card-image set/clear, or inspiration list/set.'
+        'Use show/validate/apply, image set-placement/discard, or inspiration list/set.'
       ),
     ],
     suggestion: 'Use a supported lookbook command.',

@@ -1,54 +1,21 @@
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type {
   LookbookImage,
-  LookbookImageAsset,
-  LookbookImageAssetFile,
   LookbookSection,
-  LookbookKind,
 } from '../../../client/index.js';
 import {
-  assetFiles,
-  assets,
+  assetMemberships,
   lookbookImages,
   lookbookImageSections,
-  lookbook,
 } from '../../schema/index.js';
-import { normalizeProjectRelativePath } from '../../files/project-relative-paths.js';
+import { readOwnedAsset } from '../../assets/projection.js';
+import { assetOwnerKey, parseAssetOwnerKey } from '../../assets/owner-keys.js';
+import { requireLookbookRecordById } from './lookbook.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type LookbookImageRecord = typeof lookbookImages.$inferSelect;
 export type LookbookImageSectionRecord = typeof lookbookImageSections.$inferSelect;
-
-interface LookbookImageAssetRow {
-  id: string;
-  lookbookId: string;
-  assetId: string;
-  sortOrder: number;
-  lookbookKind: LookbookKind;
-  type: string;
-  mediaKind: string;
-  title: string;
-  oneLineSummary: string | null;
-  origin: string;
-  availability: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface LookbookImageAssetFileRow {
-  id: string;
-  assetId: string;
-  role: string;
-  projectRelativePath: string;
-  mediaKind: string;
-  mimeType: string | null;
-  sizeBytes: number | null;
-  contentHash: string | null;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
-}
 
 export function nextLookbookImageSortOrder(
   session: DatabaseSession,
@@ -57,7 +24,11 @@ export function nextLookbookImageSortOrder(
   const row = session.db
     .select({ maxSortOrder: sql<number | null>`max(${lookbookImages.sortOrder})` })
     .from(lookbookImages)
-    .where(and(eq(lookbookImages.lookbookId, lookbookId), isNull(lookbookImages.discardedAt)))
+    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
+    .where(and(
+      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: lookbookId })),
+      isNull(lookbookImages.discardedAt)
+    ))
     .get();
   return (row?.maxSortOrder ?? 0) + 1;
 }
@@ -66,49 +37,52 @@ export function insertLookbookImageRecord(
   session: DatabaseSession,
   input: {
     id: string;
-    lookbookId: string;
     assetId: string;
     sortOrder: number;
     now: string;
   }
 ): void {
-  session.db
-    .insert(lookbookImages)
-    .values({
-      id: input.id,
-      lookbookId: input.lookbookId,
-      assetId: input.assetId,
-      sortOrder: input.sortOrder,
-      createdAt: input.now,
-      updatedAt: input.now,
-    })
-    .run();
+  session.db.insert(lookbookImages).values({
+    id: input.id,
+    assetId: input.assetId,
+    sortOrder: input.sortOrder,
+    createdAt: input.now,
+    updatedAt: input.now,
+  }).run();
 }
 
 export function readLookbookImageRecord(
   session: DatabaseSession,
   imageId: string
 ): LookbookImageRecord | null {
-  return (
-    session.db
-      .select()
-      .from(lookbookImages)
-      .where(and(eq(lookbookImages.id, imageId), isNull(lookbookImages.discardedAt)))
-      .get() ?? null
-  );
+  return session.db
+    .select()
+    .from(lookbookImages)
+    .where(and(eq(lookbookImages.id, imageId), isNull(lookbookImages.discardedAt)))
+    .get() ?? null;
 }
 
 export function readLookbookImageRecordByAsset(
   session: DatabaseSession,
-  input: { lookbookId: string; assetId: string },
+  input: { lookbookId: string; assetId: string }
 ): LookbookImageRecord | null {
   return session.db
-    .select()
+    .select({
+      id: lookbookImages.id,
+      assetId: lookbookImages.assetId,
+      sortOrder: lookbookImages.sortOrder,
+      createdAt: lookbookImages.createdAt,
+      updatedAt: lookbookImages.updatedAt,
+      discardedAt: lookbookImages.discardedAt,
+      discardOperationId: lookbookImages.discardOperationId,
+      restoredAt: lookbookImages.restoredAt,
+    })
     .from(lookbookImages)
+    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
     .where(and(
-      eq(lookbookImages.lookbookId, input.lookbookId),
+      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
       eq(lookbookImages.assetId, input.assetId),
-      isNull(lookbookImages.discardedAt),
+      isNull(lookbookImages.discardedAt)
     ))
     .get() ?? null;
 }
@@ -131,10 +105,8 @@ export function deleteLookbookImageRecord(
   session: DatabaseSession,
   imageId: string
 ): void {
-  session.db
-    .delete(lookbookImageSections)
-    .where(eq(lookbookImageSections.imageId, imageId))
-    .run();
+  session.db.delete(lookbookImageSections)
+    .where(eq(lookbookImageSections.imageId, imageId)).run();
   session.db.delete(lookbookImages).where(eq(lookbookImages.id, imageId)).run();
 }
 
@@ -151,12 +123,8 @@ export function countLookbookImagePlacementSlotImages(
     excludeImageId?: string;
   }
 ): number {
-  const rows = readPlacementSlotImageIds(session, {
-    lookbookId: input.lookbookId,
-    placement: input.placement,
-  });
   return new Set(
-    rows
+    readPlacementSlotImageIds(session, input)
       .map((row) => row.imageId)
       .filter((imageId) => imageId !== input.excludeImageId)
   ).size;
@@ -180,20 +148,17 @@ export function deleteOtherLookbookImagePlacementSlotRecords(
     if (rows.length === 0) {
       continue;
     }
-    session.db
-      .delete(lookbookImageSections)
+    session.db.delete(lookbookImageSections)
       .where(inArray(lookbookImageSections.id, rows.map((row) => row.sectionId)))
       .run();
     rows.forEach((row) => affectedImageIds.add(row.imageId));
   }
-  if (affectedImageIds.size === 0) {
-    return;
+  if (affectedImageIds.size > 0) {
+    session.db.update(lookbookImages)
+      .set({ updatedAt: input.now })
+      .where(inArray(lookbookImages.id, Array.from(affectedImageIds)))
+      .run();
   }
-  session.db
-    .update(lookbookImages)
-    .set({ updatedAt: input.now })
-    .where(inArray(lookbookImages.id, Array.from(affectedImageIds)))
-    .run();
 }
 
 export function setLookbookImageSectionRecords(
@@ -205,42 +170,110 @@ export function setLookbookImageSectionRecords(
     now: string;
   }
 ): void {
-  session.db
-    .delete(lookbookImageSections)
-    .where(eq(lookbookImageSections.imageId, input.imageId))
-    .run();
+  session.db.delete(lookbookImageSections)
+    .where(eq(lookbookImageSections.imageId, input.imageId)).run();
   input.placements.forEach((placement, index) => {
-    session.db
-      .insert(lookbookImageSections)
-      .values({
-        id: input.nextId(),
-        imageId: input.imageId,
-        section: placement.section,
-        pointId: placement.pointId,
-        sortOrder: index + 1,
-        createdAt: input.now,
-        updatedAt: input.now,
-      })
-      .run();
+    session.db.insert(lookbookImageSections).values({
+      id: input.nextId(),
+      imageId: input.imageId,
+      section: placement.section,
+      pointId: placement.pointId,
+      sortOrder: index + 1,
+      createdAt: input.now,
+      updatedAt: input.now,
+    }).run();
   });
-  session.db
-    .update(lookbookImages)
+  session.db.update(lookbookImages)
     .set({ updatedAt: input.now })
-    .where(eq(lookbookImages.id, input.imageId))
-    .run();
+    .where(eq(lookbookImages.id, input.imageId)).run();
+}
+
+export function listLookbookImages(
+  session: DatabaseSession,
+  lookbookId: string
+): LookbookImage[] {
+  const records = session.db
+    .select({
+      id: lookbookImages.id,
+      assetId: lookbookImages.assetId,
+      sortOrder: lookbookImages.sortOrder,
+      createdAt: lookbookImages.createdAt,
+      updatedAt: lookbookImages.updatedAt,
+      discardedAt: lookbookImages.discardedAt,
+      discardOperationId: lookbookImages.discardOperationId,
+      restoredAt: lookbookImages.restoredAt,
+    })
+    .from(lookbookImages)
+    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
+    .where(and(
+      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: lookbookId })),
+      isNull(lookbookImages.discardedAt)
+    ))
+    .orderBy(asc(lookbookImages.sortOrder), asc(lookbookImages.id))
+    .all();
+  return projectLookbookImages(session, lookbookId, records);
+}
+
+export function readLookbookImage(
+  session: DatabaseSession,
+  imageId: string
+): LookbookImage | null {
+  const record = readLookbookImageRecord(session, imageId);
+  if (!record) {
+    return null;
+  }
+  const membership = session.db
+    .select({ ownerKey: assetMemberships.ownerKey })
+    .from(assetMemberships)
+    .where(eq(assetMemberships.assetId, record.assetId))
+    .get();
+  const owner = membership ? parseAssetOwnerKey(membership.ownerKey) : null;
+  if (owner?.kind !== 'lookbook') {
+    throw new ProjectDataError(
+      'CORE_ASSET_STORAGE_INVALID',
+      `Lookbook image ${imageId} has invalid Asset ownership.`
+    );
+  }
+  return projectLookbookImages(session, owner.id, [record])[0] ?? null;
+}
+
+function projectLookbookImages(
+  session: DatabaseSession,
+  lookbookId: string,
+  records: LookbookImageRecord[]
+): LookbookImage[] {
+  const lookbook = requireLookbookRecordById(session, lookbookId);
+  const placements = readPlacementsForRecords(session, records);
+  return records.map((record) => {
+    const asset = readOwnedAsset(session, {
+      owner: { kind: 'lookbook', id: lookbookId },
+      assetId: record.assetId,
+    });
+    if (!asset) {
+      throw new ProjectDataError(
+        'CORE_ASSET_STORAGE_INVALID',
+        `Lookbook image ${record.id} has no active owned Asset.`
+      );
+    }
+    const imagePlacements = placements.get(record.id) ?? [];
+    return {
+      id: record.id,
+      lookbookId,
+      lookbookKind: lookbook.kind,
+      asset,
+      sections: sectionLevelSections(imagePlacements),
+      points: anchoredPointIds(imagePlacements),
+    };
+  });
 }
 
 function readPlacementSlotImageIds(
   session: DatabaseSession,
-  input: {
-    lookbookId: string;
-    placement: LookbookImagePlacement;
-  }
+  input: { lookbookId: string; placement: LookbookImagePlacement }
 ): { imageId: string; sectionId: string }[] {
-  const pointCondition =
-    input.placement.pointId === null
-      ? isNull(lookbookImageSections.pointId)
-      : eq(lookbookImageSections.pointId, input.placement.pointId);
+  const pointCondition = input.placement.pointId === null
+    ? isNull(lookbookImageSections.pointId)
+    : eq(lookbookImageSections.pointId, input.placement.pointId);
   return session.db
     .select({
       imageId: lookbookImageSections.imageId,
@@ -248,218 +281,59 @@ function readPlacementSlotImageIds(
     })
     .from(lookbookImageSections)
     .innerJoin(lookbookImages, eq(lookbookImages.id, lookbookImageSections.imageId))
-    .where(
-      and(
-        eq(lookbookImages.lookbookId, input.lookbookId),
-        isNull(lookbookImages.discardedAt),
-        isNull(lookbookImageSections.discardedAt),
-        eq(lookbookImageSections.section, input.placement.section),
-        pointCondition
-      )
-    )
+    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
+    .where(and(
+      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
+      isNull(lookbookImages.discardedAt),
+      isNull(lookbookImageSections.discardedAt),
+      eq(lookbookImageSections.section, input.placement.section),
+      pointCondition
+    ))
     .all();
 }
 
-export function listLookbookImages(
+function readPlacementsForRecords(
   session: DatabaseSession,
-  lookbookId: string
-): LookbookImage[] {
-  const rows = session.db
-    .select({
-      id: lookbookImages.id,
-      lookbookId: lookbookImages.lookbookId,
-      assetId: lookbookImages.assetId,
-      sortOrder: lookbookImages.sortOrder,
-      lookbookKind: lookbook.kind,
-      type: assets.type,
-      mediaKind: assets.mediaKind,
-      title: assets.title,
-      oneLineSummary: assets.oneLineSummary,
-      origin: assets.origin,
-      availability: assets.availability,
-      createdAt: assets.createdAt,
-      updatedAt: assets.updatedAt,
-    })
-    .from(lookbookImages)
-    .innerJoin(assets, eq(assets.id, lookbookImages.assetId))
-    .innerJoin(lookbook, eq(lookbook.id, lookbookImages.lookbookId))
-    .where(and(eq(lookbookImages.lookbookId, lookbookId), isNull(lookbookImages.discardedAt)))
-    .orderBy(asc(lookbookImages.sortOrder), asc(lookbookImages.id))
-    .all() as LookbookImageAssetRow[];
-
-  const assetFilesByAssetId = readAssetFilesForRows(session, rows);
-  const placementsByImageId = readPlacementsForRows(session, rows);
-  return rows.map((row) => {
-    const placements = placementsByImageId.get(row.id) ?? [];
-    return {
-      id: row.id,
-      lookbookId: row.lookbookId,
-      lookbookKind: row.lookbookKind,
-      asset: toLookbookImageAsset(row, assetFilesByAssetId),
-      sections: sectionLevelSections(placements),
-      points: anchoredPointIds(placements),
-    };
-  });
-}
-
-export function readLookbookImage(
-  session: DatabaseSession,
-  imageId: string
-): LookbookImage | null {
-  const row = session.db
-    .select({
-      id: lookbookImages.id,
-      lookbookId: lookbookImages.lookbookId,
-      assetId: lookbookImages.assetId,
-      sortOrder: lookbookImages.sortOrder,
-      lookbookKind: lookbook.kind,
-      type: assets.type,
-      mediaKind: assets.mediaKind,
-      title: assets.title,
-      oneLineSummary: assets.oneLineSummary,
-      origin: assets.origin,
-      availability: assets.availability,
-      createdAt: assets.createdAt,
-      updatedAt: assets.updatedAt,
-    })
-    .from(lookbookImages)
-    .innerJoin(assets, eq(assets.id, lookbookImages.assetId))
-    .innerJoin(lookbook, eq(lookbook.id, lookbookImages.lookbookId))
-    .where(and(eq(lookbookImages.id, imageId), isNull(lookbookImages.discardedAt)))
-    .get() as LookbookImageAssetRow | undefined;
-  if (!row) {
-    return null;
-  }
-  const rows = [row];
-  const placements = readPlacementsForRows(session, rows).get(row.id) ?? [];
-  return {
-    id: row.id,
-    lookbookId: row.lookbookId,
-    lookbookKind: row.lookbookKind,
-    asset: toLookbookImageAsset(row, readAssetFilesForRows(session, rows)),
-    sections: sectionLevelSections(placements),
-    points: anchoredPointIds(placements),
-  };
-}
-
-function readAssetFilesForRows(
-  session: DatabaseSession,
-  rows: LookbookImageAssetRow[]
-): Map<string, LookbookImageAssetFileRow[]> {
-  const filesByAssetId = new Map<string, LookbookImageAssetFileRow[]>();
-  if (rows.length === 0) {
-    return filesByAssetId;
-  }
-  const assetIds = rows.map((row) => row.assetId);
-  const fileRows = session.db
-    .select({
-      id: assetFiles.id,
-      assetId: assetFiles.assetId,
-      role: assetFiles.role,
-      projectRelativePath: assetFiles.projectRelativePath,
-      mediaKind: assetFiles.mediaKind,
-      mimeType: assetFiles.mimeType,
-      sizeBytes: assetFiles.sizeBytes,
-      contentHash: assetFiles.contentHash,
-      width: assetFiles.width,
-      height: assetFiles.height,
-      durationSeconds: assetFiles.durationSeconds,
-    })
-    .from(assetFiles)
-    .where(inArray(assetFiles.assetId, assetIds))
-    .orderBy(asc(assetFiles.role), asc(assetFiles.id))
-    .all() as LookbookImageAssetFileRow[];
-  for (const row of fileRows) {
-    const existing = filesByAssetId.get(row.assetId) ?? [];
-    existing.push(row);
-    filesByAssetId.set(row.assetId, existing);
-  }
-  return filesByAssetId;
-}
-
-function readPlacementsForRows(
-  session: DatabaseSession,
-  rows: LookbookImageAssetRow[]
+  records: LookbookImageRecord[]
 ): Map<string, LookbookImagePlacement[]> {
-  const placementsByImageId = new Map<string, LookbookImagePlacement[]>();
-  if (rows.length === 0) {
-    return placementsByImageId;
+  const result = new Map<string, LookbookImagePlacement[]>();
+  if (records.length === 0) {
+    return result;
   }
-  const rowIds = rows.map((row) => row.id);
-  const sectionRows = session.db
-    .select()
-    .from(lookbookImageSections)
-    .where(inArray(lookbookImageSections.imageId, rowIds))
+  const rows = session.db.select().from(lookbookImageSections)
+    .where(and(
+      inArray(lookbookImageSections.imageId, records.map((record) => record.id)),
+      isNull(lookbookImageSections.discardedAt)
+    ))
     .orderBy(
       asc(lookbookImageSections.imageId),
       asc(lookbookImageSections.sortOrder),
       asc(lookbookImageSections.id)
     )
     .all();
-  for (const row of sectionRows) {
-    const existing = placementsByImageId.get(row.imageId) ?? [];
+  for (const row of rows) {
+    const existing = result.get(row.imageId) ?? [];
     existing.push({
       section: row.section as LookbookSection,
-      pointId: row.pointId ?? null,
+      pointId: row.pointId,
     });
-    placementsByImageId.set(row.imageId, existing);
+    result.set(row.imageId, existing);
   }
-  return placementsByImageId;
+  return result;
 }
 
 function sectionLevelSections(
   placements: LookbookImagePlacement[]
 ): LookbookSection[] {
-  const sections: LookbookSection[] = [];
-  for (const placement of placements) {
-    if (placement.pointId === null && !sections.includes(placement.section)) {
-      sections.push(placement.section);
-    }
-  }
-  return sections;
+  return placements
+    .filter((placement) => placement.pointId === null)
+    .map((placement) => placement.section)
+    .filter((section, index, sections) => sections.indexOf(section) === index);
 }
 
 function anchoredPointIds(placements: LookbookImagePlacement[]): string[] {
-  const points: string[] = [];
-  for (const placement of placements) {
-    if (placement.pointId !== null && !points.includes(placement.pointId)) {
-      points.push(placement.pointId);
-    }
-  }
-  return points;
-}
-
-function toLookbookImageAsset(
-  row: LookbookImageAssetRow,
-  filesByAssetId: Map<string, LookbookImageAssetFileRow[]>
-): LookbookImageAsset {
-  return {
-    assetId: row.assetId,
-    type: row.type,
-    mediaKind: row.mediaKind,
-    title: row.title,
-    oneLineSummary: row.oneLineSummary ?? undefined,
-    origin: row.origin,
-    availability: row.availability,
-    files: (filesByAssetId.get(row.assetId) ?? []).map(toLookbookImageAssetFile),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-function toLookbookImageAssetFile(
-  row: LookbookImageAssetFileRow
-): LookbookImageAssetFile {
-  return {
-    id: row.id,
-    role: row.role,
-    projectRelativePath: normalizeProjectRelativePath(row.projectRelativePath),
-    mediaKind: row.mediaKind,
-    mimeType: row.mimeType,
-    sizeBytes: row.sizeBytes,
-    contentHash: row.contentHash,
-    width: row.width,
-    height: row.height,
-    durationSeconds: row.durationSeconds,
-  };
+  return placements
+    .map((placement) => placement.pointId)
+    .filter((pointId): pointId is string => pointId !== null)
+    .filter((pointId, index, pointIds) => pointIds.indexOf(pointId) === index);
 }

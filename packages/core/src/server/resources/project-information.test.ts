@@ -167,14 +167,13 @@ describe('project information resource', () => {
     await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'project' },
+      owner: { kind: 'project' },
       locale: { localeId: 'locale_test0001' },
       type: 'reference',
       mediaKind: 'image',
       title: 'Project reference',
       projectRelativePath: assetPath as ProjectRelativePath,
       fileRole: 'primary',
-      role: 'reference',
     });
 
     await expect(
@@ -202,7 +201,7 @@ describe('project information resource', () => {
       issues: expect.arrayContaining([
         expect.objectContaining({
           code: 'PROJECT_DATA057',
-          message: expect.stringContaining('project_asset'),
+          message: expect.stringContaining('Asset'),
         }),
       ]),
     });

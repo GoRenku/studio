@@ -195,6 +195,7 @@ renku media import \
   --target lookbook:<lookbook-id> \
   --source <project-relative-path> \
   --sections palette,lighting \
+  --select \
   --json
 ```
 
@@ -203,20 +204,28 @@ also sit beside a point-level Production Lookbook pattern or observation, includ
 point-owning section and `--anchor`, for example `--sections thesis,texture
 --anchor texture-cannon-material-states`.
 
-Editing existing Lookbook image relationships stays Lookbook-specific:
+Editing existing Lookbook placement and lifecycle stays Lookbook-specific:
 
 ```bash
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera,texture --json
 renku lookbook image set-placement --image <lookbook-image-id> --sections camera --anchor <lookbook-point-id> --json
 renku lookbook image set-placement --image <lookbook-image-id> --sections thesis,texture --anchor <texture-point-id> --json
 renku lookbook image discard --image <lookbook-image-id> --json
-renku lookbook card-image set --lookbook <lookbook-id> --image <lookbook-image-id> --json
-renku lookbook card-image clear --lookbook <lookbook-id> --json
 ```
 
 Use `image set-placement` to retag or anchor an existing image. `image discard`
 is only for intentional removal from the Lookbook, and keeps the underlying
 media recoverable until Trash is emptied.
+
+`media import --select` atomically imports and selects a new canonical
+Lookbook image. To choose an existing candidate, list the Lookbook's Assets and
+use the common selection commands:
+
+```bash
+renku asset list --project <project-name> --owner lookbook:<lookbook-id> --type lookbook_image --json
+renku asset select --project <project-name> --target lookbook:<lookbook-id> --asset <asset-id> --json
+renku asset clear-selection --project <project-name> --target lookbook:<lookbook-id> --json
+```
 
 Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
 Point anchors are also stored there. When `--anchor` is present, the owning

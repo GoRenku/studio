@@ -13,18 +13,28 @@ or architecture decision.
 ### 2026-07-19 — Convert local development data instead of preserving obsolete contracts
 
 - **User objection:** A review treated old values in the single local sample
-  database as a reason to keep or choose an obsolete product name.
+  database as a reason to keep or choose an obsolete product name. A later plan
+  made the opposite mistake: it applied a “no existing data” instruction about
+  one never-created Shot-image schema to a cross-domain Asset refactor even
+  though the sample project already contained Cast, Location, Lookbook,
+  Storyboard, Dialogue Audio, and generic relationship rows.
 - **Planning rule:** When the user confirms the current product contract and
   only pre-customer development data uses the old contract, plan one verified
   one-way data conversion, update every current caller and document directly,
   and remove the old value from runtime code. Do not add aliases, dual-role
-  matching, fallback readers, or compatibility diagnostics.
+  matching, fallback readers, or compatibility diagnostics. Scope “no data”
+  assumptions to the exact tables and migrations proven empty or unapplied;
+  every populated table affected by a broader schema change needs an explicit
+  preservation mapping and verification.
 - **Apply when:** Repository code and accepted docs disagree with the intended
   product name while the conflicting persisted state is limited to local sample
-  projects that can be backed up and upgraded once.
+  projects that can be backed up and upgraded once, or when a new feature
+  triggers consolidation of already-populated neighboring domain tables.
 - **Evidence to inspect:** Search current contracts, relationship roles, asset
   types, persisted JSON keys, storage paths, tests, documentation, sister
-  skills, and the real sample database; keep obsolete wording only in the
+  skills, the Drizzle journal and applied schema generation, and per-table rows
+  in the real sample database. Identify duplicate Asset ownership and file-path
+  cases before defining the conversion; keep obsolete wording only in the
   one-way conversion or explicit historical records.
 
 ### 2026-07-19 — Trace concepts to needs without erasing requirement detail
@@ -135,6 +145,91 @@ or architecture decision.
   validation count with the direct user-visible outcome. Remove the slice when
   the shared machinery is larger than the accepted product behavior or revives
   a previously rejected dependency model.
+
+### 2026-07-26 — Inspect analogous owned-media paths before choosing the schema
+
+- **User objection:** A Shot image plan mechanically copied generic Asset
+  relationship columns, confused copying with sharing one Asset, and then
+  proposed removing common Asset machinery too broadly without first comparing
+  Cast profile images, Location hero images, storyboard images, Lookbook
+  membership, lifecycle services, and skill workflows. A later correction still
+  chose one of those inconsistent existing patterns and added another public
+  Asset shape instead of recognizing that the repeated ownership and selection
+  implementations themselves needed consolidation. Another revision treated
+  batch Storyboard generation and slicing as a reason to preserve a separate
+  durable Beat-image association even though each sliced image has the same
+  owner, candidate, and canonical-selection behavior as a Shot image.
+- **Planning rule:** Before designing an owned-media collection, trace the
+  nearest existing examples through schema, public projection, Core mutation,
+  file/provenance persistence, selection, copy, Trash, CLI, and agent guidance.
+  When the same product concept already has several storage tables, public
+  shapes, commands, or selection paths, do not select one flawed precedent or
+  add a new adapter beside them. Identify one source of truth, move the existing
+  owners to that model in the same architecture slice, and delete the duplicate
+  paths. Keep focused domain-detail records only when they own real additional
+  facts rather than mirroring generic ownership or selection. Require a current
+  product need for every remaining column. Keep generation batching,
+  compositing, slicing, and import orchestration outside the durable model once
+  their outputs become ordinary owned media. Unless the product explicitly
+  says “share,” copying creates independent entity, file, and path identities.
+- **Apply when:** Adding a media candidate collection, selected image, owner
+  membership, copy operation, or purpose-specific generation attachment,
+  especially when two or more existing domains already implement similar
+  collection or selection behavior differently.
+- **Evidence to inspect:** Generic relationship tables and why their roles and
+  ordering exist; purpose-specific child tables and why their extra columns
+  exist; existing selection tables and commands; Asset/AssetFile write-sets,
+  provenance, copy, and Trash primitives; duplicated Asset type versus
+  relationship-role values; real project rows that store the same ownership
+  twice; whether a focused record exists only because several outputs were
+  generated or imported together; public response shapes, UI collection
+  plumbing, CLI, and sister-skill call sequences.
+
+### 2026-07-26 — Keep canonical display selection separate from generation choice
+
+- **User objection:** A proposed unified Asset model put `selected` on every
+  Asset without preserving that Profile, Hero, Lookbook card, Shot image, and
+  Beat Storyboard image selection is a canonical representation choice, while
+  Character Sheet, Location Sheet, Dialogue Audio Take, and other generation
+  references are chosen independently by each generation request.
+- **Planning rule:** Name and model selection by product scope rather than media
+  kind. A canonical selection may exist only when the product defines one
+  current representation for its subject, including one Storyboard image for a
+  Beat as well as owner-level Profile, Hero, Lookbook card, and Shot images.
+  Generation reference choices, including the exact Dialogue Audio Take, belong
+  to the persisted GenerationSpec that consumes them and must never read,
+  initialize, or mutate canonical representation state. A shared Asset
+  collection model must preserve this distinction rather than making every
+  image or audio Asset globally selectable.
+- **Apply when:** Consolidating Asset ownership, adding a selected flag or
+  command, defining media import selection, projecting generation candidates,
+  or making a canonical image available to UI and downstream workflows.
+- **Evidence to inspect:** Focused display-choice requirements and UI uses;
+  the durable identity of nested subjects such as a Beat within a Beat Sheet;
+  Asset type capabilities; `GenerationSpec.references`; purpose reference
+  guides and exact AssetFile or Dialogue Audio Take selections;
+  import-and-select commands; tests that prove one request can choose a
+  different Character Sheet, Location Sheet, or Dialogue Audio Take without
+  changing canonical representation state.
+
+### 2026-07-26 — Design skill workflows around user intents, not command count alone
+
+- **User objection:** Agent skills were made fragile by requiring several small
+  CLI mutations for one accepted intent, while a simplistic cleanup risked
+  collapsing meaningful generation safety and approval steps.
+- **Planning rule:** Give one durable user intent one coarse Core/CLI operation
+  when it can be atomic, such as importing and explicitly selecting an accepted
+  image or creating an initial collection from one document. Keep separate
+  calls when they represent real review, approval, execution, inspection, or
+  later-edit boundaries. Add skill evals for unnecessary loops as well as for
+  skipped safety gates.
+- **Apply when:** A Studio skill repeatedly reads unchanged context, creates an
+  aggregate object one child at a time, or performs a second mutation that was
+  already explicit in the first command's user intent.
+- **Evidence to inspect:** The owning Core transaction, CLI flag/document
+  contract, existing Preview and approval workflow, aggregate context coverage,
+  focused later-edit commands, and forward evals for both efficiency and
+  correctness.
 
 ### 2026-07-23 — Keep plan review manual and user-controlled
 

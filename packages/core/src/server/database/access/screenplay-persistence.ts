@@ -13,11 +13,10 @@ import type {
 } from '../../../client/screenplay.js';
 import {
   acts,
+  assetMemberships,
   sceneLocations,
-  sceneAssets,
   scenes,
   screenplay,
-  sequenceAssets,
   sequences,
 } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -29,6 +28,7 @@ import {
   type ProjectIdGenerator,
 } from '../../entity-ids.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
+import { parseAssetOwnerKey } from '../../assets/owner-keys.js';
 
 export interface ResolvedScreenplayDocument {
   document: ScreenplayDocument;
@@ -405,7 +405,7 @@ function collectDuplicateIdsInCollection(
 }
 
 export function replaceScreenplayDocument(session: DatabaseSession, document: ScreenplayDocument): void {
-  assertNoScreenplayAssetRelationships(session);
+  assertNoOwnedScreenplayAssets(session);
   try {
     session.db.transaction(() => {
       deleteScreenplayTables(session);
@@ -485,22 +485,25 @@ export function replaceScreenplayDocument(session: DatabaseSession, document: Sc
   }
 }
 
-function assertNoScreenplayAssetRelationships(session: DatabaseSession): void {
-  const relationship = [
-    session.db.select({ id: sequenceAssets.id }).from(sequenceAssets).get(),
-    session.db.select({ id: sceneAssets.id }).from(sceneAssets).get(),
-  ].find(Boolean);
+function assertNoOwnedScreenplayAssets(session: DatabaseSession): void {
+  const relationship = session.db.select().from(assetMemberships).all()
+    .find((membership) => {
+      const owner = parseAssetOwnerKey(membership.ownerKey);
+      return owner.kind === 'sequence'
+        || owner.kind === 'scene'
+        || owner.kind === 'sceneBeat';
+    });
   if (!relationship) {
     return;
   }
   throw new ProjectDataError(
     'PROJECT_DATA213',
-    'Screenplay changes would orphan existing asset relationships.',
+    'Screenplay changes would orphan owned Assets.',
     {
       issues: [
         createDiagnosticError(
           'PROJECT_DATA213',
-          'Screenplay changes would orphan existing asset relationships.',
+          'Screenplay changes would orphan owned Assets.',
           { path: ['screenplay'] },
           'Remove or move the dependent assets before replacing screenplay rows.'
         ),

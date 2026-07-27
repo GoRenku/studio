@@ -111,13 +111,10 @@ async function createExternalSource(homeDir: string, name: string): Promise<{
     sourceProjectRelativePath: `tmp/${name}.png`,
     title: `${name} source`,
   });
-  if (!('files' in attachment.asset)) {
-    throw new Error('Expected a Cast-owned Asset.');
-  }
   return {
     projectData,
     source: {
-      assetId: attachment.asset.assetId,
+      assetId: attachment.asset.id,
       assetFileId: attachment.asset.files[0]!.id,
     },
   };

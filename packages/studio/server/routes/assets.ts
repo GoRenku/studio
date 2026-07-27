@@ -2,7 +2,6 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readAssetPageRequest } from '../http/asset-request.js';
 import {
-  readAssetFileResponse,
   readProjectAssetFileByIdResponse,
 } from '../http/asset-file-response.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -50,7 +49,7 @@ export function createAssetsRoute({
         const castMemberId = c.req.param('castMemberId') as string;
         const page = await projectData.listAssetPage({
           projectName,
-          target: { kind: 'castMember', castMemberId },
+          owner: { kind: 'castMember', id: castMemberId },
           ...readPageRequest(c.req.query()),
         });
         return c.json({ assets: page.items, page });
@@ -102,16 +101,16 @@ export function createAssetsRoute({
       }
     })
     .post(
-      '/cast/:castMemberId/display-profile/:assetId',
+      '/cast/:castMemberId/selected-profile/:assetId',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const castMemberId = c.req.param('castMemberId') as string;
           const assetId = c.req.param('assetId') as string;
-          const report = await projectData.setCastProfileDisplayAsset({
+          const report = await projectData.selectAsset({
             projectName,
-            castMemberId,
+            target: { kind: 'castMember', id: castMemberId },
             assetId,
           });
           return c.json(report);
@@ -121,15 +120,15 @@ export function createAssetsRoute({
       }
     )
     .delete(
-      '/cast/:castMemberId/display-profile',
+      '/cast/:castMemberId/selected-profile',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const castMemberId = c.req.param('castMemberId') as string;
-          const report = await projectData.clearCastProfileDisplayAsset({
+          const report = await projectData.clearAssetSelection({
             projectName,
-            castMemberId,
+            target: { kind: 'castMember', id: castMemberId },
           });
           return c.json(report);
         } catch (error) {
@@ -144,26 +143,10 @@ export function createAssetsRoute({
         const assetId = c.req.param('assetId') as string;
         const report = await projectData.discardAsset({
           projectName,
-          target: { kind: 'castMember', castMemberId },
+          owner: { kind: 'castMember', id: castMemberId },
           assetId,
         });
         return c.json(report);
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/cast/:castMemberId/assets/:assetId/files/:assetFileId', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const castMemberId = c.req.param('castMemberId') as string;
-        const assetId = c.req.param('assetId') as string;
-        const assetFileId = c.req.param('assetFileId') as string;
-        return await readAssetFileResponse(projectData, {
-          projectName,
-          target: { kind: 'castMember', castMemberId },
-          assetId,
-          assetFileId,
-        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -174,7 +157,7 @@ export function createAssetsRoute({
         const locationId = c.req.param('locationId') as string;
         const page = await projectData.listAssetPage({
           projectName,
-          target: { kind: 'location', locationId },
+          owner: { kind: 'location', id: locationId },
           ...readPageRequest(c.req.query()),
         });
         return c.json({ assets: page.items, page });
@@ -182,14 +165,14 @@ export function createAssetsRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .post('/locations/:locationId/display-hero/:assetId', requireToken, async (c) => {
+    .post('/locations/:locationId/selected-hero/:assetId', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const locationId = c.req.param('locationId') as string;
         const assetId = c.req.param('assetId') as string;
-        const report = await projectData.setLocationHeroDisplayAsset({
+        const report = await projectData.selectAsset({
           projectName,
-          locationId,
+          target: { kind: 'location', id: locationId },
           assetId,
         });
         return c.json(report);
@@ -197,13 +180,13 @@ export function createAssetsRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .delete('/locations/:locationId/display-hero', requireToken, async (c) => {
+    .delete('/locations/:locationId/selected-hero', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const locationId = c.req.param('locationId') as string;
-        const report = await projectData.clearLocationHeroDisplayAsset({
+        const report = await projectData.clearAssetSelection({
           projectName,
-          locationId,
+          target: { kind: 'location', id: locationId },
         });
         return c.json(report);
       } catch (error) {
@@ -217,42 +200,10 @@ export function createAssetsRoute({
         const assetId = c.req.param('assetId') as string;
         const report = await projectData.discardAsset({
           projectName,
-          target: { kind: 'location', locationId },
+          owner: { kind: 'location', id: locationId },
           assetId,
         });
         return c.json(report);
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/locations/:locationId/assets/:assetId/files/:assetFileId', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const locationId = c.req.param('locationId') as string;
-        const assetId = c.req.param('assetId') as string;
-        const assetFileId = c.req.param('assetFileId') as string;
-        return await readAssetFileResponse(projectData, {
-          projectName,
-          target: { kind: 'location', locationId },
-          assetId,
-          assetFileId,
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/scenes/:sceneId/assets/:assetId/files/:assetFileId', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const sceneId = c.req.param('sceneId') as string;
-        const assetId = c.req.param('assetId') as string;
-        const assetFileId = c.req.param('assetFileId') as string;
-        return await readAssetFileResponse(projectData, {
-          projectName,
-          target: { kind: 'scene', sceneId },
-          assetId,
-          assetFileId,
-        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

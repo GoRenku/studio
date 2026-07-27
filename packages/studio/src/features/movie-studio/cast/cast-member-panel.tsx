@@ -9,8 +9,9 @@ import {
   deleteCastAsset,
   deleteCastVoice,
   readCastAssets,
-  clearCastProfileDisplayAsset,
-  setCastProfileDisplayAsset,
+  clearSelectedCastProfile,
+  selectCastProfileAsset,
+  type StudioAssetCollection,
 } from '@/services/studio-project-assets-api';
 import {
   readCastMemberResource,
@@ -30,7 +31,8 @@ interface CastMemberPanelProps {
 
 export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelProps) {
   const [resource, setResource] = useState<CastMemberResourceResponse | null>(null);
-  const [assets, setAssets] = useState<StudioAssetResponse[]>([]);
+  const [assetCollection, setAssetCollection] =
+    useState<StudioAssetCollection>({ items: [], selectedAssetId: null });
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
 
@@ -40,7 +42,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
       readCastAssets(projectName, castMemberId),
     ]);
     setResource(nextResource);
-    setAssets(nextAssets);
+    setAssetCollection(nextAssets);
     setError(null);
   }, [castMemberId, projectName]);
 
@@ -53,7 +55,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
       .then(([nextResource, nextAssets]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setAssets(nextAssets);
+          setAssetCollection(nextAssets);
           setError(null);
         }
       })
@@ -76,12 +78,12 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
 
   const togglePick = async (asset: StudioAssetResponse) => {
     try {
-      if (resource?.firstImage?.assetId === asset.assetId) {
-        await clearCastProfileDisplayAsset(projectName, castMemberId);
+      if (assetCollection.selectedAssetId === asset.id) {
+        await clearSelectedCastProfile(projectName, castMemberId);
         await refreshCastMember();
         return;
       }
-      await setCastProfileDisplayAsset(projectName, castMemberId, asset.assetId);
+      await selectCastProfileAsset(projectName, castMemberId, asset.id);
       await refreshCastMember();
     } catch (selectError) {
       toast.error(errorMessage(selectError));
@@ -90,7 +92,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
 
   const removeAsset = async (asset: StudioAssetResponse) => {
     try {
-      await deleteCastAsset(projectName, castMemberId, asset.assetId);
+      await deleteCastAsset(projectName, castMemberId, asset.id);
       await refreshCastMember();
     } catch (deleteError) {
       toast.error(errorMessage(deleteError));
@@ -140,19 +142,18 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
       <LineTabsContent value='details'>
         <CastMemberDetailsTab
           projectName={projectName}
-          castMemberId={castMemberId}
           resource={resource}
-          assets={assets}
+          assets={assetCollection.items}
+          selectedProfileAssetId={assetCollection.selectedAssetId}
           onVoiceOverChange={updateVoiceOver}
         />
       </LineTabsContent>
       <LineTabsContent value='assets'>
         <CastMemberAssetsTab
           projectName={projectName}
-          castMemberId={castMemberId}
           resource={resource}
-          assets={assets}
-          displayProfileAssetId={resource.firstImage?.assetId ?? null}
+          assets={assetCollection.items}
+          selectedProfileAssetId={assetCollection.selectedAssetId}
           onTogglePick={togglePick}
           onDeleteAsset={removeAsset}
           onDeleteVoice={removeVoice}

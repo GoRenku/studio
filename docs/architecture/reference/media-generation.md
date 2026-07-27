@@ -159,24 +159,39 @@ agent-external-Spec provenance and become independent Project Assets under
 Trash lifecycles remain independent, and request inspection reads only the
 frozen Spec or Run snapshot recorded for the Asset File.
 
-## Shot Representative Images
+## Shot Images
 
 `shot.image` is an image purpose targeting `{ kind: "shot", id }`. Core
 resolves the exact Shot and owning Scene, projects opaque Shot facts, and
 recommends the current project aspect ratio. It does not inspect Shot prose or
 pixels.
 
-Focused import writes a `shot-image` relationship and the Core-owned path
-`shot-plans/<plan-id>/shots/<shot-id>/images/`. It never changes the separate
-representative selection. Managed imports require an exact matching Run;
-external Codex imports require the exact frozen agent-external Spec.
+Focused import writes a `shot_image` Asset, exclusive Shot membership, and the
+Core-owned path `shot-plans/<plan-id>/shots/<shot-id>/images/`. Import may
+atomically select the candidate when `select` is explicit. Choosing an existing
+candidate uses common Asset selection. Managed imports require an exact
+matching Run; external Codex imports require the exact frozen agent-external
+Spec.
+
+Copying a Shot Plan copies only each source Shot's selected image. Core
+allocates new Asset and AssetFile ids, copies bytes to new Shot-owned paths, and
+preserves existing provenance links. The copied image and source image then
+have independent ownership and Trash lifecycles.
+
+## Database Generation 53
+
+Migration `0067_unified_asset_ownership.sql` replaces relationship storage with
+exclusive `asset_membership`, adds common `selected_asset`, preserves
+Asset/File/provenance, Shot ownership and selection, and focused detail facts,
+and advances the project database to generation 53. It aborts ambiguous
+existing ownership rather than guessing. There is no compatibility reader or
+creative-data rewrite.
 
 ## Database Generation 52
 
-Migration `0066_concerned_the_fury.sql` adds Shot title and lifecycle columns,
-`shot_asset`, and `shot_representative_display_asset`, then advances the
-project database to generation 52. There is no brief compatibility reader or
-creative-data rewrite.
+Migration `0066_concerned_the_fury.sql` adds Shot title and lifecycle columns
+plus the Shot Asset and selected-image tables that migration 0067 converts into
+the common ownership and selection model.
 
 ## Database Generation 51
 

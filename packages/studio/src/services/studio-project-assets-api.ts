@@ -9,12 +9,13 @@ interface StudioAssetsResponse {
   page: {
     items: StudioAssetResponse[];
     nextCursor: string | null;
+    selectedAssetId: string | null;
   };
 }
 
-interface StudioAssetApiResponse {
-  asset: StudioAssetResponse | null;
-  resourceKeys?: string[];
+export interface StudioAssetCollection {
+  items: StudioAssetResponse[];
+  selectedAssetId: string | null;
 }
 
 interface StudioCastVoiceDeleteResponse {
@@ -33,8 +34,9 @@ interface SceneDesignResourceApiResponse {
 export async function readCastAssets(
   projectName: string,
   castMemberId: string
-): Promise<StudioAssetResponse[]> {
+): Promise<StudioAssetCollection> {
   const assets: StudioAssetResponse[] = [];
+  let selectedAssetId: string | null = null;
   let cursor: string | null = null;
   do {
     const search = new URLSearchParams({ limit: '200' });
@@ -48,16 +50,18 @@ export async function readCastAssets(
 
     const body = (await response.json()) as StudioAssetsResponse;
     assets.push(...body.page.items);
+    selectedAssetId = body.page.selectedAssetId;
     cursor = body.page.nextCursor;
   } while (cursor);
-  return assets;
+  return { items: assets, selectedAssetId };
 }
 
 export async function readLocationAssets(
   projectName: string,
   locationId: string
-): Promise<StudioAssetResponse[]> {
+): Promise<StudioAssetCollection> {
   const assets: StudioAssetResponse[] = [];
+  let selectedAssetId: string | null = null;
   let cursor: string | null = null;
   do {
     const search = new URLSearchParams({ limit: '200' });
@@ -71,9 +75,10 @@ export async function readLocationAssets(
 
     const body = (await response.json()) as StudioAssetsResponse;
     assets.push(...body.page.items);
+    selectedAssetId = body.page.selectedAssetId;
     cursor = body.page.nextCursor;
   } while (cursor);
-  return assets;
+  return { items: assets, selectedAssetId };
 }
 
 export async function readSceneDesignResource(
@@ -95,13 +100,13 @@ export async function readSceneDesignResource(
   return body.resource;
 }
 
-export async function setCastProfileDisplayAsset(
+export async function selectCastProfileAsset(
   projectName: string,
   castMemberId: string,
   assetId: string
-): Promise<StudioAssetResponse> {
+): Promise<void> {
   const response = await fetch(
-    castProfileDisplayUrl(projectName, castMemberId, assetId),
+    castProfileSelectionUrl(projectName, castMemberId, assetId),
     {
       method: 'POST',
       headers: {
@@ -115,19 +120,15 @@ export async function setCastProfileDisplayAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as StudioAssetApiResponse;
-  if (!body.asset) {
-    throw new Error('Renku Studio API returned no cast asset.');
-  }
-  return body.asset;
+  await response.json();
 }
 
-export async function clearCastProfileDisplayAsset(
+export async function clearSelectedCastProfile(
   projectName: string,
   castMemberId: string
 ): Promise<void> {
   const response = await fetch(
-    castProfileDisplayUrl(projectName, castMemberId),
+    castProfileSelectionUrl(projectName, castMemberId),
     {
       method: 'DELETE',
       headers: {
@@ -180,13 +181,13 @@ export async function deleteCastVoice(
   return body.removed;
 }
 
-export async function setLocationHeroDisplayAsset(
+export async function selectLocationHeroAsset(
   projectName: string,
   locationId: string,
   assetId: string
-): Promise<StudioAssetResponse> {
+): Promise<void> {
   const response = await fetch(
-    locationHeroDisplayUrl(projectName, locationId, assetId),
+    locationHeroSelectionUrl(projectName, locationId, assetId),
     {
       method: 'POST',
       headers: {
@@ -200,19 +201,15 @@ export async function setLocationHeroDisplayAsset(
     throw await readStudioApiError(response);
   }
 
-  const body = (await response.json()) as StudioAssetApiResponse;
-  if (!body.asset) {
-    throw new Error('Renku Studio API returned no location asset.');
-  }
-  return body.asset;
+  await response.json();
 }
 
-export async function clearLocationHeroDisplayAsset(
+export async function clearSelectedLocationHero(
   projectName: string,
   locationId: string
 ): Promise<void> {
   const response = await fetch(
-    locationHeroDisplayUrl(projectName, locationId),
+    locationHeroSelectionUrl(projectName, locationId),
     {
       method: 'DELETE',
       headers: {
@@ -246,31 +243,12 @@ export async function deleteLocationAsset(
   return assetId;
 }
 
-export function castAssetFileUrl(
+export function projectAssetFileUrl(
   projectName: string,
-  castMemberId: string,
   assetId: string,
   assetFileId: string
 ): string {
-  return `${castAssetsUrl(projectName, castMemberId)}/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
-}
-
-export function locationAssetFileUrl(
-  projectName: string,
-  locationId: string,
-  assetId: string,
-  assetFileId: string
-): string {
-  return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
-}
-
-export function sceneAssetFileUrl(
-  projectName: string,
-  sceneId: string,
-  assetId: string,
-  assetFileId: string
-): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
 }
 
 function castAssetsUrl(projectName: string, castMemberId: string): string {
@@ -305,21 +283,21 @@ function locationAssetUrl(
   return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}`;
 }
 
-function castProfileDisplayUrl(
+function castProfileSelectionUrl(
   projectName: string,
   castMemberId: string,
   assetId?: string
 ): string {
-  const root = castAssetsUrl(projectName, castMemberId).replace(/\/assets$/, '/display-profile');
+  const root = castAssetsUrl(projectName, castMemberId).replace(/\/assets$/, '/selected-profile');
   return assetId ? `${root}/${encodeURIComponent(assetId)}` : root;
 }
 
-function locationHeroDisplayUrl(
+function locationHeroSelectionUrl(
   projectName: string,
   locationId: string,
   assetId?: string
 ): string {
-  const root = locationAssetsUrl(projectName, locationId).replace(/\/assets$/, '/display-hero');
+  const root = locationAssetsUrl(projectName, locationId).replace(/\/assets$/, '/selected-hero');
   return assetId ? `${root}/${encodeURIComponent(assetId)}` : root;
 }
 

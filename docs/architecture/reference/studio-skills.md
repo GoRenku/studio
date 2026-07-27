@@ -128,8 +128,8 @@ operational companions that teach agents how to use those contracts.
   whole-plan replacement.
 - Keeps descriptions opaque, briefs concise, and status/timeline concepts out
   of the workflow.
-- Hands `shot.image` generation to `media-producer`, then imports and selects
-  the accepted representative in separate steps.
+- Hands `shot.image` generation to `media-producer`, which imports and selects
+  the accepted image atomically when selection is the user's intent.
 
 `scene-beat-designer`
 

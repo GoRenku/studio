@@ -907,7 +907,7 @@ describe('renku CLI', () => {
       valid: true,
       purpose: 'lookbook.image',
       target: { kind: 'lookbook', id: report.lookbook.id },
-      asset: expect.objectContaining({ assetId: expect.any(String) }),
+      asset: expect.objectContaining({ id: expect.any(String) }),
       ownerRecord: { kind: 'lookbookImage', id: expect.any(String) },
     });
 
@@ -993,7 +993,7 @@ describe('renku CLI', () => {
       valid: true,
       purpose: 'lookbook.video-sheet',
       target: { kind: 'lookbook', id: report.lookbook.id },
-      asset: expect.objectContaining({ assetId: expect.any(String) }),
+      asset: expect.objectContaining({ id: expect.any(String) }),
       ownerRecord: { kind: 'lookbookSheet', id: expect.any(String) },
     });
 
@@ -1168,14 +1168,13 @@ describe('renku CLI', () => {
     );
     expect(characterSheetImportExitCode).toBe(0);
     const characterSheetImport = JSON.parse(stdout.join('\n')) as {
-      asset: { assetId: string; files: Array<{ projectRelativePath: string }> };
+      asset: { id: string; files: Array<{ projectRelativePath: string }> };
     };
     expect(characterSheetImport).toMatchObject({
       valid: true,
       purpose: 'cast.character-sheet',
       asset: expect.objectContaining({
         type: 'character_sheet',
-        role: 'character-sheet',
         files: [expect.objectContaining({ role: 'primary' })],
       }),
     });
@@ -1250,6 +1249,7 @@ describe('renku CLI', () => {
         `cast:${castMemberId}`,
         '--source',
         profileRun.run.outputs[0]!.projectRelativePath,
+        '--select',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -1259,7 +1259,7 @@ describe('renku CLI', () => {
       valid: true,
       purpose: 'cast.profile',
       asset: {
-        role: 'profile',
+        type: 'cast_profile',
         files: [expect.objectContaining({ role: 'primary' })],
       },
     });
@@ -1403,7 +1403,7 @@ describe('renku CLI', () => {
       valid: true,
       purpose: 'location.sheet',
       asset: {
-        role: 'location-sheet',
+        type: 'location_sheet',
         files: [expect.objectContaining({ role: 'primary' })],
       },
     });
@@ -1497,11 +1497,12 @@ describe('renku CLI', () => {
         '--source',
         locationHeroRun.run.outputs[0]!.projectRelativePath,
         '--source-sheet',
-        locationImportReport.asset.assetId,
+        locationImportReport.asset.id,
         '--title',
         'Council Chamber Hero Image',
         '--summary',
-        'Council chamber representative image for overview cards and the detail header.',
+        'Council chamber overview image for cards and the detail header.',
+        '--select',
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -1512,7 +1513,7 @@ describe('renku CLI', () => {
       valid: true,
       purpose: 'location.hero',
       asset: {
-        role: 'hero',
+        type: 'location_hero',
         files: [expect.objectContaining({ role: 'primary' })],
       },
     });
@@ -1572,13 +1573,13 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
 
-    expect(importExitCode).toBe(0);
+    expect(importExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       valid: true,
       purpose: 'cast.profile',
       target: { kind: 'castMember', id: castMemberId },
       asset: {
-        role: 'profile',
+        type: 'cast_profile',
         files: [expect.objectContaining({ role: 'primary' })],
       },
       resourceKeys: [`surface:castMember:${castMemberId}`],
@@ -1700,7 +1701,7 @@ describe('renku CLI', () => {
       voice: {
         id: string;
         name: string;
-        sample: { assetId: string };
+        sample: { id: string };
         providerRegistrations: Array<{ id: string }>;
       };
     };
@@ -1717,7 +1718,6 @@ describe('renku CLI', () => {
           }),
         ],
         sample: {
-          role: 'voice_sample',
           files: [
             {
               projectRelativePath: 'cast/urban/voice-samples/normal-voice.mp3',
@@ -1781,7 +1781,7 @@ describe('renku CLI', () => {
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       removed: {
         voiceId: attached.voice.id,
-        sampleAssetId: attached.voice.sample.assetId,
+        sampleAssetId: attached.voice.sample.id,
       },
     });
   });
@@ -1833,7 +1833,6 @@ describe('renku CLI', () => {
       purpose: 'cast.character-sheet',
       asset: {
         type: 'character_sheet',
-        role: 'character-sheet',
         files: [expect.objectContaining({ role: 'primary' })],
       },
     });
@@ -1843,12 +1842,10 @@ describe('renku CLI', () => {
     const updateExitCode = await runRenkuCli(
       [
         'asset',
-        'reference-update',
-        imported.asset.assetId,
+        'update',
+        imported.asset.id,
         '--project',
         'constantinople',
-        '--target',
-        `cast:${castMemberId}`,
         '--reference-name',
         'urban-siege-workshop-main',
         '--reference-purpose',
@@ -1862,8 +1859,7 @@ describe('renku CLI', () => {
     expect(updateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       asset: {
-        assetId: imported.asset.assetId,
-        relationshipId: imported.asset.relationshipId,
+        id: imported.asset.id,
         referenceName: 'urban-siege-workshop-main',
         purpose: 'main workshop character sheet',
         title: 'Urban Workshop Main Character Sheet',
@@ -2144,7 +2140,10 @@ describe('renku CLI', () => {
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(validateOperationsExitCode).toBe(0);
+    expect(
+      validateOperationsExitCode,
+      stderr.join('\n') + stdout.join('\n')
+    ).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({ valid: true });
 
     stdout = [];
@@ -2173,7 +2172,7 @@ describe('renku CLI', () => {
       ['screenplay', 'beat-sheet', 'apply', '--file', operationPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(applyExitCode).toBe(0);
+    expect(applyExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
     const applyReport = JSON.parse(stdout.join('\n'));
     expect(applyReport).toMatchObject({
       baseBeatSheetId: writeReport.activeBeatSheetId,
@@ -2329,7 +2328,7 @@ describe('renku CLI', () => {
     );
     expect(storyboardSheetImportExitCode).toBe(0);
     const storyboardSheetImport = JSON.parse(stdout.join('\n')) as {
-      asset: { assetId: string; assetFileId: string };
+      asset: { id: string; files: Array<{ id: string }> };
     };
 
     stdout = [];
@@ -2419,7 +2418,7 @@ describe('renku CLI', () => {
         {
           executionKind: 'renku-managed',
           purpose: 'image.edit',
-          target: { kind: 'asset', id: storyboardSheetImport.asset.assetId },
+          target: { kind: 'asset', id: storyboardSheetImport.asset.id },
           model: { provider: 'fal-ai', model: 'openai/gpt-image-2/edit' },
           values: { prompt: 'A still first frame for Urban studying the bronze.' },
           references: [
@@ -2432,8 +2431,8 @@ describe('renku CLI', () => {
               providerField: 'image_urls',
               reference: {
                 kind: 'asset-file',
-                assetId: storyboardSheetImport.asset.assetId,
-                assetFileId: storyboardSheetImport.asset.assetFileId,
+                assetId: storyboardSheetImport.asset.id,
+                assetFileId: storyboardSheetImport.asset.files[0]!.id,
               },
             },
           ],
@@ -2466,7 +2465,7 @@ describe('renku CLI', () => {
         references: [
           expect.objectContaining({
             reference: expect.objectContaining({
-              assetId: storyboardSheetImport.asset.assetId,
+              assetId: storyboardSheetImport.asset.id,
             }),
           }),
         ],
@@ -2559,6 +2558,7 @@ describe('renku CLI', () => {
         {
           kind: 'sceneStoryboardImagesImport',
           beatSheetId: writeReport.activeBeatSheetId,
+          select: true,
           beats: [{ beatId: 'beat_001', source: 'generated/media/beat.png' }],
         },
         null,
@@ -2585,10 +2585,9 @@ describe('renku CLI', () => {
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(importExitCode).toBe(0);
+    expect(importExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
-      storyboardImageIds: [expect.any(String)],
       imported: [expect.objectContaining({ type: 'scene_storyboard_image' })],
       files: [
         expect.objectContaining({
@@ -2611,6 +2610,7 @@ describe('renku CLI', () => {
         {
           kind: 'sceneStoryboardImagesImport',
           beatSheetId: writeReport.activeBeatSheetId,
+          select: true,
           title: 'Foundry grouped storyboard',
           beats: [
             { beatId: 'beat_001', source: 'generated/media/beat-1.png' },
@@ -2644,7 +2644,6 @@ describe('renku CLI', () => {
     expect(multiImportExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       purpose: 'scene.storyboard-sheet',
-      storyboardImageIds: [expect.any(String), expect.any(String)],
       imported: [
         expect.objectContaining({ type: 'scene_storyboard_image' }),
         expect.objectContaining({ type: 'scene_storyboard_image' }),

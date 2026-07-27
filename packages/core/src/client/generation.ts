@@ -1,4 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import type { AssetOwner } from './assets.js';
 import type { ProjectRelativePath } from './project.js';
 
 export type JsonScalar = string | number | boolean | null;
@@ -186,7 +187,7 @@ export interface GenerationReferenceCatalogItem {
   width: number | null;
   height: number | null;
   durationSeconds: number | null;
-  owner: { kind: string; id: string } | null;
+  owner: AssetOwner | null;
   role: string;
   provenance: {
     origin: string;

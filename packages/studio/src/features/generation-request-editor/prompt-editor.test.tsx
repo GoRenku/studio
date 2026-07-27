@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe('PromptEditor', () => {
-  it('emits one representative controlled prompt edit', () => {
+  it('emits one controlled prompt edit', () => {
     const onValueChange = vi.fn();
     render(
       <PromptEditor

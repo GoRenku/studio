@@ -10,53 +10,54 @@ import {
   writeConfig,
 } from '../testing/project-data-fixtures.js';
 
-describe('update Asset reference', () => {
+describe('Asset metadata', () => {
   let homeDir: string;
 
   beforeEach(async () => {
-    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-asset-update-test-'));
+    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-asset-metadata-test-'));
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
   });
 
-  it('returns project identity and Core-owned owner surface keys', async () => {
+  it('rejects an unknown locale with a structured Core error before writing', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return;
     }
-    const projectRelativePath = 'tmp/profile.png' as ProjectRelativePath;
+    const projectRelativePath = 'tmp/reference.png' as ProjectRelativePath;
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(path.join(created.projectPath, projectRelativePath), 'image');
     const asset = await createTestAssetFixture({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'castMember', castMemberId: 'cast_test0001' },
-      type: 'profile',
+      owner: { kind: 'location', id: 'location_test0001' },
+      type: 'location_sheet',
       mediaKind: 'image',
-      title: 'Profile',
+      title: 'Location Sheet',
       projectRelativePath,
       fileRole: 'primary',
-      role: 'profile',
     });
 
-    const report = await projectData.updateAssetReference({
+    await expect(projectData.updateAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'castMember', castMemberId: 'cast_test0001' },
-      assetId: asset.assetId,
-      referenceName: 'urban-profile',
+      assetId: asset.id,
+      title: 'Changed title',
+      localeId: 'locale_missing',
+    })).rejects.toMatchObject({
+      code: 'CORE_ASSET_LOCALE_INVALID',
     });
 
-    expect(report).toMatchObject({
-      valid: true,
-      warnings: [],
-      project: {
-        id: expect.any(String),
-        name: 'constantinople',
-        projectFolder: created.projectPath,
-      },
-      asset: { assetId: asset.assetId, referenceName: 'urban-profile' },
-      resourceKeys: ['surface:castMember:cast_test0001'],
-    });
+    await expect(projectData.listAssets({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'location', id: 'location_test0001' },
+    })).resolves.toEqual([
+      expect.objectContaining({
+        id: asset.id,
+        title: 'Location Sheet',
+        localeId: null,
+      }),
+    ]);
   });
 });

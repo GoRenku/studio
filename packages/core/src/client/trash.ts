@@ -4,7 +4,6 @@ export type TrashActorKind = 'user' | 'agent' | 'system';
 
 export type TrashItemKind =
   | 'asset'
-  | 'assetRelationship'
   | 'castVoice'
   | 'inspirationFolder'
   | 'inspirationImage'

@@ -2,12 +2,13 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { insertGenerationRunRecord } from '../database/access/media-generation.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { freezeManagedGenerationSpec } from '../generation/spec-lifecycle.js';
 import { createProjectDataService } from '../project-data-service.js';
+import { assets } from '../schema/index.js';
 import {
   createSampleMovieProject,
   writeConfig,
@@ -418,7 +419,7 @@ describe('Shot Plans', () => {
       receipt: { id: 'media_generation_run_video_import' },
     });
     expect(first.asset).toMatchObject({
-      role: 'generated-video',
+      type: 'project_video',
       mediaKind: 'video',
       files: [
         expect.objectContaining({
@@ -463,8 +464,8 @@ describe('Shot Plans', () => {
     const discarded = await projectData.discardAsset({
       projectName: 'constantinople',
       homeDir,
-      target: { kind: 'project' },
-      assetId: first.asset.assetId,
+      owner: first.asset.owner,
+      assetId: first.asset.id,
     });
     expect((await projectData.readShotPlan({
       projectName: 'constantinople',
@@ -536,9 +537,9 @@ describe('Shot Plans', () => {
       const [state] = session.db.all(sql`
         select
           (select count(*) from shot where shot_plan_id = ${plan.shotPlan.id}) as shot_count,
-          (select discarded_at from asset where id = ${attachment.asset.assetId}) as asset_discarded_at,
+          (select discarded_at from asset where id = ${attachment.asset.id}) as asset_discarded_at,
           (select count(*) from media_generation_spec where id = ${spec.id}) as spec_count,
-          (select count(*) from project_asset where asset_id = ${attachment.asset.assetId}) as relationship_count
+          (select count(*) from asset_membership where asset_id = ${attachment.asset.id} and owner_key = 'project') as relationship_count
       `) as Array<{
         shot_count: number;
         asset_discarded_at: string | null;
@@ -645,9 +646,39 @@ describe('Shot Plans', () => {
       title: 'Second candidate',
       sourceSpecId: sourceSpec.id,
     });
-    if (!('files' in first.asset) || !('files' in second.asset)) {
-      throw new Error('Expected shot.image attachments to return complete Assets.');
-    }
+    const initialShot = (
+      await projectData.readShotPlan({
+        projectName: 'constantinople',
+        homeDir,
+        shotPlanId: plan.shotPlan.id,
+      })
+    ).shotPlan.shots[0]!;
+    expect(initialShot.selectedImageId).toBeNull();
+    expect(initialShot.images.map((image) => image.id)).toEqual(
+      expect.arrayContaining([first.asset.id, second.asset.id])
+    );
+    await expect(
+      projectData.selectAsset({
+        projectName: 'constantinople',
+        homeDir,
+        target: { kind: 'shot', id: shot.id },
+        assetId: 'asset_missing',
+      })
+    ).rejects.toMatchObject({ code: 'CORE_ASSET_SELECTION_INVALID' });
+
+    await projectData.selectAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'shot', id: shot.id },
+      assetId: first.asset.id,
+    });
+    const discarded = await projectData.discardShotImageCandidate({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+      shotId: shot.id,
+      assetId: first.asset.id,
+    });
     expect(
       (
         await projectData.readShotPlan({
@@ -655,48 +686,8 @@ describe('Shot Plans', () => {
           homeDir,
           shotPlanId: plan.shotPlan.id,
         })
-      ).shotPlan.shots[0]!.representativeImage
+      ).shotPlan.shots[0]!.selectedImageId
     ).toBeNull();
-    await expect(
-      projectData.setShotRepresentativeImage({
-        projectName: 'constantinople',
-        homeDir,
-        shotPlanId: plan.shotPlan.id,
-        shotId: shot.id,
-        assetId: 'asset_missing',
-      })
-    ).rejects.toMatchObject({ code: 'CORE_SHOT_IMAGE_INVALID' });
-
-    const selected = await projectData.setShotRepresentativeImage({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      shotId: shot.id,
-      assetId: first.asset.assetId,
-    });
-    expect(selected.shotPlan.shots[0]!.representativeImage).toMatchObject({
-      assetId: first.asset.assetId,
-      role: 'shot-image',
-    });
-    await expect(
-      projectData.discardShotImageCandidate({
-        projectName: 'constantinople',
-        homeDir,
-        shotPlanId: plan.shotPlan.id,
-        shotId: shot.id,
-        assetId: first.asset.assetId,
-      })
-    ).rejects.toMatchObject({
-      code: 'CORE_SHOT_IMAGE_DISCARD_SELECTED',
-    });
-
-    const discarded = await projectData.discardShotImageCandidate({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      shotId: shot.id,
-      assetId: second.asset.assetId,
-    });
     const restoredCandidate = await projectData.restoreTrashItem({
       projectName: 'constantinople',
       homeDir,
@@ -705,15 +696,12 @@ describe('Shot Plans', () => {
     expect(restoredCandidate.resourceKeys).toEqual([
       `surface:scene:${fixture.sceneId}:shot-plans`,
     ]);
-    expect(
-      (
-        await projectData.readShotPlan({
-          projectName: 'constantinople',
-          homeDir,
-          shotPlanId: plan.shotPlan.id,
-        })
-      ).shotPlan.shots[0]!.representativeImage?.assetId
-    ).toBe(first.asset.assetId);
+    await projectData.selectAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'shot', id: shot.id },
+      assetId: first.asset.id,
+    });
 
     const copied = await projectData.copyShotPlan({
       projectName: 'constantinople',
@@ -721,16 +709,42 @@ describe('Shot Plans', () => {
       shotPlanId: plan.shotPlan.id,
     });
     const copiedShot = copied.shotPlan.shots[0]!;
-    expect(copiedShot.representativeImage?.assetId).toBe(first.asset.assetId);
-    expect(
-      await projectData.listAssets({
+    expect(copiedShot.images).toHaveLength(1);
+    expect(copiedShot.selectedImageId).toBe(copiedShot.images[0]!.id);
+    expect(copiedShot.selectedImageId).not.toBe(first.asset.id);
+    expect(copiedShot.images[0]!.owner).toEqual({
+      kind: 'shot',
+      id: copiedShot.id,
+    });
+    expect(copiedShot.images[0]!.files[0]!.projectRelativePath).not.toBe(
+      first.asset.files[0]!.projectRelativePath
+    );
+    await expect(
+      fs.readFile(
+        path.join(
+          fixture.projectFolder,
+          copiedShot.images[0]!.files[0]!.projectRelativePath
+        )
+      )
+    ).resolves.toEqual(
+      await fs.readFile(
+        path.join(
+          fixture.projectFolder,
+          first.asset.files[0]!.projectRelativePath
+        )
+      )
+    );
+    await expect(
+      projectData.listAssets({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'shot', shotId: copiedShot.id },
+        owner: { kind: 'shot', id: copiedShot.id },
       })
-    ).toHaveLength(1);
+    ).resolves.toEqual([
+      expect.objectContaining({ id: copiedShot.selectedImageId }),
+    ]);
 
-    const sharedOwnerDeletion = await projectData.deleteShotPlan({
+    const originalDeletion = await projectData.deleteShotPlan({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: plan.shotPlan.id,
@@ -744,67 +758,26 @@ describe('Shot Plans', () => {
         .all(sql`
           select discarded_at, restored_at
           from asset
-          where id = ${first.asset.assetId}
+          where id = ${first.asset.id}
         `) as Array<{
           discarded_at: string | null;
           restored_at: string | null;
         }>;
-      expect(assetState).toEqual({
-        discarded_at: null,
-        restored_at: null,
-      });
+      expect(assetState?.discarded_at).not.toBeNull();
+      expect(
+        sharedOwnerSession.session.db
+          .select()
+          .from(assets)
+          .where(eq(assets.id, copiedShot.selectedImageId!))
+          .get()?.discardedAt
+      ).toBeNull();
     } finally {
       sharedOwnerSession.session.close();
     }
     await projectData.restoreTrashItem({
       projectName: 'constantinople',
       homeDir,
-      trashItemId: sharedOwnerDeletion.recovery.trashItemIds[0]!,
-    });
-    const restoredSharedOwnerSession = await openProjectSession({
-      projectName: 'constantinople',
-      homeDir,
-    });
-    try {
-      const [assetState] = restoredSharedOwnerSession.session.db
-        .all(sql`
-          select discarded_at, restored_at
-          from asset
-          where id = ${first.asset.assetId}
-        `) as Array<{
-          discarded_at: string | null;
-          restored_at: string | null;
-        }>;
-      expect(assetState).toEqual({
-        discarded_at: null,
-        restored_at: null,
-      });
-    } finally {
-      restoredSharedOwnerSession.session.close();
-    }
-
-    await projectData.clearShotRepresentativeImage({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      shotId: shot.id,
-    });
-    const sharedCandidateDiscard = await projectData.discardShotImageCandidate({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      shotId: shot.id,
-      assetId: first.asset.assetId,
-    });
-    const sharedCopyDeletion = await projectData.deleteShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: copied.shotPlan.id,
-    });
-    await projectData.restoreTrashItem({
-      projectName: 'constantinople',
-      homeDir,
-      trashItemId: sharedCandidateDiscard.recovery.trashItemIds[0]!,
+      trashItemId: originalDeletion.recovery.trashItemIds[0]!,
     });
     expect(
       (
@@ -813,28 +786,14 @@ describe('Shot Plans', () => {
           homeDir,
           shotPlanId: plan.shotPlan.id,
         })
-      ).shotPlan.shots[0]!.representativeImage
-    ).toBeNull();
-    expect(
-      await projectData.listAssets({
-        projectName: 'constantinople',
-        homeDir,
-        target: { kind: 'shot', shotId: shot.id },
-      })
-    ).toHaveLength(2);
-    await projectData.restoreTrashItem({
-      projectName: 'constantinople',
-      homeDir,
-      trashItemId: sharedCopyDeletion.recovery.trashItemIds[0]!,
-    });
-    await projectData.setShotRepresentativeImage({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      shotId: shot.id,
-      assetId: first.asset.assetId,
-    });
+      ).shotPlan.shots[0]!.selectedImageId
+    ).toBe(first.asset.id);
 
+    await projectData.clearAssetSelection({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'shot', id: shot.id },
+    });
     const removed = await projectData.removeShotFromPlan({
       projectName: 'constantinople',
       homeDir,
@@ -862,73 +821,37 @@ describe('Shot Plans', () => {
           homeDir,
           shotPlanId: plan.shotPlan.id,
         })
-      ).shotPlan.shots[0]!.representativeImage?.assetId
-    ).toBe(first.asset.assetId);
+      ).shotPlan.shots[0]!.selectedImageId
+    ).toBeNull();
 
-    const deletedOriginal = await projectData.deleteShotPlan({
+    const copyDeletion = await projectData.deleteShotPlan({
       projectName: 'constantinople',
       homeDir,
-      shotPlanId: plan.shotPlan.id,
+      shotPlanId: copied.shotPlan.id,
     });
     expect(
       (
         await projectData.readShotPlan({
           projectName: 'constantinople',
           homeDir,
-          shotPlanId: copied.shotPlan.id,
+          shotPlanId: plan.shotPlan.id,
         })
-      ).shotPlan.shots[0]!.representativeImage?.assetId
-    ).toBe(first.asset.assetId);
-
-    const deletedCopy = await projectData.deleteShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: copied.shotPlan.id,
-    });
-    const garbageCollection = await projectData.previewGarbageCollection({
-      projectName: 'constantinople',
-      homeDir,
-    });
-    const collectablePaths = garbageCollection.files.map(
-      (file) => file.originalProjectRelativePath
-    );
-    expect(collectablePaths).toHaveLength(2);
-    expect(new Set(collectablePaths).size).toBe(2);
-    expect(collectablePaths).toEqual(
-      expect.arrayContaining([
-        first.asset.files[0]!.projectRelativePath,
-        second.asset.files[0]!.projectRelativePath,
-      ])
-    );
-
-    const restoredOriginal = await projectData.restoreTrashItem({
-      projectName: 'constantinople',
-      homeDir,
-      trashItemId: deletedOriginal.recovery.trashItemIds[0]!,
-    });
-    expect(restoredOriginal.resourceKeys).toEqual([
-      `surface:scene:${fixture.sceneId}:shot-plans`,
-    ]);
-    expect(
-      await projectData.listAssets({
-        projectName: 'constantinople',
-        homeDir,
-        target: { kind: 'shot', shotId: shot.id },
-      })
-    ).toHaveLength(2);
-
+      ).shotPlan.shots[0]!.images.map((image) => image.id)
+    ).toEqual(expect.arrayContaining([first.asset.id, second.asset.id]));
     await projectData.restoreTrashItem({
       projectName: 'constantinople',
       homeDir,
-      trashItemId: deletedCopy.recovery.trashItemIds[0]!,
+      trashItemId: copyDeletion.recovery.trashItemIds[0]!,
     });
-    expect(
-      await projectData.listAssets({
+    await expect(
+      projectData.listAssets({
         projectName: 'constantinople',
         homeDir,
-        target: { kind: 'shot', shotId: copiedShot.id },
+        owner: { kind: 'shot', id: copiedShot.id },
       })
-    ).toHaveLength(1);
+    ).resolves.toEqual([
+      expect.objectContaining({ id: copiedShot.selectedImageId }),
+    ]);
   });
 
   it('keeps video.create context project-scoped and free of Shot Plan facts', async () => {

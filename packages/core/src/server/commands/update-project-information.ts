@@ -5,17 +5,12 @@ import {
 } from '@gorenku/studio-diagnostics';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectInformationResource } from '../../client/index.js';
-import { listCastAssetRecords } from '../database/access/asset-relationships/cast-members.js';
-import {
-  listSceneAssetRecords,
-  listSequenceAssetRecords,
-} from '../database/access/asset-relationships/screenplay-assets.js';
 import {
   listProjectLocaleRecords,
   replaceProjectLocaleRecords,
   type ProjectLocaleRecord,
 } from '../database/access/project-locales.js';
-import { listProjectAssetRecords } from '../database/access/asset-relationships/project.js';
+import { listAssetRecords } from '../database/access/assets.js';
 import {
   effectiveProjectAspectRatio,
   readProjectInformationResourceFromDatabase,
@@ -217,11 +212,9 @@ function validateProjectInformationUpdate(update: ProjectInformationUpdate): voi
   }
 }
 
-interface LocaleAssetReference {
-  tableName: string;
-  relationshipId: string;
+interface LocaleAssetUse {
   assetId: string;
-  role: string;
+  type: string;
 }
 
 function assertRemovedLocalesAreUnused(
@@ -234,17 +227,17 @@ function assertRemovedLocalesAreUnused(
 
   const issues: DiagnosticIssue[] = [];
   for (const locale of removedLocales) {
-    const references = listLocaleAssetReferences(session, locale.id);
+    const references = listLocaleAssetUses(session, locale.id);
     for (const reference of references) {
       issues.push(
         createDiagnosticError(
           'PROJECT_DATA057',
-          `Project locale ${locale.localeTag} cannot be removed because ${reference.tableName} ${reference.relationshipId} still uses asset ${reference.assetId} as ${reference.role}.`,
+          `Project locale ${locale.localeTag} cannot be removed because Asset ${reference.assetId} still uses it as ${reference.type}.`,
           {
             path: ['languages', locale.localeTag],
             context: 'project information update',
           },
-          'Remove or reassign the locale-specific asset relationship before removing this project locale.'
+          'Remove or reassign the locale-specific Asset before removing this project locale.'
         )
       );
     }
@@ -264,44 +257,13 @@ function assertRemovedLocalesAreUnused(
   }
 }
 
-function listLocaleAssetReferences(
+function listLocaleAssetUses(
   session: DatabaseSession,
   localeId: string
-): LocaleAssetReference[] {
-  return [
-    ...listProjectAssetRecords(session)
-      .filter((asset) => asset.localeId === localeId)
-      .map((asset) => ({
-        tableName: 'project_asset',
-        relationshipId: asset.id,
-        assetId: asset.assetId,
-        role: asset.role,
-      })),
-    ...listCastAssetRecords(session)
-      .filter((asset) => asset.localeId === localeId)
-      .map((asset) => ({
-        tableName: 'cast_asset',
-        relationshipId: asset.id,
-        assetId: asset.assetId,
-        role: asset.role,
-      })),
-    ...listSequenceAssetRecords(session)
-      .filter((asset) => asset.localeId === localeId)
-      .map((asset) => ({
-        tableName: 'sequence_asset',
-        relationshipId: asset.id,
-        assetId: asset.assetId,
-        role: asset.role,
-      })),
-    ...listSceneAssetRecords(session)
-      .filter((asset) => asset.localeId === localeId)
-      .map((asset) => ({
-        tableName: 'scene_asset',
-        relationshipId: asset.id,
-        assetId: asset.assetId,
-        role: asset.role,
-      })),
-  ];
+): LocaleAssetUse[] {
+  return listAssetRecords(session)
+    .filter((asset) => asset.localeId === localeId)
+    .map((asset) => ({ assetId: asset.id, type: asset.type }));
 }
 
 async function readCurrentProjectInformationUpdate(input: {

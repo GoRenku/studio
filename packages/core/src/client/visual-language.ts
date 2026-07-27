@@ -1,5 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { ProjectRelativePath } from './project.js';
+import type { Asset } from './assets.js';
 import type { RecoverableMutationReport } from './trash.js';
 
 export interface InspirationFolder {
@@ -141,7 +142,7 @@ export interface LookbookImage {
   id: string;
   lookbookId: string;
   lookbookKind: LookbookKind;
-  asset: LookbookImageAsset;
+  asset: Asset;
   /** Sections this image is section-level evidence for (un-anchored placements). */
   sections: LookbookSection[];
   /** Point ids this image is anchored to (e.g. a specific pattern or observation). */
@@ -152,59 +153,7 @@ export interface LookbookSheet {
   id: string;
   lookbookId: string;
   lookbookKind: LookbookKind;
-  asset: LookbookSheetAsset;
-}
-
-export interface LookbookImageAsset {
-  assetId: string;
-  type: string;
-  mediaKind: string;
-  title: string;
-  oneLineSummary?: string;
-  origin: string;
-  availability: string;
-  files: LookbookImageAssetFile[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface LookbookSheetAsset {
-  assetId: string;
-  type: string;
-  mediaKind: string;
-  title: string;
-  oneLineSummary?: string;
-  origin: string;
-  availability: string;
-  files: LookbookSheetAssetFile[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface LookbookImageAssetFile {
-  id: string;
-  role: string;
-  projectRelativePath: ProjectRelativePath;
-  mediaKind: string;
-  mimeType: string | null;
-  sizeBytes: number | null;
-  contentHash: string | null;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
-}
-
-export interface LookbookSheetAssetFile {
-  id: string;
-  role: string;
-  projectRelativePath: ProjectRelativePath;
-  mediaKind: string;
-  mimeType: string | null;
-  sizeBytes: number | null;
-  contentHash: string | null;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
+  asset: Asset;
 }
 
 export interface ThesisSection {
