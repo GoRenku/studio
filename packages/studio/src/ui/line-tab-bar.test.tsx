@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { LineTabBar } from './line-tab-bar';
 import { Tabs } from './tabs';
 
@@ -24,5 +24,31 @@ describe('LineTabBar', () => {
     expect(prompt.className).toContain('px-3');
     expect(prompt.className).toContain('data-[state=active]:!bg-item-active-bg');
     expect(prompt.className).toContain('after:!bottom-0');
+  });
+
+  it('keeps disabled items visible and prevents activation', () => {
+    const onValueChange = vi.fn();
+    render(
+      <Tabs defaultValue='shot-plans' onValueChange={onValueChange}>
+        <LineTabBar items={[
+          { value: 'shot-plans', label: 'Shot Plans' },
+          { value: 'generations', label: 'Generations', disabled: true },
+        ]} />
+      </Tabs>,
+    );
+
+    const shotPlans = screen.getByRole('tab', { name: 'Shot Plans' });
+    const generations = screen.getByRole('tab', { name: 'Generations' });
+    expect(document.body.contains(generations)).toBe(true);
+    expect(generations.hasAttribute('disabled')).toBe(true);
+
+    fireEvent.click(generations);
+    expect(onValueChange).not.toHaveBeenCalled();
+
+    fireEvent.focus(shotPlans);
+    fireEvent.keyDown(shotPlans, { key: 'ArrowRight' });
+    expect(shotPlans.getAttribute('data-state')).toBe('active');
+    expect(generations.getAttribute('data-state')).toBe('inactive');
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 });

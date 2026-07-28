@@ -195,16 +195,19 @@ function CastAssetSection({
         selection:
           selectable && onTogglePick
             ? {
+                kind: 'toggle' as const,
                 selected,
                 selectedLabel: `Clear ${roleLabel} pick`,
                 unselectedLabel: `Set ${roleLabel} pick`,
                 onToggle: () => onTogglePick(asset),
               }
             : undefined,
-        inspectionAction: onInspectImage
+        cornerAction: onInspectImage
           ? {
+              kind: 'inspect' as const,
               label: 'View generation request',
-              onInspect: () => onInspectImage(asset),
+              visibility: 'always' as const,
+              onAction: () => onInspectImage(asset),
             }
           : undefined,
         deleteAction: {

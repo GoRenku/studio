@@ -35,9 +35,12 @@ resource-refresh backlogs.
 `studio.projectRefreshRequested` remains available for the narrower project
 information and project library refresh cases.
 
-Scene focus uses the current `narrative`, `beats`, and `shots` tab vocabulary.
-Only the Beats tab accepts a nested `beatId`; the Shots tab is an inert
-persistence-free placeholder and has no Shot or Take route state.
+Scene focus uses the current `narrative`, `beats`, and `shotPlans` tab
+vocabulary. The Beats tab may carry `beatId`. The Shot Plans tab may carry a
+Scene-owned `shotPlanId` and, beneath it, a plan-owned `shotId`. Core validates
+both ownership relationships before the browser consumes the focus. The
+collection and in-page detail use the same URL-backed selection; Back clears
+only the nested plan and Shot focus.
 
 Generation previews use `studio.generationPreviewsRequested`. This event opens or
 updates the Generation Preview Dialog with an ordered array of one or more

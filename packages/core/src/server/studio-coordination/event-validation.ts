@@ -2,13 +2,13 @@ import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-dia
 import { StudioCoordinationError } from './errors.js';
 import {
   STUDIO_COORDINATION_EVENT_VERSION,
-  type StudioSelection,
   type StudioEvent,
   type StudioEventSource,
   type StudioProjectRef,
 } from './events.js';
+import type { StudioSelection } from '../../client/index.js';
 
-const SCENE_PANEL_TABS = ['narrative', 'beats', 'shots'];
+const SCENE_PANEL_TABS = ['narrative', 'beats', 'shotPlans'];
 
 export function validateStudioEvent(value: unknown): StudioEvent {
   const issues = collectStudioEventIssues(value);
@@ -182,7 +182,10 @@ function validateSelection(value: unknown, path: string[], issues: ReturnType<ty
     }
     const fields = Object.keys(selection);
     const unknownField = fields.find(
-      (field) => !['type', 'id', 'sceneTab', 'beatId'].includes(field)
+      (field) =>
+        !['type', 'id', 'sceneTab', 'beatId', 'shotPlanId', 'shotId'].includes(
+          field
+        )
     );
     if (unknownField) {
       issues.push(

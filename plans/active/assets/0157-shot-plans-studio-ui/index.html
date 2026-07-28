@@ -1,0 +1,2266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Renku Studio — Shot Brief Cards</title>
+    <script src="https://unpkg.com/lucide@0.556.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --background: hsl(0 0% 20%);
+        --panel-bg: hsl(0 0% 20%);
+        --panel-header-bg: hsl(0 0% 20%);
+        --card: hsl(0 0% 29%);
+        --card-foreground: hsl(60 51% 91%);
+        --foreground: hsl(60 51% 91%);
+        --primary: hsl(42 75% 48%);
+        --muted: hsl(0 0% 32%);
+        --muted-foreground: hsl(0 0% 65%);
+        --border: hsl(0 0% 35%);
+        --panel-border: hsl(0 0% 26%);
+        --item-hover-bg: hsl(0 0% 32%);
+        --item-active-bg: hsl(42 65% 45% / 0.2);
+        --item-active-border: hsl(42 65% 45% / 0.5);
+        --ring: hsl(42 65% 45% / 0.5);
+        --radius: 10px;
+        --shadow-2xl: 0 32px 64px -12px hsl(0 0% 0% / 0.9);
+        font-family: Montserrat, Inter, ui-sans-serif, system-ui, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 760px;
+        min-height: 100vh;
+        background:
+          radial-gradient(
+            circle at 50% 12%,
+            hsl(42 65% 45% / 0.07),
+            transparent 27rem
+          ),
+          var(--background);
+        color: var(--foreground);
+      }
+
+      .prototype-shell {
+        min-height: 100vh;
+        padding: 38px 42px;
+      }
+
+      .prototype-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: min(1480px, calc(100vw - 84px));
+        margin: 0 auto 14px;
+        color: var(--muted-foreground);
+        font-size: 10px;
+        font-weight: 650;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .prototype-label span:last-child {
+        color: hsl(42 70% 66%);
+      }
+
+      .scene-workspace,
+      .shot-plan-detail-page {
+        width: min(1480px, calc(100vw - 84px));
+        min-height: 700px;
+        margin: 0 auto;
+      }
+
+      .scene-workspace {
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        background: var(--panel-bg);
+        box-shadow: var(--shadow-2xl);
+      }
+
+      .scene-header {
+        padding: 20px 22px 0;
+      }
+
+      .scene-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+
+      .scene-tabs {
+        display: flex;
+        align-items: stretch;
+        min-height: 44px;
+        margin-top: 14px;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.45);
+      }
+
+      .scene-tab {
+        position: relative;
+        display: inline-flex;
+        min-width: 124px;
+        appearance: none;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        padding: 0 16px;
+        color: var(--muted-foreground);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .scene-tab[aria-selected="true"] {
+        color: var(--foreground);
+      }
+
+      .scene-tab[aria-selected="true"]::after {
+        position: absolute;
+        right: 12px;
+        bottom: -1px;
+        left: 12px;
+        height: 2px;
+        border-radius: 999px;
+        background: var(--primary);
+        content: "";
+      }
+
+      .scene-tab:disabled {
+        color: hsl(0 0% 50%);
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .scene-tab:focus-visible,
+      .back-button:focus-visible,
+      .shot-plan-card:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      .shot-plan-list-content {
+        min-height: 610px;
+        padding: 34px 30px;
+      }
+
+      .shot-plan-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .shot-plan-card {
+        position: relative;
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        aspect-ratio: 16 / 9;
+        appearance: none;
+        border: 1px solid hsl(0 0% 38% / 0.72);
+        border-radius: 12px;
+        background: var(--muted);
+        padding: 0;
+        color: var(--foreground);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        box-shadow: 0 8px 20px hsl(0 0% 0% / 0.18);
+        transition:
+          border-color 140ms ease,
+          transform 140ms ease,
+          box-shadow 140ms ease;
+      }
+
+      .shot-plan-card:hover {
+        border-color: hsl(42 60% 55% / 0.56);
+        box-shadow: 0 12px 28px hsl(0 0% 0% / 0.28);
+        transform: translateY(-2px);
+      }
+
+      .shot-plan-card-mosaic {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 2px;
+        background: hsl(0 0% 16%);
+      }
+
+      .shot-plan-card-mosaic.two-up {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .shot-plan-card-mosaic img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .shot-plan-card-overlay {
+        position: absolute;
+        inset: auto 0 0;
+        display: flex;
+        min-height: 82px;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 24px 16px 14px;
+        background: linear-gradient(
+          180deg,
+          transparent,
+          hsl(0 0% 7% / 0.9)
+        );
+      }
+
+      .shot-plan-card-title {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .shot-plan-card-coverage {
+        margin: 5px 0 0;
+        color: hsl(0 0% 72%);
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      .shot-plan-detail-page .shot-plan-surface {
+        width: 100%;
+        margin: 0;
+        box-shadow: none;
+      }
+
+      .plan-route-header {
+        display: flex;
+        min-height: 46px;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 10px;
+      }
+
+      .back-button {
+        display: inline-flex;
+        min-height: 32px;
+        appearance: none;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid hsl(0 0% 42% / 0.74);
+        border-radius: 8px;
+        background: hsl(0 0% 26% / 0.72);
+        padding: 0 11px;
+        color: var(--foreground);
+        font: inherit;
+        font-size: 10px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+
+      .back-button:hover {
+        border-color: hsl(42 60% 55% / 0.56);
+        background: var(--item-hover-bg);
+      }
+
+      .back-button svg,
+      .plan-breadcrumb svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .plan-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        color: var(--muted-foreground);
+        font-size: 11px;
+        font-weight: 650;
+        list-style: none;
+      }
+
+      .plan-breadcrumb [aria-current="page"] {
+        color: var(--foreground);
+      }
+
+      .shot-plan-surface {
+        width: min(1480px, calc(100vw - 84px));
+        min-height: 700px;
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        background: var(--panel-bg);
+        box-shadow: var(--shadow-2xl);
+      }
+
+      .shot-plan-surface-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 84px;
+        padding: 18px 22px 16px;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.4);
+        background: var(--panel-header-bg);
+      }
+
+      .plan-title {
+        margin: 0 0 11px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .beat-list {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .beat-item {
+        position: relative;
+      }
+
+      .beat-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 25px;
+        appearance: none;
+        border: 1px solid hsl(0 0% 35% / 0.58);
+        border-radius: 999px;
+        background: hsl(0 0% 29% / 0.62);
+        padding: 0 10px;
+        color: var(--muted-foreground);
+        font: inherit;
+        font-size: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: default;
+      }
+
+      .beat-chip:focus-visible {
+        border-color: var(--item-active-border);
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      .beat-preview {
+        position: absolute;
+        top: calc(100% + 9px);
+        left: 0;
+        z-index: 30;
+        width: 238px;
+        overflow: hidden;
+        border: 1px solid hsl(0 0% 40% / 0.75);
+        border-radius: 10px;
+        background: var(--card);
+        padding: 6px;
+        opacity: 0;
+        box-shadow: 0 18px 40px hsl(0 0% 0% / 0.48);
+        pointer-events: none;
+        transform: translateY(-4px);
+        transition:
+          opacity 140ms ease,
+          transform 140ms ease;
+      }
+
+      .beat-item:last-child .beat-preview {
+        right: 0;
+        left: auto;
+      }
+
+      .beat-preview img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: 6px;
+        object-fit: cover;
+      }
+
+      .beat-item:hover .beat-preview,
+      .beat-item:focus-within .beat-preview {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .shot-plan-surface-body {
+        display: grid;
+        grid-template-columns: clamp(210px, 18vw, 260px) 8px minmax(0, 1fr);
+        min-height: 646px;
+      }
+
+      .shot-rail {
+        padding: 18px 14px;
+        border-right: 1px solid hsl(0 0% 35% / 0.36);
+        background: hsl(0 0% 16% / 0.68);
+      }
+
+      .rail-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 12px;
+        color: var(--muted-foreground);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .rail-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .rail-card {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 16 / 9;
+        border: 1px solid hsl(0 0% 38% / 0.72);
+        border-radius: 10px;
+        background: var(--muted);
+      }
+
+      .rail-card-selected {
+        border: 3px solid var(--primary);
+        box-shadow:
+          0 0 0 1px hsl(42 75% 48% / 0.18),
+          0 8px 20px hsl(0 0% 0% / 0.2);
+      }
+
+      .rail-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .rail-card::after {
+        position: absolute;
+        inset: 0;
+        content: "";
+        background: linear-gradient(
+          180deg,
+          hsl(0 0% 0% / 0.22),
+          transparent 45%,
+          hsl(0 0% 0% / 0.36)
+        );
+        pointer-events: none;
+      }
+
+      .rail-card-empty {
+        background: hsl(0 0% 20% / 0.58);
+        box-shadow: inset 0 0 0 1px hsl(0 0% 100% / 0.02);
+      }
+
+      .rail-card-empty::after {
+        background: linear-gradient(
+          180deg,
+          hsl(0 0% 0% / 0.12),
+          transparent 50%,
+          hsl(0 0% 0% / 0.2)
+        );
+      }
+
+      .rail-empty-visual {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: hsl(0 0% 64% / 0.76);
+      }
+
+      .rail-empty-visual svg {
+        width: 22px;
+        height: 22px;
+        stroke-width: 1.6;
+      }
+
+      .shot-number,
+      .duration {
+        position: absolute;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid hsl(0 0% 100% / 0.14);
+        background: hsl(0 0% 10% / 0.75);
+        color: hsl(60 51% 95%);
+        box-shadow: 0 2px 8px hsl(0 0% 0% / 0.32);
+        backdrop-filter: blur(8px);
+      }
+
+      .shot-number {
+        top: 9px;
+        left: 9px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .duration {
+        bottom: 9px;
+        left: 9px;
+        gap: 5px;
+        min-height: 24px;
+        border-radius: 999px;
+        padding: 0 8px;
+        font-size: 10px;
+        font-weight: 650;
+      }
+
+      .duration svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      .resize-handle {
+        position: relative;
+        background: hsl(0 0% 16% / 0.38);
+      }
+
+      .resize-handle::after {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 2px;
+        height: 42px;
+        border-radius: 999px;
+        background: hsl(0 0% 62% / 0.26);
+        content: "";
+        transform: translate(-50%, -50%);
+      }
+
+      .detail {
+        min-width: 0;
+        padding: 28px 28px 32px;
+      }
+
+      .shot-heading {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 0;
+      }
+
+      .shot-heading h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 650;
+        letter-spacing: -0.018em;
+        line-height: 1.25;
+      }
+
+      .detail-tabs {
+        margin-top: 13px;
+      }
+
+      .tab-list {
+        display: flex;
+        align-items: stretch;
+        min-height: 35px;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.45);
+      }
+
+      .tab-trigger {
+        position: relative;
+        display: inline-flex;
+        min-width: 96px;
+        appearance: none;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        padding: 0 14px;
+        color: var(--muted-foreground);
+        font: inherit;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
+      .tab-trigger::after {
+        position: absolute;
+        right: 14px;
+        bottom: -1px;
+        left: 14px;
+        height: 2px;
+        border-radius: 999px 999px 0 0;
+        background: transparent;
+        content: "";
+      }
+
+      .tab-trigger:hover {
+        color: var(--foreground);
+      }
+
+      .tab-trigger[aria-selected="true"] {
+        color: var(--foreground);
+      }
+
+      .tab-trigger[aria-selected="true"]::after {
+        background: var(--primary);
+      }
+
+      .tab-trigger:focus-visible {
+        z-index: 1;
+        border-radius: 5px 5px 0 0;
+        outline: 2px solid var(--ring);
+        outline-offset: -2px;
+      }
+
+      .tab-panel {
+        padding-top: 16px;
+      }
+
+      .tab-panel[hidden] {
+        display: none;
+      }
+
+      .brief-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+        gap: 12px;
+      }
+
+      .brief-card {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        min-height: 284px;
+        overflow: hidden;
+        appearance: none;
+        flex-direction: column;
+        border: 1px solid hsl(0 0% 35% / 0.63);
+        border-radius: 12px;
+        background: var(--card);
+        padding: 0;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        box-shadow: 0 2px 4px hsl(0 0% 0% / 0.22);
+        transition:
+          border-color 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .brief-card:focus-within,
+      .brief-card.motion-card:hover {
+        border-color: hsl(0 0% 45% / 0.9);
+        box-shadow: 0 9px 22px hsl(0 0% 0% / 0.22);
+      }
+
+      .brief-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 40px;
+        padding: 0 13px;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.42);
+      }
+
+      .brief-subject {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .brief-subject svg {
+        width: 14px;
+        height: 14px;
+        color: hsl(42 63% 61%);
+        stroke-width: 1.8;
+      }
+
+      .brief-header h2 {
+        margin: 0;
+        color: var(--card-foreground);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .media-region {
+        position: relative;
+        appearance: none;
+        overflow: hidden;
+        height: 112px;
+        flex: none;
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.36);
+        background: var(--muted);
+        padding: 0;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+      }
+
+      .media-region img,
+      .media-region video {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .media-region video {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity 180ms ease;
+      }
+
+      .motion-card:hover video,
+      .motion-card:focus-within video {
+        opacity: 1;
+      }
+
+      .framing-media {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1px;
+        background: hsl(0 0% 35% / 0.8);
+      }
+
+      .framing-panel {
+        position: relative;
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        appearance: none;
+        border: 0;
+        background: var(--muted);
+        padding: 0;
+        cursor: zoom-in;
+      }
+
+      .framing-panel img {
+        transition: transform 240ms ease;
+      }
+
+      .brief-card:hover .framing-panel:first-child img {
+        transform: scale(1.018);
+      }
+
+      .brief-card:hover .framing-panel:last-child img {
+        transform: scale(1.028);
+      }
+
+      .image-label {
+        position: absolute;
+        bottom: 7px;
+        left: 7px;
+        z-index: 1;
+        border: 1px solid hsl(0 0% 100% / 0.12);
+        border-radius: 4px;
+        background: hsl(0 0% 8% / 0.7);
+        padding: 3px 6px;
+        color: hsl(60 51% 95%);
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        backdrop-filter: blur(7px);
+      }
+
+      .framing-arrow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        z-index: 2;
+        display: grid;
+        width: 25px;
+        height: 25px;
+        place-items: center;
+        border: 1px solid hsl(0 0% 100% / 0.12);
+        border-radius: 50%;
+        background: hsl(0 0% 10% / 0.82);
+        color: hsl(42 78% 64%);
+        box-shadow: 0 4px 12px hsl(0 0% 0% / 0.38);
+        transform: translate(-50%, -50%);
+        backdrop-filter: blur(8px);
+        pointer-events: none;
+      }
+
+      .framing-arrow svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      .media-scrim {
+        position: absolute;
+        inset: auto 0 0;
+        height: 50%;
+        background: linear-gradient(transparent, hsl(0 0% 0% / 0.46));
+        pointer-events: none;
+      }
+
+      .motion-hint {
+        position: absolute;
+        right: 7px;
+        bottom: 7px;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid hsl(0 0% 100% / 0.12);
+        border-radius: 999px;
+        background: hsl(0 0% 8% / 0.7);
+        padding: 4px 7px;
+        color: hsl(0 0% 89%);
+        font-size: 8px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+        backdrop-filter: blur(7px);
+      }
+
+      .motion-hint svg {
+        width: 10px;
+        height: 10px;
+      }
+
+      .media-open {
+        cursor: zoom-in;
+      }
+
+      .media-open:focus-visible {
+        z-index: 3;
+        outline: 2px solid var(--ring);
+        outline-offset: -3px;
+      }
+
+      .brief-body {
+        display: flex;
+        min-height: 0;
+        flex: 1;
+        flex-direction: column;
+        padding: 11px 12px 12px;
+      }
+
+      .brief-body-with-help {
+        padding-bottom: 46px;
+      }
+
+      .education-open {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        z-index: 3;
+        display: inline-grid;
+        width: 28px;
+        height: 28px;
+        appearance: none;
+        place-items: center;
+        border: 1px solid hsl(42 58% 54% / 0.42);
+        border-radius: 50%;
+        background: hsl(0 0% 22% / 0.9);
+        color: hsl(42 70% 68%);
+        box-shadow: 0 3px 9px hsl(0 0% 0% / 0.2);
+        cursor: pointer;
+        transition:
+          border-color 150ms ease,
+          background 150ms ease,
+          color 150ms ease,
+          transform 150ms ease;
+      }
+
+      .education-open:hover {
+        border-color: hsl(42 72% 58% / 0.8);
+        background: hsl(42 56% 34% / 0.3);
+        color: hsl(48 70% 86%);
+        transform: translateY(-1px);
+      }
+
+      .education-open:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      .education-open svg {
+        width: 15px;
+        height: 15px;
+        stroke-width: 1.9;
+      }
+
+      .value-kicker {
+        margin: 0 0 5px;
+        color: var(--muted-foreground);
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .primary-value {
+        margin: 0;
+        color: var(--card-foreground);
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 1.45;
+      }
+
+      .supporting-value {
+        margin: 6px 0 0;
+        color: var(--muted-foreground);
+        font-size: 10px;
+        line-height: 1.52;
+      }
+
+      .intent-body {
+        padding-top: 13px;
+      }
+
+      .intent-text {
+        margin: 0;
+        color: hsl(60 30% 88%);
+        font-size: 11px;
+        font-weight: 520;
+        line-height: 1.58;
+      }
+
+      .metadata {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: auto;
+        padding-top: 11px;
+      }
+
+      .metadata-chip {
+        display: inline-flex;
+        min-height: 21px;
+        align-items: center;
+        border: 1px solid hsl(0 0% 35% / 0.78);
+        border-radius: 999px;
+        background: hsl(0 0% 22% / 0.46);
+        padding: 0 7px;
+        color: hsl(0 0% 72%);
+        font-size: 8px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .metadata-chip strong {
+        margin-right: 4px;
+        color: hsl(0 0% 58%);
+        font-weight: 650;
+      }
+
+      .description-panel {
+        height: 458px;
+      }
+
+      .description-editor {
+        display: flex;
+        height: 100%;
+        overflow: hidden;
+        flex-direction: column;
+        border: 1px solid hsl(0 0% 35% / 0.45);
+        border-radius: 10px;
+        background: hsl(30 5% 16%);
+      }
+
+      .editor-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 40px;
+        flex: none;
+        padding: 0 15px;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.4);
+        color: var(--muted-foreground);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .editor-scroll {
+        min-height: 0;
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+      }
+
+      .editor-copy {
+        margin: 0;
+        padding: 20px 22px 38px;
+        color: hsl(48 34% 84%);
+        font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 11px;
+        line-height: 1.72;
+        white-space: pre-wrap;
+        word-break: normal;
+      }
+
+      .markdown-token {
+        color: hsl(42 72% 67%);
+      }
+
+      .media-dialog[hidden],
+      .education-dialog[hidden] {
+        display: none;
+      }
+
+      .media-dialog,
+      .education-dialog {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        padding: 28px;
+      }
+
+      .dialog-backdrop {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        appearance: none;
+        border: 0;
+        background: hsl(0 0% 0% / 0.72);
+        padding: 0;
+      }
+
+      .media-dialog-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        width: min(1020px, calc(100vw - 56px));
+        max-height: calc(100vh - 56px);
+        overflow: hidden;
+        flex-direction: column;
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        background: var(--panel-bg);
+        box-shadow: var(--shadow-2xl);
+      }
+
+      .media-dialog-header {
+        display: flex;
+        min-height: 66px;
+        flex: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 13px 16px 13px 20px;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.4);
+        background: var(--panel-header-bg);
+      }
+
+      .dialog-kicker {
+        margin: 0 0 5px;
+        color: var(--muted-foreground);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .dialog-title {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 650;
+      }
+
+      .dialog-close {
+        display: inline-grid;
+        width: 34px;
+        height: 34px;
+        flex: none;
+        appearance: none;
+        place-items: center;
+        border: 1px solid hsl(0 0% 35% / 0.6);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted-foreground);
+        cursor: pointer;
+      }
+
+      .dialog-close:hover {
+        background: var(--item-hover-bg);
+        color: var(--foreground);
+      }
+
+      .dialog-close:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      .dialog-close svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .dialog-media {
+        display: grid;
+        min-height: 0;
+        flex: 1;
+        place-items: center;
+        overflow: hidden;
+        background: hsl(0 0% 10%);
+        padding: 16px;
+      }
+
+      .dialog-media img,
+      .dialog-media video {
+        display: block;
+        max-width: 100%;
+        max-height: calc(100vh - 154px);
+        border-radius: 8px;
+        object-fit: contain;
+      }
+
+      .dialog-media [hidden] {
+        display: none;
+      }
+
+      .education-dialog-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        width: min(1120px, calc(100vw - 56px));
+        max-height: calc(100vh - 56px);
+        overflow: hidden;
+        flex-direction: column;
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        background: var(--panel-bg);
+        box-shadow: var(--shadow-2xl);
+      }
+
+      .education-dialog-copy {
+        min-width: 0;
+      }
+
+      .education-dialog-heading {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .education-dialog-count {
+        flex: none;
+        border: 1px solid hsl(0 0% 35% / 0.68);
+        border-radius: 999px;
+        background: hsl(0 0% 26%);
+        padding: 3px 7px;
+        color: var(--muted-foreground);
+        font-size: 8px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+      }
+
+      .education-dialog-subtitle {
+        max-width: 720px;
+        margin: 5px 0 0;
+        color: var(--muted-foreground);
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .education-dialog-scroll {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 18px;
+        scrollbar-gutter: stable;
+      }
+
+      .education-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+        gap: 12px;
+      }
+
+      .education-option {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid hsl(0 0% 35% / 0.65);
+        border-radius: 10px;
+        background: var(--card);
+        box-shadow: 0 2px 6px hsl(0 0% 0% / 0.2);
+      }
+
+      .education-option-current {
+        border-color: hsl(42 67% 52% / 0.92);
+        box-shadow:
+          0 0 0 1px hsl(42 67% 52% / 0.18),
+          0 5px 14px hsl(0 0% 0% / 0.24);
+      }
+
+      .education-option:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      .education-option-media {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 16 / 9;
+        border-bottom: 1px solid hsl(0 0% 35% / 0.42);
+        background: var(--muted);
+      }
+
+      .education-option-media img,
+      .education-option-media video {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .education-option-media video {
+        opacity: 0;
+        transition: opacity 180ms ease;
+      }
+
+      .education-option:hover video,
+      .education-option:focus video {
+        opacity: 1;
+      }
+
+      .education-option-caption {
+        display: flex;
+        min-height: 40px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+      }
+
+      .education-option-name {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--card-foreground);
+        font-size: 10px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .education-option-status {
+        flex: none;
+        border: 1px solid hsl(42 67% 52% / 0.44);
+        border-radius: 999px;
+        background: hsl(42 67% 34% / 0.24);
+        padding: 3px 6px;
+        color: hsl(42 72% 72%);
+        font-size: 7px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 1100px) {
+        .prototype-shell {
+          padding: 26px 24px;
+        }
+
+        .prototype-label,
+        .shot-plan-surface,
+        .scene-workspace,
+        .shot-plan-detail-page {
+          width: calc(100vw - 48px);
+        }
+
+        .shot-plan-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .detail {
+          padding-right: 22px;
+          padding-left: 22px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+
+        .media-region video {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="prototype-shell">
+      <div class="prototype-label">
+        <span>Plan 0157 · Shot Plan navigation mockup</span>
+        <span id="prototype-state-label">Open a Shot Plan</span>
+      </div>
+
+      <section
+        id="shot-plans-list-view"
+        class="scene-workspace"
+        aria-labelledby="scene-title"
+      >
+        <header class="scene-header">
+          <h1 id="scene-title" class="scene-title">01 · The First Patron</h1>
+          <div
+            class="scene-tabs"
+            role="tablist"
+            aria-label="Scene workspace"
+          >
+            <button
+              type="button"
+              class="scene-tab"
+              role="tab"
+              aria-selected="false"
+            >
+              Narrative
+            </button>
+            <button
+              type="button"
+              class="scene-tab"
+              role="tab"
+              aria-selected="false"
+            >
+              Beats
+            </button>
+            <button
+              type="button"
+              class="scene-tab"
+              role="tab"
+              aria-selected="true"
+            >
+              Shot Plans
+            </button>
+            <button
+              type="button"
+              class="scene-tab"
+              role="tab"
+              aria-selected="false"
+              disabled
+            >
+              Generations
+            </button>
+          </div>
+        </header>
+
+        <div class="shot-plan-list-content">
+          <div class="shot-plan-grid">
+            <button
+              type="button"
+              class="shot-plan-card shot-plan-open"
+              aria-label="Open Shot Plan The Letter, Intimate Coverage"
+            >
+              <span class="shot-plan-card-mosaic" aria-hidden="true">
+                <img
+                  src="./storyboards/beat-04.webp"
+                  alt=""
+                />
+                <img
+                  src="./storyboards/beat-05.webp"
+                  alt=""
+                />
+                <img
+                  src="./storyboards/beat-06.webp"
+                  alt=""
+                />
+              </span>
+              <span class="shot-plan-card-overlay">
+                <span class="shot-plan-card-title">
+                  The Letter · Intimate Coverage
+                </span>
+                <span class="shot-plan-card-coverage">
+                  Beats 4–6 · 2 Shots
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="shot-plan-card shot-plan-open"
+              aria-label="Open Shot Plan The First Exchange"
+            >
+              <span
+                class="shot-plan-card-mosaic two-up"
+                aria-hidden="true"
+              >
+                <img
+                  src="./assets/images/shot-size-wide-shot.webp"
+                  alt=""
+                />
+                <img
+                  src="./assets/images/shot-size-medium-shot.webp"
+                  alt=""
+                />
+              </span>
+              <span class="shot-plan-card-overlay">
+                <span class="shot-plan-card-title">
+                  The First Exchange
+                </span>
+                <span class="shot-plan-card-coverage">
+                  Beats 1–3 · 3 Shots
+                </span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="shot-plan-detail-view"
+        class="shot-plan-detail-page"
+        aria-label="Shot Plan detail"
+        hidden
+      >
+        <nav class="plan-route-header" aria-label="Shot Plan navigation">
+          <button type="button" id="shot-plan-back" class="back-button">
+            <i data-lucide="arrow-left" aria-hidden="true"></i>
+            Back
+          </button>
+          <ol class="plan-breadcrumb">
+            <li>01 · The First Patron</li>
+            <li aria-hidden="true">
+              <i data-lucide="chevron-right"></i>
+            </li>
+            <li aria-current="page">Shot Plan</li>
+          </ol>
+        </nav>
+
+        <section class="shot-plan-surface" aria-label="Shot Plan detail mockup">
+        <header class="shot-plan-surface-header">
+          <div>
+            <p class="plan-title">The Letter · Intimate Coverage</p>
+            <ul class="beat-list" aria-label="Covered Beats">
+              <li class="beat-item">
+                <button type="button" class="beat-chip">
+                  Beat 4 · The envelope
+                </button>
+                <div class="beat-preview" aria-hidden="true">
+                  <img
+                    src="./storyboards/beat-04.webp"
+                    alt=""
+                  />
+                </div>
+              </li>
+              <li class="beat-item">
+                <button type="button" class="beat-chip">
+                  Beat 5 · Recognition
+                </button>
+                <div class="beat-preview" aria-hidden="true">
+                  <img
+                    src="./storyboards/beat-05.webp"
+                    alt=""
+                  />
+                </div>
+              </li>
+              <li class="beat-item">
+                <button type="button" class="beat-chip">
+                  Beat 6 · The look
+                </button>
+                <div class="beat-preview" aria-hidden="true">
+                  <img
+                    src="./storyboards/beat-06.webp"
+                    alt=""
+                  />
+                </div>
+              </li>
+            </ul>
+          </div>
+        </header>
+
+        <div class="shot-plan-surface-body">
+          <aside class="shot-rail" aria-label="Selected Shot">
+            <p class="rail-label">Selected Shot</p>
+            <div class="rail-stack">
+              <div class="rail-card rail-card-selected">
+                <img
+                  src="./assets/images/shot-size-medium-close-up.webp"
+                  alt="Anna framed in a medium close-up"
+                />
+                <span class="shot-number">4</span>
+                <span class="duration">
+                  <i data-lucide="timer" aria-hidden="true"></i>
+                  10s
+                </span>
+              </div>
+              <div
+                class="rail-card rail-card-empty"
+                aria-label="Shot 5 has no selected image"
+              >
+                <div class="rail-empty-visual">
+                  <i data-lucide="image-off" aria-hidden="true"></i>
+                </div>
+                <span class="shot-number">5</span>
+                <span class="duration">
+                  <i data-lucide="timer" aria-hidden="true"></i>
+                  6s
+                </span>
+              </div>
+            </div>
+          </aside>
+
+          <div class="resize-handle" aria-hidden="true"></div>
+
+          <section class="detail" aria-labelledby="shot-title">
+            <div class="shot-heading">
+              <h1 id="shot-title">Anna reads the letter</h1>
+            </div>
+
+            <div class="detail-tabs">
+              <div class="tab-list" role="tablist" aria-label="Shot details">
+                <button
+                  type="button"
+                  id="brief-tab"
+                  class="tab-trigger"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="brief-panel"
+                  tabindex="0"
+                >
+                  Brief
+                </button>
+                <button
+                  type="button"
+                  id="description-tab"
+                  class="tab-trigger"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="description-panel"
+                  tabindex="-1"
+                >
+                  Description
+                </button>
+              </div>
+
+              <div
+                id="brief-panel"
+                class="tab-panel"
+                role="tabpanel"
+                aria-labelledby="brief-tab"
+              >
+                <div class="brief-grid">
+                  <article class="brief-card" aria-labelledby="framing-title">
+                <header class="brief-header">
+                  <div class="brief-subject">
+                    <i data-lucide="scan" aria-hidden="true"></i>
+                    <h2 id="framing-title">Framing</h2>
+                  </div>
+                </header>
+                <div class="media-region framing-media">
+                  <button
+                    type="button"
+                    class="framing-panel media-open"
+                    aria-label="Open full-size Start framing: Medium close-up"
+                    data-preview-kind="Framing · Start"
+                    data-preview-title="Medium close-up"
+                    data-preview-type="image"
+                    data-preview-src="./assets/images/shot-size-medium-close-up.webp"
+                    data-preview-alt="Medium close-up framing"
+                  >
+                    <img
+                      src="./assets/images/shot-size-medium-close-up.webp"
+                      alt="Medium close-up framing"
+                    />
+                    <span class="image-label">Start</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="framing-panel media-open"
+                    aria-label="Open full-size End framing: Close-up"
+                    data-preview-kind="Framing · End"
+                    data-preview-title="Close-up"
+                    data-preview-type="image"
+                    data-preview-src="./assets/images/shot-size-close-up.webp"
+                    data-preview-alt="Close-up framing"
+                  >
+                    <img
+                      src="./assets/images/shot-size-close-up.webp"
+                      alt="Close-up framing"
+                    />
+                    <span class="image-label">End</span>
+                  </button>
+                  <span class="framing-arrow" aria-hidden="true">
+                    <i data-lucide="arrow-right"></i>
+                  </span>
+                </div>
+                <div class="brief-body brief-body-with-help">
+                  <p class="value-kicker">Authored relationship</p>
+                  <p class="primary-value">Medium close-up → Close-up</p>
+                  <p class="supporting-value">
+                    The push tightens as recognition lands.
+                  </p>
+                  <button
+                    type="button"
+                    class="education-open"
+                    aria-label="Learn about Framing options"
+                    data-education-category="framing"
+                  >
+                    <i data-lucide="circle-help" aria-hidden="true"></i>
+                  </button>
+                </div>
+                  </article>
+
+                  <article class="brief-card" aria-labelledby="camera-title">
+                <header class="brief-header">
+                  <div class="brief-subject">
+                    <i data-lucide="camera" aria-hidden="true"></i>
+                    <h2 id="camera-title">Camera</h2>
+                  </div>
+                </header>
+                <button
+                  type="button"
+                  class="media-region media-open"
+                  aria-label="Open full-size Camera angle: Eye level"
+                  data-preview-kind="Camera · Angle"
+                  data-preview-title="Eye level"
+                  data-preview-type="image"
+                  data-preview-src="./assets/images/angle-eye-level.webp"
+                  data-preview-alt="Eye-level camera angle"
+                >
+                  <img
+                    src="./assets/images/angle-eye-level.webp"
+                    alt="Eye-level camera angle"
+                  />
+                  <div class="media-scrim" aria-hidden="true"></div>
+                </button>
+                <div class="brief-body brief-body-with-help">
+                  <p class="value-kicker">Angle</p>
+                  <p class="primary-value">Eye level</p>
+                  <p class="supporting-value">
+                    Neutral observation keeps the change in Anna’s performance.
+                  </p>
+                  <button
+                    type="button"
+                    class="education-open"
+                    aria-label="Learn about Camera options"
+                    data-education-category="camera"
+                  >
+                    <i data-lucide="circle-help" aria-hidden="true"></i>
+                  </button>
+                </div>
+                  </article>
+
+                  <article
+                    class="brief-card motion-card"
+                    aria-labelledby="motion-title"
+                  >
+                <header class="brief-header">
+                  <div class="brief-subject">
+                    <i data-lucide="move-3d" aria-hidden="true"></i>
+                    <h2 id="motion-title">Motion</h2>
+                  </div>
+                </header>
+                <button
+                  type="button"
+                  class="media-region media-open"
+                  aria-label="Open large Motion preview: Push In"
+                  data-preview-kind="Motion · Movement"
+                  data-preview-title="Push In"
+                  data-preview-type="video"
+                  data-preview-src="./assets/motion/movement-push-in.mp4"
+                  data-preview-poster="./assets/images/movement-push-in.webp"
+                >
+                  <img
+                    src="./assets/images/movement-push-in.webp"
+                    alt="Poster for a push-in camera movement"
+                  />
+                  <video
+                    src="./assets/motion/movement-push-in.mp4"
+                    muted
+                    loop
+                    playsinline
+                    preload="metadata"
+                    aria-label="Push In motion preview"
+                  ></video>
+                  <div class="media-scrim" aria-hidden="true"></div>
+                  <span class="motion-hint">
+                    <i data-lucide="play" aria-hidden="true"></i>
+                    Preview
+                  </span>
+                </button>
+                <div class="brief-body brief-body-with-help">
+                  <p class="value-kicker">Movement</p>
+                  <p class="primary-value">Push In</p>
+                  <p class="supporting-value">
+                    Slow and nearly imperceptible; complete on Anna’s look.
+                  </p>
+                  <button
+                    type="button"
+                    class="education-open"
+                    aria-label="Learn about Motion options"
+                    data-education-category="motion"
+                  >
+                    <i data-lucide="circle-help" aria-hidden="true"></i>
+                  </button>
+                </div>
+                  </article>
+
+                  <article class="brief-card" aria-labelledby="optics-title">
+                <header class="brief-header">
+                  <div class="brief-subject">
+                    <i data-lucide="aperture" aria-hidden="true"></i>
+                    <h2 id="optics-title">Optics</h2>
+                  </div>
+                </header>
+                <div class="brief-body intent-body">
+                  <p class="value-kicker">Intent</p>
+                  <p class="intent-text">
+                    Compress the space around Anna. Keep her eyes sharp while
+                    Ben and the letter fall softly away.
+                  </p>
+                  <div class="metadata" aria-label="Optics details">
+                    <span class="metadata-chip">
+                      <strong>Lens</strong> 85 mm
+                    </span>
+                    <span class="metadata-chip">
+                      <strong>Depth</strong> Shallow
+                    </span>
+                    <span class="metadata-chip">
+                      <strong>Focus</strong> Anna’s eyes
+                    </span>
+                  </div>
+                </div>
+                  </article>
+
+                  <article class="brief-card" aria-labelledby="lighting-title">
+                <header class="brief-header">
+                  <div class="brief-subject">
+                    <i data-lucide="lightbulb" aria-hidden="true"></i>
+                    <h2 id="lighting-title">Lighting</h2>
+                  </div>
+                </header>
+                <div class="brief-body intent-body">
+                  <p class="value-kicker">Intent</p>
+                  <p class="intent-text">
+                    Cool, diffused window light wraps from camera-left.
+                    Negative fill deepens camera-right, with a warm desk lamp
+                    on the letter.
+                  </p>
+                </div>
+                  </article>
+                </div>
+              </div>
+
+              <div
+                id="description-panel"
+                class="tab-panel description-panel"
+                role="tabpanel"
+                aria-labelledby="description-tab"
+                hidden
+              >
+                <div class="description-editor" aria-label="Shot description">
+                  <div class="editor-header">
+                    <span>Shot Description</span>
+                    <span>Markdown · Read only</span>
+                  </div>
+                  <div class="editor-scroll" tabindex="0">
+                    <div class="editor-copy"><span class="markdown-token">### Shot: Anna reads the letter</span>
+
+The shot lasts approximately ten seconds and is captured on an <span class="markdown-token">**85 mm lens on a full-frame camera at T2.0**</span>, giving Anna a compressed, intimate close-up with a shallow depth of field. The camera begins at her eye level, approximately 2.5 metres away, in a medium close-up from the chest upward. Anna is positioned on the right third of the frame beside the window. Ben is seated closer to camera on the left, visible only as a soft, dark foreground silhouette that frames Anna without drawing attention away from her.
+
+Anna holds the unopened letter in her left hand at the lower edge of the frame. She opens it and begins reading. The camera remains still for the first three seconds, allowing the action to settle. As Anna reaches the first line and her expression begins to change, the camera makes a <span class="markdown-token">**slow, nearly imperceptible dolly push**</span> of approximately 60 centimetres, tightening from the medium close-up to a close-up. The movement should feel motivated by her realization rather than noticeable as a camera move.
+
+Focus remains on Anna’s eyes throughout the shot. Because of the shallow depth of field, the letter is identifiable but its text is not readable, while Ben remains heavily defocused in the foreground. The focus puller should make a subtle adjustment during the push to maintain sharp focus on Anna as the camera closes the distance.
+
+The primary light is cool, soft daylight entering through the window to Anna’s left. It is diffused so that it wraps gently across her face without producing hard shadows. Negative fill on camera-right deepens the shadow side of her face. A dimmed tungsten desk lamp creates a warmer pool of light on the letter and her hands.
+
+Anna’s reaction must develop gradually: recognition, disbelief, and then stillness. She freezes briefly after reading the first line, lifts only her eyes toward Ben, and then raises her head. The camera completes its push at the exact moment she looks at him.
+
+The shot ends with Anna in close-up, looking screen-right toward Ben. She must keep the letter in her left hand throughout, the desk lamp must remain visible behind her, and Ben must remain on the left side of the frame to preserve the established eyeline and screen direction.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        </section>
+      </section>
+
+      <div
+        id="media-dialog"
+        class="media-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="media-dialog-title"
+        hidden
+      >
+        <button
+          type="button"
+          class="dialog-backdrop"
+          aria-label="Close large media preview"
+        ></button>
+        <section class="media-dialog-content">
+          <header class="media-dialog-header">
+            <div>
+              <p id="media-dialog-kicker" class="dialog-kicker"></p>
+              <h2 id="media-dialog-title" class="dialog-title"></h2>
+            </div>
+            <button
+              type="button"
+              class="dialog-close"
+              aria-label="Close large media preview"
+            >
+              <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+          </header>
+          <div class="dialog-media">
+            <img id="dialog-image" alt="" hidden />
+            <video
+              id="dialog-video"
+              muted
+              loop
+              playsinline
+              controls
+              hidden
+            ></video>
+          </div>
+        </section>
+      </div>
+
+      <div
+        id="education-dialog"
+        class="education-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="education-dialog-title"
+        aria-describedby="education-dialog-subtitle"
+        hidden
+      >
+        <button
+          type="button"
+          class="dialog-backdrop education-dialog-backdrop"
+          aria-label="Close visual glossary"
+        ></button>
+        <section class="education-dialog-content">
+          <header class="media-dialog-header">
+            <div class="education-dialog-copy">
+              <p class="dialog-kicker">Visual glossary</p>
+              <div class="education-dialog-heading">
+                <h2 id="education-dialog-title" class="dialog-title"></h2>
+                <span
+                  id="education-dialog-count"
+                  class="education-dialog-count"
+                ></span>
+              </div>
+              <p
+                id="education-dialog-subtitle"
+                class="education-dialog-subtitle"
+              ></p>
+            </div>
+            <button
+              type="button"
+              class="dialog-close education-dialog-close"
+              aria-label="Close visual glossary"
+            >
+              <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+          </header>
+          <div class="education-dialog-scroll">
+            <div id="education-grid" class="education-grid"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      lucide.createIcons();
+
+      const shotPlansListView = document.querySelector(
+        "#shot-plans-list-view",
+      );
+      const shotPlanDetailView = document.querySelector(
+        "#shot-plan-detail-view",
+      );
+      const shotPlanOpenButtons = Array.from(
+        document.querySelectorAll(".shot-plan-open"),
+      );
+      const shotPlanBack = document.querySelector("#shot-plan-back");
+      const prototypeStateLabel = document.querySelector(
+        "#prototype-state-label",
+      );
+      let shotPlanReturnTarget = shotPlanOpenButtons[0] ?? null;
+
+      function showShotPlansList({ restoreFocus = false } = {}) {
+        shotPlansListView.hidden = false;
+        shotPlanDetailView.hidden = true;
+        prototypeStateLabel.textContent = "Open a Shot Plan";
+        document.title = "Renku Studio — Shot Plans";
+        if (restoreFocus) {
+          shotPlanReturnTarget?.focus();
+        }
+      }
+
+      function showShotPlanDetail({ focusBack = false } = {}) {
+        shotPlansListView.hidden = true;
+        shotPlanDetailView.hidden = false;
+        document.querySelectorAll('.detail-tabs [role="tab"]').forEach((tab) => {
+          const selected = tab.id === "brief-tab";
+          tab.setAttribute("aria-selected", String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+        });
+        document
+          .querySelectorAll('.detail-tabs [role="tabpanel"]')
+          .forEach((panel) => {
+            panel.hidden = panel.id !== "brief-panel";
+          });
+        prototypeStateLabel.textContent = "In-page Shot Plan detail";
+        document.title =
+          "Renku Studio — The First Patron → Shot Plan";
+        if (focusBack) {
+          shotPlanBack.focus();
+        }
+      }
+
+      function syncShotPlanRoute() {
+        if (window.location.hash.startsWith("#shot-plan/")) {
+          showShotPlanDetail();
+        } else {
+          showShotPlansList();
+        }
+      }
+
+      shotPlanOpenButtons.forEach((trigger) => {
+        trigger.addEventListener("click", () => {
+          shotPlanReturnTarget = trigger;
+          window.history.pushState(
+            { view: "shot-plan" },
+            "",
+            "#shot-plan/the-letter-intimate-coverage",
+          );
+          showShotPlanDetail({ focusBack: true });
+        });
+      });
+
+      shotPlanBack.addEventListener("click", () => {
+        window.history.pushState({ view: "shot-plans" }, "", "#shot-plans");
+        showShotPlansList({ restoreFocus: true });
+      });
+
+      window.addEventListener("popstate", syncShotPlanRoute);
+      syncShotPlanRoute();
+
+      const tabs = Array.from(
+        document.querySelectorAll('.detail-tabs [role="tab"]'),
+      );
+      const panels = Array.from(
+        document.querySelectorAll('.detail-tabs [role="tabpanel"]'),
+      );
+
+      function activateTab(nextTab) {
+        tabs.forEach((tab) => {
+          const selected = tab === nextTab;
+          tab.setAttribute("aria-selected", String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+        });
+        panels.forEach((panel) => {
+          panel.hidden = panel.id !== nextTab.getAttribute("aria-controls");
+        });
+      }
+
+      tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => activateTab(tab));
+        tab.addEventListener("keydown", (event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+            return;
+          }
+          event.preventDefault();
+          let nextIndex = index;
+          if (event.key === "ArrowLeft") {
+            nextIndex = (index - 1 + tabs.length) % tabs.length;
+          } else if (event.key === "ArrowRight") {
+            nextIndex = (index + 1) % tabs.length;
+          } else if (event.key === "Home") {
+            nextIndex = 0;
+          } else if (event.key === "End") {
+            nextIndex = tabs.length - 1;
+          }
+          activateTab(tabs[nextIndex]);
+          tabs[nextIndex].focus();
+        });
+      });
+
+      const mediaDialog = document.querySelector("#media-dialog");
+      const mediaDialogKicker = document.querySelector("#media-dialog-kicker");
+      const mediaDialogTitle = document.querySelector("#media-dialog-title");
+      const dialogImage = document.querySelector("#dialog-image");
+      const dialogVideo = document.querySelector("#dialog-video");
+      const dialogClose = document.querySelector(".dialog-close");
+      const dialogBackdrop = document.querySelector(".dialog-backdrop");
+      let previewReturnTarget = null;
+
+      function openMediaDialog(trigger) {
+        previewReturnTarget = trigger;
+        mediaDialogKicker.textContent = trigger.dataset.previewKind ?? "";
+        mediaDialogTitle.textContent = trigger.dataset.previewTitle ?? "";
+        const isVideo = trigger.dataset.previewType === "video";
+
+        dialogImage.hidden = isVideo;
+        dialogVideo.hidden = !isVideo;
+        mediaDialog.hidden = false;
+        document.body.style.overflow = "hidden";
+        if (isVideo) {
+          dialogVideo.src = trigger.dataset.previewSrc ?? "";
+          dialogVideo.poster = trigger.dataset.previewPoster ?? "";
+          dialogVideo.currentTime = 0;
+          dialogVideo.play().catch(() => {});
+        } else {
+          dialogImage.src = trigger.dataset.previewSrc ?? "";
+          dialogImage.alt = trigger.dataset.previewAlt ?? "";
+        }
+
+        dialogClose.focus();
+      }
+
+      function closeMediaDialog() {
+        if (mediaDialog.hidden) return;
+        dialogVideo.pause();
+        dialogVideo.removeAttribute("src");
+        dialogVideo.load();
+        dialogImage.removeAttribute("src");
+        mediaDialog.hidden = true;
+        document.body.style.overflow = "";
+        previewReturnTarget?.focus();
+      }
+
+      document.querySelectorAll(".media-open").forEach((trigger) => {
+        trigger.addEventListener("click", () => openMediaDialog(trigger));
+      });
+      dialogClose.addEventListener("click", closeMediaDialog);
+      dialogBackdrop.addEventListener("click", closeMediaDialog);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeMediaDialog();
+        }
+      });
+
+      const motionCard = document.querySelector(".motion-card");
+      const motionVideo = motionCard.querySelector("video");
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      );
+
+      const educationCatalogs = {
+        framing: {
+          title: "Framing options",
+          subtitle:
+            "Compare the standard shot sizes. Anna’s authored start and end frames are highlighted.",
+          options: [
+            ["Extreme Close-Up", "shot-size-extreme-close-up.webp"],
+            ["Close-Up", "shot-size-close-up.webp", "End"],
+            ["Medium Close-Up", "shot-size-medium-close-up.webp", "Start"],
+            ["Medium Shot", "shot-size-medium-shot.webp"],
+            ["Medium Full", "shot-size-medium-full-shot.webp"],
+            ["Full Shot", "shot-size-full-shot.webp"],
+            ["Wide Shot", "shot-size-wide-shot.webp"],
+            ["Extreme Wide", "shot-size-extreme-wide-shot.webp"],
+            ["Establishing Shot", "shot-size-establishing-shot.webp"],
+          ],
+        },
+        camera: {
+          title: "Camera options",
+          subtitle:
+            "Compare where the lens sits relative to the subject. The authored angle is highlighted.",
+          options: [
+            ["Ground-Level", "angle-ground-level.webp"],
+            ["Knee-Level", "angle-knee-level.webp"],
+            ["Hip-Level", "angle-hip-level.webp"],
+            ["Shoulder-Level", "angle-shoulder-level.webp"],
+            ["Eye-Level", "angle-eye-level.webp", "Current"],
+            ["Low Angle", "angle-low-angle.webp"],
+            ["High Angle", "angle-high-angle.webp"],
+            ["Overhead", "angle-overhead.webp"],
+          ],
+        },
+        motion: {
+          title: "Motion options",
+          subtitle:
+            "Hover or focus a tile to preview the move. The authored movement is highlighted.",
+          options: [
+            ["Static", "movement-static.webp", "", "movement-static.mp4"],
+            ["Pan", "movement-pan.webp", "", "movement-pan.mp4"],
+            ["Tilt", "movement-tilt.webp", "", "movement-tilt.mp4"],
+            ["Swish Pan", "movement-swish-pan.webp", "", "movement-swish-pan.mp4"],
+            ["Swish Tilt", "movement-swish-tilt.webp", "", "movement-swish-tilt.mp4"],
+            ["Tracking", "movement-tracking.webp", "", "movement-tracking.mp4"],
+            ["Push In", "movement-push-in.webp", "Current", "movement-push-in.mp4"],
+            ["Pull Out", "movement-pull-out.webp", "", "movement-pull-out.mp4"],
+            ["Zoom", "movement-zoom.webp", "", "movement-zoom.mp4"],
+            [
+              "Rack Focus",
+              "../extras/movement-rack-focus.webp",
+            ],
+          ],
+        },
+      };
+
+      const educationDialog = document.querySelector("#education-dialog");
+      const educationDialogTitle = document.querySelector(
+        "#education-dialog-title",
+      );
+      const educationDialogSubtitle = document.querySelector(
+        "#education-dialog-subtitle",
+      );
+      const educationDialogCount = document.querySelector(
+        "#education-dialog-count",
+      );
+      const educationGrid = document.querySelector("#education-grid");
+      const educationDialogClose = document.querySelector(
+        ".education-dialog-close",
+      );
+      const educationDialogBackdrop = document.querySelector(
+        ".education-dialog-backdrop",
+      );
+      let educationReturnTarget = null;
+
+      function makeEducationOption(category, option) {
+        const [label, imageName, status, videoName] = option;
+        const item = document.createElement("article");
+        item.className = "education-option";
+        if (status) {
+          item.classList.add("education-option-current");
+        }
+        if (videoName) {
+          item.tabIndex = 0;
+          item.setAttribute("aria-label", `${label} motion preview`);
+        }
+
+        const media = document.createElement("div");
+        media.className = "education-option-media";
+        const image = document.createElement("img");
+        image.src = imageName.startsWith("../")
+          ? `./extras/${imageName.split("/").pop()}`
+          : `./assets/images/${imageName}`;
+        image.alt = `${label} example`;
+        media.append(image);
+
+        if (videoName) {
+          const video = document.createElement("video");
+          video.src = `./assets/motion/${videoName}`;
+          video.muted = true;
+          video.loop = true;
+          video.playsInline = true;
+          video.preload = "none";
+          video.setAttribute("aria-hidden", "true");
+          media.append(video);
+
+          const play = () => {
+            if (reducedMotion.matches) return;
+            video.currentTime = 0;
+            video.play().catch(() => {});
+          };
+          const stop = () => {
+            video.pause();
+            video.currentTime = 0;
+          };
+          item.addEventListener("pointerenter", play);
+          item.addEventListener("pointerleave", stop);
+          item.addEventListener("focus", play);
+          item.addEventListener("blur", stop);
+        }
+
+        const caption = document.createElement("div");
+        caption.className = "education-option-caption";
+        const name = document.createElement("span");
+        name.className = "education-option-name";
+        name.textContent = label;
+        caption.append(name);
+        if (status) {
+          const marker = document.createElement("span");
+          marker.className = "education-option-status";
+          marker.textContent = status;
+          caption.append(marker);
+        }
+
+        item.append(media, caption);
+        return item;
+      }
+
+      function openEducationDialog(trigger) {
+        const category = trigger.dataset.educationCategory;
+        const catalog = educationCatalogs[category];
+        if (!catalog) return;
+
+        educationReturnTarget = trigger;
+        educationDialogTitle.textContent = catalog.title;
+        educationDialogSubtitle.textContent = catalog.subtitle;
+        educationDialogCount.textContent = `${catalog.options.length} terms`;
+        educationGrid.replaceChildren(
+          ...catalog.options.map((option) =>
+            makeEducationOption(category, option),
+          ),
+        );
+        educationDialog.hidden = false;
+        document.body.style.overflow = "hidden";
+        educationDialogClose.focus();
+      }
+
+      function closeEducationDialog() {
+        if (educationDialog.hidden) return;
+        educationGrid.querySelectorAll("video").forEach((video) => {
+          video.pause();
+          video.removeAttribute("src");
+          video.load();
+        });
+        educationDialog.hidden = true;
+        educationGrid.replaceChildren();
+        document.body.style.overflow = "";
+        educationReturnTarget?.focus();
+      }
+
+      document.querySelectorAll(".education-open").forEach((trigger) => {
+        trigger.addEventListener("click", () => openEducationDialog(trigger));
+      });
+      educationDialogClose.addEventListener("click", closeEducationDialog);
+      educationDialogBackdrop.addEventListener("click", closeEducationDialog);
+
+      function startPreview() {
+        if (reducedMotion.matches) return;
+        motionVideo.currentTime = 0;
+        motionVideo.play().catch(() => {});
+      }
+
+      function stopPreview() {
+        motionVideo.pause();
+        motionVideo.currentTime = 0;
+      }
+
+      motionCard.addEventListener("pointerenter", startPreview);
+      motionCard.addEventListener("pointerleave", stopPreview);
+      motionCard.addEventListener("focusin", startPreview);
+      motionCard.addEventListener("focusout", stopPreview);
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeEducationDialog();
+        }
+      });
+    </script>
+  </body>
+</html>

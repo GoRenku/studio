@@ -13,6 +13,7 @@ import type {
   MediaCardPresentation,
   MediaCardVideo,
 } from './media-card-contract';
+import { MediaCardMosaicGridVisual } from './media-card-mosaic-grid';
 
 interface MediaCardVisualProps {
   media: MediaCardMedia | null;
@@ -110,6 +111,9 @@ function MediaCardMediaVisual({
         ))}
       </div>
     );
+  }
+  if (media.kind === 'mosaic-grid') {
+    return <MediaCardMosaicGridVisual media={media} />;
   }
 
   return (

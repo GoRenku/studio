@@ -13,6 +13,7 @@ import type {
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
+  StudioSelection,
   StudioSelectionContext,
 } from '@gorenku/studio-core/client';
 import type {
@@ -27,7 +28,6 @@ import {
   readSequencesForAct,
 } from '@/services/studio-screenplay-api';
 import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
-import type { StudioSelection } from './movie-studio-selection';
 
 export interface ScreenplayNavigationState {
   cast: CastNavigationRow[];

@@ -18,6 +18,7 @@ import type {
   InspirationResource,
   SceneNavigationRow,
   SequenceNavigationRow,
+  StudioSelection,
 } from '@gorenku/studio-core/client';
 import { formatSceneProductionNumber } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
@@ -32,7 +33,6 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
-import type { StudioSelection } from '../movie-studio-selection';
 import type { ScreenplayNavigationState } from '../use-screenplay-navigation';
 import { StudioSidebarActions } from './studio-sidebar-actions';
 import { StudioSidebarButton } from './studio-sidebar-button';

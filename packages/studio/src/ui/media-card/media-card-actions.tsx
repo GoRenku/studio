@@ -1,4 +1,5 @@
-import { Check, CircleDot, FileSearch, Trash2 } from 'lucide-react';
+import { Check, CircleDot, FileSearch, Pencil, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import {
@@ -8,30 +9,30 @@ import {
 } from '@/ui/tooltip';
 import type {
   MediaCardDeleteAction,
-  MediaCardInspectionAction,
+  MediaCardCornerAction,
   MediaCardSelection,
 } from './media-card-contract';
 
 interface MediaCardActionsProps {
   selection?: MediaCardSelection;
-  inspectionAction?: MediaCardInspectionAction;
+  cornerAction?: MediaCardCornerAction;
   deleteAction?: MediaCardDeleteAction;
 }
 
 export function MediaCardActions({
   selection,
-  inspectionAction,
+  cornerAction,
   deleteAction,
 }: MediaCardActionsProps) {
   return (
     <>
-      {selection || inspectionAction ? (
+      {selection || cornerAction ? (
         <div
           data-media-card-lower-actions=''
           className='pointer-events-auto absolute bottom-2 right-2 z-30 flex items-center gap-2'
         >
           {selection ? <MediaCardSelectionControl selection={selection} /> : null}
-          {inspectionAction ? <MediaCardInspectionControl action={inspectionAction} /> : null}
+          {cornerAction ? <MediaCardCornerControl action={cornerAction} /> : null}
         </div>
       ) : null}
       {deleteAction ? (
@@ -54,6 +55,17 @@ function MediaCardSelectionControl({
   const label = selection.selected
     ? selection.selectedLabel
     : selection.unselectedLabel;
+  if (selection.kind === 'choose' && selection.selected) {
+    return (
+      <span
+        role='status'
+        aria-label={selection.selectedLabel}
+        className='flex h-7 w-7 items-center justify-center rounded-full border border-primary/80 bg-primary text-primary-foreground shadow-[0_5px_12px_rgba(0,0,0,0.22)]'
+      >
+        <Check className='h-3.5 w-3.5' />
+      </span>
+    );
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -70,7 +82,11 @@ function MediaCardSelectionControl({
           aria-pressed={selection.selected}
           onClick={(event) => {
             const button = event.currentTarget;
-            void Promise.resolve(selection.onToggle()).finally(() =>
+            const action =
+              selection.kind === 'toggle'
+                ? selection.onToggle
+                : selection.onChoose;
+            void Promise.resolve(action()).finally(() =>
               button.blur()
             );
           }}
@@ -87,7 +103,8 @@ function MediaCardSelectionControl({
   );
 }
 
-function MediaCardInspectionControl({ action }: { action: MediaCardInspectionAction }) {
+function MediaCardCornerControl({ action }: { action: MediaCardCornerAction }) {
+  const Icon = action.kind === 'inspect' ? FileSearch : Pencil;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -95,11 +112,16 @@ function MediaCardInspectionControl({ action }: { action: MediaCardInspectionAct
           type='button'
           size='icon'
           variant='secondary'
-          className='h-8 w-8 rounded-full border border-white/20 bg-black/60 text-white shadow-sm backdrop-blur-sm hover:bg-black/75 hover:text-white'
+          className={cn(
+            'h-8 w-8 rounded-full border border-white/20 bg-black/60 text-white shadow-sm backdrop-blur-sm hover:bg-black/75 hover:text-white',
+            action.visibility === 'hover-or-focus'
+              ? 'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'
+              : null
+          )}
           aria-label={action.label}
-          onClick={action.onInspect}
+          onClick={action.onAction}
         >
-          <FileSearch className='h-3.5 w-3.5' />
+          <Icon className='h-3.5 w-3.5' />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{action.label}</TooltipContent>

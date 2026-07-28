@@ -127,6 +127,8 @@ File meanings:
 - `routes/projects.ts`: top-level `/studio-api/projects` resource route module;
 - `routes/navigation.ts`: navigation page routes mounted below one project;
 - `routes/assets.ts`: asset page, selection, and file routes mounted below one project;
+- `routes/shot-plans.ts`: Scene Shot Plan list/delete and Shot-image
+  select/discard routes mounted below one project;
 - `routes/project-information.ts`: Project Information routes mounted below one project;
 - `routes/markdown-assets.ts`: Markdown asset content routes mounted below one project;
 - `routes/movie-studio-selection-context.ts`: Movie Studio selection context route
@@ -136,6 +138,8 @@ File meanings:
   core service input and structured diagnostics;
 - `http/asset-file-response.ts`: asset file response mechanics, including
   content type and cache headers;
+- `http/shot-plan-responses.ts`: browser-safe Shot Plan media serialization and
+  Asset file URL decoration;
 - `http/project-responses.ts`: adapts core `Project` and `ProjectLibrary`
   contracts into HTTP response bodies when HTTP-only fields are needed;
 - `http/project-cover-url.ts`: builds Studio API cover URLs only;
@@ -301,6 +305,21 @@ Project-open responses follow ADR 0017. The Studio project route should adapt a
 bounded project shell, not construct a project-wide eager surface snapshot.
 Selected surface resources, navigation pages, and asset pages should be exposed
 as explicit resource routes that call core query methods.
+
+Shot Plans use four focused browser routes:
+
+```text
+GET    /studio-api/projects/:projectName/screenplay/scenes/:sceneId/shot-plans
+DELETE /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId
+POST   /studio-api/projects/:projectName/screenplay/shots/:shotId/selected-image/:assetId
+DELETE /studio-api/projects/:projectName/screenplay/shots/:shotId/images/:assetId
+```
+
+Candidate listing reuses the common Asset page with the fixed browser query
+`ownerKind=shot&ownerId=<shot-id>&type=shot_image&mediaKind=image`. Route code
+parses ids, calls focused Core services, serializes browser-safe URLs, and
+translates structured errors. It does not decide ownership, membership,
+selection eligibility, fallback selection, or Trash scope.
 
 ## Error Handling
 

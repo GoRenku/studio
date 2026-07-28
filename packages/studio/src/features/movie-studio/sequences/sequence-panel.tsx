@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { ScreenplayImageReferenceWithHttp } from '@gorenku/studio-core/client';
+import type {
+  ScreenplayImageReferenceWithHttp,
+  StudioSelection,
+} from '@gorenku/studio-core/client';
 import type { SequenceResourceResponse } from '@/services/studio-project-contracts';
 import { readSequenceResource } from '@/services/studio-screenplay-api';
 import {
@@ -9,7 +12,6 @@ import {
 import { cn } from '@/lib/utils';
 import { MediaCard } from '@/ui/media-card/media-card';
 import type { MediaCardMosaicCell } from '@/ui/media-card/media-card-contract';
-import type { StudioSelection } from '../movie-studio-selection';
 import { SEQUENCE_STORYBOARD_LAYOUT } from './sequence-storyboard-layout';
 
 interface SequencePanelProps {

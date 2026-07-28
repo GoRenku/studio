@@ -6,6 +6,7 @@ import { Tabs, TabsContent } from '@/ui/tabs';
 export interface LineTabsItem<Value extends string> {
   value: Value;
   label: ReactNode;
+  disabled?: boolean;
 }
 
 interface LineTabsProps<Value extends string>

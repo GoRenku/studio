@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import type { DebouncedSaveStatus } from '@/hooks/use-debounced-autosave';
 import { createInspirationFolder } from '@/services/studio-visual-language-api';
 import {
@@ -30,7 +31,6 @@ import {
   type ScreenplayNavigationState,
 } from './use-screenplay-navigation';
 import { useStudioSelectionResolution } from './use-movie-studio-selection-resolution';
-import type { StudioSelection } from './movie-studio-selection';
 import { InspirationFolderCreateDialog } from './visual-language/inspiration-folder-create-dialog';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
 import {
@@ -387,6 +387,8 @@ export function MovieStudioScreen({
                   sceneId={selection.id}
                   sceneTab={selection.sceneTab}
                   beatId={selection.beatId}
+                  shotPlanId={selection.shotPlanId}
+                  shotId={selection.shotId}
                   onSelect={selectMovieStudioSurface}
                   onHeaderActionChange={handleActiveSceneHeaderActionChange}
                   onHeaderTitleChange={handleActiveSceneHeaderTitleChange}

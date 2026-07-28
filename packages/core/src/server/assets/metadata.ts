@@ -9,7 +9,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { requireAssetOwner } from './ownership.js';
 import { readOwnedAsset } from './projection.js';
-import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { assetOwnerResourceKeys } from './resource-keys.js';
 import { readProjectLocaleRecord } from '../database/access/project-locales.js';
 
 export async function updateAsset(
@@ -47,7 +47,7 @@ export async function updateAsset(
       warnings: [],
       project: { id: project.id, name: project.name, projectFolder },
       asset,
-      resourceKeys: studioAssetOwnerSurfaceResourceKeys(owner),
+      resourceKeys: assetOwnerResourceKeys(session, owner),
     };
   } finally {
     session.close();

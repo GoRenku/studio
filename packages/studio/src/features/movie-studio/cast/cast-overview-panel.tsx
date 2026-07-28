@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import type { CastOverviewResourceResponse } from '@/services/studio-project-contracts';
 import { readCastOverviewResource } from '@/services/studio-screenplay-api';
 import {
@@ -7,7 +8,6 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
-import type { StudioSelection } from '../movie-studio-selection';
 
 interface CastOverviewPanelProps {
   projectName: string;

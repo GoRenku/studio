@@ -65,6 +65,39 @@ describe('movie studio selection context Hono route', () => {
     });
   });
 
+  it('accepts nested Shot Plan selection state without interpreting ownership', async () => {
+    const app = createMountedMovieStudioSelectionContextRoute();
+
+    const response = await app.request(
+      '/constantinople/movie-studio-selection/context',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          selection: {
+            type: 'scene',
+            id: 'scene_bombardment',
+            sceneTab: 'shotPlans',
+            shotPlanId: 'plan_primary',
+            shotId: 'shot_wide',
+          },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      valid: true,
+      selection: {
+        type: 'scene',
+        id: 'scene_bombardment',
+        sceneTab: 'shotPlans',
+        shotPlanId: 'plan_primary',
+        shotId: 'shot_wide',
+      },
+    });
+  });
+
   it('rejects unsupported selection types', async () => {
     const app = createMountedMovieStudioSelectionContextRoute();
 

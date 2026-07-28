@@ -110,6 +110,12 @@ The included surfaces are:
 - Generation Preview and Generation Request inspector reference cards;
 - Reference Picker candidates;
 - Shot Design Composition and Motion options.
+- Shot Plan collection cards, Shot rail cards, and Shot-image candidates.
+
+The exact four-cell `mosaic` remains the Visual Language contract. Variable
+selected-image summaries use the separate bounded `mosaic-grid` contract from
+ADR 0065. That contract preserves caller order and uses deterministic count
+layouts; it does not accept arbitrary grid settings or domain objects.
 
 Pure presentation media remains outside `MediaCard`: Cast and Location detail
 feature images, the Studio sidebar cover and logo, preview-dialog media,

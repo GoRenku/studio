@@ -58,7 +58,6 @@ export {
 } from './runtime-descriptor.js';
 export type {
   AppendStudioEventInput,
-  StudioSelection,
   ProjectInformationRefreshField,
   ReadStudioEventsInput,
   StudioBrowserSessionActiveEvent,

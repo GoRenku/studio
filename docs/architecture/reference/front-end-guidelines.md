@@ -510,6 +510,7 @@ Use `src/ui/media-card` for the current included visual-card surfaces:
 - Generation Preview and Generation Request inspector references;
 - Reference Picker candidates;
 - Shot Design Composition and Motion options.
+- Shot Plan collection cards, Shot rail cards, and Shot-image candidates.
 
 Do not use it for pure presentation media:
 
@@ -524,9 +525,16 @@ Do not use it for pure presentation media:
 
 The module supports only the four current presentations: overlay, thumbnail,
 evidence, and summary. Its contracts are typed for current image, video, fixed
-2x2 mosaic, frame, activation, selection, Edit, delete, and empty-state needs.
-Do not add arbitrary render slots, caller-owned action nodes, class overrides,
-domain variants, or generic mosaic layouts.
+2x2 mosaic, bounded adaptive image mosaic, frame, activation, selection,
+inspect/edit corner action, delete, and empty-state needs. Do not add arbitrary
+render slots, caller-owned action nodes, class overrides, domain variants, or
+caller-configurable mosaic layouts.
+
+Shared Shot Design presentation media lives under
+`features/movie-studio/shot-design`. Both authoring and read-only Shot Plan
+surfaces consume that one media catalog directly. The catalog owns file lookup
+and labels for presentation; it does not own Shot Plan state or validate
+authored creative values.
 
 Action placement is fixed:
 

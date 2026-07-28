@@ -5,7 +5,7 @@ export interface MediaCardProps {
   activation?: MediaCardActivation;
   selected?: boolean;
   selection?: MediaCardSelection;
-  inspectionAction?: MediaCardInspectionAction;
+  cornerAction?: MediaCardCornerAction;
   deleteAction?: MediaCardDeleteAction;
   emptyState?: MediaCardEmptyState;
 }
@@ -13,7 +13,8 @@ export interface MediaCardProps {
 export type MediaCardMedia =
   | MediaCardImage
   | MediaCardVideo
-  | MediaCardMosaic;
+  | MediaCardMosaic
+  | MediaCardMosaicGrid;
 
 export interface MediaCardImage {
   kind: 'image';
@@ -52,6 +53,17 @@ export interface MediaCardMosaic {
 export interface MediaCardMosaicCell {
   id: string;
   src?: string;
+  alt: string;
+}
+
+export interface MediaCardMosaicGrid {
+  kind: 'mosaic-grid';
+  items: MediaCardMosaicGridItem[];
+}
+
+export interface MediaCardMosaicGridItem {
+  key: string;
+  imageUrl: string;
   alt: string;
 }
 
@@ -123,17 +135,35 @@ export interface MediaCardActivation {
   onActivate: () => void;
 }
 
-export interface MediaCardSelection {
-  selected: boolean;
-  selectedLabel: string;
-  unselectedLabel: string;
-  onToggle: () => void | Promise<void>;
-}
+export type MediaCardSelection =
+  | {
+      kind: 'toggle';
+      selected: boolean;
+      selectedLabel: string;
+      unselectedLabel: string;
+      onToggle: () => void | Promise<void>;
+    }
+  | {
+      kind: 'choose';
+      selected: boolean;
+      selectedLabel: string;
+      unselectedLabel: string;
+      onChoose: () => void | Promise<void>;
+    };
 
-export interface MediaCardInspectionAction {
-  label: string;
-  onInspect: () => void;
-}
+export type MediaCardCornerAction =
+  | {
+      kind: 'inspect';
+      label: string;
+      visibility: 'always' | 'hover-or-focus';
+      onAction: () => void;
+    }
+  | {
+      kind: 'edit';
+      label: string;
+      visibility: 'always' | 'hover-or-focus';
+      onAction: () => void;
+    };
 
 export interface MediaCardDeleteAction {
   label: string;

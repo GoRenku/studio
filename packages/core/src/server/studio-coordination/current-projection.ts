@@ -3,12 +3,12 @@ import { createProjectDataService } from '../project-data-service.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
   ScenePanelTab,
+  StudioSelection,
 } from '../../client/index.js';
 import { studioCoordinationWarning } from './errors.js';
 import { isStudioRuntimeDescriptorUsable, readStudioRuntimeDescriptor } from './runtime-descriptor.js';
 import { resolveStudioSelectionForProject } from './focus-validation.js';
 import type {
-  StudioSelection,
   StudioBrowserSessionActiveEvent,
   StudioCurrent,
   StudioCurrentContext,
@@ -347,6 +347,11 @@ function enrichSceneBeatFocusContext(input: {
 function sceneTabLabel(tab: ScenePanelTab) {
   return {
     id: tab,
-    label: tab === 'beats' ? 'Beats' : tab === 'shots' ? 'Shots' : 'Narrative',
+    label:
+      tab === 'beats'
+        ? 'Beats'
+        : tab === 'shotPlans'
+          ? 'Shot Plans'
+          : 'Narrative',
   };
 }

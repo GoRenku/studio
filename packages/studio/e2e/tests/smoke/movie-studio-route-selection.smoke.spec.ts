@@ -1,6 +1,6 @@
 import { expect, test } from '../../fixtures/studio-e2e-test';
 
-test('keeps Scene Beat and Shots route selection across reload and browser navigation', async ({
+test('keeps Scene Beat and Shot Plan detail across reload and browser navigation', async ({
   page,
   movieProject,
 }) => {
@@ -19,12 +19,24 @@ test('keeps Scene Beat and Shots route selection across reload and browser navig
   await expect(page.getByText('Show consequence through human response.'))
     .toBeVisible();
 
-  await page.goto(`${sceneRoute}?sceneTab=shots`);
-  await expect(page.getByRole('button', { name: 'New Shot' })).toBeVisible();
+  const shotPlansRoute = `${sceneRoute}?sceneTab=shotPlans`;
+  const shotPlanRoute = `${shotPlansRoute}&shotPlan=${movieProject.shotPlanId}&shot=${movieProject.firstShotId}`;
+  await page.goto(shotPlansRoute);
+  await expect(
+    page.getByRole('heading', { name: 'Gate pressure coverage' })
+  ).toBeVisible();
+  await page.getByRole('button', {
+    name: 'Open Shot Plan Gate pressure coverage',
+  }).click();
+  await expect(page).toHaveURL(shotPlanRoute);
+  await expect(
+    page.getByRole('heading', { name: 'Urban holds beside the cannon' })
+  ).toBeVisible();
+  await page.reload();
+  await expect(page).toHaveURL(shotPlanRoute);
 
   await page.goBack();
-  await expect(page).toHaveURL(beatRoute);
+  await expect(page).toHaveURL(shotPlansRoute);
   await page.goForward();
-  await expect(page).toHaveURL(`${sceneRoute}?sceneTab=shots`);
-  await expect(page.getByRole('button', { name: 'New Shot' })).toBeVisible();
+  await expect(page).toHaveURL(shotPlanRoute);
 });

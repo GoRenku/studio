@@ -13,7 +13,11 @@ import {
   readRequiredHttpString,
 } from './request-validation.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'beats', 'shots'];
+const SCENE_PANEL_TABS: ScenePanelTab[] = [
+  'narrative',
+  'beats',
+  'shotPlans',
+];
 
 export function readMovieStudioSelectionRequest(input: unknown): {
   selection: StudioSelection;
@@ -54,6 +58,14 @@ export function readMovieStudioSelectionRequest(input: unknown): {
   const beatId =
     typeof selection.beatId === 'string' && selection.beatId.trim()
       ? selection.beatId.trim()
+      : undefined;
+  const shotPlanId =
+    typeof selection.shotPlanId === 'string' && selection.shotPlanId.trim()
+      ? selection.shotPlanId.trim()
+      : undefined;
+  const shotId =
+    typeof selection.shotId === 'string' && selection.shotId.trim()
+      ? selection.shotId.trim()
       : undefined;
   const sceneTab =
     typeof selection.sceneTab === 'string' && selection.sceneTab.trim()
@@ -116,6 +128,8 @@ export function readMovieStudioSelectionRequest(input: unknown): {
       folderId,
       kind,
       beatId,
+      shotPlanId,
+      shotId,
       sceneTab: sceneTab as ScenePanelTab | undefined,
     }),
   };
@@ -147,6 +161,8 @@ function studioSelectionFromRequest(
     folderId?: string;
     kind?: 'production' | 'storyboard';
     beatId?: string;
+    shotPlanId?: string;
+    shotId?: string;
     sceneTab?: ScenePanelTab;
   }
 ): StudioSelection {
@@ -157,6 +173,8 @@ function studioSelectionFromRequest(
         id: ids.id as string,
         ...(ids.sceneTab ? { sceneTab: ids.sceneTab } : {}),
         ...(ids.beatId ? { beatId: ids.beatId } : {}),
+        ...(ids.shotPlanId ? { shotPlanId: ids.shotPlanId } : {}),
+        ...(ids.shotId ? { shotId: ids.shotId } : {}),
       };
     case 'act':
     case 'sequence':

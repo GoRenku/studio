@@ -345,7 +345,7 @@ describe('StudioCoordinationService', () => {
         selection: {
           type: 'scene',
           id: scene.id as string,
-          sceneTab: 'shots',
+          sceneTab: 'shotPlans',
         },
       },
       source: {
@@ -360,14 +360,14 @@ describe('StudioCoordinationService', () => {
     expect(current.selection).toEqual({
       type: 'scene',
       id: scene.id,
-      sceneTab: 'shots',
+      sceneTab: 'shotPlans',
     });
     expect(current.context).toMatchObject({
       kind: 'scene',
       id: scene.id,
       sceneTab: {
-        id: 'shots',
-        label: 'Shots',
+        id: 'shotPlans',
+        label: 'Shot Plans',
       },
     });
   });
@@ -414,7 +414,7 @@ describe('StudioCoordinationService', () => {
         selection: {
           type: 'scene',
           id: scene.id as string,
-          sceneTab: 'shots',
+          sceneTab: 'shotPlans',
         },
       },
       source: {
@@ -437,7 +437,7 @@ describe('StudioCoordinationService', () => {
         selection: {
           type: 'scene',
           id: scene.id as string,
-          sceneTab: 'shots',
+          sceneTab: 'shotPlans',
         },
       },
       source: {
@@ -479,7 +479,7 @@ describe('StudioCoordinationService', () => {
         selection: {
           type: 'scene',
           id: scene.id as string,
-          sceneTab: 'shots',
+          sceneTab: 'shotPlans',
         },
       },
       source: {
@@ -513,14 +513,14 @@ describe('StudioCoordinationService', () => {
     expect(current.selection).toEqual({
       type: 'scene',
       id: scene.id,
-      sceneTab: 'shots',
+      sceneTab: 'shotPlans',
     });
     expect(current.context).toMatchObject({
       kind: 'scene',
       id: scene.id,
       sceneTab: {
-        id: 'shots',
-        label: 'Shots',
+        id: 'shotPlans',
+        label: 'Shot Plans',
       },
     });
   });

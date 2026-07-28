@@ -353,12 +353,27 @@ generic look.
 The action anatomy is consistent across all four:
 
 - selection is persistent at lower-right;
-- an optional inspection action follows selection at lower-right;
+- an optional inspect or edit action follows selection at lower-right;
 - delete uses the shared top-right treatment;
 - whole-card activation is behind those sibling controls.
 
 Use typed `MediaCard` contracts. Do not add arbitrary visual, body, action, or
 class-name slots.
+
+Shot rail selection uses a strong amber border and restrained shadow around the
+image card only. When duration intent is present, keep it in a lower-left badge
+so it does not compete with the lower-right edit action.
+
+Shot-image candidates use one-way choose semantics: unselected cards expose a
+selection control, while the selected card shows a persistent labelled status.
+Only unselected candidates expose recoverable delete in this surface.
+
+Variable selected-image summaries use the bounded adaptive mosaic from ADR
+0065. The layout preserves input order and reports overflow accessibly; callers
+must not configure arbitrary grid geometry.
+
+Read-only Shot briefs put creative intent first. Optics and Lighting show
+authored intent as primary copy and keep optional technical values secondary.
 
 **PropertyRow** (2-column grid card):
 ```

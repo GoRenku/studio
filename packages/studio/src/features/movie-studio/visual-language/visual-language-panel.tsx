@@ -1,5 +1,5 @@
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
-import type { StudioSelection } from '../movie-studio-selection';
 import { InspirationPanel } from './inspiration-panel';
 import { LookbookPanel } from './lookbook-panel';
 

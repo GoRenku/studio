@@ -1,7 +1,7 @@
 # 0157 Shot Plans Studio UI
 
-Status: proposed
-Date: 2026-07-26
+Status: complete
+Date: 2026-07-27
 
 Plan 0159 and Decision 0064 are hard dependencies for the image portions of
 this future UI. This plan consumes the common `Asset`, `Shot.images`,
@@ -12,15 +12,25 @@ future bounded-mosaic UI decision.
 
 ## Summary
 
-This plan adds the Shot Plans inspection and selected-image curation
+This plan adds the Shot Plans detail and selected-image curation
 surface sketched in
-`plans/exploration/shot-plans-ui.md` and the attached rough wireframe. It
+`plans/exploration/shot-plans-ui.md` and finalized in the normative design
+artifact defined below. It
 replaces the current `Shots` placeholder with a `Shot Plans` tab, renders
-scene-owned Shot Plans as image mosaics, and opens a desktop inspector with
-covered Beats, a resizable Shot rail, five glanceable brief cards, and the
-canonical Markdown Shot description. Each Shot rail card also opens a focused
-candidate-image dialog where the user can select the selected image or
-move any candidate to Trash.
+scene-owned Shot Plans as image mosaics, and navigates from the collection to a
+full in-page Shot Plan detail. The detail stays inside the existing Scene tab
+surface: the Scene heading remains the only page heading, the Scene tabs remain
+visible, and the Back action occupies the existing Scene header action slot.
+The focused surface contains the resizable Shot rail and Shot detail content
+without a second route header, breadcrumb, or Shot Plan title header. The exact
+authored Shot title occupies its own row, and the covered Beat chips sit in a
+separate row directly underneath it and show only `Beat N`.
+The `Brief` and `Description` tabs sit directly below the authored Shot title. The
+Brief tab contains a responsive five-card grid, full-size visual inspection,
+and Framing/Camera/Motion visual glossaries. The Description tab gives the
+canonical Markdown room to be read. Each Shot rail card also opens a focused
+candidate-image dialog where the user can select the selected image or move
+any candidate to Trash.
 
 This is deliberately the UI half of a two-plan feature:
 
@@ -28,21 +38,94 @@ This is deliberately the UI half of a two-plan feature:
   and Shot contracts, focused Core commands, Shot image ownership and
   lifecycle, `shot.image`, CLI authoring, and Studio Skills.
 - this plan owns the browser-facing Core selection contract, thin Studio
-  routes, browser service, cards, inspector, focused selected-image
-  curation, shared visual vocabulary, and desktop interaction and
-  accessibility behavior.
+  routes, browser service, cards, in-page detail navigation, focused
+  selected-image curation, shared visual vocabulary, and desktop interaction
+  and accessibility behavior.
 
 Plan 0156 is a hard dependency. This plan must not recreate its domain rules in
 React or HTTP handlers and must not ship against the current whole-plan update
 contract.
 
-The design follows the current Studio system rather than treating the
-wireframe as a literal component specification. It uses existing `LineTabs`,
-`MediaCard`, `MediaCardGrid`, `Dialog`, `ResizablePanelGroup`, CodeMirror,
-Lucide icons, amber selection language, and the existing Shot Design media.
-New shared primitive work is limited to a bounded mosaic variant, a bounded
-lower-corner `MediaCard` action, a choose-one `MediaCard` selection mode, and a
-local shadcn-style Hover Card primitive.
+The production implementation uses existing `LineTabs`, `MediaCard`,
+`MediaCardGrid`, `Button`, `ResizablePanelGroup`, `Dialog`,
+`ImagePreviewDialog`, CodeMirror, Lucide icons, the amber selection language,
+and the existing Shot Design media. It must match the accepted mockup exactly
+for every surface and state represented there. The primary Shot Plan detail is
+not a Dialog. Dialog remains appropriate only for transient candidate, media,
+confirmation, and education tasks. New shared primitive work is limited to a
+bounded mosaic variant, a bounded lower-corner `MediaCard` action, a choose-one
+`MediaCard` selection mode, and a local shadcn-style Hover Card primitive.
+
+## Normative Design Artifact
+
+The complete accepted mockup is checked into:
+
+- `plans/active/assets/0157-shot-plans-studio-ui/index.html`
+- `plans/active/assets/0157-shot-plans-studio-ui/screenshots/`
+- `plans/active/assets/0157-shot-plans-studio-ui/design-qa.md`
+
+Run it from the repository root with:
+
+```bash
+python3 -m http.server 8765 --directory plans/active/assets/0157-shot-plans-studio-ui
+```
+
+Then open `http://127.0.0.1:8765/`.
+
+For the Shot Plans collection/detail surfaces listed below, `index.html` is
+the normative implementation reference for exact layout, spacing, card
+proportions,
+typography hierarchy, colors, borders, radii, shadows, overflow, hover/focus
+behavior, navigation, and transient-dialog composition. Implementers must
+inspect the live artifact and its CSS rather than approximate these values
+from prose. The screenshots are stable state references; paths in the final
+column are relative to
+`plans/active/assets/0157-shot-plans-studio-ui/`:
+
+| Production surface/state | Normative mockup selector | Stable screenshot |
+| --- | --- | --- |
+| Scene Shot Plans collection and plan-card activation | `.scene-workspace`, `.scene-header`, `.scene-tabs`, `.shot-plan-grid`, `.shot-plan-card` | `screenshots/iteration-6-shot-plans-list.png` at 1440×900 |
+| In-page navigation and Back | `.shot-plan-detail-page`, `.back-button` | `screenshots/iteration-6-shot-plan-detail.png` at 1440×900, corrected by the implementation feedback recorded in this plan |
+| Wide Shot Plan surface, rail, exact Shot title, tabs, and readable wrapping Brief grid | `.shot-plan-surface-body`, `.shot-rail`, `.detail`, `.shot-heading`, `.detail-tabs`, `#brief-panel`, `.brief-grid` | `screenshots/iteration-6-shot-plan-detail.png` at 1440×900, with the redundant mockup route and plan headers omitted |
+| Description reading state | `.detail-tabs`, `#description-panel`, `.description-panel`, `.description-editor` | `screenshots/wide-description-tab.png` at 1315×1198; use the live artifact for the 1440×900 comparison |
+| Compact desktop/tablet wrapping behavior | `.shot-plan-surface-body`, `.brief-grid` | `screenshots/compact-wrapped-brief-grid.png` at 1024×900 |
+| Beat storyboard hover/focus preview | `.beat-item`, `.beat-preview` | `screenshots/beat-hover-preview.png` |
+| Selected and empty Shot rail cards | `.rail-card`, `.rail-card-selected`, `.rail-card-empty` | `screenshots/empty-shot-rail.png` |
+| Framing and Camera still inspection | clickable `.framing-panel` / Camera `.media-region`, `#media-dialog` | `screenshots/image-preview-dialog.png` |
+| Motion inspection | Motion `.media-region`, `#media-dialog` | `screenshots/motion-preview-dialog.png` |
+| Card education affordance and Camera glossary | `.education-open`, `#education-dialog`, `.education-dialog-content`, `.education-grid` | `screenshots/wide-brief-tab.png`, `screenshots/camera-glossary-dialog.png` |
+| Motion glossary and motion-preview behavior | `#education-dialog`, `.education-card`, `.education-media` | `screenshots/motion-glossary-dialog.png` |
+
+The navigation wireframe source is
+`screenshots/navigation-wireframe.png`; the normalized side-by-side evidence
+is `screenshots/iteration-6-list-comparison.png` and
+`screenshots/iteration-6-detail-comparison.png`.
+
+The wide reference viewport is 1440×900. The compact reference viewport is
+1024×900 and exists to verify desktop/tablet grid wrapping, not mobile
+support. Production visual verification captures both sizes.
+
+The mockup is normative only for the regions and states it contains. The Shot
+image candidate dialog, confirmation dialogs, and structured loading/error
+states are not mocked; their explicit contracts in this plan remain
+authoritative.
+
+The artifact is a design specification, not source code for production:
+
+- do not paste its raw HTML controls, global CSS, inline data, or JavaScript
+  into `packages/studio`;
+- compose local shadcn-style controls and the accepted feature/component/hook
+  boundaries in this plan;
+- reuse current product components where this plan names them;
+- use the mockup selectors to locate exact visual behavior, then express that
+  behavior through production tokens and components;
+- do not edit the artifact to make an implementation deviation appear
+  correct.
+
+If prose and the mockup conflict for a mocked visual region, the mockup wins.
+Core ownership, architecture boundaries, accessibility, exact authored-value
+preservation, and the shadcn-controls-only rule remain hard gates even where
+the one-off prototype used a shortcut.
 
 ## Requirement Ledger
 
@@ -51,25 +134,31 @@ local shadcn-style Hover Card primitive.
 | Replace the Scene `Shots` placeholder with `Shot Plans`. | Exploration brief and wireframe | Rename the stable scene tab contract and replace the placeholder feature |
 | Keep `Generations` visible but disabled. | User answer 5 | Disabled `LineTabs` trigger with no selectable tab state, route, request, or content |
 | Show existing Shot Plans in a three-column desktop card grid. | Exploration brief | Existing `MediaCardGrid` on the Scene panel |
-| Do not add a `New Shot Plan` card or general Shot Plan/Shot authoring controls in this slice. | Exploration brief and accepted image-card clarification | Read-mostly list/inspector plus recoverable plan delete and focused selected-image curation |
+| Do not add a `New Shot Plan` card or general Shot Plan/Shot authoring controls in this slice. | Exploration brief and accepted image-card clarification | Read-mostly collection/detail plus recoverable plan delete and focused selected-image curation |
 | Each Shot Plan card uses its Shots' selected images in canonical Shot order. | Exploration brief and plan 0156 | Bounded `MediaCard` mosaic input derived from the Core list projection |
 | Mosaic layout is deterministic: one full image, two split, three columns, four 2x2, five through nine in three columns, and more than nine as eight images plus a ninth `+N` tile. | User answer 7 | One reusable bounded mosaic algorithm and focused layout tests |
 | A Shot Plan with no selected images remains quiet and meaningful. | Project UI-copy rule | Existing empty-media treatment with an image icon; no fabricated title, filename, or placeholder art |
 | The card overlay shows the authored Shot Plan title and covered Beat numbers. | Exploration brief | Meaningful authored/domain copy only |
 | Delete is recoverable and includes the plan's Shot images. | User answer 1 and plan 0156 | Confirmation states that the plan and its images move to Trash; route delegates to Core |
-| Inspect opens a read-mostly modal with header, covered Beats, Shot rail, and Shot details. | Exploration brief and wireframe | Focused dialog feature, no generic inspector framework |
-| The dialog initially selects the first Shot; selecting another Shot updates the detail area. | Exploration brief | URL-backed nested selection using canonical Shot order |
-| Closing the inspector keeps the Scene on `Shot Plans`. | Exploration brief | Clear plan/Shot focus only, not the scene tab |
+| Activating a Shot Plan card navigates from the Scene tab collection to a full in-page Shot Plan detail; it does not open a modal. | Latest navigation wireframe and user direction | `scene-panel.tsx` keeps the Scene heading and `LineTabs`, while the selected Shot Plans tab renders the focused `ShotPlanDetailPage` from the URL-backed selection |
+| The existing Scene heading is the one and only page heading. Its action slot contains the Back `Button`; no breadcrumb or repeated Shot Plan header is rendered. Back restores the Shot Plans collection and its selected tab. | Corrective implementation feedback | `scene-panel.tsx` owns the header action and the stable Scene tab row |
+| The detail initially selects the first Shot; selecting another Shot updates the detail area. | Exploration brief | URL-backed nested selection using canonical Shot order |
+| Browser Back/Forward and reload preserve the collection/detail route. | Latest navigation wireframe and user direction | Existing Studio selection URL is the navigation source of truth; no parallel router state |
 | Covered Beat images appear on hover and keyboard focus. | Wireframe and design audit | Local Hover Card using actual storyboard image files; text-only fallback when absent |
-| The Shot rail shows one `MediaCard` per Shot, selected in amber and using the shared card hover/focus affordances. | User answer 6 and accepted image-card clarification | Card activation selects the Shot; amber border/background selection never uses green success language |
+| The Shot rail shows one `MediaCard` per Shot. Selection is a thick amber border on the image only, not an amber-filled rail item. The rail does not repeat the Shot title or `Shot N of M`. | Accepted mockup feedback | `.rail-card`, `.rail-card-selected`, and `.rail-card-empty` in the normative artifact |
 | Each Shot rail card exposes a bottom-right edit action on hover or keyboard focus. | Accepted image-card clarification | Bounded Pencil action opens the exact Shot's candidate-image dialog |
 | Duration is intent only and appears as a bottom-left image badge with a duration icon and value. | User answer 2 and accepted image-card clarification | Timer badge avoids the lower-right edit action; no ranges, overlaps, track, timeline, or sequencing UI |
 | The candidate-image dialog shows every active image candidate for the exact Shot as cards. | Accepted image-card clarification | Lazy focused Asset query, existing `MediaCardGrid`, and quiet loading/error/empty states |
 | Candidate cards select through a bottom-right selection control and show the selected image persistently. | Accepted image-card clarification | Focused common Asset selection mutation; selecting does not clear or auto-close |
-| Candidate cards expose top-right hover/focus delete. Deletion is recoverable. | Decision 0064 | Common Asset discard clears selection when the deleted candidate is selected. |
+| Unselected candidate cards expose top-right hover/focus delete. Deletion is recoverable. | Decision 0064 and the accepted image-card clarification | The selected candidate keeps only its persistent selected indicator; common Asset discard remains the recoverable mutation for unselected candidates. |
 | Framing shows start/end shot size; Camera shows angle; Motion shows movement. | User answer 3 and Appendix | Shared Shot Design media where known, exact authored text as fallback |
+| The Shot title is followed immediately by `Brief` and `Description` tabs; the description is not stacked below the cards. | Accepted mockup feedback | `.shot-heading`, `.detail-tabs`, `#brief-panel`, and `#description-panel` |
+| Brief cards use one fixed width and wrap into additional rows. They never shrink or stretch with the available integrated Scene width. | Corrective fixed-width feedback | `.brief-grid` plus the wide and compact reference screenshots |
+| Framing start/end images, Camera media, and Motion media open a larger inspection dialog. | Accepted mockup feedback | `#media-dialog` and the still/motion preview screenshots |
+| Framing, Camera, and Motion have a bottom-right `?` education action. It opens a read-only illustrated glossary of every canonical named option, with current/start/end markers. | Accepted mockup feedback | `.education-open`, `#education-dialog`, and the glossary screenshots |
 | Optics and Lighting put creative intent before technical metadata. | User answer 3 and Appendix | Text-led brief cards; optional optics values are secondary |
 | The full authored Shot description is the canonical detail. | Exploration brief and plan 0156 | Read-only CodeMirror Markdown surface preserving exact text |
+| The accepted mockup is a durable, runnable implementation reference, not an informal attachment. | Accepted fidelity requirement | Checked-in artifact, selector mapping, and same-viewport visual comparison |
 | Visual and motion behavior remains accessible on desktop. | Product design audit | Keyboard equivalents, visible focus, reduced-motion handling, semantic labels, independent scrolling |
 | The UI remains a projection consumer. | Architecture hard gate | No Beat, image ownership, copy, discard eligibility, duration, vocabulary, or selection eligibility rules in React |
 
@@ -117,7 +206,8 @@ Each card presents:
 - the authored Shot Plan title;
 - a compact `Beat 1 · Beat 2 · …` coverage line using the covered Beat
   positions returned by Core;
-- the existing bottom-right inspect action;
+- whole-card activation and the existing bottom-right inspect action, both
+  navigating to the same in-page detail selection;
 - the existing top-right destructive action with an accessible label.
 
 There is no create card, Shot Plan-card edit action, status badge, generated
@@ -161,40 +251,55 @@ browser sends only the Shot Plan id. Core owns:
 - moving records and files to Trash;
 - returning structured mutation and resource-key output.
 
-On success the UI closes the inspector if it was showing the deleted plan,
-clears the nested focus, invalidates the scene Shot Plans resource, and lets
-the normal list projection remove the card. It does not optimistically invent
-a partial deleted aggregate.
+On success the UI returns to the Shot Plans collection if it was showing the
+deleted plan, clears the nested plan/Shot focus, invalidates the scene Shot
+Plans resource, and lets the normal list projection remove the card. It does
+not optimistically invent a partial deleted aggregate.
 
-### Inspector focus and close behavior
+### Shot Plan detail navigation
 
-Inspecting a card opens the Shot Plan dialog and sets:
+Activating a Shot Plan card replaces the Shot Plans tab-panel collection with
+the full in-page detail while keeping the Scene heading and `LineTabs` visible,
+and sets:
 
 - the selected Shot Plan id; and
 - the first Shot id in canonical order when at least one Shot exists.
 
-The dialog can also restore a valid URL-backed focus after reload. If the Shot
-Plan has no Shots, it opens with the header and an empty Shot detail state, with
-no fabricated selected id.
+The URL-backed Studio selection is the navigation state; do not add a
+component-local route, second router, or modal-open boolean. A valid deep link
+restores the detail after reload. If the Shot Plan has no Shots, the page keeps
+the Scene heading and tabs and shows the empty Shot detail state with no
+fabricated selected id.
 
-Selecting a Shot in the rail updates the selected Shot id. Closing the dialog
-removes the plan and Shot query fields while leaving
-`sceneTab=shotPlans`.
+The Back action uses the local `Button` with `ArrowLeft` in the existing Scene
+header action slot. The detail does not add a route header, breadcrumb, repeated
+Scene heading, or Shot Plan title header.
+
+Selecting a Shot in the rail updates the selected Shot id. Back sends the
+selection `{ type: "scene", id: sceneId, sceneTab: "shotPlans" }`, thereby
+clearing `shotPlanId` and `shotId`, restoring the Scene tab row and Shot Plans
+collection, and returning focus to the plan card that initiated navigation.
+Browser Back/Forward and direct reload use the same URL-backed contract.
 
 If the URL supplies an unavailable plan, a Shot from a different plan, or a
 deleted Shot, the server-owned Studio coordination projection rejects or
 normalizes that focus using the current structured selection mechanism. React
 does not decide membership from stale list data.
 
-### Inspector header and covered Beats
+### Shot title and covered Beats
 
-The header shows:
+The Shot heading block shows:
 
-- the authored Shot Plan title;
-- compact Beat chips in covered order;
-- the Beat position and authored Beat title;
+- the exact authored Shot title on its own row, with no appended Beat,
+  coverage, framing, or other generated qualifier;
+- compact Beat chips in covered order on a separate row directly underneath
+  the title, never right-aligned beside it;
+- only the Beat position as `Beat N`, without the authored Beat title;
 - a hover/focus preview of the Beat's selected storyboard image when one
   exists.
+
+It does not show the Shot Plan title, explanatory detail copy, a read-only
+disclaimer, or a summary of what is canonical.
 
 The preview uses the existing generic Asset file route. If a covered Beat does
 not have a selected storyboard image, the chip remains useful text and no
@@ -205,11 +310,12 @@ supplemental; no required information is available only on hover.
 
 ### Shot rail
 
-The dialog body uses the existing horizontal resizable panel primitive:
+The in-page detail body uses the existing horizontal resizable panel primitive:
 
-- rail default: 24% of the dialog body;
-- rail minimum: 20%;
-- rail maximum: 30%;
+- the initial rail geometry matches `.shot-plan-surface-body` in the normative
+  artifact, whose reference width is `clamp(210px, 18vw, 260px)`;
+- production resize constraints keep the rail within that same readable range
+  rather than converting it to the earlier 24%/20%/30% proposal;
 - visible drag handle;
 - independently scrollable rail and detail regions.
 
@@ -217,16 +323,22 @@ Each rail item is a shared `MediaCard`, not a one-off clickable panel. Whole-car
 activation selects the Shot. The card contains:
 
 - the Shot's selected image, or a quiet `ImageOff` state;
-- a circular `Shot 1`, `Shot 2`, … number badge at the upper left;
+- a circular `1`, `2`, … number badge at the upper left;
 - a bottom-left Timer badge only when `durationSeconds` exists;
 - a value such as `5s` or `2.5s`, without a start time or range;
 - an accessible label such as `Approximate duration 5 seconds`;
 - a bottom-right Pencil action that appears on pointer hover or keyboard focus
   and is labelled `Manage images for Shot <position>`.
 
-Shot numbers derive from canonical position. The selected item uses the
-project's amber active treatment and a visible focus ring. Green is reserved
-for success/readiness semantics and is not used for selection.
+The rail does not repeat the authored Shot title beneath the image and does not
+show `Shot N of M`; the upper-left number already establishes position. Shot
+numbers derive from canonical position. The selected item uses the exact
+`.rail-card-selected` treatment: a thick amber border and restrained shadow
+around the image card only. It does not apply an amber background to the whole
+rail row. The empty card uses `.rail-card-empty`: the same geometry, a neutral
+thin border, centered `ImageOff`, and the available number/duration overlays.
+Green is reserved for success/readiness semantics and is not used for
+selection.
 
 The number and duration badges are feature-owned, pointer-transparent overlays
 around the shared card. They do not require arbitrary badge slots or
@@ -237,7 +349,8 @@ actions.
 
 ### Shot image candidate dialog
 
-The rail-card Pencil action opens a second focused Dialog for that exact Shot.
+The rail-card Pencil action opens a focused Dialog over the in-page detail for
+that exact Shot.
 It follows the current `ReferencePickerDialog` desktop geometry:
 
 - `max-w-5xl`;
@@ -247,10 +360,10 @@ It follows the current `ReferencePickerDialog` desktop geometry:
 - a concise description that selecting an image changes the selected
   image used by the rail and Shot Plan mosaic.
 
-Only the top dialog traps focus. Closing it returns focus to the rail card's
-Pencil action and leaves the inspector, selected Scene tab, selected Shot Plan,
-and selected Shot unchanged. The dialog is transient UI state and is not added
-to the URL-backed Studio selection contract.
+The candidate Dialog traps focus while open. Closing it returns focus to the
+rail card's Pencil action and leaves the detail page, selected Scene tab,
+selected Shot Plan, and selected Shot unchanged. The Dialog is transient UI
+state and is not added to the URL-backed Studio selection contract.
 
 The dialog lazily loads every active `shot_image` candidate owned by the exact
 Shot in the order returned by Core. It does not sort by filename, infer
@@ -286,8 +399,21 @@ selected image.
 The detail region presents:
 
 1. the authored Shot title;
-2. the five-card brief grid;
-3. the canonical Markdown description.
+2. the `Brief` and `Description` tabs immediately below the title;
+3. exactly one active tab panel.
+
+The title does not repeat `Shot N`. Match `.shot-heading`, `.detail-tabs`, and
+`.tab-list` in the normative artifact. `Brief` is the initial tab for a newly
+opened Shot detail. The selected detail tab is transient component state, not
+URL state and not a Core/server concern.
+
+The `Brief` panel contains the five-card grid. It follows the card proportions
+from `screenshots/wide-brief-tab.png`, while column count responds to the actual
+integrated Scene content width. Every card uses the same fixed width from the
+feature-local `SHOT_BRIEF_CARD_WIDTH_PX` constant; cards wrap but never shrink
+or stretch. The grid is deliberately content-extensible; adding another brief
+card later uses the same wrapping behavior rather than adding a special row
+definition.
 
 The brief card subjects and hierarchy are:
 
@@ -303,6 +429,36 @@ catalog. Custom non-empty values remain exact text. Missing optional values
 leave a quiet card; the UI does not invent `Auto`, `None`, or a generic pick
 label.
 
+The Framing start and end images are independently activatable. Camera media
+and Motion media are activatable. A still activation opens the existing shared
+`ImagePreviewDialog` used elsewhere in Studio. Motion uses the feature-local
+preview composition in `shot-brief-media.tsx`, built from the local `Dialog`
+and shared `VideoPreview`, with the same frame, title hierarchy, poster, and
+close behavior as the still preview. Match `#media-dialog` and the still/motion
+preview screenshots. Close through the standard upper-right Dialog close
+control, backdrop, or Escape; return focus to the exact invoking image.
+
+Framing, Camera, and Motion each include the exact bottom-right
+`.education-open` `?` action from the artifact. This control is separate from
+the media activation target and has a specific accessible name such as
+`Learn about camera angle options`. It opens the read-only visual glossary:
+
+- Framing renders every one of the nine canonical `SHOT_SIZE_OPTIONS`; the
+  authored start option is marked `Start` and the authored end option is marked
+  `End`;
+- Camera renders every one of the eight canonical `CAMERA_ANGLE_OPTIONS`; the
+  authored option is marked `Current`;
+- Motion renders every one of the ten canonical `MOVEMENT_OPTIONS`; the
+  authored option is marked `Current`.
+
+The glossary consumes those existing option arrays directly. It does not copy
+or independently order the vocabulary. Match `.education-dialog-content`,
+`.education-dialog-scroll`, `.education-grid`, `.education-card`,
+`.education-media`, and the Camera/Motion glossary screenshots. The wide
+reference renders five glossary columns; the compact reference renders four,
+using the artifact's `repeat(auto-fit, minmax(185px, 1fr))` behavior. Current,
+Start, and End are amber contextual markers, not selection controls.
+
 Motion media may preview on hover or focus when the current catalog supplies a
 clip. It must:
 
@@ -311,8 +467,11 @@ clip. It must:
 - render a static poster when reduced motion is requested;
 - retain the exact text label so the concept is never communicated by motion
   alone;
-- use the text fallback for catalog entries such as Rack Focus that do not
-  have a motion file.
+- use the bundled still illustration for Rack Focus, which has no motion file.
+
+The same motion behavior applies inside the Motion glossary. Hover/focus starts
+the clip from its poster; leaving/blurring stops and resets it. Reduced motion
+keeps every option on its still poster. Rack Focus remains still-only.
 
 Optics is intentionally not reduced to `85 mm`, and Lighting is intentionally
 not reduced to a color-temperature label. Their intent text receives the
@@ -321,9 +480,13 @@ secondary metadata.
 
 ### Canonical description
 
-The description is rendered in a read-only CodeMirror Markdown surface using
-the project's neutral editor treatment. It preserves the exact authored
-Markdown and may syntax-highlight presentation tokens only.
+The Description tab renders a long-form, read-only CodeMirror Markdown surface
+using the project's neutral editor treatment. It occupies the available detail
+height and scrolls internally, matching `#description-panel`,
+`.description-panel`, `.description-editor`, and
+`screenshots/wide-description-tab.png`. It is never vertically stacked under
+the Brief cards. It preserves the exact authored Markdown and may
+syntax-highlight presentation tokens only.
 
 The browser does not:
 
@@ -351,7 +514,7 @@ This plan does not add:
 - plan or Shot status, approval, version, history, readiness, or progress;
 - user-facing pagination, filtering, search, bulk delete, or bulk selection;
 - arbitrary `MediaCard` layout configuration;
-- a generic inspector framework;
+- a generic nested-page/detail framework;
 - a semantic creative validator;
 - mobile behavior or mobile verification.
 
@@ -359,11 +522,12 @@ This plan does not add:
 
 ### Accepted decisions and current direction
 
-- `docs/design-guidelines.md` establishes the dark neutral surface, amber
-  active language, thin borders, compact controls, and restrained density.
-- `docs/architecture/front-end-guidelines.md` requires feature-local React
-  modules, thin service boundaries, direct use of local UI primitives, and
-  intentional component names.
+- `docs/product/design-guidelines.md` establishes the dark neutral surface,
+  amber active language, thin borders, compact controls, and restrained
+  density.
+- `docs/architecture/reference/front-end-guidelines.md` requires feature-local
+  React modules, thin service boundaries, direct use of local UI primitives,
+  and intentional component names.
 - Decision 0053 accepts a fixed 2x2 `MediaCard` mosaic for Visual Language.
   This feature needs a separate bounded adaptive mosaic while preserving that
   current variant.
@@ -380,6 +544,9 @@ This plan does not add:
 The current implementation evidence is:
 
 - `scene-panel.tsx` renders `Narrative`, `Beats`, and `Shots`;
+- `scene-panel.tsx` owns the Scene `LineTabs`, current Scene resource, formatted
+  production-number/title header, and selection callback, so it is the correct
+  boundary to switch between the tab collection and a focused Shot Plan detail;
 - `scene-shots-placeholder-tab.tsx` contains only a `New Shot` button;
 - `ScenePanelTab` and the `shots` spelling are duplicated across Core
   selection, Studio route parsing, events, and tests;
@@ -396,32 +563,48 @@ The current implementation evidence is:
   Shot rail needs one bounded icon/visibility generalization rather than a
   feature-local raw button;
 - `MediaCardGrid` already supplies the three-column desktop layout;
-- the Generation Request inspector already demonstrates the accepted
-  large-dialog, resizable-panel, and independent-scroll treatment;
+- the Generation Request inspector demonstrates the accepted resizable-panel
+  and independent-scroll treatment, but its Dialog frame is not reused for
+  this primary navigation;
+- `ImagePreviewDialog` already supplies the accepted shared still-image
+  inspection behavior and must be reused directly;
 - the local `Dialog`, `Button`, `ResizablePanelGroup`, CodeMirror, Tooltip, and
   Lucide icon infrastructure is available;
 - `radix-ui` is already a dependency, but there is no local shadcn-style
   `HoverCard` primitive;
 - framing, camera-angle, and motion assets exist under the current
   Shot-authoring feature;
-- Rack Focus has no motion file and therefore proves that a real text fallback
-  is required;
+- Rack Focus has no motion file; the accepted artifact supplies the missing
+  still illustration required for its Brief and glossary presentation;
 - the generic Asset file endpoint can serve selected Shot and storyboard
   images; no Shot-specific file route is necessary.
 
-### Wireframe design audit
+### Accepted mockup design resolution
 
-The wireframe establishes the information architecture but leaves several
-interaction and hierarchy details unresolved. This plan resolves them using
-the current product system:
+The normative artifact resolves the wireframe's remaining interaction and
+hierarchy questions. The implementation must preserve these accepted choices:
 
-- the green selected Shot is changed to amber because selection is not success;
+- the selected Shot image receives a thick amber border without an amber-filled
+  rail item because selection is not success and the fill was visually
+  overwhelming;
+- the rail omits the repeated Shot title and `Shot N of M`;
 - the time-range labels are removed because duration is only intent;
 - duration becomes a small lower-left Timer badge on the image rather than a
   timeline and stays clear of the new lower-right edit action;
 - hover-only Beat images gain keyboard-focus access and meaningful text;
-- the dialog uses a constrained resizable rail rather than a fixed oversized
-  column;
+- the in-page detail uses a constrained resizable rail rather than a fixed
+  oversized column;
+- the Scene heading and `LineTabs` remain stable while only the Shot Plans
+  tab-panel content switches between collection and detail;
+- Back sits in the existing Scene header action slot and uses the URL-backed
+  selection contract rather than modal state;
+- `Brief` and `Description` are sibling tabs directly below the Shot title so
+  long descriptions receive a full reading surface;
+- the Brief cards retain one readable fixed width and wrap into rows at the
+  compact reference viewport;
+- Framing, Camera, and Motion media open full-size inspection dialogs;
+- Framing, Camera, and Motion expose visual education glossaries through the
+  bottom-right `?` action;
 - Optics and Lighting are text-led so creative intent is not visually
   subordinated to technical metadata;
 - existing Shot Design media is shared instead of copied into a second feature;
@@ -431,18 +614,20 @@ the current product system:
 
 ### Real project evidence
 
-`urban-basilica` currently contains Scenes, active Beat Sheets, and storyboard
-image relationships but no persisted Shot Plans or Shots. The Bombardment
-Scene has a ten-Beat active sheet with ten storyboard images, making it a
-useful verification target for:
+`urban-basilica` contains Scenes, active Beat Sheets, storyboard image
+relationships, and persisted Shot Plans and Shots. The Bombardment Scene has a
+ten-Beat active sheet with ten storyboard images, making it a useful
+verification target for:
 
 - covered Beat chip density;
 - hover/focus storyboard previews;
-- dialog width and header wrapping;
+- full-page detail width, stable Scene header/tab layout, and route transition;
 - the no-Shot and many-Shot states once a temporary fixture is created.
 
-Any mutation-based verification uses a temporary clone of the real project.
-This plan does not authorize modifying the user's active movie project.
+General mutation-based verification uses a temporary clone of the real
+project. The explicit corrective follow-up did authorize focused updates to
+the named active Shot Plan and Shot so the visible authored title, camera
+angle, and optics properties match the requested state.
 
 ### Overlapping active work
 
@@ -457,7 +642,7 @@ This plan does not authorize modifying the user's active movie project.
 
 Use a focused feature plus bounded shared primitive extensions:
 
-- a feature-local Shot Plans tab and inspector;
+- a feature-local Shot Plans collection and in-page detail;
 - a feature-local Shot-image candidate dialog;
 - a dedicated browser service and thin server routes;
 - one bounded adaptive `MediaCard` mosaic variant;
@@ -467,14 +652,16 @@ Use a focused feature plus bounded shared primitive extensions:
   `MediaCard` selection control;
 - one local shadcn-style Hover Card primitive;
 - one shared Shot Design media catalog consumed by both current Shot
-  authoring and the new inspector;
+  authoring and the new Shot Plan detail;
+- feature-local tab, full-size media activation, and read-only visual glossary
+  composition using existing shadcn-style controls;
 - a small split of generic Markdown CodeMirror theme from prompt-specific
   presentation.
 
-Do not turn this into literal one-file wireframe code or a generic
-media-dashboard/inspector framework. Arbitrary mosaic rows/columns, render
-slots, arbitrary card actions, and configuration-driven inspection are not
-required by the accepted product behavior.
+Do not turn this into literal one-file wireframe code, a second router, or a
+generic nested-detail framework. Arbitrary mosaic rows/columns, render slots,
+arbitrary card actions, and configuration-driven inspection are not required
+by the accepted product behavior.
 
 ## Architecture Shape Gate
 
@@ -577,14 +764,18 @@ domain validation.
 
 ```text
 packages/studio/src/features/movie-studio/
+  scenes/
+    scene-panel.tsx
   shot-plans/
     scene-shot-plans-tab.tsx
-    shot-plan-inspector-dialog.tsx
+    shot-plan-detail-page.tsx
     shot-plan-beat-links.tsx
     shot-plan-shot-rail.tsx
     shot-image-candidates-dialog.tsx
     shot-plan-shot-content.tsx
     shot-brief-grid.tsx
+    shot-brief-media.tsx
+    shot-design-glossary-dialog.tsx
     shot-description-viewer.tsx
     use-scene-shot-plans.ts
     use-shot-image-candidates.ts
@@ -598,9 +789,32 @@ packages/studio/src/features/movie-studio/
 `scene-shot-plans-tab.tsx` owns list-state composition only.
 It maps the accepted list item directly into `MediaCard`; do not add a
 pass-through Shot Plan card wrapper.
-`shot-plan-inspector-dialog.tsx` owns the dialog frame, focus inputs, header,
-and panel composition only. The rail, details, brief, Beat previews, and
-description stay focused in the named modules.
+`scene-panel.tsx` remains the Scene surface owner. After its existing Scene
+resource has loaded, it always renders the current Scene heading and
+`LineTabs`. The Shot Plans tab panel renders its collection when `shotPlanId`
+is absent and `ShotPlanDetailPage` when `sceneTab === "shotPlans"` and
+`shotPlanId` is present. It does not introduce a second router or retain both
+Shot Plans panel states in the DOM.
+`shot-plan-detail-page.tsx` owns only the in-page detail composition: URL-backed
+focus inputs, resizable rail, and detail panel. It is not a `Dialog`, portal,
+overlay, focus trap, route header, breadcrumb, or second page shell. The rail,
+Shot content, Brief, Beat previews, and Description stay focused in the named
+modules.
+`scene-panel.tsx` composes the local shadcn `Button` Back action into the
+existing Scene header action. It emits the existing Scene selection intent with
+`sceneTab: "shotPlans"` and no plan/Shot ids.
+`shot-plan-shot-content.tsx` owns the authored Shot title, the local
+Brief/Description tab state, and tab-panel composition. It does not fetch or
+validate the Shot.
+`shot-brief-grid.tsx` owns the five semantic cards and the normative responsive
+grid. `shot-brief-media.tsx` owns the bounded still/video activation targets,
+uses `ImagePreviewDialog` directly for stills, and composes the local `Dialog`
+plus shared `VideoPreview` for the Motion preview; it is not a new generic
+media viewer or a pass-through wrapper.
+`shot-design-glossary-dialog.tsx` owns the transient Framing/Camera/Motion
+glossary category, dialog frame, read-only option composition, current markers,
+and focus return. It consumes the shared option arrays directly and does not
+introduce another vocabulary catalog or interactive authoring picker.
 `shot-image-candidates-dialog.tsx` owns only the transient dialog frame and
 candidate-card composition. Its hook calls the focused browser service and
 subscribes to the same Shot Plans resource key; it does not own image
@@ -608,8 +822,11 @@ eligibility or deletion rules.
 
 The generated Shot Design files move from their current private
 `shot-authoring` location to `shot-design/generated`. Existing Shot authoring
-and the new Shot Plans feature import the shared catalog directly. Do not keep
-an old-path re-export or wrapper.
+and the new Shot Plans feature import the shared catalog directly. Add the
+accepted Rack Focus still illustration represented by
+`plans/active/assets/0157-shot-plans-studio-ui/extras/movement-rack-focus.webp`
+to the production generated image set. `MOVEMENT_OPTIONS` exposes that still
+with no `videoUrl`. Do not keep an old-path re-export or wrapper.
 
 ### Intended shared UI layout
 
@@ -665,13 +882,23 @@ move to `markdown-code-editor-theme.ts`.
   routes, services, hooks, or React.
 - No raw `<button>`, `<dialog>`, or other raw interactive control in feature
   code.
-- No `ShotPlanInspector` god component containing fetch, delete, URL selection,
-  mosaic layout, rail, brief cards, motion preview, and CodeMirror setup.
+- No `ShotPlanDetailPage` god component containing fetch, delete, URL selection,
+  mosaic layout, rail, detail tabs, brief cards, glossary, motion preview, and
+  CodeMirror setup.
 - No arbitrary row/column/render-slot or caller-provided icon API on
   `MediaCard`.
-- No new generic inspector shell for one consumer.
+- No new generic nested-page, detail-page, breadcrumb, or inspector shell for
+  one consumer.
+- No primary Shot Plan `Dialog`, backdrop, portal, focus trap, `open` state, or
+  duplicate close control. Only candidate, media-preview, confirmation, and
+  glossary interactions remain transient dialogs.
 - No semantic parsing, completion scoring, or brief/description comparison.
-- No local copy of Shot Design image or motion Assets.
+- No production feature-local copy of Shot Design image or motion Assets; the
+  checked-in plan artifact is reference evidence, not a runtime import source.
+- No duplicated Framing/Camera/Motion option arrays or feature-owned ordering
+  for the glossary.
+- No wrapper around `ImagePreviewDialog` whose only purpose is to rename its
+  props.
 - No raw filenames, ids, relationship roles, or generated placeholder labels
   in visible UI.
 - No selectable disabled Generations route or hidden Generations request.
@@ -693,7 +920,14 @@ Stop implementation and revise the shape if:
   accepts arbitrary render content;
 - the shared Shot Design module begins owning Shot Plan state or vocabulary
   validation;
-- the inspector feature cannot be reviewed as focused files with a thin frame;
+- the glossary needs a new Core/server contract, a second vocabulary list, or
+  arbitrary card slots;
+- matching the normative artifact would require raw interactive controls,
+  global feature CSS, or bypassing the current local UI primitives;
+- the in-page detail feature cannot be reviewed as focused files with a thin
+  composition owner;
+- Scene detail navigation bypasses `scene-panel.tsx` or duplicates the current
+  URL-backed Studio selection as local React state;
 - an `index.ts` grows into an implementation switchboard;
 - accessibility would require a parallel custom control instead of extending a
   local UI primitive;
@@ -734,7 +968,8 @@ Selection invariants are:
 - `shotId` must belong to that active Shot Plan;
 - a valid Shot Plan with no Shots has no `shotId`;
 - changing away from `shotPlans` clears `shotPlanId` and `shotId`;
-- closing the dialog clears only `shotPlanId` and `shotId`;
+- activating Back from the detail page clears only `shotPlanId` and `shotId`,
+  preserving the selected Scene and `sceneTab: "shotPlans"`;
 - Beat focus remains owned by the Beats tab and does not coexist as active
   selection with Shot Plan focus.
 
@@ -762,6 +997,17 @@ shot=<shot-id>
 
 The browser parser recognizes only the current names. There is no `shots`
 translation branch.
+
+The URL-backed selection is also the navigation source of truth:
+
+- a Shot Plan card activation sets `shotPlanId` and the first canonical
+  `shotId` when one exists;
+- `scene-panel.tsx` renders the collection when `shotPlanId` is absent and the
+  in-page detail when it is present;
+- the detail Back action requests the same Scene with
+  `sceneTab: "shotPlans"` and no nested ids;
+- browser Back/Forward and direct reload resolve through the same parser and
+  selection validation rather than a feature-local `open` flag.
 
 ### Disabled `LineTabs` item
 
@@ -793,8 +1039,8 @@ Add these focused Shot Plan routes:
 ```text
 GET    /studio-api/projects/:projectName/screenplay/scenes/:sceneId/shot-plans
 DELETE /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId
-POST   /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId/shots/:shotId/selected-image/:assetId
-DELETE /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId/shots/:shotId/images/:assetId
+POST   /studio-api/projects/:projectName/screenplay/shots/:shotId/selected-image/:assetId
+DELETE /studio-api/projects/:projectName/screenplay/shots/:shotId/images/:assetId
 ```
 
 Candidate listing reuses the current generic read-only Asset page:
@@ -1059,10 +1305,26 @@ getShotMovementMedia(value: string): ShotDesignMotion | ShotDesignStill | null;
 Use a typed record or focused lookup tables rather than a long conditional
 chain. These are presentation lookups only:
 
+- the existing exported `SHOT_SIZE_OPTIONS`, `CAMERA_ANGLE_OPTIONS`, and
+  `MOVEMENT_OPTIONS` remain the single ordered option catalogs for Shot
+  authoring and the education glossary;
+- Shot authoring and the glossary consume those arrays directly rather than
+  rebuilding arrays from labels;
+- `getShotMovementMedia("rack-focus")` returns `ShotDesignStill` using the
+  accepted Rack Focus illustration and no motion URL;
 - unknown custom values return `null`;
 - values are not normalized, repaired, or rejected;
 - the functions do not inspect prose or generated media;
 - the UI always renders the exact authored label whether media exists or not.
+
+The glossary category is a feature-local presentation type:
+
+```ts
+type ShotDesignGlossaryKind = "framing" | "camera" | "motion";
+```
+
+Do not export it from Core or the browser service. It controls only which
+existing option array the transient Dialog renders.
 
 ### Hover Card
 
@@ -1125,42 +1387,69 @@ and prompt behaviors remain in the prompt feature.
 - Missing or failed browser images use the existing broken-media treatment; the
   browser does not substitute an unrelated Shot image.
 
-### Dialog geometry
+### In-page detail geometry
 
-Use the Generation Request inspector's current
-`h-[760px] w-[1120px] max-h-[calc(100vh-6rem)] max-w-[calc(100vw-6rem)]`
-Dialog geometry. This is a desktop layout, not a mobile breakpoint project.
+Match `.scene-workspace`, `.shot-plan-list-content`,
+`.shot-plan-detail-page`, `.shot-plan-surface`, and the Iteration 6 wide
+collection/detail screenshots in the normative artifact, subject to the
+corrected stable Scene header and tab structure in this plan. The Shot Plan
+detail replaces only the Shot Plans tab-panel collection, not the Scene heading
+or tabs, and is not a Dialog. Reuse the current Scene content width and the
+Generation Request inspector's accepted resizable-panel treatment only; do not
+reuse its Dialog frame, portal, backdrop, fixed viewport box, or focus trap.
+This is a desktop layout, not a mobile breakpoint project.
 
-The dialog structure is:
+The Scene panel render structure is:
 
 ```text
-Dialog
-  Header
-    Shot Plan title
-    Covered Beat links
-  Resizable body
-    Shot rail
-    Shot detail
-      Shot title
-      Five-card brief
-      Markdown description
-  Footer
-    Close
+ScenePanel
+  Scene heading
+    optional Back Button in existing header action slot
+  LineTabs
+    Narrative
+    Beats
+    Shot Plans
+      when no shotPlanId
+        Shot Plan MediaCard grid
+      when shotPlanId
+        ShotPlanDetailPage
+        Resizable body
+          Shot rail
+          Shot detail
+            Shot title row
+            Covered Beat links row: Beat N
+            Brief / Description tabs
+              Brief panel
+                Responsive five-card grid
+              Description panel
+                Long-form Markdown reader
+    Generations (disabled)
 ```
 
-Use one visible `Close` Button in the footer plus `DialogContent`'s current
-upper-right accessible Close affordance. Do not add Save, Done, Previous, Next,
-Generate, or general Shot/plan Edit controls. The rail-card image-management
-action is the one accepted editing exception.
+Use the existing Lucide `ArrowLeft` in the local shadcn Back `Button` and place
+it in the current Scene header action slot. Do not add a second route header,
+breadcrumb primitive, repeated Scene heading, or Shot Plan title header.
 
-The candidate dialog uses the existing nested Radix Dialog behavior and the
-`ReferencePickerDialog` geometry named above. Its scroll region, not the full
-inspector, owns candidate overflow. The candidate dialog has no Save/Done
-footer because selection and recoverable delete apply immediately through
-focused commands; closing it uses the standard Dialog close affordance.
+The detail page has no overlay, portal, backdrop, upper-right close control,
+Escape-to-close behavior, modal focus trap, footer band, or duplicate visible
+Close Button. Do not add Save, Done, Previous, Next, Generate, or general
+Shot/plan Edit controls. The rail-card image-management action is the one
+accepted editing exception. On entry, focus the Back action after the
+URL-backed selection resolves; on Back, restore focus to the invoking Shot Plan
+card when it still exists.
+
+The candidate dialog is a single transient Radix Dialog over the detail page
+and uses the `ReferencePickerDialog` geometry named above. Its scroll region,
+not the full detail page, owns candidate overflow. The candidate dialog has no
+Save/Done footer because selection and recoverable delete apply immediately
+through focused commands; closing it uses the standard Dialog close affordance
+and returns focus to the rail Pencil action without changing URL-backed detail
+selection.
 
 ### Header and Beat preview
 
+- Match `.shot-plan-surface-header`, `.beat-list`, `.beat-chip`, and `.beat-preview`
+  rather than recreating header spacing from prose.
 - Let Beat chips wrap within the header rather than forcing horizontal page
   overflow.
 - Use compact neutral chips; amber is reserved for active selection, not every
@@ -1175,13 +1464,17 @@ focused commands; closing it uses the standard Dialog close affordance.
 
 ### Rail item geometry
 
+- Match `.shot-rail`, `.rail-item`, `.rail-card`, `.rail-card-selected`,
+  `.rail-card-empty`, `.shot-index`, and `.duration-badge` in the artifact.
 - The image occupies the visual majority of the item.
 - The Shot-number badge is circular, upper-left, high-contrast, and concise.
 - The Timer badge is lower-left and rendered only for an authored duration.
 - The Pencil action is lower-right and appears on card hover or focus.
 - The duration formatter preserves meaningful fractional seconds without
   manufacturing frame precision.
-- The selected border/background is amber and does not obscure the image.
+- The selected image card has a thick amber border and restrained shadow. The
+  rail item background remains neutral.
+- Do not render a rail title or `Shot N of M`.
 - The complete item uses `MediaCard` activation through the local `Button`
   primitive, not a raw button or clickable `div`.
 - Focus, selected, hover, and disabled states remain visually distinct.
@@ -1200,14 +1493,26 @@ focused commands; closing it uses the standard Dialog close affordance.
 
 ### Brief-card geometry
 
-At the supported dialog width, use a five-column grid with equal-height cards.
+Match `.brief-grid`, `.brief-card`, `.brief-header`, `.media-region`,
+`.brief-body`, `.brief-body-with-help`, and `.education-open` in the normative
+artifact. Specifically:
+
+- the wide reference is five equal columns;
+- the compact reference wraps cards using
+  `repeat(auto-fit, minmax(172px, 1fr))` and a 12-pixel grid gap;
+- card media and text keep the accepted fixed card width;
+- cards flow naturally into future rows if another brief subject is added;
+- card height, internal padding, labels, chips, media aspect, and the bottom
+  education-action position come from the artifact CSS.
+
 Each card uses:
 
 - a compact subject label and matching Lucide icon;
 - a media region for Framing, Camera, and Motion when known media exists;
 - exact authored value text;
 - text-led content for Optics and Lighting;
-- quiet neutral borders and no status color.
+- quiet neutral borders and no status color;
+- a bottom-right `?` local `Button` only for Framing, Camera, and Motion.
 
 Framing may place start and end visuals side by side when both exist. If only
 one exists, label it `Start` or `End` rather than pretending it represents
@@ -1227,11 +1532,37 @@ Optics order is:
 Lighting shows the intent text without trying to split it into direction,
 source, softness, color, or time of day. Those concepts remain authored prose.
 
+### Education glossary geometry
+
+Match `.education-dialog-content`, `.education-dialog-header`,
+`.education-dialog-scroll`, `.education-grid`, `.education-card`,
+`.education-media`, `.education-caption`, and `.education-status` in the
+normative artifact:
+
+- Dialog width is `min(1120px, calc(100vw - 56px))`;
+- maximum height is `calc(100vh - 56px)`;
+- the independently scrolling body has 18-pixel padding;
+- the grid uses `repeat(auto-fit, minmax(185px, 1fr))` with a 12-pixel gap;
+- media remains 16:9;
+- the caption area keeps the accepted 40-pixel minimum height;
+- current/start/end cards use the artifact's thin amber border and compact
+  status badge;
+- the Dialog has no footer; standard upper-right close, backdrop, and Escape
+  behavior return focus to the invoking `?` action.
+
+The dialog header uses the category title, concise educational subtitle, and
+exact option count shown by the artifact. Tiles are read-only inspection
+content, not controls that mutate the Shot.
+
 ### Description geometry
 
-- Place the description below the brief grid in the detail column.
-- Give it the remaining vertical space with its own scroll area.
-- Label it `Description`.
+- Match `.detail-tabs`, `.tab-list`, `.tab-trigger`, `#description-panel`,
+  `.description-panel`, and `.description-editor`.
+- Place Description in the second tab directly below the Shot title, never
+  below the Brief grid.
+- Give the active Description panel the available detail height with its own
+  scroll area and the long sample copy from the artifact as the visual-density
+  test.
 - Render exact Markdown in a read-only CodeMirror editor with
   `aria-readonly="true"` through the accepted component contract.
 - Preserve selection and copying of text.
@@ -1241,7 +1572,8 @@ source, softness, color, or time of day. Those concepts remain authored prose.
 ### Motion and reduced motion
 
 Known motion clips preview only while their brief card is hovered or focused.
-The component checks the current reduced-motion preference:
+The same behavior applies to Motion glossary tiles. The component checks the
+current reduced-motion preference:
 
 - reduced motion: show poster only;
 - normal motion: play muted inline video on hover/focus, then pause and reset;
@@ -1268,8 +1600,8 @@ The feature explicitly covers:
 - candidate image failure;
 - candidate selected or discarded from another surface while the candidate
   dialog is open;
-- plan deleted from another surface while the dialog is open;
-- selected Shot removed from another surface while the dialog is open.
+- plan deleted from another surface while the detail page is open;
+- selected Shot removed from another surface while the detail page is open.
 
 External mutation recovery uses a fresh list/selection projection. It does not
 silently keep a stale aggregate or synthesize a replacement Shot locally.
@@ -1337,32 +1669,57 @@ silently keep a stale aggregate or synthesize a replacement Shot locally.
 - Move the existing generated Shot Design media to the shared feature domain.
 - Add typed still/motion lookup functions for shot size, camera angle, and
   movement.
+- Add the accepted Rack Focus still illustration to the production generated
+  set and return it as still-only movement media.
+- Keep `SHOT_SIZE_OPTIONS`, `CAMERA_ANGLE_OPTIONS`, and `MOVEMENT_OPTIONS` as
+  the single ordered catalogs consumed by authoring and the new glossary.
 - Update current Shot authoring imports directly.
 - Do not leave an old-path facade or duplicate generated files.
-- Cover custom values and missing motion files with text-first fallbacks.
+- Cover custom values with text-first fallbacks and motion entries without
+  clips with their still illustration.
 
-### Slice 6: add inspector focus, header, and rail
+### Slice 6: add in-page detail navigation, header, and rail
 
-- Add URL-backed plan/Shot selection behavior.
-- Add the focused large Dialog frame and header.
+- Add URL-backed plan/Shot selection behavior as the sole collection/detail
+  navigation state.
+- Update `scene-panel.tsx` to keep its existing Scene heading and `LineTabs`
+  visible while the Shot Plans tab panel switches between the collection and
+  `ShotPlanDetailPage`.
+- Add the Back action to the existing Scene header action slot. Back clears
+  only nested plan/Shot focus and restores the Shot Plans collection.
+- Do not add a route header, breadcrumb, repeated Scene heading, Shot Plan title
+  header, primary Dialog, portal, backdrop, focus trap, upper-right close
+  control, or feature-local `open` state.
 - Add the local Hover Card primitive and covered Beat image previews.
 - Add the horizontal resizable body with constrained rail.
 - Add accessible `MediaCard` Shot selection, image states, number badge,
-  lower-left Timer duration badge, lower-right hover/focus Pencil action, amber
-  selection, and independent scrolling.
+  lower-left Timer duration badge, lower-right hover/focus Pencil action,
+  image-only thick amber selection border, and independent scrolling.
+- Match the selected and empty rail states from the artifact; render neither a
+  repeated Shot title nor `Shot N of M`.
 - Add the focused candidate-image dialog, lazy candidate query, card selection,
   unselected-only recoverable delete, and resource invalidation.
 - Cover no-Shot plans without creating a selected id.
 
 ### Slice 7: add brief and canonical description
 
-- Add the five-card brief grid with accepted ownership of each value.
+- Add the Shot title followed immediately by feature-local Brief/Description
+  tabs, with Brief initially active and exactly one mounted visible panel.
+- Add the five-card Brief grid with accepted ownership of each value and the
+  artifact's card proportions plus one feature-local fixed-width constant and
+  natural wrapping inside the integrated Scene width.
 - Add known media, custom text, missing-field, and motion fallback behavior.
+- Activate Framing start/end, Camera, and Motion media through the existing
+  still/motion preview dialog treatments with correct focus return.
+- Add the three bottom-right `?` actions and the Framing/Camera/Motion
+  illustrated glossary Dialog using the single shared option catalogs and
+  exact 9/8/10 counts.
 - Make Optics and Lighting intent primary and optics technical values
   secondary.
 - Split only generic Markdown CodeMirror theme from prompt-specific theme.
-- Add the exact read-only Markdown description surface.
-- Add reduced-motion and motion failure behavior.
+- Add the exact long-form read-only Markdown Description tab surface with
+  independent scrolling.
+- Add reduced-motion and motion failure behavior to Brief and glossary motion.
 
 ### Slice 8: verify integrated desktop behavior
 
@@ -1372,11 +1729,20 @@ silently keep a stale aggregate or synthesize a replacement Shot locally.
 - Exercise no images, 1, 2, 3, 4, 5, 9, 10, and more than 10 selected-image
   mosaics.
 - Exercise a ten-Beat covered header and keyboard preview.
+- Capture the production Shot Plans collection and in-page detail at 1440×900
+  and 1024×900 and compare them directly with the paired normative screenshots,
+  navigation wireframe, and live selectors.
+- Exercise plan-card entry, the detail Back action, browser Back/Forward,
+  direct detail reload, and invoking-card focus restoration.
+- Exercise the Brief/Description tabs with a long description, readable wide
+  and compact wrapped grid states, selected/empty rail cards, all full-size
+  media previews, and all three glossary categories.
 - Exercise multiple candidates for one Shot, in-dialog selected
   selection, unselected candidate delete/restore, and selected-delete
   rejection.
 - Verify delete/restore/invalidation against plan 0156's real Core lifecycle.
-- Inspect the dialog visually at the supported desktop viewport.
+- Record any intentional deviation before accepting it; do not silently
+  approximate artifact spacing or substitute a different layout.
 - Update current docs and run final architecture-shape review.
 
 ## Tests And Guardrails
@@ -1396,7 +1762,7 @@ Cover:
   coordination behavior;
 - a Shot Plan with no Shots permits plan focus without Shot focus;
 - leaving the Shot Plans tab clears nested focus;
-- closing the dialog clears nested focus but keeps `shotPlans`;
+- activating detail Back clears nested focus but keeps `shotPlans`;
 - deleted or unavailable plans and Shots return the current structured
   selection diagnostic/normalization behavior;
 - no Beat or image domain rule is reimplemented in selection parsing.
@@ -1415,10 +1781,9 @@ Cover:
 - structured Core errors are translated through the current HTTP mechanism;
 - delete passes only the Shot Plan id to Core;
 - delete returns the recoverable mutation report and exact resource key;
-- selected-image selection passes exact plan, Shot, and Asset ids to Core with
-  no body;
-- candidate delete passes the same exact ids to
-  `discardAsset`;
+- selected-image selection passes the exact Shot and Asset ids to Core with no
+  body;
+- candidate delete passes the same exact Shot and Asset ids to `discardAsset`;
 - candidate delete returns the recoverable mutation report;
 - `ownerKind=shot` maps to the exact Core `AssetOwner`;
 - candidate query fixes `shot_image` and `image` in the browser service;
@@ -1492,29 +1857,41 @@ Cover:
 - title and covered Beat position copy is meaningful;
 - raw ids, filenames, and relationship roles are absent;
 - no create card or general Shot Plan/Shot authoring control appears;
-- inspect sets plan and first-Shot focus;
-- inspect on an empty plan sets plan focus only;
+- whole-card and inspect-action activation set plan and first-Shot focus;
+- activation on an empty plan sets plan focus only;
 - delete confirmation describes recoverable plan/image Trash behavior;
 - successful delete invalidates the exact Shot Plans resource and clears
   matching nested focus;
 - failed delete retains the card and reports the structured error.
 
-### Inspector tests
+### Shot Plan detail navigation tests
 
 Cover:
 
-- valid focused plan opens the dialog;
-- close keeps the `shotPlans` tab;
+- card activation replaces only the Shot Plans tab-panel collection with the
+  in-page detail, keeps the Scene tabs visible, and does not open a primary
+  Dialog;
+- Back keeps the `shotPlans` tab, clears only nested focus, restores the
+  collection, and returns focus to the invoking plan card when it still
+  exists;
+- browser Back/Forward and direct reload resolve the same collection/detail
+  states from URL-backed selection;
+- the existing Scene header exposes the accessible Back action without a
+  duplicate route header, breadcrumb, or Shot Plan title;
 - initial and changed Shot focus follow canonical order;
 - externally removed focus resolves through refreshed coordination/list state;
-- header uses authored title and covered Beat order;
+- the Shot heading uses the exact authored title and `Beat N` chips in covered
+  Beat order, without appended Beat titles or coverage qualifiers;
 - Beat trigger works with pointer and keyboard;
 - storyboard preview appears only when real media exists;
 - no-image Beat remains meaningful text;
 - rail has independent scroll and the accepted resize bounds;
 - rail items use shared card activation and actions;
-- selected Shot uses amber, not green;
-- missing selected image uses the quiet icon state;
+- selected Shot uses the thick amber image-card border, not green or an amber
+  rail-row background;
+- the rail repeats neither the Shot title nor `Shot N of M`;
+- missing selected image uses the neutral-border quiet icon state while
+  retaining number and available duration;
 - duration badge appears only when authored;
 - duration badge is lower-left and Pencil action is lower-right;
 - Pencil action is pointer- and keyboard-accessible and opens the exact Shot's
@@ -1522,7 +1899,9 @@ Cover:
 - duration has no start/end/range UI;
 - fractional duration formatting does not add false precision;
 - no-Shot plan shows a deliberate empty detail state;
-- footer has Close and no Save/general-edit/Generate action.
+- there is no primary Dialog role, portal, backdrop, modal focus trap,
+  upper-right close control, footer band, or duplicate Close button;
+- there is no Save/general-edit/Generate action.
 
 ### Shot image candidate dialog tests
 
@@ -1539,16 +1918,16 @@ Cover:
 - selecting calls the exact focused mutation, leaves the gallery open, and
   refreshes candidate, rail, and plan mosaic projections through the Shot Plans
   resource key;
-- every candidate card exposes top-right hover/focus delete;
+- every unselected candidate card exposes top-right hover/focus delete;
 - delete confirmation says the image moves to Trash and can be restored;
 - delete calls the focused recoverable mutation and does not send a replacement
   or cascade scope;
-- successful delete removes the candidate through refreshed Core state and
-  clears selection when that candidate was selected;
+- successful delete removes the unselected candidate through refreshed Core
+  state without changing the selected candidate;
 - a concurrent delete failure retains the card, refreshes current
   state, and displays the structured diagnostic;
 - candidate close restores focus to the rail Pencil action and leaves the
-  inspector and URL-backed focus unchanged;
+  in-page detail and URL-backed focus unchanged;
 - keyboard focus reaches select, delete, confirmation, retry, and close;
 - no clear, generate, import, or bulk controls appear.
 
@@ -1556,40 +1935,70 @@ Cover:
 
 Cover:
 
+- Shot title is followed directly by `Brief` and `Description` tabs and does
+  not repeat the Shot number;
+- Brief is initially active and tab switching exposes exactly one panel;
+- the Brief grid keeps every card at the exact configured fixed width and wraps
+  according to the available integrated Scene content width at 1440×900 and
+  1024×900;
 - Framing owns start/end shot size and labels single-ended values accurately;
 - Camera owns angle only;
 - Motion owns movement and always renders exact text;
 - known values use shared catalog media;
 - unknown custom values render exact text without failure;
-- missing Rack Focus motion media uses text/static fallback;
+- Rack Focus uses its accepted still illustration and no video;
+- Framing start/end, Camera, and Motion media open the accepted large preview
+  Dialog and return focus to the invoking media;
+- Framing, Camera, and Motion render separate bottom-right `?` actions with
+  specific accessible names;
+- glossary dialogs render exactly 9 shot sizes, 8 camera angles, and 10
+  movements from the shared catalogs, in catalog order;
+- glossary marks Framing start/end and Camera/Motion current values without
+  exposing an authoring selection action;
+- glossary uses five columns at 1440×900 and four at 1024×900;
 - Optics renders intent before optional technical metadata;
 - Lighting renders exact intent without semantic tokenization;
 - missing fields stay quiet and do not produce invented labels;
-- reduced motion suppresses video playback;
-- normal hover/focus preview is muted and resets;
+- reduced motion suppresses Brief and glossary video playback;
+- normal Brief and glossary hover/focus preview is muted and resets;
 - video failure preserves poster/text;
-- description is exact, selectable, read-only Markdown;
+- Description is a sibling tab, not a block below Brief;
+- a long description is exact, selectable, read-only Markdown and scrolls
+  inside the available detail area;
 - description is not semantically compared with brief values.
 
 ### E2E desktop journeys
 
-At the supported desktop viewport:
+At the 1440×900 wide reference and 1024×900 compact reference:
 
 1. open a Scene, select Shot Plans, and confirm Generations is visible but
    disabled;
-2. inspect a plan with several Shots, switch rail selection, resize the rail,
-   keyboard-focus a covered Beat preview, and close back to the grid;
-3. open one Shot's candidate dialog, select another image, verify the rail and
+2. open a plan with several Shots, confirm the Scene heading and tabs remain
+   stable while the Shot Plans panel shows the in-page detail, switch rail
+   selection, resize the rail, keyboard-focus a covered Beat preview, and use
+   Back to restore the Shot Plans collection and invoking-card focus;
+3. switch Brief/Description, read and scroll a long description, verify the
+   wide and compact wrapped card grids never shrink or stretch, open all
+   supported full-size media previews, and inspect the three education
+   glossaries;
+4. open one Shot's candidate dialog, select another image, verify the rail and
    plan mosaic refresh, delete/restore one unselected image, and prove the
    selected image cannot be deleted;
-4. reload a valid plan/Shot deep link and confirm focus;
-5. inspect a plan with no Shots and a Shot with no image or optional brief
+5. exercise browser Back/Forward, then reload a valid plan/Shot deep link and
+   confirm focus;
+6. inspect a plan with no Shots and a Shot with no image or optional brief
    fields;
-6. delete a plan, confirm its card disappears through resource invalidation,
+7. delete a plan, confirm its card disappears through resource invalidation,
    restore through the existing Trash surface, and confirm it returns with its
    images;
-7. exercise shared-image copy behavior from plan 0156 so deleting one plan
+8. exercise shared-image copy behavior from plan 0156 so deleting one plan
    does not break the active copy's selected image.
+
+For mocked surfaces, capture production screenshots at both reference
+viewports and compare against the named files under
+`plans/active/assets/0157-shot-plans-studio-ui/screenshots/`. Visual tests
+protect rendered outcomes and roles; they do not assert the prototype's
+private selector strings in production source.
 
 Do not add mobile viewport tests.
 
@@ -1626,15 +2035,16 @@ Add only a concise narrowing notice to Decision 0053 pointing to 0065. Preserve
 
 Update current documentation where relevant:
 
-- `docs/design-guidelines.md` with the amber selection, lower-left
+- `docs/product/design-guidelines.md` with the amber selection, lower-left
   duration-badge/lower-right card-action separation, bounded-mosaic,
   candidate-card selection/delete, and intent-led brief patterns only if these
   are now durable reusable UI guidance rather than feature-local details;
-- `docs/architecture/front-end-guidelines.md` only if the new browser service
-  or shared presentation-media folder establishes a reusable accepted
+- `docs/architecture/reference/front-end-guidelines.md` only if the new browser
+  service or shared presentation-media folder establishes a reusable accepted
   convention;
-- current Studio surface/selection documentation for `shotPlans`,
-  `shotPlanId`, and `shotId`;
+- current Studio surface/selection documentation for the Scene-owned
+  collection/detail navigation, header-slot Back behavior, stable Scene tabs,
+  `shotPlans`, `shotPlanId`, and `shotId`;
 - current API documentation for the four Shot Plan browser routes and reused
   Shot-target Asset query;
 - current testing guidance with the desktop Shot Plans E2E journey.
@@ -1666,25 +2076,46 @@ Implementation is complete only after:
 7. The full desktop E2E journeys pass.
 8. A temporary `urban-basilica` clone verifies the ten-Beat header and
    selected-image mosaic edge counts without mutating the active project.
-9. A visual inspection at the supported desktop viewport confirms:
+9. Side-by-side visual inspection at 1440×900 and 1024×900 against the live
+   normative artifact and named screenshots confirms:
    - tabs align with current Scene navigation;
    - Generations is visibly disabled;
+   - Shot Plan card activation keeps the Scene heading and tab row visible
+     while replacing the Shot Plans tab-panel collection with the in-page
+     detail;
+   - Back occupies the existing Scene header action slot, and there is no
+     repeated route header, breadcrumb, Scene heading, or Shot Plan title;
+   - Back, browser Back/Forward, and direct reload preserve the accepted
+     URL-backed collection/detail states;
    - card crops, gaps, radii, overlays, and focus states are correct;
-   - the dialog does not crop header, rail, brief cards, or footer;
+   - the in-page detail does not crop the rail, exact Shot title, Beat chips,
+     detail tabs, cards, or description;
    - rail resizing keeps both columns usable;
-   - amber selection is clear without appearing as success;
+   - the selected rail image has the exact thick amber border without an amber
+     rail-row fill;
+   - the empty Shot uses the exact neutral image state and the rail has no
+     duplicated Shot title or count;
    - rail cards share the current card language, with edit lower-right and
      duration lower-left;
+   - Brief preserves the accepted fixed card width and wraps without shrinking
+     or stretching cards;
+   - Description uses the full tab-panel reading area with long text;
+   - full-size Framing, Camera, and Motion inspection matches the reference
+     dialogs;
+   - all three `?` actions and 9/8/10-option glossaries match their reference
+     geometry and markers;
    - candidate selection is persistent and clear, while unselected-only delete
      remains discoverable on pointer hover and keyboard focus;
-   - the candidate dialog layers and returns focus correctly over the
-     inspector;
+   - the candidate dialog layers and returns focus correctly over the in-page
+     detail;
    - intent text is visually primary for Optics and Lighting;
    - duration reads as a small image badge, not a timeline;
    - empty and fallback states remain quiet and meaningful.
-10. Keyboard-only inspection covers tabs, card controls, both dialogs, Beat
+10. Keyboard-only inspection covers collection/detail navigation, Back, tabs,
+    card controls, media previews, glossary dialogs, candidate dialog, Beat
     preview, rail selection/edit, candidate select/delete, resize handle where
-    supported, description selection, and Close.
+    supported, description selection, transient-dialog close, and focus
+    return.
 11. Reduced-motion inspection confirms no unsolicited motion preview.
 12. Run the repository's focused package commands and then:
 
@@ -1701,7 +2132,8 @@ pnpm check
     explicitly says otherwise.
 16. Confirm there is no compatibility alias, re-export facade, route-local
     business rule, React-local domain validation, raw feature control, generic
-    inspector framework, arbitrary mosaic API, or arbitrary card-action API.
+    nested-page/inspector framework, arbitrary mosaic API, or arbitrary
+    card-action API.
 17. Confirm no checklist item was satisfied by accepting code that is too
     large or cross-layer to review.
 
@@ -1709,241 +2141,311 @@ pnpm check
 
 ### Review Area
 
-- [ ] Confirm plan 0156 is accepted as the domain/CLI/skill dependency.
-- [ ] Confirm this plan remains read-mostly apart from recoverable plan/image
+- [x] Confirm plan 0156 is accepted as the domain/CLI/skill dependency.
+- [x] Open the checked-in normative artifact and confirm its named screenshots
+      and `design-qa.md` are present and readable.
+- [x] Confirm this plan remains read-mostly apart from recoverable plan/image
       delete and focused selected-image selection.
-- [ ] Confirm every user clarification is represented in the Requirement
+- [x] Confirm every user clarification is represented in the Requirement
       Ledger and product behavior.
-- [ ] Confirm there are no unresolved product or interface-level questions.
-- [ ] Confirm mobile, video, timeline, authoring, and selectable Generations
+- [x] Confirm there are no unresolved product or interface-level questions.
+- [x] Confirm mobile, video, timeline, authoring, and selectable Generations
       work remain out of scope.
-- [ ] Confirm the UI projects Core contracts rather than creating parallel
+- [x] Confirm the UI projects Core contracts rather than creating parallel
       Shot or image models.
 
 ### Architecture And Contracts
 
-- [ ] Replace `shots` with `shotPlans` directly in the selectable scene-tab
+- [x] Replace `shots` with `shotPlans` directly in the selectable scene-tab
       contract.
-- [ ] Remove duplicate Studio selection/tab type declarations and update
+- [x] Remove duplicate Studio selection/tab type declarations and update
       callers to import the Core owner directly.
-- [ ] Add `shotPlanId` and `shotId` to the current Core-owned Studio focus.
-- [ ] Enforce Scene/plan/Shot focus invariants in Core coordination.
-- [ ] Extend `readStudioSelectionContext` and reuse it from the focus-request
+- [x] Add `shotPlanId` and `shotId` to the current Core-owned Studio focus.
+- [x] Enforce Scene/plan/Shot focus invariants in Core coordination.
+- [x] Extend `readStudioSelectionContext` and reuse it from the focus-request
       route for Beat, Shot Plan, and Shot membership.
-- [ ] Remove the route-local Beat validator and add no route-local Shot Plan
+- [x] Remove the route-local Beat validator and add no route-local Shot Plan
       validator.
-- [ ] Add no compatibility parser, alias, redirect, or fallback.
-- [ ] Add exactly the plan list/delete and image select/delete HTTP routes.
-- [ ] Reuse the generic Asset page for candidate listing and add only the
+- [x] Add no compatibility parser, alias, redirect, or fallback.
+- [x] Add exactly the plan list/delete and image select/delete HTTP routes.
+- [x] Reuse the generic Asset page for candidate listing and add only the
       `shot` target parser branch.
-- [ ] Keep route handlers to parse, call, serialize, and translate.
-- [ ] Add browser-safe image URLs without provider URLs or local paths.
-- [ ] Add one focused browser API and contract boundary.
-- [ ] Subscribe to the exact Shot Plans resource key from plan 0156.
-- [ ] Add no generic patch API, server-side delete cascade flag, or React
+- [x] Keep route handlers to parse, call, serialize, and translate.
+- [x] Add browser-safe image URLs without provider URLs or local paths.
+- [x] Add one focused browser API and contract boundary.
+- [x] Subscribe to the exact Shot Plans resource key from plan 0156.
+- [x] Add no generic patch API, server-side delete cascade flag, or React
       membership rule.
-- [ ] Keep selection clearing on selected-candidate discard in Core.
+- [x] Keep selection clearing on selected-candidate discard in Core.
 
 ### Scene Tabs And Grid
 
-- [ ] Rename the visible tab to `Shot Plans`.
-- [ ] Render `Generations` visible and disabled.
-- [ ] Confirm disabled Generations cannot select, deep-link, mount content, or
+- [x] Rename the visible tab to `Shot Plans`.
+- [x] Render `Generations` visible and disabled.
+- [x] Confirm disabled Generations cannot select, deep-link, mount content, or
       request data.
-- [ ] Delete the current Shot placeholder and its stale tests.
-- [ ] Reuse the current three-column `MediaCardGrid`.
-- [ ] Cover loading, structured failure/retry, empty, and populated states.
-- [ ] Render authored plan title and resolved covered Beat positions.
-- [ ] Show no raw ids, filenames, roles, or fabricated card labels.
-- [ ] Add no New Shot Plan card or general browser authoring control.
+- [x] Delete the current Shot placeholder and its stale tests.
+- [x] Reuse the current three-column `MediaCardGrid`.
+- [x] Cover loading, structured failure/retry, empty, and populated states.
+- [x] Render authored plan title and resolved covered Beat positions.
+- [x] Show no raw ids, filenames, roles, or fabricated card labels.
+- [x] Add no New Shot Plan card or general browser authoring control.
 
 ### MediaCard Mosaic
 
-- [ ] Add the bounded `mosaic-grid` variant.
-- [ ] Keep the existing exact four-image mosaic behavior unchanged.
-- [ ] Implement 0, 1, 2, 3, 4, 5–9, and 10+ layouts exactly.
-- [ ] Preserve canonical selected-image order.
-- [ ] Render only selected images.
-- [ ] Render first eight plus a ninth `+N` tile above nine.
-- [ ] Give overflow and image tiles meaningful accessible labels.
-- [ ] Add no arbitrary rows, columns, slots, domain inputs, or caller-provided
+- [x] Add the bounded `mosaic-grid` variant.
+- [x] Keep the existing exact four-image mosaic behavior unchanged.
+- [x] Implement 0, 1, 2, 3, 4, 5–9, and 10+ layouts exactly.
+- [x] Preserve canonical selected-image order.
+- [x] Render only selected images.
+- [x] Render first eight plus a ninth `+N` tile above nine.
+- [x] Give overflow and image tiles meaningful accessible labels.
+- [x] Add no arbitrary rows, columns, slots, domain inputs, or caller-provided
       overflow algorithm.
-- [ ] Add Decision 0065 and only a narrowing notice to Decision 0053.
+- [x] Add Decision 0065 and only a narrowing notice to Decision 0053.
 
 ### MediaCard Actions
 
-- [ ] Replace `inspectionAction` directly with the bounded
+- [x] Replace `inspectionAction` directly with the bounded
       `MediaCardCornerAction`.
-- [ ] Support only `inspect`/`edit` icon kinds and
+- [x] Support only `inspect`/`edit` icon kinds and
       `always`/`hover-or-focus` visibility.
-- [ ] Keep lower-right placement, tooltip, shadcn `Button`, and click isolation
+- [x] Keep lower-right placement, tooltip, shadcn `Button`, and click isolation
       inside the shared card.
-- [ ] Replace selection with the bounded `toggle`/`choose` union.
-- [ ] Preserve current toggle/clear behavior for existing callers.
-- [ ] Render choose-mode selected state as a labelled non-interactive
+- [x] Replace selection with the bounded `toggle`/`choose` union.
+- [x] Preserve current toggle/clear behavior for existing callers.
+- [x] Render choose-mode selected state as a labelled non-interactive
       indicator, not a disabled button or clear action.
-- [ ] Update current inspection callers directly with no compatibility prop.
-- [ ] Add no caller-provided icons, positions, variants, class names, or React
+- [x] Update current inspection callers directly with no compatibility prop.
+- [x] Add no caller-provided icons, positions, variants, class names, or React
       nodes.
 
 ### Delete And Resource Invalidation
 
-- [ ] Use the local confirmation and Button primitives.
-- [ ] State that the plan and its Shot images move to Trash and are restorable.
-- [ ] Send only the Shot Plan id to the server.
-- [ ] Delegate image ownership, shared-copy, and lifecycle rules to Core.
-- [ ] On success, clear matching nested focus and invalidate the exact scene
+- [x] Use the local confirmation and Button primitives.
+- [x] State that the plan and its Shot images move to Trash and are restorable.
+- [x] Send only the Shot Plan id to the server.
+- [x] Delegate image ownership, shared-copy, and lifecycle rules to Core.
+- [x] On success, clear matching nested focus and invalidate the exact scene
       Shot Plans resource.
-- [ ] On failure, retain the card and show the structured error.
-- [ ] Verify delete/restore returns the plan and images.
-- [ ] Verify deleting one copy does not break an active shared selected image.
+- [x] On failure, retain the card and show the structured error.
+- [x] Verify delete/restore returns the plan and images.
+- [x] Verify deleting one copy does not break an active shared selected image.
 
 ### Shared Shot Design Media
 
-- [ ] Move existing generated Shot Design media into the shared feature domain.
-- [ ] Add typed presentation lookup for shot size, camera angle, and movement.
-- [ ] Update current Shot authoring imports directly.
-- [ ] Delete the old private asset location.
-- [ ] Add no re-export stub, compatibility wrapper, or duplicated Asset files.
-- [ ] Preserve exact authored custom vocabulary as text.
-- [ ] Preserve text/static fallback for entries without motion media.
+- [x] Move existing generated Shot Design media into the shared feature domain.
+- [x] Add typed presentation lookup for shot size, camera angle, and movement.
+- [x] Add the accepted Rack Focus still illustration and expose it as
+      still-only movement media.
+- [x] Keep the existing 9 Shot Size, 8 Camera Angle, and 10 Movement option
+      arrays as the single ordered catalogs for authoring and the glossary.
+- [x] Update current Shot authoring imports directly.
+- [x] Delete the old private asset location.
+- [x] Add no re-export stub, compatibility wrapper, or duplicated Asset files.
+- [x] Preserve exact authored custom vocabulary as text.
+- [x] Preserve exact text plus a still illustration for entries without motion
+      media.
 
-### Inspector Frame And Header
+### In-Page Detail Navigation And Header
 
-- [ ] Open a focused large read-mostly Dialog from Inspect.
-- [ ] Select the first Shot when one exists.
-- [ ] Support valid URL-backed plan/Shot focus after reload.
-- [ ] Keep `shotPlans` selected when the dialog closes.
-- [ ] Handle plans with no Shots without fabricating a Shot id.
-- [ ] Render authored plan title and ordered covered Beat links.
-- [ ] Add local shadcn-style Hover Card using the existing dependency.
-- [ ] Provide equivalent pointer-hover and keyboard-focus Beat preview.
-- [ ] Show no fake preview when the Beat has no selected storyboard image.
-- [ ] Use generic Asset file URLs and meaningful alt text.
-- [ ] Add no Save, general Edit, Done, Generate, Previous, or Next action.
+- [x] Activate a Shot Plan card by setting URL-backed plan/Shot focus and
+      replacing only the Shot Plans tab-panel collection with
+      `ShotPlanDetailPage`.
+- [x] Keep the Scene heading and `LineTabs` visible in detail and keep
+      `scene-panel.tsx` as their owner.
+- [x] Match `.shot-plan-detail-page`, `.shot-plan-surface`, and
+      `.shot-plan-surface-body` in the normative artifact at both reference
+      viewports, subject to the corrected single-header structure.
+- [x] Render a shadcn Back `Button` with Lucide `ArrowLeft`.
+- [x] Render Back in the existing Scene header action slot.
+- [x] Render no route header, breadcrumb, repeated Scene heading, or Shot Plan
+      title header.
+- [x] Select the first Shot when one exists.
+- [x] Support valid URL-backed plan/Shot focus after reload.
+- [x] Make browser Back/Forward resolve the same collection/detail states.
+- [x] On detail Back, clear only nested plan/Shot focus, keep `shotPlans`
+      selected, restore the collection, and return focus to the invoking plan
+      card when it still exists.
+- [x] Handle plans with no Shots without fabricating a Shot id.
+- [x] Render the exact authored Shot title and ordered `Beat N` links without
+      appended Beat titles or coverage qualifiers.
+- [x] Render no explanatory read-only/canonical description in the header.
+- [x] Add local shadcn-style Hover Card using the existing dependency.
+- [x] Provide equivalent pointer-hover and keyboard-focus Beat preview.
+- [x] Show no fake preview when the Beat has no selected storyboard image.
+- [x] Use generic Asset file URLs and meaningful alt text.
+- [x] Add no primary Dialog, portal, backdrop, modal focus trap,
+      upper-right close control, Escape-to-close behavior, footer band, or
+      duplicate visible Close Button.
+- [x] Add no Save, general Edit, Done, Generate, Previous, or Next action.
 
 ### Shot Rail
 
-- [ ] Use the current horizontal resizable-panel primitive.
-- [ ] Set the rail to 24% default, 20% minimum, and 30% maximum.
-- [ ] Keep rail and details independently scrollable.
-- [ ] Use shared `MediaCard` activation, not raw interactive HTML or a one-off
+- [x] Use the current horizontal resizable-panel primitive.
+- [x] Match the artifact's initial
+      `clamp(210px, 18vw, 260px)` rail geometry and keep resize constraints in
+      that readable range.
+- [x] Keep rail and details independently scrollable.
+- [x] Use shared `MediaCard` activation, not raw interactive HTML or a one-off
       clickable panel.
-- [ ] Render selected image or a quiet `ImageOff` state.
-- [ ] Render canonical Shot-number badge.
-- [ ] Render the Timer duration badge lower-left only when authored.
-- [ ] Render the Pencil action lower-right on hover or focus.
-- [ ] Ensure the Pencil action does not also select the rail card.
-- [ ] Format fractional seconds without false frame precision.
-- [ ] Render no range, start time, overlap, track, or sequencing hint.
-- [ ] Use amber for selected and retain visible keyboard focus.
-- [ ] Use no green selected state.
+- [x] Render selected image or a quiet `ImageOff` state.
+- [x] Render canonical Shot-number badge.
+- [x] Render no repeated Shot title and no `Shot N of M`.
+- [x] Render the Timer duration badge lower-left only when authored.
+- [x] Render the Pencil action lower-right on hover or focus.
+- [x] Ensure the Pencil action does not also select the rail card.
+- [x] Format fractional seconds without false frame precision.
+- [x] Render no range, start time, overlap, track, or sequencing hint.
+- [x] Use the artifact's thick amber border and restrained shadow on the
+      selected image card only; keep the rail row neutral.
+- [x] Keep the empty Shot card at the same geometry with a neutral thin border,
+      centered `ImageOff`, and number/available duration.
+- [x] Retain visible keyboard focus independently from selection.
+- [x] Use no green selected state.
 
 ### Shot Image Candidate Dialog
 
-- [ ] Open a feature-local Dialog for the exact Shot from the rail Pencil
+- [x] Open a feature-local Dialog for the exact Shot from the rail Pencil
       action.
-- [ ] Follow the current `ReferencePickerDialog` `max-w-5xl`, `max-h-[65vh]`,
+- [x] Follow the current `ReferencePickerDialog` `max-w-5xl`, `max-h-[65vh]`,
       220-pixel card-grid geometry.
-- [ ] Keep candidate dialog state transient and out of URL-backed selection.
-- [ ] Restore focus to the Pencil action on close without changing inspector
-      focus.
-- [ ] Load candidates lazily through the fixed Shot-target Asset query.
-- [ ] Follow Asset-page cursors and preserve Core order.
-- [ ] Cover stable loading, structured failure/retry, empty, and populated
+- [x] Keep candidate dialog state transient and out of URL-backed selection.
+- [x] Restore focus to the Pencil action on close without changing in-page
+      detail focus.
+- [x] Load candidates lazily through the fixed Shot-target Asset query.
+- [x] Follow Asset-page cursors and preserve Core order.
+- [x] Cover stable loading, structured failure/retry, empty, and populated
       states.
-- [ ] Render every candidate as a quiet `MediaCard` with no raw filename, id,
+- [x] Render every candidate as a quiet `MediaCard` with no raw filename, id,
       role, or fabricated quality label.
-- [ ] Show bottom-right selection on every candidate.
-- [ ] Keep the selected candidate visibly checked as a labelled state
+- [x] Show bottom-right selection on every candidate.
+- [x] Keep the selected candidate visibly checked as a labelled state
       indicator, not a clear action.
-- [ ] Let unselected selection call the focused Core mutation and keep the
+- [x] Let unselected selection call the focused Core mutation and keep the
       dialog open.
-- [ ] Refresh candidate cards, rail image, and plan mosaic through the exact
+- [x] Refresh candidate cards, rail image, and plan mosaic through the exact
       Shot Plans resource key.
-- [ ] Expose top-right hover/focus delete on every candidate.
-- [ ] State that candidate delete moves the image to Trash and can be restored.
-- [ ] Send no replacement candidate, relationship role, path, or cascade scope.
-- [ ] Retain and refresh the card on concurrent delete failure.
-- [ ] Add no clear, generate, import, search, pagination, or bulk controls.
+- [x] Expose top-right hover/focus delete on every unselected candidate.
+- [x] State that candidate delete moves the image to Trash and can be restored.
+- [x] Send no replacement candidate, relationship role, path, or cascade scope.
+- [x] Retain and refresh the card on concurrent delete failure.
+- [x] Add no clear, generate, import, search, pagination, or bulk controls.
 
 ### Brief And Description
 
-- [ ] Render exactly Framing, Camera, Motion, Optics, and Lighting cards.
-- [ ] Keep shot size under Framing and angle under Camera.
-- [ ] Use known shared media and exact custom-text fallback.
-- [ ] Keep Motion exact text even when a preview clip exists.
-- [ ] Respect reduced motion and keep motion muted and user-triggered.
-- [ ] Make Optics intent primary and optional technical fields secondary.
-- [ ] Render Lighting intent as authored without semantic decomposition.
-- [ ] Keep missing values quiet without `Auto`, `None`, or generic pick text.
-- [ ] Split only generic Markdown editor theme from prompt-specific theme.
-- [ ] Render exact Markdown in a selectable read-only CodeMirror surface.
-- [ ] Add no completeness score, semantic comparison, repair, or rewrite.
+- [x] Render the authored Shot title without a repeated Shot number.
+- [x] Place `Brief` and `Description` tabs immediately below the title.
+- [x] Make Brief initial and show exactly one tab panel.
+- [x] Render exactly Framing, Camera, Motion, Optics, and Lighting cards.
+- [x] Match `.brief-grid` and its card selectors from the normative artifact.
+- [x] Keep every card at the exact feature-local fixed width and wrap according
+      to the available integrated Scene content width at 1440×900 and
+      1024×900.
+- [x] Keep shot size under Framing and angle under Camera.
+- [x] Use known shared media and exact custom-text fallback.
+- [x] Keep Motion exact text even when a preview clip exists.
+- [x] Make Framing start/end, Camera, and Motion media independently
+      activatable in the accepted full-size preview Dialog.
+- [x] Restore focus to the exact media trigger when a preview closes.
+- [x] Add a bottom-right `?` shadcn `Button` to Framing, Camera, and Motion
+      only, with category-specific accessible names.
+- [x] Render read-only Framing, Camera, and Motion glossary Dialogs from the
+      shared ordered catalogs with exact 9/8/10 counts.
+- [x] Mark Framing Start/End and Camera/Motion Current without making glossary
+      tiles authoring controls.
+- [x] Match the glossary dialog and grid selectors from the normative artifact,
+      including five wide columns and four compact columns.
+- [x] Respect reduced motion and keep Brief/glossary motion muted and
+      user-triggered.
+- [x] Make Optics intent primary and optional technical fields secondary.
+- [x] Render Lighting intent as authored without semantic decomposition.
+- [x] Keep missing values quiet without `Auto`, `None`, or generic pick text.
+- [x] Split only generic Markdown editor theme from prompt-specific theme.
+- [x] Render Description as the second tab, never below Brief.
+- [x] Render a long exact Markdown value in a selectable read-only CodeMirror
+      surface that fills and scrolls within the available detail height.
+- [x] Add no completeness score, semantic comparison, repair, or rewrite.
 
 ### Accessibility And Design Quality
 
-- [ ] Verify disabled, hover, focus, selected, loading, error, and empty states.
-- [ ] Ensure required information is not available only on hover, color, image,
+- [x] Verify disabled, hover, focus, selected, loading, error, and empty states.
+- [x] Ensure required information is not available only on hover, color, image,
       or motion.
-- [ ] Verify Beat preview, rail selection, dialog close, and card controls by
-      keyboard.
-- [ ] Verify candidate selection/delete/retry/close by keyboard.
-- [ ] Verify useful accessible names for delete, inspect, edit, selection,
+- [x] Verify plan-card entry, detail Back, Beat preview, rail selection, and
+      card controls by keyboard.
+- [x] Verify full-size media and all three glossary dialogs by keyboard,
+      including Escape and exact-trigger focus return.
+- [x] Verify candidate selection/delete/retry/close by keyboard.
+- [x] Verify useful accessible names for delete, inspect, edit, selection,
       duration, images, and overflow.
-- [ ] Verify focus return and topmost-dialog focus trapping through local
-      primitives.
-- [ ] Verify reduced-motion behavior.
-- [ ] Confirm card and dialog visuals use current tokens, radii, borders,
+- [x] Verify collection/detail focus restoration and transient-dialog focus
+      trapping through local primitives.
+- [x] Verify reduced-motion behavior.
+- [x] Confirm card and dialog visuals use current tokens, radii, borders,
       typography, spacing, and amber selection language.
-- [ ] Confirm Optics and Lighting intent remain visually primary.
-- [ ] Perform desktop-only visual verification.
+- [x] Confirm Optics and Lighting intent remain visually primary.
+- [x] Perform desktop-only visual verification at 1440×900 and 1024×900
+      against the checked-in live artifact and stable screenshots.
 
 ### Tests And Guardrails
 
-- [ ] Add Core Studio selection and focus invariant tests.
-- [ ] Add thin route and browser-service tests.
-- [ ] Add generic disabled `LineTabs` tests.
-- [ ] Add table-driven `MediaCard` count/overflow and bounded-action tests.
-- [ ] Add Shot Plans list, delete, focus, candidate-dialog, and fallback
+- [x] Add Core Studio selection and focus invariant tests.
+- [x] Add thin route and browser-service tests.
+- [x] Add generic disabled `LineTabs` tests.
+- [x] Add table-driven `MediaCard` count/overflow and bounded-action tests.
+- [x] Add Shot Plans list, delete, focus, candidate-dialog, and fallback
       component tests.
-- [ ] Add inspector header, keyboard preview, rail, duration, brief, Markdown,
-      and reduced-motion tests.
-- [ ] Add supported desktop E2E journeys.
-- [ ] Keep edge-case matrices at their owning layer.
-- [ ] Use stable contract/runtime/import guardrails, not source-text
+- [x] Add collection/detail navigation, single-header Back, keyboard preview, rail,
+      duration, brief, Markdown, media-preview, glossary, tab, grid-wrap, and
+      reduced-motion tests.
+- [x] Add same-viewport visual comparison coverage for every mocked state
+      without source-text tests for prototype selector names.
+- [x] Add supported desktop E2E journeys.
+- [x] Keep edge-case matrices at their owning layer.
+- [x] Use stable contract/runtime/import guardrails, not source-text
       implementation-name inventories.
 
 ### Documentation And ADR
 
-- [ ] Add Decision 0065 with bounded adaptive mosaic ownership and limits.
-- [ ] Add only a concise narrowing notice to Decision 0053.
-- [ ] Keep Decisions 0041, 0053, 0061, and 0062 historically intact.
-- [ ] Update current selection, route, design, frontend, and testing docs only
+- [x] Keep the complete accepted mockup, screenshots, and design QA under
+      `plans/active/assets/0157-shot-plans-studio-ui/`.
+- [x] Keep the artifact's image/video references local and keep it runnable
+      from its documented one-line local server command.
+- [x] Add Decision 0065 with bounded adaptive mosaic ownership and limits.
+- [x] Add only a concise narrowing notice to Decision 0053.
+- [x] Keep Decisions 0041, 0053, 0061, and 0062 historically intact.
+- [x] Update current selection, route, design, frontend, and testing docs only
       where the feature establishes durable current guidance.
-- [ ] Do not document old/new compatibility or selectable Generations.
-- [ ] Do not edit historical plans for a naming sweep.
+- [x] Do not document old/new compatibility or selectable Generations.
+- [x] Do not edit historical plans for a naming sweep.
 
 ### Final Verification
 
-- [ ] Confirm plan 0156's focused checks pass first.
-- [ ] Run focused Core coordination and Studio checks.
-- [ ] Confirm current Shot authoring still consumes moved shared media.
-- [ ] Confirm current Visual Language mosaic remains unchanged.
-- [ ] Confirm current prompt editor visuals remain unchanged.
-- [ ] Complete temporary urban-basilica desktop journeys.
-- [ ] Verify ten-Beat header, every mosaic edge count, delete/restore, and
+- [x] Confirm plan 0156's focused checks pass first.
+- [x] Run focused Core coordination and Studio checks.
+- [x] Confirm current Shot authoring still consumes moved shared media.
+- [x] Confirm current Visual Language mosaic remains unchanged.
+- [x] Confirm current prompt editor visuals remain unchanged.
+- [x] Complete temporary urban-basilica desktop journeys.
+- [x] Verify ten-Beat header, every mosaic edge count, delete/restore, and
       shared-copy image behavior.
-- [ ] Verify candidate selection, unselected delete/restore, selected-delete
-      rejection, and both-dialog focus behavior.
-- [ ] Run root build, test, lint, and check.
-- [ ] Inspect `git diff --stat` and the complete diff.
-- [ ] Inspect new and heavily modified files for architecture shape.
-- [ ] Confirm `index.ts` files remain thin entrypoints.
-- [ ] Confirm no route-local business rule, React-local domain validation,
+- [x] Verify candidate selection, unselected delete/restore, selected-delete
+      rejection, and transient-dialog focus behavior over the detail page.
+- [x] Capture and compare 1440×900 and 1024×900 production states against the
+      normative artifact, including collection, single-header Back detail
+      navigation, persistent tabs, wrapped grid, empty rail, media previews, and
+      glossaries.
+- [x] Record and resolve every visual deviation; do not accept approximate
+      spacing or layout for mocked regions.
+- [x] Run root build, test, lint, and check.
+- [x] Inspect `git diff --stat` and the complete diff.
+- [x] Inspect new and heavily modified files for architecture shape.
+- [x] Confirm `index.ts` files remain thin entrypoints.
+- [x] Confirm no route-local business rule, React-local domain validation,
       raw feature control, compatibility layer, re-export facade, generic
-      inspector framework, arbitrary mosaic/card-action API, or duplicated
-      media exists.
-- [ ] Confirm no checklist item is satisfied by accepting unreviewable code
+      nested-page/inspector framework, arbitrary mosaic/card-action API, or
+      duplicated media exists.
+- [x] Confirm no checklist item is satisfied by accepting unreviewable code
       structure.
-- [ ] Only then mark the plan complete.
+- [x] Only then mark the plan complete.

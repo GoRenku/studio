@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import type { Block } from '@gorenku/studio-core/client';
+import type { Block, StudioSelection } from '@gorenku/studio-core/client';
 import {
   Building2,
   ChevronLeft,
@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
-import type { StudioSelection } from '../movie-studio-selection';
 import { SceneDialogueAudioPanel } from './scene-dialogue-audio-panel';
 import {
   isSceneDialogueAudioTag,

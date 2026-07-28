@@ -666,12 +666,15 @@ describe('Shot Plans', () => {
       })
     ).rejects.toMatchObject({ code: 'CORE_ASSET_SELECTION_INVALID' });
 
-    await projectData.selectAsset({
+    const selected = await projectData.selectAsset({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'shot', id: shot.id },
       assetId: first.asset.id,
     });
+    expect(selected.resourceKeys).toEqual([
+      `surface:scene:${fixture.sceneId}:shot-plans`,
+    ]);
     const discarded = await projectData.discardShotImageCandidate({
       projectName: 'constantinople',
       homeDir,
@@ -852,6 +855,21 @@ describe('Shot Plans', () => {
     ).resolves.toEqual([
       expect.objectContaining({ id: copiedShot.selectedImageId }),
     ]);
+
+    const genericDiscard = await projectData.discardAsset({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'shot', id: shot.id },
+      assetId: second.asset.id,
+    });
+    expect(genericDiscard.resourceKeys).toEqual([
+      `surface:scene:${fixture.sceneId}:shot-plans`,
+    ]);
+    await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: genericDiscard.recovery.trashItemIds[0]!,
+    });
   });
 
   it('keeps video.create context project-scoped and free of Shot Plan facts', async () => {

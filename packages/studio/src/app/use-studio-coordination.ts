@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import type { ProjectSession } from '@/app/use-project-session';
-import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   readStudioEvents,

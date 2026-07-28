@@ -3,6 +3,7 @@ import type {
   GenerationPreviewResource,
   ProjectLanguage,
   ScenePanelTab,
+  StudioSelection,
 } from '../../client/index.js';
 
 export const STUDIO_COORDINATION_EVENT_VERSION = '0.1.0' as const;
@@ -39,25 +40,6 @@ export interface StudioProjectRef {
   id: string;
   storageRoot: string;
 }
-
-export type StudioSelection =
-  | { type: 'projectInformation' }
-  | { type: 'inspiration'; folderId?: string }
-  | { type: 'lookbook'; kind: 'production' | 'storyboard' }
-  | { type: 'trash' }
-  | { type: 'cast' }
-  | { type: 'castMember'; id: string }
-  | { type: 'locations' }
-  | { type: 'location'; id: string }
-  | { type: 'storyArc' }
-  | { type: 'act'; id: string }
-  | { type: 'sequence'; id: string }
-  | {
-      type: 'scene';
-      id: string;
-      sceneTab?: ScenePanelTab;
-      beatId?: string;
-    };
 
 export type StudioFocusRequest =
   | { screen: 'projectLibrary' }

@@ -4,36 +4,16 @@ import type {
   SceneNavigationRow,
   SequenceNavigationRow,
   ActNavigationRow,
-  LookbookKind,
+  ScenePanelTab,
+  StudioSelection,
 } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import type { ScreenplayNavigationState } from './use-screenplay-navigation';
 
-export type StudioSelection =
-  | { type: 'projectInformation' }
-  | { type: 'inspiration'; folderId?: string }
-  | { type: 'lookbook'; kind: LookbookKind }
-  | { type: 'trash' }
-  | { type: 'cast' }
-  | { type: 'castMember'; id: string }
-  | { type: 'locations' }
-  | { type: 'location'; id: string }
-  | { type: 'storyArc' }
-  | { type: 'act'; id: string }
-  | { type: 'sequence'; id: string }
-  | {
-      type: 'scene';
-      id: string;
-      sceneTab?: ScenePanelTab;
-      beatId?: string;
-    };
-
-export type ScenePanelTab = 'narrative' | 'beats' | 'shots';
-
 export const SCENE_PANEL_TABS: ScenePanelTab[] = [
   'narrative',
   'beats',
-  'shots',
+  'shotPlans',
 ];
 
 export interface MovieStudioLookup {

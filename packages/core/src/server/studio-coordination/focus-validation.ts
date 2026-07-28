@@ -9,14 +9,18 @@ import type {
   ScenePanelTab,
   Scene,
   Sequence,
+  StudioSelection,
 } from '../../client/index.js';
 import type {
-  StudioSelection,
   StudioCurrentContext,
   StudioFocusRequest,
 } from './events.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'beats', 'shots'];
+const SCENE_PANEL_TABS: ScenePanelTab[] = [
+  'narrative',
+  'beats',
+  'shotPlans',
+];
 
 export type StudioSelectionResolution =
   | {
@@ -277,7 +281,10 @@ function validateSceneTabs(
   selection: Extract<StudioSelection, { type: 'scene' }>
 ): StudioSelectionResolution | null {
   const unknownField = Object.keys(selection).find(
-    (field) => !['type', 'id', 'sceneTab', 'beatId'].includes(field)
+    (field) =>
+      !['type', 'id', 'sceneTab', 'beatId', 'shotPlanId', 'shotId'].includes(
+        field
+      )
   );
   if (unknownField) {
     return {
@@ -292,7 +299,7 @@ function validateSceneTabs(
             path: ['focus', 'selection', unknownField],
             context: 'studio.focusRequested',
           },
-          'Use only type, id, sceneTab, and beatId for a Scene selection.'
+          'Use only type, id, sceneTab, beatId, shotPlanId, and shotId for a Scene selection.'
         ),
       ],
     };
@@ -310,7 +317,7 @@ function validateSceneTabs(
           'STUDIO_COORDINATION036',
           'Requested scene tab is not supported.',
           { path: ['focus', 'selection', 'sceneTab'], context: 'studio.focusRequested' },
-          'Request a supported scene tab: narrative, beats, or shots.'
+          'Request a supported scene tab: narrative, beats, or shotPlans.'
         ),
       ],
     };
@@ -333,6 +340,42 @@ function validateSceneTabs(
       ],
     };
   }
+  if (selection.shotPlanId && selection.sceneTab !== 'shotPlans') {
+    return {
+      ok: false,
+      selection,
+      reason: 'unsupportedSelection',
+      diagnostics: [
+        createDiagnosticError(
+          'STUDIO_COORDINATION039',
+          'Shot Plan focus requires the Shot Plans scene tab.',
+          {
+            path: ['focus', 'selection', 'sceneTab'],
+            context: 'studio.focusRequested',
+          },
+          'Use sceneTab: "shotPlans" when requesting a Shot Plan.'
+        ),
+      ],
+    };
+  }
+  if (selection.shotId && !selection.shotPlanId) {
+    return {
+      ok: false,
+      selection,
+      reason: 'unsupportedSelection',
+      diagnostics: [
+        createDiagnosticError(
+          'STUDIO_COORDINATION040',
+          'Shot focus requires a Shot Plan.',
+          {
+            path: ['focus', 'selection', 'shotPlanId'],
+            context: 'studio.focusRequested',
+          },
+          'Send shotPlanId when requesting a Shot.'
+        ),
+      ],
+    };
+  }
   return null;
 }
 
@@ -345,7 +388,12 @@ function effectiveSceneTab(
 function sceneTabLabel(tab: ScenePanelTab): { id: ScenePanelTab; label: string } {
   return {
     id: tab,
-    label: tab === 'beats' ? 'Beats' : tab === 'shots' ? 'Shots' : 'Narrative',
+    label:
+      tab === 'beats'
+        ? 'Beats'
+        : tab === 'shotPlans'
+          ? 'Shot Plans'
+          : 'Narrative',
   };
 }
 

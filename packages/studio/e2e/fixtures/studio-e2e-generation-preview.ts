@@ -50,11 +50,11 @@ export async function createStudioE2eGenerationPromptProject(input: {
   });
   const [chamberImage, lookbookImage, savedSheetImage] = await Promise.all([
     fs.readFile(new URL(
-      '../../src/features/movie-studio/shot-authoring/shot-design-assets/generated/images/shot-size-establishing-shot.png',
+      '../../src/features/movie-studio/shot-design/generated/images/shot-size-establishing-shot.png',
       import.meta.url,
     )),
     fs.readFile(new URL(
-      '../../src/features/movie-studio/shot-authoring/shot-design-assets/generated/reference/consistency-sheet.png',
+      '../../src/features/movie-studio/shot-design/generated/reference/consistency-sheet.png',
       import.meta.url,
     )),
     fs.readFile(new URL(

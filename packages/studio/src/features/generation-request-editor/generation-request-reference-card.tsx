@@ -39,6 +39,7 @@ export function GenerationRequestReferenceCard({
       presentation={{ kind: 'overlay', copy: title ? { title } : undefined }}
       selected={selected}
       selection={onToggleSelected ? {
+        kind: 'toggle',
         selected,
         selectedLabel: `Exclude ${title ?? 'reference'}`,
         unselectedLabel: `Include ${title ?? 'reference'}`,

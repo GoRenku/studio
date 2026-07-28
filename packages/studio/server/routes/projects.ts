@@ -19,6 +19,7 @@ import { createMovieStudioSelectionContextRoute } from './movie-studio-selection
 import { createNavigationRoute } from './navigation.js';
 import { createProjectInformationRoute } from './project-information.js';
 import { createScreenplayRoute } from './screenplay.js';
+import { createShotPlansRoute } from './shot-plans.js';
 import { createTrashRoute } from './trash.js';
 import { createVisualLanguageRoute } from './visual-language.js';
 
@@ -57,6 +58,9 @@ export type ProjectsRouteProjectData = Pick<
   | 'listGenerationReferences'
   | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
+  | 'listSceneShotPlans'
+  | 'readShotPlan'
+  | 'deleteShotPlan'
   | 'updateProjectInformation'
   | 'resolveCoverImage'
   | 'listAssets'
@@ -131,6 +135,7 @@ export function createProjectsRoute(
     })
     .route('/:projectName', createNavigationRoute({ projectData }))
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
+    .route('/:projectName', createShotPlansRoute({ projectData, requireToken }))
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
     .route(

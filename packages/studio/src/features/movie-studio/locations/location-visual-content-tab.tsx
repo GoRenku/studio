@@ -77,9 +77,11 @@ export function LocationVisualContentTab({
           label: asset.oneLineSummary ?? 'Location sheet',
           onActivate: () => openSheetPreview(asset),
         },
-        inspectionAction: {
+        cornerAction: {
+          kind: 'inspect' as const,
           label: 'View generation request',
-          onInspect: () => {
+          visibility: 'always' as const,
+          onAction: () => {
             const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
             if (!file) return;
             openGenerationRequestInspector({
@@ -138,6 +140,7 @@ export function LocationVisualContentTab({
           onActivate: () => openSheetPreview(asset),
         },
         selection: {
+          kind: 'toggle' as const,
           selected,
           selectedLabel: 'Clear selected location hero',
           unselectedLabel: 'Use as location hero',

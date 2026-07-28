@@ -21,7 +21,7 @@ import {
   SHOT_SIZE_OPTIONS,
   SUBJECT_FRAMING_HEADCOUNT_IDS,
   SUBJECT_FRAMING_OPTIONS,
-} from './shot-design-vocabulary';
+} from '../shot-design/shot-design-media';
 
 export function ShotCompositionTab() {
   const { direction, onChange } = useShotDirection();

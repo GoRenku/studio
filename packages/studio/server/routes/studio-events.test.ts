@@ -533,34 +533,12 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
     async readProject() {
       return project;
     },
-    async readSceneBeatSheetResource() {
+    async readStudioSelectionContext(input) {
       return {
-        scene: {
-          id: 'scene_test0001',
-          sequenceId: 'sequence_test0001',
-          productionNumber: '1',
-          title: 'Opening council',
-        },
-        sequence: {
-          id: 'sequence_test0001',
-          actId: 'act_test0001',
-          number: 1,
-          title: 'The Offer',
-          sceneCount: 1,
-        },
-        act: {
-          id: 'act_test0001',
-          title: 'The Offer',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-        projectAspectRatio: '16:9',
-        activeBeatSheetId: null,
-        activeBeatSheet: null,
-        storyboardImagesByBeatId: {},
-        castMemberLabels: {},
-        castMemberImages: {},
-        locationLabels: {},
+        valid: true as const,
+        selection: input.selection,
+        context: { surface: 'project-information' as const },
+        resourceKeys: ['project-information'],
       };
     },
     async buildGenerationPreviewResource() {

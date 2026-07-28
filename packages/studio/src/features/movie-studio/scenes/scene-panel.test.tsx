@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneBeatSheetResourceResponse,
@@ -15,6 +15,9 @@ import { ScenePanel } from './scene-panel';
 vi.mock('@/services/studio-screenplay-api', () => ({
   readSceneBeatSheetResource: vi.fn(),
   readSceneNarrativeResource: vi.fn(),
+}));
+vi.mock('../shot-plans/shot-plan-detail-page', () => ({
+  ShotPlanDetailPage: () => <div>Focused Shot Plan detail</div>,
 }));
 
 describe('ScenePanel', () => {
@@ -43,18 +46,21 @@ describe('ScenePanel', () => {
     expect(await screen.findAllByText('The city prepares')).toHaveLength(2);
   });
 
-  it('renders an inert New Shot control', async () => {
+  it('keeps Generations visible and disabled on the Shot Plans tab', async () => {
     const onSelect = vi.fn();
     render(
       <ScenePanel
         projectName='constantinople'
         sceneId='scene_hook'
-        sceneTab='shots'
+        sceneTab='shotPlans'
         onSelect={onSelect}
       />
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'New Shot' }));
+    const generations = await screen.findByRole('tab', {
+      name: 'Generations',
+    });
+    expect(generations.hasAttribute('disabled')).toBe(true);
     expect(onSelect).not.toHaveBeenCalled();
     expect(readSceneBeatSheetResource).not.toHaveBeenCalled();
   });
@@ -74,6 +80,47 @@ describe('ScenePanel', () => {
     expect(onHeaderTitleChange).toHaveBeenCalledWith(
       '01 - The Sound That Opens Stone'
     );
+  });
+
+  it('keeps the Scene tab bar under the only panel header in Shot Plan detail', async () => {
+    const onSelect = vi.fn();
+    const onHeaderActionChange = vi.fn();
+    render(
+      <ScenePanel
+        projectName='constantinople'
+        sceneId='scene_hook'
+        sceneTab='shotPlans'
+        shotPlanId='plan_one'
+        shotId='shot_one'
+        onSelect={onSelect}
+        onHeaderActionChange={onHeaderActionChange}
+      />
+    );
+
+    expect(
+      (await screen.findByRole('tab', { name: 'Shot Plans' })).getAttribute(
+        'aria-selected'
+      )
+    ).toBe('true');
+    expect(screen.getByText('Focused Shot Plan detail')).not.toBeNull();
+
+    await waitFor(() => {
+      expect(
+        onHeaderActionChange.mock.calls.some(([action]) => action !== null)
+      ).toBe(true);
+    });
+    const action = onHeaderActionChange.mock.calls
+      .map(([nextAction]) => nextAction)
+      .find((nextAction) => nextAction !== null);
+    render(action);
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Back to Shot Plans',
+    }));
+    expect(onSelect).toHaveBeenCalledWith({
+      type: 'scene',
+      id: 'scene_hook',
+      sceneTab: 'shotPlans',
+    });
   });
 
   it('displays an inserted production-number suffix without a Scene prefix', async () => {

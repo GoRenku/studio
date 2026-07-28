@@ -19,7 +19,7 @@ test('opens act, sequence, and scene details with narrative content', async ({
   await sceneDetail.expectNarrativeVisible();
 });
 
-test('selects Scene Beat cards and keeps the Shots placeholder inert', async ({
+test('selects Scene Beats and navigates the Shot Plan rail', async ({
   page,
   movieProject,
 }) => {
@@ -34,9 +34,17 @@ test('selects Scene Beat cards and keeps the Shots placeholder inert', async ({
   await expect(page.getByText('Show consequence through human response.'))
     .toBeVisible();
 
-  await page.goto(`${sceneRoute}?sceneTab=shots`);
-  const newShot = page.getByRole('button', { name: 'New Shot' });
-  await expect(newShot).toBeVisible();
-  await newShot.click();
-  await expect(page).toHaveURL(`${sceneRoute}?sceneTab=shots`);
+  await page.goto(`${sceneRoute}?sceneTab=shotPlans`);
+  await page.getByRole('button', {
+    name: 'Open Shot Plan Gate pressure coverage',
+  }).click();
+  await page.getByRole('button', { name: 'Select Shot 2' }).click();
+  await expect(page).toHaveURL(
+    `${sceneRoute}?sceneTab=shotPlans&shotPlan=${movieProject.shotPlanId}&shot=${movieProject.secondShotId}`
+  );
+  await expect(
+    page.getByRole('heading', { name: 'The crew absorbs the result' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Back to Shot Plans' }).click();
+  await expect(page).toHaveURL(`${sceneRoute}?sceneTab=shotPlans`);
 });

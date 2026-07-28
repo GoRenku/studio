@@ -108,6 +108,25 @@ export function fakeProjectDataService(): NonNullable<
         selectedAssetId: null,
       };
     },
+    async listSceneShotPlans(input) {
+      return {
+        valid: true,
+        project: {
+          id: project.identity.id,
+          name: project.identity.name,
+          projectFolder: project.identity.folderPath,
+        },
+        shotPlans: [],
+        warnings: [],
+        resourceKeys: [`surface:scene:${input.sceneId}:shot-plans`],
+      };
+    },
+    async readShotPlan() {
+      throw new Error('Shot Plan fixture was not configured.');
+    },
+    async deleteShotPlan() {
+      throw new Error('Shot Plan deletion fixture was not configured.');
+    },
     async listCastNavigation() {
       return makeProjectShell(project).navigation.cast;
     },

@@ -71,6 +71,7 @@ export function OptionTileGroup({
               }}
               selected={selected}
               selection={{
+                kind: 'toggle',
                 selected,
                 selectedLabel: `Deselect ${option.label}`,
                 unselectedLabel: `Select ${option.label}`,

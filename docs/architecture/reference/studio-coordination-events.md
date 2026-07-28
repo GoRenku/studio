@@ -47,7 +47,7 @@ renku studio current --json
 That command should return the current Studio focus and enough domain context
 for the agent to act on the same subject as the user.
 
-## Scene, Beat, And Shot Tab Focus
+## Scene, Beat, And Shot Plan Focus
 
 Scene focus may include route-owned tab state. The scene selection shape is:
 
@@ -55,8 +55,10 @@ Scene focus may include route-owned tab state. The scene selection shape is:
 {
   type: 'scene';
   id: string;
-  sceneTab?: 'narrative' | 'beats' | 'shots';
+  sceneTab?: 'narrative' | 'beats' | 'shotPlans';
   beatId?: string;
+  shotPlanId?: string;
+  shotId?: string;
 }
 ```
 
@@ -64,16 +66,19 @@ Rules:
 
 - absent `sceneTab` means `narrative` unless `beatId` is present;
 - `beatId` requires `sceneTab: 'beats'`;
-- `sceneTab: 'narrative'` and `sceneTab: 'shots'` must not include `beatId`;
+- `shotPlanId` requires `sceneTab: 'shotPlans'`;
+- `shotId` requires `shotPlanId` and must belong to that plan;
+- the focused Shot Plan must belong to the selected Scene;
 - the Beats route is `?sceneTab=beats&beat=<beat-id>`;
-- the Shots route is `?sceneTab=shots`;
-- the Shots tab is currently an inert placeholder. It defines no Shot id,
-  Shot-detail route state, service read, or durable mutation.
+- the collection route is `?sceneTab=shotPlans`;
+- the detail route is
+  `?sceneTab=shotPlans&shotPlan=<plan-id>&shot=<shot-id>`;
+- Back to the collection keeps `sceneTab=shotPlans` and clears the nested ids.
 
 `renku studio current --json` enriches scene focus with the active scene tab and,
 when the focus is on `Beats`, the selected Beat summary. The Beat projection is
-read from the active Scene Beat Sheet. Shot authoring controls are not reported
-as current project state because the preserved kit has no persistence contract.
+read from the active Scene Beat Sheet. Shot Plan focus is validated against the
+current project database; the browser does not infer Scene or plan membership.
 
 Example:
 
@@ -859,8 +864,7 @@ The v1 selection contract should match the current browser selection model.
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'inspiration'; folderId?: string }
-  | { type: 'lookbooks' }
-  | { type: 'lookbook'; lookbookId: string }
+  | { type: 'lookbook'; kind: 'production' | 'storyboard' }
   | { type: 'trash' }
   | { type: 'cast' }
   | { type: 'castMember'; id: string }
@@ -872,11 +876,10 @@ export type StudioSelection =
   | {
       type: 'scene';
       id: string;
-      sceneTab?: 'narrative' | 'shots' | 'takes';
-      takeWorkspaceMode?: 'list' | 'new' | 'edit';
-      takeId?: string;
+      sceneTab?: 'narrative' | 'beats' | 'shotPlans';
+      beatId?: string;
+      shotPlanId?: string;
       shotId?: string;
-      shotTab?: SceneShotDetailTab;
     };
 ```
 

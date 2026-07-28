@@ -1,5 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { formatSceneProductionNumber } from '@gorenku/studio-core/client';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import {
+  formatSceneProductionNumber,
+  type ScenePanelTab,
+  type StudioSelection,
+} from '@gorenku/studio-core/client';
+import { Button } from '@/ui/button';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
@@ -8,13 +14,10 @@ import {
   matchesSceneNarrativeResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import type {
-  ScenePanelTab,
-  StudioSelection,
-} from '../movie-studio-selection';
 import { SceneNarrativeTab } from './scene-narrative-tab';
 import { SceneBeatsTab } from './scene-beats-tab';
-import { SceneShotsPlaceholderTab } from './scene-shots-placeholder-tab';
+import { SceneShotPlansTab } from '../shot-plans/scene-shot-plans-tab';
+import { ShotPlanDetailPage } from '../shot-plans/shot-plan-detail-page';
 
 interface SceneNeighbor {
   id: string;
@@ -26,6 +29,8 @@ interface ScenePanelProps {
   sceneId: string;
   sceneTab?: ScenePanelTab;
   beatId?: string;
+  shotPlanId?: string;
+  shotId?: string;
   onSelect: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
   onHeaderTitleChange?: (title: string | null) => void;
@@ -39,6 +44,8 @@ export function ScenePanel({
   sceneId,
   sceneTab,
   beatId,
+  shotPlanId,
+  shotId,
   onSelect,
   onHeaderActionChange,
   onHeaderTitleChange,
@@ -50,7 +57,31 @@ export function ScenePanel({
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
   const [tabBarAction, setTabBarAction] = useState<ReactNode | null>(null);
-  const activeTab: ScenePanelTab = sceneTab ?? (beatId ? 'beats' : 'narrative');
+  const [restoreFocusPlanId, setRestoreFocusPlanId] = useState<string | null>(
+    null
+  );
+  const detailPlanIdRef = useRef<string | null>(shotPlanId ?? null);
+  const activeTab: ScenePanelTab =
+    sceneTab ?? (shotPlanId ? 'shotPlans' : beatId ? 'beats' : 'narrative');
+  const handlePlanActivate = useCallback((planId: string) => {
+    detailPlanIdRef.current = planId;
+  }, []);
+  const handleBackToShotPlans = useCallback(() => {
+    onSelect({
+      type: 'scene',
+      id: sceneId,
+      sceneTab: 'shotPlans',
+    });
+  }, [onSelect, sceneId]);
+
+  useEffect(() => {
+    if (shotPlanId) {
+      detailPlanIdRef.current = shotPlanId;
+    } else if (detailPlanIdRef.current) {
+      setRestoreFocusPlanId(detailPlanIdRef.current);
+      detailPlanIdRef.current = null;
+    }
+  }, [shotPlanId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,8 +123,30 @@ export function ScenePanel({
   }, [onHeaderTitleChange, resource]);
 
   useEffect(() => {
-    onHeaderActionChange?.(null);
-  }, [onHeaderActionChange]);
+    if (activeTab === 'shotPlans' && shotPlanId) {
+      onHeaderActionChange?.(
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          className='h-7 gap-1.5 px-2 text-xs'
+          aria-label='Back to Shot Plans'
+          onClick={handleBackToShotPlans}
+        >
+          <ArrowLeft className='h-3.5 w-3.5' />
+          Back
+        </Button>
+      );
+    } else {
+      onHeaderActionChange?.(null);
+    }
+    return () => onHeaderActionChange?.(null);
+  }, [
+    activeTab,
+    handleBackToShotPlans,
+    onHeaderActionChange,
+    shotPlanId,
+  ]);
 
   if (error) {
     return <p className='p-6 text-sm text-destructive'>{error}</p>;
@@ -102,16 +155,18 @@ export function ScenePanel({
     return <p className='p-6 text-sm text-muted-foreground'>Loading scene...</p>;
   }
 
+  type SceneTabItem = ScenePanelTab | 'generations';
+
   return (
-    <LineTabs
+    <LineTabs<SceneTabItem>
       value={activeTab}
       onValueChange={(value) => {
         if (value === 'beats') {
           onSelect({ type: 'scene', id: sceneId, sceneTab: 'beats', beatId });
           return;
         }
-        if (value === 'shots') {
-          onSelect({ type: 'scene', id: sceneId, sceneTab: 'shots' });
+        if (value === 'shotPlans') {
+          onSelect({ type: 'scene', id: sceneId, sceneTab: 'shotPlans' });
           return;
         }
         onSelect({ type: 'scene', id: sceneId });
@@ -119,7 +174,8 @@ export function ScenePanel({
       items={[
         { value: 'narrative', label: 'Narrative' },
         { value: 'beats', label: 'Beats' },
-        { value: 'shots', label: 'Shots' },
+        { value: 'shotPlans', label: 'Shot Plans' },
+        { value: 'generations', label: 'Generations', disabled: true },
       ]}
       trailing={tabBarAction}
     >
@@ -153,10 +209,29 @@ export function ScenePanel({
         ) : null}
       </LineTabsContent>
       <LineTabsContent
-        value='shots'
+        value='shotPlans'
         className='flex min-h-0 min-w-0 overflow-hidden'
       >
-        {activeTab === 'shots' ? <SceneShotsPlaceholderTab /> : null}
+        {activeTab === 'shotPlans' ? (
+          shotPlanId ? (
+            <ShotPlanDetailPage
+              projectName={projectName}
+              sceneId={sceneId}
+              shotPlanId={shotPlanId}
+              shotId={shotId}
+              onSelect={onSelect}
+            />
+          ) : (
+            <SceneShotPlansTab
+              projectName={projectName}
+              sceneId={sceneId}
+              onSelect={onSelect}
+              onPlanActivate={handlePlanActivate}
+              restoreFocusPlanId={restoreFocusPlanId}
+              onFocusRestored={() => setRestoreFocusPlanId(null)}
+            />
+          )
+        ) : null}
       </LineTabsContent>
     </LineTabs>
   );

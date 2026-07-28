@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+  ScenePanelTab,
+  StudioSelection,
+} from '@gorenku/studio-core/client';
 import {
   readStudioSelectionContext,
   readProject,
@@ -9,11 +13,7 @@ import type {
   ProjectLibraryWithHttp,
   ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
-import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
-import {
-  SCENE_PANEL_TABS,
-  type ScenePanelTab,
-} from '@/features/movie-studio/movie-studio-selection';
+import { SCENE_PANEL_TABS } from '@/features/movie-studio/movie-studio-selection';
 
 type StudioRoute =
   | { screen: 'projectLibrary' }
@@ -373,6 +373,8 @@ function readStudioRoute(): StudioRoute {
     const search = new URLSearchParams(window.location.search);
     const sceneTabParam = search.get('sceneTab');
     const beatParam = search.get('beat');
+    const shotPlanParam = search.get('shotPlan');
+    const shotParam = search.get('shot');
     const sceneTab = sceneTabParam ? readScenePanelTab(sceneTabParam) : undefined;
     if (sceneTabParam && !sceneTab) {
       return {
@@ -390,11 +392,29 @@ function readStudioRoute(): StudioRoute {
         routeError: 'Beat route state requires sceneTab=beats.',
       };
     }
+    if (shotPlanParam && sceneTab !== 'shotPlans') {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: 'Shot Plan route state requires sceneTab=shotPlans.',
+      };
+    }
+    if (shotParam && !shotPlanParam) {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: 'Shot route state requires a Shot Plan.',
+      };
+    }
     const selection: StudioSelection = {
       type: 'scene',
       id: decodeURIComponent(sceneRoute[2]),
       ...(sceneTab ? { sceneTab } : {}),
       ...(beatParam ? { beatId: beatParam } : {}),
+      ...(shotPlanParam ? { shotPlanId: shotPlanParam } : {}),
+      ...(shotParam ? { shotId: shotParam } : {}),
     };
     return {
       screen: 'movieStudio',
@@ -628,6 +648,12 @@ function studioSelectionRoutePath(
     }
     if (selection.beatId) {
       params.set('beat', selection.beatId);
+    }
+    if (selection.shotPlanId) {
+      params.set('shotPlan', selection.shotPlanId);
+    }
+    if (selection.shotId) {
+      params.set('shot', selection.shotId);
     }
     const query = params.toString();
     return query ? `${base}?${query}` : base;

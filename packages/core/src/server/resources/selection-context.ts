@@ -25,6 +25,8 @@ import {
   readActiveSceneBeatSheetRecord,
   readSceneBeatSheetDocument,
 } from '../database/access/scene-beat-sheets.js';
+import { readShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
+import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import {
   studioActSurfaceResourceKey,
@@ -35,6 +37,7 @@ import {
   studioProjectInformationResourceKey,
   studioSequenceScenesNavigationResourceKey,
   studioSequenceSurfaceResourceKey,
+  studioSceneShotPlansResourceKey,
   studioStoryArcSurfaceResourceKey,
   studioTrashResourceKey,
   studioVisualLanguageInspirationResourceKey,
@@ -198,6 +201,13 @@ export function readStudioSelectionContextProjection(
         ) {
           return selectionNotFound(input.selection);
         }
+        if (
+          chain &&
+          input.selection.shotPlanId &&
+          !sceneShotPlanFocusExists(session, input.selection)
+        ) {
+          return selectionNotFound(input.selection);
+        }
         return chain && act
           ? {
               valid: true,
@@ -210,6 +220,9 @@ export function readStudioSelectionContextProjection(
               },
               resourceKeys: [
                 studioSequenceScenesNavigationResourceKey(chain.sequence.id),
+                ...(input.selection.sceneTab === 'shotPlans'
+                  ? [studioSceneShotPlansResourceKey(input.selection.id)]
+                  : []),
               ],
             }
           : selectionNotFound(input.selection);
@@ -236,7 +249,44 @@ function validateSceneSelectionTabs(
       )
     );
   }
+  if (selection.shotPlanId && selection.sceneTab !== 'shotPlans') {
+    return unsupportedSelection(
+      createDiagnosticError(
+        'STUDIO_COORDINATION039',
+        'Shot Plan focus requires the Shot Plans scene tab.',
+        { path: ['selection', 'sceneTab'], context: 'movie studio selection' },
+        'Use sceneTab: "shotPlans" when requesting a Shot Plan.'
+      )
+    );
+  }
+  if (selection.shotId && !selection.shotPlanId) {
+    return unsupportedSelection(
+      createDiagnosticError(
+        'STUDIO_COORDINATION040',
+        'Shot focus requires a Shot Plan.',
+        { path: ['selection', 'shotPlanId'], context: 'movie studio selection' },
+        'Send shotPlanId when requesting a Shot.'
+      )
+    );
+  }
   return null;
+}
+
+function sceneShotPlanFocusExists(
+  session: DatabaseSession,
+  selection: Extract<StudioSelection, { type: 'scene' }>
+): boolean {
+  const plan = selection.shotPlanId
+    ? readShotPlanRecord(session, selection.shotPlanId)
+    : null;
+  if (!plan || plan.sceneId !== selection.id) {
+    return false;
+  }
+  if (!selection.shotId) {
+    return true;
+  }
+  const shot = readShotRecord(session, selection.shotId);
+  return shot?.shotPlanId === plan.id;
 }
 
 function sceneBeatExists(

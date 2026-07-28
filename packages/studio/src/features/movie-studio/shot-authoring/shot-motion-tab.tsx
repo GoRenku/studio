@@ -20,7 +20,10 @@ import {
   PillToggle,
 } from './shot-design-controls';
 import { useShotDirection } from './shot-direction-context';
-import { MOVEMENT_OPTIONS, RIG_OPTIONS } from './shot-design-vocabulary';
+import {
+  MOVEMENT_OPTIONS,
+  RIG_OPTIONS,
+} from '../shot-design/shot-design-media';
 
 // Minimum tile width (px) for the Movement preview grid. The grid is
 // responsive auto-fill, so this is the *minimum* — larger means bigger 16:9

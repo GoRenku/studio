@@ -377,7 +377,7 @@ export type StudioSelectionContextResult =
       diagnostics: DiagnosticIssue[];
 };
 
-export type ScenePanelTab = 'narrative' | 'beats' | 'shots';
+export type ScenePanelTab = 'narrative' | 'beats' | 'shotPlans';
 
 export type StudioSelection =
   | { type: 'projectInformation' }
@@ -396,6 +396,8 @@ export type StudioSelection =
       id: string;
       sceneTab?: ScenePanelTab;
       beatId?: string;
+      shotPlanId?: string;
+      shotId?: string;
     };
 
 export type StudioSelectionContext =

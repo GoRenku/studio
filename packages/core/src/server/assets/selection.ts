@@ -13,7 +13,7 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
-import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { assetOwnerResourceKeys } from './resource-keys.js';
 import { assetOwnerKey } from './owner-keys.js';
 import { assertAssetOwnerExists } from './ownership.js';
 
@@ -147,6 +147,9 @@ function selectionReport(
     project: { id: project.id, name: project.name, projectFolder },
     target,
     selectedAssetId,
-    resourceKeys: studioAssetOwnerSurfaceResourceKeys(selectionTargetOwner(target)),
+    resourceKeys: assetOwnerResourceKeys(
+      session,
+      selectionTargetOwner(target)
+    ),
   };
 }

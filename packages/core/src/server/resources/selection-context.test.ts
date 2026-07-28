@@ -45,6 +45,72 @@ describe('readStudioSelectionContext', () => {
     });
   });
 
+  it('validates nested Shot Plan and Shot focus in Core', async () => {
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const sceneId =
+      screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
+    expect(sceneId).toBeTruthy();
+    const firstPlan = await projectData.createShotPlan({
+      projectName: PROJECT_NAME,
+      homeDir,
+      sceneId: sceneId!,
+      title: 'First coverage',
+      coverage: null,
+      shots: [
+        {
+          title: 'Opening frame',
+          description: 'Hold the council in a composed wide frame.',
+          brief: {},
+        },
+      ],
+    });
+    const secondPlan = await projectData.createShotPlan({
+      projectName: PROJECT_NAME,
+      homeDir,
+      sceneId: sceneId!,
+      title: 'Second coverage',
+      coverage: null,
+      shots: [],
+    });
+
+    await expect(
+      projectData.readStudioSelectionContext({
+        projectName: PROJECT_NAME,
+        homeDir,
+        selection: {
+          type: 'scene',
+          id: sceneId!,
+          sceneTab: 'shotPlans',
+          shotPlanId: firstPlan.shotPlan.id,
+          shotId: firstPlan.shotPlan.shots[0]!.id,
+        },
+      })
+    ).resolves.toMatchObject({
+      valid: true,
+      resourceKeys: expect.arrayContaining([
+        `surface:scene:${sceneId}:shot-plans`,
+      ]),
+    });
+
+    await expect(
+      projectData.readStudioSelectionContext({
+        projectName: PROJECT_NAME,
+        homeDir,
+        selection: {
+          type: 'scene',
+          id: sceneId!,
+          sceneTab: 'shotPlans',
+          shotPlanId: secondPlan.shotPlan.id,
+          shotId: firstPlan.shotPlan.shots[0]!.id,
+        },
+      })
+    ).resolves.toMatchObject({
+      valid: false,
+      reason: 'selectionNotFound',
+      diagnostics: [{ code: 'PROJECT_DATA119', severity: 'error' }],
+    });
+  });
+
   async function writeBeatSheet(): Promise<{ sceneId: string }> {
     const screenplay = await projectData.readScreenplay({ homeDir });
     const act = screenplay.screenplay!.acts[0]!;

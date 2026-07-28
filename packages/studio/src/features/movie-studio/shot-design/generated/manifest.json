@@ -1,6 +1,6 @@
 {
   "generatedBy": "generate-assets",
-  "outputRoot": "packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated",
+  "outputRoot": "packages/studio/src/features/movie-studio/shot-design/generated",
   "sheets": [
     {
       "number": 1,

@@ -4,6 +4,7 @@ import { readAssetPageRequest } from '../http/asset-request.js';
 import {
   readProjectAssetFileByIdResponse,
 } from '../http/asset-file-response.js';
+import { toStudioShotAssetResponse } from '../http/shot-plan-responses.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
@@ -20,11 +21,22 @@ export function createAssetsRoute({
     .get('/assets', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
+        const request = readAssetPageRequest(c.req.query());
         const page = await projectData.listAssetPage({
           projectName,
-          ...readAssetPageRequest(c.req.query()),
+          ...request,
         });
-        return c.json({ page });
+        return c.json({
+          page:
+            request.owner.kind === 'shot'
+              ? {
+                  ...page,
+                  items: page.items.map((asset) =>
+                    toStudioShotAssetResponse(projectName, asset)
+                  ),
+                }
+              : page,
+        });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

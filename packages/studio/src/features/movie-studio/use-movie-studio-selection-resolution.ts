@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   buildMovieStudioLookup,
   resolveStudioSelection,
-  type StudioSelection,
 } from './movie-studio-selection';
 import type { ScreenplayNavigationState } from './use-screenplay-navigation';
 

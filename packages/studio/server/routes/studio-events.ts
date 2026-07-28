@@ -30,7 +30,11 @@ import {
 } from '../projections/generation-preview.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = ['narrative', 'beats', 'shots'];
+const SCENE_PANEL_TABS: ScenePanelTab[] = [
+  'narrative',
+  'beats',
+  'shotPlans',
+];
 const PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT =
   'studio.projectResourcesChanged notification';
 const GENERATION_PREVIEW_NOTIFICATION_CONTEXT =
@@ -56,7 +60,7 @@ type GenerationPreviewResourceProjection = (input: {
 type StudioEventsRouteProjectData = Pick<
   ProjectDataService,
   | 'readProject'
-  | 'readSceneBeatSheetResource'
+  | 'readStudioSelectionContext'
   | 'buildGenerationPreviewResource'
 >;
 
@@ -211,13 +215,14 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
             diagnostics: validation.diagnostics,
           });
         }
-        const beatValidation = await validateSceneBeatSelection({
-          projectData,
-          projectName: body.projectName ?? '',
-          focus: focus.focus,
-        });
-        if (!beatValidation.valid) {
-          return c.json(beatValidation);
+        if (focus.focus.screen === 'movieStudio') {
+          const context = await projectData.readStudioSelectionContext({
+            projectName: body.projectName ?? '',
+            selection: focus.focus.selection,
+          });
+          if (!context.valid) {
+            return c.json(context);
+          }
         }
         return c.json({ valid: true });
       } catch (error) {
@@ -334,49 +339,6 @@ function readGenericGenerationPreviews(
   return previews.length === value.length ? previews : null;
 }
 
-async function validateSceneBeatSelection(input: {
-  projectData: StudioEventsRouteProjectData;
-  projectName: string;
-  focus: StudioFocusRequest;
-}): Promise<
-  | { valid: true }
-  | {
-      valid: false;
-      reason: 'selectionNotFound';
-      diagnostics: DiagnosticIssue[];
-    }
-> {
-  if (input.focus.screen !== 'movieStudio') {
-    return { valid: true };
-  }
-  const selection = input.focus.selection;
-  if (selection.type !== 'scene' || !selection.beatId) {
-    return { valid: true };
-  }
-  const resource = await input.projectData.readSceneBeatSheetResource({
-    projectName: input.projectName,
-    sceneId: selection.id,
-  });
-  const beat = resource.activeBeatSheet?.beats.find(
-    (entry) => entry.id === selection.beatId
-  );
-  if (beat) {
-    return { valid: true };
-  }
-  return {
-    valid: false,
-    reason: 'selectionNotFound',
-    diagnostics: [
-      createDiagnosticError(
-        'STUDIO_COORDINATION038',
-        `Requested Beat '${selection.beatId}' was not found in the active Beat Sheet.`,
-        { path: ['focus', 'selection', 'beatId'], context: 'studio.focusRequested' },
-        'Request a Beat id from the Scene active Beat Sheet.'
-      ),
-    ],
-  };
-}
-
 type StudioFocusRequestReadResult =
   | { ok: true; focus: StudioFocusRequest }
   | { ok: false; diagnostics: DiagnosticIssue[] };
@@ -452,6 +414,14 @@ function readStudioSelection(value: unknown): StudioSelection | null {
       typeof selection.beatId === 'string' && selection.beatId.trim()
         ? selection.beatId
         : undefined;
+    const shotPlanId =
+      typeof selection.shotPlanId === 'string' && selection.shotPlanId.trim()
+        ? selection.shotPlanId
+        : undefined;
+    const shotId =
+      typeof selection.shotId === 'string' && selection.shotId.trim()
+        ? selection.shotId
+        : undefined;
     if (selection.sceneTab !== undefined && !sceneTab) {
       return null;
     }
@@ -460,6 +430,8 @@ function readStudioSelection(value: unknown): StudioSelection | null {
       id: selection.id,
       ...(sceneTab ? { sceneTab } : {}),
       ...(beatId ? { beatId } : {}),
+      ...(shotPlanId ? { shotPlanId } : {}),
+      ...(shotId ? { shotId } : {}),
     };
   }
 

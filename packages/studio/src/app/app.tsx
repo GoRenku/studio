@@ -1,11 +1,11 @@
 import { Loader2 } from 'lucide-react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import { ProjectLibraryScreen } from '@/features/project-library/project-library-screen';
 import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
 import { GenerationPreviewDialogHost } from '@/features/generation-preview/generation-preview-dialog-host';
 import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
-import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 import { Toaster } from '@/ui/sonner';
 
 const defaultStudioSelection: StudioSelection = {

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './app';
@@ -9,7 +10,6 @@ import type {
   ProjectShellWithHttp,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
-import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
 
 describe('App', () => {
   beforeEach(() => {
@@ -852,13 +852,24 @@ describe('App', () => {
       '/projects/constantinople/scenes/scene_1_1?sceneTab=beats&beat=beat_001',
     ],
     [
-      'Scene Shots placeholder',
+      'Scene Shot Plans',
       {
         type: 'scene',
         id: 'scene_1_1',
-        sceneTab: 'shots',
+        sceneTab: 'shotPlans',
       },
-      '/projects/constantinople/scenes/scene_1_1?sceneTab=shots',
+      '/projects/constantinople/scenes/scene_1_1?sceneTab=shotPlans',
+    ],
+    [
+      'Shot Plan detail',
+      {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'shotPlans',
+        shotPlanId: 'plan_001',
+        shotId: 'shot_002',
+      },
+      '/projects/constantinople/scenes/scene_1_1?sceneTab=shotPlans&shotPlan=plan_001&shot=shot_002',
     ],
     ['Cast overview', { type: 'cast' }, '/projects/constantinople/cast'],
     [

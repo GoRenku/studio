@@ -20,7 +20,7 @@ export function MediaCard({
   activation,
   selected,
   selection,
-  inspectionAction,
+  cornerAction,
   deleteAction,
   emptyState,
 }: MediaCardProps) {
@@ -28,7 +28,7 @@ export function MediaCard({
   const selectedState = selection?.selected ?? selected ?? false;
   const option = presentation.kind === 'thumbnail' && isOptionMedia(media);
   const mosaic = presentation.kind === 'thumbnail' && media?.kind === 'mosaic';
-  const hasLowerActions = Boolean(selection || inspectionAction);
+  const hasLowerActions = Boolean(selection || cornerAction);
   const imageKey =
     frame.kind === 'ratio' &&
     frame.detectFromImage &&
@@ -86,7 +86,7 @@ export function MediaCard({
         />
         <MediaCardActions
           selection={selection}
-          inspectionAction={inspectionAction}
+          cornerAction={cornerAction}
           deleteAction={deleteAction}
         />
       </div>

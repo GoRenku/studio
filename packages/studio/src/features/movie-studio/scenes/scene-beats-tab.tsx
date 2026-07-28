@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import { MediaCard } from '@/ui/media-card/media-card';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneBeatSheetResourceResponse } from '@/services/studio-project-contracts';
@@ -9,7 +10,6 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { SceneBeatsEmpty } from './scene-beats-empty';
 import { beatLabel } from './scene-beat-labels';
-import type { StudioSelection } from '../movie-studio-selection';
 
 interface SceneBeatsTabProps {
   projectName: string;

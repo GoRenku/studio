@@ -196,7 +196,7 @@ describe('Studio focus validation', () => {
       resolveStudioSelectionForProject(project, {
         type: 'scene',
         id: 'scene_1_1',
-        sceneTab: 'shots',
+        sceneTab: 'shotPlans',
         unexpected: true,
       } as never)
     ).toMatchObject({
@@ -215,6 +215,45 @@ describe('Studio focus validation', () => {
       ok: false,
       reason: 'unsupportedSelection',
       diagnostics: [{ code: 'STUDIO_COORDINATION036', severity: 'error' }],
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'narrative',
+        shotPlanId: 'shot_plan_001',
+      })
+    ).toMatchObject({
+      ok: false,
+      reason: 'unsupportedSelection',
+      diagnostics: [{ code: 'STUDIO_COORDINATION039', severity: 'error' }],
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'shotPlans',
+        shotId: 'shot_001',
+      })
+    ).toMatchObject({
+      ok: false,
+      reason: 'unsupportedSelection',
+      diagnostics: [{ code: 'STUDIO_COORDINATION040', severity: 'error' }],
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'scene',
+        id: 'scene_1_1',
+        sceneTab: 'shotPlans',
+        shotPlanId: 'shot_plan_001',
+        shotId: 'shot_001',
+      })
+    ).toMatchObject({
+      ok: true,
+      context: {
+        kind: 'scene',
+        sceneTab: { id: 'shotPlans', label: 'Shot Plans' },
+      },
     });
   });
 });

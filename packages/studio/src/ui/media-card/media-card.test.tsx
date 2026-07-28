@@ -138,6 +138,86 @@ describe('MediaCard', () => {
     expect(screen.queryByRole('img', { name: 'Two' })).toBeNull();
   });
 
+  it.each([
+    [1, 1, null],
+    [2, 2, null],
+    [3, 3, null],
+    [4, 4, null],
+    [5, 5, null],
+    [9, 9, null],
+    [10, 8, '2 more selected images'],
+    [14, 8, '6 more selected images'],
+  ] as const)(
+    'renders %i selected images as a bounded mosaic',
+    (count, visibleImages, overflowLabel) => {
+      const { container } = render(
+        <MediaCard
+          media={{
+            kind: 'mosaic-grid',
+            items: Array.from({ length: count }, (_, index) => ({
+              key: `image-${index}`,
+              imageUrl: `/image-${index}.jpg`,
+              alt: `Selected image ${index + 1}`,
+            })),
+          }}
+          frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+          presentation={{ kind: 'overlay' }}
+        />
+      );
+
+      expect(container.querySelectorAll('img')).toHaveLength(visibleImages);
+      if (overflowLabel) {
+        expect(screen.getByLabelText(overflowLabel)).not.toBeNull();
+      } else {
+        expect(
+          container.querySelector('[aria-label$="more selected images"]')
+        ).toBeNull();
+      }
+    }
+  );
+
+  it('uses one-way choose semantics and renders a selected status without a toggle', () => {
+    const onChoose = vi.fn();
+    const { rerender } = render(
+      <MediaCard
+        media={image('Candidate')}
+        frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+        presentation={{ kind: 'overlay' }}
+        selection={{
+          kind: 'choose',
+          selected: false,
+          selectedLabel: 'Selected image',
+          unselectedLabel: 'Use as selected image',
+          onChoose,
+        }}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Use as selected image' })
+    );
+    expect(onChoose).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <MediaCard
+        media={image('Candidate')}
+        frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+        presentation={{ kind: 'overlay' }}
+        selection={{
+          kind: 'choose',
+          selected: true,
+          selectedLabel: 'Selected image',
+          unselectedLabel: 'Use as selected image',
+          onChoose,
+        }}
+      />
+    );
+    expect(screen.getByRole('status', { name: 'Selected image' })).not.toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Selected image' })
+    ).toBeNull();
+  });
+
   it('renders the three bounded empty states', () => {
     const { rerender } = render(
       <MediaCard
@@ -186,12 +266,18 @@ describe('MediaCard', () => {
         presentation={{ kind: 'overlay' }}
         activation={{ label: 'Open card preview', onActivate }}
         selection={{
+          kind: 'toggle',
           selected: false,
           selectedLabel: 'Remove reference',
           unselectedLabel: 'Select reference',
           onToggle,
         }}
-        inspectionAction={{ label: 'View generation request', onInspect }}
+        cornerAction={{
+          kind: 'inspect',
+          label: 'View generation request',
+          visibility: 'always',
+          onAction: onInspect,
+        }}
         deleteAction={{
           label: 'Delete image',
           confirmationTitle: 'Delete this image?',
@@ -226,12 +312,18 @@ describe('MediaCard', () => {
         frame={{ kind: 'ratio', aspectRatio: 1 }}
         presentation={{ kind: 'overlay' }}
         selection={{
+          kind: 'toggle',
           selected: true,
           selectedLabel: 'Remove reference',
           unselectedLabel: 'Select reference',
           onToggle: vi.fn(),
         }}
-        inspectionAction={{ label: 'View generation request', onInspect: vi.fn() }}
+        cornerAction={{
+          kind: 'inspect',
+          label: 'View generation request',
+          visibility: 'always',
+          onAction: vi.fn(),
+        }}
         deleteAction={{
           label: 'Delete image',
           confirmationTitle: 'Delete?',

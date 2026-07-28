@@ -1,273 +1,43 @@
-# Design QA — Image Generation Review
+# Shot Plans Studio UI — Design QA
 
-## Scope And Evidence
+Date: 2026-07-27
 
-- Source visual truth:
-  `plans/active/assets/0149-image-generation-review-design/`.
-- Production route:
-  `http://localhost:5173/projects/urban-basilica/locations/location_g9s9246r`
-  and the previously verified Production Lookbook route.
-- Desktop viewport: 1708×1251.
-- Themes: dark and light.
-- Production states checked: Generation Preview Prompt, References, and Config;
-  Image Revision Regenerate Prompt, References, and Config; Image Revision Edit
-  Prompt, References, and Config.
-- Final screenshots:
-  `/Users/keremk/.codex/visualizations/2026/07/18/019f76c1-a102-7b72-8e4d-e14ae19409de/preview-{dark,light}-{prompt,references,config}-final.png`
-  and
-  `/Users/keremk/.codex/visualizations/2026/07/18/019f76c1-a102-7b72-8e4d-e14ae19409de/revision-{regenerate,edit}-{dark,light}-{prompt,references,config}-final.png`.
-- Same-viewport combined comparisons:
-  `final-preview-prompt-comparison.png`,
-  `final-regenerate-config-comparison.png`, and
-  `final-edit-references-comparison.png` in the same visualization folder.
-- Focused comparisons:
-  `final-config-controls-comparison.png` and
-  `final-footer-comparison.png` in the same visualization folder.
-- Follow-up Chrome implementation capture after the user's visual review:
-  `/Users/keremk/.codex/visualizations/2026/07/18/019f76c1-a102-7b72-8e4d-e14ae19409de/location-preview-final-approved.png`.
-- Follow-up same-viewport full comparison:
-  `location-preview-source-final-comparison.png` in the same visualization
-  folder.
-- Follow-up focused header/tab comparison:
-  `location-preview-header-tabs-final-comparison.png` in the same visualization
-  folder.
+Reference:
 
-## Findings And Corrections
+- `plans/active/assets/0157-shot-plans-studio-ui/index.html`
+- checked-in 1440×900, 1024×900, and dialog-state screenshots beside the artifact
 
-The first production comparison found five actionable visual issues. All were
-corrected and rechecked against combined source/implementation evidence.
+Production verification:
 
-1. **P1 — collapsed Image Revision content.** The dialog declared three grid
-   rows while rendering four direct grid children, which let the tab bar consume
-   most of the flexible height and reduced the request editor to roughly 90px.
-   The dialog now declares header, request tabs, flexible content, and footer as
-   four explicit rows. The 1120×760 frame remains stable across every state.
-2. **P2 — Config layout drift.** Config used a nested tinted card and controls
-   stretched too widely. The nested card was removed and the form now uses the
-   compact centered label/control rhythm shown in the source. The focused
-   comparison confirms the row spacing, widths, borders, and alignment.
-3. **P2 — reference-card scale and labels.** Reference cards were undersized and
-   their labels were too conversational. Cards now use the intended 420px grid
-   width with quiet uppercase section labels. The Edit source remains visibly
-   locked without adding invented copy.
-4. **P2 — sepia dialog surfaces.** Global Studio theme tokens made the request
-   dialogs warmer than the neutral graphite/near-white source. A dialog-scoped
-   token treatment now produces neutral surfaces and readable foreground colors
-   in both themes without changing the surrounding Studio UI.
-5. **P2 — raw source identifier in the title.** A kebab-case asset identifier
-   appeared as visible header copy. The dialog now shows a supplied meaningful
-   title when available and otherwise uses the intentional `Revise Image`
-   fallback.
-6. **P1 — header and request-tab geometry did not match the approved source.**
-   The live Preview header measured 45px rather than 54px; the request tabs
-   started at the dialog border rather than the source's 14px inset; tabs used
-   8px rather than 12px horizontal padding; the selected background was
-   overridden to transparent; and the underline sat 5px below the tab. Preview
-   now uses the source's 54px centered header, Image Revision keeps its 72px
-   header, the tab row is 46px high with a 14px inset, selected Prompt is 79px
-   wide, the selected fill is `rgba(189, 139, 43, 0.2)`, and the 2px underline
-   sits at the tab's bottom edge. The selected tab begins at x=309 in both the
-   source and implementation at the 1708×1251 viewport.
-7. **P2 — prompt headings and editor surface drifted from the approved palette.**
-   Live Markdown headings were orange `rgb(212, 162, 115)` at weight 400 instead
-   of the source's desaturated gold `rgb(224, 195, 111)` at weight 700. The
-   editor also introduced a rounded bordered card and blue active-line fill not
-   present in the source. Headings now use the approved gold and weight, Markdown
-   markers use the quiet gray `#858993`, the document is a transparent unboxed
-   surface, and the active-line fill is transparent.
+- Compared collection, detail, compact detail, Description, still preview,
+  motion preview, Camera glossary, and Motion glossary in same-state,
+  same-viewport side-by-side images.
+- Verified the collection uses the accepted three-column desktop grid,
+  selected-image mosaics, quiet empty state, Beat labels, and `+N` overflow.
+- Verified detail navigation, independent Shot rail/detail scrolling, amber
+  image-only selection, quiet empty Shot, and fixed-width Brief cards that wrap
+  instead of shrinking or stretching.
+- Verified exact long Markdown wraps and scrolls in the read-only Description
+  surface.
+- Verified media previews and the 9/8/10 Framing, Camera, and Motion glossaries,
+  including current/start/end markers and Rack Focus still media.
+- Verified keyboard focus return for plan Back, candidate dialog, media
+  previews, and glossary dialogs.
+- Verified plan delete/Trash restore and candidate select/delete/Trash restore
+  against an isolated clone of `urban-basilica`.
+- Rechecked Shot detail at 1024×900 after the fixed-card correction. Every
+  Brief card measures 204 pixels, wraps without shrinking or stretching, and
+  the Covered Beats group sits below the exact Shot title.
+- Rechecked the Shot rail sizing contract: it starts from the named percentage
+  constant and respects the named 210-pixel hard minimum at compact desktop
+  widths.
 
-The prototype's Image Revision header thumbnail is an explicitly rejected
-planning artifact. The production implementation intentionally does not restore
-it; the accepted header contains meaningful text and mode controls only.
+Resolved deviations:
 
-No actionable P0, P1, or P2 visual differences remain.
-
-## Fidelity Review
-
-- **Typography:** neutral document text remains readable; tab, mode, estimate,
-  label, and action hierarchy matches the source. Markdown headings now use the
-  approved desaturated-gold weight and gray markers. Token styling changes
-  presentation only and preserves the exact authored prompt.
-- **Spacing and layout:** the stable desktop frame, header, tab row, flexible
-  editor, and 72px footer remain fixed across all modes and tabs. The source's
-  header heights, 46px tab row, 14px tab inset, tab padding, 38px References and
-  Config top rhythm, and centered form geometry are now measured matches.
-- **Color and contrast:** dialog surfaces are neutral in dark and light themes;
-  the source's graphite header/tab/content/footer surfaces are mapped through
-  dialog-scoped tokens. Gold remains reserved for document hierarchy, selection,
-  focus, and primary action emphasis.
-- **Images:** production project assets are used directly with correct crops and
-  no placeholder or reconstructed imagery.
-- **Copy:** no raw filename, model id, provider payload, debug field, subtitle,
-  or filler label is exposed. Config contains only Core-projected product
-  controls.
-
-## Interaction And Runtime Verification
-
-- Prompt, References, and Config navigation passed in Preview, Regenerate, and
-  Edit.
-- Regenerate/Edit mode switching passed and preserved the stable frame.
-- Edit showed the exact source image as a required locked reference; Regenerate
-  references remained selectable.
-- Typing `@Ref` opened one exact selected-reference completion. Enter replaced
-  only the active query with `@Reference1`; one undo restored `@Ref`.
-- Hover/caret entry displayed the real selected image preview. Unknown or
-  cleared mention text was not rewritten.
-- Config showed only the route's declared controls: Nano Banana 2 exposed
-  Aspect ratio and Resolution; GPT Image 2 Edit exposed Image size and Quality.
-- Estimate and primary actions remained stable through loading and resolved
-  states.
-- Final browser logs contained only Vite connection messages and the React
-  development-tools notice; no warning or error was emitted by the flow.
-- Follow-up Chrome warning/error logs after the geometry and color corrections
-  were empty.
-
-## Verification
-
-- Studio: 62 test files and 210 tests passed.
-- Root `pnpm check`, `pnpm lint`, and `pnpm test` passed. Lint reports the existing
-  non-blocking `packages/studio/server/bin.ts` console warning and no errors.
-- Studio Skills guide validation passed for 8 image routes, 10 image purposes,
-  and the forward-test cases against the `urban-basilica` project.
-- Studio and Studio Skills diffs passed `git diff --check`.
-
-final result: passed
-
----
-
-# Design QA — Website Header GitHub Action
-
-## Scope And Evidence
-
-- Source visual truth: Codex conversation attachment
-  `Google Chrome Appshot 2026-07-24T08-16-58.750Z.png`, with the user's
-  instruction to remove the visible GitHub label.
-- Browser-rendered implementation:
-  `/private/tmp/renku-header-final-942.png`.
-- Reference attachment dimensions: 942×768 pixels.
-- Implementation viewport: 942×691 CSS pixels at device pixel ratio 1.
-- Implementation focused header capture: 942×100 pixels.
-- State: dark website header, fonts loaded, pointer outside the GitHub action.
-- Full-view comparison: the supplied page screenshot and live Chrome render
-  were compared at the same 942px page width.
-- Focused comparison: the header capture was used because the requested change
-  affects only the GitHub action and its alignment.
-
-## Comparison History
-
-### Pass 1 — blocked
-
-- **P2 — visible label crowded the header.** The GitHub wordmark introduced a
-  second compact text style between navigation and the primary CTA, making the
-  action cluster visually noisy and exposing baseline misalignment.
-
-### Correction
-
-- Removed the visible label.
-- Replaced the handcrafted inline path with GitHub's official 24px Primer
-  Octicon asset.
-- Centered the 20px mark in a fixed 32×32px action target and kept the action
-  group non-shrinking.
-- Restored the original 640px navigation breakpoint now that the label no
-  longer consumes horizontal space.
-
-### Pass 2 — passed
-
-- The GitHub action and Download Studio CTA share the same optical center:
-  33.984px and 33.992px respectively.
-- The icon remains visible after fonts load and has no visible text.
-- The link retains its accessible name and points to
-  `https://github.com/GoRenku/studio` in a new tab.
-
-## Required Fidelity Surfaces
-
-- **Fonts and typography:** no new visible type remains; the existing brand,
-  navigation, and CTA typography are unchanged.
-- **Spacing and layout rhythm:** the mark is centered in a 32×32px target with
-  12px between it and the CTA. Existing header height and navigation spacing
-  are unchanged.
-- **Colors and visual tokens:** the white mark uses 78% resting opacity and a
-  quiet translucent hover surface consistent with the dark header.
-- **Image quality and asset fidelity:** the official vector Primer Octicon is
-  rendered at 20×20px; no inline or approximate icon drawing remains.
-- **Copy and content:** the visible `GitHub` label is removed. The
-  `Renku Studio on GitHub` accessible name remains for assistive technology.
-
-No actionable P0, P1, or P2 differences remain.
-
-final result: passed
-
----
-
-# Design QA — Read-Only Generation Request Inspector Regression Repair
-
-## Scope And Evidence
-
-- Source visual truth:
-  `plans/active/assets/0149-image-generation-review-design/prototype.html` and
-  the approved pre-regression Chrome capture
-  `/Users/keremk/.codex/visualizations/2026/07/18/019f76c1-a102-7b72-8e4d-e14ae19409de/location-preview-config-final-approved.png`.
-- Browser-rendered implementation:
-  `/Users/keremk/.codex/visualizations/2026/07/20/019f7e79-e80b-7d52-942e-06159db996d3/generation-request-dialog-audit/04-final-config.png`,
-  `05-final-references.png`, and `06-final-prompt.png`.
-- Desktop viewport: 1708×1251. Dialog: 1120×760.
-- State: dark theme, exact saved Cast Character Sheet request, all three tabs.
-- Full-view comparison evidence:
-  `/Users/keremk/.codex/visualizations/2026/07/20/019f7e79-e80b-7d52-942e-06159db996d3/generation-request-dialog-audit/07-config-approved-current-comparison.png`.
-- Focused Config comparison evidence:
-  `/Users/keremk/.codex/visualizations/2026/07/20/019f7e79-e80b-7d52-942e-06159db996d3/generation-request-dialog-audit/10-config-focus-comparison.png`.
-
-## Comparison History
-
-### Pass 1 — blocked
-
-- **P1 — four dialog regions were placed into three grid rows.** The 46px tab
-  bar consumed the flexible row, forcing Prompt, References, and Config toward
-  the footer. This clipped the request tabs, made Config appear absent, and
-  created the large false top margin in References.
-- **P1 — saved Config discarded the approved presentation.** The inspector
-  exposed provider ids and enum tokens in grouped data boxes instead of the
-  compact label/value rhythm and human-readable catalog labels.
-
-### Corrections
-
-- Declared the explicit 54px header, 46px tab row, flexible content row, and
-  footer row used by the approved dialog.
-- Restored the centered 538px Config grid with 150px labels, 360px composed
-  static value surfaces, and 18px row rhythm. It contains no inputs, selects,
-  switches, or other form controls.
-- Kept catalog and provider interpretation in Core. Known saved routes now
-  project `GPT Image 2`, `Landscape · 16:9`, and `High`; removed or unknown
-  routes still fall back to their exact saved identity and values.
-
-### Pass 2 — passed
-
-- Browser measurements confirm a 1120×760 dialog, 54px header, 46px tab row,
-  589px visible panel, and 69px footer. The active Config panel contains zero
-  interactive controls.
-- Prompt, References, and Config navigation passed. Prompt remains read-only;
-  References shows the selected image without a chooser or toggle; Config uses
-  static values; both close controls remain present.
-- Chrome reported no warning or error logs during the final flow.
-
-## Required Fidelity Surfaces
-
-- **Fonts and typography:** inherited Renku dialog typography matches the
-  approved capture; labels, values, tabs, and title retain the same sizes,
-  weights, casing, and line heights.
-- **Spacing and layout rhythm:** header, tabs, content, footer, 38px panel top
-  spacing, reference-card position, and Config row geometry match the approved
-  desktop design.
-- **Colors and visual tokens:** existing dialog-scoped neutral graphite tokens,
-  muted labels, gold selected tab, and bordered value surfaces are preserved.
-  Static values intentionally remain legible instead of inheriting disabled
-  control opacity.
-- **Image quality:** References uses the exact saved production image with the
-  existing MediaCard crop; no placeholder or reconstructed asset is present.
-- **Copy and content:** the title remains `Generation Request`; catalog-backed
-  user-facing labels replace machine identifiers while exact unknown saved
-  values remain available as the Core fallback.
-
-No actionable P0, P1, or P2 differences remain.
+- Made the collection root fill the Scene panel so the grid does not
+  shrink-wrap to one column.
+- Rendered Core’s zero-based Beat positions as one-based product labels.
+- Added specific accessible names for Back and glossary actions.
+- Enabled CodeMirror line wrapping for long authored Shot descriptions.
 
 final result: passed

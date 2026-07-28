@@ -6,6 +6,11 @@ Date: 2026-07-16
 Notice: Decision [0058](0058-make-studio-image-editing-agent-owned.md)
 supersedes this decision's Image Revision and Edit-action clauses.
 
+Notice: Decision
+[0065](0065-use-bounded-adaptive-media-card-mosaics.md) narrows the mosaic
+clause by retaining the exact Visual Language 2x2 mosaic and adding a separate
+bounded adaptive image-only variant.
+
 ## Context
 
 Studio visual media cards had grown into several independent implementations.

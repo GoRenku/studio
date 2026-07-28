@@ -1,5 +1,7 @@
-import type { StudioSelection } from '@/features/movie-studio/movie-studio-selection';
-import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
+import type {
+  GenerationPreviewResource,
+  StudioSelection,
+} from '@gorenku/studio-core/client';
 
 export interface StudioProjectRef {
   name: string;

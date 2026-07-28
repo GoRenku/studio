@@ -27,6 +27,9 @@ export interface StudioE2eMovieProject extends StudioE2eProject {
   beatSheetId: string;
   firstBeatId: string;
   secondBeatId: string;
+  shotPlanId: string;
+  firstShotId: string;
+  secondShotId: string;
   lookbookId: string;
   profileAssetId: string;
   locationSheetAssetId: string;
@@ -120,6 +123,34 @@ export async function createBeatSheetMovieProject(input: {
     document: sampleBeatSheet(ids),
     idGenerator: createDeterministicIdGenerator(),
   });
+  const shotPlan = await projectData.createShotPlan({
+    projectName: input.projectName,
+    homeDir: input.runtime.isolatedHomeDirectory,
+    sceneId: ids.sceneId,
+    title: 'Gate pressure coverage',
+    coverage: {
+      beatSheetId: beatSheet.beatSheet.id,
+      beatIds: ['beat_001', 'beat_002'],
+    },
+    shots: [
+      {
+        title: 'Urban holds beside the cannon',
+        description: 'Hold Urban and the cannon together in a wide frame.',
+        brief: {
+          durationSeconds: 2,
+          framing: { start: 'wide-shot' },
+        },
+      },
+      {
+        title: 'The crew absorbs the result',
+        description: 'Move closer as the crew watches the gate.',
+        brief: {
+          durationSeconds: 3.5,
+          camera: { angle: 'eye-level' },
+        },
+      },
+    ],
+  });
 
   const mediaIds = await seedProjectMedia({
     runtime: input.runtime,
@@ -134,6 +165,9 @@ export async function createBeatSheetMovieProject(input: {
     beatSheetId: beatSheet.beatSheet.id,
     firstBeatId: 'beat_001',
     secondBeatId: 'beat_002',
+    shotPlanId: shotPlan.shotPlan.id,
+    firstShotId: shotPlan.shotPlan.shots[0]!.id,
+    secondShotId: shotPlan.shotPlan.shots[1]!.id,
     ...mediaIds,
   };
 }

@@ -82,9 +82,11 @@ export function LookbookVisualContentTab({
                     label: image.asset.title,
                     onActivate: () => openPreview(previewImagesForImage),
                   },
-                  inspectionAction: {
+                  cornerAction: {
+                    kind: 'inspect' as const,
                     label: 'View generation request',
-                    onInspect: () => {
+                    visibility: 'always' as const,
+                    onAction: () => {
                       const file = image.asset.files.find(
                         (candidate) => candidate.mediaKind === 'image'
                       );
@@ -143,9 +145,11 @@ export function LookbookVisualContentTab({
                     label: 'Lookbook sheet',
                     onActivate: () => openPreview(previewImagesForSheet),
                   },
-                  inspectionAction: {
+                  cornerAction: {
+                    kind: 'inspect' as const,
                     label: 'View generation request',
-                    onInspect: () => {
+                    visibility: 'always' as const,
+                    onAction: () => {
                       const file = sheet.asset.files.find(
                         (candidate) => candidate.mediaKind === 'image'
                       );

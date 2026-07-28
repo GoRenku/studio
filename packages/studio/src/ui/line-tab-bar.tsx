@@ -4,6 +4,7 @@ import { TabsList, TabsTrigger } from '@/ui/tabs';
 interface LineTabBarItem<Value extends string> {
   value: Value;
   label: ReactNode;
+  disabled?: boolean;
 }
 
 interface LineTabBarProps<Value extends string> {
@@ -25,7 +26,8 @@ export function LineTabBar<Value extends string>({
         <TabsTrigger
           key={item.value}
           value={item.value}
-          className='h-full flex-none rounded-none border-0 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] data-[state=active]:!bg-item-active-bg data-[state=active]:text-foreground after:!bottom-0 data-[state=active]:after:bg-primary'
+          disabled={item.disabled}
+          className='h-full flex-none rounded-none border-0 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] data-[state=active]:!bg-item-active-bg data-[state=active]:text-foreground after:!bottom-0 data-[state=active]:after:bg-primary disabled:cursor-not-allowed disabled:opacity-35'
         >
           {item.label}
         </TabsTrigger>

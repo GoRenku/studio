@@ -40,6 +40,67 @@ describe('assets Hono route', () => {
     });
   });
 
+  it('maps Shot candidate ownership and returns browser-safe file URLs', async () => {
+    const shotAsset = {
+      ...makeAsset('asset_shot_candidate'),
+      owner: { kind: 'shot' as const, id: 'shot_wide' },
+      type: 'shot_image',
+      files: [
+        {
+          ...makeAsset('asset_shot_candidate').files[0]!,
+          id: 'asset_file_shot_candidate',
+          projectRelativePath:
+            'generated/shot-wide.png' as Asset['files'][number]['projectRelativePath'],
+        },
+      ],
+    };
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData: {
+          ...fakeProjectDataService(),
+          async listAssetPage(input) {
+            expect(input).toMatchObject({
+              owner: { kind: 'shot', id: 'shot_wide' },
+              type: 'shot_image',
+              mediaKind: 'image',
+            });
+            return {
+              items: [shotAsset],
+              nextCursor: null,
+              selectedAssetId: shotAsset.id,
+            };
+          },
+        },
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    const response = await app.request(
+      '/constantinople/assets?ownerKind=shot&ownerId=shot_wide&type=shot_image&mediaKind=image'
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.page).toMatchObject({
+      selectedAssetId: 'asset_shot_candidate',
+      items: [
+        {
+          id: 'asset_shot_candidate',
+          owner: { kind: 'shot', id: 'shot_wide' },
+          files: [{
+            id: 'asset_file_shot_candidate',
+            url: '/studio-api/projects/constantinople/assets/asset_shot_candidate/files/asset_file_shot_candidate',
+          }],
+        },
+      ],
+    });
+    expect(JSON.stringify(body)).not.toContain('projectRelativePath');
+    expect(JSON.stringify(body)).not.toContain('generated/shot-wide.png');
+  });
+
   it('lists cast member assets through ProjectDataService', async () => {
     const app = createMountedAssetsRoute();
 

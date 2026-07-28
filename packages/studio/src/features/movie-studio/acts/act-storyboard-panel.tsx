@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ImageOff } from 'lucide-react';
+import type { StudioSelection } from '@gorenku/studio-core/client';
 import type {
   ActStoryboardResourceResponse,
   ActStoryboardSequenceResponse,
@@ -13,7 +14,6 @@ import {
 import { Button } from '@/ui/button';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { cn } from '@/lib/utils';
-import type { StudioSelection } from '../movie-studio-selection';
 import { ACT_STORYBOARD_LAYOUT } from './act-storyboard-layout';
 
 interface ActStoryboardPanelProps {

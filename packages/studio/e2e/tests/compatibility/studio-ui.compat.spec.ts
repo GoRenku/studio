@@ -28,9 +28,10 @@ test('matches the locked desktop Studio experience across current surfaces', asy
     .toBeVisible();
   await screenshot(page, 'scene-beats.png');
 
-  await page.goto(`${sceneRoute}?sceneTab=shots`);
-  await expect(page.getByRole('button', { name: 'New Shot' })).toBeVisible();
-  await screenshot(page, 'scene-shots-placeholder.png');
+  await page.goto(`${sceneRoute}?sceneTab=shotPlans`);
+  await expect(
+    page.getByRole('heading', { name: 'Gate pressure coverage' })
+  ).toBeVisible();
 
   await movieStudio.gotoCastMember(movieProject);
   await movieStudio.openCastAssetsTab();

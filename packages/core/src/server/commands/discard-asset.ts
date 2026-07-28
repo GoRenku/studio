@@ -7,7 +7,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import { requireAssetOwner } from '../assets/ownership.js';
 import { assetOwnerKey } from '../assets/owner-keys.js';
-import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { assetOwnerResourceKeys } from '../assets/resource-keys.js';
 import type { DiscardAssetInput } from '../project-data-service-contracts.js';
 
 export async function discardAsset(
@@ -43,7 +43,7 @@ export async function discardAsset(
       itemId: input.assetId,
       commandName: 'asset.discard',
       changes: [{ type: 'asset.discarded', assetId: input.assetId }],
-      resourceKeys: studioAssetOwnerSurfaceResourceKeys(owner),
+      resourceKeys: assetOwnerResourceKeys(session, owner),
     });
   } finally {
     session.close();

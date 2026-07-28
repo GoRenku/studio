@@ -628,6 +628,20 @@ For example:
   Engines package tests, then provider integration/e2e with credentials at the
   end.
 
+For the desktop Shot Plans surface, fast coverage belongs at each owner:
+Core selection and Asset invalidation, Hono response serialization, browser
+request contracts, shared card primitives, and focused React projections. The
+final browser journey runs once at 1440×900 and 1024×900 and covers collection
+entry, in-page detail and Back, rail selection/resizing, candidate
+selection/delete, Brief/Description, media/glossary dialogs, direct reload, and
+resource-driven delete/restore. Detail verification must confirm that the Scene
+heading remains the only page heading, the Scene tabs remain visible, Back uses
+the existing header action slot, the exact Shot title is not embellished, Beat
+chips read only `Beat N` in a separate row directly beneath the Shot title, and
+Brief cards use one fixed width and wrap without shrinking or stretching.
+Compare production screenshots directly with the accepted paired references;
+do not add a mobile viewport to this journey.
+
 ## Implementation Checklist For The Split
 
 - [x] Add explicit Core integration config and command for
