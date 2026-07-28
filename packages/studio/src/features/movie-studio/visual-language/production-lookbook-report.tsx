@@ -10,7 +10,6 @@ import type {
   ThesisSection,
   ToneMoodSection,
 } from '@gorenku/studio-core/client';
-import type { PreviewImage } from '@/ui/image-preview-dialog';
 import {
   EvidenceFeatureCard,
   EvidenceGrid,
@@ -40,7 +39,6 @@ interface ProductionLookbookReportProps {
   projectName: string;
   sections: ProductionVisualLanguageSections;
   source: LookbookReportSource;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }
 
@@ -48,7 +46,6 @@ export function ProductionLookbookReport({
   projectName,
   sections,
   source,
-  onOpenImage,
   onDeleteImage,
 }: ProductionLookbookReportProps) {
   const themeColors = sections.palette.colors.map((color) => color.hex);
@@ -77,7 +74,6 @@ export function ProductionLookbookReport({
           <EvidenceGrid
             images={thesisImages}
             size='feature'
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
           {sections.thesis.principles.length ? (
@@ -98,13 +94,11 @@ export function ProductionLookbookReport({
             observations={sections.palette.observations}
             projectName={projectName}
             source={source}
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
           <EvidenceGrid
             images={imagesForSection(projectName, source, 'palette')}
             size='feature'
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
         </div>
@@ -136,7 +130,6 @@ export function ProductionLookbookReport({
           <EvidenceGrid
             images={toneImages}
             size='feature'
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
         </div>
@@ -150,7 +143,6 @@ export function ProductionLookbookReport({
         section={sections.composition}
         projectName={projectName}
         source={source}
-        onOpenImage={onOpenImage}
         onDeleteImage={onDeleteImage}
       />
 
@@ -162,7 +154,6 @@ export function ProductionLookbookReport({
         section={sections.lighting}
         projectName={projectName}
         source={source}
-        onOpenImage={onOpenImage}
         onDeleteImage={onDeleteImage}
       />
 
@@ -177,13 +168,11 @@ export function ProductionLookbookReport({
             observations={sections.texture.observations}
             projectName={projectName}
             source={source}
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
           <EvidenceGrid
             images={imagesForSection(projectName, source, 'texture')}
             size='feature'
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
         </div>
@@ -204,7 +193,6 @@ export function ProductionLookbookReport({
               patterns={sections.camera.movement}
               projectName={projectName}
               source={source}
-              onOpenImage={onOpenImage}
               onDeleteImage={onDeleteImage}
             />
             <PatternDeck
@@ -212,7 +200,6 @@ export function ProductionLookbookReport({
               patterns={sections.camera.motion}
               projectName={projectName}
               source={source}
-              onOpenImage={onOpenImage}
               onDeleteImage={onDeleteImage}
             />
             <PatternDeck
@@ -220,13 +207,11 @@ export function ProductionLookbookReport({
               patterns={sections.camera.framing}
               projectName={projectName}
               source={source}
-              onOpenImage={onOpenImage}
               onDeleteImage={onDeleteImage}
             />
             <EvidenceGrid
               images={imagesForSection(projectName, source, 'camera')}
               size='feature'
-              onOpenImage={onOpenImage}
               onDeleteImage={onDeleteImage}
             />
           </div>
@@ -251,7 +236,6 @@ export function ProductionLookbookReport({
               section={sections.inspiredBy}
               projectName={projectName}
               source={source}
-              onOpenImage={onOpenImage}
               onDeleteImage={onDeleteImage}
             />
           </div>
@@ -334,7 +318,6 @@ function PatternReportSection({
   section,
   projectName,
   source,
-  onOpenImage,
   onDeleteImage,
 }: {
   number: string;
@@ -344,7 +327,6 @@ function PatternReportSection({
   section: PatternSection;
   projectName: string;
   source: LookbookReportSource;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   return (
@@ -360,13 +342,11 @@ function PatternReportSection({
             patterns={section.patterns}
             projectName={projectName}
             source={source}
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
           <EvidenceGrid
             images={imagesForSection(projectName, source, sectionKey)}
             size='feature'
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
         </div>
@@ -380,14 +360,12 @@ function PatternDeck({
   patterns,
   projectName,
   source,
-  onOpenImage,
   onDeleteImage,
 }: {
   title?: string;
   patterns: Pattern[];
   projectName: string;
   source: LookbookReportSource;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!patterns.length) return null;
@@ -407,7 +385,6 @@ function PatternDeck({
             key={`${title ?? 'pattern'}-${pattern.name}`}
             pattern={pattern}
             images={images}
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
         ))}
@@ -419,12 +396,10 @@ function PatternDeck({
 function PatternCard({
   pattern,
   images,
-  onOpenImage,
   onDeleteImage,
 }: {
   pattern: Pattern;
   images: ReportImage[];
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   const displayImages = images.slice(0, LookbookEvidenceDisplayLimit);
@@ -435,7 +410,6 @@ function PatternCard({
         image={displayImages[0]}
         title={pattern.name}
         description={pattern.description}
-        onOpenImage={onOpenImage}
         onDeleteImage={onDeleteImage}
       />
     );
@@ -464,7 +438,6 @@ function PatternCard({
           <EvidenceGrid
             images={displayImages}
             size='compact'
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
         </div>
@@ -486,13 +459,11 @@ function ObservationDeck({
   observations,
   projectName,
   source,
-  onOpenImage,
   onDeleteImage,
 }: {
   observations: Observation[];
   projectName: string;
   source: LookbookReportSource;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!observations.length) return null;
@@ -503,7 +474,6 @@ function ObservationDeck({
           key={observation.text}
           observation={observation}
           images={imagesForNestedReferences(projectName, source, observation)}
-          onOpenImage={onOpenImage}
           onDeleteImage={onDeleteImage}
         />
       ))}
@@ -514,12 +484,10 @@ function ObservationDeck({
 function ObservationCard({
   observation,
   images,
-  onOpenImage,
   onDeleteImage,
 }: {
   observation: Observation;
   images: ReportImage[];
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   const displayImages = images.slice(0, LookbookEvidenceDisplayLimit);
@@ -529,7 +497,6 @@ function ObservationCard({
       <EvidenceFeatureCard
         image={displayImages[0]}
         description={observation.text}
-        onOpenImage={onOpenImage}
         onDeleteImage={onDeleteImage}
       />
     );
@@ -556,7 +523,6 @@ function ObservationCard({
         <EvidenceGrid
           images={displayImages}
           size='compact'
-          onOpenImage={onOpenImage}
           onDeleteImage={onDeleteImage}
         />
       </div>
@@ -568,13 +534,11 @@ function LineageGrid({
   section,
   projectName,
   source,
-  onOpenImage,
   onDeleteImage,
 }: {
   section: InspiredBySection;
   projectName: string;
   source: LookbookReportSource;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!section.items.length) return null;
@@ -601,7 +565,6 @@ function LineageGrid({
             images={imagesForNestedReferences(projectName, source, item)}
             size='compact'
             className='mt-4'
-            onOpenImage={onOpenImage}
             onDeleteImage={onDeleteImage}
           />
         </div>

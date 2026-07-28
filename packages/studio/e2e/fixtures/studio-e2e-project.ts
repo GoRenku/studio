@@ -34,6 +34,9 @@ export interface StudioE2eMovieProject extends StudioE2eProject {
   profileAssetId: string;
   locationSheetAssetId: string;
   lookbookSheetId: string;
+  firstShotImageAssetId: string;
+  secondShotImageAssetId: string;
+  secondShotImageAlternateAssetId: string;
 }
 
 export async function createMinimalMovieProject(input: {
@@ -157,6 +160,8 @@ export async function createBeatSheetMovieProject(input: {
     projectData,
     projectName: input.projectName,
     ids,
+    firstShotId: shotPlan.shotPlan.shots[0]!.id,
+    secondShotId: shotPlan.shotPlan.shots[1]!.id,
   });
 
   return {
@@ -363,13 +368,32 @@ async function seedProjectMedia(input: {
   projectData: ProjectDataService;
   projectName: string;
   ids: SampleIds;
+  firstShotId: string;
+  secondShotId: string;
 }): Promise<{
   lookbookId: string;
   profileAssetId: string;
   locationSheetAssetId: string;
   lookbookSheetId: string;
+  firstShotImageAssetId: string;
+  secondShotImageAssetId: string;
+  secondShotImageAlternateAssetId: string;
 }> {
   const idGenerator = createDeterministicIdGenerator();
+  const [wideShotImage, closeUpImage, reactionImage] = await Promise.all([
+    fs.readFile(new URL(
+      '../../src/features/movie-studio/shot-design/generated/images/shot-size-wide-shot.png',
+      import.meta.url,
+    )),
+    fs.readFile(new URL(
+      '../../src/features/movie-studio/shot-design/generated/images/shot-size-close-up.png',
+      import.meta.url,
+    )),
+    fs.readFile(new URL(
+      '../../src/features/movie-studio/shot-design/generated/images/subject-reaction.png',
+      import.meta.url,
+    )),
+  ]);
   await writeProjectFile({
     projectData: input.projectData,
     homeDir: input.runtime.isolatedHomeDirectory,
@@ -399,6 +423,24 @@ async function seedProjectMedia(input: {
     homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/audio/urban-sample.mp3',
     contents: Buffer.from('urban voice sample'),
+  });
+  await writeProjectFile({
+    projectData: input.projectData,
+    homeDir: input.runtime.isolatedHomeDirectory,
+    projectRelativePath: 'generated/media/shot-one-wide.png',
+    contents: wideShotImage,
+  });
+  await writeProjectFile({
+    projectData: input.projectData,
+    homeDir: input.runtime.isolatedHomeDirectory,
+    projectRelativePath: 'generated/media/shot-two-close-up.png',
+    contents: closeUpImage,
+  });
+  await writeProjectFile({
+    projectData: input.projectData,
+    homeDir: input.runtime.isolatedHomeDirectory,
+    projectRelativePath: 'generated/media/shot-two-reaction.png',
+    contents: reactionImage,
   });
 
   const profile = await input.projectData.attachGenerationMedia({
@@ -499,12 +541,42 @@ async function seedProjectMedia(input: {
     },
     simulate: true,
   });
+  const firstShotImage = await input.projectData.attachGenerationMedia({
+    homeDir: input.runtime.isolatedHomeDirectory,
+    projectName: input.projectName,
+    purpose: 'shot.image',
+    target: { kind: 'shot', id: input.firstShotId },
+    sourceProjectRelativePath: 'generated/media/shot-one-wide.png',
+    title: 'Urban and the cannon',
+    select: true,
+  });
+  const secondShotImage = await input.projectData.attachGenerationMedia({
+    homeDir: input.runtime.isolatedHomeDirectory,
+    projectName: input.projectName,
+    purpose: 'shot.image',
+    target: { kind: 'shot', id: input.secondShotId },
+    sourceProjectRelativePath: 'generated/media/shot-two-close-up.png',
+    title: 'Crew close-up',
+    select: true,
+  });
+  const secondShotImageAlternate =
+    await input.projectData.attachGenerationMedia({
+      homeDir: input.runtime.isolatedHomeDirectory,
+      projectName: input.projectName,
+      purpose: 'shot.image',
+      target: { kind: 'shot', id: input.secondShotId },
+      sourceProjectRelativePath: 'generated/media/shot-two-reaction.png',
+      title: 'Crew reaction',
+    });
 
   return {
     lookbookId: lookbook.lookbook.id,
     profileAssetId: profile.asset.id,
     locationSheetAssetId: locationSheet.asset.id,
     lookbookSheetId: lookbookSheet.ownerRecord!.id,
+    firstShotImageAssetId: firstShotImage.asset.id,
+    secondShotImageAssetId: secondShotImage.asset.id,
+    secondShotImageAlternateAssetId: secondShotImageAlternate.asset.id,
   };
 }
 

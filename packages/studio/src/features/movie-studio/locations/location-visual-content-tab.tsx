@@ -1,10 +1,5 @@
-import { useState } from 'react';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
-import {
-  ImagePreviewDialog,
-  type PreviewImage,
-} from '@/ui/image-preview-dialog';
 import {
   locationSheetAspectRatio,
   locationSheetAssets,
@@ -29,27 +24,16 @@ export function LocationVisualContentTab({
   onToggleHeroDisplay,
   onDeleteAsset,
 }: LocationVisualContentTabProps) {
-  const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
-  const [previewIndex, setPreviewIndex] = useState(0);
   const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
   const sheetAssets = locationSheetAssets(assets);
   const heroAssets = locationHeroAssets(assets);
-
-  const openSheetPreview = (asset: StudioAssetResponse) => {
-    const images = locationSheetPreviewImages(
-      projectName,
-      asset
-    );
-    if (!images.length) return;
-    setPreviewImages(images);
-    setPreviewIndex(0);
-  };
 
   const items = sheetAssets.map((asset) => {
     const imageUrl = locationSheetCompositeUrl(
       projectName,
       asset
     );
+    const previewImage = locationSheetPreviewImages(projectName, asset)[0];
     return {
       id: asset.id,
       card: {
@@ -73,10 +57,13 @@ export function LocationVisualContentTab({
             ? { description: asset.oneLineSummary }
             : undefined,
         },
-        activation: {
-          label: asset.oneLineSummary ?? 'Location sheet',
-          onActivate: () => openSheetPreview(asset),
-        },
+        activation: previewImage
+          ? {
+              kind: 'image-preview' as const,
+              label: asset.oneLineSummary ?? 'Location sheet',
+              image: previewImage,
+            }
+          : undefined,
         cornerAction: {
           kind: 'inspect' as const,
           label: 'View generation request',
@@ -96,16 +83,7 @@ export function LocationVisualContentTab({
           confirmationTitle: 'Delete Location Sheet?',
           confirmationMessage:
             'Remove this location sheet from this location. This cannot be undone.',
-          onDelete: async () => {
-            await onDeleteAsset(asset);
-            setPreviewImages((current) =>
-              current.some((image) =>
-                image.src.includes(encodeURIComponent(asset.id))
-              )
-                ? []
-                : current
-            );
-          },
+          onDelete: () => onDeleteAsset(asset),
         },
         emptyState: { kind: 'image' as const },
       },
@@ -117,6 +95,7 @@ export function LocationVisualContentTab({
       projectName,
       asset
     );
+    const previewImage = locationSheetPreviewImages(projectName, asset)[0];
     return {
       id: asset.id,
       card: {
@@ -135,10 +114,13 @@ export function LocationVisualContentTab({
           detectFromImage: true,
         },
         presentation: { kind: 'overlay' as const },
-        activation: {
-          label: selected ? 'Current location hero' : 'Location hero',
-          onActivate: () => openSheetPreview(asset),
-        },
+        activation: previewImage
+          ? {
+              kind: 'image-preview' as const,
+              label: selected ? 'Current location hero' : 'Location hero',
+              image: previewImage,
+            }
+          : undefined,
         selection: {
           kind: 'toggle' as const,
           selected,
@@ -159,34 +141,21 @@ export function LocationVisualContentTab({
   });
 
   return (
-    <>
-      <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
-        <div className='space-y-8'>
-          <MediaCollectionSection
-            title='Hero Images'
-            emptyTitle='No hero images yet.'
-            items={heroItems}
-            minimumCardWidthPx={320}
-          />
-          <MediaCollectionSection
-            title='Location Sheets'
-            emptyTitle='No location sheets yet.'
-            items={items}
-            minimumCardWidthPx={480}
-          />
-        </div>
+    <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
+      <div className='space-y-8'>
+        <MediaCollectionSection
+          title='Hero Images'
+          emptyTitle='No hero images yet.'
+          items={heroItems}
+          minimumCardWidthPx={320}
+        />
+        <MediaCollectionSection
+          title='Location Sheets'
+          emptyTitle='No location sheets yet.'
+          items={items}
+          minimumCardWidthPx={480}
+        />
       </div>
-      <ImagePreviewDialog
-        images={previewImages}
-        currentIndex={previewIndex}
-        onCurrentIndexChange={setPreviewIndex}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPreviewImages([]);
-            setPreviewIndex(0);
-          }
-        }}
-      />
-    </>
+    </div>
   );
 }

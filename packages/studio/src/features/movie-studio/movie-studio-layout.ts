@@ -1,7 +1,9 @@
 export const MOVIE_STUDIO_LAYOUT = {
-  sidebarDefaultSizePercent: 18,
+  // Default panel percentages must total 100 so the panel group does not
+  // normalize them at runtime.
+  sidebarDefaultSizePercent: 18.75,
   sidebarMinSizePercent: 14,
   sidebarMaxSizePercent: 34,
-  detailsDefaultSizePercent: 78,
+  detailsDefaultSizePercent: 81.25,
   detailsMinSizePercent: 60,
 } as const;

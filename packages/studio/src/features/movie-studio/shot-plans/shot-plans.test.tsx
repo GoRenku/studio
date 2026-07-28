@@ -7,11 +7,12 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SceneShotPlansTab } from './scene-shot-plans-tab';
 import { ShotBriefGrid } from './shot-brief-grid';
 import { ShotPlanBeatLinks } from './shot-plan-beat-links';
 import { ShotImageCandidatesDialog } from './shot-image-candidates-dialog';
+import { ShotPlanDetailPage } from './shot-plan-detail-page';
 import { ShotPlanShotContent } from './shot-plan-shot-content';
 import { ShotPlanShotRail } from './shot-plan-shot-rail';
 import { useSceneShotPlans } from './use-scene-shot-plans';
@@ -31,6 +32,10 @@ vi.mock('@/services/studio-shot-plans-api', () => ({
 }));
 
 describe('Shot Plans feature', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     window.matchMedia = vi.fn().mockReturnValue({
@@ -193,6 +198,22 @@ describe('Shot Plans feature', () => {
       name: 'Delete image candidate 2',
     })).toBeNull();
 
+    const previewTrigger = screen.getByRole('button', {
+      name: 'Preview Image candidate 1 for Shot 1',
+    });
+    fireEvent.click(previewTrigger);
+    expect(screen.getByRole('img', {
+      name: 'Image candidate 1 for Shot 1',
+    })).not.toBeNull();
+    expect(setStudioShotSelectedImage).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Close image preview',
+    }));
+    await waitFor(() => expect(screen.queryByLabelText(
+      'Close image preview'
+    )).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(previewTrigger));
+
     fireEvent.click(
       screen.getAllByRole('button', { name: 'Use as selected image' })[0]!
     );
@@ -220,6 +241,152 @@ describe('Shot Plans feature', () => {
         assetId: 'asset_second',
       });
     });
+  });
+
+  it('opens one candidate directly without a choose control or implicit selection', () => {
+    vi.mocked(useShotImageCandidates).mockReturnValue({
+      resource: {
+        items: [asset('asset_only', '/only.jpg')],
+        selectedAssetId: null,
+      },
+      error: null,
+      reload: vi.fn(),
+    });
+
+    render(
+      <ShotImageCandidatesDialog
+        projectName='constantinople'
+        sceneId='scene_one'
+        shot={shot('shot_one', 0, null, [])}
+        open
+        onOpenChange={vi.fn()}
+        onShotPlansChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('img', {
+      name: 'Image candidate 1 for Shot 1',
+    })).not.toBeNull();
+    expect(screen.queryByRole('button', {
+      name: 'Use as selected image',
+    })).toBeNull();
+    expect(setStudioShotSelectedImage).not.toHaveBeenCalled();
+  });
+
+  it('keeps a selection failure visible and retryable inside the collection', async () => {
+    const reload = vi.fn();
+    vi.mocked(useShotImageCandidates).mockReturnValue({
+      resource: {
+        items: [
+          asset('asset_first', '/first.jpg'),
+          asset('asset_second', '/second.jpg'),
+        ],
+        selectedAssetId: 'asset_first',
+      },
+      error: null,
+      reload,
+    });
+    vi.mocked(setStudioShotSelectedImage).mockRejectedValue(
+      new Error('The selected image could not be saved.')
+    );
+
+    render(
+      <ShotImageCandidatesDialog
+        projectName='constantinople'
+        sceneId='scene_one'
+        shot={shot('shot_one', 0, 'asset_first', [])}
+        open
+        onOpenChange={vi.fn()}
+        onShotPlansChange={vi.fn()}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Use as selected image' })
+    );
+    expect(
+      await screen.findByText('The selected image could not be saved.')
+    ).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns focus to the exact rail image action after direct and collection close', async () => {
+    const shots = [
+      shot('shot_one', 0, null, [asset('asset_only', '/only.jpg')]),
+      shot('shot_two', 1, null, [
+        asset('asset_first', '/first.jpg'),
+        asset('asset_second', '/second.jpg'),
+      ]),
+    ];
+    vi.mocked(useSceneShotPlans).mockReturnValue({
+      resource: {
+        sceneId: 'scene_one',
+        warnings: [],
+        shotPlans: [{
+          shotPlan: {
+            id: 'plan_one',
+            sceneId: 'scene_one',
+            title: 'Council coverage',
+            coverage: null,
+            createdAt: '2026-07-27T10:00:00.000Z',
+            updatedAt: '2026-07-27T10:00:00.000Z',
+            shots,
+          },
+          coveredBeats: [],
+        }],
+      },
+      error: null,
+      reload: vi.fn(),
+    });
+    vi.mocked(useShotImageCandidates).mockReturnValue({
+      resource: {
+        items: [asset('asset_only', '/only.jpg')],
+        selectedAssetId: null,
+      },
+      error: null,
+      reload: vi.fn(),
+    });
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
+      window.setTimeout(() => callback(0), 0)
+    );
+
+    render(
+      <ShotPlanDetailPage
+        projectName='constantinople'
+        sceneId='scene_one'
+        shotPlanId='plan_one'
+        shotId='shot_one'
+        onSelect={vi.fn()}
+      />
+    );
+
+    const firstTrigger = screen.getByRole('button', {
+      name: 'Manage images for Shot 1',
+    });
+    fireEvent.click(firstTrigger);
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Close image preview',
+    }));
+    await waitFor(() => expect(document.activeElement).toBe(firstTrigger));
+
+    vi.mocked(useShotImageCandidates).mockReturnValue({
+      resource: {
+        items: [
+          asset('asset_first', '/first.jpg'),
+          asset('asset_second', '/second.jpg'),
+        ],
+        selectedAssetId: null,
+      },
+      error: null,
+      reload: vi.fn(),
+    });
+    const secondTrigger = screen.getByRole('button', {
+      name: 'Manage images for Shot 2',
+    });
+    fireEvent.click(secondTrigger);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(document.activeElement).toBe(secondTrigger));
   });
 
   it('keeps collection loading, error retry, and empty states quiet', () => {
@@ -256,7 +423,7 @@ describe('Shot Plans feature', () => {
     expect(screen.getByText('No Shot Plans for this Scene.')).not.toBeNull();
   });
 
-  it('keeps candidate loading, error retry, and empty states stable', () => {
+  it('keeps candidate loading and error retry stable without an empty dialog', () => {
     const reload = vi.fn();
     const props = {
       projectName: 'constantinople',
@@ -289,7 +456,7 @@ describe('Shot Plans feature', () => {
       reload,
     });
     rerender(<ShotImageCandidatesDialog {...props} />);
-    expect(screen.getByText('No images for this Shot.')).not.toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('keeps Brief and exact read-only Description as sibling tabs', async () => {
@@ -442,10 +609,13 @@ describe('Shot Plans feature', () => {
     expect(screen.getByText('3.5s')).not.toBeNull();
     expect(container.textContent).not.toContain('Shot 1 of 2');
 
+    expect(
+      screen.queryByRole('button', { name: 'Manage images for Shot 2' })
+    ).toBeNull();
     fireEvent.click(
-      screen.getByRole('button', { name: 'Manage images for Shot 2' })
+      screen.getByRole('button', { name: 'Manage images for Shot 1' })
     );
-    expect(onManageImages).toHaveBeenCalledWith(secondShot);
+    expect(onManageImages).toHaveBeenCalledWith(firstShot);
     expect(onSelectShot).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Select Shot 2' }));

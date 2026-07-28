@@ -1,14 +1,9 @@
-import { useState } from 'react';
 import { VolumeX } from 'lucide-react';
 import type {
   CastMemberResourceResponse,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
-import {
-  ImagePreviewDialog,
-  type PreviewImage,
-} from '@/ui/image-preview-dialog';
 import {
   CAST_CHARACTER_SHEET_ROLES,
   CAST_PROFILE_ROLE,
@@ -43,7 +38,6 @@ export function CastMemberAssetsTab({
   onDeleteAsset,
   onDeleteVoice,
 }: CastMemberAssetsTabProps) {
-  const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
   const profileAssets = castImageAssetsForRole(assets, CAST_PROFILE_ROLE);
   const characterSheetAssets = castImageAssetsForRoles(
@@ -52,68 +46,49 @@ export function CastMemberAssetsTab({
   );
 
   return (
-    <>
-      <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
-        <div className='space-y-8'>
-          <CastAssetSection
-            title='Profile Images'
-            roleLabel='profile image'
-            fallbackAspectRatio={1}
-            fit='cover'
-            minimumCardWidthPx={240}
-            projectName={projectName}
-            assets={profileAssets}
-            selectedAssetId={selectedProfileAssetId}
-            emptyTitle='No profile images yet.'
-            onOpenImage={setPreviewImage}
-            onTogglePick={onTogglePick}
-            onDeleteAsset={async (asset) => {
-              await onDeleteAsset(asset);
-              setPreviewImage((current) =>
-                current?.title === asset.title ? null : current
-              );
-            }}
-          />
-          <CastAssetSection
-            title='Character Sheets'
-            roleLabel='character sheet'
-            fallbackAspectRatio={4 / 3}
-            fit='contain'
-            minimumCardWidthPx={384}
-            projectName={projectName}
-            assets={characterSheetAssets}
-            emptyTitle='No character sheets yet.'
-            onOpenImage={setPreviewImage}
-            onInspectImage={(asset) => {
-              const file = asset.files.find(
-                (candidate) => candidate.mediaKind === 'image'
-              );
-              if (!file) return;
-              openGenerationRequestInspector({
-                projectName,
-                assetId: asset.id,
-                assetFileId: file.id,
-              });
-            }}
-            onDeleteAsset={async (asset) => {
-              await onDeleteAsset(asset);
-              setPreviewImage((current) =>
-                current?.title === asset.title ? null : current
-              );
-            }}
-          />
-          <VoiceSamplesSection
-            voices={resource.voices}
-            onDeleteVoice={onDeleteVoice}
-          />
-        </div>
+    <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
+      <div className='space-y-8'>
+        <CastAssetSection
+          title='Profile Images'
+          roleLabel='profile image'
+          fallbackAspectRatio={1}
+          fit='cover'
+          minimumCardWidthPx={240}
+          projectName={projectName}
+          assets={profileAssets}
+          selectedAssetId={selectedProfileAssetId}
+          emptyTitle='No profile images yet.'
+          onTogglePick={onTogglePick}
+          onDeleteAsset={onDeleteAsset}
+        />
+        <CastAssetSection
+          title='Character Sheets'
+          roleLabel='character sheet'
+          fallbackAspectRatio={4 / 3}
+          fit='contain'
+          minimumCardWidthPx={384}
+          projectName={projectName}
+          assets={characterSheetAssets}
+          emptyTitle='No character sheets yet.'
+          onInspectImage={(asset) => {
+            const file = asset.files.find(
+              (candidate) => candidate.mediaKind === 'image'
+            );
+            if (!file) return;
+            openGenerationRequestInspector({
+              projectName,
+              assetId: asset.id,
+              assetFileId: file.id,
+            });
+          }}
+          onDeleteAsset={onDeleteAsset}
+        />
+        <VoiceSamplesSection
+          voices={resource.voices}
+          onDeleteVoice={onDeleteVoice}
+        />
       </div>
-      <ImagePreviewDialog
-        images={previewImage ? [previewImage] : []}
-        currentIndex={0}
-        onOpenChange={(open) => !open && setPreviewImage(null)}
-      />
-    </>
+    </div>
   );
 }
 
@@ -127,7 +102,6 @@ function CastAssetSection({
   assets,
   selectedAssetId,
   emptyTitle,
-  onOpenImage,
   onTogglePick,
   onInspectImage,
   onDeleteAsset,
@@ -141,7 +115,6 @@ function CastAssetSection({
   assets: StudioAssetResponse[];
   selectedAssetId?: string | null;
   emptyTitle: string;
-  onOpenImage: (image: PreviewImage) => void;
   onTogglePick?: (asset: StudioAssetResponse) => Promise<void>;
   onInspectImage?: (asset: StudioAssetResponse) => void;
   onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
@@ -184,14 +157,13 @@ function CastAssetSection({
                 }
               : undefined,
         },
-        activation: {
-          label: title ?? (selected ? `Current ${roleLabel} pick` : roleLabel),
-          onActivate: () => {
-            if (previewImage) {
-              onOpenImage(previewImage);
+        activation: previewImage
+          ? {
+              kind: 'image-preview' as const,
+              label: title ?? (selected ? `Current ${roleLabel} pick` : roleLabel),
+              image: previewImage,
             }
-          },
-        },
+          : undefined,
         selection:
           selectable && onTogglePick
             ? {

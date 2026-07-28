@@ -1,14 +1,10 @@
 import { useState } from 'react';
-import { Button } from '@/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/ui/dialog';
-import { MediaCard } from '@/ui/media-card/media-card';
-import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
+import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
+import { MediaCardCollectionDialog } from '@/ui/media-card/media-card-collection-dialog';
+import type {
+  MediaCardCollectionDialogState,
+  MediaCardCollectionItem,
+} from '@/ui/media-card/media-card-contract';
 import {
   deleteStudioShotImageCandidate,
   setStudioShotSelectedImage,
@@ -38,115 +34,189 @@ export function ShotImageCandidatesDialog({
     enabled: open && Boolean(shot),
   });
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setMutationError(null);
+    }
+    onOpenChange(nextOpen);
+  };
+  const readyCandidates = resource?.items.flatMap((asset, index) => {
+    const file = asset.files.find(
+      (candidate) => candidate.mediaKind === 'image'
+    );
+    return file ? [{ asset, file, index }] : [];
+  }) ?? [];
+  const title = shot?.title ?? 'Shot Images';
+  const description =
+    'Select the image used by the Shot rail and Shot Plan mosaic.';
+
+  if (resource && readyCandidates.length === 1) {
+    const candidate = readyCandidates[0]!;
+    return (
+      <ImagePreviewDialog
+        images={
+          open
+            ? [{
+                src: candidate.file.url,
+                alt: `Image candidate ${candidate.index + 1} for ${title}`,
+                title,
+              }]
+            : []
+        }
+        currentIndex={0}
+        onOpenChange={handleOpenChange}
+      />
+    );
+  }
+
+  if (resource && readyCandidates.length === 0) {
+    return null;
+  }
+
+  const state: MediaCardCollectionDialogState = mutationError
+    ? {
+        kind: 'error',
+        message: mutationError,
+        retryLabel: 'Retry',
+        onRetry: () => {
+          setMutationError(null);
+          reload();
+        },
+      }
+    : error
+      ? {
+          kind: 'error',
+          message: error,
+          retryLabel: 'Retry',
+          onRetry: reload,
+        }
+      : !resource
+        ? {
+            kind: 'loading',
+            message: 'Loading Shot images...',
+          }
+        : {
+            kind: 'ready',
+            items: readyCandidates.map(({ asset, file, index }) =>
+              candidateItem({
+                projectName,
+                shot,
+                asset,
+                imageUrl: file.url,
+                index,
+                selected: asset.id === resource.selectedAssetId,
+                onMutationError: setMutationError,
+                reload,
+                onShotPlansChange,
+              })
+            ),
+          };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-h-[calc(100vh-3rem)] max-w-5xl gap-0 overflow-hidden p-0'>
-        <DialogHeader>
-          <DialogTitle>{shot?.title ?? 'Shot Images'}</DialogTitle>
-          <DialogDescription>
-            Select the image used by the Shot rail and Shot Plan mosaic.
-          </DialogDescription>
-        </DialogHeader>
-        <div className='max-h-[65vh] overflow-y-auto p-5'>
-          {mutationError ? (
-            <p className='mb-4 text-sm text-destructive'>{mutationError}</p>
-          ) : null}
-          {error ? (
-            <div className='flex min-h-56 flex-col items-center justify-center gap-3'>
-              <p className='text-sm text-destructive'>{error}</p>
-              <Button type='button' variant='outline' size='sm' onClick={reload}>
-                Retry
-              </Button>
-            </div>
-          ) : !resource ? (
-            <p className='min-h-56 py-8 text-sm text-muted-foreground'>
-              Loading Shot images...
-            </p>
-          ) : resource.items.length === 0 ? (
-            <p className='min-h-56 py-8 text-sm text-muted-foreground'>
-              No images for this Shot.
-            </p>
-          ) : (
-            <MediaCardGrid minimumCardWidthPx={220}>
-              {resource.items.map((asset, index) => {
-                const file = asset.files.find(
-                  (candidate) => candidate.mediaKind === 'image'
-                );
-                const selected = asset.id === resource.selectedAssetId;
-                return (
-                  <MediaCard
-                    key={asset.id}
-                    media={
-                      file
-                        ? {
-                            kind: 'image',
-                            src: file.url,
-                            alt: `Image candidate ${index + 1} for ${shot?.title ?? 'Shot'}`,
-                            fit: 'cover',
-                            effect: 'zoom-on-hover',
-                          }
-                        : null
-                    }
-                    frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
-                    presentation={{ kind: 'overlay' }}
-                    selection={{
-                      kind: 'choose',
-                      selected,
-                      selectedLabel: 'Selected image',
-                      unselectedLabel: 'Use as selected image',
-                      onChoose: async () => {
-                        if (!shot) {
-                          return;
-                        }
-                        try {
-                          await setStudioShotSelectedImage({
-                            projectName,
-                            shotId: shot.id,
-                            assetId: asset.id,
-                          });
-                          setMutationError(null);
-                          reload();
-                          onShotPlansChange();
-                        } catch (selectionError) {
-                          setMutationError(
-                            selectionError instanceof Error
-                              ? selectionError.message
-                              : 'Unable to select the image.'
-                          );
-                        }
-                      },
-                    }}
-                    deleteAction={
-                      selected
-                        ? undefined
-                        : {
-                            label: `Delete image candidate ${index + 1}`,
-                            confirmationTitle: 'Delete Shot Image?',
-                            confirmationMessage:
-                              'This image will move to Trash. You can restore it later.',
-                            onDelete: async () => {
-                              if (!shot) {
-                                return;
-                              }
-                              await deleteStudioShotImageCandidate({
-                                projectName,
-                                shotId: shot.id,
-                                assetId: asset.id,
-                              });
-                              reload();
-                              onShotPlansChange();
-                            },
-                          }
-                    }
-                    emptyState={{ kind: 'image' }}
-                  />
-                );
-              })}
-            </MediaCardGrid>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <MediaCardCollectionDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={title}
+      description={description}
+      state={state}
+      presentation={{ kind: 'flush' }}
+      minimumCardWidthPx={220}
+    />
   );
+}
+
+function candidateItem({
+  projectName,
+  shot,
+  asset,
+  imageUrl,
+  index,
+  selected,
+  onMutationError,
+  reload,
+  onShotPlansChange,
+}: {
+  projectName: string;
+  shot: StudioShot | null;
+  asset: StudioShot['images'][number];
+  imageUrl: string;
+  index: number;
+  selected: boolean;
+  onMutationError: (message: string | null) => void;
+  reload: () => void;
+  onShotPlansChange: () => void;
+}): MediaCardCollectionItem {
+  const imageLabel = `Image candidate ${index + 1} for ${shot?.title ?? 'Shot'}`;
+
+  return {
+    id: asset.id,
+    card: {
+      media: {
+        kind: 'image',
+        src: imageUrl,
+        alt: imageLabel,
+        fit: 'cover',
+        effect: 'zoom-on-hover',
+      },
+      frame: { kind: 'ratio', aspectRatio: 16 / 9 },
+      presentation: { kind: 'overlay' },
+      activation: {
+        kind: 'image-preview',
+        label: `Preview ${imageLabel}`,
+        image: {
+          src: imageUrl,
+          alt: imageLabel,
+          title: shot?.title ?? 'Shot Image',
+        },
+      },
+      selection: {
+        kind: 'choose',
+        selected,
+        selectedLabel: 'Selected image',
+        unselectedLabel: 'Use as selected image',
+        onChoose: async () => {
+          if (!shot) {
+            return;
+          }
+          try {
+            await setStudioShotSelectedImage({
+              projectName,
+              shotId: shot.id,
+              assetId: asset.id,
+            });
+            onMutationError(null);
+            reload();
+            onShotPlansChange();
+          } catch (selectionError) {
+            onMutationError(
+              selectionError instanceof Error
+                ? selectionError.message
+                : 'Unable to select the image.'
+            );
+          }
+        },
+      },
+      deleteAction: selected
+        ? undefined
+        : {
+            label: `Delete image candidate ${index + 1}`,
+            confirmationTitle: 'Delete Shot Image?',
+            confirmationMessage:
+              'This image will move to Trash. You can restore it later.',
+            onDelete: async () => {
+              if (!shot) {
+                return;
+              }
+              await deleteStudioShotImageCandidate({
+                projectName,
+                shotId: shot.id,
+                assetId: asset.id,
+              });
+              reload();
+              onShotPlansChange();
+            },
+          },
+      emptyState: { kind: 'image' },
+    },
+  };
 }

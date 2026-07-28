@@ -97,6 +97,7 @@ export function SceneShotPlansTab({
                   },
                 }}
                 activation={{
+                  kind: 'callback',
                   label: `Open Shot Plan ${item.shotPlan.title}`,
                   onActivate: open,
                 }}

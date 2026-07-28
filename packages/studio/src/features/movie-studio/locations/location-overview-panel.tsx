@@ -80,6 +80,7 @@ export function LocationOverviewPanel({
               },
             }}
             activation={{
+              kind: 'callback',
               label: location.name,
               onActivate: () =>
                 onSelect({ type: 'location', id: location.id }),

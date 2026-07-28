@@ -530,6 +530,19 @@ inspect/edit corner action, delete, and empty-state needs. Do not add arbitrary
 render slots, caller-owned action nodes, class overrides, domain variants, or
 caller-configurable mosaic layouts.
 
+Whole-card activation is a bounded semantic union. `callback` delegates
+navigation or another product action to the feature, `image-preview` composes
+the shared still-image viewer, and omitted activation renders no whole-card
+control. The MediaCard activation layer owns preview state and exact-trigger
+focus return. It must not branch on domains or combine preview with selection.
+
+`src/ui/media-card` also owns `MediaCardCollectionDialog` for repeated
+MediaCard Dialogs. It accepts prepared ordered items and bounded loading,
+error/retry, empty, and ready states. Its only presentations are `flush` for
+the existing Shot-candidate frame and `inset` for the existing Reference Picker
+frame. It accepts no arbitrary children, action nodes, class overrides,
+feature contracts, fetching, sorting, or mutations.
+
 Shared Shot Design presentation media lives under
 `features/movie-studio/shot-design`. Both authoring and read-only Shot Plan
 surfaces consume that one media catalog directly. The catalog owns file lookup
@@ -546,8 +559,11 @@ Action placement is fixed:
 Selection must toggle both ways, expose `aria-pressed`, and keep a meaningful
 accessible label.
 
-Feature code owns product data, labels, preview/navigation behavior, and
-mutations. The UI module owns only card presentation and interaction anatomy.
+Feature code owns product data, labels, activation choice, navigation, and
+mutations. The UI module owns only card presentation, semantic preview
+mechanics, collection anatomy, and interaction isolation. Shot feature code
+owns the zero/one/multiple candidate branch; Reference Picker owns callback
+choice behavior.
 
 Keep card copy sparse. Do not show raw filenames, asset ids, producer
 identifiers, generated role names, or kebab-case labels unless they are

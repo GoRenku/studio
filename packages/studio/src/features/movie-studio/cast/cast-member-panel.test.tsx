@@ -158,6 +158,32 @@ describe('CastMemberPanel', () => {
     expect(screen.queryByText('asset_character_sheet')).toBeNull();
   });
 
+  it('opens Asset cards through semantic image preview activation', async () => {
+    vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
+    vi.mocked(readCastAssets).mockResolvedValue(
+      assetCollection([castProfileAsset()], 'asset_profile')
+    );
+
+    render(
+      <CastMemberPanel
+        projectName='constantinople'
+        castMemberId='cast_urban'
+      />
+    );
+
+    const assetsTab = await screen.findByRole('tab', { name: 'Assets' });
+    activateTab(assetsTab);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Current profile image pick',
+      })
+    );
+    expect(
+      await screen.findByRole('img', { name: 'Urban profile' })
+    ).toBeTruthy();
+    expect(screen.getByLabelText('Close image preview')).toBeTruthy();
+  });
+
   it('plays and deletes Voice Sample cards from the Assets tab', async () => {
     vi.mocked(readCastMemberResource).mockResolvedValue(
       castMemberResource({ voices: [castVoiceSample()] })

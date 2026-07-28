@@ -142,6 +142,7 @@ export function SceneBeatsTab({
                 }}
                 selected={beat.id === selectedBeatId}
                 activation={{
+                  kind: 'callback',
                   label: `${label} - ${beat.title}`,
                   onActivate: () =>
                     onSelect({

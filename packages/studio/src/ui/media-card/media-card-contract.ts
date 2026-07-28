@@ -129,11 +129,62 @@ export interface MediaCardSummaryBody {
   }>;
 }
 
-export interface MediaCardActivation {
+export type MediaCardActivation =
+  | MediaCardCallbackActivation
+  | MediaCardImagePreviewActivation;
+
+export interface MediaCardCallbackActivation {
+  kind: 'callback';
   label: string;
   disabled?: boolean;
   onActivate: () => void;
 }
+
+export interface MediaCardImagePreviewActivation {
+  kind: 'image-preview';
+  label: string;
+  disabled?: boolean;
+  image: MediaCardPreviewImage;
+}
+
+export interface MediaCardPreviewImage {
+  src: string;
+  alt: string;
+  title: string;
+}
+
+export interface MediaCardCollectionItem {
+  id: string;
+  card: MediaCardProps;
+}
+
+export type MediaCardCollectionDialogState =
+  | {
+      kind: 'loading';
+      message: string;
+    }
+  | {
+      kind: 'error';
+      message: string;
+      retryLabel: string;
+      onRetry: () => void;
+    }
+  | {
+      kind: 'empty';
+      message: string;
+    }
+  | {
+      kind: 'ready';
+      items: MediaCardCollectionItem[];
+    };
+
+export type MediaCardCollectionDialogPresentation =
+  | {
+      kind: 'flush';
+    }
+  | {
+      kind: 'inset';
+    };
 
 export type MediaCardSelection =
   | {

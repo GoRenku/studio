@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { MediaCollectionItem } from './media-collection-section';
+import type { MediaCardCollectionItem } from './media-card/media-card-contract';
 import { MediaCollectionSection } from './media-collection-section';
 
 describe('MediaCollectionSection', () => {
@@ -55,7 +55,7 @@ describe('MediaCollectionSection', () => {
   });
 });
 
-function item(id: string): MediaCollectionItem {
+function item(id: string): MediaCardCollectionItem {
   return {
     id,
     card: {

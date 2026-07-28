@@ -43,6 +43,7 @@ export function InspirationFolderCard({
         },
       }}
       activation={{
+        kind: 'callback',
         label: item.folder.name,
         onActivate: onOpen,
       }}

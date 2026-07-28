@@ -102,6 +102,28 @@ describe('LookbookPanel', () => {
     expect(screen.queryByAltText('Palette frame')).toBeNull();
   });
 
+  it('opens Lookbook Asset cards through semantic image preview activation', async () => {
+    vi.mocked(readProjectLookbooks).mockResolvedValue(
+      lookbookResource('Original lookbook')
+    );
+
+    render(
+      <LookbookPanel
+        projectName='constantinople'
+        kind='production'
+      />
+    );
+
+    await openVisualContentTab();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Palette frame' })
+    );
+    expect(
+      await screen.findByRole('dialog', { name: 'Palette frame' })
+    ).toBeTruthy();
+    expect(screen.getByLabelText('Close image preview')).toBeTruthy();
+  });
+
   it('deletes a Lookbook sheet after confirmation', async () => {
     vi.mocked(deleteLookbookSheet).mockResolvedValue();
     vi.mocked(readProjectLookbooks)

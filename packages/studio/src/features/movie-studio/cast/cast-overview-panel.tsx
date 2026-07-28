@@ -77,6 +77,7 @@ export function CastOverviewPanel({ projectName, onSelect }: CastOverviewPanelPr
               },
             }}
             activation={{
+              kind: 'callback',
               label: castMember.name,
               onActivate: () =>
                 onSelect({ type: 'castMember', id: castMember.id }),

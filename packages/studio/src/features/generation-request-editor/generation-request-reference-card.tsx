@@ -46,6 +46,7 @@ export function GenerationRequestReferenceCard({
         onToggle: onToggleSelected,
       } : undefined}
       activation={onOpen ? {
+        kind: 'callback',
         label: title ?? reference.label,
         onActivate: onOpen,
       } : undefined}

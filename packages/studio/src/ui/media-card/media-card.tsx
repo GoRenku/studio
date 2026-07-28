@@ -1,9 +1,9 @@
 import { useState, type FocusEvent } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/ui/button';
 import { Card } from '@/ui/card';
 import { useImageAspectRatio } from '@/ui/image-aspect-ratio';
+import { MediaCardActivationLayer } from './media-card-activation';
 import { MediaCardActions } from './media-card-actions';
 import type {
   MediaCardMedia,
@@ -95,16 +95,7 @@ export function MediaCard({
         selected={selectedState}
         option={option}
       />
-      {activation ? (
-        <Button
-          type='button'
-          variant='ghost'
-          aria-label={activation.label}
-          disabled={activation.disabled}
-          className='absolute inset-0 z-20 h-full w-full overflow-hidden rounded-[inherit] p-0 text-left hover:bg-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-          onClick={activation.onActivate}
-        />
-      ) : null}
+      {activation ? <MediaCardActivationLayer activation={activation} /> : null}
     </Card>
   );
 }

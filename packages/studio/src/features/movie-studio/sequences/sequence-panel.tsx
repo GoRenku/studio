@@ -127,6 +127,7 @@ function SequenceStoryboardPreviewCard({
         },
       }}
       activation={{
+        kind: 'callback',
         label: title,
         onActivate: onClick,
       }}

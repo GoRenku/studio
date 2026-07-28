@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import type { PreviewImage } from '@/ui/image-preview-dialog';
 import { MediaCard } from '@/ui/media-card/media-card';
 import {
   readableImageTitle,
@@ -106,13 +105,11 @@ export function EvidenceGrid({
   images,
   size,
   className,
-  onOpenImage,
   onDeleteImage,
 }: {
   images: ReportImage[];
   size: 'feature' | 'compact';
   className?: string;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   if (!images.length) return null;
@@ -146,13 +143,13 @@ export function EvidenceGrid({
                 : undefined,
             }}
             activation={{
+              kind: 'image-preview',
               label: title,
-              onActivate: () =>
-                onOpenImage({
-                  src: image.src,
-                  alt: image.alt,
-                  title,
-                }),
+              image: {
+                src: image.src,
+                alt: image.alt,
+                title,
+              },
             }}
             deleteAction={
               image.lookbookImageId && onDeleteImage
@@ -176,13 +173,11 @@ export function EvidenceFeatureCard({
   image,
   title,
   description,
-  onOpenImage,
   onDeleteImage,
 }: {
   image: ReportImage;
   title?: string;
   description: string;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   const readableTitle = readableImageTitle(image);
@@ -206,13 +201,13 @@ export function EvidenceFeatureCard({
           },
         }}
         activation={{
+          kind: 'image-preview',
           label: readableTitle,
-          onActivate: () =>
-            onOpenImage({
-              src: image.src,
-              alt: image.alt,
-              title: readableTitle,
-            }),
+          image: {
+            src: image.src,
+            alt: image.alt,
+            title: readableTitle,
+          },
         }}
         deleteAction={
           onDeleteImage && image.lookbookImageId

@@ -11,6 +11,11 @@ Notice: Decision
 clause by retaining the exact Visual Language 2x2 mosaic and adding a separate
 bounded adaptive image-only variant.
 
+Notice: Decision
+[0066](0066-use-semantic-media-card-preview-and-collection-dialogs.md) narrows
+preview activation and card-collection Dialog ownership into bounded shared
+MediaCard contracts.
+
 ## Context
 
 Studio visual media cards had grown into several independent implementations.

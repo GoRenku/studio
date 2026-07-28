@@ -30,6 +30,9 @@ export function ShotPlanShotRail({
           const imageFile =
             selectedAsset?.files.find((file) => file.mediaKind === 'image') ??
             null;
+          const hasImageCandidates = shot.images.some((asset) =>
+            asset.files.some((file) => file.mediaKind === 'image')
+          );
           const selected = shot.id === selectedShotId;
           return (
             <div
@@ -58,15 +61,20 @@ export function ShotPlanShotRail({
                 frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
                 presentation={{ kind: 'overlay' }}
                 activation={{
+                  kind: 'callback',
                   label: `Select Shot ${position}`,
                   onActivate: () => onSelectShot(shot),
                 }}
-                cornerAction={{
-                  kind: 'edit',
-                  label: `Manage images for Shot ${position}`,
-                  visibility: 'hover-or-focus',
-                  onAction: () => onManageImages(shot),
-                }}
+                cornerAction={
+                  hasImageCandidates
+                    ? {
+                        kind: 'edit',
+                        label: `Manage images for Shot ${position}`,
+                        visibility: 'hover-or-focus',
+                        onAction: () => onManageImages(shot),
+                      }
+                    : undefined
+                }
                 emptyState={{ kind: 'image' }}
               />
               <span className='pointer-events-none absolute left-2 top-2 z-40 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/70 text-xs font-semibold text-white shadow-md'>

@@ -264,7 +264,11 @@ describe('MediaCard', () => {
         media={image('Card')}
         frame={{ kind: 'ratio', aspectRatio: 1 }}
         presentation={{ kind: 'overlay' }}
-        activation={{ label: 'Open card preview', onActivate }}
+        activation={{
+          kind: 'callback',
+          label: 'Open card preview',
+          onActivate,
+        }}
         selection={{
           kind: 'toggle',
           selected: false,
@@ -363,6 +367,7 @@ describe('MediaCard', () => {
         frame={{ kind: 'ratio', aspectRatio: 1 }}
         presentation={{ kind: 'overlay' }}
         activation={{
+          kind: 'callback',
           label: 'Open disabled card',
           disabled: true,
           onActivate,
@@ -372,6 +377,98 @@ describe('MediaCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open disabled card' }));
     expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it('opens image preview and returns focus to the exact activation trigger', async () => {
+    render(
+      <MediaCard
+        media={image('Preview card')}
+        frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+        presentation={{ kind: 'overlay' }}
+        activation={{
+          kind: 'image-preview',
+          label: 'Open preview card',
+          image: {
+            src: '/preview-card.jpg',
+            alt: 'Expanded preview card',
+            title: 'Preview card',
+          },
+        }}
+      />
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Open preview card' });
+    fireEvent.click(trigger);
+    expect(
+      screen.getByRole('img', { name: 'Expanded preview card' })
+    ).not.toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Close image preview' })
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it('closes image preview through Escape', async () => {
+    render(
+      <MediaCard
+        media={image('Preview card')}
+        frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+        presentation={{ kind: 'overlay' }}
+        activation={{
+          kind: 'image-preview',
+          label: 'Open preview card',
+          image: {
+            src: '/preview-card.jpg',
+            alt: 'Expanded preview card',
+            title: 'Preview card',
+          },
+        }}
+      />
+    );
+
+    const trigger = screen.getByRole('button', { name: 'Open preview card' });
+    fireEvent.click(trigger);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it('renders no activation target when activation is omitted', () => {
+    render(
+      <MediaCard
+        media={image('Quiet card')}
+        frame={{ kind: 'ratio', aspectRatio: 1 }}
+        presentation={{ kind: 'overlay' }}
+      />
+    );
+
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('does not open disabled image preview activation', () => {
+    render(
+      <MediaCard
+        media={image('Disabled preview')}
+        frame={{ kind: 'ratio', aspectRatio: 1 }}
+        presentation={{ kind: 'overlay' }}
+        activation={{
+          kind: 'image-preview',
+          label: 'Open disabled preview',
+          disabled: true,
+          image: {
+            src: '/disabled.jpg',
+            alt: 'Disabled image',
+            title: 'Disabled preview',
+          },
+        }}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open disabled preview' })
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('plays hover video only while active and preserves still playback', async () => {

@@ -78,6 +78,7 @@ export function OptionTileGroup({
                 onToggle: toggle,
               }}
               activation={{
+                kind: 'callback',
                 label: option.label,
                 onActivate: toggle,
               }}

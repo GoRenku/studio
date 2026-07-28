@@ -1,17 +1,12 @@
 import { ImageOff } from 'lucide-react';
-import type { MediaCardProps } from '@/ui/media-card/media-card-contract';
+import type { MediaCardCollectionItem } from '@/ui/media-card/media-card-contract';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
-
-export interface MediaCollectionItem {
-  id: string;
-  card: MediaCardProps;
-}
 
 interface MediaCollectionSectionProps {
   title: string;
   emptyTitle: string;
-  items: MediaCollectionItem[];
+  items: MediaCardCollectionItem[];
   minimumCardWidthPx: number;
   gap?: 'compact' | 'standard' | 'roomy';
 }

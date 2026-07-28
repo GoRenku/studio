@@ -122,6 +122,33 @@ describe('InspirationPanel', () => {
 
     expect(await screen.findByText('1 image')).not.toBeNull();
   });
+
+  it('opens Inspiration grabs through semantic image preview activation', async () => {
+    vi.mocked(readInspirationResource).mockResolvedValue(inspirationResource());
+    vi.mocked(readInspirationFolder).mockResolvedValue(
+      inspirationFolderResource(null)
+    );
+
+    render(
+      <InspirationPanel
+        projectName='constantinople'
+        folderId='inspiration_folder_test0001'
+        foldersRevision={0}
+        onOpenFolder={vi.fn()}
+        onInspirationFoldersChange={vi.fn()}
+      />
+    );
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'frame-001.png inspiration grab',
+      })
+    );
+    expect(
+      await screen.findByRole('dialog', { name: 'frame-001.png' })
+    ).not.toBeNull();
+    expect(screen.getByLabelText('Close image preview')).not.toBeNull();
+  });
 });
 
 const folder: InspirationFolder = {

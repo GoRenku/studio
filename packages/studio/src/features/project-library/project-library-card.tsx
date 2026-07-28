@@ -49,6 +49,7 @@ export function ProjectLibraryCard({
         },
       }}
       activation={{
+        kind: 'callback',
         label: project.title,
         disabled,
         onActivate: () => void onSelectProject(project.name),

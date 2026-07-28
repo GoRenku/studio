@@ -357,16 +357,34 @@ The action anatomy is consistent across all four:
 - delete uses the shared top-right treatment;
 - whole-card activation is behind those sibling controls.
 
+Whole-card activation is always intentional. Use `callback` for navigation or a
+caller-owned product action, `image-preview` for the shared large still-image
+viewer, or omit activation when the card is presentation only. Image preview
+owns its open state and returns focus to the exact card trigger. Sibling
+selection, inspect/edit, and delete controls never activate the card.
+
+Use `MediaCardCollectionDialog` for a Dialog whose ready state is an ordered
+MediaCard grid. Its `flush` presentation preserves Shot-candidate chrome, while
+its `inset` presentation preserves Reference Picker chrome. Loading,
+error/retry, empty, and ready are bounded shared states; feature containers
+still supply product copy, prepared cards, data loading, and mutations.
+
 Use typed `MediaCard` contracts. Do not add arbitrary visual, body, action, or
 class-name slots.
 
 Shot rail selection uses a strong amber border and restrained shadow around the
 image card only. When duration intent is present, keep it in a lower-left badge
-so it does not compete with the lower-right edit action.
+so it does not compete with the lower-right edit action. Activating the card
+selects the Shot and never previews its image. The separate lower-right image
+action opens the exact Shot-image flow.
 
 Shot-image candidates use one-way choose semantics: unselected cards expose a
 selection control, while the selected card shows a persistent labelled status.
-Only unselected candidates expose recoverable delete in this surface.
+Only unselected candidates expose recoverable delete in this surface. A Shot
+with no ready images keeps its placeholder card quiet and exposes no lower-right
+image action. One ready image opens the large viewer directly without choosing,
+and multiple images open the flush collection. Activating a candidate previews
+it; only the lower-right choose control changes canonical selection.
 
 Variable selected-image summaries use the bounded adaptive mosaic from ADR
 0065. The layout preserves input order and reports overflow accessibly; callers

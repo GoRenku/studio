@@ -230,6 +230,7 @@ function BeatThumbnail({
         },
       }}
       activation={{
+        kind: 'callback',
         label: `${beat.label} — ${beat.title}`,
         onActivate: () =>
           onSelect({

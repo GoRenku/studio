@@ -9,7 +9,6 @@ import type {
 } from '@gorenku/studio-core/client';
 import { Ban, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PreviewImage } from '@/ui/image-preview-dialog';
 import { MediaCard } from '@/ui/media-card/media-card';
 import {
   EvidenceGrid,
@@ -25,7 +24,6 @@ interface StoryboardLookbookReportProps {
   projectName: string;
   sections: StoryboardLookbookDefinition;
   source: LookbookReportSource;
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }
 
@@ -33,7 +31,6 @@ export function StoryboardLookbookReport({
   projectName,
   sections,
   source,
-  onOpenImage,
   onDeleteImage,
 }: StoryboardLookbookReportProps) {
   const styleBriefImages = imagesForSection(projectName, source, 'styleBrief');
@@ -69,13 +66,13 @@ export function StoryboardLookbookReport({
               copy: { kind: 'label', label: 'Overall style' },
             }}
             activation={{
+              kind: 'image-preview',
               label: readableImageTitle(heroImage),
-              onActivate: () =>
-                onOpenImage({
-                  src: heroImage.src,
-                  alt: heroImage.alt,
-                  title: readableImageTitle(heroImage),
-                }),
+              image: {
+                src: heroImage.src,
+                alt: heroImage.alt,
+                title: readableImageTitle(heroImage),
+              },
             }}
             deleteAction={
               heroImage.lookbookImageId && onDeleteImage
@@ -99,7 +96,6 @@ export function StoryboardLookbookReport({
             <EvidenceGrid
               images={supportingStyleBriefImages}
               size='feature'
-              onOpenImage={onOpenImage}
               onDeleteImage={onDeleteImage}
             />
           </div>
@@ -115,7 +111,6 @@ export function StoryboardLookbookReport({
           }
           text={sections.lineAndFinish.text}
           images={lineAndFinishImages}
-          onOpenImage={onOpenImage}
           onDeleteImage={onDeleteImage}
         />
       </StoryboardSection>
@@ -129,7 +124,6 @@ export function StoryboardLookbookReport({
           }
           text={sections.valueAndAccent.text}
           images={valueAndAccentImages}
-          onOpenImage={onOpenImage}
           onDeleteImage={onDeleteImage}
         />
       </StoryboardSection>
@@ -143,7 +137,6 @@ export function StoryboardLookbookReport({
             <EvidenceGrid
               images={guardrailImages}
               size='feature'
-              onOpenImage={onOpenImage}
               onDeleteImage={onDeleteImage}
             />
           </div>
@@ -199,13 +192,11 @@ function StoryboardSpecimenBody({
   widget,
   text,
   images,
-  onOpenImage,
   onDeleteImage,
 }: {
   widget: ReactNode | null;
   text: string;
   images: ReportImage[];
-  onOpenImage: (image: PreviewImage) => void;
   onDeleteImage?: (image: ReportImage) => Promise<void>;
 }) {
   return (
@@ -223,7 +214,6 @@ function StoryboardSpecimenBody({
           images={images}
           size='feature'
           className='mt-6'
-          onOpenImage={onOpenImage}
           onDeleteImage={onDeleteImage}
         />
       ) : null}
