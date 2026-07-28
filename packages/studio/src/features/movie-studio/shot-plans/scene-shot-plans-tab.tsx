@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { StudioSelection } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import { MediaCard } from '@/ui/media-card/media-card';
@@ -26,7 +26,6 @@ export function SceneShotPlansTab({
   onFocusRestored?: () => void;
 }) {
   const { resource, error, reload } = useSceneShotPlans(projectName, sceneId);
-  const [mutationError, setMutationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!resource || !restoreFocusPlanId) {
@@ -71,9 +70,6 @@ export function SceneShotPlansTab({
 
   return (
     <div className='h-full w-full overflow-y-auto px-6 py-7'>
-      {mutationError ? (
-        <p className='mb-4 text-sm text-destructive'>{mutationError}</p>
-      ) : null}
       <MediaCardGrid minimumCardWidthPx={300} gap='roomy'>
         {resource.shotPlans.map((item) => {
           const open = () => {
@@ -116,21 +112,11 @@ export function SceneShotPlansTab({
                   confirmationMessage:
                     'This Shot Plan and its Shot images will move to Trash. You can restore them later.',
                   onDelete: async () => {
-                    try {
-                      await deleteStudioShotPlan({
-                        projectName,
-                        shotPlanId: item.shotPlan.id,
-                      });
-                      setMutationError(null);
-                      reload();
-                    } catch (deleteError) {
-                      setMutationError(
-                        deleteError instanceof Error
-                          ? deleteError.message
-                          : 'Unable to delete the Shot Plan.'
-                      );
-                      throw deleteError;
-                    }
+                    await deleteStudioShotPlan({
+                      projectName,
+                      shotPlanId: item.shotPlan.id,
+                    });
+                    reload();
                   },
                 }}
                 emptyState={{ kind: 'image' }}

@@ -6,9 +6,7 @@ import {
   type StudioEventSource,
   type StudioProjectRef,
 } from './events.js';
-import type { StudioSelection } from '../../client/index.js';
-
-const SCENE_PANEL_TABS = ['narrative', 'beats', 'shotPlans'];
+import { parseStudioSelection } from './selection-validation.js';
 
 export function validateStudioEvent(value: unknown): StudioEvent {
   const issues = collectStudioEventIssues(value);
@@ -153,62 +151,13 @@ function validateFocus(value: unknown, path: string[], issues: ReturnType<typeof
 }
 
 function validateSelection(value: unknown, path: string[], issues: ReturnType<typeof collectStudioEventIssues>): void {
-  const selection = readRecord(value) as StudioSelection | null;
-  if (!selection) {
-    issues.push(issue('STUDIO_COORDINATION005', 'Movie Studio selection must be an object.', path));
-    return;
+  const result = parseStudioSelection(value, {
+    path,
+    context: 'studio coordination event',
+  });
+  if (!result.valid) {
+    issues.push(...result.issues);
   }
-  if (
-    selection.type === 'projectInformation' ||
-    selection.type === 'inspiration' ||
-    selection.type === 'cast' ||
-    selection.type === 'locations' ||
-    selection.type === 'storyArc'
-  ) {
-    return;
-  }
-  if (
-    selection.type === 'lookbook' &&
-    (selection.kind === 'production' || selection.kind === 'storyboard')
-  ) {
-    return;
-  }
-  if (selection.type === 'scene' && typeof selection.id === 'string' && selection.id.trim()) {
-    if (
-      selection.sceneTab !== undefined &&
-      !SCENE_PANEL_TABS.includes(selection.sceneTab)
-    ) {
-      issues.push(issue('STUDIO_COORDINATION036', 'Unsupported scene tab.', [...path, 'sceneTab']));
-    }
-    const fields = Object.keys(selection);
-    const unknownField = fields.find(
-      (field) =>
-        !['type', 'id', 'sceneTab', 'beatId', 'shotPlanId', 'shotId'].includes(
-          field
-        )
-    );
-    if (unknownField) {
-      issues.push(
-        issue(
-          'STUDIO_COORDINATION037',
-          'Unsupported Scene selection field.',
-          [...path, unknownField]
-        )
-      );
-    }
-    return;
-  }
-  if (
-    (selection.type === 'act' ||
-      selection.type === 'sequence' ||
-      selection.type === 'castMember' ||
-      selection.type === 'location') &&
-    typeof selection.id === 'string' &&
-    selection.id.trim()
-  ) {
-    return;
-  }
-  issues.push(issue('STUDIO_COORDINATION005', 'Unsupported Movie Studio selection.', path));
 }
 
 function validateOptionalProjectRef(value: unknown, path: string[], issues: ReturnType<typeof collectStudioEventIssues>): void {

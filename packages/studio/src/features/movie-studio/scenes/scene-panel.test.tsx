@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   SceneBeatSheetResourceResponse,
   SceneNarrativeResourceResponse,
 } from '@/services/studio-project-contracts';
+import type { StudioSelection } from '@gorenku/studio-core/client';
+import { Button } from '@/ui/button';
 import {
   readSceneBeatSheetResource,
   readSceneNarrativeResource,
 } from '@/services/studio-screenplay-api';
+import { useSceneShotPlans } from '../shot-plans/use-scene-shot-plans';
 import { ScenePanel } from './scene-panel';
 
 vi.mock('@/services/studio-screenplay-api', () => ({
@@ -19,6 +22,9 @@ vi.mock('@/services/studio-screenplay-api', () => ({
 vi.mock('../shot-plans/shot-plan-detail-page', () => ({
   ShotPlanDetailPage: () => <div>Focused Shot Plan detail</div>,
 }));
+vi.mock('../shot-plans/use-scene-shot-plans', () => ({
+  useSceneShotPlans: vi.fn(),
+}));
 
 describe('ScenePanel', () => {
   beforeEach(() => {
@@ -26,6 +32,26 @@ describe('ScenePanel', () => {
     vi.mocked(readSceneBeatSheetResource).mockReset();
     vi.mocked(readSceneNarrativeResource).mockResolvedValue(sceneNarrative());
     vi.mocked(readSceneBeatSheetResource).mockResolvedValue(sceneBeatSheet());
+    vi.mocked(useSceneShotPlans).mockReturnValue({
+      resource: {
+        sceneId: 'scene_hook',
+        shotPlans: [{
+          shotPlan: {
+            id: 'plan_one',
+            sceneId: 'scene_hook',
+            title: 'Council coverage',
+            coverage: null,
+            shots: [],
+            createdAt: '2026-07-27T10:00:00.000Z',
+            updatedAt: '2026-07-27T10:00:00.000Z',
+          },
+          coveredBeats: [],
+        }],
+        warnings: [],
+      },
+      error: null,
+      reload: vi.fn(),
+    });
   });
 
   it('opens the Beats tab for a Beat deep link', async () => {
@@ -140,7 +166,97 @@ describe('ScenePanel', () => {
       '22A - The Sound That Opens Stone'
     );
   });
+
+  it('moves keyboard focus into Shot Plan detail without stealing it on rerenders', async () => {
+    render(<ScenePanelSelectionHarness />);
+
+    const planButton = await screen.findByRole('button', {
+      name: 'Open Shot Plan Council coverage',
+    });
+    act(() => planButton.focus());
+    fireEvent.click(planButton);
+
+    const backButton = await screen.findByRole('button', {
+      name: 'Back to Shot Plans',
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(backButton);
+    });
+
+    const rerenderButton = screen.getByRole('button', {
+      name: 'Rerender parent',
+    });
+    act(() => rerenderButton.focus());
+    fireEvent.click(rerenderButton);
+    expect(document.activeElement).toBe(rerenderButton);
+
+    fireEvent.click(backButton);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', {
+          name: 'Open Shot Plan Council coverage',
+        })
+      );
+    });
+  });
+
+  it('does not move focus for a direct Shot Plan URL', async () => {
+    render(<ScenePanelSelectionHarness initialShotPlanId='plan_one' />);
+
+    const existingFocus = screen.getByRole('button', {
+      name: 'Existing focus',
+    });
+    existingFocus.focus();
+    await screen.findByText('Focused Shot Plan detail');
+    await screen.findByRole('button', { name: 'Back to Shot Plans' });
+
+    expect(document.activeElement).toBe(existingFocus);
+  });
 });
+
+function ScenePanelSelectionHarness({
+  initialShotPlanId,
+}: {
+  initialShotPlanId?: string;
+}) {
+  const [selection, setSelection] = React.useState<
+    Extract<StudioSelection, { type: 'scene' }>
+  >({
+    type: 'scene',
+    id: 'scene_hook',
+    sceneTab: 'shotPlans',
+    ...(initialShotPlanId ? { shotPlanId: initialShotPlanId } : {}),
+  });
+  const [headerAction, setHeaderAction] = React.useState<React.ReactNode>(null);
+  const [, setRevision] = React.useState(0);
+  const handleSelect = React.useCallback((nextSelection: StudioSelection) => {
+    if (nextSelection.type === 'scene') {
+      setSelection(nextSelection);
+    }
+  }, []);
+  return (
+    <>
+      <Button type='button'>Existing focus</Button>
+      <Button
+        type='button'
+        onClick={() => setRevision((current) => current + 1)}
+      >
+        Rerender parent
+      </Button>
+      <div>{headerAction}</div>
+      <ScenePanel
+        projectName='constantinople'
+        sceneId='scene_hook'
+        sceneTab={selection.sceneTab}
+        beatId={selection.beatId}
+        shotPlanId={selection.shotPlanId}
+        shotId={selection.shotId}
+        onSelect={handleSelect}
+        onHeaderActionChange={setHeaderAction}
+      />
+    </>
+  );
+}
 
 function sceneNarrative(productionNumber = '1'): SceneNarrativeResourceResponse {
   return {

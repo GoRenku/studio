@@ -872,6 +872,92 @@ describe('Shot Plans', () => {
     });
   });
 
+  it('keeps an older selected image in a Shot Plan with more than one asset page', async () => {
+    const projectData = createProjectDataService();
+    const fixture = await createProjectFixture(projectData, homeDir);
+    if (!fixture) {
+      return;
+    }
+    const plan = await createPlan(projectData, homeDir, fixture.sceneId);
+    const shot = plan.shotPlan.shots[0]!;
+    const sourceSpec = await projectData.createGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      spec: {
+        purpose: 'shot.image',
+        target: { kind: 'shot', id: shot.id },
+        executionKind: 'agent-external',
+        model: { provider: 'codex', model: 'gpt-image-2' },
+        values: { prompt: 'Opaque authored Shot image prompt.' },
+        references: [],
+      },
+    });
+    await projectData.freezeGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      specId: sourceSpec.id,
+    });
+    await fs.mkdir(path.join(fixture.projectFolder, 'tmp'), { recursive: true });
+    await fs.writeFile(
+      path.join(fixture.projectFolder, 'tmp', 'shot.png'),
+      'image'
+    );
+    const selected = await projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'shot.image',
+      target: { kind: 'shot', id: shot.id },
+      sourceProjectRelativePath: 'tmp/shot.png',
+      title: 'Old selected candidate',
+      sourceSpecId: sourceSpec.id,
+    });
+    await projectData.selectAsset({
+      projectName: 'constantinople',
+      homeDir,
+      target: { kind: 'shot', id: shot.id },
+      assetId: selected.asset.id,
+    });
+    for (let index = 0; index < 60; index += 1) {
+      await projectData.attachGenerationMedia({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'shot.image',
+        target: { kind: 'shot', id: shot.id },
+        sourceProjectRelativePath: 'tmp/shot.png',
+        title: `New candidate ${index + 1}`,
+        sourceSpecId: sourceSpec.id,
+      });
+    }
+    const { session } = await openProjectSession({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    try {
+      session.db
+        .update(assets)
+        .set({ createdAt: '2000-01-01T00:00:00.000Z' })
+        .where(eq(assets.id, selected.asset.id))
+        .run();
+    } finally {
+      session.close();
+    }
+
+    const projectedShot = (
+      await projectData.readShotPlan({
+        projectName: 'constantinople',
+        homeDir,
+        shotPlanId: plan.shotPlan.id,
+      })
+    ).shotPlan.shots[0]!;
+    expect(projectedShot.images).toHaveLength(61);
+    expect(projectedShot.selectedImageId).toBe(selected.asset.id);
+    expect(projectedShot.images).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: selected.asset.id }),
+      ])
+    );
+  });
+
   it('keeps video.create context project-scoped and free of Shot Plan facts', async () => {
     const projectData = createProjectDataService();
     const fixture = await createProjectFixture(projectData, homeDir);

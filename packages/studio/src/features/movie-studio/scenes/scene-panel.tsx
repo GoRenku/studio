@@ -61,11 +61,26 @@ export function ScenePanel({
     null
   );
   const detailPlanIdRef = useRef<string | null>(shotPlanId ?? null);
+  const pendingDetailFocusPlanIdRef = useRef<string | null>(null);
   const activeTab: ScenePanelTab =
     sceneTab ?? (shotPlanId ? 'shotPlans' : beatId ? 'beats' : 'narrative');
   const handlePlanActivate = useCallback((planId: string) => {
     detailPlanIdRef.current = planId;
+    pendingDetailFocusPlanIdRef.current = planId;
   }, []);
+  const handleBackButtonRef = useCallback(
+    (button: HTMLButtonElement | null) => {
+      if (
+        button &&
+        shotPlanId &&
+        pendingDetailFocusPlanIdRef.current === shotPlanId
+      ) {
+        pendingDetailFocusPlanIdRef.current = null;
+        button.focus();
+      }
+    },
+    [shotPlanId]
+  );
   const handleBackToShotPlans = useCallback(() => {
     onSelect({
       type: 'scene',
@@ -126,6 +141,7 @@ export function ScenePanel({
     if (activeTab === 'shotPlans' && shotPlanId) {
       onHeaderActionChange?.(
         <Button
+          ref={handleBackButtonRef}
           type='button'
           variant='ghost'
           size='sm'
@@ -143,6 +159,7 @@ export function ScenePanel({
     return () => onHeaderActionChange?.(null);
   }, [
     activeTab,
+    handleBackButtonRef,
     handleBackToShotPlans,
     onHeaderActionChange,
     shotPlanId,

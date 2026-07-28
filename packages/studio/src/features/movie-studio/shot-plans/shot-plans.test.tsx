@@ -68,7 +68,6 @@ describe('Shot Plans feature', () => {
             sceneId: 'scene_one',
             title: 'Council coverage',
             coverage: null,
-            lastGenerationSpec: null,
             createdAt: '2026-07-27T10:00:00.000Z',
             updatedAt: '2026-07-27T10:00:00.000Z',
             shots: [
@@ -427,7 +426,6 @@ describe('Shot Plans feature', () => {
           sceneId: 'scene_one',
           title: 'Council coverage',
           coverage: null,
-          lastGenerationSpec: null,
           createdAt: '2026-07-27T10:00:00.000Z',
           updatedAt: '2026-07-27T10:00:00.000Z',
           shots: [firstShot, secondShot],

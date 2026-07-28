@@ -67,6 +67,39 @@ describe('StudioCoordinationService', () => {
     })).rejects.toMatchObject({ code: 'STUDIO_COORDINATION003' });
   });
 
+  it('rejects malformed nested selection ids before appending an event', async () => {
+    const coordination = createStudioCoordinationService({ homeDir });
+
+    await expect(
+      coordination.appendStudioEvent({
+        type: 'studio.focusRequested',
+        focus: {
+          screen: 'movieStudio',
+          selection: {
+            type: 'scene',
+            id: 'scene_opening',
+            sceneTab: 'shotPlans',
+            shotPlanId: 123,
+          },
+        },
+        source: { kind: 'cli', command: 'renku project select' },
+      } as never)
+    ).rejects.toMatchObject({
+      code: 'STUDIO_COORDINATION003',
+      issues: [
+        expect.objectContaining({
+          code: 'STUDIO_COORDINATION005',
+          location: expect.objectContaining({
+            path: ['focus', 'selection', 'shotPlanId'],
+          }),
+        }),
+      ],
+    });
+    await expect(coordination.readStudioEvents()).resolves.toMatchObject({
+      events: [],
+    });
+  });
+
   it('creates the Renku config directory before appending events', async () => {
     const isolatedHomeDir = path.join(homeDir, 'fresh-home');
     const coordination = createStudioCoordinationService({ homeDir: isolatedHomeDir });

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '@/ui/button';
 import {
   Dialog,
@@ -27,8 +27,45 @@ export function DeleteConfirmDialog({
   message,
   onDelete,
 }: DeleteConfirmDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const controlled = open !== undefined;
+  const dialogOpen = controlled ? open : internalOpen;
+  const updateOpen = (nextOpen: boolean) => {
+    if (!controlled) {
+      setInternalOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  };
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) {
+      return;
+    }
+    if (nextOpen) {
+      setError(null);
+    }
+    updateOpen(nextOpen);
+  };
+  const handleDelete = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await onDelete();
+      updateOpen(false);
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error && deleteError.message.trim()
+          ? deleteError.message
+          : 'Unable to delete this item.'
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent
         showCloseButton={false}
@@ -38,10 +75,20 @@ export function DeleteConfirmDialog({
           <DialogTitle className='truncate'>{title}</DialogTitle>
           <DialogDescription className='sr-only'>{message}</DialogDescription>
           <p className='mt-3 text-sm leading-6 text-muted-foreground'>{message}</p>
+          {error ? (
+            <p className='mt-3 text-sm text-destructive' role='alert'>
+              {error}
+            </p>
+          ) : null}
         </div>
         <DialogFooter className='border-t border-border/40 bg-dialog-footer-bg px-4 py-3'>
           <DialogClose asChild>
-            <Button type='button' variant='ghost' size='sm'>
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              disabled={pending}
+            >
               Cancel
             </Button>
           </DialogClose>
@@ -49,9 +96,10 @@ export function DeleteConfirmDialog({
             type='button'
             variant='destructive'
             size='sm'
-            onClick={() => void onDelete()}
+            disabled={pending}
+            onClick={() => void handleDelete()}
           >
-            Delete
+            {pending ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogFooter>
       </DialogContent>

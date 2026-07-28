@@ -155,4 +155,44 @@ describe('movie studio selection context Hono route', () => {
       },
     });
   });
+
+  it.each([
+    ['a number', 123],
+    ['a blank string', '   '],
+    ['an array', ['plan_primary']],
+    ['an object', { id: 'plan_primary' }],
+  ])('rejects shotPlanId when it is %s', async (_label, shotPlanId) => {
+    const app = createMountedMovieStudioSelectionContextRoute();
+
+    const response = await app.request(
+      '/constantinople/movie-studio-selection/context',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          selection: {
+            type: 'scene',
+            id: 'scene_bombardment',
+            sceneTab: 'shotPlans',
+            shotPlanId,
+          },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'STUDIO_SERVER034',
+        issues: [
+          {
+            code: 'STUDIO_COORDINATION005',
+            location: {
+              path: ['selection', 'shotPlanId'],
+            },
+          },
+        ],
+      },
+    });
+  });
 });

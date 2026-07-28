@@ -129,23 +129,13 @@ export function ShotImageCandidatesDialog({
                               if (!shot) {
                                 return;
                               }
-                              try {
-                                await deleteStudioShotImageCandidate({
-                                  projectName,
-                                  shotId: shot.id,
-                                  assetId: asset.id,
-                                });
-                                setMutationError(null);
-                                reload();
-                                onShotPlansChange();
-                              } catch (deleteError) {
-                                const message =
-                                  deleteError instanceof Error
-                                    ? deleteError.message
-                                    : 'Unable to delete the image.';
-                                setMutationError(message);
-                                throw deleteError;
-                              }
+                              await deleteStudioShotImageCandidate({
+                                projectName,
+                                shotId: shot.id,
+                                assetId: asset.id,
+                              });
+                              reload();
+                              onShotPlansChange();
                             },
                           }
                     }

@@ -8,7 +8,9 @@ import type {
   ShotPlanListReport,
   ShotPlanReport,
 } from '../../client/shot-plans.js';
-import { listAssetPageInSession } from '../assets/projection.js';
+import { assetOwnerKey } from '../assets/owner-keys.js';
+import { listAssetsInSession } from '../assets/projection.js';
+import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   listSceneShotPlanRecords,
@@ -119,13 +121,14 @@ function projectShotImages(
   session: DatabaseSession,
   shotId: string
 ): Pick<import('../../client/shot-plans.js').Shot, 'images' | 'selectedImageId'> {
-  const page = listAssetPageInSession(session, {
-    owner: { kind: 'shot', id: shotId },
-    type: 'shot_image',
-  });
+  const owner = { kind: 'shot' as const, id: shotId };
   return {
-    images: page.items,
-    selectedImageId: page.selectedAssetId,
+    images: listAssetsInSession(session, {
+      owner,
+      type: 'shot_image',
+    }),
+    selectedImageId:
+      readSelectedAssetRecord(session, assetOwnerKey(owner))?.assetId ?? null,
   };
 }
 

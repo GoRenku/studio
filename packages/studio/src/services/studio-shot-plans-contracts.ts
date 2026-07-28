@@ -22,7 +22,8 @@ export interface StudioShot extends Omit<Shot, 'images'> {
   images: StudioShotAsset[];
 }
 
-export interface StudioShotPlan extends Omit<ShotPlan, 'shots'> {
+export interface StudioShotPlan
+  extends Omit<ShotPlan, 'shots' | 'lastGenerationSpec'> {
   shots: StudioShot[];
 }
 

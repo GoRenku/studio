@@ -1,8 +1,10 @@
 import type {
   Asset,
   AssetFile,
+  AssetSelectionReport,
+  RecoverableMutationReport,
   ShotPlanListReport,
-} from '@gorenku/studio-core/server';
+} from '@gorenku/studio-core/client';
 
 export interface StudioAssetFileResponse
   extends Omit<AssetFile, 'projectRelativePath'> {
@@ -14,7 +16,10 @@ export interface StudioAssetResponse extends Omit<Asset, 'files'> {
 }
 
 export interface StudioShotPlanListItemResponse {
-  shotPlan: Omit<ShotPlanListReport['shotPlans'][number]['shotPlan'], 'shots'> & {
+  shotPlan: Omit<
+    ShotPlanListReport['shotPlans'][number]['shotPlan'],
+    'shots' | 'lastGenerationSpec'
+  > & {
     shots: Array<
       Omit<ShotPlanListReport['shotPlans'][number]['shotPlan']['shots'][number], 'images'> & {
         images: StudioAssetResponse[];
@@ -39,6 +44,16 @@ export interface StudioShotPlansResponse {
   shotPlans: StudioShotPlanListItemResponse[];
   warnings: ShotPlanListReport['warnings'];
 }
+
+export type StudioShotSelectionMutationResponse = Pick<
+  AssetSelectionReport,
+  'valid' | 'warnings' | 'selectedAssetId' | 'resourceKeys'
+>;
+
+export type StudioRecoverableMutationResponse = Pick<
+  RecoverableMutationReport,
+  'valid' | 'warnings' | 'changes' | 'recovery' | 'resourceKeys'
+>;
 
 export function toStudioShotPlansResponse(
   projectName: string,
@@ -75,15 +90,45 @@ export function toStudioShotAssetResponse(
   };
 }
 
+export function toStudioShotSelectionMutationResponse(
+  report: AssetSelectionReport
+): StudioShotSelectionMutationResponse {
+  return {
+    valid: report.valid,
+    warnings: report.warnings,
+    selectedAssetId: report.selectedAssetId,
+    resourceKeys: report.resourceKeys,
+  };
+}
+
+export function toStudioRecoverableMutationResponse(
+  report: RecoverableMutationReport
+): StudioRecoverableMutationResponse {
+  return {
+    valid: report.valid,
+    warnings: report.warnings,
+    changes: report.changes,
+    recovery: report.recovery,
+    resourceKeys: report.resourceKeys,
+  };
+}
+
 function toStudioShotPlanListItemResponse(
   projectName: string,
   item: ShotPlanListReport['shotPlans'][number]
 ): StudioShotPlanListItemResponse {
   return {
     shotPlan: {
-      ...item.shotPlan,
+      id: item.shotPlan.id,
+      sceneId: item.shotPlan.sceneId,
+      title: item.shotPlan.title,
+      coverage: item.shotPlan.coverage,
       shots: item.shotPlan.shots.map((shot) => ({
-        ...shot,
+        id: shot.id,
+        position: shot.position,
+        title: shot.title,
+        description: shot.description,
+        brief: shot.brief,
         images: shot.images.map((asset) => ({
           ...asset,
           files:
@@ -91,7 +136,10 @@ function toStudioShotPlanListItemResponse(
               ? toStudioShotAssetResponse(projectName, asset).files
               : [],
         })),
+        selectedImageId: shot.selectedImageId,
       })),
+      createdAt: item.shotPlan.createdAt,
+      updatedAt: item.shotPlan.updatedAt,
     },
     coveredBeats: item.coveredBeats.map((coveredBeat) => ({
       ...coveredBeat,

@@ -2,11 +2,10 @@ import {
   createProjectDataService,
   createStudioCoordinationService,
   createStudioOperationId,
+  parseStudioSelection,
   validateStudioFocusRequestForProject,
   type GenerationPreview,
-  type ScenePanelTab,
   type GenerationPreviewResource,
-  type StudioSelection,
   type StudioBrowserSessionActivityKind,
   type ProjectDataService,
   type StudioCoordinationService,
@@ -30,11 +29,6 @@ import {
 } from '../projections/generation-preview.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
-const SCENE_PANEL_TABS: ScenePanelTab[] = [
-  'narrative',
-  'beats',
-  'shotPlans',
-];
 const PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT =
   'studio.projectResourcesChanged notification';
 const GENERATION_PREVIEW_NOTIFICATION_CONTEXT =
@@ -365,87 +359,28 @@ function readStudioFocusRequest(value: unknown): StudioFocusRequestReadResult {
     );
   }
 
-  const selection = readStudioSelection(focus.selection);
-  if (!selection) {
+  if (focus.selection === undefined) {
     return unsupportedFocusRequest(
       ['focus', 'selection'],
       'Requested Studio focus selection is not supported.',
       'Request a supported Movie Studio selection.'
     );
   }
-
-  return {
-    ok: true,
-    focus: { screen: 'movieStudio', selection },
-  };
-}
-
-function readStudioSelection(value: unknown): StudioSelection | null {
-  const selection = readRecord(value);
-  if (!selection) {
-    return null;
-  }
-
-  if (
-    selection.type === 'projectInformation' ||
-    selection.type === 'cast' ||
-    selection.type === 'locations' ||
-    selection.type === 'storyArc'
-  ) {
-    return { type: selection.type };
-  }
-
-  if (selection.type === 'inspiration') {
-    return typeof selection.folderId === 'string' && selection.folderId.trim()
-      ? { type: selection.type, folderId: selection.folderId }
-      : { type: selection.type };
-  }
-
-  if (
-    selection.type === 'lookbook' &&
-    (selection.kind === 'production' || selection.kind === 'storyboard')
-  ) {
-    return { type: selection.type, kind: selection.kind };
-  }
-
-  if (selection.type === 'scene' && typeof selection.id === 'string' && selection.id.trim()) {
-    const sceneTab = readScenePanelTab(selection.sceneTab);
-    const beatId =
-      typeof selection.beatId === 'string' && selection.beatId.trim()
-        ? selection.beatId
-        : undefined;
-    const shotPlanId =
-      typeof selection.shotPlanId === 'string' && selection.shotPlanId.trim()
-        ? selection.shotPlanId
-        : undefined;
-    const shotId =
-      typeof selection.shotId === 'string' && selection.shotId.trim()
-        ? selection.shotId
-        : undefined;
-    if (selection.sceneTab !== undefined && !sceneTab) {
-      return null;
-    }
+  const selection = parseStudioSelection(focus.selection, {
+    path: ['focus', 'selection'],
+    context: 'studio.focusRequested',
+  });
+  if (!selection.valid) {
     return {
-      type: selection.type,
-      id: selection.id,
-      ...(sceneTab ? { sceneTab } : {}),
-      ...(beatId ? { beatId } : {}),
-      ...(shotPlanId ? { shotPlanId } : {}),
-      ...(shotId ? { shotId } : {}),
+      ok: false,
+      diagnostics: selection.issues,
     };
   }
 
-  if (
-    (selection.type === 'sequence' ||
-      selection.type === 'castMember' ||
-      selection.type === 'location') &&
-    typeof selection.id === 'string' &&
-    selection.id.trim()
-  ) {
-    return { type: selection.type, id: selection.id };
-  }
-
-  return null;
+  return {
+    ok: true,
+    focus: { screen: 'movieStudio', selection: selection.selection },
+  };
 }
 
 interface ProjectResourcesChangedRequest {
@@ -605,13 +540,6 @@ function readCliNotificationSource(
     record.command.trim()
     ? { kind: 'cli', command: record.command }
     : null;
-}
-
-function readScenePanelTab(value: unknown): ScenePanelTab | undefined {
-  return typeof value === 'string' &&
-    SCENE_PANEL_TABS.includes(value as ScenePanelTab)
-    ? (value as ScenePanelTab)
-    : undefined;
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {

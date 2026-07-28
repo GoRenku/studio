@@ -11,6 +11,10 @@ export {
   validateStudioFocusRequestForProject,
 } from './focus-validation.js';
 export {
+  parseStudioSelection,
+  type StudioSelectionParseResult,
+} from './selection-validation.js';
+export {
   readStudioEventStoreSummary,
   resolveStudioEventStorePath,
   type StudioEventStoreSummary,

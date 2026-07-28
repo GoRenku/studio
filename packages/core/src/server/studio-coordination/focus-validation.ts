@@ -15,12 +15,7 @@ import type {
   StudioCurrentContext,
   StudioFocusRequest,
 } from './events.js';
-
-const SCENE_PANEL_TABS: ScenePanelTab[] = [
-  'narrative',
-  'beats',
-  'shotPlans',
-];
+import { parseStudioSelection } from './selection-validation.js';
 
 export type StudioSelectionResolution =
   | {
@@ -80,6 +75,20 @@ export function resolveStudioSelectionForProject(
   project: Project,
   selection: StudioSelection
 ): StudioSelectionResolution {
+  const parsed = parseStudioSelection(selection, {
+    path: ['focus', 'selection'],
+    context: 'studio.focusRequested',
+  });
+  if (!parsed.valid) {
+    return {
+      ok: false,
+      selection,
+      reason: 'unsupportedSelection',
+      diagnostics: parsed.issues,
+    };
+  }
+  selection = parsed.selection;
+
   if (selection.type === 'projectInformation') {
     return {
       ok: true,
@@ -229,10 +238,6 @@ export function resolveStudioSelectionForProject(
   }
 
   if (selection.type === 'scene') {
-    const tabValidation = validateSceneTabs(selection);
-    if (tabValidation) {
-      return tabValidation;
-    }
     const resolved = findScene(project, selection.id);
     if (!resolved) {
       return missingSelection(
@@ -275,108 +280,6 @@ export function resolveStudioSelectionForProject(
       ),
     ],
   };
-}
-
-function validateSceneTabs(
-  selection: Extract<StudioSelection, { type: 'scene' }>
-): StudioSelectionResolution | null {
-  const unknownField = Object.keys(selection).find(
-    (field) =>
-      !['type', 'id', 'sceneTab', 'beatId', 'shotPlanId', 'shotId'].includes(
-        field
-      )
-  );
-  if (unknownField) {
-    return {
-      ok: false,
-      selection,
-      reason: 'unsupportedSelection',
-      diagnostics: [
-        createDiagnosticError(
-          'STUDIO_COORDINATION037',
-          'Requested Scene selection field is not supported.',
-          {
-            path: ['focus', 'selection', unknownField],
-            context: 'studio.focusRequested',
-          },
-          'Use only type, id, sceneTab, beatId, shotPlanId, and shotId for a Scene selection.'
-        ),
-      ],
-    };
-  }
-  if (
-    selection.sceneTab !== undefined &&
-    !SCENE_PANEL_TABS.includes(selection.sceneTab)
-  ) {
-    return {
-      ok: false,
-      selection,
-      reason: 'unsupportedSelection',
-      diagnostics: [
-        createDiagnosticError(
-          'STUDIO_COORDINATION036',
-          'Requested scene tab is not supported.',
-          { path: ['focus', 'selection', 'sceneTab'], context: 'studio.focusRequested' },
-          'Request a supported scene tab: narrative, beats, or shotPlans.'
-        ),
-      ],
-    };
-  }
-  if (selection.beatId && selection.sceneTab !== 'beats') {
-    return {
-      ok: false,
-      selection,
-      reason: 'unsupportedSelection',
-      diagnostics: [
-        createDiagnosticError(
-          'STUDIO_COORDINATION036',
-          'Beat focus requires the Beats scene tab.',
-          {
-            path: ['focus', 'selection', 'sceneTab'],
-            context: 'studio.focusRequested',
-          },
-          'Use sceneTab: "beats" when requesting a Beat.'
-        ),
-      ],
-    };
-  }
-  if (selection.shotPlanId && selection.sceneTab !== 'shotPlans') {
-    return {
-      ok: false,
-      selection,
-      reason: 'unsupportedSelection',
-      diagnostics: [
-        createDiagnosticError(
-          'STUDIO_COORDINATION039',
-          'Shot Plan focus requires the Shot Plans scene tab.',
-          {
-            path: ['focus', 'selection', 'sceneTab'],
-            context: 'studio.focusRequested',
-          },
-          'Use sceneTab: "shotPlans" when requesting a Shot Plan.'
-        ),
-      ],
-    };
-  }
-  if (selection.shotId && !selection.shotPlanId) {
-    return {
-      ok: false,
-      selection,
-      reason: 'unsupportedSelection',
-      diagnostics: [
-        createDiagnosticError(
-          'STUDIO_COORDINATION040',
-          'Shot focus requires a Shot Plan.',
-          {
-            path: ['focus', 'selection', 'shotPlanId'],
-            context: 'studio.focusRequested',
-          },
-          'Send shotPlanId when requesting a Shot.'
-        ),
-      ],
-    };
-  }
-  return null;
 }
 
 function effectiveSceneTab(

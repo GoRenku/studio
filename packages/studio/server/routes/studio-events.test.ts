@@ -495,6 +495,48 @@ describe('studio events Hono route', () => {
       ],
     });
   });
+
+  it('does not reinterpret a malformed Shot Plan id as Scene-only focus', async () => {
+    const token = createStudioRuntimeToken();
+    const app = createStudioEventsRoute({
+      token,
+      projectData: fakeProjectDataService(),
+    });
+
+    const response = await app.request('/focus-requests/validate', {
+      method: 'POST',
+      body: JSON.stringify({
+        projectName: 'constantinople',
+        focus: {
+          screen: 'movieStudio',
+          selection: {
+            type: 'scene',
+            id: 'scene_bombardment',
+            sceneTab: 'shotPlans',
+            shotPlanId: 123,
+          },
+        },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': token.value,
+      },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      valid: false,
+      reason: 'unsupportedSelection',
+      diagnostics: [
+        {
+          code: 'STUDIO_COORDINATION005',
+          location: {
+            path: ['focus', 'selection', 'shotPlanId'],
+          },
+        },
+      ],
+    });
+  });
 });
 
 function fakeCoordinationService(

@@ -413,6 +413,7 @@ export {
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
+  parseStudioSelection,
   validateStudioFocusRequestForProject,
 } from './studio-coordination/index.js';
 export { sceneBeatSheetResourceKeys } from './scene-beat-sheet/storyboard-status.js';
@@ -451,4 +452,5 @@ export type {
   StudioProjectResourcesChangedEvent,
   StudioRefreshRequest,
   StudioRuntimeDescriptor,
+  StudioSelectionParseResult,
 } from './studio-coordination/index.js';

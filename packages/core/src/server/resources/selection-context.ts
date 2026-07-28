@@ -44,6 +44,7 @@ import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import { parseStudioSelection } from '../studio-coordination/selection-validation.js';
 
 export async function readStudioSelectionContext(input: {
   projectName: string;
@@ -64,6 +65,17 @@ export function readStudioSelectionContextProjection(
   session: DatabaseSession,
   input: { selection: StudioSelection }
 ): StudioSelectionContextResult {
+  const parsed = parseStudioSelection(input.selection, {
+    path: ['selection'],
+    context: 'movie studio selection',
+  });
+  if (!parsed.valid) {
+    return {
+      valid: false,
+      reason: 'unsupportedSelection',
+      diagnostics: parsed.issues,
+    };
+  }
   try {
     switch (input.selection.type) {
       case 'projectInformation':
@@ -188,10 +200,6 @@ export function readStudioSelectionContextProjection(
           : selectionNotFound(input.selection);
       }
       case 'scene': {
-        const sceneTabValidation = validateSceneSelectionTabs(input.selection);
-        if (sceneTabValidation) {
-          return sceneTabValidation;
-        }
         const chain = readSceneNavigationContext(session, input.selection.id);
         const act = chain ? readActNavigationRow(session, chain.sequence.actId) : null;
         if (
@@ -234,42 +242,6 @@ export function readStudioSelectionContextProjection(
     }
     throw error;
   }
-}
-
-function validateSceneSelectionTabs(
-  selection: Extract<StudioSelection, { type: 'scene' }>
-): StudioSelectionContextResult | null {
-  if (selection.beatId && selection.sceneTab !== 'beats') {
-    return unsupportedSelection(
-      createDiagnosticError(
-        'STUDIO_COORDINATION036',
-        'Beat focus requires the Beats scene tab.',
-        { path: ['selection', 'sceneTab'], context: 'movie studio selection' },
-        'Use sceneTab: "beats" when requesting a Beat.'
-      )
-    );
-  }
-  if (selection.shotPlanId && selection.sceneTab !== 'shotPlans') {
-    return unsupportedSelection(
-      createDiagnosticError(
-        'STUDIO_COORDINATION039',
-        'Shot Plan focus requires the Shot Plans scene tab.',
-        { path: ['selection', 'sceneTab'], context: 'movie studio selection' },
-        'Use sceneTab: "shotPlans" when requesting a Shot Plan.'
-      )
-    );
-  }
-  if (selection.shotId && !selection.shotPlanId) {
-    return unsupportedSelection(
-      createDiagnosticError(
-        'STUDIO_COORDINATION040',
-        'Shot focus requires a Shot Plan.',
-        { path: ['selection', 'shotPlanId'], context: 'movie studio selection' },
-        'Send shotPlanId when requesting a Shot.'
-      )
-    );
-  }
-  return null;
 }
 
 function sceneShotPlanFocusExists(
@@ -318,15 +290,5 @@ function selectionNotFound(selection: StudioSelection): StudioSelectionContextRe
         'Refresh Studio or choose an existing project item.'
       ),
     ]).issues,
-  };
-}
-
-function unsupportedSelection(
-  diagnostic: ReturnType<typeof createDiagnosticError>
-): StudioSelectionContextResult {
-  return {
-    valid: false,
-    reason: 'unsupportedSelection',
-    diagnostics: buildDiagnosticResult([diagnostic]).issues,
   };
 }

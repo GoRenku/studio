@@ -1,6 +1,10 @@
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
-import { toStudioShotPlansResponse } from '../http/shot-plan-responses.js';
+import {
+  toStudioRecoverableMutationResponse,
+  toStudioShotPlansResponse,
+  toStudioShotSelectionMutationResponse,
+} from '../http/shot-plan-responses.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
 export interface CreateShotPlansRouteOptions {
@@ -37,7 +41,7 @@ export function createShotPlansRoute({
             projectName,
             shotPlanId,
           });
-          return c.json(report);
+          return c.json(toStudioRecoverableMutationResponse(report));
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -56,7 +60,7 @@ export function createShotPlansRoute({
             target: { kind: 'shot', id: shotId },
             assetId,
           });
-          return c.json(report);
+          return c.json(toStudioShotSelectionMutationResponse(report));
         } catch (error) {
           return projectErrorResponse(c, error);
         }
@@ -75,7 +79,7 @@ export function createShotPlansRoute({
             owner: { kind: 'shot', id: shotId },
             assetId,
           });
-          return c.json(report);
+          return c.json(toStudioRecoverableMutationResponse(report));
         } catch (error) {
           return projectErrorResponse(c, error);
         }
