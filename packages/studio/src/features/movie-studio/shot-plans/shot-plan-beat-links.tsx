@@ -27,7 +27,7 @@ export function ShotPlanBeatLinks({
                 type='button'
                 variant='secondary'
                 size='sm'
-                className='h-7 gap-1.5 rounded-full px-3 text-[11px] text-muted-foreground hover:text-foreground'
+                className='h-7 gap-1.5 rounded-full bg-muted/45 px-3 text-[11px] text-muted-foreground hover:text-foreground'
               >
                 {label}
                 <Image className='h-3 w-3' />
