@@ -47,6 +47,15 @@ The theme extends the standard Shadcn token set with custom semantic tokens for 
 - `panel-bg`, `panel-header-bg`, `panel-border` -- Panel anatomy
 - `item-hover-bg`, `item-active-bg`, `item-active-border` -- Interactive item states
 - `editor-bg`, `editor-fg` -- Code editor
+- `editor-mention-foreground` -- Mint Generation Preview media-reference
+  mentions.
+- `shot-entity-mention-foreground` / `shot-entity-mention-hover` -- Amber
+  screenplay-entity mentions and their restrained hover state in Shot
+  descriptions.
+- `shot-description-heading-foreground` -- Terracotta Shot-description
+  headings, distinct from both semantic inline accents.
+- `shot-cinema-term-foreground` -- Muted sage strong-Markdown terms in Shot
+  descriptions, distinct from screenplay entities in light and dark themes.
 - `dialog-footer-bg` -- Dialog footer surface (semi-transparent)
 
 **Functional tokens:**
@@ -392,6 +401,26 @@ must not configure arbitrary grid geometry.
 
 Read-only Shot briefs put creative intent first. Optics and Lighting show
 authored intent as primary copy and keep optional technical values secondary.
+Present focal length as `{n}mm lens`, depth as `Shallow Focus` or `Deep Focus`,
+and the focus target as `Focus on …`. Present exact known Cast Member and
+Location mentions inside Optics and Lighting prose in bold amber, without the
+source `@` prefix, hover behavior, or Markdown/HTML interpretation.
+
+Read-only Shot descriptions keep the generic Markdown editor domain-neutral.
+Shot-owned presentation renders exact known screenplay handles as meaningful
+amber `@label` text. Hovering those labels previews the selected Cast profile
+or Location hero image. Strong Markdown uses the separate muted sage
+`shot-cinema-term-foreground` token. Shot Markdown headings use terracotta so
+structural hierarchy has its own restrained accent. Unknown
+mention-like text stays literal. The underlying selectable and copied value
+remains the exact authored Markdown.
+
+Entity hover previews use the shared `ScreenplayEntityImagePreview` visual in
+Narrative and Shot descriptions. Keep it image-only, use a square frame for
+Cast profiles and a 16:9 frame for Location heroes. Keep the current frame
+styling local to that component: its stronger muted-gray border is a visual
+judgment for this specific preview, not a reusable border convention. Do not
+add a visible label, white padding, or surface-specific preview styling.
 
 **PropertyRow** (2-column grid card):
 ```

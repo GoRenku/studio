@@ -1,6 +1,7 @@
 import {
   CAMERA_ANGLE_LABELS,
   MOVEMENT_LABELS,
+  SHOT_DEPTH_OF_FIELD_LABELS,
   SHOT_SIZE_LABELS,
 } from './shot-spec-labels.js';
 
@@ -31,6 +32,7 @@ const catalogOrCustom = (values: readonly string[]) => ({
 const shotSizeValues = Object.keys(SHOT_SIZE_LABELS);
 const cameraAngleValues = Object.keys(CAMERA_ANGLE_LABELS);
 const movementValues = Object.keys(MOVEMENT_LABELS);
+const shotDepthOfFieldValues = Object.keys(SHOT_DEPTH_OF_FIELD_LABELS);
 
 export const shotPlanCoverageSchema = {
   $id: 'https://schemas.gorenku.com/studio/shot-plan-coverage.schema.json',
@@ -72,7 +74,7 @@ export const shotBriefSchema = {
         type: 'number',
         exclusiveMinimum: 0,
       },
-      depthOfField: nonEmptyString,
+      depthOfField: { enum: shotDepthOfFieldValues },
       focusTarget: nonEmptyString,
     }),
     lighting: optionalTextFields({

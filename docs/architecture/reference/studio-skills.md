@@ -126,8 +126,13 @@ operational companions that teach agents how to use those contracts.
   commands.
 - Resolves exact plan/Shot ids and one-based user-facing Shot numbers without
   whole-plan replacement.
-- Keeps descriptions opaque, briefs concise, and status/timeline concepts out
-  of the workflow.
+- Authors readable opaque Markdown with only relevant sections, exact
+  context-provided Cast Member and Location `@handle` references, and strong
+  emphasis for material known cinematography terms.
+- Keeps briefs concise, uses only `shallow` or `deep` for depth of field, and
+  uses `focusTarget` for one primary optical subject, plane, or distance.
+  Shared deep-focus legibility belongs in `optics.intent`; status/timeline
+  concepts stay out of the workflow.
 - Hands `shot.image` generation to `media-producer`, which imports and selects
   the accepted image atomically when selection is the user's intent.
 

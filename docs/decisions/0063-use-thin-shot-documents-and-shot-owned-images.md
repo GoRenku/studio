@@ -4,6 +4,13 @@ Date: 2026-07-26
 
 Status: accepted
 
+Decision 0067 narrows the custom brief-language rule below for
+`optics.depthOfField`: current Shot briefs accept only `shallow` or `deep`.
+Description, Optics intent, focus target, and Lighting intent remain exact
+opaque creative text. Decision 0067 also assigns the agent convention that
+`focusTarget` names one primary optical subject, plane, or distance while
+shared deep-focus legibility belongs in Optics intent.
+
 Decision 0064 supersedes the Shot relationship table, representative naming,
 shared-copy behavior, selected-Asset discard guard, and active-owner counting
 described below. Thin Shot authoring and the `shot.image` purpose remain

@@ -1,6 +1,6 @@
 # 0161 Readable Shot Descriptions And Optics Vocabulary
 
-Status: proposed
+Status: completed
 Date: 2026-07-28
 
 ## Summary
@@ -14,7 +14,7 @@ director to read quickly:
   screenplay's existing `@handle` references;
 - Markdown headings are available, but the Shot-writing skill does not ask for
   a compact section structure;
-- Markdown strong text is not given the Shot-specific amber emphasis needed to
+- Markdown strong text is not given the Shot-specific warm emphasis needed to
   make authored camera choices scannable;
 - the Optics card renders `focalLengthMm: 24` as `Lens 24 mm` and the arbitrary
   string `depthOfField: "Deep"` as `Depth Deep`;
@@ -27,22 +27,45 @@ The smallest useful response is to extend the owners that already exist:
 2. teach `shot-planner` to author a small set of optional Markdown sections,
    canonical `@handle` references, and bold Markdown around material
    cinematography terms;
-3. reuse the Scene narrative resource's existing Cast/Location handle and label
-   maps to present known Shot mentions without another Core report, route, or
-   fetch;
-4. align known Shot mentions with Generation Preview's established mint `@`
-   mention language while keeping screenplay entities and request-scoped media
-   references as separate feature contracts;
+3. extend the existing Scene narrative resource's Cast/Location handle, label,
+   and selected-image projection so Shot mentions need no separate report,
+   route, or fetch;
+4. align Shot entity mentions with the screenplay narrative's amber entity
+   language while keeping Generation Preview's mint request-scoped media
+   references visually and behaviorally separate;
 5. add Shot-specific presentation extensions to the existing read-only
    CodeMirror surface;
 6. narrow only `ShotBrief.optics.depthOfField` to a deliberate two-value
    vocabulary and give every Optics chip complete director-facing copy;
 7. update the real `urban-basilica` Shot through the existing focused CLI before
    enabling the stricter Core validator.
+8. treat `focusTarget` as one primary optical subject, plane, or distance and
+   keep multi-subject deep-focus legibility in `optics.intent`.
 
 This plan does not add a rich-document schema, a second description field,
 browser authoring, prompt generation, runtime prose interpretation, or a
 database migration.
+
+## Completion Evidence
+
+Completed on 2026-07-28.
+
+- Corrected `urban-basilica` Shot `shot_tymef5sr` through the existing focused
+  CLI, then corrected its multi-subject focus target to `@urban` and read the
+  exact Shot Plan back.
+- Added the strict Core depth vocabulary, Studio presentation-only mentions,
+  selected Cast/Location image previews, complete Optics labels, focused
+  tests, Decision 0067, and current documentation.
+- Updated and validated the sister `shot-planner` skill, both current samples,
+  and forward eval specifications.
+- Passed root `build`, `test`, `lint`, and `check`; focused Core, CLI, Studio,
+  skill, and Chromium checks; the Shot Plan and Generation Preview browser
+  regressions; and exact Chromium clipboard serialization.
+- Inspected the real desktop route in dark and light themes. The visual check
+  caught and corrected Shot strong-Markdown precedence before completion.
+- Reviewed both repository diffs, new and heavily modified files, architecture
+  boundaries, file sizes, formatting, raw-control rules, and stale-value/
+  cross-feature-import searches.
 
 ## Requirement Ledger
 
@@ -50,15 +73,17 @@ database migration.
 | --- | --- | --- | --- | --- |
 | R1 | A Shot description must be easy for a director to scan instead of being one dense paragraph. | User request and supplied Description screenshot | Agent-authored Markdown uses a small set of relevant `##` sections with blank-line separation. | `studio-skills/skills/shot-planner/references/shot-writing-guidelines.md`; real-project desktop inspection and skill eval |
 | R2 | Cast Members and Locations in descriptions should use `@` mentions. | User request | The skill writes canonical screenplay `@handle` tokens; known tokens receive a human-readable read-only presentation. | Existing Scene narrative handle/label maps, Studio mention presentation, skill samples/evals |
-| R3 | Known cinematography language such as Establishing Shot should be visually easy to spot. | User request | The skill wraps material terms in `**strong Markdown**`; the Shot description theme renders strong content in amber. | Shot-specific CodeMirror theme and Studio tests |
+| R3 | Known cinematography language such as Establishing Shot should be visually easy to spot. | User request | The skill wraps material terms in `**strong Markdown**`; the Shot description theme renders strong content in a muted sage tone distinct from amber entities. | Shot-specific CodeMirror theme and Studio tests |
 | R4 | Description structure and styling must remain useful as source context for later video-prompt authoring. | User request | The description remains one exact, self-contained, model-neutral Markdown string containing the authored creative choices. | Existing `Shot.description` contract; round-trip and copy tests |
 | R5 | The Optics card must use deliberate cinematography vocabulary and complete labels. | User request and live card | `24` renders as `24mm lens`; `depthOfField` accepts only `shallow` or `deep` and renders as `Shallow Focus` or `Deep Focus`; focus target renders as `Focus on …`. | Core Shot brief contract and labels; Studio card tests |
-| R6 | Cast references inside Optics and Lighting cards need visible emphasis, but the cards do not need a full Markdown document renderer. | User request | Known `@handle` references render as bold human-readable mentions inside Optics intent, focus target, and Lighting intent. | Feature-local inline mention presentation and UI tests |
+| R6 | Cast references inside Optics and Lighting cards need visible emphasis, but the cards do not need a full Markdown document renderer. | User request | Known `@handle` references render as bold amber human-readable labels without `@` or hover behavior inside Optics intent, focus target, and Lighting intent. | Feature-local inline mention presentation and UI tests |
 | R7 | The skill must use the conventions rather than Studio deriving them from prose. | User request and Decision 0041 | Skill guidance, samples, and evals author headings, strong terminology, canonical handles, and exact brief values. Studio only presents authored syntax. | Sister-project skill diff and evals |
 | R8 | Cinema terminology must be research-backed. | User request | The accepted vocabulary distinguishes focal length, depth of field, focus target, and focus transition. | Research evidence below and the new ADR |
 | R9 | Runtime code must not semantically validate, rewrite, repair, or compare creative prose. | `AGENTS.md` and Decision 0041 | No required headings, term scanning, prose-to-brief derivation, completeness scoring, or automatic repair. | Core tests, UI tests, architecture review |
 | R10 | Existing architecture and current work must be preserved. | Repository rules and dirty worktree | Reuse current contracts and controls; settle overlap with plan 0160 before implementation; touch no unrelated working-tree files. | Diff review and final architecture gate |
-| R11 | Shot `@` mentions should feel consistent with the established Generation Preview prompt-reference treatment without conflating screenplay entities with media references. | User follow-up and current Generation Request editor | Both editors use one mint known-mention color, exact-token matching, presentation-only enrichment, and literal unknown text; each feature retains its own identity data and interactions. | Shared visual token, unchanged prompt-editor behavior, Shot description tests, desktop comparison |
+| R11 | Shot `@` mentions should match screenplay narrative entity treatment without conflating screenplay entities with Generation Preview media references. | User follow-up and current Studio surfaces | Shot entities use amber, exact-token matching, and selected profile/hero hover previews; Generation Preview keeps its mint reference treatment and feature-owned interactions. | Separate semantic tokens, unchanged prompt-editor behavior, Shot description tests, desktop comparison |
+| R12 | `focusTarget` must describe optics rather than list everyone held legible by deep focus. | User follow-up | The skill uses one primary subject, plane, or distance; multi-plane/shared legibility stays in `optics.intent`. | Skill guidance, sample, eval, and corrected real Shot |
+| R13 | Entity hover previews must be visually consistent across Narrative and Shot descriptions. | User follow-up and live Narrative comparison | Both surfaces render one image-only shared preview with square Cast framing, 16:9 Location framing, the component's visually tuned two-pixel muted-gray frame, and no caption. The stronger frame is specific to this preview rather than a general border rule. | Shared Movie Studio component, focused component test, browser regression, desktop comparison |
 
 Every planned contract, file, test, data correction, and documentation change
 below maps to one or more ledger entries. No future prompt-builder behavior is
@@ -129,12 +154,12 @@ or reject a different valid creative structure.
 The existing `ShotDescriptionViewer` remains a read-only `CodeMirrorEditor`.
 It gains Shot-owned presentation extensions:
 
-- Markdown headings keep the existing amber heading treatment;
-- content inside Markdown strong delimiters renders with the primary amber text
-  color and strong weight;
+- Markdown headings use terracotta so structure has its own restrained accent;
+- content inside Markdown strong delimiters renders with a muted sage text
+  color and strong weight, distinct from amber entity mentions;
 - known Cast/Location `@handle` ranges are resolved from the already-loaded
   Scene narrative resource;
-- a known handle is displayed as a bold, quiet inline mention using the
+- a known handle is displayed as a bold amber inline mention using the
   meaningful entity label while the underlying CodeMirror document retains the
   exact authored handle;
 - the visible label keeps the `@` prefix, for example
@@ -142,7 +167,10 @@ It gains Shot-owned presentation extensions:
 - unknown mention-like text remains exact ordinary text and produces no warning,
   error, fallback guess, or automatic repair;
 - there is no completion menu because this surface is read-only;
-- there is no hover image, click navigation, or entity mutation in this slice.
+- hovering a known mention previews the selected Cast profile or Location hero
+  image already projected by the Scene narrative resource through the same
+  image-only preview visual used by Narrative dialogue names;
+- there is no click navigation or entity mutation in this slice.
 
 The mention replacement is presentation-only. Text selection and copy must
 return the exact stored Markdown—including the canonical handles and Markdown
@@ -157,8 +185,8 @@ reusing its media-reference contract:
 | Surface | Source token and identity | Presentation | Interaction |
 | --- | --- | --- | --- |
 | Generation Preview prompt | Request-scoped Core `promptMention`, such as `@Reference1`, attached to a selected image reference | Exact token remains visible in mint; the reference label and image appear in its rich preview | Completion while editable; hover/caret preview in editable and read-only states |
-| Shot description | Project screenplay handle, such as `@constantine-xi-palaiologos`, resolved from the existing Cast/Location maps | Director-readable `@Constantine XI Palaiologos` appears in the same mint mention color while the exact canonical handle remains the document source | Read-only presentation only; no completion, hover card, or navigation in this slice |
-| Optics and Lighting cards | The same screenplay handle source | Director-readable label receives the requested bold treatment inside ordinary card prose | Non-interactive |
+| Shot description | Project screenplay handle, such as `@constantine-xi-palaiologos`, resolved from the existing Cast/Location maps | Director-readable amber `@Constantine XI Palaiologos` appears while the exact canonical handle remains the document source | Read-only presentation with selected profile/hero hover preview; no completion or navigation |
+| Optics and Lighting cards | The same screenplay handle source | Director-readable label receives bold amber treatment without `@` | Non-interactive; no hover preview |
 
 The common convention is:
 
@@ -228,7 +256,7 @@ Card copy is complete rather than assembled from vague field fragments:
 | `focalLengthMm: 24` | `24mm lens` |
 | `depthOfField: "shallow"` | `Shallow Focus` |
 | `depthOfField: "deep"` | `Deep Focus` |
-| `focusTarget: "@urban"` | `Focus on @Urban` |
+| `focusTarget: "@urban"` | `Focus on Urban` |
 
 `focalLengthMm` remains a positive number in JSON. The author never embeds
 `mm`, `lens`, or a lens category in that numeric field. This plan does not infer
@@ -241,15 +269,20 @@ accurately describes the Shot and expresses any more specific choice in
 `optics.intent`. `rack-focus` is not a depth-of-field value; it is a focus
 transition and must not be written into this field.
 
+`focusTarget` names one primary optical subject, plane, or distance. It is not
+a list of every subject intended to remain legible. For deep focus, the agent
+puts shared or multi-plane legibility in `optics.intent` and either names the
+deliberate primary plane in `focusTarget` or omits the field.
+
 ### Optics and Lighting mention emphasis
 
 `optics.intent`, `optics.focusTarget`, and `lighting.intent` remain exact
 freeform brief strings. They are not upgraded into Markdown documents.
 
 When a string contains a known canonical `@handle`, the card replaces that
-range for presentation with `@` plus the meaningful entity label and applies a
-strong text weight. The rest of the sentence keeps the existing text-led card
-treatment.
+range for presentation with the meaningful entity label, omits the source `@`,
+and applies bold amber text. The rest of the sentence keeps the existing
+text-led card treatment. Cards do not show entity image previews.
 
 Unknown `@` text remains literal. The card does not validate whether every named
 person or place uses a handle, scan ordinary names, or compare the mention with
@@ -351,7 +384,7 @@ Its target brief remains:
     "intent": "Preserve the chamber's monumental scale at the start, then tighten onto the unequal power triangle around the table",
     "focalLengthMm": 24,
     "depthOfField": "deep",
-    "focusTarget": "@urban, @constantine-xi-palaiologos, and @loukas-notaras"
+    "focusTarget": "@urban"
   },
   "lighting": {
     "intent": "Cold daylight from the windows fills the chamber in three concentrated pools that nearly spotlight @urban, @constantine-xi-palaiologos, and @loukas-notaras against the dim room"
@@ -368,8 +401,8 @@ This plan does not:
 
 - add browser Shot authoring or an editable description editor;
 - add Markdown toolbar controls;
-- add mention completion, insertion, click navigation, preview images, or
-  mention mutation;
+- add mention completion, insertion, click navigation, or mention mutation;
+- add a Shot-specific entity-image fetch or asset-selection rule;
 - create a durable mention array, entity relationship table, or second
   description representation;
 - reuse Generation Preview `promptMention`, `GenerationPromptReferenceMention`,
@@ -568,6 +601,8 @@ with no present product need.
 
 - owns `ShotDepthOfField`, its labels, JSON Schema validation, and structured
   boundary failures;
+- projects selected Cast profile and Location hero images through the existing
+  Scene narrative resource;
 - continues to treat description, intent, focus target, and lighting text as
   opaque;
 - gains no renderer, Markdown parser, handle resolver, route, or persistence
@@ -578,8 +613,9 @@ with no present product need.
 - owns read-only Shot description and brief presentation;
 - derives known entity mentions from the already-loaded
   `SceneNarrativeResourceResponse`;
-- owns one domain-neutral `--editor-mention-foreground` theme token used by
-  both editor features while each feature owns its own mention behavior;
+- owns separate semantic tokens for mint Generation Preview references, amber
+  Shot entities, terracotta Shot headings, and muted sage Shot cinematography
+  terms;
 - owns no durable entity relationship or creative validation;
 - continues to consume `CodeMirrorEditor` as the domain-neutral local control.
 
@@ -621,20 +657,23 @@ The current client contract and AJV boundary are the correct owners.
 ```text
 packages/studio/src/styles/
   theme.css
-    shared --editor-mention-foreground visual token
+    separate Generation Preview, Shot entity, and Shot strong-term tokens
 
 packages/studio/src/features/generation-request-editor/
   prompt-theme.ts
     consumes --editor-mention-foreground; otherwise unchanged
 
 packages/studio/src/features/movie-studio/
+  screenplay-entity-image-preview.tsx
+    shared image-only Cast/Location preview visual
+  screenplay-entity-image-preview.test.tsx
   screenplay-entity-mentions.ts
     pure known-handle resolution and exact text ranges
   screenplay-entity-mentions.test.ts
 
   scenes/
     scene-panel.tsx
-      passes its existing entity maps into Shot Plan detail
+      passes the existing entity maps and selected images into Shot Plan detail
     scene-narrative-tab.tsx
       consumes the extracted pure resolver; retains dialogue-tag rendering
 
@@ -658,8 +697,16 @@ packages/studio/src/features/movie-studio/
 
 `screenplay-entity-mentions.ts` is a focused feature utility, not a new generic
 UI primitive or a barrel. It knows only screenplay Cast/Location handle maps,
-meaningful labels, exact lexical boundaries, and resolved identity. It does not
-render DOM, read Markdown, fetch data, or mutate selection.
+meaningful labels, selected image URLs, exact lexical boundaries, and resolved
+identity. It does not render DOM, read Markdown, fetch data, or mutate
+selection.
+
+`screenplay-entity-image-preview.tsx` owns only the reusable visual: square Cast
+profiles, 16:9 Location heroes, its specifically tuned two-pixel muted-gray
+frame, and no visible caption. The frame is a local visual judgment, not a
+general preview-border convention. Narrative retains Tooltip interaction and
+Shot descriptions retain CodeMirror hover detection; the shared component does
+not parse mentions or own interaction.
 
 `shot-description-mentions.ts` owns the CodeMirror-specific presentation because
 the generic local editor must not learn about Cast Members, Locations, Shots,
@@ -668,10 +715,10 @@ or Studio mentions.
 `shot-brief-mention-text.tsx` owns the compact card treatment. It must not become
 a Markdown renderer or an interactive entity navigation component.
 
-`theme.css` owns only the repeated visual token. It does not define mention
-syntax, range matching, identity, decoration, completion, preview, or
-interaction. `prompt-theme.ts` replaces its hard-coded mint literals with the
-token without changing Generation Preview behavior.
+`theme.css` owns only semantic colors. It does not define mention syntax, range
+matching, identity, decoration, completion, preview, or interaction.
+`prompt-theme.ts` replaces its hard-coded mint literals with its token without
+changing Generation Preview behavior.
 
 ### Public entrypoints and contracts
 
@@ -872,15 +919,16 @@ Required presentation/accessibility behavior:
 
 ### Cross-surface mention visual contract
 
-Add one `--editor-mention-foreground` semantic token to `theme.css`, initialized
-to the current accepted Generation Preview mint. Both `prompt-theme.ts` and
-`shot-description-theme.ts` consume it for known editor mentions.
+Keep `--editor-mention-foreground` for Generation Preview's accepted mint
+media references. Add `--shot-entity-mention-foreground` and its hover tint for
+amber screenplay entities, plus `--shot-cinema-term-foreground` for terracotta
+strong Markdown.
 
-The token is the only shared implementation. Generation Preview continues to
+The features share no mention behavior. Generation Preview continues to
 decorate exact `promptMention` text and own reference completion/image preview.
-Shot Plans continue to resolve screenplay entity handles and own read-only
-label presentation. Optics and Lighting cards keep the explicitly requested
-bold-only treatment and do not use the editor mention color.
+Shot Plans resolve screenplay entity handles, own selected profile/hero
+previews, and use the separate Shot tokens. Optics and Lighting cards use
+amber labels without the source `@` and without hover behavior.
 
 ### Shot brief presentation contract
 
@@ -1030,10 +1078,12 @@ Work:
 2. Keep Scene dialogue-audio-tag tokenization inside the Scene feature.
 3. Make the existing Scene inline renderer consume the pure resolver with no
    visible behavior change.
-4. Derive/pass the focused catalog from the narrative resource already loaded
+4. Extend the existing narrative resource with selected Location hero images,
+   matching its selected Cast profile projection.
+5. Derive/pass the focused catalog from the narrative resource already loaded
    by `ScenePanel`.
 
-Do not add a fetch, server response property, or global UI mention primitive.
+Do not add a Shot-specific fetch, route, or global UI mention primitive.
 
 ### Slice 5 — Add Shot description presentation
 
@@ -1052,15 +1102,17 @@ Files:
 Work:
 
 1. Pass the existing catalog through the detail components.
-2. Add `--editor-mention-foreground` with the current Generation Preview mint
-   value and replace the prompt theme's two hard-coded mint literals with that
-   token.
-3. Compose the existing generic Markdown editor theme with Shot-only amber
-   strong text and mint known-mention presentation.
+2. Keep `--editor-mention-foreground` for Generation Preview and add separate
+   amber Shot-entity and terracotta Shot-Markdown semantic tokens.
+3. Compose the existing generic Markdown editor theme with terracotta headings,
+   muted sage strong text, and amber known-mention presentation.
 4. Add the known-handle CodeMirror presentation extension.
 5. Present meaningful `@label` text while retaining exact document offsets and
    serialized text.
-6. Keep the editor read-only, selectable, copyable, wrapped, and internally
+6. Preview selected Cast profile and Location hero images on mention hover.
+7. Render the same image-only preview component used by Narrative dialogue
+   names.
+8. Keep the editor read-only, selectable, copyable, wrapped, and internally
    scrollable.
 
 If exact copy cannot be preserved, stop under the Architecture Shape Gate;
@@ -1125,9 +1177,8 @@ Work:
 3. document presentation-only known-handle resolution;
 4. update CLI Shot brief guidance with the numeric focal length and exact depth
    values;
-5. document `--editor-mention-foreground` as the shared editor mention color
-   while keeping Generation Preview reference behavior and Shot entity
-   behavior feature-owned;
+5. document the separate Generation Preview reference, Shot entity, and Shot
+   strong-term semantic colors;
 6. document the Shot description and card emphasis treatment;
 7. run focused, root, desktop, real-project, and architecture verification.
 
@@ -1183,14 +1234,17 @@ Do not duplicate the pure range matrix here.
 Component tests prove:
 
 - exact Markdown is the CodeMirror document;
-- headings retain the accepted primary treatment;
-- strong text receives Shot-only amber emphasis;
+- headings receive terracotta treatment;
+- strong text receives Shot-only muted sage emphasis;
 - known Cast and Location mentions present meaningful `@label` copy in the
-  established mint mention color;
+  amber entity color;
+- selected Cast profile and Location hero images appear on known-mention hover;
+- Narrative and Shot surfaces use the same image-only preview component,
+  entity-specific aspect ratio, and specifically tuned stronger frame;
 - unknown mentions remain exact;
 - the editor stays read-only and focusable;
 - the underlying text remains exact when entity labels differ from handles;
-- Generation Preview still presents exact `@ReferenceN` text with the same mint
+- Generation Preview still presents exact `@ReferenceN` text with its mint
   color, completion, and hover/caret image preview.
 
 Use one Chromium interaction test for selection/copy because JSDOM is not
@@ -1282,9 +1336,8 @@ Update:
   wording;
 - `docs/architecture/reference/studio-skills.md` for the agent-owned structure,
   handles, and emphasis convention;
-- `docs/product/design-guidelines.md` for the shared mint editor-mention token,
-  Shot-only strong amber text, bold-only brief-card entities, and complete
-  Optics chip copy;
+- `docs/product/design-guidelines.md` for separate mention/strong tokens, amber
+  `@`-free brief-card entities, hover previews, and complete Optics chip copy;
 - `docs/cli/commands.md` for exact current brief values.
 
 No standalone cinematography encyclopedia is added. The bounded research-backed
@@ -1352,16 +1405,18 @@ http://localhost:5173/projects/urban-basilica/scenes/scene_zp6ysnpy?sceneTab=sho
 
 Verify in both dark and light themes:
 
-1. Description headings make the Shot scannable without unnecessary empty
-   sections.
-2. Strong cinema terms are amber and remain legible.
-3. Known Cast/Location mentions show meaningful `@label` text in the same mint
-   mention color used by Generation Preview.
+1. Terracotta Description headings make the Shot scannable without unnecessary
+   empty sections and remain distinct from amber entity and muted sage cinema
+   terminology.
+2. Strong cinema terms are muted sage and remain legible.
+3. Known Cast/Location mentions show meaningful amber `@label` text and
+   selected profile/hero hover previews.
 4. unknown mention-like text, if added to a fixture, remains literal.
 5. Description scroll, selection, copy, and tab switching remain correct.
 6. The copied value is exact Markdown with canonical handles.
 7. Optics shows `24mm lens`, `Deep Focus`, and `Focus on …`.
-8. Optics and Lighting entity mentions are visibly bold.
+8. Optics and Lighting entity mentions are visibly bold amber, omit `@`, and
+   do not open previews.
 9. Intent remains more visually prominent than technical chips.
 10. A Generation Preview prompt still shows exact `@ReferenceN` text in mint
     with its existing completion and rich reference preview.
@@ -1399,175 +1454,189 @@ Before completion:
 
 ### Review Area
 
-- [ ] Confirm every implemented concept maps to R1-R11.
-- [ ] Confirm the result is director-readable at the supplied real Shot.
-- [ ] Confirm the implementation preserves the opaque creative-text boundary.
-- [ ] Confirm centralized ownership did not become a monolithic
+- [x] Confirm every implemented concept maps to R1-R11.
+- [x] Confirm the result is director-readable at the supplied real Shot.
+- [x] Confirm the implementation preserves the opaque creative-text boundary.
+- [x] Confirm centralized ownership did not become a monolithic
       implementation.
-- [ ] Confirm the final module/file shape matches the Architecture Shape Gate.
-- [ ] Confirm no new broad dispatcher, catch-all helper, rich-editor framework,
+- [x] Confirm the final module/file shape matches the Architecture Shape Gate.
+- [x] Confirm no new broad dispatcher, catch-all helper, rich-editor framework,
       optics manager, or god file was added.
-- [ ] Confirm plan 0160 and all unrelated dirty-worktree changes were preserved.
+- [x] Confirm plan 0160 and all unrelated dirty-worktree changes were preserved.
 
 ### Product Behavior
 
-- [ ] Make complex Shot descriptions scannable through relevant `##` sections.
-- [ ] Omit empty or irrelevant sections rather than filling a template.
-- [ ] Keep description prose self-contained, model-neutral, and temporally
+- [x] Make complex Shot descriptions scannable through relevant `##` sections.
+- [x] Omit empty or irrelevant sections rather than filling a template.
+- [x] Keep description prose self-contained, model-neutral, and temporally
       coherent.
-- [ ] Use canonical screenplay `@handle` references for Cast Members and
+- [x] Use canonical screenplay `@handle` references for Cast Members and
       Locations.
-- [ ] Use strong Markdown only for material known cinematography choices.
-- [ ] Render strong description text with Shot-only amber emphasis.
-- [ ] Present known handles as meaningful `@label` text without changing stored
+- [x] Use strong Markdown only for material known cinematography choices.
+- [x] Render Shot Markdown headings in terracotta so they remain distinct from
+      amber entities and muted sage cinema terms.
+- [x] Render strong description text with Shot-only muted sage emphasis.
+- [x] Present known handles as meaningful `@label` text without changing stored
       Markdown.
-- [ ] Use the established mint known-mention color in both Shot descriptions
-      and Generation Preview prompts.
-- [ ] Keep Generation Preview media-reference behavior and Shot screenplay-
-      entity behavior recognizably related but semantically distinct.
-- [ ] Keep unknown mention-like text exact and non-blocking.
-- [ ] Render `24` as `24mm lens`.
-- [ ] Render depth as `Shallow Focus` or `Deep Focus`.
-- [ ] Render the focus target with `Focus on`.
-- [ ] Bold known entity mentions in Optics and Lighting card prose.
-- [ ] Keep Optics/Lighting intent visually primary and optional metadata
+- [x] Use amber for Shot screenplay entities and retain mint for Generation
+      Preview media references.
+- [x] Preview selected Cast profiles and Location heroes from the existing
+      Scene narrative resource.
+- [x] Reuse one image-only entity preview component across Narrative and Shot
+      descriptions.
+- [x] Keep Generation Preview media-reference behavior and Shot screenplay-
+      entity behavior visually and semantically distinct.
+- [x] Keep unknown mention-like text exact and non-blocking.
+- [x] Render `24` as `24mm lens`.
+- [x] Render depth as `Shallow Focus` or `Deep Focus`.
+- [x] Render the focus target with `Focus on`.
+- [x] Keep `focusTarget` to one primary subject, plane, or distance.
+- [x] Bold known entity mentions in amber without `@` or hover behavior in
+      Optics and Lighting card prose.
+- [x] Keep Optics/Lighting intent visually primary and optional metadata
       secondary.
 
 ### Architecture And Public Contracts
 
-- [ ] Add the deliberately named `ShotDepthOfField` public union.
-- [ ] Add `SHOT_DEPTH_OF_FIELD_LABELS` as the single current display map.
-- [ ] Narrow the existing JSON Schema to `shallow` and `deep`.
-- [ ] Keep the current `ShotBrief`, commands, reports, routes, and browser API
+- [x] Add the deliberately named `ShotDepthOfField` public union.
+- [x] Add `SHOT_DEPTH_OF_FIELD_LABELS` as the single current display map.
+- [x] Narrow the existing JSON Schema to `shallow` and `deep`.
+- [x] Keep the current `ShotBrief`, commands, reports, routes, and browser API
       as the owning entrypoints.
-- [ ] Keep package-boundary diagnostics on existing structured Core codes.
-- [ ] Add no compatibility alias, fallback reader, old-value mapper, or
+- [x] Keep package-boundary diagnostics on existing structured Core codes.
+- [x] Add no compatibility alias, fallback reader, old-value mapper, or
       obsolete-value diagnostic.
-- [ ] Add no durable mention model, route property, table, column, or migration.
-- [ ] Share only `--editor-mention-foreground`; add no cross-feature mention
-      DTO, parser, component, CodeMirror extension, completion, or preview
-      contract.
-- [ ] Keep all creative description/intent strings opaque to Core.
-- [ ] Keep `packages/core/src/client/index.ts` thin.
+- [x] Add no durable mention model, Shot-specific route, table, column, or
+      migration.
+- [x] Extend the existing Scene narrative resource with selected Location hero
+      images instead of adding a Shot-specific fetch.
+- [x] Add no cross-feature mention DTO, parser, component, CodeMirror extension,
+      or completion contract; share only the entity image-preview visual.
+- [x] Keep all creative description/intent strings opaque to Core.
+- [x] Keep `packages/core/src/client/index.ts` thin.
 
 ### Real Project Data
 
-- [ ] Capture the exact current `urban-basilica` Shot before mutation.
-- [ ] Author a current `kind: "shot"` correction document.
-- [ ] Validate the document through the existing CLI.
-- [ ] Update only `shot_tymef5sr` through the focused Shot command before the
+- [x] Capture the exact current `urban-basilica` Shot before mutation.
+- [x] Author a current `kind: "shot"` correction document.
+- [x] Validate the document through the existing CLI.
+- [x] Update only `shot_tymef5sr` through the focused Shot command before the
       stricter enum lands.
-- [ ] Convert `"Deep"` directly to `"deep"`.
-- [ ] add the relevant headings, exact handles, and strong terms without losing
+- [x] Convert `"Deep"` directly to `"deep"`.
+- [x] add the relevant headings, exact handles, and strong terms without losing
       any current creative choice.
-- [ ] Read the exact Shot Plan back and verify all unchanged fields.
-- [ ] Leave no direct SQLite write or compatibility path.
+- [x] Read the exact Shot Plan back and verify all unchanged fields.
+- [x] Leave no direct SQLite write or compatibility path.
 
 ### Core Implementation
 
-- [ ] Update `ShotBrief.optics.depthOfField` to the new union.
-- [ ] Update the shared label map and JSON Schema from one current source.
-- [ ] Update current fixtures directly to the accepted values.
-- [ ] Preserve positive-number validation for focal length.
-- [ ] Preserve exact description and intent strings.
-- [ ] Keep Core free of Markdown, handle, heading, and cinematic-term
+- [x] Update `ShotBrief.optics.depthOfField` to the new union.
+- [x] Update the shared label map and JSON Schema from one current source.
+- [x] Update current fixtures directly to the accepted values.
+- [x] Preserve positive-number validation for focal length.
+- [x] Preserve exact description and intent strings.
+- [x] Keep Core free of Markdown, handle, heading, and cinematic-term
       interpretation.
 
 ### Studio Mention Reuse
 
-- [ ] Extract the existing pure screenplay entity resolver into
+- [x] Extract the existing pure screenplay entity resolver into
       `screenplay-entity-mentions.ts`.
-- [ ] Keep Scene dialogue-audio tag handling inside the Scene feature.
-- [ ] Preserve Scene narrative mention labels and navigation.
-- [ ] Derive the Shot mention catalog from the already-loaded narrative
+- [x] Keep Scene dialogue-audio tag handling inside the Scene feature.
+- [x] Preserve Scene narrative mention labels and navigation.
+- [x] Derive the Shot mention catalog from the already-loaded narrative
       resource.
-- [ ] Pass the catalog through shallow Shot Plan components.
-- [ ] Add no extra fetch or Studio server contract.
-- [ ] Keep prompt-reference and Shot entity-mention features independent.
-- [ ] Replace Generation Preview's hard-coded mint literals with the shared
-      semantic token without changing prompt behavior.
+- [x] Pass the catalog through shallow Shot Plan components.
+- [x] Add no extra fetch or Shot-specific Studio server contract.
+- [x] Keep prompt-reference and Shot entity-mention features independent.
+- [x] Replace Generation Preview's hard-coded mint literals with its semantic
+      token without changing prompt behavior.
 
 ### Shot Description Presentation
 
-- [ ] Add the Shot-only strong Markdown theme.
-- [ ] Add known-handle CodeMirror presentation in a Shot-owned module.
-- [ ] Display meaningful mint `@label` copy for known Cast Members and
+- [x] Add the Shot-only strong Markdown theme.
+- [x] Add known-handle CodeMirror presentation in a Shot-owned module.
+- [x] Display meaningful amber `@label` copy for known Cast Members and
       Locations.
-- [ ] Preserve exact CodeMirror document text and offsets.
-- [ ] Preserve keyboard focus, read-only state, wrapping, scrolling, selection,
+- [x] Show selected Cast profile and Location hero images on description
+      mention hover.
+- [x] Keep Cast previews square, Location previews 16:9, the shared component's
+      specifically tuned stronger frame intact, and visible captions absent.
+- [x] Preserve exact CodeMirror document text and offsets.
+- [x] Preserve keyboard focus, read-only state, wrapping, scrolling, selection,
       and copy.
-- [ ] Preserve exact copied Markdown and canonical handles in Chromium.
-- [ ] Keep `CodeMirrorEditor` and the generic Markdown theme domain-neutral.
-- [ ] Keep unknown mentions exact and unstyled as known entities.
+- [x] Preserve exact copied Markdown and canonical handles in Chromium.
+- [x] Keep `CodeMirrorEditor` and the generic Markdown theme domain-neutral.
+- [x] Keep unknown mentions exact and unstyled as known entities.
 
 ### Brief Card Presentation
 
-- [ ] Add the compact non-interactive mention renderer.
-- [ ] Apply it to Optics intent, focus target, and Lighting intent.
-- [ ] Render complete focal-length, depth, and focus-target labels.
-- [ ] Preserve intent-first order and quiet missing values.
-- [ ] Add no Markdown/HTML renderer or raw interactive control.
-- [ ] Keep card copy meaningful and free of raw ids or invented labels.
+- [x] Add the compact non-interactive mention renderer.
+- [x] Apply it to Optics intent, focus target, and Lighting intent.
+- [x] Render complete focal-length, depth, and focus-target labels.
+- [x] Preserve intent-first order and quiet missing values.
+- [x] Add no Markdown/HTML renderer or raw interactive control.
+- [x] Keep card copy meaningful and free of raw ids or invented labels.
 
 ### CLI And Agent Skills
 
-- [ ] Keep the current focused Shot CLI unchanged and thin.
-- [ ] Update `shot-writing-guidelines.md` with the optional section vocabulary.
-- [ ] Require exact context-provided handles.
-- [ ] Define deliberate strong Markdown treatment for material terms.
-- [ ] Update `shot-brief-vocabulary.md` with exact stored values and labels.
-- [ ] Keep `focalLengthMm` numeric and unitless in JSON guidance.
-- [ ] State that `rack-focus` is not a depth-of-field value.
-- [ ] Update both current samples directly.
-- [ ] Add evals for complex and simple description structure.
-- [ ] Add evals for exact handles, no filler headings, and no invented choices.
-- [ ] Add evals for the strict depth vocabulary and focused iteration workflow.
+- [x] Keep the current focused Shot CLI unchanged and thin.
+- [x] Update `shot-writing-guidelines.md` with the optional section vocabulary.
+- [x] Require exact context-provided handles.
+- [x] Define deliberate strong Markdown treatment for material terms.
+- [x] Update `shot-brief-vocabulary.md` with exact stored values and labels.
+- [x] Keep `focalLengthMm` numeric and unitless in JSON guidance.
+- [x] State that `rack-focus` is not a depth-of-field value.
+- [x] Update both current samples directly.
+- [x] Add evals for complex and simple description structure.
+- [x] Add evals for exact handles, no filler headings, and no invented choices.
+- [x] Add evals for the strict depth vocabulary and focused iteration workflow.
 
 ### Tests And Guardrails
 
-- [ ] Cover the complete depth enum and round-trip behavior once in Core.
-- [ ] Prove creative prose remains opaque in Core.
-- [ ] Cover exact known/unknown entity ranges in the pure Studio resolver.
-- [ ] Preserve Scene narrative behavior after resolver extraction.
-- [ ] Cover Shot heading, strong, mention, and read-only presentation.
-- [ ] Preserve Generation Preview exact-token decoration, completion, and rich
-      image preview while moving its mint color to the shared token.
-- [ ] Cover exact clipboard serialization in Chromium.
-- [ ] Cover complete Optics labels and card mention emphasis.
-- [ ] Update adapter fixtures without duplicating the Core invalid matrix.
-- [ ] Add no source-text architecture test that freezes private names or a
+- [x] Cover the complete depth enum and round-trip behavior once in Core.
+- [x] Prove creative prose remains opaque in Core.
+- [x] Cover exact known/unknown entity ranges in the pure Studio resolver.
+- [x] Preserve Scene narrative behavior after resolver extraction.
+- [x] Cover Shot heading, strong, mention, and read-only presentation.
+- [x] Preserve Generation Preview exact-token decoration, completion, and rich
+      image preview while moving its mint color to a semantic token.
+- [x] Cover exact clipboard serialization in Chromium.
+- [x] Cover complete Optics labels and card mention emphasis.
+- [x] Update adapter fixtures without duplicating the Core invalid matrix.
+- [x] Add no source-text architecture test that freezes private names or a
       complete implementation inventory.
-- [ ] Run the shape-review checks listed in Final Verification.
+- [x] Run the shape-review checks listed in Final Verification.
 
 ### Documentation And Decisions
 
-- [ ] Add Decision 0067 with the current accepted contract.
-- [ ] Add only a concise narrowing notice to Decision 0063.
-- [ ] Leave Decision 0063's historical body intact.
-- [ ] Update current architecture, domain, skill, design, and CLI docs.
-- [ ] Document the shared mention color and the separate Shot/entity versus
+- [x] Add Decision 0067 with the current accepted contract.
+- [x] Add only a concise narrowing notice to Decision 0063.
+- [x] Leave Decision 0063's historical body intact.
+- [x] Update current architecture, domain, skill, design, and CLI docs.
+- [x] Document the shared mention color and the separate Shot/entity versus
       Generation Preview/media-reference behavior.
-- [ ] Include the authoritative terminology sources and product derivation.
-- [ ] Do not edit historical plans for a naming sweep.
+- [x] Include the authoritative terminology sources and product derivation.
+- [x] Do not edit historical plans for a naming sweep.
 
 ### Final Verification
 
-- [ ] Run focused Core, Studio, CLI, typecheck, lint, and Chromium checks.
-- [ ] Run root `build`, `test`, `lint`, and `check`.
-- [ ] Run the sister-skill validation/eval commands.
-- [ ] Read the exact real Shot Plan back through the CLI.
-- [ ] Verify the supplied desktop route in dark and light themes.
-- [ ] Verify exact description copy includes Markdown and canonical handles.
-- [ ] Verify mint Shot-description mentions and unchanged mint Generation
-      Preview `@ReferenceN` mentions.
-- [ ] Verify `24mm lens`, `Deep Focus`, `Focus on …`, and bold brief-card
-      entity mentions.
-- [ ] Verify plan 0160 Shot rail/media behavior did not regress.
-- [ ] Review `git diff --stat` and both complete repository diffs.
-- [ ] Inspect every large or heavily modified file.
-- [ ] Confirm no `index.ts` became a logic container.
-- [ ] Confirm no new god file, catch-all module, broad dispatcher, duplicate
+- [x] Run focused Core, Studio, CLI, typecheck, lint, and Chromium checks.
+- [x] Run root `build`, `test`, `lint`, and `check`.
+- [x] Run the sister-skill validation/eval commands.
+- [x] Read the exact real Shot Plan back through the CLI.
+- [x] Verify the supplied desktop route in dark and light themes.
+- [x] Verify exact description copy includes Markdown and canonical handles.
+- [x] Verify amber Shot-description mentions, profile/hero hover previews, and
+      unchanged mint Generation Preview `@ReferenceN` mentions.
+- [x] Verify `24mm lens`, `Deep Focus`, `Focus on …`, and bold amber `@`-free
+      brief-card entity mentions.
+- [x] Verify plan 0160 Shot rail/media behavior did not regress.
+- [x] Review `git diff --stat` and both complete repository diffs.
+- [x] Inspect every large or heavily modified file.
+- [x] Confirm no `index.ts` became a logic container.
+- [x] Confirm no new god file, catch-all module, broad dispatcher, duplicate
       entity resolver, or generic mention framework was created.
-- [ ] Confirm no checklist item was satisfied by accepting unreviewable code
+- [x] Confirm no checklist item was satisfied by accepting unreviewable code
       structure or formatting churn.
-- [ ] Only then mark the plan complete.
+- [x] Only then mark the plan complete.

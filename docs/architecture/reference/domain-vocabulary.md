@@ -101,7 +101,12 @@ Related terms:
 - **Shot** is one ordered camera-authored unit inside a Shot Plan. It has an
   authored title, opaque description, structured glanceable brief, image
   candidates, and zero or one explicitly selected image. It is
-  deliberately separate from narrative Beats.
+  deliberately separate from narrative Beats. Its optional Optics facts keep
+  focal length as a positive number, depth of field as `shallow | deep`, and
+  focus target as exact creative text describing one primary optical subject,
+  plane, or distance when authored. `Shallow Focus` and `Deep Focus` are
+  display labels; shared deep-focus legibility belongs in Optics intent, and
+  `rack-focus` is a Motion transition.
 - **Clip** is not the current Shot authoring or final-video model.
 
 ## Creative Direction

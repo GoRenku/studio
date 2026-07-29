@@ -145,6 +145,8 @@ export function matchesSceneNarrativeResource(
       resourceKey === 'screenplay' ||
       resourceKey === `scene:${sceneId}` ||
       resourceKey === `surface:scene:${sceneId}:dialogue-audio` ||
+      resourceKey.startsWith('surface:castMember:') ||
+      resourceKey.startsWith('surface:location:') ||
       resourceKey.startsWith('scene-dialogue-audio:') ||
       resourceKey.startsWith('scene-dialogue-audio-take:')
   );

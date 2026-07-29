@@ -1451,6 +1451,16 @@ Brief subjects are Framing, Camera, Motion, Optics, Lighting, plus optional
 positive `durationSeconds`. No document contains ids, position, status, media
 paths, prompts, or provider settings.
 
+`optics.focalLengthMm` is a positive numeric millimeter value without a unit
+suffix in JSON. Optional `optics.depthOfField` accepts only `"shallow"` or
+`"deep"`; `rack-focus` is a Motion value, not depth of field. Description,
+Optics intent, focus target, and Lighting intent remain exact opaque strings.
+Agents may use relevant Markdown sections, canonical screenplay `@handle`
+references, and deliberate strong emphasis in descriptions, but the CLI and
+Core do not interpret those creative conventions. Agent-authored
+`optics.focusTarget` names one primary optical subject, plane, or distance;
+shared deep-focus legibility belongs in `optics.intent`.
+
 ## `renku generation`
 
 Use the generic Core generation lifecycle for one explicit provider request.

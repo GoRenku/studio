@@ -236,6 +236,7 @@ export function ScenePanel({
               sceneId={sceneId}
               shotPlanId={shotPlanId}
               shotId={shotId}
+              entityMentions={resource}
               onSelect={onSelect}
             />
           ) : (

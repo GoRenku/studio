@@ -6,7 +6,10 @@ import {
   Move3d,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { ShotBrief } from '@gorenku/studio-core/client';
+import {
+  SHOT_DEPTH_OF_FIELD_LABELS,
+  type ShotBrief,
+} from '@gorenku/studio-core/client';
 import {
   CAMERA_ANGLE_OPTIONS,
   getCameraAngleMedia,
@@ -15,12 +18,20 @@ import {
   MOVEMENT_OPTIONS,
   SHOT_SIZE_OPTIONS,
 } from '../shot-design/shot-design-media';
+import type { ScreenplayEntityMentionCatalog } from '../screenplay-entity-mentions';
 import { ShotBriefMotionMedia, ShotBriefStillMedia } from './shot-brief-media';
+import { ShotBriefMentionText } from './shot-brief-mention-text';
 import { ShotDesignGlossaryDialog } from './shot-design-glossary-dialog';
 
 const SHOT_BRIEF_CARD_WIDTH_PX = 199;
 
-export function ShotBriefGrid({ brief }: { brief: ShotBrief }) {
+export function ShotBriefGrid({
+  brief,
+  entityMentions,
+}: {
+  brief: ShotBrief;
+  entityMentions: ScreenplayEntityMentionCatalog;
+}) {
   const framingImages = [
     brief.framing?.start
       ? {
@@ -167,18 +178,31 @@ export function ShotBriefGrid({ brief }: { brief: ShotBrief }) {
         {brief.optics?.intent ? (
           <>
             <BriefEyebrow>Intent</BriefEyebrow>
-            <BriefPrimary>{brief.optics.intent}</BriefPrimary>
+            <BriefPrimary>
+              <ShotBriefMentionText
+                text={brief.optics.intent}
+                entityMentions={entityMentions}
+              />
+            </BriefPrimary>
           </>
         ) : null}
         <div className='mt-auto flex flex-wrap gap-1.5 pt-4'>
           {brief.optics?.focalLengthMm !== undefined ? (
-            <BriefChip>Lens {brief.optics.focalLengthMm} mm</BriefChip>
+            <BriefChip>{brief.optics.focalLengthMm}mm lens</BriefChip>
           ) : null}
           {brief.optics?.depthOfField ? (
-            <BriefChip>Depth {brief.optics.depthOfField}</BriefChip>
+            <BriefChip>
+              {SHOT_DEPTH_OF_FIELD_LABELS[brief.optics.depthOfField]}
+            </BriefChip>
           ) : null}
           {brief.optics?.focusTarget ? (
-            <BriefChip>Focus {brief.optics.focusTarget}</BriefChip>
+            <BriefChip>
+              Focus on{' '}
+              <ShotBriefMentionText
+                text={brief.optics.focusTarget}
+                entityMentions={entityMentions}
+              />
+            </BriefChip>
           ) : null}
         </div>
       </BriefCard>
@@ -189,7 +213,12 @@ export function ShotBriefGrid({ brief }: { brief: ShotBrief }) {
         {brief.lighting?.intent ? (
           <>
             <BriefEyebrow>Intent</BriefEyebrow>
-            <BriefPrimary>{brief.lighting.intent}</BriefPrimary>
+            <BriefPrimary>
+              <ShotBriefMentionText
+                text={brief.lighting.intent}
+                entityMentions={entityMentions}
+              />
+            </BriefPrimary>
           </>
         ) : null}
       </BriefCard>

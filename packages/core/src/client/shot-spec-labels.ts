@@ -9,6 +9,7 @@ import type {
   ShotSizeId,
   SubjectFramingId,
 } from './shot-authoring.js';
+import type { ShotDepthOfField } from './shot-plans.js';
 
 // Canonical display labels for the structured shot specs vocabularies (0036).
 // These are the single source of truth shared by the prompt-string derivation
@@ -60,6 +61,14 @@ export const MOVEMENT_LABELS: Record<ShotMovementId, string> = {
   'pull-out': 'Pull Out',
   zoom: 'Zoom',
   'rack-focus': 'Rack Focus',
+};
+
+export const SHOT_DEPTH_OF_FIELD_LABELS: Record<
+  ShotDepthOfField,
+  string
+> = {
+  shallow: 'Shallow Focus',
+  deep: 'Deep Focus',
 };
 
 export const MOVE_DIRECTION_LABELS: Record<MoveDirectionId, string> = {

@@ -7,6 +7,7 @@ import {
   ResizablePanelGroup,
 } from '@/ui/resizable';
 import type { StudioShot } from '@/services/studio-shot-plans-contracts';
+import type { ScreenplayEntityMentionCatalog } from '../screenplay-entity-mentions';
 import { ShotImageCandidatesDialog } from './shot-image-candidates-dialog';
 import { ShotPlanShotContent } from './shot-plan-shot-content';
 import { ShotPlanShotRail } from './shot-plan-shot-rail';
@@ -26,12 +27,14 @@ export function ShotPlanDetailPage({
   sceneId,
   shotPlanId,
   shotId,
+  entityMentions,
   onSelect,
 }: {
   projectName: string;
   sceneId: string;
   shotPlanId: string;
   shotId?: string;
+  entityMentions: ScreenplayEntityMentionCatalog;
   onSelect: (selection: StudioSelection) => void;
 }) {
   const { resource, error, reload } = useSceneShotPlans(projectName, sceneId);
@@ -136,6 +139,7 @@ export function ShotPlanDetailPage({
                   <ShotPlanShotContent
                     shot={shot}
                     coveredBeats={item.coveredBeats}
+                    entityMentions={entityMentions}
                   />
                 ) : (
                   <p className='p-8 text-sm text-muted-foreground'>

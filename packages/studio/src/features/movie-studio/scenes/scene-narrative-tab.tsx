@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import { resolveScreenplayEntityMention } from '../screenplay-entity-mentions';
 import { SceneDialogueAudioPanel } from './scene-dialogue-audio-panel';
 import {
   isSceneDialogueAudioTag,
@@ -39,8 +40,6 @@ interface SceneNarrativeTabProps {
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   onSelect: (selection: StudioSelection) => void;
 }
-
-type ReferenceKind = 'castMember' | 'location';
 
 export function SceneNarrativeTab({
   projectName,
@@ -436,7 +435,7 @@ function InlineText({
       );
     } else {
       const handle = match[1].toLowerCase();
-      const entity = resolveHandle(handle, resource);
+      const entity = resolveScreenplayEntityMention(handle, resource);
       if (entity) {
         nodes.push(
           interactive ? (
@@ -472,29 +471,6 @@ function InlineText({
     nodes.push(<span key={`t${key++}`}>{text.slice(lastIndex)}</span>);
   }
   return <>{nodes}</>;
-}
-
-function resolveHandle(
-  handle: string,
-  resource: SceneNarrativeResourceResponse
-): { kind: ReferenceKind; id: string; label: string } | null {
-  const castId = resource.castMemberHandles?.[handle];
-  if (castId) {
-    return {
-      kind: 'castMember',
-      id: castId,
-      label: resource.castMemberLabels[castId] ?? handle,
-    };
-  }
-  const locationId = resource.locationHandles?.[handle];
-  if (locationId) {
-    return {
-      kind: 'location',
-      id: locationId,
-      label: resource.locationLabels[locationId] ?? handle,
-    };
-  }
-  return null;
 }
 
 function updateDialogueTextPreview(

@@ -115,9 +115,10 @@ export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
 export type StoryArcResourceResponse = StoryArcResource;
 export type SceneNarrativeResourceResponse = Omit<
   SceneNarrativeResource,
-  'castMemberImages'
+  'castMemberImages' | 'locationImages'
 > & {
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
+  locationImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
 export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardPreview'> & {

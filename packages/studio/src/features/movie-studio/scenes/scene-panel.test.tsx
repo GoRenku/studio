@@ -108,6 +108,46 @@ describe('ScenePanel', () => {
     );
   });
 
+  it('preserves known entity navigation, unknown handles, and dialogue tags', async () => {
+    const resource = sceneNarrative();
+    resource.blocks = [{
+      type: 'action',
+      text: '@urban enters @city-gate near @unknown. [shouts]',
+    }];
+    resource.castMemberHandles = { urban: 'cast_urban' };
+    resource.castMemberLabels = { cast_urban: 'Urban' };
+    resource.locationHandles = { 'city-gate': 'location_gate' };
+    resource.locationLabels = { location_gate: 'City Gate' };
+    vi.mocked(readSceneNarrativeResource).mockResolvedValue(resource);
+    const onSelect = vi.fn();
+
+    const { container } = render(
+      <ScenePanel
+        projectName='constantinople'
+        sceneId='scene_hook'
+        onSelect={onSelect}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Urban' }));
+    expect(onSelect).toHaveBeenCalledWith({
+      type: 'castMember',
+      id: 'cast_urban',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'City Gate' }));
+    expect(onSelect).toHaveBeenCalledWith({
+      type: 'location',
+      id: 'location_gate',
+    });
+    expect(screen.getByText('@unknown').className).toContain(
+      'text-muted-foreground'
+    );
+    expect(screen.getByText('[shouts]').className).toContain(
+      'text-dialogue-audio-tag'
+    );
+    expect(container.textContent).toContain('@unknown');
+  });
+
   it('keeps the Scene tab bar under the only panel header in Shot Plan detail', async () => {
     const onSelect = vi.fn();
     const onHeaderActionChange = vi.fn();
@@ -280,6 +320,7 @@ function sceneNarrative(productionNumber = '1'): SceneNarrativeResourceResponse 
     castMemberLabels: {},
     castMemberImages: {},
     locationLabels: {},
+    locationImages: {},
     castMemberHandles: {},
     locationHandles: {},
     dialogueAudio: {

@@ -8,6 +8,8 @@ export interface ShotPlanCoverage {
   beatIds: string[];
 }
 
+export type ShotDepthOfField = 'shallow' | 'deep';
+
 export interface ShotBrief {
   durationSeconds?: number;
   framing?: {
@@ -23,7 +25,7 @@ export interface ShotBrief {
   optics?: {
     intent?: string;
     focalLengthMm?: number;
-    depthOfField?: string;
+    depthOfField?: ShotDepthOfField;
     focusTarget?: string;
   };
   lighting?: {

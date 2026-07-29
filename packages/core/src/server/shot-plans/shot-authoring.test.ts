@@ -7,6 +7,10 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import {
+  parseStoredShotBrief,
+  serializeShotBrief,
+} from './validation.js';
 
 describe('Shot Plan focused authoring', () => {
   let homeDir: string;
@@ -58,6 +62,74 @@ describe('Shot Plan focused authoring', () => {
         },
       })
     ).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_INVALID' });
+  });
+
+  it('owns the complete depth vocabulary and preserves creative text exactly', async () => {
+    const projectData = createProjectDataService();
+    const exactDescription =
+      '## Intent\n\nKeep **unusual authored language** and @unknown exact.';
+    const exactOpticsIntent = '<not-markup> Hold the foreground.';
+    const exactFocusTarget = 'near plane: @unknown';
+    const exactLightingIntent = '**Do not interpret this as Markdown.**';
+
+    for (const depthOfField of ['shallow', 'deep'] as const) {
+      const brief = {
+        optics: {
+          intent: exactOpticsIntent,
+          focalLengthMm: 50,
+          depthOfField,
+          focusTarget: exactFocusTarget,
+        },
+        lighting: { intent: exactLightingIntent },
+      };
+      const report = await projectData.validateShotPlanDocument({
+        document: {
+          kind: 'shot',
+          title: `${depthOfField} focus`,
+          description: exactDescription,
+          brief,
+        },
+      });
+
+      expect(report.document).toMatchObject({
+        description: exactDescription,
+        brief,
+      });
+      expect(parseStoredShotBrief(serializeShotBrief(brief), 'shot_exact'))
+        .toEqual(brief);
+    }
+
+    const withoutDepth = await projectData.validateShotPlanDocument({
+      document: {
+        kind: 'shot',
+        title: 'Unspecified depth',
+        description: exactDescription,
+        brief: { optics: { intent: exactOpticsIntent } },
+      },
+    });
+    expect(withoutDepth.document).toMatchObject({
+      brief: { optics: { intent: exactOpticsIntent } },
+    });
+
+    await expect(
+      projectData.validateShotPlanDocument({
+        document: {
+          kind: 'shot',
+          title: 'Unsupported depth',
+          description: exactDescription,
+          brief: { optics: { depthOfField: 'medium' } },
+        },
+      })
+    ).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_INVALID' });
+
+    expect(() =>
+      parseStoredShotBrief(
+        JSON.stringify({ optics: { depthOfField: 'medium' } }),
+        'shot_invalid'
+      )
+    ).toThrowError(
+      expect.objectContaining({ code: 'CORE_SHOT_PLAN_STORAGE_INVALID' })
+    );
   });
 
   it('updates, adds, moves, removes, and restores one Shot without aggregate replacement', async () => {

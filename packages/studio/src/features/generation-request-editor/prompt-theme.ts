@@ -9,7 +9,7 @@ const promptEditorTheme = EditorView.theme({
   },
   '.cm-prompt-reference-mention': {
     borderRadius: '3px',
-    color: 'hsl(169 52% 58%)',
+    color: 'var(--editor-mention-foreground)',
     fontWeight: '650',
   },
   '.cm-prompt-reference-mention:hover, .cm-prompt-reference-mention-active': {
@@ -74,7 +74,7 @@ const promptEditorTheme = EditorView.theme({
     whiteSpace: 'nowrap',
   },
   '.cm-prompt-reference-option-token': {
-    color: 'hsl(169 52% 58%)',
+    color: 'var(--editor-mention-foreground)',
     fontFamily: 'var(--font-mono)',
     fontSize: '11px',
     fontWeight: '650',

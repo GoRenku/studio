@@ -64,11 +64,18 @@ Use the focused documents below for current direction.
   Core stores no Shot Plan authoring history, revision, status, output table,
   owned video output, owned references, or dependency graph.
 - Shot `description` is an intentional SQLite `TEXT` exception for opaque
-  Markdown-capable authored text. Each Shot also stores a non-empty title.
+  Markdown-capable authored text. Agents may author relevant headings, strong
+  cinematography terms, and canonical screenplay `@handle` references. Studio
+  may enrich exact known handles for read-only presentation, but runtime code
+  does not validate, interpret, rewrite, or derive facts from the creative
+  text. Each Shot also stores a non-empty title.
   Shot `brief` contains optional Framing, Camera, Motion, Optics, Lighting, and
-  approximate duration facts; Shot Plan Beat `coverage` stores soft Beat
-  context. Both are strict AJV-validated JSON text. Missing or stale coverage
-  references produce warnings rather than invalid state.
+  approximate duration facts. `optics.focalLengthMm` is a positive number and
+  `optics.depthOfField` is optional `shallow | deep`; Optics intent, focus
+  target, and Lighting intent remain exact opaque strings. Shot Plan Beat
+  `coverage` stores soft Beat context. Both are strict AJV-validated JSON text.
+  Missing or stale coverage references produce warnings rather than invalid
+  state.
 - Cast Design and Location Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
   `cast_design` and `location_design`, with one active document per owner
@@ -180,6 +187,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0036-use-unsliced-location-sheets.md`
 - `docs/decisions/0061-use-mutable-copy-and-freeze-shot-plans.md`
 - `docs/decisions/0064-use-exclusive-asset-membership-and-scoped-selection.md`
+- `docs/decisions/0067-use-structured-shot-depth-and-presentational-mentions.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

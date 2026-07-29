@@ -223,6 +223,7 @@ export interface SceneNarrativeResource {
   castMemberLabels: Record<string, string>;
   castMemberImages: Record<string, ScreenplayImageReference>;
   locationLabels: Record<string, string>;
+  locationImages: Record<string, ScreenplayImageReference>;
   castMemberHandles: Record<string, string>;
   locationHandles: Record<string, string>;
   dialogueAudio: SceneDialogueAudioWorkspace;

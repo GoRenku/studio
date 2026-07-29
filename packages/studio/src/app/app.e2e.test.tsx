@@ -1971,7 +1971,11 @@ function makeSceneNarrativeResource(
     castMemberLabels: {
       cast_narrator: 'Narrator',
     },
+    castMemberImages: {},
     locationLabels: {},
+    locationImages: {},
+    castMemberHandles: {},
+    locationHandles: {},
   };
 }
 

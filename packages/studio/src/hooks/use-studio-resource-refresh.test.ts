@@ -6,6 +6,7 @@ import {
   matchesLocationOverviewResource,
   matchesLocationResource,
   matchesSceneBeatsResource,
+  matchesSceneNarrativeResource,
   matchesSequenceResource,
   matchesVisualLanguageLookbookResource,
 } from './use-studio-resource-refresh';
@@ -60,6 +61,27 @@ describe('Studio resource refresh matchers', () => {
       expect(matchesLocationOverviewResource([removedKey])).toBe(false);
       expect(matchesLocationResource([removedKey], 'location_gate')).toBe(false);
     }
+  });
+
+  it('refreshes the Scene narrative projection when entity preview images change', () => {
+    expect(
+      matchesSceneNarrativeResource(
+        ['surface:castMember:cast_urban'],
+        'scene_bombardment'
+      )
+    ).toBe(true);
+    expect(
+      matchesSceneNarrativeResource(
+        ['surface:location:location_gate'],
+        'scene_bombardment'
+      )
+    ).toBe(true);
+    expect(
+      matchesSceneNarrativeResource(
+        ['surface:visual-language:lookbooks'],
+        'scene_bombardment'
+      )
+    ).toBe(false);
   });
 
   it('matches only the current Lookbook or the collection resource', () => {

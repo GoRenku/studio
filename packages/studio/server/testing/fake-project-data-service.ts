@@ -299,6 +299,7 @@ export function fakeProjectDataService(): NonNullable<
         castMemberLabels: {},
         castMemberImages: {},
         locationLabels: {},
+        locationImages: {},
         castMemberHandles: {},
         locationHandles: {},
         dialogueAudio: makeSceneDialogueAudioWorkspace(project),

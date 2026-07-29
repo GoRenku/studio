@@ -39,6 +39,12 @@ export interface StudioE2eMovieProject extends StudioE2eProject {
   secondShotImageAlternateAssetId: string;
 }
 
+export const studioE2eStructuredShotDescription =
+  '## Intent\n\nHold @urban against the scale of @city-gate.\n\n' +
+  '## Camera & Optics\n\nUse a **Wide Shot** on a **24mm lens** with ' +
+  '**Deep Focus** so the gate and cannon remain legible.\n\n' +
+  '## End Condition\n\nEnd when @urban looks toward the crew.';
+
 export async function createMinimalMovieProject(input: {
   runtime: StudioE2eRuntime;
   projectName: string;
@@ -138,10 +144,19 @@ export async function createBeatSheetMovieProject(input: {
     shots: [
       {
         title: 'Urban holds beside the cannon',
-        description: 'Hold Urban and the cannon together in a wide frame.',
+        description: studioE2eStructuredShotDescription,
         brief: {
           durationSeconds: 2,
           framing: { start: 'wide-shot' },
+          optics: {
+            intent: 'Keep @urban and @city-gate legible together.',
+            focalLengthMm: 24,
+            depthOfField: 'deep',
+            focusTarget: '@urban',
+          },
+          lighting: {
+            intent: 'Cold dawn separates @urban from @city-gate.',
+          },
         },
       },
       {
@@ -415,6 +430,12 @@ async function seedProjectMedia(input: {
   await writeProjectFile({
     projectData: input.projectData,
     homeDir: input.runtime.isolatedHomeDirectory,
+    projectRelativePath: 'generated/media/gate-location-hero.png',
+    contents: samplePng(),
+  });
+  await writeProjectFile({
+    projectData: input.projectData,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/media/lookbook-sheet.png',
     contents: samplePng(),
   });
@@ -493,6 +514,15 @@ async function seedProjectMedia(input: {
     oneLineSummary: 'The gate, approach, and defensive masonry.',
     referenceName: 'gate-location-sheet',
     purpose: 'Browser E2E location sheet reference.',
+  });
+  await input.projectData.attachGenerationMedia({
+    homeDir: input.runtime.isolatedHomeDirectory,
+    projectName: input.projectName,
+    purpose: 'location.hero',
+    target: { kind: 'location', id: input.ids.locationId },
+    sourceProjectRelativePath: 'generated/media/gate-location-hero.png',
+    title: 'City Gate hero',
+    select: true,
   });
   const lookbook = await input.projectData.writeProductionLookbook({
     projectName: input.projectName,

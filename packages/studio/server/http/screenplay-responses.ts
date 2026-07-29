@@ -64,9 +64,10 @@ export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
 export type StoryArcResourceResponse = StoryArcResource;
 export type SceneNarrativeResourceResponse = Omit<
   SceneNarrativeResource,
-  'castMemberImages'
+  'castMemberImages' | 'locationImages'
 > & {
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
+  locationImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
 export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardPreview'> & {
@@ -236,6 +237,12 @@ export function toSceneNarrativeResourceResponse(
     castMemberImages: Object.fromEntries(
       Object.entries(resource.castMemberImages).map(([castMemberId, image]) => [
         castMemberId,
+        withImageUrl(projectName, image),
+      ])
+    ),
+    locationImages: Object.fromEntries(
+      Object.entries(resource.locationImages).map(([locationId, image]) => [
+        locationId,
         withImageUrl(projectName, image),
       ])
     ),

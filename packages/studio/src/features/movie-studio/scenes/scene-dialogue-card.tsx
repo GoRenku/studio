@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
 import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import { ScreenplayEntityImagePreview } from '../screenplay-entity-image-preview';
 
 interface SceneDialogueCardProps {
   block: Extract<Block, { type: 'dialogue' }>;
@@ -94,11 +95,15 @@ export function SceneDialogueCard({
           {castMemberId && profileImage ? (
             <Tooltip>
               <TooltipTrigger asChild>{nameControl}</TooltipTrigger>
-              <TooltipContent side='right' align='center' className='p-2'>
-                <img
-                  src={profileImage.url}
-                  alt={`${characterName} profile image`}
-                  className='h-40 w-40 rounded-md object-cover'
+              <TooltipContent
+                side='right'
+                align='center'
+                className='max-w-none overflow-visible border-0 bg-transparent p-0 shadow-none'
+              >
+                <ScreenplayEntityImagePreview
+                  kind='castMember'
+                  label={characterName}
+                  imageUrl={profileImage.url}
                 />
               </TooltipContent>
             </Tooltip>

@@ -381,6 +381,18 @@ export async function readSceneNarrativeResource(
       locationLabels: Object.fromEntries(
         document.locations.map((location) => [location.id, location.name])
       ),
+      locationImages: Object.fromEntries(
+        document.locations.flatMap((location) => {
+          if (!location.id) {
+            return [];
+          }
+          const image = firstImageForTarget(session, {
+            kind: 'location',
+            id: location.id,
+          });
+          return image ? [[location.id, image]] : [];
+        })
+      ),
       castMemberHandles: Object.fromEntries(
         document.cast
           .filter((castMember) => castMember.handle && castMember.id)
