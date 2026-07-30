@@ -96,12 +96,11 @@ Use the focused documents below for current direction.
   files remain filesystem content until an explicit media import registers and
   attaches them as assets. A saved spec is mutable while `frozen_at` is null and
   permanently frozen when live execution begins.
-- A Shot Plan identifies zero or one `lastGenerationSpec`: the most recently
-  associated request configuration to continue from, regardless of Run success
-  or failure. Run and Asset lifecycle events never move or clear it. A mutable
-  last Spec is edited directly; a changed attempt after freezing copies it into
-  a new mutable Spec. Copying a plan may likewise copy its last Spec. Neither
-  flow copies Runs, Assets, Asset Files, provenance, or referenced media.
+- A Shot Plan stores authoring state only: Scene ownership, title, optional Beat
+  coverage, ordered Shots, selected/candidate Shot images, timestamps, and
+  Trash lifecycle. It stores no GenerationSpec id or generation lifecycle
+  state. Copy and Trash operations never read, copy, or mutate generation
+  records.
 - Durable generated and imported asset files live under the folder for the
   domain object that owns them. Current asset paths must not start with
   `generated/`; temporary agent/debug files belong under top-level `tmp/`;
@@ -119,11 +118,10 @@ Use the focused documents below for current direction.
 - Scene dialogue audio takes are durable scene dialogue media assets. They may
   be selected as exact GenerationSpec references; Shot Plans do not own or
   retain them.
-- `video.create` outputs are ordinary Project Assets under `videos/`. Their
-  Asset Files retain exact managed-Run or frozen agent-external-Spec
-  provenance. Optional `authoredFrom` context is information-only and never
-  creates Shot Plan ownership. Shot Plan and Asset Trash lifecycles are
-  independent.
+- GenerationSpecs may retain optional
+  `authoredFrom: { kind: 'shotPlan', id }` context. The stored value is nullable,
+  indexed, one-way, and has no foreign key. Missing or discarded source plans
+  never invalidate generation history or independently owned Assets.
 - `shot.image` outputs are exclusively Shot-owned planning image candidates
   with canonical type `shot_image`. Common selection chooses zero or one
   candidate. Import may atomically select when that is the accepted intent.

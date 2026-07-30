@@ -56,7 +56,6 @@ function isGenerationScopeFile(file) {
     file.startsWith('packages/core/src/server/generation/') ||
     file.startsWith('packages/core/src/server/image-revision-workflow/') ||
     file.startsWith('packages/core/src/server/scene-dialogue-audio-workspace/') ||
-    file.startsWith('packages/core/src/server/shot-video-take-workspace/') ||
     file === 'packages/core/src/server/database/access/generation-references.ts'
   ) {
     return true;
@@ -66,8 +65,7 @@ function isGenerationScopeFile(file) {
     (
       file.includes('generation') ||
       file.includes('image-revision-workflow') ||
-      file.includes('scene-dialogue-audio-workspace') ||
-      file.includes('shot-video-take-workspace')
+      file.includes('scene-dialogue-audio-workspace')
     )
   ) {
     return true;
@@ -81,11 +79,10 @@ function isGenerationScopeFile(file) {
   if (
     file.startsWith('packages/cli/src/commands/') ||
     file.startsWith('packages/studio/server/') ||
-    file.startsWith('packages/studio/src/') ||
-    file.includes('/shot-video-take/')
+    file.startsWith('packages/studio/src/')
   ) {
     const contents = readContents(file);
-    return /media-generation|generation-preview|generation dependency|GenerationPreview|MediaGeneration|ImageRevision|SceneDialogueAudio|ShotVideoTake/i.test(contents);
+    return /media-generation|generation-preview|generation dependency|GenerationPreview|MediaGeneration|ImageRevision|SceneDialogueAudio/i.test(contents);
   }
   return false;
 }

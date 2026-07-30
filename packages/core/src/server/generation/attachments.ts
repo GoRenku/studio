@@ -45,12 +45,6 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     ...input,
     destinationAssetType: attachment.assetType,
   });
-  if (input.purpose === 'video.create' && provenance === null) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_ATTACHMENT_PROVENANCE_REQUIRED',
-      'Generated video import requires an exact managed Run or frozen external Generation Spec.'
-    );
-  }
   validateLookbookKind(input);
   const persisted = persistGeneratedMediaAttachment({
     session: input.session,

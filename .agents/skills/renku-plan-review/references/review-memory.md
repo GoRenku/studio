@@ -277,3 +277,26 @@ or architecture decision.
 - **Evidence to inspect:** Read the current and older decision records, identify
   the exact supersession scope, and verify both the new ADR and discoverability
   notice are planned without a historical rewrite.
+
+### 2026-07-30 — Separate obsolete workflow contracts from durable research
+
+- **User objection:** A cleanup treated an entire skill subtree as stale and
+  deleted researched Seedance and other provider-specific video guidance,
+  examples, and eval material that was intentionally retained for the next
+  workflow.
+- **Planning rule:** Never use an old folder name as the deletion boundary when
+  a skill path mixes executable workflow contracts with durable provider or
+  creative research. Inventory each file, remove obsolete purposes, targets,
+  commands, lifecycle rules, and executable envelopes, then refresh and re-home
+  reusable provider guidance, examples, source provenance, and eval intent.
+  Keep unsupported provider research inactive by excluding it from current
+  route registries and executable fixtures rather than deleting it.
+- **Apply when:** A plan removes or replaces an agent workflow whose folder also
+  contains model-specific prompting research, vendor findings, golden or
+  negative examples, or reusable evaluation scenarios.
+- **Evidence to inspect:** Read the full skill subtree and its Git history;
+  compare accepted prompt-ownership decisions, current provider capability
+  research, exact route documentation, active model catalogs, route registries,
+  samples, and evals; require every deleted file to have either a named
+  successor or an explicit finding that it contains only an obsolete executable
+  contract.

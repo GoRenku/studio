@@ -93,11 +93,9 @@ Related terms:
 - **Beat** is one non-camera narrative unit inside a Scene Beat Sheet. Beats
   are ordered by their array position and contain exactly the accepted
   eight-field Beat shape.
-- **Shot Plan** is one mutable Scene-owned camera plan containing ordered Shots,
-  optional Beat coverage, and zero or one last Generation Spec used as the
-  starting point for continued generation authoring. Generation and Asset
-  history never freeze the plan. Its Shots own planning image Assets but no
-  generated video.
+- **Shot Plan** is one mutable Scene-owned camera plan containing ordered Shots
+  and optional Beat coverage. Generation and Asset history never freeze the
+  plan. Its Shots own planning image Assets but no generated video.
 - **Shot** is one ordered camera-authored unit inside a Shot Plan. It has an
   authored title, opaque description, structured glanceable brief, image
   candidates, and zero or one explicitly selected image. It is
@@ -123,7 +121,7 @@ Related terms:
 | Screenplay Analysis           | A validated critique of the current screenplay structure, scene energy, evidence, and suggested additions.                               | Stored as history through `renku screenplay analyze`; suggestions do not mutate screenplay rows.            |
 | Scene Beat Sheet              | A validated scene-owned narrative breakdown made of ordered Beats.                                                                        | Stored as history through `renku screenplay beat-sheet`; one active Beat Sheet can be selected per Scene.   |
 | Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus title, description, narrative development, narrative purpose, cast/location ids, and screenplay block indexes. |
-| Shot Plan                     | One mutable Scene-owned plan for ordered Shots and one optional last Generation Spec.                                                      | Remains editable regardless of Run or Asset history. Its Shots own planning-image Assets, never generated video. |
+| Shot Plan                     | One mutable Scene-owned plan for ordered Shots and optional Beat coverage.                                                                | Remains editable regardless of Run or Asset history. Its Shots own planning-image Assets, never generated video. |
 | Shot                          | One ordered camera-authored unit inside a Shot Plan.                                                                                       | Stores title, opaque `description`, strict glanceable `brief`, candidate images, and an optional selected image; Beat coverage belongs to the plan. |
 | Lookbook                      | One of the two project-owned visual direction roles.                                                                                       | A project has at most one Production Lookbook and one Storyboard Lookbook. The role is permanent and cannot be discarded. |
 | Production Lookbook           | The project Lookbook for final-video visual language: palette, lighting, texture, composition, camera, and tone/mood.                      | Read directly for movie, cast, location, and future Shot visual-language guidance; it is never selected from alternatives. |

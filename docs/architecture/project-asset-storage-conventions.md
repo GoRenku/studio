@@ -152,18 +152,10 @@ The take number is the next unused zero-based two-digit suffix for that
 dialogue filename prefix. Scene-owned Dialogue Audio must not be stored under
 `storyboards/`.
 
-A generated project video is stored at:
-
-```text
-videos/bombardment-wide.mp4
-videos/bombardment-wide-2.mp4
-```
-
-The path is not Shot Plan ownership metadata. A `video.create` output is an
-independent Project Asset whose Asset File retains exact generation provenance.
-Optional `authoredFrom` context on the Spec is information-only. Copying a Shot
-Plan or continuing from its frozen last Spec copies the exact reference
-identities into a new mutable Spec but does not copy or retain their files.
+The top-level `videos/` root remains available for deliberately accepted
+project storage workflows, but Studio currently has no generic project-video
+destination or product video-generation purpose. A future workflow must add a
+focused Core-owned destination rather than accepting an arbitrary caller path.
 
 A Shot planning image is stored at:
 
@@ -243,7 +235,6 @@ the durable filesystem folder themselves.
 - asset-file path updates;
 - validation that new durable asset paths do not start with `generated/`;
 - validation that durable asset files are not registered under `research/`;
-- project-video placement;
 - storyboard iteration allocation;
 - write-set cleanup for copied files when a later database relationship or
   selection write fails.
@@ -255,7 +246,7 @@ the durable file destination and the `asset_file.project_relative_path` write.
 Its durable destination contract is owner-aware, for example
 `cast.characterSheet`, `cast.voiceSample`, `location.hero`,
 `location.sheet`, `visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or
-`project.video`.
+`shot.image`.
 Scene Storyboard imports use a batch storage API so all Beats in one import
 share one iteration folder. The module must not accept
 arbitrary caller-provided destination folders.

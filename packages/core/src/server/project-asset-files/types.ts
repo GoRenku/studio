@@ -37,8 +37,7 @@ export type ProjectAssetFileDestination =
       sceneId: string;
       iterationFolder: ProjectRelativePath;
       beatOrdinal: number;
-    }
-  | { kind: 'project.video'; titleHint?: string };
+    };
 
 export type ProjectTemporaryFileDestination =
   | { kind: 'generation.media'; purpose: GenerationPurpose }

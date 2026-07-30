@@ -135,29 +135,19 @@ unavailable when exact pricing facts are insufficient.
 A provider failure after execution begins is a persisted failed run. A
 predictable validation or approval failure is not.
 
-## Project Video And Shot Plan Authoring
+## Video Capability And Shot Plan Context
 
-`video.create` is a video purpose targeting the Project. It has no Shot Plan
-facts, inferred reference slots, prompt synthesis, or Shot-content validation.
-The agent may read a mutable Shot Plan separately, choose exact references, and
-author the request.
+Studio currently exposes no product video-generation purpose or focused video
+attachment destination. Engines retains its generic video model descriptors,
+provider schemas, validation, pricing, simulation, routing, and execution
+adapters independently from the Studio purpose registry.
 
-A Shot Plan stores only its zero-or-one `lastGenerationSpec`. It is the request
-configuration to continue from regardless of whether its Runs have failed,
-succeeded, or have not started. Run and Asset lifecycle events never move or
-clear the pointer.
-
-A mutable last Spec is edited directly. A frozen Spec remains retryable
-unchanged; a changed attempt copies it into a new mutable Spec for the same
-plan. Copying a Shot Plan may also copy its last Spec. Both copy paths preserve
-the request and exact reference identities, replace `authoredFrom` as needed,
-and copy no Run, Asset, Asset File, provenance, or media.
-
-Imported `video.create` outputs require exact managed-Run or frozen
-agent-external-Spec provenance and become independent Project Assets under
-`videos/`. Multiple Assets may come from one or more Specs. Shot Plan and Asset
-Trash lifecycles remain independent, and request inspection reads only the
-frozen Spec or Run snapshot recorded for the Asset File.
+A GenerationSpec may retain optional
+`authoredFrom: { kind: 'shotPlan', id }` context. This nullable, indexed value
+has no foreign key and points only from the request to its source context. Shot
+Plans store no GenerationSpec id or lifecycle state. Copying, deleting,
+restoring, or permanently removing a Shot Plan never reads, copies, updates, or
+invalidates a GenerationSpec, Run, Asset File, or Asset.
 
 ## Shot Images
 

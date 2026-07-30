@@ -44,9 +44,6 @@ describe('Shot Plans Hono route', () => {
       assetFileId: 'asset_file_storyboard',
       url: '/studio-api/projects/constantinople/assets/asset_storyboard/files/asset_file_storyboard',
     });
-    expect(body.shotPlans[0].shotPlan.lastGenerationSpec).toBeUndefined();
-    expect(JSON.stringify(body)).not.toContain('PRIVATE_SHOT_PLAN_PROMPT');
-    expect(JSON.stringify(body)).not.toContain('private/reference.png');
     expect(JSON.stringify(body)).not.toContain('/tmp/renku');
     expect(body.warnings).toEqual([
       expect.objectContaining({ code: 'SHOT_PLAN_TEST_WARNING' }),
@@ -198,26 +195,6 @@ function shotPlanReport(): ShotPlanReport {
           selectedImageId: null,
         },
       ],
-      lastGenerationSpec: {
-        id: 'generation_spec_private',
-        spec: {
-          purpose: 'shot.image',
-          target: { kind: 'shot', id: 'shot_second' },
-          executionKind: 'agent-external',
-          values: { prompt: 'PRIVATE_SHOT_PLAN_PROMPT' },
-          references: [{
-            placement: { kind: 'additional' },
-            reference: {
-              kind: 'project-file',
-              projectRelativePath:
-                'private/reference.png' as import('@gorenku/studio-core/client').ProjectRelativePath,
-            },
-          }],
-        },
-        frozenAt: null,
-        createdAt: '2026-07-27T10:00:00.000Z',
-        updatedAt: '2026-07-27T10:00:00.000Z',
-      },
       createdAt: '2026-07-27T10:00:00.000Z',
       updatedAt: '2026-07-27T10:00:00.000Z',
     },

@@ -477,6 +477,13 @@
       "when": 1785157200000,
       "tag": "0067_unified_asset_ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "6",
+      "when": 1785400036278,
+      "tag": "0068_remove_stale_shot_video_scaffolding",
+      "breakpoints": true
     }
   ]
 }

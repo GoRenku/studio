@@ -29,16 +29,6 @@ export interface GeneratedMediaAttachmentDetails {
   resourceKeys: string[];
 }
 
-export function projectVideoAttachmentDestination(
-  titleHint?: string
-): GeneratedMediaAttachmentDestination {
-  return {
-    file: { kind: 'project.video', titleHint },
-    owner: { kind: 'project' },
-    resourceKeys: [],
-  };
-}
-
 export function castCharacterSheetAttachmentDestination(
   castMemberId: string,
   titleHint?: string
@@ -128,14 +118,6 @@ type AttachmentBuilder = (
 const attachmentBuilders: Partial<
   Record<GenerationPurpose, AttachmentBuilder>
 > = {
-  'video.create': (input) =>
-    details(
-      requireTarget(input, 'project'),
-      projectVideoAttachmentDestination(input.title),
-      'Generated Video',
-      'project_video',
-      'video'
-    ),
   'lookbook.image': (input) =>
     details(
       requireTarget(input, 'lookbook'),

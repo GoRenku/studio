@@ -223,6 +223,15 @@ both child tables to temporary tables before the generated rebuild and restores
 them afterward. A transaction-level regression test executes the SQL with
 foreign keys enabled and proves that active and discarded child rows survive.
 
+`0068_remove_stale_shot_video_scaffolding.sql` contains the same narrowly
+documented preservation pattern for `shot`. Drizzle Kit rebuilds `shot_plan` to
+remove its obsolete nullable GenerationSpec foreign key. Because `shot`
+references `shot_plan` with `ON DELETE CASCADE`, the migration temporarily
+copies all active and discarded Shot rows before the generated parent-table
+rebuild and restores them afterward. Its focused transaction-level regression
+test runs with foreign keys enabled and proves that Shot rows and unrelated
+generation and Asset data survive.
+
 ## Project Store Schema Generation
 
 Renku Studio project databases use SQLite's `PRAGMA user_version` as the

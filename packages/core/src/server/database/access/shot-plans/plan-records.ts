@@ -101,21 +101,3 @@ export function updateShotPlanDetailsRecord(
     .where(eq(shotPlans.id, input.shotPlanId))
     .run();
 }
-
-export function setShotPlanLastGenerationSpecId(
-  session: DatabaseSession,
-  input: {
-    shotPlanId: string;
-    lastGenerationSpecId: string;
-    now: string;
-  }
-): void {
-  session.db
-    .update(shotPlans)
-    .set({
-      lastGenerationSpecId: input.lastGenerationSpecId,
-      updatedAt: input.now,
-    })
-    .where(eq(shotPlans.id, input.shotPlanId))
-    .run();
-}

@@ -37,13 +37,6 @@ import {
   resolveSceneStoryboardDestinationRoot,
   resolveSceneStoryboardDestinationRootSync,
 } from './scene-storyboard.js';
-import {
-  resolveProjectVideoDestinationFile,
-  resolveProjectVideoDestinationFileSync,
-  resolveProjectVideoDestinationOutputNames,
-  resolveProjectVideoDestinationRoot,
-  resolveProjectVideoDestinationRootSync,
-} from './project-video.js';
 import type {
   DestinationKind,
   DestinationResolver,
@@ -86,13 +79,6 @@ const destinationResolvers = {
     resolveRoot: resolveSceneStoryboardDestinationRoot,
     resolveRootSync: resolveSceneStoryboardDestinationRootSync,
     resolveOutputNames: resolveSceneStoryboardDestinationOutputNames,
-  },
-  'project.video': {
-    resolveFile: resolveProjectVideoDestinationFile,
-    resolveFileSync: resolveProjectVideoDestinationFileSync,
-    resolveRoot: resolveProjectVideoDestinationRoot,
-    resolveRootSync: resolveProjectVideoDestinationRootSync,
-    resolveOutputNames: resolveProjectVideoDestinationOutputNames,
   },
   'shot.image': {
     resolveFile: resolveShotDestinationFile,

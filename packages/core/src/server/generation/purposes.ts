@@ -15,9 +15,8 @@ import { locationSheetPurpose } from './purposes/location-sheet.js';
 import { locationHeroPurpose } from './purposes/location-hero.js';
 import { sceneStoryboardSheetPurpose } from './purposes/scene-storyboard-sheet.js';
 import { shotImagePurpose } from './purposes/shot-image.js';
-import { videoCreatePurpose } from './purposes/video-create.js';
 
-const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, sceneStoryboardSheetPurpose, shotImagePurpose, videoCreatePurpose];
+const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, sceneStoryboardSheetPurpose, shotImagePurpose];
 const descriptorByPurpose = new Map(descriptors.map((descriptor) => [descriptor.purpose, descriptor]));
 
 export function listGenerationPurposes(): GenerationPurposeDescriptor[] { return [...descriptors]; }

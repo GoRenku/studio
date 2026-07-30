@@ -19,7 +19,6 @@ import {
 } from '../database/access/shot-plans/plan-records.js';
 import { listShotRecords } from '../database/access/shot-plans/shot-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { readGenerationSpec } from '../generation/specs.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { scenes } from '../schema/index.js';
 import { studioSceneShotPlansResourceKey } from '../studio-coordination/resource-keys.js';
@@ -106,10 +105,6 @@ function projectShotPlan(
         description: shot.description,
         brief: parseStoredShotBrief(shot.brief, shot.id),
       })),
-      lastGenerationSpec:
-        record.lastGenerationSpecId === null
-          ? null
-          : readGenerationSpec({ id: record.lastGenerationSpecId, session }),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     },

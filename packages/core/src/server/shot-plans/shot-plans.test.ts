@@ -1,12 +1,9 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { insertGenerationRunRecord } from '../database/access/media-generation.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
-import { freezeManagedGenerationSpec } from '../generation/spec-lifecycle.js';
 import { createProjectDataService } from '../project-data-service.js';
 import { assets } from '../schema/index.js';
 import {
@@ -22,7 +19,110 @@ describe('Shot Plans', () => {
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
   });
 
-  it('keeps mutable authoring and one reusable last Generation Spec', async () => {
+  it('keeps authoring, copying, and lifecycle independent from soft generation context', async () => {
+    const projectData = createProjectDataService();
+    const fixture = await createProjectFixture(projectData, homeDir);
+    if (!fixture) {
+      return;
+    }
+    const plan = await createPlan(projectData, homeDir, fixture.sceneId);
+    const spec = await projectData.createGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      spec: {
+        purpose: 'image.create',
+        target: { kind: 'project', id: 'project' },
+        authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
+        executionKind: 'agent-external',
+        values: { prompt: 'Opaque authored request.' },
+        references: [],
+      },
+    });
+    const copied = await projectData.copyShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    });
+
+    expect(copied.shotPlan.id).not.toBe(plan.shotPlan.id);
+    expect(copied.shotPlan.shots).toHaveLength(1);
+    expect(copied.shotPlan.shots[0]!.id).not.toBe(plan.shotPlan.shots[0]!.id);
+    expect((await projectData.listGenerationSpecs({
+      projectName: 'constantinople',
+      homeDir,
+      authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
+    })).map((record) => record.id)).toEqual([spec.id]);
+    expect((await projectData.listGenerationSpecs({
+      projectName: 'constantinople',
+      homeDir,
+      authoredFrom: { kind: 'shotPlan', id: copied.shotPlan.id },
+    }))).toEqual([]);
+
+    const deleted = await projectData.deleteShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    });
+    await expect(projectData.readGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      specId: spec.id,
+    })).resolves.toMatchObject({
+      id: spec.id,
+      spec: {
+        authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
+      },
+    });
+    await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: deleted.recovery.trashItemIds[0]!,
+    });
+    await expect(projectData.readShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    })).resolves.toMatchObject({
+      shotPlan: {
+        id: plan.shotPlan.id,
+        shots: [expect.objectContaining({ id: plan.shotPlan.shots[0]!.id })],
+      },
+    });
+
+    await projectData.deleteShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    });
+    const preview = await projectData.previewGarbageCollection({
+      projectName: 'constantinople',
+      homeDir,
+      olderThanIso: '9999-12-31T23:59:59.999Z',
+    });
+    await projectData.emptyTrash({
+      projectName: 'constantinople',
+      homeDir,
+      olderThanIso: '9999-12-31T23:59:59.999Z',
+      confirmationToken: preview.confirmationToken,
+    });
+    await expect(projectData.readShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    })).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_NOT_FOUND' });
+    await expect(projectData.readGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      specId: spec.id,
+    })).resolves.toMatchObject({
+      id: spec.id,
+      spec: {
+        authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
+      },
+    });
+  });
+
+  it('keeps mutable Shot Plan authoring behavior unchanged', async () => {
     const projectData = createProjectDataService();
     const fixture = await createProjectFixture(projectData, homeDir);
     if (!fixture) {
@@ -40,36 +140,20 @@ describe('Shot Plans', () => {
       shots: [],
     });
     expect(created.shotPlan.title).toBe('First pass');
-    expect(created.shotPlan.lastGenerationSpec).toBeNull();
     expect(created.warnings).toEqual([
       expect.objectContaining({
         code: 'CORE_SHOT_PLAN_BEAT_SHEET_MISSING',
       }),
     ]);
-    await expect(
-      projectData.createNextShotPlanGenerationSpec({
-        projectName: 'constantinople',
-        homeDir,
-        shotPlanId: created.shotPlan.id,
-      })
-    ).rejects.toMatchObject({
-      code: 'CORE_SHOT_PLAN_GENERATION_SPEC_MISSING',
-    });
-    const copiedWithoutSpec = await projectData.copyShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-    });
-    expect(copiedWithoutSpec.shotPlan.lastGenerationSpec).toBeNull();
-
-    await projectData.updateShotPlanDetails({
+    const updated = await projectData.updateShotPlanDetails({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: created.shotPlan.id,
       title: 'Second pass',
       coverage: null,
     });
-    await projectData.addShotToPlan({
+    expect(updated.shotPlan.title).toBe('Second pass');
+    const authored = await projectData.addShotToPlan({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: created.shotPlan.id,
@@ -82,492 +166,12 @@ describe('Shot Plans', () => {
         },
       },
     });
-    const authored = await projectData.addShotToPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-      shot: {
-        title: 'Close detail',
-        description: 'Close detail.',
-        brief: { optics: { focalLengthMm: 50 } },
-      },
-    });
-    expect(authored.shotPlan.shots.map((shot) => shot.position)).toEqual([0, 1]);
-
-    const sourceSpec = await createVideoSpec(projectData, {
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-      executionKind: 'agent-external',
-      title: 'Video request',
-    });
-    await projectData.setShotPlanLastGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-      lastGenerationSpecId: sourceSpec.id,
-    });
-    await projectData.freezeGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      specId: sourceSpec.id,
-    });
-    const copiedFromFrozen = await projectData.copyShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-    });
-    expect(copiedFromFrozen.shotPlan.lastGenerationSpec).toMatchObject({
-      frozenAt: null,
-      spec: {
-        authoredFrom: {
-          kind: 'shotPlan',
-          id: copiedFromFrozen.shotPlan.id,
-        },
-      },
-    });
-
-    const next = await projectData.createNextShotPlanGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-    });
-    expect(next.shotPlan.lastGenerationSpec).toMatchObject({
-      frozenAt: null,
-      spec: sourceSpec.spec,
-    });
-    expect(next.shotPlan.lastGenerationSpec?.id).not.toBe(sourceSpec.id);
-    expect((await projectData.readGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      specId: sourceSpec.id,
-    })).frozenAt).not.toBeNull();
-
-    await expect(
-      projectData.createNextShotPlanGenerationSpec({
-        projectName: 'constantinople',
-        homeDir,
-        shotPlanId: created.shotPlan.id,
-      })
-    ).rejects.toMatchObject({
-      code: 'CORE_SHOT_PLAN_GENERATION_SPEC_MUTABLE',
-    });
-
-    const copied = await projectData.copyShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-    });
-    expect(copied.shotPlan.id).not.toBe(created.shotPlan.id);
-    expect(copied.shotPlan.shots.map((shot) => shot.id)).not.toEqual(
-      authored.shotPlan.shots.map((shot) => shot.id)
-    );
-    expect(copied.shotPlan.lastGenerationSpec).toMatchObject({
-      frozenAt: null,
-      spec: {
-        purpose: 'video.create',
-        target: { kind: 'project', id: 'project' },
-        authoredFrom: { kind: 'shotPlan', id: copied.shotPlan.id },
-        executionKind: 'agent-external',
-        title: 'Video request',
-      },
-    });
-    expect(copied.shotPlan.lastGenerationSpec?.id).not.toBe(
-      next.shotPlan.lastGenerationSpec?.id
-    );
-
-    const editedAgain = await projectData.updateShotPlanDetails({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: created.shotPlan.id,
-      title: 'Still editable',
-      coverage: null,
-    });
-    expect(editedAgain.shotPlan.title).toBe('Still editable');
-    expect(editedAgain.shotPlan.lastGenerationSpec?.id).toBe(
-      next.shotPlan.lastGenerationSpec?.id
-    );
-  });
-
-  it('associates only a video request authored from the same Shot Plan', async () => {
-    const projectData = createProjectDataService();
-    const fixture = await createProjectFixture(projectData, homeDir);
-    if (!fixture) {
-      return;
-    }
-    const plan = await createPlan(projectData, homeDir, fixture.sceneId);
-    const otherPlan = await createPlan(projectData, homeDir, fixture.sceneId);
-    const wrongPurpose = await projectData.createGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      spec: {
-        purpose: 'image.create',
-        target: { kind: 'project', id: 'project' },
-        executionKind: 'agent-external',
-        values: {},
-        references: [],
-      },
-    });
-    const wrongPlan = await createVideoSpec(projectData, {
-      homeDir,
-      shotPlanId: otherPlan.shotPlan.id,
-      executionKind: 'agent-external',
-    });
-
-    for (const lastGenerationSpecId of [wrongPurpose.id, wrongPlan.id]) {
-      await expect(
-        projectData.setShotPlanLastGenerationSpec({
-          projectName: 'constantinople',
-          homeDir,
-          shotPlanId: plan.shotPlan.id,
-          lastGenerationSpecId,
-        })
-      ).rejects.toMatchObject({
-        code: 'CORE_SHOT_PLAN_GENERATION_SPEC_INVALID',
-      });
-    }
-  });
-
-  it('retains the last frozen Spec across failed and successful Runs', async () => {
-    const projectData = createProjectDataService();
-    const fixture = await createProjectFixture(projectData, homeDir);
-    if (!fixture) {
-      return;
-    }
-    const plan = await createPlan(projectData, homeDir, fixture.sceneId);
-    const spec = await createVideoSpec(projectData, {
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      executionKind: 'agent-external',
-    });
-    await projectData.setShotPlanLastGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      lastGenerationSpecId: spec.id,
-    });
-    const frozen = await projectData.freezeGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      specId: spec.id,
-    });
-
-    const { session } = await openProjectSession({
-      projectName: 'constantinople',
-      homeDir,
-    });
-    try {
-      insertGenerationRunRecord(
-        session,
-        generationRun({
-          id: 'media_generation_run_failed',
-          specId: frozen.id,
-          spec: frozen.spec,
-          status: 'failed',
-          outputs: [],
-        })
-      );
-      insertGenerationRunRecord(
-        session,
-        generationRun({
-          id: 'media_generation_run_completed',
-          specId: frozen.id,
-          spec: frozen.spec,
-          status: 'completed',
-          outputs: [{
-            artifactId: 'artifact-video',
-            projectRelativePath: 'tmp/completed.mp4' as never,
-          }],
-        })
-      );
-    } finally {
-      session.close();
-    }
-
-    const afterRuns = await projectData.readShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-    });
-    expect(afterRuns.shotPlan.lastGenerationSpec?.id).toBe(spec.id);
-    expect(afterRuns.shotPlan.lastGenerationSpec?.frozenAt).not.toBeNull();
-
-    const next = await projectData.createNextShotPlanGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-    });
-    expect(next.shotPlan.lastGenerationSpec).toMatchObject({
-      frozenAt: null,
-      spec: frozen.spec,
-    });
-  });
-
-  it('imports provenance-backed videos as independent Project Assets', async () => {
-    const projectData = createProjectDataService();
-    const fixture = await createProjectFixture(projectData, homeDir);
-    if (!fixture) {
-      return;
-    }
-    const plan = await createPlan(projectData, homeDir, fixture.sceneId);
-    const lastSpec = await createVideoSpec(projectData, {
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      executionKind: 'agent-external',
-      title: 'First try',
-    });
-    const otherSpec = await createVideoSpec(projectData, {
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      executionKind: 'agent-external',
-      title: 'Another try',
-    });
-    const managedSpec = await createVideoSpec(projectData, {
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      executionKind: 'renku-managed',
-      title: 'Managed try',
-    });
-    await projectData.setShotPlanLastGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      lastGenerationSpecId: lastSpec.id,
-    });
-    await projectData.freezeGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      specId: lastSpec.id,
-    });
-    await projectData.freezeGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      specId: otherSpec.id,
-    });
-    await fs.mkdir(path.join(fixture.projectFolder, 'tmp'), { recursive: true });
-    await fs.writeFile(
-      path.join(fixture.projectFolder, 'tmp', 'external.mp4'),
-      'video'
-    );
-    await fs.writeFile(
-      path.join(fixture.projectFolder, 'tmp', 'managed.mp4'),
-      'video'
-    );
-    const { session } = await openProjectSession({
-      projectName: 'constantinople',
-      homeDir,
-    });
-    try {
-      freezeManagedGenerationSpec({
-        record: managedSpec,
-        session,
-        now: '2026-07-24T10:00:00.000Z',
-      });
-      insertGenerationRunRecord(
-        session,
-        generationRun({
-          id: 'media_generation_run_video_import',
-          specId: managedSpec.id,
-          spec: managedSpec.spec,
-          status: 'completed',
-          outputs: [{
-            artifactId: 'artifact-managed-video',
-            projectRelativePath: 'tmp/managed.mp4' as never,
-            mimeType: 'video/mp4',
-            contentHash: createHash('sha256').update('video').digest('hex'),
-          }],
-        })
-      );
-    } finally {
-      session.close();
-    }
-
-    await expect(projectData.attachGenerationMedia({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'video.create',
-      target: { kind: 'project', id: 'project' },
-      sourceProjectRelativePath: 'tmp/external.mp4',
-    })).rejects.toMatchObject({
-      code: 'CORE_GENERATION_ATTACHMENT_PROVENANCE_REQUIRED',
-    });
-
-    const first = await projectData.attachGenerationMedia({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'video.create',
-      target: { kind: 'project', id: 'project' },
-      sourceProjectRelativePath: 'tmp/external.mp4',
-      title: 'First try',
-      sourceSpecId: lastSpec.id,
-    });
-    const second = await projectData.attachGenerationMedia({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'video.create',
-      target: { kind: 'project', id: 'project' },
-      sourceProjectRelativePath: 'tmp/external.mp4',
-      title: 'First try',
-      sourceSpecId: otherSpec.id,
-    });
-    const managed = await projectData.attachGenerationMedia({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'video.create',
-      target: { kind: 'project', id: 'project' },
-      sourceProjectRelativePath: 'tmp/managed.mp4',
-      title: 'Managed try',
-      receipt: { id: 'media_generation_run_video_import' },
-    });
-    expect(first.asset).toMatchObject({
-      type: 'project_video',
-      mediaKind: 'video',
-      files: [
-        expect.objectContaining({
-          role: 'primary',
-          projectRelativePath: 'videos/first-try.mp4',
-        }),
-      ],
-    });
-    expect(second.asset).toMatchObject({
-      files: [
-        expect.objectContaining({
-          projectRelativePath: 'videos/first-try-2.mp4',
-        }),
-      ],
-    });
-    expect(first.provenance).toEqual({ generationSpecId: lastSpec.id });
-    expect(second.provenance).toEqual({ generationSpecId: otherSpec.id });
-    expect(managed.provenance).toEqual({
-      generationRunId: 'media_generation_run_video_import',
-    });
-
-    await projectData.updateShotInPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      shotId: plan.shotPlan.shots[0]!.id,
-      shot: {
-        title: 'Changed shot',
-        description: 'Changed shot.',
-        brief: {},
-      },
-    });
-    const afterAttachments = await projectData.updateShotPlanDetails({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      title: 'Editable after videos',
-      coverage: null,
-    });
-    expect(afterAttachments.shotPlan.lastGenerationSpec?.id).toBe(lastSpec.id);
-
-    const discarded = await projectData.discardAsset({
-      projectName: 'constantinople',
-      homeDir,
-      owner: first.asset.owner,
-      assetId: first.asset.id,
-    });
-    expect((await projectData.readShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-    })).shotPlan.lastGenerationSpec?.id).toBe(lastSpec.id);
-    await projectData.restoreTrashItem({
-      projectName: 'constantinople',
-      homeDir,
-      trashItemId: discarded.recovery.trashItemIds[0]!,
-    });
-    expect((await projectData.readShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-    })).shotPlan.lastGenerationSpec?.id).toBe(lastSpec.id);
-  });
-
-  it('deletes and restores a Shot Plan without changing independent media', async () => {
-    const projectData = createProjectDataService();
-    const fixture = await createProjectFixture(projectData, homeDir);
-    if (!fixture) {
-      return;
-    }
-    const plan = await createPlan(projectData, homeDir, fixture.sceneId);
-    const spec = await createVideoSpec(projectData, {
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      executionKind: 'agent-external',
-    });
-    await projectData.setShotPlanLastGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-      lastGenerationSpecId: spec.id,
-    });
-    await projectData.freezeGenerationSpec({
-      projectName: 'constantinople',
-      homeDir,
-      specId: spec.id,
-    });
-    await fs.mkdir(path.join(fixture.projectFolder, 'tmp'), { recursive: true });
-    await fs.writeFile(path.join(fixture.projectFolder, 'tmp', 'final.mp4'), 'video');
-    const attachment = await projectData.attachGenerationMedia({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'video.create',
-      target: { kind: 'project', id: 'project' },
-      sourceProjectRelativePath: 'tmp/final.mp4',
-      sourceSpecId: spec.id,
-    });
-
-    const deleted = await projectData.deleteShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-    });
-    await expect(projectData.readShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-    })).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_NOT_FOUND' });
-
-    const { session } = await openProjectSession({
-      projectName: 'constantinople',
-      homeDir,
-    });
-    try {
-      const [state] = session.db.all(sql`
-        select
-          (select count(*) from shot where shot_plan_id = ${plan.shotPlan.id}) as shot_count,
-          (select discarded_at from asset where id = ${attachment.asset.id}) as asset_discarded_at,
-          (select count(*) from media_generation_spec where id = ${spec.id}) as spec_count,
-          (select count(*) from asset_membership where asset_id = ${attachment.asset.id} and owner_key = 'project') as relationship_count
-      `) as Array<{
-        shot_count: number;
-        asset_discarded_at: string | null;
-        spec_count: number;
-        relationship_count: number;
-      }>;
-      expect(state).toEqual({
-        shot_count: 1,
-        asset_discarded_at: null,
-        spec_count: 1,
-        relationship_count: 1,
-      });
-    } finally {
-      session.close();
-    }
-
-    await projectData.restoreTrashItem({
-      projectName: 'constantinople',
-      homeDir,
-      trashItemId: deleted.recovery.trashItemIds[0]!,
-    });
-    const restored = await projectData.readShotPlan({
-      projectName: 'constantinople',
-      homeDir,
-      shotPlanId: plan.shotPlan.id,
-    });
-    expect(restored.shotPlan.lastGenerationSpec?.id).toBe(spec.id);
-    expect(restored.shotPlan.shots).toHaveLength(1);
+    expect(authored.shotPlan.shots).toEqual([
+      expect.objectContaining({
+        position: 0,
+        title: 'Establishing drift',
+      }),
+    ]);
   });
 
   it('owns image candidates, explicit selection, selected-only copy, and recoverable cleanup', async () => {
@@ -958,23 +562,6 @@ describe('Shot Plans', () => {
     );
   });
 
-  it('keeps video.create context project-scoped and free of Shot Plan facts', async () => {
-    const projectData = createProjectDataService();
-    const fixture = await createProjectFixture(projectData, homeDir);
-    if (!fixture) {
-      return;
-    }
-    const context = await projectData.buildGenerationContext({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'video.create',
-      target: { kind: 'project', id: 'project' },
-    });
-
-    expect(context.outputMediaKind).toBe('video');
-    expect(context.facts).toEqual({ projectAspectRatio: '16:9' });
-    expect(context.referenceGuide.sections).toEqual([]);
-  });
 });
 
 async function createProjectFixture(
@@ -1013,64 +600,4 @@ async function createPlan(
     coverage: null,
     shots: [{ title: 'One shot', description: 'One shot.', brief: {} }],
   });
-}
-
-async function createVideoSpec(
-  projectData: ReturnType<typeof createProjectDataService>,
-  input: {
-    homeDir: string;
-    shotPlanId: string;
-    executionKind: 'renku-managed' | 'agent-external';
-    title?: string;
-  }
-) {
-  return projectData.createGenerationSpec({
-    projectName: 'constantinople',
-    homeDir: input.homeDir,
-    spec: {
-      purpose: 'video.create',
-      target: { kind: 'project', id: 'project' },
-      authoredFrom: { kind: 'shotPlan', id: input.shotPlanId },
-      executionKind: input.executionKind,
-      ...(input.title ? { title: input.title } : {}),
-      model: { provider: 'agent', model: 'opaque-video' },
-      values: { prompt: 'Exact authored request.', duration: 5 },
-      references: [],
-    },
-  });
-}
-
-function generationRun(input: {
-  id: string;
-  specId: string;
-  spec: Awaited<ReturnType<typeof createVideoSpec>>['spec'];
-  status: 'failed' | 'completed';
-  outputs: Array<{
-    artifactId: string;
-    projectRelativePath?: import('../../client/project.js').ProjectRelativePath;
-    mimeType?: string;
-    contentHash?: string;
-  }>;
-}) {
-  return {
-    id: input.id,
-    specId: input.specId,
-    specSnapshot: input.spec,
-    provider: 'fixture',
-    model: 'video',
-    providerPayload: {},
-    estimate: {
-      provider: 'fixture',
-      model: 'video',
-      estimatedCostUsd: 0,
-      approvalToken: 'fixture',
-      billableUnits: {},
-    },
-    status: input.status,
-    outputs: input.outputs,
-    receipt: null,
-    diagnostics: [],
-    startedAt: '2026-07-24T10:00:00.000Z',
-    completedAt: '2026-07-24T10:01:00.000Z',
-  };
 }

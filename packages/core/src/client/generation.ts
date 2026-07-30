@@ -18,8 +18,7 @@ export type GenerationPurpose =
   | 'location.sheet'
   | 'location.hero'
   | 'scene.storyboard-sheet'
-  | 'shot.image'
-  | 'video.create';
+  | 'shot.image';
 export type GenerationOutputMediaKind = 'image' | 'audio' | 'video';
 
 export type GenerationTarget =

@@ -2,7 +2,6 @@ import type { CopyShotPlanInput } from '../../client/shot-plans.js';
 import {
   insertShotPlanRecord,
   requireShotPlanRecord,
-  setShotPlanLastGenerationSpecId,
 } from '../database/access/shot-plans/plan-records.js';
 import {
   insertShotRecords,
@@ -14,7 +13,6 @@ import {
   createUniqueIdAllocator,
   type ProjectIdGenerator,
 } from '../entity-ids.js';
-import { copyGenerationSpecForAuthoring } from '../generation/specs.js';
 import { parseStoredShotBrief, parseStoredShotPlanCoverage } from './validation.js';
 import { requireScene } from './scene-ownership.js';
 import {
@@ -75,21 +73,6 @@ export function copyShotPlanAuthoring(input: {
           destinationShotId: copiedShot.id,
           destinationShotPlanId: shotPlanId,
           ids,
-          now: input.now,
-        });
-      }
-      if (source.lastGenerationSpecId !== null) {
-        const generationSpecId = ids('media_generation_spec');
-        copyGenerationSpecForAuthoring({
-          sourceSpecId: source.lastGenerationSpecId,
-          newSpecId: generationSpecId,
-          authoredFrom: { kind: 'shotPlan', id: shotPlanId },
-          session,
-          now: input.now,
-        });
-        setShotPlanLastGenerationSpecId(session, {
-          shotPlanId,
-          lastGenerationSpecId: generationSpecId,
           now: input.now,
         });
       }

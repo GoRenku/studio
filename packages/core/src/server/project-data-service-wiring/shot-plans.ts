@@ -9,10 +9,6 @@ import {
   updateShotPlanDetails,
 } from '../commands/shot-plan-authoring-commands.js';
 import {
-  createNextShotPlanGenerationSpec,
-  setShotPlanLastGenerationSpec,
-} from '../commands/shot-plan-generation-commands.js';
-import {
   listSceneShotPlans,
   readShotPlan,
 } from '../commands/shot-plan-read-commands.js';
@@ -29,8 +25,6 @@ export function createShotPlanServiceWiring(): Pick<
   | 'updateShotInPlan'
   | 'moveShotInPlan'
   | 'removeShotFromPlan'
-  | 'setShotPlanLastGenerationSpec'
-  | 'createNextShotPlanGenerationSpec'
   | 'copyShotPlan'
   | 'readShotPlan'
   | 'listSceneShotPlans'
@@ -47,8 +41,6 @@ export function createShotPlanServiceWiring(): Pick<
     updateShotInPlan,
     moveShotInPlan,
     removeShotFromPlan,
-    setShotPlanLastGenerationSpec,
-    createNextShotPlanGenerationSpec,
     copyShotPlan,
     readShotPlan,
     listSceneShotPlans,

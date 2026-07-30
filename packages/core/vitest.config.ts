@@ -19,8 +19,6 @@ const moduleMockedTests = [
   'src/server/media-generation/lifecycle/project-session.test.ts',
   'src/server/media-generation/lifecycle/run-service.test.ts',
   'src/server/media-generation/lifecycle/scene-dialogue-audio-estimates.test.ts',
-  'src/server/media-generation/lifecycle/shot-video-take-estimates.test.ts',
-  'src/server/media-generation/lifecycle/shot-video-take-production-estimates.test.ts',
   'src/server/media-generation/lifecycle/spec-estimates.test.ts',
   'src/server/media-generation/lifecycle/spec-service.test.ts',
   'src/server/media-generation/dependencies/dependency-draft-specs.test.ts',

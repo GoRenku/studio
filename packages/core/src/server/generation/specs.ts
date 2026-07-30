@@ -80,29 +80,6 @@ export function listGenerationSpecs(input: {
   });
 }
 
-export function copyGenerationSpecForAuthoring(input: {
-  sourceSpecId: string;
-  newSpecId: string;
-  authoredFrom: GenerationSpecAuthoredFrom;
-  session: DatabaseSession;
-  now: string;
-}): GenerationSpecRecord {
-  const source = readGenerationSpec({
-    id: input.sourceSpecId,
-    session: input.session,
-  });
-  return insertGenerationSpecRecord(input.session, {
-    id: input.newSpecId,
-    spec: {
-      ...cloneGenerationSpec(source.spec),
-      authoredFrom: structuredClone(input.authoredFrom),
-    },
-    frozenAt: null,
-    createdAt: input.now,
-    updatedAt: input.now,
-  });
-}
-
 function assertGenerationSpecEnvelope(
   spec: GenerationSpec,
   purpose: GenerationPurposeContract

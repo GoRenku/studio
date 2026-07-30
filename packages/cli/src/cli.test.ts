@@ -5,9 +5,8 @@ describe('Renku CLI generation parsing', () => {
   it('uses current purpose names and exact targets', () => {
     const purpose = parseGenerationPurpose('location.sheet');
     expect(parseGenerationTarget({ purpose, target: 'location:basilica' })).toEqual({ kind: 'location', id: 'basilica' });
-    expect(parseGenerationTarget({
-      purpose: 'video.create',
-      target: 'project',
-    })).toEqual({ kind: 'project', id: 'project' });
+    expect(() => parseGenerationPurpose('unknown.purpose')).toThrow(
+      expect.objectContaining({ code: 'CLI024' })
+    );
   });
 });

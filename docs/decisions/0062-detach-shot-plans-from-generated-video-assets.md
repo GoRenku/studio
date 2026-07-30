@@ -4,6 +4,11 @@ Date: 2026-07-24
 
 Status: accepted
 
+Decision 0068 supersedes this decision's generic video purpose, Project-video
+destination, and last-Spec continuation behavior. Its independent Asset
+ownership, exact provenance, and one-way non-FK `authoredFrom` direction remain
+accepted.
+
 ## Context
 
 A Shot Plan is an authoring surface that users continue to revise while trying
@@ -74,4 +79,3 @@ This decision supersedes the final-video ownership, attachment-driven freeze,
 and coupled Trash behavior in Decision 0061. It retains mutable Shot Plans,
 ordered Shots, soft Beat coverage, the last-Spec convenience pointer, and Shot
 Plan duplication.
-

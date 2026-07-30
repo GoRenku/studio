@@ -18,7 +18,7 @@ export interface StudioAssetResponse extends Omit<Asset, 'files'> {
 export interface StudioShotPlanListItemResponse {
   shotPlan: Omit<
     ShotPlanListReport['shotPlans'][number]['shotPlan'],
-    'shots' | 'lastGenerationSpec'
+    'shots'
   > & {
     shots: Array<
       Omit<ShotPlanListReport['shotPlans'][number]['shotPlan']['shots'][number], 'images'> & {

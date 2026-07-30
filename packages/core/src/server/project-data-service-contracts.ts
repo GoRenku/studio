@@ -98,14 +98,12 @@ import type {
   RecoverableMutationReport,
   TrashListReport,
   CreateShotPlanInput,
-  CreateNextShotPlanGenerationSpecInput,
   UpdateShotPlanDetailsInput,
   AddShotToPlanInput,
   UpdateShotInPlanInput,
   MoveShotInPlanInput,
   RemoveShotFromPlanInput,
   DiscardShotImageCandidateInput,
-  SetShotPlanLastGenerationSpecInput,
   CopyShotPlanInput,
   ReadShotPlanInput,
   ListSceneShotPlansInput,
@@ -243,12 +241,6 @@ export interface ProjectDataService {
   removeShotFromPlan(
     input: RemoveShotFromPlanInput
   ): Promise<RecoverableMutationReport>;
-  setShotPlanLastGenerationSpec(
-    input: SetShotPlanLastGenerationSpecInput
-  ): Promise<ShotPlanReport>;
-  createNextShotPlanGenerationSpec(
-    input: CreateNextShotPlanGenerationSpecInput
-  ): Promise<ShotPlanReport>;
   copyShotPlan(input: CopyShotPlanInput): Promise<ShotPlanReport>;
   readShotPlan(input: ReadShotPlanInput): Promise<ShotPlanReport>;
   listSceneShotPlans(

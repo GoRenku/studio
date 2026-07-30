@@ -4,6 +4,9 @@ Date: 2026-07-26
 
 Status: accepted
 
+Decision 0068 supersedes only this decision's reference to the generic video
+purpose. Thin Shot authoring and Shot-owned image behavior remain accepted.
+
 Decision 0067 narrows the custom brief-language rule below for
 `optics.depthOfField`: current Shot briefs accept only `shallow` or `deep`.
 Description, Optics intent, focus target, and Lighting intent remain exact

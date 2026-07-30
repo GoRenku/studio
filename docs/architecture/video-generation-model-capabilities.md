@@ -6,24 +6,20 @@ Status: reference
 
 Current implementation note: this document preserves capability research, not
 the active runtime contract. The schema-first Engines catalog exposes each
-provider route directly, and project-scoped `video.create` uses that catalog
-without the normalized `modelChoice` interface below. Decision 0052 removed the
-legacy Take runtime. The illustrative AI Production aggregate remains
-non-current.
+provider route directly, but Studio currently registers no product
+video-generation purpose. Decision 0052 removed the legacy Take runtime and
+Decision 0068 removed the later dormant generic video scaffolding. The
+illustrative AI Production aggregate remains non-current.
 
 ## Purpose
 
 This document records the current capability analysis for the video-generation
 models Renku Studio may support for future Shot video authoring.
 
-It is deliberately separate from the active implementation plans:
-
-- `plans/active/0038-shot-composition-location-tabs.md` specifies shot design
-  tabs;
-- `plans/active/0039-shot-ai-production-tab.md` specifies AI Production,
-  persistence, and Studio/Core implementation;
-- this document describes model capabilities and the normalized axes needed by
-  future engine support.
+It is deliberately separate from product implementation plans. This document
+describes provider capabilities and normalized axes that may inform future
+engine support; it does not define a current Studio workflow or presentation
+contract.
 
 The implementation must not hard-code UI assumptions from this document. The
 engine catalog should expose normalized capability metadata, and Core should use

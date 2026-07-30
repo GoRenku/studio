@@ -1471,7 +1471,6 @@ Current purposes:
 ```text
 image.create
 image.edit
-video.create
 lookbook.image
 lookbook.video-sheet
 lookbook.storyboard-sheet
@@ -1517,15 +1516,15 @@ A generic `GenerationSpec` has this shape:
 ```json
 {
   "executionKind": "renku-managed",
-  "purpose": "video.create",
+  "purpose": "image.create",
   "target": { "kind": "project", "id": "project" },
   "authoredFrom": { "kind": "shotPlan", "id": "shot_plan_bombardment" },
   "model": {
     "provider": "fal-ai",
-    "model": "bytedance/seedance-2.0/text-to-video"
+    "model": "openai/gpt-image-2"
   },
   "values": {
-    "prompt": "A wide bombardment shot..."
+    "prompt": "An authored planning image..."
   },
   "references": [],
   "title": "Bombardment wide"
@@ -1596,8 +1595,6 @@ Behavior:
 - Estimates cover only the current provider request; they never walk references
   or construct child work.
 - `image.create` has Additional References only and no named slot.
-- `video.create` is project-scoped, has no Shot Plan facts or inferred slots,
-  and imports accepted outputs as independent Project Assets.
 - `image.edit` targets the exact source asset and uses the
   `source/source-image` slot plus optional exact Cast, Location, and
   Lookbook candidates.
@@ -1646,7 +1643,6 @@ cast.character-sheet
 cast.profile
 location.sheet
 location.hero
-video.create
 ```
 
 General form:
@@ -1677,16 +1673,13 @@ renku media import --purpose cast.character-sheet --target cast:<cast-member-id>
 renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --select --json
 renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
 renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --select --json
-renku media import --purpose video.create --target project --source tmp/media/bombardment-wide.mp4 --title "Bombardment wide" --receipt tmp/receipts/video-run.json --json
 ```
 
 Pass `--receipt` only for an exact output from a Renku run whose purpose and
 target match the focused attachment. Pass `--source-spec` for a Codex-generated
 output after saving and freezing the matching agent-external request.
-`video.create` requires one of these exact provenance forms; it is not a manual
-video import purpose. Other supported purposes may omit both for uploaded,
-downloaded, manually created, or other external media with no saved generation
-request.
+Supported purposes may omit both for uploaded, downloaded, manually created,
+or other external media with no saved generation request.
 
 Scene Storyboard Sheet uses the focused cropped-image attachment:
 

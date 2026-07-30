@@ -13,7 +13,6 @@ const PREVIEW_TITLE_CASES = {
   'location.hero': 'Location Hero Generation Preview',
   'scene.storyboard-sheet': 'Scene Storyboard Sheet Generation Preview',
   'shot.image': 'Shot Image Generation Preview',
-  'video.create': 'Video Generation Preview',
   'image.create': 'Image Create Generation Preview',
 } satisfies Record<GenerationPreviewPurpose, string>;
 

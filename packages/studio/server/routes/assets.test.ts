@@ -193,7 +193,7 @@ describe('assets Hono route', () => {
       id: 'asset_file_video_primary',
       role: 'primary',
       projectRelativePath:
-        'generated/media/shot-video-take.mp4' as Asset['files'][number]['projectRelativePath'],
+        'generated/media/generated-media.mp4' as Asset['files'][number]['projectRelativePath'],
       mediaKind: 'video',
       mimeType: 'video/mp4',
       sizeBytes: 1234,
@@ -215,7 +215,7 @@ describe('assets Hono route', () => {
               assetMediaKind: 'video',
               file: videoFile,
               absolutePath:
-                '/tmp/renku/constantinople/generated/media/shot-video-take.mp4',
+                '/tmp/renku/constantinople/generated/media/generated-media.mp4',
             };
           },
         },

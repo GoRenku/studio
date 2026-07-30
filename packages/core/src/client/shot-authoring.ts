@@ -1,5 +1,3 @@
-import type { JsonScalar, JsonValue } from './generation.js';
-
 export type ShotSizeId =
   | 'extreme-close-up'
   | 'close-up'
@@ -112,70 +110,4 @@ export interface ShotDirectionDraft {
   cast?: { castMemberIds?: string[] };
   location?: { locationId?: string };
   dialogue?: ShotDialogueChoice[];
-}
-
-export type ShotGenerationInputModeId =
-  | 'text-only'
-  | 'first-frame'
-  | 'first-last-frame'
-  | 'reference'
-  | 'source-video-reference';
-
-export type ShotGenerationParameterValue =
-  | JsonScalar
-  | string[]
-  | number[]
-  | boolean[]
-  | { kind: 'dimensions'; width: number; height: number }
-  | { [key: string]: JsonValue };
-
-export type ShotGenerationParameterValues = Record<string, JsonValue>;
-
-export interface ShotGenerationPromptDraft {
-  prompt: string;
-  negativePrompt?: string;
-}
-
-export interface ShotGenerationParameterReport {
-  name: string;
-  label: string;
-  required: boolean;
-  allowedValues?: ShotGenerationParameterValue[];
-  minimum?: number;
-  maximum?: number;
-}
-
-export interface ShotGenerationModelReport {
-  modelChoice: string;
-  provider: string;
-  model: string;
-  label: string;
-  supportedInputModes: ShotGenerationInputModeId[];
-  duration: {
-    supported: boolean;
-    values?: number[];
-    minimum?: number;
-    maximum?: number;
-  };
-  parameters: ShotGenerationParameterReport[];
-}
-
-export interface ShotGenerationSetup {
-  inputModeId: ShotGenerationInputModeId;
-  modelChoice?: string;
-  parameterValues: ShotGenerationParameterValues;
-}
-
-export function selectShotGenerationModel(
-  setup: ShotGenerationSetup,
-  model: ShotGenerationModelReport
-): ShotGenerationSetup {
-  if (setup.modelChoice === model.modelChoice) {
-    return setup;
-  }
-  return {
-    ...setup,
-    modelChoice: model.modelChoice,
-    parameterValues: {},
-  };
 }

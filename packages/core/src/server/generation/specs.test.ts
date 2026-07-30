@@ -81,14 +81,14 @@ describe('generic generation spec editing persistence', () => {
   it('round-trips and filters soft Shot Plan authoring context', () => {
     const session = createMemorySession();
     const purpose = {
-      purpose: 'video.create' as const,
+      purpose: 'image.create' as const,
       targetKind: 'project' as const,
-      outputMediaKind: 'video' as const,
+      outputMediaKind: 'image' as const,
     };
     createGenerationSpec({
       id: 'spec-shot-plan',
       spec: {
-        purpose: 'video.create',
+        purpose: 'image.create',
         target: { kind: 'project', id: 'project-1' },
         authoredFrom: { kind: 'shotPlan', id: 'shot-plan-missing' },
         executionKind: 'agent-external',
@@ -102,7 +102,7 @@ describe('generic generation spec editing persistence', () => {
     createGenerationSpec({
       id: 'spec-project',
       spec: {
-        purpose: 'video.create',
+        purpose: 'image.create',
         target: { kind: 'project', id: 'project-1' },
         executionKind: 'agent-external',
         values: {},
@@ -128,7 +128,7 @@ describe('generic generation spec editing persistence', () => {
     expect(() => createGenerationSpec({
       id: 'spec-invalid-origin',
       spec: {
-        purpose: 'video.create',
+        purpose: 'image.create',
         target: { kind: 'project', id: 'project-1' },
         authoredFrom: { kind: 'shotPlan', id: ' ' },
         executionKind: 'agent-external',

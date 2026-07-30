@@ -120,17 +120,15 @@ controls list only explicitly registered assets for their exact domain subject.
 A generic reference is never promoted into a typed slot automatically. Creative
 prompts and media remain opaque under Decision `0041`.
 
-`video.create` is a project-scoped video purpose. It defines no Shot-owned
-reference guide or durable Shot production lifecycle. A Spec may retain
-information-only `authoredFrom: { kind: 'shotPlan', id }` context, but Core does
-not resolve that context into purpose facts or use it as a target, owner, or
-execution requirement.
+Studio currently exposes no product video-generation purpose. Engines retains
+generic video descriptors, schemas, validation, pricing, simulation, and
+provider adapters independently from the Studio purpose registry.
 
-A Shot Plan remains mutable and keeps at most one `lastGenerationSpec` as the
-request configuration to continue from, regardless of Run success or failure.
-Frozen Specs are retried unchanged; changed attempts copy the last frozen Spec
-into a new mutable Spec. Generated videos are independent Project Assets with
-existing exact provenance. Shot Plan and Asset Trash lifecycles are independent.
+A Spec may retain information-only
+`authoredFrom: { kind: 'shotPlan', id }` context. Core does not resolve that
+value into purpose facts or use it as a target, owner, foreign key, lifecycle
+rule, or execution requirement. Shot Plans contain no GenerationSpec state;
+copy and Trash behavior never read, copy, or mutate generation records.
 
 ## Persistence
 

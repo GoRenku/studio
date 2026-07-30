@@ -4,6 +4,9 @@ Date: 2026-07-23
 
 Status: accepted
 
+Decision 0068 supersedes this decision's remaining Shot Plan-to-Spec pointer
+and Spec-copy behavior. Shot Plans now contain authoring state only.
+
 Decision 0062 supersedes this decision's final-video ownership,
 attachment-driven freeze, and coupled Trash behavior. It retains durable
 mutable Shot Plans, ordered Shots, soft Beat context, the last-Spec convenience

@@ -131,12 +131,6 @@ That integration bucket includes:
 - `packages/studio/src/app/app.e2e.test.tsx`
 - `packages/studio/src/features/generation-preview/generation-preview-dialog-host.e2e.test.tsx`
 
-The named estimate matrix command remains available:
-
-```bash
-pnpm --filter @gorenku/studio test:shot-video-estimates
-```
-
 ### Studio Browser E2E
 
 Studio browser e2e uses Playwright under `packages/studio/e2e/tests`.
@@ -206,7 +200,7 @@ Examples:
 
 ```bash
 pnpm --dir packages/core exec vitest run src/server/media-generation/cost/cost-projection.test.ts
-pnpm --dir packages/studio exec vitest run src/features/movie-studio/shot-authoring/shot-ai-production-projection.test.ts
+pnpm --dir packages/studio exec vitest run src/features/movie-studio/shot-design/shot-design-media.test.ts
 pnpm --dir packages/cli exec vitest run src/commands/generation-command-handlers.test.ts
 pnpm --dir packages/engines exec vitest run src/sdk/replicate/retry.test.ts
 ```
@@ -405,8 +399,6 @@ Studio's default Vitest config previously included `src/**/*.e2e.test.ts` and
 
 Expected impact:
 
-- ordinary Studio tests include the estimate matrix and take-state persistence
-  flows;
 - expensive, valuable final checks run too often;
 - the slowest tests become the development loop instead of the final gate.
 
@@ -414,9 +406,7 @@ Implemented direction:
 
 - keep the in-process e2e tests;
 - exclude `src/**/*.e2e.test.*` from the fast Studio Vitest config;
-- add a Studio integration command that explicitly includes those files;
-- keep `test:shot-video-estimates` as a named targeted command for the estimate
-  matrix.
+- add a Studio integration command that explicitly includes those files.
 
 ### CLI Workflow Tests Mixed With Fast CLI Tests
 

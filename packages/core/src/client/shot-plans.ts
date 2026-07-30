@@ -1,6 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { Asset } from './assets.js';
-import type { GenerationSpecRecord } from './generation.js';
 import type { Beat } from './scene-beat-sheet.js';
 
 export interface ShotPlanCoverage {
@@ -49,7 +48,6 @@ export interface ShotPlan {
   title: string;
   coverage: ShotPlanCoverage | null;
   shots: Shot[];
-  lastGenerationSpec: GenerationSpecRecord | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,17 +103,6 @@ export interface DiscardShotImageCandidateInput
   shotPlanId: string;
   shotId: string;
   assetId: string;
-}
-
-export interface SetShotPlanLastGenerationSpecInput
-  extends ShotPlanProjectInput {
-  shotPlanId: string;
-  lastGenerationSpecId: string;
-}
-
-export interface CreateNextShotPlanGenerationSpecInput
-  extends ShotPlanProjectInput {
-  shotPlanId: string;
 }
 
 export interface CopyShotPlanInput extends ShotPlanProjectInput {

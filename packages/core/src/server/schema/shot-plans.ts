@@ -8,7 +8,6 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
-import { mediaGenerationSpecs } from './media-generation.js';
 
 export const shotPlans = sqliteTable(
   'shot_plan',
@@ -17,17 +16,11 @@ export const shotPlans = sqliteTable(
     sceneId: text('scene_id').notNull(),
     title: text('title').notNull(),
     coverage: text('coverage'),
-    lastGenerationSpecId: text('generation_spec_id').references(
-      () => mediaGenerationSpecs.id
-    ),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
     ...discardLifecycleColumns(),
   },
   (table) => [
-    uniqueIndex('shot_plan_last_generation_spec_unique_idx').on(
-      table.lastGenerationSpecId
-    ),
     index('shot_plan_scene_active_created_idx').on(
       table.sceneId,
       table.discardedAt,
