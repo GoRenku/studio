@@ -25,6 +25,7 @@ import {
   createSimulatedProviderClient,
   isSimulatedProviderClient,
 } from '../unified/simulated-client.js';
+import { normalizeFalApiError } from './fal-api-error.js';
 
 type SubscribeOptions = {
   logger?: ProviderLogger;
@@ -125,6 +126,10 @@ export const falAdapter: ProviderAdapter = {
         enhancedError.model = model;
         enhancedError.reason = 'timeout';
         throw enhancedError;
+      }
+      const providerError = normalizeFalApiError(error, { model });
+      if (providerError) {
+        throw providerError;
       }
       throw error;
     }
