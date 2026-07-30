@@ -30,9 +30,9 @@ type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 
 export function createGenerationServiceWiring() {
   return {
-    async buildGenerationContext(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; facts?: Record<string, never> }) {
+    async buildGenerationContext(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; facts?: Record<string, never>; authoredFrom?: GenerationSpecAuthoredFrom }) {
       return withGenerationProject(input, ({ session, projectFolder }) =>
-        readGenerationPurpose(input.purpose).buildContext({ target: input.target, facts: input.facts, session, projectFolder })
+        readGenerationPurpose(input.purpose).buildContext({ target: input.target, facts: input.facts, authoredFrom: input.authoredFrom, session, projectFolder })
       );
     },
     async listGenerationModels(input: ProjectInput & { purpose?: GenerationPurpose; outputMediaKind?: 'image' | 'audio' | 'video' }) {
@@ -90,7 +90,7 @@ export function createGenerationServiceWiring() {
         const purpose = readGenerationPurpose(rawSpec.purpose);
         const authoredSpec = await applyFixedGenerationSettings({ spec: rawSpec, purpose });
         const spec = await preparePurposeExecutionSpec({ spec: rawSpec, purpose, projectAspectRatio: projectAspectRatio(session) });
-        const context = await purpose.buildContext({ target: authoredSpec.target, session, projectFolder });
+        const context = await purpose.buildContext({ target: authoredSpec.target, authoredFrom: authoredSpec.authoredFrom, session, projectFolder });
         const validation = rawSpec.executionKind === 'renku-managed'
           ? await validateGenerationSpecForExecution({ spec, purpose, session, projectFolder })
           : null;
@@ -114,6 +114,7 @@ export function createGenerationServiceWiring() {
       specId: string;
       prompt: { authoredText: string; negativeText?: string | null };
       modelFamilyId?: string;
+      shotPlanVideoInputMode?: import('../../client/generation.js').ShotPlanVideoInputMode;
       parameterValues: Record<string, JsonValue>;
       slotSelections: GenerationReferenceSlotSelectionInput[];
     }) {

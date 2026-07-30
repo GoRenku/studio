@@ -1,10 +1,12 @@
 import type {
   GenerationPreviewConfigurationValue,
+  GenerationEditorControl,
   GenerationReferenceSlotSelectionInput,
   GenerationPreviewReferenceSlot,
   GenerationPreviewResource,
   GenerationPreviewResourceReference,
   JsonValue,
+  ShotPlanVideoInputMode,
 } from '@gorenku/studio-core/client';
 import type { UpdateGenerationPreviewResourceSpecInput } from '@/services/studio-generation-preview-api';
 
@@ -14,6 +16,7 @@ export interface GenerationPreviewDraft {
     negativeText?: string;
   };
   modelFamilyId: string;
+  shotPlanVideoInputMode?: ShotPlanVideoInputMode;
   parameterValues: Record<string, GenerationPreviewConfigurationValue>;
   authoredParameterNames: string[];
   slotSelections: GenerationReferenceSlotSelectionInput[];
@@ -29,8 +32,13 @@ export function createGenerationPreviewDraft(
         ? { negativeText: preview.finalPrompt.negativeText }
         : {}),
     },
-    modelFamilyId: preview.authoring.selectedModelFamilyId,
-    ...parameterDraftForControls(preview.authoring.controls),
+    modelFamilyId: preview.authoring.kind === 'none'
+      ? ''
+      : preview.authoring.selectedModelFamilyId,
+    ...(preview.authoring.kind === 'video'
+      ? { shotPlanVideoInputMode: preview.authoring.selectedInputMode }
+      : {}),
+    ...parameterDraftForControls(authoringControls(preview)),
     slotSelections: [],
   };
 }
@@ -100,14 +108,23 @@ export function generationPreviewDraftIsDirty(
   draft: GenerationPreviewDraft
 ): boolean {
   return draft.slotSelections.length > 0 ||
-    draft.modelFamilyId !== preview.authoring.selectedModelFamilyId ||
+    draft.modelFamilyId !== (
+      preview.authoring.kind === 'none'
+        ? ''
+        : preview.authoring.selectedModelFamilyId
+    ) ||
+    draft.shotPlanVideoInputMode !== (
+      preview.authoring.kind === 'video'
+        ? preview.authoring.selectedInputMode
+        : undefined
+    ) ||
     !configurationValuesEqual(
       draft.parameterValues,
-      parameterDraftForControls(preview.authoring.controls).parameterValues
+      parameterDraftForControls(authoringControls(preview)).parameterValues
     ) ||
     !stringCollectionsEqual(
       draft.authoredParameterNames,
-      parameterDraftForControls(preview.authoring.controls).authoredParameterNames
+      parameterDraftForControls(authoringControls(preview)).authoredParameterNames
     ) ||
     draft.promptDraft.authoredText !== preview.finalPrompt.authoredText ||
     draft.promptDraft.negativeText !== preview.finalPrompt.negativeText;
@@ -119,6 +136,7 @@ export function buildGenerationPreviewUpdateRequest(
 ): Pick<
   UpdateGenerationPreviewResourceSpecInput,
   'prompt' | 'modelFamilyId' | 'parameterValues' | 'slotSelections'
+  | 'shotPlanVideoInputMode'
 > {
   return {
     prompt: {
@@ -132,6 +150,9 @@ export function buildGenerationPreviewUpdateRequest(
         : {}),
     },
     modelFamilyId: draft.modelFamilyId,
+    ...(draft.shotPlanVideoInputMode
+      ? { shotPlanVideoInputMode: draft.shotPlanVideoInputMode }
+      : {}),
     parameterValues: Object.fromEntries(
       draft.authoredParameterNames.map((name) => [
         name,
@@ -145,13 +166,20 @@ export function buildGenerationPreviewUpdateRequest(
 export function changeGenerationPreviewModel(
   draft: GenerationPreviewDraft,
   modelFamilyId: string,
-  controls: GenerationPreviewResource['authoring']['controls'],
+  controls: GenerationEditorControl[],
 ): GenerationPreviewDraft {
   return {
     ...draft,
     modelFamilyId,
     ...parameterDraftForControls(controls, true),
   };
+}
+
+export function changeGenerationPreviewInputMode(
+  draft: GenerationPreviewDraft,
+  shotPlanVideoInputMode: ShotPlanVideoInputMode,
+): GenerationPreviewDraft {
+  return { ...draft, shotPlanVideoInputMode };
 }
 
 export function changeGenerationPreviewParameter(
@@ -172,7 +200,7 @@ export function changeGenerationPreviewParameter(
 }
 
 function parameterDraftForControls(
-  inputControls: GenerationPreviewResource['authoring']['controls'],
+  inputControls: GenerationEditorControl[],
   modelSelection = false,
 ): Pick<GenerationPreviewDraft, 'parameterValues' | 'authoredParameterNames'> {
   const controls = inputControls
@@ -187,6 +215,14 @@ function parameterDraftForControls(
       )
       .map((control) => control.controlId),
   };
+}
+
+function authoringControls(
+  preview: GenerationPreviewResource,
+): GenerationEditorControl[] {
+  return preview.authoring.kind === 'none'
+    ? []
+    : preview.authoring.controls;
 }
 
 function configurationValuesEqual(

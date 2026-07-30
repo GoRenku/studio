@@ -24,6 +24,7 @@ export interface StudioModelConfigurableParameter {
   field: string;
   label: string;
   valueLabels?: Record<string, string>;
+  initialValue?: string | number | boolean;
 }
 
 export type StudioImageInputAvailability = 'none' | 'optional' | 'required';
@@ -337,6 +338,16 @@ function validateRouteParameters(input: {
           ));
         }
       }
+    }
+    if (
+      parameter.initialValue !== undefined &&
+      field.allowedValues?.length &&
+      !field.allowedValues.includes(parameter.initialValue)
+    ) {
+      input.issues.push(catalogIssue(
+        `Configurable field ${parameter.field} does not accept its initial value.`,
+        [...path, 'initialValue'],
+      ));
     }
   }
 }

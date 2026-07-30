@@ -4,6 +4,12 @@ Date: 2026-07-06
 
 Status: accepted
 
+> Decision
+> [0069](0069-use-shot-plan-video-generation-with-weak-context.md)
+> supersedes only this decision's separate shot-video Preview route/helper
+> clauses. Shot Plan video now uses the shared discriminated Preview authoring
+> path and existing exact request inspector.
+
 ## Context
 
 Saved media-generation specs need preview payloads so users can verify a

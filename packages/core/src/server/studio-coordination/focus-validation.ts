@@ -296,6 +296,8 @@ function sceneTabLabel(tab: ScenePanelTab): { id: ScenePanelTab; label: string }
         ? 'Beats'
         : tab === 'shotPlans'
           ? 'Shot Plans'
+          : tab === 'generations'
+            ? 'Generations'
           : 'Narrative',
   };
 }

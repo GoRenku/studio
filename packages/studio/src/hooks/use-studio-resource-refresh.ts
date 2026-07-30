@@ -152,6 +152,15 @@ export function matchesSceneNarrativeResource(
   );
 }
 
+export function matchesSceneVideoGenerationsResource(
+  resourceKeys: string[],
+  sceneId: string,
+): boolean {
+  return resourceKeys.includes(
+    `surface:scene:${sceneId}:video-generations`,
+  );
+}
+
 export function matchesSceneBeatsResource(input: {
   resourceKeys: string[];
   sceneId: string;

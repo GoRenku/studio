@@ -10,6 +10,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
+import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 
 describe('Shot Plans', () => {
   let homeDir: string;
@@ -560,6 +561,146 @@ describe('Shot Plans', () => {
         expect.objectContaining({ id: selected.asset.id }),
       ])
     );
+  });
+
+  it('projects exact Shot Plan video provenance through rename, Trash, restore, and Empty Trash', async () => {
+    const projectData = createProjectDataService();
+    const fixture = await createProjectFixture(projectData, homeDir);
+    if (!fixture) {
+      return;
+    }
+    const plan = await createPlan(projectData, homeDir, fixture.sceneId);
+    const spec = await projectData.createGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      spec: {
+        executionKind: 'agent-external',
+        purpose: 'shot-plan.video-generation',
+        target: { kind: 'project', id: 'project' },
+        authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
+        shotPlanVideoInputMode: 'text-only',
+        model: {
+          provider: 'fal-ai',
+          model: 'bytedance/seedance-2.0/text-to-video',
+        },
+        values: { prompt: 'One continuous opaque video request.' },
+        references: [],
+        title: 'Opening video',
+      },
+    });
+    await projectData.freezeGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      specId: spec.id,
+    });
+    await fs.mkdir(path.join(fixture.projectFolder, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(fixture.projectFolder, 'tmp', 'video.mp4'), 'video');
+    const attached = await projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'shot-plan.video-generation',
+      target: { kind: 'project', id: 'project' },
+      sourceProjectRelativePath: 'tmp/video.mp4',
+      sourceSpecId: spec.id,
+      title: 'Opening video',
+    });
+    const resourceKey =
+      `surface:scene:${fixture.sceneId}:video-generations`;
+    expect(attached.resourceKeys).toEqual([resourceKey]);
+    const { session: provenanceSession } = await openProjectSession({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    try {
+      expect(shotPlanVideoAssetResourceKeys(
+        provenanceSession,
+        attached.asset.id,
+      )).toEqual([resourceKey]);
+    } finally {
+      provenanceSession.close();
+    }
+    await expect(projectData.listSceneShotPlanVideoGenerations({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: fixture.sceneId,
+    })).resolves.toMatchObject({
+      groups: [{
+        kind: 'shotPlan',
+        shotPlan: { id: plan.shotPlan.id, title: 'Plan' },
+        assets: [{ id: attached.asset.id }],
+      }],
+      resourceKeys: [resourceKey],
+    });
+
+    const discardedVideo = await projectData.discardAsset({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'project' },
+      assetId: attached.asset.id,
+    });
+    expect(discardedVideo.resourceKeys).toContain(resourceKey);
+    await expect(projectData.listSceneShotPlanVideoGenerations({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: fixture.sceneId,
+    })).resolves.toMatchObject({ groups: [] });
+    const restoredVideo = await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: discardedVideo.recovery.trashItemIds[0]!,
+    });
+    expect(restoredVideo.resourceKeys).toContain(resourceKey);
+
+    const renamed = await projectData.updateShotPlanDetails({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+      title: 'Renamed plan',
+      coverage: null,
+    });
+    expect(renamed.resourceKeys).toContain(resourceKey);
+    const deleted = await projectData.deleteShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    });
+    expect(deleted.resourceKeys).toContain(resourceKey);
+    await expect(projectData.listSceneShotPlanVideoGenerations({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: fixture.sceneId,
+    })).resolves.toMatchObject({
+      groups: [{ kind: 'miscellaneous', assets: [{ id: attached.asset.id }] }],
+    });
+
+    const restored = await projectData.restoreTrashItem({
+      projectName: 'constantinople',
+      homeDir,
+      trashItemId: deleted.recovery.trashItemIds[0]!,
+    });
+    expect(restored.resourceKeys).toContain(resourceKey);
+    await projectData.deleteShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    });
+    const preview = await projectData.previewGarbageCollection({
+      projectName: 'constantinople',
+      homeDir,
+      olderThanIso: '9999-12-31T23:59:59.999Z',
+    });
+    const collected = await projectData.emptyTrash({
+      projectName: 'constantinople',
+      homeDir,
+      olderThanIso: '9999-12-31T23:59:59.999Z',
+      confirmationToken: preview.confirmationToken,
+    });
+    expect(collected.resourceKeys).toContain(resourceKey);
+    await expect(projectData.listSceneShotPlanVideoGenerations({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: fixture.sceneId,
+    })).resolves.toMatchObject({ groups: [] });
   });
 
 });

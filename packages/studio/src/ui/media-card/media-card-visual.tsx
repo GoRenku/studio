@@ -6,6 +6,7 @@ import {
 } from 'react';
 import { Film, ImageOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AudioPreview } from '@/ui/audio-preview';
 import type {
   MediaCardEmptyState,
   MediaCardFrame,
@@ -86,6 +87,17 @@ function MediaCardMediaVisual({
   active: boolean;
   onImageLoad?: (event: SyntheticEvent<HTMLImageElement>) => void;
 }) {
+  if (media.kind === 'audio') {
+    return (
+      <div className='flex h-full min-h-28 w-full items-center bg-card/40 px-4 pb-12 pt-4'>
+        <AudioPreview
+          src={media.src}
+          title={media.title}
+          className='w-full'
+        />
+      </div>
+    );
+  }
   if (media.kind === 'video') {
     return (
       <MediaCardVideoVisual

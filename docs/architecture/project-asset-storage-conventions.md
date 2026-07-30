@@ -326,3 +326,8 @@ It should not become a broad compatibility layer or reusable legacy loader.
   current path.
 - Development data with old paths must be moved once and then treated as
   current data.
+
+Shot Plan video outputs are Project-owned files under `videos/`. Optional first
+frame, last frame, and storyboard outputs are Project-owned files under
+`videos/references/`. Their exact source request remains provenance metadata;
+filenames and paths never determine Shot Plan or Scene grouping.

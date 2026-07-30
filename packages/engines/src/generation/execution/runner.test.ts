@@ -37,6 +37,39 @@ describe('runGeneration', () => {
     ]);
   });
 
+  it('binds schema-described video duration for simulated output', async () => {
+    const outputRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'renku-generation-video-output-')
+    );
+
+    const result = await runGeneration({
+      mode: 'simulated',
+      outputRoot,
+      outputProjectRelativeRoot: 'generated/media',
+      policy: {
+        provider: 'fal-ai',
+        model: 'bytedance/seedance-2.0/text-to-video',
+        mediaKind: 'video',
+      },
+      request: {
+        payload: {
+          prompt: 'A simulated Shot Plan video.',
+          duration: '4',
+          resolution: '480p',
+          generate_audio: false,
+        },
+        outputNames: ['shot-plan-video.mp4'],
+      },
+    });
+
+    expect(result.outputs).toEqual([
+      expect.objectContaining({
+        projectRelativePath: 'generated/media/shot-plan-video.mp4',
+        mimeType: 'video/mp4',
+      }),
+    ]);
+  });
+
   it('rejects generated output names with path segments', async () => {
     const outputRoot = await fs.mkdtemp(
       path.join(os.tmpdir(), 'renku-generation-output-')

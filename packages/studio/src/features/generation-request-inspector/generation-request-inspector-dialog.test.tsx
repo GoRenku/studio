@@ -218,6 +218,7 @@ function previewFixture(
     references: {
       slots: [{
         label: 'Research image',
+        mediaKind: 'image',
         locked: false,
         placement: {
           kind: 'slot',
@@ -259,7 +260,7 @@ function previewFixture(
         }],
       }],
     },
-    authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+    authoring: { kind: 'image', selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     diagnostics: [],
   };
 }

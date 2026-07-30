@@ -352,6 +352,8 @@ function sceneTabLabel(tab: ScenePanelTab) {
         ? 'Beats'
         : tab === 'shotPlans'
           ? 'Shot Plans'
+          : tab === 'generations'
+            ? 'Generations'
           : 'Narrative',
   };
 }

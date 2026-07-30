@@ -77,6 +77,7 @@ export type * from './generation-preview-resource.js';
 export type * from './scene-dialogue-audio-workspace.js';
 export type * from './scene-beat-sheet.js';
 export type * from './shot-plans.js';
+export type * from './shot-plan-video-generations.js';
 export * from './shot-authoring.js';
 export type {
   ProjectLanguage,

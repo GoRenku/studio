@@ -377,3 +377,13 @@ This architecture follows Hono's documented guidance:
 - avoid Rails-style controllers when possible;
 - write handlers directly next to path definitions to preserve type inference;
 - use chained route definitions when future RPC/client inference matters.
+
+The Shot Plan video read route is:
+
+```text
+GET /studio-api/projects/:projectName/screenplay/scenes/:sceneId/video-generations
+```
+
+It calls the Core projection, adds browser-safe AssetFile URLs, and serializes
+the result. It does not resolve provenance, plans, groups, or provider fields
+in the handler.

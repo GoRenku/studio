@@ -9,11 +9,14 @@ import {
   studioLocationSurfaceResourceKey,
   studioVisualLanguageLookbookResourceKey,
   studioSceneShotPlansResourceKey,
+  studioSceneVideoGenerationsResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { requireShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { readGenerationSpecRecord } from '../database/access/media-generation.js';
+import { shotPlanVideoSourceSceneId } from '../shot-plan-video-generations/source-provenance.js';
 
 export interface GeneratedMediaAttachmentDestination {
   file: ProjectAssetFileDestination;
@@ -118,6 +121,39 @@ type AttachmentBuilder = (
 const attachmentBuilders: Partial<
   Record<GenerationPurpose, AttachmentBuilder>
 > = {
+  'shot-plan.video-generation': (input) =>
+    details(
+      requireTarget(input, 'project'),
+      {
+        file: { kind: 'shotPlan.video', titleHint: input.title },
+        owner: { kind: 'project' },
+        resourceKeys: [],
+      },
+      'Shot Plan Video',
+      'shot_plan_video',
+      'video',
+    ),
+  'shot-plan.video-first-frame': (input) =>
+    shotPlanVideoReferenceImageDetails(
+      requireTarget(input, 'project'),
+      input.title,
+      'Shot Plan Video First Frame',
+      'shot_plan_video_first_frame',
+    ),
+  'shot-plan.video-last-frame': (input) =>
+    shotPlanVideoReferenceImageDetails(
+      requireTarget(input, 'project'),
+      input.title,
+      'Shot Plan Video Last Frame',
+      'shot_plan_video_last_frame',
+    ),
+  'shot-plan.video-storyboard': (input) =>
+    shotPlanVideoReferenceImageDetails(
+      requireTarget(input, 'project'),
+      input.title,
+      'Shot Plan Video Storyboard',
+      'shot_plan_video_storyboard',
+    ),
   'lookbook.image': (input) =>
     details(
       requireTarget(input, 'lookbook'),
@@ -188,6 +224,44 @@ const attachmentBuilders: Partial<
     );
   },
 };
+
+export function generatedMediaAttachmentResourceKeys(input: {
+  attachment: GeneratedMediaAttachmentDetails;
+  generationSpecId: string | null;
+  session: DatabaseSession;
+}): string[] {
+  if (
+    input.attachment.assetType !== 'shot_plan_video' ||
+    !input.generationSpecId
+  ) {
+    return input.attachment.resourceKeys;
+  }
+  const source = readGenerationSpecRecord(input.session, input.generationSpecId);
+  const sceneId = source
+    ? shotPlanVideoSourceSceneId(input.session, source.spec)
+    : null;
+  return sceneId
+    ? [studioSceneVideoGenerationsResourceKey(sceneId)]
+    : [];
+}
+
+function shotPlanVideoReferenceImageDetails(
+  _input: unknown,
+  titleHint: string | undefined,
+  label: string,
+  assetType: string,
+): GeneratedMediaAttachmentDetails {
+  return details(
+    _input,
+    {
+      file: { kind: 'shotPlan.videoReferenceImage', titleHint },
+      owner: { kind: 'project' },
+      resourceKeys: [],
+    },
+    label,
+    assetType,
+  );
+}
 
 function details(
   _input: unknown,

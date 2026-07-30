@@ -626,3 +626,9 @@ Key dark mode behaviors:
 - Base layer sets `border-border` on all elements and `bg-background text-foreground` on body
 - `cn()` utility (clsx + tailwind-merge) for conditional class composition
 - No component-scoped CSS -- everything uses Tailwind utility classes
+
+For video requests, Preview Config uses the accepted desktop three-column
+composition: Model, Input, and Setup. The Scene Generations tab uses quiet
+accordion groups, hover-muted video cards, a shared large player, and a
+separate request-inspection action. Do not expose filenames, Asset ids,
+provider source ids, or invented card labels.

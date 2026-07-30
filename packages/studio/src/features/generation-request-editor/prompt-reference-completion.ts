@@ -78,10 +78,16 @@ function renderCompletionOption(
   const option = document.createElement('span');
   option.className = 'cm-prompt-reference-option-content';
 
-  const thumbnail = document.createElement('img');
+  const thumbnail = mention.previewImageUrl
+    ? document.createElement('img')
+    : document.createElement('span');
   thumbnail.className = 'cm-prompt-reference-option-image';
-  thumbnail.src = mention.previewImageUrl;
-  thumbnail.alt = '';
+  if (thumbnail instanceof HTMLImageElement) {
+    thumbnail.src = mention.previewImageUrl!;
+    thumbnail.alt = '';
+  } else {
+    thumbnail.textContent = mention.kind === 'audio' ? 'AUDIO' : 'VIDEO';
+  }
 
   const copy = document.createElement('span');
   copy.className = 'cm-prompt-reference-option-copy';

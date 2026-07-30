@@ -7,6 +7,8 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
 
 export type ProjectAssetFileDestination =
+  | { kind: 'shotPlan.video'; titleHint?: string }
+  | { kind: 'shotPlan.videoReferenceImage'; titleHint?: string }
   | { kind: 'cast.characterSheet'; castMemberId: string; titleHint?: string }
   | { kind: 'cast.profile'; castMemberId: string; titleHint?: string }
   | {

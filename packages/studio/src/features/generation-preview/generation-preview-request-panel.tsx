@@ -65,13 +65,24 @@ export function GenerationPreviewRequestPanel({
         onNegativeTextChange={editor.updateNegativeText}
         onReferenceChoose={editor.chooseReference}
         controls={editor.controls}
-        modelControl={preview.authoring.modelFamilies.length > 0
+        modelControl={preview.authoring.kind === 'image'
+          && preview.authoring.modelFamilies.length > 0
           ? {
               value: editor.modelKey,
               options: preview.authoring.modelFamilies.map((family) => ({
                 value: family.familyId,
                 label: family.label,
               })),
+            }
+          : undefined}
+        videoConfig={preview.authoring.kind === 'video'
+          ? {
+              inputModes: preview.authoring.inputModes,
+              inputMode: draft.shotPlanVideoInputMode
+                ?? preview.authoring.selectedInputMode,
+              modelFamilies: preview.authoring.modelFamilies,
+              modelFamilyId: editor.modelKey,
+              onInputModeChange: editor.chooseInputMode,
             }
           : undefined}
         onModelChange={editor.chooseModel}

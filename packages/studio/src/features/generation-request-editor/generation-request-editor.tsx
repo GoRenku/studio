@@ -4,6 +4,9 @@ import type {
   GenerationPreviewResource,
   GenerationPreviewReferenceSlot,
   GenerationPreviewResourceReference,
+  GenerationPreviewVideoInputMode,
+  GenerationPreviewVideoModelFamily,
+  ShotPlanVideoInputMode,
 } from '@gorenku/studio-core/client';
 import { AlertCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -17,6 +20,7 @@ import { GenerationRequestPromptPanel } from './generation-request-prompt-panel'
 import { GenerationRequestConfigPanel } from './generation-request-config-panel';
 import { GenerationRequestDiagnostics } from './generation-request-diagnostics';
 import { GenerationRequestReferenceGrid } from './generation-request-reference-grid';
+import { GenerationRequestVideoConfigPanel } from './generation-request-video-config-panel';
 
 export type GenerationRequestEditorTab = 'prompt' | 'references' | 'config';
 
@@ -33,6 +37,13 @@ interface GenerationRequestEditorProps {
   modelControl?: {
     value: string;
     options: Array<{ value: string; label: string }>;
+  };
+  videoConfig?: {
+    inputModes: GenerationPreviewVideoInputMode[];
+    inputMode: ShotPlanVideoInputMode;
+    modelFamilies: GenerationPreviewVideoModelFamily[];
+    modelFamilyId: string;
+    onInputModeChange: (value: ShotPlanVideoInputMode) => void;
   };
   onTabChange: (tab: GenerationRequestEditorTab) => void;
   onAuthoredTextChange: (value: string) => void;
@@ -61,6 +72,7 @@ export function GenerationRequestEditor({
   readOnly = false,
   controls = [],
   modelControl,
+  videoConfig,
   onTabChange,
   onAuthoredTextChange,
   onNegativeTextChange,
@@ -127,7 +139,15 @@ export function GenerationRequestEditor({
           )}
         </LineTabsContent>
         <LineTabsContent value='config' className='mt-0 min-h-0 overflow-auto'>
-          {controls.length || modelControl ? (
+          {videoConfig ? (
+            <GenerationRequestVideoConfigPanel
+              {...videoConfig}
+              controls={controls}
+              disabled={pending || readOnly}
+              onModelChange={onModelChange}
+              onControlChange={onControlChange}
+            />
+          ) : controls.length || modelControl ? (
             <GenerationRequestControlsPanel
               controls={controls}
               disabled={pending || readOnly}

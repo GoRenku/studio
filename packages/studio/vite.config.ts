@@ -36,6 +36,18 @@ const expandPath = (input: string | null | undefined) => {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// CodeMirror syntax tags use module identity. Keep its parser and highlighter
+// dependencies in one stable Vite prebundle instead of discovering them in waves.
+const codeMirrorDependencyIds = [
+  '@codemirror/autocomplete',
+  '@codemirror/commands',
+  '@codemirror/lang-markdown',
+  '@codemirror/language',
+  '@codemirror/state',
+  '@codemirror/view',
+  '@lezer/highlight',
+];
+
 export default defineConfig(({ mode }) => {
   const env = {
     ...loadEnv(mode, process.cwd(), ''),
@@ -189,6 +201,10 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+      dedupe: codeMirrorDependencyIds,
+    },
+    optimizeDeps: {
+      include: codeMirrorDependencyIds,
     },
     server: {
       host: studioServerHost,

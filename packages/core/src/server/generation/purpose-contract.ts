@@ -1,9 +1,11 @@
 import type {
   GenerationContext,
+  GenerationGuideNotice,
   GenerationOutputMediaKind,
   GenerationPurpose,
   GenerationPurposeSettings,
   GenerationReferenceGuide,
+  GenerationSpecAuthoredFrom,
   GenerationTarget,
   JsonValue,
 } from '../../client/generation.js';
@@ -14,6 +16,8 @@ export interface BuildGenerationPurposeInput {
   session: DatabaseSession;
   projectFolder: string;
   facts?: Record<string, JsonValue>;
+  authoredFrom?: GenerationSpecAuthoredFrom;
+  guideNotices?: GenerationGuideNotice[];
 }
 
 export interface GenerationPurposeDescriptor {

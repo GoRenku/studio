@@ -183,3 +183,9 @@ JSON contracts, craft guidance, and samples belong in the skill's
 When a Renku architecture contract changes, update the architecture/reference
 docs and CLI docs in this repository first, then update the external skill
 references to match the current contract.
+
+Shot Plan video workflow guidance lives separately from reusable provider
+research. The media-producer route registry maps exactly the nine
+Engines-activated Seedance routes to guide files and is checked against current
+CLI JSON. Inactive Kling and Veo research stays outside that registry and
+cannot activate runtime routes.

@@ -99,6 +99,7 @@ Options
   --spec               Media Generation Spec id
   --run                Media Generation Run id
   --approval-token     Approval token returned by generation estimate
+  --authored-from-shot-plan  Shot Plan source id for generation context
   --receipt            Generation Receipt JSON file
   --source-spec        Agent-external Generation Spec id for an imported image
   --locale             Project locale id
@@ -213,6 +214,9 @@ function createCliFlags() {
       type: 'string',
     },
     approvalToken: {
+      type: 'string',
+    },
+    authoredFromShotPlan: {
       type: 'string',
     },
     receipt: {
@@ -563,6 +567,9 @@ export async function runRenkuCli(
             kind: cli.flags.kind,
             approvalToken: cli.flags.approvalToken,
             simulate: cli.flags.simulate,
+            authoredFromShotPlan: input.join(' ') === 'context'
+              ? cli.flags.authoredFromShotPlan
+              : undefined,
           },
           json: cli.flags.json,
           io,

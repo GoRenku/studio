@@ -84,6 +84,12 @@ export function studioSceneShotPlansResourceKey(sceneId: string): string {
   return `surface:scene:${sceneId}:shot-plans`;
 }
 
+export function studioSceneVideoGenerationsResourceKey(
+  sceneId: string,
+): string {
+  return `surface:scene:${sceneId}:video-generations`;
+}
+
 export function studioSceneBeatsResourceKey(sceneId: string): string {
   return `surface:scene:${sceneId}:beats`;
 }

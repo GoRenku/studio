@@ -895,3 +895,9 @@ Do not hide an unexplained layout or state change with a broad mask, threshold,
 snapshot update, skipped test, or weaker assertion. A backend fixture may use a
 different identifier or exact media record, but it must drive the same visible
 state before a pixel comparison is treated as compatibility evidence.
+
+Managed video Preview Config uses a desktop three-column surface for model
+family, input mode, and setup. It consumes the Core `video` authoring
+discriminant and uses local shadcn controls. Scene Generations uses the exact
+`surface:scene:<scene-id>:video-generations` refresh key and must not subscribe
+to a broad Project Asset surface.

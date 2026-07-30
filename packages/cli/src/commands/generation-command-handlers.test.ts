@@ -26,6 +26,20 @@ describe('generation command handlers', () => {
     expect(buildGenerationContext).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'image.create', target: { kind: 'project', id: 'project' } }));
   });
 
+  it('passes an explicit Shot Plan association to Core context', async () => {
+    const buildGenerationContext = vi.fn().mockResolvedValue({
+      purpose: 'shot-plan.video-generation',
+    });
+    await handler('context').run(input({
+      purpose: 'shot-plan.video-generation',
+      target: 'project',
+      authoredFromShotPlan: 'shot_plan_1',
+    }, { buildGenerationContext }));
+    expect(buildGenerationContext).toHaveBeenCalledWith(expect.objectContaining({
+      authoredFrom: { kind: 'shotPlan', id: 'shot_plan_1' },
+    }));
+  });
+
   it('passes the exact approval token and mode to a generation run', async () => {
     const runGeneration = vi.fn().mockResolvedValue({ valid: true });
     await handler('run').run(input({ spec: 'spec_1', approvalToken: 'sha256:approved', simulate: true }, { runGeneration }));

@@ -14,6 +14,10 @@ const PREVIEW_TITLE_CASES = {
   'scene.storyboard-sheet': 'Scene Storyboard Sheet Generation Preview',
   'shot.image': 'Shot Image Generation Preview',
   'image.create': 'Image Create Generation Preview',
+  'shot-plan.video-generation': 'Shot Plan Video Generation Preview',
+  'shot-plan.video-first-frame': 'First Frame Generation Preview',
+  'shot-plan.video-last-frame': 'Last Frame Generation Preview',
+  'shot-plan.video-storyboard': 'Video Storyboard Generation Preview',
 } satisfies Record<GenerationPreviewPurpose, string>;
 
 describe('generationPreviewTitle', () => {

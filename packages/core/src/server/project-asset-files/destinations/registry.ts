@@ -49,6 +49,20 @@ import {
   resolveShotDestinationRoot,
   resolveShotDestinationRootSync,
 } from './shot.js';
+import {
+  resolveShotPlanVideoDestinationFile,
+  resolveShotPlanVideoDestinationFileSync,
+  resolveShotPlanVideoDestinationOutputNames,
+  resolveShotPlanVideoDestinationRoot,
+  resolveShotPlanVideoDestinationRootSync,
+} from './shot-plan-video.js';
+import {
+  resolveShotPlanVideoReferenceImageDestinationFile,
+  resolveShotPlanVideoReferenceImageDestinationFileSync,
+  resolveShotPlanVideoReferenceImageDestinationOutputNames,
+  resolveShotPlanVideoReferenceImageDestinationRoot,
+  resolveShotPlanVideoReferenceImageDestinationRootSync,
+} from './shot-plan-video-reference-image.js';
 
 const castCharacterSheetResolver = castResolver<'cast.characterSheet'>();
 const castProfileResolver = castResolver<'cast.profile'>();
@@ -59,6 +73,20 @@ const lookbookImageResolver = lookbookResolver<'visualLanguage.lookbookImage'>()
 const lookbookSheetResolver = lookbookResolver<'visualLanguage.lookbookSheet'>();
 
 const destinationResolvers = {
+  'shotPlan.video': {
+    resolveFile: resolveShotPlanVideoDestinationFile,
+    resolveFileSync: resolveShotPlanVideoDestinationFileSync,
+    resolveRoot: resolveShotPlanVideoDestinationRoot,
+    resolveRootSync: resolveShotPlanVideoDestinationRootSync,
+    resolveOutputNames: resolveShotPlanVideoDestinationOutputNames,
+  },
+  'shotPlan.videoReferenceImage': {
+    resolveFile: resolveShotPlanVideoReferenceImageDestinationFile,
+    resolveFileSync: resolveShotPlanVideoReferenceImageDestinationFileSync,
+    resolveRoot: resolveShotPlanVideoReferenceImageDestinationRoot,
+    resolveRootSync: resolveShotPlanVideoReferenceImageDestinationRootSync,
+    resolveOutputNames: resolveShotPlanVideoReferenceImageDestinationOutputNames,
+  },
   'cast.characterSheet': castCharacterSheetResolver,
   'cast.profile': castProfileResolver,
   'cast.voiceSample': castVoiceSampleResolver,

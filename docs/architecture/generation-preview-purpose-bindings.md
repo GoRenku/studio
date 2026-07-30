@@ -30,13 +30,15 @@ The resource projects exact persisted current choices separately from optional
 typed candidates supplied by the active purpose guide. No Shot or Take-specific
 slot family exists in the current generation contract.
 
-Each Draft typed slot has `current: null` or one exact persisted choice plus
-subject-filtered eligible candidates. In an editable Preview, a sole candidate
-is visible but unchecked when current is null. Read-only Preview surfaces show
-only exact current references; they do not present unselected candidates as if
-the request uses them. Purpose guides may add empty suggestions and candidate
-facts; they cannot erase an exact persisted selection. An unavailable selection
-is shown as unavailable without substitution.
+Each Draft typed slot carries its media kind and has `current: null` or one
+exact persisted choice plus subject-filtered eligible candidates. In an
+editable Preview, eligible candidates render directly as media cards and remain
+unchecked when current is null. There is no slot-local `Choose` button or
+generic picker step. Read-only Preview surfaces show only exact current
+references; they do not present unselected candidates as if the request uses
+them. Purpose guides may add empty suggestions and candidate facts; they cannot
+erase an exact persisted selection. An unavailable selection is shown as
+unavailable without substitution.
 
 Generic references are a separate ordered collection authored through the
 agent/CLI `GenerationSpec` contract. Generation Preview displays exact attached
@@ -47,11 +49,11 @@ path. Typed reference controls use focused domain relationships only.
 ## Update Semantics
 
 A focused nullable typed-slot selection command sets or clears one exact
-choice. A sole eligible candidate renders directly as the shared selectable
-media card; it does not open a picker dialog or expose a `None` button.
-Agent-authored generic references remain unchanged when Studio updates the
-saved request. Both AI Production and Generation Preview persist through the
-same spec state.
+choice. Eligible candidates render directly as shared selectable media cards;
+the card opens media inspection and its separate selection control changes the
+slot. Agent-authored generic references remain unchanged when Studio updates
+the saved request. Both AI Production and Generation Preview persist through
+the same spec state.
 
 Saved Preview updates may change the selected purpose-compatible model and the
 non-media provider inputs projected from Core model descriptors. Current
@@ -100,3 +102,29 @@ unsaved/read-only, pending, failure, latest-response-wins, typed-slot,
 unchecked-sole-candidate, inline singleton selection, read-only generic
 references, model/input authoring, fixed image-edit source, and exact-only
 read-only reference coverage.
+
+Video authoring uses the same Preview resource with an explicit `video`
+authoring discriminant. A focused video strategy projects input modes,
+catalog-backed families, and schema-backed controls; image and none strategies
+remain separate. The strategy registry is keyed by output media kind, not
+purpose or provider. Exact image/video/audio prompt mentions are displayed
+without scanning or rewriting prompt text.
+
+The editable video Config tab keeps three desktop panes in the order Model,
+Input, Setup. Setup contains only schema-backed controls; prompt content is
+displayed and edited exclusively in the Prompt tab.
+
+For `shot-plan.video-generation`, Core filters optional guide slots before the
+resource reaches React:
+
+- text-only shows no unselected typed reference slots;
+- first-frame shows only the first-frame slot;
+- first-last-frame shows only first-frame and last-frame slots;
+- reference mode shows compatible available storyboard, lookbook, and dialogue
+  media, plus one named Character Sheet and Location Sheet slot for each Scene
+  subject so missing subject media has an explicit placeholder.
+
+Empty Dialogue Audio slots are not projected. Persisted exact selections and
+Additional Media remain visible even when a later input-mode change leaves them
+unassigned, so the user can remove them and structured execution diagnostics
+remain actionable.

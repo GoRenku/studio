@@ -9,6 +9,7 @@ import { requireAssetOwner } from '../assets/ownership.js';
 import { assetOwnerKey } from '../assets/owner-keys.js';
 import { assetOwnerResourceKeys } from '../assets/resource-keys.js';
 import type { DiscardAssetInput } from '../project-data-service-contracts.js';
+import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 
 export async function discardAsset(
   input: DiscardAssetInput
@@ -43,7 +44,10 @@ export async function discardAsset(
       itemId: input.assetId,
       commandName: 'asset.discard',
       changes: [{ type: 'asset.discarded', assetId: input.assetId }],
-      resourceKeys: assetOwnerResourceKeys(session, owner),
+      resourceKeys: [
+        ...assetOwnerResourceKeys(session, owner),
+        ...shotPlanVideoAssetResourceKeys(session, input.assetId),
+      ],
     });
   } finally {
     session.close();

@@ -25,6 +25,9 @@ vi.mock('../shot-plans/shot-plan-detail-page', () => ({
 vi.mock('../shot-plans/use-scene-shot-plans', () => ({
   useSceneShotPlans: vi.fn(),
 }));
+vi.mock('../shot-plan-video-generations/scene-shot-plan-video-generations-tab', () => ({
+  SceneShotPlanVideoGenerationsTab: () => <div>Video generations</div>,
+}));
 
 describe('ScenePanel', () => {
   beforeEach(() => {
@@ -72,7 +75,7 @@ describe('ScenePanel', () => {
     expect(await screen.findAllByText('The city prepares')).toHaveLength(2);
   });
 
-  it('keeps Generations visible and disabled on the Shot Plans tab', async () => {
+  it('opens the enabled Generations Scene tab', async () => {
     const onSelect = vi.fn();
     render(
       <ScenePanel
@@ -86,8 +89,13 @@ describe('ScenePanel', () => {
     const generations = await screen.findByRole('tab', {
       name: 'Generations',
     });
-    expect(generations.hasAttribute('disabled')).toBe(true);
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(generations.hasAttribute('disabled')).toBe(false);
+    activateTab(generations);
+    expect(onSelect).toHaveBeenCalledWith({
+      type: 'scene',
+      id: 'scene_hook',
+      sceneTab: 'generations',
+    });
     expect(readSceneBeatSheetResource).not.toHaveBeenCalled();
   });
 
@@ -296,6 +304,14 @@ function ScenePanelSelectionHarness({
       />
     </>
   );
+}
+
+function activateTab(tab: HTMLElement): void {
+  fireEvent.pointerDown(tab, { button: 0, ctrlKey: false });
+  fireEvent.pointerUp(tab);
+  fireEvent.mouseDown(tab, { button: 0, ctrlKey: false });
+  fireEvent.mouseUp(tab);
+  fireEvent.click(tab);
 }
 
 function sceneNarrative(productionNumber = '1'): SceneNarrativeResourceResponse {

@@ -138,6 +138,7 @@ function previewFixture(): GenerationPreviewResource {
     references: {
       slots: [{
         label: 'Style reference',
+        mediaKind: 'image',
         locked: false,
         placement: {
           kind: 'slot',
@@ -170,6 +171,7 @@ function previewFixture(): GenerationPreviewResource {
     },
     configuration: { sections: [] },
     authoring: {
+      kind: 'image',
       selectedModelFamilyId: 'gpt-image-2',
       modelFamilies: [
         { familyId: 'gpt-image-2', label: 'GPT Image 2' },

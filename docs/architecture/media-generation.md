@@ -181,3 +181,12 @@ exact source AssetFile locked in `source/source-image`. Preview reviews the
 request; a managed receipt or frozen external source spec proves execution; and
 the accepted result is imported through the source owner's real focused
 destination. Studio inspection never edits, executes, or attaches output.
+
+## Shot Plan video generation
+
+`shot-plan.video-generation` targets Project, carries a weak Shot Plan source,
+and requires an explicit text-only, first-frame, first-last-frame, or reference
+input mode. Core owns exact catalog route selection, schema-backed values,
+reference routing, provenance, and attachment. The three auxiliary Shot Plan
+video image purposes follow the same weak source contract. Prompts and media
+remain opaque.

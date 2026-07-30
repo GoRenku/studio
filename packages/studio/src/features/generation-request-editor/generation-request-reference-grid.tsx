@@ -1,13 +1,11 @@
-import { useState } from 'react';
 import type {
   GenerationPreviewReferenceSlot,
   GenerationPreviewResource,
   GenerationPreviewResourceReference,
 } from '@gorenku/studio-core/client';
-import { ReferencePickerDialog } from '@/features/reference-picker/reference-picker-dialog';
 import type { GenerationPreviewDraft } from '@/features/generation-preview/generation-preview-draft';
 import { generationPreviewReferenceSelected } from '@/features/generation-preview/generation-preview-draft';
-import { Button } from '@/ui/button';
+import { MediaCard } from '@/ui/media-card/media-card';
 import { GenerationRequestReferenceCard } from './generation-request-reference-card';
 
 interface GenerationRequestReferenceGridProps {
@@ -28,7 +26,6 @@ export function GenerationRequestReferenceGrid({
   editable,
   onReferenceChoose,
 }: GenerationRequestReferenceGridProps) {
-  const [openSlot, setOpenSlot] = useState<GenerationPreviewReferenceSlot | null>(null);
   const canEdit = (editable ?? preview.generationSpec?.frozenAt === null) &&
     Boolean(onReferenceChoose);
   const visibleSlots = preview.references.slots.filter(
@@ -46,40 +43,43 @@ export function GenerationRequestReferenceGrid({
       <div className='mx-auto w-full max-w-[900px] space-y-[30px] pt-[38px] pb-12'>
         {visibleSlots.map((slot) => {
           const canEditSlot = canEdit && !slot.locked;
-          const selected = [slot.current, ...slot.eligibleCandidates]
-            .filter((reference): reference is GenerationPreviewResourceReference => Boolean(reference))
-            .find((reference) => generationPreviewReferenceSelected(slot, reference, draft)) ?? null;
-          const soleCandidate = canEditSlot && !selected && slot.eligibleCandidates.length === 1
-            ? slot.eligibleCandidates[0]!
-            : null;
+          const references = uniqueReferences(
+            canEditSlot
+              ? [slot.current, ...slot.eligibleCandidates]
+              : [slot.current]
+          );
           return (
             <section key={slotKey(slot)} className='space-y-[15px]'>
               <h3 className='text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
                 {slot.label}
               </h3>
               <div className='grid grid-cols-[repeat(2,minmax(0,420px))] gap-5'>
-                {selected || soleCandidate ? (
-                  <GenerationRequestReferenceCard
-                    reference={(selected ?? soleCandidate)!}
-                    selected={Boolean(selected)}
-                    onOpen={canEditSlot && !updating && slot.eligibleCandidates.length > 1
-                      ? () => setOpenSlot(slot)
-                      : undefined}
-                    onToggleSelected={canEditSlot && !updating
-                      ? () => onReferenceChoose?.(slot, selected ? null : soleCandidate)
-                      : undefined}
-                  />
-                ) : slot.eligibleCandidates.length > 0 ? (
-                  <Button
-                    type='button'
-                    variant='outline'
-                    disabled={!canEditSlot || updating}
-                    onClick={() => setOpenSlot(slot)}
-                  >
-                    Choose {slot.label}
-                  </Button>
+                {references.length > 0 ? (
+                  references.map((reference) => {
+                    const referenceSelected =
+                      generationPreviewReferenceSelected(
+                        slot,
+                        reference,
+                        draft
+                      );
+                    return (
+                      <GenerationRequestReferenceCard
+                        key={referenceIdentityKey(reference)}
+                        reference={reference}
+                        fallbackTitle={slot.label}
+                        selected={referenceSelected}
+                        onToggleSelected={canEditSlot && !updating
+                          ? () =>
+                              onReferenceChoose?.(
+                                slot,
+                                referenceSelected ? null : reference
+                              )
+                          : undefined}
+                      />
+                    );
+                  })
                 ) : (
-                  <p className='text-sm text-muted-foreground'>No {slot.label} is available.</p>
+                  <GenerationRequestReferenceEmptyCard slot={slot} />
                 )}
               </div>
             </section>
@@ -102,30 +102,59 @@ export function GenerationRequestReferenceGrid({
           </section>
         ) : null}
       </div>
-      {openSlot ? (
-        <ReferencePickerDialog
-          open
-          onOpenChange={(open) => !open && setOpenSlot(null)}
-          title={openSlot.label}
-          description={`Choose the exact ${openSlot.label} for this generation request.`}
-          candidates={openSlot.eligibleCandidates.map((reference) => ({
-            id: referenceIdentityKey(reference),
-            title: reference.label,
-            imageUrl: reference.kind === 'image' ? reference.browserUrl : null,
-            imageAlt: reference.label,
-            selected: generationPreviewReferenceSelected(openSlot, reference, draft),
-          }))}
-          onChoose={(candidateId) => {
-            const reference = openSlot.eligibleCandidates.find((candidate) =>
-              referenceIdentityKey(candidate) === candidateId
-            ) ?? null;
-            onReferenceChoose?.(openSlot, reference);
-            setOpenSlot(null);
-          }}
-        />
-      ) : null}
     </>
   );
+}
+
+function GenerationRequestReferenceEmptyCard({
+  slot,
+}: {
+  slot: GenerationPreviewReferenceSlot;
+}) {
+  return (
+    <MediaCard
+      media={null}
+      frame={{ kind: 'ratio', aspectRatio: 16 / 10 }}
+      presentation={{
+        kind: 'overlay',
+        copy: { description: emptyReferenceDescription(slot) },
+      }}
+      emptyState={{ kind: emptyReferenceMediaKind(slot) }}
+    />
+  );
+}
+
+function emptyReferenceDescription(
+  slot: GenerationPreviewReferenceSlot,
+): string {
+  if (slot.placement.subject?.kind === 'castMember') {
+    return `No character sheet exists for ${slot.label}.`;
+  }
+  if (slot.placement.subject?.kind === 'location') {
+    return `No location sheet exists for ${slot.label}.`;
+  }
+  return `No ${slot.label.toLocaleLowerCase()} is available.`;
+}
+
+function emptyReferenceMediaKind(
+  slot: GenerationPreviewReferenceSlot,
+): 'image' | 'film' | 'waveform' {
+  if (slot.mediaKind === 'audio') {
+    return 'waveform';
+  }
+  return slot.mediaKind === 'video' ? 'film' : 'image';
+}
+
+function uniqueReferences(
+  references: Array<GenerationPreviewResourceReference | null>
+): GenerationPreviewResourceReference[] {
+  const unique = new Map<string, GenerationPreviewResourceReference>();
+  for (const reference of references) {
+    if (reference) {
+      unique.set(referenceIdentityKey(reference), reference);
+    }
+  }
+  return [...unique.values()];
 }
 
 function referenceIdentityKey(

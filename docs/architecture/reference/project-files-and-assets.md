@@ -382,3 +382,9 @@ AssetFile role instead of parsing names or inferring meaning from folders.
 The same rule applies to Visual Language folders. A folder name may be a useful
 creative hint for an agent, but Renku ownership and focused domain links come
 from SQLite rows and Core commands, not parsed names or paths.
+
+The Scene Generations projection follows the same rule. It includes only active
+Project-owned `shot_plan_video` Assets whose exact managed run snapshot or
+frozen external source spec identifies a Shot Plan video request. A restorable
+trashed plan supplies Scene context for `Miscellaneous`; a permanently
+collected plan supplies none.

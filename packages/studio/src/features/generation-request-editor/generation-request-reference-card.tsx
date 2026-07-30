@@ -1,57 +1,121 @@
+import { useState } from 'react';
 import type { GenerationPreviewResourceReference } from '@gorenku/studio-core/client';
-import { AudioPreview } from '@/ui/audio-preview';
 import { MediaCard } from '@/ui/media-card/media-card';
+import type {
+  MediaCardActivation,
+  MediaCardFrame,
+  MediaCardMedia,
+} from '@/ui/media-card/media-card-contract';
+import { VideoPreviewDialog } from '@/ui/video-preview-dialog';
 
 interface GenerationRequestReferenceCardProps {
   reference: GenerationPreviewResourceReference;
+  fallbackTitle?: string;
   selected: boolean;
-  onOpen?: () => void;
   onToggleSelected?: () => void | Promise<void>;
 }
 
 export function GenerationRequestReferenceCard({
   reference,
+  fallbackTitle,
   selected,
-  onOpen,
   onToggleSelected,
 }: GenerationRequestReferenceCardProps) {
-  const title = referenceDisplayTitle(reference);
-  if (reference.kind === 'audio') {
-    return (
-      <article className='flex min-h-28 flex-col gap-3 rounded-md border border-border/50 bg-card/40 p-3'>
-        {title ? <h3 className='truncate text-sm font-semibold'>{title}</h3> : null}
-        <AudioPreview src={reference.browserUrl} title={reference.label} className='w-full' />
-      </article>
-    );
-  }
+  const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
+  const title = referenceDisplayTitle(reference) ?? fallbackTitle;
+  const displayTitle = title ?? 'Generation reference';
   return (
-    <MediaCard
-      media={reference.kind === 'video'
-        ? {
-            kind: 'video', src: reference.browserUrl, title: reference.label,
-            playback: onOpen ? 'hover-muted' : 'still',
-          }
-        : {
-            kind: 'image', src: reference.browserUrl,
-            alt: title ?? 'Generation reference', fit: 'cover', effect: 'zoom-on-hover',
-          }}
-      frame={{ kind: 'ratio', aspectRatio: 16 / 10 }}
-      presentation={{ kind: 'overlay', copy: title ? { title } : undefined }}
-      selected={selected}
-      selection={onToggleSelected ? {
-        kind: 'toggle',
-        selected,
-        selectedLabel: `Exclude ${title ?? 'reference'}`,
-        unselectedLabel: `Include ${title ?? 'reference'}`,
-        onToggle: onToggleSelected,
-      } : undefined}
-      activation={onOpen ? {
-        kind: 'callback',
-        label: title ?? reference.label,
-        onActivate: onOpen,
-      } : undefined}
-    />
+    <>
+      <MediaCard
+        media={referenceCardMedia(reference, title)}
+        frame={referenceCardFrame(reference)}
+        presentation={{ kind: 'overlay', copy: title ? { title } : undefined }}
+        selected={selected}
+        selection={onToggleSelected ? {
+          kind: 'toggle',
+          selected,
+          selectedLabel: `Exclude ${title ?? 'reference'}`,
+          unselectedLabel: `Include ${title ?? 'reference'}`,
+          onToggle: onToggleSelected,
+        } : undefined}
+        activation={referenceCardActivation({
+          reference,
+          displayTitle,
+          onOpenVideo: () => setVideoPreviewOpen(true),
+        })}
+      />
+      {reference.kind === 'video' ? (
+        <VideoPreviewDialog
+          open={videoPreviewOpen}
+          onOpenChange={setVideoPreviewOpen}
+          src={reference.browserUrl}
+          title={displayTitle}
+        />
+      ) : null}
+    </>
   );
+}
+
+function referenceCardMedia(
+  reference: GenerationPreviewResourceReference,
+  title: string | undefined,
+): MediaCardMedia {
+  if (reference.kind === 'audio') {
+    return {
+      kind: 'audio',
+      src: reference.browserUrl,
+      title: title ?? 'Generation reference',
+    };
+  }
+  if (reference.kind === 'video') {
+    return {
+      kind: 'video',
+      src: reference.browserUrl,
+      title: title ?? 'Generation reference',
+      playback: 'hover-muted',
+    };
+  }
+  return {
+    kind: 'image',
+    src: reference.browserUrl,
+    alt: title ?? 'Generation reference',
+    fit: 'cover',
+    effect: 'zoom-on-hover',
+  };
+}
+
+function referenceCardFrame(
+  reference: GenerationPreviewResourceReference,
+): MediaCardFrame {
+  return reference.kind === 'audio'
+    ? { kind: 'minimum-height', minimumHeightPx: 112 }
+    : { kind: 'ratio', aspectRatio: 16 / 10 };
+}
+
+function referenceCardActivation(input: {
+  reference: GenerationPreviewResourceReference;
+  displayTitle: string;
+  onOpenVideo: () => void;
+}): MediaCardActivation | undefined {
+  if (input.reference.kind === 'image') {
+    return {
+      kind: 'image-preview',
+      label: `Open ${input.displayTitle} preview`,
+      image: {
+        src: input.reference.browserUrl,
+        alt: input.displayTitle,
+        title: input.displayTitle,
+      },
+    };
+  }
+  if (input.reference.kind === 'video') {
+    return {
+      kind: 'callback',
+      label: `Open ${input.displayTitle} preview`,
+      onActivate: input.onOpenVideo,
+    };
+  }
+  return undefined;
 }
 
 function referenceDisplayTitle(

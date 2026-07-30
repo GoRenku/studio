@@ -111,6 +111,8 @@ import type {
   ShotPlanListReport,
   ShotPlanValidationReport,
   DeleteShotPlanInput,
+  ListSceneShotPlanVideoGenerationsInput,
+  SceneShotPlanVideoGenerations,
 } from '../client/index.js';
 import type {
   InspirationAnalysisDocument,
@@ -246,6 +248,9 @@ export interface ProjectDataService {
   listSceneShotPlans(
     input: ListSceneShotPlansInput
   ): Promise<ShotPlanListReport>;
+  listSceneShotPlanVideoGenerations(
+    input: ListSceneShotPlanVideoGenerationsInput
+  ): Promise<SceneShotPlanVideoGenerations>;
   deleteShotPlan(
     input: DeleteShotPlanInput
   ): Promise<RecoverableMutationReport>;

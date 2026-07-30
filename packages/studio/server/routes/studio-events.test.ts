@@ -665,6 +665,7 @@ function coreGenerationPreviewResourceFixture() {
     references: {
       slots: [{
         label: 'Visual language',
+        mediaKind: 'image' as const,
         locked: false,
         placement: {
           kind: 'slot' as const,
@@ -687,7 +688,7 @@ function coreGenerationPreviewResourceFixture() {
       additional: [],
     },
     configuration: { sections: [] },
-    authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+    authoring: { kind: 'image' as const, selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     diagnostics: [],
   };
 }

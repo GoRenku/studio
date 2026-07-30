@@ -26,7 +26,10 @@ import {
   moveShotAuthoring,
   updateShotAuthoring,
 } from '../shot-plans/shot-authoring.js';
-import { studioSceneShotPlansResourceKey } from '../studio-coordination/resource-keys.js';
+import {
+  studioSceneShotPlansResourceKey,
+  studioSceneVideoGenerationsResourceKey,
+} from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
 export async function createShotPlan(
@@ -51,11 +54,18 @@ export async function updateShotPlanDetails(
       session,
       now: new Date().toISOString(),
     });
-    return projectShotPlanReport({
+    const report = projectShotPlanReport({
       session,
       projectFolder,
       shotPlanId: input.shotPlanId,
     });
+    return {
+      ...report,
+      resourceKeys: [
+        ...report.resourceKeys,
+        studioSceneVideoGenerationsResourceKey(report.shotPlan.sceneId),
+      ],
+    };
   });
 }
 

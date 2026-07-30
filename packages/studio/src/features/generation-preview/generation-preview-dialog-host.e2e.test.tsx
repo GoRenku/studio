@@ -201,7 +201,7 @@ describe('GenerationPreviewDialogHost', () => {
       mediaKind: 'image',
       executionPath: 'agent-external',
     };
-    preview.authoring = { selectedModelFamilyId: '', modelFamilies: [], controls: [] };
+    preview.authoring = { kind: 'image', selectedModelFamilyId: '', modelFamilies: [], controls: [] };
     preview.configuration.sections = [
       {
         key: 'model',
@@ -682,6 +682,7 @@ function previewFixture(input: {
     references: {
       slots: [{
         label: 'Visual language',
+        mediaKind: 'image',
         locked: input.purpose === 'image.edit',
         placement: {
           kind: 'slot',
@@ -744,6 +745,7 @@ function previewFixture(input: {
       ],
     },
     authoring: {
+      kind: 'image',
       selectedModelFamilyId: 'gpt-image-2',
       modelFamilies: [{ familyId: 'gpt-image-2', label: 'GPT Image 2' }],
       controls: [

@@ -7,6 +7,7 @@ import type {
   GenerationPreviewReferenceSlot,
   GenerationPreviewResourceDataReference,
 } from '../../client/generation-preview-resource.js';
+import { shotPlanVideoPreviewIncludesReferenceSlot } from './shot-plan-video-reference-projection.js';
 
 type ProjectedReference = GenerationPreviewResourceDataReference;
 type ProjectedSlot = Omit<
@@ -25,11 +26,13 @@ export function projectGenerationPreviewReferences(
     if (selection.placement.kind !== 'slot') {
       continue;
     }
+    const current = projectSavedReference(selection);
     slots.set(placementKey(selection.placement), {
-      label: selection.placement.slotId,
+      label: current.label,
+      mediaKind: current.kind,
       locked: referenceSlotLocked(preview.spec.purpose, selection.placement),
       placement: selection.placement,
-      current: projectSavedReference(selection),
+      current,
       eligibleCandidates: [],
     });
   }
@@ -45,6 +48,7 @@ export function projectGenerationPreviewReferences(
       const persisted = slots.get(key);
       slots.set(key, {
         label: slot.label,
+        mediaKind: slot.mediaKind,
         locked: referenceSlotLocked(preview.spec.purpose, placement),
         placement,
         current: persisted?.current ?? null,
@@ -53,7 +57,21 @@ export function projectGenerationPreviewReferences(
     }
   }
   return {
-    slots: [...slots.values()],
+    slots: [...slots.values()].filter((slot) =>
+      preview.spec.purpose !== 'shot-plan.video-generation' ||
+      shotPlanVideoPreviewIncludesReferenceSlot({
+        inputMode: preview.spec.shotPlanVideoInputMode!,
+        placement: slot.placement,
+        mediaKind: slot.mediaKind,
+        hasCurrent: Boolean(slot.current),
+        eligibleCandidateCount: slot.eligibleCandidates.length,
+        model: preview.models?.find(
+          (candidate) =>
+            candidate.provider === preview.spec.model?.provider &&
+            candidate.model === preview.spec.model?.model
+        ),
+      })
+    ),
     additional: preview.references
       .filter((selection) => selection.placement.kind === 'additional')
       .map(projectSavedReference),

@@ -91,11 +91,15 @@ function buildSceneGenerationFacts(
     ...scene.blocks.flatMap((block) => block.locationIds ?? []),
     ...(beatSheet?.beats.flatMap((beat) => beat.locationIds) ?? []),
   ]);
+  const sceneDialogueIds = scene.blocks.flatMap((block) =>
+    block.type === 'dialogue' ? [block.dialogueId] : []
+  );
   return {
     projectAspectRatio,
     contextText: renderScreenplaySceneContextText({ scene, screenplay }),
     sceneCastMemberIds,
     sceneLocationIds,
+    sceneDialogueIds,
     ...(input.authored ?? {}),
   };
 }

@@ -4,6 +4,7 @@ import type {
   GenerationReferenceSelection,
   GenerationTarget,
   JsonValue,
+  ShotPlanVideoInputMode,
 } from './generation.js';
 
 export type GenerationPreviewPurpose = Exclude<
@@ -97,6 +98,7 @@ export interface GenerationPreviewReferences {
 
 export interface GenerationPreviewReferenceSlot {
   label: string;
+  mediaKind: 'image' | 'audio' | 'video';
   locked: boolean;
   placement: Extract<
     GenerationReferenceSelection['placement'],
@@ -180,13 +182,38 @@ export type GenerationEditorControl =
       recommended?: boolean;
     };
 
-export interface GenerationPreviewAuthoring {
-  selectedModelFamilyId: string;
-  modelFamilies: Array<{
-    familyId: string;
-    label: string;
-  }>;
-  controls: GenerationEditorControl[];
+export type GenerationPreviewAuthoring =
+  | { kind: 'none' }
+  | {
+      kind: 'image';
+      selectedModelFamilyId: string;
+      modelFamilies: GenerationPreviewModelFamily[];
+      controls: GenerationEditorControl[];
+    }
+  | {
+      kind: 'video';
+      selectedModelFamilyId: string;
+      modelFamilies: GenerationPreviewVideoModelFamily[];
+      selectedInputMode: ShotPlanVideoInputMode;
+      inputModes: GenerationPreviewVideoInputMode[];
+      controls: GenerationEditorControl[];
+    };
+
+export interface GenerationPreviewModelFamily {
+  familyId: string;
+  label: string;
+}
+
+export interface GenerationPreviewVideoModelFamily
+  extends GenerationPreviewModelFamily {
+  available: boolean;
+  durationCapabilityLabel: string;
+}
+
+export interface GenerationPreviewVideoInputMode {
+  id: ShotPlanVideoInputMode;
+  label: string;
+  available: boolean;
 }
 
 export type GenerationPreviewConfigurationValueSource =

@@ -8,6 +8,10 @@ export type JsonValue = JsonScalar | JsonValue[] | { [key: string]: JsonValue };
 export type GenerationPurpose =
   | 'image.create'
   | 'image.edit'
+  | 'shot-plan.video-generation'
+  | 'shot-plan.video-first-frame'
+  | 'shot-plan.video-last-frame'
+  | 'shot-plan.video-storyboard'
   | 'lookbook.image'
   | 'lookbook.video-sheet'
   | 'lookbook.storyboard-sheet'
@@ -36,6 +40,12 @@ export type GenerationSpecAuthoredFrom = {
   id: string;
 };
 
+export type ShotPlanVideoInputMode =
+  | 'text-only'
+  | 'first-frame'
+  | 'first-last-frame'
+  | 'reference';
+
 export interface GenerationModelIdentity {
   provider?: string;
   model?: string;
@@ -45,6 +55,7 @@ export interface GenerationSpec {
   purpose: GenerationPurpose;
   target: GenerationTarget;
   authoredFrom?: GenerationSpecAuthoredFrom;
+  shotPlanVideoInputMode?: ShotPlanVideoInputMode;
   executionKind: 'renku-managed' | 'agent-external';
   model?: GenerationModelIdentity;
   values: Record<string, JsonValue>;
@@ -91,6 +102,7 @@ export interface GenerationReferenceGuideSection {
 export interface GenerationReferenceGuideSlot {
   id: string;
   label: string;
+  mediaKind: GenerationOutputMediaKind;
   subject?: { kind: string; id: string };
   guidance?: string;
   eligibleCandidates: GenerationReferenceCatalogItem[];

@@ -2,6 +2,7 @@ import type {
   GenerationReferenceSlotSelectionInput,
   GenerationPreviewResource,
   JsonValue,
+  ShotPlanVideoInputMode,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
 
@@ -13,6 +14,7 @@ export interface UpdateGenerationPreviewResourceSpecInput {
     negativeText?: string | null;
   };
   modelFamilyId?: string;
+  shotPlanVideoInputMode?: ShotPlanVideoInputMode;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
 }
@@ -28,6 +30,9 @@ export async function updateGenerationPreviewResource(
       body: JSON.stringify({
         prompt: input.prompt,
         ...(input.modelFamilyId ? { modelFamilyId: input.modelFamilyId } : {}),
+        ...(input.shotPlanVideoInputMode
+          ? { shotPlanVideoInputMode: input.shotPlanVideoInputMode }
+          : {}),
         parameterValues: input.parameterValues,
         slotSelections: input.slotSelections,
       }),

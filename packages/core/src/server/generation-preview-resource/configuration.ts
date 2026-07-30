@@ -1,6 +1,8 @@
 import {
   readStudioImageModelFamily,
   readStudioImageModelRouteProfile,
+  readStudioVideoModelFamily,
+  readStudioVideoModelRouteProfile,
 } from '@gorenku/studio-engines';
 import type {
   GenerationModelDescriptor,
@@ -8,16 +10,15 @@ import type {
   JsonValue,
 } from '../../client/generation.js';
 import type {
+  GenerationEditorControl,
   GenerationPreviewAuthoring,
   GenerationPreviewConfiguration,
   GenerationPreviewConfigurationRow,
   GenerationPreviewConfigurationValue,
 } from '../../client/generation-preview-resource.js';
-import {
-  listAvailableStudioImageModelFamilies,
-  readStudioImageModelFamilyId,
-} from '../generation/image-model-authoring.js';
-import { projectStudioImageControls } from '../generation/image-configurable-values.js';
+import { readStudioImageModelFamilyId } from '../generation/image-model-authoring.js';
+import { readStudioVideoModelFamilyId } from '../generation/shot-plan-video-model-authoring.js';
+import { readGenerationPreviewAuthoringStrategy } from './authoring-strategies/registry.js';
 
 export async function projectGenerationPreviewConfiguration(input: {
   preview: GenerationPreview;
@@ -26,10 +27,14 @@ export async function projectGenerationPreviewConfiguration(input: {
   if (input.preview.spec.executionKind === 'agent-external') {
     return await savedConfiguration(input.preview);
   }
-  const family = input.authoring.modelFamilies.find((candidate) =>
-    candidate.familyId === input.authoring.selectedModelFamilyId
+  if (input.authoring.kind === 'none') {
+    return await savedConfiguration(input.preview);
+  }
+  const authoring = input.authoring;
+  const family = authoring.modelFamilies.find((candidate) =>
+    candidate.familyId === authoring.selectedModelFamilyId
   );
-  if (!family && !input.authoring.selectedModelFamilyId) {
+  if (!family && !authoring.selectedModelFamilyId) {
     return await savedConfiguration(input.preview);
   }
   return {
@@ -40,17 +45,17 @@ export async function projectGenerationPreviewConfiguration(input: {
         rows: [{
           key: 'model',
           label: 'Model',
-          value: input.authoring.selectedModelFamilyId,
+          value: authoring.selectedModelFamilyId,
           ...(family ? { valueLabel: family.label } : {}),
           source: 'model-capability',
           emphasis: 'primary',
         }],
       },
-      ...(input.authoring.controls.length > 0
+      ...(authoring.controls.length > 0
         ? [{
             key: 'model-inputs',
             label: 'Configuration',
-            rows: input.authoring.controls.map(configurationRow),
+            rows: authoring.controls.map(configurationRow),
           }]
         : []),
     ],
@@ -61,36 +66,16 @@ export async function projectGenerationPreviewAuthoring(input: {
   preview: GenerationPreview;
   model?: GenerationModelDescriptor;
 }): Promise<GenerationPreviewAuthoring> {
-  if (input.preview.spec.executionKind === 'agent-external' || !input.model) {
-    return { selectedModelFamilyId: '', modelFamilies: [], controls: [] };
-  }
-  const [families, selectedModelFamilyId, route] = await Promise.all([
-    listAvailableStudioImageModelFamilies(input.preview.models ?? []),
-    readStudioImageModelFamilyId(input.preview.spec.model),
-    readStudioImageModelRouteProfile({
-      provider: input.model.provider,
-      model: input.model.model,
-    }),
-  ]);
-  if (!selectedModelFamilyId || !route) {
-    return { selectedModelFamilyId: '', modelFamilies: [], controls: [] };
-  }
-  return {
-    selectedModelFamilyId,
-    modelFamilies: families.map((family) => ({
-      familyId: family.id,
-      label: family.label,
-    })),
-    controls: projectStudioImageControls({
-      preview: input.preview,
-      model: input.model,
-      route,
-    }),
-  };
+  const mediaKind = input.preview.spec.executionKind === 'agent-external'
+    ? null
+    : input.model?.mediaKind ??
+      input.preview.models?.[0]?.mediaKind ??
+      null;
+  return readGenerationPreviewAuthoringStrategy(mediaKind).project(input);
 }
 
 function configurationRow(
-  control: GenerationPreviewAuthoring['controls'][number],
+  control: GenerationEditorControl,
 ): GenerationPreviewConfigurationRow {
   return {
     key: control.controlId,
@@ -128,13 +113,19 @@ async function savedConfiguration(
       }
     : null;
   const [modelFamilyId, route] = await Promise.all([
-    readStudioImageModelFamilyId(preview.spec.model),
+    preview.spec.purpose === 'shot-plan.video-generation'
+      ? readStudioVideoModelFamilyId(preview.spec.model)
+      : readStudioImageModelFamilyId(preview.spec.model),
     routeIdentity
-      ? readStudioImageModelRouteProfile(routeIdentity)
+      ? preview.spec.purpose === 'shot-plan.video-generation'
+        ? readStudioVideoModelRouteProfile(routeIdentity)
+        : readStudioImageModelRouteProfile(routeIdentity)
       : Promise.resolve(null),
   ]);
   const family = modelFamilyId
-    ? await readStudioImageModelFamily(modelFamilyId)
+    ? preview.spec.purpose === 'shot-plan.video-generation'
+      ? await readStudioVideoModelFamily(modelFamilyId)
+      : await readStudioImageModelFamily(modelFamilyId)
     : null;
   const modelIdentity = [preview.spec.model?.provider, preview.spec.model?.model]
     .filter(Boolean)

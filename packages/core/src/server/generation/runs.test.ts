@@ -131,6 +131,7 @@ function createMemorySession(): {
       target_kind text not null,
       target_id text not null,
       authored_from_shot_plan_id text,
+      shot_plan_video_input_mode text,
       execution_kind text not null,
       provider text,
       model text,

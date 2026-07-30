@@ -253,6 +253,9 @@ export async function emptyTrash(input: TrashProjectContext & {
     }),
   }));
   const dryRun = input.dryRun === true;
+  const resourceKeys = dryRun
+    ? preview.resourceKeys
+    : garbageCollectionResourceKeys(input.session, preview.items);
   await stageTrashFiles({
     projectFolder: input.projectFolder,
     operationId,
@@ -292,11 +295,30 @@ export async function emptyTrash(input: TrashProjectContext & {
   }
   return {
     ...preview,
+    resourceKeys,
     dryRun,
     operationId,
     files,
     manifestProjectRelativePath,
   };
+}
+
+function garbageCollectionResourceKeys(
+  session: DatabaseSession,
+  items: TrashItem[],
+): string[] {
+  const resourceKeys = new Set<string>(['trash:list']);
+  for (const item of items) {
+    for (const resourceKey of getTrashObjectDefinition(item.itemKind).resourceKeys({
+      session,
+      itemId: item.itemId,
+      ownerKind: item.ownerKind,
+      ownerId: item.ownerId,
+    })) {
+      resourceKeys.add(resourceKey);
+    }
+  }
+  return [...resourceKeys];
 }
 
 function collectGarbageCollectionFiles(input: TrashProjectContext & {

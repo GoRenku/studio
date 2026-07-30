@@ -210,3 +210,8 @@ For media surfaces, verification should check:
 - `../decisions/0053-use-one-configurable-studio-media-card.md` defines the
   included card surfaces, exclusions, bounded presentations, and shared action
   placement.
+
+Scene Generations is an enabled Scene tab. It consumes the Core grouping,
+renders multiple-open accordion sections with MediaCards, uses shared video
+preview and request-inspection components, and sends only generic Asset discard
+intent. The feature does not resolve source provenance or Shot Plan grouping.

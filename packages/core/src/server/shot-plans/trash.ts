@@ -1,6 +1,9 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { shotPlans, shots } from '../schema/index.js';
-import { studioSceneShotPlansResourceKey } from '../studio-coordination/resource-keys.js';
+import {
+  studioSceneShotPlansResourceKey,
+  studioSceneVideoGenerationsResourceKey,
+} from '../studio-coordination/resource-keys.js';
 import type { TrashObjectDefinition } from '../trash/trash-object-definition.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
@@ -138,7 +141,10 @@ export const shotPlanTrashDefinition: TrashObjectDefinition = {
         `Shot Plan Trash item is missing its Scene owner: ${input.itemId}.`
       );
     }
-    return [studioSceneShotPlansResourceKey(input.ownerId)];
+    return [
+      studioSceneShotPlansResourceKey(input.ownerId),
+      studioSceneVideoGenerationsResourceKey(input.ownerId),
+    ];
   },
   restoredChanges(input) {
     return [{ type: 'shotPlan.restored', shotPlanId: input.itemId }];

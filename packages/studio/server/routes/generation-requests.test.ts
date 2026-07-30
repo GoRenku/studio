@@ -146,7 +146,7 @@ function routeCommands(): GenerationRequestRouteCommands {
         ],
       },
       configuration: { sections: [] },
-      authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+      authoring: { kind: 'image', selectedModelFamilyId: '', modelFamilies: [], controls: [] },
       diagnostics: [],
     })),
     readGenerationReferenceProjectFile: vi.fn(),

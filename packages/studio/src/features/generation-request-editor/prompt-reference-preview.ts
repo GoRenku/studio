@@ -103,13 +103,16 @@ function renderReferencePreview(
 ): HTMLElement {
   const preview = document.createElement('div');
   preview.className = 'cm-prompt-reference-preview';
-  const image = document.createElement('img');
-  image.className = 'cm-prompt-reference-preview-image';
-  image.src = mention.previewImageUrl;
-  image.alt = mention.label;
+  if (mention.kind !== 'video' && mention.kind !== 'audio' && mention.previewImageUrl) {
+    const image = document.createElement('img');
+    image.className = 'cm-prompt-reference-preview-image';
+    image.src = mention.previewImageUrl;
+    image.alt = mention.label;
+    preview.append(image);
+  }
   const title = document.createElement('p');
   title.className = 'cm-prompt-reference-preview-title';
   title.textContent = mention.label;
-  preview.append(image, title);
+  preview.append(title);
   return preview;
 }

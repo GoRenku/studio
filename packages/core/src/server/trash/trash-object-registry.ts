@@ -18,6 +18,7 @@ import {
   studioVisualLanguageLookbooksResourceKey,
   studioSceneShotPlansResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
   TrashObjectDefinition,
@@ -357,8 +358,15 @@ const assetDefinition: TrashObjectDefinition = {
   },
   resourceKeys(input) {
     const owner = requireAssetOwner(input.session, input.itemId);
+    const videoGenerationKeys = shotPlanVideoAssetResourceKeys(
+      input.session,
+      input.itemId,
+    );
     if (owner.kind !== 'shot') {
-      return studioAssetOwnerSurfaceResourceKeys(owner);
+      return [
+        ...studioAssetOwnerSurfaceResourceKeys(owner),
+        ...videoGenerationKeys,
+      ];
     }
     const shot = readShotRecord(input.session, owner.id);
     if (!shot) {
@@ -371,6 +379,7 @@ const assetDefinition: TrashObjectDefinition = {
       studioSceneShotPlansResourceKey(
         requireShotPlanRecord(input.session, shot.shotPlanId).sceneId
       ),
+      ...videoGenerationKeys,
     ];
   },
   restoredChanges(input) {

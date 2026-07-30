@@ -32,6 +32,7 @@ export function updateGenerationSpecRecord(
       targetKind: row.targetKind,
       targetId: row.targetId,
       authoredFromShotPlanId: row.authoredFromShotPlanId,
+      shotPlanVideoInputMode: row.shotPlanVideoInputMode,
       executionKind: row.executionKind,
       provider: row.provider,
       model: row.model,
@@ -61,6 +62,10 @@ export function freezeGenerationSpecRecord(
       nullableEquality(
         mediaGenerationSpecs.authoredFromShotPlanId,
         expected.authoredFromShotPlanId
+      ),
+      nullableEquality(
+        mediaGenerationSpecs.shotPlanVideoInputMode,
+        expected.shotPlanVideoInputMode
       ),
       eq(mediaGenerationSpecs.executionKind, expected.executionKind),
       nullableEquality(mediaGenerationSpecs.provider, expected.provider),
@@ -217,6 +222,7 @@ function toSpecRow(record: GenerationSpecRecord) {
     targetKind: record.spec.target.kind,
     targetId: generationTargetId(record.spec.target),
     authoredFromShotPlanId: record.spec.authoredFrom?.id ?? null,
+    shotPlanVideoInputMode: record.spec.shotPlanVideoInputMode ?? null,
     executionKind: record.spec.executionKind,
     provider: record.spec.model?.provider ?? null,
     model: record.spec.model?.model ?? null,
@@ -241,6 +247,7 @@ function toSpecRecord(
       purpose: row.purpose,
       target: generationTarget(row.targetKind, row.targetId),
       ...generationSpecAuthoredFrom(row.authoredFromShotPlanId),
+      ...generationSpecShotPlanVideoInputMode(row.shotPlanVideoInputMode),
       executionKind: row.executionKind as GenerationSpec['executionKind'],
       ...(row.provider !== null || row.model !== null
         ? {
@@ -295,5 +302,25 @@ function generationSpecAuthoredFrom(
   throw new ProjectDataError(
     'CORE_GENERATION_SPEC_INVALID',
     'Stored generation authored-from context is invalid.'
+  );
+}
+
+function generationSpecShotPlanVideoInputMode(
+  inputMode: string | null
+): Pick<GenerationSpec, 'shotPlanVideoInputMode'> | {} {
+  if (inputMode === null) {
+    return {};
+  }
+  if (
+    inputMode === 'text-only' ||
+    inputMode === 'first-frame' ||
+    inputMode === 'first-last-frame' ||
+    inputMode === 'reference'
+  ) {
+    return { shotPlanVideoInputMode: inputMode };
+  }
+  throw new ProjectDataError(
+    'CORE_GENERATION_SPEC_INVALID',
+    'Stored Shot Plan video input mode is invalid.'
   );
 }

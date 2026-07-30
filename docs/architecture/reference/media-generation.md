@@ -232,3 +232,9 @@ The irreversible lifecycle is recorded in
 Mutable Shot Plans, last-Spec continuation, and independent generated video
 Assets are recorded in
 `../../decisions/0062-detach-shot-plans-from-generated-video-assets.md`.
+
+The current specific replacement is Decision
+`../../decisions/0069-use-shot-plan-video-generation-with-weak-context.md`.
+It uses independent Project video Assets, one-way Shot Plan context, explicit
+input mode, and the shared Preview lifecycle. It does not use last-Spec
+continuation state.

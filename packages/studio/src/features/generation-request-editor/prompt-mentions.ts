@@ -1,7 +1,8 @@
 export interface GenerationPromptReferenceMention {
   value: string;
   label: string;
-  previewImageUrl: string;
+  kind?: 'image' | 'video' | 'audio';
+  previewImageUrl?: string;
 }
 
 export interface GenerationPromptMentionQuery {

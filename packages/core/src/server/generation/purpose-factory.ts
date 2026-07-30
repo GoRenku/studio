@@ -6,13 +6,31 @@ import type {
 } from './purpose-contract.js';
 import { buildGenerationPurposeFacts } from './purpose-context.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { resolveAuthoredShotPlanContext } from './authored-shot-plan-context.js';
 
 export function defineGenerationPurpose(input: Omit<GenerationPurposeDescriptor, 'buildContext'>): GenerationPurposeDescriptor {
   const descriptor: GenerationPurposeDescriptor = {
     ...input,
     async buildContext(contextInput: BuildGenerationPurposeInput) {
-      const facts = buildGenerationPurposeFacts({ target: contextInput.target, session: contextInput.session, authored: contextInput.facts });
-      const resolvedInput = { ...contextInput, facts };
+      const authoredShotPlan = resolveAuthoredShotPlanContext({
+        authoredFrom: contextInput.authoredFrom,
+        session: contextInput.session,
+      });
+      const facts = {
+        ...buildGenerationPurposeFacts({
+          target: authoredShotPlan.sceneId
+            ? { kind: 'scene', id: authoredShotPlan.sceneId }
+            : contextInput.target,
+          session: contextInput.session,
+          authored: contextInput.facts,
+        }),
+        ...authoredShotPlan.facts,
+      };
+      const resolvedInput = {
+        ...contextInput,
+        facts,
+        guideNotices: authoredShotPlan.notices,
+      };
       const referenceGuide = await descriptor.buildReferenceGuide(resolvedInput);
       const settings = {
         ...descriptor.settings,

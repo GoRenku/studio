@@ -31,7 +31,7 @@ describe('GenerationPreviewReferenceGrid', () => {
     expect(screen.queryByText('Additional Media')).toBeNull();
   });
 
-  it('toggles a sole typed candidate directly on the reusable card', () => {
+  it('shows and toggles typed candidates directly without a made-up picker button', () => {
     const preview = previewFixture();
     const slot = preview.references.slots[1]!;
     const onReferenceChoose = vi.fn();
@@ -53,7 +53,7 @@ describe('GenerationPreviewReferenceGrid', () => {
 
     expect(screen.queryByText('None')).toBeNull();
     expect(
-      screen.queryByRole('button', { name: 'Choose Character Sheet' })
+      screen.queryByRole('button', { name: 'Choose Constantine XI' })
     ).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Exclude Mara Character Sheet' })
@@ -67,6 +67,122 @@ describe('GenerationPreviewReferenceGrid', () => {
       slot,
       slot.eligibleCandidates[0]
     );
+  });
+
+  it('opens an image card in the shared large image preview', () => {
+    render(
+      <GenerationRequestReferenceGrid
+        preview={previewFixture()}
+        draft={{
+          promptDraft: { authoredText: 'Create a character sheet.' },
+          modelFamilyId: 'gpt-image-2',
+          parameterValues: {},
+          authoredParameterNames: [],
+          slotSelections: [],
+        }}
+        updating={false}
+        editable
+        onReferenceChoose={vi.fn()}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open Constantine Character Sheet preview',
+      })
+    );
+    expect(
+      screen.getByRole('img', { name: 'Constantine Character Sheet' })
+    ).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('names missing character sheets by character and renders an empty media card', () => {
+    const preview = previewFixture();
+    preview.references.slots[1] = {
+      ...preview.references.slots[1]!,
+      label: 'Urban',
+      current: null,
+      eligibleCandidates: [],
+    };
+    const { container } = render(
+      <GenerationRequestReferenceGrid
+        preview={preview}
+        draft={{
+          promptDraft: { authoredText: 'Create a character sheet.' },
+          modelFamilyId: 'gpt-image-2',
+          parameterValues: {},
+          authoredParameterNames: [],
+          slotSelections: [],
+        }}
+        updating={false}
+        editable
+        onReferenceChoose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Urban')).toBeTruthy();
+    expect(
+      screen.getByText('No character sheet exists for Urban.')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-media-card-empty-state="image"]')
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
+  });
+
+  it('renders dialogue audio as a selectable MediaCard', () => {
+    const preview = previewFixture();
+    preview.references.slots = [{
+      label: 'Urban opening line',
+      mediaKind: 'audio',
+      locked: false,
+      placement: {
+        kind: 'slot',
+        sectionId: 'dialogue-audio',
+        slotId: 'dialogue-audio',
+        subject: {
+          kind: 'sceneDialogue',
+          id: 'dialogue_urban',
+        },
+      },
+      current: null,
+      eligibleCandidates: [{
+        kind: 'audio',
+        role: 'dialogue-audio',
+        label: 'Urban opening line',
+        identity: {
+          kind: 'asset-file',
+          assetId: 'asset_dialogue',
+          assetFileId: 'asset_file_dialogue',
+        },
+        selected: false,
+        browserUrl: '/urban-opening-line.wav',
+      }],
+    }];
+    const { container } = render(
+      <GenerationRequestReferenceGrid
+        preview={preview}
+        draft={{
+          promptDraft: { authoredText: 'Create a video.' },
+          modelFamilyId: 'seedance-2',
+          parameterValues: {},
+          authoredParameterNames: [],
+          slotSelections: [],
+        }}
+        updating={false}
+        editable
+        onReferenceChoose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('Urban opening line')).toBeTruthy();
+    expect(
+      container.querySelector('[data-media-card]')
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Include Urban opening line' })
+    ).toBeTruthy();
   });
 
   it('shows agent-authored additional media without Studio add controls', () => {
@@ -137,6 +253,7 @@ function previewFixture(): GenerationPreviewResource {
       slots: [
         {
           label: 'Source Image',
+          mediaKind: 'image',
           locked: true,
           placement: {
             kind: 'slot',
@@ -158,7 +275,8 @@ function previewFixture(): GenerationPreviewResource {
           eligibleCandidates: [],
         },
         {
-          label: 'Character Sheet',
+          label: 'Constantine XI',
+          mediaKind: 'image',
           locked: false,
           placement: {
             kind: 'slot',
@@ -191,7 +309,7 @@ function previewFixture(): GenerationPreviewResource {
     configuration: {
       sections: [],
     },
-    authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+    authoring: { kind: 'image', selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     diagnostics: [],
   };
 }

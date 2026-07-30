@@ -5,6 +5,7 @@ import type {
   GenerationPreviewResource,
   GenerationPreviewReferenceSlot,
   GenerationPreviewResourceReference,
+  ShotPlanVideoInputMode,
 } from '@gorenku/studio-core/client';
 import { updateGenerationPreviewResource } from '@/services/studio-generation-preview-api';
 import {
@@ -14,6 +15,7 @@ import {
   createGenerationPreviewDraft,
   generationPreviewDraftIsDirty,
   changeGenerationPreviewReference,
+  changeGenerationPreviewInputMode,
   type GenerationPreviewDraft,
 } from './generation-preview-draft';
 
@@ -66,7 +68,11 @@ export function useGenerationPreviewEditor(
     if (preview.generationSpec?.frozenAt !== null || updatePending) {
       return;
     }
-    const family = preview.authoring.modelFamilies.find(
+    if (preview.authoring.kind === 'none') {
+      return;
+    }
+    const authoring = preview.authoring;
+    const family = authoring.modelFamilies.find(
       (candidate) => candidate.familyId === modelKey
     );
     if (!family) {
@@ -75,10 +81,24 @@ export function useGenerationPreviewEditor(
     setDraft((current) => changeGenerationPreviewModel(
       current,
       family.familyId,
-      family.familyId === preview.authoring.selectedModelFamilyId
-        ? preview.authoring.controls
+      family.familyId === authoring.selectedModelFamilyId
+        ? authoring.controls
         : [],
     ));
+    setUpdateError(null);
+  };
+
+  const chooseInputMode = (inputMode: ShotPlanVideoInputMode) => {
+    if (
+      preview.authoring.kind !== 'video'
+      || preview.generationSpec?.frozenAt !== null
+      || updatePending
+    ) {
+      return;
+    }
+    setDraft((current) =>
+      changeGenerationPreviewInputMode(current, inputMode)
+    );
     setUpdateError(null);
   };
 
@@ -129,7 +149,8 @@ export function useGenerationPreviewEditor(
 
   const modelKey = draft.modelFamilyId;
   const controls: GenerationEditorControl[] = (
-    draft.modelFamilyId === preview.authoring.selectedModelFamilyId
+    preview.authoring.kind !== 'none'
+    && draft.modelFamilyId === preview.authoring.selectedModelFamilyId
       ? preview.authoring.controls
       : []
   )
@@ -156,6 +177,7 @@ export function useGenerationPreviewEditor(
     updateNegativeText,
     chooseReference,
     chooseModel,
+    chooseInputMode,
     chooseParameter,
     update,
   };

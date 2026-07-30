@@ -19,9 +19,52 @@ export function validateGenerationSpecEnvelope(input: {
   }
   validateJsonRecord(input.spec.values, ['values'], diagnostics);
   validateAuthoredFrom(input.spec, diagnostics);
+  validateShotPlanVideoEnvelope(input.spec, diagnostics);
   validateModel(input.spec, diagnostics);
   validateReferences(input.spec, diagnostics);
   return diagnostics;
+}
+
+const SHOT_PLAN_AUTHORED_PURPOSES = new Set<GenerationSpec['purpose']>([
+  'shot-plan.video-generation',
+  'shot-plan.video-first-frame',
+  'shot-plan.video-last-frame',
+  'shot-plan.video-storyboard',
+]);
+
+function validateShotPlanVideoEnvelope(
+  spec: GenerationSpec,
+  diagnostics: DiagnosticIssue[]
+): void {
+  if (SHOT_PLAN_AUTHORED_PURPOSES.has(spec.purpose) && !spec.authoredFrom?.id.trim()) {
+    diagnostics.push(issue(
+      'CORE_SHOT_PLAN_VIDEO_AUTHORED_SOURCE_REQUIRED',
+      `Generation purpose ${spec.purpose} requires a non-empty authored Shot Plan source.`,
+      ['authoredFrom']
+    ));
+  }
+  if (spec.purpose === 'shot-plan.video-generation') {
+    if (
+      spec.shotPlanVideoInputMode !== 'text-only' &&
+      spec.shotPlanVideoInputMode !== 'first-frame' &&
+      spec.shotPlanVideoInputMode !== 'first-last-frame' &&
+      spec.shotPlanVideoInputMode !== 'reference'
+    ) {
+      diagnostics.push(issue(
+        'CORE_SHOT_PLAN_VIDEO_INPUT_MODE_REQUIRED',
+        'Shot Plan video generation requires an explicit supported input mode.',
+        ['shotPlanVideoInputMode']
+      ));
+    }
+    return;
+  }
+  if (spec.shotPlanVideoInputMode !== undefined) {
+    diagnostics.push(issue(
+      'CORE_SHOT_PLAN_VIDEO_INPUT_MODE_FORBIDDEN',
+      `Generation purpose ${spec.purpose} does not accept a Shot Plan video input mode.`,
+      ['shotPlanVideoInputMode']
+    ));
+  }
 }
 
 function validateAuthoredFrom(

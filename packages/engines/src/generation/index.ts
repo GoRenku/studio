@@ -53,6 +53,14 @@ export {
   type StudioModelConfigurableParameter,
 } from './studio-image-model-catalog.js';
 export {
+  listStudioVideoModelFamilies,
+  readStudioVideoModelFamily,
+  readStudioVideoModelRouteProfile,
+  type StudioVideoModelFamily,
+  type StudioVideoModelRouteProfile,
+  type StudioVideoRouteKind,
+} from './studio-video-model-catalog.js';
+export {
   bindGenerationProductSettings,
   bindGenerationSemanticValues,
   type GenerationProductSettingBinding,

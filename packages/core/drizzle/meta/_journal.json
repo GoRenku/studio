@@ -484,6 +484,13 @@
       "when": 1785400036278,
       "tag": "0068_remove_stale_shot_video_scaffolding",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "6",
+      "when": 1785411576718,
+      "tag": "0069_shot_plan_video_generation",
+      "breakpoints": true
     }
   ]
 }

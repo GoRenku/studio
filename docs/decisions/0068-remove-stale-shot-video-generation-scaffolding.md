@@ -4,6 +4,12 @@ Date: 2026-07-30
 
 Status: accepted
 
+> Decision
+> [0069](0069-use-shot-plan-video-generation-with-weak-context.md)
+> subsequently introduces a specific Shot Plan video workflow without
+> restoring the generic purpose, reverse pointer, Take model, or dormant UI
+> removed here.
+
 ## Context
 
 Renku Studio retained an unreachable Shot AI Production presentation island,

@@ -18,6 +18,7 @@ import { SceneNarrativeTab } from './scene-narrative-tab';
 import { SceneBeatsTab } from './scene-beats-tab';
 import { SceneShotPlansTab } from '../shot-plans/scene-shot-plans-tab';
 import { ShotPlanDetailPage } from '../shot-plans/shot-plan-detail-page';
+import { SceneShotPlanVideoGenerationsTab } from '../shot-plan-video-generations/scene-shot-plan-video-generations-tab';
 
 interface SceneNeighbor {
   id: string;
@@ -172,10 +173,8 @@ export function ScenePanel({
     return <p className='p-6 text-sm text-muted-foreground'>Loading scene...</p>;
   }
 
-  type SceneTabItem = ScenePanelTab | 'generations';
-
   return (
-    <LineTabs<SceneTabItem>
+    <LineTabs<ScenePanelTab>
       value={activeTab}
       onValueChange={(value) => {
         if (value === 'beats') {
@@ -186,13 +185,17 @@ export function ScenePanel({
           onSelect({ type: 'scene', id: sceneId, sceneTab: 'shotPlans' });
           return;
         }
+        if (value === 'generations') {
+          onSelect({ type: 'scene', id: sceneId, sceneTab: 'generations' });
+          return;
+        }
         onSelect({ type: 'scene', id: sceneId });
       }}
       items={[
         { value: 'narrative', label: 'Narrative' },
         { value: 'beats', label: 'Beats' },
         { value: 'shotPlans', label: 'Shot Plans' },
-        { value: 'generations', label: 'Generations', disabled: true },
+        { value: 'generations', label: 'Generations' },
       ]}
       trailing={tabBarAction}
     >
@@ -207,6 +210,17 @@ export function ScenePanel({
             onResourceChange={setResource}
             onSaveNotificationChange={onSaveNotificationChange}
             onSelect={onSelect}
+          />
+        ) : null}
+      </LineTabsContent>
+      <LineTabsContent
+        value='generations'
+        className='flex min-h-0 min-w-0 overflow-hidden'
+      >
+        {activeTab === 'generations' ? (
+          <SceneShotPlanVideoGenerationsTab
+            projectName={projectName}
+            sceneId={sceneId}
           />
         ) : null}
       </LineTabsContent>

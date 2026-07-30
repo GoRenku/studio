@@ -142,6 +142,108 @@ describe('generic generation spec editing persistence', () => {
       code: 'CORE_GENERATION_SPEC_INVALID',
     }));
   });
+
+  it('persists the explicit Shot Plan video input mode without resolving the source plan', () => {
+    const session = createMemorySession();
+    const purpose = {
+      purpose: 'shot-plan.video-generation' as const,
+      targetKind: 'project' as const,
+      outputMediaKind: 'video' as const,
+    };
+    const spec: GenerationSpec = {
+      purpose: 'shot-plan.video-generation',
+      target: { kind: 'project', id: 'project-1' },
+      authoredFrom: { kind: 'shotPlan', id: 'shot-plan-missing' },
+      shotPlanVideoInputMode: 'first-last-frame',
+      executionKind: 'agent-external',
+      values: {},
+      references: [],
+    };
+
+    createGenerationSpec({
+      id: 'spec-video',
+      spec,
+      purpose,
+      session,
+      now: '2026-07-30T10:00:00.000Z',
+    });
+
+    expect(readGenerationSpec({ id: 'spec-video', session }).spec).toEqual(spec);
+
+    const updated = { ...spec, shotPlanVideoInputMode: 'reference' as const };
+    updateGenerationSpec({
+      id: 'spec-video',
+      spec: updated,
+      purpose,
+      session,
+      now: '2026-07-30T10:01:00.000Z',
+    });
+    expect(readGenerationSpec({ id: 'spec-video', session }).spec).toEqual(updated);
+  });
+
+  it('enforces the Shot Plan video source and input-mode envelope', () => {
+    const session = createMemorySession();
+    const purpose = {
+      purpose: 'shot-plan.video-generation' as const,
+      targetKind: 'project' as const,
+      outputMediaKind: 'video' as const,
+    };
+
+    expect(() => createGenerationSpec({
+      id: 'spec-missing-mode',
+      spec: {
+        purpose: 'shot-plan.video-generation',
+        target: { kind: 'project', id: 'project-1' },
+        authoredFrom: { kind: 'shotPlan', id: 'shot-plan-1' },
+        executionKind: 'agent-external',
+        values: {},
+        references: [],
+      },
+      purpose,
+      session,
+      now: '2026-07-30T10:00:00.000Z',
+    })).toThrow(expect.objectContaining({
+      code: 'CORE_SHOT_PLAN_VIDEO_INPUT_MODE_REQUIRED',
+    }));
+
+    expect(() => createGenerationSpec({
+      id: 'spec-missing-source',
+      spec: {
+        purpose: 'shot-plan.video-generation',
+        target: { kind: 'project', id: 'project-1' },
+        shotPlanVideoInputMode: 'text-only',
+        executionKind: 'agent-external',
+        values: {},
+        references: [],
+      },
+      purpose,
+      session,
+      now: '2026-07-30T10:00:00.000Z',
+    })).toThrow(expect.objectContaining({
+      code: 'CORE_SHOT_PLAN_VIDEO_AUTHORED_SOURCE_REQUIRED',
+    }));
+
+    expect(() => createGenerationSpec({
+      id: 'spec-forbidden-mode',
+      spec: {
+        purpose: 'image.create',
+        target: { kind: 'project', id: 'project-1' },
+        shotPlanVideoInputMode: 'text-only',
+        executionKind: 'agent-external',
+        values: {},
+        references: [],
+      },
+      purpose: {
+        purpose: 'image.create',
+        targetKind: 'project',
+        outputMediaKind: 'image',
+      },
+      session,
+      now: '2026-07-30T10:00:00.000Z',
+    })).toThrow(expect.objectContaining({
+      code: 'CORE_SHOT_PLAN_VIDEO_INPUT_MODE_FORBIDDEN',
+    }));
+  });
 });
 
 function selection(id: string) {
@@ -175,6 +277,7 @@ function createMemorySession(): DatabaseSession {
       target_kind text not null,
       target_id text not null,
       authored_from_shot_plan_id text,
+      shot_plan_video_input_mode text,
       execution_kind text not null,
       provider text,
       model text,

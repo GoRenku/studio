@@ -14,6 +14,7 @@ export const SCENE_PANEL_TABS: ScenePanelTab[] = [
   'narrative',
   'beats',
   'shotPlans',
+  'generations',
 ];
 
 export interface MovieStudioLookup {

@@ -261,3 +261,11 @@ Current related exploration:
 - `plans/exploration/data-model-and-storage-long-draft.md`
 - `plans/exploration/generation-definitions-and-catalog.md`
 - `plans/exploration/project-generation-definitions.md`
+
+## Weak Shot Plan generation source
+
+`media_generation_spec.authored_from_shot_plan_id` is a nullable one-way source
+id with no foreign key. `shot_plan_video_input_mode` is nullable storage that
+is required only by the Shot Plan video purpose. Generated videos and
+auxiliary images use ordinary Project Asset membership; Shot Plans do not
+store request, video, dependency, selection, or completion pointers.

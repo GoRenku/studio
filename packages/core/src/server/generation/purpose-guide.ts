@@ -73,6 +73,7 @@ function slotFromDefinition(
   return {
     id: definition.slotId,
     label: definition.slotLabel,
+    mediaKind: definition.mediaKind ?? 'image',
     ...(definition.subject ? { subject: definition.subject } : {}),
     ...(definition.guidance ? { guidance: definition.guidance } : {}),
     eligibleCandidates,

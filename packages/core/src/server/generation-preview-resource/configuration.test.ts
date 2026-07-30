@@ -4,6 +4,7 @@ import {
   projectGenerationPreviewAuthoring,
   projectGenerationPreviewConfiguration,
 } from './configuration.js';
+import { listGenerationModels } from '../generation/purposes.js';
 
 describe('generation preview authoring projection', () => {
   it('projects model families and only catalog-declared controls', async () => {
@@ -13,6 +14,10 @@ describe('generation preview authoring projection', () => {
       model: preview.models![0],
     });
 
+    expect(authoring.kind).toBe('image');
+    if (authoring.kind !== 'image') {
+      throw new Error('Expected image authoring.');
+    }
     expect(authoring.selectedModelFamilyId).toBe('nano-banana-2');
     expect(authoring.modelFamilies).toEqual([
       { familyId: 'nano-banana-2', label: 'Nano Banana 2' },
@@ -64,7 +69,12 @@ describe('generation preview authoring projection', () => {
 
     const configuration = await projectGenerationPreviewConfiguration({
       preview,
-      authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+      authoring: {
+        kind: 'image',
+        selectedModelFamilyId: '',
+        modelFamilies: [],
+        controls: [],
+      },
     });
 
     expect(configuration.sections[1]?.rows).toEqual([
@@ -119,6 +129,51 @@ describe('generation preview authoring projection', () => {
           },
         ],
       });
+  });
+
+  it('projects the video authoring discriminant with Seedance families, modes, and 480p initial resolution', async () => {
+    const preview = previewFixture();
+    preview.spec = {
+      executionKind: 'renku-managed',
+      purpose: 'shot-plan.video-generation',
+      target: { kind: 'project', id: 'project' },
+      authoredFrom: { kind: 'shotPlan', id: 'shot_plan_1' },
+      shotPlanVideoInputMode: 'reference',
+      model: {
+        provider: 'fal-ai',
+        model: 'bytedance/seedance-2.0/reference-to-video',
+      },
+      values: { prompt: 'Use @Image1 as an opaque reference.' },
+      references: [],
+    };
+    preview.models = await listGenerationModels({ outputMediaKind: 'video' });
+
+    const authoring = await projectGenerationPreviewAuthoring({ preview });
+
+    expect(authoring).toMatchObject({
+      kind: 'video',
+      selectedModelFamilyId: 'seedance-2.0',
+      selectedInputMode: 'reference',
+      inputModes: [
+        { id: 'text-only', available: true },
+        { id: 'first-frame', available: true },
+        { id: 'first-last-frame', available: true },
+        { id: 'reference', available: true },
+      ],
+      modelFamilies: [
+        { familyId: 'seedance-2.0', available: true },
+        { familyId: 'seedance-2.0-mini', available: true },
+        { familyId: 'seedance-2.0-fast', available: true },
+      ],
+      controls: expect.arrayContaining([
+        expect.objectContaining({
+          controlId: 'resolution',
+          value: '480p',
+          authored: false,
+          recommended: true,
+        }),
+      ]),
+    });
   });
 
   it('presents exact saved managed values when the model is no longer available', async () => {

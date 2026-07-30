@@ -72,11 +72,14 @@ function selectedImageMentions(
   ];
   const mentions = new Map<string, GenerationPromptReferenceMention>();
   for (const reference of references) {
-    if (reference.kind === 'image' && reference.promptMention) {
+    if (reference.promptMention) {
       mentions.set(reference.promptMention, {
         value: reference.promptMention,
         label: reference.label,
-        previewImageUrl: reference.browserUrl,
+        kind: reference.kind,
+        ...(reference.kind === 'image'
+          ? { previewImageUrl: reference.browserUrl }
+          : {}),
       });
     }
   }

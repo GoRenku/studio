@@ -22,6 +22,7 @@ export interface GenerationCommandFlags {
   dialogue?: string;
   take?: string;
   kind?: string;
+  authoredFromShotPlan?: string;
 }
 
 export type GenerationCommandRuntime = CliCommandRuntime;
@@ -49,6 +50,14 @@ async function runContext(input: Input) {
     ...projectInput(input),
     purpose,
     target: parseGenerationTarget({ purpose, target: requiredFlag(input.flags.target, '--target') }),
+    ...(input.flags.authoredFromShotPlan
+      ? {
+          authoredFrom: {
+            kind: 'shotPlan' as const,
+            id: input.flags.authoredFromShotPlan,
+          },
+        }
+      : {}),
   });
 }
 

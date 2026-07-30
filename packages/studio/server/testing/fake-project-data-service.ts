@@ -121,6 +121,15 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [`surface:scene:${input.sceneId}:shot-plans`],
       };
     },
+    async listSceneShotPlanVideoGenerations(input) {
+      return {
+        sceneId: input.sceneId,
+        groups: [],
+        resourceKeys: [
+          `surface:scene:${input.sceneId}:video-generations`,
+        ],
+      };
+    },
     async readShotPlan() {
       throw new Error('Shot Plan fixture was not configured.');
     },
@@ -887,7 +896,7 @@ function generationPreviewResource(): GenerationPreviewResourceData {
     },
     references: { slots: [], additional: [] },
     configuration: { sections: [] },
-    authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+    authoring: { kind: 'image', selectedModelFamilyId: '', modelFamilies: [], controls: [] },
     diagnostics: [],
   };
 }

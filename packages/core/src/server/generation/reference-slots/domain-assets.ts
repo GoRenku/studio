@@ -1,3 +1,5 @@
+import { readCastMemberRecord } from '../../database/access/cast-members.js';
+import { readLocationRecord } from '../../database/access/locations.js';
 import type { BuildGenerationPurposeInput } from '../purpose-contract.js';
 import type { GuideSlotDefinition } from '../purpose-guide.js';
 
@@ -9,7 +11,9 @@ export function characterSheetSlot(input: {
     sectionId: 'cast',
     sectionLabel: 'Cast',
     slotId: 'character-sheet',
-    slotLabel: 'Character Sheet',
+    slotLabel:
+      readCastMemberRecord(input.context.session, input.castMemberId)?.name ??
+      'Character',
     subject: { kind: 'castMember', id: input.castMemberId },
     owner: { kind: 'castMember', id: input.castMemberId },
     roles: ['character-sheet'],
@@ -24,7 +28,9 @@ export function locationSheetSlot(input: {
     sectionId: 'location',
     sectionLabel: 'Location',
     slotId: 'location-sheet',
-    slotLabel: 'Location Sheet',
+    slotLabel:
+      readLocationRecord(input.context.session, input.locationId)?.name ??
+      'Location',
     subject: { kind: 'location', id: input.locationId },
     owner: { kind: 'location', id: input.locationId },
     roles: ['location-sheet'],

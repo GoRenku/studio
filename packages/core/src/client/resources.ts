@@ -378,7 +378,11 @@ export type StudioSelectionContextResult =
       diagnostics: DiagnosticIssue[];
 };
 
-export type ScenePanelTab = 'narrative' | 'beats' | 'shotPlans';
+export type ScenePanelTab =
+  | 'narrative'
+  | 'beats'
+  | 'shotPlans'
+  | 'generations';
 
 export type StudioSelection =
   | { type: 'projectInformation' }

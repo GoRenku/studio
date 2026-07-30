@@ -20,6 +20,10 @@ import {
   loadBundledGenerationCatalog,
   resolveBundledModelCatalogDir,
 } from '../catalog/model-discovery.js';
+import {
+  describeGenerationModelInputs,
+  type GenerationModelInputDescriptor,
+} from '../catalog/model-input-descriptors.js';
 import { buildLogicalProviderPayload } from './logical-provider-payload.js';
 import {
   assignGenerationInputFilePayloadValue,
@@ -71,6 +75,11 @@ export async function runGeneration(
     options.policy.provider,
     options.policy.model
   );
+  const inputDescriptor = await describeGenerationModelInputs({
+    provider: options.policy.provider,
+    model: options.policy.model,
+    catalog,
+  });
   const payload = buildLogicalProviderPayload(options.request);
   await validateGenerationProviderPayload({
     catalog,
@@ -93,6 +102,7 @@ export async function runGeneration(
     mediaKind: options.policy.mediaKind,
     outputCount,
     expectedOutputMimeType: model.mime?.[0],
+    inputDescriptor,
   });
   const result =
     options.mode === 'simulated'
@@ -140,12 +150,25 @@ function createProviderJobContext(input: {
   mediaKind: string;
   outputCount: number;
   expectedOutputMimeType?: string;
+  inputDescriptor: GenerationModelInputDescriptor | null;
 }): ProviderJobContext {
   const inputBindings = Object.fromEntries(
     Object.keys(input.payload).map((key) => [key, `Input:${key}`])
   );
+  const durationField = input.inputDescriptor?.fields.find(
+    (field) =>
+      field.semantic?.kind === 'setting' &&
+      field.semantic.role === 'duration' &&
+      Object.hasOwn(input.payload, field.name)
+  );
+  if (durationField) {
+    inputBindings.Duration = `Input:${durationField.name}`;
+  }
   const resolvedInputs = Object.fromEntries(
-    Object.entries(input.payload).map(([key, value]) => [`Input:${key}`, value])
+    Object.entries(input.payload).map(([key, value]) => [
+      `Input:${key}`,
+      key === durationField?.name ? numericDuration(value) : value,
+    ])
   );
   const sdkMapping = Object.fromEntries(
     Object.keys(input.payload).map((key) => [key, { input: key, field: key }])
@@ -177,6 +200,16 @@ function createProviderJobContext(input: {
       },
     },
   };
+}
+
+function numericDuration(value: unknown): unknown {
+  if (
+    typeof value === 'string' &&
+    /^\d+(?:\.\d+)?$/.test(value.trim())
+  ) {
+    return Number(value);
+  }
+  return value;
 }
 
 async function buildExecutionProviderPayload(input: {

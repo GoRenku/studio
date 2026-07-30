@@ -535,3 +535,16 @@ same implementation branch.
 
 Provider contracts, names, and pricing are not stable enough to rely on this
 document indefinitely without verification.
+
+## Current Studio activation
+
+Studio currently activates only Seedance 2.0, Seedance 2.0 Mini, and Seedance
+2.0 Fast through `studio-video-model-catalog.ts`, with exact text, image, and
+reference routes. `listStudioModelAvailability({ mediaKind: 'video' })` is a
+derived flattening of that catalog, not a second policy inventory. Generic
+Engines discovery may expose technically implemented Kling, Veo, and other
+routes without activating them in Studio.
+
+The catalog exposes duration, aspect ratio, resolution, and audio generation
+as editable controls. Resolution initializes at 480p; it is not a fixed
+product setting.

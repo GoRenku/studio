@@ -40,6 +40,8 @@ describe('Scene generation context', () => {
     expect(context.facts.sceneCastMemberIds).toEqual([castMemberId]);
     expect(context.facts.sceneLocationIds).toEqual([locationId]);
     const castSlot = context.referenceGuide.sections.find((section) => section.id === 'cast')!.slots[0]!;
+    expect(castSlot.label).toBe(screenplay.screenplay!.cast[1]!.name);
+    expect(castSlot.mediaKind).toBe('image');
     expect(castSlot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual(expect.arrayContaining([
       { kind: 'asset-file', assetId: 'asset_cast_selected', assetFileId: 'asset_file_cast_selected' },
       { kind: 'asset-file', assetId: 'asset_cast_take', assetFileId: 'asset_file_cast_take' },
@@ -49,10 +51,45 @@ describe('Scene generation context', () => {
       candidate.reference.assetId === 'asset_generic_reference'
     )).toBe(false);
     const locationSlot = context.referenceGuide.sections.find((section) => section.id === 'location')!.slots[0]!;
+    expect(locationSlot.label).toBe(
+      screenplay.screenplay!.locations[0]!.name
+    );
+    expect(locationSlot.mediaKind).toBe('image');
     expect(locationSlot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual([
       { kind: 'asset-file', assetId: 'asset_location_selected', assetFileId: 'asset_file_location_selected' },
     ]);
 
+  });
+
+  it('warns when optional Shot Plan video reference candidates are unavailable', async () => {
+    const created = await createSampleMovieProject({ homeDir, projectData });
+    if (!created) {
+      return;
+    }
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const shotPlan = await projectData.createShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: scene.id!,
+      title: 'Video authoring source',
+      coverage: null,
+      shots: [],
+    });
+
+    const context = await projectData.buildGenerationContext({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'shot-plan.video-generation',
+      target: { kind: 'project', id: 'constantinople' },
+      authoredFrom: { kind: 'shotPlan', id: shotPlan.shotPlan.id },
+    });
+
+    expect(context.referenceGuide.notices).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'CORE_GENERATION_OPTIONAL_REFERENCE_UNAVAILABLE',
+      }),
+    ]));
   });
 });
 

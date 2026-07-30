@@ -8,6 +8,7 @@ export const mediaGenerationSpecs = sqliteTable(
     targetKind: text('target_kind').notNull(),
     targetId: text('target_id').notNull(),
     authoredFromShotPlanId: text('authored_from_shot_plan_id'),
+    shotPlanVideoInputMode: text('shot_plan_video_input_mode'),
     executionKind: text('execution_kind').notNull().default('renku-managed'),
     provider: text('provider'),
     model: text('model'),

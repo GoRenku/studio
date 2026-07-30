@@ -12,6 +12,7 @@ export interface MediaCardProps {
 
 export type MediaCardMedia =
   | MediaCardImage
+  | MediaCardAudio
   | MediaCardVideo
   | MediaCardMosaic
   | MediaCardMosaicGrid;
@@ -23,6 +24,12 @@ export interface MediaCardImage {
   fit: 'cover' | 'contain';
   loading?: 'lazy';
   effect: 'none' | 'zoom-on-hover' | 'desaturate-until-hover-or-selected';
+}
+
+export interface MediaCardAudio {
+  kind: 'audio';
+  src: string;
+  title: string;
 }
 
 export type MediaCardVideo =

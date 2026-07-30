@@ -25,6 +25,10 @@ describe('generic generation model listing', () => {
     expect(listGenerationPurposes().map((purpose) => purpose.purpose)).toEqual([
       'image.create',
       'image.edit',
+      'shot-plan.video-generation',
+      'shot-plan.video-first-frame',
+      'shot-plan.video-last-frame',
+      'shot-plan.video-storyboard',
       'lookbook.image',
       'lookbook.video-sheet',
       'lookbook.storyboard-sheet',
@@ -59,6 +63,10 @@ describe('generic generation model listing', () => {
     }))).toEqual([
       purpose('image.create', 'project', 'image'),
       purpose('image.edit', 'asset', 'image'),
+      purpose('shot-plan.video-generation', 'project', 'video'),
+      purpose('shot-plan.video-first-frame', 'project', 'image'),
+      purpose('shot-plan.video-last-frame', 'project', 'image'),
+      purpose('shot-plan.video-storyboard', 'project', 'image'),
       purpose('lookbook.image', 'lookbook', 'image', [], [aspectRatio('project'), quality('medium')], nanoBanana2),
       purpose('lookbook.video-sheet', 'lookbook', 'image', [], [aspectRatio('4:3'), quality('high')], gptImage2),
       purpose('lookbook.storyboard-sheet', 'lookbook', 'image', [], [aspectRatio('4:3'), quality('high')], gptImage2),

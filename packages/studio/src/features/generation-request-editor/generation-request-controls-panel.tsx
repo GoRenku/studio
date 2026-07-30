@@ -24,6 +24,7 @@ interface GenerationRequestControlsPanelProps {
     controlId: string,
     value: GenerationPreviewConfigurationValue,
   ) => void;
+  compact?: boolean;
 }
 
 export function GenerationRequestControlsPanel({
@@ -31,15 +32,20 @@ export function GenerationRequestControlsPanel({
   disabled,
   model,
   onChange,
+  compact = false,
 }: GenerationRequestControlsPanelProps) {
   if (!controls.length && !model) {
     return <p className='text-sm text-muted-foreground'>No settings.</p>;
   }
   return (
-    <section className='mx-auto grid w-full max-w-[538px] gap-[18px] pt-[38px] pb-12'>
+    <section className={compact
+      ? 'grid w-full gap-4'
+      : 'mx-auto grid w-full max-w-[538px] gap-[18px] pt-[38px] pb-12'}>
       <div className='contents'>
         {model ? (
-          <div className='grid min-h-9 grid-cols-[150px_360px] items-center gap-7'>
+          <div className={compact
+            ? 'grid min-h-9 gap-2'
+            : 'grid min-h-9 grid-cols-[150px_360px] items-center gap-7'}>
             <span className='text-xs font-medium text-muted-foreground'>Model</span>
             <Select
               value={model.value}
@@ -62,7 +68,7 @@ export function GenerationRequestControlsPanel({
         {controls.map((control) => (
           <div
             key={control.controlId}
-            className='grid min-h-9 grid-cols-[150px_360px] items-center gap-7'
+            className={controlRowClassName(compact, control.kind)}
           >
             <span className='text-xs font-medium text-muted-foreground'>
               {control.label}
@@ -141,4 +147,16 @@ export function GenerationRequestControlsPanel({
       </div>
     </section>
   );
+}
+
+function controlRowClassName(
+  compact: boolean,
+  kind: GenerationEditorControl['kind'],
+): string {
+  if (!compact) {
+    return 'grid min-h-9 grid-cols-[150px_360px] items-center gap-7';
+  }
+  return kind === 'toggle'
+    ? 'flex min-h-9 items-center justify-between gap-4'
+    : 'grid min-h-9 gap-1.5';
 }

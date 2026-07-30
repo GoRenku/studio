@@ -22,6 +22,7 @@ import { createScreenplayRoute } from './screenplay.js';
 import { createShotPlansRoute } from './shot-plans.js';
 import { createTrashRoute } from './trash.js';
 import { createVisualLanguageRoute } from './visual-language.js';
+import { createShotPlanVideoGenerationsRoute } from './shot-plan-video-generations.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectsRouteProjectData;
@@ -72,6 +73,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'restoreTrashItem'
   | 'previewGarbageCollection'
   | 'emptyTrash'
+  | 'listSceneShotPlanVideoGenerations'
   | 'listCastVoices'
   | 'readCastVoice'
   | 'removeCastVoice'
@@ -136,6 +138,10 @@ export function createProjectsRoute(
     .route('/:projectName', createNavigationRoute({ projectData }))
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
     .route('/:projectName', createShotPlansRoute({ projectData, requireToken }))
+    .route(
+      '/:projectName',
+      createShotPlanVideoGenerationsRoute({ projectData, requireToken }),
+    )
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
     .route(

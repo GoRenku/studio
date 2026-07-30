@@ -31,6 +31,7 @@ export {
   studioSceneNarrativeResourceKey,
   studioSceneBeatSheetResourceKey,
   studioSceneShotPlansResourceKey,
+  studioSceneVideoGenerationsResourceKey,
   studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
   studioSequenceScenesNavigationResourceKey,

@@ -7,7 +7,10 @@ import type { ProjectIdGenerator } from '../entity-ids.js';
 import { generationRunIdFromReceipt } from '../asset-file-generation/import-provenance.js';
 import { readGenerationRunRecord, readGenerationSpecRecord } from '../database/access/media-generation.js';
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
-import { resolveGeneratedMediaAttachment } from './attachment-destinations.js';
+import {
+  generatedMediaAttachmentResourceKeys,
+  resolveGeneratedMediaAttachment,
+} from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { validateImageEditAttachment } from './image-edit-attachment.js';
 
@@ -44,6 +47,11 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   const provenance = validateGenerationProvenance({
     ...input,
     destinationAssetType: attachment.assetType,
+  });
+  const resourceKeys = generatedMediaAttachmentResourceKeys({
+    attachment,
+    generationSpecId: provenance?.generationSpecId ?? null,
+    session: input.session,
   });
   validateLookbookKind(input);
   const persisted = persistGeneratedMediaAttachment({
@@ -91,7 +99,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       : provenance?.kind === 'agent-external'
         ? { generationSpecId: provenance.generationSpecId }
         : null,
-    resourceKeys: attachment.resourceKeys,
+    resourceKeys,
     project: { name: project.name, id: project.id, projectFolder: input.projectFolder },
     ...(persisted.ownerRecord ? { ownerRecord: persisted.ownerRecord } : {}),
   };
@@ -139,6 +147,12 @@ export function validateGenerationProvenance(input: AttachGenerationMediaInput &
     };
   }
   if (input.receipt === undefined) {
+    if (requiresExactGenerationProvenance(input.destinationAssetType)) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_ATTACHMENT_PROVENANCE_REQUIRED',
+        'Shot Plan video generation attachments require exact frozen-spec or managed-run provenance.',
+      );
+    }
     return null;
   }
   const generationRunId = generationRunIdFromReceipt(input.receipt);
@@ -162,6 +176,13 @@ export function validateGenerationProvenance(input: AttachGenerationMediaInput &
     generationSpecId: run.specId,
     outputArtifactId: selectedOutput.artifactId,
   };
+}
+
+function requiresExactGenerationProvenance(assetType: string): boolean {
+  return assetType === 'shot_plan_video' ||
+    assetType === 'shot_plan_video_first_frame' ||
+    assetType === 'shot_plan_video_last_frame' ||
+    assetType === 'shot_plan_video_storyboard';
 }
 
 function validateAttachmentRequestMatch(

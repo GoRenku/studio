@@ -7,6 +7,7 @@ import type {
   GenerationReferenceSlotSelectionInput,
   JsonValue,
   ProjectRelativePath,
+  ShotPlanVideoInputMode,
 } from '@gorenku/studio-core/client';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
@@ -45,6 +46,9 @@ export function createGenerationPreviewRoute(
           specId,
           prompt: body.prompt,
           ...(body.modelFamilyId ? { modelFamilyId: body.modelFamilyId } : {}),
+          ...(body.shotPlanVideoInputMode
+            ? { shotPlanVideoInputMode: body.shotPlanVideoInputMode }
+            : {}),
           parameterValues: body.parameterValues,
           slotSelections: body.slotSelections,
         });
@@ -64,6 +68,7 @@ export function createGenerationPreviewRoute(
 function readGenerationPreviewUpdateBody(value: unknown): {
   prompt: { authoredText: string; negativeText?: string | null };
   modelFamilyId?: string;
+  shotPlanVideoInputMode?: ShotPlanVideoInputMode;
   parameterValues: Record<string, JsonValue>;
   slotSelections: GenerationReferenceSlotSelectionInput[];
 } {
@@ -98,6 +103,14 @@ function readGenerationPreviewUpdateBody(value: unknown): {
       (typeof body.modelFamilyId !== 'string' || !body.modelFamilyId.trim())) {
     throw requestError('Request body modelFamilyId must be a non-empty string when provided.');
   }
+  if (
+    body.shotPlanVideoInputMode !== undefined
+    && !isShotPlanVideoInputMode(body.shotPlanVideoInputMode)
+  ) {
+    throw requestError(
+      'Request body shotPlanVideoInputMode is invalid.',
+    );
+  }
   const parameterValues = readParameterValues(body.parameterValues);
   return {
     prompt: {
@@ -109,11 +122,23 @@ function readGenerationPreviewUpdateBody(value: unknown): {
     ...(typeof body.modelFamilyId === 'string'
       ? { modelFamilyId: body.modelFamilyId }
       : {}),
+    ...(isShotPlanVideoInputMode(body.shotPlanVideoInputMode)
+      ? { shotPlanVideoInputMode: body.shotPlanVideoInputMode }
+      : {}),
     parameterValues,
     slotSelections: body.slotSelections.map((selection, index) =>
       readReferenceSelection(selection, index),
     ),
   };
+}
+
+function isShotPlanVideoInputMode(
+  value: unknown,
+): value is ShotPlanVideoInputMode {
+  return value === 'text-only'
+    || value === 'first-frame'
+    || value === 'first-last-frame'
+    || value === 'reference';
 }
 
 function readParameterValues(value: unknown): Record<string, JsonValue> {
