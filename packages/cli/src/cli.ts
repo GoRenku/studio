@@ -166,6 +166,7 @@ function createCliFlags() {
     },
     file: {
       type: 'string',
+      isMultiple: true,
     },
     storageRoot: {
       type: 'string',
@@ -209,6 +210,7 @@ function createCliFlags() {
     },
     spec: {
       type: 'string',
+      isMultiple: true,
     },
     run: {
       type: 'string',
@@ -428,11 +430,20 @@ export async function runRenkuCli(
   const [command, ...input] = cli.input;
 
   try {
+    const isGenerationPreview =
+      command === 'generation' && input.join(' ') === 'preview show';
+    const file = isGenerationPreview
+      ? undefined
+      : singleCommandFlagValue(cli.flags.file, '--file');
+    const spec = isGenerationPreview
+      ? undefined
+      : singleCommandFlagValue(cli.flags.spec, '--spec');
+
     switch (command) {
       case 'create':
         return await runCreateCommand({
           input,
-          file: cli.flags.file,
+          file,
           title: cli.flags.title,
           aspectRatio: cli.flags.aspectRatio,
           logline: cli.flags.logline,
@@ -475,7 +486,7 @@ export async function runRenkuCli(
         return await runCastCommand({
           input,
           flags: {
-            file: cli.flags.file,
+            file,
             project: cli.flags.project,
             cast: cli.flags.cast,
             voice: cli.flags.voice,
@@ -523,7 +534,7 @@ export async function runRenkuCli(
         return await runProductionDesignCommand({
           input,
           flags: {
-            file: cli.flags.file,
+            file,
             location: cli.flags.location,
             design: cli.flags.design,
             active: cli.flags.active,
@@ -536,7 +547,7 @@ export async function runRenkuCli(
         return await runInspirationCommand({
           input,
           flags: {
-            file: cli.flags.file,
+            file,
             folder: cli.flags.folder,
             name: cli.flags.name,
             project: cli.flags.project,
@@ -546,9 +557,6 @@ export async function runRenkuCli(
           homeDir: options.homeDir,
         });
       case 'generation': {
-        const generationPreviewFlags = input.join(' ') === 'preview show'
-          ? repeatedGenerationPreviewFlags(argv)
-          : {};
         return await runGenerationCommand({
           input,
           flags: {
@@ -558,8 +566,8 @@ export async function runRenkuCli(
             mediaKind: cli.flags.mediaKind,
             provider: cli.flags.provider,
             model: cli.flags.model,
-            file: generationPreviewFlags.file ?? cli.flags.file,
-            spec: generationPreviewFlags.spec ?? cli.flags.spec,
+            file: isGenerationPreview ? cli.flags.file : file,
+            spec: isGenerationPreview ? cli.flags.spec : spec,
             run: cli.flags.run,
             scene: cli.flags.scene,
             dialogue: cli.flags.dialogue,
@@ -581,7 +589,7 @@ export async function runRenkuCli(
           input,
           flags: {
             anchor: cli.flags.anchor,
-            file: cli.flags.file,
+            file,
             image: cli.flags.image,
             lookbook: cli.flags.lookbook,
             kind: cli.flags.kind,
@@ -599,7 +607,7 @@ export async function runRenkuCli(
             project: cli.flags.project,
             purpose: cli.flags.purpose,
             target: cli.flags.target,
-            file: cli.flags.file,
+            file,
             source: cli.flags.source,
             title: cli.flags.title,
             summary: cli.flags.summary,
@@ -626,7 +634,7 @@ export async function runRenkuCli(
         return await runLocationCommand({
           input,
           flags: {
-            file: cli.flags.file,
+            file,
             location: cli.flags.location,
             dryRun: cli.flags.dryRun,
           },
@@ -646,7 +654,7 @@ export async function runRenkuCli(
         return await runScreenplayCommand({
           input,
           flags: {
-            file: cli.flags.file,
+            file,
             act: cli.flags.act,
             active: cli.flags.active,
             analysis: cli.flags.analysis,
@@ -667,7 +675,7 @@ export async function runRenkuCli(
           input,
           flags: {
             project: cli.flags.project,
-            file: cli.flags.file,
+            file,
             scene: cli.flags.scene,
             shotPlan: cli.flags.shotPlan,
             shot: cli.flags.shot,
@@ -731,26 +739,30 @@ export async function runRenkuCli(
   }
 }
 
-function repeatedGenerationPreviewFlags(argv: string[]): {
-  file?: string[];
-  spec?: string[];
-} {
-  const file = repeatedFlagValues(argv, '--file');
-  const spec = repeatedFlagValues(argv, '--spec');
-  return {
-    ...(file.length > 0 ? { file } : {}),
-    ...(spec.length > 0 ? { spec } : {}),
-  };
-}
-
-function repeatedFlagValues(argv: string[], name: string): string[] {
-  return argv.flatMap((argument, index) =>
-    argument === name && argv[index + 1] !== undefined
-      ? [argv[index + 1]!]
-      : argument.startsWith(`${name}=`)
-        ? [argument.slice(name.length + 1)]
-        : []
-  );
+function singleCommandFlagValue(
+  values: readonly string[] | undefined,
+  flagName: '--file' | '--spec'
+): string | undefined {
+  if (!values) {
+    return undefined;
+  }
+  if (values.length > 1) {
+    const suggestion = `Pass one ${flagName} value, or use generation preview show to review several requests together.`;
+    throw new StructuredError({
+      code: 'CLI154',
+      message: `Repeated ${flagName} values are supported only by generation preview show.`,
+      issues: [
+        createDiagnosticError(
+          'CLI154',
+          `The ${flagName} flag was provided more than once for a scalar command.`,
+          { path: ['arguments', flagName], context: 'renku CLI arguments' },
+          suggestion
+        ),
+      ],
+      suggestion,
+    });
+  }
+  return values[0];
 }
 
 function findUnknownFlags(
