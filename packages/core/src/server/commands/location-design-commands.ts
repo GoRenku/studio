@@ -19,7 +19,7 @@ import {
   readLocationDesignDocumentById,
   setActiveLocationDesignRecord,
   writeLocationDesignRecord,
-} from '../database/access/department-design.js';
+} from '../database/access/location-designs.js';
 import { assertLocationDesignDocument } from '../department-design-json/validator.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { projectSummary, throwIfDepartmentIssues } from './department-command-support.js';
@@ -114,12 +114,13 @@ export async function writeLocationDesign(
     assertLocationDesignSemantics(session, input.document);
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     const designId = ids('location_design');
+    const now = new Date().toISOString();
     writeLocationDesignRecord({
       session,
       id: designId,
       document: input.document,
       sourceCommand: 'production-design.location.write',
-      now: new Date().toISOString(),
+      now,
     });
     return {
       valid: true,
@@ -175,20 +176,20 @@ function assertLocationDesignSemantics(
 ): void {
   requireLocation(document.locationId, session);
   const issues: DiagnosticIssue[] = [];
-  const propNames = new Set<string>();
-  document.design.propsAndRecurringObjects.forEach((prop, index) => {
-    const name = prop.name.trim().toLocaleLowerCase();
-    if (propNames.has(name)) {
+  const recurringObjectNames = new Set<string>();
+  document.design.recurringObjects.forEach((recurringObject, index) => {
+    const name = recurringObject.name.trim().toLocaleLowerCase();
+    if (recurringObjectNames.has(name)) {
       issues.push(
         createDiagnosticError(
           'PROJECT_DATA209',
-          `Duplicate production design prop name: ${prop.name}.`,
-          { path: ['design', 'propsAndRecurringObjects', String(index), 'name'] },
-          'Use unique prop names inside one Location Design.'
+          `Duplicate recurring object name: ${recurringObject.name}.`,
+          { path: ['design', 'recurringObjects', String(index), 'name'] },
+          'Use unique recurring object names inside one Location Design.'
         )
       );
     }
-    propNames.add(name);
+    recurringObjectNames.add(name);
   });
   throwIfDepartmentIssues(issues);
 }

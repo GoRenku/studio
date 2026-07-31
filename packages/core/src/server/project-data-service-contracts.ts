@@ -53,6 +53,9 @@ import type {
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
+  PropNavigationRow,
+  PropOverviewResource,
+  PropResource,
   LocationDesignDocument,
   LocationDesignListReport,
   LocationDesignReadReport,
@@ -60,6 +63,12 @@ import type {
   LocationOperationDocument,
   SceneDesignResource,
   ProductionDesignLocationContextReport,
+  ProductionDesignPropContextReport,
+  PropDesignDocument,
+  PropDesignListReport,
+  PropDesignReadReport,
+  PropDesignWriteReport,
+  PropOperationDocument,
   SceneNarrativeResource,
   SceneProductionNumberListReport,
   SceneProductionNumberResolveReport,
@@ -163,6 +172,9 @@ export interface ProjectDataService {
   listLocationNavigation(
     input: ListNavigationInput
   ): Promise<PageResponse<LocationNavigationRow>>;
+  listPropNavigation(
+    input: ListNavigationInput
+  ): Promise<PageResponse<PropNavigationRow>>;
   listActNavigation(input: ListNavigationInput): Promise<PageResponse<ActNavigationRow>>;
   listSequenceNavigation(
     input: ListNavigationInput | ListSequencesForActNavigationInput
@@ -182,6 +194,8 @@ export interface ProjectDataService {
     input: ListNavigationInput
   ): Promise<LocationOverviewResource>;
   readLocationResource(input: ReadLocationResourceInput): Promise<LocationResource>;
+  readPropOverviewResource(input: ListNavigationInput): Promise<PropOverviewResource>;
+  readPropResource(input: ReadPropResourceInput): Promise<PropResource>;
   readStoryArcResource(input: ReadProjectInput): Promise<StoryArcResource>;
   readSequenceResource(input: ReadSequenceResourceInput): Promise<SequenceResource>;
   readSceneNarrativeResource(
@@ -295,6 +309,16 @@ export interface ProjectDataService {
   validateLocationDesign(input: ValidateLocationDesignInput): Promise<DepartmentCommandReport>;
   writeLocationDesign(input: WriteLocationDesignInput): Promise<LocationDesignWriteReport>;
   setActiveLocationDesign(input: SetActiveLocationDesignInput): Promise<LocationDesignWriteReport>;
+  listProps(input?: RenkuConfigPathOptions): Promise<import('../client/props.js').Prop[]>;
+  readProp(input: ReadPropInput): Promise<import('../client/props.js').Prop>;
+  readPropContext(input: ReadPropContextInput): Promise<ProductionDesignPropContextReport>;
+  validatePropOperations(input: ValidatePropOperationsInput): Promise<DepartmentCommandReport>;
+  applyPropOperations(input: ApplyPropOperationsInput): Promise<DepartmentCommandReport>;
+  listPropDesigns(input: ListPropDesignsInput): Promise<PropDesignListReport>;
+  readPropDesign(input: ReadPropDesignInput): Promise<PropDesignReadReport>;
+  validatePropDesign(input: ValidatePropDesignInput): Promise<DepartmentCommandReport>;
+  writePropDesign(input: WritePropDesignInput): Promise<PropDesignWriteReport>;
+  setActivePropDesign(input: SetActivePropDesignInput): Promise<PropDesignWriteReport>;
   readScreenplayStatus(input?: RenkuConfigPathOptions): Promise<ScreenplayStatusReport>;
   readScreenplay(input?: RenkuConfigPathOptions): Promise<ScreenplayReadReport>;
   listScreenplayCastMembers(input?: RenkuConfigPathOptions): Promise<ScreenplayCastMember[]>;
@@ -553,6 +577,48 @@ export interface WriteLocationDesignInput extends ValidateLocationDesignInput {
 
 export interface SetActiveLocationDesignInput extends RenkuConfigPathOptions {
   locationId: string;
+  designId: string;
+}
+
+export interface ReadPropInput extends RenkuConfigPathOptions {
+  propId: string;
+}
+
+export interface ReadPropContextInput extends RenkuConfigPathOptions {
+  propId: string;
+}
+
+export interface ValidatePropOperationsInput extends RenkuConfigPathOptions {
+  document: PropOperationDocument;
+  filePath?: string;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface ApplyPropOperationsInput extends ValidatePropOperationsInput {
+  dryRun?: boolean;
+}
+
+export interface ListPropDesignsInput extends RenkuConfigPathOptions {
+  propId: string;
+}
+
+export interface ReadPropDesignInput extends RenkuConfigPathOptions {
+  propId?: string;
+  designId?: string;
+  active?: boolean;
+}
+
+export interface ValidatePropDesignInput extends RenkuConfigPathOptions {
+  document: PropDesignDocument;
+  filePath?: string;
+}
+
+export interface WritePropDesignInput extends ValidatePropDesignInput {
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface SetActivePropDesignInput extends RenkuConfigPathOptions {
+  propId: string;
   designId: string;
 }
 
@@ -831,6 +897,11 @@ export interface ReadCastMemberResourceInput extends RenkuConfigPathOptions {
 export interface ReadLocationResourceInput extends RenkuConfigPathOptions {
   projectName: string;
   locationId: string;
+}
+
+export interface ReadPropResourceInput extends RenkuConfigPathOptions {
+  projectName: string;
+  propId: string;
 }
 
 export interface ReadSequenceResourceInput extends RenkuConfigPathOptions {

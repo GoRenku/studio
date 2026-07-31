@@ -34,7 +34,7 @@ A **Take** is a persisted generated or imported candidate only in a focused
 domain that explicitly defines Take behavior. The current example is a Scene
 Dialogue Audio Take. Common Asset membership does not carry Take state.
 
-An **Asset Owner** is the one Project, Cast Member, Location, Sequence, Scene,
+An **Asset Owner** is the one Project, Cast Member, Location, Prop, Sequence, Scene,
 logical Scene Beat, Lookbook, or Shot that exclusively owns an Asset.
 
 A **canonical selection** chooses at most one ready candidate for a Cast
@@ -83,6 +83,12 @@ A **Location Hero Image** is a compact overview image owned by a Location. It
 uses canonical type `location_hero` and one primary image file. Common
 selection drives overview and detail display only; it is not a generation
 reference default.
+
+A **Prop Sheet** is a Prop-owned image Asset with canonical type
+`prop_sheet`. Its selection is request-scoped to an exact GenerationSpec.
+
+A **Prop Hero** is a Prop-owned image Asset with canonical type `prop_hero`.
+One Hero may be selected as the Prop's compact Studio image.
 
 A **Scene Storyboard Image** is an image Asset owned by one logical Scene Beat.
 Durable storyboard images are stored under
@@ -242,6 +248,8 @@ Folder responsibilities:
 - `locations/<handle>/heroes/` contains imported or generated Location Hero
   Images as flat files, such as `hero.png` and `hero-v01.png`. Do not create
   one subfolder per hero image.
+- `props/<handle>/prop-sheets/` contains flat, versioned Prop Sheets.
+- `props/<handle>/heroes/` contains flat, versioned Prop Heroes.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
   those folders are not per-image assets unless a future command explicitly
   registers one.

@@ -3,6 +3,7 @@ import type { AssetPage } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
+import type { Prop } from './props.js';
 import type {
   Block,
   Scene,
@@ -51,6 +52,7 @@ export interface ProjectShell {
 export interface ProjectShellNavigation {
   cast: PageResponse<CastNavigationRow>;
   locations: PageResponse<LocationNavigationRow>;
+  props: PageResponse<PropNavigationRow>;
   screenplay: ScreenplayNavigation;
 }
 
@@ -72,6 +74,13 @@ export interface LocationNavigationRow {
   handle: string;
   name: string;
   timePeriod?: string;
+  firstImage?: ScreenplayImageReference;
+}
+
+export interface PropNavigationRow {
+  id: string;
+  handle: string;
+  name: string;
   firstImage?: ScreenplayImageReference;
 }
 
@@ -132,6 +141,15 @@ export interface LocationOverviewResource {
 
 export interface LocationResource {
   location: Location;
+  firstImage?: ScreenplayImageReference;
+}
+
+export interface PropOverviewResource {
+  props: PageResponse<PropNavigationRow>;
+}
+
+export interface PropResource {
+  prop: Prop;
   firstImage?: ScreenplayImageReference;
 }
 
@@ -329,6 +347,12 @@ export interface DirectorProductionDesignReadiness {
   locationSheetCount: number;
   missingEnvironmentSheetLocationIds: string[];
   everyLocationHasEnvironmentSheet: boolean;
+  propCount: number;
+  activePropDesignCount: number;
+  missingActivePropDesignPropIds: string[];
+  propSheetCount: number;
+  missingPropSheetPropIds: string[];
+  everyPropHasPropSheet: boolean;
 }
 
 export interface DirectorSceneReadiness {
@@ -354,6 +378,7 @@ export type DirectorNextStepId =
   | 'author-storyboard-lookbook'
   | 'design-cast'
   | 'design-production'
+  | 'design-props'
   | 'design-beat-sheet'
   | 'generate-storyboards';
 
@@ -393,6 +418,8 @@ export type StudioSelection =
   | { type: 'castMember'; id: string }
   | { type: 'locations' }
   | { type: 'location'; id: string }
+  | { type: 'props' }
+  | { type: 'prop'; id: string }
   | { type: 'storyArc' }
   | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }
@@ -414,6 +441,8 @@ export type StudioSelectionContext =
   | { surface: 'cast-member'; castMember: CastNavigationRow }
   | { surface: 'locations'; locations: PageResponse<LocationNavigationRow> }
   | { surface: 'location'; location: LocationNavigationRow }
+  | { surface: 'props'; props: PageResponse<PropNavigationRow> }
+  | { surface: 'prop'; prop: PropNavigationRow }
   | { surface: 'story-arc'; acts: PageResponse<ActNavigationRow> }
   | { surface: 'act'; act: ActNavigationRow }
   | {

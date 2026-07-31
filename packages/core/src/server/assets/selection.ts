@@ -20,6 +20,7 @@ import { assertAssetOwnerExists } from './ownership.js';
 const selectedAssetTypes: Record<AssetSelectionTarget['kind'], string> = {
   castMember: 'cast_profile',
   location: 'location_hero',
+  prop: 'prop_hero',
   lookbook: 'lookbook_image',
   shot: 'shot_image',
   sceneBeat: 'scene_storyboard_image',
@@ -82,6 +83,7 @@ export function assetSelectionTargetForOwnerType(
     ? owner
     : owner.kind === 'castMember'
       || owner.kind === 'location'
+      || owner.kind === 'prop'
       || owner.kind === 'lookbook'
       || owner.kind === 'shot'
       ? { kind: owner.kind, id: owner.id }

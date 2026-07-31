@@ -1,6 +1,7 @@
 import type {
   CastNavigationRow,
   LocationNavigationRow,
+  PropNavigationRow,
   SceneNavigationRow,
   SequenceNavigationRow,
   ActNavigationRow,
@@ -8,7 +9,7 @@ import type {
   StudioSelection,
 } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
-import type { ScreenplayNavigationState } from './use-screenplay-navigation';
+import type { MovieStudioNavigationState } from './use-movie-studio-navigation';
 
 export const SCENE_PANEL_TABS: ScenePanelTab[] = [
   'narrative',
@@ -20,6 +21,7 @@ export const SCENE_PANEL_TABS: ScenePanelTab[] = [
 export interface MovieStudioLookup {
   cast: Map<string, CastNavigationRow>;
   locations: Map<string, LocationNavigationRow>;
+  props: Map<string, PropNavigationRow>;
   acts: Map<string, ActNavigationRow>;
   sequences: Map<string, SequenceNavigationRow>;
   scenes: Map<string, SceneNavigationRow>;
@@ -32,6 +34,7 @@ export interface ResolvedStudioSelection {
   summary: string;
   castMember?: CastNavigationRow;
   location?: LocationNavigationRow;
+  prop?: PropNavigationRow;
   act?: ActNavigationRow;
   sequence?: SequenceNavigationRow;
   scene?: SceneNavigationRow;
@@ -39,10 +42,11 @@ export interface ResolvedStudioSelection {
 
 export function buildMovieStudioLookup(
   project: ProjectShellWithHttp,
-  navigation: ScreenplayNavigationState
+  navigation: MovieStudioNavigationState
 ): MovieStudioLookup {
   const cast = new Map<string, CastNavigationRow>();
   const locations = new Map<string, LocationNavigationRow>();
+  const props = new Map<string, PropNavigationRow>();
   const acts = new Map<string, ActNavigationRow>();
   const sequences = new Map<string, SequenceNavigationRow>();
   const scenes = new Map<string, SceneNavigationRow>();
@@ -53,6 +57,9 @@ export function buildMovieStudioLookup(
   }
   for (const location of navigation.locations) {
     locations.set(location.id, location);
+  }
+  for (const prop of navigation.props) {
+    props.set(prop.id, prop);
   }
   for (const act of navigation.acts) {
     acts.set(act.id, act);
@@ -70,7 +77,7 @@ export function buildMovieStudioLookup(
   }
 
   void project;
-  return { cast, locations, acts, sequences, scenes, scenesBySequenceId };
+  return { cast, locations, props, acts, sequences, scenes, scenesBySequenceId };
 }
 
 export function resolveStudioSelection(
@@ -92,7 +99,9 @@ export function resolveStudioSelection(
     case 'cast':
       return valid('Cast', 'Cast members loaded from screenplay data.');
     case 'locations':
-      return valid('Locations', 'Locations loaded from screenplay data.');
+      return valid('Locations', 'Production locations.');
+    case 'props':
+      return valid('Props', 'Continuity props.');
     case 'storyArc':
       return valid('Story Arc', 'Acts and sequences loaded from screenplay data.');
     case 'act': {
@@ -111,6 +120,12 @@ export function resolveStudioSelection(
       const location = lookup.locations.get(selection.id);
       return location
         ? { ...valid(location.name, location.timePeriod ?? 'Location'), location }
+        : invalid();
+    }
+    case 'prop': {
+      const prop = lookup.props.get(selection.id);
+      return prop
+        ? { ...valid(prop.name, 'Prop'), prop }
         : invalid();
     }
     case 'sequence': {

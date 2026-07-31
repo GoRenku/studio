@@ -26,6 +26,7 @@ describe('generation media attachment', () => {
       return;
     }
     const lookbooks = await ensureLookbooks(homeDir);
+    const propId = await ensureProp(projectData, homeDir);
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(path.join(created.projectPath, 'tmp', 'attachment.png'), 'image');
 
@@ -65,6 +66,16 @@ describe('generation media attachment', () => {
         target: { kind: 'location' as const, id: 'location_test0001' },
         resourceKey: 'surface:location:location_test0001',
       },
+      {
+        purpose: 'prop.sheet' as const,
+        target: { kind: 'prop' as const, id: propId },
+        resourceKey: `surface:prop:${propId}`,
+      },
+      {
+        purpose: 'prop.hero' as const,
+        target: { kind: 'prop' as const, id: propId },
+        resourceKey: `surface:prop:${propId}`,
+      },
     ];
 
     for (const attachment of cases) {
@@ -81,7 +92,50 @@ describe('generation media attachment', () => {
         name: 'constantinople',
         projectFolder: created.projectPath,
       });
+      if (attachment.purpose === 'prop.sheet') {
+        expect(report.asset.files[0]?.projectRelativePath).toMatch(
+          /^props\/field-cannon\/prop-sheets\/prop-sheet(?:-v\d+)?\.png$/
+        );
+      }
+      if (attachment.purpose === 'prop.hero') {
+        expect(report.asset.files[0]?.projectRelativePath).toMatch(
+          /^props\/field-cannon\/heroes\/hero(?:-v\d+)?\.png$/
+        );
+      }
     }
+
+    const propContext = await projectData.readPropContext({
+      homeDir,
+      propId,
+    });
+    expect(propContext.assets.map((asset) => asset.type)).toEqual(
+      expect.arrayContaining(['prop_sheet', 'prop_hero'])
+    );
+  });
+
+  it('keeps Prop Hero storage naming independent from the Asset title', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const propId = await ensureProp(projectData, homeDir);
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, 'tmp', 'hero.png'), 'image');
+
+    const report = await projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'prop.hero',
+      target: { kind: 'prop', id: propId },
+      title: 'Field Cannon Presentation Hero',
+      sourceProjectRelativePath: 'tmp/hero.png',
+    });
+
+    expect(report.asset.title).toBe('Field Cannon Presentation Hero');
+    expect(report.asset.files[0]?.projectRelativePath).toBe(
+      'props/field-cannon/heroes/hero.png'
+    );
   });
 
   it('atomically selects canonical imports and rejects request-scoped selection before writes', async () => {
@@ -91,6 +145,7 @@ describe('generation media attachment', () => {
       return;
     }
     const lookbooks = await ensureLookbooks(homeDir);
+    const propId = await ensureProp(projectData, homeDir);
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(
       path.join(created.projectPath, 'tmp', 'selected.png'),
@@ -107,6 +162,11 @@ describe('generation media attachment', () => {
         purpose: 'location.hero' as const,
         target: { kind: 'location' as const, id: 'location_test0001' },
         owner: { kind: 'location' as const, id: 'location_test0001' },
+      },
+      {
+        purpose: 'prop.hero' as const,
+        target: { kind: 'prop' as const, id: propId },
+        owner: { kind: 'prop' as const, id: propId },
       },
       {
         purpose: 'lookbook.image' as const,
@@ -164,6 +224,32 @@ describe('generation media attachment', () => {
     });
     expect(after.map((asset) => asset.id)).toEqual(
       before.map((asset) => asset.id)
+    );
+
+    const propAssetsBefore = await projectData.listAssets({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'prop', id: propId },
+    });
+    await expect(
+      projectData.attachGenerationMedia({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'prop.sheet',
+        target: { kind: 'prop', id: propId },
+        sourceProjectRelativePath: 'tmp/selected.png',
+        select: true,
+      })
+    ).rejects.toMatchObject({
+      code: 'CORE_ASSET_SELECTION_UNSUPPORTED',
+    });
+    const propAssetsAfter = await projectData.listAssets({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'prop', id: propId },
+    });
+    expect(propAssetsAfter.map((asset) => asset.id)).toEqual(
+      propAssetsBefore.map((asset) => asset.id)
     );
   });
 
@@ -483,4 +569,27 @@ async function ensureLookbooks(homeDir: string): Promise<{
   } finally {
     session.close();
   }
+}
+
+async function ensureProp(
+  projectData: ReturnType<typeof createProjectDataService>,
+  homeDir: string
+): Promise<string> {
+  const report = await projectData.applyPropOperations({
+    homeDir,
+    document: {
+      kind: 'propOperations',
+      operations: [
+        {
+          operation: 'prop.add',
+          prop: {
+            key: 'field-cannon',
+            handle: 'field-cannon',
+            name: 'Field Cannon',
+          },
+        },
+      ],
+    },
+  });
+  return report.generatedIds?.[0]?.id as string;
 }

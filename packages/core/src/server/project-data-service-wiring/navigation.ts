@@ -2,6 +2,7 @@ import {
   listActNavigation,
   listCastNavigation,
   listLocationNavigation,
+  listPropNavigation,
   listSceneNavigation,
   listSequenceNavigation,
 } from '../resources/navigation.js';
@@ -11,6 +12,7 @@ export function createNavigationServiceWiring(): Pick<
   ProjectDataService,
   | 'listCastNavigation'
   | 'listLocationNavigation'
+  | 'listPropNavigation'
   | 'listActNavigation'
   | 'listSequenceNavigation'
   | 'listSceneNavigation'
@@ -18,6 +20,7 @@ export function createNavigationServiceWiring(): Pick<
   return {
     listCastNavigation,
     listLocationNavigation,
+    listPropNavigation,
     listActNavigation,
     listSequenceNavigation,
     listSceneNavigation,

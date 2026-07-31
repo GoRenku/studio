@@ -50,9 +50,18 @@ describe('Studio focus validation', () => {
         locations: [{ id: 'location_walls', name: 'City Walls' }],
       },
     });
+    expect(
+      resolveStudioSelectionForProject(project, { type: 'props' })
+    ).toMatchObject({
+      ok: true,
+      context: {
+        kind: 'props',
+        props: [{ id: 'prop_field_cannon', name: 'Field Cannon' }],
+      },
+    });
   });
 
-  it('resolves screenplay, cast, and location selections to current context', () => {
+  it('resolves screenplay and continuity selections to current context', () => {
     const project = makeProject();
 
     expect(
@@ -108,6 +117,19 @@ describe('Studio focus validation', () => {
         name: 'City Walls',
       },
     });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'prop',
+        id: 'prop_field_cannon',
+      })
+    ).toMatchObject({
+      ok: true,
+      context: {
+        kind: 'prop',
+        id: 'prop_field_cannon',
+        name: 'Field Cannon',
+      },
+    });
   });
 
   it('rejects missing Movie Studio selections with structured diagnostics', () => {
@@ -152,6 +174,16 @@ describe('Studio focus validation', () => {
       ok: false,
       reason: 'selectionNotFound',
       diagnostics: [{ code: 'STUDIO_COORDINATION035', severity: 'error' }],
+    });
+    expect(
+      resolveStudioSelectionForProject(project, {
+        type: 'prop',
+        id: 'missing_prop',
+      })
+    ).toMatchObject({
+      ok: false,
+      reason: 'selectionNotFound',
+      diagnostics: [{ code: 'STUDIO_COORDINATION041', severity: 'error' }],
     });
   });
 
@@ -288,6 +320,14 @@ function makeProject(): Project {
         description: 'The outer walls where the opening scene begins.',
       },
     ],
+    props: [
+      {
+        id: 'prop_field_cannon',
+        handle: 'field-cannon',
+        name: 'Field Cannon',
+        description: 'A large siege cannon positioned outside the walls.',
+      },
+    ],
     sequences: [
       {
         id: 'seq_opening',
@@ -308,6 +348,7 @@ function makeProject(): Project {
       languages: 0,
       castMembers: 1,
       locations: 1,
+      props: 1,
       acts: 1,
       sequences: 1,
       scenes: 1,

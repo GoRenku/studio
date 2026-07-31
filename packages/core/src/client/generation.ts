@@ -21,6 +21,8 @@ export type GenerationPurpose =
   | 'scene.dialogue-audio'
   | 'location.sheet'
   | 'location.hero'
+  | 'prop.sheet'
+  | 'prop.hero'
   | 'scene.storyboard-sheet'
   | 'shot.image';
 export type GenerationOutputMediaKind = 'image' | 'audio' | 'video';
@@ -31,6 +33,7 @@ export type GenerationTarget =
   | { kind: 'lookbook'; id: string }
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
+  | { kind: 'prop'; id: string }
   | { kind: 'scene'; id: string }
   | { kind: 'shot'; id: string }
   | { kind: 'sceneDialogue'; id: string };

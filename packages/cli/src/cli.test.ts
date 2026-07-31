@@ -169,6 +169,14 @@ describe('Renku CLI generation parsing', () => {
   it('uses current purpose names and exact targets', () => {
     const purpose = parseGenerationPurpose('location.sheet');
     expect(parseGenerationTarget({ purpose, target: 'location:basilica' })).toEqual({ kind: 'location', id: 'basilica' });
+    const propSheet = parseGenerationPurpose('prop.sheet');
+    expect(
+      parseGenerationTarget({ purpose: propSheet, target: 'prop:field-cannon' })
+    ).toEqual({ kind: 'prop', id: 'field-cannon' });
+    const propHero = parseGenerationPurpose('prop.hero');
+    expect(
+      parseGenerationTarget({ purpose: propHero, target: 'prop:helmet' })
+    ).toEqual({ kind: 'prop', id: 'helmet' });
     expect(() => parseGenerationPurpose('unknown.purpose')).toThrow(
       expect.objectContaining({ code: 'CLI024' })
     );

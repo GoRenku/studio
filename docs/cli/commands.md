@@ -505,10 +505,29 @@ Input JSON shape:
 
 New Locations use `key`, not `id`. Existing Locations use durable `id`.
 
+## `renku prop`
+
+List, inspect, validate, and mutate ordered Prop facts for the current
+authoring project.
+
+```bash
+renku prop list --json
+renku prop show <prop-id> --json
+renku prop context --prop <prop-id> --json
+renku prop validate --file <prop-operations-json> --json
+renku prop apply --file <prop-operations-json> --dry-run --json
+renku prop apply --file <prop-operations-json> --json
+```
+
+`kind: "propOperations"` documents add, update, delete, or move Props. Adds use
+a request-local `key`; existing Props use their durable `id`. Handles are
+unique across Cast Members, Locations, and Props. Delete fails while Prop
+Assets or Prop Design history depends on the Prop.
+
 ## `renku production-design`
 
 Read, validate, write, and activate durable production-design documents for
-Locations.
+Locations and Props.
 
 ```bash
 renku production-design location context --location <location-id> --json
@@ -518,14 +537,23 @@ renku production-design location show --design <location-design-id> --json
 renku production-design location validate --file <location-design-json> --json
 renku production-design location write --file <location-design-json> --json
 renku production-design location set-active --location <location-id> --design <location-design-id> --json
-
+renku production-design prop context --prop <prop-id> --json
+renku production-design prop list --prop <prop-id> --json
+renku production-design prop show --active --prop <prop-id> --json
+renku production-design prop show --design <prop-design-id> --json
+renku production-design prop validate --file <prop-design-json> --json
+renku production-design prop write --file <prop-design-json> --json
+renku production-design prop set-active --prop <prop-id> --design <prop-design-id> --json
 ```
 
 Behavior:
 
 - Location Design is location-level production design: spatial thesis,
-  architecture, set dressing, materials, atmosphere, props, continuity, and
+  architecture, set dressing, materials, atmosphere, recurring objects, continuity, and
   Location Sheet guidance in `locationSheetGuidance`.
+- Prop Design is Prop-level production design: form, materials, construction,
+  scale and handling, states, continuity, Prop Sheet guidance, and generation
+  guidance.
 - `context` commands return the relevant screenplay hierarchy, the Production
   Lookbook summary, active design summary when present, selected media, and
   downstream readiness signals.
@@ -1480,6 +1508,8 @@ cast.voice-sample
 scene.dialogue-audio
 location.sheet
 location.hero
+prop.sheet
+prop.hero
 scene.storyboard-sheet
 shot.image
 ```
@@ -1493,6 +1523,7 @@ lookbook:<lookbook-id>
 cast:<cast-member-id>
 scene:<scene-id>:dialogue:<scene-dialogue-id>
 location:<location-id>
+prop:<prop-id>
 scene:<scene-id>
 shot:<shot-id>
 ```
@@ -1643,6 +1674,8 @@ cast.character-sheet
 cast.profile
 location.sheet
 location.hero
+prop.sheet
+prop.hero
 ```
 
 General form:
@@ -1660,7 +1693,7 @@ renku media import \
 ```
 
 `--receipt` and `--source-spec` are alternatives; do not pass both.
-`--select` is supported only by canonical Profile, Hero, Lookbook Image, Shot
+`--select` is supported only by canonical Profile, Location/Prop Hero, Lookbook Image, Shot
 Image, and Scene Storyboard Image imports.
 
 Examples:
@@ -1673,6 +1706,8 @@ renku media import --purpose cast.character-sheet --target cast:<cast-member-id>
 renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --select --json
 renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
 renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --select --json
+renku media import --purpose prop.sheet --target prop:<prop-id> --source tmp/media/prop-sheet.png --title "Prop Sheet" --json
+renku media import --purpose prop.hero --target prop:<prop-id> --source tmp/media/prop-hero.png --title "Prop Hero" --select --json
 ```
 
 Pass `--receipt` only for an exact output from a Renku run whose purpose and

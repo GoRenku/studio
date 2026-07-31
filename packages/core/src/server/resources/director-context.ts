@@ -39,8 +39,12 @@ import {
 } from '../database/access/scene-beat-sheets.js';
 import {
   readActiveCastDesignId,
+} from '../database/access/cast-designs.js';
+import {
   readActiveLocationDesignId,
-} from '../database/access/department-design.js';
+} from '../database/access/location-designs.js';
+import { listPropRecords } from '../database/access/props.js';
+import { readActivePropDesignId } from '../database/access/prop-designs.js';
 import {
   withCurrentProjectSession,
   type CurrentProject,
@@ -50,6 +54,7 @@ import type { ReadDirectorContextInput } from '../project-data-service-contracts
 import {
   studioCastNavigationResourceKey,
   studioLocationNavigationResourceKey,
+  studioPropNavigationResourceKey,
   studioProjectInformationResourceKey,
   studioSceneBeatSheetResourceKey,
   studioSceneBeatsResourceKey,
@@ -216,6 +221,11 @@ function readProductionDesignReadiness(
   const missingActiveLocationDesignLocationIds: string[] = [];
   let locationSheetCount = 0;
   let activeLocationDesignCount = 0;
+  const props = listPropRecords(session);
+  const missingPropSheetPropIds: string[] = [];
+  const missingActivePropDesignPropIds: string[] = [];
+  let propSheetCount = 0;
+  let activePropDesignCount = 0;
 
   for (const location of locations) {
     if (!location.id) {
@@ -237,6 +247,23 @@ function readProductionDesignReadiness(
     }
   }
 
+  for (const prop of props) {
+    if (readActivePropDesignId(session, prop.id)) {
+      activePropDesignCount += 1;
+    } else {
+      missingActivePropDesignPropIds.push(prop.id);
+    }
+    const assets = listAssetPageInSession(session, {
+      owner: { kind: 'prop', id: prop.id },
+      type: 'prop_sheet',
+      limit: 200,
+    }).items;
+    propSheetCount += assets.length;
+    if (assets.length === 0) {
+      missingPropSheetPropIds.push(prop.id);
+    }
+  }
+
   return {
     locationCount: locations.length,
     activeLocationDesignCount,
@@ -246,6 +273,13 @@ function readProductionDesignReadiness(
     everyLocationHasEnvironmentSheet:
       locations.length > 0 &&
       missingEnvironmentSheetLocationIds.length === 0,
+    propCount: props.length,
+    activePropDesignCount,
+    missingActivePropDesignPropIds,
+    propSheetCount,
+    missingPropSheetPropIds,
+    everyPropHasPropSheet:
+      props.length === 0 || missingPropSheetPropIds.length === 0,
   };
 }
 
@@ -435,6 +469,16 @@ function readinessDiagnostics(input: {
       )
     );
   }
+  if (!input.productionDesign.everyPropHasPropSheet) {
+    diagnostics.push(
+      directorWarning(
+        'DIRECTOR_CONTEXT014',
+        'One or more Props do not have Prop Sheet media.',
+        ['productionDesign', 'missingPropSheetPropIds'],
+        'Generate or select Prop Sheets before relying on Prop visuals.'
+      )
+    );
+  }
   if (input.selectedScene && !input.selectedScene.activeBeatSheetId) {
     diagnostics.push(
       directorWarning(
@@ -518,10 +562,19 @@ function buildNextSteps(input: {
   if (!input.productionDesign.everyLocationHasEnvironmentSheet) {
     steps.push({
       id: 'design-production',
-      title: 'Establish location visuals',
+      title: 'Establish production-design visuals',
       specialistSkill: 'media-producer',
-      reason: 'Locations need available Location Sheets before shots rely on location visuals.',
+      reason: 'Locations need available Location Sheet media before shots rely on their visuals.',
       command: 'renku generation context --purpose location.sheet --target location:<location-id> --json',
+    });
+  }
+  if (!input.productionDesign.everyPropHasPropSheet) {
+    steps.push({
+      id: 'design-props',
+      title: 'Establish Prop visuals',
+      specialistSkill: 'media-producer',
+      reason: 'Authored Props need available Prop Sheet media before shots rely on their visuals.',
+      command: 'renku generation context --purpose prop.sheet --target prop:<prop-id> --json',
     });
   }
   if (input.selectedScene && !input.selectedScene.activeBeatSheetId) {
@@ -559,6 +612,7 @@ function directorResourceKeys(
     studioVisualLanguageLookbooksResourceKey(),
     studioCastNavigationResourceKey(),
     studioLocationNavigationResourceKey(),
+    studioPropNavigationResourceKey(),
     ...(selectedScene
       ? [
           studioSceneBeatsResourceKey(selectedScene.sceneId),

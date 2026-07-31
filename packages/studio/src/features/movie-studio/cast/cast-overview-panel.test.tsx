@@ -3,10 +3,10 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CastOverviewResourceResponse } from '@/services/studio-project-contracts';
-import { readCastOverviewResource } from '@/services/studio-screenplay-api';
+import { readCastOverviewResource } from '@/services/studio-continuity-api';
 import { CastOverviewPanel } from './cast-overview-panel';
 
-vi.mock('@/services/studio-screenplay-api', () => ({
+vi.mock('@/services/studio-continuity-api', () => ({
   readCastOverviewResource: vi.fn(),
 }));
 

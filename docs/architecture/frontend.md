@@ -102,7 +102,7 @@ it is not a generic render-slot container.
 
 The included surfaces are:
 
-- Cast and Location overview cards and asset galleries;
+- Cast, Location, and Prop overview cards and asset galleries;
 - Inspiration folders and grabs;
 - Production and Storyboard Lookbook evidence, hero, and asset cards;
 - Scene, Act, and Sequence storyboard cards;
@@ -117,7 +117,7 @@ selected-image summaries use the separate bounded `mosaic-grid` contract from
 ADR 0065. That contract preserves caller order and uses deterministic count
 layouts; it does not accept arbitrary grid settings or domain objects.
 
-Pure presentation media remains outside `MediaCard`: Cast and Location detail
+Pure presentation media remains outside `MediaCard`: Cast, Location, and Prop detail
 feature images, the Studio sidebar cover and logo, preview-dialog media,
 standalone video players, tooltip portraits, upload/dropzone visuals, audio
 cards, and non-media report widgets.
@@ -135,7 +135,13 @@ Examples:
 
 - Cast profile cards use `1`.
 - Cast character sheets use `4 / 3`.
+- Prop overview cards use `4 / 3`; Prop Heroes and Sheets follow Location
+  detail and Assets geometry.
 - Generic cinematic frames and Lookbook cards may use wider defaults.
+
+Cast, Location, and Prop resource reads live under the Studio continuity
+service boundary. URL-owned Prop routes are
+`/projects/:projectName/props` and `/projects/:projectName/props/:propId`.
 
 When the image file dimensions are available, feature code should derive the
 aspect ratio through the shared aspect-ratio utility. When dimensions are not

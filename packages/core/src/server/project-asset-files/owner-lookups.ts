@@ -2,6 +2,7 @@ import { listAssetFileRecordsForAsset, readAssetFileRecord } from '../database/a
 import type { AssetFileRecord } from '../database/access/asset-files.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readLocationRecord } from '../database/access/locations.js';
+import { readPropRecord } from '../database/access/props.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -61,6 +62,17 @@ export function requireLocation(session: DatabaseSession, locationId: string) {
     );
   }
   return location;
+}
+
+export function requireProp(session: DatabaseSession, propId: string) {
+  const prop = readPropRecord(session, propId);
+  if (!prop) {
+    throw new ProjectDataError(
+      'PROJECT_ASSET_FILE_OWNER_MISSING',
+      `Prop was not found for project asset file destination: ${propId}.`
+    );
+  }
+  return prop;
 }
 
 export function requireSceneHierarchy(

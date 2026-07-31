@@ -15,6 +15,10 @@ export function parseLocationTarget(value: string, context: string): string {
   return id;
 }
 
+export function parsePropTarget(value: string, context: string): string {
+  return parseKindedTarget(value, 'prop', context);
+}
+
 export function parseSceneTarget(value: string, context: string): string {
   const id = parseKindedTarget(value, 'scene', context);
   return id;
@@ -72,7 +76,7 @@ export function parseAnchor(value: string | undefined): string | undefined {
 
 function parseKindedTarget(
   value: string,
-  expectedKind: 'lookbook' | 'cast' | 'location' | 'scene',
+  expectedKind: 'lookbook' | 'cast' | 'location' | 'prop' | 'scene',
   context: string
 ): string {
   const [kind, id, extra] = value.split(':');
@@ -86,7 +90,7 @@ function parseKindedTarget(
   return id;
 }
 
-function targetLabel(kind: 'lookbook' | 'cast' | 'location' | 'scene'): string {
+function targetLabel(kind: 'lookbook' | 'cast' | 'location' | 'prop' | 'scene'): string {
   switch (kind) {
     case 'lookbook':
       return 'lookbook-id';
@@ -94,6 +98,8 @@ function targetLabel(kind: 'lookbook' | 'cast' | 'location' | 'scene'): string {
       return 'cast-member-id';
     case 'location':
       return 'location-id';
+    case 'prop':
+      return 'prop-id';
     case 'scene':
       return 'scene-id';
   }

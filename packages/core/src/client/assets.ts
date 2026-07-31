@@ -5,6 +5,7 @@ export type AssetOwner =
   | { kind: 'project' }
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
+  | { kind: 'prop'; id: string }
   | { kind: 'sequence'; id: string }
   | { kind: 'scene'; id: string }
   | { kind: 'sceneBeat'; sceneId: string; beatId: string }
@@ -14,6 +15,7 @@ export type AssetOwner =
 export type AssetSelectionTarget =
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
+  | { kind: 'prop'; id: string }
   | { kind: 'lookbook'; id: string }
   | { kind: 'shot'; id: string }
   | { kind: 'sceneBeat'; sceneId: string; beatId: string };

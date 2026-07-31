@@ -18,7 +18,7 @@ import {
   readCastDesignDocumentById,
   setActiveCastDesignRecord,
   writeCastDesignRecord,
-} from '../database/access/department-design.js';
+} from '../database/access/cast-designs.js';
 import { assertCastDesignDocument } from '../department-design-json/validator.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { projectSummary, throwIfDepartmentIssues } from './department-command-support.js';

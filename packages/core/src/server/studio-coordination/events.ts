@@ -225,6 +225,16 @@ export type StudioCurrentContext =
   | {
       kind: 'locations';
       locations: { id: string; name: string; timePeriod?: string; description?: string }[];
+    }
+  | {
+      kind: 'props';
+      props: { id: string; name: string; description?: string }[];
+    }
+  | {
+      kind: 'prop';
+      id: string;
+      name: string;
+      description?: string;
     };
 
 export interface StudioCurrentSceneTab {

@@ -3,6 +3,7 @@ import type { AssetOwner } from '../../client/assets.js';
 import {
   castMembers,
   locations,
+  props,
   scenes,
   sequences,
 } from '../schema/index.js';
@@ -74,6 +75,8 @@ function assetOwnerExists(
       return rowExists(session, castMembers, castMembers.id, owner.id);
     case 'location':
       return rowExists(session, locations, locations.id, owner.id);
+    case 'prop':
+      return rowExists(session, props, props.id, owner.id);
     case 'sequence':
       return rowExists(session, sequences, sequences.id, owner.id);
     case 'scene':
@@ -89,8 +92,8 @@ function assetOwnerExists(
 
 function rowExists(
   session: DatabaseSession,
-  table: typeof castMembers | typeof locations | typeof sequences | typeof scenes,
-  idColumn: typeof castMembers.id | typeof locations.id | typeof sequences.id | typeof scenes.id,
+  table: typeof castMembers | typeof locations | typeof props | typeof sequences | typeof scenes,
+  idColumn: typeof castMembers.id | typeof locations.id | typeof props.id | typeof sequences.id | typeof scenes.id,
   id: string
 ): boolean {
   return session.db

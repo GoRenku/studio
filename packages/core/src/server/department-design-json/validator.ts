@@ -10,6 +10,8 @@ import type {
   CastOperationDocument,
   LocationDesignDocument,
   LocationOperationDocument,
+  PropDesignDocument,
+  PropOperationDocument,
 } from '../../client/department-design.js';
 import {
   castDesignSchema,
@@ -17,6 +19,8 @@ import {
   departmentPlacementSchema,
   locationDesignSchema,
   locationOperationsSchema,
+  propDesignSchema,
+  propOperationsSchema,
 } from '../../client/department-design-json-schemas.js';
 
 const ajv = new Ajv2020({
@@ -31,20 +35,26 @@ const ajv = new Ajv2020({
 ajv.addSchema(departmentPlacementSchema);
 ajv.addSchema(castOperationsSchema);
 ajv.addSchema(locationOperationsSchema);
+ajv.addSchema(propOperationsSchema);
 ajv.addSchema(castDesignSchema);
 ajv.addSchema(locationDesignSchema);
+ajv.addSchema(propDesignSchema);
 
 type DepartmentDocumentKind =
   | 'castOperations'
   | 'locationOperations'
+  | 'propOperations'
   | 'castDesign'
-  | 'locationDesign';
+  | 'locationDesign'
+  | 'propDesign';
 
 const schemaIds: Record<DepartmentDocumentKind, string> = {
   castOperations: 'https://schemas.gorenku.com/studio/cast-operations.schema.json',
   locationOperations: 'https://schemas.gorenku.com/studio/location-operations.schema.json',
+  propOperations: 'https://schemas.gorenku.com/studio/prop-operations.schema.json',
   castDesign: 'https://schemas.gorenku.com/studio/cast-design.schema.json',
   locationDesign: 'https://schemas.gorenku.com/studio/location-design.schema.json',
+  propDesign: 'https://schemas.gorenku.com/studio/prop-design.schema.json',
 };
 
 export function parseDepartmentJson(input: {
@@ -89,6 +99,18 @@ export function assertLocationOperationDocument(input: {
   return [];
 }
 
+export function assertPropOperationDocument(input: {
+  document: PropOperationDocument;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  assertDepartmentDocument({
+    value: input.document,
+    kind: 'propOperations',
+    filePath: input.filePath,
+  });
+  return [];
+}
+
 export function assertCastDesignDocument(input: {
   document: CastDesignDocument;
   filePath?: string;
@@ -108,6 +130,18 @@ export function assertLocationDesignDocument(input: {
   assertDepartmentDocument({
     value: input.document,
     kind: 'locationDesign',
+    filePath: input.filePath,
+  });
+  return [];
+}
+
+export function assertPropDesignDocument(input: {
+  document: PropDesignDocument;
+  filePath?: string;
+}): DiagnosticIssue[] {
+  assertDepartmentDocument({
+    value: input.document,
+    kind: 'propDesign',
     filePath: input.filePath,
   });
   return [];

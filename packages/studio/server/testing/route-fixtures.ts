@@ -56,6 +56,7 @@ export function makeProjectShell(project: Project): ProjectShell {
         nextCursor: null,
       },
       locations: { items: [], nextCursor: null },
+      props: { items: [], nextCursor: null },
       screenplay: {
         acts: {
           items: [{
@@ -96,6 +97,7 @@ export function makeProject(): Project {
       },
     ],
     locations: [],
+    props: [],
     sequences: [
       {
         id: 'seq_opening',
@@ -113,6 +115,7 @@ export function makeProject(): Project {
       languages: 0,
       castMembers: 1,
       locations: 0,
+      props: 0,
       acts: 1,
       sequences: 1,
       scenes: 1,

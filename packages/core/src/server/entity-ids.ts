@@ -20,6 +20,8 @@ export type EntityIdPrefix =
   | 'cast_voice_provider_registration'
   | 'location'
   | 'location_design'
+  | 'prop'
+  | 'prop_design'
   | 'act'
   | 'sequence'
   | 'scene'

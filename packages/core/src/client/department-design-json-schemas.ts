@@ -67,6 +67,20 @@ const locationInputSchema = {
   additionalProperties: false,
 } as const;
 
+const propInputSchema = {
+  type: 'object',
+  required: ['handle', 'name'],
+  properties: {
+    id: stringValue,
+    key: stringValue,
+    handle: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' },
+    name: stringValue,
+    description: optionalStringValue,
+    visualNotes: optionalStringValue,
+  },
+  additionalProperties: false,
+} as const;
+
 export const castOperationsSchema = {
   $id: 'https://schemas.gorenku.com/studio/cast-operations.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -130,6 +144,42 @@ export const locationOperationsSchema = {
           operationObject(['operation', 'locationId', 'placement'], {
             operation: { const: 'location.move' },
             locationId: stringValue,
+            placement: { $ref: 'https://schemas.gorenku.com/studio/department-placement.schema.json' },
+          }),
+        ],
+      },
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const propOperationsSchema = {
+  $id: 'https://schemas.gorenku.com/studio/prop-operations.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['kind', 'operations'],
+  properties: {
+    kind: { const: 'propOperations' },
+    operations: {
+      type: 'array',
+      items: {
+        oneOf: [
+          operationObject(['operation', 'prop'], {
+            operation: { const: 'prop.add' },
+            prop: propInputSchema,
+            placement: { $ref: 'https://schemas.gorenku.com/studio/department-placement.schema.json' },
+          }),
+          operationObject(['operation', 'prop'], {
+            operation: { const: 'prop.update' },
+            prop: propInputSchema,
+          }),
+          operationObject(['operation', 'propId'], {
+            operation: { const: 'prop.delete' },
+            propId: stringValue,
+          }),
+          operationObject(['operation', 'propId', 'placement'], {
+            operation: { const: 'prop.move' },
+            propId: stringValue,
             placement: { $ref: 'https://schemas.gorenku.com/studio/department-placement.schema.json' },
           }),
         ],
@@ -241,7 +291,7 @@ export const locationDesignSchema = {
         'setDressing',
         'materialsAndSurfaces',
         'atmosphere',
-        'propsAndRecurringObjects',
+        'recurringObjects',
         'continuity',
         'locationSheetGuidance',
         'generationGuidance',
@@ -252,7 +302,7 @@ export const locationDesignSchema = {
         setDressing: stringArray,
         materialsAndSurfaces: stringArray,
         atmosphere: stringArray,
-        propsAndRecurringObjects: {
+        recurringObjects: {
           type: 'array',
           items: objectWith(['name', 'description'], {
             name: stringValue,
@@ -262,6 +312,44 @@ export const locationDesignSchema = {
         },
         continuity: stringArray,
         locationSheetGuidance: stringArray,
+        generationGuidance: stringArray,
+      }
+    ),
+    openQuestions: stringArray,
+  },
+  additionalProperties: false,
+} as const;
+
+export const propDesignSchema = {
+  $id: 'https://schemas.gorenku.com/studio/prop-design.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: ['kind', 'propId', 'design'],
+  properties: {
+    kind: { const: 'propDesign' },
+    propId: stringValue,
+    title: optionalStringValue,
+    design: objectWith(
+      [
+        'designThesis',
+        'formAndSilhouette',
+        'materialsAndSurfaces',
+        'constructionAndFunction',
+        'scaleAndHandling',
+        'statesAndVariants',
+        'continuity',
+        'propSheetGuidance',
+        'generationGuidance',
+      ],
+      {
+        designThesis: stringValue,
+        formAndSilhouette: stringArray,
+        materialsAndSurfaces: stringArray,
+        constructionAndFunction: stringArray,
+        scaleAndHandling: stringArray,
+        statesAndVariants: stringArray,
+        continuity: stringArray,
+        propSheetGuidance: stringArray,
         generationGuidance: stringArray,
       }
     ),

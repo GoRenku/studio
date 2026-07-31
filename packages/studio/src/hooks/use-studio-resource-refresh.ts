@@ -43,8 +43,25 @@ export function matchesProjectShellResource(resourceKeys: string[]): boolean {
       resourceKey === 'project-information' ||
       resourceKey === 'navigation:cast' ||
       resourceKey === 'navigation:locations' ||
+      resourceKey === 'navigation:props' ||
       resourceKey === 'screenplay' ||
       resourceKey === 'screenplay:acts'
+  );
+}
+
+export function matchesMovieStudioNavigationResource(
+  resourceKeys: string[]
+): boolean {
+  return resourceKeys.some(
+    (resourceKey) =>
+      resourceKey === 'screenplay' ||
+      resourceKey === 'screenplay:acts' ||
+      resourceKey === 'navigation:cast' ||
+      resourceKey === 'navigation:locations' ||
+      resourceKey === 'navigation:props' ||
+      resourceKey.startsWith('surface:act:') ||
+      resourceKey.startsWith('surface:sequence:') ||
+      resourceKey.startsWith('navigation:sequence-scenes:')
   );
 }
 
@@ -93,6 +110,21 @@ export function matchesLocationResource(
     (resourceKey) =>
       resourceKey === `surface:location:${locationId}`
   );
+}
+
+export function matchesPropOverviewResource(resourceKeys: string[]): boolean {
+  return resourceKeys.some(
+    (resourceKey) =>
+      resourceKey === 'navigation:props' ||
+      resourceKey.startsWith('surface:prop:')
+  );
+}
+
+export function matchesPropResource(
+  resourceKeys: string[],
+  propId: string
+): boolean {
+  return resourceKeys.includes(`surface:prop:${propId}`);
 }
 
 export function matchesVisualLanguageInspirationResource(

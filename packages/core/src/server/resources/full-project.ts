@@ -5,6 +5,7 @@ import type {
   Project,
   ProjectInfo,
   ProjectLanguage,
+  Prop,
   Scene,
   Sequence,
 } from '../../client/index.js';
@@ -29,6 +30,7 @@ import {
 import { readProjectRecord, type ProjectRecord } from '../database/access/project.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { listScreenplayLocationsFromSession } from '../database/access/screenplay-resource.js';
+import { listPropRecords } from '../database/access/props.js';
 import { resolveProjectFolder } from '../files/project-paths.js';
 import type { ReadProjectInput } from '../project-data-service-contracts.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -65,6 +67,7 @@ export function readProjectFromSession(input: {
   const locations = listScreenplayLocationsFromSession(input.session).map(
     toProjectLocation
   );
+  const props = listPropRecords(input.session).map(toProjectProp);
   const sequenceRecords = listSequenceRecords(input.session);
   const sceneRecords = listSceneRecords(input.session);
 
@@ -81,8 +84,19 @@ export function readProjectFromSession(input: {
     languages,
     cast,
     locations,
+    props,
     sequences,
     counts,
+  };
+}
+
+function toProjectProp(row: ReturnType<typeof listPropRecords>[number]): Prop {
+  return {
+    id: row.id,
+    handle: row.handle,
+    name: row.name,
+    description: nullable(row.description),
+    visualNotes: nullable(row.visualNotes),
   };
 }
 

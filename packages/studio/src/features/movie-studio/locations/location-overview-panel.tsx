@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import type { StudioSelection } from '@gorenku/studio-core/client';
-import type { LocationOverviewResourceResponse } from '@/services/studio-project-contracts';
-import { readLocationOverviewResource } from '@/services/studio-screenplay-api';
+import { readLocationOverviewResource } from '@/services/studio-continuity-api';
 import {
   matchesLocationOverviewResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { MediaCard } from '@/ui/media-card/media-card';
-import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
+import { ContinuityOverviewGrid } from '../continuity/continuity-overview-grid';
+import { useContinuityResource } from '../continuity/use-continuity-resource';
 
 interface LocationOverviewPanelProps {
   projectName: string;
@@ -18,32 +17,19 @@ export function LocationOverviewPanel({
   projectName,
   onSelect,
 }: LocationOverviewPanelProps) {
-  const [resource, setResource] = useState<LocationOverviewResourceResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [resourceRevision, setResourceRevision] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void readLocationOverviewResource(projectName)
-      .then((nextResource) => {
-        if (!cancelled) {
-          setResource(nextResource);
-        }
-      })
-      .catch((loadError) => {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Unable to load locations.');
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [projectName, resourceRevision]);
+  const readResource = useCallback(
+    () => readLocationOverviewResource(projectName),
+    [projectName]
+  );
+  const { resource, error, refresh } = useContinuityResource({
+    read: readResource,
+    fallbackErrorMessage: 'Unable to load locations.',
+  });
 
   useStudioResourceRefresh({
     projectName,
     matches: matchesLocationOverviewResource,
-    onRefresh: () => setResourceRevision((current) => current + 1),
+    onRefresh: refresh,
   });
 
   if (error) {
@@ -54,41 +40,21 @@ export function LocationOverviewPanel({
   }
 
   return (
-    <MediaCardGrid minimumCardWidthPx={260} gap='roomy'>
-      {resource.locations.items.map((location) => {
-        const imageAlt = `${location.name} location hero image`;
-        return (
-          <MediaCard
-            key={location.id}
-            media={
-              location.firstImage
-                ? {
-                    kind: 'image',
-                    src: location.firstImage.url,
-                    alt: imageAlt,
-                    fit: 'cover',
-                    effect: 'zoom-on-hover',
-                  }
-                : null
+    <ContinuityOverviewGrid
+      aspectRatio={4 / 3}
+      onSelect={onSelect}
+      cards={resource.locations.items.map((location) => ({
+        id: location.id,
+        name: location.name,
+        description: location.timePeriod,
+        image: location.firstImage
+          ? {
+              url: location.firstImage.url,
+              alt: `${location.name} location hero image`,
             }
-            frame={{ kind: 'ratio', aspectRatio: 4 / 3 }}
-            presentation={{
-              kind: 'overlay',
-              copy: {
-                title: location.name,
-                description: location.timePeriod,
-              },
-            }}
-            activation={{
-              kind: 'callback',
-              label: location.name,
-              onActivate: () =>
-                onSelect({ type: 'location', id: location.id }),
-            }}
-            emptyState={{ kind: 'image' }}
-          />
-        );
-      })}
-    </MediaCardGrid>
+          : undefined,
+        selection: { type: 'location', id: location.id },
+      }))}
+    />
   );
 }

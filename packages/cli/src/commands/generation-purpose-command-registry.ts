@@ -8,6 +8,7 @@ import { StructuredError } from '@gorenku/studio-diagnostics';
 import {
   parseCastTarget,
   parseLocationTarget,
+  parsePropTarget,
   parseLookbookTarget,
   parseSceneDialogueTarget,
   parseSceneTarget,
@@ -37,6 +38,7 @@ const targetParsers: Record<GenerationTarget['kind'], (value: string, purpose: G
   lookbook: (value) => ({ kind: 'lookbook', id: parseLookbookTarget(value, 'Lookbook generation') }),
   castMember: (value) => ({ kind: 'castMember', id: parseCastTarget(value, 'Cast generation') }),
   location: (value) => ({ kind: 'location', id: parseLocationTarget(value, 'Location generation') }),
+  prop: (value) => ({ kind: 'prop', id: parsePropTarget(value, 'Prop generation') }),
   scene: (value) => ({ kind: 'scene', id: parseSceneTarget(value, 'Scene generation') }),
   shot: (value, purpose) => ({
     kind: 'shot',

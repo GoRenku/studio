@@ -405,6 +405,68 @@ describe('StudioCoordinationService', () => {
     });
   });
 
+  it('projects the focused Prop into current Studio context', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+    const projectData = createProjectDataService();
+    await createSampleMovieProject({
+      homeDir,
+      projectData,
+    });
+    const propReport = await projectData.applyPropOperations({
+      homeDir,
+      document: {
+        kind: 'propOperations',
+        operations: [
+          {
+            operation: 'prop.add',
+            prop: {
+              key: 'field-cannon',
+              handle: 'field-cannon',
+              name: 'Field Cannon',
+            },
+          },
+        ],
+      },
+    });
+    const propId = propReport.generatedIds?.[0]?.id as string;
+    const coordination = createStudioCoordinationService({ homeDir });
+
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive',
+      browserSessionId: 'studio_browser_prop',
+      activityKind: 'focused',
+      projectRef: {
+        name: 'constantinople',
+        id: 'project_test0001',
+        storageRoot,
+      },
+      focus: {
+        screen: 'movieStudio',
+        selection: {
+          type: 'prop',
+          id: propId,
+        },
+      },
+      source: {
+        kind: 'studio',
+        browserSessionId: 'studio_browser_prop',
+      },
+    });
+
+    const current = await coordination.readStudioCurrent();
+
+    expect(current.selection).toEqual({
+      type: 'prop',
+      id: propId,
+    });
+    expect(current.context).toMatchObject({
+      kind: 'prop',
+      id: propId,
+      name: 'Field Cannon',
+    });
+  });
+
   it('keeps the most recently engaged focus when passive activity reports arrive later', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);

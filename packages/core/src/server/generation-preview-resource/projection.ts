@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type {
   GenerationEstimate,
@@ -6,18 +5,16 @@ import type {
 } from '../../client/generation.js';
 import type {
   GenerationPreviewResource,
-  GenerationPreviewSubject,
 } from '../../client/generation-preview-resource.js';
-import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { scenes } from '../schema/index.js';
 import {
   projectGenerationPreviewAuthoring,
   projectGenerationPreviewConfiguration,
 } from './configuration.js';
 import { projectGenerationPreviewPrompt } from './prompt.js';
 import { projectGenerationPreviewReferences } from './references.js';
+import { readGenerationPreviewSubject } from './subjects.js';
 
 export async function projectGenerationPreviewResource(input: {
   preview: GenerationPreview;
@@ -50,7 +47,7 @@ export async function projectGenerationPreviewResource(input: {
     },
     target: input.preview.spec.target,
     title: input.preview.spec.title ?? 'Generation Preview',
-    subject: projectSubject(input.session, input.preview),
+    subject: readGenerationPreviewSubject(input.session, input.preview.spec.target),
     model: {
       provider,
       modelId,
@@ -85,34 +82,5 @@ export async function projectGenerationPreviewResource(input: {
         }
       : {}),
     diagnostics: input.preview.diagnostics,
-  };
-}
-
-function projectSubject(
-  session: DatabaseSession,
-  preview: GenerationPreview
-): GenerationPreviewSubject {
-  const project = readProjectRecord(session);
-  const result: GenerationPreviewSubject = {
-    projectLabel: project?.title || project?.name || 'Project',
-  };
-  if (preview.spec.target.kind === 'castMember') {
-    const castMember = readCastMemberRecord(session, preview.spec.target.id);
-    return {
-      ...result,
-      ...(castMember?.name ? { castMemberLabel: castMember.name } : {}),
-    };
-  }
-  if (preview.spec.target.kind !== 'scene') {
-    return result;
-  }
-  const scene = session.db
-    .select()
-    .from(scenes)
-    .where(eq(scenes.id, preview.spec.target.id))
-    .get();
-  return {
-    ...result,
-    ...(scene?.title ? { sceneLabel: scene.title } : {}),
   };
 }

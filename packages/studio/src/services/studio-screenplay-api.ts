@@ -1,10 +1,6 @@
 import type {
   ActNavigationPageResponse,
   ActStoryboardResourceResponse,
-  CastMemberResourceResponse,
-  CastOverviewResourceResponse,
-  LocationOverviewResourceResponse,
-  LocationResourceResponse,
   SceneNarrativeResourceResponse,
   SceneNavigationPageResponse,
   SceneBeatSheetResourceResponse,
@@ -26,67 +22,6 @@ interface PageResponse<T> {
 interface PageQuery {
   limit?: number;
   cursor?: string | null;
-}
-
-export async function readCastOverviewResource(
-  projectName: string,
-  query: PageQuery = {}
-): Promise<CastOverviewResourceResponse> {
-  return readResource(screenplayPath(projectName, '/cast'), query);
-}
-
-export async function readCastMemberResource(
-  projectName: string,
-  castMemberId: string
-): Promise<CastMemberResourceResponse> {
-  return readResource(
-    screenplayPath(projectName, `/cast/${encodeURIComponent(castMemberId)}`)
-  );
-}
-
-export async function updateCastMemberVoiceOverStatus(
-  projectName: string,
-  castMemberId: string,
-  isVoiceOver: boolean
-): Promise<CastMemberResourceResponse> {
-  const response = await fetch(
-    screenplayPath(
-      projectName,
-      `/cast/${encodeURIComponent(castMemberId)}/voice-over`
-    ),
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Renku-Studio-Token': readStudioApiToken(),
-      },
-      body: JSON.stringify({ isVoiceOver }),
-    }
-  );
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-  const body = (await response.json()) as ResourceResponse<CastMemberResourceResponse>;
-  if (!body.resource) {
-    throw new Error('Renku Studio API returned no screenplay resource.');
-  }
-  return body.resource;
-}
-
-export async function readLocationOverviewResource(
-  projectName: string,
-  query: PageQuery = {}
-): Promise<LocationOverviewResourceResponse> {
-  return readResource(screenplayPath(projectName, '/locations'), query);
-}
-
-export async function readLocationResource(
-  projectName: string,
-  locationId: string
-): Promise<LocationResourceResponse> {
-  return readResource(
-    screenplayPath(projectName, `/locations/${encodeURIComponent(locationId)}`)
-  );
 }
 
 export async function readStoryArcResource(
@@ -159,14 +94,6 @@ export async function readSceneBeatSheetResource(
   return readResource(
     screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/beat-sheet`)
   );
-}
-
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
 }
 
 export async function readActStoryboardResource(

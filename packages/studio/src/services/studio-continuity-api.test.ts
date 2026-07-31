@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { updateCastMemberVoiceOverStatus } from './studio-screenplay-api';
+import { updateCastMemberVoiceOverStatus } from './studio-continuity-api';
 
 function okResponse(body: unknown): Response {
   return {
@@ -15,7 +15,7 @@ function lastCall() {
   return fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
 }
 
-describe('studio-screenplay-api', () => {
+describe('studio-continuity-api', () => {
   beforeEach(() => {
     (window as unknown as { __RENKU_STUDIO_BOOTSTRAP__: unknown }).__RENKU_STUDIO_BOOTSTRAP__ =
       { studioApiToken: 'token-123' };
@@ -49,7 +49,7 @@ describe('studio-screenplay-api', () => {
 
     const [url, init] = lastCall();
     expect(String(url)).toBe(
-      '/studio-api/projects/constantinople/screenplay/cast/cast_narrator/voice-over'
+      '/studio-api/projects/constantinople/continuity/cast/cast_narrator/voice-over'
     );
     expect(init).toMatchObject({
       method: 'PATCH',

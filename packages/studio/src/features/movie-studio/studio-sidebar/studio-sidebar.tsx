@@ -8,6 +8,7 @@ import {
   Layers3,
   MapPin,
   Palette,
+  Package,
   Trash2,
   UserRound,
   UsersRound,
@@ -33,7 +34,7 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
-import type { ScreenplayNavigationState } from '../use-screenplay-navigation';
+import type { MovieStudioNavigationState } from '../use-movie-studio-navigation';
 import { StudioSidebarActions } from './studio-sidebar-actions';
 import { StudioSidebarButton } from './studio-sidebar-button';
 import { StudioSidebarHoverActionRow } from './studio-sidebar-hover-action-row';
@@ -41,7 +42,7 @@ import { StudioSidebarSection } from './studio-sidebar-section';
 
 interface StudioSidebarProps {
   project: ProjectShellWithHttp;
-  screenplayNavigation: ScreenplayNavigationState;
+  screenplayNavigation: MovieStudioNavigationState;
   selection: StudioSelection;
   onSelect: (selection: StudioSelection) => void;
   onHome: () => void;
@@ -115,6 +116,7 @@ export function StudioSidebar({
     const sequences: string[] = [];
     if (selection.type === 'castMember') sections.push('cast');
     if (selection.type === 'location') sections.push('locations');
+    if (selection.type === 'prop') sections.push('props');
     if (selection.type === 'inspiration') {
       sections.push('visualLanguage', 'inspiration');
     }
@@ -424,6 +426,29 @@ export function StudioSidebar({
                   detail={location.timePeriod ?? 'Location'}
                   compact
                   onClick={() => onSelect({ type: 'location', id: location.id })}
+                />
+              ))
+            : null}
+        </StudioSidebarSection>
+
+        <StudioSidebarSection
+          title='Props'
+          detail={`${project.counts.props} props`}
+          icon={<Package className='h-4 w-4' />}
+          active={selection.type === 'props'}
+          expanded={visibleExpandedSections.has('props')}
+          onSelect={() => onSelect({ type: 'props' })}
+          onToggle={() => toggleSection('props')}
+        >
+          {visibleExpandedSections.has('props')
+            ? screenplayNavigation.props.map((prop) => (
+                <StudioSidebarButton
+                  key={prop.id}
+                  active={selection.type === 'prop' && selection.id === prop.id}
+                  icon={<Package className='h-4 w-4' />}
+                  label={prop.name}
+                  compact
+                  onClick={() => onSelect({ type: 'prop', id: prop.id })}
                 />
               ))
             : null}

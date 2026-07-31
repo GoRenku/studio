@@ -210,6 +210,8 @@ export function parseAssetOwner(value: string): AssetOwner {
       return { kind: 'castMember', id: parts[1] };
     case 'location':
       return { kind: 'location', id: parts[1] };
+    case 'prop':
+      return { kind: 'prop', id: parts[1] };
     case 'sequence':
       return { kind: 'sequence', id: parts[1] };
     case 'scene':
@@ -228,6 +230,7 @@ export function parseSelectionTarget(value: string): AssetSelectionTarget {
   if (
     owner.kind === 'castMember'
     || owner.kind === 'location'
+    || owner.kind === 'prop'
     || owner.kind === 'lookbook'
     || owner.kind === 'shot'
     || owner.kind === 'sceneBeat'
@@ -240,9 +243,9 @@ export function parseSelectionTarget(value: string): AssetSelectionTarget {
     issues: [
       createDiagnosticError(
         'CLI046',
-        'Asset selection supports Cast Members, Locations, Lookbooks, Shots, and Scene Beats.',
+        'Asset selection supports Cast Members, Locations, Props, Lookbooks, Shots, and Scene Beats.',
         { path: ['--target'], context: 'renku CLI arguments' },
-        'Use cast:<id>, location:<id>, lookbook:<id>, shot:<id>, or beat:<scene-id>:<beat-id>.'
+        'Use cast:<id>, location:<id>, prop:<id>, lookbook:<id>, shot:<id>, or beat:<scene-id>:<beat-id>.'
       ),
     ],
   });

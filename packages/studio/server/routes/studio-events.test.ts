@@ -603,11 +603,13 @@ function makeProject(): Project {
     languages: [],
     cast: [],
     locations: [],
+    props: [],
     sequences: [],
     counts: {
       languages: 0,
       castMembers: 0,
       locations: 0,
+      props: 0,
       acts: 0,
       sequences: 0,
       scenes: 0,

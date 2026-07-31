@@ -467,6 +467,28 @@ function readStudioRoute(): StudioRoute {
     };
   }
 
+  const propRoute = /^\/projects\/([^/]+)\/props\/([^/]+)\/?$/.exec(
+    window.location.pathname
+  );
+  if (propRoute?.[1] && propRoute[2]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(propRoute[1]),
+      selection: { type: 'prop', id: decodeURIComponent(propRoute[2]) },
+    };
+  }
+
+  const propOverviewRoute = /^\/projects\/([^/]+)\/props\/?$/.exec(
+    window.location.pathname
+  );
+  if (propOverviewRoute?.[1]) {
+    return {
+      screen: 'movieStudio',
+      projectName: decodeURIComponent(propOverviewRoute[1]),
+      selection: { type: 'props' },
+    };
+  }
+
   const actRoute = /^\/projects\/([^/]+)\/acts\/([^/]+)\/?$/.exec(
     window.location.pathname
   );
@@ -547,6 +569,8 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Cast member';
     case 'location':
       return 'Location';
+    case 'prop':
+      return 'Prop';
     case 'act':
       return 'Act';
     case 'sequence':
@@ -565,6 +589,8 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Cast';
     case 'locations':
       return 'Locations';
+    case 'props':
+      return 'Props';
     case 'storyArc':
       return 'Story Arc';
   }
@@ -579,6 +605,9 @@ function canResolveRouteSelection(
   }
   if (selection.type === 'location') {
     return project.navigation.locations?.items.some((location) => location.id === selection.id) ?? false;
+  }
+  if (selection.type === 'prop') {
+    return project.navigation.props.items.some((prop) => prop.id === selection.id);
   }
   if (selection.type === 'act') {
     return false;
@@ -617,6 +646,12 @@ function studioSelectionRoutePath(
   }
   if (selection.type === 'location') {
     return `${projectRoutePath(projectName)}/locations/${encodeURIComponent(selection.id)}`;
+  }
+  if (selection.type === 'props') {
+    return `${projectRoutePath(projectName)}/props`;
+  }
+  if (selection.type === 'prop') {
+    return `${projectRoutePath(projectName)}/props/${encodeURIComponent(selection.id)}`;
   }
   if (selection.type === 'inspiration') {
     const base = `${projectRoutePath(projectName)}/visual-language/inspiration`;

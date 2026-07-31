@@ -224,6 +224,11 @@ context as read-only Prompt, selected References, and static Config tabs by
 reusing the same resource. Image editing is an agent-owned new `image.edit`
 request with the exact source AssetFile locked in `source/source-image`.
 
+`prop.sheet` and `prop.hero` are focused image purposes targeting
+`{ kind: "prop", id }`. Prop Sheets expose ready same-owner prior sheets as
+optional candidates and retain only exact request selections. Prop Heroes use
+canonical owner-scoped selection for overview/detail display.
+
 Decision history is recorded in
 `../../decisions/0047-use-context-first-provider-valid-generation.md` and
 `../../decisions/0055-preserve-agent-external-generation-specs-on-images.md`.

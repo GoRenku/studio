@@ -12,7 +12,7 @@ import {
   selectCastProfileAsset,
   clearSelectedCastProfile,
 } from '@/services/studio-project-assets-api';
-import { readCastMemberResource } from '@/services/studio-screenplay-api';
+import { readCastMemberResource } from '@/services/studio-continuity-api';
 import { CastMemberPanel } from './cast-member-panel';
 import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
 
@@ -44,7 +44,7 @@ vi.mock('@/services/studio-project-assets-api', () => ({
   clearSelectedCastProfile: vi.fn(),
 }));
 
-vi.mock('@/services/studio-screenplay-api', () => ({
+vi.mock('@/services/studio-continuity-api', () => ({
   readCastMemberResource: vi.fn(),
 }));
 
@@ -280,7 +280,7 @@ function castProfileAsset(): StudioAssetResponse {
       {
         id: 'asset_file_profile',
         role: 'primary',
-        projectRelativePath: 'cast/urban/profile.png' as never,
+        url: '/studio-api/projects/constantinople/assets/asset_profile/files/file_profile',
         mediaKind: 'image',
         mimeType: 'image/png',
         sizeBytes: 123,
@@ -308,7 +308,7 @@ function castCharacterSheetAsset(): StudioAssetResponse {
       {
         id: 'asset_file_character_sheet',
         role: 'primary',
-        projectRelativePath: 'cast/urban/urban-sheet.png' as never,
+        url: '/studio-api/projects/constantinople/assets/asset_sheet/files/file_sheet',
         mediaKind: 'image',
         mimeType: 'image/png',
         sizeBytes: 456,
@@ -357,7 +357,6 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
         {
           id: 'asset_file_voice_sample',
           role: 'primary',
-          projectRelativePath: 'cast/urban/urban-normal.mp3' as never,
           mediaKind: 'audio',
           mimeType: 'audio/mpeg',
           sizeBytes: 789,

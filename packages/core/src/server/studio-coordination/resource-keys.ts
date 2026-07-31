@@ -32,6 +32,14 @@ export function studioLocationSurfaceResourceKey(locationId: string): string {
   return `surface:location:${locationId}`;
 }
 
+export function studioPropNavigationResourceKey(): string {
+  return 'navigation:props';
+}
+
+export function studioPropSurfaceResourceKey(propId: string): string {
+  return `surface:prop:${propId}`;
+}
+
 export function studioVisualLanguageInspirationResourceKey(): string {
   return 'surface:visual-language:inspiration';
 }
@@ -115,6 +123,8 @@ export function studioAssetOwnerSurfaceResourceKeys(owner: AssetOwner): string[]
       return [studioCastMemberSurfaceResourceKey(owner.id)];
     case 'location':
       return [studioLocationSurfaceResourceKey(owner.id)];
+    case 'prop':
+      return [studioPropSurfaceResourceKey(owner.id)];
     case 'lookbook':
       return [studioVisualLanguageLookbookResourceKey(owner.id)];
     case 'sceneBeat':

@@ -5,6 +5,7 @@ import {
 import {
   createProjectDataService,
   createStudioCoordinationService,
+  parseStudioSelection,
   type DirectorContextReport,
   type StudioSelection,
 } from '@gorenku/studio-core/server';
@@ -82,42 +83,18 @@ function parseSelectionFlag(value: string): StudioSelection {
     });
   }
 
-  if (!isStudioSelectionCandidate(parsed)) {
+  const selection = parseStudioSelection(parsed, {
+    path: ['--selection'],
+    context: 'renku CLI arguments',
+  });
+  if (!selection.valid) {
     throw new StructuredError({
       code: 'CLI031',
       message: 'Director selection must be a Studio selection object.',
-      issues: [
-        createDiagnosticError(
-          'CLI031',
-          'The --selection JSON does not look like a Studio selection.',
-          { path: ['--selection'], context: 'renku CLI arguments' },
-          'Pass a JSON object with a supported type field.'
-        ),
-      ],
+      issues: selection.issues,
     });
   }
-  return parsed;
-}
-
-function isStudioSelectionCandidate(value: unknown): value is StudioSelection {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-  const type = (value as { type?: unknown }).type;
-  return (
-    type === 'projectInformation' ||
-    type === 'inspiration' ||
-    type === 'lookbooks' ||
-    type === 'lookbook' ||
-    type === 'cast' ||
-    type === 'castMember' ||
-    type === 'locations' ||
-    type === 'location' ||
-    type === 'storyArc' ||
-    type === 'act' ||
-    type === 'sequence' ||
-    type === 'scene'
-  );
+  return selection.selection;
 }
 
 function writeDirectorContextSummary(

@@ -201,7 +201,7 @@ describe('context-first generation lifecycle', () => {
         modelId: 'gpt-image-2',
         executionPath: 'agent-external',
       },
-      authoring: { selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+      authoring: { kind: 'none' },
     });
     expect(
       await projectData.readGenerationSpec({

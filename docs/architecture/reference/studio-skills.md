@@ -47,7 +47,7 @@ operational companions that teach agents how to use those contracts.
 `screenplay-analyst`
 
 - Analyzes the current screenplay through `renku screenplay analyze`.
-- Reads ordered acts, sequences, scenes, cast, locations, and default analysis
+- Reads ordered acts, sequences, scenes, cast, locations, props, and default analysis
   criteria from the CLI context command.
 - Writes validated `kind: "screenplayAnalysis"` JSON through the CLI.
 - Suggests scene additions or revisions as critique only; it does not mutate the
@@ -71,11 +71,15 @@ operational companions that teach agents how to use those contracts.
 `production-designer`
 
 - Creates and revises Location facts through `renku location`.
+- Creates and revises Prop facts through `renku prop`.
 - Writes validated `kind: "locationDesign"` JSON through
   `renku production-design`.
+- Writes validated `kind: "propDesign"` JSON through
+  `renku production-design prop`.
 - Owns spatial design, architecture, set dressing, materials, props,
   atmosphere, and continuity risks.
 - Hands `location.sheet` and `location.hero` generation to `media-producer`.
+- Hands `prop.sheet` and `prop.hero` generation to `media-producer`.
 
 `media-producer`
 
@@ -167,10 +171,10 @@ Skills must not:
 - store generated storyboard image paths inside Scene Beat Sheet JSON;
 - add framing, lens, camera movement, coverage, analog shooting logistics, or
   call-sheet timing to Scene Beat Sheet documents.
-- mutate Cast Members or Locations through screenplay operation documents;
+- mutate Cast Members, Locations, or Props through screenplay operation documents;
 - store generated media paths inside Cast Design or Location Design JSON;
-- treat costume variants, props, or set dressing as media targets until those
-  concepts have explicit durable media contracts.
+- treat costume variants or location-local set dressing as media targets
+  without explicit durable contracts.
 - store generated Cast Voice sample paths inside Cast Design JSON. Cast Voice
   samples are attached through `renku cast voice attach`.
 

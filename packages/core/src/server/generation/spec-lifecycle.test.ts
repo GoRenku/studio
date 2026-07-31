@@ -60,6 +60,43 @@ describe('generation spec lifecycle', () => {
     })).toBe(false);
     expect(readGenerationSpec({ id: created.id, session }).frozenAt).toBeNull();
   });
+
+  it('round-trips and freezes a Prop generation target', () => {
+    const session = createMemorySession();
+    const created = createGenerationSpec({
+      id: 'spec-prop-sheet',
+      spec: {
+        executionKind: 'agent-external',
+        purpose: 'prop.sheet',
+        target: { kind: 'prop', id: 'prop-cannon' },
+        model: { provider: 'codex', model: 'gpt-image-2' },
+        values: { prompt: 'Exact Prop Sheet prompt.' },
+        references: [],
+      },
+      purpose: {
+        purpose: 'prop.sheet',
+        targetKind: 'prop',
+        outputMediaKind: 'image',
+      },
+      session,
+      now: '2026-07-30T10:00:00.000Z',
+    });
+
+    expect(readGenerationSpec({ id: created.id, session }).spec.target).toEqual({
+      kind: 'prop',
+      id: 'prop-cannon',
+    });
+    expect(freezeGenerationSpec({
+      id: created.id,
+      purpose: {
+        purpose: 'prop.sheet',
+        targetKind: 'prop',
+        outputMediaKind: 'image',
+      },
+      session,
+      now: '2026-07-30T10:05:00.000Z',
+    }).frozenAt).toBe('2026-07-30T10:05:00.000Z');
+  });
 });
 
 function externalSpec() {

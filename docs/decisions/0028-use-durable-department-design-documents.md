@@ -41,3 +41,11 @@ buckets.
   but generated files are imported as Assets through media-purpose commands.
 - Costume-variant media, voice media, and prop media remain future work until
   those concepts have explicit durable targets and import contracts.
+
+# Update notice: first-class Props
+
+Decision 0070 supersedes the former Prop-media limitation and extends durable
+department design history with Prop Design.
+Location Design now calls its location-local entries `recurringObjects`;
+first-class Props have independent facts, design history, Assets, and
+generation targets.

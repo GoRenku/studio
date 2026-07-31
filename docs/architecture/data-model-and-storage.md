@@ -76,14 +76,14 @@ Use the focused documents below for current direction.
   `coverage` stores soft Beat context. Both are strict AJV-validated JSON text.
   Missing or stale coverage references produce warnings rather than invalid
   state.
-- Cast Design and Location Design are SQLite-owned project data. They store
+- Cast Design, Location Design, and Prop Design are SQLite-owned project data. They store
   validated, agent-authored department design history as tagged JSON in
-  `cast_design` and `location_design`, with one active document per owner
-  tracked in `cast_design_state` and `location_design_state`.
-- Cast Members and Locations have one canonical authoring path each:
-  `renku cast` and `renku location`. Screenplay JSON references existing Cast
-  Members and Locations by durable ids; it does not create or update those fact
-  records.
+  `cast_design`, `location_design`, and `prop_design`, with one active document
+  per owner tracked in their corresponding state table.
+- Cast Members, Locations, and Props have one canonical authoring path each:
+  `renku cast`, `renku location`, and `renku prop`. Screenplay JSON references
+  existing Cast Members and Locations by durable ids; Props remain production
+  continuity subjects outside screenplay facts.
 - Lookbooks are durable SQLite-owned project direction. Each project has at
   most one Production Lookbook and at most one Storyboard Lookbook. Lookbook
   owner rows are permanent and cannot enter Trash. The two roles share one
@@ -115,6 +115,11 @@ Use the focused documents below for current direction.
 - Location Hero Images are Location-owned Assets with canonical type
   `location_hero`. Common selection chooses zero or one Hero for
   overview/detail imagery and does not create a generation reference.
+- Props are ordered durable continuity subjects in `prop`. Prop Design history
+  lives in `prop_design` with active state in `prop_design_state`.
+- Prop Sheets are Prop-owned `prop_sheet` Assets chosen only by consuming
+  GenerationSpecs. Prop Heroes are Prop-owned `prop_hero` Assets with optional
+  canonical owner-scoped selection.
 - Scene dialogue audio takes are durable scene dialogue media assets. They may
   be selected as exact GenerationSpec references; Shot Plans do not own or
   retain them.
@@ -147,9 +152,9 @@ Use the focused documents below for current direction.
   title, one-line summary, reference name, purpose, locale, origin, type, and
   media kind. Internal owner keys are shared with `selected_asset` but never
   enter public contracts.
-- Canonical selection exists only for Cast Profile, Location Hero, Lookbook
+- Canonical selection exists only for Cast Profile, Location Hero, Prop Hero, Lookbook
   card, Shot image, and Scene Beat Storyboard targets. Character Sheets,
-  Location Sheets, Lookbook Sheets, and Dialogue Audio Takes are selected only
+  Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes are selected only
   inside the consuming GenerationSpec references.
 - The canonical project database path is:
 

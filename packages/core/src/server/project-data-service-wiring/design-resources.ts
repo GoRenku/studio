@@ -4,6 +4,10 @@ import {
   readCastOverviewResource,
   readLocationOverviewResource,
   readLocationResource,
+  readPropOverviewResource,
+  readPropResource,
+} from '../resources/continuity-subjects.js';
+import {
   readSceneNarrativeResource,
   readSequenceResource,
   readStoryArcResource,
@@ -20,6 +24,8 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readCastMemberResource'
   | 'readLocationOverviewResource'
   | 'readLocationResource'
+  | 'readPropOverviewResource'
+  | 'readPropResource'
   | 'readStoryArcResource'
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
@@ -33,6 +39,8 @@ export function createDesignResourceServiceWiring(): Pick<
     readCastMemberResource,
     readLocationOverviewResource,
     readLocationResource,
+    readPropOverviewResource,
+    readPropResource,
     readStoryArcResource,
     readSequenceResource,
     readSceneNarrativeResource,

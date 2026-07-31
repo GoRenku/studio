@@ -18,6 +18,8 @@ import { CastMemberPanel } from './cast/cast-member-panel';
 import { GenerationActivityFooter } from './generation-activity/generation-activity-footer';
 import { LocationOverviewPanel } from './locations/location-overview-panel';
 import { LocationPanel } from './locations/location-panel';
+import { PropOverviewPanel } from './props/prop-overview-panel';
+import { PropPanel } from './props/prop-panel';
 import { MOVIE_STUDIO_LAYOUT } from './movie-studio-layout';
 import { PanelShell } from './panel-shell';
 import { ProjectInformationPanel } from './project-information/project-information-panel';
@@ -27,9 +29,9 @@ import { StoryArcPanel } from './story-arc/story-arc-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
 import { TrashPanel } from './trash/trash-panel';
 import {
-  useScreenplayNavigation,
-  type ScreenplayNavigationState,
-} from './use-screenplay-navigation';
+  useMovieStudioNavigation,
+  type MovieStudioNavigationState,
+} from './use-movie-studio-navigation';
 import { useStudioSelectionResolution } from './use-movie-studio-selection-resolution';
 import { InspirationFolderCreateDialog } from './visual-language/inspiration-folder-create-dialog';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
@@ -55,7 +57,7 @@ export function MovieStudioScreen({
   onNavigateSelection,
   selection: routeSelection,
 }: MovieStudioScreenProps) {
-  const screenplayNavigation = useScreenplayNavigation(
+  const screenplayNavigation = useMovieStudioNavigation(
     project,
     routeSelection ?? { type: 'projectInformation' }
   );
@@ -360,6 +362,17 @@ export function MovieStudioScreen({
                   projectName={project.identity.name}
                   locationId={selection.id}
                 />
+              ) : selection.type === 'props' ? (
+                <PropOverviewPanel
+                  projectName={project.identity.name}
+                  onSelect={selectMovieStudioSurface}
+                />
+              ) : selection.type === 'prop' ? (
+                <PropPanel
+                  key={selection.id}
+                  projectName={project.identity.name}
+                  propId={selection.id}
+                />
               ) : selection.type === 'storyArc' ? (
                 <StoryArcPanel projectName={project.identity.name} />
               ) : selection.type === 'trash' ? (
@@ -408,7 +421,7 @@ export function MovieStudioScreen({
 }
 
 function actIdFromSelectionContext(
-  context: ScreenplayNavigationState['selectionContext'],
+  context: MovieStudioNavigationState['selectionContext'],
   sequenceId: string
 ): string | null {
   return context &&
@@ -423,6 +436,7 @@ function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean 
     selectionType === 'castMember' ||
     selectionType === 'inspiration' ||
     selectionType === 'location' ||
+    selectionType === 'prop' ||
     selectionType === 'lookbook' ||
     selectionType === 'trash' ||
     selectionType === 'scene'

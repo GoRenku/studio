@@ -182,6 +182,14 @@ request; a managed receipt or frozen external source spec proves execution; and
 the accepted result is imported through the source owner's real focused
 destination. Studio inspection never edits, executes, or attaches output.
 
+## Prop generation
+
+`prop.sheet` and `prop.hero` target one durable Prop. Core projects Prop facts
+and active Prop Design guidance without interpreting creative prompt or image
+contents. Prior same-Prop Sheets are optional explicit reference candidates;
+Core never selects one automatically. Attachments create exclusively Prop-owned
+`prop_sheet` or `prop_hero` Assets. Only a Hero may be selected canonically.
+
 ## Shot Plan video generation
 
 `shot-plan.video-generation` targets Project, carries a weak Shot Plan source,

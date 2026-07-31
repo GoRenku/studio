@@ -80,3 +80,9 @@ the Asset, file, provenance, membership, and selection atomically.
 - Decisions 0013, 0019, 0029, 0049, 0052, and 0059 remain accepted except for
   their relationship-table, role, or focused-selection implementation details,
   which this decision replaces.
+
+## Update notice: Prop media
+
+Decision 0070 adds Prop as an exclusive Asset owner. `prop_hero` participates
+in canonical owner-scoped selection; `prop_sheet` remains request-scoped and
+has no global selection.

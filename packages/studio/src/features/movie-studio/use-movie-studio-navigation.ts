@@ -10,6 +10,7 @@ import type {
   ActNavigationRow,
   CastNavigationRow,
   LocationNavigationRow,
+  PropNavigationRow,
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
@@ -27,11 +28,15 @@ import {
   readScenesForSequence,
   readSequencesForAct,
 } from '@/services/studio-screenplay-api';
-import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
+import {
+  matchesMovieStudioNavigationResource,
+  useStudioResourceRefresh,
+} from '@/hooks/use-studio-resource-refresh';
 
-export interface ScreenplayNavigationState {
+export interface MovieStudioNavigationState {
   cast: CastNavigationRow[];
   locations: LocationNavigationRow[];
+  props: PropNavigationRow[];
   acts: ActNavigationRow[];
   sequencesByActId: Map<string, SequenceNavigationRow[]>;
   scenesBySequenceId: Map<string, SceneNavigationRow[]>;
@@ -43,13 +48,14 @@ export interface ScreenplayNavigationState {
   loadSequenceScenes: (sequenceId: string) => Promise<void>;
 }
 
-export function useScreenplayNavigation(
+export function useMovieStudioNavigation(
   project: ProjectShellWithHttp,
   selection: StudioSelection
-): ScreenplayNavigationState {
+): MovieStudioNavigationState {
   const projectName = project.identity.name;
   const shellCast = project.navigation.cast;
   const shellLocations = project.navigation.locations;
+  const shellProps = project.navigation.props;
   const shellActs = project.navigation.screenplay.acts;
   const [loadedActPage, setLoadedActPage] =
     useState<PageResponse<ActNavigationRow> | null>(null);
@@ -171,7 +177,7 @@ export function useScreenplayNavigation(
 
   useStudioResourceRefresh({
     projectName,
-    matches: matchesScreenplayNavigationResource,
+    matches: matchesMovieStudioNavigationResource,
     onRefresh: (detail) => {
       const resourceKeys = detail.resourceKeys;
       if (
@@ -215,7 +221,8 @@ export function useScreenplayNavigation(
 
       if (
         resourceKeys.includes('navigation:cast') ||
-        resourceKeys.includes('navigation:locations')
+        resourceKeys.includes('navigation:locations') ||
+        resourceKeys.includes('navigation:props')
       ) {
         setSelectionContext(null);
       }
@@ -230,6 +237,7 @@ export function useScreenplayNavigation(
       shellLocations.items,
       contextRows.locations
     );
+    const props = appendUniqueRows(shellProps.items, contextRows.props);
     const sequencesByActId = new Map<string, SequenceNavigationRow[]>();
     for (const [actId, page] of sequencePages) {
       sequencesByActId.set(
@@ -260,6 +268,7 @@ export function useScreenplayNavigation(
     return {
       cast,
       locations,
+      props,
       acts,
       sequencesByActId,
       scenesBySequenceId,
@@ -279,6 +288,7 @@ export function useScreenplayNavigation(
     loadingKeys,
     shellCast.items,
     shellLocations.items,
+    shellProps.items,
     scenePages,
     selectionContext,
     sequencePages,
@@ -312,6 +322,7 @@ async function loadNavigationPage<T>({
 function rowsFromSelectionContext(context: StudioSelectionContext | null): {
   cast: CastNavigationRow[];
   locations: LocationNavigationRow[];
+  props: PropNavigationRow[];
   acts: ActNavigationRow[];
   sequencesByActId: Map<string, SequenceNavigationRow[]>;
   scenesBySequenceId: Map<string, SceneNavigationRow[]>;
@@ -319,6 +330,7 @@ function rowsFromSelectionContext(context: StudioSelectionContext | null): {
   const rows = {
     cast: [] as CastNavigationRow[],
     locations: [] as LocationNavigationRow[],
+    props: [] as PropNavigationRow[],
     acts: [] as ActNavigationRow[],
     sequencesByActId: new Map<string, SequenceNavigationRow[]>(),
     scenesBySequenceId: new Map<string, SceneNavigationRow[]>(),
@@ -331,6 +343,9 @@ function rowsFromSelectionContext(context: StudioSelectionContext | null): {
   }
   if ('location' in context) {
     rows.locations.push(context.location);
+  }
+  if ('prop' in context) {
+    rows.props.push(context.prop);
   }
   if ('act' in context) {
     rows.acts.push(context.act);
@@ -351,7 +366,7 @@ function needsSelectionContext(selection: StudioSelection): boolean {
   if (selection.type === 'inspiration' && selection.folderId) {
     return true;
   }
-  return ['castMember', 'location', 'act', 'sequence', 'scene'].includes(
+  return ['castMember', 'location', 'prop', 'act', 'sequence', 'scene'].includes(
     selection.type
   );
 }
@@ -394,19 +409,6 @@ function setWithoutValue<T>(current: Set<T>, value: T): Set<T> {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Screenplay navigation failed to load.';
-}
-
-function matchesScreenplayNavigationResource(resourceKeys: string[]): boolean {
-  return resourceKeys.some(
-    (resourceKey) =>
-      resourceKey === 'screenplay' ||
-      resourceKey === 'screenplay:acts' ||
-      resourceKey === 'navigation:cast' ||
-      resourceKey === 'navigation:locations' ||
-      resourceKey.startsWith('surface:act:') ||
-      resourceKey.startsWith('surface:sequence:') ||
-      resourceKey.startsWith('navigation:sequence-scenes:')
-  );
 }
 
 function readSequenceScenesNavigationKey(resourceKey: string): string | null {

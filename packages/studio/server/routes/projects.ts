@@ -12,6 +12,7 @@ import {
 import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
+import { createContinuityRoute } from './continuity.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
 import { createGenerationReferencesRoute } from './generation-references.js';
 import { createGenerationRequestsRoute } from './generation-requests.js';
@@ -47,6 +48,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'updateCastMemberVoiceOverStatus'
   | 'readLocationOverviewResource'
   | 'readLocationResource'
+  | 'readPropOverviewResource'
+  | 'readPropResource'
   | 'readStoryArcResource'
   | 'readSequenceResource'
   | 'readSceneNarrativeResource'
@@ -136,6 +139,7 @@ export function createProjectsRoute(
       }
     })
     .route('/:projectName', createNavigationRoute({ projectData }))
+    .route('/:projectName', createContinuityRoute({ projectData, requireToken }))
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
     .route('/:projectName', createShotPlansRoute({ projectData, requireToken }))
     .route(

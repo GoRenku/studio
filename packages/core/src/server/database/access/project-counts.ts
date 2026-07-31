@@ -6,6 +6,7 @@ import {
   acts,
   locations,
   projectLocales,
+  props,
   scenes,
   sequences,
 } from '../../schema/index.js';
@@ -16,6 +17,7 @@ export function readProjectCounts(session: DatabaseSession): ProjectCounts {
     languages: countTable(session, projectLocales),
     castMembers: countTable(session, castMembers),
     locations: countTable(session, locations),
+    props: countTable(session, props),
     acts: countTable(session, acts),
     sequences: countTable(session, sequences),
     scenes: countTable(session, scenes),

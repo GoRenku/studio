@@ -2,12 +2,13 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { PropDesignDocument } from '../../client/department-design.js';
 import { createProjectDataService } from '../index.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
 import { assetFiles, assetMemberships, assets } from '../schema/index.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 
-describe('Scene generation context', () => {
+describe('Generation purpose context', () => {
   let homeDir: string;
   const projectData = createProjectDataService();
 
@@ -90,6 +91,67 @@ describe('Scene generation context', () => {
         code: 'CORE_GENERATION_OPTIONAL_REFERENCE_UNAVAILABLE',
       }),
     ]));
+  });
+
+  it('projects the exact active Prop Design into Prop generation contexts', async () => {
+    const created = await createSampleMovieProject({ homeDir, projectData });
+    if (!created) {
+      return;
+    }
+    const propReport = await projectData.applyPropOperations({
+      homeDir,
+      document: {
+        kind: 'propOperations',
+        operations: [
+          {
+            operation: 'prop.add',
+            prop: {
+              key: 'field-cannon',
+              handle: 'field-cannon',
+              name: 'Field Cannon',
+            },
+          },
+        ],
+      },
+    });
+    const propId = propReport.generatedIds?.[0]?.id as string;
+    const design: PropDesignDocument = {
+      kind: 'propDesign',
+      propId,
+      title: 'Field Cannon Prop Design',
+      design: {
+        designThesis: 'A siege engine whose mass communicates strategic force.',
+        formAndSilhouette: ['Long bronze barrel', 'low timber carriage'],
+        materialsAndSurfaces: ['Cast bronze', 'weathered oak'],
+        constructionAndFunction: ['Iron-banded wheels', 'wedged elevation'],
+        scaleAndHandling: ['Crew-served', 'requires a hauling team'],
+        statesAndVariants: ['Travel state', 'emplaced firing state'],
+        continuity: ['The split right wheel spoke remains visible'],
+        propSheetGuidance: ['Show side elevation and loading details'],
+        generationGuidance: ['Historically grounded Ottoman siege cannon'],
+      },
+    };
+    await projectData.writePropDesign({ homeDir, document: design });
+
+    const contexts = await Promise.all([
+      projectData.buildGenerationContext({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'prop.sheet',
+        target: { kind: 'prop', id: propId },
+      }),
+      projectData.buildGenerationContext({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'prop.hero',
+        target: { kind: 'prop', id: propId },
+      }),
+    ]);
+
+    expect(contexts.map((context) => context.facts.activePropDesign)).toEqual([
+      design,
+      design,
+    ]);
   });
 });
 

@@ -1,20 +1,17 @@
 import { useState } from 'react';
-import { ImageOff } from 'lucide-react';
 import type {
   LocationResourceResponse,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
-import { Button } from '@/ui/button';
-import { useImageAspectRatio } from '@/ui/image-aspect-ratio';
 import {
   ImagePreviewDialog,
   type PreviewImage,
 } from '@/ui/image-preview-dialog';
-import { cn } from '@/lib/utils';
 import {
-  locationSheetAspectRatio,
-  locationSheetPreviewImages,
-} from './location-assets';
+  continuityImageAspectRatio,
+  continuityPreviewImage,
+} from '../continuity/continuity-image-assets';
+import { ContinuityFeatureImage } from '../continuity/continuity-feature-image';
 
 interface LocationDetailsTabProps {
   projectName: string;
@@ -35,18 +32,17 @@ export function LocationDetailsTab({
     (asset) => asset.id === selectedHeroAssetId
   ) ?? null;
   const heroPreview = heroAsset
-    ? locationSheetPreviewImages(projectName, heroAsset)[0] ??
-      null
+    ? continuityPreviewImage(projectName, heroAsset, 'Location Hero')
     : null;
   const heroAspectRatio = heroAsset
-    ? locationSheetAspectRatio(heroAsset, 16 / 9)
+    ? continuityImageAspectRatio(heroAsset, 16 / 9)
     : 16 / 9;
 
   return (
     <>
       <article className='min-h-full bg-panel-bg px-4 py-5 text-foreground'>
         <header className='grid gap-6 pb-8 lg:grid-cols-[minmax(260px,390px)_minmax(0,1fr)] lg:gap-8'>
-          <LocationFeatureImage
+          <ContinuityFeatureImage
             image={heroPreview}
             aspectRatio={heroAspectRatio}
             emptyLabel='No location hero image yet'
@@ -89,49 +85,5 @@ export function LocationDetailsTab({
         onOpenChange={(open) => !open && setPreviewImage(null)}
       />
     </>
-  );
-}
-
-function LocationFeatureImage({
-  image,
-  aspectRatio,
-  emptyLabel,
-  onOpenImage,
-}: {
-  image: PreviewImage | null;
-  aspectRatio: number;
-  emptyLabel: string;
-  onOpenImage: (image: PreviewImage) => void;
-}) {
-  const { aspectRatioStyle, onImageLoad } = useImageAspectRatio(
-    aspectRatio,
-    image?.src ?? null
-  );
-  return (
-    <div
-      className='aspect-[4/3] overflow-hidden rounded-md border border-border/40 bg-card shadow-[0_18px_45px_rgba(0,0,0,0.24)]'
-      style={aspectRatioStyle}
-    >
-      {image ? (
-        <Button
-          type='button'
-          variant='ghost'
-          className='block h-full w-full rounded-none p-0 hover:bg-transparent'
-          onClick={() => onOpenImage(image)}
-        >
-          <img
-            src={image.src}
-            alt={image.alt}
-            className={cn('h-full w-full object-cover')}
-            onLoad={onImageLoad}
-          />
-        </Button>
-      ) : (
-        <div className='flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground'>
-          <ImageOff className='h-5 w-5' />
-          <span>{emptyLabel}</span>
-        </div>
-      )}
-    </div>
   );
 }

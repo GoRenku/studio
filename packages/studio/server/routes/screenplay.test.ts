@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
 import { createScreenplayRoute } from './screenplay.js';
 
@@ -25,86 +25,6 @@ describe('screenplay Hono route', () => {
     );
 
     expect(response.status).toBe(404);
-  });
-
-  it('serves cast and location resources with HTTP image URLs only added by the response adapter', async () => {
-    const firstImage = {
-      assetId: 'asset_reference',
-      assetFileId: 'asset_file_reference',
-      title: 'Reference image',
-      fileRole: 'primary',
-      mediaKind: 'image',
-      mimeType: 'image/png',
-      width: 1200,
-      height: 900,
-    };
-    const app = new Hono().route(
-      '/:projectName',
-      createScreenplayRoute({
-        requireToken: async (_c, next) => {
-          await next();
-        },
-        projectData: {
-          ...fakeProjectDataService(),
-          async readCastMemberResource(input) {
-            expect(input).toEqual({
-              projectName: 'constantinople',
-              castMemberId: 'cast_narrator',
-            });
-            return {
-              castMember: {
-                id: 'cast_narrator',
-                handle: 'narrator',
-                name: 'Narrator',
-                isVoiceOver: true,
-              },
-              firstImage,
-              voices: [],
-            };
-          },
-          async readLocationResource(input) {
-            expect(input).toEqual({
-              projectName: 'constantinople',
-              locationId: 'location_gate',
-            });
-            return {
-              location: {
-                id: 'location_gate',
-                handle: 'gate',
-                name: 'The Gate',
-              },
-              firstImage,
-            };
-          },
-        },
-      })
-    );
-
-    const castResponse = await app.request(
-      '/constantinople/screenplay/cast/cast_narrator'
-    );
-    const locationResponse = await app.request(
-      '/constantinople/screenplay/locations/location_gate'
-    );
-
-    expect(castResponse.status).toBe(200);
-    await expect(castResponse.json()).resolves.toMatchObject({
-      resource: {
-        castMember: { id: 'cast_narrator', name: 'Narrator' },
-        firstImage: {
-          url: '/studio-api/projects/constantinople/assets/asset_reference/files/asset_file_reference',
-        },
-      },
-    });
-    expect(locationResponse.status).toBe(200);
-    await expect(locationResponse.json()).resolves.toMatchObject({
-      resource: {
-        location: { id: 'location_gate', name: 'The Gate' },
-        firstImage: {
-          url: '/studio-api/projects/constantinople/assets/asset_reference/files/asset_file_reference',
-        },
-      },
-    });
   });
 
   it('serves screenplay navigation and detail resources through the core service contract', async () => {
@@ -167,59 +87,6 @@ describe('screenplay Hono route', () => {
       resource: {
         scene: { id: 'scene_opening', title: 'Opening Scene' },
         blocks: [{ type: 'action', text: 'The siege begins.' }],
-      },
-    });
-  });
-
-  it('updates Cast Member voice-over status through the core service contract', async () => {
-    const updateCastMemberVoiceOverStatus = vi.fn(async () => ({
-      id: 'cast_narrator',
-      handle: 'narrator',
-      name: 'Narrator',
-      isVoiceOver: true,
-    }));
-    const app = new Hono().route(
-      '/:projectName',
-      createScreenplayRoute({
-        requireToken: async (_c, next) => {
-          await next();
-        },
-        projectData: {
-          ...fakeProjectDataService(),
-          updateCastMemberVoiceOverStatus,
-          async readCastMemberResource() {
-            return {
-              castMember: {
-                id: 'cast_narrator',
-                handle: 'narrator',
-                name: 'Narrator',
-                isVoiceOver: true,
-              },
-              voices: [],
-            };
-          },
-        },
-      })
-    );
-
-    const response = await app.request(
-      '/constantinople/screenplay/cast/cast_narrator/voice-over',
-      {
-        method: 'PATCH',
-        body: JSON.stringify({ isVoiceOver: true }),
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-
-    expect(response.status).toBe(200);
-    expect(updateCastMemberVoiceOverStatus).toHaveBeenCalledWith({
-      projectName: 'constantinople',
-      castMemberId: 'cast_narrator',
-      isVoiceOver: true,
-    });
-    await expect(response.json()).resolves.toMatchObject({
-      resource: {
-        castMember: { id: 'cast_narrator', isVoiceOver: true },
       },
     });
   });

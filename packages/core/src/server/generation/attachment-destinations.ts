@@ -7,6 +7,7 @@ import type { ProjectAssetFileDestination } from '../project-asset-files/index.j
 import {
   studioCastMemberSurfaceResourceKey,
   studioLocationSurfaceResourceKey,
+  studioPropSurfaceResourceKey,
   studioVisualLanguageLookbookResourceKey,
   studioSceneShotPlansResourceKey,
   studioSceneVideoGenerationsResourceKey,
@@ -73,6 +74,27 @@ export function locationHeroAttachmentDestination(
     file: { kind: 'location.hero', locationId, heroName: titleHint },
     owner: { kind: 'location', id: locationId },
     resourceKeys: [studioLocationSurfaceResourceKey(locationId)],
+  };
+}
+
+export function propSheetAttachmentDestination(
+  propId: string,
+  titleHint?: string
+): GeneratedMediaAttachmentDestination {
+  return {
+    file: { kind: 'prop.sheet', propId, titleHint },
+    owner: { kind: 'prop', id: propId },
+    resourceKeys: [studioPropSurfaceResourceKey(propId)],
+  };
+}
+
+export function propHeroAttachmentDestination(
+  propId: string
+): GeneratedMediaAttachmentDestination {
+  return {
+    file: { kind: 'prop.hero', propId },
+    owner: { kind: 'prop', id: propId },
+    resourceKeys: [studioPropSurfaceResourceKey(propId)],
   };
 }
 
@@ -202,6 +224,20 @@ const attachmentBuilders: Partial<
       locationHeroAttachmentDestination(input.target.id, input.title),
       'Location Hero',
       'location_hero'
+    ),
+  'prop.sheet': (input) =>
+    details(
+      requireTarget(input, 'prop'),
+      propSheetAttachmentDestination(input.target.id, input.title),
+      'Prop Sheet',
+      'prop_sheet'
+    ),
+  'prop.hero': (input) =>
+    details(
+      requireTarget(input, 'prop'),
+      propHeroAttachmentDestination(input.target.id),
+      'Prop Hero',
+      'prop_hero'
     ),
   'shot.image': (input) => {
     requireTarget(input, 'shot');

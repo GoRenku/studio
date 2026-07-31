@@ -25,7 +25,7 @@ import type { ProjectLanguage } from '../../client/project-languages.js';
 import {
   readActiveCastDesignDocument,
   toCastDesignSummary,
-} from '../database/access/department-design.js';
+} from '../database/access/cast-designs.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   allocateDepartmentId,
@@ -48,9 +48,12 @@ import {
   updateCastMemberVoiceOverRecord,
 } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
+import { listPropRecords } from '../database/access/props.js';
+import { listAssetsInSession } from '../assets/projection.js';
 import {
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
+  studioProjectShellResourceKey,
 } from '../studio-coordination/resource-keys.js';
 
 export async function listCastMembers(
@@ -78,6 +81,9 @@ export async function readCastContext(
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveCastDesignDocument(session, input.castMemberId);
     const assets = listCastAssetRoleRecords(session, input.castMemberId);
+    const ownedAssets = listAssetsInSession(session, {
+      owner: { kind: 'castMember', id: input.castMemberId },
+    });
     return {
       valid: true,
       warnings: [],
@@ -113,7 +119,7 @@ export async function readCastContext(
         : null,
       scenes: screenplay ? castScenes(screenplay, input.castMemberId) : [],
       activeLookbook: null,
-      assets: [],
+      assets: ownedAssets,
       assetTypeCounts: typeCounts(assets),
       generationReadiness: castGenerationReadiness(castMember, assets),
     };
@@ -167,6 +173,9 @@ export async function applyCastOperations(
     const existing = listCastMembersFromSession(session);
     const locationHandles = new Map(
       listLocationRecords(session).map((location) => [location.handle, location.id])
+    );
+    const propHandles = new Map(
+      listPropRecords(session).map((prop) => [prop.handle, prop.id])
     );
     const screenplay = readScreenplayDocumentFromSession(session);
     const referencedCastMemberIds = screenplay
@@ -276,6 +285,7 @@ export async function applyCastOperations(
     validateCastDraft({
       cast: draft,
       locationHandles,
+      propHandles,
       issues,
       warnings,
     });
@@ -394,12 +404,16 @@ function castGenerationReadiness(
 function validateCastDraft(input: {
   cast: CastMember[];
   locationHandles: Map<string, string>;
+  propHandles: Map<string, string>;
   issues: DiagnosticIssue[];
   warnings: DiagnosticIssue[];
 }): void {
   const handles = new Map<string, string[]>();
   input.locationHandles.forEach((_locationId, handle) => {
     handles.set(handle, ['locations', handle]);
+  });
+  input.propHandles.forEach((_propId, handle) => {
+    handles.set(handle, ['props', handle]);
   });
   const names = new Map<string, string[]>();
   input.cast.forEach((castMember, index) => {
@@ -411,7 +425,7 @@ function validateCastDraft(input: {
           'PROJECT_DATA209',
           `Duplicate handle: ${castMember.handle}.`,
           { path: [...path, 'handle'], context: `First seen at ${firstHandlePath.join('.')}` },
-          'Use a unique handle across cast and locations.'
+          'Use a unique handle across Cast Members, Locations, and Props.'
         )
       );
     } else {
@@ -435,7 +449,10 @@ function validateCastDraft(input: {
 }
 
 function castResourceKeysForChanges(changes: DepartmentCommandChange[]): string[] {
-  const keys = new Set(castResourceKeys());
+  const keys = new Set([
+    studioProjectShellResourceKey(),
+    ...castResourceKeys(),
+  ]);
   changes.forEach((change) => {
     const castMemberId = change.castMemberId;
     if (typeof castMemberId === 'string') {

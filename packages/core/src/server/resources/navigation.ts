@@ -2,6 +2,7 @@ import type {
   ActNavigationRow,
   CastNavigationRow,
   LocationNavigationRow,
+  PropNavigationRow,
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
@@ -10,6 +11,7 @@ import {
   listActNavigationPage,
   listCastNavigationPage,
   listLocationNavigationPage,
+  listPropNavigationPage,
   listSceneNavigationPage,
   listSequenceNavigationPage,
 } from '../database/access/navigation.js';
@@ -37,6 +39,17 @@ export async function listLocationNavigation(
   const { session } = await openProjectSession(input);
   try {
     return listLocationNavigationPage(session, input);
+  } finally {
+    session.close();
+  }
+}
+
+export async function listPropNavigation(
+  input: ListNavigationInput
+): Promise<PageResponse<PropNavigationRow>> {
+  const { session } = await openProjectSession(input);
+  try {
+    return listPropNavigationPage(session, input);
   } finally {
     session.close();
   }

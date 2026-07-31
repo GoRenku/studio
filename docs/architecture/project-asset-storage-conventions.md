@@ -64,6 +64,8 @@ cast/<cast-handle>/voice-samples/
 
 locations/<location-handle>/location-sheets/
 locations/<location-handle>/heroes/
+props/<prop-handle>/prop-sheets/
+props/<prop-handle>/heroes/
 
 visual-language/lookbook/
 
@@ -109,6 +111,15 @@ Location Hero Images are flat files under `heroes/`:
 ```text
 locations/<location-handle>/heroes/hero.<ext>
 locations/<location-handle>/heroes/hero-v01.<ext>
+```
+
+Prop Sheets and Heroes use the same flat versioning rule:
+
+```text
+props/<prop-handle>/prop-sheets/<sheet-slug>.<ext>
+props/<prop-handle>/prop-sheets/<sheet-slug>-v01.<ext>
+props/<prop-handle>/heroes/hero.<ext>
+props/<prop-handle>/heroes/hero-v01.<ext>
 ```
 
 Renku Studio must not create one folder per Location Hero Image.
@@ -240,12 +251,12 @@ the durable filesystem folder themselves.
   selection write fails.
 
 Purpose modules remain responsible for product semantics such as creating the
-`asset` row and attaching the asset to a Project, Cast Member, Location,
+`asset` row and attaching the asset to a Project, Cast Member, Location, Prop,
 Lookbook, or Scene. The project asset-file module owns
 the durable file destination and the `asset_file.project_relative_path` write.
 Its durable destination contract is owner-aware, for example
 `cast.characterSheet`, `cast.voiceSample`, `location.hero`,
-`location.sheet`, `visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or
+`location.sheet`, `prop.sheet`, `visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or
 `shot.image`.
 Scene Storyboard imports use a batch storage API so all Beats in one import
 share one iteration folder. The module must not accept

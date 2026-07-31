@@ -13,9 +13,11 @@ import {
   listCastNavigationPage,
   listActNavigationPage,
   listLocationNavigationPage,
+  listPropNavigationPage,
   readCastNavigationRow,
   readActNavigationRow,
   readLocationNavigationRow,
+  readPropNavigationRow,
   readSceneNavigationContext,
   readSequenceNavigationContext,
 } from '../database/access/navigation.js';
@@ -34,6 +36,8 @@ import {
   studioCastNavigationResourceKey,
   studioLocationNavigationResourceKey,
   studioLocationSurfaceResourceKey,
+  studioPropNavigationResourceKey,
+  studioPropSurfaceResourceKey,
   studioProjectInformationResourceKey,
   studioSequenceScenesNavigationResourceKey,
   studioSequenceSurfaceResourceKey,
@@ -159,6 +163,27 @@ export function readStudioSelectionContextProjection(
               selection: input.selection,
               context: { surface: 'location', location },
               resourceKeys: [studioLocationSurfaceResourceKey(location.id)],
+            }
+          : selectionNotFound(input.selection);
+      }
+      case 'props':
+        return {
+          valid: true,
+          selection: input.selection,
+          context: {
+            surface: 'props',
+            props: listPropNavigationPage(session, {}),
+          },
+          resourceKeys: [studioPropNavigationResourceKey()],
+        };
+      case 'prop': {
+        const prop = readPropNavigationRow(session, input.selection.id);
+        return prop
+          ? {
+              valid: true,
+              selection: input.selection,
+              context: { surface: 'prop', prop },
+              resourceKeys: [studioPropSurfaceResourceKey(prop.id)],
             }
           : selectionNotFound(input.selection);
       }

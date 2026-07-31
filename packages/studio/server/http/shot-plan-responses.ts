@@ -1,19 +1,12 @@
 import type {
-  Asset,
-  AssetFile,
   AssetSelectionReport,
   RecoverableMutationReport,
   ShotPlanListReport,
 } from '@gorenku/studio-core/client';
-
-export interface StudioAssetFileResponse
-  extends Omit<AssetFile, 'projectRelativePath'> {
-  url: string;
-}
-
-export interface StudioAssetResponse extends Omit<Asset, 'files'> {
-  files: StudioAssetFileResponse[];
-}
+import {
+  toStudioAssetResponse,
+  type StudioAssetResponse,
+} from './asset-responses.js';
 
 export interface StudioShotPlanListItemResponse {
   shotPlan: Omit<
@@ -69,27 +62,6 @@ export function toStudioShotPlansResponse(
   };
 }
 
-export function toStudioShotAssetResponse(
-  projectName: string,
-  asset: Asset
-): StudioAssetResponse {
-  return {
-    ...asset,
-    files: asset.files.map((file) => ({
-      id: file.id,
-      role: file.role,
-      mediaKind: file.mediaKind,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes,
-      contentHash: file.contentHash,
-      width: file.width,
-      height: file.height,
-      durationSeconds: file.durationSeconds,
-      url: assetFileUrl(projectName, asset.id, file.id),
-    })),
-  };
-}
-
 export function toStudioShotSelectionMutationResponse(
   report: AssetSelectionReport
 ): StudioShotSelectionMutationResponse {
@@ -133,7 +105,7 @@ function toStudioShotPlanListItemResponse(
           ...asset,
           files:
             asset.id === shot.selectedImageId
-              ? toStudioShotAssetResponse(projectName, asset).files
+              ? toStudioAssetResponse(projectName, asset).files
               : [],
         })),
         selectedImageId: shot.selectedImageId,

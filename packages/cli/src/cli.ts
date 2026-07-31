@@ -20,6 +20,7 @@ import { runMediaCommand } from './commands/media-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
+import { runPropCommand } from './commands/prop-command.js';
 import { runScreenplayCommand } from './commands/screenplay-command.js';
 import { runShotPlanCommand } from './commands/shot-plan-command.js';
 import { runStudioCommand } from './commands/studio-command.js';
@@ -60,7 +61,8 @@ Commands
   cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
   location             Author location facts
-  production-design    Author Location Design documents
+  prop                 Author Prop facts
+  production-design    Author Location and Prop Design documents
   info show            Show project information
   info set             Update project information
   info clear           Clear optional project information fields
@@ -106,7 +108,8 @@ Options
   --cast               Cast member id for cast commands
   --voice              Cast Voice id or reference name
   --location           Location id for location and production-design commands
-  --design             Cast Design or Location Design id
+  --prop               Prop id for prop and production-design commands
+  --design             Cast, Location, or Prop Design id
   --act                Act id for screenplay sequence list
   --analysis           Screenplay Analysis id
   --revision           Screenplay revision id
@@ -249,6 +252,9 @@ function createCliFlags() {
       type: 'string',
     },
     location: {
+      type: 'string',
+    },
+    prop: {
       type: 'string',
     },
     design: {
@@ -536,6 +542,7 @@ export async function runRenkuCli(
           flags: {
             file,
             location: cli.flags.location,
+            prop: cli.flags.prop,
             design: cli.flags.design,
             active: cli.flags.active,
           },
@@ -636,6 +643,18 @@ export async function runRenkuCli(
           flags: {
             file,
             location: cli.flags.location,
+            dryRun: cli.flags.dryRun,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'prop':
+        return await runPropCommand({
+          input,
+          flags: {
+            file,
+            prop: cli.flags.prop,
             dryRun: cli.flags.dryRun,
           },
           json: cli.flags.json,

@@ -17,6 +17,13 @@ import {
   resolveLocationDestinationRootSync,
 } from './location.js';
 import {
+  resolvePropDestinationFile,
+  resolvePropDestinationFileSync,
+  resolvePropDestinationOutputNames,
+  resolvePropDestinationRoot,
+  resolvePropDestinationRootSync,
+} from './prop.js';
+import {
   resolveLookbookDestinationFile,
   resolveLookbookDestinationFileSync,
   resolveLookbookDestinationOutputNames,
@@ -69,6 +76,8 @@ const castProfileResolver = castResolver<'cast.profile'>();
 const castVoiceSampleResolver = castResolver<'cast.voiceSample'>();
 const locationSheetResolver = locationResolver<'location.sheet'>();
 const locationHeroResolver = locationResolver<'location.hero'>();
+const propSheetResolver = propResolver<'prop.sheet'>();
+const propHeroResolver = propResolver<'prop.hero'>();
 const lookbookImageResolver = lookbookResolver<'visualLanguage.lookbookImage'>();
 const lookbookSheetResolver = lookbookResolver<'visualLanguage.lookbookSheet'>();
 
@@ -92,6 +101,8 @@ const destinationResolvers = {
   'cast.voiceSample': castVoiceSampleResolver,
   'location.sheet': locationSheetResolver,
   'location.hero': locationHeroResolver,
+  'prop.sheet': propSheetResolver,
+  'prop.hero': propHeroResolver,
   'visualLanguage.lookbookImage': lookbookImageResolver,
   'visualLanguage.lookbookSheet': lookbookSheetResolver,
   'scene.dialogueAudio': {
@@ -189,6 +200,16 @@ function locationResolver<K extends 'location.sheet' | 'location.hero'>(): Desti
     resolveRoot: resolveLocationDestinationRoot,
     resolveRootSync: resolveLocationDestinationRootSync,
     resolveOutputNames: resolveLocationDestinationOutputNames,
+  } as unknown as DestinationResolver<K>;
+}
+
+function propResolver<K extends 'prop.sheet' | 'prop.hero'>(): DestinationResolver<K> {
+  return {
+    resolveFile: resolvePropDestinationFile,
+    resolveFileSync: resolvePropDestinationFileSync,
+    resolveRoot: resolvePropDestinationRoot,
+    resolveRootSync: resolvePropDestinationRootSync,
+    resolveOutputNames: resolvePropDestinationOutputNames,
   } as unknown as DestinationResolver<K>;
 }
 

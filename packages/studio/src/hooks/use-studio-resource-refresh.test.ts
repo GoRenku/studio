@@ -5,6 +5,7 @@ import {
   matchesCastOverviewResource,
   matchesLocationOverviewResource,
   matchesLocationResource,
+  matchesMovieStudioNavigationResource,
   matchesSceneBeatsResource,
   matchesSceneNarrativeResource,
   matchesSequenceResource,
@@ -12,6 +13,12 @@ import {
 } from './use-studio-resource-refresh';
 
 describe('Studio resource refresh matchers', () => {
+  it('matches every continuity navigation resource', () => {
+    expect(matchesMovieStudioNavigationResource(['navigation:cast'])).toBe(true);
+    expect(matchesMovieStudioNavigationResource(['navigation:locations'])).toBe(true);
+    expect(matchesMovieStudioNavigationResource(['navigation:props'])).toBe(true);
+  });
+
   it('matches broad Beat Sheet changes for the Scene Beats surface', () => {
     expect(
       matchesSceneBeatsResource({

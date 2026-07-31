@@ -1,5 +1,7 @@
 import type { GenerationTarget, JsonValue } from '../../client/generation.js';
 import { readProjectRecord } from '../database/access/project.js';
+import { readActivePropDesignDocument } from '../database/access/prop-designs.js';
+import { readPropRecord } from '../database/access/props.js';
 import { listSceneLocationIds } from '../database/access/navigation.js';
 import { readActiveSceneBeatSheetRecord, readSceneBeatSheetDocument } from '../database/access/scene-beat-sheets.js';
 import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
@@ -17,6 +19,29 @@ export function buildGenerationPurposeFacts(input: {
   authored?: Record<string, JsonValue>;
 }): Record<string, JsonValue> {
   const projectAspectRatio = effectiveProjectAspectRatio(readProjectRecord(input.session)?.aspectRatio);
+  if (input.target.kind === 'prop') {
+    const prop = readPropRecord(input.session, input.target.id);
+    if (!prop) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_TARGET_NOT_FOUND',
+        `Prop was not found: ${input.target.id}.`
+      );
+    }
+    const activePropDesign = readActivePropDesignDocument(
+      input.session,
+      input.target.id
+    );
+    return {
+      projectAspectRatio,
+      propId: prop.id,
+      propHandle: prop.handle,
+      propName: prop.name,
+      ...(prop.description ? { propDescription: prop.description } : {}),
+      ...(prop.visualNotes ? { propVisualNotes: prop.visualNotes } : {}),
+      activePropDesign: (activePropDesign?.document ?? null) as JsonValue,
+      ...(input.authored ?? {}),
+    };
+  }
   if (input.target.kind === 'scene') {
     return buildSceneGenerationFacts({
       target: input.target,

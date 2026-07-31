@@ -7,6 +7,7 @@ export * from './locations.js';
 export * from './media-generation.js';
 export * from './project.js';
 export * from './project-locales.js';
+export * from './props.js';
 export * from './scene-locations.js';
 export * from './scene-production-numbers.js';
 export * from './scene-beat-sheets.js';

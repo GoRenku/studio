@@ -81,6 +81,31 @@ export async function readLocationAssets(
   return { items: assets, selectedAssetId };
 }
 
+export async function readPropAssets(
+  projectName: string,
+  propId: string
+): Promise<StudioAssetCollection> {
+  const assets: StudioAssetResponse[] = [];
+  let selectedAssetId: string | null = null;
+  let cursor: string | null = null;
+  do {
+    const search = new URLSearchParams({ limit: '200' });
+    if (cursor) search.set('cursor', cursor);
+    const response = await fetch(
+      `${propAssetsUrl(projectName, propId)}?${search.toString()}`
+    );
+    if (!response.ok) {
+      throw await readStudioApiError(response);
+    }
+
+    const body = (await response.json()) as StudioAssetsResponse;
+    assets.push(...body.page.items);
+    selectedAssetId = body.page.selectedAssetId;
+    cursor = body.page.nextCursor;
+  } while (cursor);
+  return { items: assets, selectedAssetId };
+}
+
 export async function readSceneDesignResource(
   projectName: string,
   sceneId: string,
@@ -243,6 +268,62 @@ export async function deleteLocationAsset(
   return assetId;
 }
 
+export async function selectPropHeroAsset(
+  projectName: string,
+  propId: string,
+  assetId: string
+): Promise<void> {
+  const response = await fetch(
+    propHeroSelectionUrl(projectName, propId, assetId),
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify({}),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  await response.json();
+}
+
+export async function clearSelectedPropHero(
+  projectName: string,
+  propId: string
+): Promise<void> {
+  const response = await fetch(propHeroSelectionUrl(projectName, propId), {
+    method: 'DELETE',
+    headers: {
+      'X-Renku-Studio-Token': readStudioApiToken(),
+    },
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  await response.json();
+}
+
+export async function deletePropAsset(
+  projectName: string,
+  propId: string,
+  assetId: string
+): Promise<string> {
+  const response = await fetch(propAssetUrl(projectName, propId, assetId), {
+    method: 'DELETE',
+    headers: {
+      'X-Renku-Studio-Token': readStudioApiToken(),
+    },
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  await response.json();
+  return assetId;
+}
+
 export function projectAssetFileUrl(
   projectName: string,
   assetId: string,
@@ -257,6 +338,10 @@ function castAssetsUrl(projectName: string, castMemberId: string): string {
 
 function locationAssetsUrl(projectName: string, locationId: string): string {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/locations/${encodeURIComponent(locationId)}/assets`;
+}
+
+function propAssetsUrl(projectName: string, propId: string): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/props/${encodeURIComponent(propId)}/assets`;
 }
 
 function castAssetUrl(
@@ -283,6 +368,14 @@ function locationAssetUrl(
   return `${locationAssetsUrl(projectName, locationId)}/${encodeURIComponent(assetId)}`;
 }
 
+function propAssetUrl(
+  projectName: string,
+  propId: string,
+  assetId: string
+): string {
+  return `${propAssetsUrl(projectName, propId)}/${encodeURIComponent(assetId)}`;
+}
+
 function castProfileSelectionUrl(
   projectName: string,
   castMemberId: string,
@@ -298,6 +391,15 @@ function locationHeroSelectionUrl(
   assetId?: string
 ): string {
   const root = locationAssetsUrl(projectName, locationId).replace(/\/assets$/, '/selected-hero');
+  return assetId ? `${root}/${encodeURIComponent(assetId)}` : root;
+}
+
+function propHeroSelectionUrl(
+  projectName: string,
+  propId: string,
+  assetId?: string
+): string {
+  const root = propAssetsUrl(projectName, propId).replace(/\/assets$/, '/selected-hero');
   return assetId ? `${root}/${encodeURIComponent(assetId)}` : root;
 }
 

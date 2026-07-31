@@ -62,10 +62,20 @@ export type {
   LocationDesignWriteReport,
   LocationOperationDocument,
   ProductionDesignLocationContextReport,
+  ProductionDesignPropContextReport,
+  PropDesignDocument,
+  PropDesignListReport,
+  PropDesignReadReport,
+  PropDesignSummary,
+  PropDesignWriteReport,
+  PropOperationDocument,
 } from './department-design.js';
 export type {
   Location,
 } from './locations.js';
+export type {
+  Prop,
+} from './props.js';
 export type {
   Scene,
   Sequence,
@@ -98,6 +108,9 @@ export type {
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
+  PropNavigationRow,
+  PropOverviewResource,
+  PropResource,
   InspirationFolderResource,
   InspirationResource,
   ProjectLookbooksResource,

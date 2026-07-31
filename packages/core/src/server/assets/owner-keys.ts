@@ -57,6 +57,7 @@ function isSingleIdOwnerKind(
 ): value is Exclude<AssetOwner['kind'], 'project' | 'sceneBeat'> {
   return value === 'castMember'
     || value === 'location'
+    || value === 'prop'
     || value === 'sequence'
     || value === 'scene'
     || value === 'lookbook'

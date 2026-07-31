@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type {
   CastDesignDocument,
   LocationDesignDocument,
+  PropDesignDocument,
 } from '../../client/department-design.js';
 import type { ProjectRelativePath } from '../../client/project.js';
 import {
@@ -27,7 +28,7 @@ describe('department design commands', () => {
     projectData = createProjectDataService();
   });
 
-  it('applies cast and location fact operations through canonical command surfaces', async () => {
+  it('applies cast, location, and prop fact operations through canonical command surfaces', async () => {
     await createBlankMovieProject({ homeDir, projectData });
     await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
 
@@ -97,9 +98,37 @@ describe('department design commands', () => {
     await expect(
       projectData.readLocation({ homeDir, locationId: locationId as string })
     ).resolves.toMatchObject({ handle: 'control-room', name: 'Control Room' });
+
+    const propReport = await projectData.applyPropOperations({
+      homeDir,
+      document: {
+        kind: 'propOperations',
+        operations: [
+          {
+            operation: 'prop.add',
+            prop: {
+              key: 'field-cannon',
+              handle: 'field-cannon',
+              name: 'Field Cannon',
+              visualNotes: 'A heavy cast-bronze siege cannon.',
+            },
+          },
+        ],
+      },
+    });
+    const propId = propReport.generatedIds?.[0]?.id;
+    expect(propReport.resourceKeys).toEqual(
+      expect.arrayContaining(['project-shell', 'navigation:props'])
+    );
+    await expect(
+      projectData.readProp({ homeDir, propId: propId as string })
+    ).resolves.toMatchObject({
+      handle: 'field-cannon',
+      name: 'Field Cannon',
+    });
   });
 
-  it('writes Cast Design and Location Design documents', async () => {
+  it('writes Cast, Location, and Prop Design documents', async () => {
     await createSampleMovieProject({ homeDir, projectData });
 
     const screenplay = await projectData.readScreenplay({ homeDir });
@@ -142,6 +171,41 @@ describe('department design commands', () => {
       activeDesignSummary: {
         locationId,
         spatialThesis: 'Ceremony squeezed into a tactical planning room.',
+      },
+    });
+
+    const propReport = await projectData.applyPropOperations({
+      homeDir,
+      document: {
+        kind: 'propOperations',
+        operations: [
+          {
+            operation: 'prop.add',
+            prop: {
+              key: 'ceremonial-helmet',
+              handle: 'ceremonial-helmet',
+              name: 'Ceremonial Helmet',
+            },
+          },
+        ],
+      },
+    });
+    const propId = propReport.generatedIds?.[0]?.id as string;
+    const propWrite = await projectData.writePropDesign({
+      homeDir,
+      document: propDesignDocument(propId),
+    });
+    expect(propWrite.activeDesignId).toBe(propWrite.designId);
+    expect(propWrite.resourceKeys).toEqual([
+      'navigation:props',
+      `surface:prop:${propId}`,
+    ]);
+    await expect(
+      projectData.readPropContext({ homeDir, propId })
+    ).resolves.toMatchObject({
+      activeDesignSummary: {
+        propId,
+        designThesis: 'Ceremonial authority built for close visual scrutiny.',
       },
     });
   });
@@ -459,7 +523,7 @@ function locationDesignDocument(locationId: string): LocationDesignDocument {
       setDressing: ['Maps pinned over older wall textiles'],
       materialsAndSurfaces: ['Dark wood', 'brass lamp glow'],
       atmosphere: ['Oil smoke', 'crowded silence'],
-      propsAndRecurringObjects: [
+      recurringObjects: [
         {
           name: 'city map',
           description: 'Large worn map weighted with brass markers.',
@@ -468,6 +532,25 @@ function locationDesignDocument(locationId: string): LocationDesignDocument {
       continuity: ['Map remains central to table geography'],
       locationSheetGuidance: ['Show cramped room geometry and map table'],
       generationGuidance: ['Ottoman planning chamber', 'lamplit tactical room'],
+    },
+  };
+}
+
+function propDesignDocument(propId: string): PropDesignDocument {
+  return {
+    kind: 'propDesign',
+    propId,
+    title: 'Ceremonial Helmet Prop Design',
+    design: {
+      designThesis: 'Ceremonial authority built for close visual scrutiny.',
+      formAndSilhouette: ['Tall conical crown', 'protective cheek pieces'],
+      materialsAndSurfaces: ['Darkened steel', 'worn gilt ornament'],
+      constructionAndFunction: ['Riveted plates', 'padded inner cap'],
+      scaleAndHandling: ['Head-worn', 'lifted with both hands when presented'],
+      statesAndVariants: ['Polished ceremony state', 'dust-marked field state'],
+      continuity: ['Gilt brow band remains aligned above the nose'],
+      propSheetGuidance: ['Show front, profile, rear, and interior construction'],
+      generationGuidance: ['Ottoman ceremonial helmet', 'historically grounded metalwork'],
     },
   };
 }

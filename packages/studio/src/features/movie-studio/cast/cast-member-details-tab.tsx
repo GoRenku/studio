@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ImageOff, Pause, Volume2 } from 'lucide-react';
+import { Pause, Volume2 } from 'lucide-react';
 import type {
   CastMemberResourceResponse,
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 import { Button } from '@/ui/button';
-import { useImageAspectRatio } from '@/ui/image-aspect-ratio';
 import {
   ImagePreviewDialog,
   type PreviewImage,
@@ -18,9 +17,10 @@ import {
 import { Switch } from '@/ui/switch';
 import { cn } from '@/lib/utils';
 import {
-  castImageAssetAspectRatio,
-  castPreviewImageForAsset,
-} from './cast-member-assets';
+  continuityImageAspectRatio,
+  continuityPreviewImage,
+} from '../continuity/continuity-image-assets';
+import { ContinuityFeatureImage } from '../continuity/continuity-feature-image';
 
 interface CastMemberDetailsTabProps {
   projectName: string;
@@ -47,10 +47,10 @@ export function CastMemberDetailsTab({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [voicePlaying, setVoicePlaying] = useState(false);
   const profilePreview = profileAsset
-    ? castPreviewImageForAsset(projectName, profileAsset)
+    ? continuityPreviewImage(projectName, profileAsset, 'Profile')
     : null;
   const profileAspectRatio = profileAsset
-    ? castImageAssetAspectRatio(profileAsset, 1)
+    ? continuityImageAspectRatio(profileAsset, 1)
     : 1;
   const facts = [
     ['Role', castMember.role],
@@ -102,7 +102,7 @@ export function CastMemberDetailsTab({
           )}
         >
           {castMember.isVoiceOver ? null : (
-            <CastFeatureImage
+            <ContinuityFeatureImage
               image={profilePreview}
               aspectClassName='aspect-square'
               aspectRatio={profileAspectRatio}
@@ -186,56 +186,5 @@ export function CastMemberDetailsTab({
         onOpenChange={(open) => !open && setPreviewImage(null)}
       />
     </>
-  );
-}
-
-function CastFeatureImage({
-  image,
-  aspectClassName,
-  aspectRatio,
-  imageClassName,
-  emptyLabel,
-  onOpenImage,
-}: {
-  image: PreviewImage | null;
-  aspectClassName: string;
-  aspectRatio: number;
-  imageClassName?: string;
-  emptyLabel: string;
-  onOpenImage: (image: PreviewImage) => void;
-}) {
-  const {
-    aspectRatioStyle,
-    onImageLoad,
-  } = useImageAspectRatio(aspectRatio, image?.src ?? null);
-  return (
-    <div
-      className={cn(
-        'overflow-hidden rounded-md border border-border/40 bg-card shadow-[0_18px_45px_rgba(0,0,0,0.24)]',
-        aspectClassName
-      )}
-      style={aspectRatioStyle}
-    >
-      {image ? (
-        <Button
-          type='button'
-          variant='ghost'
-          className='block h-full w-full rounded-none p-0 hover:bg-transparent'
-          onClick={() => onOpenImage(image)}
-        >
-          <img
-            src={image.src}
-            alt={image.alt}
-            className={cn('h-full w-full object-cover', imageClassName)}
-            onLoad={onImageLoad}
-          />
-        </Button>
-      ) : (
-        <div className='flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground'>
-          <ImageOff className='h-5 w-5' />
-          <span>{emptyLabel}</span>
-        </div>
-      )}
-    </div>
   );
 }

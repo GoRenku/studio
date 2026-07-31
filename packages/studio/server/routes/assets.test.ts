@@ -40,6 +40,39 @@ describe('assets Hono route', () => {
     });
   });
 
+  it('accepts Prop ownership on the generic Asset page', async () => {
+    const listAssetPage = vi.fn(
+      async () => ({
+        items: [],
+        nextCursor: null,
+        selectedAssetId: null,
+      })
+    );
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData: {
+          ...fakeProjectDataService(),
+          listAssetPage,
+        },
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    const response = await app.request(
+      '/constantinople/assets?ownerKind=prop&ownerId=prop_cannon'
+    );
+
+    expect(response.status).toBe(200);
+    expect(listAssetPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        owner: { kind: 'prop', id: 'prop_cannon' },
+      })
+    );
+  });
+
   it('maps Shot candidate ownership and returns browser-safe file URLs', async () => {
     const shotAsset = {
       ...makeAsset('asset_shot_candidate'),
@@ -466,6 +499,78 @@ describe('assets Hono route', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('image/png');
     await expect(response.text()).resolves.toBe('shot bytes');
+  });
+
+  it('forwards Prop asset list, Hero selection, clear, and discard intent to Core', async () => {
+    const listAssetPage = vi.fn(fakeProjectDataService().listAssetPage);
+    const selectAsset = vi.fn(fakeProjectDataService().selectAsset);
+    const clearAssetSelection = vi.fn(
+      fakeProjectDataService().clearAssetSelection
+    );
+    const discardAsset = vi.fn(fakeProjectDataService().discardAsset);
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData: {
+          ...fakeProjectDataService(),
+          listAssetPage,
+          selectAsset,
+          clearAssetSelection,
+          discardAsset,
+        },
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    expect(
+      (await app.request('/constantinople/props/prop_cannon/assets')).status
+    ).toBe(200);
+    expect(
+      (
+        await app.request(
+          '/constantinople/props/prop_cannon/selected-hero/asset_cannon',
+          { method: 'POST' }
+        )
+      ).status
+    ).toBe(200);
+    expect(
+      (
+        await app.request('/constantinople/props/prop_cannon/selected-hero', {
+          method: 'DELETE',
+        })
+      ).status
+    ).toBe(200);
+    expect(
+      (
+        await app.request(
+          '/constantinople/props/prop_cannon/assets/asset_cannon',
+          { method: 'DELETE' }
+        )
+      ).status
+    ).toBe(200);
+
+    expect(listAssetPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectName: 'constantinople',
+        owner: { kind: 'prop', id: 'prop_cannon' },
+      })
+    );
+    expect(selectAsset).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      target: { kind: 'prop', id: 'prop_cannon' },
+      assetId: 'asset_cannon',
+    });
+    expect(clearAssetSelection).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      target: { kind: 'prop', id: 'prop_cannon' },
+    });
+    expect(discardAsset).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      owner: { kind: 'prop', id: 'prop_cannon' },
+      assetId: 'asset_cannon',
+    });
   });
 
   it('rejects a malformed asset target', async () => {

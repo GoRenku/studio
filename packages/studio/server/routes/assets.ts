@@ -4,7 +4,7 @@ import { readAssetPageRequest } from '../http/asset-request.js';
 import {
   readProjectAssetFileByIdResponse,
 } from '../http/asset-file-response.js';
-import { toStudioShotAssetResponse } from '../http/shot-plan-responses.js';
+import { toStudioAssetResponse } from '../http/asset-responses.js';
 import { readPageRequest } from '../http/pagination-request.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
@@ -27,15 +27,12 @@ export function createAssetsRoute({
           ...request,
         });
         return c.json({
-          page:
-            request.owner.kind === 'shot'
-              ? {
-                  ...page,
-                  items: page.items.map((asset) =>
-                    toStudioShotAssetResponse(projectName, asset)
-                  ),
-                }
-              : page,
+          page: {
+            ...page,
+            items: page.items.map((asset) =>
+              toStudioAssetResponse(projectName, asset)
+            ),
+          },
         });
       } catch (error) {
         return projectErrorResponse(c, error);
@@ -64,7 +61,13 @@ export function createAssetsRoute({
           owner: { kind: 'castMember', id: castMemberId },
           ...readPageRequest(c.req.query()),
         });
-        return c.json({ assets: page.items, page });
+        const responsePage = {
+          ...page,
+          items: page.items.map((asset) =>
+            toStudioAssetResponse(projectName, asset)
+          ),
+        };
+        return c.json({ assets: responsePage.items, page: responsePage });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -172,7 +175,13 @@ export function createAssetsRoute({
           owner: { kind: 'location', id: locationId },
           ...readPageRequest(c.req.query()),
         });
-        return c.json({ assets: page.items, page });
+        const responsePage = {
+          ...page,
+          items: page.items.map((asset) =>
+            toStudioAssetResponse(projectName, asset)
+          ),
+        };
+        return c.json({ assets: responsePage.items, page: responsePage });
       } catch (error) {
         return projectErrorResponse(c, error);
       }
@@ -213,6 +222,69 @@ export function createAssetsRoute({
         const report = await projectData.discardAsset({
           projectName,
           owner: { kind: 'location', id: locationId },
+          assetId,
+        });
+        return c.json(report);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .get('/props/:propId/assets', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const propId = c.req.param('propId') as string;
+        const page = await projectData.listAssetPage({
+          projectName,
+          owner: { kind: 'prop', id: propId },
+          ...readPageRequest(c.req.query()),
+        });
+        const responsePage = {
+          ...page,
+          items: page.items.map((asset) =>
+            toStudioAssetResponse(projectName, asset)
+          ),
+        };
+        return c.json({ assets: responsePage.items, page: responsePage });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .post('/props/:propId/selected-hero/:assetId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const propId = c.req.param('propId') as string;
+        const assetId = c.req.param('assetId') as string;
+        const report = await projectData.selectAsset({
+          projectName,
+          target: { kind: 'prop', id: propId },
+          assetId,
+        });
+        return c.json(report);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/props/:propId/selected-hero', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const propId = c.req.param('propId') as string;
+        const report = await projectData.clearAssetSelection({
+          projectName,
+          target: { kind: 'prop', id: propId },
+        });
+        return c.json(report);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/props/:propId/assets/:assetId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const propId = c.req.param('propId') as string;
+        const assetId = c.req.param('assetId') as string;
+        const report = await projectData.discardAsset({
+          projectName,
+          owner: { kind: 'prop', id: propId },
           assetId,
         });
         return c.json(report);

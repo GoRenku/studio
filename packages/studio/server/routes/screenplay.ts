@@ -1,7 +1,3 @@
-import {
-  studioCastMemberSurfaceResourceKey,
-  studioCastNavigationResourceKey,
-} from '@gorenku/studio-core/server';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
@@ -11,15 +7,10 @@ import {
 import { readPageRequest } from '../http/pagination-request.js';
 import {
   toActStoryboardResourceResponse,
-  toCastMemberResourceResponse,
-  toCastOverviewResourceResponse,
-  toLocationOverviewResourceResponse,
-  toLocationResourceResponse,
   toSceneNarrativeResourceResponse,
   toSceneBeatSheetResourceResponse,
   toSequenceResourceResponse,
 } from '../http/screenplay-responses.js';
-import { readCastMemberVoiceOverRequest } from '../http/cast-member-request.js';
 import {
   readSceneDialogueAudioEstimateRequest,
   readSceneDialogueAudioGenerateRequest,
@@ -37,93 +28,6 @@ export function createScreenplayRoute({
   requireToken,
 }: CreateScreenplayRouteOptions) {
   return new Hono()
-    .get('/screenplay/cast', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const resource = await projectData.readCastOverviewResource({
-          projectName,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({
-          resource: toCastOverviewResourceResponse(projectName, resource),
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/screenplay/cast/:castMemberId', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const castMemberId = c.req.param('castMemberId') as string;
-        const resource = await projectData.readCastMemberResource({
-          projectName,
-          castMemberId,
-        });
-        return c.json({
-          resource: toCastMemberResourceResponse(projectName, resource),
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .patch(
-      '/screenplay/cast/:castMemberId/voice-over',
-      requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const castMemberId = c.req.param('castMemberId') as string;
-          const request = readCastMemberVoiceOverRequest(await c.req.json());
-          await projectData.updateCastMemberVoiceOverStatus({
-            projectName,
-            castMemberId,
-            isVoiceOver: request.isVoiceOver,
-          });
-          const resource = await projectData.readCastMemberResource({
-            projectName,
-            castMemberId,
-          });
-          return c.json({
-            resource: toCastMemberResourceResponse(projectName, resource),
-            resourceKeys: [
-              studioCastNavigationResourceKey(),
-              studioCastMemberSurfaceResourceKey(castMemberId),
-            ],
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
-    .get('/screenplay/locations', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const resource = await projectData.readLocationOverviewResource({
-          projectName,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({
-          resource: toLocationOverviewResourceResponse(projectName, resource),
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/screenplay/locations/:locationId', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const locationId = c.req.param('locationId') as string;
-        const resource = await projectData.readLocationResource({
-          projectName,
-          locationId,
-        });
-        return c.json({
-          resource: toLocationResourceResponse(projectName, resource),
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
     .get('/screenplay/story-arc', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

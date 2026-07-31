@@ -377,6 +377,10 @@ function focusSummary(current: StudioCurrent): string | null {
       return 'Locations';
     case 'location':
       return `Location ${context.name}`;
+    case 'props':
+      return 'Props';
+    case 'prop':
+      return `Prop ${context.name}`;
     case 'storyArc':
       return 'Story Arc';
     case 'sequence':

@@ -503,7 +503,7 @@ describe('App', () => {
       }
       if (
         url ===
-        '/studio-api/projects/constantinople/screenplay/cast/cast_narrator'
+        '/studio-api/projects/constantinople/continuity/cast/cast_narrator'
       ) {
         return jsonResponse({
           resource: makeCastMemberResource({
@@ -532,7 +532,7 @@ describe('App', () => {
       }
       if (
         url ===
-        '/studio-api/projects/constantinople/screenplay/cast/cast_mehmed'
+        '/studio-api/projects/constantinople/continuity/cast/cast_mehmed'
       ) {
         return mehmedAssets.promise;
       }
@@ -1308,6 +1308,30 @@ describe('App', () => {
     expect(screen.getAllByText('Cast').length).toBeGreaterThan(0);
   });
 
+  it('opens URL-owned Props overview and detail surfaces from the sidebar', async () => {
+    window.history.pushState({}, '', '/projects/constantinople/props');
+    const project = makeProject();
+    project.counts.props = 1;
+    project.navigation.props.items = [
+      {
+        id: 'prop_cannon',
+        handle: 'field-cannon',
+        name: 'Field Cannon',
+      },
+    ];
+    mockStudioFetch({ project });
+
+    renderApp();
+
+    const card = await screen.findByRole('button', { name: 'Field Cannon' });
+    fireEvent.click(card);
+    await screen.findByText('Details');
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/props/prop_cannon'
+    );
+    expect(screen.getByText('No prop hero image yet')).toBeTruthy();
+  });
+
   it('opens Project Information for projects without cover images', async () => {
     window.history.pushState({}, '', '/projects/constantinople');
     mockStudioFetch({ project: makeProject({ coverUrl: null }) });
@@ -1397,7 +1421,7 @@ function mockStudioFetch(input: {
     }
     if (
       url ===
-      '/studio-api/projects/constantinople/screenplay/cast'
+      '/studio-api/projects/constantinople/continuity/cast'
     ) {
       return jsonResponse({
         resource: {
@@ -1421,7 +1445,7 @@ function mockStudioFetch(input: {
     }
     if (
       url ===
-      '/studio-api/projects/constantinople/screenplay/cast/cast_narrator'
+      '/studio-api/projects/constantinople/continuity/cast/cast_narrator'
     ) {
       return jsonResponse({
         resource: makeCastMemberResource({
@@ -1448,10 +1472,49 @@ function mockStudioFetch(input: {
         page: { items: [asset], nextCursor: null },
       });
     }
-    if (url === '/studio-api/projects/constantinople/screenplay/locations') {
+    if (url === '/studio-api/projects/constantinople/continuity/locations') {
       return jsonResponse({
         resource: {
           locations: { items: [], nextCursor: null },
+        },
+      });
+    }
+    if (url === '/studio-api/projects/constantinople/continuity/props') {
+      return jsonResponse({
+        resource: {
+          props: {
+            items: input.project?.navigation.props.items ?? [],
+            nextCursor: null,
+          },
+        },
+      });
+    }
+    if (
+      url ===
+      '/studio-api/projects/constantinople/continuity/props/prop_cannon'
+    ) {
+      return jsonResponse({
+        resource: {
+          prop: {
+            id: 'prop_cannon',
+            handle: 'field-cannon',
+            name: 'Field Cannon',
+            description: 'A monumental bronze siege cannon.',
+          },
+        },
+      });
+    }
+    if (
+      url.startsWith(
+        '/studio-api/projects/constantinople/props/prop_cannon/assets'
+      )
+    ) {
+      return jsonResponse({
+        assets: [],
+        page: {
+          items: [],
+          nextCursor: null,
+          selectedAssetId: null,
         },
       });
     }
@@ -1557,6 +1620,21 @@ function makeSelectionContextResponse(selection: StudioSelection) {
         },
       },
       resourceKeys: [`surface:castMember:${selection.id}`],
+    };
+  }
+  if (selection.type === 'prop') {
+    return {
+      valid: true,
+      selection,
+      context: {
+        surface: 'prop',
+        prop: {
+          id: selection.id,
+          handle: 'field-cannon',
+          name: 'Field Cannon',
+        },
+      },
+      resourceKeys: [`surface:prop:${selection.id}`],
     };
   }
   if (selection.type === 'act') {
@@ -1681,6 +1759,7 @@ function makeProject(
       languages: 0,
       castMembers: 1,
       locations: 0,
+      props: 0,
       acts: 1,
       sequences: 1,
       scenes: 1,
@@ -1704,6 +1783,7 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
       nextCursor: null,
     },
     locations: { items: [], nextCursor: null },
+    props: { items: [], nextCursor: null },
     screenplay: {
       acts: {
         items: [
@@ -2053,8 +2133,7 @@ function makeStudioAsset(options: {
       {
         id: `${options.assetId}_file`,
         role: 'primary',
-        projectRelativePath:
-          `cast/${options.castMemberId}/${options.assetId}.png` as StudioAssetResponse['files'][number]['projectRelativePath'],
+        url: `/studio-api/projects/constantinople/assets/${options.assetId}/files/${options.assetId}_file`,
         mediaKind: 'image',
         mimeType: 'image/png',
         sizeBytes: 12,
@@ -2088,6 +2167,7 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
       languages: 0,
       castMembers: 1,
       locations: 0,
+      props: 0,
       acts: 1,
       sequences: 1,
       scenes: 1,

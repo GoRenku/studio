@@ -1,10 +1,13 @@
 import type {
   Asset,
+  AssetFile,
   ActNavigationRow,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
   LocationResource,
+  PropOverviewResource,
+  PropResource,
   InspirationFolder,
   InspirationFolderResource,
   InspirationResource,
@@ -65,7 +68,14 @@ export interface ProjectInformationLanguageUpdateRequest {
 }
 
 
-export type StudioAssetResponse = Asset;
+export interface StudioAssetFileResponse
+  extends Omit<AssetFile, 'projectRelativePath'> {
+  url: string;
+}
+
+export interface StudioAssetResponse extends Omit<Asset, 'files'> {
+  files: StudioAssetFileResponse[];
+}
 
 export type SceneDesignResourceResponse = SceneDesignResource;
 
@@ -87,9 +97,7 @@ export type CastMemberResourceResponse = Omit<
   firstImage?: ScreenplayImageReferenceWithHttp;
   voices: Array<
     Omit<CastMemberResource['voices'][number], 'sample'> & {
-      sample: Omit<Asset, 'files'> & {
-        files: Array<Asset['files'][number] & { url: string }>;
-      };
+      sample: StudioAssetResponse;
     }
   >;
 };
@@ -109,6 +117,21 @@ export type LocationOverviewResourceResponse = Omit<
 };
 
 export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
+  firstImage?: ScreenplayImageReferenceWithHttp;
+};
+
+export type PropOverviewResourceResponse = Omit<PropOverviewResource, 'props'> & {
+  props: {
+    items: Array<
+      PropOverviewResource['props']['items'][number] & {
+        firstImage?: ScreenplayImageReferenceWithHttp;
+      }
+    >;
+    nextCursor: string | null;
+  };
+};
+
+export type PropResourceResponse = Omit<PropResource, 'firstImage'> & {
   firstImage?: ScreenplayImageReferenceWithHttp;
 };
 

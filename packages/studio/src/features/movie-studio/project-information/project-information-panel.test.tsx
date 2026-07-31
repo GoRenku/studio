@@ -135,6 +135,7 @@ function makeProject(input: { title: string }): ProjectShellWithHttp {
       languages: 1,
       castMembers: 0,
       locations: 0,
+      props: 0,
       acts: 0,
       sequences: 0,
       scenes: 0,
@@ -142,6 +143,7 @@ function makeProject(input: { title: string }): ProjectShellWithHttp {
     navigation: {
       cast: { items: [], nextCursor: null },
       locations: { items: [], nextCursor: null },
+      props: { items: [], nextCursor: null },
       screenplay: {
         acts: { items: [], nextCursor: null },
       },

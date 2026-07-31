@@ -5,14 +5,11 @@ import type {
 } from '@/services/studio-project-contracts';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 import {
-  CAST_CHARACTER_SHEET_ROLES,
-  CAST_PROFILE_ROLE,
-  castImageAssetAspectRatio,
-  castImageAssetsForRole,
-  castImageAssetsForRoles,
-  castImageAssetUrl,
-  castPreviewImageForAsset,
-} from './cast-member-assets';
+  continuityImageAspectRatio,
+  continuityImageAssets,
+  continuityImageUrl,
+  continuityPreviewImage,
+} from '../continuity/continuity-image-assets';
 import { humanizeReferenceName } from './cast-reference-labels';
 import { CastVoiceSampleCard } from './cast-voice-sample-card';
 import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
@@ -39,11 +36,8 @@ export function CastMemberAssetsTab({
   onDeleteVoice,
 }: CastMemberAssetsTabProps) {
   const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
-  const profileAssets = castImageAssetsForRole(assets, CAST_PROFILE_ROLE);
-  const characterSheetAssets = castImageAssetsForRoles(
-    assets,
-    CAST_CHARACTER_SHEET_ROLES
-  );
+  const profileAssets = continuityImageAssets(assets, ['cast_profile']);
+  const characterSheetAssets = continuityImageAssets(assets, ['character_sheet']);
 
   return (
     <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
@@ -121,12 +115,13 @@ function CastAssetSection({
 }) {
   const selectable = Boolean(onTogglePick);
   const items = assets.map((asset) => {
-    const previewImage = castPreviewImageForAsset(
+    const previewImage = continuityPreviewImage(
       projectName,
-      asset
+      asset,
+      roleLabel
     );
     const selected = asset.id === selectedAssetId;
-    const imageUrl = castImageAssetUrl(projectName, asset);
+    const imageUrl = continuityImageUrl(projectName, asset);
     const title = asset.referenceName
       ? humanizeReferenceName(asset.referenceName)
       : undefined;
@@ -144,7 +139,7 @@ function CastAssetSection({
           : null,
         frame: {
           kind: 'ratio' as const,
-          aspectRatio: castImageAssetAspectRatio(asset, fallbackAspectRatio),
+          aspectRatio: continuityImageAspectRatio(asset, fallbackAspectRatio),
           detectFromImage: true,
         },
         presentation: {

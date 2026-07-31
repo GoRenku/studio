@@ -21,7 +21,7 @@ import { readProjectInformationResourceFromDatabase } from '../database/access/p
 import {
   readActiveLocationDesignDocument,
   toLocationDesignSummary,
-} from '../database/access/department-design.js';
+} from '../database/access/location-designs.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   allocateDepartmentId,
@@ -42,9 +42,12 @@ import {
   type LocationDeleteDependencySummary,
   replaceLocationAuthoringRecords,
 } from '../database/access/locations.js';
+import { listPropRecords } from '../database/access/props.js';
+import { listAssetsInSession } from '../assets/projection.js';
 import {
   studioLocationNavigationResourceKey,
   studioLocationSurfaceResourceKey,
+  studioProjectShellResourceKey,
 } from '../studio-coordination/resource-keys.js';
 
 export async function listLocations(
@@ -72,6 +75,9 @@ export async function readLocationContext(
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveLocationDesignDocument(session, input.locationId);
     const assets = listLocationAssetRoleRecords(session, input.locationId);
+    const ownedAssets = listAssetsInSession(session, {
+      owner: { kind: 'location', id: input.locationId },
+    });
     return {
       valid: true,
       warnings: [],
@@ -95,7 +101,7 @@ export async function readLocationContext(
         : null,
       scenes: screenplay ? locationScenes(screenplay, input.locationId) : [],
       activeLookbook: null,
-      assets: [],
+      assets: ownedAssets,
       assetTypeCounts: typeCounts(assets),
       generationReadiness: {
         locationSheet: true,
@@ -131,6 +137,9 @@ export async function applyLocationOperations(
     const existing = listLocationsFromSession(session);
     const castHandles = new Map(
       listCastMemberRecords(session).map((castMember) => [castMember.handle, castMember.id])
+    );
+    const propHandles = new Map(
+      listPropRecords(session).map((prop) => [prop.handle, prop.id])
     );
     const screenplay = readScreenplayDocumentFromSession(session);
     const referencedLocationIds = screenplay
@@ -231,7 +240,7 @@ export async function applyLocationOperations(
       }
     });
 
-    validateLocationDraft({ locations: draft, castHandles, issues, warnings });
+    validateLocationDraft({ locations: draft, castHandles, propHandles, issues, warnings });
     throwIfDepartmentIssues(issues);
 
     if (!input.dryRun) {
@@ -309,12 +318,16 @@ function toLocation(input: LocationInput): Location {
 function validateLocationDraft(input: {
   locations: Location[];
   castHandles: Map<string, string>;
+  propHandles: Map<string, string>;
   issues: DiagnosticIssue[];
   warnings: DiagnosticIssue[];
 }): void {
   const handles = new Map<string, string[]>();
   input.castHandles.forEach((_castMemberId, handle) => {
     handles.set(handle, ['cast', handle]);
+  });
+  input.propHandles.forEach((_propId, handle) => {
+    handles.set(handle, ['props', handle]);
   });
   const names = new Map<string, string[]>();
   input.locations.forEach((location, index) => {
@@ -326,7 +339,7 @@ function validateLocationDraft(input: {
           'PROJECT_DATA209',
           `Duplicate handle: ${location.handle}.`,
           { path: [...path, 'handle'], context: `First seen at ${firstHandlePath.join('.')}` },
-          'Use a unique handle across cast and locations.'
+          'Use a unique handle across Cast Members, Locations, and Props.'
         )
       );
     } else {
@@ -350,7 +363,10 @@ function validateLocationDraft(input: {
 }
 
 function locationResourceKeysForChanges(changes: DepartmentCommandChange[]): string[] {
-  const keys = new Set(locationResourceKeys());
+  const keys = new Set([
+    studioProjectShellResourceKey(),
+    ...locationResourceKeys(),
+  ]);
   changes.forEach((change) => {
     const locationId = change.locationId;
     if (typeof locationId === 'string') {

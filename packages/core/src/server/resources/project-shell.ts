@@ -12,6 +12,7 @@ import {
   listCastNavigationPage,
   listActNavigationPage,
   listLocationNavigationPage,
+  listPropNavigationPage,
   type ListNavigationPageInput,
 } from '../database/access/navigation.js';
 import { readProjectCounts } from '../database/access/project-counts.js';
@@ -53,6 +54,7 @@ export function readProjectShellProjection(
   };
   const castPage = listCastNavigationPage(session, input);
   const locationPage = listLocationNavigationPage(session, input);
+  const propPage = listPropNavigationPage(session, input);
   const counts = readProjectCounts(session);
 
   const actPage = listActNavigationPage(session, input);
@@ -72,6 +74,7 @@ export function readProjectShellProjection(
     navigation: {
       cast: castPage,
       locations: locationPage,
+      props: propPage,
       screenplay: {
         acts: actPage,
       },

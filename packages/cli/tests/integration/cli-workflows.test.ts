@@ -3035,6 +3035,29 @@ describe('renku CLI', () => {
       diagnostics: [expect.objectContaining({ code: 'DIRECTOR_CONTEXT002' })],
     });
     expect(stderr).toEqual([]);
+
+    stdout = [];
+    stderr = [];
+    const propSelectionExitCode = await runRenkuCli(
+      [
+        'director',
+        'context',
+        '--selection',
+        JSON.stringify({ type: 'props' }),
+        '--json',
+      ],
+      { homeDir, io: captureIo(stdout, stderr) }
+    );
+
+    expect(propSelectionExitCode).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      currentSelection: {
+        valid: true,
+        selection: { type: 'props' },
+        context: { surface: 'props' },
+      },
+    });
+    expect(stderr).toEqual([]);
   });
 
   async function initializeStorageRoot(): Promise<string> {

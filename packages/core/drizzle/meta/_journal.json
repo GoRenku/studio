@@ -491,6 +491,13 @@
       "when": 1785411576718,
       "tag": "0069_shot_plan_video_generation",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "6",
+      "when": 1785437751146,
+      "tag": "0070_add_props_continuity_subjects",
+      "breakpoints": true
     }
   ]
 }

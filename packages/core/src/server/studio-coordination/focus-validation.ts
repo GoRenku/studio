@@ -6,6 +6,7 @@ import type {
   CastMember,
   Location,
   Project,
+  Prop,
   ScenePanelTab,
   Scene,
   Sequence,
@@ -207,6 +208,44 @@ export function resolveStudioSelectionForProject(
     };
   }
 
+  if (selection.type === 'props') {
+    return {
+      ok: true,
+      selection,
+      context: {
+        kind: 'props',
+        props: project.props.map((prop) => ({
+          id: prop.id,
+          name: prop.name,
+          description: prop.description,
+        })),
+      },
+    };
+  }
+
+  if (selection.type === 'prop') {
+    const prop = findProp(project, selection.id);
+    if (!prop) {
+      return missingSelection(
+        selection,
+        'STUDIO_COORDINATION041',
+        `Requested Prop '${selection.id}' was not found.`,
+        ['focus', 'selection', 'id'],
+        'Select an existing Prop before requesting Studio focus.'
+      );
+    }
+    return {
+      ok: true,
+      selection,
+      context: {
+        kind: 'prop',
+        id: prop.id,
+        name: prop.name,
+        description: prop.description,
+      },
+    };
+  }
+
   if (selection.type === 'sequence') {
     const sequence = findSequence(project, selection.id);
     if (!sequence) {
@@ -325,6 +364,10 @@ function findCastMember(project: Project, id: string): CastMember | null {
 
 function findLocation(project: Project, id: string): Location | null {
   return project.locations.find((location) => location.id === id) ?? null;
+}
+
+function findProp(project: Project, id: string): Prop | null {
+  return project.props.find((prop) => prop.id === id) ?? null;
 }
 
 function missingSelection(

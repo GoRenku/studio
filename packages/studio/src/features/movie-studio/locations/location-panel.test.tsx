@@ -10,7 +10,7 @@ import {
   deleteLocationAsset,
   readLocationAssets,
 } from '@/services/studio-project-assets-api';
-import { readLocationResource } from '@/services/studio-screenplay-api';
+import { readLocationResource } from '@/services/studio-continuity-api';
 import { LocationPanel } from './location-panel';
 import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
 
@@ -39,7 +39,7 @@ vi.mock('@/services/studio-project-assets-api', () => ({
   readLocationAssets: vi.fn(),
 }));
 
-vi.mock('@/services/studio-screenplay-api', () => ({
+vi.mock('@/services/studio-continuity-api', () => ({
   readLocationResource: vi.fn(),
 }));
 
@@ -296,7 +296,7 @@ function imageFile(
   return {
     id,
     role,
-    projectRelativePath: `locations/gate/${id}.png` as never,
+    url: `/studio-api/projects/constantinople/assets/${id}/files/${id}`,
     mediaKind: 'image',
     mimeType: 'image/png',
     sizeBytes: 123,

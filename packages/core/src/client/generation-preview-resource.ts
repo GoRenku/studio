@@ -48,6 +48,8 @@ export interface GenerationPreviewSubject {
   takeLabel?: string;
   shotLabel?: string;
   castMemberLabel?: string;
+  locationLabel?: string;
+  propLabel?: string;
 }
 
 export interface GenerationPreviewModel {

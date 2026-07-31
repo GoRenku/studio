@@ -106,7 +106,7 @@ describe('movie studio selection context Hono route', () => {
       {
         method: 'POST',
         body: JSON.stringify({
-          selection: { type: 'prop', id: 'prop_1' },
+          selection: { type: 'unsupported-subject', id: 'subject_1' },
         }),
         headers: { 'Content-Type': 'application/json' },
       }

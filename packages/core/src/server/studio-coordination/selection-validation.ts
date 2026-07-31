@@ -58,6 +58,7 @@ export function parseStudioSelection(
     case 'trash':
     case 'cast':
     case 'locations':
+    case 'props':
     case 'storyArc':
       validateFields(record, ['type'], path, context, issues);
       selection = { type };
@@ -92,7 +93,8 @@ export function parseStudioSelection(
     case 'act':
     case 'sequence':
     case 'castMember':
-    case 'location': {
+    case 'location':
+    case 'prop': {
       validateFields(record, ['type', 'id'], path, context, issues);
       const id = readRequiredString(record, 'id', path, context, issues);
       if (id !== null) {

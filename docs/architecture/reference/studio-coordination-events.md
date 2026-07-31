@@ -637,8 +637,10 @@ than direct `window` listeners. Current examples include:
 - `project-information`;
 - `navigation:cast`;
 - `navigation:locations`;
+- `navigation:props`;
 - `surface:castMember:<castMemberId>`;
 - `surface:location:<locationId>`;
+- `surface:prop:<propId>`;
 - `surface:visual-language:lookbook:<lookbookId>`;
 - `surface:scene:<sceneId>:beats`;
 - `surface:scene:<sceneId>:dialogue-audio`.
@@ -650,6 +652,7 @@ Durable media attachments invalidate their current owner surface:
 | Lookbook image, Video Lookbook Sheet, or Storyboard Lookbook Sheet | `surface:visual-language:lookbook:<lookbookId>` |
 | Cast Character Sheet, Profile, Voice sample, or accepted image edit | `surface:castMember:<castMemberId>` |
 | Location Sheet, Hero, or accepted image edit | `surface:location:<locationId>` |
+| Prop Sheet, Hero, or accepted image edit | `surface:prop:<propId>` |
 | Scene Beat storyboard image | `surface:scene:<sceneId>:beats` |
 | Scene Dialogue Audio | `surface:scene:<sceneId>:dialogue-audio` |
 
@@ -870,6 +873,8 @@ export type StudioSelection =
   | { type: 'castMember'; id: string }
   | { type: 'locations' }
   | { type: 'location'; id: string }
+  | { type: 'props' }
+  | { type: 'prop'; id: string }
   | { type: 'storyArc' }
   | { type: 'act'; id: string }
   | { type: 'sequence'; id: string }

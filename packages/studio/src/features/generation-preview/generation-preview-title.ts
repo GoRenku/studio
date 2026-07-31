@@ -9,6 +9,8 @@ const GENERATION_PREVIEW_TITLES = {
   'cast.profile': 'Cast Profile Generation Preview',
   'location.sheet': 'Location Sheet Generation Preview',
   'location.hero': 'Location Hero Generation Preview',
+  'prop.sheet': 'Prop Sheet Generation Preview',
+  'prop.hero': 'Prop Hero Generation Preview',
   'scene.storyboard-sheet': 'Scene Storyboard Sheet Generation Preview',
   'shot.image': 'Shot Image Generation Preview',
   'image.create': 'Image Create Generation Preview',

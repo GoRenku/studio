@@ -38,6 +38,8 @@ describe('generic generation model listing', () => {
       'scene.dialogue-audio',
       'location.sheet',
       'location.hero',
+      'prop.sheet',
+      'prop.hero',
       'scene.storyboard-sheet',
       'shot.image',
     ]);
@@ -76,6 +78,8 @@ describe('generic generation model listing', () => {
       purpose('scene.dialogue-audio', 'sceneDialogue', 'audio'),
       purpose('location.sheet', 'location', 'image', [], [aspectRatio('16:9'), quality('high')], gptImage2),
       purpose('location.hero', 'location', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
+      purpose('prop.sheet', 'prop', 'image', [], [aspectRatio('16:9'), quality('high')], gptImage2),
+      purpose('prop.hero', 'prop', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
       purpose('scene.storyboard-sheet', 'scene', 'image', [aspectRatio('4:3'), quality('high')], [], gptImage2),
       purpose('shot.image', 'shot', 'image', [], [aspectRatio('project'), quality('high')]),
     ]);

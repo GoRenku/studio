@@ -19,6 +19,8 @@ export type ProjectAssetFileDestination =
     }
   | { kind: 'location.sheet'; locationId: string; titleHint?: string }
   | { kind: 'location.hero'; locationId: string; heroName?: string }
+  | { kind: 'prop.sheet'; propId: string; titleHint?: string }
+  | { kind: 'prop.hero'; propId: string }
   | { kind: 'visualLanguage.lookbookImage'; titleHint?: string }
   | { kind: 'visualLanguage.lookbookSheet'; titleHint?: string }
   | {

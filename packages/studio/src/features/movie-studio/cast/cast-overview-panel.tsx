@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import type { StudioSelection } from '@gorenku/studio-core/client';
-import type { CastOverviewResourceResponse } from '@/services/studio-project-contracts';
-import { readCastOverviewResource } from '@/services/studio-screenplay-api';
+import { readCastOverviewResource } from '@/services/studio-continuity-api';
 import {
   matchesCastOverviewResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { MediaCard } from '@/ui/media-card/media-card';
-import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
+import { ContinuityOverviewGrid } from '../continuity/continuity-overview-grid';
+import { useContinuityResource } from '../continuity/use-continuity-resource';
 
 interface CastOverviewPanelProps {
   projectName: string;
@@ -15,32 +14,19 @@ interface CastOverviewPanelProps {
 }
 
 export function CastOverviewPanel({ projectName, onSelect }: CastOverviewPanelProps) {
-  const [resource, setResource] = useState<CastOverviewResourceResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [resourceRevision, setResourceRevision] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    void readCastOverviewResource(projectName)
-      .then((nextResource) => {
-        if (!cancelled) {
-          setResource(nextResource);
-        }
-      })
-      .catch((loadError) => {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Unable to load cast.');
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [projectName, resourceRevision]);
+  const readResource = useCallback(
+    () => readCastOverviewResource(projectName),
+    [projectName]
+  );
+  const { resource, error, refresh } = useContinuityResource({
+    read: readResource,
+    fallbackErrorMessage: 'Unable to load cast.',
+  });
 
   useStudioResourceRefresh({
     projectName,
     matches: matchesCastOverviewResource,
-    onRefresh: () => setResourceRevision((current) => current + 1),
+    onRefresh: refresh,
   });
 
   if (error) {
@@ -51,46 +37,25 @@ export function CastOverviewPanel({ projectName, onSelect }: CastOverviewPanelPr
   }
 
   return (
-    <MediaCardGrid minimumCardWidthPx={260} gap='roomy'>
-      {resource.cast.items.map((castMember) => {
-        const imageAlt = `${castMember.name} profile image`;
-        return (
-          <MediaCard
-            key={castMember.id}
-            media={
-              castMember.firstImage
-                ? {
-                    kind: 'image',
-                    src: castMember.firstImage.url,
-                    alt: imageAlt,
-                    fit: 'cover',
-                    effect: 'zoom-on-hover',
-                  }
-                : null
+    <ContinuityOverviewGrid
+      aspectRatio={1}
+      onSelect={onSelect}
+      cards={resource.cast.items.map((castMember) => ({
+        id: castMember.id,
+        name: castMember.name,
+        description: castMember.role ?? 'Cast member',
+        image: castMember.firstImage
+          ? {
+              url: castMember.firstImage.url,
+              alt: `${castMember.name} profile image`,
             }
-            frame={{ kind: 'ratio', aspectRatio: 1 }}
-            presentation={{
-              kind: 'overlay',
-              copy: {
-                title: castMember.name,
-                description: castMember.role ?? 'Cast member',
-              },
-            }}
-            activation={{
-              kind: 'callback',
-              label: castMember.name,
-              onActivate: () =>
-                onSelect({ type: 'castMember', id: castMember.id }),
-            }}
-            emptyState={{
-              kind:
-                castMember.isVoiceOver && !castMember.firstImage
-                  ? 'waveform'
-                  : 'image',
-            }}
-          />
-        );
-      })}
-    </MediaCardGrid>
+          : undefined,
+        selection: { type: 'castMember', id: castMember.id },
+        emptyKind:
+          castMember.isVoiceOver && !castMember.firstImage
+            ? 'waveform'
+            : 'image',
+      }))}
+    />
   );
 }

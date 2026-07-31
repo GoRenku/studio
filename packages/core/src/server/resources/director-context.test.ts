@@ -138,6 +138,79 @@ describe('readDirectorContext', () => {
     );
   });
 
+  it('reports missing Prop Sheets independently from Location Sheet readiness', async () => {
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const screenplay = await projectData.readScreenplay({ homeDir });
+    const propReport = await projectData.applyPropOperations({
+      homeDir,
+      document: {
+        kind: 'propOperations',
+        operations: [
+          {
+            operation: 'prop.add',
+            prop: {
+              key: 'field-cannon',
+              handle: 'field-cannon',
+              name: 'Field Cannon',
+            },
+          },
+        ],
+      },
+    });
+    const propId = propReport.generatedIds?.[0]?.id as string;
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(
+      path.join(created.projectPath, 'tmp', 'location-sheet.png'),
+      'image'
+    );
+    for (const location of screenplay.screenplay!.locations) {
+      await projectData.attachGenerationMedia({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: 'location.sheet',
+        target: { kind: 'location', id: location.id as string },
+        sourceProjectRelativePath: 'tmp/location-sheet.png',
+      });
+    }
+
+    const report = await projectData.readDirectorContext({ homeDir });
+
+    expect(report.productionDesign).toMatchObject({
+      everyLocationHasEnvironmentSheet: true,
+      everyPropHasPropSheet: false,
+      missingEnvironmentSheetLocationIds: [],
+      missingPropSheetPropIds: [propId],
+    });
+    expect(report.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'DIRECTOR_CONTEXT014',
+          location: expect.objectContaining({
+            path: ['productionDesign', 'missingPropSheetPropIds'],
+          }),
+        }),
+      ])
+    );
+    expect(report.diagnostics.map((issue) => issue.code)).not.toContain(
+      'DIRECTOR_CONTEXT006'
+    );
+    expect(report.nextSteps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'design-props',
+          command:
+            'renku generation context --purpose prop.sheet --target prop:<prop-id> --json',
+        }),
+      ])
+    );
+    expect(report.nextSteps.map((step) => step.id)).not.toContain(
+      'design-production'
+    );
+  });
+
   async function createSampleProjectAndReadSceneId(): Promise<string | null> {
     return (await createSampleProjectAndReadScene())?.sceneId ?? null;
   }

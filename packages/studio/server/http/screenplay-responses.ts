@@ -1,12 +1,7 @@
 import type {
-  Asset,
   ActStoryboardResource,
   ActStoryboardSequence,
   ActStoryboardBeat,
-  CastMemberResource,
-  CastOverviewResource,
-  LocationOverviewResource,
-  LocationResource,
   SceneNarrativeResource,
   SceneBeatSheetResource,
   ScreenplayImageReference,
@@ -15,51 +10,6 @@ import type {
   SequenceSceneRow,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
-
-export type CastOverviewResourceResponse = Omit<CastOverviewResource, 'cast'> & {
-  cast: {
-    items: Array<
-      CastOverviewResource['cast']['items'][number] & {
-        firstImage?: ScreenplayImageReferenceWithHttp;
-      }
-    >;
-    nextCursor: string | null;
-  };
-};
-
-export type CastMemberResourceResponse = Omit<
-  CastMemberResource,
-  'firstImage' | 'voices'
-> & {
-  firstImage?: ScreenplayImageReferenceWithHttp;
-  voices: Array<
-    Omit<CastMemberResource['voices'][number], 'sample'> & {
-      sample: AssetWithHttpFiles;
-    }
-  >;
-};
-
-type AssetWithHttpFiles = Omit<Asset, 'files'> & {
-  files: Array<Asset['files'][number] & { url: string }>;
-};
-
-export type LocationOverviewResourceResponse = Omit<
-  LocationOverviewResource,
-  'locations'
-> & {
-  locations: {
-    items: Array<
-      LocationOverviewResource['locations']['items'][number] & {
-        firstImage?: ScreenplayImageReferenceWithHttp;
-      }
-    >;
-    nextCursor: string | null;
-  };
-};
-
-export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
-  firstImage?: ScreenplayImageReferenceWithHttp;
-};
 
 export type StoryArcResourceResponse = StoryArcResource;
 export type SceneNarrativeResourceResponse = Omit<
@@ -115,71 +65,6 @@ export type ActStoryboardResourceResponse = Omit<
 > & {
   sequences: ActStoryboardSequenceResponse[];
 };
-
-export function toCastOverviewResourceResponse(
-  projectName: string,
-  resource: CastOverviewResource
-): CastOverviewResourceResponse {
-  return {
-    cast: {
-      ...resource.cast,
-      items: resource.cast.items.map((castMember) => ({
-        ...castMember,
-        firstImage: castMember.firstImage
-          ? withImageUrl(projectName, castMember.firstImage)
-          : undefined,
-      })),
-    },
-  };
-}
-
-export function toCastMemberResourceResponse(
-  projectName: string,
-  resource: CastMemberResource
-): CastMemberResourceResponse {
-  return {
-    ...resource,
-    firstImage: resource.firstImage
-      ? withImageUrl(projectName, resource.firstImage)
-      : undefined,
-    voices: resource.voices.map((voice) => ({
-      ...voice,
-      sample: withAssetFileUrls(
-        projectName,
-        voice.sample
-      ),
-    })),
-  };
-}
-
-export function toLocationOverviewResourceResponse(
-  projectName: string,
-  resource: LocationOverviewResource
-): LocationOverviewResourceResponse {
-  return {
-    locations: {
-      ...resource.locations,
-      items: resource.locations.items.map((location) => ({
-        ...location,
-        firstImage: location.firstImage
-          ? withImageUrl(projectName, location.firstImage)
-          : undefined,
-      })),
-    },
-  };
-}
-
-export function toLocationResourceResponse(
-  projectName: string,
-  resource: LocationResource
-): LocationResourceResponse {
-  return {
-    ...resource,
-    firstImage: resource.firstImage
-      ? withImageUrl(projectName, resource.firstImage)
-      : undefined,
-  };
-}
 
 export function toSequenceResourceResponse(
   projectName: string,
@@ -277,18 +162,5 @@ function withImageUrl(
   return {
     ...image,
     url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
-  };
-}
-
-function withAssetFileUrls(
-  projectName: string,
-  asset: Asset
-): AssetWithHttpFiles {
-  return {
-    ...asset,
-    files: asset.files.map((file) => ({
-      ...file,
-      url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(asset.id)}/files/${encodeURIComponent(file.id)}`,
-    })),
   };
 }

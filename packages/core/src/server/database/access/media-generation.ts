@@ -274,6 +274,7 @@ function generationTarget(kind: string, id: string): GenerationTarget {
     kind === 'lookbook' ||
     kind === 'castMember' ||
     kind === 'location' ||
+    kind === 'prop' ||
     kind === 'scene' ||
     kind === 'shot' ||
     kind === 'sceneDialogue'

@@ -3,6 +3,7 @@ import {
   castMembers,
   acts,
   locations,
+  props,
   sceneLocations,
   sceneProductionNumbers,
   scenes,
@@ -12,6 +13,7 @@ import type {
   CastNavigationRow,
   ActNavigationRow,
   LocationNavigationRow,
+  PropNavigationRow,
   PageResponse,
   SceneNavigationRow,
   SequenceNavigationRow,
@@ -93,6 +95,35 @@ export function listLocationNavigationPage(
       handle: row.handle,
       name: row.name,
       timePeriod: nullable(row.timePeriod),
+    }),
+  });
+}
+
+export function listPropNavigationPage(
+  session: DatabaseSession,
+  input: ListNavigationPageInput
+): PageResponse<PropNavigationRow> {
+  return listPositionPage({
+    input,
+    selectPage: (limit, cursorCondition) =>
+      session.db
+        .select({
+          id: props.id,
+          handle: props.handle,
+          name: props.name,
+          position: props.position,
+        })
+        .from(props)
+        .where(cursorCondition)
+        .orderBy(asc(props.position), asc(props.id))
+        .limit(limit)
+        .all(),
+    positionColumn: props.position,
+    idColumn: props.id,
+    mapRow: (row) => ({
+      id: row.id,
+      handle: row.handle,
+      name: row.name,
     }),
   });
 }
@@ -238,6 +269,16 @@ export function readLocationNavigationRow(
         name: location.name,
         timePeriod: nullable(location.timePeriod),
       }
+    : null;
+}
+
+export function readPropNavigationRow(
+  session: DatabaseSession,
+  propId: string
+): PropNavigationRow | null {
+  const prop = session.db.select().from(props).where(eq(props.id, propId)).get();
+  return prop
+    ? { id: prop.id, handle: prop.handle, name: prop.name }
     : null;
 }
 

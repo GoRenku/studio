@@ -26,7 +26,21 @@ import {
   setActiveLocationDesign,
   validateLocationDesign,
   writeLocationDesign,
-} from '../commands/production-design-commands.js';
+} from '../commands/location-design-commands.js';
+import {
+  applyPropOperations,
+  listProps,
+  readProp,
+  readPropContext,
+  validatePropOperations,
+} from '../commands/prop-commands.js';
+import {
+  listPropDesigns,
+  readPropDesign,
+  setActivePropDesign,
+  validatePropDesign,
+  writePropDesign,
+} from '../commands/prop-design-commands.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createDepartmentDesignServiceWiring(): Pick<
@@ -40,6 +54,10 @@ export function createDepartmentDesignServiceWiring(): Pick<
   | 'validateLocationOperations' | 'applyLocationOperations'
   | 'listLocationDesigns' | 'readLocationDesign' | 'validateLocationDesign'
   | 'writeLocationDesign' | 'setActiveLocationDesign'
+    | 'listProps' | 'readProp' | 'readPropContext'
+    | 'validatePropOperations' | 'applyPropOperations'
+    | 'listPropDesigns' | 'readPropDesign' | 'validatePropDesign'
+    | 'writePropDesign' | 'setActivePropDesign'
 > {
   return {
     listCastMembers,
@@ -63,5 +81,15 @@ export function createDepartmentDesignServiceWiring(): Pick<
     validateLocationDesign,
     writeLocationDesign,
     setActiveLocationDesign,
+    listProps,
+    readProp,
+    readPropContext,
+    validatePropOperations,
+    applyPropOperations,
+    listPropDesigns,
+    readPropDesign,
+    validatePropDesign,
+    writePropDesign,
+    setActivePropDesign,
   };
 }

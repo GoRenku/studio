@@ -220,6 +220,18 @@ export function fakeProjectDataService(): NonNullable<
         },
       };
     },
+    async readPropOverviewResource() {
+      return { props: makeProjectShell(project).navigation.props };
+    },
+    async readPropResource() {
+      return {
+        prop: {
+          id: 'prop_test',
+          handle: 'prop-test',
+          name: 'Prop',
+        },
+      };
+    },
     async readStoryArcResource() {
       return {
         screenplay: { title: project.identity.title },

@@ -1,22 +1,11 @@
 import type {
-  AssetOwner,
-  Asset,
-  CastVoiceProviderCapability,
-  CastVoiceProviderRegistration,
-  CastMemberResource,
-  CastOverviewResource,
-  LocationOverviewResource,
-  LocationResource,
   SceneNarrativeResource,
-  ScreenplayImageReference,
   SequenceResource,
   StoryArcResource,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   listActNavigationPage,
-  listCastNavigationPage,
-  listLocationNavigationPage,
   listSceneNavigationPage,
   listSequenceNavigationPage,
   readActNavigationRow,
@@ -27,237 +16,21 @@ import {
   readActiveScreenplayAnalysisRecord,
   readScreenplayAnalysisDocument,
 } from '../database/access/screenplay-analysis.js';
-import { listAssetPageInSession, readOwnedAsset } from '../assets/projection.js';
 import {
-  listCastVoiceProviderRegistrationRecords,
-  listCastVoiceRecords,
-  type CastVoiceProviderRegistrationRecord,
-} from '../database/access/cast-voices.js';
-import {
-  readScreenplayCastMemberFromSession,
   readScreenplayDocumentFromSession,
-  readScreenplayLocationFromSession,
   readScreenplaySceneFromSession,
   readScreenplaySequenceFromSession,
 } from '../database/access/screenplay-resource.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { readSceneStoryboardPreview } from './storyboard-overviews.js';
 import type {
-  ListNavigationInput,
-  ReadCastMemberResourceInput,
-  ReadLocationResourceInput,
   ReadProjectInput,
   ReadSceneNarrativeResourceInput,
   ReadSequenceResourceInput,
 } from '../project-data-service-contracts.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readSceneDialogueAudioWorkspace } from '../scene-dialogue-audio-workspace/context.js';
-
-export async function readCastOverviewResource(
-  input: ListNavigationInput
-): Promise<CastOverviewResource> {
-  const { session } = await openProjectSession(input);
-  try {
-    return {
-      cast: mapCastImages(
-        session,
-        listCastNavigationPage(session, input)
-      ),
-    };
-  } finally {
-    session.close();
-  }
-}
-
-export async function readCastMemberResource(
-  input: ReadCastMemberResourceInput
-): Promise<CastMemberResource> {
-  const { session } = await openProjectSession(input);
-  try {
-    return {
-      castMember: requireCastMemberId(
-        readScreenplayCastMemberFromSession(session, input.castMemberId)
-      ),
-      firstImage: firstImageForTarget(session, {
-        kind: 'castMember',
-        id: input.castMemberId,
-      }),
-      voices: listCastVoiceRecords(session, input.castMemberId).map((voice) => {
-        const sample = readOwnedAsset(session, {
-          owner: { kind: 'castMember', id: input.castMemberId },
-          assetId: voice.sampleAssetId,
-        });
-        if (!sample) {
-          throw new ProjectDataError(
-            'PROJECT_DATA352',
-            `Cast Voice sample asset is missing: ${voice.sampleAssetId}.`
-          );
-        }
-        return {
-          id: voice.id,
-          castMemberId: voice.castMemberId,
-          name: voice.name,
-          purpose: voice.purpose,
-          providerRegistrations: listCastVoiceProviderRegistrationRecords(
-            session,
-            voice.id
-          ).map(toCastVoiceProviderRegistration),
-          sampleSource: castVoiceSampleSource(voice),
-          sample: {
-            ...sample,
-            files: sample.files.filter((file) => file.mediaKind === 'audio'),
-          },
-          createdAt: voice.createdAt,
-          updatedAt: voice.updatedAt,
-        };
-      }),
-    };
-  } finally {
-    session.close();
-  }
-}
-
-function castVoiceSampleSource(voice: ReturnType<typeof listCastVoiceRecords>[number]) {
-  if (voice.sampleSourceKind === 'elevenlabs_voice_sample') {
-    if (!voice.sampleId || !voice.sampleFetchedAt || !voice.sampleApiBaseUrl) {
-      throw new ProjectDataError(
-        'PROJECT_DATA357',
-        `Cast Voice ${voice.id} is missing ElevenLabs sample provenance.`
-      );
-    }
-    return {
-      kind: 'elevenlabs_voice_sample' as const,
-      sampleId: voice.sampleId,
-      fetchedAt: voice.sampleFetchedAt,
-      apiBaseUrl: voice.sampleApiBaseUrl,
-    };
-  }
-  return voice.sampleSourceKind === 'generated_sample'
-    ? { kind: 'generated_sample' as const }
-    : { kind: 'custom_file' as const };
-}
-
-function toCastVoiceProviderRegistration(
-  record: CastVoiceProviderRegistrationRecord
-): CastVoiceProviderRegistration {
-  return {
-    id: record.id,
-    castVoiceId: record.castVoiceId,
-    provider: toCastVoiceProvider(record.provider, record.id),
-    registrationModel: toCastVoiceProviderRegistrationModel(
-      record.registrationModel,
-      record.id
-    ),
-    externalVoiceId: record.externalVoiceId,
-    capabilities: parseRegistrationCapabilities(record),
-    sourceSampleAssetId: record.sourceSampleAssetId,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-  };
-}
-
-function toCastVoiceProvider(
-  provider: string,
-  registrationId: string
-): CastVoiceProviderRegistration['provider'] {
-  if (provider === 'elevenlabs') {
-    return provider;
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA358',
-    `Cast Voice provider registration ${registrationId} has unsupported provider: ${provider}.`
-  );
-}
-
-function toCastVoiceProviderRegistrationModel(
-  model: string,
-  registrationId: string
-): CastVoiceProviderRegistration['registrationModel'] {
-  if (
-    model === 'eleven_v3' ||
-    model === 'eleven_multilingual_v2' ||
-    model === 'eleven_turbo_v2_5'
-  ) {
-    return model;
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA358',
-    `Cast Voice provider registration ${registrationId} has unsupported model: ${model}.`
-  );
-}
-
-function parseRegistrationCapabilities(
-  record: CastVoiceProviderRegistrationRecord
-): CastVoiceProviderCapability[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(record.capabilitiesJson);
-  } catch {
-    throw invalidRegistrationCapabilities(record.id);
-  }
-  if (!Array.isArray(parsed)) {
-    throw invalidRegistrationCapabilities(record.id);
-  }
-  return Array.from(
-    new Set(
-      parsed.map((candidate) => {
-        if (candidate === 'dialogue-audio-tts') {
-          return candidate;
-        }
-        throw invalidRegistrationCapabilities(record.id);
-      })
-    )
-  );
-}
-
-function invalidRegistrationCapabilities(registrationId: string): ProjectDataError {
-  return new ProjectDataError(
-    'PROJECT_DATA358',
-    `Cast Voice provider registration ${registrationId} has invalid capabilities.`
-  );
-}
-
-export async function readLocationOverviewResource(
-  input: ListNavigationInput
-): Promise<LocationOverviewResource> {
-  const { session } = await openProjectSession(input);
-  try {
-    const page = listLocationNavigationPage(session, input);
-    return {
-      locations: {
-        ...page,
-        items: page.items.map((location) => ({
-          ...location,
-          firstImage: firstImageForTarget(session, {
-            kind: 'location',
-            id: location.id,
-          }),
-        })),
-      },
-    };
-  } finally {
-    session.close();
-  }
-}
-
-export async function readLocationResource(
-  input: ReadLocationResourceInput
-): Promise<LocationResource> {
-  const { session } = await openProjectSession(input);
-  try {
-    return {
-      location: requireLocationId(
-        readScreenplayLocationFromSession(session, input.locationId)
-      ),
-      firstImage: firstImageForTarget(session, {
-        kind: 'location',
-        id: input.locationId,
-      }),
-    };
-  } finally {
-    session.close();
-  }
-}
+import { firstImageForContinuitySubject } from './continuity-subjects.js';
 
 export async function readStoryArcResource(
   input: ReadProjectInput
@@ -371,7 +144,7 @@ export async function readSceneNarrativeResource(
           if (!castMember.id) {
             return [];
           }
-          const image = firstImageForTarget(session, {
+          const image = firstImageForContinuitySubject(session, {
             kind: 'castMember',
             id: castMember.id,
           });
@@ -386,7 +159,7 @@ export async function readSceneNarrativeResource(
           if (!location.id) {
             return [];
           }
-          const image = firstImageForTarget(session, {
+          const image = firstImageForContinuitySubject(session, {
             kind: 'location',
             id: location.id,
           });
@@ -428,63 +201,6 @@ function findScreenplayDocumentScene(
   return undefined;
 }
 
-function mapCastImages(
-  session: DatabaseSession,
-  page: CastOverviewResource['cast']
-): CastOverviewResource['cast'] {
-  return {
-    ...page,
-    items: page.items.map((castMember) => ({
-      ...castMember,
-      firstImage: firstImageForTarget(session, {
-        kind: 'castMember',
-        id: castMember.id,
-      }),
-    })),
-  };
-}
-
-function firstImageForTarget(
-  session: DatabaseSession,
-  owner: AssetOwner
-): ScreenplayImageReference | undefined {
-  const asset = firstPreferredImageAsset(session, owner);
-  return asset ? toScreenplayImageReference(asset) : undefined;
-}
-
-function firstPreferredImageAsset(
-  session: DatabaseSession,
-  owner: AssetOwner
-): Asset | undefined {
-  const page = listAssetPageInSession(session, {
-    owner,
-    mediaKind: 'image',
-  });
-  if (owner.kind === 'castMember' || owner.kind === 'location') {
-    return page.items.find((asset) => asset.id === page.selectedAssetId);
-  }
-  return page.items[0];
-}
-
-function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | undefined {
-  const file =
-    asset?.files.find(
-      (candidate) => candidate.role === 'primary' && candidate.mediaKind === 'image'
-    ) ?? asset?.files.find((candidate) => candidate.mediaKind === 'image');
-  if (!asset || !file) {
-    return undefined;
-  }
-  return {
-    assetId: asset.id,
-    assetFileId: file.id,
-    title: asset.title,
-    fileRole: file.role,
-    mediaKind: file.mediaKind,
-    mimeType: file.mimeType,
-    width: file.width,
-    height: file.height,
-  };
-}
 
 function requireScreenplayDocument(session: DatabaseSession) {
   const document = readScreenplayDocumentFromSession(session);
@@ -502,28 +218,4 @@ function throwNotFound(label: string, id: string): never {
     `No ${label} was found for this screenplay request: ${id}.`,
     { suggestion: 'Check the id from the latest screenplay resource.' }
   );
-}
-
-function requireCastMemberId(
-  castMember: ReturnType<typeof readScreenplayCastMemberFromSession>
-) {
-  if (!castMember.id) {
-    throwNotFound('cast member', castMember.handle);
-  }
-  return {
-    ...castMember,
-    id: castMember.id,
-  };
-}
-
-function requireLocationId(
-  location: ReturnType<typeof readScreenplayLocationFromSession>
-) {
-  if (!location.id) {
-    throwNotFound('location', location.handle);
-  }
-  return {
-    ...location,
-    id: location.id,
-  };
 }

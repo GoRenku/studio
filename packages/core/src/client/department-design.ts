@@ -2,6 +2,7 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { Location } from './locations.js';
+import type { Prop } from './props.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type {
   Block,
@@ -92,6 +93,26 @@ export interface LocationOperationDocument {
   operations: LocationOperation[];
 }
 
+export interface PropInput {
+  id?: string;
+  key?: string;
+  handle: string;
+  name: string;
+  description?: string;
+  visualNotes?: string;
+}
+
+export type PropOperation =
+  | { operation: 'prop.add'; prop: PropInput; placement?: DepartmentPlacement }
+  | { operation: 'prop.update'; prop: PropInput }
+  | { operation: 'prop.delete'; propId: string }
+  | { operation: 'prop.move'; propId: string; placement: DepartmentPlacement };
+
+export interface PropOperationDocument {
+  kind: 'propOperations';
+  operations: PropOperation[];
+}
+
 export interface DepartmentPlacement {
   beforeId?: string;
   afterId?: string;
@@ -178,7 +199,7 @@ export interface CastDesignDocument {
   openQuestions?: string[];
 }
 
-export interface ProductionDesignProp {
+export interface LocationRecurringObject {
   name: string;
   description: string;
   continuityNotes?: string[];
@@ -194,7 +215,7 @@ export interface LocationDesignDocument {
     setDressing: string[];
     materialsAndSurfaces: string[];
     atmosphere: string[];
-    propsAndRecurringObjects: ProductionDesignProp[];
+    recurringObjects: LocationRecurringObject[];
     continuity: string[];
     locationSheetGuidance: string[];
     generationGuidance: string[];
@@ -251,6 +272,44 @@ export interface LocationDesignWriteReport extends DepartmentCommandReport {
   activeDesignId: string;
 }
 
+export interface PropDesignDocument {
+  kind: 'propDesign';
+  propId: string;
+  title?: string;
+  design: {
+    designThesis: string;
+    formAndSilhouette: string[];
+    materialsAndSurfaces: string[];
+    constructionAndFunction: string[];
+    scaleAndHandling: string[];
+    statesAndVariants: string[];
+    continuity: string[];
+    propSheetGuidance: string[];
+    generationGuidance: string[];
+  };
+  openQuestions?: string[];
+}
+
+export interface PropDesignListReport extends DepartmentCommandReport {
+  prop: Prop;
+  designs: DepartmentDocumentSummary[];
+  activeDesignId: string | null;
+}
+
+export interface PropDesignReadReport extends DepartmentCommandReport {
+  prop: Prop;
+  design: PropDesignDocument | null;
+  summary: DepartmentDocumentSummary | null;
+  activeDesignId: string | null;
+}
+
+export interface PropDesignWriteReport extends DepartmentCommandReport {
+  prop: Prop;
+  design: PropDesignDocument;
+  designId: string;
+  activeDesignId: string;
+}
+
 export interface CastDesignSummary {
   id: string;
   castMemberId: string;
@@ -269,8 +328,23 @@ export interface LocationDesignSummary {
   spatialThesis: string;
   architecture: string[];
   setDressing: string[];
-  props: string[];
+  recurringObjects: string[];
   locationSheetGuidance: string[];
+  generationGuidance: string[];
+}
+
+export interface PropDesignSummary {
+  id: string;
+  propId: string;
+  title: string | null;
+  designThesis: string;
+  formAndSilhouette: string[];
+  materialsAndSurfaces: string[];
+  constructionAndFunction: string[];
+  scaleAndHandling: string[];
+  statesAndVariants: string[];
+  continuity: string[];
+  propSheetGuidance: string[];
   generationGuidance: string[];
 }
 
@@ -324,6 +398,20 @@ export interface ProductionDesignLocationContextReport extends DepartmentCommand
   assetTypeCounts: Array<{ type: string; count: number }>;
   generationReadiness: {
     locationSheet: boolean;
+    notes: string[];
+  };
+}
+
+export interface ProductionDesignPropContextReport extends DepartmentCommandReport {
+  prop: Prop;
+  activeDesign: PropDesignDocument | null;
+  activeDesignSummary: PropDesignSummary | null;
+  activeLookbook: DepartmentLookbookContext | null;
+  assets: Asset[];
+  assetTypeCounts: Array<{ type: string; count: number }>;
+  generationReadiness: {
+    propSheet: boolean;
+    propHero: boolean;
     notes: string[];
   };
 }

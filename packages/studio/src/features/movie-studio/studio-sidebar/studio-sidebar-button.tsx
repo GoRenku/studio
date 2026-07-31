@@ -7,7 +7,7 @@ interface StudioSidebarButtonProps {
   active: boolean;
   icon: ReactNode;
   label: string;
-  detail: string;
+  detail?: string;
   disclosure?: {
     expanded: boolean;
     label: string;

@@ -16,7 +16,7 @@ import {
 import {
   readCastMemberResource,
   updateCastMemberVoiceOverStatus,
-} from '@/services/studio-screenplay-api';
+} from '@/services/studio-continuity-api';
 import {
   matchesCastMemberResource,
   useStudioResourceRefresh,
