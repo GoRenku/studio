@@ -43,7 +43,7 @@ export function createGenerationRequestsRoute(options: {
         }
       },
     )
-    .get('/generation-reference-file', options.requireToken, async (c) => {
+    .get('/generation-reference-file', async (c) => {
       try {
         const resolved = await commands.readGenerationReferenceProjectFile({
           projectName: c.req.param('projectName') as string,

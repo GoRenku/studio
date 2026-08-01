@@ -44,7 +44,7 @@ describe('generation request routes', () => {
     });
   });
 
-  it('serves a Core-resolved project reference file', async () => {
+  it('serves a Core-resolved project reference file without requiring mutation authentication', async () => {
     const filePath = path.join(
       await fs.mkdtemp(path.join(os.tmpdir(), 'renku-reference-route-')),
       'reference.jpg',
@@ -58,7 +58,10 @@ describe('generation request routes', () => {
       mimeType: 'image/jpeg',
       sizeBytes: 9,
     }));
-    const response = await routeApp(commands).request(
+    const response = await routeApp(
+      commands,
+      async (c) => c.json({ error: { code: 'TOKEN_REQUIRED' } }, 403),
+    ).request(
       '/constantinople/generation-reference-file?path=research%2Fhelmet.jpg',
     );
 
@@ -92,12 +95,16 @@ describe('generation request routes', () => {
   });
 });
 
-function routeApp(commands: GenerationRequestRouteCommands) {
+function routeApp(
+  commands: GenerationRequestRouteCommands,
+  requireToken: Parameters<typeof createGenerationRequestsRoute>[0]['requireToken'] =
+    async (_c, next) => next(),
+) {
   return new Hono().route(
     '/:projectName',
     createGenerationRequestsRoute({
       commands,
-      requireToken: async (_c, next) => next(),
+      requireToken,
     }),
   );
 }
