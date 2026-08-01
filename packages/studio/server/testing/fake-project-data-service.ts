@@ -331,28 +331,10 @@ export function fakeProjectDataService(): NonNullable<
     },
     async estimateSceneDialogueAudioDraft(input) {
       return {
-        spec: {
-          executionKind: 'renku-managed',
-          purpose: input.spec.purpose,
-          target: { kind: 'sceneDialogue', id: input.spec.target.dialogueId },
-          model: {
-            provider: 'elevenlabs',
-            model: input.spec.modelChoice.replace('elevenlabs/', ''),
-          },
-          values: {
-            text: input.spec.plainText,
-            voiceId: input.spec.castVoiceId,
-          },
-          references: [],
-          title: input.spec.title,
-        },
-        estimate: {
-          provider: 'elevenlabs',
-          model: 'eleven_v3',
-          estimatedCostUsd: 0.01,
-          approvalToken: 'approval-token',
-          billableUnits: {},
-        },
+        provider: 'elevenlabs',
+        model: input.estimate.modelChoice.replace('elevenlabs/', ''),
+        estimatedCostUsd: 0.01,
+        billableUnits: { characterCount: input.estimate.text.length },
       };
     },
     async updateSceneDialogueAudioSetup() {

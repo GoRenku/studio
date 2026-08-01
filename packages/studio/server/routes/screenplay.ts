@@ -160,10 +160,10 @@ export function createScreenplayRoute({
     .post('/screenplay/scenes/:sceneId/dialogue-audio/:dialogueId/estimate', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const spec = readSceneDialogueAudioEstimateRequest(await c.req.json());
+        const estimateInput = readSceneDialogueAudioEstimateRequest(await c.req.json());
         const estimate = await projectData.estimateSceneDialogueAudioDraft({
           projectName,
-          spec,
+          estimate: estimateInput,
         });
         return c.json({ estimate });
       } catch (error) {

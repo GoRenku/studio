@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  SceneDialogueAudioEstimateInput,
   SceneDialogueAudioSetup,
   SceneDialogueAudioModelChoice,
   SceneDialogueAudioVoiceSettings,
@@ -109,9 +110,9 @@ export function useSceneDialogueAudio(input: {
 
   const [draft, setDraft] = useState<SceneDialogueAudioDraft>(initialDraft);
   const [estimateState, setEstimateState] = useState<{
-    specSignature: string;
+    estimateSignature: string;
     estimate: SceneDialogueAudioEstimateState;
-  }>({ specSignature: '', estimate: idleEstimate });
+  }>({ estimateSignature: '', estimate: idleEstimate });
   const [actionBusy, setActionBusy] = useState(false);
 
   const selectedModel = useMemo(
@@ -152,17 +153,24 @@ export function useSceneDialogueAudio(input: {
     [dialogueId, draft, sceneId]
   );
 
-  const specSignature = useMemo(() => JSON.stringify(spec), [spec]);
-  const estimate = blocked
-    ? {
-        state: 'idle' as const,
-        label: 'Unavailable',
-        message: blockedIssue,
-      }
-    : estimateState.specSignature === specSignature
-      ? estimateState.estimate
-      : idleEstimate;
-  const canGenerateCurrentEstimate = estimate.state === 'ready';
+  const estimateInput = useMemo<SceneDialogueAudioEstimateInput>(
+    () => ({
+      modelChoice: draft.modelChoice,
+      text:
+        draft.modelChoice === 'elevenlabs/eleven_v3'
+          ? draft.v3Text
+          : draft.plainText,
+    }),
+    [draft.modelChoice, draft.plainText, draft.v3Text]
+  );
+  const estimateSignature = useMemo(
+    () => JSON.stringify(estimateInput),
+    [estimateInput]
+  );
+  const estimate = estimateState.estimateSignature === estimateSignature
+    ? estimateState.estimate
+    : idleEstimate;
+  const canGenerateCurrentEstimate = !blocked && estimate.state === 'ready';
 
   const autosave = useDebouncedAutosave({
     value: spec,
@@ -244,30 +252,23 @@ export function useSceneDialogueAudio(input: {
   ]);
 
   useEffect(() => {
-    if (blocked) {
-      return;
-    }
-
     let cancelled = false;
 
     void estimateSceneDialogueAudioDraft(
       projectName,
       sceneId,
       dialogueId,
-      spec
+      estimateInput
     )
       .then((report) => {
         if (cancelled) {
           return;
         }
         setEstimateState({
-          specSignature,
+          estimateSignature,
           estimate: {
             state: 'ready',
-            label:
-              report.estimate.estimatedCostUsd === null
-                ? 'Unpriced'
-                : `$${report.estimate.estimatedCostUsd.toFixed(4)}`,
+            label: `$${report.estimatedCostUsd.toFixed(4)}`,
             message: null,
           },
         });
@@ -277,7 +278,7 @@ export function useSceneDialogueAudio(input: {
           return;
         }
         setEstimateState({
-          specSignature,
+          estimateSignature,
           estimate: {
             state: 'error',
             label: 'Unavailable',
@@ -293,12 +294,11 @@ export function useSceneDialogueAudio(input: {
       cancelled = true;
     };
   }, [
-    blocked,
     dialogueId,
+    estimateInput,
+    estimateSignature,
     projectName,
     sceneId,
-    spec,
-    specSignature,
   ]);
 
   const generateTake = useCallback(async () => {
@@ -320,7 +320,7 @@ export function useSceneDialogueAudio(input: {
         { setup: spec, approveLiveProviderRun: true }
       );
       onContextChange(report.context);
-      setEstimateState({ specSignature, estimate: idleEstimate });
+      setEstimateState({ estimateSignature, estimate: idleEstimate });
     } finally {
       setActionBusy(false);
     }
@@ -330,11 +330,11 @@ export function useSceneDialogueAudio(input: {
     blockedIssue,
     canGenerateCurrentEstimate,
     dialogueId,
+    estimateSignature,
     onContextChange,
     projectName,
     sceneId,
     spec,
-    specSignature,
   ]);
 
   const deleteTake = useCallback(

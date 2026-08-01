@@ -4,6 +4,28 @@ import type { GenerationPurposeContract } from './purpose-contract.js';
 import { estimateGeneration } from './estimates.js';
 
 describe('generic generation estimates', () => {
+  it('estimates TTS text without requiring a voice execution input', async () => {
+    const text = 'The barrel is still angry.';
+    const estimate = await estimateGeneration({
+      spec: {
+        executionKind: 'renku-managed',
+        purpose: 'scene.dialogue-audio',
+        target: { kind: 'sceneDialogue', id: 'dialogue-mara' },
+        model: { provider: 'elevenlabs', model: 'eleven_v3' },
+        values: { text },
+        references: [],
+      },
+      purpose: dialogueAudioPurpose,
+    });
+
+    expect(estimate.valid).toBe(true);
+    if (estimate.valid) {
+      expect(estimate.estimate.billableUnits).toMatchObject({
+        characterCount: text.length,
+      });
+    }
+  });
+
   it('estimates pricing inputs without requiring execution inputs', async () => {
     const estimate = await estimateGeneration({
       spec: seedanceSpec({ duration: '5' }),
@@ -65,6 +87,12 @@ const videoPurpose = {
   purpose: 'image.create',
   targetKind: 'project',
   outputMediaKind: 'image',
+} satisfies GenerationPurposeContract;
+
+const dialogueAudioPurpose = {
+  purpose: 'scene.dialogue-audio',
+  targetKind: 'sceneDialogue',
+  outputMediaKind: 'audio',
 } satisfies GenerationPurposeContract;
 
 function seedanceSpec(values: Record<string, string>): GenerationSpec {

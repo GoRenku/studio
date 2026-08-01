@@ -51,7 +51,7 @@ export function SceneDialogueAudioPanel({
     onDraftTextPreviewChange,
     onContextChange,
   });
-  const controlsDisabled = dialogueAudio.blocked || dialogueAudio.actionBusy;
+  const controlsDisabled = dialogueAudio.actionBusy;
   const activeSaveNotification =
     generationNotification.state === 'idle'
       ? dialogueAudio.autosave

@@ -35,6 +35,53 @@ describe('SceneDialogueAudioPanel', () => {
     vi.useRealTimers();
   });
 
+  it('estimates dialog text while generation is blocked by a missing voice', async () => {
+    render(
+      <SceneDialogueAudioPanel
+        projectName='constantinople'
+        sceneId='scene_hook'
+        dialogueId='dialogue_urban'
+        context={contextWithoutVoices()}
+        player={player()}
+        onClose={vi.fn()}
+        onContextChange={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(estimateSceneDialogueAudioDraft).toHaveBeenCalledWith(
+      'constantinople',
+      'scene_hook',
+      'dialogue_urban',
+      {
+        modelChoice: 'elevenlabs/eleven_v3',
+        text: 'Bronze has no temper. Men give it one.',
+      }
+    );
+    expect(screen.getByText('$0.0040')).toBeTruthy();
+    expect(
+      (screen.getByRole('combobox', { name: 'Model' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
+    expect(
+      (screen.getByRole('combobox', { name: 'Voice' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+    expect(screen.getByText('No voice available')).toBeTruthy();
+    expect(
+      (screen.getByRole('textbox', { name: 'Dialog Text' }) as HTMLTextAreaElement)
+        .disabled
+    ).toBe(false);
+    expect(
+      (screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+  });
+
   it('autosaves edited dialog text and publishes the saved header status', async () => {
     const onSaveNotificationChange = vi.fn();
 
@@ -193,48 +240,18 @@ function baseContext(): SceneDialogueAudioWorkspaceWithUrls {
 }
 
 function estimateReport(): SceneDialogueAudioEstimateReport {
-  const setup = {
-    purpose: 'scene.dialogue-audio' as const,
-    target: {
-      kind: 'sceneDialogue' as const,
-      sceneId: 'scene_hook',
-      dialogueId: 'dialogue_urban',
-    },
-    modelChoice: 'elevenlabs/eleven_v3' as const,
-    castVoiceId: 'voice_urban',
-    plainText: 'Bronze has no temper. Men give it one.',
-    v3Text: 'Bronze has no temper. Men give it one.',
-    voiceSettings: {
-      stability: 0.5,
-      similarityBoost: 0.75,
-      style: 0,
-      speed: 1,
-      useSpeakerBoost: true,
-    },
-    outputFormat: 'mp3_44100_128',
-    languageCode: null,
-  };
   return {
-    spec: {
-      executionKind: 'renku-managed',
-      purpose: 'scene.dialogue-audio',
-      target: { kind: 'sceneDialogue', id: 'dialogue_urban' },
-      model: { provider: 'elevenlabs', model: 'eleven_v3' },
-      values: {
-        text: setup.v3Text,
-        voiceId: setup.castVoiceId,
-        outputFormat: setup.outputFormat,
-      },
-      references: [],
-      title: 'Urban dialogue audio',
-    },
-    estimate: {
-      provider: 'elevenlabs',
-      model: 'eleven_v3',
-      estimatedCostUsd: 0.004,
-      approvalToken: 'approval-token',
-      billableUnits: { text: setup.v3Text },
-    },
+    provider: 'elevenlabs',
+    model: 'eleven_v3',
+    estimatedCostUsd: 0.004,
+    billableUnits: { characterCount: 40 },
+  };
+}
+
+function contextWithoutVoices(): SceneDialogueAudioWorkspaceWithUrls {
+  return {
+    ...baseContext(),
+    castVoicesByCastMemberId: { cast_urban: [] },
   };
 }
 

@@ -1,7 +1,4 @@
-import type {
-  GenerationEstimate,
-  GenerationSpec,
-} from './generation.js';
+import type { GenerationCostEstimate } from './generation.js';
 
 export type SceneDialogueAudioModelChoice =
   | 'elevenlabs/eleven_v3'
@@ -126,10 +123,12 @@ export interface SceneDialogueAudioWorkspaceMutationReport {
   resourceKeys: string[];
 }
 
-export interface SceneDialogueAudioEstimateReport {
-  spec: GenerationSpec;
-  estimate: GenerationEstimate;
+export interface SceneDialogueAudioEstimateInput {
+  modelChoice: SceneDialogueAudioModelChoice;
+  text: string;
 }
+
+export type SceneDialogueAudioEstimateReport = GenerationCostEstimate;
 
 export interface SceneDialogueAudioModelChoiceReport {
   modelChoice: SceneDialogueAudioModelChoice;

@@ -149,15 +149,9 @@ export function createGenerationServiceWiring() {
       );
     },
     async estimateSceneDialogueAudioDraft(input: ProjectInput & {
-      spec: import('../../client/scene-dialogue-audio-workspace.js').SceneDialogueAudioSetup;
+      estimate: import('../../client/scene-dialogue-audio-workspace.js').SceneDialogueAudioEstimateInput;
     }) {
-      return withGenerationProject(input, ({ session, projectFolder }) =>
-        estimateSceneDialogueAudioDraft({
-          session,
-          projectFolder,
-          setup: input.spec,
-        })
-      );
+      return estimateSceneDialogueAudioDraft({ estimate: input.estimate });
     },
     async generateSceneDialogueAudioTake(input: ProjectInput & {
       sceneId: string;
@@ -190,7 +184,7 @@ export function createGenerationServiceWiring() {
         const record = readGenerationSpec({ id: input.specId, session });
         const purpose = readGenerationPurpose(record.spec.purpose);
         return estimateGeneration({
-          spec: await preparePurposeExecutionSpec({ spec: record.spec, purpose, projectAspectRatio: projectAspectRatio(session) }),
+          spec: record.spec,
           purpose,
           session,
           projectFolder,

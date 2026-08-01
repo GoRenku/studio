@@ -1,5 +1,6 @@
 import type {
   SceneDialogueAudioEstimateReport,
+  SceneDialogueAudioEstimateInput,
   SceneDialogueAudioWorkspace,
   SceneDialogueAudioSetup,
   SceneDialogueAudioWorkspaceMutationReport,
@@ -59,14 +60,14 @@ export async function estimateSceneDialogueAudioDraft(
   projectName: string,
   sceneId: string,
   dialogueId: string,
-  spec: SceneDialogueAudioSetup
+  estimate: SceneDialogueAudioEstimateInput
 ): Promise<SceneDialogueAudioEstimateReport> {
   const response = await fetch(
     `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/estimate`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spec }),
+      body: JSON.stringify({ estimate }),
     }
   );
   if (!response.ok) {

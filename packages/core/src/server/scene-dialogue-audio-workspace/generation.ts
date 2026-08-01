@@ -8,6 +8,7 @@ import type {
   JsonValue,
 } from '../../client/generation.js';
 import type {
+  SceneDialogueAudioEstimateInput,
   SceneDialogueAudioEstimateReport,
   SceneDialogueAudioSetup,
   SceneDialogueAudioWorkspaceMutationReport,
@@ -18,7 +19,7 @@ import { createAssetMembership } from '../assets/ownership.js';
 import { listCastVoiceProviderRegistrationRecords, readCastVoiceRecord } from '../database/access/cast-voices.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
-import { estimateGeneration } from '../generation/estimates.js';
+import { estimateGeneration, estimateGenerationCost } from '../generation/estimates.js';
 import { readGenerationPurpose } from '../generation/purposes.js';
 import { runGeneration } from '../generation/runs.js';
 import { resolveGenerationRunOutputRoot } from '../project-asset-files/index.js';
@@ -36,14 +37,14 @@ import { readSceneDialogueAudioWorkspace } from './context.js';
 import { requireSceneDialogueAudioSetup, updateSceneDialogueAudioSetup } from './setup.js';
 
 export async function estimateSceneDialogueAudioDraft(input: {
-  session: DatabaseSession;
-  projectFolder: string;
-  setup: SceneDialogueAudioSetup;
+  estimate: SceneDialogueAudioEstimateInput;
 }): Promise<SceneDialogueAudioEstimateReport> {
-  const spec = await buildSceneDialogueAudioSpec(input);
-  const estimate = await estimateGeneration({
-    spec,
-    purpose: readGenerationPurpose('scene.dialogue-audio'),
+  const estimate = await estimateGenerationCost({
+    provider: 'elevenlabs',
+    model: input.estimate.modelChoice.slice('elevenlabs/'.length),
+    mediaKind: 'audio',
+    values: { text: input.estimate.text },
+    inputMediaCounts: {},
   });
   if (!estimate.valid) {
     throw new ProjectDataError(
@@ -52,7 +53,7 @@ export async function estimateSceneDialogueAudioDraft(input: {
       { issues: estimate.diagnostics }
     );
   }
-  return { spec, estimate: estimate.estimate };
+  return estimate.estimate;
 }
 
 export async function generateSceneDialogueAudioTake(input: {
@@ -74,7 +75,13 @@ export async function generateSceneDialogueAudioTake(input: {
   }
   updateSceneDialogueAudioSetup(input);
   const setup = requireSceneDialogueAudioSetup(input);
-  const spec = await buildSceneDialogueAudioSpec({ ...input, setup });
+  const spec = await buildSceneDialogueAudioSpec({
+    setup,
+    providerVoiceId: requireSceneDialogueAudioProviderVoiceId({
+      session: input.session,
+      setup,
+    }),
+  });
   const purpose = readGenerationPurpose('scene.dialogue-audio');
   const specId = input.idGenerator.next('media_generation_spec');
   const record = createGenerationSpec({
@@ -141,8 +148,8 @@ export async function generateSceneDialogueAudioTake(input: {
 }
 
 async function buildSceneDialogueAudioSpec(input: {
-  session: DatabaseSession;
   setup: SceneDialogueAudioSetup;
+  providerVoiceId: string;
 }): Promise<GenerationSpec> {
   const providerModel = input.setup.modelChoice.slice('elevenlabs/'.length);
   const descriptor = await describeGenerationModelInputs({
@@ -155,6 +162,33 @@ async function buildSceneDialogueAudioSpec(input: {
       `Scene Dialogue Audio model is unavailable: ${input.setup.modelChoice}.`
     );
   }
+  const text = input.setup.modelChoice === 'elevenlabs/eleven_v3'
+    ? input.setup.v3Text
+    : input.setup.plainText;
+  return {
+    purpose: 'scene.dialogue-audio',
+    target: { kind: 'sceneDialogue', id: input.setup.target.dialogueId },
+    executionKind: 'renku-managed',
+    model: { provider: 'elevenlabs', model: providerModel },
+    values: bindGenerationSemanticValues({
+      descriptor,
+      values: {
+        prompt: text,
+        voice: input.providerVoiceId,
+        voiceSettings: input.setup.voiceSettings,
+        outputFormat: input.setup.outputFormat,
+        language: input.setup.languageCode,
+      },
+    }) as Record<string, JsonValue>,
+    references: [],
+    title: input.setup.title ?? 'Dialogue Audio',
+  };
+}
+
+function requireSceneDialogueAudioProviderVoiceId(input: {
+  session: DatabaseSession;
+  setup: SceneDialogueAudioSetup;
+}): string {
   const voice = readCastVoiceRecord(input.session, {
     castMemberId: requireDialogueCastMemberId(input),
     voiceIdOrName: input.setup.castVoiceId,
@@ -170,27 +204,7 @@ async function buildSceneDialogueAudioSpec(input: {
       'The selected Cast Voice is not registered with ElevenLabs.'
     );
   }
-  const text = input.setup.modelChoice === 'elevenlabs/eleven_v3'
-    ? input.setup.v3Text
-    : input.setup.plainText;
-  return {
-    purpose: 'scene.dialogue-audio',
-    target: { kind: 'sceneDialogue', id: input.setup.target.dialogueId },
-    executionKind: 'renku-managed',
-    model: { provider: 'elevenlabs', model: providerModel },
-    values: bindGenerationSemanticValues({
-      descriptor,
-      values: {
-        prompt: text,
-        voice: registration.externalVoiceId,
-        voiceSettings: input.setup.voiceSettings,
-        outputFormat: input.setup.outputFormat,
-        language: input.setup.languageCode,
-      },
-    }) as Record<string, JsonValue>,
-    references: [],
-    title: input.setup.title ?? 'Dialogue Audio',
-  };
+  return registration.externalVoiceId;
 }
 
 function requireDialogueCastMemberId(input: {
@@ -205,7 +219,7 @@ function requireDialogueCastMemberId(input: {
   if (!row) {
     throw new ProjectDataError(
       'CORE_DIALOGUE_AUDIO_SETUP_REQUIRED',
-      'Scene Dialogue Audio setup must be saved before estimate or generation.'
+      'Scene Dialogue Audio setup must be saved before generation.'
     );
   }
   return row.castMemberId;

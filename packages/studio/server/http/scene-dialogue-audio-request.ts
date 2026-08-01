@@ -1,5 +1,8 @@
 import { createDiagnosticError, createStructuredError } from '@gorenku/studio-diagnostics';
-import type { SceneDialogueAudioSetup } from '@gorenku/studio-core/client';
+import type {
+  SceneDialogueAudioEstimateInput,
+  SceneDialogueAudioSetup,
+} from '@gorenku/studio-core/client';
 import { readHttpRequestRecord } from './request-validation.js';
 
 const CONTEXT = 'Scene Dialogue Audio request';
@@ -45,27 +48,48 @@ export function readSceneDialogueAudioGenerateRequest(input: unknown): {
 
 export function readSceneDialogueAudioEstimateRequest(
   input: unknown
-): SceneDialogueAudioSetup {
+): SceneDialogueAudioEstimateInput {
   const issues: ReturnType<typeof createDiagnosticError>[] = [];
   const record = readHttpRequestRecord(input, [], issues, CONTEXT);
   if (!record) {
     throw invalidRequest(issues);
   }
-  const spec = record.spec;
-  if (!spec || typeof spec !== 'object') {
+  const estimate = record.estimate;
+  if (!estimate || typeof estimate !== 'object') {
     issues.push(
       createDiagnosticError(
         'STUDIO_SERVER120',
-        'Scene Dialogue Audio estimate requires spec.',
-        { path: ['spec'], context: CONTEXT },
-        'Send a complete Scene Dialogue Audio generation spec.'
+        'Scene Dialogue Audio estimate inputs are required.',
+        { path: ['estimate'], context: CONTEXT },
+        'Send the selected model and dialog text.'
+      )
+    );
+  }
+  const estimateRecord = estimate as Record<string, unknown> | undefined;
+  if (typeof estimateRecord?.modelChoice !== 'string') {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER120',
+        'Scene Dialogue Audio estimate requires a model choice.',
+        { path: ['estimate', 'modelChoice'], context: CONTEXT },
+        'Send the selected model.'
+      )
+    );
+  }
+  if (typeof estimateRecord?.text !== 'string') {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER120',
+        'Scene Dialogue Audio estimate requires dialog text.',
+        { path: ['estimate', 'text'], context: CONTEXT },
+        'Send the current dialog text.'
       )
     );
   }
   if (issues.length > 0) {
     throw invalidRequest(issues);
   }
-  return spec as SceneDialogueAudioSetup;
+  return estimateRecord as unknown as SceneDialogueAudioEstimateInput;
 }
 
 function optionalSetup(

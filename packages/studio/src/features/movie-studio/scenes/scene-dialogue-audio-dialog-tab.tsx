@@ -71,7 +71,13 @@ export function SceneDialogueAudioDialogTab({
           disabled={disabled || usableVoices.length === 0}
         >
           <SelectTrigger aria-label='Voice' className='w-full'>
-            <SelectValue placeholder='Choose voice' />
+            <SelectValue
+              placeholder={
+                usableVoices.length === 0
+                  ? 'No voice available'
+                  : 'Choose voice'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
