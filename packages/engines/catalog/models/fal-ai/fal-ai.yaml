@@ -1372,6 +1372,38 @@ models:
       prices:
         - pricePerMillionTokens: 11.2
 
+  # MiniMax H3 Models
+  - name: minimax/h3/text-to-video
+    subProvider: minimax
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.26
+  - name: minimax/h3/image-to-video
+    subProvider: minimax
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration]
+      pricePerSecond: 0.26
+  - name: minimax/h3/reference-to-video
+    subProvider: minimax
+    type: video
+    mime:
+      - video/mp4
+    price:
+      function: costByVideoDuration
+      inputs: [duration, reference_image_urls, input_video_duration_seconds]
+      pricePerSecond: 0.26
+      pricePerInputImage: 0.08
+      includedInputImages: 5
+      pricePerInputVideoSecond: 0.26
+
   - name: bytedance/omnihuman/v1.5
     type: video
     mime:

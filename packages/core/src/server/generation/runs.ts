@@ -39,6 +39,8 @@ export async function runGeneration(input: {
   const estimateReport = await estimateGeneration({
     spec,
     purpose: input.purpose,
+    session: input.session,
+    projectFolder: input.projectFolder,
   });
   if (!estimateReport.valid) {
     return estimateReport;

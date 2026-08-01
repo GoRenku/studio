@@ -9,10 +9,13 @@ import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
   GenerationCostEstimateReport,
   GenerationEstimateReport,
+  GenerationReferenceCatalogItem,
   GenerationSpec,
   JsonValue,
 } from '../../client/generation.js';
+import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { GenerationPurposeContract } from './purpose-contract.js';
+import { resolveGenerationReference } from './references.js';
 
 export interface GenerationCostEstimateInput {
   provider: string;
@@ -20,6 +23,7 @@ export interface GenerationCostEstimateInput {
   mediaKind: GenerationMediaKind;
   values: Record<string, JsonValue>;
   inputMediaCounts: Partial<Record<'image' | 'audio' | 'video', number>>;
+  inputMediaDurationSeconds?: Partial<Record<'audio' | 'video', number>>;
 }
 
 export async function estimateGenerationCost(
@@ -31,6 +35,7 @@ export async function estimateGenerationCost(
     mediaKind: input.mediaKind,
     payload: input.values,
     inputMediaCounts: input.inputMediaCounts,
+    inputMediaDurationSeconds: input.inputMediaDurationSeconds,
   });
   if (cost.state !== 'priced') {
     return {
@@ -60,6 +65,8 @@ export async function estimateGenerationCost(
 export async function estimateGeneration(input: {
   spec: GenerationSpec;
   purpose: GenerationPurposeContract;
+  session?: DatabaseSession;
+  projectFolder?: string;
 }): Promise<GenerationEstimateReport> {
   if (input.spec.executionKind === 'agent-external') {
     return {
@@ -86,12 +93,24 @@ export async function estimateGeneration(input: {
     };
   }
   const descriptor = await describeGenerationModelInputs({ provider, model });
+  const inputMediaCounts = generationSpecInputMediaCounts(
+    input.spec,
+    descriptor
+  );
+  const inputMediaDurationSeconds = await generationSpecInputMediaDurationSeconds({
+    spec: input.spec,
+    descriptor,
+    inputMediaCounts,
+    session: input.session,
+    projectFolder: input.projectFolder,
+  });
   const estimate = await estimateGenerationCost({
     provider,
     model,
     mediaKind: input.purpose.outputMediaKind,
     values: input.spec.values,
-    inputMediaCounts: generationSpecInputMediaCounts(input.spec, descriptor),
+    inputMediaCounts,
+    inputMediaDurationSeconds,
   });
   if (!estimate.valid) {
     return estimate;
@@ -107,6 +126,52 @@ export async function estimateGeneration(input: {
       }),
     },
     diagnostics: [],
+  };
+}
+
+async function generationSpecInputMediaDurationSeconds(input: {
+  spec: GenerationSpec;
+  descriptor: GenerationModelInputDescriptor | null;
+  inputMediaCounts: Partial<Record<'image' | 'audio' | 'video', number>>;
+  session?: DatabaseSession;
+  projectFolder?: string;
+}): Promise<Partial<Record<'audio' | 'video', number>>> {
+  if ((input.inputMediaCounts.video ?? 0) === 0) {
+    return { video: 0 };
+  }
+  if (!input.descriptor || !input.session || !input.projectFolder) {
+    return {};
+  }
+  const fields = new Map(
+    input.descriptor.fields.map((field) => [field.name, field])
+  );
+  const resolvedVideos: GenerationReferenceCatalogItem[] = [];
+  for (const selection of input.spec.references) {
+    const field = selection.providerField
+      ? fields.get(selection.providerField)
+      : undefined;
+    if (!field?.media?.acceptedKinds.includes('video')) {
+      continue;
+    }
+    const resolved = await resolveGenerationReference({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      reference: selection.reference,
+    });
+    if (!resolved || resolved.mediaKind !== 'video') {
+      return {};
+    }
+    resolvedVideos.push(resolved);
+  }
+  const durations = resolvedVideos.map((reference) => reference.durationSeconds);
+  if (
+    resolvedVideos.length !== input.inputMediaCounts.video ||
+    !durations.every((duration): duration is number => duration !== null)
+  ) {
+    return {};
+  }
+  return {
+    video: durations.reduce((total, duration) => total + duration, 0),
   };
 }
 

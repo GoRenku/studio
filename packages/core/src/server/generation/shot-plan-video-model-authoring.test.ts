@@ -16,6 +16,7 @@ describe('Shot Plan video model authoring', () => {
       'seedance-2.0',
       'seedance-2.0-mini',
       'seedance-2.0-fast',
+      'minimax-h3',
     ];
     const modes = [
       'text-only',

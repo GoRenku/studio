@@ -46,7 +46,7 @@ const RESOLUTION_LABELS = {
   '720p': '720p',
 };
 
-const VIDEO_PARAMETERS: StudioModelConfigurableParameter[] = [
+const SEEDANCE_VIDEO_PARAMETERS: StudioModelConfigurableParameter[] = [
   { field: 'duration', label: 'Duration', valueLabels: DURATION_LABELS },
   { field: 'aspect_ratio', label: 'Aspect ratio', valueLabels: ASPECT_RATIO_LABELS },
   {
@@ -58,45 +58,86 @@ const VIDEO_PARAMETERS: StudioModelConfigurableParameter[] = [
   { field: 'generate_audio', label: 'Generate audio' },
 ];
 
-function seedanceFamily(input: {
+const H3_TEXT_AND_REFERENCE_PARAMETERS: StudioModelConfigurableParameter[] = [
+  { field: 'duration', label: 'Duration' },
+  {
+    field: 'aspect_ratio',
+    label: 'Aspect ratio',
+    valueLabels: {
+      ...ASPECT_RATIO_LABELS,
+      adaptive: 'Adaptive',
+    },
+  },
+];
+
+const H3_IMAGE_PARAMETERS: StudioModelConfigurableParameter[] = [
+  { field: 'duration', label: 'Duration' },
+];
+
+function threeRouteVideoFamily(input: {
   id: string;
   label: string;
   routePrefix: string;
+  routeParameters?: Partial<
+    Record<StudioVideoRouteKind, StudioModelConfigurableParameter[]>
+  >;
 }): StudioVideoModelFamily {
   return {
     id: input.id,
     label: input.label,
     routes: {
-      text: route(`${input.routePrefix}/text-to-video`),
-      image: route(`${input.routePrefix}/image-to-video`),
-      reference: route(`${input.routePrefix}/reference-to-video`),
+      text: route(
+        `${input.routePrefix}/text-to-video`,
+        input.routeParameters?.text
+      ),
+      image: route(
+        `${input.routePrefix}/image-to-video`,
+        input.routeParameters?.image
+      ),
+      reference: route(
+        `${input.routePrefix}/reference-to-video`,
+        input.routeParameters?.reference
+      ),
     },
   };
 }
 
-function route(model: string): StudioVideoModelRouteProfile {
+function route(
+  model: string,
+  parameters: StudioModelConfigurableParameter[] = SEEDANCE_VIDEO_PARAMETERS,
+): StudioVideoModelRouteProfile {
   return {
     provider: 'fal-ai',
     model,
-    userConfigurableParameters: structuredClone(VIDEO_PARAMETERS),
+    userConfigurableParameters: structuredClone(parameters),
   };
 }
 
 const VIDEO_MODEL_CATALOG: StudioVideoModelFamily[] = [
-  seedanceFamily({
+  threeRouteVideoFamily({
     id: 'seedance-2.0',
     label: 'Seedance 2.0',
     routePrefix: 'bytedance/seedance-2.0',
   }),
-  seedanceFamily({
+  threeRouteVideoFamily({
     id: 'seedance-2.0-mini',
     label: 'Seedance 2.0 Mini',
     routePrefix: 'bytedance/seedance-2.0/mini',
   }),
-  seedanceFamily({
+  threeRouteVideoFamily({
     id: 'seedance-2.0-fast',
     label: 'Seedance 2.0 Fast',
     routePrefix: 'bytedance/seedance-2.0/fast',
+  }),
+  threeRouteVideoFamily({
+    id: 'minimax-h3',
+    label: 'MiniMax H3',
+    routePrefix: 'minimax/h3',
+    routeParameters: {
+      text: H3_TEXT_AND_REFERENCE_PARAMETERS,
+      image: H3_IMAGE_PARAMETERS,
+      reference: H3_TEXT_AND_REFERENCE_PARAMETERS,
+    },
   }),
 ];
 
@@ -244,17 +285,23 @@ function validateRouteKind(
   path: string[],
   issues: DiagnosticIssue[],
 ): void {
-  const requiredFields =
-    routeKind === 'text'
-      ? []
-      : routeKind === 'image'
-        ? ['image_url', 'end_image_url']
-        : ['image_urls', 'video_urls', 'audio_urls'];
-  for (const fieldName of requiredFields) {
-    if (!fields.get(fieldName)?.media) {
+  const requiredRoles: Array<
+    Extract<
+      NonNullable<GenerationModelInputDescriptor['fields'][number]['semantic']>,
+      { kind: 'media' }
+    >['role']
+  > = routeKind === 'text'
+    ? []
+    : routeKind === 'image'
+      ? ['source-image', 'last-frame']
+      : ['reference-image', 'source-video', 'audio'];
+  for (const role of requiredRoles) {
+    if (![...fields.values()].some((field) =>
+      field.media && field.semantic?.kind === 'media' && field.semantic.role === role
+    )) {
       issues.push(catalogIssue(
-        `Video ${routeKind} route must expose media field ${fieldName}.`,
-        [...path, fieldName],
+        `Video ${routeKind} route must expose a media field for ${role}.`,
+        [...path, role],
       ));
     }
   }

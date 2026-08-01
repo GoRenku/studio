@@ -361,6 +361,60 @@ describe('generation estimates', () => {
     });
   });
 
+  it('estimates bundled MiniMax H3 output and reference input pricing', async () => {
+    const catalog = await loadBundledGenerationCatalog();
+
+    await expect(estimateGenerationCost({
+      catalog,
+      priceKey: {
+        provider: 'fal-ai',
+        model: 'minimax/h3/text-to-video',
+        mediaKind: 'video',
+      },
+      pricingInputs: { durationSeconds: 10 },
+    })).resolves.toMatchObject({
+      estimatedCostUsd: 2.6,
+      warnings: [],
+    });
+    await expect(estimateGenerationCost({
+      catalog,
+      priceKey: {
+        provider: 'fal-ai',
+        model: 'minimax/h3/image-to-video',
+        mediaKind: 'video',
+      },
+      pricingInputs: { durationSeconds: 5, inputImageCount: 2 },
+    })).resolves.toMatchObject({
+      estimatedCostUsd: 1.3,
+      warnings: [],
+    });
+    await expect(estimateGenerationCost({
+      catalog,
+      priceKey: {
+        provider: 'fal-ai',
+        model: 'minimax/h3/reference-to-video',
+        mediaKind: 'video',
+      },
+      pricingInputs: {
+        durationSeconds: 5,
+        inputImageCount: 8,
+        inputAudioCount: 2,
+        inputVideoCount: 1,
+        inputVideoDurationSeconds: 6,
+      },
+    })).resolves.toMatchObject({
+      estimatedCostUsd: 3.1,
+      warnings: [],
+      billableUnits: {
+        duration: 5,
+        inputImageCount: 8,
+        inputAudioCount: 2,
+        inputVideoCount: 1,
+        inputVideoDurationSeconds: 6,
+      },
+    });
+  });
+
   it('estimates bundled fal.ai video duration pricing with audio', async () => {
     const catalog = await loadBundledGenerationCatalog();
 

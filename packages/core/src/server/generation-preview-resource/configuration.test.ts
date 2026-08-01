@@ -164,6 +164,7 @@ describe('generation preview authoring projection', () => {
         { familyId: 'seedance-2.0', available: true },
         { familyId: 'seedance-2.0-mini', available: true },
         { familyId: 'seedance-2.0-fast', available: true },
+        { familyId: 'minimax-h3', available: true },
       ],
       controls: expect.arrayContaining([
         expect.objectContaining({

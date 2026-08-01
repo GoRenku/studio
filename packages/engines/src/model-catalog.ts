@@ -26,6 +26,8 @@ export interface ModelPriceConfig {
   tokenFramesPerSecond?: number;
   pricePerMegapixel?: number;
   pricePerInputImage?: number;
+  includedInputImages?: number;
+  pricePerInputVideoSecond?: number;
   prices?: Array<Record<string, unknown>>;
   pricePerCharByPlan?: Record<string, number>;
   defaultPlan?: string;

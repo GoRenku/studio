@@ -44,6 +44,7 @@ export interface GenerationPricingInputs {
   inputImageCount?: number;
   inputAudioCount?: number;
   inputVideoCount?: number;
+  inputVideoDurationSeconds?: number;
   durationSeconds?: number | string;
   characterCount?: number;
   imageSize?: string | { width: number; height: number };

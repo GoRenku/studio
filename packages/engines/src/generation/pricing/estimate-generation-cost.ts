@@ -146,7 +146,8 @@ function priceFromConfig(
   if (typeof pricing.pricePerSecond === 'number') {
     return (
       pricing.pricePerSecond * seconds(inputs.durationSeconds) * outputCount +
-      inputImageCost(pricing, inputs, outputCount)
+      inputImageCost(pricing, inputs, outputCount) +
+      inputVideoDurationCost(pricing, inputs, outputCount)
     );
   }
   if (typeof pricing.pricePerMinute === 'number') {
@@ -209,7 +210,8 @@ function priceFromConfig(
     const pricePerSecond = row?.pricePerSecond;
     return typeof pricePerSecond === 'number'
       ? pricePerSecond * seconds(inputs.durationSeconds) * outputCount +
-          inputImageCost(pricing, inputs, outputCount)
+          inputImageCost(pricing, inputs, outputCount) +
+          inputVideoDurationCost(pricing, inputs, outputCount)
       : null;
   }
   if (pricing.function === 'costByVideoPerMillionTokens') {
@@ -296,7 +298,11 @@ function missingPricingInput(
       ? null
       : 'usesVoiceControl';
   }
-  if (inputName === 'image_url' || inputName === 'image_urls') {
+  if (
+    inputName === 'image_url' ||
+    inputName === 'image_urls' ||
+    inputName === 'reference_image_urls'
+  ) {
     return typeof inputs.inputImageCount === 'number' &&
       Number.isFinite(inputs.inputImageCount) &&
       inputs.inputImageCount >= 0
@@ -310,12 +316,23 @@ function missingPricingInput(
       ? null
       : 'inputAudioCount';
   }
-  if (inputName === 'video_url' || inputName === 'video_urls') {
+  if (
+    inputName === 'video_url' ||
+    inputName === 'video_urls' ||
+    inputName === 'reference_video_urls'
+  ) {
     return typeof inputs.inputVideoCount === 'number' &&
       Number.isFinite(inputs.inputVideoCount) &&
       inputs.inputVideoCount >= 0
       ? null
       : 'inputVideoCount';
+  }
+  if (inputName === 'input_video_duration_seconds') {
+    return typeof inputs.inputVideoDurationSeconds === 'number' &&
+      Number.isFinite(inputs.inputVideoDurationSeconds) &&
+      inputs.inputVideoDurationSeconds >= 0
+      ? null
+      : 'inputVideoDurationSeconds';
   }
   if (inputName === 'num_frames') {
     return hasPositiveNumber(inputs.numFrames) ? null : 'numFrames';
@@ -345,6 +362,9 @@ function billableUnitsFromPricingInputs(
   }
   if (normalized.inputVideoCount !== undefined) {
     units.inputVideoCount = normalized.inputVideoCount;
+  }
+  if (normalized.inputVideoDurationSeconds !== undefined) {
+    units.inputVideoDurationSeconds = normalized.inputVideoDurationSeconds;
   }
   if (normalized.durationSeconds !== undefined) {
     units.duration = normalized.durationSeconds;
@@ -400,6 +420,13 @@ function normalizedPricingInputs(
       : {}),
     ...(inputs.inputVideoCount !== undefined
       ? { inputVideoCount: normalizedNonNegativeCount(inputs.inputVideoCount) }
+      : {}),
+    ...(inputs.inputVideoDurationSeconds !== undefined
+      ? {
+          inputVideoDurationSeconds: normalizedNonNegativeNumber(
+            inputs.inputVideoDurationSeconds
+          ),
+        }
       : {}),
     ...(inputs.durationSeconds !== undefined
       ? { durationSeconds: inputs.durationSeconds }
@@ -744,7 +771,29 @@ function inputImageCost(
   if (typeof pricing.pricePerInputImage !== 'number') {
     return 0;
   }
-  return pricing.pricePerInputImage * inputImageCount(inputs) * outputCount;
+  const includedInputImages = normalizedNonNegativeCount(
+    pricing.includedInputImages ?? 0
+  );
+  const billableInputImages = Math.max(
+    inputImageCount(inputs) - includedInputImages,
+    0
+  );
+  return pricing.pricePerInputImage * billableInputImages * outputCount;
+}
+
+function inputVideoDurationCost(
+  pricing: ModelPriceConfig,
+  inputs: GenerationPricingInputs,
+  outputCount: number
+): number {
+  if (typeof pricing.pricePerInputVideoSecond !== 'number') {
+    return 0;
+  }
+  return (
+    pricing.pricePerInputVideoSecond *
+    normalizedNonNegativeNumber(inputs.inputVideoDurationSeconds ?? 0) *
+    outputCount
+  );
 }
 
 function inputImageCount(inputs: GenerationPricingInputs): number {
@@ -758,6 +807,12 @@ function normalizedOutputCount(value: unknown): number {
 }
 
 function normalizedNonNegativeCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : 0;
+}
+
+function normalizedNonNegativeNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
     ? value
     : 0;

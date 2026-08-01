@@ -68,6 +68,7 @@ function selectedModelAcceptsReference(input: {
     inputMode: input.inputMode,
     mediaKind: input.mediaKind,
     slotId: input.placement.slotId,
+    model: input.model,
   });
   return Boolean(
     providerField &&

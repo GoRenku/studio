@@ -1,0 +1,195 @@
+{
+  "input_schema": {
+    "required": [
+      "prompt",
+      "image_url"
+    ],
+    "x-fal-order-properties": [
+      "prompt",
+      "duration",
+      "resolution",
+      "image_url",
+      "end_image_url"
+    ],
+    "title": "ImageToVideoHailuo03Input",
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "minLength": 1,
+        "title": "Prompt",
+        "examples": [
+          "The camera slowly pulls back from the scene, revealing the full landscape as clouds drift overhead and light shifts across the terrain."
+        ],
+        "type": "string",
+        "maxLength": 2000,
+        "description": "Text prompt for video generation"
+      },
+      "image_url": {
+        "examples": [
+          "https://storage.googleapis.com/falserverless/example_inputs/hailuo23/pro_i2v_in.jpg"
+        ],
+        "title": "Image Url",
+        "type": "string",
+        "description": "URL of the image to use as the first frame. The output aspect ratio follows this image.",
+        "format": "uri"
+      },
+      "end_image_url": {
+        "title": "End Image Url",
+        "anyOf": [
+          {
+            "type": "string",
+            "format": "uri"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Optional URL of the image to use as the last frame, for first-to-last keyframe generation."
+      },
+      "duration": {
+        "maximum": 15,
+        "minimum": 5,
+        "type": "integer",
+        "default": 5,
+        "description": "The duration of the video in seconds.",
+        "title": "Duration"
+      },
+      "resolution": {
+        "const": "2K",
+        "title": "Resolution",
+        "type": "string",
+        "default": "2K",
+        "description": "The resolution of the generated video. Only 2K is currently supported."
+      }
+    }
+  },
+  "output_schema": {
+    "required": [
+      "video"
+    ],
+    "x-fal-order-properties": [
+      "video"
+    ],
+    "title": "ImageToVideoHailuo03Output",
+    "type": "object",
+    "properties": {
+      "video": {
+        "$ref": "#/File",
+        "description": "The generated video"
+      }
+    }
+  },
+  "File": {
+    "required": [
+      "url"
+    ],
+    "x-fal-order-properties": [
+      "url",
+      "content_type",
+      "file_name",
+      "file_size"
+    ],
+    "title": "File",
+    "type": "object",
+    "properties": {
+      "url": {
+        "title": "Url",
+        "type": "string",
+        "description": "The URL where the file can be downloaded from.",
+        "format": "uri"
+      },
+      "file_size": {
+        "examples": [
+          4404019
+        ],
+        "title": "File Size",
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The size of the file in bytes."
+      },
+      "content_type": {
+        "examples": [
+          "image/png"
+        ],
+        "title": "Content Type",
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The mime type of the file."
+      },
+      "file_name": {
+        "examples": [
+          "z9RV14K95DvU.png"
+        ],
+        "title": "File Name",
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The name of the file. It will be auto-generated if not provided."
+      }
+    }
+  },
+  "x-renku-viewer": {
+    "version": 1,
+    "input": {
+      "pointer": "/input_schema",
+      "component": "object",
+      "label": "Input",
+      "order": [
+        "prompt",
+        "image_url",
+        "end_image_url",
+        "duration",
+        "resolution"
+      ],
+      "fields": {
+        "prompt": {
+          "pointer": "/input_schema/properties/prompt",
+          "component": "string",
+          "label": "Prompt"
+        },
+        "image_url": {
+          "pointer": "/input_schema/properties/image_url",
+          "component": "file-uri",
+          "label": "Image Url"
+        },
+        "end_image_url": {
+          "pointer": "/input_schema/properties/end_image_url",
+          "component": "nullable",
+          "label": "End Image Url",
+          "value": {
+            "pointer": "/input_schema/properties/end_image_url/anyOf/0",
+            "component": "file-uri",
+            "label": "End Image Url"
+          }
+        },
+        "duration": {
+          "pointer": "/input_schema/properties/duration",
+          "component": "integer",
+          "label": "Duration"
+        },
+        "resolution": {
+          "pointer": "/input_schema/properties/resolution",
+          "component": "string",
+          "label": "Resolution"
+        }
+      }
+    }
+  }
+}

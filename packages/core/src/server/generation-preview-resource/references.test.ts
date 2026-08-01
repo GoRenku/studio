@@ -265,11 +265,19 @@ function mediaField(
   name: string,
   acceptedKinds: Array<'image' | 'audio' | 'video'>,
 ) {
+  const mediaKind = acceptedKinds[0];
   return {
     name,
     label: name,
     kind: 'array',
-    semantic: { kind: 'media' as const, role: 'reference-image' as const },
+    semantic: {
+      kind: 'media' as const,
+      role: mediaKind === 'video'
+        ? 'source-video' as const
+        : mediaKind === 'audio'
+          ? 'audio' as const
+          : 'reference-image' as const,
+    },
     required: false,
     media: {
       acceptedKinds,

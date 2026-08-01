@@ -45,11 +45,12 @@ describe('Studio generation model availability', () => {
         mediaKind: 'video',
       }))
     ));
-    expect(models).toHaveLength(9);
+    expect(models).toHaveLength(12);
     expect(new Set(models.map((model) => model.label))).toEqual(new Set([
       'Seedance 2.0',
       'Seedance 2.0 Mini',
       'Seedance 2.0 Fast',
+      'MiniMax H3',
     ]));
   });
 });

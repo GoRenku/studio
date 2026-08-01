@@ -189,7 +189,12 @@ export function createGenerationServiceWiring() {
       return withGenerationProject(input, async ({ session, projectFolder }) => {
         const record = readGenerationSpec({ id: input.specId, session });
         const purpose = readGenerationPurpose(record.spec.purpose);
-        return estimateGeneration({ spec: await preparePurposeExecutionSpec({ spec: record.spec, purpose, projectAspectRatio: projectAspectRatio(session) }), purpose });
+        return estimateGeneration({
+          spec: await preparePurposeExecutionSpec({ spec: record.spec, purpose, projectAspectRatio: projectAspectRatio(session) }),
+          purpose,
+          session,
+          projectFolder,
+        });
       });
     },
     async runGeneration(input: ProjectInput & { specId: string; approvalToken: string; mode: 'simulated' | 'live' }) {

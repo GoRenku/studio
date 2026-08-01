@@ -13,6 +13,7 @@ export async function estimateGenerationProviderRequest(input: {
   mediaKind: GenerationMediaKind;
   payload: Record<string, unknown>;
   inputMediaCounts?: Partial<Record<'image' | 'audio' | 'video', number>>;
+  inputMediaDurationSeconds?: Partial<Record<'audio' | 'video', number>>;
   catalog?: LoadedModelCatalog;
 }): Promise<GenerationCostEstimate> {
   const descriptor = await describeGenerationModelInputs({
@@ -64,6 +65,7 @@ export async function estimateGenerationProviderRequest(input: {
     inputImageCount: input.inputMediaCounts?.image,
     inputAudioCount: input.inputMediaCounts?.audio,
     inputVideoCount: input.inputMediaCounts?.video,
+    inputVideoDurationSeconds: input.inputMediaDurationSeconds?.video,
   };
   return estimateGenerationCost({
     priceKey: {

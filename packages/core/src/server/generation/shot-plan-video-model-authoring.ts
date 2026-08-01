@@ -92,18 +92,22 @@ export function routeKindForInputMode(
 export function shotPlanVideoDurationCapability(
   model: GenerationModelDescriptor,
 ): string {
-  const values = model.fields.find((field) =>
+  const durationField = model.fields.find((field) =>
     field.semantic?.kind === 'setting' && field.semantic.role === 'duration'
-  )?.allowedValues?.filter((value): value is string | number =>
+  );
+  const values = durationField?.allowedValues?.filter((value): value is string | number =>
     typeof value === 'string' || typeof value === 'number'
   ) ?? [];
   const seconds = values
     .map((value) => Number(value))
     .filter(Number.isFinite);
-  if (seconds.length === 0) {
+  const maximum = durationField?.maximum ?? (
+    seconds.length > 0 ? Math.max(...seconds) : null
+  );
+  if (maximum === null) {
     return 'Provider-defined duration';
   }
-  return `Up to ${Math.max(...seconds)} seconds`;
+  return `Up to ${maximum} seconds`;
 }
 
 function modelKey(input: { provider: string; model: string }): string {

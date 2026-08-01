@@ -237,10 +237,19 @@ function semanticForField(
   ) {
     return { kind: 'media', role: 'last-frame' };
   }
-  if (name === 'source_video_url' || name === 'video_url') {
+  if (
+    name === 'source_video_url' ||
+    name === 'video_url' ||
+    name === 'video_urls' ||
+    name === 'reference_video_urls'
+  ) {
     return { kind: 'media', role: 'source-video' };
   }
-  if (name === 'audio_url' || name === 'audio_urls') {
+  if (
+    name === 'audio_url' ||
+    name === 'audio_urls' ||
+    name === 'reference_audio_urls'
+  ) {
     return { kind: 'media', role: 'audio' };
   }
   if (
