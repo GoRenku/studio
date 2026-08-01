@@ -13,7 +13,7 @@ import type {
   SceneDialogueAudioSetup,
   SceneDialogueAudioWorkspaceMutationReport,
 } from '../../client/scene-dialogue-audio-workspace.js';
-import { recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
+import { recordAssetFileGenerationProvenanceInSession } from '../asset-file-generation/commands.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { createAssetMembership } from '../assets/ownership.js';
 import { listCastVoiceProviderRegistrationRecords, readCastVoiceRecord } from '../database/access/cast-voices.js';
@@ -28,6 +28,7 @@ import { readProjectRecord } from '../database/access/project.js';
 import { createGenerationSpec } from '../generation/specs.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
+  assertSceneDialogueAudioDestinationReady,
   createProjectAssetFileWriteSet,
   persistProjectAssetFileSync,
   rollbackProjectAssetFileWriteSetSync,
@@ -73,6 +74,11 @@ export async function generateSceneDialogueAudioTake(input: {
       'Scene Dialogue Audio requires explicit approval for a live provider run.'
     );
   }
+  assertSceneDialogueAudioDestinationReady({
+    session: input.session,
+    sceneId: input.sceneId,
+    dialogueId: input.dialogueId,
+  });
   updateSceneDialogueAudioSetup(input);
   const setup = requireSceneDialogueAudioSetup(input);
   const spec = await buildSceneDialogueAudioSpec({
@@ -137,10 +143,11 @@ export async function generateSceneDialogueAudioTake(input: {
       'Scene Dialogue Audio generation produced no attachable output.'
     );
   }
-  attachDialogueAudioTake({
+  attachSceneDialogueAudioTake({
     ...input,
     setup,
     run: report.run,
+    outputArtifactId: output.artifactId,
     sourceProjectRelativePath: output.projectRelativePath,
   });
   const context = readSceneDialogueAudioWorkspace(input);
@@ -225,17 +232,36 @@ function requireDialogueCastMemberId(input: {
   return row.castMemberId;
 }
 
-function attachDialogueAudioTake(input: {
+function attachSceneDialogueAudioTake(input: {
   session: DatabaseSession;
   projectFolder: string;
   sceneId: string;
   dialogueId: string;
   setup: SceneDialogueAudioSetup;
   run: import('../../client/generation.js').GenerationRun;
+  outputArtifactId: string;
   sourceProjectRelativePath: string;
   idGenerator: ProjectIdGenerator;
   now: string;
 }): void {
+  const output = input.run.outputs.find(
+    (candidate) =>
+      candidate.artifactId === input.outputArtifactId &&
+      candidate.projectRelativePath === input.sourceProjectRelativePath
+  );
+  if (
+    (input.run.status !== 'completed' && input.run.status !== 'simulated') ||
+    input.run.specSnapshot.purpose !== 'scene.dialogue-audio' ||
+    input.run.specSnapshot.target.kind !== 'sceneDialogue' ||
+    input.run.specSnapshot.target.id !== input.dialogueId ||
+    !output ||
+    !input.run.receipt
+  ) {
+    throw new ProjectDataError(
+      'CORE_DIALOGUE_AUDIO_ATTACHMENT_INVALID',
+      'Generated dialogue audio does not match the completed Dialogue Audio run.'
+    );
+  }
   const audio = input.session.db
     .select()
     .from(sceneDialogueAudio)
@@ -256,7 +282,7 @@ function attachDialogueAudioTake(input: {
         (candidate) => candidate.provider === 'elevenlabs'
       )
     : null;
-  if (!voice || !registration || !input.run.receipt) {
+  if (!voice || !registration) {
     throw new ProjectDataError(
       'CORE_DIALOGUE_AUDIO_ATTACHMENT_INVALID',
       'Generated dialogue audio is missing voice or provenance data.'
@@ -305,10 +331,10 @@ function attachDialogueAudioTake(input: {
         owner,
         now: input.now,
       });
-      recordImportedAssetFileGenerationProvenanceInSession({
-        session,
+      recordAssetFileGenerationProvenanceInSession(session, {
         assetFileId,
-        receipt: input.run.receipt,
+        mediaGenerationRunId: input.run.id,
+        outputArtifactId: input.outputArtifactId,
       });
       tx.insert(sceneDialogueAudioTakes).values({
         id: takeId,

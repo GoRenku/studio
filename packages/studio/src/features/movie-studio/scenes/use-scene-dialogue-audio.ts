@@ -320,7 +320,6 @@ export function useSceneDialogueAudio(input: {
         { setup: spec, approveLiveProviderRun: true }
       );
       onContextChange(report.context);
-      setEstimateState({ estimateSignature, estimate: idleEstimate });
     } finally {
       setActionBusy(false);
     }
@@ -330,7 +329,6 @@ export function useSceneDialogueAudio(input: {
     blockedIssue,
     canGenerateCurrentEstimate,
     dialogueId,
-    estimateSignature,
     onContextChange,
     projectName,
     sceneId,

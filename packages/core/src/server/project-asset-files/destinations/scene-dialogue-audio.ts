@@ -11,6 +11,15 @@ import type {
   DestinationRootInput,
 } from './types.js';
 
+export function assertSceneDialogueAudioDestinationReady(input: {
+  session: DestinationRootInput<'scene.dialogueAudio'>['session'];
+  sceneId: string;
+  dialogueId: string;
+}): void {
+  requireSceneHierarchy(input.session, input.sceneId);
+  sceneDialogueAudioBasePrefix(input.session, input);
+}
+
 export async function resolveSceneDialogueAudioDestinationFile(
   input: DestinationFileInput<'scene.dialogueAudio'>
 ): Promise<ProjectRelativePath> {
@@ -64,7 +73,10 @@ export async function resolveSceneDialogueAudioDestinationOutputNames(
 
 function sceneDialogueAudioBasePrefix(
   session: DestinationRootInput<'scene.dialogueAudio'>['session'],
-  destination: DestinationRootInput<'scene.dialogueAudio'>['destination']
+  destination: Pick<
+    DestinationRootInput<'scene.dialogueAudio'>['destination'],
+    'sceneId' | 'dialogueId'
+  >
 ): string {
   const screenplay = readScreenplayDocumentFromSession(session);
   if (!screenplay) {

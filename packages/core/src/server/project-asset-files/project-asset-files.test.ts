@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ProjectRelativePath } from '../../client/index.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
@@ -12,11 +12,13 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { scenes } from '../schema/index.js';
 import { createDialogueAudioReadyProject } from '../testing/dialogue-audio-template-fixtures.js';
 import {
   createProjectAssetFileWriteSet,
   persistProjectAssetFileSync,
   allocateSceneStoryboardIterationFolderSync,
+  assertSceneDialogueAudioDestinationReady,
   resolveGenerationRunOutputRoot,
   rollbackProjectAssetFileWriteSetSync,
   writeProjectTemporaryFile,
@@ -137,6 +139,33 @@ describe('project asset file storage', () => {
     );
     expect(second.projectRelativePath).toBe(
       'audio/the-wall/cannon-test/0100-urban-01.mp3'
+    );
+  });
+
+  it('rejects dialogue audio destinations without a persisted dialogue order key', () => {
+    const row = session.db
+      .select({ blocksJson: scenes.blocksJson })
+      .from(scenes)
+      .where(eq(scenes.id, sceneId))
+      .get()!;
+    const blocks = JSON.parse(row.blocksJson) as Array<Record<string, unknown>>;
+    blocks.forEach((block) => delete block.dialogueOrderKey);
+    session.db
+      .update(scenes)
+      .set({ blocksJson: JSON.stringify(blocks) })
+      .where(eq(scenes.id, sceneId))
+      .run();
+
+    expect(() =>
+      assertSceneDialogueAudioDestinationReady({
+        session,
+        sceneId,
+        dialogueId,
+      })
+    ).toThrowError(
+      expect.objectContaining({
+        code: 'PROJECT_ASSET_FILE_DIALOGUE_ORDER_KEY_MISSING',
+      })
     );
   });
 

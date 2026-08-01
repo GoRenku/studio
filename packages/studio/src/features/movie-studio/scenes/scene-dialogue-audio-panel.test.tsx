@@ -22,7 +22,9 @@ vi.mock('@/services/studio-scene-dialogue-audio-api', () => ({
 describe('SceneDialogueAudioPanel', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.mocked(estimateSceneDialogueAudioDraft).mockReset();
     vi.mocked(estimateSceneDialogueAudioDraft).mockResolvedValue(estimateReport());
+    vi.mocked(saveSceneDialogueAudioSetup).mockReset();
     vi.mocked(saveSceneDialogueAudioSetup).mockResolvedValue({
       context: savedContext('Bronze has no temper. [shouts] Men give it one.'),
       resourceKeys: [],
@@ -125,6 +127,49 @@ describe('SceneDialogueAudioPanel', () => {
         message: 'Saved',
       })
     );
+  });
+
+  it('keeps the current estimate ready after generating another take', async () => {
+    vi.mocked(generateSceneDialogueAudioTake).mockResolvedValue({
+      context: savedContext('Bronze has no temper. Men give it one.'),
+      resourceKeys: [],
+    });
+
+    render(
+      <SceneDialogueAudioPanel
+        projectName='constantinople'
+        sceneId='scene_hook'
+        dialogueId='dialogue_urban'
+        context={baseContext()}
+        player={player()}
+        onClose={vi.fn()}
+        onContextChange={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByText('$0.0040')).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(generateSceneDialogueAudioTake).toHaveBeenCalledOnce();
+    expect(estimateSceneDialogueAudioDraft).toHaveBeenCalledOnce();
+    expect(screen.getByText('$0.0040')).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
   });
 
   it('flushes pending dialog text when the panel unmounts before debounce completes', async () => {
