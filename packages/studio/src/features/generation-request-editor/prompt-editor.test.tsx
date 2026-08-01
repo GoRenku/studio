@@ -111,11 +111,34 @@ describe('PromptEditor', () => {
     view.dispatch({ selection: { anchor: secondMention + 3 } });
     expect((await screen.findByRole('img', { name: 'Imperial lookbook' }))
       .getAttribute('src')).toBe('/studio-api/reference-2.png');
+    expect(screen.queryByText('Imperial lookbook')).toBeNull();
 
     view.dispatch({ selection: { anchor: 0 } });
     activateHover(view, secondMention + 2, 1);
     expect((await screen.findByRole('img', { name: 'Imperial lookbook' }))
       .getAttribute('src')).toBe('/studio-api/reference-2.png');
+    expect(screen.queryByText('Imperial lookbook')).toBeNull();
+  });
+
+  it('shows one preview when the caret enters an actively hovered mention', async () => {
+    render(
+      <PromptEditor
+        value='Use @Reference1.'
+        onValueChange={() => {}}
+        mentions={mentions}
+        ariaLabel='Generation prompt'
+      />,
+    );
+    const view = editorView();
+    const mention = view.state.doc.toString().indexOf('@Reference1');
+    activateHover(view, mention + 2, 1);
+    await screen.findByRole('img', { name: 'Council chamber' });
+
+    view.dispatch({ selection: { anchor: mention + 3 } });
+
+    await waitFor(() => expect(
+      screen.getAllByRole('img', { name: 'Council chamber' }),
+    ).toHaveLength(1));
   });
 
   it('keeps completion, decoration, and preview ranges normalized for CRLF prompts', async () => {

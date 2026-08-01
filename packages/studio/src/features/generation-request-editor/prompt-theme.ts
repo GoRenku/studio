@@ -79,9 +79,20 @@ const promptEditorTheme = EditorView.theme({
     fontSize: '11px',
     fontWeight: '650',
   },
-  '.cm-tooltip > .cm-prompt-reference-preview': {
+  '.cm-tooltip.cm-tooltip-hover': {
+    border: '0',
+    backgroundColor: 'transparent',
+    boxShadow: 'none',
+    overflow: 'visible',
+  },
+  '.cm-prompt-reference-preview': {
     width: '328px',
     padding: '7px',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    backgroundColor: 'var(--popover)',
+    boxShadow: '0 18px 48px hsl(0 0% 0% / 0.32), 0 4px 12px hsl(0 0% 0% / 0.2)',
+    overflow: 'hidden',
   },
   '.cm-prompt-reference-preview-image': {
     display: 'block',
@@ -90,17 +101,6 @@ const promptEditorTheme = EditorView.theme({
     borderRadius: '5px',
     backgroundColor: 'hsl(0 0% 7%)',
     objectFit: 'contain',
-  },
-  '.cm-prompt-reference-preview-title': {
-    overflow: 'hidden',
-    margin: '0',
-    padding: '10px 6px 5px',
-    color: 'var(--popover-foreground)',
-    fontSize: '12px',
-    fontWeight: '620',
-    lineHeight: '1.35',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
   },
 });
 

@@ -28,7 +28,7 @@ export function promptReferencePreview(
         mentions,
       );
       return range ? tooltipForRange(range) : null;
-    }, { hoverTime: 180 }),
+    }, { hoverTime: 180, hideOnChange: true }),
     StateField.define<Tooltip | null>({
       create: (state) => caretTooltip(state.doc.toString(), state.selection.main, mentions),
       update: (_tooltip, transaction) => caretTooltip(
@@ -110,9 +110,5 @@ function renderReferencePreview(
     image.alt = mention.label;
     preview.append(image);
   }
-  const title = document.createElement('p');
-  title.className = 'cm-prompt-reference-preview-title';
-  title.textContent = mention.label;
-  preview.append(title);
   return preview;
 }
