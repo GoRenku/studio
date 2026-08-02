@@ -8,8 +8,18 @@ import {
 } from './prompt-mentions';
 
 const mentions: GenerationPromptReferenceMention[] = [
-  { value: '@Reference1', label: 'Council chamber', previewImageUrl: '/one.png' },
-  { value: '@Reference2', label: 'Production lookbook', previewImageUrl: '/two.png' },
+  {
+    value: '@Reference1',
+    title: 'Council chamber',
+    accessibleName: 'Council chamber',
+    previewImageUrl: '/one.png',
+  },
+  {
+    value: '@Reference2',
+    title: 'Production lookbook',
+    accessibleName: 'Production lookbook',
+    previewImageUrl: '/two.png',
+  },
 ];
 
 describe('prompt mentions', () => {

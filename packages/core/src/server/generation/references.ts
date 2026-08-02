@@ -48,7 +48,7 @@ export function listGenerationReferences(
         return [];
       }
       const role = asset.type;
-      const label = asset.title.trim() || file.role;
+      const title = asset.title.trim() || undefined;
       if (input.mediaKind && file.mediaKind !== input.mediaKind) {
         return [];
       }
@@ -69,7 +69,7 @@ export function listGenerationReferences(
       }
       if (
         search &&
-        !`${label} ${role} ${file.projectRelativePath}`
+        !`${title ?? ''} ${role} ${file.projectRelativePath}`
           .toLocaleLowerCase()
           .includes(search)
       ) {
@@ -81,7 +81,7 @@ export function listGenerationReferences(
           assetId: file.assetId,
           assetFileId: file.id,
         },
-        label,
+        ...(title ? { title } : {}),
         mediaKind: file.mediaKind,
         mimeType: file.mimeType,
         sizeBytes: file.sizeBytes,
@@ -102,8 +102,8 @@ export function listGenerationReferences(
       }];
     })
     .sort((left, right) =>
-      `${left.label}\0${referenceKey(left.reference)}`.localeCompare(
-        `${right.label}\0${referenceKey(right.reference)}`
+      `${left.title ?? ''}\0${referenceKey(left.reference)}`.localeCompare(
+        `${right.title ?? ''}\0${referenceKey(right.reference)}`
       )
     );
   const afterCursor = input.cursor
@@ -241,7 +241,6 @@ export async function resolveGenerationReference(input: {
     }
     return {
       reference: input.reference,
-      label: path.posix.basename(projectFile.projectRelativePath),
       mediaKind: projectFile.mediaKind,
       mimeType: projectFile.mimeType,
       sizeBytes: projectFile.sizeBytes,
@@ -270,7 +269,7 @@ export async function resolveGenerationReference(input: {
   }
   return {
     reference: input.reference,
-    label: asset.title.trim() || file.role,
+    ...(asset.title.trim() ? { title: asset.title.trim() } : {}),
     mediaKind,
     mimeType: file.mimeType,
     sizeBytes: file.sizeBytes,
@@ -333,7 +332,7 @@ function placementKey(
 }
 
 function itemCursor(item: GenerationReferenceCatalogItem): string {
-  return `${item.label}\0${referenceKey(item.reference)}`;
+  return `${item.title ?? ''}\0${referenceKey(item.reference)}`;
 }
 
 function isGenerationMediaKind(

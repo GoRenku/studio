@@ -33,19 +33,19 @@ describe('projectGenerationPreviewReferences', () => {
   it('projects entity placeholders and available compatible media for reference video', () => {
     const dialogueAudio = catalogItem({
       id: 'dialogue-audio',
-      label: 'Urban opening line',
+      title: 'Urban opening line',
       mediaKind: 'audio',
       role: 'dialogue-audio',
     });
     const constantineSheet = catalogItem({
       id: 'constantine-sheet',
-      label: 'Constantine Character Sheet',
+      title: 'Constantine Character Sheet',
       mediaKind: 'image',
       role: 'character-sheet',
     });
     const lookbookSheet = catalogItem({
       id: 'lookbook-sheet',
-      label: 'Production Lookbook Sheet',
+      title: 'Production Lookbook Sheet',
       mediaKind: 'image',
       role: 'lookbook-sheet',
     });
@@ -109,7 +109,7 @@ describe('projectGenerationPreviewReferences', () => {
         id: 'dialogue_urban',
       }, 'audio', [catalogItem({
         id: 'dialogue-audio',
-        label: 'Urban opening line',
+        title: 'Urban opening line',
         mediaKind: 'audio',
         role: 'dialogue-audio',
       })]),
@@ -124,7 +124,7 @@ describe('projectGenerationPreviewReferences', () => {
   it('keeps an exact persisted incompatible slot visible for removal', () => {
     const persisted = catalogItem({
       id: 'persisted-character-sheet',
-      label: 'Persisted Character Sheet',
+      title: 'Persisted Character Sheet',
       mediaKind: 'image',
       role: 'character-sheet',
     });
@@ -156,6 +156,42 @@ describe('projectGenerationPreviewReferences', () => {
     expect(
       projectGenerationPreviewReferences(preview).slots.map((slot) => slot.label)
     ).toEqual(['Urban', 'First Frame', 'Last Frame']);
+  });
+
+  it('keeps project-file storage paths out of reference presentation metadata', () => {
+    const preview = videoPreview('reference', []);
+    const projectRelativePath =
+      'references/raw-storage-filename.png' as ProjectRelativePath;
+    preview.spec.references = [{
+      placement: { kind: 'additional' },
+      reference: { kind: 'project-file', projectRelativePath },
+      promptMention: '@Reference1',
+    }];
+    preview.references = [{
+      ...preview.spec.references[0]!,
+      resolved: {
+        reference: { kind: 'project-file', projectRelativePath },
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        sizeBytes: 100,
+        width: null,
+        height: null,
+        durationSeconds: null,
+        owner: null,
+        role: 'project-file',
+        provenance: { origin: 'project-file' },
+        projectRelativePath,
+      },
+    }];
+
+    const [projected] = projectGenerationPreviewReferences(preview).additional;
+    expect(projected).toMatchObject({
+      kind: 'image',
+      role: 'project-file',
+      promptMention: '@Reference1',
+      identity: { kind: 'project-file', projectRelativePath },
+    });
+    expect(projected).not.toHaveProperty('title');
   });
 });
 
@@ -237,7 +273,7 @@ function guideSlot(
 
 function catalogItem(input: {
   id: string;
-  label: string;
+  title: string;
   mediaKind: 'image' | 'audio' | 'video';
   role: string;
 }): GenerationReferenceCatalogItem {
@@ -247,7 +283,7 @@ function catalogItem(input: {
       assetId: `asset_${input.id}`,
       assetFileId: `asset_file_${input.id}`,
     },
-    label: input.label,
+    title: input.title,
     mediaKind: input.mediaKind,
     mimeType: null,
     sizeBytes: null,

@@ -22,7 +22,8 @@ describe('generation request routes', () => {
       assetId: 'asset_test',
       assetFileId: 'asset_file_test',
     });
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       preview: {
         references: {
           additional: [
@@ -42,6 +43,8 @@ describe('generation request routes', () => {
         },
       },
     });
+    expect(body.preview.references.additional[0].title).toBe('Reference');
+    expect(body.preview.references.additional[1]).not.toHaveProperty('title');
   });
 
   it('serves a Core-resolved project reference file without requiring mutation authentication', async () => {
@@ -132,7 +135,7 @@ function routeCommands(): GenerationRequestRouteCommands {
           {
             kind: 'image',
             role: 'reference',
-            label: 'Reference',
+            title: 'Reference',
             identity: {
               kind: 'asset-file',
               assetId: 'asset_reference',
@@ -143,7 +146,6 @@ function routeCommands(): GenerationRequestRouteCommands {
           {
             kind: 'image',
             role: 'project-file',
-            label: 'helmet.jpg',
             identity: {
               kind: 'project-file',
               projectRelativePath: 'research/helmet.jpg',

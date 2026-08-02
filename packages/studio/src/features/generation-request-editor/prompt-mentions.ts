@@ -1,6 +1,7 @@
 export interface GenerationPromptReferenceMention {
   value: string;
-  label: string;
+  title?: string;
+  accessibleName: string;
   kind?: 'image' | 'video' | 'audio';
   previewImageUrl?: string;
 }
@@ -63,7 +64,7 @@ export function filterGenerationPromptMentions(
   const normalized = query.slice(1).toLocaleLowerCase();
   return mentions.filter((mention) =>
     mention.value.slice(1).toLocaleLowerCase().includes(normalized) ||
-    mention.label.toLocaleLowerCase().includes(normalized)
+    mention.title?.toLocaleLowerCase().includes(normalized)
   );
 }
 

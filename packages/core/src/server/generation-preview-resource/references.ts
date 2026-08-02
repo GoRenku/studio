@@ -28,7 +28,7 @@ export function projectGenerationPreviewReferences(
     }
     const current = projectSavedReference(selection);
     slots.set(placementKey(selection.placement), {
-      label: current.label,
+      label: current.title ?? 'Reference',
       mediaKind: current.kind,
       locked: referenceSlotLocked(preview.spec.purpose, selection.placement),
       placement: selection.placement,
@@ -93,7 +93,7 @@ function projectCatalogItem(
   return {
     kind: candidate.mediaKind,
     role: candidate.role,
-    label: candidate.label,
+    ...(candidate.title ? { title: candidate.title } : {}),
     identity: candidate.reference.kind === 'asset-file'
       ? {
           kind: 'asset-file',
@@ -113,10 +113,11 @@ function projectSavedReference(
   selection: GenerationPreview['references'][number]
 ): ProjectedReference {
   const resolved = selection.resolved;
+  const title = resolved ? resolved.title : 'Unavailable reference';
   return {
     kind: resolved?.mediaKind ?? 'image',
     role: resolved?.role ?? 'unavailable',
-    label: resolved?.label ?? 'Unavailable reference',
+    ...(title ? { title } : {}),
     ...(selection.promptMention ? { promptMention: selection.promptMention } : {}),
     identity: selection.reference.kind === 'asset-file'
       ? {

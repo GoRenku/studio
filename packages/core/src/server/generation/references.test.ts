@@ -1,8 +1,12 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import type { ProjectRelativePath } from '../../client/project.js';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { resolveGenerationReferenceProjectFile } from './references.js';
+import {
+  resolveGenerationReference,
+  resolveGenerationReferenceProjectFile,
+} from './references.js';
 
 describe('generation project-file reference safety', () => {
   let projectFolder: string;
@@ -26,6 +30,30 @@ describe('generation project-file reference safety', () => {
       mimeType: 'image/jpeg',
       sizeBytes: 9,
     });
+  });
+
+  it('does not turn a project-file path into a presentation title', async () => {
+    await fs.mkdir(path.join(projectFolder, 'research'));
+    await fs.writeFile(
+      path.join(projectFolder, 'research', 'raw-storage-filename.png'),
+      'reference',
+    );
+
+    const resolved = await resolveGenerationReference({
+      session: {} as never,
+      projectFolder,
+      reference: {
+        kind: 'project-file',
+        projectRelativePath:
+          'research/raw-storage-filename.png' as ProjectRelativePath,
+      },
+    });
+
+    expect(resolved).not.toBeNull();
+    expect(resolved).not.toHaveProperty('title');
+    expect(resolved?.projectRelativePath).toBe(
+      'research/raw-storage-filename.png',
+    );
   });
 
   it('rejects traversal, unsupported media, missing files, and symlink escape', async () => {

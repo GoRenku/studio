@@ -1,6 +1,7 @@
 import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { generationReferencePresentation } from './generation-reference-presentation';
 import { PromptEditor } from './prompt-editor';
 import type { GenerationPromptReferenceMention } from './prompt-mentions';
 
@@ -73,9 +74,14 @@ function selectedImageMentions(
   const mentions = new Map<string, GenerationPromptReferenceMention>();
   for (const reference of references) {
     if (reference.promptMention) {
+      const presentation = generationReferencePresentation({
+        reference,
+        contextLabel: reference.promptMention,
+      });
       mentions.set(reference.promptMention, {
         value: reference.promptMention,
-        label: reference.label,
+        ...(presentation.title ? { title: presentation.title } : {}),
+        accessibleName: presentation.accessibleName,
         kind: reference.kind,
         ...(reference.kind === 'image'
           ? { previewImageUrl: reference.browserUrl }

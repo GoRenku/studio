@@ -13,7 +13,7 @@ import {
 
 export interface GenerationReferenceCatalogResponseItem {
   reference: GenerationReference;
-  label: string;
+  title?: string;
   mediaKind: GenerationOutputMediaKind;
   mimeType: string | null;
   sizeBytes: number | null;
@@ -53,7 +53,7 @@ export function createGenerationReferencesRoute(options: {
             }
             return {
               reference: item.reference,
-              label: item.label,
+              ...(item.title ? { title: item.title } : {}),
               mediaKind: item.mediaKind,
               mimeType: item.mimeType,
               sizeBytes: item.sizeBytes,

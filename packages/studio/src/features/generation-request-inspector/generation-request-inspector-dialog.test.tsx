@@ -46,7 +46,10 @@ describe('Generation Request inspector', () => {
     const referencesTab = screen.getByRole('tab', { name: 'References' });
     activateTab(referencesTab);
     await waitFor(() => expect(referencesTab.getAttribute('aria-selected')).toBe('true'));
-    expect(screen.getByAltText('Saved project reference')).not.toBeNull();
+    expect(screen.getByAltText('Research image')).not.toBeNull();
+    expect(screen.queryByText('helmet.jpg')).toBeNull();
+    expect(screen.queryByAltText('helmet.jpg')).toBeNull();
+    expect(screen.queryByRole('button', { name: /helmet\.jpg/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Choose|Include|Exclude/ })).toBeNull();
 
     const configTab = screen.getByRole('tab', { name: 'Config' });
@@ -228,7 +231,6 @@ function previewFixture(
         current: {
           kind: 'image',
           role: 'project-file',
-          label: 'Saved project reference',
           identity: { kind: 'project-file' },
           selected: true,
           browserUrl: '/studio-api/projects/constantinople/generation-reference-file?path=research%2Fhelmet.jpg',

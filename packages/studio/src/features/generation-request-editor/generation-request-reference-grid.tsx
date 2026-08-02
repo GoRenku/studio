@@ -66,7 +66,7 @@ export function GenerationRequestReferenceGrid({
                       <GenerationRequestReferenceCard
                         key={referenceIdentityKey(reference)}
                         reference={reference}
-                        fallbackTitle={slot.label}
+                        contextLabel={slot.label}
                         selected={referenceSelected}
                         onToggleSelected={canEditSlot && !updating
                           ? () =>
@@ -91,10 +91,11 @@ export function GenerationRequestReferenceGrid({
               Additional Media
             </h3>
             <div className='grid grid-cols-[repeat(2,minmax(0,420px))] gap-5'>
-              {preview.references.additional.map((reference) => (
+              {preview.references.additional.map((reference, index) => (
                 <GenerationRequestReferenceCard
                   key={referenceIdentityKey(reference)}
                   reference={reference}
+                  contextLabel={`Additional ${reference.kind} reference ${index + 1}`}
                   selected
                 />
               ))}

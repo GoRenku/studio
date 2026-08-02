@@ -69,7 +69,7 @@ export interface GenerationPreviewPrompt {
 interface GenerationPreviewResourceReferenceBase {
   kind: 'image' | 'audio' | 'video';
   role: string;
-  label: string;
+  title?: string;
   promptMention?: string;
   dialogueId?: string;
   sourcePurpose?: string;

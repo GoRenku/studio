@@ -692,7 +692,7 @@ function previewFixture(input: {
         current: (input.selected ?? true) ? {
           kind: 'image',
           role: 'style',
-          label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
+          title: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
           promptMention: '@Reference1',
           identity: {
             kind: 'asset-file',
@@ -707,7 +707,7 @@ function previewFixture(input: {
         eligibleCandidates: [{
           kind: 'image',
           role: 'style',
-          label: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
+          title: input.referenceLabel ?? 'Storyboard Lookbook Sheet',
           promptMention: '@Reference1',
           identity: {
             kind: 'asset-file',

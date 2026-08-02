@@ -58,7 +58,7 @@ function completionForMention(
   return {
     label: mention.value,
     displayLabel: mention.value,
-    detail: mention.label,
+    ...(mention.title ? { detail: mention.title } : {}),
     apply: (view, completion, from, to) => {
       view.dispatch({
         ...insertCompletionText(view.state, mention.value, from, to),
@@ -91,13 +91,16 @@ function renderCompletionOption(
 
   const copy = document.createElement('span');
   copy.className = 'cm-prompt-reference-option-copy';
-  const title = document.createElement('span');
-  title.className = 'cm-prompt-reference-option-title';
-  title.textContent = mention.label;
   const token = document.createElement('span');
   token.className = 'cm-prompt-reference-option-token';
   token.textContent = mention.value;
-  copy.append(title, token);
+  if (mention.title) {
+    const title = document.createElement('span');
+    title.className = 'cm-prompt-reference-option-title';
+    title.textContent = mention.title;
+    copy.append(title);
+  }
+  copy.append(token);
   option.append(thumbnail, copy);
   return option;
 }

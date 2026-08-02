@@ -12,12 +12,14 @@ import { PromptEditor } from './prompt-editor';
 const mentions = [
   {
     value: '@Reference1',
-    label: 'Council chamber',
+    title: 'Council chamber',
+    accessibleName: 'Council chamber',
     previewImageUrl: '/studio-api/reference-1.png',
   },
   {
     value: '@Reference2',
-    label: 'Imperial lookbook',
+    title: 'Imperial lookbook',
+    accessibleName: 'Imperial lookbook',
     previewImageUrl: '/studio-api/reference-2.png',
   },
 ];
@@ -190,6 +192,37 @@ describe('PromptEditor', () => {
     expect(startCompletion(view)).toBe(false);
     await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
     expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps an untitled project-file mention free of storage filenames', async () => {
+    render(
+      <PromptEditor
+        value='Use @Reference1.'
+        onValueChange={() => {}}
+        mentions={[{
+          value: '@Reference1',
+          accessibleName: '@Reference1',
+          previewImageUrl: '/studio-api/references/raw-storage-filename.png',
+        }]}
+        ariaLabel='Generation prompt'
+      />,
+    );
+    const view = editorView();
+    view.dispatch({ selection: { anchor: 7 } });
+    expect(await screen.findByRole('img', { name: '@Reference1' })).not.toBeNull();
+    expect(screen.queryByText('raw-storage-filename.png')).toBeNull();
+
+    view.dispatch({
+      changes: { from: 4, to: 15, insert: '@' },
+      selection: { anchor: 5 },
+    });
+    expect(startCompletion(view)).toBe(true);
+    const option = await screen.findByRole('option');
+    expect(
+      option.querySelector('.cm-prompt-reference-option-token')?.textContent,
+    ).toBe('@Reference1');
+    expect(option.querySelector('.cm-prompt-reference-option-title')).toBeNull();
+    expect(option.textContent).not.toContain('raw-storage-filename.png');
   });
 });
 

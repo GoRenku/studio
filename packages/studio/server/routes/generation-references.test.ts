@@ -29,6 +29,7 @@ describe('generation references Hono route', () => {
       'video',
     ]);
     expect(body.items[0]).not.toHaveProperty('projectRelativePath');
+    expect(body.items[0].title).toBe('image reference');
     expect(body.items[0].browserUrl).toContain('/assets/asset_image/files/file_image');
     expect(body.nextCursor).toBe('next-page');
     expect(listGenerationReferences).toHaveBeenCalledWith({
@@ -47,7 +48,7 @@ function catalogItem(
 ) {
   return {
     reference: { kind: 'asset-file' as const, assetId, assetFileId },
-    label: `${mediaKind} reference`,
+    title: `${mediaKind} reference`,
     mediaKind,
     mimeType: null,
     sizeBytes: null,

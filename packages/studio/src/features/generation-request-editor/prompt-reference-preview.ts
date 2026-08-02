@@ -107,7 +107,7 @@ function renderReferencePreview(
     const image = document.createElement('img');
     image.className = 'cm-prompt-reference-preview-image';
     image.src = mention.previewImageUrl;
-    image.alt = mention.label;
+    image.alt = mention.accessibleName;
     preview.append(image);
   }
   return preview;

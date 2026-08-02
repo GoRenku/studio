@@ -6,7 +6,7 @@ import { readStudioApiError } from './studio-api-errors';
 
 export interface StudioGenerationReferenceCatalogItem {
   reference: GenerationReference;
-  label: string;
+  title?: string;
   mediaKind: GenerationOutputMediaKind;
   mimeType: string | null;
   sizeBytes: number | null;

@@ -148,7 +148,7 @@ function previewFixture(): GenerationPreviewResource {
         current: {
           kind: 'image',
           role: 'style',
-          label: 'Style sheet',
+          title: 'Style sheet',
           identity: {
             kind: 'asset-file',
             assetId: 'asset_style',
@@ -158,7 +158,7 @@ function previewFixture(): GenerationPreviewResource {
           selected: true,
         },
         eligibleCandidates: [{
-          kind: 'image', role: 'style', label: 'Style sheet',
+          kind: 'image', role: 'style', title: 'Style sheet',
           identity: {
             kind: 'asset-file',
             assetId: 'asset_style',

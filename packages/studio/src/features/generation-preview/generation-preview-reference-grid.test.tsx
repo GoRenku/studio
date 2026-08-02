@@ -150,7 +150,7 @@ describe('GenerationPreviewReferenceGrid', () => {
       eligibleCandidates: [{
         kind: 'audio',
         role: 'dialogue-audio',
-        label: 'Urban opening line',
+        title: 'Urban opening line',
         identity: {
           kind: 'asset-file',
           assetId: 'asset_dialogue',
@@ -190,7 +190,7 @@ describe('GenerationPreviewReferenceGrid', () => {
     preview.references.additional = [{
       kind: 'image',
       role: 'additional',
-      label: 'Costume study',
+      title: 'Costume study',
       identity: {
         kind: 'asset-file',
         assetId: 'asset_costume',
@@ -219,6 +219,43 @@ describe('GenerationPreviewReferenceGrid', () => {
     expect(screen.getByText('Costume study')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add Media' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Manage Media' })).toBeNull();
+  });
+
+  it('keeps untitled additional project files quiet without leaking filenames', () => {
+    const preview = previewFixture();
+    preview.references.additional = [{
+      kind: 'image',
+      role: 'project-file',
+      identity: { kind: 'project-file' },
+      selected: true,
+      browserUrl:
+        '/studio-api/projects/basilica/generation-reference-file?path=research%2Fraw-storage-filename.png',
+    }];
+    render(
+      <GenerationRequestReferenceGrid
+        preview={preview}
+        draft={{
+          promptDraft: { authoredText: 'Create a prop sheet.' },
+          modelFamilyId: 'gpt-image-2',
+          parameterValues: {},
+          authoredParameterNames: [],
+          slotSelections: [],
+        }}
+        updating={false}
+        editable={false}
+      />
+    );
+
+    expect(screen.getByText('Additional Media')).toBeTruthy();
+    expect(screen.getByAltText('Additional image reference 1')).toBeTruthy();
+    expect(screen.queryByText('raw-storage-filename.png')).toBeNull();
+    expect(screen.queryByAltText('raw-storage-filename.png')).toBeNull();
+    const openPreview = screen.getByRole('button', {
+      name: 'Open Additional image reference 1 preview',
+    });
+    expect(openPreview.textContent).not.toContain('raw-storage-filename.png');
+    fireEvent.click(openPreview);
+    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 });
 
@@ -263,7 +300,7 @@ function previewFixture(): GenerationPreviewResource {
           current: {
             kind: 'image',
             role: 'source-image',
-            label: 'Mara Character Sheet',
+            title: 'Mara Character Sheet',
             identity: {
               kind: 'asset-file',
               assetId: 'asset_mara',
@@ -292,7 +329,7 @@ function previewFixture(): GenerationPreviewResource {
             {
               kind: 'image',
               role: 'character-sheet',
-              label: 'Constantine Character Sheet',
+              title: 'Constantine Character Sheet',
               identity: {
                 kind: 'asset-file',
                 assetId: 'asset_constantine',

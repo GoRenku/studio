@@ -7,40 +7,46 @@ import type {
   MediaCardMedia,
 } from '@/ui/media-card/media-card-contract';
 import { VideoPreviewDialog } from '@/ui/video-preview-dialog';
+import { generationReferencePresentation } from './generation-reference-presentation';
 
 interface GenerationRequestReferenceCardProps {
   reference: GenerationPreviewResourceReference;
-  fallbackTitle?: string;
+  contextLabel: string;
   selected: boolean;
   onToggleSelected?: () => void | Promise<void>;
 }
 
 export function GenerationRequestReferenceCard({
   reference,
-  fallbackTitle,
+  contextLabel,
   selected,
   onToggleSelected,
 }: GenerationRequestReferenceCardProps) {
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
-  const title = referenceDisplayTitle(reference) ?? fallbackTitle;
-  const displayTitle = title ?? 'Generation reference';
+  const presentation = generationReferencePresentation({
+    reference,
+    contextLabel,
+  });
   return (
     <>
       <MediaCard
-        media={referenceCardMedia(reference, title)}
+        media={referenceCardMedia(reference, presentation.accessibleName)}
         frame={referenceCardFrame(reference)}
-        presentation={{ kind: 'overlay', copy: title ? { title } : undefined }}
+        presentation={{
+          kind: 'overlay',
+          copy: presentation.title ? { title: presentation.title } : undefined,
+        }}
         selected={selected}
         selection={onToggleSelected ? {
           kind: 'toggle',
           selected,
-          selectedLabel: `Exclude ${title ?? 'reference'}`,
-          unselectedLabel: `Include ${title ?? 'reference'}`,
+          selectedLabel: `Exclude ${presentation.accessibleName}`,
+          unselectedLabel: `Include ${presentation.accessibleName}`,
           onToggle: onToggleSelected,
         } : undefined}
         activation={referenceCardActivation({
           reference,
-          displayTitle,
+          accessibleName: presentation.accessibleName,
           onOpenVideo: () => setVideoPreviewOpen(true),
         })}
       />
@@ -49,7 +55,7 @@ export function GenerationRequestReferenceCard({
           open={videoPreviewOpen}
           onOpenChange={setVideoPreviewOpen}
           src={reference.browserUrl}
-          title={displayTitle}
+          title={presentation.accessibleName}
         />
       ) : null}
     </>
@@ -58,27 +64,27 @@ export function GenerationRequestReferenceCard({
 
 function referenceCardMedia(
   reference: GenerationPreviewResourceReference,
-  title: string | undefined,
+  accessibleName: string,
 ): MediaCardMedia {
   if (reference.kind === 'audio') {
     return {
       kind: 'audio',
       src: reference.browserUrl,
-      title: title ?? 'Generation reference',
+      title: accessibleName,
     };
   }
   if (reference.kind === 'video') {
     return {
       kind: 'video',
       src: reference.browserUrl,
-      title: title ?? 'Generation reference',
+      title: accessibleName,
       playback: 'hover-muted',
     };
   }
   return {
     kind: 'image',
     src: reference.browserUrl,
-    alt: title ?? 'Generation reference',
+    alt: accessibleName,
     fit: 'cover',
     effect: 'zoom-on-hover',
   };
@@ -94,42 +100,26 @@ function referenceCardFrame(
 
 function referenceCardActivation(input: {
   reference: GenerationPreviewResourceReference;
-  displayTitle: string;
+  accessibleName: string;
   onOpenVideo: () => void;
 }): MediaCardActivation | undefined {
   if (input.reference.kind === 'image') {
     return {
       kind: 'image-preview',
-      label: `Open ${input.displayTitle} preview`,
+      label: `Open ${input.accessibleName} preview`,
       image: {
         src: input.reference.browserUrl,
-        alt: input.displayTitle,
-        title: input.displayTitle,
+        alt: input.accessibleName,
+        title: input.accessibleName,
       },
     };
   }
   if (input.reference.kind === 'video') {
     return {
       kind: 'callback',
-      label: `Open ${input.displayTitle} preview`,
+      label: `Open ${input.accessibleName} preview`,
       onActivate: input.onOpenVideo,
     };
   }
   return undefined;
-}
-
-function referenceDisplayTitle(
-  reference: GenerationPreviewResourceReference,
-): string | undefined {
-  const label = reference.label.trim();
-  if (!label || /^(image|video|audio)\s*\d+$/i.test(label) ||
-      (reference.identity.kind === 'asset-file' &&
-        (label === reference.identity.assetId ||
-          label === reference.identity.assetFileId)) ||
-      label === reference.promptMention ||
-      /^(asset|asset_file|file|reference)[-_][a-z0-9_-]+$/i.test(label) ||
-      /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(label)) {
-    return undefined;
-  }
-  return label;
 }
