@@ -1,23 +1,30 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import Database from 'better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
-  ScreenplayCreateDocument,
-  ScreenplayDocument,
-  ScreenplayOperationDocument,
-} from '../../client/screenplay.js';
+  Screenplay,
+  ScreenplayInput,
+} from '../../client/screenplay/index.js';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
 } from '../index.js';
+import { deleteSectionAndSpliceChildren } from '../screenplay/commands/sections.js';
+import { assertValidScreenplay } from '../screenplay/validation/blocks.js';
+import { validateScreenplayStructure } from '../screenplay/validation/structure.js';
 import {
   createBlankMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
 
-describe('screenplay JSON commands', () => {
+const SUBJECTS = {
+  castMemberIds: new Set(['cast_urban', 'cast_mara']),
+  locationIds: new Set(['location_forge']),
+  propIds: new Set(['prop_drawing']),
+};
+
+describe('scene-first Screenplay', () => {
   let homeDir: string;
   let projectData = createProjectDataService();
 
@@ -27,962 +34,495 @@ describe('screenplay JSON commands', () => {
     projectData = createProjectDataService();
   });
 
-  it('requires a current authoring project before screenplay authoring', async () => {
-    await expect(
-      projectData.readScreenplayStatus({ homeDir })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA202',
-      suggestion:
-        'Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>`.',
-    });
-  });
-
-  it('creates and reads a screenplay document with generated ids and resolved relationships', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-
-    const report = await projectData.createScreenplay({
-      homeDir,
-      document: minimalScreenplayDocument(),
-    });
-
-    expect(report).toMatchObject({
-      valid: true,
-      project: { name: 'blank-movie' },
-      changes: [{ operation: 'screenplay.create' }],
-      resourceKeys: expect.arrayContaining(['screenplay']),
-    });
-    expect(report.generatedIds?.map((id) => id.kind)).toEqual(
-      expect.arrayContaining(['act', 'sequence', 'scene'])
-    );
-
-    await expect(projectData.readScreenplayStatus({ homeDir })).resolves.toMatchObject({
-      exists: true,
-      counts: {
-        castMembers: 1,
-        locations: 1,
-        acts: 1,
-        sequences: 1,
-        scenes: 1,
-        blocks: 2,
-      },
-    });
-
-    const read = await projectData.readScreenplay({ homeDir });
-    const scene = read.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-    expect(scene?.setting.locationIds).toHaveLength(1);
-    expect(scene?.blocks[0]).toMatchObject({
-      type: 'action',
-      castMemberIds: [read.screenplay?.cast[0]?.id],
-      locationIds: [read.screenplay?.locations[0]?.id],
-    });
-    expect(scene?.blocks[1]).toMatchObject({
-      type: 'dialogue',
-      castMemberId: read.screenplay?.cast[0]?.id,
-    });
-    const sceneNumbers = await projectData.listSceneProductionNumbers({ homeDir });
-    expect(sceneNumbers.sceneNumbers).toEqual([
-      {
-        productionNumber: '1',
-        sceneId: scene?.id,
-        title: scene?.title,
-      },
+  it('validates and round-trips every block, dialogue, reference, and organization branch', () => {
+    const screenplay = completeScreenplay();
+    expect(() => assertValidScreenplay(screenplay, {
+      subjects: SUBJECTS,
+      context: 'complete Screenplay test',
+    })).not.toThrow();
+    expect(screenplay.scenes[0]?.blocks.map((block) => block.type)).toEqual([
+      'action', 'transition', 'shot', 'lyrics', 'castList', 'note',
+      'specialHeading', 'titleCard', 'super', 'dialogue', 'dualDialogue',
     ]);
-    await expect(
-      projectData.resolveSceneProductionNumber({
-        homeDir,
-        productionNumber: '01',
-      })
-    ).resolves.toMatchObject({
-      scene: {
-        productionNumber: '1',
-        sceneId: scene?.id,
-        title: scene?.title,
-      },
-    });
-    await expect(
-      projectData.resolveSceneProductionNumber({ homeDir, productionNumber: 'not-a-scene' })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA447' });
-    await expect(
-      projectData.resolveSceneProductionNumber({ homeDir, productionNumber: '99' })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA447' });
   });
 
-  it('rejects a second create and points callers to apply', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
+  it('rejects unknown block fields, duplicate identities, invalid structure, and overlapping ranges', () => {
+    const unknownField = structuredClone(completeScreenplay()) as Screenplay & {
+      scenes: Array<Screenplay['scenes'][number] & { unexpected?: boolean }>;
+    };
+    unknownField.scenes[0]!.unexpected = true;
+    expect(() => assertValidScreenplay(unknownField, {
+      subjects: SUBJECTS,
+      context: 'unknown field',
+    })).toThrowError(expect.objectContaining({ code: 'SCREENPLAY_INVALID_CONTENT' }));
 
-    await expect(
-      projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA204',
-      suggestion: 'Use `renku screenplay apply` for revisions.',
+    const duplicate = structuredClone(completeScreenplay());
+    duplicate.scenes[0]!.blocks[1]!.id = duplicate.scenes[0]!.blocks[0]!.id;
+    expect(() => assertValidScreenplay(duplicate, {
+      subjects: SUBJECTS,
+      context: 'duplicate ID',
+    })).toThrowError(expect.objectContaining({ code: 'SCREENPLAY_INVALID_CONTENT' }));
+
+    const missingPlacement = structuredClone(completeScreenplay());
+    missingPlacement.structure = missingPlacement.structure.filter(
+      (entry) => entry.content.type !== 'scene',
+    );
+    expect(validateScreenplayStructure(missingPlacement).traversal).toBeNull();
+
+    const overlap = structuredClone(completeScreenplay());
+    overlap.references.push({
+      id: 'reference_overlap',
+      subject: { type: 'prop', id: 'prop_drawing' },
+      target: { type: 'block', sceneId: 'scene_forge', blockId: 'block_action' },
+      role: 'mention',
+      range: { start: 20, length: 5 },
     });
+    expect(() => assertValidScreenplay(overlap, {
+      subjects: SUBJECTS,
+      context: 'overlap',
+    })).toThrowError(expect.objectContaining({ code: 'SCREENPLAY_INVALID_CONTENT' }));
   });
 
-  it('validates structural errors and unknown-field warnings without writing', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-
-    await expect(
-      projectData.validateScreenplayJson({
-        homeDir,
-        document: {
-          kind: 'screenplay',
-          screenplay: { title: 'Broken' },
-          cast: [],
-          locations: [],
-          acts: [{ title: 'Act without sequences' }],
-        } as unknown as ScreenplayDocument,
-      })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA200',
-      issues: [expect.objectContaining({ code: 'PROJECT_DATA206' })],
-    });
-
-    const valid = await projectData.validateScreenplayJson({
-      homeDir,
-      document: {
-        ...minimalScreenplayDocument(),
-        mood: 'extraneous',
-      } as unknown as ScreenplayCreateDocument,
-    });
-    expect(valid.warnings).toEqual([
-      expect.objectContaining({
-        code: 'PROJECT_DATA214',
-        location: expect.objectContaining({ path: ['mood'] }),
+  it('rejects invalid reference subjects, targets, roles, ranges, and duplicate speakers', () => {
+    const invalidScreenplays = [
+      mutateReference('reference_presence', (reference) => {
+        reference.subject = { type: 'castMember', id: 'cast_missing' };
       }),
+      mutateReference('reference_prop', (reference) => {
+        reference.target = {
+          type: 'block',
+          sceneId: 'scene_forge',
+          blockId: 'block_missing',
+        };
+      }),
+      mutateReference('reference_prop', (reference) => {
+        reference.role = 'speaker';
+      }),
+      mutateReference('reference_prop', (reference) => {
+        delete reference.range;
+      }),
+      mutateReference('reference_prop', (reference) => {
+        reference.range = { start: 1000, length: 1 };
+      }),
+      (() => {
+        const screenplay = completeScreenplay();
+        const speaker = screenplay.references.find(
+          (reference) => reference.id === 'reference_speaker_0',
+        )!;
+        screenplay.references.push({ ...structuredClone(speaker), id: 'reference_duplicate_speaker' });
+        return screenplay;
+      })(),
+    ];
+
+    for (const screenplay of invalidScreenplays) {
+      expect(() => assertValidScreenplay(screenplay, {
+        subjects: SUBJECTS,
+        context: 'invalid reference matrix',
+      })).toThrowError(expect.objectContaining({ code: 'SCREENPLAY_INVALID_CONTENT' }));
+    }
+  });
+
+  it('promotes direct children in place when a Section is deleted', () => {
+    const screenplay = completeScreenplay();
+    const before = canonicalSceneIds(screenplay);
+
+    deleteSectionAndSpliceChildren(screenplay, 'section_act');
+
+    expect(screenplay.sections.map((section) => section.id)).toEqual([
+      'section_sequence',
     ]);
+    expect(canonicalSceneIds(screenplay)).toEqual(before);
+    expect(screenplay.structure.find((entry) =>
+      entry.content.type === 'section'
+      && entry.content.sectionId === 'section_sequence'
+    )?.parentSectionId).toBeUndefined();
   });
 
-  it('rejects screenplay metadata arrays that are not strings', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-
-    await expect(
-      projectData.validateScreenplayJson({
-        homeDir,
-        document: {
-          ...minimalScreenplayDocument(),
-          screenplay: {
-            title: 'Urban Basilica',
-            historicalBasis: [{ source: 'chronicle' }],
-          },
-        } as unknown as ScreenplayCreateDocument,
-      })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA200',
-      issues: [expect.objectContaining({ code: 'PROJECT_DATA208' })],
-    });
-  });
-
-  it('applies focused scene additions atomically', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-    const current = await projectData.readScreenplay({ homeDir });
-    const sequenceId = current.screenplay?.acts[0]?.sequences[0]?.id;
-    const locationId = current.screenplay?.locations[0]?.id;
-    if (!sequenceId || !locationId) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-
-    const operations: ScreenplayOperationDocument = {
-      kind: 'screenplayOperations',
-      operations: [
-        {
-          operation: 'scene.add',
-          sequenceId,
-          scene: {
-            key: 'new-scene',
-            title: 'Second Scene',
-            setting: { locationReferences: [{ id: locationId }] },
-            blocks: [],
-          },
-        },
-      ],
-    };
-    const report = await projectData.applyScreenplayOperations({ homeDir, document: operations });
-
-    expect(report).toMatchObject({
-      valid: true,
-      changes: [expect.objectContaining({ operation: 'scene.add' })],
-      generatedIds: [expect.objectContaining({ kind: 'scene', key: 'new-scene' })],
-    });
-    await expect(projectData.readScreenplayStatus({ homeDir })).resolves.toMatchObject({
-      counts: expect.objectContaining({ scenes: 2 }),
-    });
-    await expect(projectData.listSceneProductionNumbers({ homeDir })).resolves.toMatchObject({
-      sceneNumbers: [
-        expect.objectContaining({ productionNumber: '1' }),
-        expect.objectContaining({ productionNumber: '2', title: 'Second Scene' }),
-      ],
-    });
-  });
-
-  it('updates screenplay metadata without changing the screenplay graph', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-
-    const current = await projectData.readScreenplay({ homeDir });
-    const screenplay = current.screenplay?.screenplay;
-    if (!screenplay) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-
-    const report = await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'screenplay.update',
-            screenplay: {
-              ...screenplay,
-              summary: 'Urban understands that craft can become consequence.',
-            },
-          },
-        ],
-      },
-    });
-
-    expect(report.changes).toEqual([{ operation: 'screenplay.update' }]);
-    const updated = await projectData.readScreenplay({ homeDir });
-    expect(updated.screenplay?.screenplay.summary).toBe(
-      'Urban understands that craft can become consequence.'
-    );
-  });
-
-  it('reserves omitted scene numbers and never reuses them', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-    const current = await projectData.readScreenplay({ homeDir });
-    const sequenceId = current.screenplay?.acts[0]?.sequences[0]?.id;
-    const sceneId = current.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
-    if (!sequenceId || !sceneId) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [{ operation: 'scene.delete', sceneId }],
-      },
-    });
-
-    await expect(
-      projectData.resolveSceneProductionNumber({ homeDir, productionNumber: '1' })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA448' });
-    await expect(projectData.listSceneProductionNumbers({ homeDir })).resolves.toMatchObject({
-      sceneNumbers: [],
-    });
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'scene.add',
-            sequenceId,
-            scene: {
-              key: 'replacement-scene',
-              title: 'Replacement Scene',
-              setting: {},
-              blocks: [],
-            },
-          },
-        ],
-      },
-    });
-    await expect(projectData.listSceneProductionNumbers({ homeDir })).resolves.toMatchObject({
-      sceneNumbers: [
-        expect.objectContaining({ productionNumber: '2', title: 'Replacement Scene' }),
-      ],
-    });
-  });
-
-  it('numbers nested Sequence and Act scene changes through one screenplay plan', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-    const current = await projectData.readScreenplay({ homeDir });
-    const actId = current.screenplay?.acts[0]?.id;
-    if (!actId) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-
-    const sequenceReport = await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'sequence.add',
-            actId,
-            sequence: {
-              key: 'nested-sequence',
-              title: 'Nested Sequence',
-              scenes: [
-                { key: 'nested-a', title: 'Nested A', setting: {}, blocks: [] },
-                { key: 'nested-b', title: 'Nested B', setting: {}, blocks: [] },
-              ],
-            },
-          },
-        ],
-      },
-    });
-    const sequenceId = sequenceReport.generatedIds?.find(
-      (generated) => generated.kind === 'sequence' && generated.key === 'nested-sequence'
-    )?.id;
-    if (!sequenceId) {
-      throw new Error('Expected generated Sequence id.');
-    }
-    await expect(projectData.listSceneProductionNumbers({ homeDir })).resolves.toMatchObject({
-      sceneNumbers: [
-        expect.objectContaining({ productionNumber: '1' }),
-        expect.objectContaining({ productionNumber: '2', title: 'Nested A' }),
-        expect.objectContaining({ productionNumber: '3', title: 'Nested B' }),
-      ],
-    });
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [{ operation: 'sequence.delete', sequenceId }],
-      },
-    });
-    await expect(
-      projectData.resolveSceneProductionNumber({ homeDir, productionNumber: '2' })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA448' });
-
-    const actReport = await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'act.add',
-            act: {
-              key: 'nested-act',
-              title: 'Nested Act',
-              sequences: [
-                {
-                  key: 'nested-act-sequence',
-                  title: 'Nested Act Sequence',
-                  scenes: [
-                    { key: 'nested-c', title: 'Nested C', setting: {}, blocks: [] },
-                  ],
-                },
-              ],
-            },
-          },
-        ],
-      },
-    });
-    const nestedActId = actReport.generatedIds?.find(
-      (generated) => generated.kind === 'act' && generated.key === 'nested-act'
-    )?.id;
-    if (!nestedActId) {
-      throw new Error('Expected generated Act id.');
-    }
-    await expect(projectData.listSceneProductionNumbers({ homeDir })).resolves.toMatchObject({
-      sceneNumbers: [
-        expect.objectContaining({ productionNumber: '1' }),
-        expect.objectContaining({ productionNumber: '4', title: 'Nested C' }),
-      ],
-    });
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [{ operation: 'act.delete', actId: nestedActId }],
-      },
-    });
-    await expect(
-      projectData.resolveSceneProductionNumber({ homeDir, productionNumber: '4' })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA448' });
-  });
-
-  it('rejects an unrepresentable deep insertion before writing either screenplay state', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-    const current = await projectData.readScreenplay({ homeDir });
-    const sequence = current.screenplay?.acts[0]?.sequences[0];
-    const firstSceneId = sequence?.scenes[0]?.id;
-    if (!sequence?.id || !firstSceneId) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'scene.add',
-            sequenceId: sequence.id,
-            scene: { key: 'closing', title: 'Closing', setting: {}, blocks: [] },
-          },
-        ],
-      },
-    });
-    const inserted = await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'scene.add',
-            sequenceId: sequence.id,
-            placement: { afterId: firstSceneId },
-            scene: { key: 'inserted', title: 'Inserted', setting: {}, blocks: [] },
-          },
-        ],
-      },
-    });
-    const insertedSceneId = inserted.generatedIds?.find(
-      (generated) => generated.kind === 'scene' && generated.key === 'inserted'
-    )?.id;
-    if (!insertedSceneId) {
-      throw new Error('Expected inserted Scene id.');
-    }
-    const beforeFailure = await projectData.readScreenplay({ homeDir });
-    const beforeNumbers = await projectData.listSceneProductionNumbers({ homeDir });
-
-    await expect(
-      projectData.applyScreenplayOperations({
-        homeDir,
-        document: {
-          kind: 'screenplayOperations',
-          operations: [
-            {
-              operation: 'scene.add',
-              sequenceId: sequence.id,
-              placement: { beforeId: insertedSceneId },
-              scene: { key: 'too-deep', title: 'Too Deep', setting: {}, blocks: [] },
-            },
-          ],
-        },
-      })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA449' });
-    await expect(projectData.readScreenplay({ homeDir })).resolves.toEqual(beforeFailure);
-    await expect(projectData.listSceneProductionNumbers({ homeDir })).resolves.toEqual(
-      beforeNumbers
-    );
-  });
-
-  it('fails projection reads when a current Scene loses its registry mapping', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-    const current = await projectData.readScreenplay({ homeDir });
-    const sequenceId = current.screenplay?.acts[0]?.sequences[0]?.id;
-    const sceneId = current.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
-    if (!sequenceId || !sceneId) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-    const sqlite = new Database(
-      path.join(homeDir, 'projects', 'blank-movie', '.renku', 'project.sqlite')
-    );
-    sqlite.prepare('delete from scene_production_number').run();
-    sqlite.close();
-
-    await expect(
-      projectData.listSceneNavigation({
-        homeDir,
-        projectName: 'blank-movie',
-        sequenceId,
-      })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA450' });
-    await expect(
-      projectData.readSceneNarrativeResource({
-        homeDir,
-        projectName: 'blank-movie',
-        sceneId,
-      })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA450' });
-  });
-
-  it('records screenplay revisions and restores a previous narrative version', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-    const initialRevisions = await projectData.listScreenplayRevisions({ homeDir });
-    expect(initialRevisions.revisions).toHaveLength(1);
-
-    const current = await projectData.readScreenplay({ homeDir });
-    const scene = current.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-    if (!scene?.id) {
-      throw new Error('Expected seeded scene id.');
-    }
-
-    const revisedScene = {
-      ...scene,
-      title: 'Opening Scene Revised',
-      blocks: [
-        ...scene.blocks,
-        {
-          type: 'action' as const,
-          text: 'Urban notices the metal has changed color overnight.',
-          castMemberIds: [],
-          locationIds: [],
-        },
-      ],
-    };
-
-    const dryRun = await projectData.reviseScreenplayScene({
-      homeDir,
-      sceneId: scene.id as string,
-      document: { kind: 'screenplaySceneRevision', scene: revisedScene },
-      dryRun: true,
-    });
-    expect(dryRun.warnings).toEqual([]);
-    expect(dryRun.changes).toEqual([
-      expect.objectContaining({ operation: 'scene.update' }),
-    ]);
-    await expect(projectData.readScreenplay({ homeDir })).resolves.toMatchObject({
-      screenplay: {
-        acts: [
-          {
-            sequences: [
-              {
-                scenes: [expect.objectContaining({ title: scene.title })],
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-    const reviseReport = await projectData.reviseScreenplayScene({
-      homeDir,
-      sceneId: scene.id as string,
-      document: { kind: 'screenplaySceneRevision', scene: revisedScene },
-    });
-    expect(reviseReport.resourceKeys).toEqual(
-      expect.arrayContaining(['screenplay', `scene:${String(scene.id)}`])
-    );
-    await expect(
-      projectData.resolveSceneProductionNumber({ homeDir, productionNumber: '1' })
-    ).resolves.toMatchObject({ scene: { sceneId: scene.id } });
-
-    const afterRevise = await projectData.listScreenplayRevisions({ homeDir });
-    expect(afterRevise.revisions).toHaveLength(2);
-    const shown = await projectData.readScreenplayRevision({
-      homeDir,
-      revisionId: afterRevise.revisions[0]!.id,
-    });
-    expect(shown.screenplay.acts[0]?.sequences[0]?.scenes[0]?.title).toBe(
-      'Opening Scene Revised'
-    );
-
-    const restore = await projectData.restoreScreenplayRevision({
-      homeDir,
-      revisionId: initialRevisions.revisions[0]!.id,
-    });
-    expect(restore.resourceKeys).toEqual(
-      expect.arrayContaining(['screenplay', `scene:${String(scene.id)}`])
-    );
-    const restored = await projectData.readScreenplay({ homeDir });
-    expect(restored.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.title).toBe(
-      scene.title
-    );
-    await expect(
-      projectData.resolveSceneProductionNumber({ homeDir, productionNumber: '1' })
-    ).resolves.toMatchObject({ scene: { sceneId: scene.id } });
-    await expect(projectData.listScreenplayRevisions({ homeDir })).resolves.toMatchObject({
-      revisions: expect.arrayContaining([
-        expect.objectContaining({ sourceCommand: 'screenplay.revision.restore' }),
-      ]),
-    });
-  });
-
-  it('preserves dialogue order keys during scene revisions', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-
-    const current = await projectData.readScreenplay({ homeDir });
-    const scene = current.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-    const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
-    if (!scene?.id || dialogue?.type !== 'dialogue' || !dialogue.dialogueOrderKey) {
-      throw new Error('Expected a seeded dialogue block with a dialogue order key.');
-    }
-
-    const reviseReport = await projectData.reviseScreenplayScene({
-      homeDir,
-      sceneId: scene.id,
-      document: {
-        kind: 'screenplaySceneRevision',
-        scene: {
-          ...scene,
-          blocks: [
-            ...scene.blocks,
-            {
-              type: 'action',
-              text: 'The metal answers with a low groan.',
-            },
-          ],
-        },
-      },
-    });
-
-    expect(reviseReport.warnings).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'PROJECT_DATA214',
-          location: expect.objectContaining({
-            path: expect.arrayContaining(['dialogueOrderKey']),
-          }),
-        }),
-      ])
-    );
-
-    const revised = await projectData.readScreenplay({ homeDir });
-    const revisedDialogue =
-      revised.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.blocks.find(
-        (block) => block.type === 'dialogue'
-      );
-    expect(revisedDialogue).toMatchObject({
-      type: 'dialogue',
-      dialogueOrderKey: dialogue.dialogueOrderKey,
-    });
-  });
-
-  it('honors placement and warns when duplicate relationship refs are normalized', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    const createReport = await projectData.createScreenplay({
-      homeDir,
-      document: {
-        ...minimalScreenplayDocument(),
-        acts: [
-          {
-            key: 'act-one',
-            title: 'Act I',
-            sequences: [
-              {
-                key: 'commission',
-                title: 'The Commission',
-                scenes: [
-                  {
-                    key: 'opening',
-                    title: 'Opening Scene',
-                    setting: {
-                      locationIds: ['location_test0001', 'location_test0001'],
-                    },
-                    blocks: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    });
-    expect(createReport.warnings).toEqual([
-      expect.objectContaining({ code: 'PROJECT_DATA215' }),
-    ]);
-
-    const current = await projectData.readScreenplay({ homeDir });
-    const sequence = current.screenplay?.acts[0]?.sequences[0];
-    const firstSceneId = sequence?.scenes[0]?.id;
-    if (!sequence?.id || !firstSceneId) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'scene.add',
-            sequenceId: sequence.id,
-            placement: { beforeId: firstSceneId },
-            scene: {
-              key: 'inserted',
-              title: 'Inserted Scene',
-              setting: { locationReferences: [] },
-              blocks: [],
-            },
-          },
-        ],
-      },
-    });
-
-    const reordered = await projectData.readScreenplay({ homeDir });
-    expect(reordered.screenplay?.acts[0]?.sequences[0]?.scenes.map((scene) => scene.title)).toEqual([
-      'Inserted Scene',
-      'Opening Scene',
-    ]);
-  });
-
-  it('warns when reusable cast or location names look duplicated', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-
-    const castReport = await projectData.applyCastOperations({
-      homeDir,
-      document: {
-        kind: 'castOperations',
-        operations: [
-          {
-            operation: 'castMember.add',
-            castMember: { key: 'urban-voice', handle: 'urban-voice', name: 'Urban' },
-          },
-        ],
-      },
-    });
-    const locationReport = await projectData.applyLocationOperations({
-      homeDir,
-      document: {
-        kind: 'locationOperations',
-        operations: [
-          {
-            operation: 'location.add',
-            location: { key: 'foundry-night', handle: 'foundry-night', name: 'Foundry' },
-          },
-        ],
-      },
-    });
-
-    expect(castReport.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'PROJECT_DATA215',
-        }),
-      ])
-    );
-    expect(locationReport.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'PROJECT_DATA215',
-        }),
-      ])
-    );
-  });
-
-  it('validates scene moves against declared parents and adjacent placement neighbors', async () => {
-    await createBlankProject();
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.createScreenplay({ homeDir, document: minimalScreenplayDocument() });
-
-    const current = await projectData.readScreenplay({ homeDir });
-    const actId = current.screenplay?.acts[0]?.id;
-    const sequenceId = current.screenplay?.acts[0]?.sequences[0]?.id;
-    const firstSceneId = current.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
-    if (!actId || !sequenceId || !firstSceneId) {
-      throw new Error('Expected seeded screenplay ids.');
-    }
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'scene.add',
-            sequenceId,
-            scene: {
-              key: 'second-scene',
-              title: 'Second Scene',
-              setting: {},
-              blocks: [],
-            },
-          },
-          {
-            operation: 'scene.add',
-            sequenceId,
-            scene: {
-              key: 'third-scene',
-              title: 'Third Scene',
-              setting: {},
-              blocks: [],
-            },
-          },
-          {
-            operation: 'sequence.add',
-            actId,
-            sequence: {
-              key: 'parallel-sequence',
-              title: 'Parallel Sequence',
-              scenes: [],
-            },
-          },
-        ],
-      },
-    });
-
-    const expanded = await projectData.readScreenplay({ homeDir });
-    const mainSequence = expanded.screenplay?.acts[0]?.sequences[0];
-    const otherSequenceId = expanded.screenplay?.acts[0]?.sequences[1]?.id;
-    const secondSceneId = mainSequence?.scenes[1]?.id;
-    const thirdSceneId = mainSequence?.scenes[2]?.id;
-    if (!mainSequence?.id || !otherSequenceId || !secondSceneId || !thirdSceneId) {
-      throw new Error('Expected expanded screenplay ids.');
-    }
-
-    await projectData.applyScreenplayOperations({
-      homeDir,
-      document: {
-        kind: 'screenplayOperations',
-        operations: [
-          {
-            operation: 'scene.move',
-            sceneId: thirdSceneId,
-            fromSequenceId: mainSequence.id,
-            toSequenceId: mainSequence.id,
-            placement: { afterId: firstSceneId, beforeId: secondSceneId },
-          },
-        ],
-      },
-    });
-    const moved = await projectData.readScreenplay({ homeDir });
-    expect(moved.screenplay?.acts[0]?.sequences[0]?.scenes.map((scene) => scene.title)).toEqual([
-      'Urban Enters The Foundry',
-      'Third Scene',
-      'Second Scene',
-    ]);
-
-    await expect(
-      projectData.applyScreenplayOperations({
-        homeDir,
-        document: {
-          kind: 'screenplayOperations',
-          operations: [
-            {
-              operation: 'scene.move',
-              sceneId: thirdSceneId,
-              fromSequenceId: otherSequenceId,
-              toSequenceId: mainSequence.id,
-              placement: { afterId: firstSceneId },
-            },
-          ],
-        },
-      })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA212' });
-
-    await expect(
-      projectData.applyScreenplayOperations({
-        homeDir,
-        document: {
-          kind: 'screenplayOperations',
-          operations: [
-            {
-              operation: 'scene.move',
-              sceneId: thirdSceneId,
-              fromSequenceId: mainSequence.id,
-              toSequenceId: mainSequence.id,
-              placement: { afterId: secondSceneId, beforeId: firstSceneId },
-            },
-          ],
-        },
-      })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA212' });
-  });
-
-  async function createBlankProject(): Promise<void> {
-    const created = await createBlankMovieProject({
-      projectData,
-      homeDir,
-    });
+  it('creates an aggregate, resolves request-local keys, applies focused operations, and restores revisions', async () => {
+    const created = await createBlankMovieProject({ homeDir, projectData });
     if (!created) {
       return;
     }
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.applyCastOperations({
-      homeDir,
-      document: {
-        kind: 'castOperations',
-        operations: [
-          {
-            operation: 'castMember.add',
-            castMember: {
-              key: 'urban',
-              handle: 'urban',
-              name: 'Urban',
-              role: 'cannon founder',
-            },
-          },
-        ],
-      },
-      idGenerator: createDeterministicIdGenerator(),
-    });
-    await projectData.applyLocationOperations({
-      homeDir,
-      document: {
-        kind: 'locationOperations',
-        operations: [
-          {
-            operation: 'location.add',
-            location: {
-              key: 'foundry',
-              handle: 'foundry',
-              name: 'Foundry',
-            },
-          },
-        ],
-      },
-      idGenerator: createDeterministicIdGenerator(),
-    });
-  }
-});
 
-function minimalScreenplayDocument(): ScreenplayCreateDocument {
-  return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Urban Basilica',
-      logline: 'A founder builds a weapon and a conscience.',
-    },
-    cast: [],
-    locations: [],
-    acts: [
-      {
-        key: 'act-one',
-        title: 'Act I',
-        sequences: [
-          {
-            key: 'commission',
-            title: 'The Commission',
-            scenes: [
+    const createReport = await projectData.createScreenplay({
+      projectName: created.projectName,
+      homeDir,
+      screenplay: minimalScreenplayInput(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    expect(createReport.generatedIdentities.map((identity) => identity.kind)).toEqual([
+      'block', 'scene', 'block', 'section', 'structureEntry', 'structureEntry',
+    ]);
+
+    const createdScreenplay = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(createdScreenplay.orderedSceneIds).toHaveLength(1);
+    expect(createdScreenplay.screenplay.opening[0]?.text).toBe('FADE IN:');
+    const sceneId = createdScreenplay.orderedSceneIds[0]!;
+
+    await expect(projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      operations: [{
+        operation: 'scene.update',
+        scene: {
+          id: sceneId,
+          heading: 'INT. WORKSHOP - NIGHT',
+          blocks: [{
+            id: 'screenplay_block_unknown',
+            type: 'action',
+            text: 'This caller-provided durable ID was never created.',
+          }],
+        },
+      }],
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_INVALID_CONTENT' });
+
+    const applyReport = await projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      operations: [
+        {
+          operation: 'opening.replace',
+          opening: [{ key: 'opening-title', type: 'titleCard', text: 'BASILICA' }],
+        },
+        {
+          operation: 'scene.update',
+          scene: {
+            id: sceneId,
+            productionNumber: 'A12',
+            heading: 'EXT. TEST FIELD - DAWN',
+            blocks: [
               {
-                key: 'urban-enters',
-                title: 'Urban Enters The Foundry',
-                setting: {
-                  interiorExterior: 'INT',
-                  timeOfDay: 'NIGHT',
-                  locationIds: ['location_test0001'],
-                },
-                storyFunction: ['Introduce Urban'],
-                blocks: [
-                  {
-                    type: 'action',
-                    text: 'Urban studies the cracked bronze.',
-                    castMemberIds: ['cast_test0001'],
-                    locationIds: ['location_test0001'],
-                  },
-                  {
-                    dialogueId: 'dialogue_urban_test',
-                    type: 'dialogue',
-                    castMemberId: 'cast_test0001',
-                    lines: ['No furnace is innocent.'],
-                  },
-                ],
+                key: 'new-action',
+                type: 'action',
+                text: 'The cannon waits.',
               },
             ],
           },
-        ],
+        },
+      ],
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    expect(applyReport.generatedIdentities.map((identity) => identity.key)).toEqual([
+      'opening-title', 'new-action',
+    ]);
+
+    const revised = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(revised.screenplay.opening[0]).toMatchObject({ type: 'titleCard', text: 'BASILICA' });
+    expect(revised.screenplay.scenes[0]).toMatchObject({
+      id: sceneId,
+      productionNumber: 'A12',
+      heading: 'EXT. TEST FIELD - DAWN',
+    });
+
+    const revisions = await projectData.listScreenplayRevisions({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(revisions.revisions).toHaveLength(2);
+    await projectData.restoreScreenplayRevision({
+      projectName: created.projectName,
+      revisionId: createReport.screenplayRevisionId,
+      homeDir,
+    });
+    const restored = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(restored.screenplay.opening[0]?.text).toBe('FADE IN:');
+    expect(restored.screenplay.scenes[0]?.productionNumber).toBe('1');
+  });
+
+  it('moves Scenes and Sections without changing identity and rolls back an invalid final structure', async () => {
+    const created = await createBlankMovieProject({ homeDir, projectData });
+    if (!created) {
+      return;
+    }
+    await projectData.createScreenplay({
+      projectName: created.projectName,
+      homeDir,
+      screenplay: minimalScreenplayInput(),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const initial = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    const firstSceneId = initial.orderedSceneIds[0]!;
+    const actId = initial.screenplay.sections[0]!.id;
+
+    const moveReport = await projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      idGenerator: createDeterministicIdGenerator(),
+      operations: [
+        {
+          operation: 'section.add',
+          section: { key: 'sequence-two', type: 'sequence', title: 'Sequence II' },
+          structureEntryKey: 'sequence-two-entry',
+          placement: { parentSection: { id: actId }, at: 'end' },
+        },
+        {
+          operation: 'section.move',
+          section: { key: 'sequence-two' },
+          placement: { at: 'start' },
+        },
+        {
+          operation: 'scene.add',
+          scene: {
+            key: 'scene-two',
+            productionNumber: '2',
+            heading: 'EXT. WORKSHOP - DAWN',
+            blocks: [{ key: 'scene-two-action', type: 'action', text: 'The doors open.' }],
+          },
+          structureEntryKey: 'scene-two-entry',
+          placement: { at: 'end' },
+        },
+        {
+          operation: 'scene.move',
+          scene: { id: firstSceneId },
+          placement: { afterEntry: { key: 'scene-two-entry' } },
+        },
+      ],
+    });
+    const secondSceneId = moveReport.generatedIdentities.find(
+      (identity) => identity.key === 'scene-two',
+    )!.id;
+    const sequenceId = moveReport.generatedIdentities.find(
+      (identity) => identity.key === 'sequence-two',
+    )!.id;
+    const moved = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(moved.orderedSceneIds).toEqual([
+      secondSceneId,
+      firstSceneId,
+    ]);
+    expect(moved.screenplay.sections).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: actId }),
+      expect.objectContaining({ id: sequenceId }),
+    ]));
+    const revisionsBeforeFailure = await projectData.listScreenplayRevisions({
+      projectName: created.projectName,
+      homeDir,
+    });
+
+    await expect(projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      operations: [{
+        operation: 'section.move',
+        section: { id: actId },
+        placement: { parentSection: { id: sequenceId }, at: 'end' },
+      }],
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_INVALID_CONTENT' });
+
+    const afterFailure = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    const revisionsAfterFailure = await projectData.listScreenplayRevisions({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(afterFailure).toEqual(moved);
+    expect(revisionsAfterFailure).toEqual(revisionsBeforeFailure);
+  });
+});
+
+function mutateReference(
+  referenceId: string,
+  mutation: (reference: Screenplay['references'][number]) => void,
+): Screenplay {
+  const screenplay = completeScreenplay();
+  mutation(screenplay.references.find((reference) => reference.id === referenceId)!);
+  return screenplay;
+}
+
+function minimalScreenplayInput(): ScreenplayInput {
+  return {
+    opening: [{ key: 'opening-fade', type: 'transition', text: 'FADE IN:' }],
+    scenes: [{
+      key: 'scene-one',
+      productionNumber: '1',
+      heading: 'INT. WORKSHOP - NIGHT',
+      blocks: [{ key: 'scene-action', type: 'action', text: 'A hammer falls.' }],
+    }],
+    sections: [{ key: 'act-one', type: 'act', title: 'Act I' }],
+    structure: [
+      {
+        key: 'act-entry',
+        content: { type: 'section', section: { key: 'act-one' } },
+        position: 0,
+      },
+      {
+        key: 'scene-entry',
+        parentSection: { key: 'act-one' },
+        content: { type: 'scene', scene: { key: 'scene-one' } },
+        position: 0,
       },
     ],
+    references: [],
   };
+}
+
+function completeScreenplay(): Screenplay {
+  return {
+    opening: [{ id: 'opening_fade', type: 'transition', text: 'FADE IN:' }],
+    scenes: [{
+      id: 'scene_forge',
+      productionNumber: 'A12',
+      heading: 'INT. IMPERIAL FOUNDRY - NIGHT',
+      title: 'The Pour',
+      blocks: [
+        { id: 'block_action', type: 'action', text: 'Urban studies the drawing.' },
+        { id: 'block_transition', type: 'transition', text: 'CUT TO:' },
+        { id: 'block_shot', type: 'shot', text: 'CLOSE ON THE MOLD.' },
+        { id: 'block_lyrics', type: 'lyrics', text: 'Hammer, bell, and flame.' },
+        { id: 'block_cast_list', type: 'castList', text: 'URBAN, MARA' },
+        { id: 'block_note', type: 'note', text: 'The metal remains audible.' },
+        { id: 'block_special', type: 'specialHeading', text: 'LATER' },
+        { id: 'block_title', type: 'titleCard', text: '1453' },
+        { id: 'block_super', type: 'super', text: 'EDIRNE' },
+        {
+          id: 'turn_urban',
+          type: 'dialogue',
+          characterName: 'URBAN',
+          extensions: ['O.S.'],
+          parts: [
+            { id: 'part_urban_direction', type: 'parenthetical', text: 'quietly' },
+            { id: 'part_urban_speech', type: 'speech', text: 'Hold the line.' },
+          ],
+        },
+        {
+          id: 'block_dual',
+          type: 'dualDialogue',
+          left: {
+            id: 'turn_left',
+            characterName: 'URBAN',
+            extensions: [],
+            parts: [{ id: 'part_left', type: 'speech', text: 'Now.' }],
+          },
+          right: {
+            id: 'turn_right',
+            characterName: 'MARA',
+            extensions: ['V.O.'],
+            parts: [{ id: 'part_right', type: 'speech', text: 'Wait.' }],
+          },
+        },
+      ],
+    }],
+    sections: [
+      { id: 'section_act', type: 'act', title: 'Act I' },
+      { id: 'section_sequence', type: 'sequence', title: 'The Foundry' },
+    ],
+    structure: [
+      {
+        id: 'entry_act',
+        content: { type: 'section', sectionId: 'section_act' },
+        position: 0,
+      },
+      {
+        id: 'entry_sequence',
+        parentSectionId: 'section_act',
+        content: { type: 'section', sectionId: 'section_sequence' },
+        position: 0,
+      },
+      {
+        id: 'entry_scene',
+        parentSectionId: 'section_sequence',
+        content: { type: 'scene', sceneId: 'scene_forge' },
+        position: 0,
+      },
+    ],
+    references: [
+      {
+        id: 'reference_opening',
+        subject: { type: 'location', id: 'location_forge' },
+        target: { type: 'openingElement', elementId: 'opening_fade' },
+        role: 'mention',
+        range: { start: 0, length: 4 },
+      },
+      {
+        id: 'reference_setting',
+        subject: { type: 'location', id: 'location_forge' },
+        target: { type: 'scene', sceneId: 'scene_forge' },
+        role: 'setting',
+      },
+      {
+        id: 'reference_heading',
+        subject: { type: 'location', id: 'location_forge' },
+        target: { type: 'sceneHeading', sceneId: 'scene_forge' },
+        role: 'mention',
+        range: { start: 5, length: 17 },
+      },
+      {
+        id: 'reference_presence',
+        subject: { type: 'castMember', id: 'cast_urban' },
+        target: { type: 'scene', sceneId: 'scene_forge' },
+        role: 'presence',
+      },
+      {
+        id: 'reference_block_presence',
+        subject: { type: 'prop', id: 'prop_drawing' },
+        target: { type: 'block', sceneId: 'scene_forge', blockId: 'block_transition' },
+        role: 'presence',
+      },
+      {
+        id: 'reference_prop',
+        subject: { type: 'prop', id: 'prop_drawing' },
+        target: { type: 'block', sceneId: 'scene_forge', blockId: 'block_action' },
+        role: 'mention',
+        range: { start: 18, length: 7 },
+      },
+      {
+        id: 'reference_dialogue_part',
+        subject: { type: 'prop', id: 'prop_drawing' },
+        target: {
+          type: 'dialoguePart',
+          sceneId: 'scene_forge',
+          turnId: 'turn_urban',
+          partId: 'part_urban_speech',
+        },
+        role: 'mention',
+        range: { start: 0, length: 4 },
+      },
+      ...['turn_urban', 'turn_left', 'turn_right'].map((turnId, index) => ({
+        id: `reference_speaker_${index}`,
+        subject: { type: 'castMember' as const, id: index === 2 ? 'cast_mara' : 'cast_urban' },
+        target: { type: 'dialogueCue' as const, sceneId: 'scene_forge', turnId },
+        role: 'speaker' as const,
+      })),
+    ],
+  };
+}
+
+function canonicalSceneIds(screenplay: Screenplay): string[] {
+  const entriesByParent = new Map<string | undefined, typeof screenplay.structure>();
+  for (const entry of screenplay.structure) {
+    const siblings = entriesByParent.get(entry.parentSectionId) ?? [];
+    siblings.push(entry);
+    entriesByParent.set(entry.parentSectionId, siblings);
+  }
+  for (const siblings of entriesByParent.values()) {
+    siblings.sort((left, right) => left.position - right.position);
+  }
+  const sceneIds: string[] = [];
+  const visit = (parentSectionId?: string) => {
+    for (const entry of entriesByParent.get(parentSectionId) ?? []) {
+      if (entry.content.type === 'scene') {
+        sceneIds.push(entry.content.sceneId);
+      } else {
+        visit(entry.content.sectionId);
+      }
+    }
+  };
+  visit();
+  return sceneIds;
 }

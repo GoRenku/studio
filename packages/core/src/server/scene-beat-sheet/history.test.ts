@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneBeatSheetDocument } from '../../client/scene-beat-sheet.js';
+import type { SceneBeatSheetDocument } from '../../client/scene-beats/index.js';
 import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
 import {
   createSampleMovieProject,
@@ -56,7 +56,7 @@ describe('scene Beat Sheet commands', () => {
             {
               ...valid.beats[0]!,
               id: 'beat_001_duplicate',
-              screenplayBlockIndexes: [99],
+              screenplayBlockIds: ['block_missing'],
             },
           ],
         },
@@ -65,7 +65,7 @@ describe('scene Beat Sheet commands', () => {
       code: 'PROJECT_DATA320',
       issues: expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining('outside the scene'),
+            message: expect.stringContaining('unknown screenplay block'),
         }),
       ]),
     });
@@ -157,19 +157,22 @@ describe('scene Beat Sheet commands', () => {
   });
 
   async function sampleIds() {
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
+    const cast = await projectData.listCastMembers({ homeDir });
+    const locations = await projectData.listLocations({ homeDir });
     return {
-      sceneId: scene.id as string,
-      castMemberId: screenplay.screenplay!.cast[1]!.id as string,
-      locationId: screenplay.screenplay!.locations[0]!.id as string,
+      sceneId: scene.id,
+      castMemberId: cast[1]!.id,
+      locationId: locations[0]!.id,
+      blockId: scene.blocks[0]!.id,
     };
   }
 
 });
 
 function sampleBeatSheet(
-  ids: { sceneId: string; castMemberId: string; locationId: string },
+  ids: { sceneId: string; castMemberId: string; locationId: string; blockId: string },
   title = 'Council chamber coverage',
   beatCount = 1
 ): SceneBeatSheetDocument {
@@ -179,12 +182,12 @@ function sampleBeatSheet(
       'Mehmed stands at the council table with the city map spread before him.',
     narrativeDevelopment: 'Mehmed studies the city map before the siege plan hardens.',
     narrativePurpose: 'Establish the strategic obsession driving the scene.',
-    screenplayBlockIndexes: [0],
+    screenplayBlockIds: [ids.blockId],
     castMemberIds: [ids.castMemberId],
     locationIds: [ids.locationId],
+    propIds: [],
   };
   return {
-    kind: 'sceneBeatSheet',
     sceneId: ids.sceneId,
     title,
     summary: 'The council scene progresses from study toward commitment.',

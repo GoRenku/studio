@@ -69,7 +69,7 @@ props/<prop-handle>/heroes/
 
 visual-language/lookbook/
 
-storyboards/<sequence-name>/<scene-name>/
+storyboards/<scene-id>/
 
 videos/<video-slug>.<ext>
 ```
@@ -78,7 +78,7 @@ Temporary project files use:
 
 ```text
 tmp/
-storyboards/<sequence-name>/<scene-name>/tmp/
+storyboards/<scene-id>/tmp/
 ```
 
 User scratch references use:
@@ -133,7 +133,7 @@ visual-language/lookbook/<asset-slug>.<ext>
 Scene Storyboard images are top-level project assets, not screenplay files:
 
 ```text
-storyboards/<sequence-name>/<scene-name>/<nn>-iteration/beat-<nn>.<ext>
+storyboards/<scene-id>/<nn>-iteration/beat-<nn>.<ext>
 ```
 
 The storyboard iteration number starts at `00` and is zero-padded so normal
@@ -144,20 +144,17 @@ snapshot of every current storyboard image for the scene.
 Temporary generated storyboard sheets live beside the scene's storyboard work:
 
 ```text
-storyboards/<sequence-name>/<scene-name>/tmp/<sheet-slug>.<ext>
+storyboards/<scene-id>/tmp/<sheet-slug>.<ext>
 ```
 
 Scene-owned Dialogue Audio stays under a short `audio/` root:
 
 ```text
-audio/<sequence-name>/<scene-name>/<dialogue-order-key>-<character-name>-<take-number>.<ext>
+audio/<scene-id>/<dialogue-turn-id>-<speaker-handle>-<take-number>.<ext>
 ```
 
-Dialogue order keys are stable four-digit values assigned to screenplay
-dialogue blocks, normally spaced as `0100`, `0200`, and `0300`. Insertions use
-midpoint values such as `0050` or `0150` when possible. Existing dialogue order
-keys must not be recomputed merely because dialogue text, speaker, setup,
-generation, insertion, or deletion changes the current scene array position.
+Dialogue Turn ids are stable screenplay identities. File allocation never
+derives ownership or identity from Section ancestry or current Block position.
 
 The take number is the next unused zero-based two-digit suffix for that
 dialogue filename prefix. Scene-owned Dialogue Audio must not be stored under

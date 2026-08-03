@@ -49,13 +49,13 @@ No compatibility export or temporary adapter was added.
 
 - `packages/studio/server/http/scene-shot-direction-request.ts`
 - `packages/studio/server/http/scene-shot-video-take-production-request.ts`
-- `packages/studio/server/http/screenplay-responses.ts`
+- `packages/studio/server/http/screenplay/responses.ts`
 - `packages/studio/server/projections/generation-preview.ts`
 - `packages/studio/server/projections/image-revision.ts`
 - `packages/studio/server/routes/generation-preview.ts`
 - `packages/studio/server/routes/image-revisions.ts`
 - `packages/studio/server/routes/projects.ts`
-- `packages/studio/server/routes/screenplay.ts`
+- `packages/studio/server/routes/screenplay/`
 - `packages/studio/server/routes/studio-events.ts`
 - `packages/studio/server/routes/visual-language.ts`
 
@@ -64,7 +64,7 @@ No compatibility export or temporary adapter was added.
 - `packages/studio/server/architecture.test.ts`
 - `packages/studio/server/routes/assets.test.ts`
 - `packages/studio/server/routes/generation-preview.test.ts`
-- `packages/studio/server/routes/screenplay-video-take-production.test.ts`
+- `packages/studio/server/routes/screenplay/index.test.ts`
 - `packages/studio/server/routes/studio-events.test.ts`
 - `packages/studio/server/testing/fake-project-data-service.ts`
 

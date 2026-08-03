@@ -52,47 +52,46 @@ Decision history:
 
 ## Narrative Structure
 
-Renku Studio should use this canonical hierarchy for v1:
+Renku Studio uses Scenes as the canonical Screenplay units:
 
 ```text
 Standalone movie project
-  -> Sequence
+  -> Screenplay
     -> Scene
-      -> Scene Beat Sheet
-        -> Beat
-      -> Shot Plan
-        -> Shot
+      -> Scene Beat Sheet -> Beat
+      -> Shot Plan -> Shot
+    -> optional Act / Sequence Sections (organization only)
 
 Series project
   -> Episode
-    -> Sequence
+    -> Screenplay
       -> Scene
-        -> Scene Beat Sheet
-          -> Beat
-        -> Shot Plan
-          -> Shot
+        -> Scene Beat Sheet -> Beat
+        -> Shot Plan -> Shot
+      -> optional Act / Sequence Sections
 ```
 
-`Sequence` is a film and screenwriting term for a meaningful group of scenes
-that form a larger dramatic or production beat.
+`Act` and `Sequence` are optional `ScreenplaySection` types. They organize
+canonical Scene order but own no Scenes, Assets, designs, or production state.
+A flat Screenplay with no Sections is valid.
 
 Related terms:
 
-- **Act** is a higher-level story structure. It can be added later if Studio
-  needs screenplay-style act planning, but it should not replace `Sequence` in
-  the v1 hierarchy.
+- **Screenplay** is the Project's semantic screenplay content: opening elements,
+  canonical Scenes, optional Sections/structure, and Project-subject references.
+- **Scene** is canonical and does not require Section ancestry.
 - **Chapter** can be a friendly display label for documentaries, courses,
   serialized web videos, or exports. It should not be the canonical schema term.
 - **Scene Beat Sheet** is a scene-owned narrative breakdown document. It is
   stored as validated project data with history and one active Beat Sheet per
   scene.
-- **Production Scene Number** is the stable human-facing reference for a Scene,
-  such as `01` or `22A`. It is separate from the durable Scene id, survives
-  moves, remains reserved when a Scene is omitted, and is not stored inside
-  creative screenplay documents.
+- **Production Scene Number** is an optional exact human-facing value on a
+  current Scene, such as `1` or `22A`. It is separate from the durable Scene id
+  and does not define canonical order.
 - **Beat** is one non-camera narrative unit inside a Scene Beat Sheet. Beats
   are ordered by their array position and contain exactly the accepted
-  eight-field Beat shape.
+  nine-field Beat shape with Cast Member, Location, Prop, and stable Screenplay
+  Block ids.
 - **Shot Plan** is one mutable Scene-owned camera plan containing ordered Shots
   and optional Beat coverage. Generation and Asset history never freeze the
   plan. Its Shots own planning image Assets but no generated video.
@@ -118,9 +117,9 @@ Related terms:
 | Visual Language Catalog Entry | A system-owned option shown in Studio and readable by agents. Choosing one creates an editable project Visual Language entry.            | Do not store catalog entries in project SQLite.                                                             |
 | Inspiration Folder            | A project Visual Language folder containing user-provided reference images.                                                              | Folder metadata is stored in SQLite. Images inside the folder are filesystem content, not per-image assets. |
 | Inspiration Analysis          | A validated visual study of one Inspiration Folder.                                                                                      | Stored as tagged JSON through `renku inspiration analysis`; image citations use folder-local filenames.     |
-| Screenplay Analysis           | A validated critique of the current screenplay structure, scene energy, evidence, and suggested additions.                               | Stored as history through `renku screenplay analyze`; suggestions do not mutate screenplay rows.            |
+| Screenplay Analysis           | A validated critique of canonical ordered Scenes with analysis-owned Act segments, optional Scene groups, evidence, and suggested Scenes. | Stored as history through `renku screenplay analyze`; it never depends on optional screenplay Sections.      |
 | Scene Beat Sheet              | A validated scene-owned narrative breakdown made of ordered Beats.                                                                        | Stored as history through `renku screenplay beat-sheet`; one active Beat Sheet can be selected per Scene.   |
-| Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus title, description, narrative development, narrative purpose, cast/location ids, and screenplay block indexes. |
+| Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus narrative fields, Cast Member/Location/Prop ids, and stable Screenplay Block ids. |
 | Shot Plan                     | One mutable Scene-owned plan for ordered Shots and optional Beat coverage.                                                                | Remains editable regardless of Run or Asset history. Its Shots own planning-image Assets, never generated video. |
 | Shot                          | One ordered camera-authored unit inside a Shot Plan.                                                                                       | Stores title, opaque `description`, strict glanceable `brief`, candidate images, and an optional selected image; Beat coverage belongs to the plan. |
 | Lookbook                      | One of the two project-owned visual direction roles.                                                                                       | A project has at most one Production Lookbook and one Storyboard Lookbook. The role is permanent and cannot be discarded. |
@@ -273,4 +272,4 @@ Money storage rules:
 | Style                | Avoid as the top-level domain concept. Use Visual Language. `style_sheet` is acceptable as a visual language asset type.                                                                                                              |
 | Selection            | Name the scope: canonical owner-scoped selection for Profile, Hero, Lookbook, Shot, or Scene Beat imagery; request-scoped selection for exact GenerationSpec references. Use Pin for cast favorites and Binding for other usage relationships. |
 | Lineage / Provenance | Avoid for the v1 data model. Use Generation Run for persisted media-generation execution history and Generation Packet for a resolved execution snapshot when that distinction is needed.                                             |
-| Act / Chapter        | Do not use as canonical v1 schema terms. Use Sequence for the movie hierarchy, with future display labels if needed.                                                                                                                  |
+| Mandatory Act/Sequence hierarchy | Do not require organizational Sections for Scene identity or ownership.                                                                                                                                                           |

@@ -39,7 +39,6 @@ function readAssetOwnerQuery(
     case 'castMember':
     case 'location':
     case 'prop':
-    case 'sequence':
     case 'scene':
     case 'lookbook':
     case 'shot':
@@ -62,7 +61,7 @@ function readAssetOwnerQuery(
             'STUDIO_SERVER032',
             'ownerKind must name a supported Asset owner.',
             { path: ['ownerKind'] },
-            'Use project, castMember, location, prop, sequence, scene, sceneBeat, lookbook, or shot.'
+            'Use project, castMember, location, prop, scene, sceneBeat, lookbook, or shot.'
           ),
         ],
         suggestion:

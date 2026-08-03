@@ -25,13 +25,13 @@ describe('createMovieProject', () => {
       title: 'Preparation of the Siege',
       idGenerator: createDeterministicIdGenerator(),
     });
-    const project = await projectData.readProject({
+    const shell = await projectData.readProjectShell({
       homeDir,
       projectName: 'constantinople',
     });
 
     expect(created.created.languages).toBe(1);
-    expect(project.languages).toEqual([
+    expect(shell.languages).toEqual([
       {
         id: 'locale_test0001',
         localeTag: 'en-US',
@@ -41,6 +41,6 @@ describe('createMovieProject', () => {
         supportsSubtitles: true,
       },
     ]);
-    expect(project.counts.languages).toBe(1);
+    expect(shell.project.counts.languages).toBe(1);
   });
 });

@@ -45,7 +45,7 @@ export async function updateAsset(
     return {
       valid: true,
       warnings: [],
-      project: { id: project.id, name: project.name, projectFolder },
+      project: { id: project.id, projectName: project.projectName, projectFolder },
       asset,
       resourceKeys: assetOwnerResourceKeys(session, owner),
     };

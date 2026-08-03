@@ -498,6 +498,13 @@
       "when": 1785437751146,
       "tag": "0070_add_props_continuity_subjects",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "6",
+      "when": 1785760081815,
+      "tag": "0071_scene_first_screenplay",
+      "breakpoints": true
     }
   ]
 }

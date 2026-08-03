@@ -138,9 +138,8 @@ describe('Shot Plan focused authoring', () => {
     if (!created) {
       return;
     }
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const sceneId =
-      screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const sceneId = screenplay.screenplay.scenes[0]?.id;
     if (!sceneId) {
       return;
     }

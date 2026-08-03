@@ -9,6 +9,7 @@ import type {
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { describe, expect, it } from 'vitest';
 import { createStudioRuntimeToken } from '../studio-runtime-token.js';
+import { makeProjectShell } from '../testing/route-fixtures.js';
 import { createStudioEventsRoute, type CreateStudioEventsRouteOptions } from './studio-events.js';
 
 describe('studio events Hono route', () => {
@@ -572,8 +573,8 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
   const project = makeProject();
 
   return {
-    async readProject() {
-      return project;
+    async readProjectShell() {
+      return makeProjectShell(project);
     },
     async readStudioSelectionContext(input) {
       return {
@@ -591,20 +592,11 @@ function fakeProjectDataService(): NonNullable<CreateStudioEventsRouteOptions['p
 
 function makeProject(): Project {
   return {
-    identity: {
-      id: 'project_test0001',
-      name: 'constantinople',
-      title: 'Preparation of the Siege',
-      folderPath: '/tmp/renku/constantinople',
-      databasePath: '/tmp/renku/constantinople/.renku/project.sqlite',
-      aspectRatio: '16:9',
-    },
+    id: 'project_test0001',
+    projectName: 'constantinople',
+    title: 'Preparation of the Siege',
+    aspectRatio: '16:9',
     coverImage: null,
-    languages: [],
-    cast: [],
-    locations: [],
-    props: [],
-    sequences: [],
     counts: {
       languages: 0,
       castMembers: 0,
@@ -643,7 +635,7 @@ function coreGenerationPreviewResourceFixture() {
     purpose: 'image.create' as const,
     project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
       title: 'Preparation of the Siege',
     },
     target: { kind: 'project' as const, id: 'project_test0001' },

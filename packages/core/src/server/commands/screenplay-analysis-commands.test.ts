@@ -3,20 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
-  ScreenplayAnalysisDocument,
-  ScreenplayAnalysisWriteReport,
-} from '../../client/screenplay-analysis.js';
-import type { ScreenplayCreateDocument } from '../../client/screenplay.js';
-import {
-  createDeterministicIdGenerator,
-  createProjectDataService,
-} from '../index.js';
-import {
-  createBlankMovieProject,
-  writeConfig,
-} from '../testing/project-data-fixtures.js';
+  ScreenplayAnalysis,
+  ScreenplayAnalysisCritique,
+} from '../../client/screenplay-analysis/index.js';
+import type { Screenplay, ScreenplayInput } from '../../client/screenplay/index.js';
+import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
+import { validateScreenplayAnalysis } from '../screenplay-analysis/validation.js';
+import { createBlankMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 
-describe('screenplay analysis commands', () => {
+describe('hierarchy-independent Screenplay Analysis', () => {
   let homeDir: string;
   let projectData = createProjectDataService();
 
@@ -24,578 +19,243 @@ describe('screenplay analysis commands', () => {
     homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-screenplay-analysis-test-'));
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
     projectData = createProjectDataService();
-    await createBlankMovieProject({ projectData, homeDir });
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
-    await projectData.applyCastOperations({
-      homeDir,
-      document: {
-        kind: 'castOperations',
-        operations: [
-          {
-            operation: 'castMember.add',
-            castMember: {
-              key: 'urban',
-              handle: 'urban',
-              name: 'Urban',
-              role: 'cannon founder',
-            },
-          },
-        ],
-      },
-      idGenerator: createDeterministicIdGenerator(),
+  });
+
+  it('validates analytical Acts and optional groups against flat canonical Scene order', () => {
+    const screenplay = flatScreenplay();
+    const result = validateScreenplayAnalysis({
+      analysis: validAnalysis(),
+      screenplay,
     });
-    await projectData.applyLocationOperations({
-      homeDir,
-      document: {
-        kind: 'locationOperations',
-        operations: [
-          {
-            operation: 'location.add',
-            location: {
-              key: 'foundry',
-              handle: 'foundry',
-              name: 'Foundry',
-            },
-          },
-        ],
+    expect(result).toMatchObject({ valid: true, issues: [] });
+  });
+
+  it('does not read organization Sections when validating analytical structure', () => {
+    const flat = flatScreenplay();
+    const organized = structuredClone(flat);
+    organized.sections = [
+      { id: 'section_sequence', type: 'sequence', title: 'A non-analytical grouping' },
+    ];
+    organized.structure = [
+      {
+        id: 'entry_sequence',
+        content: { type: 'section', sectionId: 'section_sequence' },
+        position: 0,
       },
-      idGenerator: createDeterministicIdGenerator(),
-    });
+      ...flat.structure.map((entry, position) => ({
+        ...entry,
+        parentSectionId: 'section_sequence',
+        position,
+      })),
+    ];
+
+    expect(validateScreenplayAnalysis({ analysis: validAnalysis(), screenplay: flat }).valid).toBe(true);
+    expect(validateScreenplayAnalysis({ analysis: validAnalysis(), screenplay: organized }).valid).toBe(true);
+  });
+
+  it('rejects incomplete Scene partitions, organizational fields, missing beats, bad scores, and unknown evidence Scenes', () => {
+    const screenplay = flatScreenplay();
+
+    const incomplete = validAnalysis();
+    incomplete.actSegments[1]!.sceneIds = [];
+    expect(validateScreenplayAnalysis({ analysis: incomplete, screenplay }).valid).toBe(false);
+
+    const organizational = validAnalysis() as ScreenplayAnalysis & { acts?: unknown[] };
+    organizational.acts = [];
+    expect(validateScreenplayAnalysis({ analysis: organizational, screenplay }).valid).toBe(false);
+
+    const missingBeat = validAnalysis();
+    missingBeat.keyBeats = missingBeat.keyBeats.slice(0, 8);
+    expect(validateScreenplayAnalysis({ analysis: missingBeat, screenplay }).valid).toBe(false);
+
+    const badScore = validAnalysis();
+    badScore.sceneAnalyses[0]!.scoreByCriterion.stakes = 101;
+    expect(validateScreenplayAnalysis({ analysis: badScore, screenplay }).valid).toBe(false);
+
+    const unknownEvidence = validAnalysis();
+    unknownEvidence.sceneAnalyses[0]!.critique.evidence[0]!.sceneId = 'scene_missing';
+    expect(validateScreenplayAnalysis({ analysis: unknownEvidence, screenplay }).valid).toBe(false);
+  });
+
+  it('persists immutable history, active selection, and the Scene-first Story Arc resource', async () => {
+    const created = await createBlankMovieProject({ homeDir, projectData });
+    if (!created) {
+      return;
+    }
     await projectData.createScreenplay({
+      projectName: created.projectName,
       homeDir,
-      document: threeActScreenplayDocument(),
+      screenplay: flatScreenplayInput(),
+      idGenerator: createDeterministicIdGenerator(),
     });
-  });
+    await projectData.openCurrentProject({
+      projectName: created.projectName,
+      homeDir,
+    });
+    const screenplay = (await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    })).screenplay;
+    const sceneIds = screenplay.scenes.map((scene) => scene.id);
+    const analysis = validAnalysis(sceneIds);
 
-  it('returns analysis context with default criteria and no active analysis', async () => {
-    const context = await projectData.readScreenplayAnalysisContext({ homeDir });
-
-    expect(context.valid).toBe(true);
-    expect(context.screenplay.title).toBe('Urban Basilica');
-    expect(context.screenplay.acts[0]?.sequences[0]?.scenes[0]?.title).toBe(
-      'The Refusal'
-    );
-    expect(context.defaultCriteria).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ key: 'dramaticEnergy' }),
-        expect.objectContaining({ key: 'stakes' }),
-        expect.objectContaining({ key: 'characterAgency' }),
-      ])
-    );
-    expect(context.activeAnalysis).toBeNull();
-    expect(context.resourceKeys).toEqual(
-      expect.arrayContaining(['surface:story-arc', 'screenplay-analysis'])
-    );
-  });
-
-  it('validates a three-act analysis document and accepts additional criteria', async () => {
-    const analysis = await analysisDocument();
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          criteria: [
-            ...analysis.criteria,
-            {
-              key: 'moralPressure',
-              label: 'Moral Pressure',
-              description: 'How forcefully the scene confronts responsibility.',
-            },
-          ],
-          scenes: analysis.scenes.map((scene) => ({
-            ...scene,
-            scoreByCriterion: {
-              ...scene.scoreByCriterion,
-              moralPressure: 80,
-            },
-          })),
-        },
-      })
-    ).resolves.toMatchObject({ valid: true, analysis: { kind: 'screenplayAnalysis' } });
-  });
-
-  it('rejects missing required fields and unknown fields with structured diagnostics', async () => {
-    const analysis = await analysisDocument();
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          summary: undefined,
-        } as unknown as ScreenplayAnalysisDocument,
-      })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA260',
-      issues: [expect.objectContaining({ code: 'PROJECT_DATA260' })],
+    const analysisIds = createDeterministicIdGenerator();
+    const first = await projectData.writeScreenplayAnalysis({
+      homeDir,
+      analysis,
+      idGenerator: analysisIds,
+    });
+    const secondAnalysis = structuredClone(analysis);
+    secondAnalysis.title = 'Second analysis';
+    const second = await projectData.writeScreenplayAnalysis({
+      homeDir,
+      analysis: secondAnalysis,
+      idGenerator: analysisIds,
     });
 
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          timing: 'not part of this app',
-        } as unknown as ScreenplayAnalysisDocument,
-      })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA260',
-      issues: [
-        expect.objectContaining({
-          message: expect.stringContaining('Unknown field'),
-        }),
-      ],
+    const history = await projectData.listScreenplayAnalyses({
+      homeDir,
     });
-  });
+    expect(history.analyses).toHaveLength(2);
+    expect(history.activeAnalysisId).toBe(second.activeAnalysisId);
 
-  it('rejects invalid criteria and scores', async () => {
-    const analysis = await analysisDocument();
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          criteria: analysis.criteria.filter((criterion) => criterion.key !== 'stakes'),
-        },
-      })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA260',
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('stakes') }),
-      ]),
+    await projectData.setActiveScreenplayAnalysis({
+      homeDir,
+      analysisId: first.activeAnalysisId,
     });
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          criteria: [...analysis.criteria, analysis.criteria[0]!],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('Duplicate') }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          scenes: [
-            {
-              ...analysis.scenes[0]!,
-              scoreByCriterion: {
-                dramaticEnergy: 101,
-                stakes: 50,
-                characterAgency: 50,
-                undeclared: 20,
-              },
-            },
-            ...analysis.scenes.slice(1),
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('Invalid value') }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          scenes: [
-            {
-              ...analysis.scenes[0]!,
-              scoreByCriterion: {
-                dramaticEnergy: 60,
-                stakes: 50,
-                characterAgency: 50,
-                undeclared: 20,
-              },
-            },
-            ...analysis.scenes.slice(1),
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('undeclared') }),
-      ]),
-    });
-  });
-
-  it('rejects unknown and mismatched screenplay references', async () => {
-    const analysis = await analysisDocument();
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          acts: [
-            { ...analysis.acts[0]!, actId: 'act_missing' },
-            ...analysis.acts.slice(1),
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('order') }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          sequences: [
-            {
-              ...analysis.sequences[0]!,
-              actId: analysis.acts[1]!.actId,
-            },
-            ...analysis.sequences.slice(1),
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('Sequence does not belong') }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          scenes: [
-            {
-              ...analysis.scenes[0]!,
-              sequenceId: analysis.sequences[1]!.sequenceId,
-            },
-            ...analysis.scenes.slice(1),
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('Scene does not belong') }),
-      ]),
-    });
-
-    await expect(
-      projectData.validateScreenplayAnalysis({
-        homeDir,
-        document: {
-          ...analysis,
-          acts: [
-            {
-              ...analysis.acts[0]!,
-              critique: {
-                ...analysis.acts[0]!.critique,
-                evidence: [
-                  {
-                    sceneId: 'scene_missing',
-                    text: 'The evidence cites a scene id that is not in the screenplay.',
-                  },
-                ],
-              },
-            },
-            ...analysis.acts.slice(1),
-          ],
-        },
-      })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining('unknown scene') }),
-      ]),
-    });
-  });
-
-  it('validates suggested scene additions without creating scene rows', async () => {
-    const analysis = await analysisDocument();
-    const statusBefore = await projectData.readScreenplayStatus({ homeDir });
-
-    await expect(
-      projectData.validateScreenplayAnalysis({ homeDir, document: analysis })
-    ).resolves.toMatchObject({ valid: true });
-
-    await expect(projectData.readScreenplayStatus({ homeDir })).resolves.toMatchObject({
-      counts: { scenes: statusBefore.counts.scenes },
-    });
-  });
-
-  it('writes history rows, sets active, and preserves older analyses', async () => {
-    const first = await writeAnalysis('First pass');
-    const second = await writeAnalysis('Second pass');
-
-    expect(first.analysis.id).not.toEqual(second.analysis.id);
-    expect(second.activeAnalysisId).toBe(second.analysis.id);
-
-    const list = await projectData.listScreenplayAnalyses({ homeDir });
-    expect(list.analyses.map((analysis) => analysis.id)).toEqual(
-      expect.arrayContaining([first.analysis.id, second.analysis.id])
-    );
-    expect(list.activeAnalysisId).toBe(second.analysis.id);
-
     const active = await projectData.readScreenplayAnalysis({
       homeDir,
       active: true,
     });
-    expect(active.summary?.id).toBe(second.analysis.id);
+    expect(active.analysis?.title).toBe(analysis.title);
 
-    await projectData.setActiveScreenplayAnalysis({
+    const storyArc = await projectData.readStoryArcResource({
+      projectName: created.projectName,
       homeDir,
-      analysisId: first.analysis.id,
     });
-
-    await expect(projectData.readScreenplayAnalysis({ homeDir, active: true })).resolves.toMatchObject({
-      summary: { id: first.analysis.id },
-    });
+    expect(storyArc.scenes.map((scene) => scene.id)).toEqual(sceneIds);
+    expect(storyArc.activeAnalysis?.actSegments.flatMap((segment) => segment.sceneIds)).toEqual(sceneIds);
+    expect(storyArc).not.toHaveProperty('acts');
   });
-
-  it('returns null when no active analysis exists', async () => {
-    await expect(
-      projectData.readScreenplayAnalysis({ homeDir, active: true })
-    ).resolves.toMatchObject({
-      analysis: null,
-      summary: null,
-      activeAnalysisId: null,
-    });
-  });
-
-  it('returns ordered scenes and active analysis in the Story Arc resource', async () => {
-    await writeAnalysis('Story Arc pass');
-
-    const resource = await projectData.readStoryArcResource({
-      homeDir,
-      projectName: 'blank-movie',
-    });
-
-    expect(resource.screenplay.title).toBe('Urban Basilica');
-    expect(resource.acts[0]?.sequences[0]?.scenes[0]).toMatchObject({
-      title: 'The Refusal',
-      storyFunction: ['Pressure Urban'],
-    });
-    expect(resource.activeAnalysis).toMatchObject({
-      kind: 'screenplayAnalysis',
-      title: 'Story Arc pass',
-      scenes: expect.arrayContaining([
-        expect.objectContaining({
-          title: 'The Refusal',
-          scoreByCriterion: {
-            dramaticEnergy: 64,
-            stakes: 59,
-            characterAgency: 51,
-          },
-        }),
-      ]),
-    });
-  });
-
-  async function writeAnalysis(title: string): Promise<ScreenplayAnalysisWriteReport> {
-    const analysis = await analysisDocument();
-    return await projectData.writeScreenplayAnalysis({
-      homeDir,
-      document: { ...analysis, title },
-    });
-  }
-
-  async function analysisDocument(): Promise<ScreenplayAnalysisDocument> {
-    const context = await projectData.readScreenplayAnalysisContext({ homeDir });
-    const acts = context.screenplay.acts;
-    const sequences = acts.map((act) => act.sequences[0]!);
-    const scenes = sequences.map((sequence) => sequence.scenes[0]!);
-    return {
-      kind: 'screenplayAnalysis',
-      structureModel: 'threeAct',
-      title: 'Three-act screenplay analysis',
-      summary:
-        'Urban has a clear moral engine, but the opening can sharpen agency.',
-      criteria: [
-        {
-          key: 'dramaticEnergy',
-          label: 'Dramatic Energy',
-          description: 'How strongly the moment pulls the audience forward.',
-        },
-        {
-          key: 'stakes',
-          label: 'Stakes',
-          description:
-            'How clearly the audience understands what can be lost or gained.',
-        },
-        {
-          key: 'characterAgency',
-          label: 'Character Agency',
-          description: "How clearly a character's choice drives the story.",
-        },
-      ],
-      acts: acts.map((act, index) => ({
-        actId: act.id,
-        actRole: ['actOne', 'actTwo', 'actThree'][index] as
-          | 'actOne'
-          | 'actTwo'
-          | 'actThree',
-        title: act.title ?? `Act ${index + 1}`,
-        synopsis:
-          'The act presents a clear pressure pattern and a moral consequence.',
-        scoreByCriterion: {
-          dramaticEnergy: 60 + index,
-          stakes: 55 + index,
-          characterAgency: 50 + index,
-        },
-        critique: usefulCritique(scenes[index]!.id),
-      })),
-      keyBeats: [
-        {
-          key: 'hook',
-          label: 'Hook',
-          actId: acts[0]!.id,
-          sequenceId: sequences[0]!.id,
-          sceneId: scenes[0]!.id,
-          synopsis: 'The story opens with the cost of Urban refusing limits.',
-          scoreByCriterion: {
-            dramaticEnergy: 70,
-            stakes: 65,
-            characterAgency: 55,
-          },
-          critique: usefulCritique(scenes[0]!.id),
-        },
-      ],
-      sequences: sequences.map((sequence, index) => ({
-        sequenceId: sequence.id,
-        actId: acts[index]!.id,
-        title: sequence.title ?? `Sequence ${index + 1}`,
-        synopsis: 'The sequence advances the pressure on Urban.',
-        beatRole: index === 0 ? 'hook' : undefined,
-        scoreByCriterion: {
-          dramaticEnergy: 60,
-          stakes: 58,
-          characterAgency: 53,
-        },
-        critique: usefulCritique(scenes[index]!.id),
-      })),
-      scenes: scenes.map((scene, index) => ({
-        sceneId: scene.id,
-        sequenceId: sequences[index]!.id,
-        actId: acts[index]!.id,
-        title: scene.title,
-        synopsis: 'The scene shows Urban under pressure.',
-        beatRole: index === 0 ? 'hook' : undefined,
-        scoreByCriterion: {
-          dramaticEnergy: 64,
-          stakes: 59,
-          characterAgency: 51,
-        },
-        critique: usefulCritique(scene.id),
-      })),
-      suggestedSceneAdditions: [
-        {
-          targetActId: acts[0]!.id,
-          targetSequenceId: sequences[0]!.id,
-          placement: { afterSceneId: scenes[0]!.id },
-          title: 'The Maker Calculates',
-          purpose: 'Give Urban a clearer active choice after the hook.',
-          synopsis:
-            'Urban privately weighs whether his craft can survive without patronage.',
-          rationale:
-            'The added beat would make the hook personal instead of only situational.',
-          expectedCriterionChanges: [
-            {
-              criterionKey: 'characterAgency',
-              direction: 'increase',
-              reason: 'The audience sees Urban choose pressure.',
-            },
-          ],
-        },
-      ],
-    };
-  }
 });
 
-function usefulCritique(sceneId: string) {
+const CRITERIA = [
+  { key: 'dramaticEnergy', label: 'Dramatic Energy', description: 'How strongly the moment pulls the audience forward.' },
+  { key: 'stakes', label: 'Stakes', description: 'How clearly the audience understands what can be lost or gained.' },
+  { key: 'characterAgency', label: 'Character Agency', description: "How clearly a character's choice drives the story." },
+];
+
+function validAnalysis(sceneIds = ['scene_one', 'scene_two', 'scene_three']): ScreenplayAnalysis {
+  const roles = ['hook', 'incitingIncident', 'firstPlotPoint', 'firstPinchPoint', 'midpoint', 'secondPinchPoint', 'secondPlotPoint', 'climax', 'resolution'] as const;
   return {
-    summary: 'The dramatic pressure is clear, but the choice can be sharper.',
-    strengths: ['The scene gives the audience concrete pressure.'],
-    concerns: ['Urban reacts before the audience fully sees his want.'],
-    evidence: [
-      {
-        sceneId,
-        text: 'The scene emphasizes pressure before a fully active decision.',
-      },
+    structureModel: 'threeAct',
+    title: 'Three-act evidence study',
+    summary: 'The maker chooses power and faces the human cost of that choice.',
+    criteria: CRITERIA,
+    actSegments: [
+      scoredAct('actOne', 'The offer', [sceneIds[0]!]),
+      scoredAct('actTwo', 'The bargain', [sceneIds[1]!]),
+      scoredAct('actThree', 'The consequence', [sceneIds[2]!]),
     ],
-    suggestions: ['Make the decision point more visible on the page.'],
+    keyBeats: roles.map((key, index) => ({
+      key,
+      label: key,
+      sceneId: sceneIds[Math.min(Math.floor(index / 3), 2)],
+      synopsis: `Evidence-backed ${key} beat.`,
+      scoreByCriterion: scores(),
+      critique: critique(sceneIds[Math.min(Math.floor(index / 3), 2)]!),
+    })),
+    sceneGroups: sceneIds.map((sceneId, index) => ({
+      title: `Group ${index + 1}`,
+      synopsis: `Scene group ${index + 1} follows one dramatic movement.`,
+      sceneIds: [sceneId],
+      scoreByCriterion: scores(),
+      critique: critique(sceneId),
+    })),
+    sceneAnalyses: sceneIds.map((sceneId) => ({
+      sceneId,
+      synopsis: `Analysis for ${sceneId}.`,
+      scoreByCriterion: scores(),
+      critique: critique(sceneId),
+    })),
+    suggestedScenes: [{
+      placement: { afterSceneId: sceneIds[0]! },
+      title: 'A harder choice',
+      purpose: 'Clarify that the maker rejects a viable alternative.',
+      synopsis: 'A safe commission is offered and consciously refused.',
+      rationale: 'The added decision makes later responsibility legible.',
+      expectedCriterionChanges: [{
+        criterionKey: 'characterAgency',
+        direction: 'increase',
+        reason: 'The protagonist makes the decisive compromise on screen.',
+      }],
+    }],
   };
 }
 
-function threeActScreenplayDocument(): ScreenplayCreateDocument {
+function scoredAct(
+  role: 'actOne' | 'actTwo' | 'actThree',
+  title: string,
+  sceneIds: string[],
+) {
   return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Urban Basilica',
-      logline: 'A founder builds a weapon and a conscience.',
-      summary: 'Urban sells his craft and must face what it makes possible.',
-      dramaticQuestion: 'Can Urban understand responsibility before the walls fall?',
-      themes: ['craft and complicity'],
-      tone: ['grave', 'precise'],
-      genrePrimary: 'historical drama',
-    },
-    cast: [],
-    locations: [],
-    acts: [
-      screenplayAct('act-one', 'The Offer', 'commission', 'The Refusal'),
-      screenplayAct('act-two', 'The Patron', 'casting', 'The Bargain'),
-      screenplayAct('act-three', 'The Sound', 'siege', 'The Wall Answers'),
-    ],
+    role,
+    title,
+    synopsis: `${title} advances the central dramatic question.`,
+    sceneIds,
+    scoreByCriterion: scores(),
+    critique: critique(sceneIds[0]!),
   };
 }
 
-function screenplayAct(
-  actKey: string,
-  actTitle: string,
-  sequenceKey: string,
-  sceneTitle: string
-): ScreenplayCreateDocument['acts'][number] {
+function scores(): Record<string, number> {
+  return { dramaticEnergy: 75, stakes: 80, characterAgency: 70 };
+}
+
+function critique(sceneId: string): ScreenplayAnalysisCritique {
   return {
-    key: actKey,
-    title: actTitle,
-    purpose: 'Move Urban through the moral cost of his craft.',
-    sequences: [
-      {
-        key: sequenceKey,
-        title: sceneTitle,
-        purpose: 'Pressure Urban toward a choice.',
-        scenes: [
-          {
-            key: `${sequenceKey}-scene`,
-            title: sceneTitle,
-            setting: {
-              interiorExterior: 'INT',
-              timeOfDay: 'NIGHT',
-              locationIds: ['location_test0001'],
-            },
-            storyFunction: ['Pressure Urban'],
-            blocks: [
-              {
-                type: 'action',
-                text: 'Urban studies the cracked bronze and hears the city waiting.',
-                castMemberIds: ['cast_test0001'],
-                locationIds: ['location_test0001'],
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    summary: 'The scene has a clear dramatic turn.',
+    strengths: ['The choice is visible in action.'],
+    concerns: ['The consequence can arrive sooner.'],
+    evidence: [{ sceneId, text: 'A concrete Scene detail supports this reading.' }],
+    suggestions: ['Make the next decision more costly.'],
+  };
+}
+
+function flatScreenplay(): Screenplay {
+  return {
+    opening: [{ id: 'opening_one', type: 'titleCard', text: 'BASILICA' }],
+    scenes: ['one', 'two', 'three'].map((suffix) => ({
+      id: `scene_${suffix}`,
+      productionNumber: suffix,
+      heading: `EXT. TEST FIELD ${suffix.toUpperCase()} - DAY`,
+      blocks: [{ id: `block_${suffix}`, type: 'action' as const, text: `Action ${suffix}.` }],
+    })),
+    sections: [],
+    structure: ['one', 'two', 'three'].map((suffix, position) => ({
+      id: `entry_${suffix}`,
+      content: { type: 'scene' as const, sceneId: `scene_${suffix}` },
+      position,
+    })),
+    references: [],
+  };
+}
+
+function flatScreenplayInput(): ScreenplayInput {
+  return {
+    opening: [{ key: 'opening-one', type: 'titleCard', text: 'BASILICA' }],
+    scenes: ['one', 'two', 'three'].map((suffix) => ({
+      key: `scene-${suffix}`,
+      productionNumber: suffix,
+      heading: `EXT. TEST FIELD ${suffix.toUpperCase()} - DAY`,
+      blocks: [{ key: `block-${suffix}`, type: 'action' as const, text: `Action ${suffix}.` }],
+    })),
+    sections: [],
+    structure: ['one', 'two', 'three'].map((suffix, position) => ({
+      key: `entry-${suffix}`,
+      content: { type: 'scene' as const, scene: { key: `scene-${suffix}` } },
+      position,
+    })),
+    references: [],
   };
 }

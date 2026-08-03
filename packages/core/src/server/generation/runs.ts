@@ -6,7 +6,7 @@ import type {
   GenerationSpecRecord,
   JsonValue,
 } from '../../client/generation.js';
-import type { ProjectRelativePath } from '../../client/project.js';
+import type { ProjectRelativePath } from '../../client/project/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   insertGenerationRunRecord,

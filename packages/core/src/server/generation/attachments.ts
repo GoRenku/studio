@@ -34,7 +34,7 @@ export interface GenerationMediaAttachmentReport {
     | { generationSpecId: string }
     | null;
   resourceKeys: string[];
-  project: { name: string; id: string; projectFolder: string };
+  project: { projectName: string; id: string; projectFolder: string };
   ownerRecord?: { kind: 'lookbookImage' | 'lookbookSheet'; id: string };
 }
 
@@ -100,7 +100,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
         ? { generationSpecId: provenance.generationSpecId }
         : null,
     resourceKeys,
-    project: { name: project.name, id: project.id, projectFolder: input.projectFolder },
+    project: { projectName: project.projectName, id: project.id, projectFolder: input.projectFolder },
     ...(persisted.ownerRecord ? { ownerRecord: persisted.ownerRecord } : {}),
   };
 }

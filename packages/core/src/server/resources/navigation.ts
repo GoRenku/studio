@@ -1,89 +1,34 @@
 import type {
-  ActNavigationRow,
   CastNavigationRow,
   LocationNavigationRow,
-  PropNavigationRow,
   PageResponse,
-  SceneNavigationRow,
-  SequenceNavigationRow,
+  PropNavigationRow,
 } from '../../client/index.js';
 import {
-  listActNavigationPage,
   listCastNavigationPage,
   listLocationNavigationPage,
   listPropNavigationPage,
-  listSceneNavigationPage,
-  listSequenceNavigationPage,
 } from '../database/access/navigation.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
-import type {
-  ListNavigationInput,
-  ListSequencesForActNavigationInput,
-  ListSceneNavigationInput,
-} from '../project-data-service-contracts.js';
+import type { ListNavigationInput } from '../project-data-service-contracts.js';
 
 export async function listCastNavigation(
-  input: ListNavigationInput
+  input: ListNavigationInput,
 ): Promise<PageResponse<CastNavigationRow>> {
   const { session } = await openProjectSession(input);
-  try {
-    return listCastNavigationPage(session, input);
-  } finally {
-    session.close();
-  }
+  try { return listCastNavigationPage(session, input); } finally { session.close(); }
 }
 
 export async function listLocationNavigation(
-  input: ListNavigationInput
+  input: ListNavigationInput,
 ): Promise<PageResponse<LocationNavigationRow>> {
   const { session } = await openProjectSession(input);
-  try {
-    return listLocationNavigationPage(session, input);
-  } finally {
-    session.close();
-  }
+  try { return listLocationNavigationPage(session, input); } finally { session.close(); }
 }
 
 export async function listPropNavigation(
-  input: ListNavigationInput
+  input: ListNavigationInput,
 ): Promise<PageResponse<PropNavigationRow>> {
   const { session } = await openProjectSession(input);
-  try {
-    return listPropNavigationPage(session, input);
-  } finally {
-    session.close();
-  }
-}
-
-export async function listActNavigation(
-  input: ListNavigationInput
-): Promise<PageResponse<ActNavigationRow>> {
-  const { session } = await openProjectSession(input);
-  try {
-    return listActNavigationPage(session, input);
-  } finally {
-    session.close();
-  }
-}
-
-export async function listSequenceNavigation(
-  input: ListNavigationInput | ListSequencesForActNavigationInput
-): Promise<PageResponse<SequenceNavigationRow>> {
-  const { session } = await openProjectSession(input);
-  try {
-    return listSequenceNavigationPage(session, input);
-  } finally {
-    session.close();
-  }
-}
-
-export async function listSceneNavigation(
-  input: ListSceneNavigationInput
-): Promise<PageResponse<SceneNavigationRow>> {
-  const { session } = await openProjectSession(input);
-  try {
-    return listSceneNavigationPage(session, input);
-  } finally {
-    session.close();
-  }
+  try { return listPropNavigationPage(session, input); } finally { session.close(); }
 }

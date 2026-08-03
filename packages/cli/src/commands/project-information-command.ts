@@ -8,6 +8,7 @@ import {
   createStudioOperationId,
   resolveRenkuStorageRoot,
   type Project,
+  type ProjectShell,
   type ProjectInformationPatch,
   type ProjectInformationRefreshField,
   type ProjectLanguagePatchOperation,
@@ -28,7 +29,26 @@ export interface ProjectInformationFlags {
   title?: string;
   aspectRatio?: string | boolean;
   logline?: string | boolean;
-  summary?: string | boolean;
+  synopsis?: string | boolean;
+  premise?: string | boolean;
+  intendedAudience?: string | boolean;
+  format?: string | boolean;
+  targetRuntimeMinutes?: string | boolean;
+  primaryGenre?: string | boolean;
+  secondaryGenres?: string | boolean;
+  tones?: string | boolean;
+  contentRatingIntent?: string | boolean;
+  creativeBoundaries?: string | boolean;
+  centralConflict?: string | boolean;
+  dramaticQuestion?: string | boolean;
+  themes?: string | boolean;
+  historicalBasis?: string | boolean;
+  dramatizedElements?: string | boolean;
+  screenplayDraftStatus?: string | boolean;
+  researchSources?: string | boolean;
+  assumptions?: string | boolean;
+  openQuestions?: string | boolean;
+  nextSteps?: string | boolean;
   displayName?: string;
   base?: boolean;
   audio?: boolean;
@@ -70,18 +90,23 @@ export async function runProjectInformationCommand(
 async function showProjectInformation(
   options: RunProjectInformationCommandOptions
 ): Promise<number> {
-  const project = await readTargetProject(options);
-  const information = toProjectInformationOutput(project);
+  const shell = await readTargetProject(options);
+  const project = shell.project;
+  const information = toProjectInformationOutput(shell);
   if (options.json) {
     options.io.stdout.log(JSON.stringify({ project: information }, null, 2));
   } else {
-    options.io.stdout.log(`Project Information: ${project.identity.name}`);
-    options.io.stdout.log(`Title: ${project.identity.title}`);
-    options.io.stdout.log(`Aspect ratio: ${project.identity.aspectRatio ?? 'not set'}`);
-    options.io.stdout.log(`Logline: ${project.identity.logline ?? 'not set'}`);
-    options.io.stdout.log(`Summary: ${project.identity.summary ?? 'not set'}`);
+    options.io.stdout.log(`Project Information: ${project.projectName}`);
+    options.io.stdout.log(`Title: ${project.title}`);
+    options.io.stdout.log(`Aspect ratio: ${project.aspectRatio}`);
+    options.io.stdout.log(`Logline: ${project.logline ?? 'not set'}`);
+    options.io.stdout.log(`Synopsis: ${project.synopsis ?? 'not set'}`);
+    options.io.stdout.log(`Premise: ${project.premise ?? 'not set'}`);
+    options.io.stdout.log(`Format: ${project.format ?? 'not set'}`);
+    options.io.stdout.log(`Target runtime: ${project.targetRuntimeMinutes ?? 'not set'}`);
+    options.io.stdout.log(`Primary genre: ${project.primaryGenre ?? 'not set'}`);
     options.io.stdout.log(
-      `Languages: ${project.languages.map((language) => language.localeTag).join(', ')}`
+      `Languages: ${shell.languages.map((language) => language.localeTag).join(', ')}`
     );
   }
   return 0;
@@ -98,13 +123,13 @@ async function mutateProjectInformation(
     patch,
     homeDir: options.homeDir,
   });
-  const project = await projectData.readProject({
+  const shell = await projectData.readProjectShell({
     projectName,
     homeDir: options.homeDir,
   });
   const changedFields = changedProjectInformationFields(patch);
   await appendProjectInformationEvents({
-    project,
+    project: shell.project,
     changedFields,
     command: `renku info ${options.input[0]}`,
     homeDir: options.homeDir,
@@ -112,10 +137,10 @@ async function mutateProjectInformation(
 
   if (options.json) {
     options.io.stdout.log(
-      JSON.stringify({ project: toProjectInformationOutput(project), changedFields }, null, 2)
+      JSON.stringify({ project: toProjectInformationOutput(shell), changedFields }, null, 2)
     );
   } else {
-    options.io.stdout.log(`Project information updated: ${project.identity.name}`);
+    options.io.stdout.log(`Project information updated: ${shell.project.projectName}`);
     options.io.stdout.log(`Changed: ${changedFields.join(', ')}`);
   }
   return 0;
@@ -190,9 +215,9 @@ async function runLanguageCommand(
 
 async function readTargetProject(
   options: RunProjectInformationCommandOptions
-): Promise<Project> {
+): Promise<ProjectShell> {
   const projectName = await resolveTargetProjectName(options);
-  return await createProjectDataService().readProject({
+  return await createProjectDataService().readProjectShell({
     projectName,
     homeDir: options.homeDir,
   });
@@ -237,9 +262,10 @@ function readSetPatch(flags: ProjectInformationFlags): ProjectInformationPatch {
   if (flags.logline !== undefined) {
     patch.logline = String(flags.logline);
   }
-  if (flags.summary !== undefined) {
-    patch.summary = String(flags.summary);
+  if (flags.synopsis !== undefined) {
+    patch.synopsis = String(flags.synopsis);
   }
+  assignSetProjectInformationFields(patch, flags);
   assertPatchHasFields(patch, 'renku info set');
   return patch;
 }
@@ -252,9 +278,10 @@ function readClearPatch(flags: ProjectInformationFlags): ProjectInformationPatch
   if (flags.logline !== undefined) {
     patch.logline = null;
   }
-  if (flags.summary !== undefined) {
-    patch.summary = null;
+  if (flags.synopsis !== undefined) {
+    patch.synopsis = null;
   }
+  assignClearProjectInformationFields(patch, flags);
   assertPatchHasFields(patch, 'renku info clear');
   return patch;
 }
@@ -264,7 +291,26 @@ function assertPatchHasFields(patch: ProjectInformationPatch, command: string): 
     patch.title === undefined &&
     patch.aspectRatio === undefined &&
     patch.logline === undefined &&
-    patch.summary === undefined &&
+    patch.synopsis === undefined &&
+    patch.premise === undefined &&
+    patch.intendedAudience === undefined &&
+    patch.format === undefined &&
+    patch.targetRuntimeMinutes === undefined &&
+    patch.primaryGenre === undefined &&
+    patch.secondaryGenres === undefined &&
+    patch.tones === undefined &&
+    patch.contentRatingIntent === undefined &&
+    patch.creativeBoundaries === undefined &&
+    patch.centralConflict === undefined &&
+    patch.dramaticQuestion === undefined &&
+    patch.themes === undefined &&
+    patch.historicalBasis === undefined &&
+    patch.dramatizedElements === undefined &&
+    patch.screenplayDraftStatus === undefined &&
+    patch.researchSources === undefined &&
+    patch.assumptions === undefined &&
+    patch.openQuestions === undefined &&
+    patch.nextSteps === undefined &&
     patch.languages === undefined
   ) {
     throw new StructuredError({
@@ -295,8 +341,13 @@ function changedProjectInformationFields(
   if (patch.logline !== undefined) {
     fields.push('logline');
   }
-  if (patch.summary !== undefined) {
-    fields.push('summary');
+  if (patch.synopsis !== undefined) {
+    fields.push('synopsis');
+  }
+  for (const field of PROJECT_INFORMATION_OPTIONAL_FIELDS) {
+    if (patch[field] !== undefined) {
+      fields.push(field);
+    }
   }
   if (patch.languages !== undefined) {
     fields.push('languages');
@@ -339,20 +390,88 @@ async function toProjectRef(
   homeDir?: string
 ): Promise<StudioProjectRef> {
   return {
-    name: project.identity.name,
-    id: project.identity.id,
+    name: project.projectName,
+    id: project.id,
     storageRoot: await resolveRenkuStorageRoot({ homeDir }),
   };
 }
 
-function toProjectInformationOutput(project: Project) {
+function toProjectInformationOutput(shell: ProjectShell) {
+  const project = shell.project;
   return {
-    name: project.identity.name,
-    id: project.identity.id,
-    title: project.identity.title,
-    aspectRatio: project.identity.aspectRatio,
-    logline: project.identity.logline,
-    summary: project.identity.summary,
-    languages: project.languages,
+    projectName: project.projectName,
+    id: project.id,
+    title: project.title,
+    aspectRatio: project.aspectRatio,
+    logline: project.logline,
+    synopsis: project.synopsis,
+    premise: project.premise,
+    intendedAudience: project.intendedAudience,
+    format: project.format,
+    targetRuntimeMinutes: project.targetRuntimeMinutes,
+    primaryGenre: project.primaryGenre,
+    secondaryGenres: project.secondaryGenres,
+    tones: project.tones,
+    contentRatingIntent: project.contentRatingIntent,
+    creativeBoundaries: project.creativeBoundaries,
+    centralConflict: project.centralConflict,
+    dramaticQuestion: project.dramaticQuestion,
+    themes: project.themes,
+    historicalBasis: project.historicalBasis,
+    dramatizedElements: project.dramatizedElements,
+    screenplayDraftStatus: project.screenplayDraftStatus,
+    researchSources: project.researchSources,
+    assumptions: project.assumptions,
+    openQuestions: project.openQuestions,
+    nextSteps: project.nextSteps,
+    languages: shell.languages,
   };
+}
+
+const PROJECT_INFORMATION_OPTIONAL_FIELDS = [
+  'premise', 'intendedAudience', 'format', 'targetRuntimeMinutes',
+  'primaryGenre', 'secondaryGenres', 'tones', 'contentRatingIntent',
+  'creativeBoundaries', 'centralConflict', 'dramaticQuestion', 'themes',
+  'historicalBasis', 'dramatizedElements', 'screenplayDraftStatus',
+  'researchSources', 'assumptions', 'openQuestions', 'nextSteps',
+] as const;
+
+function assignSetProjectInformationFields(
+  patch: ProjectInformationPatch,
+  flags: ProjectInformationFlags,
+): void {
+  const stringFields = [
+    'premise', 'intendedAudience', 'format', 'primaryGenre',
+    'contentRatingIntent', 'centralConflict', 'dramaticQuestion',
+    'screenplayDraftStatus',
+  ] as const;
+  for (const field of stringFields) {
+    if (flags[field] !== undefined) {
+      patch[field] = String(flags[field]);
+    }
+  }
+  if (flags.targetRuntimeMinutes !== undefined) {
+    patch.targetRuntimeMinutes = Number(flags.targetRuntimeMinutes);
+  }
+  const arrayFields = [
+    'secondaryGenres', 'tones', 'creativeBoundaries', 'themes',
+    'historicalBasis', 'dramatizedElements', 'researchSources', 'assumptions',
+    'openQuestions', 'nextSteps',
+  ] as const;
+  for (const field of arrayFields) {
+    if (flags[field] !== undefined) {
+      patch[field] = String(flags[field]).split(',').map((value) => value.trim());
+    }
+  }
+}
+
+function assignClearProjectInformationFields(
+  patch: ProjectInformationPatch,
+  flags: ProjectInformationFlags,
+): void {
+  for (const field of PROJECT_INFORMATION_OPTIONAL_FIELDS) {
+    if (flags[field] !== undefined) {
+      patch[field] = null;
+    }
+  }
 }

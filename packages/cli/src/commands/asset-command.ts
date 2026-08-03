@@ -212,8 +212,6 @@ export function parseAssetOwner(value: string): AssetOwner {
       return { kind: 'location', id: parts[1] };
     case 'prop':
       return { kind: 'prop', id: parts[1] };
-    case 'sequence':
-      return { kind: 'sequence', id: parts[1] };
     case 'scene':
       return { kind: 'scene', id: parts[1] };
     case 'lookbook':

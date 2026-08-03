@@ -1,29 +1,14 @@
-import {
-  createDiagnosticError,
-  type DiagnosticIssue,
-} from '@gorenku/studio-diagnostics';
+import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
-  CastMember,
-  Location,
-  Project,
-  Prop,
+  ProjectShell,
   ScenePanelTab,
-  Scene,
-  Sequence,
   StudioSelection,
 } from '../../client/index.js';
-import type {
-  StudioCurrentContext,
-  StudioFocusRequest,
-} from './events.js';
+import type { StudioCurrentContext, StudioFocusRequest } from './events.js';
 import { parseStudioSelection } from './selection-validation.js';
 
 export type StudioSelectionResolution =
-  | {
-      ok: true;
-      selection: StudioSelection;
-      context: StudioCurrentContext;
-    }
+  | { ok: true; selection: StudioSelection; context: StudioCurrentContext }
   | {
       ok: false;
       selection: StudioSelection;
@@ -32,11 +17,7 @@ export type StudioSelectionResolution =
     };
 
 export type StudioFocusRequestValidation =
-  | {
-      ok: true;
-      focus: StudioFocusRequest;
-      context: StudioCurrentContext | null;
-    }
+  | { ok: true; focus: StudioFocusRequest; context: StudioCurrentContext | null }
   | {
       ok: false;
       focus: StudioFocusRequest;
@@ -45,36 +26,21 @@ export type StudioFocusRequestValidation =
     };
 
 export function validateStudioFocusRequestForProject(
-  project: Project,
-  focus: StudioFocusRequest
+  shell: ProjectShell,
+  focus: StudioFocusRequest,
 ): StudioFocusRequestValidation {
   if (focus.screen === 'projectLibrary') {
     return { ok: true, focus, context: null };
   }
-
-  const selection = resolveStudioSelectionForProject(
-    project,
-    focus.selection
-  );
-  if (!selection.ok) {
-    return {
-      ok: false,
-      focus,
-      reason: selection.reason,
-      diagnostics: selection.diagnostics,
-    };
-  }
-
-  return {
-    ok: true,
-    focus,
-    context: selection.context,
-  };
+  const selection = resolveStudioSelectionForProject(shell, focus.selection);
+  return selection.ok
+    ? { ok: true, focus, context: selection.context }
+    : { ok: false, focus, reason: selection.reason, diagnostics: selection.diagnostics };
 }
 
 export function resolveStudioSelectionForProject(
-  project: Project,
-  selection: StudioSelection
+  shell: ProjectShell,
+  selection: StudioSelection,
 ): StudioSelectionResolution {
   const parsed = parseStudioSelection(selection, {
     path: ['focus', 'selection'],
@@ -89,305 +55,196 @@ export function resolveStudioSelectionForProject(
     };
   }
   selection = parsed.selection;
+  const project = shell.project;
+  const screenplay = shell.navigation.screenplay.screenplay;
 
   if (selection.type === 'projectInformation') {
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'projectInformation',
-        title: project.identity.title,
-        aspectRatio: project.identity.aspectRatio,
-        logline: project.identity.logline,
-        summary: project.identity.summary,
-        languages: project.languages,
-      },
-    };
+    return success(selection, {
+      kind: 'projectInformation',
+      title: project.title,
+      aspectRatio: project.aspectRatio,
+      logline: project.logline,
+      summary: project.synopsis,
+      languages: shell.languages,
+    });
   }
-
-  if (
-    selection.type === 'inspiration' ||
-    selection.type === 'lookbook'
-  ) {
-    return {
-      ok: true,
-      selection,
-      context: { kind: 'visualLanguage', sections: ['inspiration', 'lookbooks'] },
-    };
+  if (selection.type === 'inspiration' || selection.type === 'lookbook') {
+    return success(selection, {
+      kind: 'visualLanguage',
+      sections: ['inspiration', 'lookbooks'],
+    });
   }
-
   if (selection.type === 'storyArc') {
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'storyArc',
-        projectTitle: project.identity.title,
-        sequences: project.sequences.map((sequence) => ({
-          id: sequence.id,
-          number: sequence.number,
-          title: sequence.title,
-          scenes: sequence.scenes.map((scene) => ({
-            id: scene.id,
-            title: scene.title,
-          })),
-        })),
-      },
-    };
+    return success(selection, {
+      kind: 'storyArc',
+      projectTitle: project.title,
+      sections: screenplay.sections.map((section) => ({
+        id: section.id,
+        type: section.type,
+        title: section.title,
+      })),
+    });
   }
-
   if (selection.type === 'cast') {
-    return {
-      ok: true,
-      selection,
-      context: { kind: 'cast', cast: project.cast },
-    };
+    return success(selection, {
+      kind: 'cast',
+      cast: shell.navigation.cast.items.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        role: entry.role,
+      })),
+    });
   }
-
   if (selection.type === 'castMember') {
-    const castMember = findCastMember(project, selection.id);
-    if (!castMember) {
-      return missingSelection(
-        selection,
-        'STUDIO_COORDINATION033',
-        `Requested cast member '${selection.id}' was not found.`,
-        ['focus', 'selection', 'id'],
-        'Select an existing cast member before requesting Studio focus.'
-      );
-    }
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'castMember',
-        id: castMember.id,
-        name: castMember.name,
-        role: castMember.role,
-        description: castMember.description,
-      },
-    };
+    const entry = shell.navigation.cast.items.find((value) => value.id === selection.id);
+    return entry
+      ? success(selection, { kind: 'castMember', id: entry.id, name: entry.name, role: entry.role })
+      : missing(selection, `Requested Cast Member '${selection.id}' was not found.`);
   }
-
   if (selection.type === 'locations') {
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'locations',
-        locations: project.locations.map((location) => ({
-          id: location.id,
-          name: location.name,
-          timePeriod: location.timePeriod,
-          description: location.description,
-        })),
-      },
-    };
+    return success(selection, {
+      kind: 'locations',
+      locations: shell.navigation.locations.items.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        timePeriod: entry.timePeriod,
+      })),
+    });
   }
-
   if (selection.type === 'location') {
-    const location = findLocation(project, selection.id);
-    if (!location) {
-      return missingSelection(
-        selection,
-        'STUDIO_COORDINATION035',
-        `Requested location '${selection.id}' was not found.`,
-        ['focus', 'selection', 'id'],
-        'Select an existing location before requesting Studio focus.'
-      );
-    }
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'location',
-        id: location.id,
-        name: location.name,
-        timePeriod: location.timePeriod,
-        description: location.description,
-      },
-    };
+    const entry = shell.navigation.locations.items.find((value) => value.id === selection.id);
+    return entry
+      ? success(selection, { kind: 'location', id: entry.id, name: entry.name, timePeriod: entry.timePeriod })
+      : missing(selection, `Requested Location '${selection.id}' was not found.`);
   }
-
   if (selection.type === 'props') {
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'props',
-        props: project.props.map((prop) => ({
-          id: prop.id,
-          name: prop.name,
-          description: prop.description,
-        })),
-      },
-    };
+    return success(selection, {
+      kind: 'props',
+      props: shell.navigation.props.items.map((entry) => ({ id: entry.id, name: entry.name })),
+    });
   }
-
   if (selection.type === 'prop') {
-    const prop = findProp(project, selection.id);
-    if (!prop) {
-      return missingSelection(
-        selection,
-        'STUDIO_COORDINATION041',
-        `Requested Prop '${selection.id}' was not found.`,
-        ['focus', 'selection', 'id'],
-        'Select an existing Prop before requesting Studio focus.'
-      );
-    }
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'prop',
-        id: prop.id,
-        name: prop.name,
-        description: prop.description,
-      },
-    };
+    const entry = shell.navigation.props.items.find((value) => value.id === selection.id);
+    return entry
+      ? success(selection, { kind: 'prop', id: entry.id, name: entry.name })
+      : missing(selection, `Requested Prop '${selection.id}' was not found.`);
   }
-
-  if (selection.type === 'sequence') {
-    const sequence = findSequence(project, selection.id);
-    if (!sequence) {
-      return missingSelection(
-        selection,
-        'STUDIO_COORDINATION030',
-        `Requested sequence '${selection.id}' was not found.`,
-        ['focus', 'selection', 'id'],
-        'Select an existing sequence before requesting Studio focus.'
-      );
+  if (selection.type === 'section') {
+    const section = screenplay.sections.find((value) => value.id === selection.id);
+    if (!section) {
+      return missing(selection, `Requested Section '${selection.id}' was not found.`);
     }
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'sequence',
-        id: sequence.id,
-        number: sequence.number,
-        title: sequence.title,
-        shortTitle: sequence.shortTitle,
-        summary: sequence.summary,
-        scenes: sequence.scenes.map((scene) => ({
-          id: scene.id,
-          title: scene.title,
-          summary: scene.summary,
-        })),
-      },
-    };
+    const sceneIds = descendantSceneIds(screenplay, section.id);
+    return success(selection, {
+      kind: 'section',
+      id: section.id,
+      sectionType: section.type,
+      title: section.title,
+      description: section.description,
+      scenes: screenplay.scenes
+        .filter((scene) => sceneIds.includes(scene.id))
+        .map((scene) => ({ id: scene.id, heading: scene.heading, title: scene.title })),
+    });
   }
-
   if (selection.type === 'scene') {
-    const resolved = findScene(project, selection.id);
-    if (!resolved) {
-      return missingSelection(
-        selection,
-        'STUDIO_COORDINATION031',
-        `Requested scene '${selection.id}' was not found.`,
-        ['focus', 'selection', 'id'],
-        'Select an existing scene before requesting Studio focus.'
-      );
+    const scene = screenplay.scenes.find((value) => value.id === selection.id);
+    if (!scene) {
+      return missing(selection, `Requested Scene '${selection.id}' was not found.`);
     }
-    return {
-      ok: true,
-      selection,
-      context: {
-        kind: 'scene',
-        id: resolved.scene.id,
-        title: resolved.scene.title,
-        summary: resolved.scene.summary,
-        parentSequence: {
-          id: resolved.sequence.id,
-          number: resolved.sequence.number,
-          title: resolved.sequence.title,
-          summary: resolved.sequence.summary,
-        },
-        sceneTab: sceneTabLabel(effectiveSceneTab(selection)),
-      },
-    };
+    return success(selection, {
+      kind: 'scene',
+      id: scene.id,
+      title: scene.title ?? scene.heading,
+      productionNumber: scene.productionNumber,
+      parentSections: parentSections(screenplay, scene.id),
+      sceneTab: sceneTabLabel(selection.sceneTab ?? (selection.beatId ? 'beats' : 'narrative')),
+    });
   }
-
   return {
     ok: false,
     selection,
     reason: 'unsupportedSelection',
-    diagnostics: [
-      createDiagnosticError(
-        'STUDIO_COORDINATION034',
-        'Requested Studio focus selection is not supported.',
-        { path: ['focus', 'selection'], context: 'studio.focusRequested' },
-        'Request a supported Movie Studio selection.'
-      ),
-    ],
+    diagnostics: [createDiagnosticError(
+      'STUDIO_COORDINATION034',
+      'Requested Studio focus selection is not supported.',
+      { path: ['focus', 'selection'], context: 'studio.focusRequested' },
+      'Request a supported Movie Studio selection.',
+    )],
   };
 }
 
-function effectiveSceneTab(
-  selection: Extract<StudioSelection, { type: 'scene' }>
-): ScenePanelTab {
-  return selection.sceneTab ?? (selection.beatId ? 'beats' : 'narrative');
+function parentSections(
+  screenplay: ProjectShell['navigation']['screenplay']['screenplay'],
+  sceneId: string,
+): Array<{ id: string; type: 'act' | 'sequence'; title: string }> {
+  const result: Array<{ id: string; type: 'act' | 'sequence'; title: string }> = [];
+  let entry = screenplay.structure.find(
+    (value) => value.content.type === 'scene' && value.content.sceneId === sceneId,
+  );
+  while (entry?.parentSectionId) {
+    const section = screenplay.sections.find((value) => value.id === entry!.parentSectionId);
+    if (!section) {
+      break;
+    }
+    result.unshift({ id: section.id, type: section.type, title: section.title });
+    entry = screenplay.structure.find(
+      (value) => value.content.type === 'section' && value.content.sectionId === section.id,
+    );
+  }
+  return result;
+}
+
+function descendantSceneIds(
+  screenplay: ProjectShell['navigation']['screenplay']['screenplay'],
+  sectionId: string,
+): string[] {
+  const result: string[] = [];
+  const visit = (parentId: string): void => {
+    screenplay.structure
+      .filter((entry) => entry.parentSectionId === parentId)
+      .sort((left, right) => left.position - right.position)
+      .forEach((entry) => {
+        if (entry.content.type === 'scene') {
+          result.push(entry.content.sceneId);
+        } else {
+          visit(entry.content.sectionId);
+        }
+      });
+  };
+  visit(sectionId);
+  return result;
+}
+
+function success(
+  selection: StudioSelection,
+  context: StudioCurrentContext,
+): StudioSelectionResolution {
+  return { ok: true, selection, context };
+}
+
+function missing(selection: StudioSelection, message: string): StudioSelectionResolution {
+  return {
+    ok: false,
+    selection,
+    reason: 'selectionNotFound',
+    diagnostics: [createDiagnosticError(
+      'STUDIO_COORDINATION031',
+      message,
+      { path: ['focus', 'selection', 'id'], context: 'studio.focusRequested' },
+      'Select an existing Screenplay or Project entity.',
+    )],
+  };
 }
 
 function sceneTabLabel(tab: ScenePanelTab): { id: ScenePanelTab; label: string } {
   return {
     id: tab,
-    label:
-      tab === 'beats'
-        ? 'Beats'
-        : tab === 'shotPlans'
-          ? 'Shot Plans'
-          : tab === 'generations'
-            ? 'Generations'
+    label: tab === 'beats'
+      ? 'Beats'
+      : tab === 'shotPlans'
+        ? 'Shot Plans'
+        : tab === 'generations'
+          ? 'Generations'
           : 'Narrative',
-  };
-}
-
-function findSequence(project: Project, id: string): Sequence | null {
-  return project.sequences.find((sequence) => sequence.id === id) ?? null;
-}
-
-function findScene(
-  project: Project,
-  id: string
-): { sequence: Sequence; scene: Scene } | null {
-  for (const sequence of project.sequences) {
-    const scene = sequence.scenes.find((entry) => entry.id === id);
-    if (scene) {
-      return { sequence, scene };
-    }
-  }
-  return null;
-}
-
-function findCastMember(project: Project, id: string): CastMember | null {
-  return project.cast.find((entry) => entry.id === id) ?? null;
-}
-
-function findLocation(project: Project, id: string): Location | null {
-  return project.locations.find((location) => location.id === id) ?? null;
-}
-
-function findProp(project: Project, id: string): Prop | null {
-  return project.props.find((prop) => prop.id === id) ?? null;
-}
-
-function missingSelection(
-  selection: StudioSelection,
-  code: string,
-  message: string,
-  path: string[],
-  suggestion: string
-): StudioSelectionResolution {
-  return {
-    ok: false,
-    selection,
-    reason: 'selectionNotFound',
-    diagnostics: [
-      createDiagnosticError(
-        code,
-        message,
-        { path, context: 'studio.focusRequested' },
-        suggestion
-      ),
-    ],
   };
 }

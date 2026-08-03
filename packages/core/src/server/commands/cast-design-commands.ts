@@ -9,7 +9,7 @@ import { withCurrentProjectSession } from '../database/lifecycle/current-project
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import {
   listCastDesignRecords,
@@ -183,22 +183,9 @@ function assertCastDesignSemantics(
   document: CastDesignDocument
 ): void {
   requireCastMember(document.castMemberId, session);
-  const screenplay = readScreenplayDocumentFromSession(session);
+  const screenplay = readCanonicalScreenplay(session);
   const issues: DiagnosticIssue[] = [];
-  const sequenceIds = new Set<string>();
-  const sceneIds = new Set<string>();
-  screenplay?.acts.forEach((act) =>
-    act.sequences.forEach((sequence) => {
-      if (sequence.id) {
-        sequenceIds.add(sequence.id);
-      }
-      sequence.scenes.forEach((scene) => {
-        if (scene.id) {
-          sceneIds.add(scene.id);
-        }
-      });
-    })
-  );
+  const sceneIds = new Set(screenplay.scenes.map((scene) => scene.id));
   const variantLabels = new Set<string>();
   document.design.costume.variants.forEach((variant, index) => {
     const labelKey = variant.label.trim().toLocaleLowerCase();
@@ -213,11 +200,12 @@ function assertCastDesignSemantics(
       );
     }
     variantLabels.add(labelKey);
-    if (variant.scope.kind === 'sequence' && !sequenceIds.has(variant.scope.sequenceId)) {
-      issues.push(scopeIssue(['design', 'costume', 'variants', String(index), 'scope', 'sequenceId']));
-    }
-    if (variant.scope.kind === 'scene' && !sceneIds.has(variant.scope.sceneId)) {
-      issues.push(scopeIssue(['design', 'costume', 'variants', String(index), 'scope', 'sceneId']));
+    if (
+      variant.scope.kind === 'scenes'
+      && (new Set(variant.scope.sceneIds).size !== variant.scope.sceneIds.length
+        || variant.scope.sceneIds.some((sceneId) => !sceneIds.has(sceneId)))
+    ) {
+      issues.push(scopeIssue(['design', 'costume', 'variants', String(index), 'scope', 'sceneIds']));
     }
   });
   throwIfDepartmentIssues(issues);

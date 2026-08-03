@@ -75,7 +75,7 @@ async function withTrashSession<T>(
   input: { projectName: string; homeDir?: string },
   fn: (handle: {
     projectFolder: string;
-    project: Pick<ProjectRecord, 'id' | 'name'>;
+    project: Pick<ProjectRecord, 'id' | 'projectName'>;
     session: DatabaseSession;
   }) => T | Promise<T>
 ): Promise<T> {

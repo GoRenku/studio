@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
   bindGenerationSemanticValues,
   describeGenerationModelInputs,
@@ -61,7 +61,7 @@ export async function generateSceneDialogueAudioTake(input: {
   session: DatabaseSession;
   projectFolder: string;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   setup: Partial<SceneDialogueAudioSetup>;
   simulate?: boolean;
   approveLiveProviderRun?: boolean;
@@ -77,7 +77,7 @@ export async function generateSceneDialogueAudioTake(input: {
   assertSceneDialogueAudioDestinationReady({
     session: input.session,
     sceneId: input.sceneId,
-    dialogueId: input.dialogueId,
+    turnId: input.turnId,
   });
   updateSceneDialogueAudioSetup(input);
   const setup = requireSceneDialogueAudioSetup(input);
@@ -174,7 +174,7 @@ async function buildSceneDialogueAudioSpec(input: {
     : input.setup.plainText;
   return {
     purpose: 'scene.dialogue-audio',
-    target: { kind: 'sceneDialogue', id: input.setup.target.dialogueId },
+    target: { kind: 'sceneDialogue', id: input.setup.target.turnId },
     executionKind: 'renku-managed',
     model: { provider: 'elevenlabs', model: providerModel },
     values: bindGenerationSemanticValues({
@@ -221,7 +221,10 @@ function requireDialogueCastMemberId(input: {
   const row = input.session.db
     .select({ castMemberId: sceneDialogueAudio.castMemberId })
     .from(sceneDialogueAudio)
-    .where(eq(sceneDialogueAudio.dialogueId, input.setup.target.dialogueId))
+    .where(and(
+      eq(sceneDialogueAudio.sceneId, input.setup.target.sceneId),
+      eq(sceneDialogueAudio.turnId, input.setup.target.turnId),
+    ))
     .get();
   if (!row) {
     throw new ProjectDataError(
@@ -236,7 +239,7 @@ function attachSceneDialogueAudioTake(input: {
   session: DatabaseSession;
   projectFolder: string;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   setup: SceneDialogueAudioSetup;
   run: import('../../client/generation.js').GenerationRun;
   outputArtifactId: string;
@@ -253,7 +256,7 @@ function attachSceneDialogueAudioTake(input: {
     (input.run.status !== 'completed' && input.run.status !== 'simulated') ||
     input.run.specSnapshot.purpose !== 'scene.dialogue-audio' ||
     input.run.specSnapshot.target.kind !== 'sceneDialogue' ||
-    input.run.specSnapshot.target.id !== input.dialogueId ||
+    input.run.specSnapshot.target.id !== input.turnId ||
     !output ||
     !input.run.receipt
   ) {
@@ -265,7 +268,10 @@ function attachSceneDialogueAudioTake(input: {
   const audio = input.session.db
     .select()
     .from(sceneDialogueAudio)
-    .where(eq(sceneDialogueAudio.dialogueId, input.dialogueId))
+    .where(and(
+      eq(sceneDialogueAudio.sceneId, input.sceneId),
+      eq(sceneDialogueAudio.turnId, input.turnId),
+    ))
     .get();
   if (!audio || audio.sceneId !== input.sceneId) {
     throw new ProjectDataError(
@@ -318,7 +324,7 @@ function attachSceneDialogueAudioTake(input: {
         destination: {
           kind: 'scene.dialogueAudio',
           sceneId: input.sceneId,
-          dialogueId: input.dialogueId,
+          turnId: input.turnId,
           sceneDialogueAudioId: audio.id,
           dialogueAudioTakeId: takeId,
         },

@@ -23,10 +23,8 @@ import {
   listPropNavigationPage,
 } from '../database/access/navigation.js';
 import { readPropRecord } from '../database/access/props.js';
-import {
-  readScreenplayCastMemberFromSession,
-  readScreenplayLocationFromSession,
-} from '../database/access/screenplay-resource.js';
+import { readCastMemberRecord } from '../database/access/cast-members.js';
+import { readLocationRecord } from '../database/access/locations.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -66,9 +64,7 @@ export async function readCastMemberResource(
   const { session } = await openProjectSession(input);
   try {
     return {
-      castMember: requireCastMemberId(
-        readScreenplayCastMemberFromSession(session, input.castMemberId)
-      ),
+      castMember: requireCastMember(session, input.castMemberId),
       firstImage: firstImageForContinuitySubject(session, {
         kind: 'castMember',
         id: input.castMemberId,
@@ -137,9 +133,7 @@ export async function readLocationResource(
   const { session } = await openProjectSession(input);
   try {
     return {
-      location: requireLocationId(
-        readScreenplayLocationFromSession(session, input.locationId)
-      ),
+      location: requireLocation(session, input.locationId),
       firstImage: firstImageForContinuitySubject(session, {
         kind: 'location',
         id: input.locationId,
@@ -324,22 +318,39 @@ function invalidRegistrationCapabilities(registrationId: string): ProjectDataErr
   );
 }
 
-function requireCastMemberId(
-  castMember: ReturnType<typeof readScreenplayCastMemberFromSession>
-) {
-  if (!castMember.id) {
-    throwNotFound('Cast Member', castMember.handle);
+function requireCastMember(session: DatabaseSession, castMemberId: string) {
+  const castMember = readCastMemberRecord(session, castMemberId);
+  if (!castMember) {
+    throwNotFound('Cast Member', castMemberId);
   }
-  return { ...castMember, id: castMember.id };
+  return {
+    id: castMember.id,
+    handle: castMember.handle,
+    name: castMember.name,
+    isVoiceOver: castMember.isVoiceOver,
+    ...(castMember.role ? { role: castMember.role } : {}),
+    ...(castMember.age !== null ? { age: castMember.age } : {}),
+    ...(castMember.want ? { want: castMember.want } : {}),
+    ...(castMember.need ? { need: castMember.need } : {}),
+    ...(castMember.arc ? { arc: castMember.arc } : {}),
+    ...(castMember.voiceNotes ? { voiceNotes: castMember.voiceNotes } : {}),
+    ...(castMember.description ? { description: castMember.description } : {}),
+  };
 }
 
-function requireLocationId(
-  location: ReturnType<typeof readScreenplayLocationFromSession>
-) {
-  if (!location.id) {
-    throwNotFound('Location', location.handle);
+function requireLocation(session: DatabaseSession, locationId: string) {
+  const location = readLocationRecord(session, locationId);
+  if (!location) {
+    throwNotFound('Location', locationId);
   }
-  return { ...location, id: location.id };
+  return {
+    id: location.id,
+    handle: location.handle,
+    name: location.name,
+    ...(location.timePeriod ? { timePeriod: location.timePeriod } : {}),
+    ...(location.description ? { description: location.description } : {}),
+    ...(location.visualNotes ? { visualNotes: location.visualNotes } : {}),
+  };
 }
 
 function throwNotFound(label: string, id: string): never {

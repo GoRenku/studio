@@ -66,22 +66,12 @@ export function studioScreenplayResourceKey(): string {
   return 'screenplay';
 }
 
-export function studioScreenplayActsResourceKey(): string {
-  return 'screenplay:acts';
+export function studioScreenplayStructureResourceKey(): string {
+  return 'screenplay:structure';
 }
 
-export function studioActSurfaceResourceKey(actId: string): string {
-  return `surface:act:${actId}`;
-}
-
-export function studioSequenceSurfaceResourceKey(sequenceId: string): string {
-  return `surface:sequence:${sequenceId}`;
-}
-
-export function studioSequenceScenesNavigationResourceKey(
-  sequenceId: string
-): string {
-  return `navigation:sequence-scenes:${sequenceId}`;
+export function studioScreenplaySectionResourceKey(sectionId: string): string {
+  return `screenplay:section:${sectionId}`;
 }
 
 export function studioSceneNarrativeResourceKey(sceneId: string): string {
@@ -132,7 +122,6 @@ export function studioAssetOwnerSurfaceResourceKeys(owner: AssetOwner): string[]
     case 'shot':
       return [];
     case 'project':
-    case 'sequence':
     case 'scene':
       return [];
   }

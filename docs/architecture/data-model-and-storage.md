@@ -1,6 +1,6 @@
 # Renku Studio Data Model And Storage
 
-Date: 2026-05-10
+Date: 2026-08-03
 
 Status: current
 
@@ -39,24 +39,36 @@ Use the focused documents below for current direction.
 - Inspiration folder images are filesystem-owned content and are not registered
   as per-image assets. The persisted Inspiration Analysis JSON is SQLite-owned
   project data.
+- Project owns story and development metadata directly: title, logline,
+  synopsis, premise, audience, format/runtime, genres, tones, boundaries,
+  conflict, dramatic question, themes, historical/dramatized notes, draft
+  status, research, assumptions, open questions, and next steps. Screenplay
+  storage does not mirror those fields.
+- Each Project has one Scene-first Screenplay aggregate. Scenes are canonical
+  ordered units. Optional Act and Sequence Sections provide non-owning
+  organization through explicit structure entries; a flat ordered Scene list
+  is valid. Deleting a Section splices its direct children into the parent.
+- Screenplay text uses stable IDs for every Opening Element, Block, Dialogue
+  Turn, and Dialogue Part. Separate references bind Cast Members, Locations,
+  and Props to Scenes, headings, Blocks, dialogue cues/parts, and exact text
+  ranges without mutating prose or requiring `@handle` tokens.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
-  agent-authored critique history as tagged JSON in `screenplay_analysis`, with
-  one active analysis tracked in `screenplay_analysis_state`.
+  agent-authored critique history as hierarchy-independent JSON in
+  `screenplay_analysis`, with one active analysis tracked in
+  `screenplay_analysis_state`. Its three Act segments and optional Scene groups
+  partition canonical Scenes and do not reference screenplay Sections.
 - Scene Beat Sheets are SQLite-owned project data. They store validated,
   agent-authored narrative breakdown history as tagged JSON in
   `scene_beat_sheet`, with one active Beat Sheet per scene tracked in
   `scene_beat_sheet_state`.
-- Production Scene Numbers are stable human-facing references stored in the
-  separate `scene_production_number` registry. Scene ids remain the durable
-  identity used by screenplay JSON, relationships, URLs, and existing command
-  inputs. Registry rows remain after a Scene is removed, so omitted status is
-  derived from current Scene existence and reserved numbers are never reused.
-  The registry intentionally has no Scene foreign key; Core commands enforce
-  that every current Scene has exactly one canonical reservation.
-- A Beat is a non-camera narrative unit with exactly eight authored fields:
+- Production Scene Numbers are optional exact non-empty strings stored directly
+  on Scene. They are human-facing references, not identity or canonical order;
+  Core list/resolve queries use current Scenes without a reservation registry.
+- A Beat is a non-camera narrative unit with exactly nine authored fields:
   `id`, `title`, `description`, `narrativeDevelopment`, `narrativePurpose`,
-  `castMemberIds`, `locationIds`, and `screenplayBlockIndexes`. Beat order is
-  the JSON array order.
+  `castMemberIds`, `locationIds`, `propIds`, and `screenplayBlockIds`. Beat
+  order is the JSON array order, and Block relationships use stable IDs rather
+  than array indexes.
   Beat descriptions and the other authored fields must not encode framing,
   lenses, camera movement, composition, coverage, or production instructions.
 - Shot Plans are Scene-owned mutable authoring aggregates with ordered Shots.
@@ -82,8 +94,8 @@ Use the focused documents below for current direction.
   per owner tracked in their corresponding state table.
 - Cast Members, Locations, and Props have one canonical authoring path each:
   `renku cast`, `renku location`, and `renku prop`. Screenplay JSON references
-  existing Cast Members and Locations by durable ids; Props remain production
-  continuity subjects outside screenplay facts.
+  all three existing Project subject types by durable ids without embedding or
+  duplicating their facts.
 - Lookbooks are durable SQLite-owned project direction. Each project has at
   most one Production Lookbook and at most one Storyboard Lookbook. Lookbook
   owner rows are permanent and cannot enter Trash. The two roles share one
@@ -191,6 +203,8 @@ The durable decision history is recorded in:
 - `docs/decisions/0061-use-mutable-copy-and-freeze-shot-plans.md`
 - `docs/decisions/0064-use-exclusive-asset-membership-and-scoped-selection.md`
 - `docs/decisions/0067-use-structured-shot-depth-and-presentational-mentions.md`
+- `docs/decisions/0071-use-scene-first-screenplay-and-direct-project-story-metadata.md`
+- `docs/decisions/0072-use-hierarchy-independent-screenplay-analysis.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

@@ -60,7 +60,26 @@ export type ProjectInformationRefreshField =
   | 'title'
   | 'aspectRatio'
   | 'logline'
-  | 'summary'
+  | 'synopsis'
+  | 'premise'
+  | 'intendedAudience'
+  | 'format'
+  | 'targetRuntimeMinutes'
+  | 'primaryGenre'
+  | 'secondaryGenres'
+  | 'tones'
+  | 'contentRatingIntent'
+  | 'creativeBoundaries'
+  | 'centralConflict'
+  | 'dramaticQuestion'
+  | 'themes'
+  | 'historicalBasis'
+  | 'dramatizedElements'
+  | 'screenplayDraftStatus'
+  | 'researchSources'
+  | 'assumptions'
+  | 'openQuestions'
+  | 'nextSteps'
   | 'languages';
 
 export interface StudioProjectRefreshRequestedEvent extends StudioEventBase {
@@ -191,27 +210,25 @@ export type StudioCurrentContext =
       kind: 'scene';
       id: string;
       title: string;
-      summary?: string;
-      parentSequence: { id: string; number: number; title: string; summary?: string };
+      productionNumber?: string;
+      parentSections: { id: string; type: 'act' | 'sequence'; title: string }[];
       sceneTab: StudioCurrentSceneTab;
     }
   | {
-      kind: 'sequence';
+      kind: 'section';
       id: string;
-      number: number;
+      sectionType: 'act' | 'sequence';
       title: string;
-      shortTitle?: string;
-      summary?: string;
-      scenes: { id: string; title: string; summary?: string }[];
+      description?: string;
+      scenes: { id: string; heading: string; title?: string }[];
     }
   | {
       kind: 'storyArc';
       projectTitle: string;
-      sequences: {
+      sections: {
         id: string;
-        number: number;
+        type: 'act' | 'sequence';
         title: string;
-        scenes: { id: string; title: string }[];
       }[];
     }
   | {

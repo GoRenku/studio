@@ -8,6 +8,7 @@ import {
   createRandomIdGenerator,
   createUniqueIdAllocator,
 } from '../entity-ids.js';
+import { ensureScreenplaySingleton } from '../screenplay/persistence/screenplay.js';
 import {
   RENKU_PROJECT_DIR,
   isPathInside,
@@ -57,16 +58,17 @@ export async function createMovieProject(
         transactionSession,
         {
           id: ids('project'),
-          name: input.projectName,
+          projectName: input.projectName,
           title: input.title,
-          logline: input.logline,
+          logline: input.logline ?? null,
           aspectRatio: input.aspectRatio ?? DEFAULT_MOVIE_PROJECT_ASPECT_RATIO,
-          summary: input.summary,
+          synopsis: input.synopsis ?? null,
           coverFile: null,
           createdAt: now,
           updatedAt: now,
         }
       );
+      ensureScreenplaySingleton(transactionSession);
       insertProjectLocaleRecords(transactionSession, [
         {
           id: ids('locale'),

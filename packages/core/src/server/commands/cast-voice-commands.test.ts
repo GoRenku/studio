@@ -33,11 +33,10 @@ describe('Cast Voice commands', () => {
       return;
     }
     projectPath = created.projectPath;
-    const project = await projectData.readProject({
-      projectName: 'constantinople',
+    const cast = await projectData.listCastMembers({
       homeDir,
     });
-    castMemberId = project.cast.find((member) => member.handle === 'mehmed-ii')!.id;
+    castMemberId = cast.find((member) => member.handle === 'mehmed-ii')!.id;
   });
 
   it('validates, attaches, lists, reads, and removes a Cast Voice sample asset', async () => {

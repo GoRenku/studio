@@ -3,8 +3,8 @@ import type {
   SceneBeatSheetReadReport,
   SceneBeatSheetValidationReport,
   SceneBeatSheetWriteReport,
-} from '../../client/scene-beat-sheet.js';
-import type { ScreenplayDocument } from '../../client/screenplay.js';
+} from '../../client/scene-beats/index.js';
+import type { Screenplay } from '../../client/screenplay/index.js';
 import {
   listSceneBeatSheetRecords,
   readActiveSceneBeatSheetId,
@@ -15,7 +15,6 @@ import {
   toSceneBeatSheetSummary,
   writeSceneBeatSheetRecord,
 } from '../database/access/scene-beat-sheets.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import {
   createRandomIdGenerator,
@@ -29,6 +28,7 @@ import type {
   ValidateSceneBeatSheetInput,
   WriteSceneBeatSheetInput,
 } from '../project-data-service-contracts.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { sceneBeatSheetResourceKeys } from './storyboard-status.js';
 import { assertSceneBeatSheetDocument } from './validator.js';
 
@@ -36,13 +36,13 @@ export async function listSceneBeatSheets(
   input: SceneBeatSheetProjectInput & { sceneId: string }
 ): Promise<SceneBeatSheetListReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplayDocument(session);
+    const screenplay = requireScreenplay(session);
     requireSceneHierarchy(screenplay, input.sceneId);
     return {
       valid: true,
       warnings: [],
       project: {
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
         id: currentProject.projectId,
         projectFolder: currentProject.projectFolder,
       },
@@ -65,7 +65,7 @@ export async function readSceneBeatSheet(
   input: ReadSceneBeatSheetInput
 ): Promise<SceneBeatSheetReadReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplayDocument(session);
+    const screenplay = requireScreenplay(session);
     const row = input.active
       ? readActiveSceneBeatSheetRecord(
           session,
@@ -85,7 +85,7 @@ export async function readSceneBeatSheet(
         valid: true,
         warnings: [],
         project: {
-          name: currentProject.projectName,
+          projectName: currentProject.projectName,
           id: currentProject.projectId,
           projectFolder: currentProject.projectFolder,
         },
@@ -102,7 +102,7 @@ export async function readSceneBeatSheet(
       valid: true,
       warnings: [],
       project: {
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
         id: currentProject.projectId,
         projectFolder: currentProject.projectFolder,
       },
@@ -125,7 +125,7 @@ export async function validateSceneBeatSheet(
   input: ValidateSceneBeatSheetInput
 ): Promise<SceneBeatSheetValidationReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplayDocument(session);
+    const screenplay = requireScreenplay(session);
     const warnings = assertSceneBeatSheetDocument({
       document: input.document,
       screenplay,
@@ -135,7 +135,7 @@ export async function validateSceneBeatSheet(
       valid: true,
       warnings,
       project: {
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
         id: currentProject.projectId,
         projectFolder: currentProject.projectFolder,
       },
@@ -152,7 +152,7 @@ export async function writeSceneBeatSheet(
   input: WriteSceneBeatSheetInput
 ): Promise<SceneBeatSheetWriteReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplayDocument(session);
+    const screenplay = requireScreenplay(session);
     const warnings = assertSceneBeatSheetDocument({
       document: input.document,
       screenplay,
@@ -182,7 +182,7 @@ export async function writeSceneBeatSheet(
       valid: true,
       warnings,
       project: {
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
         id: currentProject.projectId,
         projectFolder: currentProject.projectFolder,
       },
@@ -216,7 +216,7 @@ export async function setActiveSceneBeatSheet(
   input: SetActiveSceneBeatSheetInput
 ): Promise<SceneBeatSheetWriteReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplayDocument(session);
+    const screenplay = requireScreenplay(session);
     const now = new Date().toISOString();
     setActiveSceneBeatSheetRecord(session, {
       sceneId: input.sceneId,
@@ -228,7 +228,7 @@ export async function setActiveSceneBeatSheet(
       valid: true,
       warnings: [],
       project: {
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
         id: currentProject.projectId,
         projectFolder: currentProject.projectFolder,
       },
@@ -253,35 +253,25 @@ export async function setActiveSceneBeatSheet(
   });
 }
 
-function requireScreenplayDocument(
-  session: Parameters<typeof readScreenplayDocumentFromSession>[0]
-): ScreenplayDocument {
-  const screenplay = readScreenplayDocumentFromSession(session);
-  if (!screenplay) {
-    throw new ProjectDataError('PROJECT_DATA205', 'No screenplay data exists.', {
-      suggestion: 'Use `renku screenplay create` first.',
-    });
-  }
-  return screenplay;
+function requireScreenplay(
+  session: Parameters<typeof readCanonicalScreenplay>[0]
+): Screenplay {
+  return readCanonicalScreenplay(session);
 }
 
 function requireSceneHierarchy(
-  screenplay: ScreenplayDocument,
+  screenplay: Screenplay,
   sceneId: string
 ): void {
-  for (const act of screenplay.acts) {
-    for (const sequence of act.sequences) {
-      if (sequence.scenes.some((scene) => scene.id === sceneId)) {
-        return;
-      }
-    }
+  if (screenplay.scenes.some((scene) => scene.id === sceneId)) {
+    return;
   }
   throw new ProjectDataError(
     'PROJECT_DATA326',
     `Scene was not found: ${sceneId}.`,
     {
       suggestion:
-        'Use a scene id from `renku screenplay scene list --sequence <sequence-id> --json`.',
+        'Use a Scene id from the Screenplay structure resource.',
     }
   );
 }

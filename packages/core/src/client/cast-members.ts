@@ -1,5 +1,7 @@
+export type CastMemberId = string;
+
 export interface CastMember {
-  id: string;
+  id: CastMemberId;
   handle: string;
   name: string;
   role?: string;

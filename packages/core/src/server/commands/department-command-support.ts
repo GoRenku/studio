@@ -1,5 +1,5 @@
 import { createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Block, ScreenplayDocument } from '../../client/screenplay.js';
+import type { Screenplay } from '../../client/screenplay/index.js';
 import type {
   DepartmentGeneratedId,
   DepartmentPlacement,
@@ -19,16 +19,16 @@ export function projectSummary(input: {
   title?: string;
   aspectRatio?: string | null;
   logline?: string | null;
-  summary?: string | null;
+  synopsis?: string | null;
 }): DepartmentProjectSummary {
   return {
-    name: input.projectName,
+    projectName: input.projectName,
     id: input.projectId,
     projectFolder: input.projectFolder,
     title: input.title,
     aspectRatio: input.aspectRatio,
     logline: input.logline,
-    summary: input.summary,
+    synopsis: input.synopsis,
   };
 }
 
@@ -199,39 +199,21 @@ export function moveByPlacement<T extends { id: string }>(
 }
 
 export function collectReferencedCastMemberIds(
-  screenplay: ScreenplayDocument
+  screenplay: Screenplay
 ): Set<string> {
-  const ids = new Set<string>();
-  screenplay.acts.forEach((act) =>
-    act.sequences.forEach((sequence) =>
-      sequence.scenes.forEach((scene) =>
-        scene.blocks.forEach((block) => collectBlockCastMemberIds(block, ids))
-      )
-    )
+  return new Set(
+    screenplay.references.flatMap((reference) =>
+      reference.subject.type === 'castMember' ? [reference.subject.id] : []),
   );
-  return ids;
 }
 
 export function collectReferencedLocationIds(
-  screenplay: ScreenplayDocument
+  screenplay: Screenplay
 ): Set<string> {
-  const ids = new Set<string>();
-  screenplay.acts.forEach((act) =>
-    act.sequences.forEach((sequence) =>
-      sequence.scenes.forEach((scene) => {
-        scene.setting.locationIds?.forEach((locationId) => ids.add(locationId));
-        scene.blocks.forEach((block) => block.locationIds?.forEach((locationId) => ids.add(locationId)));
-      })
-    )
+  return new Set(
+    screenplay.references.flatMap((reference) =>
+      reference.subject.type === 'location' ? [reference.subject.id] : []),
   );
-  return ids;
-}
-
-function collectBlockCastMemberIds(block: Block, ids: Set<string>): void {
-  block.castMemberIds?.forEach((castMemberId) => ids.add(castMemberId));
-  if (block.type === 'dialogue' && block.castMemberId) {
-    ids.add(block.castMemberId);
-  }
 }
 
 function throwPlacementError(message: string): never {

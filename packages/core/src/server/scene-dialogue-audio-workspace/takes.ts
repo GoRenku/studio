@@ -11,7 +11,7 @@ export function discardSceneDialogueAudioTake(input: {
   session: DatabaseSession;
   projectFolder: string;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   takeId: string;
 }): SceneDialogueAudioWorkspaceMutationReport {
   const take = input.session.db
@@ -25,7 +25,7 @@ export function discardSceneDialogueAudioTake(input: {
       and(
         eq(sceneDialogueAudioTakes.id, input.takeId),
         eq(sceneDialogueAudio.sceneId, input.sceneId),
-        eq(sceneDialogueAudio.dialogueId, input.dialogueId),
+        eq(sceneDialogueAudio.turnId, input.turnId),
         isNull(sceneDialogueAudioTakes.discardedAt)
       )
     )

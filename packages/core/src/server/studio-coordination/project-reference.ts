@@ -10,8 +10,8 @@ import type { StudioProjectRef } from './events.js';
 export async function resolveStudioProjectRef(
   input: RenkuConfigPathOptions & { projectName?: string }
 ): Promise<StudioProjectRef> {
-  const storageRoot = await resolveRenkuStorageRoot(input);
-  return withProjectDatabaseSession(input, (session) => {
+  return withProjectDatabaseSession(input, async (session) => {
+    const storageRoot = await resolveRenkuStorageRoot(input);
     const project = readProjectRecord(session);
     if (!project) {
       throw new ProjectDataError(
@@ -20,7 +20,7 @@ export async function resolveStudioProjectRef(
       );
     }
     return {
-      name: project.name,
+      name: project.projectName,
       id: project.id,
       storageRoot,
     };

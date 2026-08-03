@@ -10,7 +10,13 @@ import type {
   SceneDialogueAudioWorkspace,
 } from '@gorenku/studio-core/client';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
-import { makeAsset, makeProject, makeProjectShell } from './route-fixtures.js';
+import {
+  fixtureCastMember,
+  fixtureScreenplay,
+  makeAsset,
+  makeProject,
+  makeProjectShell,
+} from './route-fixtures.js';
 
 export function fakeProjectDataService(): NonNullable<
   CreateProjectsRouteOptions['projectData']
@@ -20,9 +26,9 @@ export function fakeProjectDataService(): NonNullable<
     storageRoot: '/tmp/renku',
     projects: [
       {
-        name: project.identity.name,
-        title: project.identity.title,
-        folderPath: project.identity.folderPath,
+        projectName: project.projectName,
+        title: project.title,
+        folderPath: '/tmp/renku/constantinople',
         coverImage: project.coverImage,
         counts: project.counts,
         validationError: null,
@@ -42,18 +48,18 @@ export function fakeProjectDataService(): NonNullable<
     },
     async readProjectInformationResource() {
       return {
-        title: project.identity.title,
-        aspectRatio: project.identity.aspectRatio,
-        logline: project.identity.logline,
-        languages: project.languages,
+        title: project.title,
+        aspectRatio: project.aspectRatio,
+        logline: project.logline,
+        languages: makeProjectShell(project).languages,
       };
     },
     async updateProjectInformation() {
       return {
-        title: project.identity.title,
-        aspectRatio: project.identity.aspectRatio,
-        logline: project.identity.logline,
-        languages: project.languages,
+        title: project.title,
+        aspectRatio: project.aspectRatio,
+        logline: project.logline,
+        languages: makeProjectShell(project).languages,
       };
     },
     async resolveCoverImage() {
@@ -83,8 +89,8 @@ export function fakeProjectDataService(): NonNullable<
     async removeCastVoice(input) {
       return {
         project: {
-          id: project.identity.id,
-          name: project.identity.name,
+          id: project.id,
+          projectName: project.projectName,
         },
         removed: {
           castMemberId: input.castMemberId,
@@ -112,9 +118,9 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         project: {
-          id: project.identity.id,
-          name: project.identity.name,
-          projectFolder: project.identity.folderPath,
+          id: project.id,
+          projectName: project.projectName,
+          projectFolder: '/tmp/renku/constantinople',
         },
         shotPlans: [],
         warnings: [],
@@ -142,51 +148,11 @@ export function fakeProjectDataService(): NonNullable<
     async listLocationNavigation() {
       return makeProjectShell(project).navigation.locations;
     },
-    async listActNavigation() {
-      return makeProjectShell(project).navigation.screenplay.acts;
-    },
-    async listSequenceNavigation() {
-      return {
-        items: [
-          {
-            id: 'seq_opening',
-            actId: 'act_opening',
-            number: 1,
-            title: 'Opening',
-            sceneCount: 1,
-          },
-        ],
-        nextCursor: null,
-      };
-    },
-    async listSceneNavigation() {
-      return {
-        items: [
-          {
-            id: 'scene_opening',
-            sequenceId: 'seq_opening',
-            productionNumber: '1',
-            title: 'Opening Scene',
-          },
-        ],
-        nextCursor: null,
-      };
-    },
     async readSceneDesignResource() {
       return {
         scene: {
-          id: 'scene_opening',
-          sequenceId: 'seq_opening',
-          productionNumber: '1',
-          title: 'Opening Scene',
-          setting: { locationIds: [] },
-        },
-        sequence: {
-          id: 'seq_opening',
-          actId: 'act_opening',
-          number: 1,
-          title: 'Opening',
-          sceneCount: 1,
+          scene: fixtureScreenplay.scenes[0]!,
+          references: [],
         },
         assetPage: { items: [], nextCursor: null, selectedAssetId: null },
       };
@@ -203,10 +169,10 @@ export function fakeProjectDataService(): NonNullable<
       return { cast: makeProjectShell(project).navigation.cast };
     },
     async readCastMemberResource() {
-      return { castMember: project.cast[0], voices: [] };
+      return { castMember: fixtureCastMember, voices: [] };
     },
     async updateCastMemberVoiceOverStatus() {
-      return project.cast[0];
+      return fixtureCastMember;
     },
     async readLocationOverviewResource() {
       return { locations: makeProjectShell(project).navigation.locations };
@@ -234,96 +200,33 @@ export function fakeProjectDataService(): NonNullable<
     },
     async readStoryArcResource() {
       return {
-        screenplay: { title: project.identity.title },
-        acts: [
-          {
-            id: 'act_opening',
-            title: 'Opening Act',
-            sequenceCount: 1,
-            sceneCount: 1,
-            sequences: [
-              {
-                id: 'seq_opening',
-                actId: 'act_opening',
-                number: 1,
-                title: 'Opening',
-                sceneCount: 1,
-                scenes: [
-                  {
-                    id: 'scene_opening',
-                    sequenceId: 'seq_opening',
-                    productionNumber: '1',
-                    title: 'Opening Scene',
-                    setting: { locationIds: [] },
-                    storyFunction: ['Establish the siege preparations.'],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        project: { title: project.title },
+        scenes: fixtureScreenplay.scenes.map(({ id, productionNumber, heading, title }) => ({
+          id,
+          productionNumber,
+          heading,
+          title,
+        })),
         activeAnalysis: null,
       };
     },
-    async readSequenceResource() {
+    async readScreenplayStructure() {
       return {
-        act: {
-          id: 'act_opening',
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-        sequence: {
-          id: 'seq_opening',
-          actId: 'act_opening',
-          number: 1,
-          title: 'Opening',
-          sceneCount: 1,
-        },
-        scenes: {
-          items: [
-            {
-              id: 'scene_opening',
-              sequenceId: 'seq_opening',
-              productionNumber: '1',
-              title: 'Opening Scene',
-              setting: { locationIds: [] },
-            },
-          ],
-          nextCursor: null,
-        },
+        screenplay: fixtureScreenplay,
+        orderedSceneIds: ['scene_opening'],
       };
     },
-    async readSceneNarrativeResource() {
+    async readScreenplaySection() {
       return {
-        act: {
-          id: 'act_opening',
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-        sequence: {
-          id: 'seq_opening',
-          actId: 'act_opening',
-          number: 1,
-          title: 'Opening',
-          sceneCount: 1,
-        },
-        productionNumber: '1',
-        scene: {
-          id: 'scene_opening',
-          title: 'Opening Scene',
-          setting: { locationIds: [] },
-          blocks: [{ type: 'action', text: 'The siege begins.' }],
-        },
-        blocks: [{ type: 'action', text: 'The siege begins.' }],
-        castMemberLabels: {},
-        castMemberImages: {},
-        locationLabels: {},
-        locationImages: {},
-        castMemberHandles: {},
-        locationHandles: {},
-        dialogueAudio: makeSceneDialogueAudioWorkspace(project),
+        section: fixtureScreenplay.sections[0]!,
+        structure: fixtureScreenplay.structure,
+        orderedSceneIds: ['scene_opening'],
+      };
+    },
+    async readScreenplayScene() {
+      return {
+        scene: fixtureScreenplay.scenes[0]!,
+        references: [],
       };
     },
     async readSceneDialogueAudioWorkspace() {
@@ -358,25 +261,10 @@ export function fakeProjectDataService(): NonNullable<
     async readSceneBeatSheetResource() {
       return {
         scene: {
-          id: 'scene_opening',
-          sequenceId: 'seq_opening',
-          productionNumber: '1',
-          title: 'Opening Scene',
-          setting: { locationIds: [] },
+          scene: fixtureScreenplay.scenes[0]!,
+          references: [],
         },
-        sequence: {
-          id: 'seq_opening',
-          actId: 'act_opening',
-          number: 1,
-          title: 'Opening',
-          sceneCount: 1,
-        },
-        act: {
-          id: 'act_opening',
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
+        sections: fixtureScreenplay.sections,
         projectAspectRatio: '16:9',
         activeBeatSheetId: 'scene_beat_sheet_opening',
         activeBeatSheet: null,
@@ -384,17 +272,7 @@ export function fakeProjectDataService(): NonNullable<
         castMemberLabels: {},
         castMemberImages: {},
         locationLabels: {},
-      };
-    },
-    async readActStoryboardResource() {
-      return {
-        act: {
-          id: 'act_opening',
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-        sequences: [],
+        propLabels: {},
       };
     },
     async selectAsset(input) {
@@ -402,9 +280,9 @@ export function fakeProjectDataService(): NonNullable<
         valid: true,
         warnings: [],
         project: {
-          id: project.identity.id,
-          name: project.identity.name,
-          projectFolder: project.identity.folderPath,
+          id: project.id,
+          projectName: project.projectName,
+          projectFolder: '/tmp/renku/constantinople',
         },
         target: input.target,
         selectedAssetId: input.assetId,
@@ -416,9 +294,9 @@ export function fakeProjectDataService(): NonNullable<
         valid: true,
         warnings: [],
         project: {
-          id: project.identity.id,
-          name: project.identity.name,
-          projectFolder: project.identity.folderPath,
+          id: project.id,
+          projectName: project.projectName,
+          projectFolder: '/tmp/renku/constantinople',
         },
         target: input.target,
         selectedAssetId: null,
@@ -436,7 +314,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true as const,
         warnings: [],
-        project: { id: project.identity.id, name: project.identity.name },
+        project: { id: project.id, projectName: project.projectName },
         items: [],
         resourceKeys: ['trash:list'],
       };
@@ -452,7 +330,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true as const,
         warnings: [],
-        project: { id: project.identity.id, name: project.identity.name },
+        project: { id: project.id, projectName: project.projectName },
         confirmationToken: 'sha256:test',
         items: [],
         files: [],
@@ -463,7 +341,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true as const,
         warnings: [],
-        project: { id: project.identity.id, name: project.identity.name },
+        project: { id: project.id, projectName: project.projectName },
         confirmationToken: 'sha256:test',
         items: [],
         files: [],
@@ -552,7 +430,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         warnings: [],
-        project: { name: 'test-project' },
+        project: { projectName: 'test-project' },
         folder: {
           id: input.folderId,
           name: 'Reference',
@@ -567,7 +445,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         warnings: [],
-        project: { name: 'test-project' },
+        project: { projectName: 'test-project' },
         folder: {
           id: input.folderId,
           name: 'Reference',
@@ -581,7 +459,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         warnings: [],
-        project: { name: 'test-project' },
+        project: { projectName: 'test-project' },
         changes: [{ type: 'inspirationAnalysis.upserted', folderId: input.folderId }],
         folder: {
           id: input.folderId,
@@ -598,7 +476,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         warnings: [],
-        project: { name: 'test-project' },
+        project: { projectName: 'test-project' },
         production,
         storyboard: null,
         resourceKeys: [],
@@ -624,7 +502,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         warnings: [],
-        project: { name: 'test-project' },
+        project: { projectName: 'test-project' },
         sourceInspirationFolders: [],
         resourceKeys: [],
       };
@@ -633,7 +511,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         warnings: [],
-        project: { name: 'test-project' },
+        project: { projectName: 'test-project' },
         sourceInspirationFolders: [],
         resourceKeys: [],
       };
@@ -647,7 +525,7 @@ export function fakeProjectDataService(): NonNullable<
       return {
         valid: true,
         warnings: [],
-        project: { name: 'test-project' },
+        project: { projectName: 'test-project' },
         lookbookId: input.lookbookId,
         sourceInspirationFolders: [],
         resourceKeys: [],
@@ -663,9 +541,9 @@ export function fakeProjectDataService(): NonNullable<
         provenance: null,
         resourceKeys: [],
         project: {
-          name: project.identity.name,
-          id: project.identity.id,
-          projectFolder: project.identity.folderPath,
+          projectName: project.projectName,
+          id: project.id,
+          projectFolder: '/tmp/renku/constantinople',
         },
       };
     },
@@ -694,19 +572,19 @@ function makeSceneDialogueAudioWorkspace(
     purpose: 'scene.dialogue-audio',
     target: { kind: 'scene', sceneId: 'scene_opening' },
     project: {
-      name: project.identity.name,
-      title: project.identity.title,
+      projectName: project.projectName,
+      title: project.title,
       baseLanguageCode: null,
     },
     scene: {
       id: 'scene_opening',
+      heading: 'EXT. THEODOSIAN WALLS - DAWN',
       title: 'Opening Scene',
-      settingLabel: null,
     },
     dialogues: [],
     castMemberLabels: {},
     castVoicesByCastMemberId: {},
-    audioByDialogueId: {},
+    audioByTurnId: {},
     models: [],
     defaults: {
       modelChoice: 'elevenlabs/eleven_v3',
@@ -783,7 +661,7 @@ function makeLookbookResource(kind: 'production' | 'storyboard'): LookbookResour
   return {
     valid: true as const,
     warnings: [],
-    project: { name: 'test-project' },
+    project: { projectName: 'test-project' },
     lookbook,
     sourceInspirationFolders: [],
     selectedImageId: null,
@@ -856,7 +734,7 @@ function makeVisualLanguageCommandReport(type: string) {
   return {
     valid: true as const,
     warnings: [],
-    project: { name: 'test-project' },
+    project: { projectName: 'test-project' },
     changes: [{ type }],
     resourceKeys: [],
   };
@@ -870,7 +748,7 @@ function generationPreviewResource(): GenerationPreviewResourceData {
     purpose: 'cast.character-sheet',
     project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
     },
     target: { kind: 'castMember', id: 'cast_narrator' },
     title: 'Narrator Character Sheet',
@@ -904,7 +782,7 @@ function makeRecoverableMutationReport(input: {
     warnings: [],
     project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
     },
     changes: [{ type: input.changeType, itemId: input.itemId }],
     recovery: {

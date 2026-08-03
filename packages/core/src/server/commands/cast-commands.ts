@@ -15,7 +15,7 @@ import type {
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import {
   listProjectLocaleRecords,
@@ -77,7 +77,7 @@ export async function readCastContext(
 ): Promise<CastDesignContextReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
     const castMember = requireCastMember(session, input.castMemberId);
-    const screenplay = readScreenplayDocumentFromSession(session);
+    const screenplay = readCanonicalScreenplay(session);
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveCastDesignDocument(session, input.castMemberId);
     const assets = listCastAssetRoleRecords(session, input.castMemberId);
@@ -95,21 +95,19 @@ export async function readCastContext(
           title: projectInfo.title,
           aspectRatio: projectInfo.aspectRatio,
           logline: projectInfo.logline,
-          summary: projectInfo.summary,
+          synopsis: projectInfo.synopsis,
         }),
         languages: listProjectLocaleRecords(session).map(toProjectLanguage),
       },
       resourceKeys: castResourceKeys(input.castMemberId),
       castMember,
-      screenplay: screenplay
-        ? {
-            title: screenplay.screenplay.title,
-            logline: screenplay.screenplay.logline,
-            summary: screenplay.screenplay.summary,
-            centralConflict: screenplay.screenplay.centralConflict,
-            dramaticQuestion: screenplay.screenplay.dramaticQuestion,
-          }
-        : null,
+      screenplay: {
+        title: projectInfo.title,
+        ...(projectInfo.logline ? { logline: projectInfo.logline } : {}),
+        ...(projectInfo.synopsis ? { synopsis: projectInfo.synopsis } : {}),
+        ...(projectInfo.centralConflict ? { centralConflict: projectInfo.centralConflict } : {}),
+        ...(projectInfo.dramaticQuestion ? { dramaticQuestion: projectInfo.dramaticQuestion } : {}),
+      },
       activeDesign: activeDesign?.document ?? null,
       activeDesignSummary: activeDesign
         ? toCastDesignSummary({
@@ -117,7 +115,7 @@ export async function readCastContext(
             document: activeDesign.document,
           })
         : null,
-      scenes: screenplay ? castScenes(screenplay, input.castMemberId) : [],
+      scenes: castScenes(screenplay, input.castMemberId),
       activeLookbook: null,
       assets: ownedAssets,
       assetTypeCounts: typeCounts(assets),
@@ -177,10 +175,8 @@ export async function applyCastOperations(
     const propHandles = new Map(
       listPropRecords(session).map((prop) => [prop.handle, prop.id])
     );
-    const screenplay = readScreenplayDocumentFromSession(session);
-    const referencedCastMemberIds = screenplay
-      ? collectReferencedCastMemberIds(screenplay)
-      : new Set<string>();
+    const screenplay = readCanonicalScreenplay(session);
+    const referencedCastMemberIds = collectReferencedCastMemberIds(screenplay);
     const generatedIds: DepartmentGeneratedId[] = [];
     const changes: DepartmentCommandChange[] = [];
     const draft = [...existing];
@@ -463,31 +459,27 @@ function castResourceKeysForChanges(changes: DepartmentCommandChange[]): string[
 }
 
 function castScenes(
-  screenplay: NonNullable<ReturnType<typeof readScreenplayDocumentFromSession>>,
+  screenplay: ReturnType<typeof readCanonicalScreenplay>,
   castMemberId: string
 ): CastDesignContextReport['scenes'] {
   const scenes: CastDesignContextReport['scenes'] = [];
-  screenplay.acts.forEach((act) =>
-    act.sequences.forEach((sequence) =>
-      sequence.scenes.forEach((scene) => {
-        const referenced = scene.blocks.some(
-          (block) =>
-            block.castMemberIds?.includes(castMemberId) ||
-            (block.type === 'dialogue' && block.castMemberId === castMemberId)
-        );
-        if (referenced) {
-          scenes.push({
-            sceneId: scene.id as string,
-            sequenceId: sequence.id as string,
-            sequenceTitle: sequence.title,
-            title: scene.title,
-            setting: scene.setting,
-            blocks: scene.blocks,
-          });
-        }
-      })
-    )
-  );
+  for (const scene of screenplay.scenes) {
+    const referenced = screenplay.references.some((reference) =>
+      reference.subject.type === 'castMember'
+      && reference.subject.id === castMemberId
+      && 'sceneId' in reference.target
+      && reference.target.sceneId === scene.id,
+    );
+    if (referenced) {
+      scenes.push({
+        sceneId: scene.id,
+        ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
+        heading: scene.heading,
+        ...(scene.title ? { title: scene.title } : {}),
+        blocks: scene.blocks,
+      });
+    }
+  }
   return scenes;
 }
 

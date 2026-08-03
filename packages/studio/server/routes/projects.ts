@@ -19,7 +19,7 @@ import { createGenerationRequestsRoute } from './generation-requests.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
 import { createProjectInformationRoute } from './project-information.js';
-import { createScreenplayRoute } from './screenplay.js';
+import { createScreenplayRoute } from './screenplay/index.js';
 import { createShotPlansRoute } from './shot-plans.js';
 import { createTrashRoute } from './trash.js';
 import { createVisualLanguageRoute } from './visual-language.js';
@@ -38,9 +38,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'readProjectInformationResource'
   | 'listCastNavigation'
   | 'listLocationNavigation'
-  | 'listActNavigation'
-  | 'listSequenceNavigation'
-  | 'listSceneNavigation'
   | 'listAssetPage'
   | 'readSceneDesignResource'
   | 'readCastOverviewResource'
@@ -51,8 +48,9 @@ export type ProjectsRouteProjectData = Pick<
   | 'readPropOverviewResource'
   | 'readPropResource'
   | 'readStoryArcResource'
-  | 'readSequenceResource'
-  | 'readSceneNarrativeResource'
+  | 'readScreenplayStructure'
+  | 'readScreenplaySection'
+  | 'readScreenplayScene'
   | 'readSceneDialogueAudioWorkspace'
   | 'estimateSceneDialogueAudioDraft'
   | 'updateSceneDialogueAudioSetup'
@@ -60,7 +58,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'deleteSceneDialogueAudioTake'
   | 'readSceneBeatSheetResource'
   | 'listGenerationReferences'
-  | 'readActStoryboardResource'
   | 'readStudioSelectionContext'
   | 'listSceneShotPlans'
   | 'readShotPlan'

@@ -6,11 +6,30 @@ export type ProjectRecord = typeof projects.$inferSelect;
 
 export interface InsertProjectRecord {
   id: string;
-  name: string;
+  projectName: string;
   title: string;
-  logline?: string;
-  aspectRatio?: string;
-  summary?: string;
+  aspectRatio: string;
+  logline?: string | null;
+  synopsis?: string | null;
+  premise?: string | null;
+  intendedAudience?: string | null;
+  format?: string | null;
+  targetRuntimeMinutes?: number | null;
+  primaryGenre?: string | null;
+  secondaryGenresJson?: string | null;
+  tonesJson?: string | null;
+  contentRatingIntent?: string | null;
+  creativeBoundariesJson?: string | null;
+  centralConflict?: string | null;
+  dramaticQuestion?: string | null;
+  themesJson?: string | null;
+  historicalBasisJson?: string | null;
+  dramatizedElementsJson?: string | null;
+  screenplayDraftStatus?: string | null;
+  researchSourcesJson?: string | null;
+  assumptionsJson?: string | null;
+  openQuestionsJson?: string | null;
+  nextStepsJson?: string | null;
   coverFile: string | null;
   createdAt: string;
   updatedAt: string;
@@ -38,9 +57,28 @@ export function readProjectRecordById(
 
 export interface UpdateProjectInformationRecord {
   title: string;
+  aspectRatio: string;
   logline: string | null;
-  summary: string | null;
-  aspectRatio?: string;
+  synopsis: string | null;
+  premise: string | null;
+  intendedAudience: string | null;
+  format: string | null;
+  targetRuntimeMinutes: number | null;
+  primaryGenre: string | null;
+  secondaryGenresJson: string | null;
+  tonesJson: string | null;
+  contentRatingIntent: string | null;
+  creativeBoundariesJson: string | null;
+  centralConflict: string | null;
+  dramaticQuestion: string | null;
+  themesJson: string | null;
+  historicalBasisJson: string | null;
+  dramatizedElementsJson: string | null;
+  screenplayDraftStatus: string | null;
+  researchSourcesJson: string | null;
+  assumptionsJson: string | null;
+  openQuestionsJson: string | null;
+  nextStepsJson: string | null;
   updatedAt: string;
 }
 

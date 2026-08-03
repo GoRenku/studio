@@ -135,38 +135,21 @@ describe('project asset file storage', () => {
     });
 
     expect(first.projectRelativePath).toBe(
-      'audio/the-wall/cannon-test/0100-urban-00.mp3'
+      'audio/scene-test0001/screenplay-block-test0001-urban-00.mp3'
     );
     expect(second.projectRelativePath).toBe(
-      'audio/the-wall/cannon-test/0100-urban-01.mp3'
+      'audio/scene-test0001/screenplay-block-test0001-urban-01.mp3'
     );
   });
 
-  it('rejects dialogue audio destinations without a persisted dialogue order key', () => {
-    const row = session.db
-      .select({ blocksJson: scenes.blocksJson })
-      .from(scenes)
-      .where(eq(scenes.id, sceneId))
-      .get()!;
-    const blocks = JSON.parse(row.blocksJson) as Array<Record<string, unknown>>;
-    blocks.forEach((block) => delete block.dialogueOrderKey);
-    session.db
-      .update(scenes)
-      .set({ blocksJson: JSON.stringify(blocks) })
-      .where(eq(scenes.id, sceneId))
-      .run();
-
+  it('accepts dialogue audio destinations from Scene and Turn identity alone', () => {
     expect(() =>
       assertSceneDialogueAudioDestinationReady({
         session,
         sceneId,
-        dialogueId,
+        turnId: dialogueId,
       })
-    ).toThrowError(
-      expect.objectContaining({
-        code: 'PROJECT_ASSET_FILE_DIALOGUE_ORDER_KEY_MISSING',
-      })
-    );
+    ).not.toThrow();
   });
 
   it('persists storyboard batches into one iteration folder', async () => {
@@ -232,8 +215,8 @@ describe('project asset file storage', () => {
     ];
 
     expect(files.map((file) => file.assetFile.projectRelativePath)).toEqual([
-      'storyboards/the-wall/cannon-test/00-iteration/beat-01.png',
-      'storyboards/the-wall/cannon-test/00-iteration/beat-02.png',
+      'storyboards/scene-test0001/00-iteration/beat-01.png',
+      'storyboards/scene-test0001/00-iteration/beat-02.png',
     ]);
   });
 
@@ -319,7 +302,7 @@ describe('project asset file storage', () => {
       destination: {
         kind: 'scene.dialogueAudio',
         sceneId,
-        dialogueId,
+        turnId: dialogueId,
         sceneDialogueAudioId: 'scene_dialogue_audio_test',
         dialogueAudioTakeId: input.assetFileId,
       },

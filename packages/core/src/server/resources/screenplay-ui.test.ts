@@ -28,12 +28,20 @@ describe('screenplay UI resources', () => {
     if (!created) {
       throw new Error('Expected sample movie project.');
     }
-    const screenplay = await projectData.readScreenplay({
+    const screenplay = await projectData.readScreenplayStructure({
+      projectName: 'constantinople',
       homeDir,
     });
-    const castMemberId = screenplay.screenplay?.cast[0]?.id;
-    const locationId = screenplay.screenplay?.locations[0]?.id;
-    const sceneId = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
+    const sceneId = screenplay.screenplay.scenes[0]?.id;
+    const sceneReferences = screenplay.screenplay.references.filter((reference) =>
+      sceneId && 'sceneId' in reference.target && reference.target.sceneId === sceneId
+    );
+    const castMemberId = sceneReferences.find(
+      (reference) => reference.subject.type === 'castMember'
+    )?.subject.id;
+    const locationId = sceneReferences.find(
+      (reference) => reference.subject.type === 'location'
+    )?.subject.id;
     if (!castMemberId || !locationId || !sceneId) {
       throw new Error('Expected sample Cast Member, Location, and Scene ids.');
     }

@@ -301,7 +301,7 @@ describe('assets Hono route', () => {
     const discardAsset = vi.fn(async () => ({
       valid: true as const,
       warnings: [],
-      project: { id: 'project_test0001', name: 'constantinople' },
+      project: { id: 'project_test0001', projectName: 'constantinople' },
       changes: [{ type: 'asset.discarded', assetId: 'asset_location_reference' }],
       recovery: {
         operationId: 'trash_operation_test0001',
@@ -355,7 +355,7 @@ describe('assets Hono route', () => {
               warnings: [],
               project: {
                 id: 'project_test0001',
-                name: 'constantinople',
+                projectName: 'constantinople',
                 projectFolder: '/tmp/renku/constantinople',
               },
               target: input.target,
@@ -373,7 +373,7 @@ describe('assets Hono route', () => {
               warnings: [],
               project: {
                 id: 'project_test0001',
-                name: 'constantinople',
+                projectName: 'constantinople',
                 projectFolder: '/tmp/renku/constantinople',
               },
               target: input.target,

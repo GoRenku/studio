@@ -42,7 +42,7 @@ export async function projectGenerationPreviewResource(input: {
     purpose: input.preview.spec.purpose as GenerationPreviewResource['purpose'],
     project: {
       id: project?.id ?? '',
-      name: project?.name ?? '',
+      projectName: project?.projectName ?? '',
       ...(project?.title ? { title: project.title } : {}),
     },
     target: input.preview.spec.target,

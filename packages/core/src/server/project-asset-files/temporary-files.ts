@@ -4,7 +4,7 @@ import type { ProjectRelativePath } from '../../client/index.js';
 import type { GenerationPurpose } from '../../client/generation.js';
 import { PROJECT_TMP_ROOT, STORYBOARDS_ROOT, kebabCasePathSegment } from '../files/asset-paths.js';
 import { joinProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';
-import { requireSceneHierarchy } from './owner-lookups.js';
+import { requireSceneStorageContext } from './owner-lookups.js';
 import { allocateProjectRelativeFilePath } from './path-allocation.js';
 import { assertResolvedPathInsideProject } from './path-guards.js';
 import type { ProjectTemporaryFileDestination } from './types.js';
@@ -44,7 +44,7 @@ export async function writeProjectTemporaryFile(input: {
 }
 
 export async function resolveTemporaryFileRoot(input: {
-  session?: Parameters<typeof requireSceneHierarchy>[0];
+  session?: Parameters<typeof requireSceneStorageContext>[0];
   projectFolder: string;
   destination: ProjectTemporaryFileDestination;
 }): Promise<ProjectRelativePath> {
@@ -66,11 +66,10 @@ export async function resolveTemporaryFileRoot(input: {
   if (input.destination.kind === 'scratch') {
     return joinProjectRelativePath(PROJECT_TMP_ROOT, 'scratch');
   }
-  const hierarchy = requireSceneHierarchy(input.session, input.destination.sceneId);
+  const scene = requireSceneStorageContext(input.session, input.destination.sceneId);
   return joinProjectRelativePath(
     STORYBOARDS_ROOT,
-    kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
-    kebabCasePathSegment(hierarchy.sceneTitle, 'scene'),
+    kebabCasePathSegment(scene.sceneId, 'scene'),
     'tmp'
   );
 }

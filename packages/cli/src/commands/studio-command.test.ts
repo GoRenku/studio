@@ -56,8 +56,8 @@ describe('studio command', () => {
     expect(JSON.parse(stdout.join('\n'))).toEqual({
       valid: true,
       project: {
-        name: 'constantinople',
-        id: project.identity.id,
+        projectName: 'constantinople',
+        id: project.project.id,
       },
       resourceKeys: ['scene-beat-sheet:scene_beat_sheet_test0001'],
     });
@@ -67,13 +67,13 @@ describe('studio command', () => {
         notification: expect.objectContaining({
           projectRef: expect.objectContaining({
             name: 'constantinople',
-            id: project.identity.id,
+            id: project.project.id,
           }),
           resourceKeys: ['scene-beat-sheet:scene_beat_sheet_test0001'],
         }),
       })
     );
-    expect(project.identity.id).toMatch(/^project_/);
+    expect(project.project.id).toMatch(/^project_/);
   });
 
   it('reports structured errors for missing notify-refresh resources', async () => {

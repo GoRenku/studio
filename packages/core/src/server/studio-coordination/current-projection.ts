@@ -282,11 +282,11 @@ async function enrichMovieStudioFocus(
     return { project: null, context: null, warnings };
   }
   const projectData = createProjectDataService();
-  const project = await projectData.readProject({
+  const project = await projectData.readProjectShell({
     projectName: projectRef.name,
     homeDir: options.homeDir,
   });
-  if (project.identity.id !== projectRef.id) {
+  if (project.project.id !== projectRef.id) {
     warnings.push(
       studioCoordinationWarning(
         'STUDIO_COORDINATION012',
@@ -303,7 +303,7 @@ async function enrichMovieStudioFocus(
   if (resolution.ok && context?.kind === 'scene') {
     const enriched = await enrichSceneBeatFocusContext({
       projectData,
-      projectName: project.identity.name,
+      projectName: project.project.projectName,
       selection,
       context,
       options,
@@ -313,9 +313,9 @@ async function enrichMovieStudioFocus(
   }
   return {
     project: {
-      name: project.identity.name,
-      id: project.identity.id,
-      title: project.identity.title,
+      name: project.project.projectName,
+      id: project.project.id,
+      title: project.project.title,
     },
     context,
     warnings: resolution.ok ? warnings : [...warnings, ...resolution.diagnostics],

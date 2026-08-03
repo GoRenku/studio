@@ -2,16 +2,16 @@ import type { GenerationTarget, JsonValue } from '../../client/generation.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { readActivePropDesignDocument } from '../database/access/prop-designs.js';
 import { readPropRecord } from '../database/access/props.js';
-import { listSceneLocationIds } from '../database/access/navigation.js';
+import { listCastMemberRecords } from '../database/access/cast-members.js';
 import { readActiveSceneBeatSheetRecord, readSceneBeatSheetDocument } from '../database/access/scene-beat-sheets.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
-import { renderScreenplaySceneContextText } from '../screenplay-scene-context-text.js';
+import { renderScreenplaySceneContextText } from '../screenplay/context/scene-text.js';
 import { requireShotInPlan, requireShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { parseStoredShotBrief } from '../shot-plans/validation.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 
 export function buildGenerationPurposeFacts(input: {
   target: GenerationTarget;
@@ -83,12 +83,9 @@ function buildSceneGenerationFacts(
   },
   projectAspectRatio: string
 ): Record<string, JsonValue> {
-  const screenplay = readScreenplayDocumentFromSession(input.session);
-  const scene = screenplay?.acts
-    .flatMap((act) => act.sequences)
-    .flatMap((sequence) => sequence.scenes)
-    .find((candidate) => candidate.id === input.target.id);
-  if (!screenplay || !scene) {
+  const screenplay = readCanonicalScreenplay(input.session);
+  const scene = screenplay.scenes.find((candidate) => candidate.id === input.target.id);
+  if (!scene) {
     throw new ProjectDataError(
       'CORE_GENERATION_TARGET_NOT_FOUND',
       `Scene was not found: ${input.target.id}.`
@@ -101,23 +98,30 @@ function buildSceneGenerationFacts(
   const beatSheet = activeBeatSheetRecord
     ? readSceneBeatSheetDocument({ row: activeBeatSheetRecord, screenplay })
     : null;
-  const sceneCastMemberIds = orderedUnique([
-    ...scene.blocks.flatMap((block) => [
-      ...(block.type === 'dialogue' && block.castMemberId ? [block.castMemberId] : []),
-      ...(block.castMemberIds ?? []),
-    ]),
-    ...(beatSheet?.beats.flatMap((beat) => beat.castMemberIds) ?? []),
-  ]).filter((castMemberId) =>
-    !screenplay.cast.find((member) => member.id === castMemberId)?.isVoiceOver
+  const sceneReferences = screenplay.references.filter(
+    (reference) => 'sceneId' in reference.target && reference.target.sceneId === scene.id,
   );
+  const voiceOverIds = new Set(
+    listCastMemberRecords(input.session)
+      .filter((member) => member.isVoiceOver)
+      .map((member) => member.id),
+  );
+  const sceneCastMemberIds = orderedUnique([
+    ...sceneReferences.flatMap((reference) =>
+      reference.subject.type === 'castMember' ? [reference.subject.id] : []),
+    ...(beatSheet?.beats.flatMap((beat) => beat.castMemberIds) ?? []),
+  ]).filter((castMemberId) => !voiceOverIds.has(castMemberId));
   const sceneLocationIds = orderedUnique([
-    ...(scene.setting.locationIds ?? []),
-    ...listSceneLocationIds(input.session, input.target.id),
-    ...scene.blocks.flatMap((block) => block.locationIds ?? []),
+    ...sceneReferences.flatMap((reference) =>
+      reference.subject.type === 'location' ? [reference.subject.id] : []),
     ...(beatSheet?.beats.flatMap((beat) => beat.locationIds) ?? []),
   ]);
   const sceneDialogueIds = scene.blocks.flatMap((block) =>
-    block.type === 'dialogue' ? [block.dialogueId] : []
+    block.type === 'dialogue'
+      ? [block.id]
+      : block.type === 'dualDialogue'
+        ? [block.left.id, block.right.id]
+        : []
   );
   return {
     projectAspectRatio,

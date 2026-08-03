@@ -15,7 +15,7 @@ import { preparePurposeExecutionSpec } from '../generation/purpose-execution.js'
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
-import type { SceneStoryboardImagesImportDocument } from '../../client/scene-beat-sheet.js';
+import type { SceneStoryboardImagesImportDocument } from '../../client/scene-beats/index.js';
 import { attachSceneStoryboardImages } from '../generation/scene-storyboard-attachments.js';
 import { projectGenerationPreviewResource } from '../generation-preview-resource/projection.js';
 import { updateGenerationPreviewResource } from '../generation-preview-resource/update.js';
@@ -136,7 +136,7 @@ export function createGenerationServiceWiring() {
     },
     async updateSceneDialogueAudioSetup(input: ProjectInput & {
       sceneId: string;
-      dialogueId: string;
+      turnId: string;
       setup: Partial<import('../../client/scene-dialogue-audio-workspace.js').SceneDialogueAudioSetup>;
     }) {
       return withGenerationProject(input, ({ session }) =>
@@ -155,7 +155,7 @@ export function createGenerationServiceWiring() {
     },
     async generateSceneDialogueAudioTake(input: ProjectInput & {
       sceneId: string;
-      dialogueId: string;
+      turnId: string;
       setup: Partial<import('../../client/scene-dialogue-audio-workspace.js').SceneDialogueAudioSetup>;
       simulate?: boolean;
       approveLiveProviderRun?: boolean;
@@ -172,7 +172,7 @@ export function createGenerationServiceWiring() {
     },
     async deleteSceneDialogueAudioTake(input: ProjectInput & {
       sceneId: string;
-      dialogueId: string;
+      turnId: string;
       takeId: string;
     }) {
       return withGenerationProject(input, ({ session, projectFolder }) =>

@@ -1,17 +1,17 @@
 import type {
   SceneBeatSheetDocument,
   SceneBeatSheetStoryboardStatus,
-} from '../../client/scene-beat-sheet.js';
-import type { ScreenplayDocument } from '../../client/screenplay.js';
+} from '../../client/scene-beats/index.js';
+import type { Screenplay } from '../../client/screenplay/index.js';
 import {
   readActiveSceneBeatSheetRecord,
   readSceneBeatSheetDocument,
   requireSceneBeatSheetForScene,
 } from '../database/access/scene-beat-sheets.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ReadSceneBeatSheetStoryboardStatusInput } from '../project-data-service-contracts.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { listAssetPageInSession } from '../assets/projection.js';
 import {
   studioSceneNarrativeResourceKey,
@@ -26,7 +26,7 @@ export async function readSceneBeatSheetStoryboardStatus(
   input: ReadSceneBeatSheetStoryboardStatusInput
 ): Promise<SceneBeatSheetStoryboardStatus> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplayDocument(session);
+    const screenplay = requireScreenplay(session);
     requireSceneHierarchy(screenplay, input.sceneId);
     const row = requireSceneBeatSheetForScene({
       session,
@@ -81,7 +81,7 @@ export function readSceneBeatSheetStoryboardStatusFromSession(input: {
     valid: true,
     warnings: [],
     project: {
-      name: input.currentProject.projectName,
+      projectName: input.currentProject.projectName,
       id: input.currentProject.projectId,
       projectFolder: input.currentProject.projectFolder,
     },
@@ -107,10 +107,10 @@ function readCurrentBeatIds(
   sceneId: string
 ): ReadonlySet<string> {
   const active = readActiveSceneBeatSheetRecord(session, sceneId);
-  const screenplay = readScreenplayDocumentFromSession(session);
-  if (!active || !screenplay) {
+  if (!active) {
     return new Set();
   }
+  const screenplay = readCanonicalScreenplay(session);
   return new Set(
     readSceneBeatSheetDocument({ row: active, screenplay }).beats.map(
       (beat) => beat.id
@@ -136,35 +136,25 @@ export function sceneBeatSheetResourceKeys(input: {
   ];
 }
 
-function requireScreenplayDocument(
-  session: Parameters<typeof readScreenplayDocumentFromSession>[0]
-): ScreenplayDocument {
-  const screenplay = readScreenplayDocumentFromSession(session);
-  if (!screenplay) {
-    throw new ProjectDataError('PROJECT_DATA205', 'No screenplay data exists.', {
-      suggestion: 'Use `renku screenplay create` first.',
-    });
-  }
-  return screenplay;
+function requireScreenplay(
+  session: Parameters<typeof readCanonicalScreenplay>[0]
+): Screenplay {
+  return readCanonicalScreenplay(session);
 }
 
 function requireSceneHierarchy(
-  screenplay: ScreenplayDocument,
+  screenplay: Screenplay,
   sceneId: string
 ): void {
-  for (const act of screenplay.acts) {
-    for (const sequence of act.sequences) {
-      if (sequence.scenes.some((scene) => scene.id === sceneId)) {
-        return;
-      }
-    }
+  if (screenplay.scenes.some((scene) => scene.id === sceneId)) {
+    return;
   }
   throw new ProjectDataError(
     'PROJECT_DATA326',
     `Scene was not found: ${sceneId}.`,
     {
       suggestion:
-        'Use a scene id from `renku screenplay scene list --sequence <sequence-id> --json`.',
+        'Use a Scene id from the Screenplay structure resource.',
     }
   );
 }

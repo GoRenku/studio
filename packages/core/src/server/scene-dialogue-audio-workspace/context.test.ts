@@ -22,10 +22,11 @@ describe('Scene Dialogue Audio workspace context', () => {
     if (!created) {
       return;
     }
-    const screenplay = await projectData.readScreenplay({
+    const screenplay = await projectData.readScreenplayStructure({
+      projectName: 'constantinople',
       homeDir,
     });
-    const sceneId = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id;
+    const sceneId = screenplay.screenplay.scenes[0]?.id;
     expect(sceneId).toBeTruthy();
 
     const workspace = await projectData.readSceneDialogueAudioWorkspace({

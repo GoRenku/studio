@@ -104,7 +104,7 @@ describe('visual language Hono route', () => {
         return {
           valid: true,
           warnings: [],
-          project: { name: 'constantinople' },
+          project: { projectName: 'constantinople' },
           changes: [{ type: 'inspirationFolder.created' as const }],
           folder: {
             id: 'inspiration_folder_test0001',

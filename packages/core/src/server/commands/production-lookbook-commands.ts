@@ -130,7 +130,7 @@ function assertProductionDocument(document: { kind: string }): void {
 function writeReport(
   session: DatabaseSession,
   projectFolder: string,
-  project: Pick<ProjectRecord, 'id' | 'name'>,
+  project: Pick<ProjectRecord, 'id' | 'projectName'>,
   lookbookId: string,
   change: 'created' | 'updated'
 ): LookbookWriteReport {
@@ -173,7 +173,7 @@ async function withSession<T>(
   input: { projectName?: string; homeDir?: string },
   fn: (handle: {
     projectFolder: string;
-    project: Pick<ProjectRecord, 'id' | 'name'>;
+    project: Pick<ProjectRecord, 'id' | 'projectName'>;
     session: DatabaseSession;
   }) => T | Promise<T>
 ): Promise<T> {
@@ -193,7 +193,7 @@ async function withSession<T>(
   }
   return withCurrentProjectSession(input, ({ currentProject, session }) => fn({
     projectFolder: currentProject.projectFolder,
-    project: { id: currentProject.projectId, name: currentProject.projectName },
+    project: { id: currentProject.projectId, projectName: currentProject.projectName },
     session,
   }));
 }
@@ -210,8 +210,8 @@ function requireProject(session: DatabaseSession): ProjectRecord {
 }
 
 function projectReport(
-  project: Pick<ProjectRecord, 'id' | 'name'>,
+  project: Pick<ProjectRecord, 'id' | 'projectName'>,
   projectFolder: string
 ): VisualLanguageProjectReport {
-  return { id: project.id, name: project.name, projectFolder };
+  return { id: project.id, projectName: project.projectName, projectFolder };
 }

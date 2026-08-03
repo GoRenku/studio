@@ -76,16 +76,12 @@ export type {
 export type {
   Prop,
 } from './props.js';
-export type {
-  Scene,
-  Sequence,
-} from './screenplay-projection.js';
 export type * from './trash.js';
 export type * from './agent-media.js';
 export type * from './generation.js';
 export type * from './generation-preview-resource.js';
 export type * from './scene-dialogue-audio-workspace.js';
-export type * from './scene-beat-sheet.js';
+export type * from './scene-beats/index.js';
 export type * from './shot-plans.js';
 export type * from './shot-plan-video-generations.js';
 export * from './shot-authoring.js';
@@ -94,7 +90,6 @@ export type {
 } from './project-languages.js';
 export type {
   CastNavigationRow,
-  ActNavigationRow,
   CastMemberResource,
   CastOverviewResource,
   DirectorCastReadiness,
@@ -119,11 +114,6 @@ export type {
   SceneNarrativeResource,
   SceneBeatSheetResource,
   SequenceSceneStoryboardPreview,
-  ActStoryboardResource,
-  ActStoryboardSequence,
-  ActStoryboardScene,
-  ActStoryboardBeat,
-  ScreenplayNavigation,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
   PageResponse,
@@ -131,51 +121,12 @@ export type {
   ProjectShell,
   ProjectShellNavigation,
   ScenePanelTab,
-  SceneNavigationRow,
-  SequenceNavigationRow,
-  SequenceResource,
-  SequenceSceneRow,
   StoryArcResource,
   StudioSelection,
   StudioSelectionContext,
   StudioSelectionContextResult,
 } from './resources.js';
-export {
-  DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
-} from './screenplay-analysis.js';
-export type {
-  DefaultScreenplayAnalysisCriterionKey,
-  ScreenplayActAnalysis,
-  ScreenplayActRole,
-  ScreenplayAnalysisChange,
-  ScreenplayAnalysisCommandReport,
-  ScreenplayAnalysisContextAct,
-  ScreenplayAnalysisContextCastMember,
-  ScreenplayAnalysisContextLocation,
-  ScreenplayAnalysisContextReport,
-  ScreenplayAnalysisContextScene,
-  ScreenplayAnalysisContextScreenplay,
-  ScreenplayAnalysisContextSequence,
-  ScreenplayAnalysisCriterion,
-  ScreenplayAnalysisCritique,
-  ScreenplayAnalysisDocument,
-  ScreenplayAnalysisEvidence,
-  ScreenplayAnalysisListReport,
-  ScreenplayAnalysisProjectReport,
-  ScreenplayAnalysisReadReport,
-  ScreenplayAnalysisScoreMap,
-  ScreenplayAnalysisStructureModel,
-  ScreenplayAnalysisSummary,
-  ScreenplayAnalysisValidationReport,
-  ScreenplayAnalysisWriteReport,
-  ScreenplayBeatRole,
-  ScreenplayKeyBeatAnalysis,
-  ScreenplaySceneAnalysis,
-  ScreenplaySequenceAnalysis,
-  SuggestedCriterionChange,
-  SuggestedSceneAddition,
-  SuggestedScenePlacement,
-} from './screenplay-analysis.js';
+export * from './screenplay-analysis/index.js';
 export {
   CAMERA_ANGLE_LABELS,
   FOCUS_LABELS,
@@ -193,9 +144,9 @@ export type {
   ProjectCoverImage,
   ProjectCounts,
   ProjectCreateReport,
-  ProjectInfo,
+  ProjectId,
   ProjectRelativePath,
-} from './project.js';
+} from './project/index.js';
 export type {
   ProjectLibrary,
   ProjectSummary,
@@ -256,22 +207,12 @@ export type {
 export type {
   ProjectDataErrorContract,
 } from './diagnostics.js';
-export {
-  screenplayBlockSchema,
-  screenplayCreateDocumentSchema,
-  screenplayDocumentSchema,
-  screenplayOperationsSchema,
-  screenplayReferenceSchema,
-  screenplaySceneRevisionDocumentSchema,
-} from './screenplay-json-schemas.js';
-export {
-  screenplayAnalysisDocumentSchema,
-} from './screenplay-analysis-json-schemas.js';
+export * from './screenplay/index.js';
 export {
   sceneBeatSheetDocumentSchema,
   sceneBeatSheetOperationDocumentSchema,
   sceneStoryboardImagesImportDocumentSchema,
-} from './scene-beat-sheet-json-schemas.js';
+} from './scene-beats/index.js';
 export {
   shotBriefSchema,
   shotPlanCoverageSchema,
@@ -290,17 +231,6 @@ export {
   thesisSectionSchema as visualLanguageThesisSectionSchema,
   toneMoodSectionSchema as visualLanguageToneMoodSectionSchema,
 } from './visual-language-json-schemas.js';
-export type {
-  Block,
-} from './screenplay.js';
-export {
-  formatSceneProductionNumber,
-} from './scene-production-numbers.js';
-export type {
-  SceneProductionNumberListReport,
-  SceneProductionNumberReference,
-  SceneProductionNumberResolveReport,
-} from './scene-production-numbers.js';
 export type {
   ReadVisualLanguageCatalogEntryInput,
   ReadVisualLanguageCatalogInput,

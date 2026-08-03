@@ -48,7 +48,7 @@ describe('Shot Plan video generations Hono route', () => {
       valid: true as const,
       project: {
         id: 'project_test0001',
-        name: 'constantinople',
+        projectName: 'constantinople',
         projectFolder: '/tmp/renku/constantinople',
       },
       changes: [],

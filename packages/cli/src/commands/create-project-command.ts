@@ -16,7 +16,7 @@ export interface RunCreateCommandOptions {
   title?: string;
   aspectRatio?: string;
   logline?: string;
-  summary?: string;
+  synopsis?: string;
   storageRoot?: string;
   json: boolean;
   io: RenkuCliIo;
@@ -93,7 +93,7 @@ export async function runCreateCommand(
     title: options.title,
     aspectRatio: options.aspectRatio,
     logline: options.logline,
-    summary: options.summary,
+    synopsis: options.synopsis,
     homeDir: options.homeDir,
     storageRoot: options.storageRoot,
   });

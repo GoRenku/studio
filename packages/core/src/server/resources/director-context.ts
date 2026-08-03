@@ -24,15 +24,8 @@ import { readProjectInformationResourceFromDatabase } from '../database/access/p
 import {
   readActiveScreenplayAnalysisId,
   listScreenplayAnalysisRecords,
-} from '../database/access/screenplay-analysis.js';
-import {
-  hasScreenplayRecord,
-  readScreenplayStatusCounts,
-} from '../database/access/screenplay-status.js';
-import {
-  listScreenplayLocationsFromSession,
-  readScreenplayDocumentFromSession,
-} from '../database/access/screenplay-resource.js';
+} from '../screenplay-analysis/persistence.js';
+import { listLocationRecords } from '../database/access/locations.js';
 import {
   readActiveSceneBeatSheetRecord,
   readSceneBeatSheetDocument,
@@ -63,6 +56,7 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { readStudioSelectionContextProjection } from './selection-context.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 
 export async function readDirectorContext(
   input: ReadDirectorContextInput = {}
@@ -146,16 +140,24 @@ export async function readDirectorContext(
 function readScreenplayReadiness(
   session: DatabaseSession
 ): DirectorScreenplayReadiness {
-  const exists = hasScreenplayRecord(session);
-  const screenplay = readScreenplayDocumentFromSession(session);
+  const screenplay = readCanonicalScreenplay(session);
+  const exists = screenplay.opening.length > 0 || screenplay.scenes.length > 0;
   return {
     exists,
     activeAnalysisId: exists ? readActiveScreenplayAnalysisId(session) : null,
     analysisCount:
-      exists && screenplay
-        ? listScreenplayAnalysisRecords({ session, screenplay }).length
-        : 0,
-    counts: readScreenplayStatusCounts(session),
+      exists ? listScreenplayAnalysisRecords({ session, screenplay }).length : 0,
+    counts: {
+      castMembers: listCastMemberRecords(session).length,
+      locations: listLocationRecords(session).length,
+      openingElements: screenplay.opening.length,
+      sections: screenplay.sections.length,
+      acts: screenplay.sections.filter((section) => section.type === 'act').length,
+      sequences: screenplay.sections.filter((section) => section.type === 'sequence').length,
+      scenes: screenplay.scenes.length,
+      blocks: screenplay.scenes.reduce((count, scene) => count + scene.blocks.length, 0),
+      references: screenplay.references.length,
+    },
   };
 }
 
@@ -216,7 +218,7 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
 function readProductionDesignReadiness(
   session: DatabaseSession
 ): DirectorProductionDesignReadiness {
-  const locations = listScreenplayLocationsFromSession(session);
+  const locations = listLocationRecords(session);
   const missingEnvironmentSheetLocationIds: string[] = [];
   const missingActiveLocationDesignLocationIds: string[] = [];
   let locationSheetCount = 0;
@@ -228,9 +230,6 @@ function readProductionDesignReadiness(
   let activePropDesignCount = 0;
 
   for (const location of locations) {
-    if (!location.id) {
-      continue;
-    }
     if (readActiveLocationDesignId(session, location.id)) {
       activeLocationDesignCount += 1;
     } else {
@@ -352,10 +351,7 @@ async function readSelectedSceneReadiness(input: {
     };
   }
 
-  const screenplay = readScreenplayDocumentFromSession(session);
-  if (!screenplay) {
-    return null;
-  }
+  const screenplay = readCanonicalScreenplay(session);
   const document = readSceneBeatSheetDocument({
     row: activeBeatSheet,
     screenplay,

@@ -168,11 +168,11 @@ async function readStudioNotifyRefreshProject(
   projectDataService: ReturnType<typeof createProjectDataService>,
   projectName: string,
   homeDir?: string
-): Promise<{ name: string; id: string }> {
+): Promise<{ projectName: string; id: string }> {
   const project = await projectDataService.readProjectShell({ projectName, homeDir });
   return {
-    name: project.identity.name,
-    id: project.identity.id,
+    projectName: project.project.projectName,
+    id: project.project.id,
   };
 }
 
@@ -383,9 +383,8 @@ function focusSummary(current: StudioCurrent): string | null {
       return `Prop ${context.name}`;
     case 'storyArc':
       return 'Story Arc';
-    case 'sequence':
-      return `Sequence ${context.title}`;
   }
+  return null;
 }
 
 function formatHomeRelativePath(filePath: string, homeDir?: string): string {

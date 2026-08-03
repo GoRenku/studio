@@ -1,5 +1,7 @@
+export type LocationId = string;
+
 export interface Location {
-  id: string;
+  id: LocationId;
   handle: string;
   name: string;
   timePeriod?: string;

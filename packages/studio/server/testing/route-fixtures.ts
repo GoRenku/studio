@@ -1,8 +1,33 @@
-import type {
-  Asset,
-  Project,
-  ProjectShell,
-} from '@gorenku/studio-core/client';
+import type { Asset, Project, ProjectShell, Screenplay } from '@gorenku/studio-core/client';
+
+export const fixtureCastMember = {
+  id: 'cast_narrator',
+  handle: 'narrator',
+  name: 'Narrator',
+  isVoiceOver: true,
+  role: 'voiceover',
+};
+
+export const fixtureScreenplay: Screenplay = {
+  opening: [],
+  scenes: [{
+    id: 'scene_opening',
+    productionNumber: '1',
+    heading: 'EXT. THEODOSIAN WALLS - DAWN',
+    title: 'Opening Scene',
+    blocks: [{ id: 'block_opening_action', type: 'action', text: 'The siege begins.' }],
+  }],
+  sections: [
+    { id: 'act_opening', type: 'act', title: 'Opening Act' },
+    { id: 'seq_opening', type: 'sequence', title: 'Opening' },
+  ],
+  structure: [
+    { id: 'structure_act_opening', content: { type: 'section', sectionId: 'act_opening' }, position: 0 },
+    { id: 'structure_seq_opening', parentSectionId: 'act_opening', content: { type: 'section', sectionId: 'seq_opening' }, position: 0 },
+    { id: 'structure_scene_opening', parentSectionId: 'seq_opening', content: { type: 'scene', sceneId: 'scene_opening' }, position: 0 },
+  ],
+  references: [],
+};
 
 export function makeAsset(assetId: string): Asset {
   return {
@@ -17,21 +42,18 @@ export function makeAsset(assetId: string): Asset {
     origin: 'imported',
     referenceName: null,
     purpose: null,
-    files: [
-      {
-        id: 'asset_file_cast_reference',
-        role: 'primary',
-        projectRelativePath:
-          'cast/narrator/reference.png' as Asset['files'][number]['projectRelativePath'],
-        mediaKind: 'image',
-        mimeType: 'image/png',
-        sizeBytes: 12,
-        contentHash: null,
-        width: null,
-        height: null,
-        durationSeconds: null,
-      },
-    ],
+    files: [{
+      id: 'asset_file_cast_reference',
+      role: 'primary',
+      projectRelativePath: 'cast/narrator/reference.png' as Asset['files'][number]['projectRelativePath'],
+      mediaKind: 'image',
+      mimeType: 'image/png',
+      sizeBytes: 12,
+      contentHash: null,
+      width: null,
+      height: null,
+      durationSeconds: null,
+    }],
     createdAt: '2026-05-12T00:00:00.000Z',
     updatedAt: '2026-05-12T00:00:00.000Z',
   };
@@ -39,78 +61,24 @@ export function makeAsset(assetId: string): Asset {
 
 export function makeProjectShell(project: Project): ProjectShell {
   return {
-    identity: project.identity,
-    coverImage: project.coverImage,
-    languages: project.languages,
-    cast: project.cast,
-    counts: project.counts,
+    project,
+    languages: [],
     navigation: {
-      cast: {
-        items: project.cast.map((castMember) => ({
-          id: castMember.id,
-          handle: castMember.id,
-          name: castMember.name,
-          role: castMember.role,
-          isVoiceOver: castMember.isVoiceOver,
-        })),
-        nextCursor: null,
-      },
+      cast: { items: [fixtureCastMember], nextCursor: null },
       locations: { items: [], nextCursor: null },
       props: { items: [], nextCursor: null },
-      screenplay: {
-        acts: {
-          items: [{
-            id: 'act_opening',
-            title: 'Opening Act',
-            sequenceCount: project.sequences.length,
-            sceneCount: project.sequences.reduce(
-              (total, sequence) => total + sequence.scenes.length,
-              0
-            ),
-          }],
-          nextCursor: null,
-        },
-      },
+      screenplay: { screenplay: fixtureScreenplay, orderedSceneIds: ['scene_opening'] },
     },
   };
 }
 
 export function makeProject(): Project {
   return {
-    identity: {
-      id: 'project_test0001',
-      name: 'constantinople',
-      title: 'Preparation of the Siege',
-      folderPath: '/tmp/renku/constantinople',
-      databasePath: '/tmp/renku/constantinople/.renku/project.sqlite',
-      aspectRatio: '16:9',
-    },
+    id: 'project_test0001',
+    projectName: 'constantinople',
+    title: 'Preparation of the Siege',
+    aspectRatio: '16:9',
     coverImage: { fileName: 'cover.png' },
-    languages: [],
-    cast: [
-      {
-        id: 'cast_narrator',
-        handle: 'narrator',
-        name: 'Narrator',
-        isVoiceOver: true,
-        role: 'voiceover',
-      },
-    ],
-    locations: [],
-    props: [],
-    sequences: [
-      {
-        id: 'seq_opening',
-        number: 1,
-        title: 'Opening',
-        scenes: [
-          {
-            id: 'scene_opening',
-            title: 'Opening Scene',
-          },
-        ],
-      },
-    ],
     counts: {
       languages: 0,
       castMembers: 1,

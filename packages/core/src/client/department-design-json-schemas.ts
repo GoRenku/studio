@@ -232,13 +232,9 @@ export const castDesignSchema = {
               scope: {
                 oneOf: [
                   objectWith(['kind'], { kind: { const: 'project' } }),
-                  objectWith(['kind', 'sequenceId'], {
-                    kind: { const: 'sequence' },
-                    sequenceId: stringValue,
-                  }),
-                  objectWith(['kind', 'sceneId'], {
-                    kind: { const: 'scene' },
-                    sceneId: stringValue,
+                  objectWith(['kind', 'sceneIds'], {
+                    kind: { const: 'scenes' },
+                    sceneIds: { type: 'array', minItems: 1, items: stringValue },
                   }),
                 ],
               },

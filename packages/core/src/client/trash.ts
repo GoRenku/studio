@@ -15,7 +15,7 @@ export type TrashItemKind =
 
 export interface TrashProjectReport {
   id: string;
-  name: string;
+  projectName: string;
   projectFolder?: string;
 }
 

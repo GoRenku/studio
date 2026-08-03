@@ -2,8 +2,8 @@ import { desc, eq } from 'drizzle-orm';
 import type {
   SceneBeatSheetDocument,
   SceneBeatSheetSummary,
-} from '../../../client/scene-beat-sheet.js';
-import type { ScreenplayDocument } from '../../../client/screenplay.js';
+} from '../../../client/scene-beats/index.js';
+import type { Screenplay } from '../../../client/screenplay/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import {
   sceneBeatSheets,
@@ -21,7 +21,7 @@ export type SceneBeatSheetStateRecord = typeof sceneBeatSheetState.$inferSelect;
 export function listSceneBeatSheetRecords(input: {
   session: DatabaseSession;
   sceneId: string;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
 }): SceneBeatSheetSummary[] {
   const activeBeatSheetId = readActiveSceneBeatSheetId(
     input.session,
@@ -77,7 +77,7 @@ export function writeSceneBeatSheetRecord(input: {
   session: DatabaseSession;
   id: string;
   document: SceneBeatSheetDocument;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   now: string;
   filePath?: string;
   baseBeatSheetId?: string | null;
@@ -110,7 +110,7 @@ export function updateSceneBeatSheetRecordDocument(input: {
   session: DatabaseSession;
   id: string;
   document: SceneBeatSheetDocument;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   now: string;
   filePath?: string;
 }): SceneBeatSheetRecord {
@@ -133,7 +133,7 @@ export function updateSceneBeatSheetRecordDocument(input: {
 
 export function readSceneBeatSheetDocument(input: {
   row: SceneBeatSheetRecord;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
 }): SceneBeatSheetDocument {
   return parseStoredSceneBeatSheetDocument({
     value: input.row.document,
@@ -212,7 +212,7 @@ export function setActiveSceneBeatSheetRecord(
 
 export function toSceneBeatSheetSummary(input: {
   row: SceneBeatSheetRecord;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   activeBeatSheetId?: string | null;
 }): SceneBeatSheetSummary {
   const document = readSceneBeatSheetDocument({
@@ -233,10 +233,10 @@ export function toSceneBeatSheetSummary(input: {
 
 function readBaseBeatSheetId(
   document: SceneBeatSheetDocument
-): string | null | undefined {
+): string | undefined {
   const value = (document as unknown as { baseBeatSheetId?: unknown })
     .baseBeatSheetId;
-  return typeof value === 'string' ? value : null;
+  return typeof value === 'string' ? value : undefined;
 }
 
 export function requireSceneBeatSheetForScene(input: {

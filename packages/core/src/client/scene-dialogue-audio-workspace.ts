@@ -22,7 +22,7 @@ export interface SceneDialogueAudioSetup {
   target: {
     kind: 'sceneDialogue';
     sceneId: string;
-    dialogueId: string;
+    turnId: string;
   };
   modelChoice: SceneDialogueAudioModelChoice;
   castVoiceId: string;
@@ -37,7 +37,7 @@ export interface SceneDialogueAudioSetup {
 export interface SceneDialogueAudio {
   id: string;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   castMemberId: string;
   castVoiceId: string | null;
   modelChoice: SceneDialogueAudioModelChoice;
@@ -73,7 +73,7 @@ export interface SceneDialogueAudioTake {
 }
 
 export interface SceneDialogueAudioDialogueContext {
-  dialogueId: string;
+  turnId: string;
   castMemberId: string | null;
   speakerName: string;
   plainText: string;
@@ -94,19 +94,19 @@ export interface SceneDialogueAudioWorkspace {
   purpose: 'scene.dialogue-audio';
   target: { kind: 'scene'; sceneId: string };
   project: {
-    name: string;
+    projectName: string;
     title: string;
     baseLanguageCode: string | null;
   };
   scene: {
     id: string;
-    title: string;
-    settingLabel: string | null;
+    heading: string;
+    title?: string;
   };
   dialogues: SceneDialogueAudioDialogueContext[];
   castMemberLabels: Record<string, string>;
   castVoicesByCastMemberId: Record<string, SceneDialogueAudioCastVoiceOption[]>;
-  audioByDialogueId: Record<string, SceneDialogueAudio>;
+  audioByTurnId: Record<string, SceneDialogueAudio>;
   models: SceneDialogueAudioModelChoiceReport[];
   defaults: {
     modelChoice: SceneDialogueAudioModelChoice;

@@ -22,7 +22,7 @@ export interface GenerationPreviewResource {
   purpose: GenerationPreviewPurpose;
   project: {
     id: string;
-    name: string;
+    projectName: string;
     title?: string;
   };
   target: GenerationTarget;

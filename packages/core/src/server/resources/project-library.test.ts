@@ -33,7 +33,7 @@ describe('project library resource', () => {
     expect(library.storageRoot).toBe(storageRoot);
     expect(library.projects).toHaveLength(1);
     expect(library.projects[0]).toMatchObject({
-      name: 'constantinople',
+      projectName: 'constantinople',
       title: 'Preparation of the Siege',
     });
   });
@@ -58,11 +58,11 @@ describe('project library resource', () => {
     expect(library.projects).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: 'constantinople',
+          projectName: 'constantinople',
           validationError: null,
         }),
         expect.objectContaining({
-          name: 'broken-project',
+          projectName: 'broken-project',
           title: 'broken-project',
           counts: null,
           validationError: expect.objectContaining({

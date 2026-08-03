@@ -5,23 +5,21 @@ import type { Location } from './locations.js';
 import type { Prop } from './props.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type {
-  Block,
-  Scene,
-  Screenplay,
-} from './screenplay.js';
+  ScreenplayBlock,
+} from './screenplay/index.js';
 import type {
   Lookbook,
   LookbookImage,
 } from './visual-language.js';
 
 export interface DepartmentProjectSummary {
-  name: string;
+  projectName: string;
   id?: string;
   projectFolder?: string;
   title?: string;
   aspectRatio?: string | null;
   logline?: string | null;
-  summary?: string | null;
+  synopsis?: string | null;
   languages?: ProjectLanguage[];
 }
 
@@ -121,8 +119,7 @@ export interface DepartmentPlacement {
 
 export type CastDesignScope =
   | { kind: 'project' }
-  | { kind: 'sequence'; sequenceId: string }
-  | { kind: 'scene'; sceneId: string };
+  | { kind: 'scenes'; sceneIds: string[] };
 
 export interface CastInterpretation {
   roleUnderstanding: string;
@@ -356,19 +353,21 @@ export interface DepartmentLookbookContext {
 
 export interface CastDesignContextReport extends DepartmentCommandReport {
   castMember: CastMember;
-  screenplay: Pick<
-    Screenplay,
-    'title' | 'logline' | 'summary' | 'centralConflict' | 'dramaticQuestion'
-  > | null;
+  screenplay: {
+    title: string;
+    logline?: string;
+    synopsis?: string;
+    centralConflict?: string;
+    dramaticQuestion?: string;
+  };
   activeDesign: CastDesignDocument | null;
   activeDesignSummary: CastDesignSummary | null;
   scenes: Array<{
     sceneId: string;
-    sequenceId: string;
-    sequenceTitle?: string;
-    title: string;
-    setting: Scene['setting'];
-    blocks: Block[];
+    productionNumber?: string;
+    heading: string;
+    title?: string;
+    blocks: ScreenplayBlock[];
   }>;
   activeLookbook: DepartmentLookbookContext | null;
   assets: Asset[];
@@ -386,11 +385,9 @@ export interface ProductionDesignLocationContextReport extends DepartmentCommand
   activeDesignSummary: LocationDesignSummary | null;
   scenes: Array<{
     sceneId: string;
-    sequenceId: string;
-    sequenceTitle?: string;
-    title: string;
-    setting: Scene['setting'];
-    storyFunction: string[];
+    productionNumber?: string;
+    heading: string;
+    title?: string;
     excerpts: string[];
   }>;
   activeLookbook: DepartmentLookbookContext | null;

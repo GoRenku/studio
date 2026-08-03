@@ -7,7 +7,6 @@ import type {
   AssetSelectionReport,
   AssetSelectionTarget,
   AssetUpdateReport,
-  ActNavigationRow,
   CastMemberResource,
   CastOverviewResource,
   CastNavigationRow,
@@ -70,10 +69,8 @@ import type {
   PropDesignWriteReport,
   PropOperationDocument,
   SceneNarrativeResource,
-  SceneProductionNumberListReport,
-  SceneProductionNumberResolveReport,
   ScreenplayAnalysisContextReport,
-  ScreenplayAnalysisDocument,
+  ScreenplayAnalysis,
   ScreenplayAnalysisListReport,
   ScreenplayAnalysisReadReport,
   ScreenplayAnalysisValidationReport,
@@ -96,11 +93,7 @@ import type {
   ProjectLibrary,
   ProjectShell,
   UpdateAssetInput,
-  SceneNavigationRow,
-  SequenceNavigationRow,
-  SequenceResource,
   StoryArcResource,
-  ActStoryboardResource,
   SceneBeatSheetResource,
   GarbageCollectionPreview,
   GarbageCollectionReport,
@@ -124,27 +117,24 @@ import type {
   SceneShotPlanVideoGenerations,
 } from '../client/index.js';
 import type {
+  ScreenplayInput,
+  ScreenplayMutationReport,
+  ScreenplayOperationsInput,
+  ScreenplayRevisionListReport,
+  ScreenplayRevisionReadReport,
+  ScreenplaySceneResource,
+  ScreenplaySectionResource,
+  ScreenplayStatusReport,
+  ScreenplayStructureResource,
+  SceneProductionNumberListReport,
+  SceneProductionNumberResolveReport,
+} from '../client/screenplay/index.js';
+import type {
   InspirationAnalysisDocument,
   LookbookSourceInspirationsDocument,
   ProductionLookbookDocument,
   StoryboardLookbookDocument,
 } from './visual-language-json/validator.js';
-import type {
-  Act as ScreenplayAct,
-  CastMember as ScreenplayCastMember,
-  Location as ScreenplayLocation,
-  Scene as ScreenplayScene,
-  ScreenplayCommandReport,
-  ScreenplayCreateDocument,
-  ScreenplayDocument,
-  ScreenplayOperationDocument,
-  ScreenplayReadReport,
-  ScreenplayRevisionListReport,
-  ScreenplayRevisionReadReport,
-  ScreenplaySceneRevisionDocument,
-  ScreenplayStatusReport,
-  Sequence as ScreenplaySequence,
-} from '../client/screenplay.js';
 import type { CurrentProjectReport } from './database/lifecycle/current-project.js';
 import type { ProjectDatabasePreMigrationBackupReport } from './database/lifecycle/project-database-backups.js';
 import type {
@@ -175,13 +165,6 @@ export interface ProjectDataService {
   listPropNavigation(
     input: ListNavigationInput
   ): Promise<PageResponse<PropNavigationRow>>;
-  listActNavigation(input: ListNavigationInput): Promise<PageResponse<ActNavigationRow>>;
-  listSequenceNavigation(
-    input: ListNavigationInput | ListSequencesForActNavigationInput
-  ): Promise<PageResponse<SequenceNavigationRow>>;
-  listSceneNavigation(
-    input: ListSceneNavigationInput
-  ): Promise<PageResponse<SceneNavigationRow>>;
   listAssetPage(input: ListAssetPageInput): Promise<AssetPage>;
   readSceneDesignResource(
     input: ReadSceneDesignResourceInput
@@ -197,16 +180,12 @@ export interface ProjectDataService {
   readPropOverviewResource(input: ListNavigationInput): Promise<PropOverviewResource>;
   readPropResource(input: ReadPropResourceInput): Promise<PropResource>;
   readStoryArcResource(input: ReadProjectInput): Promise<StoryArcResource>;
-  readSequenceResource(input: ReadSequenceResourceInput): Promise<SequenceResource>;
   readSceneNarrativeResource(
     input: ReadSceneNarrativeResourceInput
   ): Promise<SceneNarrativeResource>;
   readSceneBeatSheetResource(
     input: ReadSceneBeatSheetResourceInput
   ): Promise<SceneBeatSheetResource>;
-  readActStoryboardResource(
-    input: ReadActStoryboardResourceInput
-  ): Promise<ActStoryboardResource>;
   readStudioSelectionContext(input: {
     projectName: string;
     selection: StudioSelection;
@@ -319,27 +298,17 @@ export interface ProjectDataService {
   validatePropDesign(input: ValidatePropDesignInput): Promise<DepartmentCommandReport>;
   writePropDesign(input: WritePropDesignInput): Promise<PropDesignWriteReport>;
   setActivePropDesign(input: SetActivePropDesignInput): Promise<PropDesignWriteReport>;
-  readScreenplayStatus(input?: RenkuConfigPathOptions): Promise<ScreenplayStatusReport>;
-  readScreenplay(input?: RenkuConfigPathOptions): Promise<ScreenplayReadReport>;
-  listScreenplayCastMembers(input?: RenkuConfigPathOptions): Promise<ScreenplayCastMember[]>;
-  readScreenplayCastMember(input: ReadScreenplayCastMemberInput): Promise<ScreenplayCastMember>;
-  listScreenplayLocations(input?: RenkuConfigPathOptions): Promise<ScreenplayLocation[]>;
-  readScreenplayLocation(input: ReadScreenplayLocationInput): Promise<ScreenplayLocation>;
-  listScreenplayActs(input?: RenkuConfigPathOptions): Promise<ScreenplayAct[]>;
-  readScreenplayAct(input: ReadScreenplayActInput): Promise<ScreenplayAct>;
-  listScreenplaySequencesForAct(input: ListScreenplaySequencesForActInput): Promise<ScreenplaySequence[]>;
-  readScreenplaySequence(input: ReadScreenplaySequenceInput): Promise<ScreenplaySequence>;
-  listScreenplayScenesForSequence(input: ListScreenplayScenesForSequenceInput): Promise<ScreenplayScene[]>;
-  readScreenplayScene(input: ReadScreenplaySceneInput): Promise<ScreenplayScene>;
-  listSceneProductionNumbers(input?: RenkuConfigPathOptions): Promise<SceneProductionNumberListReport>;
+  readScreenplayStatus(input: ScreenplayProjectInput): Promise<ScreenplayStatusReport>;
+  readScreenplayStructure(input: ScreenplayProjectInput): Promise<ScreenplayStructureResource>;
+  readScreenplaySection(input: ReadScreenplaySectionInput): Promise<ScreenplaySectionResource>;
+  readScreenplayScene(input: ReadScreenplaySceneInput): Promise<ScreenplaySceneResource>;
+  listSceneProductionNumbers(input: ScreenplayProjectInput): Promise<SceneProductionNumberListReport>;
   resolveSceneProductionNumber(input: ResolveSceneProductionNumberInput): Promise<SceneProductionNumberResolveReport>;
-  validateScreenplayJson(input: ValidateScreenplayJsonInput): Promise<ScreenplayCommandReport>;
-  createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayCommandReport>;
-  applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayCommandReport>;
-  reviseScreenplayScene(input: ReviseScreenplaySceneInput): Promise<ScreenplayCommandReport>;
-  listScreenplayRevisions(input?: RenkuConfigPathOptions): Promise<ScreenplayRevisionListReport>;
+  createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayMutationReport>;
+  applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayMutationReport>;
+  listScreenplayRevisions(input: ScreenplayProjectInput): Promise<ScreenplayRevisionListReport>;
   readScreenplayRevision(input: ReadScreenplayRevisionInput): Promise<ScreenplayRevisionReadReport>;
-  restoreScreenplayRevision(input: RestoreScreenplayRevisionInput): Promise<ScreenplayCommandReport>;
+  restoreScreenplayRevision(input: RestoreScreenplayRevisionInput): Promise<ScreenplayMutationReport>;
   readScreenplayAnalysisContext(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisContextReport>;
   listScreenplayAnalyses(input?: ScreenplayAnalysisProjectInput): Promise<ScreenplayAnalysisListReport>;
   readScreenplayAnalysis(input: ReadScreenplayAnalysisInput): Promise<ScreenplayAnalysisReadReport>;
@@ -386,7 +355,7 @@ export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
   title: string;
   aspectRatio?: string;
   logline?: string;
-  summary?: string;
+  synopsis?: string;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -622,76 +591,38 @@ export interface SetActivePropDesignInput extends RenkuConfigPathOptions {
   designId: string;
 }
 
-export interface ReadScreenplayCastMemberInput extends RenkuConfigPathOptions {
-  castMemberId: string;
+export interface ScreenplayProjectInput extends RenkuConfigPathOptions {
+  projectName: string;
 }
 
-export interface ReadScreenplayLocationInput extends RenkuConfigPathOptions {
-  locationId: string;
+export interface ReadScreenplaySectionInput extends ScreenplayProjectInput {
+  sectionId: string;
 }
 
-export interface ReadScreenplayActInput extends RenkuConfigPathOptions {
-  actId: string;
-}
-
-export interface ListScreenplaySequencesForActInput extends RenkuConfigPathOptions {
-  actId: string;
-}
-
-export interface ReadScreenplaySequenceInput extends RenkuConfigPathOptions {
-  sequenceId: string;
-}
-
-export interface ListScreenplayScenesForSequenceInput extends RenkuConfigPathOptions {
-  sequenceId: string;
-}
-
-export interface ReadScreenplaySceneInput extends RenkuConfigPathOptions {
+export interface ReadScreenplaySceneInput extends ScreenplayProjectInput {
   sceneId: string;
 }
 
-export interface ResolveSceneProductionNumberInput extends RenkuConfigPathOptions {
+export interface ResolveSceneProductionNumberInput extends ScreenplayProjectInput {
   productionNumber: string;
 }
 
-export interface ValidateScreenplayJsonInput extends RenkuConfigPathOptions {
-  document?:
-    | ScreenplayDocument
-    | ScreenplayCreateDocument
-    | ScreenplayOperationDocument
-    | ScreenplaySceneRevisionDocument;
-  filePath?: string;
-}
-
-export interface CreateScreenplayInput extends RenkuConfigPathOptions {
-  document: ScreenplayCreateDocument;
-  filePath?: string;
-  dryRun?: boolean;
+export interface CreateScreenplayInput extends ScreenplayProjectInput {
+  screenplay: ScreenplayInput;
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface ApplyScreenplayOperationsInput extends RenkuConfigPathOptions {
-  document: ScreenplayOperationDocument;
-  filePath?: string;
-  dryRun?: boolean;
+export interface ApplyScreenplayOperationsInput extends ScreenplayProjectInput {
+  operations: ScreenplayOperationsInput['operations'];
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface ReviseScreenplaySceneInput extends RenkuConfigPathOptions {
-  sceneId: string;
-  document: ScreenplaySceneRevisionDocument;
-  filePath?: string;
-  dryRun?: boolean;
-  idGenerator?: ProjectIdGenerator;
-}
-
-export interface ReadScreenplayRevisionInput extends RenkuConfigPathOptions {
+export interface ReadScreenplayRevisionInput extends ScreenplayProjectInput {
   revisionId: string;
 }
 
-export interface RestoreScreenplayRevisionInput extends RenkuConfigPathOptions {
+export interface RestoreScreenplayRevisionInput extends ScreenplayProjectInput {
   revisionId: string;
-  idGenerator?: ProjectIdGenerator;
 }
 
 export interface ScreenplayAnalysisProjectInput extends RenkuConfigPathOptions {}
@@ -702,7 +633,7 @@ export interface ReadScreenplayAnalysisInput extends ScreenplayAnalysisProjectIn
 }
 
 export interface ValidateScreenplayAnalysisInput extends ScreenplayAnalysisProjectInput {
-  document: ScreenplayAnalysisDocument;
+  analysis: ScreenplayAnalysis;
   filePath?: string;
 }
 
@@ -904,13 +835,6 @@ export interface ReadPropResourceInput extends RenkuConfigPathOptions {
   propId: string;
 }
 
-export interface ReadSequenceResourceInput extends RenkuConfigPathOptions {
-  projectName: string;
-  sequenceId: string;
-  limit?: number;
-  cursor?: string | null;
-}
-
 export interface ReadSceneNarrativeResourceInput extends RenkuConfigPathOptions {
   projectName: string;
   sceneId: string;
@@ -919,11 +843,6 @@ export interface ReadSceneNarrativeResourceInput extends RenkuConfigPathOptions 
 export interface ReadSceneBeatSheetResourceInput extends RenkuConfigPathOptions {
   projectName: string;
   sceneId: string;
-}
-
-export interface ReadActStoryboardResourceInput extends RenkuConfigPathOptions {
-  projectName: string;
-  actId: string;
 }
 
 export interface ReadSceneDesignResourceInput
@@ -949,7 +868,26 @@ export interface ProjectInformationPatch {
   title?: string;
   aspectRatio?: string | null;
   logline?: string | null;
-  summary?: string | null;
+  synopsis?: string | null;
+  premise?: string | null;
+  intendedAudience?: string | null;
+  format?: string | null;
+  targetRuntimeMinutes?: number | null;
+  primaryGenre?: string | null;
+  secondaryGenres?: string[] | null;
+  tones?: string[] | null;
+  contentRatingIntent?: string | null;
+  creativeBoundaries?: string[] | null;
+  centralConflict?: string | null;
+  dramaticQuestion?: string | null;
+  themes?: string[] | null;
+  historicalBasis?: string[] | null;
+  dramatizedElements?: string[] | null;
+  screenplayDraftStatus?: string | null;
+  researchSources?: string[] | null;
+  assumptions?: string[] | null;
+  openQuestions?: string[] | null;
+  nextSteps?: string[] | null;
   languages?: ProjectLanguagePatchOperation[];
 }
 
@@ -977,7 +915,26 @@ export interface ProjectInformationUpdate {
   title: string;
   aspectRatio?: string;
   logline?: string;
-  summary?: string | null;
+  synopsis?: string;
+  premise?: string;
+  intendedAudience?: string;
+  format?: string;
+  targetRuntimeMinutes?: number;
+  primaryGenre?: string;
+  secondaryGenres?: string[];
+  tones?: string[];
+  contentRatingIntent?: string;
+  creativeBoundaries?: string[];
+  centralConflict?: string;
+  dramaticQuestion?: string;
+  themes?: string[];
+  historicalBasis?: string[];
+  dramatizedElements?: string[];
+  screenplayDraftStatus?: string;
+  researchSources?: string[];
+  assumptions?: string[];
+  openQuestions?: string[];
+  nextSteps?: string[];
   languages: ProjectInformationLanguageUpdate[];
 }
 

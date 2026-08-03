@@ -56,7 +56,7 @@ function isMutationPath(path: readonly string[]): boolean {
 function hasResourceReport(
   value: unknown
 ): value is {
-  project: { name: string };
+  project: { projectName: string };
   resourceKeys: string[];
 } {
   return (
@@ -65,8 +65,8 @@ function hasResourceReport(
     'project' in value &&
     typeof value.project === 'object' &&
     value.project !== null &&
-    'name' in value.project &&
-    typeof value.project.name === 'string' &&
+    'projectName' in value.project &&
+    typeof value.project.projectName === 'string' &&
     'resourceKeys' in value &&
     Array.isArray(value.resourceKeys)
   );

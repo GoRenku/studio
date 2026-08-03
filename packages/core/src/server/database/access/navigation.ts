@@ -1,24 +1,11 @@
-import { and, asc, count, eq, gt, lt, or, type SQL } from 'drizzle-orm';
-import {
-  castMembers,
-  acts,
-  locations,
-  props,
-  sceneLocations,
-  sceneProductionNumbers,
-  scenes,
-  sequences,
-} from '../../schema/index.js';
+import { and, asc, eq, gt, or, type SQL } from 'drizzle-orm';
 import type {
   CastNavigationRow,
-  ActNavigationRow,
   LocationNavigationRow,
-  PropNavigationRow,
   PageResponse,
-  SceneNavigationRow,
-  SequenceNavigationRow,
+  PropNavigationRow,
 } from '../../../client/index.js';
-import { normalizeSceneProductionNumber } from '../../../client/scene-production-numbers.js';
+import { castMembers, locations, props } from '../../schema/index.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import {
@@ -37,25 +24,24 @@ export interface ListNavigationPageInput {
 
 export function listCastNavigationPage(
   session: DatabaseSession,
-  input: ListNavigationPageInput
+  input: ListNavigationPageInput,
 ): PageResponse<CastNavigationRow> {
   return listPositionPage({
     input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: castMembers.id,
-          handle: castMembers.handle,
-          name: castMembers.name,
-          role: castMembers.role,
-          isVoiceOver: castMembers.isVoiceOver,
-          position: castMembers.position,
-        })
-        .from(castMembers)
-        .where(cursorCondition)
-        .orderBy(asc(castMembers.position), asc(castMembers.id))
-        .limit(limit)
-        .all(),
+    selectPage: (limit, cursorCondition) => session.db
+      .select({
+        id: castMembers.id,
+        handle: castMembers.handle,
+        name: castMembers.name,
+        role: castMembers.role,
+        isVoiceOver: castMembers.isVoiceOver,
+        position: castMembers.position,
+      })
+      .from(castMembers)
+      .where(cursorCondition)
+      .orderBy(asc(castMembers.position), asc(castMembers.id))
+      .limit(limit)
+      .all(),
     positionColumn: castMembers.position,
     idColumn: castMembers.id,
     mapRow: (row) => ({
@@ -70,24 +56,23 @@ export function listCastNavigationPage(
 
 export function listLocationNavigationPage(
   session: DatabaseSession,
-  input: ListNavigationPageInput
+  input: ListNavigationPageInput,
 ): PageResponse<LocationNavigationRow> {
   return listPositionPage({
     input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: locations.id,
-          handle: locations.handle,
-          name: locations.name,
-          timePeriod: locations.timePeriod,
-          position: locations.position,
-        })
-        .from(locations)
-        .where(cursorCondition)
-        .orderBy(asc(locations.position), asc(locations.id))
-        .limit(limit)
-        .all(),
+    selectPage: (limit, cursorCondition) => session.db
+      .select({
+        id: locations.id,
+        handle: locations.handle,
+        name: locations.name,
+        timePeriod: locations.timePeriod,
+        position: locations.position,
+      })
+      .from(locations)
+      .where(cursorCondition)
+      .orderBy(asc(locations.position), asc(locations.id))
+      .limit(limit)
+      .all(),
     positionColumn: locations.position,
     idColumn: locations.id,
     mapRow: (row) => ({
@@ -101,263 +86,26 @@ export function listLocationNavigationPage(
 
 export function listPropNavigationPage(
   session: DatabaseSession,
-  input: ListNavigationPageInput
+  input: ListNavigationPageInput,
 ): PageResponse<PropNavigationRow> {
   return listPositionPage({
     input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: props.id,
-          handle: props.handle,
-          name: props.name,
-          position: props.position,
-        })
-        .from(props)
-        .where(cursorCondition)
-        .orderBy(asc(props.position), asc(props.id))
-        .limit(limit)
-        .all(),
+    selectPage: (limit, cursorCondition) => session.db
+      .select({
+        id: props.id,
+        handle: props.handle,
+        name: props.name,
+        position: props.position,
+      })
+      .from(props)
+      .where(cursorCondition)
+      .orderBy(asc(props.position), asc(props.id))
+      .limit(limit)
+      .all(),
     positionColumn: props.position,
     idColumn: props.id,
-    mapRow: (row) => ({
-      id: row.id,
-      handle: row.handle,
-      name: row.name,
-    }),
+    mapRow: (row) => ({ id: row.id, handle: row.handle, name: row.name }),
   });
-}
-
-export function listActNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput
-): PageResponse<ActNavigationRow> {
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: acts.id,
-          title: acts.title,
-          purpose: acts.purpose,
-          position: acts.position,
-        })
-        .from(acts)
-        .where(cursorCondition)
-        .orderBy(asc(acts.position), asc(acts.id))
-        .limit(limit)
-        .all(),
-    positionColumn: acts.position,
-    idColumn: acts.id,
-    mapRow: (row) => ({
-      id: row.id,
-      title: row.title,
-      purpose: nullable(row.purpose),
-      sequenceCount: countRows(session, sequences, eq(sequences.actId, row.id)),
-      sceneCount: countScenesForAct(session, row.id),
-    }),
-  });
-}
-
-export function listSequenceNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput & { actId?: string }
-): PageResponse<SequenceNavigationRow> {
-  const actCondition = input.actId ? eq(sequences.actId, input.actId) : undefined;
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: sequences.id,
-          actId: sequences.actId,
-          title: sequences.title,
-          purpose: sequences.purpose,
-          position: sequences.position,
-        })
-        .from(sequences)
-        .where(and(actCondition, cursorCondition))
-        .orderBy(asc(sequences.position), asc(sequences.id))
-        .limit(limit)
-        .all(),
-    positionColumn: sequences.position,
-    idColumn: sequences.id,
-    mapRow: (row) => ({
-      id: row.id,
-      actId: row.actId,
-      number: sequenceNumber(session, row.id),
-      title: row.title,
-      purpose: nullable(row.purpose),
-      sceneCount: countRows(session, scenes, eq(scenes.sequenceId, row.id)),
-    }),
-  });
-}
-
-export function listSceneNavigationPage(
-  session: DatabaseSession,
-  input: ListNavigationPageInput & { sequenceId: string }
-): PageResponse<SceneNavigationRow> {
-  assertExists(session, sequences, sequences.id, input.sequenceId, 'PROJECT_DATA113');
-  return listPositionPage({
-    input,
-    selectPage: (limit, cursorCondition) =>
-      session.db
-        .select({
-          id: scenes.id,
-          sequenceId: scenes.sequenceId,
-          title: scenes.title,
-          productionNumber: sceneProductionNumbers.productionNumber,
-          interiorExterior: scenes.interiorExterior,
-          timeOfDay: scenes.timeOfDay,
-          position: scenes.position,
-        })
-        .from(scenes)
-        .leftJoin(sceneProductionNumbers, eq(sceneProductionNumbers.sceneId, scenes.id))
-        .where(and(eq(scenes.sequenceId, input.sequenceId), cursorCondition))
-        .orderBy(asc(scenes.position), asc(scenes.id))
-        .limit(limit)
-        .all(),
-    positionColumn: scenes.position,
-    idColumn: scenes.id,
-    mapRow: (row) => ({
-      id: row.id,
-      sequenceId: row.sequenceId,
-      title: row.title,
-      productionNumber: requireProductionNumber(row.id, row.productionNumber),
-      setting: {
-        interiorExterior: nullable(row.interiorExterior),
-        timeOfDay: nullable(row.timeOfDay),
-        locationIds: listSceneLocationIds(session, row.id),
-      },
-    }),
-  });
-}
-
-export function readCastNavigationRow(
-  session: DatabaseSession,
-  castMemberId: string
-): CastNavigationRow | null {
-  const castMember = session.db
-    .select()
-    .from(castMembers)
-    .where(eq(castMembers.id, castMemberId))
-    .get();
-  return castMember
-    ? {
-        id: castMember.id,
-        handle: castMember.handle,
-        name: castMember.name,
-        role: nullable(castMember.role),
-        isVoiceOver: castMember.isVoiceOver,
-      }
-    : null;
-}
-
-export function readLocationNavigationRow(
-  session: DatabaseSession,
-  locationId: string
-): LocationNavigationRow | null {
-  const location = session.db
-    .select()
-    .from(locations)
-    .where(eq(locations.id, locationId))
-    .get();
-  return location
-    ? {
-        id: location.id,
-        handle: location.handle,
-        name: location.name,
-        timePeriod: nullable(location.timePeriod),
-      }
-    : null;
-}
-
-export function readPropNavigationRow(
-  session: DatabaseSession,
-  propId: string
-): PropNavigationRow | null {
-  const prop = session.db.select().from(props).where(eq(props.id, propId)).get();
-  return prop
-    ? { id: prop.id, handle: prop.handle, name: prop.name }
-    : null;
-}
-
-export function readSceneNavigationContext(
-  session: DatabaseSession,
-  sceneId: string
-):
-  | {
-      scene: SceneNavigationRow;
-      sequence: SequenceNavigationRow;
-    }
-  | null {
-  const scene = session.db
-    .select({
-      id: scenes.id,
-      sequenceId: scenes.sequenceId,
-      title: scenes.title,
-      productionNumber: sceneProductionNumbers.productionNumber,
-    })
-    .from(scenes)
-    .leftJoin(sceneProductionNumbers, eq(sceneProductionNumbers.sceneId, scenes.id))
-    .where(eq(scenes.id, sceneId))
-    .get();
-  if (!scene) {
-    return null;
-  }
-  const sequence = readSequenceNavigationContext(session, scene.sequenceId);
-  if (!sequence) {
-    return null;
-  }
-  return {
-    scene: {
-      id: scene.id,
-      sequenceId: scene.sequenceId,
-      productionNumber: requireProductionNumber(scene.id, scene.productionNumber),
-      title: scene.title,
-    },
-    sequence: sequence.sequence,
-  };
-}
-
-export function readSequenceNavigationContext(
-  session: DatabaseSession,
-  sequenceId: string
-): { sequence: SequenceNavigationRow } | null {
-  const sequence = session.db
-    .select()
-    .from(sequences)
-    .where(eq(sequences.id, sequenceId))
-    .get();
-  if (!sequence) {
-    return null;
-  }
-  return {
-    sequence: {
-      id: sequence.id,
-      actId: sequence.actId,
-      number: sequenceNumber(session, sequence.id),
-      title: sequence.title,
-      purpose: nullable(sequence.purpose),
-      sceneCount: countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
-    },
-  };
-}
-
-export function readActNavigationRow(
-  session: DatabaseSession,
-  actId: string
-): ActNavigationRow | null {
-  const act = session.db.select().from(acts).where(eq(acts.id, actId)).get();
-  return act
-    ? {
-        id: act.id,
-        title: act.title,
-        purpose: nullable(act.purpose),
-        sequenceCount: countRows(session, sequences, eq(sequences.actId, act.id)),
-        sceneCount: countScenesForAct(session, act.id),
-      }
-    : null;
 }
 
 function listPositionPage<Row extends { id: string; position: number }, Result>(
@@ -367,7 +115,7 @@ function listPositionPage<Row extends { id: string; position: number }, Result>(
     positionColumn: any;
     idColumn: any;
     mapRow: (row: Row) => Result;
-  }
+  },
 ): PageResponse<Result> {
   const limit = normalizeProjectPageLimit(config.input.limit, {
     defaultLimit: DEFAULT_NAVIGATION_PAGE_LIMIT,
@@ -377,124 +125,17 @@ function listPositionPage<Row extends { id: string; position: number }, Result>(
   const cursorCondition = cursor
     ? or(
         gt(config.positionColumn, cursor.position),
-        and(eq(config.positionColumn, cursor.position), gt(config.idColumn, cursor.id))
+        and(eq(config.positionColumn, cursor.position), gt(config.idColumn, cursor.id)),
       )
     : undefined;
   const rows = config.selectPage(limit + 1, cursorCondition);
   const pageRows = rows.slice(0, limit);
   return {
     items: pageRows.map(config.mapRow),
-    nextCursor:
-      rows.length > limit
-        ? encodePositionCursor(pageRows[pageRows.length - 1]!)
-        : null,
+    nextCursor: rows.length > limit
+      ? encodePositionCursor(pageRows[pageRows.length - 1]!)
+      : null,
   };
-}
-
-function sequenceNumber(
-  session: DatabaseSession,
-  sequenceId: string
-): number {
-  const sequence = session.db
-    .select({ position: sequences.position })
-    .from(sequences)
-    .where(eq(sequences.id, sequenceId))
-    .get();
-  if (!sequence) {
-    return 1;
-  }
-  const rows = session.db
-    .select({ id: sequences.id })
-    .from(sequences)
-    .where(
-      and(
-        or(
-        lt(sequences.position, sequence.position),
-        and(
-          eq(sequences.position, sequence.position),
-          lt(sequences.id, sequenceId)
-        )
-      ))
-    )
-    .all();
-  return rows.length + 1;
-}
-
-function countRows(
-  session: DatabaseSession,
-  table: any,
-  condition?: SQL
-): number {
-  const row = session.db
-    .select({ value: count() })
-    .from(table)
-    .where(condition)
-    .get();
-  return row?.value ?? 0;
-}
-
-function countScenesForAct(session: DatabaseSession, actId: string): number {
-  const actSequences = session.db
-    .select({ id: sequences.id })
-    .from(sequences)
-    .where(eq(sequences.actId, actId))
-    .all();
-  return actSequences.reduce(
-    (total, sequence) =>
-      total + countRows(session, scenes, eq(scenes.sequenceId, sequence.id)),
-    0
-  );
-}
-
-function requireProductionNumber(
-  sceneId: string,
-  productionNumber: string | null
-): string {
-  if (!productionNumber) {
-    throw new ProjectDataError(
-      'PROJECT_DATA450',
-      `Current scene ${sceneId} has no production number reservation.`,
-      {
-        suggestion: 'Run project validation and repair production scene-number reservations through Core.',
-      }
-    );
-  }
-  if (normalizeSceneProductionNumber(productionNumber) !== productionNumber) {
-    throw new ProjectDataError(
-      'PROJECT_DATA450',
-      `Scene ${sceneId} has noncanonical production number ${productionNumber}.`,
-      {
-        suggestion: 'Run project validation and repair production scene-number reservations through Core.',
-      }
-    );
-  }
-  return productionNumber;
-}
-
-export function listSceneLocationIds(
-  session: DatabaseSession,
-  sceneId: string
-): string[] {
-  return session.db
-    .select({ locationId: sceneLocations.locationId })
-    .from(sceneLocations)
-    .where(eq(sceneLocations.sceneId, sceneId))
-    .orderBy(asc(sceneLocations.position))
-    .all()
-    .map((row) => row.locationId);
-}
-
-function assertExists(
-  session: DatabaseSession,
-  table: any,
-  idColumn: any,
-  id: string,
-  code: string
-): void {
-  const row = session.db.select({ id: idColumn }).from(table).where(eq(idColumn, id)).get();
-  if (!row) {
-    throw new ProjectDataError(code, `Project entity was not found: ${id}.`);
-  }
 }
 
 interface PositionCursor {
@@ -513,7 +154,7 @@ function parsePositionCursor(cursor: string | null | undefined): PositionCursor 
   return value as unknown as PositionCursor;
 }
 
-function encodePositionCursor(row: { position: number; id: string }): string {
+function encodePositionCursor(row: PositionCursor): string {
   return encodeProjectPageCursor({ position: row.position, id: row.id });
 }
 

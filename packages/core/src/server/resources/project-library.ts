@@ -27,7 +27,7 @@ export async function resolveCoverImage(
   const storageRoot = await resolveRenkuStorageRoot(input);
   const library = await readProjectLibrary({ storageRoot });
   const project = library.projects.find(
-    (candidate) => candidate.name === input.projectName
+    (candidate) => candidate.projectName === input.projectName
   );
   return await resolveProjectCoverImageFile({
     storageRoot,
@@ -70,18 +70,18 @@ function readProjectSummary(projectFolder: string): ProjectSummary {
     session = openProjectStore({ projectFolder, create: false });
     const project = readProjectFromSession({ session, projectFolder });
     return {
-      name: project.identity.name,
-      title: project.identity.title,
-      folderPath: project.identity.folderPath,
+      projectName: project.projectName,
+      title: project.title,
+      folderPath: projectFolder,
       coverImage: project.coverImage,
-      logline: project.identity.logline,
+      logline: project.logline,
       counts: project.counts,
       validationError: null,
     };
   } catch (error) {
     const folderName = path.basename(projectFolder);
     return {
-      name: folderName,
+      projectName: folderName,
       title: folderName,
       folderPath: projectFolder,
       coverImage: null,

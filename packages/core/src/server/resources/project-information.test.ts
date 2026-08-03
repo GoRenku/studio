@@ -32,7 +32,7 @@ describe('project information resource', () => {
         title: 'The Siege Machine',
         aspectRatio: '21:9',
         logline: 'A sharper premise.',
-        summary: 'A revised project summary.',
+        synopsis: 'A revised project synopsis.',
         languages: [
           {
             localeTag: 'en-US',
@@ -56,7 +56,7 @@ describe('project information resource', () => {
       title: 'The Siege Machine',
       aspectRatio: '21:9',
       logline: 'A sharper premise.',
-      summary: 'A revised project summary.',
+      synopsis: 'A revised project synopsis.',
     });
     expect(resource.languages).toEqual([
       expect.objectContaining({
@@ -88,7 +88,7 @@ describe('project information resource', () => {
         title: 'The Siege Machine',
         aspectRatio: '21:9',
         logline: 'A sharper premise.',
-        summary: 'A revised project summary.',
+        synopsis: 'A revised project synopsis.',
         languages: [
           {
             localeTag: 'en-US',
@@ -108,7 +108,7 @@ describe('project information resource', () => {
         title: 'The Siege Machine',
         aspectRatio: '21:9',
         logline: '',
-        summary: '   ',
+        synopsis: '   ',
         languages: [
           {
             localeTag: 'en-US',
@@ -122,18 +122,16 @@ describe('project information resource', () => {
     });
 
     expect(resource.logline).toBeUndefined();
-    expect(resource.summary).toBeUndefined();
+    expect(resource.synopsis).toBeUndefined();
     await expect(
       projectData.readProject({ projectName: 'constantinople', homeDir })
     ).resolves.toMatchObject({
-      identity: {
-        logline: undefined,
-        summary: undefined,
-      },
+      logline: undefined,
+      synopsis: undefined,
     });
   });
 
-  it('clears the SQLite-backed project summary through a patch', async () => {
+  it('clears the SQLite-backed project synopsis through a patch', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -143,13 +141,13 @@ describe('project information resource', () => {
     await projectData.patchProjectInformation({
       projectName: 'constantinople',
       homeDir,
-      patch: { summary: null },
+      patch: { synopsis: null },
     });
 
     await expect(
       projectData.readProject({ projectName: 'constantinople', homeDir })
     ).resolves.toMatchObject({
-      identity: { summary: undefined },
+      synopsis: undefined,
     });
   });
 
@@ -184,7 +182,7 @@ describe('project information resource', () => {
           title: 'Preparation of the Siege',
           aspectRatio: '16:9',
           logline: 'A documentary about preparation before 1453.',
-          summary: 'A documentary project summary stored in SQLite.',
+          synopsis: 'A documentary project synopsis stored in SQLite.',
           languages: [
             {
               localeTag: 'tr-TR',

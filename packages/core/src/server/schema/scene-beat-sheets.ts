@@ -1,5 +1,5 @@
 import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { scenes } from './scenes.js';
+import { scenes } from './screenplay/scenes.js';
 
 export const sceneBeatSheets = sqliteTable(
   'scene_beat_sheet',

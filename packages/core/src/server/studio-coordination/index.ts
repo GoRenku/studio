@@ -20,7 +20,6 @@ export {
   type StudioEventStoreSummary,
 } from './event-store.js';
 export {
-  studioActSurfaceResourceKey,
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
   studioLocationNavigationResourceKey,
@@ -32,10 +31,9 @@ export {
   studioSceneBeatSheetResourceKey,
   studioSceneShotPlansResourceKey,
   studioSceneVideoGenerationsResourceKey,
-  studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
-  studioSequenceScenesNavigationResourceKey,
-  studioSequenceSurfaceResourceKey,
+  studioScreenplaySectionResourceKey,
+  studioScreenplayStructureResourceKey,
   studioStoryArcSurfaceResourceKey,
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,

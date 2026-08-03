@@ -68,7 +68,26 @@ export async function updateProjectInformation(
         title: input.information.title.trim(),
         aspectRatio: effectiveProjectAspectRatio(input.information.aspectRatio),
         logline: nullableTrimmed(input.information.logline),
-        summary: nullableTrimmed(input.information.summary),
+        synopsis: nullableTrimmed(input.information.synopsis),
+        premise: nullableTrimmed(input.information.premise),
+        intendedAudience: nullableTrimmed(input.information.intendedAudience),
+        format: nullableTrimmed(input.information.format),
+        targetRuntimeMinutes: input.information.targetRuntimeMinutes ?? null,
+        primaryGenre: nullableTrimmed(input.information.primaryGenre),
+        secondaryGenresJson: nullableStringArrayJson(input.information.secondaryGenres),
+        tonesJson: nullableStringArrayJson(input.information.tones),
+        contentRatingIntent: nullableTrimmed(input.information.contentRatingIntent),
+        creativeBoundariesJson: nullableStringArrayJson(input.information.creativeBoundaries),
+        centralConflict: nullableTrimmed(input.information.centralConflict),
+        dramaticQuestion: nullableTrimmed(input.information.dramaticQuestion),
+        themesJson: nullableStringArrayJson(input.information.themes),
+        historicalBasisJson: nullableStringArrayJson(input.information.historicalBasis),
+        dramatizedElementsJson: nullableStringArrayJson(input.information.dramatizedElements),
+        screenplayDraftStatus: nullableTrimmed(input.information.screenplayDraftStatus),
+        researchSourcesJson: nullableStringArrayJson(input.information.researchSources),
+        assumptionsJson: nullableStringArrayJson(input.information.assumptions),
+        openQuestionsJson: nullableStringArrayJson(input.information.openQuestions),
+        nextStepsJson: nullableStringArrayJson(input.information.nextSteps),
         updatedAt: now,
       });
       replaceProjectLocaleRecords(
@@ -145,6 +164,34 @@ function validateProjectInformationUpdate(update: ProjectInformationUpdate): voi
         'Choose one of 1:1, 3:4, 4:3, 16:9, 9:16, or 21:9.'
       )
     );
+  }
+
+  if (
+    update.targetRuntimeMinutes !== undefined
+    && (!Number.isInteger(update.targetRuntimeMinutes) || update.targetRuntimeMinutes < 0)
+  ) {
+    issues.push(
+      createDiagnosticError(
+        'PROJECT_DATA050',
+        'Project target runtime must be a non-negative integer.',
+        { path: ['targetRuntimeMinutes'], context: 'project information update' },
+        'Use a whole number of minutes greater than or equal to zero.',
+      ),
+    );
+  }
+
+  for (const field of PROJECT_STRING_ARRAY_FIELDS) {
+    const values = update[field];
+    if (values && (values.length === 0 || values.some((value) => !value.trim()))) {
+      issues.push(
+        createDiagnosticError(
+          'PROJECT_DATA050',
+          `Project ${field} must contain non-empty values when present.`,
+          { path: [field], context: 'project information update' },
+          'Remove the empty list or provide one or more non-empty values.',
+        ),
+      );
+    }
   }
 
   if (update.languages.length === 0) {
@@ -290,7 +337,26 @@ function applyProjectInformationPatch(
         : patch.aspectRatio ?? current.aspectRatio,
     logline:
       patch.logline === null ? undefined : patch.logline ?? current.logline,
-    summary: 'summary' in patch ? patch.summary : current.summary,
+    synopsis: patchValue(current.synopsis, patch, 'synopsis'),
+    premise: patchValue(current.premise, patch, 'premise'),
+    intendedAudience: patchValue(current.intendedAudience, patch, 'intendedAudience'),
+    format: patchValue(current.format, patch, 'format'),
+    targetRuntimeMinutes: patchValue(current.targetRuntimeMinutes, patch, 'targetRuntimeMinutes'),
+    primaryGenre: patchValue(current.primaryGenre, patch, 'primaryGenre'),
+    secondaryGenres: patchValue(current.secondaryGenres, patch, 'secondaryGenres'),
+    tones: patchValue(current.tones, patch, 'tones'),
+    contentRatingIntent: patchValue(current.contentRatingIntent, patch, 'contentRatingIntent'),
+    creativeBoundaries: patchValue(current.creativeBoundaries, patch, 'creativeBoundaries'),
+    centralConflict: patchValue(current.centralConflict, patch, 'centralConflict'),
+    dramaticQuestion: patchValue(current.dramaticQuestion, patch, 'dramaticQuestion'),
+    themes: patchValue(current.themes, patch, 'themes'),
+    historicalBasis: patchValue(current.historicalBasis, patch, 'historicalBasis'),
+    dramatizedElements: patchValue(current.dramatizedElements, patch, 'dramatizedElements'),
+    screenplayDraftStatus: patchValue(current.screenplayDraftStatus, patch, 'screenplayDraftStatus'),
+    researchSources: patchValue(current.researchSources, patch, 'researchSources'),
+    assumptions: patchValue(current.assumptions, patch, 'assumptions'),
+    openQuestions: patchValue(current.openQuestions, patch, 'openQuestions'),
+    nextSteps: patchValue(current.nextSteps, patch, 'nextSteps'),
     languages: current.languages.map((language) => ({
       localeTag: language.localeTag,
       displayName: language.displayName,
@@ -373,4 +439,34 @@ function optionalTrimmed(value: string | undefined): string | undefined {
 function nullableTrimmed(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+const PROJECT_STRING_ARRAY_FIELDS = [
+  'secondaryGenres',
+  'tones',
+  'creativeBoundaries',
+  'themes',
+  'historicalBasis',
+  'dramatizedElements',
+  'researchSources',
+  'assumptions',
+  'openQuestions',
+  'nextSteps',
+] as const;
+
+function nullableStringArrayJson(values: string[] | undefined): string | null {
+  return values ? JSON.stringify(values.map((value) => value.trim())) : null;
+}
+
+function patchValue<
+  TKey extends keyof ProjectInformationPatch & keyof ProjectInformationUpdate,
+>(
+  current: ProjectInformationUpdate[TKey],
+  patch: ProjectInformationPatch,
+  key: TKey,
+): ProjectInformationUpdate[TKey] {
+  if (!(key in patch)) {
+    return current;
+  }
+  return (patch[key] === null ? undefined : patch[key]) as ProjectInformationUpdate[TKey];
 }

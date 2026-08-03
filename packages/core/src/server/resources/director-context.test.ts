@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneBeatSheetDocument } from '../../client/scene-beat-sheet.js';
+import type { SceneBeatSheetDocument } from '../../client/scene-beats/index.js';
 import { createProjectDataService } from '../index.js';
 import {
   createBlankMovieProject,
@@ -84,6 +84,7 @@ describe('readDirectorContext', () => {
         sceneId: scene.sceneId,
         castMemberId: scene.castMemberId,
         locationId: scene.locationId,
+        blockId: scene.blockId,
       }),
     });
 
@@ -143,7 +144,7 @@ describe('readDirectorContext', () => {
     if (!created) {
       return;
     }
-    const screenplay = await projectData.readScreenplay({ homeDir });
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
     const propReport = await projectData.applyPropOperations({
       homeDir,
       document: {
@@ -166,7 +167,7 @@ describe('readDirectorContext', () => {
       path.join(created.projectPath, 'tmp', 'location-sheet.png'),
       'image'
     );
-    for (const location of screenplay.screenplay!.locations) {
+    for (const location of await projectData.listLocations({ homeDir })) {
       await projectData.attachGenerationMedia({
         projectName: 'constantinople',
         homeDir,
@@ -219,19 +220,21 @@ describe('readDirectorContext', () => {
     sceneId: string;
     castMemberId: string;
     locationId: string;
+    blockId: string;
   } | null> {
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
       return null;
     }
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const act = screenplay.screenplay!.acts[0]!;
-    const sequence = act.sequences[0]!;
-    const scene = sequence.scenes[0]!;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
+    const cast = await projectData.listCastMembers({ homeDir });
+    const locations = await projectData.listLocations({ homeDir });
     return {
-      sceneId: scene.id as string,
-      castMemberId: screenplay.screenplay!.cast[1]!.id as string,
-      locationId: screenplay.screenplay!.locations[0]!.id as string,
+      sceneId: scene.id,
+      castMemberId: cast[1]!.id,
+      locationId: locations[0]!.id,
+      blockId: scene.blocks[0]!.id,
     };
   }
 });
@@ -286,9 +289,9 @@ function sampleBeatSheet(ids: {
   sceneId: string;
   castMemberId: string;
   locationId: string;
+  blockId: string;
 }): SceneBeatSheetDocument {
   return {
-    kind: 'sceneBeatSheet',
     sceneId: ids.sceneId,
     title: 'Council chamber coverage',
     summary: 'A restrained coverage plan for the first scene.',
@@ -301,9 +304,10 @@ function sampleBeatSheet(ids: {
           'Mehmed stands at the council table with the city map spread before him.',
         narrativeDevelopment: 'Mehmed studies the city map before the siege plan hardens.',
         narrativePurpose: 'Establish the strategic obsession driving the scene.',
-        screenplayBlockIndexes: [0],
+        screenplayBlockIds: [ids.blockId],
         castMemberIds: [ids.castMemberId],
         locationIds: [ids.locationId],
+        propIds: [],
       },
     ],
   };

@@ -50,7 +50,7 @@ export async function openCurrentProject(
 
     const now = new Date().toISOString();
     const currentProject: CurrentProject = {
-      projectName: project.name,
+      projectName: project.projectName,
       projectId: project.id,
       projectFolder,
       databasePath: session.databasePath,
@@ -60,7 +60,7 @@ export async function openCurrentProject(
     await writeCurrentProjectDescriptor(input, currentProject);
     return {
       ...currentProject,
-      status: existing?.projectName === project.name ? 'unchanged' : 'set',
+      status: existing?.projectName === project.projectName ? 'unchanged' : 'set',
     };
   } finally {
     session.close();

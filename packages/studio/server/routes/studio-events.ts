@@ -53,7 +53,7 @@ type GenerationPreviewResourceProjection = (input: {
 
 type StudioEventsRouteProjectData = Pick<
   ProjectDataService,
-  | 'readProject'
+  | 'readProjectShell'
   | 'readStudioSelectionContext'
   | 'buildGenerationPreviewResource'
 >;
@@ -195,7 +195,7 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
             diagnostics: focus.diagnostics,
           });
         }
-        const project = await projectData.readProject({
+        const project = await projectData.readProjectShell({
           projectName: body.projectName ?? '',
         });
         const validation = validateStudioFocusRequestForProject(

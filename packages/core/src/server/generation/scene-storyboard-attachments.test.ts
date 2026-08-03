@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneBeatSheetDocument } from '../../client/scene-beat-sheet.js';
+import type { SceneBeatSheetDocument } from '../../client/scene-beats/index.js';
 import { createProjectDataService } from '../project-data-service.js';
 import {
   createSampleMovieProject,
@@ -23,16 +23,24 @@ describe('Scene storyboard attachment', () => {
     if (!created) {
       return;
     }
-    const screenplay = await projectData.readScreenplay({
+    const screenplay = await projectData.readScreenplayStructure({
+      projectName: 'constantinople',
       homeDir,
     });
-    const scene = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-    const castMemberId = screenplay.screenplay?.cast[0]?.id;
-    const locationId = screenplay.screenplay?.locations[0]?.id;
+    const scene = screenplay.screenplay.scenes[0];
+    const sceneReferences = screenplay.screenplay.references.filter((reference) =>
+      scene && 'sceneId' in reference.target && reference.target.sceneId === scene.id
+    );
+    const castMemberId = sceneReferences.find(
+      (reference) => reference.subject.type === 'castMember'
+    )?.subject.id;
+    const locationId = sceneReferences.find(
+      (reference) => reference.subject.type === 'location'
+    )?.subject.id;
     expect(scene?.id && castMemberId && locationId).toBeTruthy();
     const beatSheet = await projectData.writeSceneBeatSheet({
       homeDir,
-      document: beatSheetDocument(scene!.id!, castMemberId!, locationId!),
+      document: beatSheetDocument(scene!.id, scene!.blocks[0]!.id, castMemberId!, locationId!),
     });
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(path.join(created.projectPath, 'tmp', 'beat.png'), 'image');
@@ -42,7 +50,6 @@ describe('Scene storyboard attachment', () => {
       sceneId: scene!.id!,
       beatSheetId: beatSheet.activeBeatSheetId,
       document: {
-        kind: 'sceneStoryboardImagesImport',
         beatSheetId: beatSheet.activeBeatSheetId,
         select: true,
         beats: [{ beatId: 'beat_001', source: 'tmp/beat.png' }],
@@ -81,7 +88,6 @@ describe('Scene storyboard attachment', () => {
       sceneId: scene!.id!,
       beatSheetId: beatSheet.activeBeatSheetId,
       document: {
-        kind: 'sceneStoryboardImagesImport',
         beatSheetId: beatSheet.activeBeatSheetId,
         select: false,
         beats: [{
@@ -125,11 +131,11 @@ describe('Scene storyboard attachment', () => {
 
 function beatSheetDocument(
   sceneId: string,
+  blockId: string,
   castMemberId: string,
   locationId: string
 ): SceneBeatSheetDocument {
   return {
-    kind: 'sceneBeatSheet',
     sceneId,
     title: 'Storyboard coverage',
     summary: 'One Beat for attachment verification.',
@@ -141,9 +147,10 @@ function beatSheetDocument(
         description: 'The decision lands in a held frame.',
         narrativeDevelopment: 'The scene reaches its visual decision.',
         narrativePurpose: 'Establish the decisive moment.',
-        screenplayBlockIndexes: [0],
+        screenplayBlockIds: [blockId],
         castMemberIds: [castMemberId],
         locationIds: [locationId],
+        propIds: [],
       },
     ],
   };

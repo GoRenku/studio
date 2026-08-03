@@ -3,7 +3,7 @@ import type { AssetFileRecord } from '../database/access/asset-files.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readLocationRecord } from '../database/access/locations.js';
 import { readPropRecord } from '../database/access/props.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 
@@ -75,34 +75,19 @@ export function requireProp(session: DatabaseSession, propId: string) {
   return prop;
 }
 
-export function requireSceneHierarchy(
+export function requireSceneStorageContext(
   session: DatabaseSession | undefined,
   sceneId: string
-): { sequenceTitle: string; sceneTitle: string } {
+): { sceneId: string } {
   if (!session) {
     throw new ProjectDataError(
       'PROJECT_ASSET_FILE_OWNER_MISSING',
-      'Scene hierarchy lookup requires a database session.'
+      'Scene storage lookup requires a database session.'
     );
   }
-  const screenplay = readScreenplayDocumentFromSession(session);
-  if (!screenplay) {
-    throw new ProjectDataError(
-      'PROJECT_ASSET_FILE_OWNER_MISSING',
-      'Scene hierarchy lookup requires a screenplay.'
-    );
-  }
-  for (const act of screenplay.acts) {
-    for (const sequence of act.sequences) {
-      for (const scene of sequence.scenes) {
-        if (scene.id === sceneId) {
-          return {
-            sequenceTitle: sequence.title ?? sequence.id ?? 'sequence',
-            sceneTitle: scene.title ?? scene.id ?? 'scene',
-          };
-        }
-      }
-    }
+  const screenplay = readCanonicalScreenplay(session);
+  if (screenplay.scenes.some((scene) => scene.id === sceneId)) {
+    return { sceneId };
   }
   throw new ProjectDataError(
     'PROJECT_ASSET_FILE_OWNER_MISSING',

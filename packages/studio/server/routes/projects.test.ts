@@ -17,7 +17,7 @@ describe('projects Hono route', () => {
       library: {
         projects: [
           {
-            name: 'constantinople',
+            projectName: 'constantinople',
             coverUrl: '/studio-api/projects/constantinople/cover',
           },
         ],
@@ -36,9 +36,7 @@ describe('projects Hono route', () => {
     const body = await response.json();
     expect(body).toMatchObject({
       project: {
-        identity: {
-          name: 'constantinople',
-        },
+        project: { projectName: 'constantinople' },
         coverUrl: '/studio-api/projects/constantinople/cover',
         navigation: {
           cast: {

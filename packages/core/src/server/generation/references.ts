@@ -10,7 +10,7 @@ import type {
   GenerationSpec,
 } from '../../client/generation.js';
 import type { AssetOwner } from '../../client/assets.js';
-import type { ProjectRelativePath } from '../../client/project.js';
+import type { ProjectRelativePath } from '../../client/project/index.js';
 import {
   listGenerationReferenceAssetFileRecords,
   readGenerationReferenceAssetFileRecord,

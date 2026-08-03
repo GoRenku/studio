@@ -4,7 +4,7 @@ Status: current
 
 Role: CLI reference
 
-Last reviewed: 2026-06-07
+Last reviewed: 2026-08-03
 
 This file is the living reference for the `renku` command-line surface. Keep it
 updated whenever a command, flag, output shape, or expected error changes.
@@ -86,7 +86,7 @@ Create a clean movie project.
 
 ```bash
 renku create <project-name> --title <title>
-renku create <project-name> --title <title> --logline <text> --summary <text>
+renku create <project-name> --title <title> --logline <text> --synopsis <text>
 renku create <project-name> --title <title> --aspect-ratio 16:9 --json
 ```
 
@@ -99,7 +99,7 @@ Options:
 - `--title`: required human-readable movie title.
 - `--aspect-ratio`: optional project aspect ratio.
 - `--logline`: optional short project logline.
-- `--summary`: optional project summary.
+- `--synopsis`: optional project synopsis.
 - `--storage-root`: override the configured storage root for this command.
 - `--json`: print the creation report as JSON.
 
@@ -573,8 +573,9 @@ renku screenplay status --json
 Behavior:
 
 - Requires a current authoring project.
-- Reports whether screenplay data exists and returns counts for cast members,
-  locations, acts, sequences, scenes, and blocks.
+- Returns counts for opening elements, Sections (including Act/Sequence type
+  counts), Scenes, Blocks, and references. An all-zero result is an empty
+  Screenplay.
 
 Expected no-project failure:
 
@@ -594,30 +595,8 @@ Behavior:
 
 - Requires a current authoring project.
 - Fails with `PROJECT_DATA202` when no current authoring project is open.
-- Fails with `PROJECT_DATA205` when a project is open but no screenplay data
-  exists yet.
-- Prints the canonical screenplay JSON document when screenplay data exists.
-
-## `renku screenplay validate`
-
-Validate screenplay JSON without writing project changes.
-
-```bash
-renku screenplay validate --file <screenplay-json> --json
-renku screenplay validate --file - --json
-```
-
-Options:
-
-- `--file`: optional JSON input file. Use `-` to read stdin.
-- `--json`: print the validation report as JSON.
-
-Behavior:
-
-- Accepts screenplay create documents, full screenplay documents, and operation
-  documents.
-- Reports unknown fields as warnings when the schema allows them to be ignored.
-- Reports invalid required fields as structured errors.
+- Prints the canonical Scene-first Screenplay with `opening`, `scenes`,
+  optional `sections`, `structure`, and `references`.
 
 ## `renku screenplay create`
 
@@ -625,25 +604,24 @@ Create screenplay data for the current authoring project.
 
 ```bash
 renku screenplay create --file <screenplay-json> --json
-renku screenplay create --file <screenplay-json> --dry-run --json
 ```
 
 Options:
 
 - `--file`: required JSON input file. Use `-` to read stdin.
-- `--dry-run`: validate and report planned changes without writing.
 - `--json`: print the create report as JSON.
 
 Behavior:
 
 - Requires a current authoring project.
-- Creates the initial screenplay graph.
-- References existing Cast Members and Locations by durable ids in scene
-  settings and dialogue blocks.
-- Rejects non-empty `cast` or `locations` arrays. Create or update those facts
-  first with `renku cast` and `renku location`.
-- Fails when screenplay data already exists and points callers to
-  `renku screenplay apply`.
+- Creates the initial Screenplay only when its current aggregate is empty.
+- Accepts a complete `opening`, `scenes`, `sections`, `structure`, and
+  `references` object without a redundant `kind` envelope.
+- References existing Cast Members, Locations, and Props through separate
+  reference objects; it never creates Project subjects or requires handle
+  tokens in screenplay text.
+- Returns `generatedIdentities` for request-local keys and records a Screenplay
+  revision.
 
 ## `renku screenplay apply`
 
@@ -651,50 +629,24 @@ Apply focused screenplay operations.
 
 ```bash
 renku screenplay apply --file <operations-json> --json
-renku screenplay apply --file <operations-json> --dry-run --json
 ```
 
 Options:
 
 - `--file`: required JSON input file. Use `-` to read stdin.
-- `--dry-run`: validate and report planned changes without writing.
 - `--json`: print the operation report as JSON.
 
 Behavior:
 
 - Requires a current authoring project.
-- Applies operation documents for screenplay metadata, acts, sequences, scenes,
-  and scene blocks.
-- Does not create, update, delete, or move Cast Members or Locations. Use
-  `renku cast` and `renku location` for those facts.
-- Writes a screenplay revision history row when the operation succeeds.
-- Reports shot-list impact details for changed scenes that have active shot
-  lists.
-
-## `renku screenplay scene revise`
-
-Replace one screenplay scene with a focused scene revision document.
-
-```bash
-renku screenplay scene revise --scene <scene-id> --file <scene-revision-json> --json
-renku screenplay scene revise --scene <scene-id> --file <scene-revision-json> --dry-run --json
-```
-
-Options:
-
-- `--scene`: required durable scene id to revise.
-- `--file`: required `kind: "screenplaySceneRevision"` JSON file.
-- `--dry-run`: validate and report planned changes without writing.
-- `--json`: print the revision report as JSON.
-
-Behavior:
-
-- Requires a current authoring project and existing screenplay data.
-- The JSON document must contain a full replacement scene whose `id` matches
-  `--scene`.
-- Writes a screenplay revision history row when the command succeeds.
-- Reports shot-list impact details for the revised scene when an active shot
-  list exists.
+- Applies the closed `opening.replace`, `scene.*`, `section.*`, and
+  `reference.*` operation union atomically.
+- Scene and Section add operations use request-local keys plus explicit
+  structure-entry keys. Incremental placement uses optional `parentSection`
+  and exactly one of `at`, `beforeEntry`, or `afterEntry`.
+- Does not create, update, delete, or move Cast Members, Locations, or Props.
+- Validates the final Screenplay and writes one revision history row only after
+  the complete batch succeeds.
 
 ## `renku screenplay revision`
 
@@ -746,10 +698,10 @@ Options:
 Behavior:
 
 - Requires a current authoring project and existing screenplay data.
-- `context` returns the screenplay text, ordered acts/sequences/scenes, cast and
-  location labels, default criteria, and active analysis summary for an agent.
-- `validate` checks a tagged `kind: "screenplayAnalysis"` document without
-  writing.
+- `context` returns direct Project story metadata, opening content, canonical
+  ordered Scenes and stable Blocks, Cast Member/Location/Prop references,
+  default criteria, and the active analysis summary.
+- `validate` checks a hierarchy-independent Screenplay Analysis without writing.
 - `write` creates a new analysis history row and makes it active.
 - `set-active` changes only the active analysis pointer.
 - `write` and `set-active` append Studio resource-change events for
@@ -760,7 +712,6 @@ Input JSON shape:
 
 ```json
 {
-  "kind": "screenplayAnalysis",
   "structureModel": "threeAct",
   "title": "Three-act screenplay analysis",
   "summary": "Short critique summary.",
@@ -781,25 +732,31 @@ Input JSON shape:
       "description": "How clearly a character's choice drives the story."
     }
   ],
-  "acts": [],
+  "actSegments": [],
   "keyBeats": [],
-  "sequences": [],
-  "scenes": [],
-  "suggestedSceneAdditions": []
+  "sceneGroups": [],
+  "sceneAnalyses": [],
+  "suggestedScenes": []
 }
 ```
 
 Validation rules:
 
 - The current v1 structure model is `threeAct`.
-- Three-act documents must analyze exactly three current screenplay acts in
-  screenplay order.
+- Three-act documents contain exactly three analysis-owned `actSegments` with
+  roles `actOne`, `actTwo`, and `actThree`. Their Scene ids partition every
+  current Scene exactly once in canonical order and never reference optional
+  screenplay Sections.
 - Default criteria `dramaticEnergy`, `stakes`, and `characterAgency` are
   required. Additional criteria are allowed.
 - Scores must be integers from `0` to `100` and must reference declared
   criteria.
-- Act, sequence, and scene ids must match the current screenplay graph.
-- Suggested scene additions are critique only. They do not create scene rows.
+- `keyBeats` contains every accepted role exactly once; `sceneId` is optional
+  for a missing or weak beat.
+- `sceneAnalyses` contains every current Scene exactly once in order. Optional
+  `sceneGroups` form another complete ordered Scene partition.
+- Suggested Scenes are critique only, use exactly one current Scene anchor,
+  and do not create Scene rows.
 - Unknown fields are rejected for this agent-authored JSON format.
 
 ## `renku screenplay beat-sheet`
@@ -843,12 +800,13 @@ Options:
 Behavior:
 
 - Requires a current authoring project and existing screenplay data.
-- `context` returns the scene hierarchy, scene blocks, referenced cast and
-  locations, Production Lookbook text, and active Beat Sheet summary.
-- `validate` checks a tagged `kind: "sceneBeatSheet"` document without writing.
+- `context` returns containing optional Sections, the Scene with stable Block
+  ids, referenced Cast Members, Locations, Props, Production Lookbook text,
+  and the active Beat Sheet summary.
+- `validate` checks a closed Scene Beat Sheet document without writing.
 - `write` creates a new scene-owned Beat Sheet history row and makes it active.
-- `validate-operations` checks a tagged `kind: "sceneBeatSheetOperations"`
-  document without writing.
+- `validate-operations` checks a closed Scene Beat Sheet operations document
+  without writing.
 - `apply` creates a new scene-owned Beat Sheet history row derived from the
   explicit `baseBeatSheetId` in the operations document. It activates the new
   row only when `activate: true`.
@@ -858,19 +816,20 @@ Behavior:
 - `write`, `apply`, and `set-active` append Studio resource-change events for
   the scene Beats surface, Beat Sheet collection, specific Beat Sheet, changed
   Beat keys, and the scene.
-- Unknown fields are rejected. Beat Sheet JSON must use the exact eight-field
+- Unknown fields are rejected. Beat Sheet JSON must use the exact nine-field
   Beat shape: `id`, `title`, `description`, `narrativeDevelopment`,
-  `narrativePurpose`, `castMemberIds`, `locationIds`, and
-  `screenplayBlockIndexes`. It must not store camera, framing, lens, movement,
+  `narrativePurpose`, `castMemberIds`, `locationIds`, `propIds`, and
+  `screenplayBlockIds`. It must not store camera, framing, lens, movement,
   coverage, generated image, or production-logistics instructions.
 
 Input JSON shape:
 
 ```json
 {
-  "kind": "sceneBeatSheet",
   "sceneId": "scene_control_room",
   "title": "Ada confronts the empty control room",
+  "summary": "Absence turns expectation into suspicion.",
+  "narrativeProgression": "Ada's confidence gives way to unease.",
   "beats": [
     {
       "id": "beat_001",
@@ -880,7 +839,8 @@ Input JSON shape:
       "narrativePurpose": "Establish the absence that forces Ada to investigate.",
       "castMemberIds": ["cast_ada"],
       "locationIds": ["location_control_room"],
-      "screenplayBlockIndexes": [0, 1]
+      "propIds": ["prop_status_key"],
+      "screenplayBlockIds": ["screenplay_block_entry", "screenplay_block_silence"]
     }
   ]
 }
@@ -890,7 +850,6 @@ Operation JSON shape:
 
 ```json
 {
-  "kind": "sceneBeatSheetOperations",
   "sceneId": "scene_control_room",
   "baseBeatSheetId": "scene_beat_sheet_control_room_v1",
   "activate": true,
@@ -908,7 +867,8 @@ Operation JSON shape:
           "narrativePurpose": "Move the scene from unease into committed investigation.",
           "castMemberIds": ["cast_ada"],
           "locationIds": ["location_control_room"],
-          "screenplayBlockIndexes": [2]
+          "propIds": ["prop_status_key"],
+          "screenplayBlockIds": ["screenplay_block_headset"]
         }
       ]
     }
@@ -916,81 +876,24 @@ Operation JSON shape:
 }
 ```
 
-## `renku screenplay cast`
+## `renku screenplay structure`, `section`, and `scene`
 
-Read-only screenplay-oriented Cast Member helpers.
-
-```bash
-renku screenplay cast list --json
-renku screenplay cast show <cast-member-id> --json
-```
-
-Behavior:
-
-- Requires a current authoring project.
-- For canonical cast authoring and department context, use `renku cast`.
-
-## `renku screenplay location`
-
-Read-only screenplay-oriented Location helpers.
+Read canonical Scene order, optional organization, or one focused value.
 
 ```bash
-renku screenplay location list --json
-renku screenplay location show <location-id> --json
-```
-
-Behavior:
-
-- Requires a current authoring project.
-- For canonical location authoring and production-design context, use
-  `renku location` and `renku production-design`.
-
-## `renku screenplay act`
-
-List or show acts from the current authoring project's screenplay.
-
-```bash
-renku screenplay act list --json
-renku screenplay act show <act-id> --json
-```
-
-Behavior:
-
-- Requires a current authoring project.
-
-## `renku screenplay sequence`
-
-List sequences for an act or show one sequence.
-
-```bash
-renku screenplay sequence list --act <act-id> --json
-renku screenplay sequence show <sequence-id> --json
-```
-
-Options:
-
-- `--act`: required for `sequence list`.
-
-Behavior:
-
-- Requires a current authoring project.
-
-## `renku screenplay scene`
-
-List scenes for a sequence or show one scene.
-
-```bash
-renku screenplay scene list --sequence <sequence-id> --json
+renku screenplay structure --json
+renku screenplay section show <section-id> --json
 renku screenplay scene show <scene-id> --json
 ```
 
-Options:
-
-- `--sequence`: required for `scene list`.
-
 Behavior:
 
-- Requires a current authoring project.
+- `structure` returns the complete Screenplay plus canonical ordered Scene ids.
+- `section show` returns one Act/Sequence Section, its direct structure entries,
+  and the ordered Scene ids inside that subtree.
+- `scene show` returns one Scene and its exact Screenplay references.
+- Scenes are canonical and need no Section ancestry. Acts and Sequences are
+  optional non-owning organization.
 
 ## `renku screenplay scene-number`
 
@@ -1004,20 +907,18 @@ renku screenplay scene-number resolve --number 22A --json
 
 Options:
 
-- `--number`: required for `scene-number resolve`. Leading zeroes and lowercase
-  suffixes are accepted and normalized, so `01` resolves canonical number `1`
-  and `22a` resolves `22A`.
+- `--number`: required for `scene-number resolve`. The exact non-empty authored
+  value is used; it is not normalized or treated as identity.
 
 Behavior:
 
 - Requires a current authoring project.
-- List output follows current screenplay order and includes the canonical
-  production number, durable Scene id, and current title.
+- List output follows current screenplay order and includes each authored
+  production number, durable Scene id, heading, and optional title.
 - Resolution returns the same three references for one current Scene.
-- A reserved number whose Scene is currently omitted reports a structured
-  omitted-scene diagnostic instead of being reused.
-- Existing `screenplay scene` commands and all existing `--scene` options
-  continue to accept durable Scene ids.
+- Production numbers live directly on current Scenes; there is no separate
+  reservation or omitted-number registry.
+- `screenplay scene show` and all `--scene` options use durable Scene ids.
 
 ## `renku info show`
 
@@ -1035,7 +936,9 @@ Options:
 
 Behavior:
 
-- Shows project title, aspect ratio, logline, summary, and languages.
+- Shows immutable `projectName`, durable `id`, title, aspect ratio, all direct
+  story/development fields, and languages. There is no nested identity or
+  duplicate Screenplay metadata object.
 - If `--project` is omitted and no current Studio project exists, fails with
   `CLI022`.
 
@@ -1045,7 +948,8 @@ Update project information fields.
 
 ```bash
 renku info set --project <project-name> --title <title>
-renku info set --project <project-name> --logline <text> --summary <text>
+renku info set --project <project-name> --logline <text> --synopsis <text>
+renku info set --project <project-name> --premise <text> --target-runtime-minutes 112 --themes responsibility,craft
 renku info set --project <project-name> --aspect-ratio 16:9 --json
 ```
 
@@ -1056,7 +960,14 @@ Options:
 - `--title`: set the title.
 - `--aspect-ratio`: set the aspect ratio.
 - `--logline`: set the logline.
-- `--summary`: set the summary.
+- `--synopsis`: set the synopsis.
+- Story/development flags also include `--premise`, `--intended-audience`,
+  `--format`, `--target-runtime-minutes`, `--primary-genre`,
+  `--secondary-genres`, `--tones`, `--content-rating-intent`,
+  `--creative-boundaries`, `--central-conflict`, `--dramatic-question`,
+  `--themes`, `--historical-basis`, `--dramatized-elements`,
+  `--screenplay-draft-status`, `--research-sources`, `--assumptions`,
+  `--open-questions`, and `--next-steps`. List values are comma-separated.
 
 Behavior:
 
@@ -1069,7 +980,7 @@ Clear optional project information fields.
 
 ```bash
 renku info clear --project <project-name> --logline
-renku info clear --project <project-name> --summary --json
+renku info clear --project <project-name> --synopsis clear --json
 ```
 
 Options:
@@ -1078,7 +989,9 @@ Options:
   Studio selection.
 - `--aspect-ratio`: clear the aspect ratio.
 - `--logline`: clear the logline.
-- `--summary`: clear the summary.
+- `--synopsis`: clear the synopsis.
+- Every optional direct Project story/development flag accepted by `set` can be
+  cleared; the supplied flag value is ignored by the clear command.
 
 Behavior:
 

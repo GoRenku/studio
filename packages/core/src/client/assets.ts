@@ -1,4 +1,4 @@
-import type { ProjectRelativePath } from './project.js';
+import type { ProjectRelativePath } from './project/index.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 
 export type AssetOwner =
@@ -6,7 +6,6 @@ export type AssetOwner =
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
   | { kind: 'prop'; id: string }
-  | { kind: 'sequence'; id: string }
   | { kind: 'scene'; id: string }
   | { kind: 'sceneBeat'; sceneId: string; beatId: string }
   | { kind: 'lookbook'; id: string }
@@ -38,7 +37,7 @@ export interface AssetUpdateReport {
   valid: true;
   warnings: DiagnosticIssue[];
   project: {
-    name: string;
+    projectName: string;
     id: string;
     projectFolder: string;
   };
@@ -61,7 +60,7 @@ export interface AssetSelectionReport {
   valid: true;
   warnings: DiagnosticIssue[];
   project: {
-    name: string;
+    projectName: string;
     id: string;
     projectFolder: string;
   };

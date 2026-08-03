@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ProjectRelativePath } from '../../client/project.js';
+import type { ProjectRelativePath } from '../../client/project/index.js';
 import { createProjectDataService } from '../project-data-service.js';
 import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 import {

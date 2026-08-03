@@ -4,21 +4,13 @@ import type { CastMember } from './cast-members.js';
 import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
 import type { Prop } from './props.js';
-import type {
-  Block,
-  Scene,
-  Screenplay,
-  Sequence,
-} from './screenplay.js';
-import type { ScreenplayAnalysisDocument } from './screenplay-analysis.js';
+import type { ScreenplayAnalysis } from './screenplay-analysis/index.js';
 import type {
   SceneBeatSheetDocument,
-} from './scene-beat-sheet.js';
+} from './scene-beats/index.js';
 import type {
-  ProjectCounts,
-  ProjectCoverImage,
-  ProjectInfo,
-} from './project.js';
+  Project,
+} from './project/index.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type { SceneDialogueAudioWorkspace } from './scene-dialogue-audio-workspace.js';
 import type {
@@ -41,11 +33,8 @@ export interface PageResponse<T> {
 }
 
 export interface ProjectShell {
-  identity: ProjectInfo;
-  coverImage: ProjectCoverImage | null;
+  project: Project;
   languages: ProjectLanguage[];
-  cast: CastMember[];
-  counts: ProjectCounts;
   navigation: ProjectShellNavigation;
 }
 
@@ -53,11 +42,7 @@ export interface ProjectShellNavigation {
   cast: PageResponse<CastNavigationRow>;
   locations: PageResponse<LocationNavigationRow>;
   props: PageResponse<PropNavigationRow>;
-  screenplay: ScreenplayNavigation;
-}
-
-export interface ScreenplayNavigation {
-  acts: PageResponse<ActNavigationRow>;
+  screenplay: import('./screenplay/index.js').ScreenplayStructureResource;
 }
 
 export interface CastNavigationRow {
@@ -82,31 +67,6 @@ export interface PropNavigationRow {
   handle: string;
   name: string;
   firstImage?: ScreenplayImageReference;
-}
-
-export interface ActNavigationRow {
-  id: string;
-  title: string;
-  purpose?: string;
-  sequenceCount: number;
-  sceneCount: number;
-}
-
-export interface SequenceNavigationRow {
-  id: string;
-  actId: string;
-  number: number;
-  title: string;
-  purpose?: string;
-  sceneCount: number;
-}
-
-export interface SceneNavigationRow {
-  id: string;
-  sequenceId: string;
-  productionNumber: string;
-  title: string;
-  setting?: Scene['setting'];
 }
 
 export interface ScreenplayImageReference {
@@ -154,33 +114,23 @@ export interface PropResource {
 }
 
 export interface StoryArcResource {
-  screenplay: Pick<
-    Screenplay,
-    | 'title'
-    | 'logline'
-    | 'dramaticQuestion'
-    | 'premiseOverview'
-    | 'centralConflict'
-    | 'summary'
-  >;
-  acts: StoryArcActResource[];
-  activeAnalysis: ScreenplayAnalysisDocument | null;
+  project: {
+    title: string;
+    logline?: string;
+    dramaticQuestion?: string;
+    premise?: string;
+    centralConflict?: string;
+    synopsis?: string;
+  };
+  scenes: StoryArcScene[];
+  activeAnalysis: ScreenplayAnalysis | null;
 }
 
-export interface StoryArcActResource extends ActNavigationRow {
-  sequences: StoryArcSequenceResource[];
-}
-
-export interface StoryArcSequenceResource extends SequenceNavigationRow {
-  scenes: StoryArcSceneResource[];
-}
-
-export interface StoryArcSceneResource extends SceneNavigationRow {
-  storyFunction?: string[];
-}
-
-export interface SequenceSceneRow extends SceneNavigationRow {
-  storyboardPreview?: SequenceSceneStoryboardPreview;
+export interface StoryArcScene {
+  id: string;
+  productionNumber?: string;
+  heading: string;
+  title?: string;
 }
 
 export interface SequenceSceneStoryboardPreview {
@@ -191,16 +141,9 @@ export interface SequenceSceneStoryboardPreview {
   }>;
 }
 
-export interface SequenceResource {
-  act: ActNavigationRow;
-  sequence: SequenceNavigationRow & Pick<Sequence, 'purpose'>;
-  scenes: PageResponse<SequenceSceneRow>;
-}
-
 export interface SceneBeatSheetResource {
-  scene: SceneNavigationRow;
-  sequence: SequenceNavigationRow;
-  act: ActNavigationRow;
+  scene: import('./screenplay/index.js').ScreenplaySceneResource;
+  sections: import('./screenplay/index.js').ScreenplaySection[];
   projectAspectRatio: string | null;
   activeBeatSheetId: string | null;
   activeBeatSheet: SceneBeatSheetDocument | null;
@@ -208,48 +151,21 @@ export interface SceneBeatSheetResource {
   castMemberLabels: Record<string, string>;
   castMemberImages: Record<string, ScreenplayImageReference>;
   locationLabels: Record<string, string>;
-}
-
-export interface ActStoryboardResource {
-  act: ActNavigationRow;
-  sequences: ActStoryboardSequence[];
-}
-
-export interface ActStoryboardSequence {
-  sequence: SequenceNavigationRow;
-  scenes: ActStoryboardScene[];
-}
-
-export interface ActStoryboardScene {
-  scene: SceneNavigationRow;
-  beats: ActStoryboardBeat[]; // empty -> render one scene placeholder slot
-}
-
-export interface ActStoryboardBeat {
-  beatId: string;
-  label: string; // app-derived ('Beat 1')
-  title: string;
-  image: ScreenplayImageReference | null;
+  propLabels: Record<string, string>;
 }
 
 export interface SceneNarrativeResource {
-  act: ActNavigationRow;
-  sequence: SequenceNavigationRow;
-  productionNumber: string;
-  scene: Scene;
-  blocks: Block[];
+  scene: import('./screenplay/index.js').ScreenplaySceneResource;
+  sections: import('./screenplay/index.js').ScreenplaySection[];
   castMemberLabels: Record<string, string>;
   castMemberImages: Record<string, ScreenplayImageReference>;
   locationLabels: Record<string, string>;
   locationImages: Record<string, ScreenplayImageReference>;
-  castMemberHandles: Record<string, string>;
-  locationHandles: Record<string, string>;
   dialogueAudio: SceneDialogueAudioWorkspace;
 }
 
 export interface SceneDesignResource {
-  scene: SceneNavigationRow;
-  sequence: SequenceNavigationRow;
+  scene: import('./screenplay/index.js').ScreenplaySceneResource;
   assetPage: AssetPage;
 }
 
@@ -283,7 +199,26 @@ export interface ProjectInformationResource {
   title: string;
   aspectRatio: string;
   logline?: string;
-  summary?: string;
+  synopsis?: string;
+  premise?: string;
+  intendedAudience?: string;
+  format?: string;
+  targetRuntimeMinutes?: number;
+  primaryGenre?: string;
+  secondaryGenres?: string[];
+  tones?: string[];
+  contentRatingIntent?: string;
+  creativeBoundaries?: string[];
+  centralConflict?: string;
+  dramaticQuestion?: string;
+  themes?: string[];
+  historicalBasis?: string[];
+  dramatizedElements?: string[];
+  screenplayDraftStatus?: string;
+  researchSources?: string[];
+  assumptions?: string[];
+  openQuestions?: string[];
+  nextSteps?: string[];
   languages: ProjectLanguage[];
 }
 
@@ -315,10 +250,13 @@ export interface DirectorScreenplayReadiness {
   counts: {
     castMembers: number;
     locations: number;
+    openingElements: number;
+    sections: number;
     acts: number;
     sequences: number;
     scenes: number;
     blocks: number;
+    references: number;
   };
 }
 
@@ -421,8 +359,7 @@ export type StudioSelection =
   | { type: 'props' }
   | { type: 'prop'; id: string }
   | { type: 'storyArc' }
-  | { type: 'act'; id: string }
-  | { type: 'sequence'; id: string }
+  | { type: 'section'; id: string }
   | {
       type: 'scene';
       id: string;
@@ -443,16 +380,9 @@ export type StudioSelectionContext =
   | { surface: 'location'; location: LocationNavigationRow }
   | { surface: 'props'; props: PageResponse<PropNavigationRow> }
   | { surface: 'prop'; prop: PropNavigationRow }
-  | { surface: 'story-arc'; acts: PageResponse<ActNavigationRow> }
-  | { surface: 'act'; act: ActNavigationRow }
-  | {
-      surface: 'sequence';
-      act: ActNavigationRow;
-      sequence: SequenceNavigationRow;
-    }
+  | { surface: 'story-arc' }
+  | { surface: 'section'; section: import('./screenplay/index.js').ScreenplaySectionResource }
   | {
       surface: 'scene';
-      act: ActNavigationRow;
-      scene: SceneNavigationRow;
-      sequence: SequenceNavigationRow;
+      scene: import('./screenplay/index.js').ScreenplaySceneResource;
     };

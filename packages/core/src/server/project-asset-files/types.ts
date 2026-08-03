@@ -32,7 +32,7 @@ export type ProjectAssetFileDestination =
   | {
       kind: 'scene.dialogueAudio';
       sceneId: string;
-      dialogueId: string;
+      turnId: string;
       sceneDialogueAudioId: string;
       dialogueAudioTakeId: string;
     }

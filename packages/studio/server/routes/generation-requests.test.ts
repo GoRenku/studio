@@ -118,7 +118,7 @@ function routeCommands(): GenerationRequestRouteCommands {
       kind: 'generationPreview',
       previewId: 'generation_preview_test',
       purpose: 'cast.character-sheet',
-      project: { id: 'project_test', name: 'constantinople' },
+      project: { id: 'project_test', projectName: 'constantinople' },
       target: { kind: 'castMember', id: 'cast_test' },
       title: 'Saved request',
       subject: { projectLabel: 'Constantinople' },

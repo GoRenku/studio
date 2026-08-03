@@ -139,7 +139,7 @@ function projectReport(input: {
     );
   }
   return {
-    name: project.name,
+    projectName: project.projectName,
     id: project.id,
     projectFolder: input.projectFolder,
   };

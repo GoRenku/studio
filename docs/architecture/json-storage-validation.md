@@ -16,7 +16,8 @@ SQLite accepting text does not make the stored value safe. TypeScript types also
 do not validate runtime data once it crosses a CLI, Studio server, agent, or
 database boundary. Project-owned JSON needs a real runtime contract.
 
-The codebase already uses this pattern for screenplay JSON:
+The codebase already uses this pattern for Screenplay, Screenplay Analysis, and
+Scene Beat Sheet JSON:
 
 - browser-safe JSON Schema constants live under `packages/core/src/client`;
 - server validators use AJV v8 with JSON Schema draft 2020-12;
@@ -33,7 +34,10 @@ returned through core, CLI, Studio server, or UI-facing resource contracts. If
 stored JSON no longer matches its schema, core must fail fast with structured
 diagnostics instead of returning malformed data.
 
-Use the same AJV pattern as `packages/core/src/server/screenplay-json/validator.ts`:
+Use the same AJV pattern as the feature-owned validators under
+`packages/core/src/server/screenplay/validation/`,
+`packages/core/src/server/screenplay-analysis/validation.ts`, and
+`packages/core/src/server/scene-beat-sheet/validator.ts`:
 
 ```ts
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -73,7 +77,9 @@ packages/core/src/client/
 For example:
 
 ```text
-packages/core/src/client/screenplay-json-schemas.ts
+packages/core/src/client/screenplay/schemas/
+packages/core/src/client/screenplay-analysis/schemas.ts
+packages/core/src/client/scene-beats/schemas.ts
 packages/core/src/client/visual-language-json-schemas.ts
 ```
 
@@ -85,7 +91,9 @@ Server-side validators should live under a feature-owned server folder, for
 example:
 
 ```text
-packages/core/src/server/screenplay-json/validator.ts
+packages/core/src/server/screenplay/validation/blocks.ts
+packages/core/src/server/screenplay-analysis/validation.ts
+packages/core/src/server/scene-beat-sheet/validator.ts
 packages/core/src/server/visual-language-json/validator.ts
 ```
 

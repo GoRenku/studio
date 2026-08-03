@@ -109,6 +109,66 @@ export function readRequiredHttpBoolean(
   return value;
 }
 
+export function readOptionalHttpNumber(
+  record: Record<string, unknown>,
+  path: string[],
+  issues: DiagnosticIssue[],
+  context: string
+): number | undefined {
+  const value = record[path[path.length - 1]];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER010',
+        `${formatHttpRequestPath(path)} must be a finite number.`,
+        { path, context }
+      )
+    );
+    return undefined;
+  }
+  return value;
+}
+
+export function readOptionalHttpStringArray(
+  record: Record<string, unknown>,
+  path: string[],
+  issues: DiagnosticIssue[],
+  context: string
+): string[] | undefined {
+  const value = record[path[path.length - 1]];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER010',
+        `${formatHttpRequestPath(path)} must be an array of strings.`,
+        { path, context }
+      )
+    );
+    return undefined;
+  }
+  const values: string[] = [];
+  value.forEach((item, index) => {
+    if (typeof item !== 'string') {
+      issues.push(
+        createDiagnosticError(
+          'STUDIO_SERVER010',
+          `${formatHttpRequestPath([...path, String(index)])} must be a string.`,
+          { path: [...path, String(index)], context }
+        )
+      );
+      return;
+    }
+    values.push(item);
+  });
+  return values;
+}
+
 export function formatHttpRequestPath(path: string[]): string {
   if (path.length === 0) {
     return '<root>';

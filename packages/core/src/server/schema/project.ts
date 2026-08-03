@@ -1,13 +1,50 @@
-import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { check, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
-export const projects = sqliteTable('project', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  title: text('title').notNull(),
-  logline: text('logline'),
-  summary: text('summary'),
-  aspectRatio: text('aspect_ratio'),
-  coverFile: text('cover_file'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-});
+export const projects = sqliteTable(
+  'project',
+  {
+    id: text('id').primaryKey(),
+    projectName: text('project_name').notNull(),
+    title: text('title').notNull(),
+    aspectRatio: text('aspect_ratio').notNull(),
+    coverFile: text('cover_file'),
+    logline: text('logline'),
+    synopsis: text('synopsis'),
+    premise: text('premise'),
+    intendedAudience: text('intended_audience'),
+    format: text('format'),
+    targetRuntimeMinutes: integer('target_runtime_minutes'),
+    primaryGenre: text('primary_genre'),
+    secondaryGenresJson: text('secondary_genres_json'),
+    tonesJson: text('tones_json'),
+    contentRatingIntent: text('content_rating_intent'),
+    creativeBoundariesJson: text('creative_boundaries_json'),
+    centralConflict: text('central_conflict'),
+    dramaticQuestion: text('dramatic_question'),
+    themesJson: text('themes_json'),
+    historicalBasisJson: text('historical_basis_json'),
+    dramatizedElementsJson: text('dramatized_elements_json'),
+    screenplayDraftStatus: text('screenplay_draft_status'),
+    researchSourcesJson: text('research_sources_json'),
+    assumptionsJson: text('assumptions_json'),
+    openQuestionsJson: text('open_questions_json'),
+    nextStepsJson: text('next_steps_json'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('project_project_name_unique_idx').on(table.projectName),
+    check('project_project_name_non_empty_check', sql`length(${table.projectName}) > 0`),
+    check('project_title_non_empty_check', sql`length(${table.title}) > 0`),
+    check('project_aspect_ratio_non_empty_check', sql`length(${table.aspectRatio}) > 0`),
+    check(
+      'project_runtime_non_negative_check',
+      sql`${table.targetRuntimeMinutes} is null or ${table.targetRuntimeMinutes} >= 0`,
+    ),
+    check(
+      'project_cover_file_check',
+      sql`${table.coverFile} is null or ${table.coverFile} = 'cover.png'`,
+    ),
+  ],
+);

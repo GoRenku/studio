@@ -1,5 +1,7 @@
+export type PropId = string;
+
 export interface Prop {
-  id: string;
+  id: PropId;
   handle: string;
   name: string;
   description?: string;

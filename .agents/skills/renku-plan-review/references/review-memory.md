@@ -10,6 +10,73 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-03 — Define every public field in the plan that owns the model
+
+- **User objection:** A backend data-model plan moved its actual interfaces to
+  a supporting document and then used fields such as a string-array
+  `storyFunction` without defining what they meant, who authored them, whether
+  they came from import, or how consumers used them.
+- **Planning rule:** The phase that implements a public model must contain its
+  complete normative types and persistence mapping. Define every field,
+  identity alias, discriminator, referenced union, input shape, and schema:
+  meaning, owner, optionality, ordering, authorship/import source, validation,
+  storage, and important consumer behavior. Do not use a supporting context
+  document as the only owner, and do not present an interface as complete while
+  leaving members unexplained or referenced types undefined.
+- **Apply when:** A plan introduces or replaces a domain aggregate, shows a
+  TypeScript/JSON interface, uses arrays or generic strings whose vocabulary is
+  unclear, links to another document for “full definitions,” or names a closed
+  operation/schema union without enumerating it.
+- **Evidence to inspect:** The owning phase plan, every displayed field and
+  referenced type, JSON Schemas, Drizzle columns and constraints, migration
+  source values, real sample values, UI/projection consumers, import behavior,
+  CLI authoring inputs, and sister-skill examples.
+
+### 2026-08-03 — Preserve legacy data without preserving a legacy subsystem
+
+- **User objection:** A screenplay redesign relaxed the existing Renku Scene-
+  number allocator but still preserved its separate reservation registry, even
+  though that registry was an initial product hack and the accepted import
+  source already supplied the relevant Final Draft Scene Number semantics.
+- **Planning rule:** When replacing a pre-customer subsystem with an
+  authoritative domain or interchange-format concept, first decide the correct
+  semantic owner and contract from the target workflow. Convert valid existing
+  values into that contract, but do not retain the old registry, allocator,
+  normalization, reservation, or lifecycle behavior merely because it already
+  exists. Treat data preservation and architecture preservation as separate
+  decisions.
+- **Apply when:** A plan imports an industry format, replaces an acknowledged
+  prototype or hack, or changes a direct entity property while proposing to
+  retain an older companion registry/service behind it.
+- **Evidence to inspect:** The external format's authoritative documentation,
+  the exact persisted values and orphan/reservation rows in the real sample,
+  current allocation and normalization code, entity ownership, ordering rules,
+  and the ADR that must be superseded if the accepted target changes it.
+
+### 2026-08-02 — Clarify the target instead of reflexively agreeing and redesigning
+
+- **User objection:** After the user rejected a plan's model and naming, the
+  agent reflexively agreed with the criticism and immediately began another
+  from-scratch redesign without first understanding the desired ownership
+  model or clarifying the choices exposed by that criticism. Agreement became
+  a substitute for senior engineering judgment.
+- **Planning rule:** Never say the user is right merely to absorb criticism or
+  reduce friction. Separate verified defects from unresolved product choices,
+  explain the evidence for each current assumption, challenge claims when the
+  evidence points elsewhere, and ask focused questions whose answers materially
+  determine the replacement. Do not rewrite a rejected plan until the intended
+  outcome, ownership boundaries, and important tradeoffs are understood well
+  enough that another blind attempt is unnecessary.
+- **Apply when:** A user rejects a plan broadly, asks for a redesign from
+  scratch, questions the meaning or ownership of several foundational fields,
+  or introduces requirements that admit materially different domain models.
+- **Evidence to inspect:** Re-read the user's exact objections, enumerate every
+  disputed assumption and unanswered product choice, then compare the current
+  implementation, accepted documentation, real project data, external-format
+  evidence, and actual user-facing workflow before proposing a replacement.
+  Confirm the user has answered the decisions that cannot be learned from
+  evidence alone.
+
 ### 2026-07-19 — Convert local development data instead of preserving obsolete contracts
 
 - **User objection:** A review treated old values in the single local sample
@@ -49,7 +116,20 @@ or architecture decision.
   every accepted UX detail, workflow step, supported variant, data effect,
   implementation owner, verification, and checkable completion item. Prefer
   extending the existing owner and remove repeated explanation, not requirement
-  detail. Once the user has decided an issue, rewrite the active plan around the
+  detail. When the accepted work has independently implementable and reviewable
+  delivery gates with different owners—such as a backend contract cutover, a
+  UI restoration, a format importer, or an adjacent persisted-analysis
+  redesign—use separately numbered plans with explicit dependencies and
+  self-contained acceptance gates instead of one massive plan and checklist.
+  A coordinated release or migration may still require multiple plans to pass
+  before it is applied; separate plan ownership does not require a temporary
+  runtime compatibility stage. When that split would scatter or compress shared
+  product reasoning, evidence, exact contracts, cross-surface behavior, or a
+  common verification matrix, preserve those parts in one linked supporting
+  design reference. Make clear that it is not another implementation plan:
+  phase plans own sequencing and completion, while the shared reference keeps
+  cross-cutting semantics inspectable without copying them into every plan.
+  Once the user has decided an issue, rewrite the active plan around the
   accepted behavior. Remove rejected alternatives, decision-question labels,
   reviewer back-and-forth, and the chronology of how the plan evolved unless
   that history is itself required implementation context.
@@ -57,10 +137,22 @@ or architecture decision.
   modes, services, dispatchers, diagnostics, routes, documentation edits, or
   repeated plan sections, or when simplification replaces exact requirements
   with phrases such as “update callers,” “update the skill,” or “test normally.”
+  Also apply when one phase is explicitly allowed to leave another layer broken
+  or when backend, UI, importer, migration, or agent work can reach meaningful
+  completion in sequence without sharing one completion status. Apply when a
+  foundational model change exposes a separate pre-existing subsystem defect
+  that deserves its own contract, migration, and verification even if both
+  changes must ship together. Apply the shared-reference check when several
+  phase plans depend on the same detailed model, evidence base, fidelity
+  boundary, UI regression contract, or agent workflow and the split drafts
+  replace those details with brief summaries.
 - **Evidence to inspect:** Compare the product request with every in-scope item,
   new concept, proposed file, validation, documentation target, verification
   step, and checklist group; identify existing owners that can be changed
   directly, then confirm no accepted requirement disappeared during compression.
+  Compare the pre-split source with the phase plans, preserve cross-cutting
+  material in a clearly linked supporting reference, and confirm every phase
+  names the exact sections it depends on.
   Search the final plan for superseded option labels, unresolved-decision
   language, and explanations of rejected models that implementers no longer
   need.
@@ -300,3 +392,71 @@ or architecture decision.
   samples, and evals; require every deleted file to have either a named
   successor or an explicit finding that it contains only an obsolete executable
   contract.
+
+### 2026-08-02 — Use folders as module boundaries instead of filename prefixes
+
+- **User objection:** A plan claimed to split a broad screenplay area but kept
+  proposing groups of `screenplay-*` files directly under Core client, CLI
+  commands, and Studio route folders. Correcting only the first example left the
+  same structural mistake in the other affected layers.
+- **Planning rule:** In an Architecture Shape Gate, express a domain boundary
+  once as a folder, then organize multi-file concerns beneath it. Review every
+  affected production-code tree—contracts, owning services, persistence,
+  schemas, wiring, resources, adapters, and features—rather than fixing one
+  representative list. Use an `index.ts` only as an intentional thin module
+  entrypoint, do not leave compatibility re-exports, and do not overcorrect by
+  creating a directory solely for each single production file.
+- **Apply when:** A proposed file list repeats one domain prefix across several
+  files in a broad parent folder, one dispatcher is being split into several
+  sibling prefixed handlers, or a plan reorganizes Core while leaving the same
+  flat grouping in CLI, HTTP, services, or UI.
+- **Evidence to inspect:** Enumerate every proposed source tree and compare it
+  with current import/registration boundaries. Check which concerns have
+  multiple collaborating files, where callers should enter the module, whether
+  old paths are deleted directly, and whether any planned `index.ts` contains
+  behavior instead of exports or shallow composition.
+
+### 2026-08-02 — Make non-owning container deletion match its flattening semantics
+
+- **User objection:** A plan described Acts and Sequences as organization-only
+  but allowed deletion only when empty, as though child Scenes were owned by the
+  section. The expected behavior was to remove the wrapper, splice its direct
+  children into the parent at the same position, and preserve their identity and
+  order.
+- **Planning rule:** When a container is explicitly non-owning, do not give its
+  deletion contract ownership-like blockers or cascading behavior. Define one
+  deterministic splice operation that removes only the wrapper, promotes direct
+  children without recursively flattening child containers, and preserves
+  surrounding order and descendant identity. Verify that durable dependencies
+  belong to the children or another real owner before claiming deletion is free.
+- **Apply when:** Planning optional sections, folders, groups, categories, or
+  other organizational wrappers whose contents must remain valid when the
+  wrapper is removed.
+- **Evidence to inspect:** Ownership tables and unions, foreign keys, dependent
+  document scopes, canonical ordering, move/delete command contracts, mixed
+  sibling examples, and owning-layer tests for empty and non-empty deletion.
+
+### 2026-08-02 — Trace every public union variant through all consumers
+
+- **User objection:** A screenplay plan made the dialogue variant detailed but
+  left the other Scene block kinds as a prose list, without proving their JSON
+  Schema, persistence validation, sister-skill contracts, Narrative rendering,
+  or downstream UI behavior. Broad phrases such as “update the UI” and “update
+  affected skills” hid important work.
+- **Planning rule:** When a plan introduces or replaces a discriminated union,
+  enumerate every accepted variant and trace it end to end: public type, closed
+  schema, persistence boundary, import/migration mapping, projections and agent
+  context, adapter contract, user-visible presentation, samples/evals, and
+  owning-layer tests. Shared envelopes are fine when variants have identical
+  durable fields, but the discriminator, mapping, and exhaustive consumers must
+  remain explicit. Name exact affected Skill/reference/sample families and UI
+  surfaces instead of using catch-all follow-up language.
+- **Apply when:** One union member receives a concrete type or renderer while
+  siblings appear only in an enum/prose list, an importer supports several
+  source element kinds, or a plan says “all consumers,” “the rest of the UI,”
+  “affected examples,” or similar without an inspectable inventory.
+- **Evidence to inspect:** Existing union/schema definitions, real persisted
+  variant counts, importer source-element vocabulary, database JSON validators,
+  context/plain-text projectors, React switches and keys, navigation/resource
+  DTOs, downstream evidence anchors, and every sister-skill contract, sample,
+  and eval that authors or consumes the union.

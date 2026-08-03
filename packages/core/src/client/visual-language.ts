@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { ProjectRelativePath } from './project.js';
+import type { ProjectRelativePath } from './project/index.js';
 import type { Asset } from './assets.js';
 import type { RecoverableMutationReport } from './trash.js';
 
@@ -225,7 +225,7 @@ export interface CameraSection {
 }
 
 export interface VisualLanguageProjectReport {
-  name: string;
+  projectName: string;
   id?: string;
   projectFolder?: string;
 }

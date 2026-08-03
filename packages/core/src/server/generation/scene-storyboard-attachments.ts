@@ -12,7 +12,6 @@ import {
   readSceneBeatSheetDocument,
   requireSceneBeatSheetForScene,
 } from '../database/access/scene-beat-sheets.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { createUniqueIdAllocator, type ProjectIdGenerator } from '../entity-ids.js';
 import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
@@ -26,6 +25,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import { studioSceneBeatsResourceKey } from '../studio-coordination/resource-keys.js';
 import { validateGenerationProvenance } from './attachments.js';
 import { persistOwnedGeneratedMediaAssetInSession } from './attachment-persistence.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 
 export function attachSceneStoryboardImages(input: {
   session: DatabaseSession;
@@ -36,13 +36,7 @@ export function attachSceneStoryboardImages(input: {
   idGenerator: ProjectIdGenerator;
 }): SceneStoryboardImagesImportReport {
   validateDocumentIdentity(input);
-  const screenplay = readScreenplayDocumentFromSession(input.session);
-  if (!screenplay) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_CONTEXT_UNAVAILABLE',
-      'A screenplay is required to attach storyboard images.'
-    );
-  }
+  const screenplay = readCanonicalScreenplay(input.session);
   const beatSheet = readSceneBeatSheetDocument({
     row: requireSceneBeatSheetForScene({
       session: input.session,
@@ -191,7 +185,7 @@ export function attachSceneStoryboardImages(input: {
     warnings: [],
     project: {
       id: project.id,
-      name: project.name,
+      projectName: project.projectName,
       projectFolder: input.projectFolder,
     },
     changes: [{
@@ -213,8 +207,7 @@ function validateDocumentIdentity(input: {
   beatSheetId: string;
 }): void {
   if (
-    input.document.kind !== 'sceneStoryboardImagesImport'
-    || input.document.beatSheetId !== input.beatSheetId
+    input.document.beatSheetId !== input.beatSheetId
     || typeof input.document.select !== 'boolean'
   ) {
     throw invalidDocument(

@@ -1,14 +1,13 @@
-import { count } from 'drizzle-orm';
+import { count, eq, type SQL } from 'drizzle-orm';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { ProjectCounts } from '../../../client/index.js';
 import {
   castMembers,
-  acts,
   locations,
   projectLocales,
   props,
   scenes,
-  sequences,
+  screenplaySections,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
@@ -18,10 +17,19 @@ export function readProjectCounts(session: DatabaseSession): ProjectCounts {
     castMembers: countTable(session, castMembers),
     locations: countTable(session, locations),
     props: countTable(session, props),
-    acts: countTable(session, acts),
-    sequences: countTable(session, sequences),
+    acts: countTableWhere(session, screenplaySections, eq(screenplaySections.sectionType, 'act')),
+    sequences: countTableWhere(session, screenplaySections, eq(screenplaySections.sectionType, 'sequence')),
     scenes: countTable(session, scenes),
   };
+}
+
+function countTableWhere(
+  session: DatabaseSession,
+  table: SQLiteTable,
+  condition: SQL<unknown>,
+): number {
+  const row = session.db.select({ value: count() }).from(table).where(condition).get();
+  return row?.value ?? 0;
 }
 
 function countTable(session: DatabaseSession, table: SQLiteTable): number {

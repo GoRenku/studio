@@ -133,11 +133,12 @@ later materializes them into an owner folder.
 Scene-owned Dialogue Audio paths use:
 
 ```text
-audio/<sequence-name>/<scene-name>/<dialogue-order-key>-<character-name>-<take-number>.<ext>
+audio/<scene-id>/<dialogue-turn-id>-<speaker-handle>-<allocation-number>.<ext>
 ```
 
-The dialogue order key is persisted on the screenplay dialogue block and is not
-recomputed from the current array index.
+The stable Dialogue Turn id and its Core-validated speaker reference determine
+the filename prefix. File allocation never depends on optional Section ancestry
+or the Dialogue Turn's current array index.
 
 ## Working Assets Versus Production Assets
 
@@ -183,7 +184,6 @@ at the project root. There is no `working-assets/` root and no
     scratch/
 
   screenplay/
-    acts/
 
   cast/
     <cast-handle>/
@@ -200,15 +200,13 @@ at the project root. There is no `working-assets/` root and no
     lookbook/
 
   storyboards/
-    <sequence-name>/
-      <scene-name>/
-        tmp/
-        00-iteration/
+    <scene-id>/
+      tmp/
+      00-iteration/
 
   shots/
-    <sequence-name>/
-      <scene-name>/
-        <take-slug>-01/
+    <scene-id>/
+      <take-slug>-01/
 
   research/
 

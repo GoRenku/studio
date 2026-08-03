@@ -13,7 +13,7 @@ export async function readSceneStoryboardImagesImportDocument(
   filePath: string
 ): Promise<SceneStoryboardImagesImportDocument> {
   const parsed = await readJsonFile(filePath);
-  if (!isRecord(parsed) || parsed.kind !== 'sceneStoryboardImagesImport') {
+  if (!isRecord(parsed)) {
     throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   const beats = parsed.beats;
@@ -25,7 +25,6 @@ export async function readSceneStoryboardImagesImportDocument(
     throw invalidSceneStoryboardImagesImportFile(filePath);
   }
   return {
-    kind: 'sceneStoryboardImagesImport',
     select: parsed.select,
     ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
     beatSheetId: parsed.beatSheetId,

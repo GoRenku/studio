@@ -61,7 +61,7 @@ describe('Scene Dialogue Audio generation', () => {
       homeDir: readyProject.homeDir,
       projectName: 'dialogue-audio-test',
       sceneId: readyProject.sceneId,
-      dialogueId: readyProject.dialogueId,
+      turnId: readyProject.dialogueId,
       setup: {
         modelChoice: 'elevenlabs/eleven_v3',
         castVoiceId: voice.voice.id,
@@ -71,7 +71,7 @@ describe('Scene Dialogue Audio generation', () => {
       simulate: true,
     });
 
-    const take = report.context.audioByDialogueId[
+    const take = report.context.audioByTurnId[
       readyProject.dialogueId
     ]?.takes[0];
     expect(take?.generationRunId).toMatch(/^media_generation_run_/);
@@ -84,46 +84,28 @@ describe('Scene Dialogue Audio generation', () => {
     ).resolves.toMatchObject({ id: take!.generationRunId, status: 'simulated' });
   });
 
-  it('rejects an invalid dialogue destination before saving setup or running generation', async () => {
+  it('rejects a missing Dialogue Turn before saving setup or running generation', async () => {
     const readyProject = await createDialogueAudioReadyProject();
     if (!readyProject) {
       return;
     }
-    const { session } = await openProjectSession({
-      homeDir: readyProject.homeDir,
-      projectName: 'dialogue-audio-test',
-    });
-    const row = session.db
-      .select({ blocksJson: scenes.blocksJson })
-      .from(scenes)
-      .where(eq(scenes.id, readyProject.sceneId))
-      .get()!;
-    const blocks = JSON.parse(row.blocksJson) as Array<Record<string, unknown>>;
-    blocks.forEach((block) => delete block.dialogueOrderKey);
-    session.db
-      .update(scenes)
-      .set({ blocksJson: JSON.stringify(blocks) })
-      .where(eq(scenes.id, readyProject.sceneId))
-      .run();
-    session.close();
-
     await expect(
       readyProject.projectData.generateSceneDialogueAudioTake({
         homeDir: readyProject.homeDir,
         projectName: 'dialogue-audio-test',
         sceneId: readyProject.sceneId,
-        dialogueId: readyProject.dialogueId,
+        turnId: 'turn_missing',
         setup: {},
         simulate: true,
       })
     ).rejects.toMatchObject({
-      code: 'PROJECT_ASSET_FILE_DIALOGUE_ORDER_KEY_MISSING',
+      code: 'PROJECT_ASSET_FILE_OWNER_MISSING',
     });
     const workspace = await readyProject.projectData.readSceneDialogueAudioWorkspace({
       homeDir: readyProject.homeDir,
       projectName: 'dialogue-audio-test',
       sceneId: readyProject.sceneId,
     });
-    expect(workspace.audioByDialogueId[readyProject.dialogueId]).toBeUndefined();
+    expect(workspace.audioByTurnId[readyProject.dialogueId]).toBeUndefined();
   });
 });

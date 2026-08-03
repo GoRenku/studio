@@ -1,5 +1,5 @@
 import type { Asset } from './assets.js';
-import type { ProjectRelativePath } from './project.js';
+import type { ProjectRelativePath } from './project/index.js';
 
 export interface CastVoice {
   id: string;
@@ -99,7 +99,7 @@ export interface CastVoiceProviderRegistrationReadReport {
 export interface CastVoiceProviderRegistrationWriteReport {
   project: {
     id?: string;
-    name: string;
+    projectName: string;
   };
   voice: CastVoice;
   registration: CastVoiceProviderRegistration;
@@ -109,7 +109,7 @@ export interface CastVoiceProviderRegistrationWriteReport {
 export interface CastVoiceProviderRegistrationRemoveReport {
   project: {
     id?: string;
-    name: string;
+    projectName: string;
   };
   removed: {
     castMemberId: string;
@@ -129,7 +129,7 @@ export interface CastVoiceAttachmentReport {
   warnings: unknown[];
   project: {
     id?: string;
-    name: string;
+    projectName: string;
   };
   castMember: {
     id: string;
@@ -153,7 +153,7 @@ export interface CastVoiceAttachmentReport {
 export interface CastVoiceRemoveReport {
   project: {
     id?: string;
-    name: string;
+    projectName: string;
   };
   removed: {
     castMemberId: string;

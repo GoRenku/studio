@@ -58,7 +58,6 @@ function isSingleIdOwnerKind(
   return value === 'castMember'
     || value === 'location'
     || value === 'prop'
-    || value === 'sequence'
     || value === 'scene'
     || value === 'lookbook'
     || value === 'shot';

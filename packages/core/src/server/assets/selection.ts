@@ -146,7 +146,7 @@ function selectionReport(
   return {
     valid: true,
     warnings: [],
-    project: { id: project.id, name: project.name, projectFolder },
+    project: { id: project.id, projectName: project.projectName, projectFolder },
     target,
     selectedAssetId,
     resourceKeys: assetOwnerResourceKeys(

@@ -35,39 +35,49 @@ describe('project information Hono route', () => {
 
   it('patches Project Information through ProjectDataService', async () => {
     let currentProject = makeProject();
+    let currentLanguages = makeProjectShell(currentProject).languages;
     const app = createMountedProjectInformationRoute({
       ...fakeProjectDataService(),
       async updateProjectInformation(input) {
         currentProject = {
           ...currentProject,
-          identity: {
-            ...currentProject.identity,
-            title: input.information.title,
-            aspectRatio:
-              input.information.aspectRatio ?? currentProject.identity.aspectRatio,
-          },
-          languages: input.information.languages.map((language, index) => ({
-            id: `language_${index + 1}`,
-            ...language,
-          })),
+          title: input.information.title,
+          aspectRatio: input.information.aspectRatio ?? currentProject.aspectRatio,
+          logline: input.information.logline,
+          synopsis: input.information.synopsis,
+          premise: input.information.premise,
+          targetRuntimeMinutes: input.information.targetRuntimeMinutes,
+          themes: input.information.themes,
         };
+        currentLanguages = input.information.languages.map((language, index) => ({
+          id: `language_${index + 1}`,
+          ...language,
+        }));
         return {
-          title: currentProject.identity.title,
-          aspectRatio: currentProject.identity.aspectRatio,
-          logline: currentProject.identity.logline,
-          languages: currentProject.languages,
+          title: currentProject.title,
+          aspectRatio: currentProject.aspectRatio,
+          logline: currentProject.logline,
+          synopsis: currentProject.synopsis,
+          premise: currentProject.premise,
+          targetRuntimeMinutes: currentProject.targetRuntimeMinutes,
+          themes: currentProject.themes,
+          languages: currentLanguages,
         };
       },
       async readProjectInformationResource() {
         return {
-          title: currentProject.identity.title,
-          aspectRatio: currentProject.identity.aspectRatio,
-          logline: currentProject.identity.logline,
-          languages: currentProject.languages,
+          title: currentProject.title,
+          aspectRatio: currentProject.aspectRatio,
+          logline: currentProject.logline,
+          synopsis: currentProject.synopsis,
+          premise: currentProject.premise,
+          targetRuntimeMinutes: currentProject.targetRuntimeMinutes,
+          themes: currentProject.themes,
+          languages: currentLanguages,
         };
       },
       async readProjectShell() {
-        return makeProjectShell(currentProject);
+        return { ...makeProjectShell(currentProject), languages: currentLanguages };
       },
     });
 
@@ -77,7 +87,10 @@ describe('project information Hono route', () => {
         title: 'The Siege Machine',
         aspectRatio: '21:9',
         logline: 'A sharper premise.',
-        summary: 'A revised summary.',
+        synopsis: 'A revised synopsis.',
+        premise: 'Craft becomes a weapon of empire.',
+        targetRuntimeMinutes: 12,
+        themes: ['ambition', 'legacy'],
         languages: [
           {
             localeTag: 'en-US',

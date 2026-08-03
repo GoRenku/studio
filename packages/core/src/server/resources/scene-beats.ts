@@ -3,21 +3,18 @@ import type {
   SceneBeatSheetResource,
   ScreenplayImageReference,
 } from '../../client/index.js';
-import type { ScreenplayDocument } from '../../client/screenplay.js';
-import { ProjectDataError } from '../project-data-error.js';
+import type { Screenplay, ScreenplaySection } from '../../client/screenplay/index.js';
 import { listAssetPageInSession } from '../assets/projection.js';
-import {
-  readActNavigationRow,
-  readSceneNavigationContext,
-} from '../database/access/navigation.js';
+import { listCastMemberRecords } from '../database/access/cast-members.js';
+import { listLocationRecords } from '../database/access/locations.js';
+import { listPropRecords } from '../database/access/props.js';
 import { readProjectRecord } from '../database/access/project.js';
-import {
-  readActiveSceneBeatSheetRecord,
-} from '../database/access/scene-beat-sheets.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import { readActiveSceneBeatSheetRecord } from '../database/access/scene-beat-sheets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ReadSceneBeatSheetResourceInput } from '../project-data-service-contracts.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
+import { projectScreenplayScene } from '../screenplay/projections/scene.js';
 import { readSceneStoryboardProjection } from './storyboard-overviews.js';
 
 export async function readSceneBeatSheetResource(
@@ -25,59 +22,72 @@ export async function readSceneBeatSheetResource(
 ): Promise<SceneBeatSheetResource> {
   const { session } = await openProjectSession(input);
   try {
-    const context = readSceneNavigationContext(session, input.sceneId);
-    if (!context) {
-      throwNotFound('scene', input.sceneId);
-    }
-    const act = readActNavigationRow(session, context.sequence.actId);
-    if (!act) {
-      throwNotFound('act', context.sequence.actId);
-    }
+    const screenplay = readCanonicalScreenplay(session);
+    const scene = projectScreenplayScene(screenplay, input.sceneId);
     const projection = readSceneStoryboardProjection(session, input.sceneId);
-    const screenplay = requireScreenplayDocumentFromSession(session);
+    const castMemberIds = subjectIds(scene.references, 'castMember');
+    const locationIds = subjectIds(scene.references, 'location');
+    const propIds = subjectIds(scene.references, 'prop');
+    const castMembers = listCastMemberRecords(session).filter((member) => castMemberIds.has(member.id));
     return {
-      scene: context.scene,
-      sequence: context.sequence,
-      act,
+      scene,
+      sections: collectContainingSections(screenplay, input.sceneId),
       projectAspectRatio: readProjectRecord(session)?.aspectRatio ?? null,
-      activeBeatSheetId:
-        readActiveSceneBeatSheetRecord(session, input.sceneId)?.id ?? null,
+      activeBeatSheetId: readActiveSceneBeatSheetRecord(session, input.sceneId)?.id ?? null,
       activeBeatSheet: projection.document,
       storyboardImagesByBeatId: projection.imagesByBeatId,
-      castMemberLabels: screenplay
-        ? Object.fromEntries(
-            screenplay.cast.map((castMember) => [castMember.id, castMember.name])
-          )
-        : {},
-      castMemberImages: screenplay
-        ? Object.fromEntries(
-            screenplay.cast.flatMap((castMember) => {
-              if (!castMember.id) {
-                return [];
-              }
-              const image = firstCastMemberImage(session, castMember.id);
-              return image ? [[castMember.id, image]] : [];
-            })
-          )
-        : {},
-      locationLabels: screenplay
-        ? Object.fromEntries(
-            screenplay.locations.map((location) => [location.id, location.name])
-          )
-        : {},
+      castMemberLabels: Object.fromEntries(castMembers.map((member) => [member.id, member.name])),
+      castMemberImages: Object.fromEntries(
+        castMembers.flatMap((member) => {
+          const image = firstCastMemberImage(session, member.id);
+          return image ? [[member.id, image]] : [];
+        }),
+      ),
+      locationLabels: Object.fromEntries(
+        listLocationRecords(session)
+          .filter((location) => locationIds.has(location.id))
+          .map((location) => [location.id, location.name]),
+      ),
+      propLabels: Object.fromEntries(
+        listPropRecords(session)
+          .filter((prop) => propIds.has(prop.id))
+          .map((prop) => [prop.id, prop.name]),
+      ),
     };
   } finally {
     session.close();
   }
 }
 
+function subjectIds(
+  references: ReturnType<typeof projectScreenplayScene>['references'],
+  type: 'castMember' | 'location' | 'prop',
+): Set<string> {
+  return new Set(references.flatMap((reference) => reference.subject.type === type ? [reference.subject.id] : []));
+}
+
+function collectContainingSections(screenplay: Screenplay, sceneId: string): ScreenplaySection[] {
+  const sectionById = new Map(screenplay.sections.map((section) => [section.id, section]));
+  const parentByContentId = new Map(screenplay.structure.map((entry) => [entry.id, entry.parentSectionId]));
+  const result: ScreenplaySection[] = [];
+  let parentId = parentByContentId.get(sceneId);
+  while (parentId) {
+    const section = sectionById.get(parentId);
+    if (!section) {
+      break;
+    }
+    result.unshift(section);
+    parentId = parentByContentId.get(section.id);
+  }
+  return result;
+}
+
 function firstCastMemberImage(
   session: DatabaseSession,
   castMemberId: string
 ): ScreenplayImageReference | undefined {
-  const owner = { kind: 'castMember' as const, id: castMemberId };
   const page = listAssetPageInSession(session, {
-    owner,
+    owner: { kind: 'castMember', id: castMemberId },
     type: 'cast_profile',
     mediaKind: 'image',
   });
@@ -85,14 +95,9 @@ function firstCastMemberImage(
   return asset ? toScreenplayImageReference(asset) : undefined;
 }
 
-function toScreenplayImageReference(
-  asset: Asset
-): ScreenplayImageReference | undefined {
+function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | undefined {
   const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
-  if (!file) {
-    return undefined;
-  }
-  return {
+  return file ? {
     assetId: asset.id,
     assetFileId: file.id,
     title: asset.title,
@@ -101,26 +106,5 @@ function toScreenplayImageReference(
     mimeType: file.mimeType,
     width: file.width,
     height: file.height,
-  };
-}
-
-function requireScreenplayDocumentFromSession(
-  session: DatabaseSession
-): ScreenplayDocument {
-  const screenplay = readScreenplayDocumentFromSession(session);
-  if (!screenplay) {
-    throw new ProjectDataError(
-      'PROJECT_DATA012',
-      'Project has no screenplay document.',
-      { suggestion: 'Create or import a screenplay before editing beat references.' }
-    );
-  }
-  return screenplay;
-}
-
-function throwNotFound(label: string, id: string): never {
-  throw new ProjectDataError(
-    'PROJECT_DATA012',
-    `Project ${label} was not found: ${id}.`
-  );
+  } : undefined;
 }

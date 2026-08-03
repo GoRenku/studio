@@ -41,7 +41,7 @@ describe('Studio project reference resolution', () => {
 
     await expect(projectData.resolveStudioProjectRef({ homeDir })).resolves.toEqual({
       name: 'current-movie',
-      id: currentProject.identity.id,
+      id: currentProject.id,
       storageRoot,
     });
     await expect(projectData.resolveStudioProjectRef({
@@ -49,7 +49,7 @@ describe('Studio project reference resolution', () => {
       projectName: 'other-movie',
     })).resolves.toEqual({
       name: 'other-movie',
-      id: otherProject.identity.id,
+      id: otherProject.id,
       storageRoot,
     });
   });

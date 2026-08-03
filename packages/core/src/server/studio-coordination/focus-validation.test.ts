@@ -1,357 +1,135 @@
 import { describe, expect, it } from 'vitest';
-import type { Project } from '../../client/index.js';
+import type { ProjectShell } from '../../client/index.js';
 import {
   resolveStudioSelectionForProject,
   validateStudioFocusRequestForProject,
 } from './focus-validation.js';
 
 describe('Studio focus validation', () => {
-  it('resolves project-level Movie Studio selections', () => {
-    const project = makeProject();
+  it('resolves Project, Section, and independent Scene selections from ProjectShell', () => {
+    const shell = makeProjectShell();
 
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'projectInformation',
-      })
-    ).toMatchObject({
+    expect(resolveStudioSelectionForProject(shell, {
+      type: 'projectInformation',
+    })).toMatchObject({
+      ok: true,
+      context: { kind: 'projectInformation', title: 'Preparation of the Siege' },
+    });
+    expect(resolveStudioSelectionForProject(shell, {
+      type: 'section',
+      id: 'section_opening',
+    })).toMatchObject({
       ok: true,
       context: {
-        kind: 'projectInformation',
-        title: 'Preparation of the Siege',
+        kind: 'section',
+        id: 'section_opening',
+        scenes: [{ id: 'scene_1', heading: 'EXT. CITY WALLS - DAWN' }],
       },
     });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'lookbook',
-        kind: 'production',
-      })
-    ).toMatchObject({
-      ok: true,
-      context: { kind: 'visualLanguage', sections: ['inspiration', 'lookbooks'] },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, { type: 'storyArc' })
-    ).toMatchObject({
-      ok: true,
-      context: { kind: 'storyArc' },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, { type: 'cast' })
-    ).toMatchObject({
-      ok: true,
-      context: { kind: 'cast' },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, { type: 'locations' })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'locations',
-        locations: [{ id: 'location_walls', name: 'City Walls' }],
-      },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, { type: 'props' })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'props',
-        props: [{ id: 'prop_field_cannon', name: 'Field Cannon' }],
-      },
-    });
-  });
-
-  it('resolves screenplay and continuity selections to current context', () => {
-    const project = makeProject();
-
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'sequence',
-        id: 'seq_opening',
-      })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'sequence',
-        id: 'seq_opening',
-      },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'scene_1_1',
-        sceneTab: 'beats',
-        beatId: 'beat_001',
-      })
-    ).toMatchObject({
+    expect(resolveStudioSelectionForProject(shell, {
+      type: 'scene',
+      id: 'scene_1',
+      sceneTab: 'beats',
+      beatId: 'beat_1',
+    })).toMatchObject({
       ok: true,
       context: {
         kind: 'scene',
-        id: 'scene_1_1',
+        id: 'scene_1',
+        parentSections: [{ id: 'section_opening', type: 'sequence' }],
         sceneTab: { id: 'beats', label: 'Beats' },
-        parentSequence: { id: 'seq_opening' },
-      },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'castMember',
-        id: 'cast_narrator',
-      })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'castMember',
-        id: 'cast_narrator',
-      },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'location',
-        id: 'location_walls',
-      })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'location',
-        id: 'location_walls',
-        name: 'City Walls',
-      },
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'prop',
-        id: 'prop_field_cannon',
-      })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'prop',
-        id: 'prop_field_cannon',
-        name: 'Field Cannon',
       },
     });
   });
 
-  it('rejects missing Movie Studio selections with structured diagnostics', () => {
-    const project = makeProject();
-
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'sequence',
-        id: 'missing_sequence',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'selectionNotFound',
-      diagnostics: [{ code: 'STUDIO_COORDINATION030', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'missing_scene',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'selectionNotFound',
-      diagnostics: [{ code: 'STUDIO_COORDINATION031', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'castMember',
-        id: 'missing_cast',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'selectionNotFound',
-      diagnostics: [{ code: 'STUDIO_COORDINATION033', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'location',
-        id: 'missing_location',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'selectionNotFound',
-      diagnostics: [{ code: 'STUDIO_COORDINATION035', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'prop',
-        id: 'missing_prop',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'selectionNotFound',
-      diagnostics: [{ code: 'STUDIO_COORDINATION041', severity: 'error' }],
-    });
+  it('rejects missing entities and invalid tab-specific focus', () => {
+    const shell = makeProjectShell();
+    expect(resolveStudioSelectionForProject(shell, {
+      type: 'section',
+      id: 'section_missing',
+    })).toMatchObject({ ok: false, reason: 'selectionNotFound' });
+    expect(resolveStudioSelectionForProject(shell, {
+      type: 'scene',
+      id: 'scene_1',
+      beatId: 'beat_1',
+      sceneTab: 'narrative',
+    })).toMatchObject({ ok: false, reason: 'unsupportedSelection' });
   });
 
-  it('validates full Studio focus requests', () => {
-    const project = makeProject();
-
-    expect(
-      validateStudioFocusRequestForProject(project, {
-        screen: 'projectLibrary',
-      })
-    ).toEqual({
+  it('validates Movie Studio and Project Library focus requests', () => {
+    const shell = makeProjectShell();
+    expect(validateStudioFocusRequestForProject(shell, {
+      screen: 'movieStudio',
+      selection: { type: 'storyArc' },
+    })).toMatchObject({ ok: true, context: { kind: 'storyArc' } });
+    expect(validateStudioFocusRequestForProject(shell, {
+      screen: 'projectLibrary',
+    })).toEqual({
       ok: true,
       focus: { screen: 'projectLibrary' },
       context: null,
     });
-    expect(
-      validateStudioFocusRequestForProject(project, {
-        screen: 'movieStudio',
-        selection: { type: 'scene', id: 'missing_scene' },
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'selectionNotFound',
-    });
-  });
-
-  it('rejects unsupported Scene tabs and fields with structured diagnostics', () => {
-    const project = makeProject();
-
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'scene_1_1',
-        sceneTab: 'script' as never,
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'unsupportedSelection',
-      diagnostics: [{ code: 'STUDIO_COORDINATION036', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'scene_1_1',
-        sceneTab: 'shotPlans',
-        unexpected: true,
-      } as never)
-    ).toMatchObject({
-      ok: false,
-      reason: 'unsupportedSelection',
-      diagnostics: [{ code: 'STUDIO_COORDINATION037', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'scene_1_1',
-        sceneTab: 'narrative',
-        beatId: 'beat_001',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'unsupportedSelection',
-      diagnostics: [{ code: 'STUDIO_COORDINATION036', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'scene_1_1',
-        sceneTab: 'narrative',
-        shotPlanId: 'shot_plan_001',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'unsupportedSelection',
-      diagnostics: [{ code: 'STUDIO_COORDINATION039', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'scene_1_1',
-        sceneTab: 'shotPlans',
-        shotId: 'shot_001',
-      })
-    ).toMatchObject({
-      ok: false,
-      reason: 'unsupportedSelection',
-      diagnostics: [{ code: 'STUDIO_COORDINATION040', severity: 'error' }],
-    });
-    expect(
-      resolveStudioSelectionForProject(project, {
-        type: 'scene',
-        id: 'scene_1_1',
-        sceneTab: 'shotPlans',
-        shotPlanId: 'shot_plan_001',
-        shotId: 'shot_001',
-      })
-    ).toMatchObject({
-      ok: true,
-      context: {
-        kind: 'scene',
-        sceneTab: { id: 'shotPlans', label: 'Shot Plans' },
-      },
-    });
   });
 });
 
-function makeProject(): Project {
+function makeProjectShell(): ProjectShell {
   return {
-    identity: {
+    project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
       title: 'Preparation of the Siege',
-      folderPath: '/tmp/constantinople',
-      databasePath: '/tmp/constantinople/.renku/project.sqlite',
       aspectRatio: '16:9',
+      coverImage: null,
+      counts: {
+        languages: 0,
+        castMembers: 1,
+        locations: 1,
+        props: 1,
+        acts: 0,
+        sequences: 1,
+        scenes: 1,
+      },
     },
-    coverImage: null,
     languages: [],
-    cast: [
-      {
-        id: 'cast_narrator',
-        handle: 'narrator',
-        name: 'Narrator',
-        isVoiceOver: true,
-        role: 'voiceover',
+    navigation: {
+      cast: {
+        items: [{ id: 'cast_narrator', handle: 'narrator', name: 'Narrator', isVoiceOver: true }],
+        nextCursor: null,
       },
-    ],
-    locations: [
-      {
-        id: 'location_walls',
-        handle: 'walls',
-        name: 'City Walls',
-        timePeriod: 'Dawn',
-        description: 'The outer walls where the opening scene begins.',
+      locations: {
+        items: [{ id: 'location_walls', handle: 'walls', name: 'City Walls' }],
+        nextCursor: null,
       },
-    ],
-    props: [
-      {
-        id: 'prop_field_cannon',
-        handle: 'field-cannon',
-        name: 'Field Cannon',
-        description: 'A large siege cannon positioned outside the walls.',
+      props: {
+        items: [{ id: 'prop_cannon', handle: 'cannon', name: 'Field Cannon' }],
+        nextCursor: null,
       },
-    ],
-    sequences: [
-      {
-        id: 'seq_opening',
-        number: 1,
-        title: 'Opening',
-        shortTitle: 'Opening',
-        summary: 'The opening sequence.',
-        scenes: [
-          {
-            id: 'scene_1_1',
-            title: 'Opening Scene',
-            summary: 'The movie begins.',
-          },
-        ],
+      screenplay: {
+        orderedSceneIds: ['scene_1'],
+        screenplay: {
+          opening: [],
+          scenes: [{
+            id: 'scene_1',
+            heading: 'EXT. CITY WALLS - DAWN',
+            blocks: [{ id: 'block_1', type: 'action', text: 'Smoke rises.' }],
+          }],
+          sections: [{ id: 'section_opening', type: 'sequence', title: 'Opening' }],
+          structure: [
+            {
+              id: 'entry_section',
+              content: { type: 'section', sectionId: 'section_opening' },
+              position: 0,
+            },
+            {
+              id: 'entry_scene',
+              parentSectionId: 'section_opening',
+              content: { type: 'scene', sceneId: 'scene_1' },
+              position: 0,
+            },
+          ],
+          references: [],
+        },
       },
-    ],
-    counts: {
-      languages: 0,
-      castMembers: 1,
-      locations: 1,
-      props: 1,
-      acts: 1,
-      sequences: 1,
-      scenes: 1,
     },
   };
 }

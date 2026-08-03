@@ -1,0 +1,82 @@
+const nonEmptyString = { type: 'string', minLength: 1 } as const;
+const nonNegativeInteger = { type: 'integer', minimum: 0 } as const;
+const optionalStringArray = {
+  type: 'array',
+  minItems: 1,
+  items: nonEmptyString,
+} as const;
+
+export const projectSchema = {
+  $id: 'https://schemas.gorenku.com/studio/project.schema.json',
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  type: 'object',
+  required: [
+    'id',
+    'projectName',
+    'title',
+    'aspectRatio',
+    'coverImage',
+    'counts',
+  ],
+  properties: {
+    id: nonEmptyString,
+    projectName: nonEmptyString,
+    title: nonEmptyString,
+    aspectRatio: nonEmptyString,
+    coverImage: {
+      oneOf: [
+        { type: 'null' },
+        {
+          type: 'object',
+          required: ['fileName'],
+          properties: { fileName: { const: 'cover.png' } },
+          additionalProperties: false,
+        },
+      ],
+    },
+    logline: nonEmptyString,
+    synopsis: nonEmptyString,
+    premise: nonEmptyString,
+    intendedAudience: nonEmptyString,
+    format: nonEmptyString,
+    targetRuntimeMinutes: nonNegativeInteger,
+    primaryGenre: nonEmptyString,
+    secondaryGenres: optionalStringArray,
+    tones: optionalStringArray,
+    contentRatingIntent: nonEmptyString,
+    creativeBoundaries: optionalStringArray,
+    centralConflict: nonEmptyString,
+    dramaticQuestion: nonEmptyString,
+    themes: optionalStringArray,
+    historicalBasis: optionalStringArray,
+    dramatizedElements: optionalStringArray,
+    screenplayDraftStatus: nonEmptyString,
+    researchSources: optionalStringArray,
+    assumptions: optionalStringArray,
+    openQuestions: optionalStringArray,
+    nextSteps: optionalStringArray,
+    counts: {
+      type: 'object',
+      required: [
+        'languages',
+        'castMembers',
+        'locations',
+        'props',
+        'acts',
+        'sequences',
+        'scenes',
+      ],
+      properties: {
+        languages: nonNegativeInteger,
+        castMembers: nonNegativeInteger,
+        locations: nonNegativeInteger,
+        props: nonNegativeInteger,
+        acts: nonNegativeInteger,
+        sequences: nonNegativeInteger,
+        scenes: nonNegativeInteger,
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+} as const;

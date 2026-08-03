@@ -5,13 +5,12 @@ import {
   locations,
   props,
   scenes,
-  sequences,
 } from '../schema/index.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { readLookbookRecordById } from '../database/access/lookbook.js';
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { readActiveSceneBeatSheetRecord, readSceneBeatSheetDocument } from '../database/access/scene-beat-sheets.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { insertAssetMembershipRecord, readAssetMembershipRecord } from '../database/access/asset-memberships.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -77,8 +76,6 @@ function assetOwnerExists(
       return rowExists(session, locations, locations.id, owner.id);
     case 'prop':
       return rowExists(session, props, props.id, owner.id);
-    case 'sequence':
-      return rowExists(session, sequences, sequences.id, owner.id);
     case 'scene':
       return rowExists(session, scenes, scenes.id, owner.id);
     case 'lookbook':
@@ -92,8 +89,8 @@ function assetOwnerExists(
 
 function rowExists(
   session: DatabaseSession,
-  table: typeof castMembers | typeof locations | typeof props | typeof sequences | typeof scenes,
-  idColumn: typeof castMembers.id | typeof locations.id | typeof props.id | typeof sequences.id | typeof scenes.id,
+  table: typeof castMembers | typeof locations | typeof props | typeof scenes,
+  idColumn: typeof castMembers.id | typeof locations.id | typeof props.id | typeof scenes.id,
   id: string
 ): boolean {
   return session.db
@@ -109,10 +106,10 @@ function sceneBeatExists(
   beatId: string
 ): boolean {
   const active = readActiveSceneBeatSheetRecord(session, sceneId);
-  const screenplay = readScreenplayDocumentFromSession(session);
-  if (!active || !screenplay) {
+  if (!active) {
     return false;
   }
+  const screenplay = readCanonicalScreenplay(session);
   const document = readSceneBeatSheetDocument({ row: active, screenplay });
   return document.beats.some((beat) => beat.id === beatId);
 }

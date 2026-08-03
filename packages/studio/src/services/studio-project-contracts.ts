@@ -53,7 +53,26 @@ export interface ProjectInformationUpdateRequest {
   title: string;
   aspectRatio?: string;
   logline?: string;
-  summary?: string | null;
+  synopsis?: string;
+  premise?: string;
+  intendedAudience?: string;
+  format?: string;
+  targetRuntimeMinutes?: number;
+  primaryGenre?: string;
+  secondaryGenres?: string[];
+  tones?: string[];
+  contentRatingIntent?: string;
+  creativeBoundaries?: string[];
+  centralConflict?: string;
+  dramaticQuestion?: string;
+  themes?: string[];
+  historicalBasis?: string[];
+  dramatizedElements?: string[];
+  screenplayDraftStatus?: string;
+  researchSources?: string[];
+  assumptions?: string[];
+  openQuestions?: string[];
+  nextSteps?: string[];
   languages: ProjectInformationLanguageUpdateRequest[];
 }
 

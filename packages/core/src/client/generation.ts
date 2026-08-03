@@ -1,6 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { AssetOwner } from './assets.js';
-import type { ProjectRelativePath } from './project.js';
+import type { ProjectRelativePath } from './project/index.js';
 
 export type JsonScalar = string | number | boolean | null;
 export type JsonValue = JsonScalar | JsonValue[] | { [key: string]: JsonValue };

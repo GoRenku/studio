@@ -139,14 +139,15 @@ Use plain domain names:
 Project
 ProjectLibrary
 ProjectSummary
-ProjectInfo
 ProjectLanguage
 VisualLanguage
 CastMember
-Episode
-Sequence
+Location
+Prop
+Screenplay
+ScreenplaySection
 Scene
-Clip
+ScreenplayBlock
 ProjectCounts
 ```
 
@@ -236,13 +237,14 @@ Expected shape:
 
 ```ts
 export interface Project {
-  identity: ProjectInfo;
+  id: ProjectId;
+  projectName: string;
+  title: string;
+  aspectRatio: string;
   coverImage: ProjectCoverImage | null;
-  languages: ProjectLanguage[];
-  visualLanguage: VisualLanguage[];
-  cast: CastMember[];
-  episodes: Episode[];
-  sequences: Sequence[];
+  logline?: string;
+  synopsis?: string;
+  // Remaining direct story/development fields use deliberate domain names.
   counts: ProjectCounts;
 }
 ```
@@ -274,9 +276,8 @@ Expected shape:
 
 ```ts
 export interface ProjectSummary {
-  name: string;
+  projectName: string;
   title: string;
-  type: ProjectType;
   folderPath: string;
   coverImage: ProjectCoverImage | null;
   logline?: string;
@@ -285,28 +286,12 @@ export interface ProjectSummary {
 }
 ```
 
-### `ProjectInfo`
+### Project Identity And Metadata
 
-`ProjectInfo` is the stable identity and top-level metadata for a `Project`.
-
-It exists so that the main `Project` object does not mix identity fields with
-collections such as cast, visual language, sequences, scenes, and clips.
-
-Expected shape:
-
-```ts
-export interface ProjectInfo {
-  id: string;
-  name: string;
-  title: string;
-  type: ProjectType;
-  folderPath: string;
-  databasePath: string;
-  aspectRatio?: string;
-  logline?: string;
-  summary?: string;
-}
-```
+`Project` directly owns its durable `id`, stable storage/CLI selector
+`projectName`, title, and story/development metadata. Do not create a nested
+`ProjectInfo`, `identity`, or duplicate Screenplay metadata object. Filesystem
+paths belong to server/resource shells, not the browser-safe Project contract.
 
 ### `ProjectType`
 
@@ -434,35 +419,35 @@ export interface Episode {
 }
 ```
 
-### `Sequence`
+### `ScreenplaySection`
 
-`Sequence` is the canonical v1 narrative group above scenes.
+`ScreenplaySection` is optional non-owning screenplay organization. Its `type`
+is `act` or `sequence`; neither kind owns a Scene.
 
 Expected shape:
 
 ```ts
-export interface Sequence {
+export interface ScreenplaySection {
   id: string;
-  number: number;
+  type: 'act' | 'sequence';
   title: string;
-  shortTitle?: string;
-  summary?: string;
-  scenes: Scene[];
+  description?: string;
 }
 ```
 
 ### `Scene`
 
-`Scene` belongs to a sequence.
+`Scene` is the canonical screenplay unit and does not require Section ancestry.
 
 Expected shape:
 
 ```ts
 export interface Scene {
   id: string;
-  title: string;
-  summary?: string;
-  clips: Clip[];
+  productionNumber?: string;
+  heading: string;
+  title?: string;
+  blocks: ScreenplayBlock[];
 }
 ```
 
@@ -491,12 +476,12 @@ Expected shape:
 ```ts
 export interface ProjectCounts {
   languages: number;
-  visualLanguage: number;
   castMembers: number;
-  episodes: number;
+  locations: number;
+  props: number;
+  acts: number;
   sequences: number;
   scenes: number;
-  clips: number;
 }
 ```
 

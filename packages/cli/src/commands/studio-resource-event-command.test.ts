@@ -37,7 +37,7 @@ describe('Studio resource event command', () => {
       runtime: runtimeFixture({ homeDir, stdout, stderr, json: false }),
       command: 'media import',
       report: {
-        project: { name: 'constantinople', id: 'project_test0001' },
+        project: { projectName: 'constantinople', id: 'project_test0001' },
         resourceKeys: ['surface:story-arc'],
       },
     });
@@ -59,7 +59,7 @@ describe('Studio resource event command', () => {
       runtime: runtimeFixture({ homeDir, stdout, stderr, json: true }),
       command: 'media import',
       report: {
-        project: { name: 'constantinople', id: 'project_test0001' },
+        project: { projectName: 'constantinople', id: 'project_test0001' },
         resourceKeys: ['surface:story-arc'],
       },
     });
@@ -97,7 +97,7 @@ describe('Studio resource event command', () => {
       runtime: runtimeFixture({ homeDir, stdout, stderr, json: false }),
       command: 'media import',
       report: {
-        project: { name: 'constantinople', id: 'project_test0001' },
+        project: { projectName: 'constantinople', id: 'project_test0001' },
         resourceKeys: [
           'surface:visual-language:lookbook:lookbook_test0001',
         ],

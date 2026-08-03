@@ -29,7 +29,7 @@ export function toProjectResponse(
   return {
     ...project,
     coverUrl: projectCoverUrl({
-      projectName: project.identity.name,
+      projectName: project.projectName,
       coverImage: project.coverImage,
     }),
   };
@@ -39,8 +39,8 @@ export function toProjectShellResponse(project: ProjectShell): ProjectShellRespo
   return {
     ...project,
     coverUrl: projectCoverUrl({
-      projectName: project.identity.name,
-      coverImage: project.coverImage,
+      projectName: project.project.projectName,
+      coverImage: project.project.coverImage,
     }),
   };
 }
@@ -53,7 +53,7 @@ export function toProjectLibraryResponse(
     projects: library.projects.map((project) => ({
       ...project,
       coverUrl: projectCoverUrl({
-        projectName: project.name,
+        projectName: project.projectName,
         coverImage: project.coverImage,
       }),
     })),

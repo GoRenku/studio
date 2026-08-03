@@ -3,7 +3,7 @@ import { assetFiles, assets } from './assets.js';
 import { castMembers } from './cast-members.js';
 import { castVoices } from './cast-voices.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
-import { scenes } from './scenes.js';
+import { scenes } from './screenplay/scenes.js';
 
 export const sceneDialogueAudio = sqliteTable(
   'scene_dialogue_audio',
@@ -12,7 +12,7 @@ export const sceneDialogueAudio = sqliteTable(
     sceneId: text('scene_id')
       .notNull()
       .references(() => scenes.id, { onDelete: 'cascade' }),
-    dialogueId: text('dialogue_id').notNull(),
+    turnId: text('turn_id').notNull(),
     castMemberId: text('cast_member_id')
       .notNull()
       .references(() => castMembers.id),
@@ -32,9 +32,9 @@ export const sceneDialogueAudio = sqliteTable(
       table.updatedAt,
       table.id
     ),
-    uniqueIndex('scene_dialogue_audio_dialogue_idx').on(
+    uniqueIndex('scene_dialogue_audio_turn_idx').on(
       table.sceneId,
-      table.dialogueId
+      table.turnId
     ),
     index('scene_dialogue_audio_cast_member_idx').on(table.castMemberId),
     index('scene_dialogue_audio_cast_voice_idx').on(table.castVoiceId),

@@ -14,8 +14,8 @@ import {
   readSceneBeatSheetDocument,
   readSceneBeatSheetRecord,
 } from '../database/access/scene-beat-sheets.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 
 export function resolveShotPlanBeatContext(input: {
   session: DatabaseSession;
@@ -60,19 +60,7 @@ export function resolveShotPlanBeatContext(input: {
       )
     );
   }
-  const screenplay = readScreenplayDocumentFromSession(input.session);
-  if (!screenplay) {
-    return {
-      coveredBeats: [],
-      warnings: [
-        ...warnings,
-        warning(
-          'CORE_SHOT_PLAN_BEAT_SHEET_MISSING',
-          `Referenced Scene Beat Sheet context is unavailable: ${beatSheet.id}.`
-        ),
-      ],
-    };
-  }
+  const screenplay = readCanonicalScreenplay(input.session);
   const document = readSceneBeatSheetDocument({
     row: beatSheet,
     screenplay,

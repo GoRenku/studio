@@ -90,8 +90,8 @@ export async function runProjectSelectionCommand(options: {
       homeDir: options.homeDir,
     });
     const projectRef: StudioProjectRef = {
-      name: project.identity.name,
-      id: project.identity.id,
+      name: project.projectName,
+      id: project.id,
       storageRoot: await resolveRenkuStorageRoot({ homeDir: options.homeDir }),
     };
     await createStudioCoordinationService({ homeDir: options.homeDir }).appendStudioEvent({

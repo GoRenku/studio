@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { ScreenplayCreateDocument } from '../../client/screenplay.js';
+import type { ScreenplayInput } from '../../client/screenplay/index.js';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
@@ -18,6 +18,8 @@ const dialogueAudioProjectName = 'dialogue-audio-test';
 interface DialogueAudioTemplate {
   projectFolder: string;
   databasePath: string;
+  sceneId: string;
+  dialogueId: string;
 }
 
 export interface DialogueAudioReadyProject {
@@ -64,8 +66,8 @@ export async function createDialogueAudioReadyProject(): Promise<
     homeDir,
     projectData,
     projectPath,
-    sceneId: 'scene_test0001',
-    dialogueId: 'dialogue_urban_test',
+    sceneId: template.sceneId,
+    dialogueId: template.dialogueId,
   };
 }
 
@@ -112,9 +114,10 @@ async function buildDialogueAudioTemplate(): Promise<DialogueAudioTemplate | nul
     },
     idGenerator: createDeterministicIdGenerator(),
   });
-  await projectData.createScreenplay({
+  const screenplay = await projectData.createScreenplay({
     homeDir,
-    document: dialogueAudioScreenplayDocument(),
+    projectName: dialogueAudioProjectName,
+    screenplay: dialogueAudioScreenplayInput(),
     idGenerator: createDeterministicIdGenerator(),
   });
 
@@ -123,47 +126,51 @@ async function buildDialogueAudioTemplate(): Promise<DialogueAudioTemplate | nul
   return {
     projectFolder: created.projectPath,
     databasePath: created.databasePath,
+    sceneId: screenplay.generatedIdentities.find((identity) => identity.key === 'cannon-test')!.id,
+    dialogueId: screenplay.generatedIdentities.find((identity) => identity.key === 'urban-dialogue')!.id,
   };
 }
 
-function dialogueAudioScreenplayDocument(): ScreenplayCreateDocument {
+function dialogueAudioScreenplayInput(): ScreenplayInput {
   return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Dialogue Audio Test',
-      logline: 'A founder tests a cannon and a conscience.',
-    },
-    cast: [],
-    locations: [],
-    acts: [
+    opening: [],
+    scenes: [
       {
-        key: 'act-one',
-        title: 'Act I',
-        sequences: [
+        key: 'cannon-test',
+        heading: 'EXT. THE WALL - DAWN',
+        title: 'Cannon Test',
+        blocks: [
           {
-            key: 'the-wall',
-            title: 'The Wall',
-            scenes: [
+            key: 'urban-dialogue',
+            type: 'dialogue',
+            characterName: 'URBAN',
+            extensions: [],
+            parts: [
               {
-                key: 'cannon-test',
-                title: 'Cannon Test',
-                setting: {
-                  interiorExterior: 'EXT',
-                  timeOfDay: 'DAWN',
-                  locationIds: [],
-                },
-                blocks: [
-                  {
-                    dialogueId: 'dialogue_urban_test',
-                    type: 'dialogue',
-                    castMemberId: 'cast_test0001',
-                    lines: ['Bronze has no temper. Men give it one.'],
-                  },
-                ],
+                key: 'urban-speech',
+                type: 'speech',
+                text: 'Bronze has no temper. Men give it one.',
               },
             ],
           },
         ],
+      },
+    ],
+    sections: [
+      { key: 'act-one', type: 'act', title: 'Act I' },
+      { key: 'the-wall', type: 'sequence', title: 'The Wall' },
+    ],
+    structure: [
+      { key: 'act-one-placement', content: { type: 'section', section: { key: 'act-one' } }, position: 0 },
+      { key: 'the-wall-placement', parentSection: { key: 'act-one' }, content: { type: 'section', section: { key: 'the-wall' } }, position: 0 },
+      { key: 'cannon-test-placement', parentSection: { key: 'the-wall' }, content: { type: 'scene', scene: { key: 'cannon-test' } }, position: 0 },
+    ],
+    references: [
+      {
+        key: 'urban-speaker',
+        subject: { type: 'castMember', id: 'cast_test0001' },
+        target: { type: 'dialogueCue', scene: { key: 'cannon-test' }, turn: { key: 'urban-dialogue' } },
+        role: 'speaker',
       },
     ],
   };

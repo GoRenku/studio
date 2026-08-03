@@ -10,7 +10,7 @@ import type { CliCommandRuntime } from './structured-command.js';
 
 export interface StudioResourceChangedReport {
   project: {
-    name: string;
+    projectName: string;
     id?: string;
   };
   resourceKeys: string[];
@@ -68,8 +68,8 @@ async function toProjectRef(
   homeDir?: string
 ): Promise<StudioProjectRef> {
   return {
-    name: project.name,
-    id: project.id ?? project.name,
+    name: project.projectName,
+    id: project.id ?? project.projectName,
     storageRoot: await resolveRenkuStorageRoot({ homeDir }),
   };
 }

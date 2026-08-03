@@ -7,7 +7,7 @@ import type {
   LocationDesignDocument,
   PropDesignDocument,
 } from '../../client/department-design.js';
-import type { ProjectRelativePath } from '../../client/project.js';
+import type { ProjectRelativePath } from '../../client/project/index.js';
 import {
   createProjectDataService,
 } from '../index.js';
@@ -131,10 +131,12 @@ describe('department design commands', () => {
   it('writes Cast, Location, and Prop Design documents', async () => {
     await createSampleMovieProject({ homeDir, projectData });
 
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const castMemberId = screenplay.screenplay?.cast[1]?.id as string;
-    const locationId = screenplay.screenplay?.locations[0]?.id as string;
-    const sceneId = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0]?.id as string;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const cast = await projectData.listCastMembers({ homeDir });
+    const locations = await projectData.listLocations({ homeDir });
+    const castMemberId = cast[1]!.id;
+    const locationId = locations[0]!.id;
+    const sceneId = screenplay.screenplay.scenes[0]!.id;
 
     const castDesign = castDesignDocument(castMemberId, sceneId);
     const castWrite = await projectData.writeCastDesign({
@@ -213,8 +215,8 @@ describe('department design commands', () => {
   it('reports voice-over cast members as profile-ready without requiring character sheets', async () => {
     await createSampleMovieProject({ homeDir, projectData });
 
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const narratorId = screenplay.screenplay?.cast.find(
+    const cast = await projectData.listCastMembers({ homeDir });
+    const narratorId = cast.find(
       (castMember) => castMember.isVoiceOver
     )?.id as string;
 
@@ -375,43 +377,6 @@ describe('department design commands', () => {
     });
   });
 
-  it('rejects obsolete screenplay-routed cast and location mutations', async () => {
-    await createSampleMovieProject({ homeDir, projectData });
-
-    await expect(
-      projectData.applyScreenplayOperations({
-        homeDir,
-        document: {
-          kind: 'screenplayOperations',
-          operations: [
-            {
-              operation: 'castMember.update',
-              castMember: {
-                id: 'cast_test0002',
-                handle: 'mehmed-ii',
-                name: 'Mehmed II',
-              },
-            },
-          ],
-        } as never,
-      })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA200' });
-
-    await expect(
-      projectData.applyScreenplayOperations({
-        homeDir,
-        document: {
-          kind: 'screenplayOperations',
-          operations: [
-            {
-              operation: 'location.delete',
-              locationId: 'location_test0001',
-            },
-          ],
-        } as never,
-      })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA200' });
-  });
 });
 
 function castDesignDocument(
@@ -445,7 +410,7 @@ function castDesignDocument(
         variants: [
           {
             label: 'council-night',
-            scope: { kind: 'scene', sceneId },
+            scope: { kind: 'scenes', sceneIds: [sceneId] },
             wardrobe: ['Layered robe, minimal jewelry, dark sash'],
           },
         ],

@@ -360,8 +360,8 @@ describe('StudioCoordinationService', () => {
       homeDir,
       projectData,
     });
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
     const coordination = createStudioCoordinationService({ homeDir });
 
     await coordination.appendStudioEvent({
@@ -475,8 +475,8 @@ describe('StudioCoordinationService', () => {
       homeDir,
       projectData,
     });
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
     const coordination = createStudioCoordinationService({ homeDir });
     const now = Date.now();
 

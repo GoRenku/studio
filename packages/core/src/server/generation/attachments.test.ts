@@ -89,7 +89,7 @@ describe('generation media attachment', () => {
       expect(report.resourceKeys).toEqual([attachment.resourceKey]);
       expect(report.project).toMatchObject({
         id: expect.any(String),
-        name: 'constantinople',
+        projectName: 'constantinople',
         projectFolder: created.projectPath,
       });
       if (attachment.purpose === 'prop.sheet') {

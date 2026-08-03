@@ -22,10 +22,12 @@ describe('Generation purpose context', () => {
     if (!created) {
       return;
     }
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
-    const castMemberId = screenplay.screenplay!.cast[1]!.id!;
-    const locationId = screenplay.screenplay!.locations[0]!.id!;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
+    const cast = await projectData.listCastMembers({ homeDir });
+    const locations = await projectData.listLocations({ homeDir });
+    const castMemberId = cast[1]!.id;
+    const locationId = locations[0]!.id;
     seedContinuityAssets(created.projectPath, { castMemberId, locationId });
 
     const context = await projectData.buildGenerationContext({
@@ -36,12 +38,12 @@ describe('Generation purpose context', () => {
     });
 
     expect(context.facts.contextText).toBe(
-      'INT — A Throne Facing an Ancient City — NIGHT\n\nMehmed studies the city map.'
+      "INT. MEHMED'S COUNCIL CHAMBER - NIGHT\n\nMehmed studies the city map."
     );
     expect(context.facts.sceneCastMemberIds).toEqual([castMemberId]);
     expect(context.facts.sceneLocationIds).toEqual([locationId]);
     const castSlot = context.referenceGuide.sections.find((section) => section.id === 'cast')!.slots[0]!;
-    expect(castSlot.label).toBe(screenplay.screenplay!.cast[1]!.name);
+    expect(castSlot.label).toBe(cast[1]!.name);
     expect(castSlot.mediaKind).toBe('image');
     expect(castSlot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual(expect.arrayContaining([
       { kind: 'asset-file', assetId: 'asset_cast_selected', assetFileId: 'asset_file_cast_selected' },
@@ -53,7 +55,7 @@ describe('Generation purpose context', () => {
     )).toBe(false);
     const locationSlot = context.referenceGuide.sections.find((section) => section.id === 'location')!.slots[0]!;
     expect(locationSlot.label).toBe(
-      screenplay.screenplay!.locations[0]!.name
+      locations[0]!.name
     );
     expect(locationSlot.mediaKind).toBe('image');
     expect(locationSlot.eligibleCandidates.map((candidate) => candidate.reference)).toEqual([
@@ -67,8 +69,8 @@ describe('Generation purpose context', () => {
     if (!created) {
       return;
     }
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
     const shotPlan = await projectData.createShotPlan({
       projectName: 'constantinople',
       homeDir,

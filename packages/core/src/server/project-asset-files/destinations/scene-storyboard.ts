@@ -6,7 +6,7 @@ import {
 } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { projectPathExistsSync } from '../file-operations.js';
-import { requireSceneHierarchy } from '../owner-lookups.js';
+import { requireSceneStorageContext } from '../owner-lookups.js';
 import { allocateProjectRelativeFolderPathSync } from '../path-allocation.js';
 import type {
   DestinationFileInput,
@@ -21,13 +21,12 @@ export function allocateSceneStoryboardIterationFolderSync(input: {
   projectFolder: string;
   sceneId: string;
 }): ProjectRelativePath {
-  const hierarchy = requireSceneHierarchy(input.session, input.sceneId);
+  const scene = requireSceneStorageContext(input.session, input.sceneId);
   return allocateProjectRelativeFolderPathSync({
     projectFolder: input.projectFolder,
     parent: joinProjectRelativePath(
       STORYBOARDS_ROOT,
-      kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
-      kebabCasePathSegment(hierarchy.sceneTitle, 'scene')
+      kebabCasePathSegment(scene.sceneId, 'scene')
     ),
     baseName: `${String(nextStoryboardIterationNumber(input.projectFolder, input.session, input.sceneId)).padStart(2, '0')}-iteration`,
   });
@@ -42,7 +41,7 @@ export async function resolveSceneStoryboardDestinationFile(
 export function resolveSceneStoryboardDestinationFileSync(
   input: DestinationFileInput<SceneStoryboardDestinationKind>
 ): ProjectRelativePath {
-  requireSceneHierarchy(input.session, input.destination.sceneId);
+  requireSceneStorageContext(input.session, input.destination.sceneId);
   return joinProjectRelativePath(
     input.destination.iterationFolder,
     storyboardBeatFileName(input.destination.beatOrdinal, input.sourceProjectRelativePath)
@@ -58,7 +57,7 @@ export async function resolveSceneStoryboardDestinationRoot(
 export function resolveSceneStoryboardDestinationRootSync(
   input: DestinationRootInput<SceneStoryboardDestinationKind>
 ): ProjectRelativePath {
-  requireSceneHierarchy(input.session, input.destination.sceneId);
+  requireSceneStorageContext(input.session, input.destination.sceneId);
   return input.destination.iterationFolder;
 }
 
@@ -86,11 +85,10 @@ function nextStoryboardIterationNumber(
   session: DatabaseSession,
   sceneId: string
 ): number {
-  const hierarchy = requireSceneHierarchy(session, sceneId);
+  const scene = requireSceneStorageContext(session, sceneId);
   const parent = joinProjectRelativePath(
     STORYBOARDS_ROOT,
-    kebabCasePathSegment(hierarchy.sequenceTitle, 'sequence'),
-    kebabCasePathSegment(hierarchy.sceneTitle, 'scene')
+    kebabCasePathSegment(scene.sceneId, 'scene')
   );
   for (let index = 0; index < 1000; index += 1) {
     const candidate = joinProjectRelativePath(

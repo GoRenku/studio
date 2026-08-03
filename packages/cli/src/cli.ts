@@ -21,7 +21,7 @@ import { runProjectInformationCommand } from './commands/project-information-com
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runPropCommand } from './commands/prop-command.js';
-import { runScreenplayCommand } from './commands/screenplay-command.js';
+import { runScreenplayCommand } from './commands/screenplay/index.js';
 import { runShotPlanCommand } from './commands/shot-plan-command.js';
 import { runStudioCommand } from './commands/studio-command.js';
 import { runTrashCommand } from './commands/trash-command.js';
@@ -145,7 +145,31 @@ Options
   --title              Project title
   --aspect-ratio       Project aspect ratio
   --logline            Project logline
-  --summary            Project summary
+  --synopsis           Project synopsis
+  --premise            Project premise
+  --intended-audience  Intended audience
+  --format             Project format
+  --target-runtime-minutes
+                       Intended finished runtime in minutes
+  --primary-genre      Primary genre
+  --secondary-genres   Comma-separated secondary genres
+  --tones              Comma-separated tones
+  --content-rating-intent
+                       Content rating intent
+  --creative-boundaries
+                       Comma-separated creative boundaries
+  --central-conflict   Central conflict
+  --dramatic-question  Dramatic question
+  --themes             Comma-separated themes
+  --historical-basis   Comma-separated historical basis notes
+  --dramatized-elements
+                       Comma-separated dramatized elements
+  --screenplay-draft-status
+                       Screenplay draft status
+  --research-sources   Comma-separated research sources
+  --assumptions        Comma-separated assumptions
+  --open-questions     Comma-separated open questions
+  --next-steps         Comma-separated next steps
   --display-name       Language display name
   --base               Mark language as base
   --audio, --no-audio  Toggle language audio support
@@ -368,6 +392,66 @@ function createCliFlags() {
     summary: {
       type: 'string',
     },
+    synopsis: {
+      type: 'string',
+    },
+    premise: {
+      type: 'string',
+    },
+    intendedAudience: {
+      type: 'string',
+    },
+    format: {
+      type: 'string',
+    },
+    targetRuntimeMinutes: {
+      type: 'string',
+    },
+    primaryGenre: {
+      type: 'string',
+    },
+    secondaryGenres: {
+      type: 'string',
+    },
+    tones: {
+      type: 'string',
+    },
+    contentRatingIntent: {
+      type: 'string',
+    },
+    creativeBoundaries: {
+      type: 'string',
+    },
+    centralConflict: {
+      type: 'string',
+    },
+    dramaticQuestion: {
+      type: 'string',
+    },
+    themes: {
+      type: 'string',
+    },
+    historicalBasis: {
+      type: 'string',
+    },
+    dramatizedElements: {
+      type: 'string',
+    },
+    screenplayDraftStatus: {
+      type: 'string',
+    },
+    researchSources: {
+      type: 'string',
+    },
+    assumptions: {
+      type: 'string',
+    },
+    openQuestions: {
+      type: 'string',
+    },
+    nextSteps: {
+      type: 'string',
+    },
     displayName: {
       type: 'string',
     },
@@ -453,7 +537,7 @@ export async function runRenkuCli(
           title: cli.flags.title,
           aspectRatio: cli.flags.aspectRatio,
           logline: cli.flags.logline,
-          summary: cli.flags.summary,
+          synopsis: cli.flags.synopsis,
           storageRoot: cli.flags.storageRoot,
           json: cli.flags.json,
           io,
@@ -524,7 +608,26 @@ export async function runRenkuCli(
             title: cli.flags.title,
             aspectRatio: cli.flags.aspectRatio,
             logline: cli.flags.logline,
-            summary: cli.flags.summary,
+            synopsis: cli.flags.synopsis,
+            premise: cli.flags.premise,
+            intendedAudience: cli.flags.intendedAudience,
+            format: cli.flags.format,
+            targetRuntimeMinutes: cli.flags.targetRuntimeMinutes,
+            primaryGenre: cli.flags.primaryGenre,
+            secondaryGenres: cli.flags.secondaryGenres,
+            tones: cli.flags.tones,
+            contentRatingIntent: cli.flags.contentRatingIntent,
+            creativeBoundaries: cli.flags.creativeBoundaries,
+            centralConflict: cli.flags.centralConflict,
+            dramaticQuestion: cli.flags.dramaticQuestion,
+            themes: cli.flags.themes,
+            historicalBasis: cli.flags.historicalBasis,
+            dramatizedElements: cli.flags.dramatizedElements,
+            screenplayDraftStatus: cli.flags.screenplayDraftStatus,
+            researchSources: cli.flags.researchSources,
+            assumptions: cli.flags.assumptions,
+            openQuestions: cli.flags.openQuestions,
+            nextSteps: cli.flags.nextSteps,
             displayName: cli.flags.displayName,
             base: cli.flags.base,
             audio: cli.flags.audio,
@@ -674,7 +777,6 @@ export async function runRenkuCli(
           input,
           flags: {
             file,
-            act: cli.flags.act,
             active: cli.flags.active,
             analysis: cli.flags.analysis,
             revision: cli.flags.revision,
@@ -682,8 +784,8 @@ export async function runRenkuCli(
             number: cli.flags.number,
             beatSheet: cli.flags.beatSheet,
             includeVisualReferences: cli.flags.includeVisualReferences,
-            sequence: cli.flags.sequence,
             dryRun: cli.flags.dryRun,
+            project: cli.flags.project,
           },
           json: cli.flags.json,
           io,

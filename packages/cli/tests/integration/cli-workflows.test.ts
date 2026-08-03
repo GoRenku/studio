@@ -142,7 +142,7 @@ describe('renku CLI', () => {
         'constantinople',
         '--title',
         'Preparation of the Siege',
-        '--summary',
+        '--synopsis',
         'A SQLite-backed project summary.',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -151,7 +151,7 @@ describe('renku CLI', () => {
       return;
     }
 
-    expect(exitCode).toBe(0);
+    expect(exitCode, stderr.join('\n')).toBe(0);
     expect(stdout.join('\n')).toContain('Renku project created: constantinople');
     expect(stdout.join('\n')).toContain('Current authoring project: constantinople');
     await expect(
@@ -169,7 +169,7 @@ describe('renku CLI', () => {
         homeDir,
       })
     ).resolves.toMatchObject({
-      identity: { summary: 'A SQLite-backed project summary.' },
+      synopsis: 'A SQLite-backed project summary.',
     });
     expect(stderr).toEqual([]);
   });
@@ -196,6 +196,52 @@ describe('renku CLI', () => {
         status: 'set',
       },
     });
+    expect(stderr).toEqual([]);
+  });
+
+  it('sets, reads, and clears Scene-first Project information fields', async () => {
+    await initializeStorageRoot();
+    const createExitCode = await createProject();
+    if (isMissingSqliteBindings(createExitCode, stderr)) {
+      return;
+    }
+    expect(createExitCode).toBe(0);
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli([
+      'info', 'set',
+      '--project', 'constantinople',
+      '--premise', 'Craft becomes complicity.',
+      '--target-runtime-minutes', '112',
+      '--themes', 'responsibility,craft',
+      '--json',
+    ], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
+      project: {
+        projectName: 'constantinople',
+        premise: 'Craft becomes complicity.',
+        targetRuntimeMinutes: 112,
+        themes: ['responsibility', 'craft'],
+      },
+      changedFields: expect.arrayContaining([
+        'premise', 'targetRuntimeMinutes', 'themes',
+      ]),
+    });
+
+    stdout = [];
+    stderr = [];
+    expect(await runRenkuCli([
+      'info', 'clear', '--project', 'constantinople',
+      '--premise', 'clear', '--themes', 'clear', '--json',
+    ], { homeDir, io: captureIo(stdout, stderr) })).toBe(0);
+    const clearReport = JSON.parse(stdout.join('\n'));
+    expect(clearReport).toMatchObject({
+      project: { targetRuntimeMinutes: 112 },
+      changedFields: expect.arrayContaining(['premise', 'themes']),
+    });
+    expect(clearReport.project).not.toHaveProperty('premise');
+    expect(clearReport.project).not.toHaveProperty('themes');
     expect(stderr).toEqual([]);
   });
 
@@ -334,9 +380,8 @@ describe('renku CLI', () => {
     expect(screenplayExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       valid: true,
-      project: { name: 'constantinople' },
-      changes: [{ operation: 'screenplay.create' }],
-      generatedIds: expect.arrayContaining([
+      project: { projectName: 'constantinople' },
+      generatedIdentities: expect.arrayContaining([
         expect.objectContaining({ key: 'act-one' }),
         expect.objectContaining({ key: 'commission' }),
         expect.objectContaining({ key: 'first-scene' }),
@@ -353,14 +398,14 @@ describe('renku CLI', () => {
 
     expect(statusExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      exists: true,
       counts: {
-        castMembers: 1,
-        locations: 1,
+        openingElements: 0,
+        sections: 2,
         acts: 1,
         sequences: 1,
         scenes: 1,
         blocks: 1,
+        references: 2,
       },
     });
   });
@@ -417,12 +462,14 @@ describe('renku CLI', () => {
     );
     stdout = [];
     stderr = [];
-    expect(
-      await runRenkuCli(
+    const screenplayCreateExitCode = await runRenkuCli(
         ['screenplay', 'create', '--file', screenplayPath, '--json'],
         { homeDir, io: captureIo(stdout, stderr) }
-      )
-    ).toBe(0);
+      );
+    expect({ screenplayCreateExitCode, stderr }).toEqual({
+      screenplayCreateExitCode: 0,
+      stderr: [],
+    });
 
     stdout = [];
     stderr = [];
@@ -452,15 +499,17 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    expect(
-      await runRenkuCli(
+    const validationExitCode = await runRenkuCli(
         ['screenplay', 'analyze', 'validate', '--file', analysisPath, '--json'],
         { homeDir, io: captureIo(stdout, stderr) }
-      )
-    ).toBe(0);
+      );
+    expect({ validationExitCode, stderr }).toEqual({
+      validationExitCode: 0,
+      stderr: [],
+    });
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       valid: true,
-      analysis: { kind: 'screenplayAnalysis' },
+      analysis: { structureModel: 'threeAct' },
     });
 
     stdout = [];
@@ -507,7 +556,7 @@ describe('renku CLI', () => {
     ).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       summary: { id: writeReport.analysis.id },
-      analysis: { kind: 'screenplayAnalysis' },
+      analysis: { structureModel: 'threeAct' },
     });
 
   });
@@ -1071,7 +1120,7 @@ describe('renku CLI', () => {
       projectName: 'constantinople',
       homeDir,
     });
-    const castMemberId = project.cast[0]!.id;
+    const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
 
     stdout = [];
     stderr = [];
@@ -1264,7 +1313,7 @@ describe('renku CLI', () => {
       },
     });
 
-    const locationId = project.locations[0]!.id;
+    const locationId = (await createProjectDataService().listLocations({ homeDir }))[0]!.id;
 
     stdout = [];
     stderr = [];
@@ -1541,7 +1590,7 @@ describe('renku CLI', () => {
       projectName: 'constantinople',
       homeDir,
     });
-    const castMemberId = project.cast[0]!.id;
+    const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
     const assetPath =
       'generated/media/urban-profile.png';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', assetPath)), {
@@ -1599,7 +1648,7 @@ describe('renku CLI', () => {
       projectName: 'constantinople',
       homeDir,
     });
-    const castMemberId = project.cast[0]!.id;
+    const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
     const samplePath = 'generated/audio/urban-normal.mp3';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', samplePath)), {
       recursive: true,
@@ -1798,7 +1847,7 @@ describe('renku CLI', () => {
       projectName: 'constantinople',
       homeDir,
     });
-    const castMemberId = project.cast[0]!.id;
+    const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
     const sourcePath = 'generated/media/urban-sheet.png';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', sourcePath)), {
       recursive: true,
@@ -2003,19 +2052,25 @@ describe('renku CLI', () => {
     }
     await openProjectAndCreateScreenplay();
 
-    const project = await createProjectDataService().readProject({
+    const projectData = createProjectDataService();
+    const project = await projectData.readProject({
       projectName: 'constantinople',
       homeDir,
     });
-    const sceneId = project.sequences[0]!.scenes[0]!.id;
-    const castMemberId = project.cast[0]!.id;
-    const locationId = project.locations[0]!.id;
+    const screenplay = await projectData.readScreenplayStructure({ projectName: project.projectName, homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
+    const sceneId = scene.id;
+    const blockId = scene.blocks[0]!.id;
+    const sceneReferences = screenplay.screenplay.references.filter((reference) =>
+      'sceneId' in reference.target && reference.target.sceneId === sceneId
+    );
+    const castMemberId = sceneReferences.find((reference) => reference.subject.type === 'castMember')!.subject.id;
+    const locationId = sceneReferences.find((reference) => reference.subject.type === 'location')!.subject.id;
     const beatSheetPath = path.join(homeDir, 'scene-beat-sheet.json');
     await fs.writeFile(
       beatSheetPath,
       JSON.stringify(
         {
-          kind: 'sceneBeatSheet',
           sceneId,
           title: 'Foundry Beats',
           summary: 'Two narrative Beats for Urban in the foundry.',
@@ -2029,7 +2084,8 @@ describe('renku CLI', () => {
               description: 'Urban stands beside the cracked bronze and studies the damaged seam.',
               castMemberIds: [castMemberId],
               locationIds: [locationId],
-              screenplayBlockIndexes: [0],
+              propIds: [],
+              screenplayBlockIds: [blockId],
             },
             {
               id: 'beat_002',
@@ -2039,7 +2095,8 @@ describe('renku CLI', () => {
               description: 'Mara studies the crack while Urban remains beside the bronze.',
               castMemberIds: [castMemberId],
               locationIds: [locationId],
-              screenplayBlockIndexes: [0],
+              propIds: [],
+              screenplayBlockIds: [blockId],
             },
           ],
         },
@@ -2097,7 +2154,6 @@ describe('renku CLI', () => {
       operationPath,
       JSON.stringify(
         {
-          kind: 'sceneBeatSheetOperations',
           sceneId,
           baseBeatSheetId: writeReport.activeBeatSheetId,
           activate: false,
@@ -2115,7 +2171,8 @@ describe('renku CLI', () => {
                   description: 'Light catches the crack crossing the bronze surface.',
                   castMemberIds: [castMemberId],
                   locationIds: [locationId],
-                  screenplayBlockIndexes: [0],
+                  propIds: [],
+                  screenplayBlockIds: [blockId],
                 },
               ],
             },
@@ -2664,14 +2721,20 @@ describe('renku CLI', () => {
     await openProjectAndCreateScreenplay();
 
     const projectData = createProjectDataService();
-    const screenplay = await projectData.readScreenplay({ homeDir });
-    const scene = screenplay.screenplay!.acts[0]!.sequences[0]!.scenes[0]!;
-    const castMember = screenplay.screenplay!.cast[0]!;
-    const location = screenplay.screenplay!.locations[0]!;
+    const screenplay = await projectData.readScreenplayStructure({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    const scene = screenplay.screenplay.scenes[0]!;
+    const sceneReferences = screenplay.screenplay.references.filter((reference) =>
+      'sceneId' in reference.target && reference.target.sceneId === scene.id
+    );
+    const castMemberId = sceneReferences.find((reference) => reference.subject.type === 'castMember')!.subject.id;
+    const locationId = sceneReferences.find((reference) => reference.subject.type === 'location')!.subject.id;
+    const blockId = scene.blocks[0]!.id;
     await projectData.writeSceneBeatSheet({
       homeDir,
       document: {
-        kind: 'sceneBeatSheet',
         sceneId: scene.id as string,
         title: 'Opening Beats',
         summary: 'A focused two-Beat scene breakdown.',
@@ -2683,9 +2746,10 @@ describe('renku CLI', () => {
             narrativeDevelopment: 'Urban reads the cannon before anyone else does.',
             narrativePurpose: 'Show expertise before consequence.',
             description: 'Urban leans close to the bronze seam.',
-            castMemberIds: [castMember.id as string],
-            locationIds: [location.id as string],
-            screenplayBlockIndexes: [0],
+            castMemberIds: [castMemberId],
+            locationIds: [locationId],
+            propIds: [],
+            screenplayBlockIds: [blockId],
           },
           {
             id: 'beat_002',
@@ -2693,9 +2757,10 @@ describe('renku CLI', () => {
             narrativeDevelopment: 'Urban sees how the room responds.',
             narrativePurpose: 'Show the response to his expertise.',
             description: 'Urban turns from the bronze to the watching officials.',
-            castMemberIds: [castMember.id as string],
-            locationIds: [location.id as string],
-            screenplayBlockIndexes: [0],
+            castMemberIds: [castMemberId],
+            locationIds: [locationId],
+            propIds: [],
+            screenplayBlockIds: [blockId],
           },
         ],
       },
@@ -2722,8 +2787,8 @@ describe('renku CLI', () => {
     await coordination.appendStudioEvent({
       type: 'studio.focusChanged',
       projectRef: {
-        name: project.identity.name,
-        id: project.identity.id,
+        name: project.projectName,
+        id: project.id,
         storageRoot: path.join(homeDir, 'movies'),
       },
       focus: {
@@ -3188,125 +3253,131 @@ function captureIo(stdout: string[], stderr: string[]) {
 
 function minimalScreenplayJson(input: { castMemberId: string; locationId: string }) {
   return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Urban Basilica',
-    },
-    cast: [],
-    locations: [],
-    acts: [
+    opening: [],
+    scenes: [
       {
-        key: 'act-one',
-        title: 'Act I',
-        sequences: [
+        key: 'first-scene',
+        productionNumber: '1',
+        heading: 'INT. FOUNDRY - NIGHT',
+        title: 'Urban Enters The Foundry',
+        blocks: [
           {
-            key: 'commission',
-            title: 'The Commission',
-            scenes: [
-              {
-                key: 'first-scene',
-                title: 'Urban Enters The Foundry',
-                setting: {
-                  locationIds: [input.locationId],
-                },
-                blocks: [
-                  {
-                    type: 'action',
-                    text: 'Urban studies the cracked bronze.',
-                    castMemberIds: [input.castMemberId],
-                    locationIds: [input.locationId],
-                  },
-                ],
-              },
-            ],
+            key: 'first-action',
+            type: 'action',
+            text: 'Urban studies the cracked bronze.',
           },
         ],
+      },
+    ],
+    sections: [
+      { key: 'act-one', type: 'act', title: 'Act I' },
+      { key: 'commission', type: 'sequence', title: 'The Commission' },
+    ],
+    structure: [
+      {
+        key: 'act-one-entry',
+        content: { type: 'section', section: { key: 'act-one' } },
+        position: 0,
+      },
+      {
+        key: 'commission-entry',
+        parentSection: { key: 'act-one' },
+        content: { type: 'section', section: { key: 'commission' } },
+        position: 0,
+      },
+      {
+        key: 'first-scene-entry',
+        parentSection: { key: 'commission' },
+        content: { type: 'scene', scene: { key: 'first-scene' } },
+        position: 0,
+      },
+    ],
+    references: [
+      {
+        key: 'first-scene-cast',
+        subject: { type: 'castMember', id: input.castMemberId },
+        target: { type: 'scene', scene: { key: 'first-scene' } },
+        role: 'presence',
+      },
+      {
+        key: 'first-scene-location',
+        subject: { type: 'location', id: input.locationId },
+        target: { type: 'scene', scene: { key: 'first-scene' } },
+        role: 'setting',
       },
     ],
   };
 }
 
 function threeActScreenplayJson(input: { castMemberId: string; locationId: string }) {
+  const sceneDefinitions = [
+    { act: 'act-one', actTitle: 'The Offer', sequence: 'commission', scene: 'commission-scene', sceneTitle: 'The Refusal' },
+    { act: 'act-two', actTitle: 'The Patron', sequence: 'casting', scene: 'casting-scene', sceneTitle: 'The Bargain' },
+    { act: 'act-three', actTitle: 'The Sound', sequence: 'siege', scene: 'siege-scene', sceneTitle: 'The Wall Answers' },
+  ];
   return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Urban Basilica',
-      logline: 'A founder builds a weapon and a conscience.',
-      summary: 'Urban sells his craft and must face what it makes possible.',
-      dramaticQuestion: 'Can Urban understand responsibility before the walls fall?',
-      themes: ['craft and complicity'],
-      tone: ['grave', 'precise'],
-      genrePrimary: 'historical drama',
-    },
-    cast: [],
-    locations: [],
-    acts: [
-      cliScreenplayAct(input, 'act-one', 'The Offer', 'commission', 'The Refusal'),
-      cliScreenplayAct(input, 'act-two', 'The Patron', 'casting', 'The Bargain'),
-      cliScreenplayAct(input, 'act-three', 'The Sound', 'siege', 'The Wall Answers'),
-    ],
-  };
-}
-
-function cliScreenplayAct(
-  input: { castMemberId: string; locationId: string },
-  actKey: string,
-  actTitle: string,
-  sequenceKey: string,
-  sceneTitle: string
-) {
-  return {
-    key: actKey,
-    title: actTitle,
-    purpose: 'Move Urban through the moral cost of his craft.',
-    sequences: [
+    opening: [],
+    scenes: sceneDefinitions.map((definition, index) => ({
+      key: definition.scene,
+      productionNumber: String(index + 1),
+      heading: 'INT. FOUNDRY - NIGHT',
+      title: definition.sceneTitle,
+      blocks: [{
+        key: `${definition.scene}-action`,
+        type: 'action',
+        text: 'Urban studies the cracked bronze and hears the city waiting.',
+      }],
+    })),
+    sections: sceneDefinitions.flatMap((definition) => [
+      { key: definition.act, type: 'act', title: definition.actTitle },
+      { key: definition.sequence, type: 'sequence', title: definition.sceneTitle },
+    ]),
+    structure: sceneDefinitions.flatMap((definition, index) => [
       {
-        key: sequenceKey,
-        title: sceneTitle,
-        purpose: 'Pressure Urban toward a choice.',
-        scenes: [
-          {
-            key: `${sequenceKey}-scene`,
-            title: sceneTitle,
-            setting: {
-              interiorExterior: 'INT',
-              timeOfDay: 'NIGHT',
-              locationIds: [input.locationId],
-            },
-            storyFunction: ['Pressure Urban'],
-            blocks: [
-              {
-                type: 'action',
-                text: 'Urban studies the cracked bronze and hears the city waiting.',
-                castMemberIds: [input.castMemberId],
-                locationIds: [input.locationId],
-              },
-            ],
-          },
-        ],
+        key: `${definition.act}-entry`,
+        content: { type: 'section', section: { key: definition.act } },
+        position: index,
       },
-    ],
+      {
+        key: `${definition.sequence}-entry`,
+        parentSection: { key: definition.act },
+        content: { type: 'section', section: { key: definition.sequence } },
+        position: 0,
+      },
+      {
+        key: `${definition.scene}-entry`,
+        parentSection: { key: definition.sequence },
+        content: { type: 'scene', scene: { key: definition.scene } },
+        position: 0,
+      },
+    ]),
+    references: sceneDefinitions.flatMap((definition) => [
+      {
+        key: `${definition.scene}-cast`,
+        subject: { type: 'castMember', id: input.castMemberId },
+        target: { type: 'scene', scene: { key: definition.scene } },
+        role: 'presence',
+      },
+      {
+        key: `${definition.scene}-location`,
+        subject: { type: 'location', id: input.locationId },
+        target: { type: 'scene', scene: { key: definition.scene } },
+        role: 'setting',
+      },
+    ]),
   };
 }
 
 function screenplayAnalysisJson(context: {
   screenplay: {
-    acts: Array<{
+    scenes: Array<{
       id: string;
-      title: string;
-      sequences: Array<{
-        id: string;
-        title: string;
-        scenes: Array<{ id: string; title: string }>;
-      }>;
+      title?: string;
     }>;
   };
 }) {
-  const acts = context.screenplay.acts;
-  const sequences = acts.map((act) => act.sequences[0]);
-  const scenes = sequences.map((sequence) => sequence?.scenes[0]);
+  const scenes = context.screenplay.scenes;
   return {
-    kind: 'screenplayAnalysis',
     structureModel: 'threeAct',
     title: 'Three-act screenplay analysis',
     summary:
@@ -3329,52 +3400,54 @@ function screenplayAnalysisJson(context: {
         description: "How clearly a character's choice drives the story.",
       },
     ],
-    acts: acts.map((act, index) => ({
-      actId: act.id,
-      actRole: ['actOne', 'actTwo', 'actThree'][index],
-      title: act.title,
+    actSegments: scenes.map((scene, index) => ({
+      role: ['actOne', 'actTwo', 'actThree'][index],
+      title: ['The Offer', 'The Patron', 'The Sound'][index],
       synopsis: 'The act presents pressure and moral consequence.',
+      sceneIds: [scene.id],
       scoreByCriterion: {
         dramaticEnergy: 60,
         stakes: 55,
         characterAgency: 50,
       },
-      critique: cliUsefulCritique(scenes[index]?.id),
+      critique: cliUsefulCritique(scene.id),
     })),
     keyBeats: [
-      {
-        key: 'hook',
-        label: 'Hook',
-        actId: acts[0]?.id,
-        sequenceId: sequences[0]?.id,
-        sceneId: scenes[0]?.id,
-        synopsis: 'The story opens with the cost of Urban refusing limits.',
-        scoreByCriterion: {
-          dramaticEnergy: 70,
-          stakes: 65,
-          characterAgency: 55,
-        },
-        critique: cliUsefulCritique(scenes[0]?.id),
+      ['hook', 'Hook'],
+      ['incitingIncident', 'Inciting Incident'],
+      ['firstPlotPoint', 'First Plot Point'],
+      ['firstPinchPoint', 'First Pinch Point'],
+      ['midpoint', 'Midpoint'],
+      ['secondPinchPoint', 'Second Pinch Point'],
+      ['secondPlotPoint', 'Second Plot Point'],
+      ['climax', 'Climax'],
+      ['resolution', 'Resolution'],
+    ].map(([key, label], index) => ({
+      key,
+      label,
+      ...(index === 0 ? { sceneId: scenes[0]?.id } : {}),
+      synopsis: 'The beat tracks the cost of Urban refusing limits.',
+      scoreByCriterion: {
+        dramaticEnergy: 70,
+        stakes: 65,
+        characterAgency: 55,
       },
-    ],
-    sequences: sequences.map((sequence, index) => ({
-      sequenceId: sequence?.id,
-      actId: acts[index]?.id,
-      title: sequence?.title,
+      critique: cliUsefulCritique(scenes[0]?.id),
+    })),
+    sceneGroups: scenes.map((scene, index) => ({
+      title: scene.title ?? `Scene ${index + 1}`,
       synopsis: 'The sequence advances pressure on Urban.',
+      sceneIds: [scene.id],
       beatRole: index === 0 ? 'hook' : undefined,
       scoreByCriterion: {
         dramaticEnergy: 60,
         stakes: 58,
         characterAgency: 53,
       },
-      critique: cliUsefulCritique(scenes[index]?.id),
+      critique: cliUsefulCritique(scene.id),
     })),
-    scenes: scenes.map((scene, index) => ({
-      sceneId: scene?.id,
-      sequenceId: sequences[index]?.id,
-      actId: acts[index]?.id,
-      title: scene?.title,
+    sceneAnalyses: scenes.map((scene, index) => ({
+      sceneId: scene.id,
       synopsis: 'The scene shows Urban under pressure.',
       beatRole: index === 0 ? 'hook' : undefined,
       scoreByCriterion: {
@@ -3382,12 +3455,10 @@ function screenplayAnalysisJson(context: {
         stakes: 59,
         characterAgency: 51,
       },
-      critique: cliUsefulCritique(scene?.id),
+      critique: cliUsefulCritique(scene.id),
     })),
-    suggestedSceneAdditions: [
+    suggestedScenes: [
       {
-        targetActId: acts[0]?.id,
-        targetSequenceId: sequences[0]?.id,
         placement: { afterSceneId: scenes[0]?.id },
         title: 'The Maker Calculates',
         purpose: 'Give Urban a clearer active choice after the hook.',

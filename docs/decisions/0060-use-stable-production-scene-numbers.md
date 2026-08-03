@@ -2,7 +2,11 @@
 
 Date: 2026-07-21
 
-Status: accepted
+Status: superseded by Decision 0071
+
+Decision 0071 removes the reservation registry. Production numbers are now
+optional exact non-empty values stored directly on current Scenes and are not
+normalized, allocated, reserved after deletion, or used as identity/order.
 
 ## Context
 

@@ -14,7 +14,7 @@ export function readGenerationPreviewSubject(
 ): GenerationPreviewSubject {
   const project = readProjectRecord(session);
   const result: GenerationPreviewSubject = {
-    projectLabel: project?.title || project?.name || 'Project',
+    projectLabel: project?.title || project?.projectName || 'Project',
   };
   if (target.kind === 'castMember') {
     const castMember = readCastMemberRecord(session, target.id);

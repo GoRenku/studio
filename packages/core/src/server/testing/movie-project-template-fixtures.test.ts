@@ -166,17 +166,15 @@ describe('movie project template fixtures', () => {
       idGenerator: createDeterministicIdGenerator(),
     });
 
-    const firstRead = await projectData.readProject({
+    const firstRead = await projectData.listCastMembers({
       homeDir: first.homeDir,
-      projectName: 'constantinople',
     });
-    const secondRead = await projectData.readProject({
+    const secondRead = await projectData.listCastMembers({
       homeDir: second.homeDir,
-      projectName: 'constantinople',
     });
 
-    expect(firstRead.cast.map((castMember) => castMember.handle)).toContain('urban');
-    expect(secondRead.cast.map((castMember) => castMember.handle)).not.toContain('urban');
+    expect(firstRead.map((castMember) => castMember.handle)).toContain('urban');
+    expect(secondRead.map((castMember) => castMember.handle)).not.toContain('urban');
   });
 
   it('opens copied sample movie projects in the receiving home', async () => {

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type {
   SceneDialogueAudioSetup,
   SceneDialogueAudioWorkspaceMutationReport,
@@ -13,7 +13,7 @@ import { readSceneDialogueAudioWorkspace } from './context.js';
 export function updateSceneDialogueAudioSetup(input: {
   session: DatabaseSession;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   setup: Partial<SceneDialogueAudioSetup>;
   idGenerator: ProjectIdGenerator;
   now: string;
@@ -22,7 +22,10 @@ export function updateSceneDialogueAudioSetup(input: {
   const current = input.session.db
     .select()
     .from(sceneDialogueAudio)
-    .where(eq(sceneDialogueAudio.dialogueId, input.dialogueId))
+    .where(and(
+      eq(sceneDialogueAudio.sceneId, input.sceneId),
+      eq(sceneDialogueAudio.turnId, input.turnId),
+    ))
     .get();
   const id = current?.id ?? input.idGenerator.next('scene_dialogue_audio');
   input.session.db
@@ -30,7 +33,7 @@ export function updateSceneDialogueAudioSetup(input: {
     .values({
       id,
       sceneId: input.sceneId,
-      dialogueId: input.dialogueId,
+      turnId: input.turnId,
       castMemberId: setup.castMemberId,
       castVoiceId: setup.castVoiceId,
       modelChoice: setup.modelChoice,
@@ -43,7 +46,7 @@ export function updateSceneDialogueAudioSetup(input: {
       updatedAt: input.now,
     })
     .onConflictDoUpdate({
-      target: [sceneDialogueAudio.sceneId, sceneDialogueAudio.dialogueId],
+      target: [sceneDialogueAudio.sceneId, sceneDialogueAudio.turnId],
       set: {
         castMemberId: setup.castMemberId,
         castVoiceId: setup.castVoiceId,
@@ -64,17 +67,20 @@ export function updateSceneDialogueAudioSetup(input: {
 export function requireSceneDialogueAudioSetup(input: {
   session: DatabaseSession;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
 }): SceneDialogueAudioSetup {
   const row = input.session.db
     .select()
     .from(sceneDialogueAudio)
-    .where(eq(sceneDialogueAudio.dialogueId, input.dialogueId))
+    .where(and(
+      eq(sceneDialogueAudio.sceneId, input.sceneId),
+      eq(sceneDialogueAudio.turnId, input.turnId),
+    ))
     .get();
   if (!row || row.sceneId !== input.sceneId || !row.castVoiceId) {
     throw new ProjectDataError(
       'CORE_DIALOGUE_AUDIO_SETUP_REQUIRED',
-      `Scene Dialogue Audio setup is incomplete: ${input.dialogueId}.`
+      `Scene Dialogue Audio setup is incomplete: ${input.turnId}.`
     );
   }
   return {
@@ -82,7 +88,7 @@ export function requireSceneDialogueAudioSetup(input: {
     target: {
       kind: 'sceneDialogue',
       sceneId: row.sceneId,
-      dialogueId: row.dialogueId,
+      turnId: row.turnId,
     },
     modelChoice: modelChoice(row.modelChoice),
     castVoiceId: row.castVoiceId,
@@ -97,20 +103,20 @@ export function requireSceneDialogueAudioSetup(input: {
 function resolveSetup(input: {
   session: DatabaseSession;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   setup: Partial<SceneDialogueAudioSetup>;
 }) {
   const workspace = readSceneDialogueAudioWorkspace(input);
   const dialogue = workspace.dialogues.find(
-    (candidate) => candidate.dialogueId === input.dialogueId
+    (candidate) => candidate.turnId === input.turnId
   );
   if (!dialogue?.castMemberId) {
     throw new ProjectDataError(
       'CORE_DIALOGUE_AUDIO_DIALOGUE_INVALID',
-      `Dialogue is not assigned to a Cast Member: ${input.dialogueId}.`
+      `Dialogue Turn is not assigned to a Cast Member: ${input.turnId}.`
     );
   }
-  const current = workspace.audioByDialogueId[input.dialogueId];
+  const current = workspace.audioByTurnId[input.turnId];
   const castVoiceId = input.setup.castVoiceId ?? current?.castVoiceId;
   if (!castVoiceId) {
     throw new ProjectDataError(

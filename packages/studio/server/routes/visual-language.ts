@@ -4,7 +4,7 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import type { LookbookKind } from '@gorenku/studio-core/server';
+import { resolveRenkuStorageRoot, type LookbookKind } from '@gorenku/studio-core/server';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -141,9 +141,8 @@ export function createVisualLanguageRoute({
               suggestion: 'Request an existing Inspiration image.',
             });
           }
-          const project = await projectData.readProject({ projectName });
           return await readProjectRelativeImageResponse(
-            project.identity.folderPath,
+            path.join(await resolveRenkuStorageRoot(), projectName),
             image.projectRelativePath
           );
         } catch (error) {

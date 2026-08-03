@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import type { ProjectCreateReport } from '../../client/index.js';
-import type { ScreenplayCreateDocument } from '../../client/screenplay.js';
+import type { ScreenplayInput } from '../../client/screenplay/index.js';
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
@@ -97,7 +97,7 @@ export async function createCommandBuiltSampleMovieProject(input: {
       projectName: 'constantinople',
       title: 'Preparation of the Siege',
       logline: 'A documentary about preparation before 1453.',
-      summary: 'A documentary project summary stored in SQLite.',
+      synopsis: 'A documentary project synopsis stored in SQLite.',
       aspectRatio: '16:9',
       homeDir: input.homeDir,
       idGenerator: createDeterministicIdGenerator(),
@@ -160,56 +160,43 @@ export async function createCommandBuiltSampleMovieProject(input: {
   });
   await projectData.createScreenplay({
     homeDir: input.homeDir,
-    document: sampleScreenplayCreateDocument(),
+    projectName: 'constantinople',
+    screenplay: sampleScreenplayInput(),
     idGenerator: createDeterministicIdGenerator(),
   });
   return created;
 }
 
-export function sampleScreenplayCreateDocument(): ScreenplayCreateDocument {
+export function sampleScreenplayInput(): ScreenplayInput {
   return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Preparation of the Siege',
-      logline: 'A documentary about preparation before 1453.',
-      summary: 'Mehmed turns an inherited ambition into a concrete plan.',
-    },
-    cast: [],
-    locations: [],
-    acts: [
+    opening: [],
+    scenes: [
       {
-        key: 'act-one',
-        title: 'Act I',
-        sequences: [
+        key: 'throne-city',
+        productionNumber: '1',
+        heading: "INT. MEHMED'S COUNCIL CHAMBER - NIGHT",
+        title: 'A Throne Facing an Ancient City',
+        blocks: [
           {
-            key: 'young-sultan',
-            title: "The Young Sultan's Obsession",
-            purpose: 'Mehmed turns conquest into policy.',
-            scenes: [
-              {
-                key: 'throne-city',
-                title: 'A Throne Facing an Ancient City',
-                setting: {
-                  interiorExterior: 'INT',
-                  timeOfDay: 'NIGHT',
-                  locationIds: ['location_test0001'],
-                },
-                storyFunction: [
-                  "Mehmed's accession is framed against Constantinople.",
-                ],
-                blocks: [
-                  {
-                    type: 'action',
-                    text: 'Mehmed studies the city map.',
-                    castMemberIds: ['cast_test0002'],
-                    locationIds: ['location_test0001'],
-                  },
-                ],
-              },
-            ],
+            key: 'studies-map',
+            type: 'action',
+            text: 'Mehmed studies the city map.',
           },
         ],
       },
+    ],
+    sections: [
+      { key: 'act-one', type: 'act', title: 'Act I' },
+      { key: 'young-sultan', type: 'sequence', title: "The Young Sultan's Obsession", description: 'Mehmed turns conquest into policy.' },
+    ],
+    structure: [
+      { key: 'act-one-placement', content: { type: 'section', section: { key: 'act-one' } }, position: 0 },
+      { key: 'young-sultan-placement', parentSection: { key: 'act-one' }, content: { type: 'section', section: { key: 'young-sultan' } }, position: 0 },
+      { key: 'throne-city-placement', parentSection: { key: 'young-sultan' }, content: { type: 'scene', scene: { key: 'throne-city' } }, position: 0 },
+    ],
+    references: [
+      { key: 'location-setting', subject: { type: 'location', id: 'location_test0001' }, target: { type: 'scene', scene: { key: 'throne-city' } }, role: 'setting' },
+      { key: 'mehmed-presence', subject: { type: 'castMember', id: 'cast_test0002' }, target: { type: 'block', scene: { key: 'throne-city' }, block: { key: 'studies-map' } }, role: 'presence' },
     ],
   };
 }

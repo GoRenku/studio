@@ -5,7 +5,7 @@ import type {
   GenerationReferenceGuideSlot,
   ShotPlanVideoInputMode,
 } from '../../client/generation.js';
-import type { ProjectRelativePath } from '../../client/project.js';
+import type { ProjectRelativePath } from '../../client/project/index.js';
 import { projectGenerationPreviewReferences } from './references.js';
 
 describe('projectGenerationPreviewReferences', () => {

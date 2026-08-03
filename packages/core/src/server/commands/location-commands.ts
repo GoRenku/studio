@@ -16,7 +16,7 @@ import { withCurrentProjectSession } from '../database/lifecycle/current-project
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
-import { readScreenplayDocumentFromSession } from '../database/access/screenplay-resource.js';
+import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { readProjectInformationResourceFromDatabase } from '../database/access/project-information.js';
 import {
   readActiveLocationDesignDocument,
@@ -71,7 +71,7 @@ export async function readLocationContext(
 ): Promise<ProductionDesignLocationContextReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
     const location = requireLocation(session, input.locationId);
-    const screenplay = readScreenplayDocumentFromSession(session);
+    const screenplay = readCanonicalScreenplay(session);
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveLocationDesignDocument(session, input.locationId);
     const assets = listLocationAssetRoleRecords(session, input.locationId);
@@ -88,7 +88,7 @@ export async function readLocationContext(
         title: projectInfo.title,
         aspectRatio: projectInfo.aspectRatio,
         logline: projectInfo.logline,
-        summary: projectInfo.summary,
+        synopsis: projectInfo.synopsis,
       }),
       resourceKeys: locationResourceKeys(input.locationId),
       location,
@@ -99,7 +99,7 @@ export async function readLocationContext(
             document: activeDesign.document,
           })
         : null,
-      scenes: screenplay ? locationScenes(screenplay, input.locationId) : [],
+      scenes: locationScenes(screenplay, input.locationId),
       activeLookbook: null,
       assets: ownedAssets,
       assetTypeCounts: typeCounts(assets),
@@ -141,10 +141,8 @@ export async function applyLocationOperations(
     const propHandles = new Map(
       listPropRecords(session).map((prop) => [prop.handle, prop.id])
     );
-    const screenplay = readScreenplayDocumentFromSession(session);
-    const referencedLocationIds = screenplay
-      ? collectReferencedLocationIds(screenplay)
-      : new Set<string>();
+    const screenplay = readCanonicalScreenplay(session);
+    const referencedLocationIds = collectReferencedLocationIds(screenplay);
     const generatedIds: DepartmentGeneratedId[] = [];
     const changes: DepartmentCommandChange[] = [];
     const draft = [...existing];
@@ -377,32 +375,33 @@ function locationResourceKeysForChanges(changes: DepartmentCommandChange[]): str
 }
 
 function locationScenes(
-  screenplay: NonNullable<ReturnType<typeof readScreenplayDocumentFromSession>>,
+  screenplay: ReturnType<typeof readCanonicalScreenplay>,
   locationId: string
 ): ProductionDesignLocationContextReport['scenes'] {
   const scenes: ProductionDesignLocationContextReport['scenes'] = [];
-  screenplay.acts.forEach((act) =>
-    act.sequences.forEach((sequence) =>
-      sequence.scenes.forEach((scene) => {
-        const referenced =
-          scene.setting.locationIds?.includes(locationId) ||
-          scene.blocks.some((block) => block.locationIds?.includes(locationId));
-        if (referenced) {
-          scenes.push({
-            sceneId: scene.id as string,
-            sequenceId: sequence.id as string,
-            sequenceTitle: sequence.title,
-            title: scene.title,
-            setting: scene.setting,
-            storyFunction: scene.storyFunction ?? [],
-            excerpts: scene.blocks.map((block) =>
-              block.type === 'dialogue' ? block.lines.join(' ') : block.text
-            ),
-          });
-        }
-      })
-    )
-  );
+  for (const scene of screenplay.scenes) {
+    const referenced = screenplay.references.some((reference) =>
+      reference.subject.type === 'location'
+      && reference.subject.id === locationId
+      && 'sceneId' in reference.target
+      && reference.target.sceneId === scene.id,
+    );
+    if (referenced) {
+      scenes.push({
+        sceneId: scene.id,
+        ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
+        heading: scene.heading,
+        ...(scene.title ? { title: scene.title } : {}),
+        excerpts: scene.blocks.flatMap((block) =>
+          block.type === 'dialogue'
+            ? block.parts.map((part) => part.text)
+            : block.type === 'dualDialogue'
+              ? [...block.left.parts, ...block.right.parts].map((part) => part.text)
+              : [block.text],
+        ),
+      });
+    }
+  }
   return scenes;
 }
 

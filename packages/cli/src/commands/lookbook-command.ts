@@ -220,7 +220,7 @@ function projectInput(options: LookbookCommandOptions): {
 async function notify(
   options: LookbookCommandOptions,
   service: Service,
-  report: { project: { name: string; id?: string }; resourceKeys: string[] },
+  report: { project: { projectName: string; id?: string }; resourceKeys: string[] },
   command: string
 ): Promise<void> {
   await appendStudioResourceChangedEvent({

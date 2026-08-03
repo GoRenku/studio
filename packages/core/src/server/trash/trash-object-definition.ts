@@ -10,7 +10,7 @@ import type { ProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export interface TrashProjectContext {
-  project: Pick<ProjectRecord, 'id' | 'name'>;
+  project: Pick<ProjectRecord, 'id' | 'projectName'>;
   projectFolder: string;
 }
 

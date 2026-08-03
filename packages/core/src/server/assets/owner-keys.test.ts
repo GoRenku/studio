@@ -9,7 +9,6 @@ describe('Asset owner keys', () => {
       { kind: 'castMember', id: 'cast:one/two' },
       { kind: 'location', id: 'location one' },
       { kind: 'prop', id: 'prop one' },
-      { kind: 'sequence', id: 'sequence%one' },
       { kind: 'scene', id: 'scene:one' },
       {
         kind: 'sceneBeat',

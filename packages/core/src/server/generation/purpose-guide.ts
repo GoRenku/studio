@@ -82,13 +82,13 @@ function slotFromDefinition(
 
 export function dialogueAudioFileIds(
   context: BuildGenerationPurposeInput,
-  dialogueId: string
+  turnId: string
 ): string[] {
   return context.session.db
     .select({ assetFileId: sceneDialogueAudioTakes.assetFileId })
     .from(sceneDialogueAudioTakes)
     .innerJoin(sceneDialogueAudio, eq(sceneDialogueAudioTakes.sceneDialogueAudioId, sceneDialogueAudio.id))
-    .where(and(eq(sceneDialogueAudio.dialogueId, dialogueId), isNull(sceneDialogueAudioTakes.discardedAt)))
+    .where(and(eq(sceneDialogueAudio.turnId, turnId), isNull(sceneDialogueAudioTakes.discardedAt)))
     .all()
     .map((row) => row.assetFileId);
 }

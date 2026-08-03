@@ -90,8 +90,7 @@ export function parseStudioSelection(
         selection = { type, kind: record.kind };
       }
       break;
-    case 'act':
-    case 'sequence':
+    case 'section':
     case 'castMember':
     case 'location':
     case 'prop': {

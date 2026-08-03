@@ -14,9 +14,7 @@ import {
   studioSceneBeatsResourceKey,
   studioSceneDialogueAudioSurfaceResourceKey,
   studioSceneShotPlansResourceKey,
-  studioScreenplayActsResourceKey,
   studioScreenplayResourceKey,
-  studioSequenceScenesNavigationResourceKey,
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,
   studioVisualLanguageLookbookResourceKey,
@@ -31,10 +29,6 @@ describe('Studio resource key catalog', () => {
     expect(studioCastNavigationResourceKey()).toBe('navigation:cast');
     expect(studioLocationNavigationResourceKey()).toBe('navigation:locations');
     expect(studioScreenplayResourceKey()).toBe('screenplay');
-    expect(studioScreenplayActsResourceKey()).toBe('screenplay:acts');
-    expect(studioSequenceScenesNavigationResourceKey('seq_opening')).toBe(
-      'navigation:sequence-scenes:seq_opening'
-    );
   });
 
   it('builds accepted surface resource keys', () => {
@@ -76,9 +70,6 @@ describe('Studio resource key catalog', () => {
       })
     ).toEqual(['surface:location:location_gate']);
     expect(studioAssetOwnerSurfaceResourceKeys({ kind: 'project' })).toEqual([]);
-    expect(
-      studioAssetOwnerSurfaceResourceKeys({ kind: 'sequence', id: 'seq_1' })
-    ).toEqual([]);
     expect(
       studioAssetOwnerSurfaceResourceKeys({ kind: 'scene', id: 'scene_1' })
     ).toEqual([]);

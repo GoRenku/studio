@@ -1,6 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { Asset } from './assets.js';
-import type { Beat } from './scene-beat-sheet.js';
+import type { Beat } from './scene-beats/index.js';
 
 export interface ShotPlanCoverage {
   beatSheetId: string;
@@ -133,7 +133,7 @@ export interface ShotPlanCoveredBeat {
 export interface ShotPlanReport {
   valid: true;
   project: {
-    name: string;
+    projectName: string;
     id: string;
     projectFolder: string;
   };

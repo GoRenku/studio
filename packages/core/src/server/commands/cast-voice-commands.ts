@@ -200,7 +200,7 @@ export async function createCastVoiceProviderRegistration(
     return {
       project: {
         id: currentProject.projectId,
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
       },
       voice: toCastVoice(session, record),
       registration: requireCastVoiceProviderRegistrationRecord(session, {
@@ -232,7 +232,7 @@ export async function removeCastVoiceProviderRegistration(
     return {
       project: {
         id: currentProject.projectId,
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
       },
       removed: {
         castMemberId: input.castMemberId,
@@ -296,7 +296,7 @@ export async function attachCastVoice(
       warnings: [],
       project: {
         id: currentProject.projectId,
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
       },
       castMember: {
         id: validated.castMember.id,
@@ -339,7 +339,7 @@ export async function removeCastVoice(
       session,
       project: {
         id: currentProject.projectId,
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
       },
       projectFolder,
       itemKind: 'castVoice',
@@ -356,7 +356,7 @@ export async function removeCastVoice(
     return {
       project: {
         id: currentProject.projectId,
-        name: currentProject.projectName,
+        projectName: currentProject.projectName,
       },
       removed: {
         castMemberId: input.castMemberId,
@@ -1106,7 +1106,7 @@ async function withCastVoiceProjectSession<T>(
       }
       return await fn({
         currentProject: {
-          projectName: project.name,
+          projectName: project.projectName,
           projectId: project.id,
           projectFolder: handle.projectFolder,
         },

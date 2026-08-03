@@ -26,32 +26,6 @@ export function createNavigationRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .get('/sequences', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const page = await projectData.listSequenceNavigation({
-          projectName,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({ page });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .get('/sequences/:sequenceId/scenes', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const sequenceId = c.req.param('sequenceId') as string;
-        const page = await projectData.listSceneNavigation({
-          projectName,
-          sequenceId,
-          ...readPageRequest(c.req.query()),
-        });
-        return c.json({ page });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
     .get('/scenes/:sceneId/design', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

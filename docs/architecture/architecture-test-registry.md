@@ -51,7 +51,7 @@ Static tests:
 
 Runtime tests:
 
-- `packages/studio/server/routes/screenplay.test.ts`
+- `packages/studio/server/routes/screenplay/index.test.ts`
 
 Forbidden capabilities:
 

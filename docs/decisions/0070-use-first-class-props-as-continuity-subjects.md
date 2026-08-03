@@ -41,7 +41,7 @@ props/<prop-handle>/prop-sheets/<sheet-slug>.<ext>
 props/<prop-handle>/heroes/hero.<ext>
 ```
 
-Studio exposes Props below Locations and above Acts, with URL-owned overview
+Studio exposes Props below Locations and above Scenes, with URL-owned overview
 and detail routes. Cast, Location, and Prop resource reads share the
 `/continuity` HTTP boundary; the obsolete Cast and Location screenplay routes
 are removed directly.
@@ -62,3 +62,10 @@ guessing.
   media promotion are introduced.
 - Production Designer owns Prop authoring direction and hands focused media
   work to Media Producer.
+
+## Update Notice: Screenplay References
+
+Decision 0071 extends first-class Props into the Scene-first Screenplay
+reference model. Props remain independent Project facts; Screenplay and Beat
+Sheet records may reference their durable ids without embedding or duplicating
+Prop facts.

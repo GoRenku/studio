@@ -32,7 +32,7 @@ describe('trash command', () => {
     vi.mocked(service.listTrash).mockResolvedValue({
       valid: true,
       warnings: [],
-      project: { id: 'project_test', name: 'constantinople' },
+      project: { id: 'project_test', projectName: 'constantinople' },
       items: [],
       resourceKeys: ['trash:list'],
     });
@@ -52,7 +52,7 @@ describe('trash command', () => {
       homeDir: '/tmp/renku-home',
     });
     expect(JSON.parse(stdout[0]!)).toMatchObject({
-      project: { name: 'constantinople' },
+      project: { projectName: 'constantinople' },
       items: [],
     });
   });
@@ -148,7 +148,7 @@ function recoverableReport() {
   return {
     valid: true as const,
     warnings: [],
-    project: { id: 'project_test', name: 'constantinople' },
+    project: { id: 'project_test', projectName: 'constantinople' },
     changes: [{ type: 'trash.restored', itemId: 'trash_item_test0001' }],
     recovery: {
       operationId: 'trash_operation_test0001',
@@ -167,7 +167,7 @@ function garbageCollectionPreview() {
   return {
     valid: true as const,
     warnings: [],
-    project: { id: 'project_test', name: 'constantinople' },
+    project: { id: 'project_test', projectName: 'constantinople' },
     confirmationToken: 'trash-confirmation-token',
     items: [],
     files: [],

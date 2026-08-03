@@ -477,7 +477,7 @@ function recoverableReport(input: {
 function toProjectReport(input: TrashProjectContext): TrashProjectReport {
   return {
     id: input.project.id,
-    name: input.project.name,
+    projectName: input.project.projectName,
     projectFolder: input.projectFolder,
   };
 }

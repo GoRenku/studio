@@ -9,6 +9,8 @@ import {
   assertHttpRequestFields,
   readHttpRequestRecord,
   readOptionalHttpString,
+  readOptionalHttpNumber,
+  readOptionalHttpStringArray,
   readRequiredHttpBoolean,
   readRequiredHttpString,
 } from './request-validation.js';
@@ -33,7 +35,14 @@ export function readProjectInformationRequest(
   assertHttpRequestFields(
     record,
     [],
-    ['title', 'aspectRatio', 'logline', 'summary', 'languages'],
+    [
+      'title', 'aspectRatio', 'logline', 'synopsis', 'premise',
+      'intendedAudience', 'format', 'targetRuntimeMinutes', 'primaryGenre',
+      'secondaryGenres', 'tones', 'contentRatingIntent', 'creativeBoundaries',
+      'centralConflict', 'dramaticQuestion', 'themes', 'historicalBasis',
+      'dramatizedElements', 'screenplayDraftStatus', 'researchSources',
+      'assumptions', 'openQuestions', 'nextSteps', 'languages',
+    ],
     issues,
     PROJECT_INFORMATION_CONTEXT,
     'Send only the supported project information fields.'
@@ -57,12 +66,31 @@ export function readProjectInformationRequest(
     issues,
     PROJECT_INFORMATION_CONTEXT
   );
-  const summary = readOptionalHttpString(
+  const synopsis = readOptionalHttpString(
     record,
-    ['summary'],
+    ['synopsis'],
     issues,
     PROJECT_INFORMATION_CONTEXT
   );
+  const premise = readOptionalHttpString(record, ['premise'], issues, PROJECT_INFORMATION_CONTEXT);
+  const intendedAudience = readOptionalHttpString(record, ['intendedAudience'], issues, PROJECT_INFORMATION_CONTEXT);
+  const format = readOptionalHttpString(record, ['format'], issues, PROJECT_INFORMATION_CONTEXT);
+  const targetRuntimeMinutes = readOptionalHttpNumber(record, ['targetRuntimeMinutes'], issues, PROJECT_INFORMATION_CONTEXT);
+  const primaryGenre = readOptionalHttpString(record, ['primaryGenre'], issues, PROJECT_INFORMATION_CONTEXT);
+  const secondaryGenres = readOptionalHttpStringArray(record, ['secondaryGenres'], issues, PROJECT_INFORMATION_CONTEXT);
+  const tones = readOptionalHttpStringArray(record, ['tones'], issues, PROJECT_INFORMATION_CONTEXT);
+  const contentRatingIntent = readOptionalHttpString(record, ['contentRatingIntent'], issues, PROJECT_INFORMATION_CONTEXT);
+  const creativeBoundaries = readOptionalHttpStringArray(record, ['creativeBoundaries'], issues, PROJECT_INFORMATION_CONTEXT);
+  const centralConflict = readOptionalHttpString(record, ['centralConflict'], issues, PROJECT_INFORMATION_CONTEXT);
+  const dramaticQuestion = readOptionalHttpString(record, ['dramaticQuestion'], issues, PROJECT_INFORMATION_CONTEXT);
+  const themes = readOptionalHttpStringArray(record, ['themes'], issues, PROJECT_INFORMATION_CONTEXT);
+  const historicalBasis = readOptionalHttpStringArray(record, ['historicalBasis'], issues, PROJECT_INFORMATION_CONTEXT);
+  const dramatizedElements = readOptionalHttpStringArray(record, ['dramatizedElements'], issues, PROJECT_INFORMATION_CONTEXT);
+  const screenplayDraftStatus = readOptionalHttpString(record, ['screenplayDraftStatus'], issues, PROJECT_INFORMATION_CONTEXT);
+  const researchSources = readOptionalHttpStringArray(record, ['researchSources'], issues, PROJECT_INFORMATION_CONTEXT);
+  const assumptions = readOptionalHttpStringArray(record, ['assumptions'], issues, PROJECT_INFORMATION_CONTEXT);
+  const openQuestions = readOptionalHttpStringArray(record, ['openQuestions'], issues, PROJECT_INFORMATION_CONTEXT);
+  const nextSteps = readOptionalHttpStringArray(record, ['nextSteps'], issues, PROJECT_INFORMATION_CONTEXT);
   const languages = readLanguages(record.languages, ['languages'], issues);
   const result = buildDiagnosticResult(issues);
   if (!result.valid || title === null || languages === null) {
@@ -73,7 +101,26 @@ export function readProjectInformationRequest(
     title,
     aspectRatio,
     logline,
-    summary,
+    synopsis,
+    premise,
+    intendedAudience,
+    format,
+    targetRuntimeMinutes,
+    primaryGenre,
+    secondaryGenres,
+    tones,
+    contentRatingIntent,
+    creativeBoundaries,
+    centralConflict,
+    dramaticQuestion,
+    themes,
+    historicalBasis,
+    dramatizedElements,
+    screenplayDraftStatus,
+    researchSources,
+    assumptions,
+    openQuestions,
+    nextSteps,
     languages,
   };
 }

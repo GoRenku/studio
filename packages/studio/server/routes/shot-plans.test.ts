@@ -78,7 +78,7 @@ describe('Shot Plans Hono route', () => {
       valid: true as const,
       project: {
         id: 'project_test0001',
-        name: 'constantinople',
+        projectName: 'constantinople',
         projectFolder: '/tmp/renku/constantinople',
       },
       target: { kind: 'shot' as const, id: 'shot_second' },
@@ -164,7 +164,7 @@ function shotPlanReport(): ShotPlanReport {
     valid: true,
     project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
       projectFolder: '/tmp/renku/constantinople',
     },
     shotPlan: {
@@ -206,9 +206,10 @@ function shotPlanReport(): ShotPlanReport {
           description: 'The order is given.',
           narrativeDevelopment: 'The decision hardens.',
           narrativePurpose: 'Commit the council.',
-          screenplayBlockIndexes: [0],
+          screenplayBlockIds: ['screenplay_block_opening'],
           castMemberIds: [],
           locationIds: [],
+          propIds: [],
         },
         position: 6,
         storyboardImage: {
@@ -223,9 +224,10 @@ function shotPlanReport(): ShotPlanReport {
           description: 'The map is studied.',
           narrativeDevelopment: 'The risk becomes visible.',
           narrativePurpose: 'Frame the siege problem.',
-          screenplayBlockIndexes: [0],
+          screenplayBlockIds: ['screenplay_block_opening'],
           castMemberIds: [],
           locationIds: [],
+          propIds: [],
         },
         position: 4,
         storyboardImage: null,
@@ -257,7 +259,7 @@ function recoverableReport(): RecoverableMutationReport {
     valid: true,
     project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
       projectFolder: '/tmp/renku/constantinople',
     },
     changes: [{ type: 'asset.discarded', assetId: 'asset_unselected' }],

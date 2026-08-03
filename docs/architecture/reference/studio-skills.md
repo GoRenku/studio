@@ -1,6 +1,6 @@
 # Studio Skills
 
-Date: 2026-05-26
+Date: 2026-08-03
 
 Status: current
 
@@ -14,6 +14,8 @@ Studio Skills project.
 Decision history:
 
 - `../../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
+- `../../decisions/0071-use-scene-first-screenplay-and-direct-project-story-metadata.md`
+- `../../decisions/0072-use-hierarchy-independent-screenplay-analysis.md`
 
 ## Skills Location
 
@@ -44,12 +46,23 @@ operational companions that teach agents how to use those contracts.
   JSON through the CLI.
 - Hands generated image requests to `media-producer`.
 
+`screenplay-drafter`
+
+- Creates and revises the Scene-first Screenplay through `renku screenplay`.
+- Stores story/development metadata on direct Project fields through
+  `renku info`, not in duplicate Screenplay metadata.
+- Authors plain screenplay text and binds existing Cast Members, Locations,
+  and Props with focused references.
+- Treats Scenes as canonical and Acts/Sequences as optional non-owning
+  Sections; uses stable IDs for Blocks and dialogue values.
+
 `screenplay-analyst`
 
 - Analyzes the current screenplay through `renku screenplay analyze`.
-- Reads ordered acts, sequences, scenes, cast, locations, props, and default analysis
-  criteria from the CLI context command.
-- Writes validated `kind: "screenplayAnalysis"` JSON through the CLI.
+- Reads direct Project story fields, canonical ordered Scenes and stable Blocks,
+  Cast Member/Location/Prop references, and default analysis criteria.
+- Writes hierarchy-independent Screenplay Analysis JSON with analysis-owned Act
+  segments and optional Scene groups through the CLI.
 - Suggests scene additions or revisions as critique only; it does not mutate the
   screenplay graph.
 
@@ -107,7 +120,7 @@ operational companions that teach agents how to use those contracts.
   runs.
 - For `scene.storyboard-sheet`, reads the exact Scene Beat Sheet, batches one
   to four Beats, inspects and includes the project Storyboard Lookbook,
-  Cast, and Location references, and stops for user direction when needed
+  Cast Member, Location, and Prop references, and stops for user direction when needed
   continuity media is unavailable.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
   the output to `casting-director` for `renku cast voice attach`.
@@ -131,7 +144,7 @@ operational companions that teach agents how to use those contracts.
 - Resolves exact plan/Shot ids and one-based user-facing Shot numbers without
   whole-plan replacement.
 - Authors readable opaque Markdown with only relevant sections, exact
-  context-provided Cast Member and Location `@handle` references, and strong
+  context-provided Cast Member, Location, and Prop `@handle` references, and strong
   emphasis for material known cinematography terms.
 - Keeps briefs concise, uses only `shallow` or `deep` for depth of field, and
   uses `focusTarget` for one primary optical subject, plane, or distance.
@@ -143,10 +156,10 @@ operational companions that teach agents how to use those contracts.
 `scene-beat-designer`
 
 - Designs and persists Scene Beat Sheets for individual screenplay scenes.
-- Uses `renku screenplay beat-sheet context` to read screenplay blocks,
-  referenced cast, referenced locations, Production Lookbook guidance, and
-  active Beat Sheet history.
-- Writes validated `kind: "sceneBeatSheet"` JSON through the CLI.
+- Uses `renku screenplay beat-sheet context` to read stable Screenplay Block
+  ids, referenced Cast Members, Locations, and Props, Production Lookbook
+  guidance, and active Beat Sheet history.
+- Writes validated closed Scene Beat Sheet JSON through the CLI.
 - Hands storyboard image requests to `media-producer` after a valid Scene Beat
   Sheet exists and uses the Storyboard Lookbook when available. The
   media-producer skill owns
@@ -172,6 +185,8 @@ Skills must not:
 - add framing, lens, camera movement, coverage, analog shooting logistics, or
   call-sheet timing to Scene Beat Sheet documents.
 - mutate Cast Members, Locations, or Props through screenplay operation documents;
+- embed Project subject facts or `@handle` tokens into authored screenplay text;
+- use screenplay Block indexes in Beat Sheet JSON;
 - store generated media paths inside Cast Design or Location Design JSON;
 - treat costume variants or location-local set dressing as media targets
   without explicit durable contracts.

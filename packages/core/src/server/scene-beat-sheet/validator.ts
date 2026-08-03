@@ -12,13 +12,13 @@ import type {
   SceneBeatSheetOperationDocument,
   SceneBeatSheetDocument,
   SceneStoryboardImagesImportDocument,
-} from '../../client/scene-beat-sheet.js';
+} from '../../client/scene-beats/index.js';
 import {
   sceneBeatSheetDocumentSchema,
   sceneBeatSheetOperationDocumentSchema,
   sceneStoryboardImagesImportDocumentSchema,
-} from '../../client/scene-beat-sheet-json-schemas.js';
-import type { ScreenplayDocument } from '../../client/screenplay.js';
+} from '../../client/scene-beats/index.js';
+import type { Scene, Screenplay } from '../../client/screenplay/index.js';
 
 const BEAT_SHEET_DIAGNOSTIC_CODE = 'PROJECT_DATA320';
 
@@ -117,7 +117,7 @@ export function assertSceneStoryboardImagesImportDocument(input: {
 
 export function validateSceneBeatSheetDocument(input: {
   document: SceneBeatSheetDocument;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   filePath?: string;
 }): DiagnosticResult {
   const shapeIssues = validateSceneBeatSheetShape(input.document, input.filePath);
@@ -130,7 +130,7 @@ export function validateSceneBeatSheetDocument(input: {
 
 export function assertSceneBeatSheetDocument(input: {
   document: SceneBeatSheetDocument;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   filePath?: string;
 }): DiagnosticIssue[] {
   const result = validateSceneBeatSheetDocument(input);
@@ -144,7 +144,7 @@ export function assertSceneBeatSheetDocument(input: {
 
 export function parseStoredSceneBeatSheetDocument(input: {
   value: string;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   path?: string[];
 }): SceneBeatSheetDocument {
   let parsed: SceneBeatSheetDocument;
@@ -182,7 +182,7 @@ export function parseStoredSceneBeatSheetDocument(input: {
 
 export function serializeSceneBeatSheetDocument(input: {
   document: SceneBeatSheetDocument;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   filePath?: string;
 }): string {
   assertSceneBeatSheetDocument(input);
@@ -215,7 +215,7 @@ function validateShape(input: {
 
 function validateSceneBeatSheetSemantics(input: {
   document: SceneBeatSheetDocument;
-  screenplay: ScreenplayDocument;
+  screenplay: Screenplay;
   filePath?: string;
 }): DiagnosticIssue[] {
   const { document, screenplay, filePath } = input;
@@ -235,7 +235,8 @@ function validateSceneBeatSheetSemantics(input: {
 
   const context = buildSceneValidationContext(screenplay, scene);
   const beatIds = new Set<string>();
-  const coveredBlocks = new Set<number>();
+  const coveredBlocks = new Set<string>();
+  const screenplayBlockIds = new Set(scene.blocks.map((block) => block.id));
   document.beats.forEach((beat, beatIndex) => {
     const beatPath = ['beats', String(beatIndex)];
     if (beatIds.has(beat.id)) {
@@ -250,29 +251,29 @@ function validateSceneBeatSheetSemantics(input: {
     }
     beatIds.add(beat.id);
     validateNoAbsoluteOrGeneratedPaths(beat, beatPath, issues, filePath);
-    beat.screenplayBlockIndexes.forEach((blockIndex, blockReferenceIndex) => {
-      if (blockIndex < 0 || blockIndex >= scene.blocks.length) {
+    beat.screenplayBlockIds.forEach((blockId, blockReferenceIndex) => {
+      if (!screenplayBlockIds.has(blockId)) {
         issues.push(
           error(
-            'Beat references a screenplay block index outside the scene.',
+            'Beat references an unknown screenplay block.',
             [
               ...beatPath,
-              'screenplayBlockIndexes',
+              'screenplayBlockIds',
               String(blockReferenceIndex),
             ],
             filePath,
-            'Use zero-based block indexes from the current scene context.'
+            'Use a screenplay block id from the current scene context.'
           )
         );
         return;
       }
-      coveredBlocks.add(blockIndex);
+      coveredBlocks.add(blockId);
     });
-    if (beat.screenplayBlockIndexes.length === 0) {
+    if (beat.screenplayBlockIds.length === 0) {
       issues.push(
         warning(
           'Beat references no screenplay block.',
-          [...beatPath, 'screenplayBlockIndexes'],
+          [...beatPath, 'screenplayBlockIds'],
           filePath,
           'Connect the beat to the nearest scene block when possible.'
         )
@@ -302,16 +303,31 @@ function validateSceneBeatSheetSemantics(input: {
         );
       }
     });
+    beat.propIds.forEach((propId, propIndex) => {
+      if (!context.propIds.has(propId)) {
+        issues.push(
+          error(
+            'Beat references an unknown prop.',
+            [...beatPath, 'propIds', String(propIndex)],
+            filePath,
+            'Use a prop id referenced by the current scene.'
+          )
+        );
+      }
+    });
   });
 
-  scene.blocks.forEach((block, blockIndex) => {
-    if (block.type === 'dialogue' && !coveredBlocks.has(blockIndex)) {
+  scene.blocks.forEach((block) => {
+    if (
+      (block.type === 'dialogue' || block.type === 'dualDialogue') &&
+      !coveredBlocks.has(block.id)
+    ) {
       issues.push(
         warning(
           'Beat Sheet leaves a dialogue block uncovered.',
           ['beats'],
           filePath,
-          `Connect dialogue block ${blockIndex} to a Beat when appropriate.`
+          `Connect dialogue block ${block.id} to a Beat when appropriate.`
         )
       );
     }
@@ -399,36 +415,32 @@ function validateUniqueStringValues(
 }
 
 function buildSceneValidationContext(
-  screenplay: ScreenplayDocument,
-  scene: NonNullable<ReturnType<typeof findScene>>
+  screenplay: Screenplay,
+  scene: Scene
 ): {
   castMemberIds: Set<string>;
   locationIds: Set<string>;
-  sceneCastMemberIds: Set<string>;
-  sceneLocationIds: Set<string>;
+  propIds: Set<string>;
 } {
-  const sceneCastMemberIds = new Set<string>();
-  const sceneLocationIds = new Set<string>(scene.setting.locationIds ?? []);
-  for (const block of scene.blocks) {
-    for (const castMemberId of block.castMemberIds ?? []) {
-      sceneCastMemberIds.add(castMemberId);
+  const castMemberIds = new Set<string>();
+  const locationIds = new Set<string>();
+  const propIds = new Set<string>();
+  for (const reference of screenplay.references) {
+    if (!('sceneId' in reference.target) || reference.target.sceneId !== scene.id) {
+      continue;
     }
-    if (block.type === 'dialogue' && block.castMemberId) {
-      sceneCastMemberIds.add(block.castMemberId);
-    }
-    for (const locationId of block.locationIds ?? []) {
-      sceneLocationIds.add(locationId);
+    if (reference.subject.type === 'castMember') {
+      castMemberIds.add(reference.subject.id);
+    } else if (reference.subject.type === 'location') {
+      locationIds.add(reference.subject.id);
+    } else {
+      propIds.add(reference.subject.id);
     }
   }
   return {
-    castMemberIds: new Set(
-      screenplay.cast.map((castMember) => castMember.id).filter(Boolean) as string[]
-    ),
-    locationIds: new Set(
-      screenplay.locations.map((location) => location.id).filter(Boolean) as string[]
-    ),
-    sceneCastMemberIds,
-    sceneLocationIds,
+    castMemberIds,
+    locationIds,
+    propIds,
   };
 }
 
@@ -469,26 +481,10 @@ function containsDisallowedPath(value: string): boolean {
 }
 
 function findScene(
-  screenplay: ScreenplayDocument,
+  screenplay: Screenplay,
   sceneId: string
-): (ScreenplayDocument['acts'][number]['sequences'][number]['scenes'][number] & {
-  actId?: string;
-  sequenceId?: string;
-}) | null {
-  for (const act of screenplay.acts) {
-    for (const sequence of act.sequences) {
-      for (const scene of sequence.scenes) {
-        if (scene.id === sceneId) {
-          return {
-            ...scene,
-            actId: act.id,
-            sequenceId: sequence.id,
-          };
-        }
-      }
-    }
-  }
-  return null;
+): Scene | null {
+  return screenplay.scenes.find((scene) => scene.id === sceneId) ?? null;
 }
 
 function throwInvalidBeatSheetJson(filePath?: string): never {
