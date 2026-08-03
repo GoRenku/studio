@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { StoryArcResourceResponse } from '@/services/studio-project-contracts';
-import { readStoryArcResource } from '@/services/studio-screenplay-api';
+import { readStoryArcResource } from '@/services/screenplay';
 import {
   matchesStoryArcResource,
   useStudioResourceRefresh,
@@ -49,16 +49,16 @@ export function StoryArcPanel({ projectName }: StoryArcPanelProps) {
   }
 
   const lead =
-    resource.screenplay.logline ??
-    resource.screenplay.dramaticQuestion ??
-    resource.screenplay.premiseOverview ??
-    resource.screenplay.centralConflict ??
-    resource.screenplay.summary;
+    resource.project.logline ??
+    resource.project.dramaticQuestion ??
+    resource.project.premise ??
+    resource.project.centralConflict ??
+    resource.project.synopsis;
   return (
     <div className='space-y-6'>
       <header>
         <h3 className='text-[1.75rem] font-bold leading-none tracking-tight text-foreground'>
-          {resource.screenplay.title}
+          {resource.project.title}
         </h3>
         {lead ? (
           <p className='mt-3 max-w-4xl text-sm leading-6 text-muted-foreground'>

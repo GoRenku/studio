@@ -1,4 +1,4 @@
-import type { SceneDialogueAudioTakeWithUrl } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioTakeWithUrl } from '@/services/screenplay';
 
 export function sceneDialogueAudioTakeLabels(
   takes: SceneDialogueAudioTakeWithUrl[]

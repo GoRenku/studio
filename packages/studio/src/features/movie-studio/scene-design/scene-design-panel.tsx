@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import type { SceneNavigationRow } from '@gorenku/studio-core/client';
+import type { Scene } from '@gorenku/studio-core/client';
 import { readSceneDesignResource } from '@/services/studio-project-assets-api';
 
 interface SceneDesignPanelProps {
   projectName: string;
-  scene: SceneNavigationRow;
+  scene: Scene;
 }
 
 export function SceneDesignPanel({
@@ -33,14 +33,15 @@ export function SceneDesignPanel({
     };
   }, [projectName, scene.id]);
 
-  const editableScene = resource?.scene.id === scene.id ? resource.scene : scene;
+  const editableScene =
+    resource?.scene.scene.id === scene.id ? resource.scene.scene : scene;
 
   return (
     <div className='space-y-4'>
       <section className='space-y-3'>
         <h3 className='text-sm font-semibold text-foreground'>Scene Brief</h3>
         <p className='min-h-24 whitespace-pre-wrap rounded-md border border-border/45 bg-muted/25 p-4 text-sm leading-relaxed text-foreground'>
-          {editableScene.title}
+          {editableScene.title ?? editableScene.heading}
         </p>
       </section>
 

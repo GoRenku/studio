@@ -88,7 +88,7 @@ export function useProjectSession(): ProjectSession {
     async function loadRoute() {
       if (route.screen === 'movieStudio') {
         const currentProject = currentProjectRef.current;
-        if (currentProject?.identity.name === route.projectName) {
+        if (currentProject?.project.projectName === route.projectName) {
           try {
             const nextProject = await validateRouteSelection(
               currentProject,
@@ -130,7 +130,7 @@ export function useProjectSession(): ProjectSession {
         const prefetchedProject = prefetchedProjectRef.current;
         prefetchedProjectRef.current = null;
         const nextProject =
-          prefetchedProject?.identity.name === route.projectName
+          prefetchedProject?.project.projectName === route.projectName
             ? prefetchedProject
             : await readProject(route.projectName);
         const routeProject = await validateRouteSelection(nextProject, route);
@@ -204,7 +204,7 @@ export function useProjectSession(): ProjectSession {
     async (selection: StudioSelection, requestedProjectName?: string) => {
       const projectName =
         requestedProjectName ??
-        project?.identity.name ??
+        project?.project.projectName ??
         (route.screen === 'movieStudio' ? route.projectName : null);
       if (!projectName) {
         return { routeChanged: false };
@@ -355,14 +355,14 @@ function readStudioRoute(): StudioRoute {
     };
   }
 
-  const sequenceRoute = /^\/projects\/([^/]+)\/sequences\/([^/]+)\/?$/.exec(
+  const sectionRoute = /^\/projects\/([^/]+)\/sections\/([^/]+)\/?$/.exec(
     window.location.pathname
   );
-  if (sequenceRoute?.[1] && sequenceRoute[2]) {
+  if (sectionRoute?.[1] && sectionRoute[2]) {
     return {
       screen: 'movieStudio',
-      projectName: decodeURIComponent(sequenceRoute[1]),
-      selection: { type: 'sequence', id: decodeURIComponent(sequenceRoute[2]) },
+      projectName: decodeURIComponent(sectionRoute[1]),
+      selection: { type: 'section', id: decodeURIComponent(sectionRoute[2]) },
     };
   }
 
@@ -489,24 +489,13 @@ function readStudioRoute(): StudioRoute {
     };
   }
 
-  const actRoute = /^\/projects\/([^/]+)\/acts\/([^/]+)\/?$/.exec(
+  const scenesRoute = /^\/projects\/([^/]+)\/scenes\/?$/.exec(
     window.location.pathname
   );
-  if (actRoute?.[1] && actRoute[2]) {
+  if (scenesRoute?.[1]) {
     return {
       screen: 'movieStudio',
-      projectName: decodeURIComponent(actRoute[1]),
-      selection: { type: 'act', id: decodeURIComponent(actRoute[2]) },
-    };
-  }
-
-  const actsRoute = /^\/projects\/([^/]+)\/acts\/?$/.exec(
-    window.location.pathname
-  );
-  if (actsRoute?.[1]) {
-    return {
-      screen: 'movieStudio',
-      projectName: decodeURIComponent(actsRoute[1]),
+      projectName: decodeURIComponent(scenesRoute[1]),
       selection: { type: 'storyArc' },
     };
   }
@@ -538,7 +527,7 @@ async function validateRouteSelection(
   if (canResolveRouteSelection(project, selection)) {
     return project;
   }
-  const context = await readStudioSelectionContext(project.identity.name, {
+  const context = await readStudioSelectionContext(project.project.projectName, {
     selection,
   });
   if (!context.valid) {
@@ -571,10 +560,8 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Location';
     case 'prop':
       return 'Prop';
-    case 'act':
-      return 'Act';
-    case 'sequence':
-      return 'Sequence';
+    case 'section':
+      return 'Section';
     case 'scene':
       return 'Scene';
     case 'projectInformation':
@@ -609,14 +596,15 @@ function canResolveRouteSelection(
   if (selection.type === 'prop') {
     return project.navigation.props.items.some((prop) => prop.id === selection.id);
   }
-  if (selection.type === 'act') {
-    return false;
-  }
-  if (selection.type === 'sequence') {
-    return false;
+  if (selection.type === 'section') {
+    return project.navigation.screenplay.screenplay.sections.some(
+      (section) => section.id === selection.id
+    );
   }
   if (selection.type === 'scene') {
-    return false;
+    return project.navigation.screenplay.screenplay.scenes.some(
+      (scene) => scene.id === selection.id
+    );
   }
   if (selection.type === 'lookbook') {
     return true;
@@ -666,13 +654,10 @@ function studioSelectionRoutePath(
     return `${projectRoutePath(projectName)}/trash`;
   }
   if (selection.type === 'storyArc') {
-    return `${projectRoutePath(projectName)}/acts`;
+    return `${projectRoutePath(projectName)}/scenes`;
   }
-  if (selection.type === 'act') {
-    return `${projectRoutePath(projectName)}/acts/${encodeURIComponent(selection.id)}`;
-  }
-  if (selection.type === 'sequence') {
-    return `${projectRoutePath(projectName)}/sequences/${encodeURIComponent(selection.id)}`;
+  if (selection.type === 'section') {
+    return `${projectRoutePath(projectName)}/sections/${encodeURIComponent(selection.id)}`;
   }
   if (selection.type === 'scene') {
     const base = `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;

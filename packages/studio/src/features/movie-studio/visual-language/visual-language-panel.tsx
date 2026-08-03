@@ -21,7 +21,7 @@ export function VisualLanguagePanel({
   onInspirationFoldersChange,
   inspirationFoldersRevision,
 }: VisualLanguagePanelProps) {
-  const projectName = project.identity.name;
+  const projectName = project.project.projectName;
 
   if (selection.type === 'lookbook') {
     return (

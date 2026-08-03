@@ -4,7 +4,6 @@ import type {
   StudioShot,
   StudioShotPlanCoveredBeat,
 } from '@/services/studio-shot-plans-contracts';
-import type { ScreenplayEntityMentionCatalog } from '../screenplay-entity-mentions';
 import { ShotBriefGrid } from './shot-brief-grid';
 import { ShotDescriptionViewer } from './shot-description-viewer';
 import { ShotPlanBeatLinks } from './shot-plan-beat-links';
@@ -12,11 +11,9 @@ import { ShotPlanBeatLinks } from './shot-plan-beat-links';
 export function ShotPlanShotContent({
   shot,
   coveredBeats = [],
-  entityMentions,
 }: {
   shot: StudioShot;
   coveredBeats?: StudioShotPlanCoveredBeat[];
-  entityMentions: ScreenplayEntityMentionCatalog;
 }) {
   const [tab, setTab] = useState<'brief' | 'description'>('brief');
   return (
@@ -58,10 +55,7 @@ export function ShotPlanShotContent({
             value='brief'
             className='min-h-0 overflow-y-auto pt-4'
           >
-            <ShotBriefGrid
-              brief={shot.brief}
-              entityMentions={entityMentions}
-            />
+            <ShotBriefGrid brief={shot.brief} />
           </TabsContent>
         ) : null}
         {tab === 'description' ? (
@@ -69,10 +63,7 @@ export function ShotPlanShotContent({
             value='description'
             className='min-h-0 overflow-hidden pt-4'
           >
-            <ShotDescriptionViewer
-              value={shot.description}
-              entityMentions={entityMentions}
-            />
+            <ShotDescriptionViewer value={shot.description} />
           </TabsContent>
         ) : null}
       </Tabs>

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import type {
   ScreenplayAnalysisCriterion,
-  ScreenplayBeatRole,
+  ScreenplayAnalysisBeatRole,
   ScreenplaySceneAnalysis,
 } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
@@ -59,7 +59,7 @@ export function StoryArcChart({ resource }: StoryArcChartProps) {
   const sceneAnalysisById = useMemo(
     () =>
       new Map(
-        resource.activeAnalysis?.scenes.map((scene) => [scene.sceneId, scene]) ?? []
+        resource.activeAnalysis?.sceneAnalyses.map((scene) => [scene.sceneId, scene]) ?? []
       ),
     [resource.activeAnalysis]
   );
@@ -82,6 +82,17 @@ export function StoryArcChart({ resource }: StoryArcChartProps) {
         : null,
     [selectedCriterion, model, sceneAnalysisById]
   );
+
+  if (!resource.activeAnalysis) {
+    return (
+      <section className='rounded-(--radius-panel) border border-dashed border-border/60 bg-card/30 px-6 py-12 text-center'>
+        <p className='text-sm font-medium text-foreground'>No active screenplay analysis</p>
+        <p className='mt-2 text-sm text-muted-foreground'>
+          Analyze the screenplay to see its Act bands, key beats, and Scene cadence.
+        </p>
+      </section>
+    );
+  }
 
   if (model.scenes.length === 0 || !view || !selectedCriterion) {
     return (
@@ -814,7 +825,7 @@ function EmptyAnalysisCallout() {
   );
 }
 
-function beatIcon(role: ScreenplayBeatRole): LucideIcon {
+function beatIcon(role: ScreenplayAnalysisBeatRole): LucideIcon {
   switch (role) {
     case 'hook':
       return Anchor;

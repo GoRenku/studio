@@ -105,7 +105,7 @@ export function ProjectLibraryScreen({
             <div className='grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3'>
               {filteredProjects.map((project) => (
                 <ProjectLibraryCard
-                  key={project.name}
+                  key={project.projectName}
                   project={project}
                   isSelectingProject={isSelectingProject}
                   onSelectProject={onSelectProject}

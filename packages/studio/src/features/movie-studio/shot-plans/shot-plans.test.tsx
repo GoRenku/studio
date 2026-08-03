@@ -31,17 +31,6 @@ vi.mock('@/services/studio-shot-plans-api', () => ({
   setStudioShotSelectedImage: vi.fn(),
 }));
 
-const ENTITY_MENTIONS = {
-  castMemberHandles: { urban: 'cast_urban' },
-  castMemberLabels: { cast_urban: 'Urban' },
-  castMemberImages: { cast_urban: { url: '/urban-profile.jpg' } },
-  locationHandles: { chamber: 'location_chamber' },
-  locationLabels: { location_chamber: 'Imperial Council Chamber' },
-  locationImages: {
-    location_chamber: { url: '/imperial-council-chamber.jpg' },
-  },
-};
-
 describe('Shot Plans feature', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -104,9 +93,10 @@ describe('Shot Plans feature', () => {
                 description: 'The council decides.',
                 narrativeDevelopment: 'The choice hardens.',
                 narrativePurpose: 'Commit the group.',
-                screenplayBlockIndexes: [0],
+                screenplayBlockIds: ['block_1'],
                 castMemberIds: [],
                 locationIds: [],
+                propIds: [],
               },
               position: 3,
               storyboardImage: null,
@@ -368,7 +358,6 @@ describe('Shot Plans feature', () => {
         sceneId='scene_one'
         shotPlanId='plan_one'
         shotId='shot_one'
-        entityMentions={ENTITY_MENTIONS}
         onSelect={vi.fn()}
       />
     );
@@ -493,7 +482,6 @@ describe('Shot Plans feature', () => {
             lighting: { intent: 'Cold dawn entering from the east.' },
           },
         }}
-        entityMentions={ENTITY_MENTIONS}
         coveredBeats={[
           {
             beat: {
@@ -502,9 +490,10 @@ describe('Shot Plans feature', () => {
               description: 'First Beat description.',
               narrativeDevelopment: 'First development.',
               narrativePurpose: 'First purpose.',
-              screenplayBlockIndexes: [0],
+              screenplayBlockIds: ['block_1'],
               castMemberIds: [],
               locationIds: [],
+              propIds: [],
             },
             position: 0,
             storyboardImage: null,
@@ -516,9 +505,10 @@ describe('Shot Plans feature', () => {
               description: 'Second Beat description.',
               narrativeDevelopment: 'Second development.',
               narrativePurpose: 'Second purpose.',
-              screenplayBlockIndexes: [1],
+              screenplayBlockIds: ['block_2'],
               castMemberIds: [],
               locationIds: [],
+              propIds: [],
             },
             position: 1,
             storyboardImage: null,
@@ -590,7 +580,7 @@ describe('Shot Plans feature', () => {
     expect(screen.queryByText('Framing')).toBeNull();
   });
 
-  it('presents known description handles as readable mentions without enriching unknown text', async () => {
+  it('preserves every authored description handle without semantic enrichment', async () => {
     const description =
       '## Intent\n\n@urban enters @chamber in an **Establishing Shot**. @unknown waits.';
     const { container } = render(
@@ -599,7 +589,6 @@ describe('Shot Plans feature', () => {
           ...shot('shot_one', 0, null, []),
           description,
         }}
-        entityMentions={ENTITY_MENTIONS}
       />
     );
 
@@ -611,23 +600,16 @@ describe('Shot Plans feature', () => {
     });
     expect(editor.getAttribute('aria-readonly')).toBe('true');
     expect(editor.getAttribute('contenteditable')).toBe('true');
-    expect(
-      container.querySelector(
-        '[data-screenplay-entity-mention-source="@urban"]'
-      )?.textContent
-    ).toBe('@Urban');
-    expect(
-      container.querySelector(
-        '[data-screenplay-entity-mention-source="@chamber"]'
-      )?.textContent
-    ).toBe('@Imperial Council Chamber');
-    expect(editor.textContent).toContain('@unknown');
+    expect(editor.textContent).toContain('## Intent');
+    expect(editor.textContent).toContain(
+      '@urban enters @chamber in an **Establishing Shot**. @unknown waits.'
+    );
     expect(
       container.querySelectorAll('.cm-shot-description-mention')
-    ).toHaveLength(2);
+    ).toHaveLength(0);
   });
 
-  it('renders complete Optics labels and bold known mentions in opaque card text', () => {
+  it('renders complete Optics labels while preserving opaque card text', () => {
     const { container } = render(
       <ShotBriefGrid
         brief={{
@@ -642,19 +624,13 @@ describe('Shot Plans feature', () => {
             intent: 'Keep @urban lit while @unknown stays exact.',
           },
         }}
-        entityMentions={ENTITY_MENTIONS}
       />
     );
 
     expect(screen.getByText('50mm lens')).not.toBeNull();
     expect(screen.getByText('Shallow Focus')).not.toBeNull();
-    expect(container.textContent).toContain('Focus on Urban');
-    expect(screen.getAllByLabelText('Urban, Cast Member mention')).toHaveLength(
-      3
-    );
-    expect(
-      screen.getByLabelText('Imperial Council Chamber, Location mention')
-    ).not.toBeNull();
+    expect(container.textContent).toContain('Focus on @urban');
+    expect(container.textContent).toContain('@chamber');
     expect(container.textContent).toContain('@unknown');
     expect(container.textContent).toContain('**rendering Markdown**');
     expect(container.querySelector('strong')).toBeNull();
@@ -720,9 +696,10 @@ describe('Shot Plans feature', () => {
               description: 'The council decides.',
               narrativeDevelopment: 'The choice hardens.',
               narrativePurpose: 'Commit the group.',
-              screenplayBlockIndexes: [0],
+              screenplayBlockIds: ['block_1'],
               castMemberIds: [],
               locationIds: [],
+              propIds: [],
             },
             position: 3,
             storyboardImage: {
@@ -738,9 +715,10 @@ describe('Shot Plans feature', () => {
               description: 'The reply lands.',
               narrativeDevelopment: 'The room shifts.',
               narrativePurpose: 'Turn the council.',
-              screenplayBlockIndexes: [1],
+              screenplayBlockIds: ['block_2'],
               castMemberIds: [],
               locationIds: [],
+              propIds: [],
             },
             position: 4,
             storyboardImage: null,
@@ -776,7 +754,6 @@ describe('Shot Plans feature', () => {
           optics: { intent: 'Hold both faces in shared focus.' },
           lighting: { intent: 'Cold dawn entering from the east.' },
         }}
-        entityMentions={ENTITY_MENTIONS}
       />
     );
 

@@ -37,7 +37,7 @@ function AppContent() {
   if (projectSession.project) {
     return (
       <MovieStudioScreen
-        key={projectSession.project.identity.id}
+        key={projectSession.project.project.id}
         project={projectSession.project}
         onHome={projectSession.returnToProjectLibrary}
         onProjectChange={projectSession.updateCurrentProject}

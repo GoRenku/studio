@@ -1,6 +1,6 @@
 # 0167 Scene-First Screenplay Studio UI
 
-Status: proposed
+Status: complete
 Date: 2026-08-03
 
 Canonical backend model:
@@ -533,80 +533,87 @@ regression matrix pass.
 
 ## Completion Checklist
 
+Completion evidence: the full workspace build, test, lint, and check gates pass;
+the migrated `urban-basilica` journey was verified at 1440x900; and the
+baseline/after interaction matrices are stored beside this plan while binary
+captures remain in the external local Project review archive. Lint reports only
+the repository's existing warnings and no errors.
+
 ### Review Area
 
-- [ ] Confirm every UI requirement and shared-contract behavior has an implementation and verification owner.
-- [ ] Confirm the current product was preserved rather than visually approximated from memory.
-- [ ] Confirm the module/file shape matches the Architecture Shape Gate.
-- [ ] Confirm no broad renderer, service, sidebar, or route compatibility layer was added.
+- [x] Confirm every UI requirement and shared-contract behavior has an implementation and verification owner.
+- [x] Confirm the current product was preserved rather than visually approximated from memory.
+- [x] Confirm the module/file shape matches the Architecture Shape Gate.
+- [x] Confirm no broad renderer, service, sidebar, or route compatibility layer was added.
 
 ### Baseline And Design Quality
 
-- [ ] Capture every required current desktop state before backend cutover.
-- [ ] Complete the interaction/accessibility matrix.
-- [ ] Preserve the existing Narrative and dialogue-audio visual/interaction language.
-- [ ] Run side-by-side Product Design QA at the same 1440×900 viewport.
-- [ ] Correct visual, focus, hover, spacing, and copy regressions before completion.
+- [x] Capture every required current desktop state before backend cutover.
+- [x] Complete the interaction/accessibility matrix.
+- [x] Preserve the existing Narrative and dialogue-audio visual/interaction language.
+- [x] Run side-by-side Product Design QA at the same 1440×900 viewport.
+- [x] Correct visual, focus, hover, spacing, and copy regressions before completion.
 
 ### Sidebar And Sections
 
-- [ ] Rename the root to Scenes and report Scene count.
-- [ ] Render every accepted flat/mixed structure shape from Core.
-- [ ] Standardize Act/Sequence rows with separate disclosure and selection.
-- [ ] Use accepted root, Act, Sequence, and Scene icons.
-- [ ] Replace separate Act/Sequence screens and URLs with the read-only Section surface.
-- [ ] Add no organization controls or ownership behavior.
+- [x] Rename the root to Scenes and report Scene count.
+- [x] Render every accepted flat/mixed structure shape from Core.
+- [x] Standardize Act/Sequence rows with separate disclosure and selection.
+- [x] Use accepted root, Act, Sequence, and Scene icons.
+- [x] Replace separate Act/Sequence screens and URLs with the read-only Section surface.
+- [x] Add no organization controls or ownership behavior.
 
 ### Narrative And References
 
-- [ ] Render Scene Heading and every complete block-union variant intentionally.
-- [ ] Render opening content above only the first Scene and outside Scene actions/counts.
-- [ ] Preserve ordinary Dialogue cards and implement semantic Dual Dialogue.
-- [ ] Render Cast, Location, and Prop exact references from validated ranges.
-- [ ] Keep presence references out of inline highlighting.
-- [ ] Remove `@handle` parsing and old mention DTOs completely.
-- [ ] Add no formatting or ScriptNote UI.
+- [x] Render Scene Heading and every complete block-union variant intentionally.
+- [x] Render opening content above only the first Scene and outside Scene actions/counts.
+- [x] Preserve ordinary Dialogue cards and implement semantic Dual Dialogue.
+- [x] Render Cast, Location, and Prop exact references from validated ranges.
+- [x] Keep presence references out of inline highlighting.
+- [x] Remove `@handle` parsing and old mention DTOs completely.
+- [x] Add no formatting or ScriptNote UI.
 
 ### Dialogue Audio
 
-- [ ] Cut every audio endpoint/state lookup to Dialogue Turn ID.
-- [ ] Preserve separate editable audio text and live card preview.
-- [ ] Preserve autosave, estimate, generation, Takes, playback, Advanced, focus, and refresh behavior.
-- [ ] Support independent left/right Dual Dialogue audio actions.
-- [ ] Prove screenplay text is never changed by audio editing.
+- [x] Cut every audio endpoint/state lookup to Dialogue Turn ID.
+- [x] Preserve separate editable audio text and live card preview.
+- [x] Preserve autosave, estimate, generation, Takes, playback, Advanced, focus, and refresh behavior.
+- [x] Support independent left/right Dual Dialogue audio actions.
+- [x] Prove screenplay text is never changed by audio editing.
 
 ### Remaining UI And Services
 
-- [ ] Move browser adapters under `services/screenplay/` and delete the flat predecessor.
-- [ ] Update Project Information to direct Project metadata.
-- [ ] Update Scene header, previous/next, Beats, Shot Plans, Generations, selection, counts, and coordination.
-- [ ] Render Story Arc exclusively from Plan 0169 analytical Act segments, key beats, Scene analyses, suggestions, and summary; preserve the Basilica baseline and remove Scene-tag fallback behavior.
-- [ ] Use one presentation-only Scene-number formatter: pad short digits-only values for sample parity and preserve all custom Final Draft values exactly.
-- [ ] Keep Cast, Locations, and Props as independent Project surfaces.
-- [ ] Remove all ancestry-only props, hooks, DTOs, routes, and tests.
-- [ ] Keep all interactive controls on local shadcn primitives.
+- [x] Move browser adapters under `services/screenplay/` and delete the flat predecessor.
+- [x] Update Project Information to direct Project metadata.
+- [x] Update Scene header, previous/next, Beats, Shot Plans, Generations, selection, counts, and coordination.
+- [x] Render Story Arc exclusively from Plan 0169 analytical Act segments, key beats, Scene analyses, suggestions, and summary; preserve the Basilica baseline and remove Scene-tag fallback behavior.
+- [x] Use one presentation-only Scene-number formatter: pad short digits-only values for sample parity and preserve all custom Final Draft values exactly.
+- [x] Keep Cast, Locations, and Props as independent Project surfaces.
+- [x] Remove all ancestry-only props, hooks, DTOs, routes, and tests.
+- [x] Keep all interactive controls on local shadcn primitives.
 
 ### Tests And Guardrails
 
-- [ ] Add exhaustive block rendering and focused Narrative tests.
-- [ ] Add complete reference-range/subject and sidebar-shape tests.
-- [ ] Retain and extend dialogue audio regression tests.
-- [ ] Add focused remaining-surface contract tests.
-- [ ] Verify service/feature/server import boundaries and exhaustive union handling.
-- [ ] Run desktop visual and accessibility checks; do not add mobile scope.
+- [x] Add exhaustive block rendering and focused Narrative tests.
+- [x] Add complete reference-range/subject and sidebar-shape tests.
+- [x] Retain and extend dialogue audio regression tests.
+- [x] Add focused remaining-surface contract tests.
+- [x] Verify service/feature/server import boundaries and exhaustive union handling.
+- [x] Run desktop visual and accessibility checks; do not add mobile scope.
 
 ### Documentation
 
-- [ ] Update current Studio navigation, UI, frontend, and screenplay docs.
-- [ ] Store baseline/after evidence without bundling it into the app.
-- [ ] Keep historical plans and rejected visual alternatives out of current docs.
+- [x] Update current Studio navigation, UI, frontend, and screenplay docs.
+- [x] Store baseline/after interaction matrices in the plan and binary captures
+  in the external local Project review archive.
+- [x] Keep historical plans and rejected visual alternatives out of current docs.
 
 ### Final Verification
 
-- [ ] Run Studio-focused tests/checks and all root gates.
-- [ ] Complete the real `urban-basilica` desktop journey and synthetic new-contract fixtures.
-- [ ] Review `git diff --stat` and the complete diff.
-- [ ] Inspect newly large/heavily modified components and split before completion when needed.
-- [ ] Confirm module `index.ts` files remain thin and old paths are deleted, not wrapped.
-- [ ] Confirm no checklist item was satisfied by accepting visual or architectural regression.
-- [ ] Only then mark Plan 0167 complete and unblock Plan 0168.
+- [x] Run Studio-focused tests/checks and all root gates.
+- [x] Complete the real `urban-basilica` desktop journey and synthetic new-contract fixtures.
+- [x] Review `git diff --stat` and the complete diff.
+- [x] Inspect newly large/heavily modified components and split before completion when needed.
+- [x] Confirm module `index.ts` files remain thin and old paths are deleted, not wrapped.
+- [x] Confirm no checklist item was satisfied by accepting visual or architectural regression.
+- [x] Only then mark Plan 0167 complete and unblock Plan 0168.

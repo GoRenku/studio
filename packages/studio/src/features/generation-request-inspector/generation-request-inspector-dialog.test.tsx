@@ -204,7 +204,7 @@ function previewFixture(
     kind: 'generationPreview',
     previewId: 'generation_preview_test',
     purpose: 'location.sheet',
-    project: { id: 'project_test', name: 'constantinople' },
+    project: { id: 'project_test', projectName: 'constantinople' },
     target: { kind: 'location', id: 'location_test' },
     title: 'Ignored resource title',
     subject: { projectLabel: 'Constantinople' },

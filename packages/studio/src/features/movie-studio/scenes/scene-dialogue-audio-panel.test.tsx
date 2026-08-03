@@ -3,16 +3,16 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SceneDialogueAudioEstimateReport } from '@gorenku/studio-core/client';
-import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/screenplay';
 import {
   deleteSceneDialogueAudioTake,
   estimateSceneDialogueAudioDraft,
   generateSceneDialogueAudioTake,
   saveSceneDialogueAudioSetup,
-} from '@/services/studio-scene-dialogue-audio-api';
+} from '@/services/screenplay';
 import { SceneDialogueAudioPanel } from './scene-dialogue-audio-panel';
 
-vi.mock('@/services/studio-scene-dialogue-audio-api', () => ({
+vi.mock('@/services/screenplay', () => ({
   deleteSceneDialogueAudioTake: vi.fn(),
   estimateSceneDialogueAudioDraft: vi.fn(),
   generateSceneDialogueAudioTake: vi.fn(),
@@ -42,7 +42,7 @@ describe('SceneDialogueAudioPanel', () => {
       <SceneDialogueAudioPanel
         projectName='constantinople'
         sceneId='scene_hook'
-        dialogueId='dialogue_urban'
+        turnId='dialogue_urban'
         context={contextWithoutVoices()}
         player={player()}
         onClose={vi.fn()}
@@ -91,7 +91,7 @@ describe('SceneDialogueAudioPanel', () => {
       <SceneDialogueAudioPanel
         projectName='constantinople'
         sceneId='scene_hook'
-        dialogueId='dialogue_urban'
+        turnId='dialogue_urban'
         context={baseContext()}
         player={player()}
         onClose={vi.fn()}
@@ -139,7 +139,7 @@ describe('SceneDialogueAudioPanel', () => {
       <SceneDialogueAudioPanel
         projectName='constantinople'
         sceneId='scene_hook'
-        dialogueId='dialogue_urban'
+        turnId='dialogue_urban'
         context={baseContext()}
         player={player()}
         onClose={vi.fn()}
@@ -177,7 +177,7 @@ describe('SceneDialogueAudioPanel', () => {
       <SceneDialogueAudioPanel
         projectName='constantinople'
         sceneId='scene_hook'
-        dialogueId='dialogue_urban'
+        turnId='dialogue_urban'
         context={baseContext()}
         player={player()}
         onClose={vi.fn()}
@@ -212,18 +212,18 @@ function baseContext(): SceneDialogueAudioWorkspaceWithUrls {
     purpose: 'scene.dialogue-audio',
     target: { kind: 'scene', sceneId: 'scene_hook' },
     project: {
-      name: 'constantinople',
+      projectName: 'constantinople',
       title: 'Constantinople',
       baseLanguageCode: null,
     },
     scene: {
       id: 'scene_hook',
       title: 'Bombardment',
-      settingLabel: 'EXT DAWN',
+      heading: 'EXT. THEODOSIAN WALLS - DAWN',
     },
     dialogues: [
       {
-        dialogueId: 'dialogue_urban',
+        turnId: 'dialogue_urban',
         castMemberId: 'cast_urban',
         speakerName: 'Urban',
         plainText: 'Bronze has no temper. Men give it one.',
@@ -246,7 +246,7 @@ function baseContext(): SceneDialogueAudioWorkspaceWithUrls {
         },
       ],
     },
-    audioByDialogueId: {},
+    audioByTurnId: {},
     models: [
       {
         modelChoice: 'elevenlabs/eleven_v3',
@@ -303,11 +303,11 @@ function contextWithoutVoices(): SceneDialogueAudioWorkspaceWithUrls {
 function savedContext(v3Text: string): SceneDialogueAudioWorkspaceWithUrls {
   return {
     ...baseContext(),
-    audioByDialogueId: {
+    audioByTurnId: {
       dialogue_urban: {
         id: 'scene_dialogue_audio_urban',
         sceneId: 'scene_hook',
-        dialogueId: 'dialogue_urban',
+        turnId: 'dialogue_urban',
         castMemberId: 'cast_urban',
         castVoiceId: 'voice_urban',
         modelChoice: 'elevenlabs/eleven_v3',

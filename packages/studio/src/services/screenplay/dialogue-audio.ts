@@ -6,7 +6,7 @@ import type {
   SceneDialogueAudioWorkspaceMutationReport,
   SceneDialogueAudioTake,
 } from '@gorenku/studio-core/client';
-import { readStudioApiError } from './studio-api-errors';
+import { readStudioApiError } from '@/services/studio-api-errors';
 
 export type SceneDialogueAudioTakeWithUrl = SceneDialogueAudioTake & {
   url: string;
@@ -14,11 +14,11 @@ export type SceneDialogueAudioTakeWithUrl = SceneDialogueAudioTake & {
 
 export type SceneDialogueAudioWorkspaceWithUrls = Omit<
   SceneDialogueAudioWorkspace,
-  'audioByDialogueId'
+  'audioByTurnId'
 > & {
-  audioByDialogueId: Record<
+  audioByTurnId: Record<
     string,
-    Omit<SceneDialogueAudioWorkspace['audioByDialogueId'][string], 'takes'> & {
+    Omit<SceneDialogueAudioWorkspace['audioByTurnId'][string], 'takes'> & {
       takes: SceneDialogueAudioTakeWithUrl[];
     }
   >;
@@ -44,11 +44,11 @@ export async function readSceneDialogueAudioWorkspace(
 export async function saveSceneDialogueAudioSetup(
   projectName: string,
   sceneId: string,
-  dialogueId: string,
+  turnId: string,
   setup: Partial<SceneDialogueAudioSetup>
 ): Promise<SceneDialogueAudioMutationWithUrls> {
   return sendMutation(
-    `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/setup`,
+    `${turnAudioPath(projectName, sceneId, turnId)}/setup`,
     'PATCH',
     setup,
     projectName,
@@ -59,11 +59,11 @@ export async function saveSceneDialogueAudioSetup(
 export async function estimateSceneDialogueAudioDraft(
   projectName: string,
   sceneId: string,
-  dialogueId: string,
+  turnId: string,
   estimate: SceneDialogueAudioEstimateInput
 ): Promise<SceneDialogueAudioEstimateReport> {
   const response = await fetch(
-    `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/estimate`,
+    `${turnAudioPath(projectName, sceneId, turnId)}/estimate`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ export async function estimateSceneDialogueAudioDraft(
 export async function generateSceneDialogueAudioTake(
   projectName: string,
   sceneId: string,
-  dialogueId: string,
+  turnId: string,
   input: {
     setup: Partial<SceneDialogueAudioSetup>;
     simulate?: boolean;
@@ -88,7 +88,7 @@ export async function generateSceneDialogueAudioTake(
   }
 ): Promise<SceneDialogueAudioMutationWithUrls> {
   return sendMutation(
-    `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/generate`,
+    `${turnAudioPath(projectName, sceneId, turnId)}/generate`,
     'POST',
     input,
     projectName,
@@ -99,11 +99,11 @@ export async function generateSceneDialogueAudioTake(
 export async function deleteSceneDialogueAudioTake(
   projectName: string,
   sceneId: string,
-  dialogueId: string,
+  turnId: string,
   takeId: string
 ): Promise<SceneDialogueAudioMutationWithUrls> {
   return sendMutation(
-    `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/takes/${encodeURIComponent(takeId)}`,
+    `${turnAudioPath(projectName, sceneId, turnId)}/takes/${encodeURIComponent(takeId)}`,
     'DELETE',
     {},
     projectName,
@@ -111,21 +111,21 @@ export async function deleteSceneDialogueAudioTake(
   );
 }
 
-export function decorateSceneDialogueAudioWorkspace(
+function decorateSceneDialogueAudioWorkspace(
   projectName: string,
   sceneId: string,
   context: SceneDialogueAudioWorkspace
 ): SceneDialogueAudioWorkspaceWithUrls {
   return {
     ...context,
-    audioByDialogueId: Object.fromEntries(
-      Object.entries(context.audioByDialogueId).map(([dialogueId, audio]) => [
-        dialogueId,
+    audioByTurnId: Object.fromEntries(
+      Object.entries(context.audioByTurnId).map(([turnId, audio]) => [
+        turnId,
         {
           ...audio,
           takes: audio.takes.map((take) => ({
             ...take,
-            url: takeFileUrl(projectName, sceneId, dialogueId, take),
+            url: takeFileUrl(projectName, sceneId, turnId, take),
           })),
         },
       ])
@@ -158,14 +158,22 @@ async function sendMutation(
 function takeFileUrl(
   projectName: string,
   sceneId: string,
-  dialogueId: string,
+  turnId: string,
   take: SceneDialogueAudioTake
 ): string {
-  return `${dialogueAudioPath(projectName, sceneId)}/${encodeURIComponent(dialogueId)}/takes/${encodeURIComponent(take.takeId)}/files/${encodeURIComponent(take.assetFileId)}`;
+  return `${turnAudioPath(projectName, sceneId, turnId)}/takes/${encodeURIComponent(take.takeId)}/files/${encodeURIComponent(take.assetFileId)}`;
+}
+
+function turnAudioPath(projectName: string, sceneId: string, turnId: string): string {
+  return `${dialogueTurnsPath(projectName, sceneId)}/${encodeURIComponent(turnId)}/audio`;
 }
 
 function dialogueAudioPath(projectName: string, sceneId: string): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/dialogue-audio`;
+  return `${dialogueTurnsPath(projectName, sceneId)}/audio`;
+}
+
+function dialogueTurnsPath(projectName: string, sceneId: string): string {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/scenes/${encodeURIComponent(sceneId)}/dialogue-turns`;
 }
 
 function jsonHeaders(): Record<string, string> {

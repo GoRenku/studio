@@ -127,9 +127,12 @@ export function createProjectsRoute(
     .get('/:projectName', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const project = await projectData.readProjectShell({ projectName });
+        const [project, library] = await Promise.all([
+          projectData.readProjectShell({ projectName }),
+          projectData.listLibrary(),
+        ]);
         return c.json({
-          project: toProjectShellResponse(project),
+          project: toProjectShellResponse(project, library.storageRoot),
         });
       } catch (error) {
         return projectErrorResponse(c, error);

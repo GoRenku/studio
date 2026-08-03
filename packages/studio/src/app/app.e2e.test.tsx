@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import type { StudioSelection } from '@gorenku/studio-core/client';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './app';
 import { ThemeProvider } from './theme-provider';
@@ -59,7 +59,7 @@ describe('App', () => {
       expect(window.location.pathname).toBe('/projects/constantinople');
     });
     await screen.findByText('Project Name');
-    await screen.findByText('Acts');
+    await screen.findByText('Scenes');
     fireEvent.click(
       screen.getByRole('button', { name: 'Expand Visual Language' })
     );
@@ -98,16 +98,16 @@ describe('App', () => {
         expectedText: 'Visual Language',
       },
       {
-        path: '/projects/constantinople/acts',
+        path: '/projects/constantinople/scenes',
         expectedText: 'Story Arc',
       },
       {
-        path: '/projects/constantinople/sequences/seq_opening',
-        expectedText: 'Opening storyboard beat',
+        path: '/projects/constantinople/sections/section_opening',
+        expectedText: 'Opening',
       },
       {
         path: '/projects/constantinople/scenes/scene_1_1',
-        expectedText: 'Opening Scene',
+        expectedText: 'Workers prepare the city walls before sunrise.',
       },
       {
         path: '/projects/constantinople/cast',
@@ -153,266 +153,49 @@ describe('App', () => {
     );
   });
 
-  it('loads a direct sequence route when the selected sequence is outside the shell page', async () => {
-    const project = {
-      ...makeProject(),
-      navigation: {
-        ...makeProjectNavigation(),
-        screenplay: {
-          acts: { items: [], nextCursor: 'after-first-page' },
-        },
-      },
-    };
-    const fetchLog: string[] = [];
+  it('keeps Section selection and disclosure independent in the scene tree', async () => {
     window.history.pushState(
       {},
       '',
-      '/projects/constantinople/sequences/seq_late'
+      '/projects/constantinople/sections/section_opening'
     );
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
-      const url = requestUrl(request);
-      fetchLog.push(url);
-      if (url === '/studio-api/projects/constantinople') {
-        return jsonResponse({ project });
-      }
-      if (
-        url ===
-        '/studio-api/projects/constantinople/movie-studio-selection/context'
-      ) {
-        return jsonResponse({
-          valid: true,
-          selection: { type: 'sequence', id: 'seq_late' },
-          context: {
-            surface: 'sequence',
-            sequence: {
-              id: 'seq_late',
-              actId: 'act_late',
-              number: 150,
-              title: 'Late Sequence',
-              sceneCount: 0,
-            },
-            act: {
-              id: 'act_late',
-              title: 'Late Act',
-              sequenceCount: 1,
-              sceneCount: 0,
-            },
-          },
-          resourceKeys: ['navigation:movie-sequences'],
-        });
-      }
-      if (
-        url ===
-        '/studio-api/projects/constantinople/screenplay/acts/act_late/storyboard'
-      ) {
-        return jsonResponse({
-          resource: makeActStoryboardResource({
-            actId: 'act_late',
-            actTitle: 'Late Act',
-            sequenceId: 'seq_late',
-            sequenceTitle: 'Late Sequence',
-            scenes: [],
-          }),
-        });
-      }
-      if (url === '/studio-api/studio/events/current') {
-        return jsonResponse(emptyStudioCurrent());
-      }
-      if (
-        url === '/studio-api/studio/events/browser-sessions/active' ||
-        url === '/studio-api/studio/events/focus-changes'
-      ) {
-        return jsonResponse({});
-      }
-      if (url.startsWith('/studio-api/studio/events')) {
-        return jsonResponse({ events: [], nextCursor: '0', warnings: [] });
-      }
-      return jsonResponse({});
-    });
-
-    renderApp();
-
-    await waitFor(() => {
-      expect(screen.getAllByText('Late Sequence').length).toBeGreaterThan(0);
-    });
-    await waitFor(() => {
-      expect(
-        document.querySelector(
-          '[data-sequence-id="seq_late"][data-selected="true"]'
-        )
-      ).not.toBeNull();
-    });
-    expect(fetchLog).toContain(
-      '/studio-api/projects/constantinople/movie-studio-selection/context'
-    );
-    expect(fetchLog).toContain(
-      '/studio-api/projects/constantinople/screenplay/acts/act_late/storyboard'
-    );
-    expect(fetchLog).not.toContain(
-      '/studio-api/projects/constantinople/screenplay/sequences/seq_late'
-    );
-    expect(window.location.pathname).toBe(
-      '/projects/constantinople/sequences/seq_late'
-    );
-  });
-
-  it('keeps the Act storyboard mounted when a sequence is selected', async () => {
-    window.history.pushState(
-      {},
-      '',
-      '/projects/constantinople/acts/act_opening'
-    );
-    const fetchLog = mockStudioFetch({
+    mockStudioFetch({
       library: makeLibrary([makeProjectSummary()]),
       project: makeProject(),
     });
 
-    const { container } = renderApp();
+    renderApp();
 
-    await screen.findByText('Opening storyboard beat');
-    await waitFor(() => {
-      expect(screen.getAllByText('Opening').length).toBeGreaterThan(1);
-    });
-    await screen.findByLabelText('Expand Opening');
-    const sequenceSection = container.querySelector(
-      '[data-sequence-id="seq_opening"]'
-    );
-    expect(sequenceSection).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Opening Act' }));
-    await waitFor(() => {
-      expect(screen.queryByLabelText('Expand Opening')).toBeNull();
-    });
-    const storyboardReadsBeforeSelection = fetchLog.filter(
-      (url) =>
-        url ===
-        '/studio-api/projects/constantinople/screenplay/acts/act_opening/storyboard'
-    ).length;
-    fireEvent.click(
-      within(sequenceSection as HTMLElement).getByRole('button', {
-        name: 'Opening',
-      })
-    );
-
-    await waitFor(() => {
-      expect(
-        container.querySelector(
-          '[data-sequence-id="seq_opening"][data-selected="true"]'
-        )
-      ).not.toBeNull();
-    });
+    await screen.findByRole('heading', { name: 'Opening' });
     await screen.findByLabelText('Collapse Opening');
     expect(window.location.pathname).toBe(
-      '/projects/constantinople/sequences/seq_opening'
+      '/projects/constantinople/sections/section_opening'
     );
-    expect(
-      fetchLog.filter(
-        (url) =>
-          url ===
-          '/studio-api/projects/constantinople/screenplay/acts/act_opening/storyboard'
-      )
-    ).toHaveLength(storyboardReadsBeforeSelection);
+
+    fireEvent.click(screen.getByLabelText('Collapse Opening'));
+    expect(screen.getByLabelText('Expand Opening')).not.toBeNull();
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/sections/section_opening'
+    );
   });
 
-  it('loads a direct scene route through selection context without eager shell children', async () => {
-    const project = {
-      ...makeProject(),
-      navigation: {
-        ...makeProjectNavigation(),
-        screenplay: {
-          acts: { items: [], nextCursor: 'after-first-page' },
-        },
-      },
-    };
-    window.history.pushState({}, '', '/projects/constantinople/scenes/scene_late');
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
-      const url = requestUrl(request);
-      if (url === '/studio-api/projects/constantinople') {
-        return jsonResponse({ project });
-      }
-      if (
-        url ===
-        '/studio-api/projects/constantinople/movie-studio-selection/context'
-      ) {
-        return jsonResponse({
-          valid: true,
-          selection: { type: 'scene', id: 'scene_late' },
-          context: {
-            surface: 'scene',
-            sequence: {
-              id: 'seq_late',
-              actId: 'act_late',
-              number: 150,
-              title: 'Late Sequence',
-              sceneCount: 1,
-            },
-            act: {
-              id: 'act_late',
-              title: 'Late Act',
-              sequenceCount: 1,
-              sceneCount: 1,
-            },
-            scene: {
-              id: 'scene_late',
-              sequenceId: 'seq_late',
-              productionNumber: '150',
-              title: 'Late Scene',
-            },
-          },
-          resourceKeys: ['navigation:sequence-scenes:seq_late'],
-        });
-      }
-      if (url === '/studio-api/projects/constantinople/screenplay/scenes/scene_late') {
-        return jsonResponse({
-          resource: makeSceneNarrativeResource({
-            sceneId: 'scene_late',
-            sceneTitle: 'Late Scene',
-            sequenceId: 'seq_late',
-            sequenceTitle: 'Late Sequence',
-            actId: 'act_late',
-            actTitle: 'Late Act',
-          }),
-        });
-      }
-      if (url === '/studio-api/studio/events/current') {
-        return jsonResponse(emptyStudioCurrent());
-      }
-      if (
-        url === '/studio-api/studio/events/browser-sessions/active' ||
-        url === '/studio-api/studio/events/focus-changes'
-      ) {
-        return jsonResponse({});
-      }
-      if (url.startsWith('/studio-api/studio/events')) {
-        return jsonResponse({ events: [], nextCursor: '0', warnings: [] });
-      }
-      return jsonResponse({});
-    });
-
-    renderApp();
-
-    await screen.findByRole('heading', { name: 'Late Scene' });
-    expect(window.location.pathname).toBe('/projects/constantinople/scenes/scene_late');
-  });
-
-  it('loads sequence scenes through navigation pages', async () => {
+  it('opens a Scene directly from the scene-first sidebar', async () => {
     window.history.pushState({}, '', '/projects/constantinople');
-    const fetchLog = mockStudioFetch({
+    mockStudioFetch({
       library: makeLibrary([makeProjectSummary()]),
       project: makeProject(),
     });
 
     renderApp();
 
-    await screen.findByText('Acts');
-    fireEvent.click(screen.getByLabelText('Expand Acts'));
-    await screen.findByText('Opening Act');
-    fireEvent.click(screen.getByText('Opening Act'));
+    fireEvent.click(await screen.findByLabelText('Expand Scenes'));
     fireEvent.click(await screen.findByLabelText('Expand Opening'));
-
-    await screen.findByText('Opening Scene');
-    expect(screen.getByText('1 scenes')).toBeTruthy();
-    expect(fetchLog).toContain(
-      '/studio-api/projects/constantinople/screenplay/sequences/seq_opening/scenes'
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Opening Scene/ })
+    );
+    await screen.findByText('Workers prepare the city walls before sunrise.');
+    expect(window.location.pathname).toBe(
+      '/projects/constantinople/scenes/scene_1_1'
     );
   });
 
@@ -472,16 +255,6 @@ describe('App', () => {
       '/projects/constantinople/cast/cast_narrator'
     );
     const project = makeProject();
-    project.cast = [
-      ...project.cast,
-      {
-        id: 'cast_mehmed',
-        handle: 'mehmed',
-        name: 'Mehmed',
-        isVoiceOver: false,
-        role: 'sultan',
-      },
-    ];
     project.navigation.cast.items = [
       ...project.navigation.cast.items,
       {
@@ -492,7 +265,7 @@ describe('App', () => {
         role: 'sultan',
       },
     ];
-    project.counts.castMembers = 2;
+    project.project.counts.castMembers = 2;
     const mehmedAssets = deferredResponse();
     let projectReadCount = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
@@ -610,8 +383,8 @@ describe('App', () => {
   it('rejects unknown story selection routes instead of falling back', async () => {
     const routeCases = [
       {
-        path: '/projects/constantinople/sequences/seq_missing',
-        message: 'Sequence not found: seq_missing',
+        path: '/projects/constantinople/sections/section_missing',
+        message: 'Section not found: section_missing',
       },
       {
         path: '/projects/constantinople/scenes/scene_missing',
@@ -804,7 +577,7 @@ describe('App', () => {
       expect(eventReadCount).toBeGreaterThan(1);
       expect(window.location.pathname).toBe('/projects/constantinople');
     }, { timeout: 2_500 });
-    await screen.findByText('Acts');
+    await screen.findByText('Scenes');
     expect(selectWasCalled).toBe(false);
   });
 
@@ -830,11 +603,11 @@ describe('App', () => {
       '/projects/constantinople/visual-language/lookbooks/storyboard',
     ],
     ['Trash', { type: 'trash' }, '/projects/constantinople/trash'],
-    ['Story Arc', { type: 'storyArc' }, '/projects/constantinople/acts'],
+    ['Story Arc', { type: 'storyArc' }, '/projects/constantinople/scenes'],
     [
-      'Sequence',
-      { type: 'sequence', id: 'seq_opening' },
-      '/projects/constantinople/sequences/seq_opening',
+      'Section',
+      { type: 'section', id: 'section_opening' },
+      '/projects/constantinople/sections/section_opening',
     ],
     [
       'Scene',
@@ -1304,14 +1077,14 @@ describe('App', () => {
         0
       );
     });
-    expect(screen.getAllByText('Acts').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Scenes').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cast').length).toBeGreaterThan(0);
   });
 
   it('opens URL-owned Props overview and detail surfaces from the sidebar', async () => {
     window.history.pushState({}, '', '/projects/constantinople/props');
     const project = makeProject();
-    project.counts.props = 1;
+    project.project.counts.props = 1;
     project.navigation.props.items = [
       {
         id: 'prop_cannon',
@@ -1375,49 +1148,6 @@ function mockStudioFetch(input: {
     ) {
       const body = requestJsonBody<{ selection: StudioSelection }>(init);
       return jsonResponse(makeSelectionContextResponse(body.selection));
-    }
-    if (
-      url ===
-      '/studio-api/projects/constantinople/screenplay/acts/act_opening/sequences'
-    ) {
-      return jsonResponse({
-        page: {
-          items: [
-            {
-              id: 'seq_opening',
-              actId: 'act_opening',
-              number: 1,
-              title: 'Opening',
-              purpose: 'Establish the siege preparations.',
-              sceneCount: 1,
-            },
-          ],
-          nextCursor: null,
-        },
-      });
-    }
-    if (
-      url ===
-      '/studio-api/projects/constantinople/screenplay/sequences/seq_opening/scenes'
-    ) {
-      return jsonResponse({
-        page: {
-          items: [
-            {
-              id: 'scene_1_1',
-              sequenceId: 'seq_opening',
-              productionNumber: '1',
-              title: 'Opening Scene',
-              setting: {
-                interiorExterior: 'EXT',
-                locationIds: [],
-                timeOfDay: 'DAY',
-              },
-            },
-          ],
-          nextCursor: null,
-        },
-      });
     }
     if (
       url ===
@@ -1525,23 +1255,27 @@ function mockStudioFetch(input: {
     }
     if (
       url ===
-      '/studio-api/projects/constantinople/screenplay/sequences/seq_opening'
+      '/studio-api/projects/constantinople/screenplay/sections/section_opening'
     ) {
       return jsonResponse({
-        resource: makeSequenceResource(),
-      });
-    }
-    if (
-      url ===
-      '/studio-api/projects/constantinople/screenplay/acts/act_opening/storyboard'
-    ) {
-      return jsonResponse({
-        resource: makeActStoryboardResource(),
+        resource: makeSectionResource(),
       });
     }
     if (url === '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1') {
       return jsonResponse({
         resource: makeSceneNarrativeResource(),
+      });
+    }
+    if (
+      url ===
+      '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1/dialogue-turns/audio'
+    ) {
+      return jsonResponse({
+        context: {
+          sceneId: 'scene_1_1',
+          projectName: 'constantinople',
+          audioByTurnId: {},
+        },
       });
     }
     if (url === '/studio-api/studio/events/current') {
@@ -1637,44 +1371,29 @@ function makeSelectionContextResponse(selection: StudioSelection) {
       resourceKeys: [`surface:prop:${selection.id}`],
     };
   }
-  if (selection.type === 'act') {
+  if (selection.type === 'section') {
     return {
       valid: true,
       selection,
       context: {
-        surface: 'act',
-        act: {
+        surface: 'section',
+        section: {
+          section: {
           id: selection.id,
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-      },
-      resourceKeys: ['screenplay:acts'],
-    };
-  }
-  if (selection.type === 'sequence') {
-    return {
-      valid: true,
-      selection,
-      context: {
-        surface: 'sequence',
-        act: {
-          id: 'act_opening',
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-        sequence: {
-          id: selection.id,
-          actId: 'act_opening',
-          number: 1,
+          type: 'sequence',
           title: 'Opening',
-          shortTitle: 'Opening',
-          sceneCount: 1,
+          },
+          structure: [
+            {
+              id: 'entry_scene_1_1',
+              content: { type: 'scene', sceneId: 'scene_1_1' },
+              position: 0,
+            },
+          ],
+          orderedSceneIds: ['scene_1_1'],
         },
       },
-      resourceKeys: ['navigation:movie-sequences'],
+      resourceKeys: [`screenplay:section:${selection.id}`],
     };
   }
   if (selection.type === 'scene') {
@@ -1683,28 +1402,18 @@ function makeSelectionContextResponse(selection: StudioSelection) {
       selection,
       context: {
         surface: 'scene',
-        act: {
-          id: 'act_opening',
-          title: 'Opening Act',
-          sequenceCount: 1,
-          sceneCount: 1,
-        },
-        sequence: {
-          id: 'seq_opening',
-          actId: 'act_opening',
-          number: 1,
-          title: 'Opening',
-          shortTitle: 'Opening',
-          sceneCount: 1,
-        },
         scene: {
-          id: selection.id,
-          sequenceId: 'seq_opening',
-          productionNumber: '1',
-          title: 'Opening Scene',
+          scene: {
+            id: selection.id,
+            productionNumber: '1',
+            heading: 'EXT. THEODOSIAN WALLS - DAWN',
+            title: 'Opening Scene',
+            blocks: [],
+          },
+          references: [],
         },
       },
-      resourceKeys: ['navigation:sequence-scenes:seq_opening'],
+      resourceKeys: [`scene:${selection.id}`],
     };
   }
   return {
@@ -1735,35 +1444,25 @@ function makeProject(
       : options.coverUrl;
 
   return {
-    identity: {
+    project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
       title: 'Preparation of the Siege',
-      folderPath: '/tmp/constantinople',
-      databasePath: '/tmp/constantinople/.renku/project.sqlite',
       aspectRatio: '16:9',
-    },
-    coverImage: coverUrl ? { fileName: 'cover.png' } : null,
-    coverUrl,
-    languages: [],
-    cast: [
-      {
-        id: 'cast_narrator',
-        handle: 'narrator',
-        name: 'Narrator',
-        isVoiceOver: true,
-        role: 'voiceover',
+      coverImage: coverUrl ? { fileName: 'cover.png' } : null,
+      counts: {
+        languages: 0,
+        castMembers: 1,
+        locations: 0,
+        props: 0,
+        acts: 1,
+        sequences: 1,
+        scenes: 1,
       },
-    ],
-    counts: {
-      languages: 0,
-      castMembers: 1,
-      locations: 0,
-      props: 0,
-      acts: 1,
-      sequences: 1,
-      scenes: 1,
     },
+    coverUrl,
+    storageRoot: '/tmp/renku-studio',
+    languages: [],
     navigation: makeProjectNavigation(),
   };
 }
@@ -1785,17 +1484,40 @@ function makeProjectNavigation(): ProjectShellWithHttp['navigation'] {
     locations: { items: [], nextCursor: null },
     props: { items: [], nextCursor: null },
     screenplay: {
-      acts: {
-        items: [
+      screenplay: {
+        opening: [],
+        sections: [
           {
-            id: 'act_opening',
-            title: 'Opening Act',
-            sequenceCount: 1,
-            sceneCount: 1,
+            id: 'section_opening',
+            type: 'sequence',
+            title: 'Opening',
           },
         ],
-        nextCursor: null,
+        scenes: [
+          {
+            id: 'scene_1_1',
+            productionNumber: '1',
+            heading: 'EXT. THEODOSIAN WALLS - DAWN',
+            title: 'Opening Scene',
+            blocks: [],
+          },
+        ],
+        structure: [
+          {
+            id: 'entry_section_opening',
+            content: { type: 'section', sectionId: 'section_opening' },
+            position: 0,
+          },
+          {
+            id: 'entry_scene_1_1',
+            parentSectionId: 'section_opening',
+            content: { type: 'scene', sceneId: 'scene_1_1' },
+            position: 0,
+          },
+        ],
+        references: [],
       },
+      orderedSceneIds: ['scene_1_1'],
     },
   };
 }
@@ -1829,233 +1551,56 @@ function makeCastMemberResource(options: {
 
 function makeStoryArcResource() {
   return {
-    screenplay: {
+    project: {
       title: 'Preparation of the Siege',
       logline: 'A documentary about preparation before 1453.',
-      dramaticQuestion: 'Can the city withstand the siege?',
-      premiseOverview: 'A city and an army prepare for a decisive confrontation.',
-      centralConflict: 'Defenders and attackers make irreversible choices.',
-      summary: 'The story follows the pressure building before the fall.',
     },
-    acts: [
+    scenes: [
       {
-        id: 'act_opening',
-        title: 'Opening Act',
-        sequenceCount: 1,
-        sceneCount: 1,
-        sequences: [
-          {
-            id: 'seq_opening',
-            actId: 'act_opening',
-            number: 1,
-            title: 'Opening',
-            purpose: 'Establish the siege preparations.',
-            sceneCount: 1,
-            scenes: [
-              {
-                id: 'scene_1_1',
-                sequenceId: 'seq_opening',
-                productionNumber: '1',
-                title: 'Opening Scene',
-                setting: {
-                  interiorExterior: 'EXT',
-                  locationIds: [],
-                  timeOfDay: 'DAY',
-                },
-                storyFunction: ['Establish the siege preparations.'],
-              },
-            ],
-          },
-        ],
+        id: 'scene_1_1',
+        productionNumber: '1',
+        heading: 'EXT. THEODOSIAN WALLS - DAWN',
+        title: 'Opening Scene',
       },
     ],
     activeAnalysis: null,
   };
 }
 
-function makeSequenceResource(
-  options: {
-    actId?: string;
-    actTitle?: string;
-    sequenceId?: string;
-    sequenceTitle?: string;
-    scenes?: Array<{
-      id: string;
-      sequenceId: string;
-      productionNumber?: string;
-      title: string;
-    }>;
-  } = {}
-) {
-  const actId = options.actId ?? 'act_opening';
-  const sequenceId = options.sequenceId ?? 'seq_opening';
-  const scenes =
-    options.scenes ??
-    [
-      {
-        id: 'scene_1_1',
-        sequenceId,
-        productionNumber: '1',
-        title: 'Opening Scene',
-        setting: {
-          interiorExterior: 'EXT',
-          locationIds: [],
-          timeOfDay: 'DAY',
-        },
-      },
-    ];
+function makeSectionResource() {
   return {
-    act: {
-      id: actId,
-      title: options.actTitle ?? 'Opening Act',
-      sequenceCount: 1,
-      sceneCount: scenes.length,
+    section: {
+      id: 'section_opening',
+      type: 'sequence',
+      title: 'Opening',
     },
-    sequence: {
-      id: sequenceId,
-      actId,
-      number: 1,
-      title: options.sequenceTitle ?? 'Opening',
-      purpose: 'Establish the siege preparations.',
-      sceneCount: scenes.length,
-    },
-    scenes: {
-      items: scenes.map((scene, index) => ({
-        ...scene,
-        productionNumber: scene.productionNumber ?? String(index + 1),
-      })),
-      nextCursor: null,
-    },
-  };
-}
-
-function makeActStoryboardResource(
-  options: {
-    actId?: string;
-    actTitle?: string;
-    sequenceId?: string;
-    sequenceTitle?: string;
-    scenes?: Array<{
-      scene: {
-        id: string;
-        sequenceId: string;
-        productionNumber?: string;
-        title: string;
-      };
-      beats: Array<{
-        beatId: string;
-        label: string;
-        title: string;
-        image: null;
-      }>;
-    }>;
-  } = {}
-) {
-  const actId = options.actId ?? 'act_opening';
-  const sequenceId = options.sequenceId ?? 'seq_opening';
-  const scenes =
-    options.scenes ??
-    [
+    structure: [
       {
-        scene: {
-          id: 'scene_1_1',
-          sequenceId,
-          productionNumber: '1',
-          title: 'Opening Scene',
-        },
-        beats: [
-          {
-            beatId: 'beat_001',
-            label: 'Beat 1',
-            title: 'Opening storyboard beat',
-            image: null,
-          },
-        ],
-      },
-    ];
-  return {
-    act: {
-      id: actId,
-      title: options.actTitle ?? 'Opening Act',
-      purpose: 'Establish the siege preparations.',
-      sequenceCount: 1,
-      sceneCount: scenes.length,
-    },
-    sequences: [
-      {
-        sequence: {
-          id: sequenceId,
-          actId,
-          number: 1,
-          title: options.sequenceTitle ?? 'Opening',
-          sceneCount: scenes.length,
-        },
-        scenes: scenes.map((scene, index) => ({
-          ...scene,
-          scene: {
-            ...scene.scene,
-            productionNumber:
-              scene.scene.productionNumber ?? String(index + 1),
-          },
-        })),
+        id: 'entry_scene_1_1',
+        content: { type: 'scene', sceneId: 'scene_1_1' },
+        position: 0,
       },
     ],
+    orderedSceneIds: ['scene_1_1'],
   };
 }
 
-function makeSceneNarrativeResource(
-  options: {
-    sceneId?: string;
-    sceneTitle?: string;
-    sequenceId?: string;
-    sequenceTitle?: string;
-    actId?: string;
-    actTitle?: string;
-  } = {}
-) {
-  const actId = options.actId ?? 'act_opening';
-  const sequenceId = options.sequenceId ?? 'seq_opening';
-  const sceneId = options.sceneId ?? 'scene_1_1';
+function makeSceneNarrativeResource() {
   return {
-    act: {
-      id: actId,
-      title: options.actTitle ?? 'Opening Act',
-      sequenceCount: 1,
-      sceneCount: 1,
-    },
-    sequence: {
-      id: sequenceId,
-      actId,
-      number: 1,
-      title: options.sequenceTitle ?? 'Opening',
-      purpose: 'Establish the siege preparations.',
-      sceneCount: 1,
-    },
     scene: {
-      id: sceneId,
-      sequenceId,
+      id: 'scene_1_1',
       productionNumber: '1',
-      title: options.sceneTitle ?? 'Opening Scene',
-      setting: {
-        interiorExterior: 'EXT',
-        locationIds: [],
-        timeOfDay: 'DAY',
-      },
+      heading: 'EXT. THEODOSIAN WALLS - DAWN',
+      title: 'Opening Scene',
+      blocks: [
+        {
+          id: 'block_opening_action',
+          type: 'action',
+          text: 'Workers prepare the city walls before sunrise.',
+        },
+      ],
     },
-    blocks: [
-      {
-        type: 'action',
-        text: 'Workers prepare the city walls before sunrise.',
-      },
-    ],
-    castMemberLabels: {
-      cast_narrator: 'Narrator',
-    },
-    castMemberImages: {},
-    locationLabels: {},
-    locationImages: {},
-    castMemberHandles: {},
-    locationHandles: {},
+    references: [],
   };
 }
 
@@ -2157,7 +1702,7 @@ function makeLibrary(projects: ProjectLibraryWithHttp['projects']): ProjectLibra
 
 function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
   return {
-    name: 'constantinople',
+    projectName: 'constantinople',
     title: 'Preparation of the Siege',
     folderPath: '/tmp/constantinople',
     coverImage: { fileName: 'cover.png' },

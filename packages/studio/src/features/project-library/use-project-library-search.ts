@@ -13,7 +13,7 @@ export function useProjectLibrarySearch(
     return projects.filter((project) =>
       [
         project.title,
-        project.name,
+        project.projectName,
         project.logline,
       ]
         .filter(Boolean)

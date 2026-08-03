@@ -12,6 +12,7 @@ export type ProjectResponse = Project & {
 
 export type ProjectShellResponse = ProjectShell & {
   coverUrl: string | null;
+  storageRoot: string;
 };
 
 export interface ProjectLibraryResponse {
@@ -35,9 +36,13 @@ export function toProjectResponse(
   };
 }
 
-export function toProjectShellResponse(project: ProjectShell): ProjectShellResponse {
+export function toProjectShellResponse(
+  project: ProjectShell,
+  storageRoot: string
+): ProjectShellResponse {
   return {
     ...project,
+    storageRoot,
     coverUrl: projectCoverUrl({
       projectName: project.project.projectName,
       coverImage: project.project.coverImage,

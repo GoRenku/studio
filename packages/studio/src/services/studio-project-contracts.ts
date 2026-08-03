@@ -1,7 +1,6 @@
 import type {
   Asset,
   AssetFile,
-  ActNavigationRow,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
@@ -17,7 +16,6 @@ import type {
   LookbookSheet,
   ProjectLookbooksResource,
   SceneDesignResource,
-  SceneNarrativeResource,
   ScreenplayImageReferenceWithHttp,
   StudioSelection,
   StudioSelectionContextResult,
@@ -26,19 +24,16 @@ import type {
   ProjectLibrary,
   ProjectShell,
   ProjectSummary,
-  SceneNavigationRow,
-  SequenceNavigationRow,
-  SequenceResource,
-  SequenceSceneRow,
   SceneBeatSheetResource,
-  ActStoryboardResource,
-  ActStoryboardSequence,
-  ActStoryboardBeat,
+  ScreenplaySceneResource,
+  ScreenplaySectionResource,
+  ScreenplayStructureResource,
   StoryArcResource,
 } from '@gorenku/studio-core/client';
 
 export type ProjectShellWithHttp = ProjectShell & {
   coverUrl: string | null;
+  storageRoot: string;
 };
 
 export type ProjectSummaryWithHttp = ProjectSummary & {
@@ -155,30 +150,9 @@ export type PropResourceResponse = Omit<PropResource, 'firstImage'> & {
 };
 
 export type StoryArcResourceResponse = StoryArcResource;
-export type SceneNarrativeResourceResponse = Omit<
-  SceneNarrativeResource,
-  'castMemberImages' | 'locationImages'
-> & {
-  castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
-  locationImages: Record<string, ScreenplayImageReferenceWithHttp>;
-};
-
-export type SequenceSceneRowResponse = Omit<SequenceSceneRow, 'storyboardPreview'> & {
-  storyboardPreview?: {
-    beatSheetId: string;
-    images: Array<{
-      beatId: string;
-      image: ScreenplayImageReferenceWithHttp | null;
-    }>;
-  };
-};
-
-export type SequenceResourceResponse = Omit<SequenceResource, 'scenes'> & {
-  scenes: {
-    items: SequenceSceneRowResponse[];
-    nextCursor: string | null;
-  };
-};
+export type ScreenplayStructureResourceResponse = ScreenplayStructureResource;
+export type ScreenplaySectionResourceResponse = ScreenplaySectionResource;
+export type ScreenplaySceneResourceResponse = ScreenplaySceneResource;
 
 export type SceneBeatSheetResourceResponse = Omit<
   SceneBeatSheetResource,
@@ -188,26 +162,6 @@ export type SceneBeatSheetResourceResponse = Omit<
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
-export type ActStoryboardBeatResponse = Omit<ActStoryboardBeat, 'image'> & {
-  image: ScreenplayImageReferenceWithHttp | null;
-};
-
-export type ActStoryboardSequenceResponse = Omit<
-  ActStoryboardSequence,
-  'scenes'
-> & {
-  scenes: Array<{
-    scene: ActStoryboardSequence['scenes'][number]['scene'];
-    beats: ActStoryboardBeatResponse[];
-  }>;
-};
-
-export type ActStoryboardResourceResponse = Omit<
-  ActStoryboardResource,
-  'sequences'
-> & {
-  sequences: ActStoryboardSequenceResponse[];
-};
 export type InspirationResourceResponse = InspirationResource;
 export type InspirationFolderResourceResponse = InspirationFolderResource;
 export type InspirationFolderResponse = InspirationFolder;
@@ -218,12 +172,6 @@ export type LookbookImageResponse = LookbookImage;
 export type LookbookSheetResponse = LookbookSheet;
 
 export type StudioPageResponse<T> = PageResponse<T>;
-
-export type SequenceNavigationPageResponse =
-  StudioPageResponse<SequenceNavigationRow>;
-export type ActNavigationPageResponse = StudioPageResponse<ActNavigationRow>;
-
-export type SceneNavigationPageResponse = StudioPageResponse<SceneNavigationRow>;
 
 export type StudioSelectionContextRequest = {
   selection: StudioSelection;

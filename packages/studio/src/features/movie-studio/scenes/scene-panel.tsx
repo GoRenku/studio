@@ -1,20 +1,26 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import {
-  formatSceneProductionNumber,
+  type OpeningElement,
+  type ScreenplayReference,
+  type ScreenplaySceneResource,
   type ScenePanelTab,
   type StudioSelection,
 } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
-import type { SceneNarrativeResourceResponse } from '@/services/studio-project-contracts';
-import { readSceneNarrativeResource } from '@/services/studio-screenplay-api';
+import {
+  readSceneDialogueAudioWorkspace,
+  readScreenplayScene,
+  type SceneDialogueAudioWorkspaceWithUrls,
+} from '@/services/screenplay';
 import {
   matchesSceneNarrativeResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { SceneNarrativeTab } from './scene-narrative-tab';
+import { NarrativeTab } from '../screenplay/narrative/narrative-tab';
+import { sceneDisplayLabel } from '../screenplay/scene-label';
 import { SceneBeatsTab } from './scene-beats-tab';
 import { SceneShotPlansTab } from '../shot-plans/scene-shot-plans-tab';
 import { ShotPlanDetailPage } from '../shot-plans/shot-plan-detail-page';
@@ -38,6 +44,8 @@ interface ScenePanelProps {
   onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   previousScene?: SceneNeighbor | null;
   nextScene?: SceneNeighbor | null;
+  opening?: OpeningElement[];
+  openingReferences?: ScreenplayReference[];
 }
 
 export function ScenePanel({
@@ -53,8 +61,12 @@ export function ScenePanel({
   onSaveNotificationChange,
   previousScene,
   nextScene,
+  opening = [],
+  openingReferences = [],
 }: ScenePanelProps) {
-  const [resource, setResource] = useState<SceneNarrativeResourceResponse | null>(null);
+  const [resource, setResource] = useState<ScreenplaySceneResource | null>(null);
+  const [dialogueAudio, setDialogueAudio] =
+    useState<SceneDialogueAudioWorkspaceWithUrls | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
   const [tabBarAction, setTabBarAction] = useState<ReactNode | null>(null);
@@ -101,11 +113,15 @@ export function ScenePanel({
 
   useEffect(() => {
     let cancelled = false;
-    void readSceneNarrativeResource(projectName, sceneId)
-      .then((nextResource) => {
+    void Promise.all([
+      readScreenplayScene(projectName, sceneId),
+      readSceneDialogueAudioWorkspace(projectName, sceneId),
+    ])
+      .then(([nextResource, nextDialogueAudio]) => {
         if (!cancelled) {
           setError(null);
           setResource(nextResource);
+          setDialogueAudio(nextDialogueAudio);
         }
       })
       .catch((loadError) => {
@@ -131,9 +147,7 @@ export function ScenePanel({
 
   useEffect(() => {
     onHeaderTitleChange?.(
-      resource
-        ? `${formatSceneProductionNumber(resource.productionNumber)} - ${resource.scene.title}`
-        : null
+      resource ? sceneDisplayLabel(resource.scene) : null
     );
     return () => onHeaderTitleChange?.(null);
   }, [onHeaderTitleChange, resource]);
@@ -169,7 +183,7 @@ export function ScenePanel({
   if (error) {
     return <p className='p-6 text-sm text-destructive'>{error}</p>;
   }
-  if (!resource) {
+  if (!resource || !dialogueAudio) {
     return <p className='p-6 text-sm text-muted-foreground'>Loading scene...</p>;
   }
 
@@ -201,13 +215,15 @@ export function ScenePanel({
     >
       <LineTabsContent value='narrative' className='overflow-hidden'>
         {activeTab === 'narrative' ? (
-          <SceneNarrativeTab
+          <NarrativeTab
             projectName={projectName}
-            sceneId={sceneId}
             resource={resource}
+            opening={opening}
+            openingReferences={openingReferences}
+            audio={dialogueAudio}
             previousScene={previousScene}
             nextScene={nextScene}
-            onResourceChange={setResource}
+            onAudioChange={setDialogueAudio}
             onSaveNotificationChange={onSaveNotificationChange}
             onSelect={onSelect}
           />
@@ -250,7 +266,6 @@ export function ScenePanel({
               sceneId={sceneId}
               shotPlanId={shotPlanId}
               shotId={shotId}
-              entityMentions={resource}
               onSelect={onSelect}
             />
           ) : (

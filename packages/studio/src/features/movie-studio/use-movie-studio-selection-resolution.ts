@@ -22,13 +22,11 @@ export function useStudioSelectionResolution(
       project && screenplayNavigation
         ? buildMovieStudioLookup(project, screenplayNavigation)
         : {
-            acts: new Map(),
-            sequences: new Map(),
+            sections: new Map(),
             scenes: new Map(),
             cast: new Map(),
             locations: new Map(),
             props: new Map(),
-            scenesBySequenceId: new Map(),
           },
     [project, screenplayNavigation]
   );

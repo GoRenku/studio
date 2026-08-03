@@ -11,7 +11,7 @@ import {
   deleteSceneDialogueAudioTake,
   saveSceneDialogueAudioSetup,
   type SceneDialogueAudioWorkspaceWithUrls,
-} from '@/services/studio-scene-dialogue-audio-api';
+} from '@/services/screenplay';
 import { useDebouncedAutosave } from '@/hooks/use-debounced-autosave';
 
 export interface SceneDialogueAudioDraft {
@@ -47,7 +47,7 @@ const idleEstimate: SceneDialogueAudioEstimateState = {
 export function useSceneDialogueAudio(input: {
   projectName: string;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   context: SceneDialogueAudioWorkspaceWithUrls;
   onDraftTextPreviewChange?: (text: string | null) => void;
   onContextChange: (context: SceneDialogueAudioWorkspaceWithUrls) => void;
@@ -55,15 +55,15 @@ export function useSceneDialogueAudio(input: {
   const {
     projectName,
     sceneId,
-    dialogueId,
+    turnId,
     context,
     onDraftTextPreviewChange,
     onContextChange,
   } = input;
   const dialogue = context.dialogues.find(
-    (candidate) => candidate.dialogueId === dialogueId
+    (candidate) => candidate.turnId === turnId
   );
-  const existing = context.audioByDialogueId[dialogueId] ?? null;
+  const existing = context.audioByTurnId[turnId] ?? null;
   const voices = dialogue?.castMemberId
     ? context.castVoicesByCastMemberId[dialogue.castMemberId] ?? []
     : [];
@@ -141,7 +141,7 @@ export function useSceneDialogueAudio(input: {
   const spec = useMemo<SceneDialogueAudioSetup>(
     () => ({
       purpose: 'scene.dialogue-audio',
-      target: { kind: 'sceneDialogue', sceneId, dialogueId },
+      target: { kind: 'sceneDialogue', sceneId, turnId },
       modelChoice: draft.modelChoice,
       castVoiceId: draft.castVoiceId,
       plainText: draft.plainText,
@@ -150,7 +150,7 @@ export function useSceneDialogueAudio(input: {
       outputFormat: draft.outputFormat,
       languageCode: draft.languageCode,
     }),
-    [dialogueId, draft, sceneId]
+    [draft, sceneId, turnId]
   );
 
   const estimateInput = useMemo<SceneDialogueAudioEstimateInput>(
@@ -179,7 +179,7 @@ export function useSceneDialogueAudio(input: {
     failureMessage: 'Dialogue audio setup could not be saved.',
     isReady: () => !blocked,
     save: (nextSpec) =>
-      saveSceneDialogueAudioSetup(projectName, sceneId, dialogueId, nextSpec),
+      saveSceneDialogueAudioSetup(projectName, sceneId, turnId, nextSpec),
     onSaved: (report) => {
       onContextChange(report.context);
       onDraftTextPreviewChange?.(null);
@@ -257,7 +257,7 @@ export function useSceneDialogueAudio(input: {
     void estimateSceneDialogueAudioDraft(
       projectName,
       sceneId,
-      dialogueId,
+      turnId,
       estimateInput
     )
       .then((report) => {
@@ -294,7 +294,7 @@ export function useSceneDialogueAudio(input: {
       cancelled = true;
     };
   }, [
-    dialogueId,
+    turnId,
     estimateInput,
     estimateSignature,
     projectName,
@@ -316,7 +316,7 @@ export function useSceneDialogueAudio(input: {
       const report = await generateSceneDialogueAudioTake(
         projectName,
         sceneId,
-        dialogueId,
+        turnId,
         { setup: spec, approveLiveProviderRun: true }
       );
       onContextChange(report.context);
@@ -328,7 +328,7 @@ export function useSceneDialogueAudio(input: {
     blocked,
     blockedIssue,
     canGenerateCurrentEstimate,
-    dialogueId,
+    turnId,
     onContextChange,
     projectName,
     sceneId,
@@ -342,7 +342,7 @@ export function useSceneDialogueAudio(input: {
         const report = await deleteSceneDialogueAudioTake(
           projectName,
           sceneId,
-          dialogueId,
+          turnId,
           takeId
         );
         onContextChange(report.context);
@@ -350,7 +350,7 @@ export function useSceneDialogueAudio(input: {
         setActionBusy(false);
       }
     },
-    [dialogueId, onContextChange, projectName, sceneId]
+    [onContextChange, projectName, sceneId, turnId]
   );
 
   return {

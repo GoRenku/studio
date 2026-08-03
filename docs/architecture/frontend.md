@@ -33,6 +33,14 @@ hold draft interaction state and bind those fields to existing controls, but it
 must not classify project assets, guess provider field names, construct missing
 generation work, or calculate cost.
 
+The Movie Studio screenplay surface is Scene-first. Browser services consume
+Core's Screenplay, Scene, Section, structure, block, and reference contracts
+directly. The Scenes sidebar tree renders stored structure entries, the shared
+Section surface remains read-only, and Scene Narrative dispatches the complete
+semantic block union. React may own disclosure, hover, focus, dialog, and audio
+draft state; it must not infer hierarchy, repair ranges, parse `@handle` text,
+or mutate authored screenplay content.
+
 ## Shared UI Ownership
 
 Reusable frontend behavior belongs to the layer that owns its meaning.
@@ -105,7 +113,7 @@ The included surfaces are:
 - Cast, Location, and Prop overview cards and asset galleries;
 - Inspiration folders and grabs;
 - Production and Storyboard Lookbook evidence, hero, and asset cards;
-- Scene, Act, and Sequence storyboard cards;
+- Scene and read-only Section summary cards;
 - Project Library cards;
 - Generation Preview and Generation Request inspector reference cards;
 - Reference Picker candidates;

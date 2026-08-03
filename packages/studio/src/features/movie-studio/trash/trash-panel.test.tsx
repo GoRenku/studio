@@ -101,7 +101,7 @@ describe('TrashPanel', () => {
 function trashProject(): TrashProjectReport {
   return {
     id: 'project_test0001',
-    name: 'constantinople',
+    projectName: 'constantinople',
     projectFolder: '/tmp/renku/constantinople',
   };
 }

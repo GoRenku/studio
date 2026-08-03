@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
-import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/screenplay';
 import { idleSaveNotification } from '../detail-save-notification';
 import {
   useSceneDialogueAudio,
@@ -17,7 +17,7 @@ import { SceneDialogueAudioTakesTab } from './scene-dialogue-audio-takes-tab';
 interface SceneDialogueAudioPanelProps {
   projectName: string;
   sceneId: string;
-  dialogueId: string;
+  turnId: string;
   context: SceneDialogueAudioWorkspaceWithUrls;
   player: SceneDialogueAudioPlayer;
   onClose: () => void;
@@ -31,7 +31,7 @@ type DialogueAudioPanelTab = 'dialog' | 'takes' | 'advanced';
 export function SceneDialogueAudioPanel({
   projectName,
   sceneId,
-  dialogueId,
+  turnId,
   context,
   player,
   onClose,
@@ -46,7 +46,7 @@ export function SceneDialogueAudioPanel({
   const dialogueAudio = useSceneDialogueAudio({
     projectName,
     sceneId,
-    dialogueId,
+    turnId,
     context,
     onDraftTextPreviewChange,
     onContextChange,

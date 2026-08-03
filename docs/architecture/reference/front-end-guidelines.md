@@ -140,6 +140,15 @@ src/features/movie-studio/
     studio-sidebar.tsx
     studio-sidebar-button.tsx
     studio-sidebar-section.tsx
+    screenplay/
+      tree.tsx
+      section-row.tsx
+      scene-row.tsx
+      use-expanded-sections.ts
+
+  screenplay/
+    narrative/
+    sections/
 
   storyboard/
     storyboard-panel.tsx
@@ -164,6 +173,14 @@ Notes:
   language, generation activity, and future sections.
 - `studio-sidebar` is preferred over plain `navigation` because it is tied to a
   specific Studio surface.
+- `studio-sidebar/screenplay` owns only the recursive read-only Scene/Section
+  subtree. It renders Core structure entries directly and keeps disclosure
+  state local; it does not validate or reconstruct screenplay organization.
+- `screenplay/narrative` owns semantic block presentation, exact reference-range
+  slicing, and Dialogue/Dual Dialogue composition. It does not mutate
+  screenplay content or infer references from text.
+- `screenplay/sections` owns the single read-only Section surface for both Act
+  and Sequence types.
 - `storyboard`, `clip-design`, `cast-design`, `visual-language`, and
   `generation-activity` should stay precise because they name product areas
   inside the broader movie studio.

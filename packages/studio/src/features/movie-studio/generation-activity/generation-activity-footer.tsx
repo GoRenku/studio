@@ -20,8 +20,10 @@ export function GenerationActivityFooter({
         </p>
       </div>
       <div className='hidden md:flex items-center gap-2'>
-        <StatPill label='Sequences' value={project.counts.sequences} />
-        <StatPill label='Scenes' value={project.counts.scenes} />
+        {project.project.counts.sequences > 0 ? (
+          <StatPill label='Sequences' value={project.project.counts.sequences} />
+        ) : null}
+        <StatPill label='Scenes' value={project.project.counts.scenes} />
       </div>
       <Button type='button' variant='outline' disabled>
         <FolderOpen className='mr-2 h-4 w-4' />

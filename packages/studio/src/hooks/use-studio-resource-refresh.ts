@@ -45,7 +45,7 @@ export function matchesProjectShellResource(resourceKeys: string[]): boolean {
       resourceKey === 'navigation:locations' ||
       resourceKey === 'navigation:props' ||
       resourceKey === 'screenplay' ||
-      resourceKey === 'screenplay:acts'
+      resourceKey === 'screenplay:structure'
   );
 }
 
@@ -55,13 +55,11 @@ export function matchesMovieStudioNavigationResource(
   return resourceKeys.some(
     (resourceKey) =>
       resourceKey === 'screenplay' ||
-      resourceKey === 'screenplay:acts' ||
+      resourceKey === 'screenplay:structure' ||
+      resourceKey.startsWith('screenplay:section:') ||
       resourceKey === 'navigation:cast' ||
       resourceKey === 'navigation:locations' ||
-      resourceKey === 'navigation:props' ||
-      resourceKey.startsWith('surface:act:') ||
-      resourceKey.startsWith('surface:sequence:') ||
-      resourceKey.startsWith('navigation:sequence-scenes:')
+      resourceKey === 'navigation:props'
   );
 }
 
@@ -162,7 +160,7 @@ export function matchesStoryArcResource(resourceKeys: string[]): boolean {
     (resourceKey) =>
       resourceKey === 'surface:story-arc' ||
       resourceKey === 'screenplay' ||
-      resourceKey === 'screenplay:acts' ||
+      resourceKey === 'screenplay:structure' ||
       resourceKey === 'screenplay-analysis' ||
       resourceKey.startsWith('screenplay-analysis:')
   );
@@ -211,65 +209,4 @@ export function matchesSceneBeatsResource(input: {
           resourceKey === `scene-beat-sheet:${input.beatSheetId}`
         : false)
   );
-}
-
-export function matchesSequenceResource(input: {
-  resourceKeys: string[];
-  sequenceId: string;
-  sceneIds: Set<string>;
-}): boolean {
-  return input.resourceKeys.some((resourceKey) => {
-    if (
-      resourceKey === 'screenplay' ||
-      resourceKey === `surface:sequence:${input.sequenceId}` ||
-      resourceKey === `navigation:sequence-scenes:${input.sequenceId}`
-    ) {
-      return true;
-    }
-    return matchesStoryboardSceneResource(resourceKey, input.sceneIds);
-  });
-}
-
-export function matchesActStoryboardResource(input: {
-  resourceKeys: string[];
-  actId: string;
-  sequenceIds: Set<string>;
-  sceneIds: Set<string>;
-}): boolean {
-  return input.resourceKeys.some((resourceKey) => {
-    if (
-      resourceKey === 'screenplay' ||
-      resourceKey === 'screenplay:acts' ||
-      resourceKey === `surface:act:${input.actId}` ||
-      [...input.sequenceIds].some(
-        (sequenceId) =>
-          resourceKey === `surface:sequence:${sequenceId}` ||
-          resourceKey === `navigation:sequence-scenes:${sequenceId}`
-      )
-    ) {
-      return true;
-    }
-    return matchesStoryboardSceneResource(resourceKey, input.sceneIds);
-  });
-}
-
-function matchesStoryboardSceneResource(
-  resourceKey: string,
-  sceneIds: Set<string>
-): boolean {
-  if (
-    resourceKey === 'scene-beat-sheet' ||
-    resourceKey.startsWith('scene-beat-sheet:')
-  ) {
-    return true;
-  }
-  for (const sceneId of sceneIds) {
-    if (
-      resourceKey === `scene:${sceneId}` ||
-      resourceKey === `surface:scene:${sceneId}:beats`
-    ) {
-      return true;
-    }
-  }
-  return false;
 }

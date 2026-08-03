@@ -611,7 +611,7 @@ async function dispatchPreviews(previews: GenerationPreviewResource[]): Promise<
     window.dispatchEvent(
       new CustomEvent('renku:generation-preview-requested', {
         detail: {
-          projectName: previews[0]!.project.name,
+          projectName: previews[0]!.project.projectName,
           previews,
           eventId: `studio_event_test_${++previewEventSequence}`,
           createdAt: '2026-07-02T10:00:00.000Z',
@@ -648,7 +648,7 @@ function previewFixture(input: {
     purpose: input.purpose,
     project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
       title: 'Preparation of the Siege',
     },
     subject: {

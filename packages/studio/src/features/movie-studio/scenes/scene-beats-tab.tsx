@@ -3,7 +3,7 @@ import type { StudioSelection } from '@gorenku/studio-core/client';
 import { MediaCard } from '@/ui/media-card/media-card';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneBeatSheetResourceResponse } from '@/services/studio-project-contracts';
-import { readSceneBeatSheetResource } from '@/services/studio-screenplay-api';
+import { readSceneBeatSheetResource } from '@/services/screenplay';
 import {
   matchesSceneBeatsResource,
   useStudioResourceRefresh,

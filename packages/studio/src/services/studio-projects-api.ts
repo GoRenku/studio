@@ -1,8 +1,6 @@
 import type {
   StudioSelectionContextRequest,
   StudioSelectionContextResponse,
-  SceneNavigationPageResponse,
-  SequenceNavigationPageResponse,
   ProjectInformationResourceResponse,
   ProjectInformationUpdateRequest,
   ProjectLibraryWithHttp,
@@ -17,15 +15,6 @@ interface ProjectResponse {
 
 interface ProjectInformationResourceApiResponse {
   resource: ProjectInformationResourceResponse | null;
-}
-
-interface NavigationPageApiResponse<T> {
-  page: T;
-}
-
-interface NavigationPageQuery {
-  limit?: number;
-  cursor?: string | null;
 }
 
 interface LibraryResponse {
@@ -73,29 +62,6 @@ export async function readStudioSelectionContext(
     throw await readStudioApiError(response);
   }
   return (await response.json()) as StudioSelectionContextResponse;
-}
-
-export async function readSequenceNavigation(
-  projectName: string,
-  query: NavigationPageQuery = {}
-): Promise<SequenceNavigationPageResponse> {
-  return readNavigationPage(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/sequences`,
-    query
-  );
-}
-
-export async function readSceneNavigation(
-  projectName: string,
-  sequenceId: string,
-  query: NavigationPageQuery = {}
-): Promise<SceneNavigationPageResponse> {
-  return readNavigationPage(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/sequences/${encodeURIComponent(
-      sequenceId
-    )}/scenes`,
-    query
-  );
 }
 
 export async function readProjectInformationResource(
@@ -147,31 +113,4 @@ function readStudioApiToken(): string {
     throw new Error('Studio API token is not available.');
   }
   return token;
-}
-
-async function readNavigationPage<T>(
-  path: string,
-  query: NavigationPageQuery
-): Promise<T> {
-  const response = await fetch(`${path}${navigationQueryString(query)}`);
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-  const body = (await response.json()) as NavigationPageApiResponse<T>;
-  if (!body.page) {
-    throw new Error('Renku Studio API returned no navigation page.');
-  }
-  return body.page;
-}
-
-function navigationQueryString(query: NavigationPageQuery): string {
-  const search = new URLSearchParams();
-  if (query.limit !== undefined) {
-    search.set('limit', String(query.limit));
-  }
-  if (query.cursor) {
-    search.set('cursor', query.cursor);
-  }
-  const value = search.toString();
-  return value ? `?${value}` : '';
 }

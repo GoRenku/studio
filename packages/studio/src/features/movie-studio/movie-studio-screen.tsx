@@ -23,15 +23,15 @@ import { PropPanel } from './props/prop-panel';
 import { MOVIE_STUDIO_LAYOUT } from './movie-studio-layout';
 import { PanelShell } from './panel-shell';
 import { ProjectInformationPanel } from './project-information/project-information-panel';
-import { ActStoryboardPanel } from './acts/act-storyboard-panel';
+import { SectionScreen } from './screenplay/sections/section-screen';
 import { ScenePanel } from './scenes/scene-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
 import { TrashPanel } from './trash/trash-panel';
 import {
   useMovieStudioNavigation,
-  type MovieStudioNavigationState,
 } from './use-movie-studio-navigation';
+import { sceneDisplayLabel } from './screenplay/scene-label';
 import { useStudioSelectionResolution } from './use-movie-studio-selection-resolution';
 import { InspirationFolderCreateDialog } from './visual-language/inspiration-folder-create-dialog';
 import { VisualLanguagePanel } from './visual-language/visual-language-panel';
@@ -97,7 +97,7 @@ export function MovieStudioScreen({
   }, []);
 
   useStudioResourceRefresh({
-    projectName: project.identity.name,
+    projectName: project.project.projectName,
     matches: (resourceKeys) =>
       matchesVisualLanguageInspirationResource(resourceKeys),
     onRefresh: handleInspirationFoldersChange,
@@ -116,52 +116,30 @@ export function MovieStudioScreen({
     if (selection.type !== 'scene') {
       return { previousScene: null, nextScene: null };
     }
-    const context = screenplayNavigation.selectionContext;
-    if (!context || !('sequence' in context)) {
-      return { previousScene: null, nextScene: null };
-    }
-    const sequenceId = context.sequence.id;
-    const actId = context.act.id;
-    const scenes = screenplayNavigation.scenesBySequenceId.get(sequenceId) ?? [];
+    const scenes = screenplayNavigation.orderedScenes;
     const sceneIndex = scenes.findIndex((scene) => scene.id === selection.id);
     if (sceneIndex === -1) {
       return { previousScene: null, nextScene: null };
     }
-    const sequencesInAct =
-      screenplayNavigation.sequencesByActId.get(actId) ?? [];
-    const sequenceIndex = sequencesInAct.findIndex((seq) => seq.id === sequenceId);
-
-    const adjacentSequenceScene = (
-      offset: -1 | 1
-    ): { id: string; title: string } | null => {
-      if (sequenceIndex === -1) return null;
-      const target = sequencesInAct[sequenceIndex + offset];
-      if (!target) return null;
-      const targetScenes =
-        screenplayNavigation.scenesBySequenceId.get(target.id) ?? [];
-      if (!targetScenes.length) return null;
-      const scene =
-        offset === 1
-          ? targetScenes[0]
-          : targetScenes[targetScenes.length - 1];
-      return { id: scene.id, title: scene.title };
-    };
-
     const previousScene =
       sceneIndex > 0
-        ? { id: scenes[sceneIndex - 1].id, title: scenes[sceneIndex - 1].title }
-        : adjacentSequenceScene(-1);
+        ? {
+            id: scenes[sceneIndex - 1].id,
+            title: sceneDisplayLabel(scenes[sceneIndex - 1]),
+          }
+        : null;
     const nextScene =
       sceneIndex < scenes.length - 1
-        ? { id: scenes[sceneIndex + 1].id, title: scenes[sceneIndex + 1].title }
-        : adjacentSequenceScene(1);
+        ? {
+            id: scenes[sceneIndex + 1].id,
+            title: sceneDisplayLabel(scenes[sceneIndex + 1]),
+          }
+        : null;
 
     return { previousScene, nextScene };
   }, [
     selection,
-    screenplayNavigation.selectionContext,
-    screenplayNavigation.scenesBySequenceId,
-    screenplayNavigation.sequencesByActId,
+    screenplayNavigation.orderedScenes,
   ]);
 
   const activeSaveNotification =
@@ -182,16 +160,6 @@ export function MovieStudioScreen({
     sceneHeaderTitle.title
       ? sceneHeaderTitle.title
       : resolvedSelection.kicker;
-  const selectedSequenceActId =
-    selection.type === 'sequence'
-      ? resolvedSelection.sequence?.actId ??
-        actIdFromSelectionContext(
-          screenplayNavigation.selectionContext,
-          selection.id
-        )
-      : null;
-  const storyboardActId =
-    selection.type === 'act' ? selection.id : selectedSequenceActId;
   const activeSceneId = selection.type === 'scene' ? selection.id : null;
   const handleSceneHeaderActionChange = useCallback(
     (sceneId: string, action: ReactNode | null) => {
@@ -268,11 +236,11 @@ export function MovieStudioScreen({
 
   const handleCreateInspirationFolder = useCallback(
     async (name: string) => {
-      const folder = await createInspirationFolder(project.identity.name, name);
+      const folder = await createInspirationFolder(project.project.projectName, name);
       handleInspirationFoldersChange();
       await onNavigateSelection({ type: 'inspiration', folderId: folder.id });
     },
-    [handleInspirationFoldersChange, onNavigateSelection, project.identity.name]
+    [handleInspirationFoldersChange, onNavigateSelection, project.project.projectName]
   );
 
   return (
@@ -342,61 +310,53 @@ export function MovieStudioScreen({
                 />
               ) : selection.type === 'cast' ? (
                 <CastOverviewPanel
-                  projectName={project.identity.name}
+                  projectName={project.project.projectName}
                   onSelect={selectMovieStudioSurface}
                 />
               ) : selection.type === 'castMember' ? (
                 <CastMemberPanel
                   key={selection.id}
-                  projectName={project.identity.name}
+                  projectName={project.project.projectName}
                   castMemberId={selection.id}
                 />
               ) : selection.type === 'locations' ? (
                 <LocationOverviewPanel
-                  projectName={project.identity.name}
+                  projectName={project.project.projectName}
                   onSelect={selectMovieStudioSurface}
                 />
               ) : selection.type === 'location' ? (
                 <LocationPanel
                   key={selection.id}
-                  projectName={project.identity.name}
+                  projectName={project.project.projectName}
                   locationId={selection.id}
                 />
               ) : selection.type === 'props' ? (
                 <PropOverviewPanel
-                  projectName={project.identity.name}
+                  projectName={project.project.projectName}
                   onSelect={selectMovieStudioSurface}
                 />
               ) : selection.type === 'prop' ? (
                 <PropPanel
                   key={selection.id}
-                  projectName={project.identity.name}
+                  projectName={project.project.projectName}
                   propId={selection.id}
                 />
               ) : selection.type === 'storyArc' ? (
-                <StoryArcPanel projectName={project.identity.name} />
+                <StoryArcPanel projectName={project.project.projectName} />
               ) : selection.type === 'trash' ? (
-                <TrashPanel projectName={project.identity.name} />
-              ) : selection.type === 'act' || selection.type === 'sequence' ? (
-                storyboardActId ? (
-                  <ActStoryboardPanel
-                    key={storyboardActId}
-                    projectName={project.identity.name}
-                    actId={storyboardActId}
-                    selectedSequenceId={
-                      selection.type === 'sequence' ? selection.id : undefined
-                    }
-                    onSelect={selectMovieStudioSurface}
-                  />
-                ) : (
-                  <p className='text-sm text-muted-foreground'>
-                    Loading sequence...
-                  </p>
-                )
+                <TrashPanel projectName={project.project.projectName} />
+              ) : selection.type === 'section' ? (
+                <SectionScreen
+                  key={selection.id}
+                  projectName={project.project.projectName}
+                  sectionId={selection.id}
+                  scenesById={screenplayNavigation.scenesById}
+                  onSelect={selectMovieStudioSurface}
+                />
               ) : (
                 <ScenePanel
                   key={selection.id}
-                  projectName={project.identity.name}
+                  projectName={project.project.projectName}
                   sceneId={selection.id}
                   sceneTab={selection.sceneTab}
                   beatId={selection.beatId}
@@ -408,6 +368,19 @@ export function MovieStudioScreen({
                   onSaveNotificationChange={handleActiveSceneSaveNotificationChange}
                   previousScene={sceneNeighbors.previousScene}
                   nextScene={sceneNeighbors.nextScene}
+                  opening={
+                    screenplayNavigation.orderedScenes[0]?.id === selection.id
+                      ? screenplayNavigation.screenplay.screenplay.opening
+                      : []
+                  }
+                  openingReferences={
+                    screenplayNavigation.orderedScenes[0]?.id === selection.id
+                      ? screenplayNavigation.screenplay.screenplay.references.filter(
+                          (reference) =>
+                            reference.target.type === 'openingElement'
+                        )
+                      : []
+                  }
                 />
               )}
             </PanelShell>
@@ -420,17 +393,6 @@ export function MovieStudioScreen({
   );
 }
 
-function actIdFromSelectionContext(
-  context: MovieStudioNavigationState['selectionContext'],
-  sequenceId: string
-): string | null {
-  return context &&
-    'sequence' in context &&
-    context.sequence.id === sequenceId
-    ? context.act.id
-    : null;
-}
-
 function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean {
   return (
     selectionType === 'castMember' ||
@@ -439,6 +401,7 @@ function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean 
     selectionType === 'prop' ||
     selectionType === 'lookbook' ||
     selectionType === 'trash' ||
+    selectionType === 'section' ||
     selectionType === 'scene'
   );
 }

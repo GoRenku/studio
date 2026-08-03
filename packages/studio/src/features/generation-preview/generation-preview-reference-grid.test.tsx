@@ -267,7 +267,7 @@ function previewFixture(): GenerationPreviewResource {
     purpose: 'image.edit',
     project: {
       id: 'project_test',
-      name: 'urban-basilica',
+      projectName: 'urban-basilica',
     },
     target: {
       kind: 'asset',

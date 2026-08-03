@@ -200,7 +200,7 @@ export function useStudioCoordination(input: {
     const observation = project && selection
       ? {
           focus: { screen: 'movieStudio', selection } as StudioFocus,
-          focusKey: `movieStudio:${project.identity.id}:${JSON.stringify(selection)}`,
+          focusKey: `movieStudio:${project.project.id}:${JSON.stringify(selection)}`,
           projectRef: toProjectRef(project),
         }
       : {
@@ -269,7 +269,7 @@ async function applyStudioEventBatch(input: {
         await input.projectSessionRef.current.refreshProjectLibrary();
       }
       if (
-        input.currentProjectRef.current?.identity.id ===
+        input.currentProjectRef.current?.project.id ===
         refreshEvent.projectRef.id
       ) {
         const project = await input.projectSessionRef.current.refreshProject(
@@ -286,7 +286,7 @@ async function applyStudioEventBatch(input: {
         resourceKeys: string[];
       };
       if (
-        input.currentProjectRef.current?.identity.id ===
+        input.currentProjectRef.current?.project.id ===
         resourceEvent.projectRef.id
       ) {
         publishChangedResources(resourceEvent);
@@ -303,7 +303,7 @@ async function applyStudioEventBatch(input: {
     if (event.type === 'studio.generationPreviewsRequested') {
       const previewEvent = event as GenerationPreviewsResourceRequestedEvent;
       if (
-        input.currentProjectRef.current?.identity.id ===
+        input.currentProjectRef.current?.project.id ===
         previewEvent.projectRef.id
       ) {
         publishGenerationPreview(previewEvent);
@@ -400,7 +400,7 @@ async function applyFocusRequest(input: {
       return;
     }
 
-    if (project?.identity.id !== input.event.projectRef.id) {
+    if (project?.project.id !== input.event.projectRef.id) {
       project = await input.projectSessionRef.current.navigateToProject(
         input.event.projectRef.name
       );
@@ -425,7 +425,7 @@ async function applyFocusRequest(input: {
       );
       input.currentProjectRef.current = project;
     }
-    if (project.identity.id !== input.event.projectRef.id) {
+    if (project.project.id !== input.event.projectRef.id) {
       await reportStudioFocusRequestFailed({
         browserSessionId: input.browserSessionId,
         requestEventId: input.event.id,
@@ -438,7 +438,7 @@ async function applyFocusRequest(input: {
       await input.projectSessionRef.current.refreshProjectLibrary();
     }
     const validation = await validateStudioFocusRequest({
-      projectName: project.identity.name,
+      projectName: project.project.projectName,
       focus: input.event.focus,
     });
     if (!validation.valid) {
@@ -454,7 +454,7 @@ async function applyFocusRequest(input: {
     input.appliedFocusRequestIdsRef.current.add(input.event.id);
     await input.projectSessionRef.current.navigateToStudioSelectionRoute(
       input.event.focus.selection,
-      project.identity.name
+      project.project.projectName
     );
   } catch {
     await reportStudioFocusRequestFailed({
@@ -521,11 +521,8 @@ function readDocumentActivityKind(): StudioBrowserSessionActivityKind {
 
 function toProjectRef(project: ProjectShellWithHttp): StudioProjectRef {
   return {
-    name: project.identity.name,
-    id: project.identity.id,
-    storageRoot: project.identity.folderPath.slice(
-      0,
-      -1 * (`/${project.identity.name}`.length)
-    ),
+    name: project.project.projectName,
+    id: project.project.id,
+    storageRoot: project.storageRoot,
   };
 }

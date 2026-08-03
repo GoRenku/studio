@@ -9,7 +9,7 @@ import {
 import type {
   ScreenplayAnalysisCriterion,
   ScreenplaySceneAnalysis,
-  SuggestedSceneAddition,
+  SuggestedScene,
 } from '@gorenku/studio-core/client';
 import { DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA } from '@gorenku/studio-core/client';
 import {
@@ -38,7 +38,7 @@ export function StoryArcSceneAnalysisDialog({
   resource,
 }: StoryArcSceneAnalysisDialogProps) {
   const analysis = scene
-    ? resource.activeAnalysis?.scenes.find((candidate) => candidate.sceneId === scene.id)
+    ? resource.activeAnalysis?.sceneAnalyses.find((candidate) => candidate.sceneId === scene.id)
     : undefined;
   const relatedAdditions = scene
     ? findRelatedSuggestedSceneAdditions(resource, scene)
@@ -49,7 +49,7 @@ export function StoryArcSceneAnalysisDialog({
       <DialogContent className='max-h-[84vh] max-w-3xl gap-0 overflow-hidden p-0'>
         <DialogHeader className='gap-2 px-6 py-5'>
           <DialogDescription className='text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground'>
-            {scene ? `${scene.actTitle} · ${scene.sequenceTitle}` : 'Story arc scene detail'}
+            {scene?.actTitle ?? 'Story arc scene detail'}
           </DialogDescription>
           <DialogTitle className='text-xl font-semibold normal-case leading-tight tracking-tight text-foreground'>
             {scene?.title ?? 'Scene Analysis'}
@@ -268,14 +268,14 @@ function ScenePlacement({
 function SuggestedSceneAdditions({
   additions,
 }: {
-  additions: SuggestedSceneAddition[];
+  additions: SuggestedScene[];
 }) {
   return (
     <Section title='Suggested Scenes'>
       <div className='space-y-3'>
         {additions.map((addition) => (
           <div
-            key={`${addition.targetActId}-${addition.targetSequenceId ?? 'act'}-${addition.title}`}
+            key={`${addition.title}-${addition.placement.beforeSceneId ?? addition.placement.afterSceneId}`}
             className='rounded-lg border border-primary/30 bg-primary/[0.07] px-4 py-3'
           >
             <p className='text-sm font-semibold text-foreground'>{addition.title}</p>
@@ -307,20 +307,12 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function findRelatedSuggestedSceneAdditions(
   resource: StoryArcResourceResponse,
   scene: StoryArcScenePoint
-): SuggestedSceneAddition[] {
+): SuggestedScene[] {
   return (
-    resource.activeAnalysis?.suggestedSceneAdditions.filter((addition) => {
-      if (
+    resource.activeAnalysis?.suggestedScenes.filter((addition) =>
         addition.placement?.beforeSceneId === scene.id ||
         addition.placement?.afterSceneId === scene.id
-      ) {
-        return true;
-      }
-      return (
-        addition.targetSequenceId === scene.sequenceId ||
-        (!addition.targetSequenceId && addition.targetActId === scene.actId)
-      );
-    }) ?? []
+    ) ?? []
   );
 }
 

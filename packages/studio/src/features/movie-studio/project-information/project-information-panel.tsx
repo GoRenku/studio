@@ -81,7 +81,8 @@ interface ProjectInformationForm {
   title: string;
   aspectRatio: string;
   logline: string;
-  summary: string;
+  synopsis: string;
+  premise: string;
   languages: ProjectLanguage[];
 }
 
@@ -120,11 +121,11 @@ export function ProjectInformationPanel({
   const save = useCallback(
     async (nextForm: ProjectInformationForm) => {
       return await updateProjectInformation(
-        project.identity.name,
+        project.project.projectName,
         toProjectInformationUpdate(nextForm)
       );
     },
-    [project.identity.name]
+    [project.project.projectName]
   );
   const isAutosaveReady = useCallback(
     (nextForm: ProjectInformationForm) =>
@@ -138,7 +139,7 @@ export function ProjectInformationPanel({
     save,
     failureMessage: 'Project information could not be saved.',
     onSaved: () => {
-      void readProject(project.identity.name).then(onProjectChange);
+      void readProject(project.project.projectName).then(onProjectChange);
     },
     isReady: isAutosaveReady,
   });
@@ -149,7 +150,7 @@ export function ProjectInformationPanel({
       projectInformationFormSignature(projectForm);
     const requestedProjectIdentitySignature =
       projectInformationIdentitySignature(projectForm);
-    void readProjectInformationResource(project.identity.name)
+    void readProjectInformationResource(project.project.projectName)
       .then((nextResource) => {
         const nextResourceForm = toProjectInformationResourceForm(nextResource);
         if (
@@ -171,10 +172,10 @@ export function ProjectInformationPanel({
     return () => {
       cancelled = true;
     };
-  }, [project.identity.name, projectForm, resourceRevision]);
+  }, [project.project.projectName, projectForm, resourceRevision]);
 
   useStudioResourceRefresh({
-    projectName: project.identity.name,
+    projectName: project.project.projectName,
     matches: matchesProjectInformationResource,
     onRefresh: () => setResourceRevision((current) => current + 1),
   });
@@ -247,7 +248,7 @@ export function ProjectInformationPanel({
         <div className='grid gap-4 lg:grid-cols-2'>
           <Field label='Project Name'>
             <Input
-              value={project.identity.name}
+              value={project.project.projectName}
               readOnly
               className={projectInformationReadOnlyControlClassName}
             />
@@ -313,16 +314,29 @@ export function ProjectInformationPanel({
             />
           </Field>
 
-          <Field label='Summary'>
+          <Field label='Synopsis'>
             <Textarea
-              value={form.summary}
+              value={form.synopsis}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
-                  summary: event.target.value,
+                  synopsis: event.target.value,
                 }))
               }
               className={cn('min-h-36', projectInformationControlClassName)}
+            />
+          </Field>
+
+          <Field label='Premise'>
+            <Textarea
+              value={form.premise}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  premise: event.target.value,
+                }))
+              }
+              className={cn('min-h-24', projectInformationControlClassName)}
             />
           </Field>
         </div>
@@ -485,10 +499,11 @@ function formatLanguageOptionLabel(language: {
 
 function toProjectInformationForm(project: ProjectShellWithHttp): ProjectInformationForm {
   return {
-    title: project.identity.title,
-    aspectRatio: project.identity.aspectRatio ?? '16:9',
-    logline: project.identity.logline ?? '',
-    summary: project.identity.summary ?? '',
+    title: project.project.title,
+    aspectRatio: project.project.aspectRatio ?? '16:9',
+    logline: project.project.logline ?? '',
+    synopsis: project.project.synopsis ?? '',
+    premise: project.project.premise ?? '',
     languages: project.languages,
   };
 }
@@ -500,7 +515,8 @@ function toProjectInformationResourceForm(
     title: resource.title,
     aspectRatio: resource.aspectRatio ?? '16:9',
     logline: resource.logline ?? '',
-    summary: resource.summary ?? '',
+    synopsis: resource.synopsis ?? '',
+    premise: resource.premise ?? '',
     languages: resource.languages,
   };
 }
@@ -512,7 +528,8 @@ function toProjectInformationUpdate(
     title: form.title,
     aspectRatio: form.aspectRatio,
     logline: form.logline,
-    summary: form.summary,
+    synopsis: form.synopsis,
+    premise: form.premise,
     languages: form.languages.map((language) => ({
       localeTag: language.localeTag,
       displayName: language.displayName,
@@ -528,12 +545,16 @@ function projectInformationFormSignature(form: ProjectInformationForm): string {
 }
 
 function projectInformationIdentitySignature(
-  form: Pick<ProjectInformationForm, 'title' | 'aspectRatio' | 'logline' | 'summary'>
+  form: Pick<
+    ProjectInformationForm,
+    'title' | 'aspectRatio' | 'logline' | 'synopsis' | 'premise'
+  >
 ): string {
   return JSON.stringify({
     title: form.title,
     aspectRatio: form.aspectRatio,
     logline: form.logline,
-    summary: form.summary,
+    synopsis: form.synopsis,
+    premise: form.premise,
   });
 }

@@ -1,5 +1,5 @@
 import { Pause, Play, Trash2 } from 'lucide-react';
-import type { SceneDialogueAudioTakeWithUrl } from '@/services/studio-scene-dialogue-audio-api';
+import type { SceneDialogueAudioTakeWithUrl } from '@/services/screenplay';
 import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { cn } from '@/lib/utils';

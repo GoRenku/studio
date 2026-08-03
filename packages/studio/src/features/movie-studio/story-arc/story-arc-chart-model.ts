@@ -1,9 +1,10 @@
 import {
   DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA,
   type ScreenplayAnalysisCriterion,
-  type ScreenplayBeatRole,
+  type ScreenplayAnalysisBeatRole,
 } from '@gorenku/studio-core/client';
 import type { StoryArcResourceResponse } from '@/services/studio-project-contracts';
+import { sceneDisplayLabel } from '../screenplay/scene-label';
 
 /**
  * The chart works in a single fractional coordinate space:
@@ -35,7 +36,7 @@ export const DEFAULT_CRITERION_COLORS: Record<string, string> = {
   characterAgency: '#668978',
 };
 
-export const DEFAULT_BEAT_POSITIONS: Record<ScreenplayBeatRole, number> = {
+export const DEFAULT_BEAT_POSITIONS: Record<ScreenplayAnalysisBeatRole, number> = {
   hook: 0.06,
   incitingIncident: 0.2,
   firstPlotPoint: 0.36,
@@ -47,7 +48,7 @@ export const DEFAULT_BEAT_POSITIONS: Record<ScreenplayBeatRole, number> = {
   resolution: 0.96,
 };
 
-export const DEFAULT_BEAT_LABELS: Record<ScreenplayBeatRole, string> = {
+export const DEFAULT_BEAT_LABELS: Record<ScreenplayAnalysisBeatRole, string> = {
   hook: 'Hook',
   incitingIncident: 'Inciting Incident',
   firstPlotPoint: 'First Turn',
@@ -65,7 +66,7 @@ export const DEFAULT_BEAT_LABELS: Record<ScreenplayBeatRole, string> = {
  * heuristics (also documented in the screenplay-analyst skill reference), not
  * agent output — the agent only assesses the measured levels.
  */
-export const EXPECTED_LEVELS: Record<string, Record<ScreenplayBeatRole, number>> = {
+export const EXPECTED_LEVELS: Record<string, Record<ScreenplayAnalysisBeatRole, number>> = {
   dramaticEnergy: {
     hook: 45,
     incitingIncident: 42,
@@ -102,7 +103,7 @@ export const EXPECTED_LEVELS: Record<string, Record<ScreenplayBeatRole, number>>
 };
 
 /** Structural beats marked on the chart, in story order. */
-export const PRIMARY_BEAT_KEYS: ScreenplayBeatRole[] = [
+export const PRIMARY_BEAT_KEYS: ScreenplayAnalysisBeatRole[] = [
   'hook',
   'incitingIncident',
   'firstPlotPoint',
@@ -113,7 +114,7 @@ export const PRIMARY_BEAT_KEYS: ScreenplayBeatRole[] = [
 ];
 
 /** Every beat (in story order) used to shape the smooth expected curve. */
-const ALL_BEAT_KEYS = (Object.keys(DEFAULT_BEAT_POSITIONS) as ScreenplayBeatRole[]).sort(
+const ALL_BEAT_KEYS = (Object.keys(DEFAULT_BEAT_POSITIONS) as ScreenplayAnalysisBeatRole[]).sort(
   (a, b) => DEFAULT_BEAT_POSITIONS[a] - DEFAULT_BEAT_POSITIONS[b]
 );
 
@@ -156,7 +157,7 @@ export interface StoryArcMeasuredPoint {
 }
 
 export interface StoryArcBeatMarker {
-  key: ScreenplayBeatRole;
+  key: ScreenplayAnalysisBeatRole;
   label: string;
   /** Fractional position across the plot the analysis placed the beat at (0..1). */
   position: number;
@@ -186,7 +187,7 @@ export interface StoryArcChartModel {
 
 /** A beat resolved for a single measure: expected vs measured level + position. */
 export interface MeasureBeat {
-  key: ScreenplayBeatRole;
+  key: ScreenplayAnalysisBeatRole;
   label: string;
   sceneId?: string;
   sceneSpecific: boolean;
@@ -214,9 +215,8 @@ export function buildStoryArcChartModel(
 ): StoryArcChartModel {
   const acts = buildActBands(resource);
   const scenes = acts.flatMap((act) => act.scenes);
-  const criteria = DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA.map((criterion) => ({
-    ...criterion,
-  }));
+  const criteria = resource.activeAnalysis?.criteria ??
+    DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA.map((criterion) => ({ ...criterion }));
 
   return {
     scenes,
@@ -311,7 +311,7 @@ export function scoreToY(score: number, domain: ScoreDomain): number {
   return PLOT_PAD_TOP + (1 - t) * usable;
 }
 
-function expectedLevelFor(criterionKey: string, beatKey: ScreenplayBeatRole): number {
+function expectedLevelFor(criterionKey: string, beatKey: ScreenplayAnalysisBeatRole): number {
   return EXPECTED_LEVELS[criterionKey]?.[beatKey] ?? EXPECTED_LEVELS.dramaticEnergy[beatKey];
 }
 
@@ -339,11 +339,9 @@ function buildActBands(resource: StoryArcResourceResponse): StoryArcActBand[] {
   // Weight each act by its scene count (min 1 so empty acts stay visible). The
   // header, plot dividers, and scene rail all share these weights, so their
   // boundaries line up vertically.
-  const weighted = resource.acts.map((act) => {
-    const sceneCount = act.sequences.reduce(
-      (total, sequence) => total + sequence.scenes.length,
-      0
-    );
+  const sceneById = new Map(resource.scenes.map((scene) => [scene.id, scene]));
+  const weighted = (resource.activeAnalysis?.actSegments ?? []).map((act) => {
+    const sceneCount = act.sceneIds.length;
     return { act, sceneCount, weight: Math.max(sceneCount, 1) };
   });
   const totalWeight =
@@ -354,17 +352,20 @@ function buildActBands(resource: StoryArcResourceResponse): StoryArcActBand[] {
     const startFraction = cursor / totalWeight;
     cursor += weight;
     const endFraction = cursor / totalWeight;
-    const scenes = act.sequences.flatMap((sequence) =>
-      sequence.scenes.map((scene) => ({
-        id: scene.id,
-        sequenceId: sequence.id,
-        actId: act.id,
-        title: scene.title,
-        actTitle: act.title,
-        sequenceTitle: sequence.title,
-        storyFunction: scene.storyFunction ?? [],
-      }))
-    );
+    const scenes = act.sceneIds.flatMap((sceneId) => {
+      const scene = sceneById.get(sceneId);
+      return scene
+        ? [{
+            id: scene.id,
+            sequenceId: '',
+            actId: act.role,
+            title: sceneDisplayLabel(scene),
+            actTitle: act.title,
+            sequenceTitle: '',
+            storyFunction: [],
+          }]
+        : [];
+    });
     const positioned = scenes.map((scene, sceneIndex) => ({
       ...scene,
       index: sceneIndex,
@@ -377,9 +378,9 @@ function buildActBands(resource: StoryArcResourceResponse): StoryArcActBand[] {
     }));
 
     return {
-      id: act.id,
+      id: act.role,
       title: act.title,
-      purpose: act.purpose,
+      purpose: act.synopsis,
       sceneCount,
       weight,
       startFraction,
@@ -499,15 +500,11 @@ function buildBeatMarkers(
       label: beat?.label ?? DEFAULT_BEAT_LABELS[key],
       position: resolveBeatPosition({
         scenes,
-        actId: beat?.actId,
-        sequenceId: beat?.sequenceId,
         sceneId: beat?.sceneId,
         fallbackPosition: DEFAULT_BEAT_POSITIONS[key],
       }),
       expectedPosition: DEFAULT_BEAT_POSITIONS[key],
       sceneId: beat?.sceneId,
-      sequenceId: beat?.sequenceId,
-      actId: beat?.actId,
       synopsis: beat?.synopsis,
       sceneSpecific: Boolean(beat?.sceneId),
     };
@@ -516,8 +513,6 @@ function buildBeatMarkers(
 
 function resolveBeatPosition(input: {
   scenes: StoryArcScenePoint[];
-  actId?: string;
-  sequenceId?: string;
   sceneId?: string;
   fallbackPosition: number;
 }): number {
@@ -526,17 +521,6 @@ function resolveBeatPosition(input: {
     : undefined;
   if (scene) {
     return scene.position;
-  }
-
-  const scopedScenes = input.sequenceId
-    ? input.scenes.filter((candidate) => candidate.sequenceId === input.sequenceId)
-    : input.actId
-      ? input.scenes.filter((candidate) => candidate.actId === input.actId)
-      : [];
-  if (scopedScenes.length > 0) {
-    const first = scopedScenes[0]?.position ?? 0;
-    const last = scopedScenes[scopedScenes.length - 1]?.position ?? first;
-    return (first + last) / 2;
   }
 
   return input.fallbackPosition;

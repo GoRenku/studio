@@ -18,19 +18,13 @@ import {
   MOVEMENT_OPTIONS,
   SHOT_SIZE_OPTIONS,
 } from '../shot-design/shot-design-media';
-import type { ScreenplayEntityMentionCatalog } from '../screenplay-entity-mentions';
 import { ShotBriefMotionMedia, ShotBriefStillMedia } from './shot-brief-media';
-import { ShotBriefMentionText } from './shot-brief-mention-text';
 import { ShotDesignGlossaryDialog } from './shot-design-glossary-dialog';
 
 const SHOT_BRIEF_CARD_WIDTH_PX = 199;
 
-export function ShotBriefGrid({
-  brief,
-  entityMentions,
-}: {
+export function ShotBriefGrid({ brief }: {
   brief: ShotBrief;
-  entityMentions: ScreenplayEntityMentionCatalog;
 }) {
   const framingImages = [
     brief.framing?.start
@@ -179,10 +173,7 @@ export function ShotBriefGrid({
           <>
             <BriefEyebrow>Intent</BriefEyebrow>
             <BriefPrimary>
-              <ShotBriefMentionText
-                text={brief.optics.intent}
-                entityMentions={entityMentions}
-              />
+              {brief.optics.intent}
             </BriefPrimary>
           </>
         ) : null}
@@ -198,10 +189,7 @@ export function ShotBriefGrid({
           {brief.optics?.focusTarget ? (
             <BriefChip>
               Focus on{' '}
-              <ShotBriefMentionText
-                text={brief.optics.focusTarget}
-                entityMentions={entityMentions}
-              />
+              {brief.optics.focusTarget}
             </BriefChip>
           ) : null}
         </div>
@@ -214,10 +202,7 @@ export function ShotBriefGrid({
           <>
             <BriefEyebrow>Intent</BriefEyebrow>
             <BriefPrimary>
-              <ShotBriefMentionText
-                text={brief.lighting.intent}
-                entityMentions={entityMentions}
-              />
+              {brief.lighting.intent}
             </BriefPrimary>
           </>
         ) : null}

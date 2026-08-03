@@ -32,7 +32,7 @@ export function ProjectLibraryCard({
         kind: 'summary',
         body: {
           title: project.title,
-          subtitle: project.name,
+          subtitle: project.projectName,
           description: project.logline,
           issue: project.validationError
             ? {
@@ -52,7 +52,7 @@ export function ProjectLibraryCard({
         kind: 'callback',
         label: project.title,
         disabled,
-        onActivate: () => void onSelectProject(project.name),
+        onActivate: () => void onSelectProject(project.projectName),
       }}
       emptyState={{ kind: 'film' }}
     />

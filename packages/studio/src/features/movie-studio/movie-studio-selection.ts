@@ -2,13 +2,13 @@ import type {
   CastNavigationRow,
   LocationNavigationRow,
   PropNavigationRow,
-  SceneNavigationRow,
-  SequenceNavigationRow,
-  ActNavigationRow,
+  Scene,
+  ScreenplaySection,
   ScenePanelTab,
   StudioSelection,
 } from '@gorenku/studio-core/client';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
+import { sceneDisplayLabel } from './screenplay/scene-label';
 import type { MovieStudioNavigationState } from './use-movie-studio-navigation';
 
 export const SCENE_PANEL_TABS: ScenePanelTab[] = [
@@ -22,10 +22,8 @@ export interface MovieStudioLookup {
   cast: Map<string, CastNavigationRow>;
   locations: Map<string, LocationNavigationRow>;
   props: Map<string, PropNavigationRow>;
-  acts: Map<string, ActNavigationRow>;
-  sequences: Map<string, SequenceNavigationRow>;
-  scenes: Map<string, SceneNavigationRow>;
-  scenesBySequenceId: Map<string, SceneNavigationRow[]>;
+  sections: Map<string, ScreenplaySection>;
+  scenes: Map<string, Scene>;
 }
 
 export interface ResolvedStudioSelection {
@@ -35,49 +33,22 @@ export interface ResolvedStudioSelection {
   castMember?: CastNavigationRow;
   location?: LocationNavigationRow;
   prop?: PropNavigationRow;
-  act?: ActNavigationRow;
-  sequence?: SequenceNavigationRow;
-  scene?: SceneNavigationRow;
+  section?: ScreenplaySection;
+  scene?: Scene;
 }
 
 export function buildMovieStudioLookup(
   project: ProjectShellWithHttp,
   navigation: MovieStudioNavigationState
 ): MovieStudioLookup {
-  const cast = new Map<string, CastNavigationRow>();
-  const locations = new Map<string, LocationNavigationRow>();
-  const props = new Map<string, PropNavigationRow>();
-  const acts = new Map<string, ActNavigationRow>();
-  const sequences = new Map<string, SequenceNavigationRow>();
-  const scenes = new Map<string, SceneNavigationRow>();
-  const scenesBySequenceId = new Map<string, SceneNavigationRow[]>();
-
-  for (const castMember of navigation.cast) {
-    cast.set(castMember.id, castMember);
-  }
-  for (const location of navigation.locations) {
-    locations.set(location.id, location);
-  }
-  for (const prop of navigation.props) {
-    props.set(prop.id, prop);
-  }
-  for (const act of navigation.acts) {
-    acts.set(act.id, act);
-  }
-  for (const rows of navigation.sequencesByActId.values()) {
-    for (const sequence of rows) {
-      sequences.set(sequence.id, sequence);
-    }
-  }
-  for (const [sequenceId, rows] of navigation.scenesBySequenceId) {
-    scenesBySequenceId.set(sequenceId, rows);
-    for (const scene of rows) {
-      scenes.set(scene.id, scene);
-    }
-  }
-
   void project;
-  return { cast, locations, props, acts, sequences, scenes, scenesBySequenceId };
+  return {
+    cast: new Map(navigation.cast.map((row) => [row.id, row])),
+    locations: new Map(navigation.locations.map((row) => [row.id, row])),
+    props: new Map(navigation.props.map((row) => [row.id, row])),
+    sections: navigation.sectionsById,
+    scenes: navigation.scenesById,
+  };
 }
 
 export function resolveStudioSelection(
@@ -97,17 +68,23 @@ export function resolveStudioSelection(
     case 'trash':
       return valid('Trash', 'Discarded project items.');
     case 'cast':
-      return valid('Cast', 'Cast members loaded from screenplay data.');
+      return valid('Cast', 'Cast members loaded from project data.');
     case 'locations':
       return valid('Locations', 'Production locations.');
     case 'props':
       return valid('Props', 'Continuity props.');
     case 'storyArc':
-      return valid('Story Arc', 'Acts and sequences loaded from screenplay data.');
-    case 'act': {
-      const act = lookup.acts.get(selection.id);
-      return act
-        ? { ...valid(act.title, `${act.sceneCount} scenes.`), act }
+      return valid('Story Arc', 'Screenplay analysis.');
+    case 'section': {
+      const section = lookup.sections.get(selection.id);
+      return section
+        ? {
+            ...valid(
+              section.title,
+              section.type === 'act' ? 'Screenplay Act.' : 'Screenplay Sequence.'
+            ),
+            section,
+          }
         : invalid();
     }
     case 'castMember': {
@@ -124,20 +101,12 @@ export function resolveStudioSelection(
     }
     case 'prop': {
       const prop = lookup.props.get(selection.id);
-      return prop
-        ? { ...valid(prop.name, 'Prop'), prop }
-        : invalid();
-    }
-    case 'sequence': {
-      const sequence = lookup.sequences.get(selection.id);
-      return sequence
-        ? { ...valid(sequence.title, `${sequence.sceneCount} scenes.`), sequence }
-        : invalid();
+      return prop ? { ...valid(prop.name, 'Prop'), prop } : invalid();
     }
     case 'scene': {
       const scene = lookup.scenes.get(selection.id);
       return scene
-        ? { ...valid(scene.title, 'Scene loaded from screenplay data.'), scene }
+        ? { ...valid(sceneDisplayLabel(scene), 'Scene loaded from screenplay data.'), scene }
         : invalid();
     }
   }
@@ -145,11 +114,8 @@ export function resolveStudioSelection(
 
 export function toggleSetValue(current: Set<string>, value: string): Set<string> {
   const next = new Set(current);
-  if (next.has(value)) {
-    next.delete(value);
-  } else {
-    next.add(value);
-  }
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
   return next;
 }
 

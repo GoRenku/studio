@@ -15,7 +15,8 @@ vi.mock('@/services/studio-projects-api', () => ({
           : projectName,
       aspectRatio: '16:9',
       logline: 'A historical documentary.',
-      summary: 'A refreshed project summary.',
+      synopsis: 'A refreshed project synopsis.',
+      premise: 'A refreshed project premise.',
       languages: [
         {
           id: 'language_1',
@@ -108,18 +109,27 @@ function rerenderPanel(
 
 function makeProject(input: { title: string }): ProjectShellWithHttp {
   return {
-    identity: {
+    project: {
       id: 'project_test0001',
-      name: 'constantinople',
+      projectName: 'constantinople',
       title: input.title,
-      folderPath: '/tmp/renku/constantinople',
-      databasePath: '/tmp/renku/constantinople/.renku/project.sqlite',
       aspectRatio: '16:9',
+      coverImage: null,
       logline: 'A historical documentary.',
-      summary: 'A refreshed project summary.',
+      synopsis: 'A refreshed project synopsis.',
+      premise: 'A refreshed project premise.',
+      counts: {
+        languages: 1,
+        castMembers: 0,
+        locations: 0,
+        props: 0,
+        acts: 0,
+        sequences: 0,
+        scenes: 0,
+      },
     },
-    coverImage: null,
     coverUrl: null,
+    storageRoot: '/tmp/renku-studio',
     languages: [
       {
         id: 'language_1',
@@ -130,22 +140,19 @@ function makeProject(input: { title: string }): ProjectShellWithHttp {
         supportsSubtitles: true,
       },
     ],
-    cast: [],
-    counts: {
-      languages: 1,
-      castMembers: 0,
-      locations: 0,
-      props: 0,
-      acts: 0,
-      sequences: 0,
-      scenes: 0,
-    },
     navigation: {
       cast: { items: [], nextCursor: null },
       locations: { items: [], nextCursor: null },
       props: { items: [], nextCursor: null },
       screenplay: {
-        acts: { items: [], nextCursor: null },
+        screenplay: {
+          opening: [],
+          scenes: [],
+          sections: [],
+          structure: [],
+          references: [],
+        },
+        orderedSceneIds: [],
       },
     },
   };

@@ -181,7 +181,7 @@ function lookbookResource(
   return {
     valid: true,
     warnings: [],
-    project: { name: 'constantinople' },
+    project: { projectName: 'constantinople' },
     production,
     storyboard: null,
     resourceKeys: [],
@@ -198,7 +198,7 @@ function productionLookbookResource(
   return {
     valid: true,
     warnings: [],
-    project: { name: 'constantinople' },
+    project: { projectName: 'constantinople' },
     resourceKeys: [],
     lookbook: lookbook(name),
     sourceInspirationFolders: [],
