@@ -109,6 +109,7 @@ export function parseFdxDocument(xml: string): FdxSyntaxDocument {
     }
     if (child.name === 'DualDialogue') {
       const dual = parseDualDialogue(child, paragraphIndex, `FinalDraft/Content/DualDialogue[${paragraphIndex}]`);
+      paragraphIndex += 1;
       parsedParagraphCount += dual.paragraphs.length;
       semanticTextCharacters += dual.paragraphs.reduce(
         (total, item) => total + item.text.length,

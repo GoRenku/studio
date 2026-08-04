@@ -142,6 +142,30 @@ describe('deterministic FDX import', () => {
     ]);
   });
 
+  it('assigns distinct identities to consecutive direct DualDialogue containers', () => {
+    const mapped = mapFdxScreenplay(parseFdxDocument(
+      '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="Scene Heading"><Text>INT. ROOM - DAY</Text></Paragraph>'
+      + '<DualDialogue>'
+      + '<Paragraph Type="Character"><Text>LEFT ONE</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>First left.</Text></Paragraph>'
+      + '<Paragraph Type="Character"><Text>RIGHT ONE</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>First right.</Text></Paragraph>'
+      + '</DualDialogue>'
+      + '<DualDialogue>'
+      + '<Paragraph Type="Character"><Text>LEFT TWO</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>Second left.</Text></Paragraph>'
+      + '<Paragraph Type="Character"><Text>RIGHT TWO</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>Second right.</Text></Paragraph>'
+      + '</DualDialogue>'
+      + '</Content></FinalDraft>',
+    ), SOURCE_SHA);
+
+    const blocks = mapped.screenplay.scenes[0]?.blocks ?? [];
+    expect(blocks).toHaveLength(2);
+    expect(new Set(blocks.map((block) => block.id))).toHaveProperty('size', 2);
+  });
+
   it('rejects unsafe, malformed, unsupported, deeply nested, and oversized input', async () => {
     expect(() => parseFdxDocument(
       '<!DOCTYPE FinalDraft><FinalDraft DocumentType="Script"><Content/></FinalDraft>',
