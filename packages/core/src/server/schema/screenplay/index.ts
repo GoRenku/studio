@@ -1,3 +1,4 @@
+export { screenplayImports } from './imports.js';
 export { screenplayReferences } from './references.js';
 export { screenplayRevisions } from './revisions.js';
 export { scenes } from './scenes.js';

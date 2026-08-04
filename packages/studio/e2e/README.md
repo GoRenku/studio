@@ -50,6 +50,13 @@ folders for inspection:
 RENKU_STUDIO_E2E_KEEP_ARTIFACTS=1 pnpm --dir packages/studio test:e2e:smoke
 ```
 
+Static real-world input provenance belongs under `e2e/test-data/<domain>/`,
+separate from the TypeScript fixture builders. Official Fountain FDX screenplay
+sources are checksum-pinned, downloaded on first use, and reused from the
+repository-ignored `tmp/studio-e2e/screenplay-fdx/` cache. Tests must import
+them through the production CLI/Core boundary and must not pre-convert them
+into canonical database state.
+
 ## AI Assistance
 
 AI tools may draft scenario specs, propose locators, inspect traces, and explain

@@ -76,14 +76,14 @@ Commands
   project close        Clear the current authoring project
   project select       Request Studio to select a project
   project migrate      Apply pending project database migrations
-  screenplay           Inspect, validate, create, and revise screenplay JSON
+  screenplay           Inspect, import, create, and revise screenplay content
   shot-plan            Author and inspect Scene Shot Plans
   studio current       Show current Studio focus and context
   studio server status Show canonical local Studio server status
   trash                List, restore, preview, and empty Trash
 
 Options
-  --file               JSON input file for screenplay commands
+  --file               Input file for screenplay JSON or FDX import commands
   --storage-root       Override configured storage root for this command
   --project            Project name for project information commands
   --owner              Asset owner for Asset listing

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<FinalDraft DocumentType="Script" Template="No" Version="3">
+  <Content>
+    <Paragraph Type="General"><Text>FADE IN:</Text></Paragraph>
+    <Paragraph Type="New Act"><Text>ACT ONE</Text></Paragraph>
+    <Paragraph Type="Sequence"><Text>THE ARRIVAL</Text></Paragraph>
+    <Paragraph Type="Scene Heading" Number="1A"><Text TagNumber="1">INT. WORKSHOP - NIGHT</Text></Paragraph>
+    <Paragraph Type="Action"><Text>A lamp &amp; </Text><Text Style="Bold" TagNumber="2">a bell</Text><Text> flicker.</Text></Paragraph>
+    <Paragraph Type="Character"><Text TagNumber="3">MARA (V.O.)</Text></Paragraph>
+    <Paragraph Type="Parenthetical"><Text>(quietly, then louder)</Text></Paragraph>
+    <Paragraph Type="Dialogue"><Text TagNumber="4">First line.</Text></Paragraph>
+    <Paragraph Type="Parenthetical"><Text>(a beat)</Text></Paragraph>
+    <Paragraph Type="Dialogue"><Text>Second line.</Text></Paragraph>
+    <ScriptNote><Text>This editor note is deliberately ignored.</Text></ScriptNote>
+    <Paragraph Type="ScriptNote"><Text>This paragraph note is also ignored.</Text></Paragraph>
+    <Paragraph Type="Scene Heading"><Text>EXT. COURTYARD - DAWN</Text></Paragraph>
+    <DualDialogue>
+      <Paragraph Type="Character"><Text>MARA</Text></Paragraph>
+      <Paragraph Type="Dialogue"><Text>Left.</Text></Paragraph>
+      <Paragraph Type="Character"><Text>ELIAS (O.S.)</Text></Paragraph>
+      <Paragraph Type="Dialogue"><Text>Right.</Text></Paragraph>
+    </DualDialogue>
+  </Content>
+  <TagData>
+    <TagCategories>
+      <TagCategory Id="category-location" Name="Location" Number="1"/>
+      <TagCategory Id="category-prop" Name="Props" Number="2"/>
+      <TagCategory Id="category-cast" Name="Cast Members" Number="3"/>
+      <TagCategory Id="category-sound" Name="Sound" Number="4"/>
+    </TagCategories>
+    <TagDefinitions Number="1">
+      <TagDefinition CatId="category-location" Label="Workshop" Number="1"/>
+      <TagDefinition CatId="category-prop" Label="Bell" Number="2"/>
+      <TagDefinition CatId="category-cast" Label="Mara" Number="3"/>
+      <TagDefinition CatId="category-sound" Label="Whisper" Number="4"/>
+    </TagDefinitions>
+  </TagData>
+</FinalDraft>

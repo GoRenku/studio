@@ -4,9 +4,10 @@ import type {
 } from '../../client/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
-export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json';
+export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json' | 'document';
 
 export type ProjectAssetFileDestination =
+  | { kind: 'screenplay.source'; sha256: string }
   | { kind: 'shotPlan.video'; titleHint?: string }
   | { kind: 'shotPlan.videoReferenceImage'; titleHint?: string }
   | { kind: 'cast.characterSheet'; castMemberId: string; titleHint?: string }

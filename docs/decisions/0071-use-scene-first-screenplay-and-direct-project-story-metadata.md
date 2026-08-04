@@ -56,6 +56,13 @@ It aborts on ambiguous or invalid source data instead of guessing.
 - The separate production-number registry and hierarchy tables are removed.
 - Existing callers, routes, docs, and skills move directly to the new contract;
   no compatibility DTOs, aliases, or fallback readers remain.
+- Deterministic Final Draft import maps a supported semantic subset into this
+  aggregate only when it is empty. It retains the exact FDX bytes as a
+  hash-addressed Project Asset and stores one provenance record; canonical
+  runtime reads never depend on or reparse the retained source.
+- Import candidates never create or auto-match Cast Members, Locations, Props,
+  or Screenplay references. Those judgments remain in later user/agent
+  collaboration through the owning commands.
 
 This decision supersedes Decision 0060's production-number registry and amends
 Decision 0070 so first-class Props may be referenced by Screenplay content.

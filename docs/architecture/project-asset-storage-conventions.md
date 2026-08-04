@@ -69,6 +69,8 @@ props/<prop-handle>/heroes/
 
 visual-language/lookbook/
 
+screenplay/sources/<sha256>.fdx
+
 storyboards/<scene-id>/
 
 videos/<video-slug>.<ext>
@@ -88,6 +90,18 @@ research/
 ```
 
 ## Asset Rules
+
+An imported Final Draft source is one Project-owned Asset with type
+`screenplay_source`, media kind `document`, and one `source` file with MIME type
+`application/xml`. Its lowercase SHA-256 determines the exact durable path:
+
+```text
+screenplay/sources/<sha256>.fdx
+```
+
+The canonical Screenplay never reads this file after import. The import record
+retains the Asset/File identities as provenance, so Core rejects source Asset
+discard or replacement while that record exists.
 
 Cast Member assets stay under the cast member:
 

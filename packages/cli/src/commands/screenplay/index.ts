@@ -5,6 +5,7 @@ import { appendStudioResourceChangedEvent } from '../studio-resource-event-comma
 import { runScreenplayAnalysisCommand } from './analysis.js';
 import { runScreenplayAuthoringCommand } from './authoring.js';
 import { runScreenplayBeatSheetCommand } from './beat-sheets.js';
+import { runScreenplayFdxImportCommand } from './fdx-import.js';
 import { runScreenplayReadingCommand } from './reading.js';
 import { runScreenplayRevisionCommand } from './revisions.js';
 import { runScreenplaySceneNumberCommand } from './scene-numbers.js';
@@ -52,6 +53,9 @@ export async function runScreenplayCommand(options: ScreenplayCommandOptions): P
   }
   if (subcommand === 'revision') {
     return runScreenplayRevisionCommand(context);
+  }
+  if (subcommand === 'import-fdx') {
+    return runScreenplayFdxImportCommand(context);
   }
   if (subcommand === 'create' || subcommand === 'apply') {
     return runScreenplayAuthoringCommand(context);
@@ -114,7 +118,7 @@ export function unknownScreenplayCommand(subcommand: string | undefined): Struct
       'CLI081',
       'Unknown screenplay command.',
       { path: ['screenplay', subcommand ?? ''] },
-      'Use status, show, structure, section, scene, create, apply, revision, analyze, beat-sheet, or scene-number.',
+      'Use status, show, structure, section, scene, create, apply, import-fdx, revision, analyze, beat-sheet, or scene-number.',
     )],
     suggestion: 'Use a supported screenplay command.',
   });

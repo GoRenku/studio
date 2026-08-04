@@ -70,6 +70,13 @@ import {
   resolveShotPlanVideoReferenceImageDestinationRoot,
   resolveShotPlanVideoReferenceImageDestinationRootSync,
 } from './shot-plan-video-reference-image.js';
+import {
+  resolveScreenplaySourceDestinationFile,
+  resolveScreenplaySourceDestinationFileSync,
+  resolveScreenplaySourceDestinationOutputNames,
+  resolveScreenplaySourceDestinationRoot,
+  resolveScreenplaySourceDestinationRootSync,
+} from './screenplay-source.js';
 
 const castCharacterSheetResolver = castResolver<'cast.characterSheet'>();
 const castProfileResolver = castResolver<'cast.profile'>();
@@ -82,6 +89,13 @@ const lookbookImageResolver = lookbookResolver<'visualLanguage.lookbookImage'>()
 const lookbookSheetResolver = lookbookResolver<'visualLanguage.lookbookSheet'>();
 
 const destinationResolvers = {
+  'screenplay.source': {
+    resolveFile: resolveScreenplaySourceDestinationFile,
+    resolveFileSync: resolveScreenplaySourceDestinationFileSync,
+    resolveRoot: resolveScreenplaySourceDestinationRoot,
+    resolveRootSync: resolveScreenplaySourceDestinationRootSync,
+    resolveOutputNames: resolveScreenplaySourceDestinationOutputNames,
+  },
   'shotPlan.video': {
     resolveFile: resolveShotPlanVideoDestinationFile,
     resolveFileSync: resolveShotPlanVideoDestinationFileSync,

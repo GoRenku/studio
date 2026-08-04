@@ -244,6 +244,20 @@ export type {
   CurrentProjectReport,
 } from './database/lifecycle/current-project.js';
 export type {
+  ImportFdxScreenplayInput,
+  ImportFdxScreenplayReport,
+  ScreenplayImport,
+  ScreenplayImportCandidates,
+  ScreenplayImportId,
+  ScreenplayImportLogEntry,
+} from './screenplay/fdx/contracts.js';
+export {
+  importFdxScreenplayReportSchema,
+  screenplayImportCandidatesSchema,
+  screenplayImportLogEntrySchema,
+  screenplayImportSchema,
+} from './screenplay/fdx/schemas.js';
+export type {
   AuthoringIdentity,
   DialogueBlock,
   DialoguePart,

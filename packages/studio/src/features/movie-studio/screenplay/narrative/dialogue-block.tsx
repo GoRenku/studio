@@ -59,6 +59,8 @@ export function NarrativeDialogueBlock({
 
   return (
     <div
+      role='group'
+      aria-label={`Dialogue by ${turn.characterName}`}
       className={cn(
         'group relative mx-auto w-full rounded-lg border px-6 py-4 transition-colors',
         compact ? 'max-w-none' : 'max-w-[28rem]',

@@ -52,6 +52,10 @@ Use the focused documents below for current direction.
   Turn, and Dialogue Part. Separate references bind Cast Members, Locations,
   and Props to Scenes, headings, Blocks, dialogue cues/parts, and exact text
   ranges without mutating prose or requiring `@handle` tokens.
+- A Project may deterministically import one supported Final Draft `.fdx` into
+  an empty Screenplay. Core stores canonical screenplay data in SQLite and
+  retains the exact source as a hash-addressed Project-owned
+  `screenplay_source` Asset. Runtime Screenplay reads never parse that source.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
   agent-authored critique history as hierarchy-independent JSON in
   `screenplay_analysis`, with one active analysis tracked in

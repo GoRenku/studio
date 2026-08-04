@@ -623,6 +623,43 @@ Behavior:
 - Returns `generatedIdentities` for request-local keys and records a Screenplay
   revision.
 
+## `renku screenplay import-fdx`
+
+Import the supported semantic subset of a Final Draft XML screenplay into the
+current empty Project.
+
+```bash
+renku screenplay import-fdx --file /absolute/path/to/script.fdx
+renku screenplay import-fdx --file /absolute/path/to/script.fdx --json
+```
+
+Options:
+
+- `--file`: required readable `.fdx` file path; stdin is not supported.
+- `--json`: return stable source IDs, SHA-256, counts, resource keys, and
+  character-cue/Scene-heading/tag candidates.
+
+Behavior:
+
+- Requires an entirely empty Screenplay and no prior FDX import record.
+- Hashes and retains the exact source as the Project-owned
+  `screenplay_source` Asset at `screenplay/sources/<sha256>.fdx`.
+- Imports opening text, Scenes, supported text blocks, complete Dialogue and
+  Parentheticals, cue extensions, Dual Dialogue, optional Scene numbers, and
+  explicit Act/Sequence markers.
+- Creates no Cast Member, Location, Prop, or identity binding. Report
+  candidates are evidence for later user/agent reconciliation.
+- Fails atomically on malformed/unsafe XML, unsupported visible screenplay
+  content, invalid structure/dialogue, a destination conflict, or persistence
+  failure.
+- Has no merge, overwrite, re-import, or replace mode.
+
+Formatting, ScriptNotes, Title Page layout, revision presentation, pagination,
+and editor state remain only in the retained source. They are intentionally not
+reported as omissions. See
+[`screenplay-fdx-import.md`](../architecture/screenplay-fdx-import.md) for the
+exact supported subset.
+
 ## `renku screenplay apply`
 
 Apply focused screenplay operations.

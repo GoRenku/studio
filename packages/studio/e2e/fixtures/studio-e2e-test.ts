@@ -13,6 +13,10 @@ import {
   type StudioE2eProject,
 } from './studio-e2e-project';
 import {
+  createBrickAndSteelMovieProject,
+  type StudioE2eBrickAndSteelProject,
+} from './studio-e2e-screenplay-fdx';
+import {
   readStudioE2eRuntime,
   type StudioE2eRuntime,
 } from './studio-e2e-runtime';
@@ -21,6 +25,7 @@ interface StudioE2eFixtures {
   minimalMovieProject: StudioE2eProject;
   movieProject: StudioE2eMovieProject;
   generationPromptProject: StudioE2eGenerationPromptProject;
+  brickAndSteelProject: StudioE2eBrickAndSteelProject;
   projectLibraryPage: ProjectLibraryPage;
 }
 
@@ -90,6 +95,29 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
       runtime: studioE2eRuntime,
       project: movieProject,
     }));
+  },
+
+  brickAndSteelProject: async ({ studioE2eRuntime }, use, testInfo) => {
+    const projectName = createStudioE2eProjectName({
+      prefix: 'e2e-brick-and-steel',
+      workerIndex: testInfo.workerIndex,
+      testIndex: testInfo.testId.length,
+      title: testInfo.title,
+    });
+    const project = await createBrickAndSteelMovieProject({
+      runtime: studioE2eRuntime,
+      projectName,
+      title: `E2E Brick And Steel ${projectName}`,
+    });
+
+    await use(project);
+
+    if (
+      !studioE2eRuntime.keepArtifacts &&
+      testInfo.status === testInfo.expectedStatus
+    ) {
+      await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
+    }
   },
 
   projectLibraryPage: async ({ page }, use) => {

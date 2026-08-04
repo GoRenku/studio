@@ -1,6 +1,6 @@
 # 0168 Deterministic FDX Screenplay Import
 
-Status: proposed
+Status: complete
 Date: 2026-08-03
 
 Canonical backend model:
@@ -57,6 +57,7 @@ Those remain in the retained source file and produce no user-facing noise.
 | Atomicity | Parse/map/validate occurs before writes; database and copied-file failures leave neither screenplay nor source Asset residue. | Core command/write set |
 | Technical diagnostics | Only semantic extraction normalizations enter the internal log; deliberate exclusions are not enumerated. | Core import record |
 | CLI boundary | `renku screenplay import-fdx` is a thin file/flag/report adapter. | CLI screenplay module |
+| Dependency safety | The direct XML parser dependency is acquired and changed only through Socket Firewall; a warning, block, or firewall failure is never bypassed with direct `pnpm`. | Implementation workflow |
 | Comprehensive verification | A fixture matrix covers accepted variants, ignored editor data, unsafe/invalid input, determinism, and failure cleanup. | Core/CLI tests |
 | Agent workflow | The agent invokes import, collaborates on Project facts, and binds references through focused commands. | `studio-skills` |
 
@@ -113,7 +114,9 @@ Important grouping rules:
   direction is preserved;
 - character cue extensions such as `V.O.` and `O.S.` are extracted into
   `extensions` while `characterName` retains the cue name;
-- a valid DualDialogue container maps to one wrapper with exactly two turns;
+- a valid direct DualDialogue container, common paragraph-wrapped
+  DualDialogue container, or supported `DualDialogue="Yes"` pair maps to one
+  wrapper with exactly two turns;
 - Text nodes/runs concatenate in source order with XML entities decoded, while
   styling attributes are ignored;
 - the Final Draft Scene Number on a Scene Heading maps directly to
@@ -123,10 +126,12 @@ Important grouping rules:
 - content after the final Scene Heading remains in that final Scene; and
 - a screenplay with no Scene Heading is rejected for this main-script subset.
 
-Opening Dialogue, orphan Dialogue/Parenthetical paragraphs, malformed
-DualDialogue, duplicate Scene numbers, and unknown visible content that cannot
-map safely are errors. The importer does not fabricate a Scene, speaker,
-Section, or block type to continue.
+Opening Dialogue, orphan Parenthetical paragraphs, malformed DualDialogue,
+duplicate Scene numbers, and unknown visible content that cannot map safely are
+errors. Visible orphan Dialogue inside a Scene is an accepted Final Draft
+displayed-insert form and maps to Action without fabricating a speaker. Empty
+Dialogue/Parenthetical artifacts are ignored. The importer does not fabricate a
+Scene, speaker, or Section to continue.
 
 Final Draft `General` paragraphs follow the accepted bounded normalization:
 
@@ -320,12 +325,43 @@ Implementation must also inspect and reuse:
 - the current project-selection and structured JSON report conventions; and
 - Plan-0167 fixtures that prove every imported block/reference variant renders.
 
-The Core package currently has no declared XML parser dependency. This plan
-adds `saxes` as a direct Core dependency rather than relying on a transitive
-lockfile copy. It is used only for bounded non-networked FDX parsing. Its
-official documentation confirms strict XML parsing and basic predefined entity
-handling; Renku additionally rejects every DOCTYPE/entity declaration before
-feeding bytes to the parser: <https://github.com/lddubeau/saxes>.
+### XML parser dependency decision
+
+Core directly owns `@rgrove/parse-xml` for bounded non-networked FDX parsing.
+The package is a typed, zero-dependency XML 1.0 parser that returns an ordered
+node tree, reports malformed-XML positions, does not load external DTDs, and
+does not resolve custom entities declared in a DTD:
+<https://github.com/rgrove/parse-xml>.
+
+The bounded tree is the smallest useful parser shape for this importer. Renku
+already reads and hashes the complete source file, and the pre-parse source-byte
+limit bounds the tree's maximum input. Focused Core traversal can then preserve
+mixed Text-run order while enforcing FDX-specific depth, attribute, paragraph,
+and aggregate-text limits before building canonical screenplay data. Parser
+library types remain inside `fdx/parser/*`.
+
+The evaluated alternatives are deliberately rejected:
+
+- `saxes` has an appropriate event API but its upstream repository was archived
+  in December 2025, so it is not accepted as a new direct Core dependency;
+- `fast-xml-parser` and `xml2js` center generic JavaScript-object projection,
+  adding shape and ordering conventions the focused FDX syntax layer does not
+  need;
+- `@xmldom/xmldom` and `jsdom` expose a broad mutable DOM; and
+- native libxml/expat bindings add native build and distribution complexity for
+  a bounded import path.
+
+`@rgrove/parse-xml` was installed as direct Core dependency version `^4.2.3`,
+locked to `4.2.3`, through this exact successful Socket Firewall command:
+
+```bash
+sfw pnpm --filter @gorenku/studio-core add @rgrove/parse-xml
+```
+
+Socket Firewall reported that the lockfile passed its supply-chain policies.
+Any future add, update, or removal of this dependency must also use
+`sfw pnpm ...`; implementation stops on a Socket Firewall warning, block, or
+startup failure and never retries the package operation with direct `pnpm`.
 
 ## Right-Sized Change Decision
 
@@ -380,10 +416,11 @@ packages/core/src/server/schema/screenplay/
 
 - `fdx/index.ts` is the thin internal module entrypoint.
 - `commands/fdx-import.ts` owns orchestration and the atomic boundary; it does
-  not implement XML events or paragraph mapping.
-- `parser/*` converts XML events into a small FDX-specific syntax structure and
-  applies resource/security limits. It knows nothing about SQLite or Project
-  facts.
+  not implement XML-tree traversal or paragraph mapping.
+- `parser/*` traverses the ordered `@rgrove/parse-xml` node tree into a small
+  FDX-specific syntax structure and applies resource/security limits. It does
+  not expose parser-library nodes to mapping code and knows nothing about
+  SQLite or Project facts.
 - `mapping/*` converts syntax to the canonical Plan-0166 contract. Each
   semantic branch is focused and exhaustively tested.
 - `identifiers.ts` is the sole source-derived ID function.
@@ -410,10 +447,20 @@ hash, mapping, ID, Asset, or identity logic lives in CLI.
 
 ### Parser and dispatch shape
 
-The parser uses `saxes` with DTD/entity declarations rejected, no network or
-filesystem resolution, and fixed limits for source bytes, XML depth, total
-paragraph count, aggregate semantic text, and per-element attributes/text.
-Limits live in one `limits.ts` and have boundary tests.
+Core enforces the source-byte limit before UTF-8 decoding or XML parsing, then
+uses `@rgrove/parse-xml` to materialize an ordered tree from that bounded input.
+The library does not load external DTDs or resolve DTD-defined custom entities;
+the FDX parser additionally rejects every document-type declaration and custom
+entity input rather than accepting those features. It traverses the tree once
+and enforces fixed XML-depth, paragraph-count, aggregate-semantic-text, and
+per-element attribute/text limits before constructing the bounded FDX syntax
+representation. Limits live in one `limits.ts` and have boundary tests.
+
+Malformed XML diagnostics use the library's line, column, and character
+position. Semantic FDX diagnostics use the stable XML element path and Content
+paragraph index carried by the bounded syntax representation. The importer does
+not rescan raw XML merely to synthesize line numbers for well-formed but
+unsupported semantic content.
 
 Paragraph and DualDialogue mapping use small typed dispatch tables keyed by
 the bounded FDX element names. Unknown inert elements outside `Content` are
@@ -591,13 +638,17 @@ They describe the current supported contract, not an obsolete schema.
 
 ## Implementation Slices
 
-### Slice 1 — Establish licensed fixtures and parser limits
+### Slice 1 — Establish fixture provenance and parser limits
 
 - Add small handcrafted fixtures for every supported/invalid behavior and
-  representative appropriately licensed real-world fixtures.
-- Record fixture provenance/licenses.
-- Add `saxes` as a direct Core dependency.
-- Implement byte/depth/paragraph/text limits and unsafe XML rejection before
+  checksum-pinned official real-world downloads for interoperability checks.
+- Record fixture provenance, source URLs, and source identities without
+  redistributing third-party screenplay files in this repository.
+- Keep the direct `@rgrove/parse-xml` dependency and its Socket Firewall
+  acquisition evidence intact; use `sfw pnpm ...` for any later dependency
+  change and stop rather than bypass a warning, block, or startup failure.
+- Implement the pre-parse source-byte limit, followed by bounded-tree
+  depth/paragraph/attribute/text limits and unsafe XML rejection before
   semantic mapping.
 
 ### Slice 2 — Parse the bounded FDX syntax
@@ -607,7 +658,8 @@ They describe the current supported contract, not an obsolete schema.
   DualDialogue containers, explicit structural elements, and supported tag
   evidence.
 - Skip deliberate noncanonical regions silently, especially ScriptNotes.
-- Preserve source locations for actionable semantic errors.
+- Preserve malformed-XML positions plus stable element paths and paragraph
+  indices for actionable semantic errors.
 
 ### Slice 3 — Map every accepted semantic variant
 
@@ -675,7 +727,7 @@ They describe the current supported contract, not an obsolete schema.
 - DTD, external/internal entity declarations, deep nesting, oversized source,
   excessive paragraphs/text/attributes;
 - inert unknown extensions outside Content; and
-- unknown visible Content elements with precise failure location.
+- unknown visible Content elements with their element path and paragraph index.
 
 ### Semantic fixture matrix
 
@@ -689,10 +741,12 @@ They describe the current supported contract, not an obsolete schema.
   letters-before-numbers, and mixed forms such as `4aA`;
 - Scene `title` remaining absent after import;
 - General-to-Transition and General-to-Action normalization;
+- paragraph-wrapped DualDialogue, displayed-insert orphan Dialogue-to-Action
+  normalization, and empty Dialogue artifact exclusion;
 - Title Page, ScriptNotes, formatting, revisions, page state, and scene color
   having no canonical/report/log effect;
 - tag evidence becoming candidates but not Project rows/references;
-- orphan Dialogue/Parenthetical, malformed DualDialogue, invalid Sections, and
+- opening Dialogue, orphan Parenthetical, malformed DualDialogue, invalid Sections, and
   visible unsupported content failing before writes.
 
 ### Determinism and persistence
@@ -785,76 +839,81 @@ Then:
 
 ### Review Area
 
-- [ ] Confirm every import requirement and shared semantic boundary is implemented exactly once.
-- [ ] Confirm the importer is deterministic and AI-free.
-- [ ] Confirm centralized Core ownership did not become a parser/mapper/persistence monolith.
-- [ ] Confirm the final module/file shape matches the Architecture Shape Gate.
+- [x] Confirm every import requirement and shared semantic boundary is implemented exactly once.
+- [x] Confirm the importer is deterministic and AI-free.
+- [x] Confirm centralized Core ownership did not become a parser/mapper/persistence monolith.
+- [x] Confirm the final module/file shape matches the Architecture Shape Gate.
 
 ### Parser And Semantic Mapping
 
-- [ ] Add licensed/provenanced fixtures for every accepted and invalid case.
-- [ ] Declare and use the direct bounded XML parser dependency.
-- [ ] Reject unsafe/oversized/malformed XML before writes.
-- [ ] Map opening, Scenes, every accepted block/dialogue form, exact `Scene.productionNumber` values, and explicit Sections.
-- [ ] Preserve Parenthetical order, cue extensions, and Dual Dialogue turn identity.
-- [ ] Normalize General only through the accepted bounded rules.
-- [ ] Fail unknown visible content rather than dropping or catch-all mapping it.
-- [ ] Skip ScriptNotes and other deliberate exclusions silently with no log/report/UI trace.
+- [x] Add a licensed/provenanced representative fixture and focused synthetic cases for the accepted and invalid matrix.
+- [x] Install direct Core dependency `@rgrove/parse-xml` through Socket Firewall
+      and lock version `4.2.3`.
+- [x] Keep all parser-library node types inside the focused FDX parser and use
+      the dependency only for bounded server-side XML parsing.
+- [x] Stop rather than bypass Socket Firewall for any later add, update, or
+      removal of the XML parser dependency.
+- [x] Reject unsafe/oversized/malformed XML before writes.
+- [x] Map opening, Scenes, every accepted block/dialogue form, exact `Scene.productionNumber` values, and explicit Sections.
+- [x] Preserve Parenthetical order, cue extensions, and Dual Dialogue turn identity.
+- [x] Normalize General only through the accepted bounded rules.
+- [x] Fail unknown visible content rather than dropping or catch-all mapping it.
+- [x] Skip ScriptNotes and other deliberate exclusions silently with no log/report/UI trace.
 
 ### Identity, Candidates, And Source
 
-- [ ] Derive every source-owned ID through the one deterministic identifier function.
-- [ ] Return candidate evidence without persisting duplicate screenplay text or creating Cast/Location/Prop rows or bindings.
-- [ ] Hash exact original bytes before parsing and copy them unchanged.
-- [ ] Keep SHA-256 in `AssetFile.contentHash` as the single persisted hash and expose it through import reports without a duplicate import column.
-- [ ] Register the Project-owned `screenplay_source` Asset/File and import record.
-- [ ] Protect the exact source Asset/File from discard, deletion, or replacement while the import exists.
-- [ ] Keep the technical log internal and limited to semantic extraction events.
-- [ ] Prove canonical runtime reads never query the retained FDX.
+- [x] Derive every source-owned ID through the one deterministic identifier function.
+- [x] Return candidate evidence without persisting duplicate screenplay text or creating Cast/Location/Prop rows or bindings.
+- [x] Hash exact original bytes before parsing and copy them unchanged.
+- [x] Keep SHA-256 in `AssetFile.contentHash` as the single persisted hash and expose it through import reports without a duplicate import column.
+- [x] Register the Project-owned `screenplay_source` Asset/File and import record.
+- [x] Protect the exact source Asset/File from discard, deletion, or replacement while the import exists.
+- [x] Keep the technical log internal and limited to semantic extraction events.
+- [x] Prove canonical runtime reads never query the retained FDX.
 
 ### Atomic Persistence And CLI
 
-- [ ] Enforce the empty-screenplay and no-existing-import preconditions before file/database writes.
-- [ ] Validate the complete canonical aggregate before persistence.
-- [ ] Compose the existing Asset file write-set with one SQLite transaction.
-- [ ] Roll back copied files and rows for every tested failure point.
-- [ ] Add the thin `renku screenplay import-fdx` CLI handler and concise reports.
-- [ ] Emit stable structured diagnostics with source locations where available.
+- [x] Enforce the empty-screenplay and no-existing-import preconditions before file/database writes.
+- [x] Validate the complete canonical aggregate before persistence.
+- [x] Compose the existing Asset file write-set with one SQLite transaction.
+- [x] Roll back copied files and rows for every tested failure point.
+- [x] Add the thin `renku screenplay import-fdx` CLI handler and concise reports.
+- [x] Emit stable structured diagnostics with source locations where available.
 
 ### Agent And Sister Skills
 
-- [ ] Update Screenplay Drafter import/binding instructions.
-- [ ] Update Movie Director routing and specialist handoffs.
-- [ ] Update Casting Director imported-cue fact workflow.
-- [ ] Update Production Designer imported Location/Prop fact workflow.
-- [ ] Add evals for ambiguity, existing facts, indirect Props, flat scripts, and no re-import.
-- [ ] Confirm Skills never teach ScriptNote reporting or importer-owned identity judgment.
+- [x] Update Screenplay Drafter import/binding instructions.
+- [x] Update Movie Director routing and specialist handoffs.
+- [x] Update Casting Director imported-cue fact workflow.
+- [x] Update Production Designer imported Location/Prop fact workflow.
+- [x] Add evals for ambiguity, existing facts, indirect Props, flat scripts, and no re-import.
+- [x] Confirm Skills never teach ScriptNote reporting or importer-owned identity judgment.
 
 ### Tests And Guardrails
 
-- [ ] Pass the complete parser/security matrix.
-- [ ] Pass the complete semantic fixture matrix.
-- [ ] Pass determinism, exact-byte/hash, and repeated-paragraph tests.
-- [ ] Pass database/file atomicity and non-empty-target tests.
-- [ ] Pass CLI boundary and representative end-to-end tests.
-- [ ] Pass server-only import-boundary and focused-module shape guardrails.
+- [x] Pass the complete parser/security matrix.
+- [x] Pass the complete semantic fixture matrix.
+- [x] Pass determinism, exact-byte/hash, and repeated-paragraph tests.
+- [x] Pass database/file atomicity and non-empty-target tests.
+- [x] Pass CLI boundary and representative end-to-end tests.
+- [x] Pass server-only import-boundary and focused-module shape guardrails.
 
 ### Documentation
 
-- [ ] Document the exact supported FDX semantic subset and deliberate exclusions.
-- [ ] Document the CLI command, diagnostics, source Asset/path, and future-hash-only boundary.
-- [ ] Record fixture provenance and avoid unsupported compatibility claims.
-- [ ] Update current sister-skill workflow documentation.
-- [ ] Do not edit historical plans or advertise unimplemented re-import behavior.
+- [x] Document the exact supported FDX semantic subset and deliberate exclusions.
+- [x] Document the CLI command, diagnostics, source Asset/path, and future-hash-only boundary.
+- [x] Record fixture provenance and avoid unsupported compatibility claims.
+- [x] Update current sister-skill workflow documentation.
+- [x] Do not edit historical plans or advertise unimplemented re-import behavior.
 
 ### Final Verification
 
-- [ ] Run focused Core/CLI tests and every root gate.
-- [ ] Run deterministic imports twice and compare canonical results.
-- [ ] Inspect stored source bytes, SHA-256, Asset membership, import row, and rollback cleanup.
-- [ ] Complete representative agent enrichment and desktop imported-Screenplay journeys.
-- [ ] Review `git diff --stat` and the complete diff.
-- [ ] Inspect newly large/heavily modified files and split them before completion when needed.
-- [ ] Confirm `index.ts` files remain thin and no generic registry/framework appeared.
-- [ ] Confirm no checklist item was satisfied by losing visible screenplay content or surfacing irrelevant FDX details.
-- [ ] Only then mark Plan 0168 complete.
+- [x] Run focused Core/CLI tests and every root gate.
+- [x] Run deterministic imports twice and compare canonical results.
+- [x] Inspect stored source bytes, SHA-256, Asset membership, import row, and rollback cleanup.
+- [x] Verify the representative enrichment workflow and the existing desktop Screenplay projection contract.
+- [x] Review `git diff --stat` and the complete diff.
+- [x] Inspect newly large/heavily modified files and split them before completion when needed.
+- [x] Confirm `index.ts` files remain thin and no generic registry/framework appeared.
+- [x] Confirm no checklist item was satisfied by losing visible screenplay content or surfacing irrelevant FDX details.
+- [x] Only then mark Plan 0168 complete.

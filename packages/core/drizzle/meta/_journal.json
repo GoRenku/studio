@@ -505,6 +505,13 @@
       "when": 1785760081815,
       "tag": "0071_scene_first_screenplay",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "6",
+      "when": 1785776252492,
+      "tag": "0072_screenplay_fdx_import",
+      "breakpoints": true
     }
   ]
 }

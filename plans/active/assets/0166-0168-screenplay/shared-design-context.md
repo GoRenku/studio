@@ -173,7 +173,8 @@ the supported semantic subset:
 | Scene Heading paragraph | New Scene and `Scene.heading` |
 | Action | `action` |
 | Character + Dialogue + Parenthetical run | One `dialogue` turn with ordered parts |
-| DualDialogue wrapper | `dualDialogue` with left/right turns |
+| Direct or paragraph-wrapped DualDialogue | `dualDialogue` with left/right turns |
+| visible Dialogue without a Character inside a Scene | `action` preserving displayed/insert text without inventing a speaker |
 | Transition | `transition` |
 | Shot | `shot` |
 | Lyrics | `lyrics` |

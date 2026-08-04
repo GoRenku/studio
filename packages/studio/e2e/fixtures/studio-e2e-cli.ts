@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import type { ImportFdxScreenplayReport } from '@gorenku/studio-core/server';
 import type { StudioE2eRuntime } from './studio-e2e-runtime';
 
 const execFileAsync = promisify(execFile);
@@ -43,4 +44,36 @@ export async function runStudioE2eMediaImport(input: {
       env: { ...process.env, HOME: input.runtime.isolatedHomeDirectory },
     }
   );
+}
+
+export async function runStudioE2eFdxImport(input: {
+  runtime: StudioE2eRuntime;
+  projectName: string;
+  sourcePath: string;
+}): Promise<ImportFdxScreenplayReport> {
+  const cliPath = path.join(
+    input.runtime.workspaceRoot,
+    'packages',
+    'cli',
+    'dist',
+    'cli.js'
+  );
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [
+      cliPath,
+      'screenplay',
+      'import-fdx',
+      '--json',
+      '--project',
+      input.projectName,
+      '--file',
+      input.sourcePath,
+    ],
+    {
+      cwd: input.runtime.workspaceRoot,
+      env: { ...process.env, HOME: input.runtime.isolatedHomeDirectory },
+    }
+  );
+  return JSON.parse(stdout) as ImportFdxScreenplayReport;
 }

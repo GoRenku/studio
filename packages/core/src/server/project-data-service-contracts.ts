@@ -143,6 +143,10 @@ import type {
 } from './studio-coordination/events.js';
 import type { RenkuConfigPathOptions } from './renku-config.js';
 import type { ProjectIdGenerator } from './entity-ids.js';
+import type {
+  ImportFdxScreenplayInput,
+  ImportFdxScreenplayReport,
+} from './screenplay/fdx/contracts.js';
 
 export type { ProjectDatabasePreMigrationBackupReport };
 
@@ -305,6 +309,7 @@ export interface ProjectDataService {
   listSceneProductionNumbers(input: ScreenplayProjectInput): Promise<SceneProductionNumberListReport>;
   resolveSceneProductionNumber(input: ResolveSceneProductionNumberInput): Promise<SceneProductionNumberResolveReport>;
   createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayMutationReport>;
+  importFdxScreenplay(input: ImportFdxScreenplayInput): Promise<ImportFdxScreenplayReport>;
   applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayMutationReport>;
   listScreenplayRevisions(input: ScreenplayProjectInput): Promise<ScreenplayRevisionListReport>;
   readScreenplayRevision(input: ReadScreenplayRevisionInput): Promise<ScreenplayRevisionReadReport>;

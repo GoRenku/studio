@@ -46,6 +46,27 @@ Use readable domain prefixes:
 
 Do not add aliases for obsolete short codes.
 
+FDX import uses stable `SCREENPLAY_FDX_...` codes:
+
+- source envelope: `SCREENPLAY_FDX_SOURCE_NOT_FOUND`,
+  `SCREENPLAY_FDX_SOURCE_NOT_FILE`, `SCREENPLAY_FDX_SOURCE_INVALID`,
+  `SCREENPLAY_FDX_SOURCE_UNREADABLE`, and `SCREENPLAY_FDX_SOURCE_TOO_LARGE`;
+- parser safety/shape: `SCREENPLAY_FDX_UNSAFE_XML`,
+  `SCREENPLAY_FDX_INVALID_XML`, `SCREENPLAY_FDX_INVALID_DOCUMENT`, and
+  `SCREENPLAY_FDX_LIMIT_EXCEEDED`;
+- semantics: `SCREENPLAY_FDX_UNSUPPORTED_VISIBLE_CONTENT`,
+  `SCREENPLAY_FDX_INVALID_DIALOGUE`,
+  `SCREENPLAY_FDX_INVALID_SECTION_STRUCTURE`, and
+  `SCREENPLAY_FDX_DUPLICATE_SCENE_NUMBER`;
+- state/persistence: `SCREENPLAY_FDX_IMPORT_EXISTS`,
+  `SCREENPLAY_FDX_IMPORT_INVALID`, `SCREENPLAY_FDX_SOURCE_CHANGED`,
+  `SCREENPLAY_FDX_SOURCE_IN_USE`,
+  `SCREENPLAY_FDX_SOURCE_DESTINATION_CONFLICT`, and existing
+  `SCREENPLAY_NOT_EMPTY`.
+
+Malformed XML includes parser line/column data. Well-formed semantic failures
+use the stable FDX element path and zero-based Content paragraph index.
+
 ## Warnings Versus Errors
 
 Errors block the operation. Warnings do not.

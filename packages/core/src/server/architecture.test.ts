@@ -12,6 +12,28 @@ describe('Core server architecture boundaries', () => {
     expect(sources.join('\n')).not.toMatch(/packages\/(?:cli|studio)\//);
     expect(sources.join('\n')).not.toMatch(/from ['"](?:react|hono|meow)['"]/);
   });
+
+  it('keeps FDX parsing server-only and confines XML library imports to the parser boundary', async () => {
+    const serverFolder = dirname(fileURLToPath(import.meta.url));
+    const fdxFiles = await sourceFiles(join(serverFolder, 'screenplay', 'fdx'));
+    const fdxSources = await Promise.all(
+      fdxFiles.map(async (file) => ({ file, source: await readFile(file, 'utf8') })),
+    );
+    expect(fdxSources.map((entry) => entry.source).join('\n')).not.toMatch(
+      /from ['"](?:react|hono|meow)['"]/,
+    );
+    expect(
+      fdxSources
+        .filter((entry) => entry.source.includes("from '@rgrove/parse-xml'"))
+        .every((entry) => entry.file.includes('/parser/')),
+    ).toBe(true);
+
+    const clientFiles = await sourceFiles(join(serverFolder, '..', 'client'));
+    const clientSources = await Promise.all(
+      clientFiles.map((file) => readFile(file, 'utf8')),
+    );
+    expect(clientSources.join('\n')).not.toMatch(/screenplay\/fdx/);
+  });
 });
 
 async function sourceFiles(folder: string): Promise<string[]> {
