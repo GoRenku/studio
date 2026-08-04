@@ -205,7 +205,9 @@ async function migrationsThroughGeneration56(): Promise<string> {
   const journal = JSON.parse(await fs.readFile(journalPath, 'utf8')) as {
     entries: Array<{ tag: string }>;
   };
-  journal.entries = journal.entries.filter((entry) => entry.tag !== '0071_scene_first_screenplay');
+  journal.entries = journal.entries.filter(
+    (entry) => Number.parseInt(entry.tag.slice(0, 4), 10) <= 70,
+  );
   await fs.writeFile(journalPath, JSON.stringify(journal));
   return migrationsFolder;
 }

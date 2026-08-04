@@ -25,7 +25,6 @@ import { ProjectDataError } from '../project-data-error.js';
 import { studioSceneBeatsResourceKey } from '../studio-coordination/resource-keys.js';
 import { validateGenerationProvenance } from './attachments.js';
 import { persistOwnedGeneratedMediaAssetInSession } from './attachment-persistence.js';
-import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 
 export function attachSceneStoryboardImages(input: {
   session: DatabaseSession;
@@ -36,14 +35,12 @@ export function attachSceneStoryboardImages(input: {
   idGenerator: ProjectIdGenerator;
 }): SceneStoryboardImagesImportReport {
   validateDocumentIdentity(input);
-  const screenplay = readCanonicalScreenplay(input.session);
   const beatSheet = readSceneBeatSheetDocument({
     row: requireSceneBeatSheetForScene({
       session: input.session,
       sceneId: input.sceneId,
       beatSheetId: input.beatSheetId,
     }),
-    screenplay,
   });
   const sources = new Set<string>();
   const beatIds = new Set<string>();

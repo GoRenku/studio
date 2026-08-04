@@ -10,7 +10,6 @@ import { readProjectRecord } from '../database/access/project.js';
 import { readLookbookRecordById } from '../database/access/lookbook.js';
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { readActiveSceneBeatSheetRecord, readSceneBeatSheetDocument } from '../database/access/scene-beat-sheets.js';
-import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { insertAssetMembershipRecord, readAssetMembershipRecord } from '../database/access/asset-memberships.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -109,8 +108,7 @@ function sceneBeatExists(
   if (!active) {
     return false;
   }
-  const screenplay = readCanonicalScreenplay(session);
-  const document = readSceneBeatSheetDocument({ row: active, screenplay });
+  const document = readSceneBeatSheetDocument({ row: active });
   return document.beats.some((beat) => beat.id === beatId);
 }
 

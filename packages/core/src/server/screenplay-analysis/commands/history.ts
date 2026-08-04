@@ -32,13 +32,12 @@ export async function listScreenplayAnalyses(
   input: ScreenplayAnalysisProjectInput = {},
 ): Promise<ScreenplayAnalysisListReport> {
   return withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = readCanonicalScreenplay(session);
     return {
       valid: true,
       warnings: [],
       project: projectIdentity(currentProject),
       resourceKeys: analysisResourceKeys(),
-      analyses: listScreenplayAnalysisRecords({ session, screenplay }),
+      analyses: listScreenplayAnalysisRecords({ session }),
       activeAnalysisId: readActiveScreenplayAnalysisId(session),
     };
   });
@@ -48,7 +47,6 @@ export async function readScreenplayAnalysis(
   input: ReadScreenplayAnalysisInput,
 ): Promise<ScreenplayAnalysisReadReport> {
   return withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = readCanonicalScreenplay(session);
     const activeAnalysisId = readActiveScreenplayAnalysisId(session);
     const row = input.active
       ? readActiveScreenplayAnalysisRecord(session)
@@ -69,8 +67,8 @@ export async function readScreenplayAnalysis(
       warnings: [],
       project: projectIdentity(currentProject),
       resourceKeys: analysisResourceKeys(row.id),
-      analysis: readStoredScreenplayAnalysis({ row, screenplay }),
-      summary: toScreenplayAnalysisSummary({ row, screenplay, activeAnalysisId }),
+      analysis: readStoredScreenplayAnalysis({ row }),
+      summary: toScreenplayAnalysisSummary({ row, activeAnalysisId }),
       activeAnalysisId,
     };
   });
@@ -111,7 +109,7 @@ export async function writeScreenplayAnalysis(
       warnings,
       project: projectIdentity(currentProject),
       resourceKeys: analysisResourceKeys(analysisId),
-      analysis: toScreenplayAnalysisSummary({ row, screenplay, activeAnalysisId: analysisId }),
+      analysis: toScreenplayAnalysisSummary({ row, activeAnalysisId: analysisId }),
       activeAnalysisId: analysisId,
       changes: [
         { type: 'screenplayAnalysis.created', analysisId },
@@ -125,7 +123,6 @@ export async function setActiveScreenplayAnalysis(
   input: SetActiveScreenplayAnalysisInput,
 ): Promise<ScreenplayAnalysisWriteReport> {
   return withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = readCanonicalScreenplay(session);
     const now = new Date().toISOString();
     setActiveScreenplayAnalysisRecord(session, { analysisId: input.analysisId, now });
     const row = requireScreenplayAnalysisRecord(session, input.analysisId);
@@ -134,7 +131,7 @@ export async function setActiveScreenplayAnalysis(
       warnings: [],
       project: projectIdentity(currentProject),
       resourceKeys: analysisResourceKeys(input.analysisId),
-      analysis: toScreenplayAnalysisSummary({ row, screenplay, activeAnalysisId: input.analysisId }),
+      analysis: toScreenplayAnalysisSummary({ row, activeAnalysisId: input.analysisId }),
       activeAnalysisId: input.analysisId,
       changes: [{ type: 'screenplayAnalysis.activeSet', analysisId: input.analysisId }],
     };

@@ -78,7 +78,7 @@ export function projectScreenplayAnalysisContext(input: {
     })),
     defaultCriteria: [...DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA],
     activeAnalysis: active
-      ? toScreenplayAnalysisSummary({ row: active, screenplay, activeAnalysisId: active.id })
+      ? toScreenplayAnalysisSummary({ row: active, activeAnalysisId: active.id })
       : null,
   };
 }

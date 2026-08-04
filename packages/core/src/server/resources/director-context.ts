@@ -146,7 +146,7 @@ function readScreenplayReadiness(
     exists,
     activeAnalysisId: exists ? readActiveScreenplayAnalysisId(session) : null,
     analysisCount:
-      exists ? listScreenplayAnalysisRecords({ session, screenplay }).length : 0,
+      exists ? listScreenplayAnalysisRecords({ session }).length : 0,
     counts: {
       castMembers: listCastMemberRecords(session).length,
       locations: listLocationRecords(session).length,
@@ -351,10 +351,8 @@ async function readSelectedSceneReadiness(input: {
     };
   }
 
-  const screenplay = readCanonicalScreenplay(session);
   const document = readSceneBeatSheetDocument({
     row: activeBeatSheet,
-    screenplay,
   });
   const missingBeatIds = document.beats
     .filter((beat) =>

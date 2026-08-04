@@ -3,15 +3,12 @@ import { assetFiles, assets } from './assets.js';
 import { castMembers } from './cast-members.js';
 import { castVoices } from './cast-voices.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
-import { scenes } from './screenplay/scenes.js';
 
 export const sceneDialogueAudio = sqliteTable(
   'scene_dialogue_audio',
   {
     id: text('id').primaryKey(),
-    sceneId: text('scene_id')
-      .notNull()
-      .references(() => scenes.id, { onDelete: 'cascade' }),
+    sceneId: text('scene_id').notNull(),
     turnId: text('turn_id').notNull(),
     castMemberId: text('cast_member_id')
       .notNull()

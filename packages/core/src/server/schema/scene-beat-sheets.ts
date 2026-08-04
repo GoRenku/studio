@@ -1,13 +1,10 @@
 import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { scenes } from './screenplay/scenes.js';
 
 export const sceneBeatSheets = sqliteTable(
   'scene_beat_sheet',
   {
     id: text('id').primaryKey(),
-    sceneId: text('scene_id')
-      .notNull()
-      .references(() => scenes.id, { onDelete: 'cascade' }),
+    sceneId: text('scene_id').notNull(),
     title: text('title').notNull(),
     document: text('document').notNull(),
     createdAt: text('created_at').notNull(),
@@ -23,9 +20,7 @@ export const sceneBeatSheets = sqliteTable(
 );
 
 export const sceneBeatSheetState = sqliteTable('scene_beat_sheet_state', {
-  sceneId: text('scene_id')
-    .primaryKey()
-    .references(() => scenes.id, { onDelete: 'cascade' }),
+  sceneId: text('scene_id').primaryKey(),
   activeBeatSheetId: text('active_beat_sheet_id').references(
     () => sceneBeatSheets.id,
     { onDelete: 'set null' }

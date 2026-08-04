@@ -96,7 +96,7 @@ function buildSceneGenerationFacts(
     input.target.id
   );
   const beatSheet = activeBeatSheetRecord
-    ? readSceneBeatSheetDocument({ row: activeBeatSheetRecord, screenplay })
+    ? readSceneBeatSheetDocument({ row: activeBeatSheetRecord })
     : null;
   const sceneReferences = screenplay.references.filter(
     (reference) => 'sceneId' in reference.target && reference.target.sceneId === scene.id,

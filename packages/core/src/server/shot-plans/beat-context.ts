@@ -15,7 +15,6 @@ import {
   readSceneBeatSheetRecord,
 } from '../database/access/scene-beat-sheets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 
 export function resolveShotPlanBeatContext(input: {
   session: DatabaseSession;
@@ -60,10 +59,8 @@ export function resolveShotPlanBeatContext(input: {
       )
     );
   }
-  const screenplay = readCanonicalScreenplay(input.session);
   const document = readSceneBeatSheetDocument({
     row: beatSheet,
-    screenplay,
   });
   const beatsById = new Map(document.beats.map((beat) => [beat.id, beat]));
   const coveredBeats: ShotPlanCoveredBeat[] = [];

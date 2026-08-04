@@ -27,7 +27,7 @@ export async function readStoryArcResource(input: ReadProjectInput): Promise<Sto
         ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
         ...(scene.title ? { title: scene.title } : {}),
       })),
-      activeAnalysis: active ? readStoredScreenplayAnalysis({ row: active, screenplay }) : null,
+      activeAnalysis: active ? readStoredScreenplayAnalysis({ row: active }) : null,
     };
   } finally {
     session.close();

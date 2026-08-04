@@ -38,7 +38,7 @@ export async function readSceneBeatSheetStoryboardStatus(
       currentProject,
       sceneId: input.sceneId,
       beatSheetId: input.beatSheetId,
-      document: readSceneBeatSheetDocument({ row, screenplay }),
+      document: readSceneBeatSheetDocument({ row }),
     });
   });
 }
@@ -110,9 +110,8 @@ function readCurrentBeatIds(
   if (!active) {
     return new Set();
   }
-  const screenplay = readCanonicalScreenplay(session);
   return new Set(
-    readSceneBeatSheetDocument({ row: active, screenplay }).beats.map(
+    readSceneBeatSheetDocument({ row: active }).beats.map(
       (beat) => beat.id
     )
   );

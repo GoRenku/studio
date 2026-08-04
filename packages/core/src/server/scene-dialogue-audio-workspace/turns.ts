@@ -1,7 +1,5 @@
 import type { DialogueTurn, Screenplay } from '../../client/screenplay/index.js';
-import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { sceneDialogueAudio } from '../schema/index.js';
 
 export interface SceneDialogueTurnContext {
   turn: DialogueTurn;
@@ -52,24 +50,6 @@ export function requireSceneDialogueTurn(
     );
   }
   return context;
-}
-
-export function assertDialogueAudioSpeakerBindings(
-  session: DatabaseSession,
-  screenplay: Screenplay,
-): void {
-  for (const audio of session.db.select().from(sceneDialogueAudio).all()) {
-    const dialogue = requireSceneDialogueTurn(screenplay, audio.sceneId, audio.turnId);
-    if (dialogue.castMemberId !== audio.castMemberId) {
-      throw new ProjectDataError(
-        'CORE_DIALOGUE_AUDIO_SPEAKER_REBIND_BLOCKED',
-        `Dialogue Turn ${audio.turnId} cannot change speaker while Dialogue Audio depends on its current Cast Member.`,
-        {
-          suggestion: 'Discard or explicitly resolve the Dialogue Audio dependency before changing the speaker reference.',
-        },
-      );
-    }
-  }
 }
 
 function speakerCastMemberId(

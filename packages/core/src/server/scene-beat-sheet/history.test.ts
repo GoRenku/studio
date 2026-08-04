@@ -39,7 +39,7 @@ describe('scene Beat Sheet commands', () => {
     expect(context.activeBeatSheet).toBeNull();
   });
 
-  it('validates Beat Sheets and reports structured reference failures', async () => {
+  it('validates Beat Sheets and reports contextual reference warnings', async () => {
     const ids = await sampleIds();
     const valid = sampleBeatSheet(ids);
 
@@ -61,11 +61,11 @@ describe('scene Beat Sheet commands', () => {
           ],
         },
       })
-    ).rejects.toMatchObject({
-      code: 'PROJECT_DATA320',
-      issues: expect.arrayContaining([
+    ).resolves.toMatchObject({
+      valid: true,
+      warnings: expect.arrayContaining([
         expect.objectContaining({
-            message: expect.stringContaining('unknown screenplay block'),
+          message: expect.stringContaining('unknown screenplay block'),
         }),
       ]),
     });
@@ -78,8 +78,9 @@ describe('scene Beat Sheet commands', () => {
           beats: [{ ...valid.beats[0]!, castMemberIds: ['cast_missing'] }],
         },
       })
-    ).rejects.toMatchObject({
-      issues: expect.arrayContaining([
+    ).resolves.toMatchObject({
+      valid: true,
+      warnings: expect.arrayContaining([
         expect.objectContaining({
           message: expect.stringContaining('unknown cast member'),
         }),
@@ -153,6 +154,76 @@ describe('scene Beat Sheet commands', () => {
     ).resolves.toMatchObject({
       summary: { id: first.beatSheet.id },
       beatSheet: { title: 'First pass' },
+    });
+  });
+
+  it('preserves Beat Sheet history after its screenplay context changes or disappears', async () => {
+    const ids = await sampleIds();
+    const written = await projectData.writeSceneBeatSheet({
+      homeDir,
+      document: sampleBeatSheet(ids),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const screenplay = (await projectData.readScreenplayStructure({
+      projectName: 'constantinople',
+      homeDir,
+    })).screenplay;
+    const scene = screenplay.scenes.find((candidate) => candidate.id === ids.sceneId)!;
+
+    await projectData.applyScreenplayOperations({
+      projectName: 'constantinople',
+      homeDir,
+      operations: [{
+        operation: 'scene.update',
+        scene: {
+          id: scene.id,
+          ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
+          heading: scene.heading,
+          ...(scene.title ? { title: scene.title } : {}),
+          blocks: [{ key: 'replacement-block', type: 'action', text: 'Replacement context.' }],
+        },
+      }, ...screenplay.references
+        .filter((reference) =>
+          'sceneId' in reference.target
+          && reference.target.sceneId === scene.id
+          && reference.target.type !== 'scene'
+          && reference.target.type !== 'sceneHeading'
+        )
+        .map((reference) => ({
+          operation: 'reference.delete' as const,
+          reference: { id: reference.id },
+        }))],
+      idGenerator: createDeterministicIdGenerator(),
+    });
+
+    await expect(projectData.readSceneBeatSheet({
+      homeDir,
+      beatSheetId: written.beatSheet.id,
+    })).resolves.toMatchObject({
+      beatSheet: {
+        sceneId: ids.sceneId,
+        beats: [expect.objectContaining({ screenplayBlockIds: [ids.blockId] })],
+      },
+    });
+
+    await projectData.applyScreenplayOperations({
+      projectName: 'constantinople',
+      homeDir,
+      operations: [{ operation: 'scene.delete', scene: { id: ids.sceneId } }],
+    });
+
+    await expect(projectData.readSceneBeatSheet({
+      homeDir,
+      beatSheetId: written.beatSheet.id,
+    })).resolves.toMatchObject({
+      summary: { id: written.beatSheet.id, sceneId: ids.sceneId },
+    });
+    await expect(projectData.listSceneBeatSheets({
+      homeDir,
+      sceneId: ids.sceneId,
+    })).resolves.toMatchObject({
+      beatSheets: [expect.objectContaining({ id: written.beatSheet.id })],
+      activeBeatSheetId: written.beatSheet.id,
     });
   });
 

@@ -80,7 +80,6 @@ export async function readSceneBeatSheetContext(
       activeBeatSheet: activeBeatSheet
         ? toSceneBeatSheetSummary({
             row: activeBeatSheet,
-            screenplay,
             activeBeatSheetId,
           })
         : null,

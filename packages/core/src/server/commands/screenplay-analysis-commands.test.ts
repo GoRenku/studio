@@ -136,6 +136,42 @@ describe('hierarchy-independent Screenplay Analysis', () => {
     expect(storyArc.scenes.map((scene) => scene.id)).toEqual(sceneIds);
     expect(storyArc.activeAnalysis?.actSegments.flatMap((segment) => segment.sceneIds)).toEqual(sceneIds);
     expect(storyArc).not.toHaveProperty('acts');
+
+    await projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      operations: [{ operation: 'scene.delete', scene: { id: sceneIds[0]! } }],
+    });
+
+    await expect(projectData.readScreenplayAnalysis({
+      homeDir,
+      analysisId: first.activeAnalysisId,
+    })).resolves.toMatchObject({
+      analysis: {
+        actSegments: expect.arrayContaining([
+          expect.objectContaining({ sceneIds: [sceneIds[0]] }),
+        ]),
+      },
+    });
+    await expect(projectData.listScreenplayAnalyses({ homeDir })).resolves.toMatchObject({
+      analyses: expect.arrayContaining([
+        expect.objectContaining({ id: first.activeAnalysisId }),
+        expect.objectContaining({ id: second.activeAnalysisId }),
+      ]),
+    });
+    await expect(projectData.readStoryArcResource({
+      projectName: created.projectName,
+      homeDir,
+    })).resolves.toMatchObject({
+      scenes: expect.not.arrayContaining([
+        expect.objectContaining({ id: sceneIds[0] }),
+      ]),
+      activeAnalysis: {
+        sceneAnalyses: expect.arrayContaining([
+          expect.objectContaining({ sceneId: sceneIds[0] }),
+        ]),
+      },
+    });
   });
 });
 

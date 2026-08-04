@@ -84,7 +84,8 @@ Related terms:
   serialized web videos, or exports. It should not be the canonical schema term.
 - **Scene Beat Sheet** is a scene-owned narrative breakdown document. It is
   stored as validated project data with history and one active Beat Sheet per
-  scene.
+  scene. Its Scene and Block ids preserve authoring context and may become
+  unresolved after later Screenplay edits.
 - **Production Scene Number** is an optional exact human-facing value on a
   current Scene, such as `1` or `22A`. It is separate from the durable Scene id
   and does not define canonical order.
@@ -118,8 +119,8 @@ Related terms:
 | Inspiration Folder            | A project Visual Language folder containing user-provided reference images.                                                              | Folder metadata is stored in SQLite. Images inside the folder are filesystem content, not per-image assets. |
 | Inspiration Analysis          | A validated visual study of one Inspiration Folder.                                                                                      | Stored as tagged JSON through `renku inspiration analysis`; image citations use folder-local filenames.     |
 | Screenplay Analysis           | A validated critique of canonical ordered Scenes with analysis-owned Act segments, optional Scene groups, evidence, and suggested Scenes. | Stored as history through `renku screenplay analyze`; it never depends on optional screenplay Sections.      |
-| Scene Beat Sheet              | A validated scene-owned narrative breakdown made of ordered Beats.                                                                        | Stored as history through `renku screenplay beat-sheet`; one active Beat Sheet can be selected per Scene.   |
-| Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus narrative fields, Cast Member/Location/Prop ids, and stable Screenplay Block ids. |
+| Scene Beat Sheet              | A validated scene-context narrative breakdown made of ordered Beats.                                                                       | Stored as history through `renku screenplay beat-sheet`; its Scene id may become obsolete without invalidating or deleting the history. |
+| Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus narrative fields and weak historical Cast Member/Location/Prop/Screenplay Block context ids. |
 | Shot Plan                     | One mutable Scene-owned plan for ordered Shots and optional Beat coverage.                                                                | Remains editable regardless of Run or Asset history. Its Shots own planning-image Assets, never generated video. |
 | Shot                          | One ordered camera-authored unit inside a Shot Plan.                                                                                       | Stores title, opaque `description`, strict glanceable `brief`, candidate images, and an optional selected image; Beat coverage belongs to the plan. |
 | Lookbook                      | One of the two project-owned visual direction roles.                                                                                       | A project has at most one Production Lookbook and one Storyboard Lookbook. The role is permanent and cannot be discarded. |

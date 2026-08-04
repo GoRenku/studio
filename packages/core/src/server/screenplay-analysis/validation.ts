@@ -57,7 +57,6 @@ export function assertScreenplayAnalysis(input: {
 
 export function parseStoredScreenplayAnalysis(input: {
   value: string;
-  screenplay: Screenplay;
   path?: string[];
 }): ScreenplayAnalysis {
   let analysis: ScreenplayAnalysis;
@@ -66,7 +65,12 @@ export function parseStoredScreenplayAnalysis(input: {
   } catch {
     invalid([issue('Stored Screenplay Analysis must be valid JSON.', input.path ?? ['screenplayAnalysis', 'document'])]);
   }
-  assertScreenplayAnalysis({ analysis, screenplay: input.screenplay });
+  const result = buildDiagnosticResult(validateShape(analysis));
+  throwIfDiagnosticResultInvalid(result, {
+    code: CODE,
+    message: 'Stored Screenplay Analysis JSON failed validation.',
+    suggestion: 'Repair the stored Screenplay Analysis JSON.',
+  });
   return analysis;
 }
 

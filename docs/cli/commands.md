@@ -779,6 +779,10 @@ Input JSON shape:
 
 Validation rules:
 
+These current-context rules apply to `validate` and `write`. `list` and `show`
+validate stored Analysis schema without requiring its historical Scene ids or
+order to match the current Screenplay.
+
 - The current v1 structure model is `threeAct`.
 - Three-act documents contain exactly three analysis-owned `actSegments` with
   roles `actOne`, `actTwo`, and `actThree`. Their Scene ids partition every
@@ -842,6 +846,9 @@ Behavior:
   and the active Beat Sheet summary.
 - `validate` checks a closed Scene Beat Sheet document without writing.
 - `write` creates a new scene-owned Beat Sheet history row and makes it active.
+- Current-context mismatches in Beat `screenplayBlockIds`, `castMemberIds`,
+  `locationIds`, and `propIds` are warnings. Stored Beat Sheets retain those
+  ids and remain readable after the Screenplay changes or the Scene is deleted.
 - `validate-operations` checks a closed Scene Beat Sheet operations document
   without writing.
 - `apply` creates a new scene-owned Beat Sheet history row derived from the

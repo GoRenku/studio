@@ -53,7 +53,6 @@ export async function applySceneBeatSheetOperations(
     });
     const baseDocument = readSceneBeatSheetDocument({
       row: baseRow,
-      screenplay,
     });
     const operationResult = buildBeatSheetDocumentFromOperations({
       base: baseDocument,
@@ -143,7 +142,6 @@ export async function applySceneBeatSheetOperations(
         !input.dryRun && input.document.activate ? createdBeatSheetId : null,
       beatSheet: toSceneBeatSheetSummary({
         row: summaryRow,
-        screenplay,
         activeBeatSheetId:
           !input.dryRun && input.document.activate
             ? createdBeatSheetId

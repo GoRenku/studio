@@ -21,7 +21,6 @@ export type SceneBeatSheetStateRecord = typeof sceneBeatSheetState.$inferSelect;
 export function listSceneBeatSheetRecords(input: {
   session: DatabaseSession;
   sceneId: string;
-  screenplay: Screenplay;
 }): SceneBeatSheetSummary[] {
   const activeBeatSheetId = readActiveSceneBeatSheetId(
     input.session,
@@ -36,7 +35,6 @@ export function listSceneBeatSheetRecords(input: {
     .map((row) =>
       toSceneBeatSheetSummary({
         row,
-        screenplay: input.screenplay,
         activeBeatSheetId,
       })
     );
@@ -133,11 +131,9 @@ export function updateSceneBeatSheetRecordDocument(input: {
 
 export function readSceneBeatSheetDocument(input: {
   row: SceneBeatSheetRecord;
-  screenplay: Screenplay;
 }): SceneBeatSheetDocument {
   return parseStoredSceneBeatSheetDocument({
     value: input.row.document,
-    screenplay: input.screenplay,
     path: ['sceneBeatSheet', input.row.id, 'document'],
   });
 }
@@ -212,12 +208,10 @@ export function setActiveSceneBeatSheetRecord(
 
 export function toSceneBeatSheetSummary(input: {
   row: SceneBeatSheetRecord;
-  screenplay: Screenplay;
   activeBeatSheetId?: string | null;
 }): SceneBeatSheetSummary {
   const document = readSceneBeatSheetDocument({
     row: input.row,
-    screenplay: input.screenplay,
   });
   return {
     id: input.row.id,

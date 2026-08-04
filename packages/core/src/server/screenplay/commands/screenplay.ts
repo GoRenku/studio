@@ -33,7 +33,6 @@ import { readProjectRecord } from '../../database/access/project.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { studioScreenplayResourceKey } from '../../studio-coordination/resource-keys.js';
-import { assertDialogueAudioSpeakerBindings } from '../../scene-dialogue-audio-workspace/turns.js';
 import { readScreenplayAggregate, replaceScreenplayAggregate } from '../persistence/screenplay.js';
 import { insertScreenplayRevision } from '../persistence/revisions.js';
 import { assertValidScreenplayInput } from '../validation/blocks.js';
@@ -293,7 +292,6 @@ export function commitScreenplayMutation(input: {
   const createdAt = new Date().toISOString();
   input.session.db.transaction((tx) => {
     const txSession = { ...input.session, db: tx };
-    assertDialogueAudioSpeakerBindings(txSession, input.screenplay);
     replaceScreenplayAggregate(txSession, input.screenplay);
     insertScreenplayRevision({
       session: txSession,

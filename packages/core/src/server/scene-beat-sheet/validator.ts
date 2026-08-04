@@ -144,7 +144,6 @@ export function assertSceneBeatSheetDocument(input: {
 
 export function parseStoredSceneBeatSheetDocument(input: {
   value: string;
-  screenplay: Screenplay;
   path?: string[];
 }): SceneBeatSheetDocument {
   let parsed: SceneBeatSheetDocument;
@@ -168,10 +167,7 @@ export function parseStoredSceneBeatSheetDocument(input: {
     );
     throw new Error('unreachable');
   }
-  const result = validateSceneBeatSheetDocument({
-    document: parsed,
-    screenplay: input.screenplay,
-  });
+  const result = buildDiagnosticResult(validateSceneBeatSheetShape(parsed));
   throwIfDiagnosticResultInvalid(result, {
     code: BEAT_SHEET_DIAGNOSTIC_CODE,
     message: 'Stored Scene Beat Sheet JSON failed validation.',
@@ -254,7 +250,7 @@ function validateSceneBeatSheetSemantics(input: {
     beat.screenplayBlockIds.forEach((blockId, blockReferenceIndex) => {
       if (!screenplayBlockIds.has(blockId)) {
         issues.push(
-          error(
+          warning(
             'Beat references an unknown screenplay block.',
             [
               ...beatPath,
@@ -282,7 +278,7 @@ function validateSceneBeatSheetSemantics(input: {
     beat.castMemberIds.forEach((castMemberId, castIndex) => {
       if (!context.castMemberIds.has(castMemberId)) {
         issues.push(
-          error(
+          warning(
             'Beat references an unknown cast member.',
             [...beatPath, 'castMemberIds', String(castIndex)],
             filePath,
@@ -294,7 +290,7 @@ function validateSceneBeatSheetSemantics(input: {
     beat.locationIds.forEach((locationId, locationIndex) => {
       if (!context.locationIds.has(locationId)) {
         issues.push(
-          error(
+          warning(
             'Beat references an unknown location.',
             [...beatPath, 'locationIds', String(locationIndex)],
             filePath,
@@ -306,7 +302,7 @@ function validateSceneBeatSheetSemantics(input: {
     beat.propIds.forEach((propId, propIndex) => {
       if (!context.propIds.has(propId)) {
         issues.push(
-          error(
+          warning(
             'Beat references an unknown prop.',
             [...beatPath, 'propIds', String(propIndex)],
             filePath,

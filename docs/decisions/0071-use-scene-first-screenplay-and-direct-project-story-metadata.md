@@ -4,6 +4,10 @@ Date: 2026-08-03
 
 Status: accepted
 
+Decision 0073 makes Beat Sheet, Analysis, Shot Plan, and Dialogue Audio
+relationships to Screenplay content weak historical context. Those artifacts
+do not block or cascade with later Screenplay mutations.
+
 ## Context
 
 The previous model duplicated story metadata between Project and Screenplay and

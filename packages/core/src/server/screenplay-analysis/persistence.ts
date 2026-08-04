@@ -16,12 +16,11 @@ export type ScreenplayAnalysisStateRecord = typeof screenplayAnalysisState.$infe
 
 export function listScreenplayAnalysisRecords(input: {
   session: DatabaseSession;
-  screenplay: Screenplay;
 }): ScreenplayAnalysisSummary[] {
   const activeAnalysisId = readActiveScreenplayAnalysisId(input.session);
   return input.session.db.select().from(screenplayAnalysis)
     .orderBy(desc(screenplayAnalysis.updatedAt), desc(screenplayAnalysis.id)).all()
-    .map((row) => toScreenplayAnalysisSummary({ row, screenplay: input.screenplay, activeAnalysisId }));
+    .map((row) => toScreenplayAnalysisSummary({ row, activeAnalysisId }));
 }
 
 export function readScreenplayAnalysisRecord(session: DatabaseSession, analysisId: string): ScreenplayAnalysisRecord | null {
@@ -63,11 +62,9 @@ export function writeScreenplayAnalysisRecord(input: {
 
 export function readStoredScreenplayAnalysis(input: {
   row: ScreenplayAnalysisRecord;
-  screenplay: Screenplay;
 }): ScreenplayAnalysis {
   return parseStoredScreenplayAnalysis({
     value: input.row.document,
-    screenplay: input.screenplay,
     path: ['screenplayAnalysis', input.row.id, 'document'],
   });
 }
@@ -100,10 +97,9 @@ export function setActiveScreenplayAnalysisRecord(
 
 export function toScreenplayAnalysisSummary(input: {
   row: ScreenplayAnalysisRecord;
-  screenplay: Screenplay;
   activeAnalysisId?: string | null;
 }): ScreenplayAnalysisSummary {
-  const analysis = readStoredScreenplayAnalysis({ row: input.row, screenplay: input.screenplay });
+  const analysis = readStoredScreenplayAnalysis({ row: input.row });
   return {
     id: input.row.id,
     structureModel: input.row.structureModel as ScreenplayAnalysisStructureModel,

@@ -13,7 +13,6 @@ import {
   readSceneBeatSheetDocument,
 } from '../database/access/scene-beat-sheets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 
 export function readActiveSceneStoryboardPreviewImage(
   session: DatabaseSession,
@@ -59,8 +58,7 @@ export function readSceneStoryboardProjection(
   if (!beatSheetRow) {
     return { document: null, beatSheetId: null, imagesByBeatId: {} };
   }
-  const screenplay = readCanonicalScreenplay(session);
-  const document = readSceneBeatSheetDocument({ row: beatSheetRow, screenplay });
+  const document = readSceneBeatSheetDocument({ row: beatSheetRow });
 
   const imagesByBeatId: Record<string, ScreenplayImageReference> = {};
   for (const beat of document.beats) {

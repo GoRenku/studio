@@ -60,11 +60,15 @@ Use the focused documents below for current direction.
   agent-authored critique history as hierarchy-independent JSON in
   `screenplay_analysis`, with one active analysis tracked in
   `screenplay_analysis_state`. Its three Act segments and optional Scene groups
-  partition canonical Scenes and do not reference screenplay Sections.
+  partition the canonical Scenes current when it is authored and do not
+  reference screenplay Sections. Stored Analysis reads preserve obsolete Scene
+  ids and never revalidate history against the current Screenplay.
 - Scene Beat Sheets are SQLite-owned project data. They store validated,
   agent-authored narrative breakdown history as tagged JSON in
   `scene_beat_sheet`, with one active Beat Sheet per scene tracked in
-  `scene_beat_sheet_state`.
+  `scene_beat_sheet_state`. Scene and Block ids are weak historical context:
+  deleting or revising Screenplay content neither invalidates nor deletes Beat
+  Sheet history.
 - Production Scene Numbers are optional exact non-empty strings stored directly
   on Scene. They are human-facing references, not identity or canonical order;
   Core list/resolve queries use current Scenes without a reservation registry.
@@ -72,7 +76,8 @@ Use the focused documents below for current direction.
   `id`, `title`, `description`, `narrativeDevelopment`, `narrativePurpose`,
   `castMemberIds`, `locationIds`, `propIds`, and `screenplayBlockIds`. Beat
   order is the JSON array order, and Block relationships use stable IDs rather
-  than array indexes.
+  than array indexes. Missing current context produces authoring warnings and
+  does not invalidate a stored Beat Sheet.
   Beat descriptions and the other authored fields must not encode framing,
   lenses, camera movement, composition, coverage, or production instructions.
 - Shot Plans are Scene-owned mutable authoring aggregates with ordered Shots.

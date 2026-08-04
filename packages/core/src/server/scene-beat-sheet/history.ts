@@ -36,8 +36,6 @@ export async function listSceneBeatSheets(
   input: SceneBeatSheetProjectInput & { sceneId: string }
 ): Promise<SceneBeatSheetListReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplay(session);
-    requireSceneHierarchy(screenplay, input.sceneId);
     return {
       valid: true,
       warnings: [],
@@ -54,7 +52,6 @@ export async function listSceneBeatSheets(
       beatSheets: listSceneBeatSheetRecords({
         session,
         sceneId: input.sceneId,
-        screenplay,
       }),
       activeBeatSheetId: readActiveSceneBeatSheetId(session, input.sceneId),
     };
@@ -65,7 +62,6 @@ export async function readSceneBeatSheet(
   input: ReadSceneBeatSheetInput
 ): Promise<SceneBeatSheetReadReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplay(session);
     const row = input.active
       ? readActiveSceneBeatSheetRecord(
           session,
@@ -110,10 +106,9 @@ export async function readSceneBeatSheet(
         sceneId: row.sceneId,
         beatSheetId: row.id,
       }),
-      beatSheet: readSceneBeatSheetDocument({ row, screenplay }),
+      beatSheet: readSceneBeatSheetDocument({ row }),
       summary: toSceneBeatSheetSummary({
         row,
-        screenplay,
         activeBeatSheetId,
       }),
       activeBeatSheetId,
@@ -192,7 +187,6 @@ export async function writeSceneBeatSheet(
       }),
       beatSheet: toSceneBeatSheetSummary({
         row,
-        screenplay,
         activeBeatSheetId: beatSheetId,
       }),
       activeBeatSheetId: beatSheetId,
@@ -216,7 +210,6 @@ export async function setActiveSceneBeatSheet(
   input: SetActiveSceneBeatSheetInput
 ): Promise<SceneBeatSheetWriteReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
-    const screenplay = requireScreenplay(session);
     const now = new Date().toISOString();
     setActiveSceneBeatSheetRecord(session, {
       sceneId: input.sceneId,
@@ -238,7 +231,6 @@ export async function setActiveSceneBeatSheet(
       }),
       beatSheet: toSceneBeatSheetSummary({
         row,
-        screenplay,
         activeBeatSheetId: input.beatSheetId,
       }),
       activeBeatSheetId: input.beatSheetId,
@@ -257,23 +249,6 @@ function requireScreenplay(
   session: Parameters<typeof readCanonicalScreenplay>[0]
 ): Screenplay {
   return readCanonicalScreenplay(session);
-}
-
-function requireSceneHierarchy(
-  screenplay: Screenplay,
-  sceneId: string
-): void {
-  if (screenplay.scenes.some((scene) => scene.id === sceneId)) {
-    return;
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA326',
-    `Scene was not found: ${sceneId}.`,
-    {
-      suggestion:
-        'Use a Scene id from the Screenplay structure resource.',
-    }
-  );
 }
 
 function requiredSceneId(value: string | undefined, flag: string): string {

@@ -159,7 +159,6 @@ function sceneBeatExists(session: DatabaseSession, sceneId: string, beatId: stri
   }
   const document = readSceneBeatSheetDocument({
     row: activeBeatSheet,
-    screenplay: readCanonicalScreenplay(session),
   });
   return document.beats.some((beat) => beat.id === beatId);
 }

@@ -4,6 +4,10 @@ Date: 2026-08-03
 
 Status: accepted
 
+Decision 0073 limits current-Screenplay semantic validation to new Analysis
+validation and writes. Stored Analysis history remains readable when its Scene
+ids or order no longer match the current Screenplay.
+
 ## Context
 
 The previous three-act analysis stored Act and Sequence ids from the mandatory
@@ -34,8 +38,8 @@ that contract without reproducing its partition rules.
   arrangement.
 - Reorganizing or deleting Sections does not invalidate analysis merely because
   an organizational id changed.
-- Every current Scene remains accounted for exactly once in analytical
-  partitions and Scene analyses.
+- Every Scene that is current when an Analysis is authored remains accounted
+  for exactly once in analytical partitions and Scene analyses.
 - Missing beats are represented without invented Scene placements.
 - The migration preserves current critique meaning while removing Act/Sequence
   ids and duplicated Scene titles from stored analysis JSON.

@@ -24,6 +24,9 @@ export function deleteScreenplayScene(screenplay: Screenplay, sceneId: string): 
   screenplay.structure = screenplay.structure.filter(
     (entry) => entry.content.type !== 'scene' || entry.content.sceneId !== sceneId,
   );
+  screenplay.references = screenplay.references.filter(
+    (reference) => !('sceneId' in reference.target) || reference.target.sceneId !== sceneId,
+  );
 }
 
 function invalidScene(message: string): ProjectDataError {
