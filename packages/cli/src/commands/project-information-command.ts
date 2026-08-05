@@ -3,15 +3,17 @@ import {
   createDiagnosticError,
 } from '@gorenku/studio-diagnostics';
 import {
+  type ProjectInformationPatch,
+  type ProjectLanguagePatchOperation,
+} from '@gorenku/studio-core/client';
+import {
   createProjectDataService,
   createStudioCoordinationService,
   createStudioOperationId,
   resolveRenkuStorageRoot,
   type Project,
   type ProjectShell,
-  type ProjectInformationPatch,
   type ProjectInformationRefreshField,
-  type ProjectLanguagePatchOperation,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';

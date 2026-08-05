@@ -1,9 +1,6 @@
 import { createMovieProject } from '../commands/create-movie-project.js';
 import { migrateProjectDatabaseForProject } from '../commands/migrate-database.js';
-import {
-  patchProjectInformation,
-  updateProjectInformation,
-} from '../commands/update-project-information.js';
+import { patchProjectInformation } from '../project-information/index.js';
 import {
   closeCurrentProject,
   openCurrentProject,
@@ -26,7 +23,6 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'readProjectShell'
   | 'readDirectorContext'
   | 'readProjectInformationResource'
-  | 'updateProjectInformation'
   | 'patchProjectInformation'
   | 'resolveCoverImage'
   | 'openCurrentProject'
@@ -42,7 +38,6 @@ export function createProjectAdministrationServiceWiring(): Pick<
     readProjectShell,
     readDirectorContext,
     readProjectInformationResource: readProjectInformationResourceForProject,
-    updateProjectInformation,
     patchProjectInformation,
     resolveCoverImage,
     openCurrentProject,

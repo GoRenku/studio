@@ -1,8 +1,10 @@
 import type {
+  ProjectInformationPatch,
+} from '@gorenku/studio-core/client';
+import type {
   StudioSelectionContextRequest,
   StudioSelectionContextResponse,
   ProjectInformationResourceResponse,
-  ProjectInformationUpdateRequest,
   ProjectLibraryWithHttp,
   ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
@@ -80,9 +82,9 @@ export async function readProjectInformationResource(
   return body.resource;
 }
 
-export async function updateProjectInformation(
+export async function patchProjectInformation(
   projectName: string,
-  information: ProjectInformationUpdateRequest
+  patch: ProjectInformationPatch
 ): Promise<ProjectInformationResourceResponse> {
   const response = await fetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/information`,
@@ -92,7 +94,7 @@ export async function updateProjectInformation(
         'Content-Type': 'application/json',
         'X-Renku-Studio-Token': readStudioApiToken(),
       },
-      body: JSON.stringify(information),
+      body: JSON.stringify(patch),
     }
   );
 

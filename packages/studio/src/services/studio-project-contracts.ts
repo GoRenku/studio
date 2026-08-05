@@ -44,43 +44,7 @@ export type ProjectLibraryWithHttp = Omit<ProjectLibrary, 'projects'> & {
   projects: ProjectSummaryWithHttp[];
 };
 
-export interface ProjectInformationUpdateRequest {
-  title: string;
-  aspectRatio?: string;
-  logline?: string;
-  synopsis?: string;
-  premise?: string;
-  intendedAudience?: string;
-  format?: string;
-  targetRuntimeMinutes?: number;
-  primaryGenre?: string;
-  secondaryGenres?: string[];
-  tones?: string[];
-  contentRatingIntent?: string;
-  creativeBoundaries?: string[];
-  centralConflict?: string;
-  dramaticQuestion?: string;
-  themes?: string[];
-  historicalBasis?: string[];
-  dramatizedElements?: string[];
-  screenplayDraftStatus?: string;
-  researchSources?: string[];
-  assumptions?: string[];
-  openQuestions?: string[];
-  nextSteps?: string[];
-  languages: ProjectInformationLanguageUpdateRequest[];
-}
-
 export type ProjectInformationResourceResponse = ProjectInformationResource;
-
-export interface ProjectInformationLanguageUpdateRequest {
-  localeTag: string;
-  displayName?: string;
-  isBase: boolean;
-  supportsAudio: boolean;
-  supportsSubtitles: boolean;
-}
-
 
 export interface StudioAssetFileResponse
   extends Omit<AssetFile, 'projectRelativePath'> {

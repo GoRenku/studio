@@ -1,5 +1,5 @@
 import type { ProjectInformationResource } from '../../../client/index.js';
-import type { ProjectInformationUpdate } from '../../project-data-service-contracts.js';
+import type { ResolvedProjectInformation } from '../../project-information/contracts.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 import { readProjectRecord } from './project.js';
@@ -46,9 +46,9 @@ export function readProjectInformationResourceFromDatabase(
   };
 }
 
-export function readProjectInformationUpdateFromDatabase(
+export function readResolvedProjectInformationFromDatabase(
   session: DatabaseSession
-): ProjectInformationUpdate {
+): ResolvedProjectInformation {
   const project = readRequiredProjectRecord(session);
   return {
     title: project.title,

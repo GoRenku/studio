@@ -21,12 +21,16 @@ export class MovieStudioPage {
   async editProjectInformation(input: {
     title: string;
     logline: string;
-    summary: string;
+    synopsis: string;
+    projectLanguage: string;
   }): Promise<void> {
     const projectName = decodeURIComponent(new URL(this.page.url()).pathname.split('/')[2] ?? '');
     await this.page.getByLabel('Title').fill(input.title);
     await this.page.getByLabel('Logline').fill(input.logline);
-    await this.page.getByLabel('Summary').fill(input.summary);
+    await this.page.getByLabel('Synopsis').fill(input.synopsis);
+    await this.page.getByLabel('Project language').click();
+    await this.page.getByRole('option', { name: input.projectLanguage }).click();
+    await expect(this.page.getByText('Add language')).toHaveCount(0);
     await expect
       .poll(
         async () =>
@@ -35,23 +39,36 @@ export class MovieStudioPage {
               `/studio-api/projects/${encodeURIComponent(name)}/information`
             );
             const body = (await response.json()) as {
-              resource?: { title?: string };
+              resource?: {
+                title?: string;
+                languages?: Array<{ localeTag: string; isBase: boolean }>;
+              };
             };
-            return body.resource?.title ?? null;
+            return {
+              title: body.resource?.title ?? null,
+              baseLocaleTag:
+                body.resource?.languages?.find((language) => language.isBase)
+                  ?.localeTag ?? null,
+            };
           }, projectName),
         { timeout: 15_000 }
       )
-      .toBe(input.title);
+      .toEqual({ title: input.title, baseLocaleTag: 'es-ES' });
   }
 
   async expectProjectInformationValues(input: {
     title: string;
     logline: string;
-    summary: string;
+    synopsis: string;
+    projectLanguage: string;
   }): Promise<void> {
     await expect(this.page.getByLabel('Title')).toHaveValue(input.title);
     await expect(this.page.getByLabel('Logline')).toHaveValue(input.logline);
-    await expect(this.page.getByLabel('Summary')).toHaveValue(input.summary);
+    await expect(this.page.getByLabel('Synopsis')).toHaveValue(input.synopsis);
+    await expect(this.page.getByLabel('Project language')).toContainText(
+      input.projectLanguage
+    );
+    await expect(this.page.getByText('Add language')).toHaveCount(0);
   }
 
   async gotoProject(project: StudioE2eProject): Promise<void> {

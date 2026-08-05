@@ -1,4 +1,7 @@
-import type { ProjectInformationUpdate } from '@gorenku/studio-core/server';
+import type {
+  ProjectInformationPatch,
+  ProjectLanguagePatchOperation,
+} from '@gorenku/studio-core/client';
 import {
   buildDiagnosticResult,
   createDiagnosticError,
@@ -8,18 +11,38 @@ import {
 import {
   assertHttpRequestFields,
   readHttpRequestRecord,
-  readOptionalHttpString,
   readOptionalHttpNumber,
+  readOptionalHttpString,
   readOptionalHttpStringArray,
-  readRequiredHttpBoolean,
   readRequiredHttpString,
 } from './request-validation.js';
 
 const PROJECT_INFORMATION_CONTEXT = 'project information request';
 
+const PROJECT_INFORMATION_FIELDS = [
+  'title', 'aspectRatio', 'logline', 'synopsis', 'premise',
+  'intendedAudience', 'format', 'targetRuntimeMinutes', 'primaryGenre',
+  'secondaryGenres', 'tones', 'contentRatingIntent', 'creativeBoundaries',
+  'centralConflict', 'dramaticQuestion', 'themes', 'historicalBasis',
+  'dramatizedElements', 'screenplayDraftStatus', 'researchSources',
+  'assumptions', 'openQuestions', 'nextSteps', 'languages',
+] as const;
+
+const NULLABLE_STRING_FIELDS = [
+  'aspectRatio', 'logline', 'synopsis', 'premise', 'intendedAudience', 'format',
+  'primaryGenre', 'contentRatingIntent', 'centralConflict', 'dramaticQuestion',
+  'screenplayDraftStatus',
+] as const;
+
+const NULLABLE_STRING_ARRAY_FIELDS = [
+  'secondaryGenres', 'tones', 'creativeBoundaries', 'themes', 'historicalBasis',
+  'dramatizedElements', 'researchSources', 'assumptions', 'openQuestions',
+  'nextSteps',
+] as const;
+
 export function readProjectInformationRequest(
   input: unknown
-): ProjectInformationUpdate {
+): ProjectInformationPatch {
   const issues: DiagnosticIssue[] = [];
   const record = readHttpRequestRecord(
     input,
@@ -35,180 +58,226 @@ export function readProjectInformationRequest(
   assertHttpRequestFields(
     record,
     [],
-    [
-      'title', 'aspectRatio', 'logline', 'synopsis', 'premise',
-      'intendedAudience', 'format', 'targetRuntimeMinutes', 'primaryGenre',
-      'secondaryGenres', 'tones', 'contentRatingIntent', 'creativeBoundaries',
-      'centralConflict', 'dramaticQuestion', 'themes', 'historicalBasis',
-      'dramatizedElements', 'screenplayDraftStatus', 'researchSources',
-      'assumptions', 'openQuestions', 'nextSteps', 'languages',
-    ],
+    [...PROJECT_INFORMATION_FIELDS],
     issues,
     PROJECT_INFORMATION_CONTEXT,
-    'Send only the supported project information fields.'
+    'Send only the supported project information patch fields.'
   );
 
-  const title = readRequiredHttpString(
-    record,
-    ['title'],
-    issues,
-    PROJECT_INFORMATION_CONTEXT
-  );
-  const aspectRatio = readOptionalHttpString(
-    record,
-    ['aspectRatio'],
-    issues,
-    PROJECT_INFORMATION_CONTEXT
-  );
-  const logline = readOptionalHttpString(
-    record,
-    ['logline'],
-    issues,
-    PROJECT_INFORMATION_CONTEXT
-  );
-  const synopsis = readOptionalHttpString(
-    record,
-    ['synopsis'],
-    issues,
-    PROJECT_INFORMATION_CONTEXT
-  );
-  const premise = readOptionalHttpString(record, ['premise'], issues, PROJECT_INFORMATION_CONTEXT);
-  const intendedAudience = readOptionalHttpString(record, ['intendedAudience'], issues, PROJECT_INFORMATION_CONTEXT);
-  const format = readOptionalHttpString(record, ['format'], issues, PROJECT_INFORMATION_CONTEXT);
-  const targetRuntimeMinutes = readOptionalHttpNumber(record, ['targetRuntimeMinutes'], issues, PROJECT_INFORMATION_CONTEXT);
-  const primaryGenre = readOptionalHttpString(record, ['primaryGenre'], issues, PROJECT_INFORMATION_CONTEXT);
-  const secondaryGenres = readOptionalHttpStringArray(record, ['secondaryGenres'], issues, PROJECT_INFORMATION_CONTEXT);
-  const tones = readOptionalHttpStringArray(record, ['tones'], issues, PROJECT_INFORMATION_CONTEXT);
-  const contentRatingIntent = readOptionalHttpString(record, ['contentRatingIntent'], issues, PROJECT_INFORMATION_CONTEXT);
-  const creativeBoundaries = readOptionalHttpStringArray(record, ['creativeBoundaries'], issues, PROJECT_INFORMATION_CONTEXT);
-  const centralConflict = readOptionalHttpString(record, ['centralConflict'], issues, PROJECT_INFORMATION_CONTEXT);
-  const dramaticQuestion = readOptionalHttpString(record, ['dramaticQuestion'], issues, PROJECT_INFORMATION_CONTEXT);
-  const themes = readOptionalHttpStringArray(record, ['themes'], issues, PROJECT_INFORMATION_CONTEXT);
-  const historicalBasis = readOptionalHttpStringArray(record, ['historicalBasis'], issues, PROJECT_INFORMATION_CONTEXT);
-  const dramatizedElements = readOptionalHttpStringArray(record, ['dramatizedElements'], issues, PROJECT_INFORMATION_CONTEXT);
-  const screenplayDraftStatus = readOptionalHttpString(record, ['screenplayDraftStatus'], issues, PROJECT_INFORMATION_CONTEXT);
-  const researchSources = readOptionalHttpStringArray(record, ['researchSources'], issues, PROJECT_INFORMATION_CONTEXT);
-  const assumptions = readOptionalHttpStringArray(record, ['assumptions'], issues, PROJECT_INFORMATION_CONTEXT);
-  const openQuestions = readOptionalHttpStringArray(record, ['openQuestions'], issues, PROJECT_INFORMATION_CONTEXT);
-  const nextSteps = readOptionalHttpStringArray(record, ['nextSteps'], issues, PROJECT_INFORMATION_CONTEXT);
-  const languages = readLanguages(record.languages, ['languages'], issues);
-  const result = buildDiagnosticResult(issues);
-  if (!result.valid || title === null || languages === null) {
-    throwProjectInformationRequestError(result.issues);
+  const patch: ProjectInformationPatch = {};
+  if ('title' in record) {
+    const title = readOptionalHttpString(record, ['title'], issues, PROJECT_INFORMATION_CONTEXT);
+    if (title !== undefined) {
+      patch.title = title;
+    }
+  }
+  for (const field of NULLABLE_STRING_FIELDS) {
+    if (field in record) {
+      patch[field] = readNullableString(record, field, issues);
+    }
+  }
+  if ('targetRuntimeMinutes' in record) {
+    patch.targetRuntimeMinutes = readNullableNumber(
+      record,
+      'targetRuntimeMinutes',
+      issues
+    );
+  }
+  for (const field of NULLABLE_STRING_ARRAY_FIELDS) {
+    if (field in record) {
+      patch[field] = readNullableStringArray(record, field, issues);
+    }
+  }
+  if ('languages' in record) {
+    patch.languages = readLanguageOperations(record.languages, ['languages'], issues);
   }
 
-  return {
-    title,
-    aspectRatio,
-    logline,
-    synopsis,
-    premise,
-    intendedAudience,
-    format,
-    targetRuntimeMinutes,
-    primaryGenre,
-    secondaryGenres,
-    tones,
-    contentRatingIntent,
-    creativeBoundaries,
-    centralConflict,
-    dramaticQuestion,
-    themes,
-    historicalBasis,
-    dramatizedElements,
-    screenplayDraftStatus,
-    researchSources,
-    assumptions,
-    openQuestions,
-    nextSteps,
-    languages,
-  };
+  const result = buildDiagnosticResult(issues);
+  if (!result.valid) {
+    throwProjectInformationRequestError(result.issues);
+  }
+  return patch;
 }
 
-function readLanguages(
+function readNullableString(
+  record: Record<string, unknown>,
+  field: string,
+  issues: DiagnosticIssue[]
+): string | null | undefined {
+  if (record[field] === null) {
+    return null;
+  }
+  return readOptionalHttpString(record, [field], issues, PROJECT_INFORMATION_CONTEXT);
+}
+
+function readNullableNumber(
+  record: Record<string, unknown>,
+  field: string,
+  issues: DiagnosticIssue[]
+): number | null | undefined {
+  if (record[field] === null) {
+    return null;
+  }
+  return readOptionalHttpNumber(record, [field], issues, PROJECT_INFORMATION_CONTEXT);
+}
+
+function readNullableStringArray(
+  record: Record<string, unknown>,
+  field: string,
+  issues: DiagnosticIssue[]
+): string[] | null | undefined {
+  if (record[field] === null) {
+    return null;
+  }
+  return readOptionalHttpStringArray(record, [field], issues, PROJECT_INFORMATION_CONTEXT);
+}
+
+function readLanguageOperations(
   input: unknown,
   path: string[],
   issues: DiagnosticIssue[]
-): ProjectInformationUpdate['languages'] | null {
+): ProjectLanguagePatchOperation[] {
   if (!Array.isArray(input)) {
     issues.push(
       createDiagnosticError(
         'STUDIO_SERVER010',
         'languages must be an array.',
         { path, context: PROJECT_INFORMATION_CONTEXT },
-        'Send the full project language list as an array.'
+        'Send project language patch operations as an array.'
+      )
+    );
+    return [];
+  }
+
+  const operations: ProjectLanguagePatchOperation[] = [];
+  input.forEach((item, index) => {
+    const operation = readLanguageOperation(
+      item,
+      [...path, String(index)],
+      issues
+    );
+    if (operation) {
+      operations.push(operation);
+    }
+  });
+  return operations;
+}
+
+function readLanguageOperation(
+  input: unknown,
+  path: string[],
+  issues: DiagnosticIssue[]
+): ProjectLanguagePatchOperation | null {
+  const record = readHttpRequestRecord(
+    input,
+    path,
+    issues,
+    PROJECT_INFORMATION_CONTEXT
+  );
+  if (!record) {
+    return null;
+  }
+  const operation = readRequiredHttpString(
+    record,
+    [...path, 'operation'],
+    issues,
+    PROJECT_INFORMATION_CONTEXT
+  );
+  const localeTag = readRequiredHttpString(
+    record,
+    [...path, 'localeTag'],
+    issues,
+    PROJECT_INFORMATION_CONTEXT
+  );
+  if (operation === null || localeTag === null) {
+    return null;
+  }
+
+  if (operation === 'remove' || operation === 'setBase') {
+    assertLanguageOperationFields(record, path, ['operation', 'localeTag'], issues);
+    return { operation, localeTag };
+  }
+  if (operation !== 'add' && operation !== 'update') {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER010',
+        `${operation} is not a supported project language operation.`,
+        { path: [...path, 'operation'], context: PROJECT_INFORMATION_CONTEXT },
+        'Use add, update, remove, or setBase.'
       )
     );
     return null;
   }
 
-  const languages: ProjectInformationUpdate['languages'] = [];
-  input.forEach((item, index) => {
-    const itemPath = [...path, String(index)];
-    const record = readHttpRequestRecord(
-      item,
-      itemPath,
-      issues,
-      PROJECT_INFORMATION_CONTEXT
-    );
-    if (!record) {
-      return;
-    }
-    assertHttpRequestFields(
-      record,
-      itemPath,
-      ['localeTag', 'displayName', 'isBase', 'supportsAudio', 'supportsSubtitles'],
-      issues,
-      PROJECT_INFORMATION_CONTEXT,
-      'Send only the supported project information fields.'
-    );
-    const localeTag = readRequiredHttpString(
-      record,
-      [...itemPath, 'localeTag'],
-      issues,
-      PROJECT_INFORMATION_CONTEXT
-    );
-    const isBase = readRequiredHttpBoolean(
-      record,
-      [...itemPath, 'isBase'],
-      issues,
-      PROJECT_INFORMATION_CONTEXT
-    );
-    const supportsAudio = readRequiredHttpBoolean(
-      record,
-      [...itemPath, 'supportsAudio'],
-      issues,
-      PROJECT_INFORMATION_CONTEXT
-    );
-    const supportsSubtitles = readRequiredHttpBoolean(
-      record,
-      [...itemPath, 'supportsSubtitles'],
-      issues,
-      PROJECT_INFORMATION_CONTEXT
-    );
-    if (
-      localeTag === null ||
-      isBase === null ||
-      supportsAudio === null ||
-      supportsSubtitles === null
-    ) {
-      return;
-    }
-    languages.push({
-      localeTag,
-      displayName: readOptionalHttpString(
+  assertLanguageOperationFields(
+    record,
+    path,
+    ['operation', 'localeTag', 'displayName', 'isBase', 'supportsAudio', 'supportsSubtitles'],
+    issues
+  );
+  const result: Extract<ProjectLanguagePatchOperation, { operation: 'add' | 'update' }> = {
+    operation,
+    localeTag,
+  };
+  if ('displayName' in record) {
+    if (operation === 'update' && record.displayName === null) {
+      result.displayName = null;
+    } else {
+      const displayName = readOptionalHttpString(
         record,
-        [...itemPath, 'displayName'],
+        [...path, 'displayName'],
         issues,
         PROJECT_INFORMATION_CONTEXT
-      ),
-      isBase,
-      supportsAudio,
-      supportsSubtitles,
-    });
-  });
+      );
+      if (displayName !== undefined) {
+        result.displayName = displayName;
+      }
+    }
+  }
+  readOptionalBoolean(record, path, 'isBase', issues, result);
+  readOptionalBoolean(record, path, 'supportsAudio', issues, result);
+  readOptionalBoolean(record, path, 'supportsSubtitles', issues, result);
+  return result;
+}
 
-  return languages;
+function assertLanguageOperationFields(
+  record: Record<string, unknown>,
+  path: string[],
+  allowedFields: string[],
+  issues: DiagnosticIssue[]
+): void {
+  assertHttpRequestFields(
+    record,
+    path,
+    allowedFields,
+    issues,
+    PROJECT_INFORMATION_CONTEXT,
+    'Send only fields supported by this project language operation.'
+  );
+}
+
+function readOptionalBoolean(
+  record: Record<string, unknown>,
+  path: string[],
+  field: 'isBase' | 'supportsAudio' | 'supportsSubtitles',
+  issues: DiagnosticIssue[],
+  result: Extract<ProjectLanguagePatchOperation, { operation: 'add' | 'update' }>
+): void {
+  const value = record[field];
+  if (value === undefined) {
+    return;
+  }
+  if (typeof value !== 'boolean') {
+    issues.push(
+      createDiagnosticError(
+        'STUDIO_SERVER010',
+        `${[...path, field].join('.')} must be a boolean.`,
+        { path: [...path, field], context: PROJECT_INFORMATION_CONTEXT }
+      )
+    );
+    return;
+  }
+  result[field] = value;
 }
 
 function warnIfProjectNameMutationAttempt(
@@ -230,14 +299,11 @@ function warnIfProjectNameMutationAttempt(
   }
 }
 
-function throwProjectInformationRequestError(
-  issues: DiagnosticIssue[]
-): never {
+function throwProjectInformationRequestError(issues: DiagnosticIssue[]): never {
   throw createStructuredError({
     code: 'STUDIO_SERVER013',
     message: 'Project information request failed validation.',
     issues,
-    suggestion:
-      'Send the editable project information fields with a full language list.',
+    suggestion: 'Send a well-formed partial project information patch.',
   });
 }

@@ -90,6 +90,7 @@ import type {
   Project,
   ProjectCreateReport,
   ProjectInformationResource,
+  ProjectInformationPatch,
   ProjectLibrary,
   ProjectShell,
   UpdateAssetInput,
@@ -195,9 +196,6 @@ export interface ProjectDataService {
     selection: StudioSelection;
     homeDir?: string;
   }): Promise<StudioSelectionContextResult>;
-  updateProjectInformation(
-    input: UpdateProjectInformationInput
-  ): Promise<ProjectInformationResource>;
   patchProjectInformation(
     input: PatchProjectInformationInput
   ): Promise<ProjectInformationResource>;
@@ -859,96 +857,9 @@ export interface ReadSceneDesignResourceInput
   cursor?: string | null;
 }
 
-export interface UpdateProjectInformationInput extends RenkuConfigPathOptions {
-  projectName: string;
-  information: ProjectInformationUpdate;
-}
-
 export interface PatchProjectInformationInput extends RenkuConfigPathOptions {
   projectName: string;
   patch: ProjectInformationPatch;
-}
-
-export interface ProjectInformationPatch {
-  title?: string;
-  aspectRatio?: string | null;
-  logline?: string | null;
-  synopsis?: string | null;
-  premise?: string | null;
-  intendedAudience?: string | null;
-  format?: string | null;
-  targetRuntimeMinutes?: number | null;
-  primaryGenre?: string | null;
-  secondaryGenres?: string[] | null;
-  tones?: string[] | null;
-  contentRatingIntent?: string | null;
-  creativeBoundaries?: string[] | null;
-  centralConflict?: string | null;
-  dramaticQuestion?: string | null;
-  themes?: string[] | null;
-  historicalBasis?: string[] | null;
-  dramatizedElements?: string[] | null;
-  screenplayDraftStatus?: string | null;
-  researchSources?: string[] | null;
-  assumptions?: string[] | null;
-  openQuestions?: string[] | null;
-  nextSteps?: string[] | null;
-  languages?: ProjectLanguagePatchOperation[];
-}
-
-export type ProjectLanguagePatchOperation =
-  | {
-      operation: 'add';
-      localeTag: string;
-      displayName?: string;
-      isBase?: boolean;
-      supportsAudio?: boolean;
-      supportsSubtitles?: boolean;
-    }
-  | {
-      operation: 'update';
-      localeTag: string;
-      displayName?: string | null;
-      isBase?: boolean;
-      supportsAudio?: boolean;
-      supportsSubtitles?: boolean;
-    }
-  | { operation: 'remove'; localeTag: string }
-  | { operation: 'setBase'; localeTag: string };
-
-export interface ProjectInformationUpdate {
-  title: string;
-  aspectRatio?: string;
-  logline?: string;
-  synopsis?: string;
-  premise?: string;
-  intendedAudience?: string;
-  format?: string;
-  targetRuntimeMinutes?: number;
-  primaryGenre?: string;
-  secondaryGenres?: string[];
-  tones?: string[];
-  contentRatingIntent?: string;
-  creativeBoundaries?: string[];
-  centralConflict?: string;
-  dramaticQuestion?: string;
-  themes?: string[];
-  historicalBasis?: string[];
-  dramatizedElements?: string[];
-  screenplayDraftStatus?: string;
-  researchSources?: string[];
-  assumptions?: string[];
-  openQuestions?: string[];
-  nextSteps?: string[];
-  languages: ProjectInformationLanguageUpdate[];
-}
-
-export interface ProjectInformationLanguageUpdate {
-  localeTag: string;
-  displayName?: string;
-  isBase: boolean;
-  supportsAudio: boolean;
-  supportsSubtitles: boolean;
 }
 
 export interface ResolveProjectCoverImageInput extends RenkuConfigPathOptions {

@@ -54,7 +54,7 @@ export function fakeProjectDataService(): NonNullable<
         languages: makeProjectShell(project).languages,
       };
     },
-    async updateProjectInformation() {
+    async patchProjectInformation() {
       return {
         title: project.title,
         aspectRatio: project.aspectRatio,

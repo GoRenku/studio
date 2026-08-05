@@ -9,8 +9,9 @@ test('saves project information edits and keeps them after reload', async ({
   const edited = {
     title: 'E2E Persisted Project Information',
     logline: 'A saved browser edit becomes durable project metadata.',
-    summary:
+    synopsis:
       'The project information panel autosaves user edits and reloads from the saved resource.',
+    projectLanguage: 'Spanish (es-ES)',
   };
 
   await movieStudio.gotoProject(minimalMovieProject);

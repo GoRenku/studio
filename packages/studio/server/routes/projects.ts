@@ -62,7 +62,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'listSceneShotPlans'
   | 'readShotPlan'
   | 'deleteShotPlan'
-  | 'updateProjectInformation'
+  | 'patchProjectInformation'
   | 'resolveCoverImage'
   | 'listAssets'
   | 'resolveProjectAssetFileById'

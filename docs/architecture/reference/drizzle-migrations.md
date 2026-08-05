@@ -214,6 +214,16 @@ Before adding a custom migration:
 - run it through Drizzle Kit's migration flow;
 - do not create a parallel application-level migration runner.
 
+`0074_backfill_missing_project_base_language.sql` is a narrow data migration
+for pre-customer project databases created without the required locale row. It
+inserts the canonical `en-US` / `English` base locale only when the database
+already has a Project row and `project_locale` is empty. It leaves every
+non-empty locale table unchanged, does not run from project open or read paths,
+and does not change the schema shape or `user_version`. Drizzle Kit's generated
+`0074_snapshot.json` records that unchanged shape. New database creation is
+unaffected because migrations run before the Project row is inserted; normal
+Core creation then writes the same canonical default.
+
 `0053_drop-obsolete-shot-media-inputs.sql` contains one documented custom
 preservation step around Drizzle Kit's generated Take-table rebuild. Drizzle
 runs SQLite migrations inside a transaction, so its generated

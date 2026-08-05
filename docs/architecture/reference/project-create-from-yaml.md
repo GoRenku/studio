@@ -421,8 +421,9 @@ Rules:
   for those entries.
 - If `languages` is missing, creation should still succeed and `studio-core`
   must create `en-US` as the base language with display name `English`.
-- If `languages` is present and no item has `isBase: true`, creation should
-  still succeed and the user can configure the base language later.
+- If `languages` is present, exactly one item must have `isBase: true`.
+  Missing or multiple base selections fail validation rather than leaving an
+  incomplete locale state for a later screen to repair.
 - Detailed localization levels beyond audio/subtitle availability are out of
   scope for this YAML.
 

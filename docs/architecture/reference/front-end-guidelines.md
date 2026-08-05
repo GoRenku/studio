@@ -326,7 +326,7 @@ src/services/
 File meanings:
 
 - `studio-projects-api.ts`: functions such as `readProject`,
-  `readProjectLibrary`, `updateProjectInformation`, and
+  `readProjectLibrary`, `patchProjectInformation`, and
   `exportProductionAssets`.
 - `studio-api-errors.ts`: response error parsing and typed frontend API errors.
 - `studio-project-contracts.ts`: HTTP-decorated project contracts such as
@@ -343,8 +343,14 @@ Function naming should use resource verbs instead of generic fetch names:
 ```ts
 readProject(projectName)
 readProjectLibrary()
-updateProjectInformation(projectName, information)
+patchProjectInformation(projectName, patch)
 ```
+
+Feature-local editor drafts should project user intent into Core-owned command
+contracts before calling a service. For example, Project Information compares
+its latest draft with the last persisted resource and sends a
+`ProjectInformationPatch`; the browser service forwards that patch and does not
+merge hidden fields or reproduce Core validation.
 
 Avoid:
 

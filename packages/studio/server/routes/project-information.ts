@@ -31,10 +31,10 @@ export function createProjectInformationRoute({
     .patch('/information', requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const information = readProjectInformationRequest(await c.req.json());
-        const resource = await projectData.updateProjectInformation({
+        const patch = readProjectInformationRequest(await c.req.json());
+        const resource = await projectData.patchProjectInformation({
           projectName,
-          information,
+          patch,
         });
         return c.json({
           resource,

@@ -99,7 +99,8 @@ describe('studio generation preview API', () => {
       })
     ).rejects.toMatchObject({
       code: 'CORE_TEST',
-      message: 'CORE_TEST: Update failed.',
+      message: 'Update failed.',
+      summary: 'Update failed.',
     });
   });
 });

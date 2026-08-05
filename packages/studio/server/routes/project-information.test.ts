@@ -1,5 +1,9 @@
 import { Hono } from 'hono';
-import { describe, expect, it } from 'vitest';
+import {
+  createDiagnosticError,
+  createStructuredError,
+} from '@gorenku/studio-diagnostics';
+import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
 import { makeProject, makeProjectShell } from '../testing/route-fixtures.js';
 import { createProjectInformationRoute } from './project-information.js';
@@ -34,51 +38,15 @@ describe('project information Hono route', () => {
   });
 
   it('patches Project Information through ProjectDataService', async () => {
-    let currentProject = makeProject();
-    let currentLanguages = makeProjectShell(currentProject).languages;
+    const patchProjectInformation = vi.fn(async () => ({
+      title: 'The Siege Machine',
+      aspectRatio: '21:9',
+      logline: undefined,
+      languages: makeProjectShell(makeProject()).languages,
+    }));
     const app = createMountedProjectInformationRoute({
       ...fakeProjectDataService(),
-      async updateProjectInformation(input) {
-        currentProject = {
-          ...currentProject,
-          title: input.information.title,
-          aspectRatio: input.information.aspectRatio ?? currentProject.aspectRatio,
-          logline: input.information.logline,
-          synopsis: input.information.synopsis,
-          premise: input.information.premise,
-          targetRuntimeMinutes: input.information.targetRuntimeMinutes,
-          themes: input.information.themes,
-        };
-        currentLanguages = input.information.languages.map((language, index) => ({
-          id: `language_${index + 1}`,
-          ...language,
-        }));
-        return {
-          title: currentProject.title,
-          aspectRatio: currentProject.aspectRatio,
-          logline: currentProject.logline,
-          synopsis: currentProject.synopsis,
-          premise: currentProject.premise,
-          targetRuntimeMinutes: currentProject.targetRuntimeMinutes,
-          themes: currentProject.themes,
-          languages: currentLanguages,
-        };
-      },
-      async readProjectInformationResource() {
-        return {
-          title: currentProject.title,
-          aspectRatio: currentProject.aspectRatio,
-          logline: currentProject.logline,
-          synopsis: currentProject.synopsis,
-          premise: currentProject.premise,
-          targetRuntimeMinutes: currentProject.targetRuntimeMinutes,
-          themes: currentProject.themes,
-          languages: currentLanguages,
-        };
-      },
-      async readProjectShell() {
-        return { ...makeProjectShell(currentProject), languages: currentLanguages };
-      },
+      patchProjectInformation,
     });
 
     const response = await app.request('/constantinople/information', {
@@ -86,18 +54,11 @@ describe('project information Hono route', () => {
       body: JSON.stringify({
         title: 'The Siege Machine',
         aspectRatio: '21:9',
-        logline: 'A sharper premise.',
-        synopsis: 'A revised synopsis.',
-        premise: 'Craft becomes a weapon of empire.',
-        targetRuntimeMinutes: 12,
-        themes: ['ambition', 'legacy'],
+        logline: null,
         languages: [
           {
-            localeTag: 'en-US',
-            displayName: 'English',
-            isBase: true,
-            supportsAudio: true,
-            supportsSubtitles: true,
+            operation: 'setBase',
+            localeTag: 'tr-TR',
           },
         ],
       }),
@@ -111,14 +72,16 @@ describe('project information Hono route', () => {
       resource: {
         title: 'The Siege Machine',
         aspectRatio: '21:9',
-        languages: [
-          {
-            localeTag: 'en-US',
-            isBase: true,
-            supportsAudio: true,
-            supportsSubtitles: true,
-          },
-        ],
+      },
+    });
+    expect(patchProjectInformation).toHaveBeenCalledOnce();
+    expect(patchProjectInformation).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      patch: {
+        title: 'The Siege Machine',
+        aspectRatio: '21:9',
+        logline: null,
+        languages: [{ operation: 'setBase', localeTag: 'tr-TR' }],
       },
     });
   });
@@ -131,7 +94,6 @@ describe('project information Hono route', () => {
       body: JSON.stringify({
         name: 'renamed-project',
         title: 'The Siege Machine',
-        languages: [],
       }),
       headers: {
         'Content-Type': 'application/json',
@@ -157,7 +119,6 @@ describe('project information Hono route', () => {
     const response = await app.request('/constantinople/information', {
       method: 'PATCH',
       body: JSON.stringify({
-        title: 'The Siege Machine',
         languages: 'English',
       }),
       headers: {
@@ -175,6 +136,86 @@ describe('project information Hono route', () => {
             message: 'languages must be an array.',
           }),
         ]),
+      },
+    });
+  });
+
+  it('parses every project language operation without domain interpretation', async () => {
+    const patchProjectInformation = vi.fn(async () => ({
+      title: 'Preparation of the Siege',
+      aspectRatio: '16:9',
+      languages: [],
+    }));
+    const app = createMountedProjectInformationRoute({
+      ...fakeProjectDataService(),
+      patchProjectInformation,
+    });
+
+    const languages = [
+      {
+        operation: 'add',
+        localeTag: 'es-ES',
+        displayName: 'Spanish',
+        isBase: true,
+      },
+      {
+        operation: 'update',
+        localeTag: 'en-US',
+        displayName: null,
+        supportsAudio: false,
+      },
+      { operation: 'remove', localeTag: 'de-DE' },
+      { operation: 'setBase', localeTag: 'fr-FR' },
+    ];
+    const response = await app.request('/constantinople/information', {
+      method: 'PATCH',
+      body: JSON.stringify({ languages }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(patchProjectInformation).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      patch: { languages },
+    });
+  });
+
+  it('serializes structured Core issues without discarding details', async () => {
+    const app = createMountedProjectInformationRoute({
+      ...fakeProjectDataService(),
+      async patchProjectInformation() {
+        throw createStructuredError({
+          code: 'PROJECT_DATA056',
+          message: 'Project information failed validation.',
+          issues: [createDiagnosticError(
+            'PROJECT_DATA050',
+            'Project title is required.',
+            { path: ['title'], context: 'project information update' }
+          )],
+          suggestion: 'Enter a project title before saving.',
+        });
+      },
+    });
+
+    const response = await app.request('/constantinople/information', {
+      method: 'PATCH',
+      body: JSON.stringify({ title: '' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'PROJECT_DATA056',
+        message: 'Project information failed validation.',
+        issues: [
+          {
+            code: 'PROJECT_DATA050',
+            message: 'Project title is required.',
+            severity: 'error',
+          },
+        ],
+        suggestion: 'Enter a project title before saving.',
       },
     });
   });

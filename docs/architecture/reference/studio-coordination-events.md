@@ -966,8 +966,10 @@ After success, append the same events as `set`.
 
 ### Language Commands
 
-Project information CLI must have parity with the Studio UI, including language
-editing.
+Project Information language editing deliberately has different surface depth.
+Studio shows one `Project language` selector that changes only the base locale.
+The CLI retains the complete Core-owned multi-locale operation set for import,
+Asset, localization, and future post-production workflows.
 
 ```bash
 renku info language add <locale-tag> \
@@ -1046,9 +1048,17 @@ Core owns the merge:
 
 This keeps behavior consistent across CLI and Studio HTTP routes.
 
-Studio UI may continue sending full form values. The server adapter can convert
-the full form request into a patch, or core can accept both a full replacement
-and patch shape if the distinction is explicit in names.
+Studio sends the Core-owned patch envelope directly. Its Project Information
+feature derives a minimal patch from the last persisted resource and current
+draft. The server validates only the HTTP envelope and delegates the patch to
+Core; it does not read current state, merge fields, or convert a full-form
+replacement.
+
+Project Details shows one base Project Language selector. Selecting an already
+configured locale sends `setBase`; selecting a supported locale that is not yet
+configured sends `add` with `isBase: true`. Hidden non-base locales remain
+unchanged. Add/remove controls and audio/subtitle capability editing remain CLI
+and Core concerns rather than Project Details UI concerns.
 
 Do not add fallback branches for obsolete request shapes.
 

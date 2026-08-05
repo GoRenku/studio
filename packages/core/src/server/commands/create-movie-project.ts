@@ -1,6 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { ProjectCreateReport, ProjectCounts } from '../../client/index.js';
+import {
+  DEFAULT_PROJECT_LOCALE_TAG,
+  SUPPORTED_PROJECT_LOCALES,
+  type ProjectCreateReport,
+  type ProjectCounts,
+} from '../../client/index.js';
 import { insertProjectRecord } from '../database/access/project.js';
 import { migrateProjectDatabase } from '../database/lifecycle/migrator.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
@@ -26,6 +31,15 @@ export async function createMovieProject(
   input: CreateMovieProjectInput
 ): Promise<ProjectCreateReport> {
   validateProjectName(input.projectName);
+  const defaultLocale = SUPPORTED_PROJECT_LOCALES.find(
+    (locale) => locale.localeTag === DEFAULT_PROJECT_LOCALE_TAG
+  );
+  if (!defaultLocale) {
+    throw new ProjectDataError(
+      'PROJECT_DATA050',
+      `Default project locale ${DEFAULT_PROJECT_LOCALE_TAG} is missing from the supported catalog.`
+    );
+  }
   const storageRoot = await resolveRenkuStorageRoot(input);
   await fs.mkdir(storageRoot, { recursive: true });
 
@@ -72,8 +86,8 @@ export async function createMovieProject(
       insertProjectLocaleRecords(transactionSession, [
         {
           id: ids('locale'),
-          localeTag: 'en-US',
-          displayName: 'English',
+          localeTag: DEFAULT_PROJECT_LOCALE_TAG,
+          displayName: defaultLocale.displayName,
           isBase: true,
           supportsAudio: true,
           supportsSubtitles: true,

@@ -85,9 +85,15 @@ export type * from './scene-beats/index.js';
 export type * from './shot-plans.js';
 export type * from './shot-plan-video-generations.js';
 export * from './shot-authoring.js';
-export type {
-  ProjectLanguage,
+export {
+  DEFAULT_PROJECT_LOCALE_TAG,
+  SUPPORTED_PROJECT_LOCALES,
+  type ProjectLanguage,
 } from './project-languages.js';
+export type {
+  ProjectInformationPatch,
+  ProjectLanguagePatchOperation,
+} from './project-information.js';
 export type {
   CastNavigationRow,
   CastMemberResource,
