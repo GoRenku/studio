@@ -15,7 +15,6 @@ import {
 } from '@/ui/resizable';
 import { CastOverviewPanel } from './cast/cast-overview-panel';
 import { CastMemberPanel } from './cast/cast-member-panel';
-import { GenerationActivityFooter } from './generation-activity/generation-activity-footer';
 import { LocationOverviewPanel } from './locations/location-overview-panel';
 import { LocationPanel } from './locations/location-panel';
 import { PropOverviewPanel } from './props/prop-overview-panel';
@@ -387,8 +386,6 @@ export function MovieStudioScreen({
           </ResizablePanel>
         </ResizablePanelGroup>
       </main>
-
-      <GenerationActivityFooter project={project} />
     </div>
   );
 }
