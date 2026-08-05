@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { ProjectLanguage } from '@gorenku/studio-core/client';
 import type {
   ProjectInformationResourceResponse,
@@ -47,16 +47,7 @@ import { cn } from '@/lib/utils';
 const ASPECT_RATIOS = ['1:1', '3:4', '4:3', '16:9', '9:16', '21:9'] as const;
 
 const projectInformationControlClassName =
-  'border-border/60 bg-background/35 transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/25';
-
-const projectInformationLanguageTriggerClassName =
-  "border-border/60 bg-background/35 [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/25 data-[state=open]:border-primary data-[state=open]:ring-[3px] data-[state=open]:ring-primary/25 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-[190px] items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
-
-const projectInformationReadOnlyControlClassName =
-  'border-border/45 bg-muted/25 text-muted-foreground';
-
-const projectInformationSectionClassName =
-  'rounded-lg border border-border/45 bg-background/35 p-4 shadow-sm';
+  'border-border/55 bg-background/45 shadow-none transition-colors hover:border-primary/45 focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20';
 
 const projectInformationSectionHeadingClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground';
@@ -243,29 +234,18 @@ export function ProjectInformationPanel({
   };
 
   return (
-    <div className='mx-auto flex w-full max-w-4xl flex-col gap-4'>
-      <section className={projectInformationSectionClassName}>
-        <div className='grid gap-4 lg:grid-cols-2'>
-          <Field label='Project Name'>
-            <Input
-              value={project.project.projectName}
-              readOnly
-              className={projectInformationReadOnlyControlClassName}
-            />
-          </Field>
-          <Field label='Type'>
-            <Input
-              value='Movie'
-              readOnly
-              className={projectInformationReadOnlyControlClassName}
-            />
-          </Field>
-        </div>
+    <div className='mx-auto flex w-full max-w-4xl flex-col px-1 pb-6'>
+      <section className='grid gap-6 border-b border-border/35 pb-6 sm:grid-cols-2'>
+        <ProjectMetadata
+          label='Project Name'
+          value={project.project.projectName}
+        />
+        <ProjectMetadata label='Type' value='Movie' />
       </section>
 
-      <section className={projectInformationSectionClassName}>
-        <div className='grid gap-4'>
-          <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]'>
+      <section className='py-6'>
+        <div className='grid gap-5'>
+          <div className='grid gap-5 lg:grid-cols-[minmax(0,1fr)_180px]'>
             <Field label='Title'>
               <Input
                 value={form.title}
@@ -310,7 +290,7 @@ export function ProjectInformationPanel({
                   logline: event.target.value,
                 }))
               }
-              className={cn('min-h-24', projectInformationControlClassName)}
+              className={cn('min-h-20', projectInformationControlClassName)}
             />
           </Field>
 
@@ -323,7 +303,7 @@ export function ProjectInformationPanel({
                   synopsis: event.target.value,
                 }))
               }
-              className={cn('min-h-36', projectInformationControlClassName)}
+              className={cn('min-h-32', projectInformationControlClassName)}
             />
           </Field>
 
@@ -336,27 +316,22 @@ export function ProjectInformationPanel({
                   premise: event.target.value,
                 }))
               }
-              className={cn('min-h-24', projectInformationControlClassName)}
+              className={cn('min-h-20', projectInformationControlClassName)}
             />
           </Field>
         </div>
       </section>
 
-      <section className={cn(projectInformationSectionClassName, 'space-y-3')}>
+      <section className='space-y-4 border-t border-border/35 pt-6'>
         <div className='flex items-center justify-between gap-3'>
           <h3 className={projectInformationSectionHeadingClassName}>Languages</h3>
           {availableLanguages.length > 0 ? (
             <DropdownMenu>
-              <DropdownMenuTrigger
-                className={projectInformationLanguageTriggerClassName}
-              >
-                <span className='flex min-w-0 items-center gap-2 line-clamp-1'>
-                  <Plus className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-                  <span className='truncate'>
-                    {formatLanguageOptionLabel(availableLanguages[0])}
-                  </span>
-                </span>
-                <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground opacity-50' />
+              <DropdownMenuTrigger asChild>
+                <Button type='button' variant='outline' size='sm'>
+                  <Plus className='h-3.5 w-3.5' />
+                  Add language
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end' className='w-[190px]'>
                 {availableLanguages.map((language) => (
@@ -372,13 +347,19 @@ export function ProjectInformationPanel({
           ) : null}
         </div>
 
-        <div className='space-y-2'>
+        {form.languages.length === 0 ? (
+          <p className='text-sm text-muted-foreground'>
+            No project languages configured.
+          </p>
+        ) : null}
+
+        <div className='divide-y divide-border/35'>
           {form.languages.map((language) => {
             const canRemove = form.languages.length > 1 && !language.isBase;
             return (
               <div
                 key={language.localeTag}
-                className='grid gap-2 rounded-md border border-border/45 bg-card/35 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]'
+                className='grid gap-2 py-3 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]'
               >
                 <div className='min-w-0'>
                   <p className='truncate text-sm font-medium'>
@@ -443,6 +424,21 @@ export function ProjectInformationPanel({
           })}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ProjectMetadata({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className='grid gap-1.5'>
+      <span className={projectInformationSectionHeadingClassName}>{label}</span>
+      <p className='text-sm font-medium text-foreground'>{value}</p>
     </div>
   );
 }
