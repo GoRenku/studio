@@ -1,6 +1,6 @@
 # Studio Skills
 
-Date: 2026-08-03
+Date: 2026-08-06
 
 Status: current
 
@@ -16,6 +16,7 @@ Decision history:
 - `../../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
 - `../../decisions/0071-use-scene-first-screenplay-and-direct-project-story-metadata.md`
 - `../../decisions/0072-use-hierarchy-independent-screenplay-analysis.md`
+- `../../decisions/0074-use-core-owned-project-workflow-settings.md`
 
 ## Skills Location
 
@@ -97,6 +98,10 @@ operational companions that teach agents how to use those contracts.
 `media-producer`
 
 - Generates purpose-specific media from Renku context.
+- Reads `workflowPolicy` from Generation Context before choosing an otherwise
+  unselected execution path or deciding automatic Preview, additional
+  confirmation, and concurrency. Explicit user direction and a path already
+  saved on the GenerationSpec take precedence.
 - Authors one generic `GenerationSpec` from Core context and Engines-owned
   provider field descriptors.
 - Preserves exact guide placement and separately assigns every included
@@ -131,6 +136,10 @@ operational companions that teach agents how to use those contracts.
   Beat design, Shot planning, media generation, and production readiness
   workflows.
 - Starts broad or cross-department requests with `renku director context`.
+- Reads `projectSettings.screenplayImport` from Director Context after FDX
+  import and coordinates enabled follow-up stages only when their prerequisites
+  are ready. It preserves ambiguity handoff and does not mutate settings for a
+  one-task override.
 - Dispatches durable artifact work to specialist skills instead of writing
   department documents directly.
 - Routes cast work to `casting-director`, production-design/location work to
@@ -179,7 +188,8 @@ Skills must not:
 - use obsolete command aliases;
 - register Inspiration folder images as assets;
 - store absolute paths in authored JSON documents;
-- run paid generation without estimate review and explicit live provider approval;
+- run paid generation without the exact current Renku estimate and approval
+  token required by the live-run contract;
 - override user-selected generation controls.
 - store generated storyboard image paths inside Scene Beat Sheet JSON;
 - add framing, lens, camera movement, coverage, analog shooting logistics, or

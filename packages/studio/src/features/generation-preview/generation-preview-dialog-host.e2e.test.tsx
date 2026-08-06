@@ -456,7 +456,7 @@ describe('GenerationPreviewDialogHost', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
 
     expect(await screen.findByText('Preview Update Failed')).toBeTruthy();
-    expect(screen.getByText('CORE_TEST: Preview update failed.')).toBeTruthy();
+    expect(screen.getByText('Preview update failed.')).toBeTruthy();
     expect(screen.getByText('Character Sheet Generation Preview')).toBeTruthy();
   });
 

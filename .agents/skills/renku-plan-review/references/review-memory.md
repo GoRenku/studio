@@ -10,6 +10,55 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-06 — Start cohesive settings as one versioned property bag
+
+- **User objection:** A Project Settings plan turned thirteen simple workflow
+  preferences into fourteen relational columns plus separate aggregate, patch,
+  policy, resource, adapter, and validation interfaces. That made adding or
+  versioning a setting require coordinated schema and contract expansion even
+  though the settings are consumed as one cohesive document.
+- **Planning rule:** Apply the simplicity rule before normalizing configuration.
+  When settings are read and written together and no accepted query, join,
+  uniqueness, or relational-integrity requirement needs individual columns,
+  start with one project-local singleton containing one explicitly versioned
+  JSON property bag. Keep its schema, defaults, validation, migration, and
+  focused read/update command in Core, but do not create a column or public
+  interface hierarchy for every preference. Add relational structure only when
+  a concrete current requirement proves it necessary.
+- **Apply when:** Planning Project preferences, feature flags, workflow policy,
+  UI settings, or another small extensible configuration document whose values
+  share one lifecycle and are not independently queried by SQLite.
+- **Evidence to inspect:** Compare the requested behavior with the proposed
+  column, type, patch, service, route, diagnostic, and test count; identify any
+  real SQL query or integrity rule that requires normalization; inspect existing
+  Core JSON-schema/AJV validation and Drizzle migration conventions; and require
+  an explicit document-version and one-way upgrade story before accepting the
+  design.
+
+### 2026-08-06 — Start schema design from the project-local database scope
+
+- **User objection:** A Project Settings plan said it would create one row “for
+  every Project,” backfill every Project row, and key the new table by
+  `project_id`, which made the design read like one shared database could hold
+  several Projects. Renku actually gives each Project its own SQLite database;
+  the home library only discovers those separate databases.
+- **Planning rule:** Treat the project-local SQLite database as the existing
+  Project ownership boundary. Model project-wide state as a true singleton,
+  following the established `singleton_id = 1` pattern unless a concrete
+  relationship inside that database needs another entity id. Describe schema
+  creation and migration as operating on one project database at a time. Do not
+  add redundant Project foreign keys or multi-project backfill language that
+  implies tenant scoping the database already provides.
+- **Apply when:** A plan adds Project-wide settings, configuration, status, or
+  another one-per-Project aggregate; proposes a `project_id` owner column in a
+  project-local database; or describes a migration as iterating over Projects
+  rather than upgrading each selected database independently.
+- **Evidence to inspect:** The canonical
+  `<project-folder>/.renku/project.sqlite` path, the migration config's one
+  `RENKU_PROJECT_DATABASE_PATH` target, `readProjectRecord`'s singleton read,
+  existing singleton schemas such as `screenplay.singleton_id = 1`, and the
+  library code that discovers separate Project folders/databases.
+
 ### 2026-08-03 — Define every public field in the plan that owns the model
 
 - **User objection:** A backend data-model plan moved its actual interfaces to

@@ -1,6 +1,6 @@
 # Renku Studio Data Model And Storage
 
-Date: 2026-08-03
+Date: 2026-08-06
 
 Status: current
 
@@ -36,6 +36,12 @@ Use the focused documents below for current direction.
 - SQLite JSON text columns must be validated with AJV against explicit JSON
   Schemas before writes and after reads. TypeScript types, `JSON.parse`, and
   ad hoc guards are not enough for persisted JSON.
+- Each Project database owns one `project_settings` singleton row containing
+  one complete versioned JSON document. Core owns its sole defaults, AJV
+  validation, reads, and full-document replacement. Studio, CLI, and skills do
+  not merge fields or calculate settings policy. Future document versions use
+  one-way Drizzle data migrations rather than runtime compatibility readers or
+  per-setting columns.
 - Inspiration folder images are filesystem-owned content and are not registered
   as per-image assets. The persisted Inspiration Analysis JSON is SQLite-owned
   project data.
@@ -214,6 +220,7 @@ The durable decision history is recorded in:
 - `docs/decisions/0067-use-structured-shot-depth-and-presentational-mentions.md`
 - `docs/decisions/0071-use-scene-first-screenplay-and-direct-project-story-metadata.md`
 - `docs/decisions/0072-use-hierarchy-independent-screenplay-analysis.md`
+- `docs/decisions/0074-use-core-owned-project-workflow-settings.md`
 
 `docs/decisions/0016-use-active-project-sessions-and-eager-surface-data-for-studio-performance.md`
 is still accepted for active project SQLite sessions, but its eager surface data

@@ -13,6 +13,7 @@ const alias = [
 // instead of once per file (each rebuild spawns a drizzle-kit process).
 // A vi.mock call in a shared-context file fails loudly; add the file here.
 const moduleMockedTests = [
+  'src/server/commands/create-movie-project-settings-rollback.test.ts',
   'src/server/media-generation/lifecycle/context-service.test.ts',
   'src/server/media-generation/lifecycle/dependency-service.test.ts',
   'src/server/media-generation/lifecycle/model-service.test.ts',

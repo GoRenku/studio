@@ -7,6 +7,10 @@ import type {
 import { buildGenerationPurposeFacts } from './purpose-context.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { resolveAuthoredShotPlanContext } from './authored-shot-plan-context.js';
+import {
+  readProjectSettingsFromSession,
+  resolveGenerationWorkflowPolicy,
+} from '../project-settings/index.js';
 
 export function defineGenerationPurpose(input: Omit<GenerationPurposeDescriptor, 'buildContext'>): GenerationPurposeDescriptor {
   const descriptor: GenerationPurposeDescriptor = {
@@ -60,6 +64,10 @@ export function defineGenerationPurpose(input: Omit<GenerationPurposeDescriptor,
         settings: recommendedModel ? { ...settings, recommendedModel } : settings,
         models,
         referenceGuide,
+        workflowPolicy: resolveGenerationWorkflowPolicy({
+          settings: readProjectSettingsFromSession(contextInput.session).settings,
+          outputMediaKind: descriptor.outputMediaKind,
+        }),
       });
     },
   };

@@ -139,6 +139,7 @@ export interface GenerationContext {
   settings: GenerationPurposeSettings;
   models: GenerationModelDescriptor[];
   referenceGuide: GenerationReferenceGuide;
+  workflowPolicy: import('./project-settings.js').GenerationWorkflowPolicy;
 }
 
 export interface GenerationModelDescriptor {

@@ -1,6 +1,6 @@
 # Renku Studio Domain Vocabulary
 
-Date: 2026-05-10
+Date: 2026-08-06
 
 Status: current
 
@@ -49,6 +49,13 @@ Decision history:
 | Standalone movie     | A project shape with one movie-like production unit.                                       | This can be the only project type implemented in the first slice.                                                                                      |
 | Series               | A project shape with multiple episodes sharing cast, visual language, and reusable assets. | A future feature, but the schema should not block it.                                                                                                  |
 | Episode              | A movie-like production unit inside a series project.                                      | Episodes can have their own sequences, scenes, clips, exports, tasks, and takes while sharing project-level cast and visual language.                  |
+
+## Project Workflow Settings
+
+| Canonical term | Use for | Notes |
+| --- | --- | --- |
+| Project Settings | The complete versioned Project-local document containing screenplay-import and generation workflow preferences. | Core owns the schema, defaults, validation, persistence, and full replacement. Do not call individual fields preferences records or global agent-media configuration. |
+| Generation Workflow Policy | The effective execution guidance Core derives from Project Settings for one output media kind. | Exposed in Generation Context; it covers Preview display, preferred path, additional confirmation, and effective lane concurrency. It is not a provider policy or execution queue. |
 
 ## Narrative Structure
 

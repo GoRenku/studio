@@ -8,7 +8,9 @@ import type {
   ProjectRelativePath,
   ProjectLibrary,
   SceneDialogueAudioWorkspace,
+  ProjectSettingsDocument,
 } from '@gorenku/studio-core/client';
+import { DEFAULT_PROJECT_SETTINGS } from '@gorenku/studio-core/server';
 import type { CreateProjectsRouteOptions } from '../routes/projects.js';
 import {
   fixtureCastMember,
@@ -52,6 +54,18 @@ export function fakeProjectDataService(): NonNullable<
         aspectRatio: project.aspectRatio,
         logline: project.logline,
         languages: makeProjectShell(project).languages,
+      };
+    },
+    async readProjectSettings() {
+      return projectSettingsResource(project.id, project.projectName);
+    },
+    async replaceProjectSettings(input) {
+      return {
+        resource: {
+          project: { id: project.id, name: project.projectName },
+          settings: input.settings as ProjectSettingsDocument,
+        },
+        resourceKeys: ['project-settings'],
       };
     },
     async patchProjectInformation() {
@@ -562,6 +576,13 @@ export function fakeProjectDataService(): NonNullable<
     async listGenerationReferences() {
       return { items: [], nextCursor: null };
     },
+  };
+}
+
+function projectSettingsResource(id: string, name: string) {
+  return {
+    project: { id, name },
+    settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
   };
 }
 

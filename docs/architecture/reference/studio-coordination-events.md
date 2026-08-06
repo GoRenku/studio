@@ -635,6 +635,7 @@ than direct `window` listeners. Current examples include:
 
 - `project-shell`;
 - `project-information`;
+- `project-settings`;
 - `navigation:cast`;
 - `navigation:locations`;
 - `navigation:props`;
@@ -669,6 +670,12 @@ the browser coordination poller publishes the event locally. The mounted panel
 matches the key through the shared resource-refresh hook and reloads its
 authoritative API projection. Studio server mutation routes likewise serialize
 Core reports unchanged; adapters do not reconstruct attachment keys.
+
+Project Settings replacement follows the same boundary. Core returns the
+complete committed settings resource with the `project-settings` key; the CLI
+forwards that report exactly once, and the mounted Settings tab reloads only
+when its current draft is clean. Project Settings use a scoped resource change,
+not the broad Project Information refresh event.
 
 Use ADR 0017 for the authoritative project shell, lazy resource loading,
 pagination, and scoped invalidation rules. Use ADR 0030 for the required

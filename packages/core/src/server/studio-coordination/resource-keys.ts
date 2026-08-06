@@ -1,4 +1,7 @@
-import type { AssetOwner } from '../../client/index.js';
+import {
+  STUDIO_PROJECT_SETTINGS_RESOURCE_KEY,
+  type AssetOwner,
+} from '../../client/index.js';
 
 export function studioProjectShellResourceKey(): string {
   return 'project-shell';
@@ -10,6 +13,10 @@ export function studioProjectLibraryResourceKey(): string {
 
 export function studioProjectInformationResourceKey(): string {
   return 'project-information';
+}
+
+export function studioProjectSettingsResourceKey(): string {
+  return STUDIO_PROJECT_SETTINGS_RESOURCE_KEY;
 }
 
 export function studioTrashResourceKey(): string {

@@ -19,6 +19,7 @@ import { runLocationCommand } from './commands/location-command.js';
 import { runMediaCommand } from './commands/media-command.js';
 import { runProjectInformationCommand } from './commands/project-information-command.js';
 import { runProjectSelectionCommand } from './commands/project-selection-command.js';
+import { runProjectSettingsCommand } from './commands/project-settings-command.js';
 import { runProductionDesignCommand } from './commands/production-design-command.js';
 import { runPropCommand } from './commands/prop-command.js';
 import { runScreenplayCommand } from './commands/screenplay/index.js';
@@ -67,6 +68,8 @@ Commands
   info set             Update project information
   info clear           Clear optional project information fields
   info language        Add, update, remove, or set base languages
+  settings show        Show the complete Project Settings document
+  settings set         Replace Project Settings from a complete JSON document
   inspiration          Manage Inspiration folders and analysis
   generation           Gather media context, inspect models, estimate cost, and run generation
   lookbook             Manage Lookbooks and Lookbook images
@@ -634,6 +637,17 @@ export async function runRenkuCli(
             noAudio: cli.flags.noAudio,
             subtitles: cli.flags.subtitles,
             noSubtitles: cli.flags.noSubtitles,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'settings':
+        return await runProjectSettingsCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            file,
           },
           json: cli.flags.json,
           io,

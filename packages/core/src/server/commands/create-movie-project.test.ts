@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  DEFAULT_PROJECT_SETTINGS,
   createDeterministicIdGenerator,
   createProjectDataService,
 } from '../index.js';
@@ -29,6 +30,10 @@ describe('createMovieProject', () => {
       homeDir,
       projectName: 'constantinople',
     });
+    const settings = await projectData.readProjectSettings({
+      homeDir,
+      projectName: 'constantinople',
+    });
 
     expect(created.created.languages).toBe(1);
     expect(shell.languages).toEqual([
@@ -42,5 +47,6 @@ describe('createMovieProject', () => {
       },
     ]);
     expect(shell.project.counts.languages).toBe(1);
+    expect(settings.settings).toEqual(DEFAULT_PROJECT_SETTINGS);
   });
 });

@@ -26,6 +26,7 @@ export {
   studioLocationSurfaceResourceKey,
   studioProjectLibraryResourceKey,
   studioProjectInformationResourceKey,
+  studioProjectSettingsResourceKey,
   studioProjectShellResourceKey,
   studioSceneNarrativeResourceKey,
   studioSceneBeatSheetResourceKey,

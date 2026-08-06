@@ -4,6 +4,11 @@ Date: 2026-07-04
 
 Status: accepted
 
+Decision 0074 makes the additional conversational pause before a Renku-managed
+run a Project workflow preference. The exact current estimate and approval
+token are still required for every live provider run and must be passed
+unchanged; the historical integrity boundary below remains accepted.
+
 ## Context
 
 Renku Studio needs a cost approval guard so agents, CLI commands, and Studio

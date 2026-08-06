@@ -42,6 +42,14 @@ describe('Generation purpose context', () => {
     );
     expect(context.facts.sceneCastMemberIds).toEqual([castMemberId]);
     expect(context.facts.sceneLocationIds).toEqual([locationId]);
+    expect(context.workflowPolicy).toMatchObject({
+      preferredExecutionPath: 'codex-built-in',
+      codexBuiltIn: {
+        applicable: true,
+        executionKind: 'agent-external',
+        capability: 'codex.gpt-image-2',
+      },
+    });
     const castSlot = context.referenceGuide.sections.find((section) => section.id === 'cast')!.slots[0]!;
     expect(castSlot.label).toBe(cast[1]!.name);
     expect(castSlot.mediaKind).toBe('image');
@@ -93,6 +101,10 @@ describe('Generation purpose context', () => {
         code: 'CORE_GENERATION_OPTIONAL_REFERENCE_UNAVAILABLE',
       }),
     ]));
+    expect(context.workflowPolicy).toMatchObject({
+      preferredExecutionPath: 'renku-managed',
+      codexBuiltIn: { applicable: false },
+    });
   });
 
   it('projects the exact active Prop Design into Prop generation contexts', async () => {

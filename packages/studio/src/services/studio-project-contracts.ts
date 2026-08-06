@@ -21,6 +21,7 @@ import type {
   StudioSelectionContextResult,
   PageResponse,
   ProjectInformationResource,
+  ProjectSettingsResource,
   ProjectLibrary,
   ProjectShell,
   ProjectSummary,
@@ -45,6 +46,7 @@ export type ProjectLibraryWithHttp = Omit<ProjectLibrary, 'projects'> & {
 };
 
 export type ProjectInformationResourceResponse = ProjectInformationResource;
+export type ProjectSettingsResourceResponse = ProjectSettingsResource;
 
 export interface StudioAssetFileResponse
   extends Omit<AssetFile, 'projectRelativePath'> {

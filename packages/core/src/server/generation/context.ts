@@ -8,6 +8,7 @@ import type {
 } from '../../client/generation.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { GenerationPurposeContract } from './purpose-contract.js';
+import type { GenerationWorkflowPolicy } from '../../client/project-settings.js';
 
 export function buildGenerationContext(input: {
   purpose: GenerationPurposeContract;
@@ -16,6 +17,7 @@ export function buildGenerationContext(input: {
   referenceGuide: GenerationReferenceGuide;
   settings: GenerationPurposeSettings;
   models: GenerationModelDescriptor[];
+  workflowPolicy: GenerationWorkflowPolicy;
 }): GenerationContext {
   if (input.target.kind !== input.purpose.targetKind) {
     throw new ProjectDataError(
@@ -32,6 +34,7 @@ export function buildGenerationContext(input: {
     settings: input.settings,
     models: input.models,
     referenceGuide: input.referenceGuide,
+    workflowPolicy: input.workflowPolicy,
   };
 }
 

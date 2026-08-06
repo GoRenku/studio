@@ -4,6 +4,11 @@ Date: 2026-06-30
 
 Status: accepted
 
+Decision 0074 supersedes the global agent-media policy source and its default
+matrix with a Core-owned Project Settings document and Generation Context
+policy. Codex built-in image generation remains an agent-external harness
+capability outside Engines, as decided below.
+
 Decision 0063 narrows the current default for `shot.image`: when the user has
 not selected an execution route, the Shot planning workflow proposes Codex
 built-in GPT-Image-2 while retaining saved Preview, approval, provenance,

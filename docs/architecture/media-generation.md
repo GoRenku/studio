@@ -1,6 +1,6 @@
 # Media Generation Architecture
 
-Date: 2026-07-12
+Date: 2026-08-06
 
 Status: current
 
@@ -28,7 +28,9 @@ The resolved cutover inventory is recorded in
 - exact reference catalog queries and project-file resolution;
 - partial spec persistence without provider-readiness validation;
 - execution-readiness orchestration and structured diagnostics;
-- exact-request approval identity and immutable run persistence.
+- exact-request approval identity and immutable run persistence;
+- Project Settings validation and the resolved generation workflow policy
+  projected in Generation Context.
 
 `packages/engines` owns:
 
@@ -104,6 +106,30 @@ persisted. Unassigned references do not enter the provider payload.
 Every run has immediate inputs and outputs only. There is no dependency graph,
 recursive estimate, automatic child generation, provider fallback, value
 clamping, semantic retry, or automatic import.
+
+## Project Workflow Policy
+
+Generation Context includes the Core-resolved Project workflow policy for the
+requested output media kind. It reports whether Preview should open
+automatically, the preferred execution path, the additional per-run
+confirmation preference, and each lane's effective concurrency limit. When
+concurrency is disabled, the effective limit is `1` without changing the saved
+maximum.
+
+Execution-path precedence is explicit user direction, an execution path
+already authored on the saved GenerationSpec, then Project policy. Codex
+built-in image generation remains an agent-external capability identified as
+`codex.gpt-image-2`; it is not a Renku provider and is never added to Engines.
+If the current harness lacks that capability, the agent asks for a path rather
+than silently falling back to a paid Renku run. Audio and video remain
+Renku-managed.
+
+`displayPreview` controls only automatic display. Explicit Preview access and
+Preview revalidation remain available. `requirePerRunConfirmation` controls an
+additional conversational pause; every Renku-managed run still validates the
+saved spec, gets the exact current estimate and approval token, and passes that
+token unchanged. Concurrency is agent-owned scheduling of independent
+requests, not a durable queue or execution graph.
 
 ## Context And Guidance
 

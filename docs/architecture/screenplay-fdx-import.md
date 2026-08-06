@@ -1,6 +1,6 @@
 # Deterministic Final Draft FDX Import
 
-Date: 2026-08-03
+Date: 2026-08-06
 
 Status: current
 
@@ -48,6 +48,19 @@ technical log. Their bytes remain unchanged in the retained source.
 The importer creates no Cast Member, Location, Prop, or Screenplay reference.
 Character cues, Scene Headings, and supported tag evidence are
 non-authoritative candidates for later agent/user reconciliation.
+
+After a successful import, Director Context exposes the Project Settings
+document to the movie-director workflow. Enabled import preferences may cause
+that agent workflow to continue, in prerequisite order, with unambiguous
+continuity facts and bindings, continuity images, screenplay analysis, Scene
+Beat Sheets, and storyboard images. Explicit task direction may override those
+preferences without changing the saved document.
+
+These are agent-owned follow-up stages, not importer behavior. Ambiguous
+identity still requires judgment, disabled stages are not proactively
+dispatched, and storyboards require an active Scene Beat Sheet. The screenplay
+drafter returns import evidence to the movie director instead of orchestrating
+other departments itself.
 
 ## Safety And Determinism
 

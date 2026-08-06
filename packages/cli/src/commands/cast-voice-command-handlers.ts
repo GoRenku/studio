@@ -4,7 +4,7 @@ import type {
 } from '@gorenku/studio-core/server';
 import {
   readRequiredJsonInput,
-} from './department-command-io.js';
+} from './command-io.js';
 import {
   requiredFlag,
   type CliCommandHandler,

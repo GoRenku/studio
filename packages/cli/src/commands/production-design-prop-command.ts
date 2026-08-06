@@ -7,7 +7,7 @@ import {
   readRequiredJsonInput,
   requiredFlag,
   writeJson,
-} from './department-command-io.js';
+} from './command-io.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 export async function runProductionDesignPropCommand(options: {

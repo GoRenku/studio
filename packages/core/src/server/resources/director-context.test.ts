@@ -38,6 +38,11 @@ describe('readDirectorContext', () => {
     const report = await projectData.readDirectorContext({ homeDir });
 
     expect(report.screenplay.exists).toBe(false);
+    expect(report.projectSettings).toMatchObject({
+      version: 1,
+      screenplayImport: { createContinuitySubjects: true },
+    });
+    expect(report.resourceKeys).toContain('project-settings');
     expect(report.nextSteps.map((step) => step.id)).toEqual(['draft-screenplay']);
     expect(report.diagnostics).toEqual(
       expect.arrayContaining([

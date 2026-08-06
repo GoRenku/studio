@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { patchProjectInformation } from './studio-projects-api';
+import {
+  patchProjectInformation,
+  readProjectSettings,
+  replaceProjectSettings,
+} from './studio-projects-api';
 
 describe('studio-projects-api', () => {
   beforeEach(() => {
@@ -45,4 +49,78 @@ describe('studio-projects-api', () => {
       }
     );
   });
+
+  it('reads and replaces the complete Project Settings document', async () => {
+    const settings = projectSettings();
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          resource: {
+            project: { id: 'project_test', name: 'constantinople' },
+            settings,
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          resource: {
+            project: { id: 'project_test', name: 'constantinople' },
+            settings,
+          },
+          resourceKeys: ['project-settings'],
+        }),
+      } as Response);
+
+    await readProjectSettings('constantinople');
+    await replaceProjectSettings('constantinople', settings);
+
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      1,
+      '/studio-api/projects/constantinople/settings',
+      { headers: { 'X-Renku-Studio-Token': 'token-123' } }
+    );
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      2,
+      '/studio-api/projects/constantinople/settings',
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Renku-Studio-Token': 'token-123',
+        },
+        body: JSON.stringify(settings),
+      }
+    );
+  });
 });
+
+function projectSettings() {
+  return {
+    version: 1 as const,
+    screenplayImport: {
+      createContinuitySubjects: true,
+      generateContinuityImages: false,
+      runScreenplayAnalysis: false,
+      generateSceneBeatSheets: false,
+      generateBeatStoryboardImages: false,
+    },
+    generation: {
+      preferCodexImageGeneration: true,
+      displayPreview: true,
+      renkuManaged: {
+        requirePerRunConfirmation: true,
+        allowConcurrentGenerations: false,
+        maxConcurrentGenerations: 1,
+      },
+      codexBuiltIn: {
+        requirePerRunConfirmation: false,
+        allowConcurrentGenerations: true,
+        maxConcurrentGenerations: 5,
+      },
+    },
+  };
+}

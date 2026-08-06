@@ -26,6 +26,11 @@ import { resolveRenkuStorageRoot } from '../renku-config.js';
 import type { CreateMovieProjectInput } from '../project-data-service-contracts.js';
 import { DEFAULT_MOVIE_PROJECT_ASPECT_RATIO } from '../database/access/project-information.js';
 import { insertProjectLocaleRecords } from '../database/access/project-locales.js';
+import { insertProjectSettingsRecord } from '../database/access/project-settings.js';
+import {
+  DEFAULT_PROJECT_SETTINGS,
+  serializeProjectSettings,
+} from '../project-settings/document.js';
 
 export async function createMovieProject(
   input: CreateMovieProjectInput
@@ -83,6 +88,10 @@ export async function createMovieProject(
         }
       );
       ensureScreenplaySingleton(transactionSession);
+      insertProjectSettingsRecord(
+        transactionSession,
+        serializeProjectSettings(DEFAULT_PROJECT_SETTINGS)
+      );
       insertProjectLocaleRecords(transactionSession, [
         {
           id: ids('locale'),

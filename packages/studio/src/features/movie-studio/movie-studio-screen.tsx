@@ -21,7 +21,7 @@ import { PropOverviewPanel } from './props/prop-overview-panel';
 import { PropPanel } from './props/prop-panel';
 import { MOVIE_STUDIO_LAYOUT } from './movie-studio-layout';
 import { PanelShell } from './panel-shell';
-import { ProjectInformationPanel } from './project-information/project-information-panel';
+import { ProjectDetailsPanel } from './project-details/project-details-panel';
 import { SectionScreen } from './screenplay/sections/section-screen';
 import { ScenePanel } from './scenes/scene-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
@@ -293,7 +293,7 @@ export function MovieStudioScreen({
               saveNotification={activeSaveNotification}
             >
               {selection.type === 'projectInformation' ? (
-                <ProjectInformationPanel
+                <ProjectDetailsPanel
                   project={project}
                   onProjectChange={onProjectChange}
                   onSaveStatusChange={handleProjectInformationSaveStatusChange}
@@ -393,6 +393,7 @@ export function MovieStudioScreen({
 function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean {
   return (
     selectionType === 'castMember' ||
+    selectionType === 'projectInformation' ||
     selectionType === 'inspiration' ||
     selectionType === 'location' ||
     selectionType === 'prop' ||

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { STUDIO_PROJECT_SETTINGS_RESOURCE_KEY } from '@gorenku/studio-core/client';
 
 export interface StudioResourceChangedDetail {
   projectName: string;
@@ -68,6 +69,10 @@ export function matchesProjectInformationResource(resourceKeys: string[]): boole
     (resourceKey) =>
       resourceKey === 'project-information' || resourceKey === 'project-shell'
   );
+}
+
+export function matchesProjectSettingsResource(resourceKeys: string[]): boolean {
+  return resourceKeys.includes(STUDIO_PROJECT_SETTINGS_RESOURCE_KEY);
 }
 
 export function matchesProjectLibraryResource(resourceKeys: string[]): boolean {

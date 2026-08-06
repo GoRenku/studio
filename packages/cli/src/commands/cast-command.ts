@@ -16,7 +16,7 @@ import {
   readRequiredJsonInput,
   requiredFlag,
   writeJson,
-} from './department-command-io.js';
+} from './command-io.js';
 import { dispatchCliCommand } from './structured-command.js';
 import {
   appendStudioResourceChangedEvent,

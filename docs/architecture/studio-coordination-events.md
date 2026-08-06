@@ -32,6 +32,8 @@ vocabulary and the `surface:` and `navigation:` projection namespaces.
 ADR 0031 defines the delivery boundary: the Studio server appends live
 coordination events, and closed Studio sessions do not accumulate offline
 resource-refresh backlogs.
+Project Settings replacement uses the Core-owned `project-settings` resource
+key; CLI and Studio server adapters forward the Core mutation report unchanged.
 `studio.projectRefreshRequested` remains available for the narrower project
 information and project library refresh cases.
 

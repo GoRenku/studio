@@ -1116,7 +1116,13 @@ describe('App', () => {
     fireEvent.click(projectInformationButton.closest('button')!);
 
     expect(screen.getByText('Project Name')).toBeTruthy();
-    expect(screen.getByDisplayValue('constantinople')).toBeTruthy();
+    expect(screen.getByText('constantinople')).toBeTruthy();
+    expect(
+      screen.getByRole('tab', { name: 'Project Info' }).getAttribute(
+        'aria-selected'
+      )
+    ).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Settings' })).toBeTruthy();
   });
 });
 

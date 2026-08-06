@@ -11,6 +11,10 @@ import { readProject } from '../resources/full-project.js';
 import { readProjectInformationResourceForProject } from '../resources/project-information.js';
 import { listLibrary, resolveCoverImage } from '../resources/project-library.js';
 import { readProjectShell } from '../resources/project-shell.js';
+import {
+  readProjectSettings,
+  replaceProjectSettings,
+} from '../project-settings/index.js';
 import { resolveStudioProjectRef } from '../studio-coordination/project-reference.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
@@ -23,6 +27,8 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'readProjectShell'
   | 'readDirectorContext'
   | 'readProjectInformationResource'
+  | 'readProjectSettings'
+  | 'replaceProjectSettings'
   | 'patchProjectInformation'
   | 'resolveCoverImage'
   | 'openCurrentProject'
@@ -38,6 +44,8 @@ export function createProjectAdministrationServiceWiring(): Pick<
     readProjectShell,
     readDirectorContext,
     readProjectInformationResource: readProjectInformationResourceForProject,
+    readProjectSettings,
+    replaceProjectSettings,
     patchProjectInformation,
     resolveCoverImage,
     openCurrentProject,

@@ -55,7 +55,6 @@ export async function createMinimalMovieProject(input: {
     projectName: input.projectName,
     title: input.title,
     logline: 'A deterministic browser E2E project.',
-    summary: 'Created through core-owned project commands for Playwright tests.',
     aspectRatio: '16:9',
     homeDir: input.runtime.isolatedHomeDirectory,
     idGenerator: createDeterministicIdGenerator(),
@@ -118,13 +117,15 @@ export async function createBeatSheetMovieProject(input: {
     idGenerator: createDeterministicIdGenerator(),
   });
   await projectData.createScreenplay({
+    projectName: input.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
-    document: sampleScreenplayCreateDocument(),
+    screenplay: sampleScreenplayInput(),
     idGenerator: createDeterministicIdGenerator(),
   });
 
   const ids = await readSampleIds({
     homeDir: input.runtime.isolatedHomeDirectory,
+    projectName: input.projectName,
     projectData,
   });
   const beatSheet = await projectData.writeSceneBeatSheet({
@@ -262,21 +263,33 @@ interface SampleIds {
   castMemberId: string;
   locationId: string;
   dialogueId: string;
+  screenplayBlockIds: string[];
 }
 
 async function readSampleIds(input: {
   homeDir: string;
+  projectName: string;
   projectData: ProjectDataService;
 }): Promise<SampleIds> {
-  const screenplay = await input.projectData.readScreenplay({
+  const screenplay = await input.projectData.readScreenplayStructure({
     homeDir: input.homeDir,
+    projectName: input.projectName,
   });
-  const scene = screenplay.screenplay?.acts[0]?.sequences[0]?.scenes[0];
-  const act = screenplay.screenplay?.acts[0];
-  const sequence = screenplay.screenplay?.acts[0]?.sequences[0];
-  const castMember = screenplay.screenplay?.cast[0];
-  const location = screenplay.screenplay?.locations[0];
-  if (!act?.id || !sequence?.id || !scene?.id || !castMember?.id || !location?.id) {
+  const scene = screenplay.screenplay.scenes[0];
+  const act = screenplay.screenplay.sections.find(
+    (section) => section.type === 'act'
+  );
+  const sequence = screenplay.screenplay.sections.find(
+    (section) => section.type === 'sequence'
+  );
+  const castMember = (await input.projectData.listCastMembers({
+    homeDir: input.homeDir,
+  }))[0];
+  const location = (await input.projectData.listLocations({
+    homeDir: input.homeDir,
+  }))[0];
+  const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
+  if (!act || !sequence || !scene || !dialogue || !castMember || !location) {
     throw new Error('Beat Sheet E2E fixture did not create its sample ids.');
   }
   return {
@@ -285,61 +298,98 @@ async function readSampleIds(input: {
     sceneId: scene.id,
     castMemberId: castMember.id,
     locationId: location.id,
-    dialogueId: 'dialogue_order',
+    dialogueId: dialogue.id,
+    screenplayBlockIds: scene.blocks.map((block) => block.id),
   };
 }
 
-function sampleScreenplayCreateDocument(): Parameters<
+function sampleScreenplayInput(): Parameters<
   ProjectDataService['createScreenplay']
->[0]['document'] {
+>[0]['screenplay'] {
   return {
-    kind: 'screenplayCreate',
-    screenplay: {
-      title: 'Preparation of the Siege',
-      logline: 'A deterministic scene for browser E2E coverage.',
-      summary: 'Urban turns an inherited ambition into a concrete plan.',
-    },
-    cast: [],
-    locations: [],
-    acts: [
+    opening: [],
+    scenes: [
       {
-        key: 'act-one',
-        title: 'Act I',
-        sequences: [
+        key: 'siege-camp',
+        productionNumber: '1',
+        heading: 'EXT. CITY GATE - DAY',
+        title: 'Ceremony Becomes Physics',
+        blocks: [
           {
-            key: 'bombardment',
-            title: 'The Bombardment',
-            purpose: 'The siege engines become a political instrument.',
-            scenes: [
+            key: 'urban-action',
+            type: 'action',
+            text: 'Urban stands near the cannon as the order is given.',
+          },
+          {
+            key: 'dialogue-order',
+            type: 'dialogue',
+            characterName: 'URBAN',
+            extensions: [],
+            parts: [
               {
-                key: 'siege-camp',
-                title: 'Ceremony Becomes Physics',
-                setting: {
-                  interiorExterior: 'EXT',
-                  timeOfDay: 'DAY',
-                  locationIds: ['location_test0001'],
-                },
-                storyFunction: [
-                  'Urban watches the cannon become state theater.',
-                ],
-                blocks: [
-                  {
-                    type: 'action',
-                    text: 'Urban stands near the cannon as the order is given.',
-                    castMemberIds: ['cast_test0001'],
-                    locationIds: ['location_test0001'],
-                  },
-                  {
-                    type: 'dialogue',
-                    dialogueId: 'dialogue_order',
-                    castMemberId: 'cast_test0001',
-                    lines: ['Hold the gate.'],
-                  },
-                ],
+                key: 'dialogue-order-speech',
+                type: 'speech',
+                text: 'Hold the gate.',
               },
             ],
           },
         ],
+      },
+    ],
+    sections: [
+      { key: 'act-one', type: 'act', title: 'Act I' },
+      {
+        key: 'bombardment',
+        type: 'sequence',
+        title: 'The Bombardment',
+        description: 'The siege engines become a political instrument.',
+      },
+    ],
+    structure: [
+      {
+        key: 'act-one-entry',
+        content: { type: 'section', section: { key: 'act-one' } },
+        position: 0,
+      },
+      {
+        key: 'bombardment-entry',
+        parentSection: { key: 'act-one' },
+        content: { type: 'section', section: { key: 'bombardment' } },
+        position: 0,
+      },
+      {
+        key: 'siege-camp-entry',
+        parentSection: { key: 'bombardment' },
+        content: { type: 'scene', scene: { key: 'siege-camp' } },
+        position: 0,
+      },
+    ],
+    references: [
+      {
+        key: 'city-gate-setting',
+        subject: { type: 'location', id: 'location_test0001' },
+        target: { type: 'scene', scene: { key: 'siege-camp' } },
+        role: 'setting',
+      },
+      {
+        key: 'urban-presence',
+        subject: { type: 'castMember', id: 'cast_test0001' },
+        target: {
+          type: 'block',
+          scene: { key: 'siege-camp' },
+          block: { key: 'urban-action' },
+        },
+        role: 'presence',
+      },
+      {
+        key: 'urban-speaker',
+        subject: { type: 'castMember', id: 'cast_test0001' },
+        target: {
+          type: 'dialogueCue',
+          scene: { key: 'siege-camp' },
+          turn: { key: 'dialogue-order' },
+        },
+        role: 'speaker',
       },
     ],
   };
@@ -347,7 +397,6 @@ function sampleScreenplayCreateDocument(): Parameters<
 
 function sampleBeatSheet(ids: SampleIds): SceneBeatSheetDocument {
   return {
-    kind: 'sceneBeatSheet',
     sceneId: ids.sceneId,
     title: 'Bombardment Beats',
     summary: 'Two narrative Beats for desktop browser verification.',
@@ -362,7 +411,8 @@ function sampleBeatSheet(ids: SampleIds): SceneBeatSheetDocument {
         description: 'Dust drifts across the battered gate while Urban stands beside the cannon.',
         castMemberIds: [ids.castMemberId],
         locationIds: [ids.locationId],
-        screenplayBlockIndexes: [0, 1],
+        propIds: [],
+        screenplayBlockIds: ids.screenplayBlockIds,
       },
       {
         id: 'beat_002',
@@ -372,7 +422,8 @@ function sampleBeatSheet(ids: SampleIds): SceneBeatSheetDocument {
         description: 'The crew watches the gate in silence.',
         castMemberIds: [ids.castMemberId],
         locationIds: [ids.locationId],
-        screenplayBlockIndexes: [0],
+        propIds: [],
+        screenplayBlockIds: ids.screenplayBlockIds.slice(0, 1),
       },
     ],
   };
@@ -560,7 +611,7 @@ async function seedProjectMedia(input: {
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     sceneId: input.ids.sceneId,
-    dialogueId: input.ids.dialogueId,
+    turnId: input.ids.dialogueId,
     setup: {
       modelChoice: 'elevenlabs/eleven_v3',
       castVoiceId: voice.voice.id,

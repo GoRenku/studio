@@ -1,10 +1,13 @@
 import type {
   ProjectInformationPatch,
+  ProjectSettingsDocument,
+  ProjectSettingsMutationReport,
 } from '@gorenku/studio-core/client';
 import type {
   StudioSelectionContextRequest,
   StudioSelectionContextResponse,
   ProjectInformationResourceResponse,
+  ProjectSettingsResourceResponse,
   ProjectLibraryWithHttp,
   ProjectShellWithHttp,
 } from '@/services/studio-project-contracts';
@@ -17,6 +20,10 @@ interface ProjectResponse {
 
 interface ProjectInformationResourceApiResponse {
   resource: ProjectInformationResourceResponse | null;
+}
+
+interface ProjectSettingsResourceApiResponse {
+  resource: ProjectSettingsResourceResponse | null;
 }
 
 interface LibraryResponse {
@@ -107,6 +114,44 @@ export async function patchProjectInformation(
     throw new Error('Renku Studio API returned no project information resource.');
   }
   return body.resource;
+}
+
+export async function readProjectSettings(
+  projectName: string
+): Promise<ProjectSettingsResourceResponse> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/settings`,
+    { headers: { 'X-Renku-Studio-Token': readStudioApiToken() } }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ProjectSettingsResourceApiResponse;
+  if (!body.resource) {
+    throw new Error('Renku Studio API returned no Project Settings resource.');
+  }
+  return body.resource;
+}
+
+export async function replaceProjectSettings(
+  projectName: string,
+  settings: ProjectSettingsDocument
+): Promise<ProjectSettingsMutationReport> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/settings`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify(settings),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  return (await response.json()) as ProjectSettingsMutationReport;
 }
 
 function readStudioApiToken(): string {

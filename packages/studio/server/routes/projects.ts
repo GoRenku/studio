@@ -19,6 +19,7 @@ import { createGenerationRequestsRoute } from './generation-requests.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
 import { createProjectInformationRoute } from './project-information.js';
+import { createProjectSettingsRoute } from './project-settings.js';
 import { createScreenplayRoute } from './screenplay/index.js';
 import { createShotPlansRoute } from './shot-plans.js';
 import { createTrashRoute } from './trash.js';
@@ -36,6 +37,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'readProject'
   | 'readProjectShell'
   | 'readProjectInformationResource'
+  | 'readProjectSettings'
+  | 'replaceProjectSettings'
   | 'listCastNavigation'
   | 'listLocationNavigation'
   | 'listAssetPage'
@@ -161,6 +164,10 @@ export function createProjectsRoute(
     .route(
       '/:projectName',
       createProjectInformationRoute({ projectData, requireToken })
+    )
+    .route(
+      '/:projectName',
+      createProjectSettingsRoute({ projectData, requireToken })
     )
     .route(
       '/:projectName',

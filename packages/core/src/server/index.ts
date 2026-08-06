@@ -4,15 +4,12 @@ export {
   RENKU_CONFIG_VERSION,
   RenkuConfigError,
   initRenkuConfig,
-  readAgentMediaExecutionPolicy,
   readRenkuConfig,
   resolveRenkuConfigDir,
   resolveRenkuConfigPath,
   resolveRenkuStorageRoot,
 } from './renku-config.js';
 export type {
-  AgentMediaExecutionPolicy,
-  ImageGenerationExecutionPath,
   InitRenkuConfigOptions,
   InitRenkuConfigResult,
   ReadRenkuConfigOptions,
@@ -53,6 +50,8 @@ export {
   type ProjectDataService,
 } from './project-data-service.js';
 export { buildGenerationContext } from './generation/context.js';
+export { DEFAULT_PROJECT_SETTINGS } from './project-settings/document.js';
+export { resolveGenerationWorkflowPolicy } from './project-settings/index.js';
 export {
   createGenerationSpec,
   listGenerationSpecs,
@@ -416,6 +415,7 @@ export {
   studioLocationSurfaceResourceKey,
   studioProjectLibraryResourceKey,
   studioProjectInformationResourceKey,
+  studioProjectSettingsResourceKey,
   studioProjectShellResourceKey,
   studioSceneNarrativeResourceKey,
   studioSceneBeatSheetResourceKey,

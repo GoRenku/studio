@@ -49,6 +49,7 @@ import {
   studioLocationNavigationResourceKey,
   studioPropNavigationResourceKey,
   studioProjectInformationResourceKey,
+  studioProjectSettingsResourceKey,
   studioSceneBeatSheetResourceKey,
   studioSceneBeatsResourceKey,
   studioScreenplayResourceKey,
@@ -57,6 +58,7 @@ import {
 } from '../studio-coordination/resource-keys.js';
 import { readStudioSelectionContextProjection } from './selection-context.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
+import { readProjectSettingsFromSession } from '../project-settings/index.js';
 
 export async function readDirectorContext(
   input: ReadDirectorContextInput = {}
@@ -64,6 +66,7 @@ export async function readDirectorContext(
   return await withCurrentProjectSession(input, async ({ currentProject, session }) => {
     const diagnostics: DiagnosticIssue[] = [...(input.studioCurrent?.warnings ?? [])];
     const projectInformation = readProjectInformationResourceFromDatabase(session);
+    const projectSettings = readProjectSettingsFromSession(session).settings;
     const screenplay = readScreenplayReadiness(session);
     const visualLanguage = readVisualLanguageReadiness(session);
     const cast = readCastReadiness(session);
@@ -117,18 +120,7 @@ export async function readDirectorContext(
       cast,
       productionDesign,
       selectedScene,
-      agentMedia: {
-        imageGeneration: {
-          defaultExecutionPath: 'ask',
-          appliesToPurpose: false,
-          renkuManagedAvailable: false,
-          externalBuiltInGeneration: {
-            preferred: null,
-            availableInRenku: false,
-            requiresHarnessTool: true,
-          },
-        },
-      },
+      projectSettings,
       nextSteps,
       resourceKeys: directorResourceKeys(currentSelection, selectedScene),
       diagnostics,
@@ -600,6 +592,7 @@ function directorResourceKeys(
 ): string[] {
   return [
     studioProjectInformationResourceKey(),
+    studioProjectSettingsResourceKey(),
     studioScreenplayResourceKey(),
     'screenplay-analysis',
     studioVisualLanguageInspirationResourceKey(),

@@ -77,7 +77,7 @@ export type {
   Prop,
 } from './props.js';
 export type * from './trash.js';
-export type * from './agent-media.js';
+export * from './project-settings.js';
 export type * from './generation.js';
 export type * from './generation-preview-resource.js';
 export type * from './scene-dialogue-audio-workspace.js';

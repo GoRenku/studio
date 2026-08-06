@@ -12,9 +12,9 @@ export class MovieStudioPage {
   }
 
   async expectProjectInformationVisible(project: StudioE2eProject): Promise<void> {
-    await expect(this.page.getByLabel('Project Name')).toHaveValue(
-      project.projectName
-    );
+    await expect(
+      this.page.getByText(project.projectName, { exact: true })
+    ).toBeVisible();
     await expect(this.page.getByLabel('Title')).toHaveValue(project.title);
   }
 

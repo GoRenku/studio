@@ -236,7 +236,7 @@ export interface DirectorContextReport {
   cast: DirectorCastReadiness;
   productionDesign: DirectorProductionDesignReadiness;
   selectedScene: DirectorSceneReadiness | null;
-  agentMedia: import('./agent-media.js').AgentMediaReport;
+  projectSettings: import('./project-settings.js').ProjectSettingsDocument;
   nextSteps: DirectorNextStep[];
   resourceKeys: string[];
   diagnostics: DiagnosticIssue[];

@@ -91,6 +91,8 @@ import type {
   ProjectCreateReport,
   ProjectInformationResource,
   ProjectInformationPatch,
+  ProjectSettingsMutationReport,
+  ProjectSettingsResource,
   ProjectLibrary,
   ProjectShell,
   UpdateAssetInput,
@@ -163,6 +165,10 @@ export interface ProjectDataService {
   readProjectInformationResource(
     input: ReadProjectInput
   ): Promise<ProjectInformationResource>;
+  readProjectSettings(input: ReadProjectInput): Promise<ProjectSettingsResource>;
+  replaceProjectSettings(
+    input: ReadProjectInput & { settings: unknown }
+  ): Promise<ProjectSettingsMutationReport>;
   listCastNavigation(input: ListNavigationInput): Promise<PageResponse<CastNavigationRow>>;
   listLocationNavigation(
     input: ListNavigationInput
