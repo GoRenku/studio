@@ -10,6 +10,114 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-08 — Model one-step undo as one previous value, not version history
+
+- **User objection:** A simple Scene-owned set of Beats that could be regenerated
+  and undone once became a versioned Beat Sheet system with durable sheet ids,
+  base and created ids, an active pointer, iteration numbers, lineage traversal,
+  history listing, and overlapping response fields. The product only needed
+  “the regenerated Beats are bad; restore the set I had immediately before.”
+- **Planning rule:** When the accepted recovery requirement is only one-step
+  undo of a full replacement, store one current aggregate and at most one
+  previous snapshot. A full replacement moves current to previous; restoration
+  consumes that previous slot; focused edits mutate current in place. Do not add
+  version ids, base links, active selection, iteration counters, history lists,
+  arbitrary-version restore, or redo without a separate explicit requirement.
+- **Apply when:** Planning reset, regenerate, replace, undo, or restore behavior
+  for one Scene-owned or Project-owned aggregate whose users do not browse,
+  compare, cite, branch, or retain several historical versions.
+- **Evidence to inspect:** The exact undo action the user needs; whether more
+  than the immediately previous value must survive; whether callers truly select
+  among versions; current foreign keys and media ownership; and whether stable
+  child ids already reconnect restored content to its dependent media.
+
+### 2026-08-08 — Do not build generation lineage merely to name files
+
+- **User objection:** A filesystem proposal turned a small filename need into
+  numbered generation folders, monotonically allocated generation counters,
+  edit-version suffixes, and implied Asset-series tracking. The added lineage
+  model would require a large cross-Asset refactor even though the user only
+  needed concurrent outputs for the same semantic object to have distinct,
+  recognizable filenames.
+- **Planning rule:** First decide whether a visible number communicates durable
+  human order or only prevents filename collisions. Use persistent,
+  insertion-safe, never-recycled numbering for user-addressed ordered domain
+  objects such as Scenes, Shots, and Beats. When an object has no authored
+  order or insertion semantics, such as creation-sequenced Shot Plans, prefer a
+  simple monotonic counter with no reuse instead of forcing it through the
+  ordered allocator. When a generated file
+  only needs a discriminator, size the shortest human-distinguishable token
+  against the expected maximum occupancy of the exact filename namespace,
+  quantify the per-draw collision chance, and use a bounded collision-check and
+  retry at the owning write boundary. Keep existing database provenance; do not
+  add generation directories, editable version counters, Asset-series
+  aggregates, or lineage registries without a separate current product
+  requirement for them.
+- **Apply when:** Planning generated media filenames, alternate candidates,
+  image edits, regeneration, concurrency, or any proposal that introduces
+  counters or nested folders solely to distinguish files.
+- **Evidence to inspect:** The exact user-visible meaning of the suffix,
+  expected same-name occupancy, alphabet size, retry count, atomic/exclusive
+  write behavior, existing GenerationSpec/run/Asset provenance, concurrent
+  attachment paths, collision behavior in the destination folder, and whether
+  users ever need to sort, cite, restore, or navigate generations by that
+  visible value.
+
+### 2026-08-07 — Scope screenplay authority to the Project's actual source workflow
+
+- **User objection:** A media-storage and Scene-numbering proposal first
+  expanded one-way FDX ingestion into screenplay round-tripping concerns, then
+  overcorrected by treating every Project as FDX-backed and deleting Renku's
+  existing agent-authored screenplay creation, revision, and restore workflow.
+  Renku is not a general screenplay editor, but users may still create a
+  screenplay entirely with the screenplay-drafter agent without importing FDX.
+- **Planning rule:** Distinguish two source-authority workflows. For an
+  FDX-backed Project, the external editor owns canonical screenplay edits and
+  Scene numbers; preserve the exact exported numbers as the future association
+  key and do not let Renku content mutations diverge from that source. For an
+  agent-authored Project with no FDX import record, retain the focused
+  screenplay-drafter create, apply, and revision-restore workflow and let Core
+  allocate stable Scene numbers for that workflow. Do not apply the constraints
+  of either source mode to the other. FDX numbers remain required by default;
+  Renku may fill missing numbers only when the Project preference permits it
+  and the user explicitly requests that import fallback. Clearly state that a
+  Renku-numbered fallback import cannot later be matched safely to newly
+  numbered editor exports.
+- **Apply when:** Planning FDX import, agent-authored screenplay workflows,
+  Scene numbering, screenplay provenance, content-mutation gates, media folders
+  keyed by Scene number, or future re-import association.
+- **Evidence to inspect:** The Project's retained FDX import record, the
+  screenplay-drafter create/apply/restore contract, current Core mutation
+  commands, importer empty-target and one-import gates, exact FDX Scene numbers,
+  Project Settings defaults, explicit per-import authorization, and whether a
+  proposed rule is correctly scoped to FDX-backed or agent-authored Projects.
+
+### 2026-08-06 — Design user-browsed folders for recognition, not database identity
+
+- **User objection:** A media-storage plan used opaque Scene, Shot Plan, and
+  Shot ids as directory names, then added deep technical layers such as
+  `generations/`, `videos/`, `first-frames/`, and `last-frames/`. The resulting
+  tree was internally unambiguous but hostile to a person browsing the project:
+  users could not recognize a Scene, related Shot Plan media was scattered
+  across subfolders, and paths became unnecessarily long.
+- **Planning rule:** Treat a user-browsed project folder as a product surface.
+  Start its design from the shortest human recognition path: use established
+  human-facing numbers or concise names for navigational folders, keep media
+  that users inspect together in one folder, and distinguish asset roles with
+  short filenames when another directory would add no useful navigation. Do not
+  expose opaque database ids or mirror internal generation taxonomy in folder
+  depth merely because those values are convenient and stable in code. Resolve
+  database identity through Core-owned metadata, not by asking users to decode
+  paths.
+- **Apply when:** Planning project files that users will open in Finder, asset
+  destination rules, Scene or Shot Plan media placement, or any hierarchy with
+  repeated single-purpose directory levels.
+- **Evidence to inspect:** Draw the proposed tree with realistic values from
+  `urban-basilica`; count the clicks from the project root to the media users
+  inspect together; compare every folder segment with the names or numbers shown
+  in Studio; and confirm Core can resolve collisions and durable identity
+  without putting ids in user-visible paths.
+
 ### 2026-08-06 — Start cohesive settings as one versioned property bag
 
 - **User objection:** A Project Settings plan turned thirteen simple workflow
@@ -138,10 +246,20 @@ or architecture decision.
   only pre-customer development data uses the old contract, plan one verified
   one-way data conversion, update every current caller and document directly,
   and remove the old value from runtime code. Do not add aliases, dual-role
-  matching, fallback readers, or compatibility diagnostics. Scope “no data”
+  matching, fallback readers, or compatibility diagnostics. When the user has
+  explicitly scoped the conversion to one known local project with no users,
+  do not demand distributable migration infrastructure, fleet-style upgrade
+  behavior, or user-facing recovery machinery: keep the conversion narrow,
+  one-time, and verified against that project. Schema changes must still follow
+  the repository's accepted migration workflow, but the data-conversion design
+  should match its actual local-only blast radius. Scope “no data”
   assumptions to the exact tables and migrations proven empty or unapplied;
   every populated table affected by a broader schema change needs an explicit
-  preservation mapping and verification.
+  preservation mapping and verification. Do not infer a current multi-file,
+  multi-role, or otherwise broader domain contract from leftover sample rows:
+  verify current writers, readers, accepted decisions, and skills first, then
+  convert or remove development-only files that the current product no longer
+  creates.
 - **Apply when:** Repository code and accepted docs disagree with the intended
   product name while the conflicting persisted state is limited to local sample
   projects that can be backed up and upgraded once, or when a new feature
@@ -172,8 +290,17 @@ or architecture decision.
   self-contained acceptance gates instead of one massive plan and checklist.
   A coordinated release or migration may still require multiple plans to pass
   before it is applied; separate plan ownership does not require a temporary
-  runtime compatibility stage. When that split would scatter or compress shared
-  product reasoning, evidence, exact contracts, cross-surface behavior, or a
+  runtime compatibility stage. Do not apply that split when the explicit
+  requirement is one reusable mechanism or algorithm shared across several
+  domain objects with the same behavior. In that case, keep the shared contract
+  and algorithm visibly owned once, and use focused domain adapters only for
+  genuinely different persistence or lifecycle boundaries; splitting the work
+  must not fragment the shared implementation or invite parallel domain-specific
+  copies. First compare the actual semantics: an explicitly unordered,
+  creation-sequenced object may correctly use a focused monotonic counter
+  instead of an insertion-aware ordered allocator. When
+  that split would scatter or compress shared product reasoning, evidence,
+  exact contracts, cross-surface behavior, or a
   common verification matrix, preserve those parts in one linked supporting
   design reference. Make clear that it is not another implementation plan:
   phase plans own sequencing and completion, while the shared reference keeps
