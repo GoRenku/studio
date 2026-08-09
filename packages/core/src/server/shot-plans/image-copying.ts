@@ -79,8 +79,10 @@ export function copySelectedShotImage(input: {
         kind: 'shot.image',
         shotPlanId: input.destinationShotPlanId,
         shotId: input.destinationShotId,
-        titleHint: source.title,
       },
+      namingMode: source.origin === 'generated'
+        ? { kind: 'generated' }
+        : { kind: 'external' },
       fileRole: sourceFile.role,
       mediaKind: 'image',
       mimeType: sourceFile.mimeType ?? undefined,

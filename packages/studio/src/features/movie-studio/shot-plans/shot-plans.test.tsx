@@ -71,6 +71,7 @@ describe('Shot Plans feature', () => {
           shotPlan: {
             id: 'plan_one',
             sceneId: 'scene_one',
+            number: 1,
             title: 'Council coverage',
             coverage: null,
             createdAt: '2026-07-27T10:00:00.000Z',
@@ -89,6 +90,7 @@ describe('Shot Plans feature', () => {
             {
               beat: {
                 id: 'beat_one',
+                number: '4',
                 title: 'The decision',
                 description: 'The council decides.',
                 narrativeDevelopment: 'The choice hardens.',
@@ -122,7 +124,7 @@ describe('Shot Plans feature', () => {
     expect(screen.getAllByRole('img').map((image) => image.getAttribute('src')))
       .toEqual(['/selected-one.jpg', '/selected-two.jpg']);
     expect(screen.queryByRole('img', { name: /unselected/i })).toBeNull();
-    expect(screen.getByText('Council coverage')).not.toBeNull();
+    expect(screen.getByText('01 · Council coverage')).not.toBeNull();
     expect(screen.getByText('Beat 4')).not.toBeNull();
 
     fireEvent.click(
@@ -328,6 +330,7 @@ describe('Shot Plans feature', () => {
           shotPlan: {
             id: 'plan_one',
             sceneId: 'scene_one',
+            number: 1,
             title: 'Council coverage',
             coverage: null,
             createdAt: '2026-07-27T10:00:00.000Z',
@@ -486,6 +489,7 @@ describe('Shot Plans feature', () => {
           {
             beat: {
               id: 'beat_one',
+              number: '1',
               title: 'First Beat',
               description: 'First Beat description.',
               narrativeDevelopment: 'First development.',
@@ -501,6 +505,7 @@ describe('Shot Plans feature', () => {
           {
             beat: {
               id: 'beat_two',
+              number: '2',
               title: 'Second Beat',
               description: 'Second Beat description.',
               narrativeDevelopment: 'Second development.',
@@ -654,6 +659,7 @@ describe('Shot Plans feature', () => {
         shotPlan={{
           id: 'plan_one',
           sceneId: 'scene_one',
+          number: 1,
           title: 'Council coverage',
           coverage: null,
           createdAt: '2026-07-27T10:00:00.000Z',
@@ -692,6 +698,7 @@ describe('Shot Plans feature', () => {
           {
             beat: {
               id: 'beat_with_image',
+              number: '4',
               title: 'The decision',
               description: 'The council decides.',
               narrativeDevelopment: 'The choice hardens.',
@@ -711,6 +718,7 @@ describe('Shot Plans feature', () => {
           {
             beat: {
               id: 'beat_without_image',
+              number: '5',
               title: 'The reply',
               description: 'The reply lands.',
               narrativeDevelopment: 'The room shifts.',
@@ -785,6 +793,7 @@ function shot(
   return {
     id,
     position,
+    number: String(position + 1),
     title: `Shot ${position + 1}`,
     description: `Description ${position + 1}`,
     brief: {},

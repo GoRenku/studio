@@ -1,6 +1,10 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
-import type { ProjectAssetFileDestination, ProjectMediaKind } from '../types.js';
+import type {
+  ProjectAssetFileDestination,
+  ProjectAssetFileNamingMode,
+  ProjectMediaKind,
+} from '../types.js';
 
 export type DestinationKind = ProjectAssetFileDestination['kind'];
 
@@ -13,6 +17,7 @@ export interface DestinationFileInput<K extends DestinationKind> {
   session: DatabaseSession;
   projectFolder: string;
   destination: DestinationForKind<K>;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath: ProjectRelativePath;
   mediaKind: ProjectMediaKind;
   now: string;
@@ -23,6 +28,7 @@ export interface DestinationRootInput<K extends DestinationKind> {
   session: DatabaseSession;
   projectFolder: string;
   destination: DestinationForKind<K>;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath?: ProjectRelativePath;
   now: string;
 }
@@ -31,6 +37,7 @@ export interface DestinationOutputNamesInput<K extends DestinationKind> {
   session: DatabaseSession;
   projectFolder: string;
   destination: DestinationForKind<K>;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath: ProjectRelativePath;
   mediaKind: ProjectMediaKind;
   outputCount: number;

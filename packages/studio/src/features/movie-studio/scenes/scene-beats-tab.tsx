@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type { StudioSelection } from '@gorenku/studio-core/client';
 import { MediaCard } from '@/ui/media-card/media-card';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
-import type { SceneBeatSheetResourceResponse } from '@/services/studio-project-contracts';
-import { readSceneBeatSheetResource } from '@/services/screenplay';
+import type { SceneBeatsResourceResponse } from '@/services/studio-project-contracts';
+import { readSceneBeatsResource } from '@/services/screenplay';
 import {
   matchesSceneBeatsResource,
   useStudioResourceRefresh,
@@ -29,12 +29,12 @@ export function SceneBeatsTab({
   onSaveNotificationChange,
 }: SceneBeatsTabProps) {
   const [resource, setResource] =
-    useState<SceneBeatSheetResourceResponse | null>(null);
+    useState<SceneBeatsResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadResource = useCallback(() => {
     let cancelled = false;
-    void readSceneBeatSheetResource(projectName, sceneId)
+    void readSceneBeatsResource(projectName, sceneId)
       .then((nextResource) => {
         if (!cancelled) {
           setError(null);
@@ -63,7 +63,7 @@ export function SceneBeatsTab({
       matchesSceneBeatsResource({
         resourceKeys,
         sceneId,
-        beatSheetId: resource?.activeBeatSheetId,
+        sceneBeatsRevisionId: resource?.activeRevisionId,
       }),
     onRefresh: () => {
       loadResource();
@@ -81,7 +81,7 @@ export function SceneBeatsTab({
   }, [onSaveNotificationChange]);
 
   const beats = useMemo(
-    () => resource?.activeBeatSheet?.beats ?? [],
+    () => resource?.activeRevision?.beats ?? [],
     [resource]
   );
   const selectedBeatId = useMemo(() => {
@@ -90,8 +90,7 @@ export function SceneBeatsTab({
     }
     return beats[0]?.id ?? null;
   }, [beatId, beats]);
-  const selectedIndex = beats.findIndex((beat) => beat.id === selectedBeatId);
-  const selectedBeat = selectedIndex >= 0 ? beats[selectedIndex] : beats[0];
+  const selectedBeat = beats.find((beat) => beat.id === selectedBeatId) ?? beats[0];
 
   if (error) {
     return (
@@ -107,7 +106,7 @@ export function SceneBeatsTab({
       </div>
     );
   }
-  if (!resource.activeBeatSheet || !beats.length) {
+  if (!resource.activeRevision || !beats.length) {
     return <SceneBeatsEmpty />;
   }
 
@@ -115,8 +114,8 @@ export function SceneBeatsTab({
     <div className='grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_320px] gap-4 overflow-hidden bg-panel-bg p-4'>
       <div className='min-h-0 min-w-0 overflow-y-auto pr-1'>
         <div className='grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3'>
-          {beats.map((beat, index) => {
-            const label = beatLabel(index);
+          {beats.map((beat) => {
+            const label = beatLabel(beat.number);
             const image = resource.storyboardImagesByBeatId[beat.id];
             return (
               <MediaCard
@@ -163,7 +162,7 @@ export function SceneBeatsTab({
           <div className='flex flex-col gap-4'>
             <div className='flex flex-col gap-1'>
               <p className='text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground'>
-                {beatLabel(selectedIndex >= 0 ? selectedIndex : 0)}
+                {beatLabel(selectedBeat.number)}
               </p>
               <h2 className='text-lg font-semibold text-foreground'>
                 {selectedBeat.title}

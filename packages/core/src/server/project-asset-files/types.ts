@@ -6,29 +6,36 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json' | 'document';
 
+export type ProjectAssetFileNamingMode =
+  | { kind: 'generated' }
+  | { kind: 'external' };
+
 export type ProjectAssetFileDestination =
-  | { kind: 'screenplay.source'; sha256: string }
-  | { kind: 'shotPlan.video'; titleHint?: string }
-  | { kind: 'shotPlan.videoReferenceImage'; titleHint?: string }
-  | { kind: 'cast.characterSheet'; castMemberId: string; titleHint?: string }
-  | { kind: 'cast.profile'; castMemberId: string; titleHint?: string }
+  | { kind: 'screenplay.source' }
+  | { kind: 'shotPlan.video'; shotPlanId: string }
+  | {
+      kind: 'shotPlan.videoReferenceImage';
+      shotPlanId: string;
+      role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference';
+    }
+  | { kind: 'cast.characterSheet'; castMemberId: string; semanticName?: string }
+  | { kind: 'cast.profile'; castMemberId: string }
   | {
       kind: 'cast.voiceSample';
       castMemberId: string;
       castVoiceId: string;
       referenceName: string;
     }
-  | { kind: 'location.sheet'; locationId: string; titleHint?: string }
-  | { kind: 'location.hero'; locationId: string; heroName?: string }
-  | { kind: 'prop.sheet'; propId: string; titleHint?: string }
+  | { kind: 'location.sheet'; locationId: string; semanticName?: string }
+  | { kind: 'location.hero'; locationId: string }
+  | { kind: 'prop.sheet'; propId: string; semanticName?: string }
   | { kind: 'prop.hero'; propId: string }
-  | { kind: 'visualLanguage.lookbookImage'; titleHint?: string }
-  | { kind: 'visualLanguage.lookbookSheet'; titleHint?: string }
+  | { kind: 'visualLanguage.lookbookImage'; lookbookId: string; semanticName?: string }
+  | { kind: 'visualLanguage.lookbookSheet'; lookbookId: string; semanticName?: string }
   | {
       kind: 'shot.image';
       shotPlanId: string;
       shotId: string;
-      titleHint?: string;
     }
   | {
       kind: 'scene.dialogueAudio';
@@ -41,7 +48,7 @@ export type ProjectAssetFileDestination =
       kind: 'scene.storyboardImage';
       sceneId: string;
       iterationFolder: ProjectRelativePath;
-      beatOrdinal: number;
+      beatNumber: string;
     };
 
 export type ProjectTemporaryFileDestination =
@@ -66,6 +73,7 @@ export interface PersistProjectAssetFileInput {
   assetFileId: string;
   sourceProjectRelativePath: string;
   destination: ProjectAssetFileDestination;
+  namingMode: ProjectAssetFileNamingMode;
   fileRole: string;
   mediaKind: ProjectMediaKind;
   mimeType?: string;

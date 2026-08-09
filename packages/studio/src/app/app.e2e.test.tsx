@@ -756,9 +756,9 @@ describe('App', () => {
       }
       if (
         url ===
-        '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1/beat-sheet'
+        '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1/beats'
       ) {
-        return jsonResponse({ resource: makeSceneBeatSheetResource() });
+        return jsonResponse({ resource: makeSceneBeatsResource() });
       }
       if (url === '/studio-api/studio/events/current') {
         return jsonResponse({
@@ -1610,7 +1610,7 @@ function makeSceneNarrativeResource() {
   };
 }
 
-function makeSceneBeatSheetResource() {
+function makeSceneBeatsResource() {
   return {
     scene: {
       id: 'scene_1_1',
@@ -1632,8 +1632,8 @@ function makeSceneBeatSheetResource() {
       sceneCount: 1,
     },
     projectAspectRatio: '16:9',
-    activeBeatSheetId: null,
-    activeBeatSheet: null,
+    activeRevisionId: null,
+    activeRevision: null,
     storyboardImagesByBeatId: {},
     castMemberLabels: {},
     castMemberImages: {},

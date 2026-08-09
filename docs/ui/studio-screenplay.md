@@ -4,7 +4,7 @@ Status: current
 
 Renku Studio presents the screenplay as a read-only, Scene-first production
 workspace. Scenes are the canonical units. Optional Act and Sequence Sections
-organize them without owning Scene media, Beat Sheets, Shot Plans, dialogue
+organize them without owning Scene media, Scene Beats revisions, Shot Plans, dialogue
 audio, or other production artifacts.
 
 ## Navigation

@@ -16,6 +16,7 @@ const AUXILIARY_ASSET_TYPES = {
   'first-frame': 'shot_plan_video_first_frame',
   'last-frame': 'shot_plan_video_last_frame',
   'video-storyboard': 'shot_plan_video_storyboard',
+  'reference': 'shot_plan_video_reference',
 } as const;
 
 export function shotPlanVideoMethodSlots(
@@ -25,6 +26,7 @@ export function shotPlanVideoMethodSlots(
     methodSlot(context, 'first-frame', 'First Frame'),
     methodSlot(context, 'last-frame', 'Last Frame'),
     methodSlot(context, 'video-storyboard', 'Video Storyboard'),
+    methodSlot(context, 'reference', 'Reference'),
   ];
 }
 

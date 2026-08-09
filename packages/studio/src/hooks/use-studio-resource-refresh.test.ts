@@ -17,12 +17,12 @@ describe('Studio resource refresh matchers', () => {
     expect(matchesMovieStudioNavigationResource(['navigation:props'])).toBe(true);
   });
 
-  it('matches broad Beat Sheet changes for the Scene Beats surface', () => {
+  it('matches broad Scene Beats revision changes for the Scene Beats surface', () => {
     expect(
       matchesSceneBeatsResource({
-        resourceKeys: ['scene-beat-sheet'],
+        resourceKeys: ['scene-beats'],
         sceneId: 'scene_bombardment',
-        beatSheetId: 'scene_beat_sheet_bombardment',
+        sceneBeatsRevisionId: 'scene_beats_revision_bombardment',
       })
     ).toBe(true);
   });

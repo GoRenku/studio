@@ -123,7 +123,7 @@ operational companions that teach agents how to use those contracts.
   repeated `--file` values for transient specs or repeated `--spec` values for
   saved specs. Multi-request display never combines estimates, approvals, or
   runs.
-- For `scene.storyboard-sheet`, reads the exact Scene Beat Sheet, batches one
+- For `scene.storyboard-sheet`, reads the exact Scene Beats revision, batches one
   to four Beats, inspects and includes the project Storyboard Lookbook,
   Cast Member, Location, and Prop references, and stops for user direction when needed
   continuity media is unavailable.
@@ -164,11 +164,11 @@ operational companions that teach agents how to use those contracts.
 
 `scene-beat-designer`
 
-- Designs and persists Scene Beat Sheets for individual screenplay scenes.
-- Uses `renku screenplay beat-sheet context` to read stable Screenplay Block
+- Designs and persists Scene Beats for individual screenplay Scenes.
+- Uses `renku screenplay beats context` to read stable Screenplay Block
   ids, referenced Cast Members, Locations, and Props, Production Lookbook
-  guidance, and active Beat Sheet history.
-- Writes validated closed Scene Beat Sheet JSON through the CLI.
+  guidance, and active Scene Beats history.
+- Writes validated closed Scene Beats JSON through the CLI.
 - Hands storyboard image requests to `media-producer` after a valid Scene Beat
   Sheet exists and uses the Storyboard Lookbook when available. The
   media-producer skill owns
@@ -191,12 +191,12 @@ Skills must not:
 - run paid generation without the exact current Renku estimate and approval
   token required by the live-run contract;
 - override user-selected generation controls.
-- store generated storyboard image paths inside Scene Beat Sheet JSON;
+- store generated storyboard image paths inside Scene Beats JSON;
 - add framing, lens, camera movement, coverage, analog shooting logistics, or
-  call-sheet timing to Scene Beat Sheet documents.
+  call-sheet timing to Scene Beats documents.
 - mutate Cast Members, Locations, or Props through screenplay operation documents;
 - embed Project subject facts or `@handle` tokens into authored screenplay text;
-- use screenplay Block indexes in Beat Sheet JSON;
+- use screenplay Block indexes in Scene Beats JSON;
 - store generated media paths inside Cast Design or Location Design JSON;
 - treat costume variants or location-local set dressing as media targets
   without explicit durable contracts.

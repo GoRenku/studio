@@ -199,19 +199,19 @@ export function matchesSceneVideoGenerationsResource(
 export function matchesSceneBeatsResource(input: {
   resourceKeys: string[];
   sceneId: string;
-  beatSheetId?: string | null;
+  sceneBeatsRevisionId?: string | null;
 }): boolean {
   return input.resourceKeys.some(
     (resourceKey) =>
       resourceKey === `scene:${input.sceneId}` ||
-      resourceKey === 'scene-beat-sheet' ||
+      resourceKey === 'scene-beats' ||
       resourceKey === `surface:scene:${input.sceneId}:beats` ||
       resourceKey === `surface:scene:${input.sceneId}:dialogue-audio` ||
       resourceKey.startsWith('scene-dialogue-audio:') ||
       resourceKey.startsWith('scene-dialogue-audio-take:') ||
-      (input.beatSheetId
-        ? resourceKey.startsWith(`scene-beat-sheet:${input.beatSheetId}:`) ||
-          resourceKey === `scene-beat-sheet:${input.beatSheetId}`
+      (input.sceneBeatsRevisionId
+        ? resourceKey.startsWith(`scene-beats:${input.sceneBeatsRevisionId}:`) ||
+          resourceKey === `scene-beats:${input.sceneBeatsRevisionId}`
         : false)
   );
 }

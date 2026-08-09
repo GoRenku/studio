@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   claimStudioRuntimeDescriptor,
+  createDeterministicIdGenerator,
   createProjectDataService,
   createStudioCoordinationService,
   resolveStudioEventStorePath,
@@ -1116,10 +1117,6 @@ describe('renku CLI', () => {
       },
     });
 
-    const project = await createProjectDataService().readProject({
-      projectName: 'constantinople',
-      homeDir,
-    });
     const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
 
     stdout = [];
@@ -1586,10 +1583,6 @@ describe('renku CLI', () => {
     }
     await openProjectAndCreateScreenplay();
 
-    const project = await createProjectDataService().readProject({
-      projectName: 'constantinople',
-      homeDir,
-    });
     const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
     const assetPath =
       'generated/media/urban-profile.png';
@@ -1644,10 +1637,6 @@ describe('renku CLI', () => {
     }
     await openProjectAndCreateScreenplay();
 
-    const project = await createProjectDataService().readProject({
-      projectName: 'constantinople',
-      homeDir,
-    });
     const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
     const samplePath = 'generated/audio/urban-normal.mp3';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', samplePath)), {
@@ -1843,10 +1832,6 @@ describe('renku CLI', () => {
     }
     await openProjectAndCreateScreenplay();
 
-    const project = await createProjectDataService().readProject({
-      projectName: 'constantinople',
-      homeDir,
-    });
     const castMemberId = (await createProjectDataService().listCastMembers({ homeDir }))[0]!.id;
     const sourcePath = 'generated/media/urban-sheet.png';
     await fs.mkdir(path.dirname(path.join(storageRoot, 'constantinople', sourcePath)), {
@@ -2044,7 +2029,7 @@ describe('renku CLI', () => {
     });
   });
 
-  it('writes a Scene Beat Sheet and imports storyboard images through the CLI', async () => {
+  it('creates Scene Beats and imports storyboard images through the CLI', async () => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -2066,18 +2051,14 @@ describe('renku CLI', () => {
     );
     const castMemberId = sceneReferences.find((reference) => reference.subject.type === 'castMember')!.subject.id;
     const locationId = sceneReferences.find((reference) => reference.subject.type === 'location')!.subject.id;
-    const beatSheetPath = path.join(homeDir, 'scene-beat-sheet.json');
+    const sceneBeatsPath = path.join(homeDir, 'scene-beats.json');
     await fs.writeFile(
-      beatSheetPath,
+      sceneBeatsPath,
       JSON.stringify(
         {
           sceneId,
-          title: 'Foundry Beats',
-          summary: 'Two narrative Beats for Urban in the foundry.',
-          narrativeProgression: 'Urban studies the damaged bronze before Mara names what he avoids.',
           beats: [
             {
-              id: 'beat_001',
               title: 'Urban studies the bronze',
               narrativeDevelopment: 'Urban studies the damaged material.',
               narrativePurpose: 'Establish attention and craft.',
@@ -2088,7 +2069,6 @@ describe('renku CLI', () => {
               screenplayBlockIds: [blockId],
             },
             {
-              id: 'beat_002',
               title: 'Mara watches the crack',
               narrativeDevelopment: 'Mara notices the damage Urban does not want named.',
               narrativePurpose: 'Give the scene a second narrative turn.',
@@ -2108,24 +2088,30 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const writeExitCode = await runRenkuCli(
-      ['screenplay', 'beat-sheet', 'write', '--file', beatSheetPath, '--json'],
+    const createBeatsExitCode = await runRenkuCli(
+      ['screenplay', 'beats', 'create', '--file', sceneBeatsPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
-    expect(writeExitCode).toBe(0);
-    const writeReport = JSON.parse(stdout.join('\n'));
-    expect(writeReport).toMatchObject({
+    expect(createBeatsExitCode).toBe(0);
+    const createBeatsReport = JSON.parse(stdout.join('\n'));
+    expect(createBeatsReport).toMatchObject({
       valid: true,
-      beatSheet: { sceneId, title: 'Foundry Beats' },
-      activeBeatSheetId: expect.any(String),
+      revision: { sceneId, id: expect.any(String) },
+      activeRevisionId: expect.any(String),
     });
+    const createdSceneBeats = await projectData.readSceneBeatsRevision({
+      homeDir,
+      revisionId: createBeatsReport.activeRevisionId,
+    });
+    const firstBeatId = createdSceneBeats.sceneBeats!.beats[0]!.id;
+    const secondBeatId = createdSceneBeats.sceneBeats!.beats[1]!.id;
 
     stdout = [];
     stderr = [];
     const contextExitCode = await runRenkuCli(
       [
         'screenplay',
-        'beat-sheet',
+        'beats',
         'context',
         '--scene',
         sceneId,
@@ -2137,34 +2123,32 @@ describe('renku CLI', () => {
     expect(contextExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       scene: { id: sceneId },
-      activeBeatSheet: { id: writeReport.activeBeatSheetId },
+      activeRevision: { id: createBeatsReport.activeRevisionId },
     });
 
     stdout = [];
     stderr = [];
     const validateExitCode = await runRenkuCli(
-      ['screenplay', 'beat-sheet', 'validate', '--file', beatSheetPath, '--json'],
+      ['screenplay', 'beats', 'validate', '--file', sceneBeatsPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(validateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({ valid: true });
 
-    const operationPath = path.join(homeDir, 'beat-sheet-operations.json');
+    const operationPath = path.join(homeDir, 'scene-beats-operations.json');
     await fs.writeFile(
       operationPath,
       JSON.stringify(
         {
           sceneId,
-          baseBeatSheetId: writeReport.activeBeatSheetId,
+          baseRevisionId: createBeatsReport.activeRevisionId,
           activate: false,
-          title: 'Foundry Beats with evidence',
           operations: [
             {
               operation: 'beats.insert',
               placement: { position: 'end' },
               beats: [
                 {
-                  id: 'beat_003',
                   title: 'The crack as evidence',
                   narrativeDevelopment: 'The material damage becomes undeniable.',
                   narrativePurpose: 'Clarify the object that changes the scene.',
@@ -2189,7 +2173,7 @@ describe('renku CLI', () => {
     const validateOperationsExitCode = await runRenkuCli(
       [
         'screenplay',
-        'beat-sheet',
+        'beats',
         'validate-operations',
         '--file',
         operationPath,
@@ -2208,7 +2192,7 @@ describe('renku CLI', () => {
     const dryRunApplyExitCode = await runRenkuCli(
       [
         'screenplay',
-        'beat-sheet',
+        'beats',
         'apply',
         '--file',
         operationPath,
@@ -2219,21 +2203,21 @@ describe('renku CLI', () => {
     );
     expect(dryRunApplyExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      baseBeatSheetId: writeReport.activeBeatSheetId,
-      createdBeatSheetId: `${writeReport.activeBeatSheetId}_dry_run`,
+      baseRevisionId: createBeatsReport.activeRevisionId,
+      createdRevisionId: `${createBeatsReport.activeRevisionId}_dry_run`,
     });
 
     stdout = [];
     stderr = [];
     const applyExitCode = await runRenkuCli(
-      ['screenplay', 'beat-sheet', 'apply', '--file', operationPath, '--json'],
+      ['screenplay', 'beats', 'apply', '--file', operationPath, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(applyExitCode, stderr.join('\n') + stdout.join('\n')).toBe(0);
     const applyReport = JSON.parse(stdout.join('\n'));
     expect(applyReport).toMatchObject({
-      baseBeatSheetId: writeReport.activeBeatSheetId,
-      createdBeatSheetId: expect.any(String),
+      baseRevisionId: createBeatsReport.activeRevisionId,
+      createdRevisionId: expect.any(String),
     });
 
     stdout = [];
@@ -2241,34 +2225,34 @@ describe('renku CLI', () => {
     const storyboardStatusExitCode = await runRenkuCli(
       [
         'screenplay',
-        'beat-sheet',
+        'beats',
         'storyboard',
         'status',
         '--scene',
         sceneId,
-        '--beat-sheet',
-        applyReport.createdBeatSheetId,
+        '--revision',
+        applyReport.createdRevisionId,
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(storyboardStatusExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      beatSheetId: applyReport.createdBeatSheetId,
-      missingBeatIds: expect.arrayContaining(['beat_003']),
+      sceneBeatsRevisionId: applyReport.createdRevisionId,
+      missingBeatIds: expect.any(Array),
     });
 
     stdout = [];
     stderr = [];
     const listExitCode = await runRenkuCli(
-      ['screenplay', 'beat-sheet', 'list', '--scene', sceneId, '--json'],
+      ['screenplay', 'beats', 'list', '--scene', sceneId, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(listExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      beatSheets: expect.arrayContaining([
+      revisions: expect.arrayContaining([
         expect.objectContaining({
-          id: writeReport.activeBeatSheetId,
+          id: createBeatsReport.activeRevisionId,
           isActive: true,
         }),
       ]),
@@ -2279,7 +2263,7 @@ describe('renku CLI', () => {
     const showActiveExitCode = await runRenkuCli(
       [
         'screenplay',
-        'beat-sheet',
+        'beats',
         'show',
         '--active',
         '--scene',
@@ -2290,8 +2274,8 @@ describe('renku CLI', () => {
     );
     expect(showActiveExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      summary: { id: writeReport.activeBeatSheetId },
-      beatSheet: { title: 'Foundry Beats' },
+      revision: { id: createBeatsReport.activeRevisionId },
+      sceneBeats: { sceneId },
     });
 
     stdout = [];
@@ -2299,17 +2283,17 @@ describe('renku CLI', () => {
     const showByIdExitCode = await runRenkuCli(
       [
         'screenplay',
-        'beat-sheet',
+        'beats',
         'show',
-        '--beat-sheet',
-        writeReport.activeBeatSheetId,
+        '--revision',
+        createBeatsReport.activeRevisionId,
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(showByIdExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      summary: { id: writeReport.activeBeatSheetId },
+      revision: { id: createBeatsReport.activeRevisionId },
     });
 
     stdout = [];
@@ -2317,19 +2301,19 @@ describe('renku CLI', () => {
     const setActiveExitCode = await runRenkuCli(
       [
         'screenplay',
-        'beat-sheet',
+        'beats',
         'set-active',
         '--scene',
         sceneId,
-        '--beat-sheet',
-        writeReport.activeBeatSheetId,
+        '--revision',
+        createBeatsReport.activeRevisionId,
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(setActiveExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      activeBeatSheetId: writeReport.activeBeatSheetId,
+      activeRevisionId: createBeatsReport.activeRevisionId,
     });
 
     const storyboardLookbookPath = path.join(homeDir, 'storyboard-lookbook.json');
@@ -2398,8 +2382,8 @@ describe('renku CLI', () => {
         'scene.storyboard-sheet',
         '--target',
         `scene:${sceneId}`,
-        '--beat-sheet',
-        writeReport.activeBeatSheetId,
+        '--revision',
+        createBeatsReport.activeRevisionId,
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -2427,8 +2411,8 @@ describe('renku CLI', () => {
         'scene.storyboard-sheet',
         '--target',
         `scene:${sceneId}`,
-        '--beat-sheet',
-        writeReport.activeBeatSheetId,
+        '--revision',
+        createBeatsReport.activeRevisionId,
         '--json',
       ],
       { homeDir, io: captureIo(stdout, stderr) }
@@ -2613,10 +2597,9 @@ describe('renku CLI', () => {
       importPath,
       JSON.stringify(
         {
-          kind: 'sceneStoryboardImagesImport',
-          beatSheetId: writeReport.activeBeatSheetId,
+          sceneBeatsRevisionId: createBeatsReport.activeRevisionId,
           select: true,
-          beats: [{ beatId: 'beat_001', source: 'generated/media/beat.png' }],
+          beats: [{ beatId: firstBeatId, source: 'generated/media/beat.png' }],
         },
         null,
         2
@@ -2634,8 +2617,8 @@ describe('renku CLI', () => {
         'scene.storyboard-sheet',
         '--target',
         `scene:${sceneId}`,
-        '--beat-sheet',
-        writeReport.activeBeatSheetId,
+        '--revision',
+        createBeatsReport.activeRevisionId,
         '--file',
         importPath,
         '--json',
@@ -2649,7 +2632,7 @@ describe('renku CLI', () => {
       files: [
         expect.objectContaining({
           role: 'storyboard_image',
-          beatId: 'beat_001',
+          beatId: firstBeatId,
         }),
       ],
     });
@@ -2665,13 +2648,12 @@ describe('renku CLI', () => {
       multiImportPath,
       JSON.stringify(
         {
-          kind: 'sceneStoryboardImagesImport',
-          beatSheetId: writeReport.activeBeatSheetId,
+          sceneBeatsRevisionId: createBeatsReport.activeRevisionId,
           select: true,
           title: 'Foundry grouped storyboard',
           beats: [
-            { beatId: 'beat_001', source: 'generated/media/beat-1.png' },
-            { beatId: 'beat_002', source: 'generated/media/beat-2.png' },
+            { beatId: firstBeatId, source: 'generated/media/beat-1.png' },
+            { beatId: secondBeatId, source: 'generated/media/beat-2.png' },
           ],
         },
         null,
@@ -2690,8 +2672,8 @@ describe('renku CLI', () => {
         'scene.storyboard-sheet',
         '--target',
         `scene:${sceneId}`,
-        '--beat-sheet',
-        writeReport.activeBeatSheetId,
+        '--revision',
+        createBeatsReport.activeRevisionId,
         '--file',
         multiImportPath,
         '--json',
@@ -2706,8 +2688,8 @@ describe('renku CLI', () => {
         expect.objectContaining({ type: 'scene_storyboard_image' }),
       ],
       files: expect.arrayContaining([
-        expect.objectContaining({ role: 'storyboard_image', beatId: 'beat_001' }),
-        expect.objectContaining({ role: 'storyboard_image', beatId: 'beat_002' }),
+        expect.objectContaining({ role: 'storyboard_image', beatId: firstBeatId }),
+        expect.objectContaining({ role: 'storyboard_image', beatId: secondBeatId }),
       ]),
     });
   });
@@ -2732,16 +2714,12 @@ describe('renku CLI', () => {
     const castMemberId = sceneReferences.find((reference) => reference.subject.type === 'castMember')!.subject.id;
     const locationId = sceneReferences.find((reference) => reference.subject.type === 'location')!.subject.id;
     const blockId = scene.blocks[0]!.id;
-    await projectData.writeSceneBeatSheet({
+    await projectData.createSceneBeatsRevision({
       homeDir,
       document: {
         sceneId: scene.id as string,
-        title: 'Opening Beats',
-        summary: 'A focused two-Beat scene breakdown.',
-        narrativeProgression: 'Urban studies the bronze, then reads the room.',
         beats: [
           {
-            id: 'beat_001',
             title: 'Urban studies the bronze',
             narrativeDevelopment: 'Urban reads the cannon before anyone else does.',
             narrativePurpose: 'Show expertise before consequence.',
@@ -2752,7 +2730,6 @@ describe('renku CLI', () => {
             screenplayBlockIds: [blockId],
           },
           {
-            id: 'beat_002',
             title: 'Urban catches the reaction',
             narrativeDevelopment: 'Urban sees how the room responds.',
             narrativePurpose: 'Show the response to his expertise.',
@@ -2764,6 +2741,7 @@ describe('renku CLI', () => {
           },
         ],
       },
+      idGenerator: createDeterministicIdGenerator(),
     });
     const project = await projectData.readProject({
       homeDir,
@@ -2797,7 +2775,7 @@ describe('renku CLI', () => {
           type: 'scene',
           id: scene.id as string,
           sceneTab: 'beats',
-          beatId: 'beat_002',
+          beatId: 'beat_test0002',
         },
       },
       source: { kind: 'studio', browserSessionId: 'studio_browser_test' },
@@ -2816,7 +2794,7 @@ describe('renku CLI', () => {
     expect(current.selection).toMatchObject({
       type: 'scene',
       sceneTab: 'beats',
-      beatId: 'beat_002',
+      beatId: 'beat_test0002',
     });
     expect(current.context).toMatchObject({
       kind: 'scene',
@@ -3257,7 +3235,6 @@ function minimalScreenplayJson(input: { castMemberId: string; locationId: string
     scenes: [
       {
         key: 'first-scene',
-        productionNumber: '1',
         heading: 'INT. FOUNDRY - NIGHT',
         title: 'Urban Enters The Foundry',
         blocks: [
@@ -3317,9 +3294,8 @@ function threeActScreenplayJson(input: { castMemberId: string; locationId: strin
   ];
   return {
     opening: [],
-    scenes: sceneDefinitions.map((definition, index) => ({
+    scenes: sceneDefinitions.map((definition) => ({
       key: definition.scene,
-      productionNumber: String(index + 1),
       heading: 'INT. FOUNDRY - NIGHT',
       title: definition.sceneTitle,
       blocks: [{

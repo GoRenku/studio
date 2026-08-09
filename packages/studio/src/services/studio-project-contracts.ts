@@ -25,7 +25,7 @@ import type {
   ProjectLibrary,
   ProjectShell,
   ProjectSummary,
-  SceneBeatSheetResource,
+  SceneBeatsResource,
   ScreenplaySceneResource,
   ScreenplaySectionResource,
   ScreenplayStructureResource,
@@ -120,8 +120,8 @@ export type ScreenplayStructureResourceResponse = ScreenplayStructureResource;
 export type ScreenplaySectionResourceResponse = ScreenplaySectionResource;
 export type ScreenplaySceneResourceResponse = ScreenplaySceneResource;
 
-export type SceneBeatSheetResourceResponse = Omit<
-  SceneBeatSheetResource,
+export type SceneBeatsResourceResponse = Omit<
+  SceneBeatsResource,
   'storyboardImagesByBeatId' | 'castMemberImages'
 > & {
   storyboardImagesByBeatId: Record<string, ScreenplayImageReferenceWithHttp>;

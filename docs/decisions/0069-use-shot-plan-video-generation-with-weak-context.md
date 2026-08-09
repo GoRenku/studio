@@ -4,6 +4,11 @@ Date: 2026-07-30
 
 Status: accepted
 
+Decision 0076 supersedes only the historical `videos/` and
+`videos/references/` destinations below. Weak one-way Shot Plan context and
+independent Project Asset ownership remain accepted; exact frozen provenance
+now selects the human-readable Scene/Plan folder.
+
 ## Context
 
 Decision 0068 removed an unreachable Shot-video product island, a generic

@@ -272,7 +272,7 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
-    async readSceneBeatSheetResource() {
+    async readSceneBeatsResource() {
       return {
         scene: {
           scene: fixtureScreenplay.scenes[0]!,
@@ -280,8 +280,8 @@ export function fakeProjectDataService(): NonNullable<
         },
         sections: fixtureScreenplay.sections,
         projectAspectRatio: '16:9',
-        activeBeatSheetId: 'scene_beat_sheet_opening',
-        activeBeatSheet: null,
+        activeRevisionId: 'scene_beats_revision_opening',
+        activeRevision: null,
         storyboardImagesByBeatId: {},
         castMemberLabels: {},
         castMemberImages: {},

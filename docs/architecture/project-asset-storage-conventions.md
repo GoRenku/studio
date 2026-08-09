@@ -1,355 +1,197 @@
 # Project Asset Storage Conventions
 
-Date: 2026-07-08
+Date: 2026-08-09
 
-Status: accepted
+Status: current
 
-Role: architecture decision
+Role: architecture contract
 
-## Context
+Decision history: `../decisions/0076-use-human-readable-project-asset-folders.md`
 
-Renku Studio stores durable project metadata in SQLite and media bytes on disk.
-That boundary is correct, but the current filesystem shape became difficult to
-use. Many generated outputs and imported assets pass through broad folders such
-as `generated/media/`, `generated/specs/`, and `generated/qa/`. A user can see
-an image in Studio but cannot reasonably find it in the filesystem because the
-folder does not reveal the asset's product owner.
+## Purpose
 
-The real development project also contains two generated dump folders:
+This document defines the current project-visible folder and filename contract
+for durable Renku Studio media. It does not define Asset identity, ownership,
+selection, or provenance; SQLite owns those relationships.
 
-```text
-/Users/keremk/renku-movies/generated/
-/Users/keremk/renku-movies/urban-basilica/generated/
-```
+## Canonical Project Tree
 
-Those folders mix durable asset files, temporary generated sheets, debug JSON,
-operation files, receipts, QA images, and old workflow leftovers. This makes
-asset ownership harder to inspect and makes future garbage collection harder to
-design.
-
-Existing architecture already says SQLite owns identity and relationships while
-the filesystem owns content. This decision keeps that boundary. It changes the
-path allocation convention so durable files live where a human would look for
-them.
-
-## Decision
-
-Renku Studio will store durable generated and imported assets under the folder
-for the product object that owns them.
-
-There must be no current project-relative durable asset path that starts with
-`generated/`. New runtime code must not create `generated/media/`,
-`generated/specs/`, `generated/audio/`, or `generated/qa/`.
-
-Path segments are labels only. SQLite remains the source of truth for:
-
-- asset ids;
-- asset-file ids;
-- owner relationships;
-- Scene ownership;
-- generation specs and runs;
-- Shot Plan last-GenerationSpec links;
-- file availability and trash state.
-
-Code must not infer business relationships from folder names.
-
-## Canonical Folders
-
-Current durable folders are:
+Projects create only the folders needed by their current content.
 
 ```text
-cast/<cast-handle>/character-sheets/
-cast/<cast-handle>/profiles/
-cast/<cast-handle>/voice-samples/
+<project>/
+  .renku/
+    project.sqlite
 
-locations/<location-handle>/location-sheets/
-locations/<location-handle>/heroes/
-props/<prop-handle>/prop-sheets/
-props/<prop-handle>/heroes/
+  screenplay/
 
-visual-language/lookbook/
+  visual-language/
+    inspiration/
+    lookbooks/
+      production/
+      storyboard/
 
-screenplay/sources/<sha256>.fdx
+  cast/
+    <cast-handle>/
 
-storyboards/<scene-id>/
+  locations/
+    <location-handle>/
 
-videos/<video-slug>.<ext>
+  props/
+    <prop-handle>/
+
+  storyboards/
+    <exact-scene-number>/
+      tmp/
+      00-iteration/
+      01-iteration/
+
+  scenes/
+    <scene-display-number>/
+      dialogues/
+      <NN>-shot-plan/
+        shot-images/
+
+  research/
+
+  tmp/
+    media/
+    specs/
+    receipts/
+    operations/
+    qa/
+    scratch/
 ```
 
-Temporary project files use:
+The Scene folder uses the exact stored Scene number without parsing,
+normalization, or validation. Shot Plan folders use a zero-padded Scene-local
+integer such as `01-shot-plan`. Those numbers remain labels; callers must use
+durable ids for all reads and mutations.
+
+## Destination Matrix
+
+| Media | Durable folder | Generated filename stem |
+| --- | --- | --- |
+| Screenplay source | `screenplay/` | external basename only |
+| Production Lookbook media | `visual-language/lookbooks/production/` | `<semantic>[-sheet]-gxxx` |
+| Storyboard Lookbook media | `visual-language/lookbooks/storyboard/` | `<semantic>[-sheet]-gxxx` |
+| Cast Profile | `cast/<handle>/` | `profile-gxxx` |
+| Cast Character Sheet | `cast/<handle>/` | `<variation>-sheet-gxxx` |
+| Cast Voice Sample | `cast/<handle>/` | `<descriptor>-gxxx` |
+| Location Hero | `locations/<handle>/` | `hero-gxxx` |
+| Location Sheet | `locations/<handle>/` | `<variation>-sheet-gxxx` |
+| Prop Hero | `props/<handle>/` | `hero-gxxx` |
+| Prop Sheet | `props/<handle>/` | `<variation>-sheet-gxxx` |
+| Dialogue Audio | `scenes/<scene>/dialogues/` | `s<scene>-<speaker>-d<turn>-gxxx` |
+| Beat Storyboard | `storyboards/<scene>/<NN>-iteration/` | `s<scene>-b<beat>-image-gxxx` |
+| Shot image | `scenes/<scene>/<NN>-shot-plan/shot-images/` | `shot<shot>-gxxx` |
+| Plan first/last frame | `scenes/<scene>/<NN>-shot-plan/` | `first-frame-gxxx` / `last-frame-gxxx` |
+| Plan Storyboard/reference | `scenes/<scene>/<NN>-shot-plan/` | `storyboard-gxxx` / `reference-gxxx` |
+| Plan video | `scenes/<scene>/<NN>-shot-plan/` | `s<scene>-p<plan>-video-gxxx` |
+
+All files retain a normalized extension. Core owns fixed role words such as
+`profile`, `hero`, `sheet`, `image`, and `video`. A skill may supply a concise
+semantic variation name where the purpose needs one; it does not construct the
+resulting filename.
+
+### Storyboard iterations
+
+Core allocates the next unused zero-based `NN-iteration` folder once for a
+Storyboard import batch. Every Beat image in that batch uses the same folder.
+An iteration contains only the candidate files created in that import; it is
+not a materialized snapshot of every selected image.
+
+Temporary Storyboard source sheets live in
+`storyboards/<scene-display-number>/tmp/` and never create Asset File rows.
+
+### Shot Plan provenance
+
+A generated Shot Plan video or reference image resolves its Plan from exact
+frozen GenerationSpec or Run provenance before Core allocates a destination.
+A title, current Studio selection, or path never chooses the Plan.
+
+`shot-plan.video-reference` is the focused purpose for a durable reference
+image authored for a Plan. Ordinary input dependencies remain references and
+are not copied into the Plan folder.
+
+## Filename Allocation
+
+### Safe segments
+
+Semantic segments are lowercase safe kebab-case and bounded to keep complete
+filenames readable. Normalization is presentation and path safety only; Studio
+does not inspect or validate the creative meaning of a semantic name.
+
+### Generated files
+
+Generated files receive one suffix consisting of `g` plus exactly three
+lowercase Crockford Base32 characters, for example `profile-g8t9.png`.
+
+Core attempts exclusive file creation. On a real collision it draws another
+token, for at most sixteen attempts, and then returns a structured allocation
+failure. There is no persisted generation counter, `vNN` suffix, media series,
+or filename lineage.
+
+### External files
+
+Imported files keep a normalized safe source basename. The first collision
+adds `-2`, then `-3`, and so on. For example:
 
 ```text
-tmp/
-storyboards/<scene-id>/tmp/
+screenplay/urban-basilica.fdx
+screenplay/urban-basilica-2.fdx
 ```
 
-User scratch references use:
+External files do not receive `gxxx`. A basename is a human-readable label,
+not identity or provenance.
 
-```text
-research/
-```
+## Temporary And User-Owned Files
 
-## Asset Rules
+Generated media staging, draft specs, receipts, operation documents, QA
+images, and scratch files belong under top-level `tmp/`. Media Generation Specs
+and Runs remain durable SQLite records; temporary JSON exports are inspection
+artifacts only.
 
-An imported Final Draft source is one Project-owned Asset with type
-`screenplay_source`, media kind `document`, and one `source` file with MIME type
-`application/xml`. Its lowercase SHA-256 determines the exact durable path:
+`.renku/tmp/` is reserved for hidden operational state. Runtime media staging
+must not use it as normal project-visible storage.
 
-```text
-screenplay/sources/<sha256>.fdx
-```
-
-The canonical Screenplay never reads this file after import. The import record
-retains the Asset/File identities as provenance, so Core rejects source Asset
-discard or replacement while that record exists.
-
-Cast Member assets stay under the cast member:
-
-```text
-cast/<cast-handle>/character-sheets/<asset-slug>.<ext>
-cast/<cast-handle>/profiles/<asset-slug>.<ext>
-cast/<cast-handle>/voice-samples/<asset-slug>.<ext>
-```
-
-Location Sheets are flat files under `location-sheets/`:
-
-```text
-locations/<location-handle>/location-sheets/<sheet-slug>.<ext>
-locations/<location-handle>/location-sheets/<sheet-slug>-v01.<ext>
-```
-
-Renku Studio must not create one folder per Location Sheet.
-
-Location Hero Images are flat files under `heroes/`:
-
-```text
-locations/<location-handle>/heroes/hero.<ext>
-locations/<location-handle>/heroes/hero-v01.<ext>
-```
-
-Prop Sheets and Heroes use the same flat versioning rule:
-
-```text
-props/<prop-handle>/prop-sheets/<sheet-slug>.<ext>
-props/<prop-handle>/prop-sheets/<sheet-slug>-v01.<ext>
-props/<prop-handle>/heroes/hero.<ext>
-props/<prop-handle>/heroes/hero-v01.<ext>
-```
-
-Renku Studio must not create one folder per Location Hero Image.
-
-Lookbook images and sheets stay under:
-
-```text
-visual-language/lookbook/<asset-slug>.<ext>
-```
-
-Scene Storyboard images are top-level project assets, not screenplay files:
-
-```text
-storyboards/<scene-id>/<nn>-iteration/beat-<nn>.<ext>
-```
-
-The storyboard iteration number starts at `00` and is zero-padded so normal
-filesystem sorting preserves iteration order. Each iteration folder contains
-only the shot images created in that iteration. It is not a full materialized
-snapshot of every current storyboard image for the scene.
-
-Temporary generated storyboard sheets live beside the scene's storyboard work:
-
-```text
-storyboards/<scene-id>/tmp/<sheet-slug>.<ext>
-```
-
-Scene-owned Dialogue Audio stays under a short `audio/` root:
-
-```text
-audio/<scene-id>/<dialogue-turn-id>-<speaker-handle>-<take-number>.<ext>
-```
-
-Dialogue Turn ids are stable screenplay identities. File allocation never
-derives ownership or identity from Section ancestry or current Block position.
-
-The take number is the next unused zero-based two-digit suffix for that
-dialogue filename prefix. Scene-owned Dialogue Audio must not be stored under
-`storyboards/`.
-
-The top-level `videos/` root remains available for deliberately accepted
-project storage workflows, but Studio currently has no generic project-video
-destination or product video-generation purpose. A future workflow must add a
-focused Core-owned destination rather than accepting an arbitrary caller path.
-
-A Shot planning image is stored at:
-
-```text
-shot-plans/shot_plan_bombardment/shots/shot_window/images/window-shockwave.png
-```
-
-This path is allocated by Core. Exclusive ownership remains in
-`asset_membership` and canonical selection remains in `selected_asset`; callers
-must not infer either from the folder.
-
-`image.edit` writes edited outputs beside the source image with a version
-suffix:
-
-```text
-shot-01.png
-shot-01-v01.png
-shot-01-v02.png
-```
-
-The original file name is not changed and does not receive a `-v00` suffix.
-
-## Temporary Files
-
-Generated JSON files, draft specs copied out for agent inspection, receipts,
-operation documents, provider payload snapshots, and QA pictures are not
-durable assets by default. They belong under top-level `tmp/`:
-
-```text
-tmp/specs/
-tmp/receipts/
-tmp/operations/
-tmp/qa/
-tmp/scratch/
-```
-
-Media generation specs and runs are durable SQLite records. Files under
-`tmp/specs/` or `tmp/receipts/` are human/agent inspection artifacts only. A
-runtime workflow must not depend on them as the source of truth.
-
-`.renku/tmp/` remains reserved for hidden Renku-internal operational state such
-as backups or repair work. Media generation staging and agent scratch files
-must not use `.renku/tmp/` as their normal project-visible location.
-
-## Research
-
-`research/` is user-owned scratch space for external material.
-
-Agents may read files from `research/` when the user instructs them to use an
-external reference. Generation specs may carry project-relative one-off
-reference file inputs, including files under `research/`, when those files are
-only inputs to that generation. Those one-off references are execution inputs;
-they are not managed assets and must not create SQLite asset rows or ownership
-relationships.
-
-Import commands may accept a `research/` file as a source. When a research file
-becomes a durable project asset, Core must copy it into the relevant owner
-folder and register that destination path. A file should become a structured
-SQLite asset only when Renku has a domain object that owns it, such as a Cast
-Member Character Sheet, Location Sheet, Lookbook Sheet, or a future Prop. Until
-Prop support exists, a helmet image used once as
-an accessory reference for a cast generation remains a one-off reference file,
-not a database asset.
+`research/` and `visual-language/inspiration/` are user-owned filesystem
+content. They may be generation inputs without Asset rows. When a focused
+import turns one of those files into a durable Asset, Core copies it to the
+appropriate canonical owner folder and registers the destination.
 
 ## Ownership Boundary
 
-Core owns path allocation through the server-internal
-`packages/core/src/server/project-asset-files/` module. Domain and purpose
-modules say which asset owner they are creating media for; they must not choose
-the durable filesystem folder themselves.
+`packages/core/src/server/project-asset-files/` is the sole durable path and
+file owner. It owns:
 
-`packages/core` owns:
+- focused owner-aware destination resolution;
+- generated versus external naming;
+- exclusive collision allocation;
+- path containment and source validation;
+- copying, size and hash calculation, and Asset File persistence;
+- Storyboard iteration allocation; and
+- rollback cleanup if a later database write fails.
 
-- destination folder selection;
-- slugification and collision handling;
-- copying files from scratch/source folders into owner folders;
-- asset-file path updates;
-- validation that new durable asset paths do not start with `generated/`;
-- validation that durable asset files are not registered under `research/`;
-- storyboard iteration allocation;
-- write-set cleanup for copied files when a later database relationship or
-  selection write fails.
+`index.ts` is the thin public entrypoint. Destination modules are split by
+domain family, naming modules own safe segments/tokens/source names,
+`path-allocation.ts` owns generic allocation, and `persistence.ts` owns the
+copy/hash/insert transaction boundary.
 
-Purpose modules remain responsible for product semantics such as creating the
-`asset` row and attaching the asset to a Project, Cast Member, Location, Prop,
-Lookbook, or Scene. The project asset-file module owns
-the durable file destination and the `asset_file.project_relative_path` write.
-Its durable destination contract is owner-aware, for example
-`cast.characterSheet`, `cast.voiceSample`, `location.hero`,
-`location.sheet`, `prop.sheet`, `visualLanguage.lookbookSheet`, `scene.dialogueAudio`, or
-`shot.image`.
-Scene Storyboard imports use a batch storage API so all Beats in one import
-share one iteration folder. The module must not accept
-arbitrary caller-provided destination folders.
+CLI handlers, Studio HTTP routes, React components, Engines, and skills provide
+user intent and durable ids. They must not construct a durable folder,
+production number, collision token, or filename.
 
-Temporary files use a separate explicit contract and must not create
-`asset_file` rows. `research/` files may be source/reference inputs, but the
-registered durable asset file must be copied into the owner folder first.
+Paths are never parsed to recover Asset identity, membership, canonical
+selection, Scene/Plan/Shot/Beat identity, or generation provenance.
 
-`packages/engines` persists provider outputs only into the output root supplied
-by Core.
+## Superseded Paths
 
-CLI handlers, Studio server routes, Studio React components, and agents must
-not build durable destination paths themselves.
+Current runtime code must not create durable media beneath `generated/`,
+`audio/`, `scene-dialogue-audio/`, `shot-plans/`, `shots/`, or `videos/`.
+It must not use nested `character-sheets/`, `profiles/`, `voice-samples/`,
+`heroes/`, `location-sheets/`, or `prop-sheets/` directories.
 
-### Implementation Shape
-
-`packages/core/src/server/project-asset-files/index.ts` is the public import
-surface for callers. It is intentionally a thin entrypoint that re-exports
-storage contracts, persistence commands, temporary-file helpers, generation
-output placement, and the few destination-owned public helpers.
-
-Implementation remains centralized in the storage module but is split by role:
-
-- `persistence.ts` owns durable materialization and `asset_file` insertion;
-- `temporary-files.ts` owns temporary writes and temporary root resolution;
-- `file-operations.ts`, `path-allocation.ts`, and `path-guards.ts` own generic
-  filesystem and path safety mechanics;
-- `owner-lookups.ts` owns read-only owner lookup helpers;
-- `destinations/*` owns durable path allocation for one destination family per
-  file;
-- `generation-output/*` owns purpose-family output placement intent.
-
-Callers outside `project-asset-files/` must import from `index.ts`, not from the
-private destination, persistence, or generation-output modules.
-
-## Superseded Guidance
-
-This decision supersedes older current or plan text that recommends:
-
-- `generated/media/` as the normal staging directory for imported assets;
-- `screenplay/storyboards/` for durable storyboard images;
-- nested folders beneath `locations/<handle>/location-sheets/` for Location
-  Sheets;
-- registering `research/` files as asset files.
-- using generic `reference.image` imports to model one-off generation reference
-  inputs as durable project assets.
-
-Existing historical plans may still mention those paths. They are not current
-direction.
-
-## Implementation Plan
-
-The implementation and one-time development project migration are planned in:
-
-```text
-plans/active/0125-project-asset-storage-conventions-and-urban-basilica-migration.md
-```
-
-The migration is intentionally one-time for:
-
-```text
-/Users/keremk/renku-movies/urban-basilica
-```
-
-It should not become a broad compatibility layer or reusable legacy loader.
-
-## Consequences
-
-- A user can locate visible Studio assets by following the product owner folder.
-- The root and project-local `generated/` dump folders disappear after the
-  one-time migration.
-- Temporary JSON and QA files become easier to garbage collect later because
-  they are under `tmp/`.
-- Import and generation code must use core-owned allocation instead of caller
-  supplied final paths.
-- Tests and examples need to stop treating `generated/media/` as the normal
-  current path.
-- Development data with old paths must be moved once and then treated as
-  current data.
-
-Shot Plan video outputs are Project-owned files under `videos/`. Optional first
-frame, last frame, and storyboard outputs are Project-owned files under
-`videos/references/`. Their exact source request remains provenance metadata;
-filenames and paths never determine Shot Plan or Scene grouping.
+No runtime compatibility reader translates those retired paths. The one-time
+Urban Basilica reconstruction is owned by Plan 0174 and its explicit rebuild
+tool; the archive remains the recovery source.

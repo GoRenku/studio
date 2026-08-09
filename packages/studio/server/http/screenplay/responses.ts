@@ -1,21 +1,21 @@
 import type {
-  SceneBeatSheetResource,
+  SceneBeatsResource,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
 } from '@gorenku/studio-core/client';
 
-export type SceneBeatSheetResourceResponse = Omit<
-  SceneBeatSheetResource,
+export type SceneBeatsResourceResponse = Omit<
+  SceneBeatsResource,
   'storyboardImagesByBeatId' | 'castMemberImages'
 > & {
   storyboardImagesByBeatId: Record<string, ScreenplayImageReferenceWithHttp>;
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
 };
 
-export function toSceneBeatSheetResourceResponse(
+export function toSceneBeatsResourceResponse(
   projectName: string,
-  resource: SceneBeatSheetResource,
-): SceneBeatSheetResourceResponse {
+  resource: SceneBeatsResource,
+): SceneBeatsResourceResponse {
   return {
     ...resource,
     storyboardImagesByBeatId: Object.fromEntries(

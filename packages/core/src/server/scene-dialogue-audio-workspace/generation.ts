@@ -328,6 +328,7 @@ function attachSceneDialogueAudioTake(input: {
           sceneDialogueAudioId: audio.id,
           dialogueAudioTakeId: takeId,
         },
+        namingMode: { kind: 'generated' },
         fileRole: 'primary',
         mediaKind: 'audio',
         now: input.now,

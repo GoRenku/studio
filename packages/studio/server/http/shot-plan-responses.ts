@@ -92,11 +92,13 @@ function toStudioShotPlanListItemResponse(
   return {
     shotPlan: {
       id: item.shotPlan.id,
+      number: item.shotPlan.number,
       sceneId: item.shotPlan.sceneId,
       title: item.shotPlan.title,
       coverage: item.shotPlan.coverage,
       shots: item.shotPlan.shots.map((shot) => ({
         id: shot.id,
+        number: shot.number,
         position: shot.position,
         title: shot.title,
         description: shot.description,

@@ -78,7 +78,7 @@ export function requireProp(session: DatabaseSession, propId: string) {
 export function requireSceneStorageContext(
   session: DatabaseSession | undefined,
   sceneId: string
-): { sceneId: string } {
+): { sceneId: string; productionNumber: string; displayNumber: string } {
   if (!session) {
     throw new ProjectDataError(
       'PROJECT_ASSET_FILE_OWNER_MISSING',
@@ -86,11 +86,26 @@ export function requireSceneStorageContext(
     );
   }
   const screenplay = readCanonicalScreenplay(session);
-  if (screenplay.scenes.some((scene) => scene.id === sceneId)) {
-    return { sceneId };
+  const scene = screenplay.scenes.find((candidate) => candidate.id === sceneId);
+  if (!scene) {
+    throw new ProjectDataError(
+      'PROJECT_ASSET_FILE_OWNER_MISSING',
+      `Scene was not found for project asset file destination: ${sceneId}.`
+    );
   }
-  throw new ProjectDataError(
-    'PROJECT_ASSET_FILE_OWNER_MISSING',
-    `Scene was not found for project asset file destination: ${sceneId}.`
-  );
+  if (scene.productionNumber === undefined) {
+    throw new ProjectDataError(
+      'PROJECT_ASSET_FILE_SCENE_NUMBER_REQUIRED',
+      `Scene ${sceneId} requires a production number before durable media can be attached.`,
+      {
+        suggestion:
+          'Assign the Scene number through the accepted screenplay workflow, then retry the attachment.',
+      }
+    );
+  }
+  return {
+    sceneId,
+    productionNumber: scene.productionNumber,
+    displayNumber: scene.productionNumber,
+  };
 }

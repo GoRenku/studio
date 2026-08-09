@@ -1,10 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ProjectRelativePath } from '../../client/index.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { insertAssetRecord } from '../database/access/assets.js';
+import { insertLookbookRecord } from '../database/access/lookbook.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
@@ -12,7 +13,6 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { scenes } from '../schema/index.js';
 import { createDialogueAudioReadyProject } from '../testing/dialogue-audio-template-fixtures.js';
 import {
   createProjectAssetFileWriteSet,
@@ -100,13 +100,14 @@ describe('project asset file storage', () => {
         castVoiceId: 'cast_voice_test',
         referenceName: 'normal-voice',
       },
+      namingMode: { kind: 'generated' },
       fileRole: 'source',
       mediaKind: 'audio',
       now: NOW,
     });
 
-    expect(file.projectRelativePath).toBe(
-      'cast/urban/voice-samples/normal-voice.mp3'
+    expect(file.projectRelativePath).toMatch(
+      /^cast\/urban\/normal-voice-g[0123456789abcdefghjkmnpqrstvwxyz]{3}\.mp3$/
     );
   });
 
@@ -134,12 +135,13 @@ describe('project asset file storage', () => {
       assetFileId: 'asset_file_dialogue_audio_1',
     });
 
-    expect(first.projectRelativePath).toBe(
-      'audio/scene-test0001/screenplay-block-test0001-urban-00.mp3'
+    expect(first.projectRelativePath).toMatch(
+      /^scenes\/1\/dialogues\/s1-urban-d01-g[0123456789abcdefghjkmnpqrstvwxyz]{3}\.mp3$/
     );
-    expect(second.projectRelativePath).toBe(
-      'audio/scene-test0001/screenplay-block-test0001-urban-01.mp3'
+    expect(second.projectRelativePath).toMatch(
+      /^scenes\/1\/dialogues\/s1-urban-d01-g[0123456789abcdefghjkmnpqrstvwxyz]{3}\.mp3$/
     );
+    expect(second.projectRelativePath).not.toBe(first.projectRelativePath);
   });
 
   it('accepts dialogue audio destinations from Scene and Turn identity alone', () => {
@@ -186,8 +188,9 @@ describe('project asset file storage', () => {
             kind: 'scene.storyboardImage',
             sceneId,
             iterationFolder,
-            beatOrdinal: 1,
+            beatNumber: '1',
           },
+          namingMode: { kind: 'generated' },
           fileRole: 'storyboard_image',
           mediaKind: 'image',
           now: NOW,
@@ -205,8 +208,9 @@ describe('project asset file storage', () => {
             kind: 'scene.storyboardImage',
             sceneId,
             iterationFolder,
-            beatOrdinal: 2,
+            beatNumber: '2',
           },
+          namingMode: { kind: 'generated' },
           fileRole: 'storyboard_image',
           mediaKind: 'image',
           now: NOW,
@@ -214,10 +218,12 @@ describe('project asset file storage', () => {
       },
     ];
 
-    expect(files.map((file) => file.assetFile.projectRelativePath)).toEqual([
-      'storyboards/scene-test0001/00-iteration/beat-01.png',
-      'storyboards/scene-test0001/00-iteration/beat-02.png',
-    ]);
+    expect(files[0]?.assetFile.projectRelativePath).toMatch(
+      /^storyboards\/1\/00-iteration\/s1-b01-image-g[0123456789abcdefghjkmnpqrstvwxyz]{3}\.png$/
+    );
+    expect(files[1]?.assetFile.projectRelativePath).toMatch(
+      /^storyboards\/1\/00-iteration\/s1-b02-image-g[0123456789abcdefghjkmnpqrstvwxyz]{3}\.png$/
+    );
   });
 
   it('rolls back only files created through the storage write set', async () => {
@@ -229,6 +235,13 @@ describe('project asset file storage', () => {
       title: 'Rollback',
     });
     const writeSet = createProjectAssetFileWriteSet({ projectFolder: projectPath });
+    insertLookbookRecord(session, {
+      id: 'lookbook_rollback',
+      name: 'Production',
+      kind: 'production',
+      definitionJson: '{}',
+      now: NOW,
+    });
 
     const file = persistProjectAssetFileSync({
       session,
@@ -239,8 +252,10 @@ describe('project asset file storage', () => {
       sourceProjectRelativePath: projectRelativePath('tmp/source/lookbook.png'),
       destination: {
         kind: 'visualLanguage.lookbookImage',
-        titleHint: 'Rollback',
+        lookbookId: 'lookbook_rollback',
+        semanticName: 'Rollback',
       },
+      namingMode: { kind: 'generated' },
       fileRole: 'source',
       mediaKind: 'image',
       now: NOW,
@@ -306,6 +321,7 @@ describe('project asset file storage', () => {
         sceneDialogueAudioId: 'scene_dialogue_audio_test',
         dialogueAudioTakeId: input.assetFileId,
       },
+      namingMode: { kind: 'generated' },
       fileRole: 'primary',
       mediaKind: 'audio',
       now: NOW,

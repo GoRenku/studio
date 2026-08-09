@@ -39,57 +39,30 @@ export async function persistProjectAssetFile(
     mediaKind: input.mediaKind,
     role: input.fileRole,
   });
-  const destination = await resolveDurableDestinationFile({
-    session: input.session,
-    projectFolder: input.projectFolder,
-    destination: input.destination,
-    sourceProjectRelativePath: source.projectRelativePath,
-    mediaKind: input.mediaKind,
-    now: input.now,
-  });
-  assertDurableProjectAssetFilePath(destination);
-  const destinationPath = resolveProjectRelativePath(
-    input.projectFolder,
-    destination
-  );
-  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
-  let copied = false;
-  try {
-    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
-    if (source.absolutePath !== destinationPath) {
-      await fs.copyFile(source.absolutePath, destinationPath);
-      copied = true;
-      input.writeSet?.recordCreatedFile(destination);
-    }
-    const stats = await statProjectFile(destinationPath, {
-      code: 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND',
-      message: `Persisted project asset file was not found: ${destination}.`,
-    });
-    insertAssetFileRecord(input.session, {
-      id: input.assetFileId,
-      assetId: input.assetId,
-      role: input.fileRole,
-      projectRelativePath: destination,
-      mimeType: input.mimeType ?? mimeTypeForProjectPath(destination, input.mediaKind),
+  for (let attempt = 0; attempt < collisionAttemptLimit(input); attempt += 1) {
+    const destination = await resolveDurableDestinationFile({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      destination: input.destination,
+      namingMode: input.namingMode,
+      sourceProjectRelativePath: source.projectRelativePath,
       mediaKind: input.mediaKind,
-      sizeBytes: stats.size,
-      contentHash: await hashFile(destinationPath),
-      width: input.width,
-      height: input.height,
-      durationSeconds: input.durationSeconds,
-      createdAt: input.now,
-      updatedAt: input.now,
+      now: input.now,
     });
-    return requireInsertedAssetFile(input.session, {
-      assetId: input.assetId,
-      assetFileId: input.assetFileId,
-    });
-  } catch (error) {
-    if (copied) {
-      await removeCopiedProjectAssetFile(input.projectFolder, destination);
+    try {
+      return await persistProjectAssetFileAtDestination({
+        ...input,
+        sourcePath: source.absolutePath,
+        sourceProjectRelativePath: source.projectRelativePath,
+        destinationProjectRelativePath: destination,
+      });
+    } catch (error) {
+      if (!isDestinationConflict(error)) {
+        throw error;
+      }
     }
-    throw error;
   }
+  throw destinationCollisionFailure(input.namingMode.kind);
 }
 
 export function persistProjectAssetFileSync(
@@ -107,31 +80,104 @@ export function persistProjectAssetFileSync(
     code: 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND',
     message: `Project reference file was not found: ${sourceProjectRelativePath}.`,
   });
-  const destination = resolveDurableDestinationFileSync({
-    session: input.session,
-    projectFolder: input.projectFolder,
-    destination: input.destination,
-    sourceProjectRelativePath,
-    mediaKind: input.mediaKind,
-    now: input.now,
-  });
-  return persistProjectAssetFileAtDestinationSync({
-    session: input.session,
-    projectFolder: input.projectFolder,
-    assetId: input.assetId,
-    assetFileId: input.assetFileId,
-    fileRole: input.fileRole,
-    mediaKind: input.mediaKind,
-    sourcePath,
-    sourceProjectRelativePath,
-    destinationProjectRelativePath: destination,
-    mimeType: input.mimeType,
-    width: input.width,
-    height: input.height,
-    durationSeconds: input.durationSeconds,
-    now: input.now,
-    writeSet: input.writeSet,
-  });
+  for (let attempt = 0; attempt < collisionAttemptLimit(input); attempt += 1) {
+    const destination = resolveDurableDestinationFileSync({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      destination: input.destination,
+      namingMode: input.namingMode,
+      sourceProjectRelativePath,
+      mediaKind: input.mediaKind,
+      now: input.now,
+    });
+    try {
+      return persistProjectAssetFileAtDestinationSync({
+        session: input.session,
+        projectFolder: input.projectFolder,
+        assetId: input.assetId,
+        assetFileId: input.assetFileId,
+        fileRole: input.fileRole,
+        mediaKind: input.mediaKind,
+        sourcePath,
+        sourceProjectRelativePath,
+        destinationProjectRelativePath: destination,
+        mimeType: input.mimeType,
+        width: input.width,
+        height: input.height,
+        durationSeconds: input.durationSeconds,
+        now: input.now,
+        writeSet: input.writeSet,
+      });
+    } catch (error) {
+      if (!isDestinationConflict(error)) {
+        throw error;
+      }
+    }
+  }
+  throw destinationCollisionFailure(input.namingMode.kind);
+}
+
+async function persistProjectAssetFileAtDestination(
+  input: PersistProjectAssetFileInput & {
+    writeSet?: ProjectAssetFileWriteSet;
+    sourcePath: string;
+    sourceProjectRelativePath: ProjectRelativePath;
+    destinationProjectRelativePath: ProjectRelativePath;
+  }
+): Promise<AssetFileRecord> {
+  assertDurableProjectAssetFilePath(input.destinationProjectRelativePath);
+  const destinationPath = resolveProjectRelativePath(
+    input.projectFolder,
+    input.destinationProjectRelativePath
+  );
+  assertResolvedPathInsideProject(input.projectFolder, destinationPath);
+  let copied = false;
+  try {
+    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+    if (input.sourcePath !== destinationPath) {
+      try {
+        await fs.copyFile(input.sourcePath, destinationPath, fsSync.constants.COPYFILE_EXCL);
+      } catch (error) {
+        if (isFileExistsError(error)) {
+          throw destinationConflict(input.destinationProjectRelativePath);
+        }
+        throw error;
+      }
+      copied = true;
+      input.writeSet?.recordCreatedFile(input.destinationProjectRelativePath);
+    }
+    const stats = await statProjectFile(destinationPath, {
+      code: 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND',
+      message: `Persisted project asset file was not found: ${input.destinationProjectRelativePath}.`,
+    });
+    insertAssetFileRecord(input.session, {
+      id: input.assetFileId,
+      assetId: input.assetId,
+      role: input.fileRole,
+      projectRelativePath: input.destinationProjectRelativePath,
+      mimeType: input.mimeType ?? mimeTypeForProjectPath(input.destinationProjectRelativePath, input.mediaKind),
+      mediaKind: input.mediaKind,
+      sizeBytes: stats.size,
+      contentHash: await hashFile(destinationPath),
+      width: input.width,
+      height: input.height,
+      durationSeconds: input.durationSeconds,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
+    return requireInsertedAssetFile(input.session, {
+      assetId: input.assetId,
+      assetFileId: input.assetFileId,
+    });
+  } catch (error) {
+    if (copied) {
+      await removeCopiedProjectAssetFile(
+        input.projectFolder,
+        input.destinationProjectRelativePath
+      );
+    }
+    throw error;
+  }
 }
 
 export async function removeCopiedProjectAssetFile(
@@ -181,7 +227,14 @@ export function persistProjectAssetFileAtDestinationSync(input: {
   try {
     fsSync.mkdirSync(path.dirname(destinationPath), { recursive: true });
     if (input.sourcePath !== destinationPath) {
-      fsSync.copyFileSync(input.sourcePath, destinationPath, fsSync.constants.COPYFILE_EXCL);
+      try {
+        fsSync.copyFileSync(input.sourcePath, destinationPath, fsSync.constants.COPYFILE_EXCL);
+      } catch (error) {
+        if (isFileExistsError(error)) {
+          throw destinationConflict(input.destinationProjectRelativePath);
+        }
+        throw error;
+      }
       copied = true;
       input.writeSet?.recordCreatedFile(input.destinationProjectRelativePath);
     }
@@ -217,6 +270,38 @@ export function persistProjectAssetFileAtDestinationSync(input: {
     }
     throw error;
   }
+}
+
+function collisionAttemptLimit(input: PersistProjectAssetFileInput): number {
+  return input.namingMode.kind === 'generated' ? 16 : 1000;
+}
+
+function isDestinationConflict(error: unknown): boolean {
+  return error instanceof ProjectDataError &&
+    error.code === 'PROJECT_ASSET_FILE_DESTINATION_CONFLICT';
+}
+
+function isFileExistsError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null &&
+    'code' in error && error.code === 'EEXIST';
+}
+
+function destinationConflict(path: ProjectRelativePath): ProjectDataError {
+  return new ProjectDataError(
+    'PROJECT_ASSET_FILE_DESTINATION_CONFLICT',
+    `Project asset file destination already exists: ${path}.`
+  );
+}
+
+function destinationCollisionFailure(
+  namingMode: PersistProjectAssetFileInput['namingMode']['kind']
+): ProjectDataError {
+  return new ProjectDataError(
+    namingMode === 'generated'
+      ? 'PROJECT_ASSET_FILE_GENERATION_TOKEN_ALLOCATION_FAILED'
+      : 'PROJECT_ASSET_FILE_EXTERNAL_NAME_ALLOCATION_FAILED',
+    `Could not allocate an exclusive ${namingMode} project asset file destination.`
+  );
 }
 
 function requireInsertedAssetFile(

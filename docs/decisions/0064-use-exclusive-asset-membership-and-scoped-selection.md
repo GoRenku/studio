@@ -4,6 +4,9 @@ Date: 2026-07-26
 
 Status: accepted
 
+Decision 0075 replaces Beat Sheet terminology with Scene Beats. This decision's
+exclusive membership and scoped selection rules remain unchanged.
+
 ## Context
 
 Studio previously represented Asset ownership through several relationship

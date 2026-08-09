@@ -22,8 +22,8 @@ export function ShotPlanShotRail({
         Selected Shot
       </p>
       <div className='space-y-3'>
-        {shotPlan.shots.map((shot, index) => {
-          const position = index + 1;
+        {shotPlan.shots.map((shot) => {
+          const number = shot.number;
           const selectedAsset =
             shot.images.find((asset) => asset.id === shot.selectedImageId) ??
             null;
@@ -52,7 +52,7 @@ export function ShotPlanShotRail({
                     ? {
                         kind: 'image',
                         src: imageFile.url,
-                        alt: `Selected image for Shot ${position}`,
+                        alt: `Selected image for Shot ${number}`,
                         fit: 'cover',
                         effect: 'zoom-on-hover',
                       }
@@ -62,14 +62,14 @@ export function ShotPlanShotRail({
                 presentation={{ kind: 'overlay' }}
                 activation={{
                   kind: 'callback',
-                  label: `Select Shot ${position}`,
+                  label: `Select Shot ${number}`,
                   onActivate: () => onSelectShot(shot),
                 }}
                 cornerAction={
                   hasImageCandidates
                     ? {
                         kind: 'edit',
-                        label: `Manage images for Shot ${position}`,
+                        label: `Manage images for Shot ${number}`,
                         visibility: 'hover-or-focus',
                         onAction: () => onManageImages(shot),
                       }
@@ -78,7 +78,7 @@ export function ShotPlanShotRail({
                 emptyState={{ kind: 'image' }}
               />
               <span className='pointer-events-none absolute left-2 top-2 z-40 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/70 text-xs font-semibold text-white shadow-md'>
-                {position}
+                {number}
               </span>
               {shot.brief.durationSeconds !== undefined ? (
                 <span

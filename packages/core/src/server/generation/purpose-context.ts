@@ -3,7 +3,7 @@ import { readProjectRecord } from '../database/access/project.js';
 import { readActivePropDesignDocument } from '../database/access/prop-designs.js';
 import { readPropRecord } from '../database/access/props.js';
 import { listCastMemberRecords } from '../database/access/cast-members.js';
-import { readActiveSceneBeatSheetRecord, readSceneBeatSheetDocument } from '../database/access/scene-beat-sheets.js';
+import { readActiveSceneBeatsRevisionRecord, readSceneBeats } from '../database/access/scene-beats.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
@@ -91,12 +91,12 @@ function buildSceneGenerationFacts(
       `Scene was not found: ${input.target.id}.`
     );
   }
-  const activeBeatSheetRecord = readActiveSceneBeatSheetRecord(
+  const activeRevisionRecord = readActiveSceneBeatsRevisionRecord(
     input.session,
     input.target.id
   );
-  const beatSheet = activeBeatSheetRecord
-    ? readSceneBeatSheetDocument({ row: activeBeatSheetRecord })
+  const revision = activeRevisionRecord
+    ? readSceneBeats({ row: activeRevisionRecord })
     : null;
   const sceneReferences = screenplay.references.filter(
     (reference) => 'sceneId' in reference.target && reference.target.sceneId === scene.id,
@@ -109,12 +109,12 @@ function buildSceneGenerationFacts(
   const sceneCastMemberIds = orderedUnique([
     ...sceneReferences.flatMap((reference) =>
       reference.subject.type === 'castMember' ? [reference.subject.id] : []),
-    ...(beatSheet?.beats.flatMap((beat) => beat.castMemberIds) ?? []),
+    ...(revision?.beats.flatMap((beat) => beat.castMemberIds) ?? []),
   ]).filter((castMemberId) => !voiceOverIds.has(castMemberId));
   const sceneLocationIds = orderedUnique([
     ...sceneReferences.flatMap((reference) =>
       reference.subject.type === 'location' ? [reference.subject.id] : []),
-    ...(beatSheet?.beats.flatMap((beat) => beat.locationIds) ?? []),
+    ...(revision?.beats.flatMap((beat) => beat.locationIds) ?? []),
   ]);
   const sceneDialogueIds = scene.blocks.flatMap((block) =>
     block.type === 'dialogue'

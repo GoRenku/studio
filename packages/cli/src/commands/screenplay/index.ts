@@ -4,7 +4,7 @@ import type { RenkuCliIo } from '../../cli.js';
 import { appendStudioResourceChangedEvent } from '../studio-resource-event-command.js';
 import { runScreenplayAnalysisCommand } from './analysis.js';
 import { runScreenplayAuthoringCommand } from './authoring.js';
-import { runScreenplayBeatSheetCommand } from './beat-sheets.js';
+import { runScreenplayBeatsCommand } from './beats.js';
 import { runScreenplayFdxImportCommand } from './fdx-import.js';
 import { runScreenplayReadingCommand } from './reading.js';
 import { runScreenplayRevisionCommand } from './revisions.js';
@@ -16,9 +16,8 @@ export interface ScreenplayCommandOptions {
     file?: string;
     active?: boolean;
     analysis?: string;
-    revision?: string;
     scene?: string;
-    beatSheet?: string;
+    revision?: string;
     includeVisualReferences?: boolean;
     number?: string;
     dryRun?: boolean;
@@ -45,8 +44,8 @@ export async function runScreenplayCommand(options: ScreenplayCommandOptions): P
   if (subcommand === 'analyze') {
     return runScreenplayAnalysisCommand(context);
   }
-  if (subcommand === 'beat-sheet') {
-    return runScreenplayBeatSheetCommand(context);
+  if (subcommand === 'beats') {
+    return runScreenplayBeatsCommand(context);
   }
   if (subcommand === 'scene-number') {
     return runScreenplaySceneNumberCommand(context);
@@ -118,7 +117,7 @@ export function unknownScreenplayCommand(subcommand: string | undefined): Struct
       'CLI081',
       'Unknown screenplay command.',
       { path: ['screenplay', subcommand ?? ''] },
-      'Use status, show, structure, section, scene, create, apply, import-fdx, revision, analyze, beat-sheet, or scene-number.',
+      'Use status, show, structure, section, scene, create, apply, import-fdx, revision, analyze, beats, or scene-number.',
     )],
     suggestion: 'Use a supported screenplay command.',
   });

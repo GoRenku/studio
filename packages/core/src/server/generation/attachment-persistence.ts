@@ -121,6 +121,9 @@ export function persistOwnedGeneratedMediaAssetInSession(
     assetFileId: input.assetFileId,
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     destination: input.destination,
+    namingMode: input.asset.origin === 'generated'
+      ? { kind: 'generated' }
+      : { kind: 'external' },
     fileRole: input.fileRole,
     mediaKind: input.asset.mediaKind,
     now: input.now,

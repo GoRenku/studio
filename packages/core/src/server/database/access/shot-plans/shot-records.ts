@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { ShotInput } from '../../../../client/shot-plans.js';
 import { ProjectDataError } from '../../../project-data-error.js';
 import { shots } from '../../../schema/index.js';
@@ -64,7 +64,7 @@ export function insertShotRecords(
   session: DatabaseSession,
   input: {
     shotPlanId: string;
-    shots: Array<ShotInput & { id: string }>;
+    shots: Array<ShotInput & { id: string; number: string }>;
     now: string;
   }
 ): void {
@@ -78,6 +78,7 @@ export function insertShotRecords(
         id: shot.id,
         shotPlanId: input.shotPlanId,
         position,
+        number: shot.number,
         title: shot.title,
         description: shot.description,
         brief: serializeShotBrief(shot.brief),
@@ -94,6 +95,7 @@ export function insertShotRecord(
     id: string;
     shotPlanId: string;
     shot: ShotInput;
+    number: string;
     now: string;
   }
 ): void {
@@ -114,6 +116,7 @@ export function insertShotRecord(
       id: input.id,
       shotPlanId: input.shotPlanId,
       position: position + 1,
+      number: input.number,
       title: input.shot.title,
       description: input.shot.description,
       brief: serializeShotBrief(input.shot.brief),
@@ -184,6 +187,13 @@ export function writeShotOrder(
     now: string;
   }
 ): void {
+  const discardedShotIds = session.db
+    .select({ id: shots.id })
+    .from(shots)
+    .where(and(eq(shots.shotPlanId, input.shotPlanId), isNotNull(shots.discardedAt)))
+    .orderBy(asc(shots.position), asc(shots.id))
+    .all()
+    .map((shot) => shot.id);
   const offset =
     (session.db
       .select({ value: sql<number | null>`max(${shots.position})` })
@@ -197,6 +207,20 @@ export function writeShotOrder(
       .where(
         and(eq(shots.id, shotId), eq(shots.shotPlanId, input.shotPlanId))
       )
+      .run();
+  });
+  discardedShotIds.forEach((shotId, position) => {
+    session.db
+      .update(shots)
+      .set({ position: offset + input.orderedShotIds.length + position })
+      .where(and(eq(shots.id, shotId), eq(shots.shotPlanId, input.shotPlanId)))
+      .run();
+  });
+  discardedShotIds.forEach((shotId, position) => {
+    session.db
+      .update(shots)
+      .set({ position: input.orderedShotIds.length + position })
+      .where(and(eq(shots.id, shotId), eq(shots.shotPlanId, input.shotPlanId)))
       .run();
   });
   input.orderedShotIds.forEach((shotId, position) => {

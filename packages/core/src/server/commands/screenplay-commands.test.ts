@@ -83,6 +83,29 @@ describe('scene-first Screenplay', () => {
     })).toThrowError(expect.objectContaining({ code: 'SCREENPLAY_INVALID_CONTENT' }));
   });
 
+  it('accepts opaque, empty, and duplicate supplied Scene numbers unchanged', () => {
+    const screenplay = completeScreenplay();
+    screenplay.scenes.push({
+      id: 'scene_second',
+      productionNumber: screenplay.scenes[0]!.productionNumber,
+      heading: 'EXT. SECOND - DAY',
+      blocks: [],
+    });
+    screenplay.structure.push({
+      id: 'entry_scene_second',
+      parentSectionId: 'section_sequence',
+      content: { type: 'scene', sceneId: 'scene_second' },
+      position: 1,
+    });
+    screenplay.scenes[0]!.productionNumber = '';
+
+    expect(() => assertValidScreenplay(screenplay, {
+      subjects: SUBJECTS,
+      context: 'opaque Scene numbers',
+    })).not.toThrow();
+    expect(screenplay.scenes.map((scene) => scene.productionNumber)).toEqual(['', 'A12']);
+  });
+
   it('rejects invalid reference subjects, targets, roles, ranges, and duplicate speakers', () => {
     const invalidScreenplays = [
       mutateReference('reference_presence', (reference) => {
@@ -191,7 +214,6 @@ describe('scene-first Screenplay', () => {
           operation: 'scene.update',
           scene: {
             id: sceneId,
-            productionNumber: 'A12',
             heading: 'EXT. TEST FIELD - DAWN',
             blocks: [
               {
@@ -216,7 +238,7 @@ describe('scene-first Screenplay', () => {
     expect(revised.screenplay.opening[0]).toMatchObject({ type: 'titleCard', text: 'BASILICA' });
     expect(revised.screenplay.scenes[0]).toMatchObject({
       id: sceneId,
-      productionNumber: 'A12',
+      productionNumber: '1',
       heading: 'EXT. TEST FIELD - DAWN',
     });
 
@@ -276,7 +298,6 @@ describe('scene-first Screenplay', () => {
           operation: 'scene.add',
           scene: {
             key: 'scene-two',
-            productionNumber: '2',
             heading: 'EXT. WORKSHOP - DAWN',
             blocks: [{ key: 'scene-two-action', type: 'action', text: 'The doors open.' }],
           },
@@ -304,6 +325,12 @@ describe('scene-first Screenplay', () => {
       secondSceneId,
       firstSceneId,
     ]);
+    expect(moved.screenplay.scenes.map((scene) => scene.productionNumber)).toEqual([
+      '1A', '1',
+    ]);
+    expect(moved.orderedSceneIds.map((sceneId) =>
+      moved.screenplay.scenes.find((scene) => scene.id === sceneId)!.productionNumber
+    )).toEqual(['1A', '1']);
     expect(moved.screenplay.sections).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: actId }),
       expect.objectContaining({ id: sequenceId }),
@@ -321,7 +348,7 @@ describe('scene-first Screenplay', () => {
         section: { id: actId },
         placement: { parentSection: { id: sequenceId }, at: 'end' },
       }],
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_INVALID_CONTENT' });
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_STRUCTURE_INVALID' });
 
     const afterFailure = await projectData.readScreenplayStructure({
       projectName: created.projectName,
@@ -333,6 +360,48 @@ describe('scene-first Screenplay', () => {
     });
     expect(afterFailure).toEqual(moved);
     expect(revisionsAfterFailure).toEqual(revisionsBeforeFailure);
+
+    await projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      operations: [{ operation: 'scene.delete', scene: { id: secondSceneId } }],
+    });
+    const inserted = await projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      idGenerator: createDeterministicIdGenerator(),
+      operations: [{
+        operation: 'scene.add',
+        scene: { key: 'inserted-scene', heading: 'INT. INSERTED ROOM - DAY', blocks: [] },
+        structureEntryKey: 'inserted-scene-entry',
+        placement: { at: 'start' },
+      }],
+    });
+    const insertedSceneId = inserted.generatedIdentities.find(
+      (identity) => identity.key === 'inserted-scene'
+    )!.id;
+    const afterInsertion = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(afterInsertion.orderedSceneIds.map((sceneId) =>
+      afterInsertion.screenplay.scenes.find((scene) => scene.id === sceneId)!.productionNumber
+    )).toEqual(['1B', '1']);
+
+    await projectData.restoreScreenplayRevision({
+      projectName: created.projectName,
+      homeDir,
+      revisionId: moveReport.screenplayRevisionId,
+    });
+    const restored = await projectData.readScreenplayStructure({
+      projectName: created.projectName,
+      homeDir,
+    });
+    expect(restored.orderedSceneIds).toEqual([secondSceneId, firstSceneId]);
+    expect(restored.orderedSceneIds.map((sceneId) =>
+      restored.screenplay.scenes.find((scene) => scene.id === sceneId)!.productionNumber
+    )).toEqual(['1A', '1']);
+    expect(restored.screenplay.scenes.some((scene) => scene.id === insertedSceneId)).toBe(false);
   });
 });
 
@@ -350,7 +419,6 @@ function minimalScreenplayInput(): ScreenplayInput {
     opening: [{ key: 'opening-fade', type: 'transition', text: 'FADE IN:' }],
     scenes: [{
       key: 'scene-one',
-      productionNumber: '1',
       heading: 'INT. WORKSHOP - NIGHT',
       blocks: [{ key: 'scene-action', type: 'action', text: 'A hammer falls.' }],
     }],

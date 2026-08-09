@@ -10,28 +10,65 @@ or architecture decision.
 
 ## Learned Constraints
 
-### 2026-08-08 — Model one-step undo as one previous value, not version history
+### 2026-08-08 — Surface scope expansion before it hides in plan detail
 
-- **User objection:** A simple Scene-owned set of Beats that could be regenerated
-  and undone once became a versioned Beat Sheet system with durable sheet ids,
-  base and created ids, an active pointer, iteration numbers, lineage traversal,
-  history listing, and overlapping response fields. The product only needed
-  “the regenerated Beats are bad; restore the set I had immediately before.”
-- **Planning rule:** When the accepted recovery requirement is only one-step
-  undo of a full replacement, store one current aggregate and at most one
-  previous snapshot. A full replacement moves current to previous; restoration
-  consumes that previous slot; focused edits mutate current in place. Do not add
-  version ids, base links, active selection, iteration counters, history lists,
-  arbitrary-version restore, or redo without a separate explicit requirement.
-- **Apply when:** Planning reset, regenerate, replace, undo, or restore behavior
-  for one Scene-owned or Project-owned aggregate whose users do not browse,
-  compare, cite, branch, or retain several historical versions.
-- **Evidence to inspect:** The exact undo action the user needs; whether more
-  than the immediately previous value must survive; whether callers truly select
-  among versions; current foreign keys and media ownership; and whether stable
-  child ids already reconnect restored content to its dependent media.
+- **User objection:** A simple shared-numbering and project-folder request grew
+  into an unrelated FDX policy redesign. The corrective rule then became too
+  broad and appeared to prohibit normal engineering work such as identifying
+  relevant edge cases and adding proper warnings or errors. Because the plan
+  was long, consequential invented behavior was easy to miss during review.
+- **Planning rule:** Continue to identify concrete edge cases, validation,
+  warnings, errors, and safety measures that directly support the requested
+  behavior. Distinguish those from adjacent product expansion. Any proposed
+  setting, flag, mode, public contract, schema field, workflow restriction,
+  migration effect, or policy outside the request must be traced to a current
+  requirement or hard boundary. If it is an additional product choice, surface
+  it for explicit approval instead of embedding it in the plan. Put a concise
+  Review Attention summary near the top of substantial plans and repeat it in
+  the user-facing handoff; name added behavior, unchanged behavior, migration
+  and destructive effects, material assumptions, and approval decisions.
+- **Apply when:** A focused request starts touching an adjacent workflow or
+  several packages, or a plan introduces Settings, flags, routes, public types,
+  schema, diagnostics, data cleanup, file moves, or a large migration that a
+  user could miss in the detailed body.
+- **Evidence to inspect:** Compare the user's request and requirement ledger
+  with every new public concept and side effect; inspect the plan's opening
+  summary and final handoff; and verify that directly relevant edge cases remain
+  covered while unrelated product choices are separately visible and approved.
 
-### 2026-08-08 — Do not build generation lineage merely to name files
+### 2026-08-08 — Separate runtime revision retention from a clean migration baseline
+
+- **User objection:** A review interpreted “restore the previous Beats” as
+  permission to replace the existing immutable history with a two-row undo
+  buffer, delete older Beat revisions, consume the rejected revision during
+  restore, and flatten Storyboard files out of their iteration folders. That
+  destroyed the retained work needed to move backward and forward between
+  revisions and contradicted the repository's other revision-backed documents.
+  A later correction overreached in the other direction by migrating every old
+  development revision even though the explicitly requested clean local
+  database should start from only the currently active revision.
+- **Planning rule:** When a domain already has immutable revision rows, active
+  selection, and artifacts authored for those revisions, preserve that runtime
+  lifecycle unless the user explicitly asks to replace its retention model.
+  Reset or regenerate creates and activates another revision; restore changes
+  active selection and does not delete either the restored revision or the
+  later one. Evaluate a one-time clean rebuild separately: when the user asks
+  the reconstructed pre-customer database to start from current state only,
+  migrate the active revision as the new baseline and leave obsolete history in
+  the archive. Keep iteration folders for artifacts that still belong to the
+  retained current aggregate; do not infer that dropping old revision rows
+  requires flattening or deleting current media candidates.
+- **Apply when:** Planning reset, regenerate, replace, undo, restore, history
+  retention, active selection, a one-time clean database reconstruction, or
+  filesystem reorganization for a revisioned aggregate.
+- **Evidence to inspect:** Existing history and state tables; list/read/set-
+  active commands; accepted ADR retention behavior; whether child IDs and Asset
+  ownership reconnect retained media; the exact active rows chosen for the clean
+  baseline; which media owners still exist in those rows; current iteration-
+  folder allocation; the archive boundary; and whether a proposed deletion is a
+  one-time local cleanup or a change to normal runtime retention.
+
+### 2026-08-08 — Do not invent generation lineage, but preserve revision artifact folders
 
 - **User objection:** A filesystem proposal turned a small filename need into
   numbered generation folders, monotonically allocated generation counters,
@@ -52,16 +89,20 @@ or architecture decision.
   retry at the owning write boundary. Keep existing database provenance; do not
   add generation directories, editable version counters, Asset-series
   aggregates, or lineage registries without a separate current product
-  requirement for them.
+  requirement for them. This does not authorize flattening an established
+  iteration folder that keeps artifacts from retained domain revisions
+  recoverable and human-distinguishable; preserve that folder when revision
+  restoration is a current workflow.
 - **Apply when:** Planning generated media filenames, alternate candidates,
   image edits, regeneration, concurrency, or any proposal that introduces
   counters or nested folders solely to distinguish files.
 - **Evidence to inspect:** The exact user-visible meaning of the suffix,
   expected same-name occupancy, alphabet size, retry count, atomic/exclusive
   write behavior, existing GenerationSpec/run/Asset provenance, concurrent
-  attachment paths, collision behavior in the destination folder, and whether
-  users ever need to sort, cite, restore, or navigate generations by that
-  visible value.
+  attachment paths, collision behavior in the destination folder, whether the
+  existing folder corresponds to retained domain revisions or only filename
+  allocation, and whether users need to sort, cite, restore, or navigate
+  generations by that visible value.
 
 ### 2026-08-07 — Scope screenplay authority to the Project's actual source workflow
 
@@ -71,26 +112,30 @@ or architecture decision.
   existing agent-authored screenplay creation, revision, and restore workflow.
   Renku is not a general screenplay editor, but users may still create a
   screenplay entirely with the screenplay-drafter agent without importing FDX.
-- **Planning rule:** Distinguish two source-authority workflows. For an
-  FDX-backed Project, the external editor owns canonical screenplay edits and
-  Scene numbers; preserve the exact exported numbers as the future association
-  key and do not let Renku content mutations diverge from that source. For an
-  agent-authored Project with no FDX import record, retain the focused
-  screenplay-drafter create, apply, and revision-restore workflow and let Core
-  allocate stable Scene numbers for that workflow. Do not apply the constraints
-  of either source mode to the other. FDX numbers remain required by default;
-  Renku may fill missing numbers only when the Project preference permits it
-  and the user explicitly requests that import fallback. Clearly state that a
-  Renku-numbered fallback import cannot later be matched safely to newly
-  numbered editor exports.
+- **Planning rule:** Treat the already-implemented FDX and agent-authored
+  Screenplay workflows as an unchanged boundary unless the user explicitly asks
+  to redesign them. Preserve the existing importer, warnings/errors, agent-skill
+  remediation, and Settings behavior exactly. If an FDX has no Scene numbers,
+  the existing warning/Agent AI workflow leaves generation to the user; do not
+  add an automatic path or a replacement policy. Carry existing FDX Scene
+  numbers through unchanged. Do not add source modes, runtime mutation gates,
+  permission logic, settings, CLI flags, provenance, fallback warnings, or
+  reconciliation machinery. Treat every supplied or already-stored Scene number
+  as an opaque value: preserve it byte-for-byte and do not apply generated-number
+  grammar, trimming, case folding, non-empty checks, or uniqueness checks to it.
+  The Scene-number allocator is one-way only: it may enforce its grammar for
+  numbers Renku generates, and it may avoid an exact occupied value, but it must
+  never reject, normalize, or reinterpret an existing value. A shared numbering
+  or Asset-path plan must stay out of FDX-versus-agent policy entirely.
 - **Apply when:** Planning FDX import, agent-authored screenplay workflows,
-  Scene numbering, screenplay provenance, content-mutation gates, media folders
-  keyed by Scene number, or future re-import association.
-- **Evidence to inspect:** The Project's retained FDX import record, the
-  screenplay-drafter create/apply/restore contract, current Core mutation
-  commands, importer empty-target and one-import gates, exact FDX Scene numbers,
-  Project Settings defaults, explicit per-import authorization, and whether a
-  proposed rule is correctly scoped to FDX-backed or agent-authored Projects.
+  Scene numbering, screenplay provenance, media folders keyed by Scene number,
+  or future re-import association.
+- **Evidence to inspect:** The last accepted pre-change importer, Settings,
+  warnings, skill guidance, screenplay-drafter contracts, Scene JSON schema,
+  database constraints, migration guards, allocator inputs, and presentation
+  code; whether the new work changes any of them; and whether every proposed FDX
+  mechanism was explicitly requested rather than inferred from a numbering/path
+  task.
 
 ### 2026-08-06 — Design user-browsed folders for recognition, not database identity
 
@@ -241,7 +286,10 @@ or architecture decision.
   made the opposite mistake: it applied a “no existing data” instruction about
   one never-created Shot-image schema to a cross-domain Asset refactor even
   though the sample project already contained Cast, Location, Lookbook,
-  Storyboard, Dialogue Audio, and generic relationship rows.
+  Storyboard, Dialogue Audio, and generic relationship rows. Another completed
+  rebuild preserved legacy Scene numbers correctly under the runtime opacity
+  rule but missed the separately intended display-format conversion for the one
+  known local sample whose values were generated before that model.
 - **Planning rule:** When the user confirms the current product contract and
   only pre-customer development data uses the old contract, plan one verified
   one-way data conversion, update every current caller and document directly,
@@ -259,7 +307,11 @@ or architecture decision.
   multi-role, or otherwise broader domain contract from leftover sample rows:
   verify current writers, readers, accepted decisions, and skills first, then
   convert or remove development-only files that the current product no longer
-  creates.
+  creates. Keep opaque imported/runtime values separate from an explicitly
+  authorized local sample conversion: do not add product validation or infer
+  provenance from arbitrary values, but when the user identifies exact
+  pre-customer rows as old locally generated data, map only those known rows
+  once and update their registered filesystem paths atomically.
 - **Apply when:** Repository code and accepted docs disagree with the intended
   product name while the conflicting persisted state is limited to local sample
   projects that can be backed up and upgraded once, or when a new feature
@@ -269,7 +321,11 @@ or architecture decision.
   skills, the Drizzle journal and applied schema generation, and per-table rows
   in the real sample database. Identify duplicate Asset ownership and file-path
   cases before defining the conversion; keep obsolete wording only in the
-  one-way conversion or explicit historical records.
+  one-way conversion or explicit historical records. For a local formatting
+  correction, inspect the exact entity-id/value mapping, every registered path
+  derived from those values, collision and rollback safety, the untouched
+  archive boundary, and proof that no runtime importer, validator, or general
+  migration was added.
 
 ### 2026-07-19 — Trace concepts to needs without erasing requirement detail
 

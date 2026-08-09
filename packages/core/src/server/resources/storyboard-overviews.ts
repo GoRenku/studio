@@ -5,13 +5,13 @@ import type {
 } from '../../client/index.js';
 import type {
   Beat,
-  SceneBeatSheetDocument,
+  SceneBeats,
 } from '../../client/scene-beats/index.js';
 import { listAssetPageInSession } from '../assets/projection.js';
 import {
-  readActiveSceneBeatSheetRecord,
-  readSceneBeatSheetDocument,
-} from '../database/access/scene-beat-sheets.js';
+  readActiveSceneBeatsRevisionRecord,
+  readSceneBeats,
+} from '../database/access/scene-beats.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export function readActiveSceneStoryboardPreviewImage(
@@ -32,7 +32,7 @@ export function readSceneStoryboardPreview(
   sceneId: string
 ): SequenceSceneStoryboardPreview | null {
   const projection = readSceneStoryboardProjection(session, sceneId);
-  if (!projection.document || !projection.beatSheetId) {
+  if (!projection.document || !projection.sceneBeatsRevisionId) {
     return null;
   }
   const selected = selectStoryboardPreviewBeats(
@@ -40,13 +40,13 @@ export function readSceneStoryboardPreview(
     projection.imagesByBeatId
   );
   return selected.length
-    ? { beatSheetId: projection.beatSheetId, images: selected }
+    ? { sceneBeatsRevisionId: projection.sceneBeatsRevisionId, images: selected }
     : null;
 }
 
 export interface SceneStoryboardProjection {
-  document: SceneBeatSheetDocument | null;
-  beatSheetId: string | null;
+  document: SceneBeats | null;
+  sceneBeatsRevisionId: string | null;
   imagesByBeatId: Record<string, ScreenplayImageReference>;
 }
 
@@ -54,11 +54,11 @@ export function readSceneStoryboardProjection(
   session: DatabaseSession,
   sceneId: string
 ): SceneStoryboardProjection {
-  const beatSheetRow = readActiveSceneBeatSheetRecord(session, sceneId);
-  if (!beatSheetRow) {
-    return { document: null, beatSheetId: null, imagesByBeatId: {} };
+  const revisionRow = readActiveSceneBeatsRevisionRecord(session, sceneId);
+  if (!revisionRow) {
+    return { document: null, sceneBeatsRevisionId: null, imagesByBeatId: {} };
   }
-  const document = readSceneBeatSheetDocument({ row: beatSheetRow });
+  const document = readSceneBeats({ row: revisionRow });
 
   const imagesByBeatId: Record<string, ScreenplayImageReference> = {};
   for (const beat of document.beats) {
@@ -76,7 +76,7 @@ export function readSceneStoryboardProjection(
 
   return {
     document,
-    beatSheetId: beatSheetRow.id,
+    sceneBeatsRevisionId: revisionRow.id,
     imagesByBeatId,
   };
 }

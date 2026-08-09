@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import os from 'node:os';
@@ -166,6 +165,23 @@ describe('deterministic FDX import', () => {
     expect(new Set(blocks.map((block) => block.id))).toHaveProperty('size', 2);
   });
 
+  it('preserves supplied Scene numbers exactly without validating or deduplicating them', () => {
+    const mapped = mapFdxScreenplay(parseFdxDocument(
+      '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="Scene Heading" Number=" A12 "><Text>INT. ONE - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading" Number=" A12 "><Text>INT. TWO - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading" Number=""><Text>INT. THREE - DAY</Text></Paragraph>'
+      + '</Content></FinalDraft>',
+    ), SOURCE_SHA);
+
+    expect(mapped.screenplay.scenes.map((scene) => scene.productionNumber)).toEqual([
+      ' A12 ',
+      ' A12 ',
+      '',
+    ]);
+    expect(mapped.counts.productionSceneNumbers).toBe(3);
+  });
+
   it('rejects unsafe, malformed, unsupported, deeply nested, and oversized input', async () => {
     expect(() => parseFdxDocument(
       '<!DOCTYPE FinalDraft><FinalDraft DocumentType="Script"><Content/></FinalDraft>',
@@ -210,8 +226,7 @@ describe('deterministic FDX import', () => {
     const retainedPath = path.join(
       created.projectPath,
       'screenplay',
-      'sources',
-      `${report.screenplayImport.sha256}.fdx`,
+      'source.fdx',
     );
 
     expect(resource.screenplay.scenes).toHaveLength(2);
@@ -240,7 +255,7 @@ describe('deterministic FDX import', () => {
       projectName: created.projectName,
       homeDir,
       sourcePath,
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_IMPORT_EXISTS' });
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_IMPORT_INVALID' });
     await expect(projectData.discardAsset({
       projectName: created.projectName,
       homeDir,
@@ -249,7 +264,7 @@ describe('deterministic FDX import', () => {
     })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_SOURCE_IN_USE' });
   });
 
-  it('rolls back database rows when the hash-addressed destination conflicts', async () => {
+  it('preserves an existing external basename and allocates a plain collision suffix', async () => {
     const projectData = createProjectDataService();
     const created = await createBlankMovieProject({
       homeDir,
@@ -260,35 +275,34 @@ describe('deterministic FDX import', () => {
     if (!created) {
       return;
     }
-    const bytes = await fs.readFile(sourcePath);
-    const sha256 = createHash('sha256').update(bytes).digest('hex');
     const destination = path.join(
       created.projectPath,
       'screenplay',
-      'sources',
-      `${sha256}.fdx`,
+      'source.fdx',
     );
     await fs.mkdir(path.dirname(destination), { recursive: true });
     await fs.writeFile(destination, 'conflict', 'utf8');
 
-    await expect(projectData.importFdxScreenplay({
+    const report = await projectData.importFdxScreenplay({
       projectName: created.projectName,
       homeDir,
       sourcePath,
-    })).rejects.toMatchObject({
-      code: 'SCREENPLAY_FDX_SOURCE_DESTINATION_CONFLICT',
     });
     const resource = await projectData.readScreenplayStructure({
       projectName: created.projectName,
       homeDir,
     });
-    expect(resource.screenplay.scenes).toEqual([]);
-    await expect(projectData.listAssets({
+    expect(resource.screenplay.scenes).toHaveLength(2);
+    const sourceAsset = (await projectData.listAssets({
       projectName: created.projectName,
       homeDir,
       owner: { kind: 'project' },
-    })).resolves.toEqual([]);
+    })).find((asset) => asset.id === report.screenplayImport.sourceAssetId);
+    expect(sourceAsset?.files[0]?.projectRelativePath).toBe('screenplay/source-2.fdx');
     await expect(fs.readFile(destination, 'utf8')).resolves.toBe('conflict');
+    await expect(
+      fs.readFile(path.join(created.projectPath, 'screenplay', 'source-2.fdx'))
+    ).resolves.toEqual(await fs.readFile(sourcePath));
   });
 
   it('rejects a non-empty Screenplay before creating a retained source', async () => {

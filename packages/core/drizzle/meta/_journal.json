@@ -533,6 +533,13 @@
       "when": 1786029787158,
       "tag": "0075_core_owned_project_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1786224355267,
+      "tag": "0076_stable_production_numbers_and_scene_beats",
+      "breakpoints": true
     }
   ]
 }

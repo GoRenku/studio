@@ -94,12 +94,14 @@ function projectShotPlan(
   return {
     shotPlan: {
       id: record.id,
+      number: record.number,
       sceneId: record.sceneId,
       title: record.title,
       coverage,
       shots: listShotRecords(session, record.id).map((shot) => ({
         ...projectShotImages(session, shot.id),
         id: shot.id,
+        number: shot.number,
         position: shot.position,
         title: shot.title,
         description: shot.description,

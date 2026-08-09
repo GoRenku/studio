@@ -12,7 +12,7 @@ export function readSceneRecords(session: DatabaseSession): Scene[] {
     .all()
     .map((row) => ({
       id: row.id,
-      ...(row.productionNumber ? { productionNumber: row.productionNumber } : {}),
+      ...(row.productionNumber !== null ? { productionNumber: row.productionNumber } : {}),
       heading: row.heading,
       ...(row.title ? { title: row.title } : {}),
       blocks: parseStoredSceneBlocksJson(row.blocksJson, row.id),
@@ -29,7 +29,7 @@ export function readSceneRecord(
   }
   return {
     id: row.id,
-    ...(row.productionNumber ? { productionNumber: row.productionNumber } : {}),
+    ...(row.productionNumber !== null ? { productionNumber: row.productionNumber } : {}),
     heading: row.heading,
     ...(row.title ? { title: row.title } : {}),
     blocks: parseStoredSceneBlocksJson(row.blocksJson, row.id),

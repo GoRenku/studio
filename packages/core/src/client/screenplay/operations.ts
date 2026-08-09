@@ -61,7 +61,6 @@ export type ScreenplayBlockInput =
   | DualDialogueBlockInput;
 
 export type SceneInput = AuthoringIdentity<SceneId> & {
-  productionNumber?: string;
   heading: string;
   title?: string;
   blocks: ScreenplayBlockInput[];

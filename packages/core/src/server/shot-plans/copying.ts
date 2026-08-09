@@ -21,6 +21,8 @@ import {
   rollbackProjectAssetFileWriteSetSync,
 } from '../project-asset-files/index.js';
 import { copySelectedShotImage } from './image-copying.js';
+import { allocateShotPlanNumber } from './plan-numbering.js';
+import { reserveInitialShotNumbers } from './shot-numbering.js';
 
 export function copyShotPlanAuthoring(input: {
   command: CopyShotPlanInput;
@@ -45,9 +47,11 @@ export function copyShotPlanAuthoring(input: {
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
+      const number = allocateShotPlanNumber(session, source.sceneId);
       insertShotPlanRecord(session, {
         id: shotPlanId,
         sceneId: source.sceneId,
+        number,
         title: source.title,
         coverage: parseStoredShotPlanCoverage(source.coverage, source.id),
         now: input.now,
@@ -59,9 +63,18 @@ export function copyShotPlanAuthoring(input: {
         description: shot.description,
         brief: parseStoredShotBrief(shot.brief, shot.id),
       }));
-      insertShotRecords(session, {
+      const numbers = reserveInitialShotNumbers({
+        session,
         shotPlanId,
         shots: copiedShots,
+        now: input.now,
+      });
+      insertShotRecords(session, {
+        shotPlanId,
+        shots: copiedShots.map((shot, index) => ({
+          ...shot,
+          number: numbers[index]!,
+        })),
         now: input.now,
       });
       for (const copiedShot of copiedShots) {

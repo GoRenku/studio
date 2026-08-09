@@ -157,7 +157,8 @@ recommends the current project aspect ratio. It does not inspect Shot prose or
 pixels.
 
 Focused import writes a `shot_image` Asset, exclusive Shot membership, and the
-Core-owned path `shot-plans/<plan-id>/shots/<shot-id>/images/`. Import may
+Core-owned path
+`scenes/<scene-number>/<plan-number>-shot-plan/shot-images/`. Import may
 atomically select the candidate when `select` is explicit. Choosing an existing
 candidate uses common Asset selection. Managed imports require an exact
 matching Run; external Codex imports require the exact frozen agent-external

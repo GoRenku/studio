@@ -6,7 +6,7 @@ import {
 } from './studio-e2e-generation-preview';
 import {
   cleanStudioE2eProject,
-  createBeatSheetMovieProject,
+  createSceneBeatsMovieProject,
   createMinimalMovieProject,
   createStudioE2eProjectName,
   type StudioE2eMovieProject,
@@ -66,15 +66,15 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
 
   movieProject: async ({ studioE2eRuntime }, use, testInfo) => {
     const projectName = createStudioE2eProjectName({
-      prefix: 'e2e-beat-sheet',
+      prefix: 'e2e-scene-beats',
       workerIndex: testInfo.workerIndex,
       testIndex: testInfo.testId.length,
       title: testInfo.title,
     });
-    const project = await createBeatSheetMovieProject({
+    const project = await createSceneBeatsMovieProject({
       runtime: studioE2eRuntime,
       projectName,
-      title: `E2E Beat Sheet ${projectName}`,
+      title: `E2E Scene Beats ${projectName}`,
     });
 
     await use(project);

@@ -4,6 +4,10 @@ Date: 2026-08-03
 
 Status: accepted
 
+Decision 0075 supersedes this decision's optional Scene-number rule and former
+Beat Sheet terminology. Scene identity, Scene-first structure, and direct
+Project story-metadata ownership remain accepted.
+
 Decision 0073 makes Beat Sheet, Analysis, Shot Plan, and Dialogue Audio
 relationships to Screenplay content weak historical context. Those artifacts
 do not block or cascade with later Screenplay mutations.

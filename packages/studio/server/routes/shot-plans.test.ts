@@ -169,12 +169,14 @@ function shotPlanReport(): ShotPlanReport {
     },
     shotPlan: {
       id: 'plan_one',
+      number: 1,
       sceneId: 'scene_opening',
       title: 'Council coverage',
       coverage: null,
       shots: [
         {
           id: 'shot_second',
+          number: '2',
           position: 1,
           title: 'Second Shot',
           description: 'The second authored Shot.',
@@ -187,6 +189,7 @@ function shotPlanReport(): ShotPlanReport {
         },
         {
           id: 'shot_first',
+          number: '1',
           position: 0,
           title: 'First Shot',
           description: 'The first authored Shot.',
@@ -202,6 +205,7 @@ function shotPlanReport(): ShotPlanReport {
       {
         beat: {
           id: 'beat_006',
+          number: '7',
           title: 'The order',
           description: 'The order is given.',
           narrativeDevelopment: 'The decision hardens.',
@@ -220,6 +224,7 @@ function shotPlanReport(): ShotPlanReport {
       {
         beat: {
           id: 'beat_004',
+          number: '5',
           title: 'The map',
           description: 'The map is studied.',
           narrativeDevelopment: 'The risk becomes visible.',

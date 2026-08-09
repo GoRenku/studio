@@ -210,7 +210,7 @@ export function createGenerationServiceWiring() {
     async attachGenerationMedia(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; sourceProjectRelativePath: string; title?: string; receipt?: unknown; sourceSpecId?: string; select?: boolean }) {
       return withGenerationProject(input, ({ session, projectFolder }) => attachGenerationMedia({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator() }));
     },
-    async attachSceneStoryboardImages(input: ProjectInput & { sceneId: string; beatSheetId: string; document: SceneStoryboardImagesImportDocument }) {
+    async attachSceneStoryboardImages(input: ProjectInput & { sceneId: string; sceneBeatsRevisionId: string; document: SceneStoryboardImagesImportDocument }) {
       return withGenerationProject(input, ({ session, projectFolder }) => attachSceneStoryboardImages({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator() }));
     },
   };

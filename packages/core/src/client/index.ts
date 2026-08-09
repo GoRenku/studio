@@ -78,6 +78,7 @@ export type {
 } from './props.js';
 export type * from './trash.js';
 export * from './project-settings.js';
+export * from './production-numbers.js';
 export type * from './generation.js';
 export type * from './generation-preview-resource.js';
 export type * from './scene-dialogue-audio-workspace.js';
@@ -118,7 +119,7 @@ export type {
   LookbookResource,
   SceneDesignResource,
   SceneNarrativeResource,
-  SceneBeatSheetResource,
+  SceneBeatsResource,
   SequenceSceneStoryboardPreview,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
@@ -215,8 +216,8 @@ export type {
 } from './diagnostics.js';
 export * from './screenplay/index.js';
 export {
-  sceneBeatSheetDocumentSchema,
-  sceneBeatSheetOperationDocumentSchema,
+  sceneBeatsInputSchema,
+  sceneBeatsOperationsInputSchema,
   sceneStoryboardImagesImportDocumentSchema,
 } from './scene-beats/index.js';
 export {

@@ -1,12 +1,12 @@
 export const STUDIO_PROJECT_SETTINGS_RESOURCE_KEY = 'project-settings' as const;
 
 export interface ProjectSettingsDocument {
-  version: 1;
+  version: 2;
   screenplayImport: {
     createContinuitySubjects: boolean;
     generateContinuityImages: boolean;
     runScreenplayAnalysis: boolean;
-    generateSceneBeatSheets: boolean;
+    generateSceneBeats: boolean;
     generateBeatStoryboardImages: boolean;
   };
   generation: {

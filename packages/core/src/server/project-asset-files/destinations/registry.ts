@@ -2,6 +2,7 @@ import type { ProjectRelativePath } from '../../../client/index.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { ProjectAssetFileDestination, ProjectMediaKind } from '../types.js';
+import type { ProjectAssetFileNamingMode } from '../types.js';
 import {
   resolveCastDestinationFile,
   resolveCastDestinationFileSync,
@@ -146,6 +147,7 @@ export async function resolveDurableDestinationFile(input: {
   session: DatabaseSession;
   projectFolder: string;
   destination: ProjectAssetFileDestination;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath: ProjectRelativePath;
   mediaKind: ProjectMediaKind;
   now: string;
@@ -157,6 +159,7 @@ export function resolveDurableDestinationFileSync(input: {
   session: DatabaseSession;
   projectFolder: string;
   destination: ProjectAssetFileDestination;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath: ProjectRelativePath;
   mediaKind: ProjectMediaKind;
   now: string;
@@ -168,6 +171,7 @@ export async function resolveDurableDestinationRoot(input: {
   session: DatabaseSession;
   projectFolder: string;
   destination: ProjectAssetFileDestination;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath?: ProjectRelativePath;
   now: string;
 }): Promise<ProjectRelativePath> {
@@ -178,6 +182,7 @@ export function resolveDurableDestinationRootSync(input: {
   session: DatabaseSession;
   projectFolder: string;
   destination: ProjectAssetFileDestination;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath?: ProjectRelativePath;
   now: string;
 }): ProjectRelativePath {
@@ -188,6 +193,7 @@ export async function resolveDurableDestinationOutputNames(input: {
   session: DatabaseSession;
   projectFolder: string;
   destination: ProjectAssetFileDestination;
+  namingMode: ProjectAssetFileNamingMode;
   sourceProjectRelativePath: ProjectRelativePath;
   mediaKind: ProjectMediaKind;
   outputCount: number;

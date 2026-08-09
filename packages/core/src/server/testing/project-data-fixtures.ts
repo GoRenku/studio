@@ -173,7 +173,6 @@ export function sampleScreenplayInput(): ScreenplayInput {
     scenes: [
       {
         key: 'throne-city',
-        productionNumber: '1',
         heading: "INT. MEHMED'S COUNCIL CHAMBER - NIGHT",
         title: 'A Throne Facing an Ancient City',
         blocks: [

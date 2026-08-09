@@ -4,6 +4,10 @@ Date: 2026-07-24
 
 Status: accepted
 
+Decision 0076 supersedes the historical `videos/` destination below. Shot Plan
+video Assets remain Project-owned and detached from Plan lifecycle, but their
+files now live in the exact provenance-derived Scene/Plan folder.
+
 Decision 0068 supersedes this decision's generic video purpose, Project-video
 destination, and last-Spec continuation behavior. Its independent Asset
 ownership, exact provenance, and one-way non-FK `authoredFrom` direction remain

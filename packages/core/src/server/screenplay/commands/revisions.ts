@@ -11,6 +11,7 @@ import {
   readScreenplayRevision as readStoredScreenplayRevision,
 } from '../persistence/revisions.js';
 import { ScreenplayIdentityResolver, commitScreenplayMutation } from './screenplay.js';
+import { restoreAgentSceneNumbers } from '../scene-numbering.js';
 
 export async function listScreenplayRevisions(
   input: RenkuConfigPathOptions & { projectName: string },
@@ -49,6 +50,9 @@ export async function restoreScreenplayRevision(
       resolver: new ScreenplayIdentityResolver(createRandomIdGenerator()),
       sourceCommand: 'screenplay.revision.restore',
       summary: `Restored ${input.revisionId}`,
+      prepareTransaction: (txSession, screenplay) => {
+        restoreAgentSceneNumbers({ session: txSession, screenplay });
+      },
     });
   } finally {
     session.close();

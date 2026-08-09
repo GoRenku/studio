@@ -261,9 +261,9 @@ function critique(sceneId: string): ScreenplayAnalysisCritique {
 function flatScreenplay(): Screenplay {
   return {
     opening: [{ id: 'opening_one', type: 'titleCard', text: 'BASILICA' }],
-    scenes: ['one', 'two', 'three'].map((suffix) => ({
+    scenes: ['one', 'two', 'three'].map((suffix, index) => ({
       id: `scene_${suffix}`,
-      productionNumber: suffix,
+      productionNumber: String(index + 1),
       heading: `EXT. TEST FIELD ${suffix.toUpperCase()} - DAY`,
       blocks: [{ id: `block_${suffix}`, type: 'action' as const, text: `Action ${suffix}.` }],
     })),
@@ -282,7 +282,6 @@ function flatScreenplayInput(): ScreenplayInput {
     opening: [{ key: 'opening-one', type: 'titleCard', text: 'BASILICA' }],
     scenes: ['one', 'two', 'three'].map((suffix) => ({
       key: `scene-${suffix}`,
-      productionNumber: suffix,
       heading: `EXT. TEST FIELD ${suffix.toUpperCase()} - DAY`,
       blocks: [{ key: `block-${suffix}`, type: 'action' as const, text: `Action ${suffix}.` }],
     })),

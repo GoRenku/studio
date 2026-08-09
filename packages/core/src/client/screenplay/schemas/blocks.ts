@@ -92,7 +92,7 @@ export const sceneSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   ...closedObject(['id', 'heading', 'blocks'], {
     id: nonEmptyString,
-    productionNumber: nonEmptyString,
+    productionNumber: { type: 'string' },
     heading: nonEmptyString,
     title: nonEmptyString,
     blocks: {

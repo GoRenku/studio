@@ -57,7 +57,7 @@ experiences:
   locked source AssetFile;
 - `scene-dialogue-audio-workspace` owns dialogue setup, generic audio
   generation, takes, playback metadata, and recoverable deletion;
-- `scene-beat-sheet` owns Beat history, active selection, storyboard status,
+- `scene-beats` owns Beat history, active selection, storyboard status,
   and storyboard-image attachment separately from generic generation.
 
 ## Generic Lifecycle
@@ -167,8 +167,8 @@ complete spec JSON blob.
 payload, estimate and approval token, outputs, receipt, diagnostics, status, and
 timestamps.
 
-Migration `0059_scene_beats_and_shot_authoring_reset.sql` converts every Scene
-Shot List revision into the exact Scene Beat Sheet shape, preserves active
+Migration `0059_scene_beats_and_shot_authoring_reset.sql` historically converted every Scene
+Shot List revision into the then-current Scene Beats shape, preserved active
 revision selection and suitable storyboard image relationships, recomputes
 content fingerprints, and removes all retired Shot Video Take, Shot membership,
 Take media, Take generation, and Take asset records. It also removes the retired
@@ -192,7 +192,7 @@ focused modules in `packages/core/src/server/generation`:
 - `runGeneration` and `readGenerationRun`.
 
 The Core server entrypoint also exports focused Preview, exact AssetFile
-Generation Request inspection, Dialogue Audio, Scene Beat Sheet, and storyboard
+Generation Request inspection, Dialogue Audio, Scene Beats, and storyboard
 attachment commands. CLI and HTTP callers remain thin projections of these
 Core-owned contracts.
 

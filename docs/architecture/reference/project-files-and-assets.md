@@ -60,17 +60,17 @@ placement belongs in
 `lookbook_image_section`, not in Lookbook JSON.
 
 A **Cast Character Sheet** is a Cast Member-owned image Asset with canonical
-type `character_sheet`. Imported/generated character sheets are stored under
-`cast/<handle>/character-sheets/`.
+type `character_sheet`. Imported/generated character sheets are stored
+directly under `cast/<handle>/`.
 
 A **Cast Profile** is a Cast Member-owned image Asset with canonical type
-`cast_profile`. Imported/generated profile images are stored under
-`cast/<handle>/profiles/`.
+`cast_profile`. Imported/generated profile images are stored directly under
+`cast/<handle>/`.
 
 A **Cast Voice Sample** is a Cast Member-owned audio Asset with canonical type
 `cast_voice_sample` and is linked from exactly one Cast Voice record. Custom audio
 files, generated `cast.voice-sample` outputs, and existing ElevenLabs provider
-samples are all stored under `cast/<handle>/voice-samples/` after attachment.
+samples are all stored directly under `cast/<handle>/` after attachment.
 The Cast Voice record, not the filename, supplies the provider voice identity,
 reference name, purpose, and structured `sampleSource` provenance.
 
@@ -92,19 +92,21 @@ One Hero may be selected as the Prop's compact Studio image.
 
 A **Scene Storyboard Image** is an image Asset owned by one logical Scene Beat.
 Durable storyboard images are stored under
-top-level `storyboards/<sequence-name>/<scene-name>/<nn>-iteration>/`.
+top-level `storyboards/<scene-display-number>/<NN>-iteration>/`.
 Temporary storyboard sheets generated for slicing or review live under that
 scene storyboard folder's `tmp/` subfolder and are not assets.
 
-A **Generated Project Video** is an independent Project Asset stored under
-`videos/`. Its primary Asset File records exact managed-Run or frozen
-agent-external-Spec provenance. Optional Shot Plan authoring context remains on
-the Spec for information and grouping only; it is not Asset ownership.
+A **Shot Plan Video** is a Project-owned Asset stored under the exact frozen
+Plan provenance folder
+`scenes/<scene-display-number>/<NN>-shot-plan/`. Its primary Asset File records
+exact managed-Run or frozen agent-external-Spec provenance. The Plan remains
+authoring context rather than Asset membership.
 
 A **Shot Image Candidate** is an image Asset exclusively owned by one Shot with
 canonical type `shot_image`. A Shot may own several candidates and explicitly
 select zero or one. Import can atomically select when requested. Candidate
-files live under `shot-plans/<plan-id>/shots/<shot-id>/images/`; SQLite
+files live under
+`scenes/<scene-display-number>/<NN>-shot-plan/shot-images/`; SQLite
 membership, not path segments, defines ownership.
 
 The **Research folder** is user-owned scratch space for external references.
@@ -133,7 +135,7 @@ later materializes them into an owner folder.
 Scene-owned Dialogue Audio paths use:
 
 ```text
-audio/<scene-id>/<dialogue-turn-id>-<speaker-handle>-<allocation-number>.<ext>
+scenes/<scene-display-number>/dialogues/s<scene>-<speaker>-d<turn>-gxxx.<ext>
 ```
 
 The stable Dialogue Turn id and its Core-validated speaker reference determine
@@ -187,9 +189,6 @@ at the project root. There is no `working-assets/` root and no
 
   cast/
     <cast-handle>/
-      character-sheets/
-      profiles/
-      voice-samples/
 
   locations/
 
@@ -197,20 +196,22 @@ at the project root. There is no `working-assets/` root and no
 
   visual-language/
     inspiration/
-    lookbook/
+    lookbooks/
+      production/
+      storyboard/
 
   storyboards/
-    <scene-id>/
+    <scene-display-number>/
       tmp/
       00-iteration/
 
-  shots/
-    <scene-id>/
-      <take-slug>-01/
+  scenes/
+    <scene-display-number>/
+      dialogues/
+      <NN>-shot-plan/
+        shot-images/
 
   research/
-
-  shot-plans/
 
   production-assets/
     master/
@@ -232,37 +233,28 @@ Folder responsibilities:
 - `screenplay/` contains authored screenplay source files.
 - `cast/`, `locations/`, `props/`, and `visual-language/` contain
   feature-owned definitions, reference material, and working files.
-- `cast/<handle>/character-sheets/` contains imported or generated cast
-  character sheet image assets.
-- `cast/<handle>/profiles/` contains imported or generated cast profile image
-  assets.
-- `cast/<handle>/voice-samples/` contains Cast Voice sample audio files. These
+- `cast/<handle>/` contains imported or generated character sheets, profiles,
+  and Cast Voice sample files. These
   files may have entered the project as custom local files, generated voice
   sample outputs, or existing ElevenLabs provider samples fetched during
   `renku cast voice attach`.
-- `locations/<handle>/location-sheets/` contains imported or generated
-  Location Sheets as flat image files. Do not create one subfolder per
-  Location Sheet.
-- `locations/<handle>/heroes/` contains imported or generated Location Hero
-  Images as flat files, such as `hero.png` and `hero-v01.png`. Do not create
-  one subfolder per hero image.
-- `props/<handle>/prop-sheets/` contains flat, versioned Prop Sheets.
-- `props/<handle>/heroes/` contains flat, versioned Prop Heroes.
+- `locations/<handle>/` contains Location Sheets and Hero Images directly.
+- `props/<handle>/` contains Prop Sheets and Hero Images directly.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
   those folders are not per-image assets unless a future command explicitly
   registers one.
-- `visual-language/lookbook/` contains imported or generated Lookbook image
-  assets.
-- `storyboards/<sequence-name>/<scene-name>/` contains durable storyboard
+- `visual-language/lookbooks/{production,storyboard}/` contains imported or
+  generated Lookbook media for that exact Lookbook role.
+- `storyboards/<scene-display-number>/` contains durable storyboard
   image iteration folders and a scene-local `tmp/` folder for temporary
   storyboard sheets.
-- `videos/` contains independent generated Project video Assets.
+- `scenes/<scene-display-number>/<NN>-shot-plan/` contains Shot images, Plan
+  video-reference images, and Plan video Assets resolved from exact provenance.
 - `research/` contains user-owned scratch references. Renku may read these
   files when instructed, and generation specs may use them as one-off reference
   inputs. Renku must not register them as SQLite asset files.
 - `tmp/` contains generated JSON snapshots, receipts, operation files, QA
   pictures, and other non-durable agent/debug files.
-- `shot-plans/` contains shot planning files and shot-owned assets.
 - `production-assets/` contains clean post-production handoff files.
 
 Project creation may create only the folders needed by the current project

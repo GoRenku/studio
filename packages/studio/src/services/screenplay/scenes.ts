@@ -1,5 +1,5 @@
 import type {
-  SceneBeatSheetResourceResponse,
+  SceneBeatsResourceResponse,
   ScreenplaySceneResourceResponse,
 } from '@/services/studio-project-contracts';
 import { readStudioApiError } from '@/services/studio-api-errors';
@@ -11,12 +11,12 @@ export async function readScreenplayScene(
   return readResource(screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}`));
 }
 
-export async function readSceneBeatSheetResource(
+export async function readSceneBeatsResource(
   projectName: string,
   sceneId: string
-): Promise<SceneBeatSheetResourceResponse> {
+): Promise<SceneBeatsResourceResponse> {
   return readResource(
-    screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/beat-sheet`)
+    screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/beats`)
   );
 }
 

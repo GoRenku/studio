@@ -243,8 +243,8 @@ test runs with foreign keys enabled and proves that Shot rows and unrelated
 generation and Asset data survive.
 
 `0073_preserve_screenplay_artifact_history.sql` removes reverse Scene foreign
-keys from Beat Sheet history/state and Dialogue Audio. Drizzle Kit rebuilds the
-parent tables, so the migration snapshots the active Beat Sheet pointers and
+keys from the former Beat-history/state tables and Dialogue Audio. Drizzle Kit rebuilds the
+parent tables, so the migration snapshots the active Beat-revision pointers and
 Dialogue Audio Takes before the generated drops, then restores them afterward.
 Its focused transaction-level regression test proves that the history, active
 pointers, audio setups, and Takes survive both migration and later Scene

@@ -1,4 +1,5 @@
 import { StructuredError } from '@gorenku/studio-diagnostics';
+import type { ShotPlacement } from '@gorenku/studio-core/client';
 import {
   requiredFlag,
   type CliCommandHandler,
@@ -27,6 +28,7 @@ export const shotPlanShotCommandHandlers: readonly Handler[] = [
         homeDir: runtime.homeDir,
         shotPlanId: requiredFlag(flags.shotPlan, '--shot-plan'),
         shot: document,
+        placement: shotPlacement(flags),
       });
     },
   },
@@ -96,4 +98,22 @@ export function corePosition(position: number | undefined): number {
     });
   }
   return position - 1;
+}
+
+export function shotPlacement(flags: ShotPlanCommandFlags): ShotPlacement {
+  const placement = flags.placement?.trim() || 'end';
+  if (placement === 'start' || placement === 'end') {
+    return { position: placement };
+  }
+  if (placement === 'before' || placement === 'after') {
+    return {
+      position: placement,
+      shotId: requiredFlag(flags.shot, '--shot'),
+    };
+  }
+  throw new StructuredError({
+    code: 'CLI153',
+    message: '--placement must be start, end, before, or after.',
+    suggestion: 'For before or after placement, also pass the anchor with --shot.',
+  });
 }

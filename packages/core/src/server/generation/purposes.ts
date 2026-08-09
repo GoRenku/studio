@@ -21,8 +21,9 @@ import { shotPlanVideoFirstFramePurpose } from './purposes/shot-plan-video-first
 import { shotPlanVideoGenerationPurpose } from './purposes/shot-plan-video-generation.js';
 import { shotPlanVideoLastFramePurpose } from './purposes/shot-plan-video-last-frame.js';
 import { shotPlanVideoStoryboardPurpose } from './purposes/shot-plan-video-storyboard.js';
+import { shotPlanVideoReferencePurpose } from './purposes/shot-plan-video-reference.js';
 
-const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, shotPlanVideoGenerationPurpose, shotPlanVideoFirstFramePurpose, shotPlanVideoLastFramePurpose, shotPlanVideoStoryboardPurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, propSheetPurpose, propHeroPurpose, sceneStoryboardSheetPurpose, shotImagePurpose];
+const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, shotPlanVideoGenerationPurpose, shotPlanVideoFirstFramePurpose, shotPlanVideoLastFramePurpose, shotPlanVideoStoryboardPurpose, shotPlanVideoReferencePurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, propSheetPurpose, propHeroPurpose, sceneStoryboardSheetPurpose, shotImagePurpose];
 const descriptorByPurpose = new Map(descriptors.map((descriptor) => [descriptor.purpose, descriptor]));
 
 export function listGenerationPurposes(): GenerationPurposeDescriptor[] { return [...descriptors]; }

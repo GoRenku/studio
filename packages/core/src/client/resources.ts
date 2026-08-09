@@ -6,7 +6,7 @@ import type { Location } from './locations.js';
 import type { Prop } from './props.js';
 import type { ScreenplayAnalysis } from './screenplay-analysis/index.js';
 import type {
-  SceneBeatSheetDocument,
+  SceneBeats,
 } from './scene-beats/index.js';
 import type {
   Project,
@@ -134,19 +134,19 @@ export interface StoryArcScene {
 }
 
 export interface SequenceSceneStoryboardPreview {
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
   images: Array<{
     beatId: string;
     image: ScreenplayImageReference | null;
   }>;
 }
 
-export interface SceneBeatSheetResource {
+export interface SceneBeatsResource {
   scene: import('./screenplay/index.js').ScreenplaySceneResource;
   sections: import('./screenplay/index.js').ScreenplaySection[];
   projectAspectRatio: string | null;
-  activeBeatSheetId: string | null;
-  activeBeatSheet: SceneBeatSheetDocument | null;
+  activeRevisionId: string | null;
+  activeRevision: SceneBeats | null;
   storyboardImagesByBeatId: Record<string, ScreenplayImageReference>;
   castMemberLabels: Record<string, string>;
   castMemberImages: Record<string, ScreenplayImageReference>;
@@ -296,7 +296,7 @@ export interface DirectorProductionDesignReadiness {
 export interface DirectorSceneReadiness {
   sceneId: string;
   beatId: string | null;
-  activeBeatSheetId: string | null;
+  activeRevisionId: string | null;
   beatCount: number;
   storyboardStatus:
     | {
@@ -317,7 +317,7 @@ export type DirectorNextStepId =
   | 'design-cast'
   | 'design-production'
   | 'design-props'
-  | 'design-beat-sheet'
+  | 'design-scene-beats'
   | 'generate-storyboards';
 
 export interface DirectorNextStep {

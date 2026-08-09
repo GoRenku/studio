@@ -103,18 +103,18 @@ export function ProjectSettingsFields({
             }
           />
           <SettingsSwitchRow
-            id='generate-scene-beat-sheets'
-            label='Generate Scene Beat Sheets'
-            description='Create an active Beat Sheet for each imported Scene after its required project context is ready.'
-            checked={settings.screenplayImport.generateSceneBeatSheets}
+            id='generate-scene-beats'
+            label='Generate Scene Beats'
+            description='Create an active Scene Beats revision for each imported Scene after its required project context is ready.'
+            checked={settings.screenplayImport.generateSceneBeats}
             onCheckedChange={(checked) =>
-              updateScreenplayImport('generateSceneBeatSheets', checked)
+              updateScreenplayImport('generateSceneBeats', checked)
             }
           />
           <SettingsSwitchRow
             id='generate-beat-storyboard-images'
             label='Generate storyboard images'
-            description='Generate and import storyboard images for the current Beats after each Scene has an active Beat Sheet.'
+            description='Generate and import storyboard images for the current Beats after each Scene has an active Scene Beats revision.'
             checked={settings.screenplayImport.generateBeatStoryboardImages}
             onCheckedChange={(checked) =>
               updateScreenplayImport('generateBeatStoryboardImages', checked)

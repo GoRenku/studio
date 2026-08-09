@@ -46,7 +46,10 @@ describe('Shot Plans', () => {
     });
 
     expect(copied.shotPlan.id).not.toBe(plan.shotPlan.id);
+    expect(plan.shotPlan.number).toBe(1);
+    expect(copied.shotPlan.number).toBe(2);
     expect(copied.shotPlan.shots).toHaveLength(1);
+    expect(copied.shotPlan.shots[0]!.number).toBe('1');
     expect(copied.shotPlan.shots[0]!.id).not.toBe(plan.shotPlan.shots[0]!.id);
     expect((await projectData.listGenerationSpecs({
       projectName: 'constantinople',
@@ -74,6 +77,8 @@ describe('Shot Plans', () => {
         authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
       },
     });
+    const afterDeletion = await createPlan(projectData, homeDir, fixture.sceneId);
+    expect(afterDeletion.shotPlan.number).toBe(3);
     await projectData.restoreTrashItem({
       projectName: 'constantinople',
       homeDir,
@@ -121,6 +126,14 @@ describe('Shot Plans', () => {
         authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
       },
     });
+    const afterCollection = await createPlan(projectData, homeDir, fixture.sceneId);
+    expect(afterCollection.shotPlan.number).toBe(4);
+
+    const concurrentPlans = await Promise.all([
+      createPlan(projectData, homeDir, fixture.sceneId),
+      createPlan(projectData, homeDir, fixture.sceneId),
+    ]);
+    expect(concurrentPlans.map((created) => created.shotPlan.number).sort()).toEqual([5, 6]);
   });
 
   it('keeps mutable Shot Plan authoring behavior unchanged', async () => {
@@ -135,7 +148,7 @@ describe('Shot Plans', () => {
       sceneId: fixture.sceneId,
       title: '  First pass  ',
       coverage: {
-        beatSheetId: 'scene_beat_sheet_missing',
+        sceneBeatsRevisionId: 'scene_beats_revision_missing',
         beatIds: [],
       },
       shots: [],
@@ -143,7 +156,7 @@ describe('Shot Plans', () => {
     expect(created.shotPlan.title).toBe('First pass');
     expect(created.warnings).toEqual([
       expect.objectContaining({
-        code: 'CORE_SHOT_PLAN_BEAT_SHEET_MISSING',
+        code: 'CORE_SHOT_PLAN_SCENE_BEATS_REVISION_MISSING',
       }),
     ]);
     const updated = await projectData.updateShotPlanDetails({

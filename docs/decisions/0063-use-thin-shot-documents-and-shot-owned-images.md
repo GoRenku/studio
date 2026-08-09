@@ -4,6 +4,10 @@ Date: 2026-07-26
 
 Status: accepted
 
+Decision 0076 supersedes the historical id-based Shot image path below. Shot
+ownership and selection remain SQLite relationships; files now live in the
+human-readable Scene/Plan `shot-images/` folder.
+
 Decision 0068 supersedes only this decision's reference to the generic video
 purpose. Thin Shot authoring and Shot-owned image behavior remain accepted.
 

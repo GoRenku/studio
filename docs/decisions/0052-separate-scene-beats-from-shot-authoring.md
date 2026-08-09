@@ -2,6 +2,10 @@
 
 Status: accepted
 
+Decision 0075 replaces the Beat Sheet product name and document shape with
+numbered, revisioned Scene Beats. This decision's separation between narrative
+Beats and camera-authored Shots remains accepted.
+
 Decision 0064 supersedes only the Storyboard association and Shot-image
 ownership implementation described below. The separation between narrative
 Scene Beats and camera-authored Shots remains accepted.

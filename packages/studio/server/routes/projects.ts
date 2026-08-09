@@ -59,7 +59,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'updateSceneDialogueAudioSetup'
   | 'generateSceneDialogueAudioTake'
   | 'deleteSceneDialogueAudioTake'
-  | 'readSceneBeatSheetResource'
+  | 'readSceneBeatsResource'
   | 'listGenerationReferences'
   | 'readStudioSelectionContext'
   | 'listSceneShotPlans'

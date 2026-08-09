@@ -38,9 +38,9 @@ export const shotPlanCoverageSchema = {
   $id: 'https://schemas.gorenku.com/studio/shot-plan-coverage.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: ['beatSheetId', 'beatIds'],
+  required: ['sceneBeatsRevisionId', 'beatIds'],
   properties: {
-    beatSheetId: nonEmptyString,
+    sceneBeatsRevisionId: nonEmptyString,
     beatIds: {
       type: 'array',
       items: nonEmptyString,

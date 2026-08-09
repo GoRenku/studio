@@ -4,6 +4,10 @@ Date: 2026-08-04
 
 Status: accepted
 
+Decision 0075 renames Beat Sheet history to Scene Beats and permits one narrow
+exception for the one-time Urban Basilica clean-baseline conversion. Normal
+runtime Scene Beats revisions remain weak, immutable, and retained.
+
 ## Context
 
 Screenplay Analysis, Scene Beat Sheets, Shot Plans, and Dialogue Audio are

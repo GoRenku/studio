@@ -3,7 +3,7 @@ import type { Asset } from './assets.js';
 import type { Beat } from './scene-beats/index.js';
 
 export interface ShotPlanCoverage {
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
   beatIds: string[];
 }
 
@@ -34,6 +34,7 @@ export interface ShotBrief {
 
 export interface Shot {
   id: string;
+  number: string;
   position: number;
   title: string;
   description: string;
@@ -44,6 +45,7 @@ export interface Shot {
 
 export interface ShotPlan {
   id: string;
+  number: number;
   sceneId: string;
   title: string;
   coverage: ShotPlanCoverage | null;
@@ -79,7 +81,12 @@ export interface UpdateShotPlanDetailsInput extends ShotPlanProjectInput {
 export interface AddShotToPlanInput extends ShotPlanProjectInput {
   shotPlanId: string;
   shot: ShotInput;
+  placement?: ShotPlacement;
 }
+
+export type ShotPlacement =
+  | { position: 'start' | 'end' }
+  | { position: 'before' | 'after'; shotId: string };
 
 export interface UpdateShotInPlanInput extends ShotPlanProjectInput {
   shotPlanId: string;

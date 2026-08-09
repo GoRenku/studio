@@ -31,12 +31,15 @@ screenplay content fails rather than being dropped or guessed.
 | New Act, Sequence, End of Act | Optional explicit Section/structure entries |
 | Multiple styled Text runs and XML entities | One exact plain-text value in source order |
 
+FDX Scene `Number` attributes are opaque. Their exact string values are carried
+into `Scene.productionNumber`; the importer does not trim, parse, validate, or
+deduplicate them.
+
 Parentheticals keep semantic order; one conventional outer pair of parentheses
 is removed because the renderer supplies screenplay notation. Empty Dialogue
 and Parenthetical artifacts carry no visible semantics and are ignored. Dialogue
-before the first Scene, orphan Parenthetical, malformed Dual Dialogue, duplicate
-Scene numbers, untitled explicit Sections, and a file without a Scene Heading
-are errors.
+before the first Scene, orphan Parenthetical, malformed Dual Dialogue, untitled
+explicit Sections, and a file without a Scene Heading are errors.
 
 ## Deliberate Exclusions
 
@@ -53,12 +56,12 @@ After a successful import, Director Context exposes the Project Settings
 document to the movie-director workflow. Enabled import preferences may cause
 that agent workflow to continue, in prerequisite order, with unambiguous
 continuity facts and bindings, continuity images, screenplay analysis, Scene
-Beat Sheets, and storyboard images. Explicit task direction may override those
+Beats, and storyboard images. Explicit task direction may override those
 preferences without changing the saved document.
 
 These are agent-owned follow-up stages, not importer behavior. Ambiguous
 identity still requires judgment, disabled stages are not proactively
-dispatched, and storyboards require an active Scene Beat Sheet. The screenplay
+dispatched, and storyboards require an active Scene Beats revision. The screenplay
 drafter returns import evidence to the movie director instead of orchestrating
 other departments itself.
 
@@ -83,7 +86,7 @@ The exact source is a Project-owned `screenplay_source` Asset with media kind
 `document`, file role `source`, MIME type `application/xml`, and path:
 
 ```text
-screenplay/sources/<sha256>.fdx
+screenplay/<safe-source-basename>[-<collision-number>].fdx
 ```
 
 `screenplay_import` stores the import id, source Asset/File ids, importer

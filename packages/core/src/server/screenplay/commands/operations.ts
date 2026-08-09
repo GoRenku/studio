@@ -31,6 +31,8 @@ import {
   resolveSceneInput,
   resolveSectionInput,
 } from './screenplay.js';
+import { reconcileAgentSceneNumbers } from '../scene-numbering.js';
+import { agentSceneNumberReservations } from '../../schema/index.js';
 
 export async function applyScreenplayOperations(
   input: RenkuConfigPathOptions & {
@@ -43,9 +45,15 @@ export async function applyScreenplayOperations(
   const { session } = await openProjectSession(input);
   try {
     const screenplay = structuredClone(readScreenplayAggregate(session));
+    const reservedSceneIds = session.db
+      .select({ sceneId: agentSceneNumberReservations.sceneId })
+      .from(agentSceneNumberReservations)
+      .all()
+      .map((reservation) => reservation.sceneId);
     const resolver = new ScreenplayIdentityResolver(
       input.idGenerator ?? createRandomIdGenerator(),
       screenplay,
+      reservedSceneIds,
     );
     const context: OperationContext = { screenplay, resolver };
     for (const operation of input.operations) {
@@ -57,6 +65,9 @@ export async function applyScreenplayOperations(
       screenplay,
       resolver,
       sourceCommand: 'screenplay.apply',
+      prepareTransaction: (txSession, nextScreenplay, now) => {
+        reconcileAgentSceneNumbers({ session: txSession, screenplay: nextScreenplay, now });
+      },
     });
   } finally {
     session.close();
@@ -106,9 +117,17 @@ const operationHandlers: OperationHandlerRegistry = {
   },
   'scene.update': (context, operation) => {
     preallocateSceneInput(context.resolver, operation.scene, false);
+    const sceneId = context.resolver.reference(operation.scene);
+    const current = context.screenplay.scenes.find((scene) => scene.id === sceneId);
+    if (!current) {
+      throw new ProjectDataError(
+        'SCREENPLAY_STRUCTURE_ENTRY_NOT_FOUND',
+        `Scene was not found: ${sceneId}.`
+      );
+    }
     updateScreenplayScene(
       context.screenplay,
-      resolveSceneInput(context.resolver, operation.scene),
+      resolveSceneInput(context.resolver, operation.scene, current.productionNumber),
     );
   },
   'scene.delete': (context, operation) => {

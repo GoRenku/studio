@@ -249,10 +249,10 @@ Behavior:
   Location Sheets, and selected-scene Beat readiness.
 - Reports structured director diagnostics for missing screenplay state, missing
   Production or Storyboard Lookbooks, missing selected visual media, missing
-  active Beat Sheets, and missing storyboard images.
+  active Scene Beats revisions, and missing storyboard images.
 - Returns ordered `nextSteps` such as `draft-screenplay`, `analyze-screenplay`,
   `author-production-lookbook`, `author-storyboard-lookbook`, `design-cast`,
-  `design-production`, `design-beat-sheet`, and `generate-storyboards`.
+  `design-production`, `design-scene-beats`, and `generate-storyboards`.
 - Does not mutate project state and does not run paid generation.
 
 ## `renku cast`
@@ -643,10 +643,12 @@ Behavior:
 
 - Requires an entirely empty Screenplay and no prior FDX import record.
 - Hashes and retains the exact source as the Project-owned
-  `screenplay_source` Asset at `screenplay/sources/<sha256>.fdx`.
+  `screenplay_source` Asset at
+  `screenplay/<safe-source-basename>[-<collision-number>].fdx`.
 - Imports opening text, Scenes, supported text blocks, complete Dialogue and
   Parentheticals, cue extensions, Dual Dialogue, optional Scene numbers, and
   explicit Act/Sequence markers.
+- Preserves exact supported FDX Scene numbers without inventing missing values.
 - Creates no Cast Member, Location, Prop, or identity binding. Report
   candidates are evidence for later user/agent reconciliation.
 - Fails atomically on malformed/unsafe XML, unsupported visible screenplay
@@ -800,125 +802,62 @@ order to match the current Screenplay.
   and do not create Scene rows.
 - Unknown fields are rejected for this agent-authored JSON format.
 
-## `renku screenplay beat-sheet`
+## `renku screenplay beats`
 
-Read, validate, write, and activate durable Scene Beat Sheet documents for one
-screenplay scene.
+Read, validate, create, reset, revise, and activate durable Scene Beats
+revisions for one Scene.
 
 ```bash
-renku screenplay beat-sheet context --scene <scene-id> --json
-renku screenplay beat-sheet context --scene <scene-id> --include-visual-references --json
-renku screenplay beat-sheet list --scene <scene-id> --json
-renku screenplay beat-sheet show --active --scene <scene-id> --json
-renku screenplay beat-sheet show --beat-sheet <beat-sheet-id> --json
-renku screenplay beat-sheet validate --file <beat-sheet-json> --json
-renku screenplay beat-sheet validate --file - --json
-renku screenplay beat-sheet write --file <beat-sheet-json> --json
-renku screenplay beat-sheet write --file - --json
-renku screenplay beat-sheet validate-operations --file <operations-json> --json
-renku screenplay beat-sheet apply --file <operations-json> --json
-renku screenplay beat-sheet apply --file <operations-json> --dry-run --json
-renku screenplay beat-sheet storyboard status --scene <scene-id> --beat-sheet <beat-sheet-id> --json
-renku screenplay beat-sheet set-active --scene <scene-id> --beat-sheet <beat-sheet-id> --json
+renku screenplay beats context --scene <scene-id> --json
+renku screenplay beats context --scene <scene-id> --include-visual-references --json
+renku screenplay beats list --scene <scene-id> --json
+renku screenplay beats show --active --scene <scene-id> --json
+renku screenplay beats show --revision <revision-id> --json
+renku screenplay beats validate --file <scene-beats-json> --json
+renku screenplay beats create --file <scene-beats-json> --json
+renku screenplay beats reset --file <scene-beats-json> --json
+renku screenplay beats validate-operations --file <operations-json> --json
+renku screenplay beats apply --file <operations-json> [--dry-run] --json
+renku screenplay beats storyboard status --scene <scene-id> --revision <revision-id> --json
+renku screenplay beats set-active --scene <scene-id> --revision <revision-id> --json
 ```
 
-Options:
+`create` requires no existing revision. `reset` requires an active revision and
+creates a fresh active revision whose new Core-authored Beat ids and numbers
+start at `1..N`. Neither operation deletes history. `set-active` changes only
+the active revision pointer, so selecting an earlier or later revision is the
+restore workflow.
 
-- `--scene`: required for `context`, `list`, `show --active`,
-  `storyboard status`, and `set-active`.
-- `--beat-sheet`: required for `show --beat-sheet`, `storyboard status`, and
-  `set-active`.
-- `--file`: required for `validate`, `write`, `validate-operations`, and
-  `apply`. Use `-` to read stdin.
-- `--dry-run`: for `apply`, validates and reports planned changes without
-  writing a derived Beat Sheet version.
-- `--include-visual-references`: opt-in context flag for user-requested visual
-  inspection. Default context stays text-only.
-- `--active`: shows the active Beat Sheet for a scene. Returns
-  `beatSheet: null` when no active Beat Sheet exists.
-- `--json`: print machine-readable JSON.
-
-Behavior:
-
-- Requires a current authoring project and existing screenplay data.
-- `context` returns containing optional Sections, the Scene with stable Block
-  ids, referenced Cast Members, Locations, Props, Production Lookbook text,
-  and the active Beat Sheet summary.
-- `validate` checks a closed Scene Beat Sheet document without writing.
-- `write` creates a new scene-owned Beat Sheet history row and makes it active.
-- Current-context mismatches in Beat `screenplayBlockIds`, `castMemberIds`,
-  `locationIds`, and `propIds` are warnings. Stored Beat Sheets retain those
-  ids and remain readable after the Screenplay changes or the Scene is deleted.
-- `validate-operations` checks a closed Scene Beat Sheet operations document
-  without writing.
-- `apply` creates a new scene-owned Beat Sheet history row derived from the
-  explicit `baseBeatSheetId` in the operations document. It activates the new
-  row only when `activate: true`.
-- `storyboard status` reports which Beats in a specific Beat Sheet version have
-  current storyboard images, missing images, or stale images.
-- `set-active` changes only the active Beat Sheet pointer for the scene.
-- `write`, `apply`, and `set-active` append Studio resource-change events for
-  the scene Beats surface, Beat Sheet collection, specific Beat Sheet, changed
-  Beat keys, and the scene.
-- Unknown fields are rejected. Beat Sheet JSON must use the exact nine-field
-  Beat shape: `id`, `title`, `description`, `narrativeDevelopment`,
-  `narrativePurpose`, `castMemberIds`, `locationIds`, `propIds`, and
-  `screenplayBlockIds`. It must not store camera, framing, lens, movement,
-  coverage, generated image, or production-logistics instructions.
-
-Input JSON shape:
+Input JSON contains `sceneId` and ordered creative Beat inputs. Callers do not
+provide Beat ids or numbers:
 
 ```json
 {
   "sceneId": "scene_control_room",
-  "title": "Ada confronts the empty control room",
-  "summary": "Absence turns expectation into suspicion.",
-  "narrativeProgression": "Ada's confidence gives way to unease.",
   "beats": [
     {
-      "id": "beat_001",
       "title": "The room is empty",
-      "description": "Ada enters expecting the night operator, finds the consoles abandoned, and stops at the threshold.",
-      "narrativeDevelopment": "Expectation gives way to unease when Ada discovers the room is empty.",
+      "description": "Ada enters expecting the night operator and finds the consoles abandoned.",
+      "narrativeDevelopment": "Expectation gives way to unease.",
       "narrativePurpose": "Establish the absence that forces Ada to investigate.",
       "castMemberIds": ["cast_ada"],
       "locationIds": ["location_control_room"],
       "propIds": ["prop_status_key"],
-      "screenplayBlockIds": ["screenplay_block_entry", "screenplay_block_silence"]
+      "screenplayBlockIds": ["screenplay_block_entry"]
     }
   ]
 }
 ```
 
-Operation JSON shape:
+Focused operations carry an exact `baseRevisionId`. Inserted Beats also omit
+ids and numbers; Core allocates both. Updates preserve id and number, deletes
+carry the retired number forward in the derived revision's reservation set,
+and `activate` controls whether the new immutable revision becomes active.
 
-```json
-{
-  "sceneId": "scene_control_room",
-  "baseBeatSheetId": "scene_beat_sheet_control_room_v1",
-  "activate": true,
-  "title": "Control room Beats, revised",
-  "operations": [
-    {
-      "operation": "beats.replace",
-      "beatIds": ["beat_003"],
-      "beats": [
-        {
-          "id": "beat_003a",
-          "title": "Ada commits to the search",
-          "description": "Ada crosses the room, lifts the abandoned headset, and calls for the operator.",
-          "narrativeDevelopment": "Ada turns passive discovery into an active search.",
-          "narrativePurpose": "Move the scene from unease into committed investigation.",
-          "castMemberIds": ["cast_ada"],
-          "locationIds": ["location_control_room"],
-          "propIds": ["prop_status_key"],
-          "screenplayBlockIds": ["screenplay_block_headset"]
-        }
-      ]
-    }
-  ]
-}
-```
+Current-context mismatches in Screenplay Block, Cast Member, Location, and Prop
+ids are warnings. Stored revisions remain readable after upstream context
+changes. Creative Beat text remains opaque and must not carry camera, framing,
+lens, movement, coverage, generated-image, or production-logistics contracts.
 
 ## `renku screenplay structure`, `section`, and `scene`
 
@@ -1409,6 +1348,8 @@ Iterate one Shot:
 
 ```bash
 renku shot-plan shot add --shot-plan <shot-plan-id> --file <shot.json> --json
+renku shot-plan shot add --shot-plan <shot-plan-id> --file <shot.json> --placement start --json
+renku shot-plan shot add --shot-plan <shot-plan-id> --file <shot.json> --placement before --shot <anchor-shot-id> --json
 renku shot-plan shot update --shot-plan <shot-plan-id> --shot <shot-id> --file <shot.json> --json
 renku shot-plan shot move --shot-plan <shot-plan-id> --shot <shot-id> --position <one-based-position> --json
 renku shot-plan shot remove --shot-plan <shot-plan-id> --shot <shot-id> --json
@@ -1416,6 +1357,10 @@ renku shot-plan shot remove --shot-plan <shot-plan-id> --shot <shot-id> --json
 
 `--position 1` means the first Shot. Core stores zero-based positions and
 rejects negative, zero, fractional, and out-of-range requested positions.
+For `shot add`, `--placement` accepts `start`, `end`, `before`, or `after`;
+`before` and `after` require the anchor Shot id in `--shot`. Core allocates the
+stable Shot number. Plan and Shot numbers are returned in read/mutation reports
+and never come from JSON authoring documents.
 
 Shot image selection remains explicit:
 
@@ -1679,14 +1624,14 @@ Scene Storyboard Sheet uses the focused cropped-image attachment:
 renku media import \
   --purpose scene.storyboard-sheet \
   --target scene:<scene-id> \
-  --beat-sheet <beat-sheet-id> \
+  --revision <scene-beats-revision-id> \
   --file <scene-storyboard-images-import.json> \
   --json
 
 renku media import \
   --purpose scene.storyboard-sheet \
   --target scene:<scene-id> \
-  --beat-sheet <beat-sheet-id> \
+  --revision <scene-beats-revision-id> \
   --beats <beat-id> \
   --source <cropped-beat-image-path> \
   --json
@@ -1697,7 +1642,7 @@ Grouped document:
 ```json
 {
   "kind": "sceneStoryboardImagesImport",
-  "beatSheetId": "scene_beat_sheet_control_room_v1",
+  "sceneBeatsRevisionId": "scene_beats_revision_control_room_v1",
   "title": "Control room storyboard images",
   "select": true,
   "beats": [

@@ -19,7 +19,7 @@ export async function readSceneStoryboardImagesImportDocument(
   const beats = parsed.beats;
   if (
     !Array.isArray(beats)
-    || typeof parsed.beatSheetId !== 'string'
+    || typeof parsed.sceneBeatsRevisionId !== 'string'
     || typeof parsed.select !== 'boolean'
   ) {
     throw invalidSceneStoryboardImagesImportFile(filePath);
@@ -27,7 +27,7 @@ export async function readSceneStoryboardImagesImportDocument(
   return {
     select: parsed.select,
     ...(typeof parsed.title === 'string' ? { title: parsed.title } : {}),
-    beatSheetId: parsed.beatSheetId,
+    sceneBeatsRevisionId: parsed.sceneBeatsRevisionId,
     beats: beats.map((beat) => readSceneStoryboardImagesImportBeat(beat, filePath)),
   };
 }
@@ -66,7 +66,7 @@ function invalidSceneStoryboardImagesImportFile(
     code: 'CLI029',
     message: `Invalid Scene storyboard image import file: ${filePath}.`,
     suggestion:
-      'Provide JSON with kind "sceneStoryboardImagesImport", beatSheetId, boolean select, and beats[] entries containing beatId and source.',
+      'Provide JSON with sceneBeatsRevisionId, boolean select, and beats[] entries containing beatId and source.',
   });
 }
 

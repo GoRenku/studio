@@ -77,7 +77,7 @@ Rules:
 
 `renku studio current --json` enriches scene focus with the active scene tab and,
 when the focus is on `Beats`, the selected Beat summary. The Beat projection is
-read from the active Scene Beat Sheet. Shot Plan focus is validated against the
+read from the active Scene Beats revision. Shot Plan focus is validated against the
 current project database; the browser does not infer Scene or plan membership.
 
 Example:

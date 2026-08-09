@@ -75,15 +75,15 @@ import type {
   ScreenplayAnalysisReadReport,
   ScreenplayAnalysisValidationReport,
   ScreenplayAnalysisWriteReport,
-  SceneBeatSheetApplyReport,
-  SceneBeatSheetContextReport,
-  SceneBeatSheetDocument,
-  SceneBeatSheetListReport,
-  SceneBeatSheetOperationDocument,
-  SceneBeatSheetReadReport,
-  SceneBeatSheetStoryboardStatus,
-  SceneBeatSheetValidationReport,
-  SceneBeatSheetWriteReport,
+  SceneBeatsOperationsReport,
+  SceneBeatsContextReport,
+  SceneBeatsInput,
+  SceneBeatsRevisionListReport,
+  SceneBeatsOperationsInput,
+  SceneBeatsRevisionReadReport,
+  SceneStoryboardStatus,
+  SceneBeatsValidationReport,
+  SceneBeatsRevisionWriteReport,
   StudioSelection,
   StudioSelectionContextResult,
   PageResponse,
@@ -97,7 +97,7 @@ import type {
   ProjectShell,
   UpdateAssetInput,
   StoryArcResource,
-  SceneBeatSheetResource,
+  SceneBeatsResource,
   GarbageCollectionPreview,
   GarbageCollectionReport,
   RecoverableMutationReport,
@@ -194,9 +194,9 @@ export interface ProjectDataService {
   readSceneNarrativeResource(
     input: ReadSceneNarrativeResourceInput
   ): Promise<SceneNarrativeResource>;
-  readSceneBeatSheetResource(
-    input: ReadSceneBeatSheetResourceInput
-  ): Promise<SceneBeatSheetResource>;
+  readSceneBeatsResource(
+    input: ReadSceneBeatsResourceInput
+  ): Promise<SceneBeatsResource>;
   readStudioSelectionContext(input: {
     projectName: string;
     selection: StudioSelection;
@@ -324,15 +324,16 @@ export interface ProjectDataService {
   validateScreenplayAnalysis(input: ValidateScreenplayAnalysisInput): Promise<ScreenplayAnalysisValidationReport>;
   writeScreenplayAnalysis(input: WriteScreenplayAnalysisInput): Promise<ScreenplayAnalysisWriteReport>;
   setActiveScreenplayAnalysis(input: SetActiveScreenplayAnalysisInput): Promise<ScreenplayAnalysisWriteReport>;
-  readSceneBeatSheetContext(input: ReadSceneBeatSheetContextInput): Promise<SceneBeatSheetContextReport>;
-  listSceneBeatSheets(input: ListSceneBeatSheetsInput): Promise<SceneBeatSheetListReport>;
-  readSceneBeatSheet(input: ReadSceneBeatSheetInput): Promise<SceneBeatSheetReadReport>;
-  validateSceneBeatSheet(input: ValidateSceneBeatSheetInput): Promise<SceneBeatSheetValidationReport>;
-  writeSceneBeatSheet(input: WriteSceneBeatSheetInput): Promise<SceneBeatSheetWriteReport>;
-  setActiveSceneBeatSheet(input: SetActiveSceneBeatSheetInput): Promise<SceneBeatSheetWriteReport>;
-  validateSceneBeatSheetOperations(input: ApplySceneBeatSheetOperationsInput): Promise<SceneBeatSheetApplyReport>;
-  applySceneBeatSheetOperations(input: ApplySceneBeatSheetOperationsInput): Promise<SceneBeatSheetApplyReport>;
-  readSceneBeatSheetStoryboardStatus(input: ReadSceneBeatSheetStoryboardStatusInput): Promise<SceneBeatSheetStoryboardStatus>;
+  readSceneBeatsContext(input: ReadSceneBeatsContextInput): Promise<SceneBeatsContextReport>;
+  listSceneBeatsRevisions(input: ListSceneBeatsRevisionsInput): Promise<SceneBeatsRevisionListReport>;
+  readSceneBeatsRevision(input: ReadSceneBeatsRevisionInput): Promise<SceneBeatsRevisionReadReport>;
+  validateSceneBeats(input: ValidateSceneBeatsInput): Promise<SceneBeatsValidationReport>;
+  createSceneBeatsRevision(input: CreateSceneBeatsRevisionInput): Promise<SceneBeatsRevisionWriteReport>;
+  resetSceneBeats(input: ResetSceneBeatsInput): Promise<SceneBeatsRevisionWriteReport>;
+  setActiveSceneBeatsRevision(input: SetActiveSceneBeatsRevisionInput): Promise<SceneBeatsRevisionWriteReport>;
+  validateSceneBeatsOperations(input: ApplySceneBeatsOperationsInput): Promise<SceneBeatsOperationsReport>;
+  applySceneBeatsOperations(input: ApplySceneBeatsOperationsInput): Promise<SceneBeatsOperationsReport>;
+  readSceneStoryboardStatus(input: ReadSceneStoryboardStatusInput): Promise<SceneStoryboardStatus>;
   listInspirationFolders(input: ListInspirationFoldersInput): Promise<PageResponse<InspirationFolder>>;
   readInspirationResource(input: ListInspirationFoldersInput): Promise<InspirationResource>;
   readInspirationFolder(input: ReadInspirationFolderInput): Promise<InspirationFolderResource>;
@@ -654,49 +655,51 @@ export interface SetActiveScreenplayAnalysisInput extends ScreenplayAnalysisProj
   analysisId: string;
 }
 
-export interface SceneBeatSheetProjectInput extends RenkuConfigPathOptions {}
+export interface SceneBeatsProjectInput extends RenkuConfigPathOptions {}
 
-export interface ReadSceneBeatSheetContextInput extends SceneBeatSheetProjectInput {
+export interface ReadSceneBeatsContextInput extends SceneBeatsProjectInput {
   sceneId: string;
   includeVisualReferences?: boolean;
 }
 
-export interface ListSceneBeatSheetsInput extends SceneBeatSheetProjectInput {
+export interface ListSceneBeatsRevisionsInput extends SceneBeatsProjectInput {
   sceneId: string;
 }
 
-export interface ReadSceneBeatSheetInput extends SceneBeatSheetProjectInput {
+export interface ReadSceneBeatsRevisionInput extends SceneBeatsProjectInput {
   active?: boolean;
   sceneId?: string;
-  beatSheetId?: string;
+  revisionId?: string;
 }
 
-export interface ValidateSceneBeatSheetInput extends SceneBeatSheetProjectInput {
-  document: SceneBeatSheetDocument;
+export interface ValidateSceneBeatsInput extends SceneBeatsProjectInput {
+  document: SceneBeatsInput;
   filePath?: string;
 }
 
-export interface WriteSceneBeatSheetInput extends ValidateSceneBeatSheetInput {
+export interface CreateSceneBeatsRevisionInput extends ValidateSceneBeatsInput {
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface SetActiveSceneBeatSheetInput extends SceneBeatSheetProjectInput {
+export interface ResetSceneBeatsInput extends CreateSceneBeatsRevisionInput {}
+
+export interface SetActiveSceneBeatsRevisionInput extends SceneBeatsProjectInput {
   sceneId: string;
-  beatSheetId: string;
+  revisionId: string;
 }
 
-export interface ApplySceneBeatSheetOperationsInput
-  extends SceneBeatSheetProjectInput {
-  document: SceneBeatSheetOperationDocument;
+export interface ApplySceneBeatsOperationsInput
+  extends SceneBeatsProjectInput {
+  document: SceneBeatsOperationsInput;
   filePath?: string;
   dryRun?: boolean;
   idGenerator?: ProjectIdGenerator;
 }
 
-export interface ReadSceneBeatSheetStoryboardStatusInput
-  extends SceneBeatSheetProjectInput {
+export interface ReadSceneStoryboardStatusInput
+  extends SceneBeatsProjectInput {
   sceneId: string;
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
 }
 
 export interface VisualLanguageProjectInput extends RenkuConfigPathOptions {
@@ -849,7 +852,7 @@ export interface ReadSceneNarrativeResourceInput extends RenkuConfigPathOptions 
   sceneId: string;
 }
 
-export interface ReadSceneBeatSheetResourceInput extends RenkuConfigPathOptions {
+export interface ReadSceneBeatsResourceInput extends RenkuConfigPathOptions {
   projectName: string;
   sceneId: string;
 }

@@ -154,7 +154,7 @@ async function populatedGeneration56Database(): Promise<Database.Database> {
     insert into scene_beat_sheet (id, scene_id, title, document, created_at, updated_at)
     values ('beat_sheet_1', 'scene_1', 'Opening beats', ?, '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z')
   `).run(JSON.stringify({
-    kind: 'sceneBeatSheet',
+    kind: 'sceneBeats',
     sceneId: 'scene_1',
     title: 'Opening beats',
     summary: 'The maker arrives.',

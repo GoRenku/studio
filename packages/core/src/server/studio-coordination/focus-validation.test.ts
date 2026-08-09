@@ -110,6 +110,7 @@ function makeProjectShell(): ProjectShell {
           opening: [],
           scenes: [{
             id: 'scene_1',
+            productionNumber: '1',
             heading: 'EXT. CITY WALLS - DAWN',
             blocks: [{ id: 'block_1', type: 'action', text: 'Smoke rises.' }],
           }],

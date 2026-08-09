@@ -178,8 +178,8 @@ function parseParagraph(
     path,
     type,
     text,
-    ...(element.attributes.Number?.trim()
-      ? { productionNumber: element.attributes.Number.trim() }
+    ...(element.attributes.Number !== undefined
+      ? { productionNumber: element.attributes.Number }
       : {}),
     dualDialogue: element.attributes.DualDialogue === 'Yes',
     tagNumbers,

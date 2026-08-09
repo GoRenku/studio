@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneBeatSheetDocument } from '../../client/scene-beats/index.js';
+import type { SceneBeatsInput } from '../../client/scene-beats/index.js';
+import { createDeterministicIdGenerator } from '../entity-ids.js';
 import { createProjectDataService } from '../project-data-service.js';
 import {
   createSampleMovieProject,
@@ -38,42 +39,66 @@ describe('Scene storyboard attachment', () => {
       (reference) => reference.subject.type === 'location'
     )?.subject.id;
     expect(scene?.id && castMemberId && locationId).toBeTruthy();
-    const beatSheet = await projectData.writeSceneBeatSheet({
+    const revision = await projectData.createSceneBeatsRevision({
       homeDir,
-      document: beatSheetDocument(scene!.id, scene!.blocks[0]!.id, castMemberId!, locationId!),
+      document: revisionDocument(scene!.id, scene!.blocks[0]!.id, castMemberId!, locationId!),
+      idGenerator: createDeterministicIdGenerator(),
     });
+    const beatId = 'beat_test0001';
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(path.join(created.projectPath, 'tmp', 'beat.png'), 'image');
 
     const report = await projectData.attachSceneStoryboardImages({
       homeDir,
       sceneId: scene!.id!,
-      beatSheetId: beatSheet.activeBeatSheetId,
+      sceneBeatsRevisionId: revision.activeRevisionId,
       document: {
-        beatSheetId: beatSheet.activeBeatSheetId,
+        sceneBeatsRevisionId: revision.activeRevisionId,
         select: true,
-        beats: [{ beatId: 'beat_001', source: 'tmp/beat.png' }],
+        beats: [{ beatId, source: 'tmp/beat.png' }],
       },
     });
     expect(report.resourceKeys).toEqual([
       `surface:scene:${scene!.id}:beats`,
     ]);
     expect(report.imported).toHaveLength(1);
+    expect(report.files).toEqual([
+      expect.objectContaining({
+        beatId,
+        projectRelativePath: 'storyboards/1/00-iteration/beat.png',
+      }),
+    ]);
+    await expect(fs.access(path.join(
+      created.projectPath,
+      report.files[0]!.projectRelativePath
+    ))).resolves.toBeUndefined();
 
-    const initiallySelected = await projectData.readSceneBeatSheetStoryboardStatus({
+    const shotPlan = await projectData.createShotPlan({
+      projectName: 'constantinople',
       homeDir,
       sceneId: scene!.id!,
-      beatSheetId: beatSheet.activeBeatSheetId,
+      title: 'Revision-bound coverage',
+      coverage: {
+        sceneBeatsRevisionId: revision.activeRevisionId,
+        beatIds: [beatId],
+      },
+      shots: [],
+    });
+
+    const initiallySelected = await projectData.readSceneStoryboardStatus({
+      homeDir,
+      sceneId: scene!.id!,
+      sceneBeatsRevisionId: revision.activeRevisionId,
     });
     expect(initiallySelected.beats[0]).toMatchObject({
-      beatId: 'beat_001',
+      beatId,
       selectedImageId: report.imported[0]!.id,
       images: [expect.objectContaining({
         id: report.imported[0]!.id,
         owner: {
           kind: 'sceneBeat',
           sceneId: scene!.id!,
-          beatId: 'beat_001',
+          beatId,
         },
       })],
     });
@@ -86,21 +111,21 @@ describe('Scene storyboard attachment', () => {
       projectName: 'constantinople',
       homeDir,
       sceneId: scene!.id!,
-      beatSheetId: beatSheet.activeBeatSheetId,
+      sceneBeatsRevisionId: revision.activeRevisionId,
       document: {
-        beatSheetId: beatSheet.activeBeatSheetId,
+        sceneBeatsRevisionId: revision.activeRevisionId,
         select: false,
         beats: [{
-          beatId: 'beat_001',
+          beatId,
           source: 'tmp/beat-candidate.png',
         }],
       },
     });
     const afterUnselectedImport =
-      await projectData.readSceneBeatSheetStoryboardStatus({
+      await projectData.readSceneStoryboardStatus({
         homeDir,
         sceneId: scene!.id!,
-        beatSheetId: beatSheet.activeBeatSheetId,
+        sceneBeatsRevisionId: revision.activeRevisionId,
       });
     expect(afterUnselectedImport.beats[0]!.images).toHaveLength(2);
     expect(afterUnselectedImport.beats[0]!.selectedImageId).toBe(
@@ -113,36 +138,111 @@ describe('Scene storyboard attachment', () => {
       target: {
         kind: 'sceneBeat',
         sceneId: scene!.id!,
-        beatId: 'beat_001',
+        beatId,
       },
       assetId: unselected.imported[0]!.id,
     });
     const afterExplicitSelection =
-      await projectData.readSceneBeatSheetStoryboardStatus({
+      await projectData.readSceneStoryboardStatus({
         homeDir,
         sceneId: scene!.id!,
-        beatSheetId: beatSheet.activeBeatSheetId,
+        sceneBeatsRevisionId: revision.activeRevisionId,
       });
     expect(afterExplicitSelection.beats[0]!.selectedImageId).toBe(
       unselected.imported[0]!.id
     );
+
+    const reset = await projectData.resetSceneBeats({
+      homeDir,
+      document: revisionDocument(
+        scene!.id,
+        scene!.blocks[0]!.id,
+        castMemberId!,
+        locationId!
+      ),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const resetRead = await projectData.readSceneBeatsRevision({
+      homeDir,
+      revisionId: reset.revision.id,
+    });
+    const resetBeatId = resetRead.sceneBeats!.beats[0]!.id;
+    expect(resetBeatId).not.toBe(beatId);
+    await expect(projectData.readSceneStoryboardStatus({
+      homeDir,
+      sceneId: scene!.id,
+      sceneBeatsRevisionId: revision.activeRevisionId,
+    })).resolves.toMatchObject({
+      beats: [expect.objectContaining({
+        beatId,
+        selectedImageId: unselected.imported[0]!.id,
+      })],
+    });
+    await expect(projectData.readSceneStoryboardStatus({
+      homeDir,
+      sceneId: scene!.id,
+      sceneBeatsRevisionId: reset.revision.id,
+    })).resolves.toMatchObject({
+      beats: [expect.objectContaining({
+        beatId: resetBeatId,
+        selectedImageId: null,
+        needsStoryboardImage: true,
+      })],
+    });
+
+    await projectData.setActiveSceneBeatsRevision({
+      homeDir,
+      sceneId: scene!.id,
+      revisionId: revision.activeRevisionId,
+    });
+    await expect(projectData.readSceneStoryboardStatus({
+      homeDir,
+      sceneId: scene!.id,
+      sceneBeatsRevisionId: revision.activeRevisionId,
+    })).resolves.toMatchObject({
+      beats: [expect.objectContaining({
+        beatId,
+        selectedImageId: unselected.imported[0]!.id,
+      })],
+    });
+
+    await projectData.setActiveSceneBeatsRevision({
+      homeDir,
+      sceneId: scene!.id,
+      revisionId: reset.revision.id,
+    });
+    await expect(projectData.readSceneStoryboardStatus({
+      homeDir,
+      sceneId: scene!.id,
+      sceneBeatsRevisionId: reset.revision.id,
+    })).resolves.toMatchObject({
+      beats: [expect.objectContaining({ beatId: resetBeatId })],
+    });
+    await expect(projectData.readShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: shotPlan.shotPlan.id,
+    })).resolves.toMatchObject({
+      shotPlan: {
+        coverage: {
+          sceneBeatsRevisionId: revision.activeRevisionId,
+          beatIds: [beatId],
+        },
+      },
+    });
   });
 });
 
-function beatSheetDocument(
+function revisionDocument(
   sceneId: string,
   blockId: string,
   castMemberId: string,
   locationId: string
-): SceneBeatSheetDocument {
+): SceneBeatsInput {
   return {
     sceneId,
-    title: 'Storyboard coverage',
-    summary: 'One Beat for attachment verification.',
-    narrativeProgression: 'Hold on the decisive image.',
     beats: [
       {
-        id: 'beat_001',
         title: 'Decision',
         description: 'The decision lands in a held frame.',
         narrativeDevelopment: 'The scene reaches its visual decision.',

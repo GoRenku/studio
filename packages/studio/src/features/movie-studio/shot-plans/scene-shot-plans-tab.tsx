@@ -9,6 +9,7 @@ import type {
   StudioShotPlanListItem,
 } from '@/services/studio-shot-plans-contracts';
 import { useSceneShotPlans } from './use-scene-shot-plans';
+import { formatProductionNumberForDisplay } from '@gorenku/studio-core/client';
 
 export function SceneShotPlansTab({
   projectName,
@@ -92,7 +93,7 @@ export function SceneShotPlansTab({
                 presentation={{
                   kind: 'overlay',
                   copy: {
-                    title: item.shotPlan.title,
+                    title: `${formatProductionNumberForDisplay(String(item.shotPlan.number))} · ${item.shotPlan.title}`,
                     description: coveredBeatCopy(item),
                   },
                 }}
@@ -141,7 +142,7 @@ function shotPlanMosaic(item: StudioShotPlanListItem) {
       {
         key: asset.id,
         imageUrl: file.url,
-        alt: `Selected image for Shot ${shot.position + 1}`,
+        alt: `Selected image for Shot ${shot.number}`,
       },
     ];
   });

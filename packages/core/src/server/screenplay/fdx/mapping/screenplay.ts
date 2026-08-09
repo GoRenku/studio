@@ -47,7 +47,7 @@ export function mapFdxScreenplay(
     references: [],
   };
   const technicalLog: ScreenplayImportLogEntry[] = [];
-  const productionNumbers = new Set<string>();
+  let productionSceneNumbers = 0;
   const candidates = new FdxCandidateCollector(syntax.tagsByNumber);
   const structure = new FdxStructureMapper(
     identities,
@@ -87,7 +87,10 @@ export function mapFdxScreenplay(
       continue;
     }
     if (paragraph.type === 'Scene Heading') {
-      activeScene = mapScene(paragraph, identities, productionNumbers);
+      activeScene = mapScene(paragraph, identities);
+      if (paragraph.productionNumber !== undefined) {
+        productionSceneNumbers += 1;
+      }
       screenplay.scenes.push(activeScene);
       structure.addScene(activeScene, paragraph);
       candidates.addTaggedTarget(paragraph.tagNumbers, {
@@ -201,7 +204,7 @@ export function mapFdxScreenplay(
         (total, block) => total + (block.type === 'dualDialogue' ? 2 : block.type === 'dialogue' ? 1 : 0),
         0,
       ),
-      productionSceneNumbers: productionNumbers.size,
+      productionSceneNumbers,
     },
   };
 }
@@ -209,24 +212,14 @@ export function mapFdxScreenplay(
 function mapScene(
   paragraph: Extract<FdxSyntaxDocument['content'][number], { kind: 'paragraph' }>,
   identities: FdxIdentityFactory,
-  productionNumbers: Set<string>,
 ): Scene {
   const heading = paragraph.text.trim();
   if (!heading) {
     throw invalidFdxParagraph(paragraph, 'Scene Heading is empty');
   }
-  if (paragraph.productionNumber) {
-    if (productionNumbers.has(paragraph.productionNumber)) {
-      throw new ProjectDataError(
-        'SCREENPLAY_FDX_DUPLICATE_SCENE_NUMBER',
-        `Duplicate FDX Scene Number at ${paragraph.path}: ${paragraph.productionNumber}.`,
-      );
-    }
-    productionNumbers.add(paragraph.productionNumber);
-  }
   return {
     id: identities.id('scene', `${paragraph.path}/scene`),
-    ...(paragraph.productionNumber
+    ...(paragraph.productionNumber !== undefined
       ? { productionNumber: paragraph.productionNumber }
       : {}),
     heading,

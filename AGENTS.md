@@ -1,5 +1,58 @@
 # Agent Rules for Renku Studio
 
+## Top Instruction: Keep Scope Relevant And Make Expansion Obvious
+
+Good engineering judgment is required. Identify edge cases that are directly
+relevant to the requested behavior, preserve data integrity, fail clearly, and
+add useful validation, warnings, and structured errors at the correct owning
+layer. Do not interpret scope discipline as permission to ignore realistic
+failure cases or deliver a fragile implementation.
+
+The hard boundary is unrelated product expansion. Do not silently turn a
+focused request into a redesign of an adjacent workflow, policy, permission
+model, Settings surface, CLI contract, provenance model, or future system.
+
+Before adding behavior or machinery that the user did not state directly:
+
+- trace it to a current accepted product rule, a concrete edge case of the
+  requested behavior, or a hard architecture, data-integrity, security, or
+  operational requirement;
+- explain why the requested outcome cannot be delivered safely without it;
+- prefer the existing owner and contract when they already handle the concern;
+- if it introduces an adjacent product choice rather than a necessary
+  implementation detail, stop and present it to the user separately before
+  implementation; and
+- do not use a hypothetical future need as sufficient justification.
+
+Plans and implementation handoffs must make expansion easy to notice. Do not
+bury consequential choices in a long plan, migration section, or checklist.
+Near the top of every substantial plan, add a concise **Review Attention**
+summary that calls out:
+
+- behavior added beyond the user's literal request and why it is necessary;
+- new or changed Settings, flags, commands, routes, public contracts, schema,
+  diagnostics, warnings, or error policies;
+- migrations, data cleanup, file moves, deletions, and other destructive or
+  difficult-to-reverse effects;
+- existing behavior deliberately kept unchanged;
+- assumptions that materially affect the implementation; and
+- decisions or scope expansions that need explicit user approval.
+
+Repeat these points in the user-facing plan handoff. A detailed plan may remain
+long when the work is genuinely broad, but its major decisions and surprises
+must never require the user to discover them by reading every section.
+
+For example, a shared numbering and project-folder request may require relevant
+collision handling, validation, and migration safety. It does not by itself
+authorize redesigning the existing FDX import workflow. Any proposed FDX change
+would need to be called out as separate scope and approved explicitly.
+
+For the current local Studio work, Urban Basilica is the only populated local
+Project database. A request for a fresh Urban Basilica folder means rebuilding
+that folder from the backed-up populated database, not creating a fresh
+database and not designing customer-fleet migration infrastructure, unless the
+user explicitly changes that scope.
+
 ## Top Instruction: Architecture Is A Hard Gate
 
 Do not make or accept a fix that is architecturally incorrect, even when it

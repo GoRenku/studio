@@ -155,16 +155,12 @@ export function ShotPlanDetailPage({
           open={Boolean(candidateShot)}
           onOpenChange={(open) => {
             if (!open) {
-              const shotPosition = candidateShot
-                ? item.shotPlan.shots.findIndex(
-                    (candidate) => candidate.id === candidateShot.id
-                  ) + 1
-                : 0;
+              const shotNumber = candidateShot?.number;
               setCandidateShot(null);
-              if (shotPosition > 0) {
+              if (shotNumber) {
                 requestAnimationFrame(() => {
                   const trigger = document.querySelector<HTMLButtonElement>(
-                    `[aria-label="Manage images for Shot ${shotPosition}"]`
+                    `[aria-label="Manage images for Shot ${shotNumber}"]`
                   );
                   trigger?.focus();
                 });

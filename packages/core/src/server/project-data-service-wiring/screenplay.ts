@@ -14,18 +14,19 @@ import {
 } from '../screenplay/index.js';
 import { listScreenplayAnalyses, readScreenplayAnalysis, readScreenplayAnalysisContext, setActiveScreenplayAnalysis, validateScreenplayAnalysis, writeScreenplayAnalysis } from '../screenplay-analysis/index.js';
 import {
-  listSceneBeatSheets,
-  readSceneBeatSheet,
-  setActiveSceneBeatSheet,
-  validateSceneBeatSheet,
-  writeSceneBeatSheet,
-} from '../scene-beat-sheet/history.js';
-import { readSceneBeatSheetContext } from '../screenplay/context/beat-sheet.js';
+  listSceneBeatsRevisions,
+  readSceneBeatsRevision,
+  resetSceneBeats,
+  setActiveSceneBeatsRevision,
+  validateSceneBeats,
+  createSceneBeatsRevision,
+} from '../scene-beats/history.js';
+import { readSceneBeatsContext } from '../screenplay/context/scene-beats.js';
 import {
-  applySceneBeatSheetOperations,
-  validateSceneBeatSheetOperations,
-} from '../scene-beat-sheet/operations.js';
-import { readSceneBeatSheetStoryboardStatus } from '../scene-beat-sheet/storyboard-status.js';
+  applySceneBeatsOperations,
+  validateSceneBeatsOperations,
+} from '../scene-beats/operations.js';
+import { readSceneStoryboardStatus } from '../scene-beats/storyboard-status.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createScreenplayServiceWiring(): Pick<
@@ -39,10 +40,11 @@ export function createScreenplayServiceWiring(): Pick<
   | 'readScreenplayAnalysisContext' | 'listScreenplayAnalyses'
   | 'readScreenplayAnalysis' | 'validateScreenplayAnalysis'
   | 'writeScreenplayAnalysis' | 'setActiveScreenplayAnalysis'
-  | 'readSceneBeatSheetContext' | 'listSceneBeatSheets' | 'readSceneBeatSheet'
-  | 'validateSceneBeatSheet' | 'writeSceneBeatSheet' | 'setActiveSceneBeatSheet'
-  | 'validateSceneBeatSheetOperations' | 'applySceneBeatSheetOperations'
-  | 'readSceneBeatSheetStoryboardStatus'
+  | 'readSceneBeatsContext' | 'listSceneBeatsRevisions' | 'readSceneBeatsRevision'
+  | 'validateSceneBeats' | 'createSceneBeatsRevision' | 'resetSceneBeats'
+  | 'setActiveSceneBeatsRevision'
+  | 'validateSceneBeatsOperations' | 'applySceneBeatsOperations'
+  | 'readSceneStoryboardStatus'
 > {
   return {
     readScreenplayStatus, readScreenplayStructure,
@@ -53,9 +55,10 @@ export function createScreenplayServiceWiring(): Pick<
     readScreenplayAnalysisContext, listScreenplayAnalyses,
     readScreenplayAnalysis, validateScreenplayAnalysis,
     writeScreenplayAnalysis, setActiveScreenplayAnalysis,
-    readSceneBeatSheetContext, listSceneBeatSheets, readSceneBeatSheet,
-    validateSceneBeatSheet, writeSceneBeatSheet, setActiveSceneBeatSheet,
-    validateSceneBeatSheetOperations, applySceneBeatSheetOperations,
-    readSceneBeatSheetStoryboardStatus,
+    readSceneBeatsContext, listSceneBeatsRevisions, readSceneBeatsRevision,
+    validateSceneBeats, createSceneBeatsRevision, resetSceneBeats,
+    setActiveSceneBeatsRevision,
+    validateSceneBeatsOperations, applySceneBeatsOperations,
+    readSceneStoryboardStatus,
   };
 }

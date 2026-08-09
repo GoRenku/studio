@@ -58,7 +58,7 @@ vi.mock('./scene-beats-tab', () => ({
 }));
 
 describe('ScenePanel', () => {
-  it('uses the shared display-only production number in the Scene header', async () => {
+  it('uses the exact production number in the Scene header', async () => {
     const onHeaderTitleChange = vi.fn();
     render(
       <ScenePanel
@@ -70,7 +70,7 @@ describe('ScenePanel', () => {
     );
 
     await waitFor(() =>
-      expect(onHeaderTitleChange).toHaveBeenCalledWith('01 - Bombardment')
+      expect(onHeaderTitleChange).toHaveBeenCalledWith('1 - Bombardment')
     );
     expect(screen.getByText('EXT. THEODOSIAN WALLS - DAWN')).toBeTruthy();
   });

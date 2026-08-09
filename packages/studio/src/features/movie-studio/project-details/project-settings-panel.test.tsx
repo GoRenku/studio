@@ -40,7 +40,7 @@ describe('ProjectSettingsPanel', () => {
     expect(replaceProjectSettings).toHaveBeenCalledWith(
       'constantinople',
       expect.objectContaining({
-        version: 1,
+        version: 2,
         screenplayImport: expect.objectContaining({
           createContinuitySubjects: true,
           runScreenplayAnalysis: true,
@@ -117,12 +117,12 @@ function resource(value: ReturnType<typeof settings>) {
 
 function settings() {
   return {
-    version: 1 as const,
+    version: 2 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
       runScreenplayAnalysis: false,
-      generateSceneBeatSheets: false,
+      generateSceneBeats: false,
       generateBeatStoryboardImages: false,
     },
     generation: {

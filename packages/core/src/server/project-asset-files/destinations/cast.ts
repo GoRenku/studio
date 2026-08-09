@@ -1,12 +1,15 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
-import { CAST_ROOT, extensionForMediaSource } from '../../files/asset-paths.js';
 import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
 import { requireCastMember } from '../owner-lookups.js';
 import {
-  allocateProjectRelativeVersionedFileNames,
-  allocateProjectRelativeVersionedFilePath,
-  allocateProjectRelativeVersionedFilePathSync,
+  allocateProjectAssetFileNames,
+  allocateProjectAssetFilePath,
+  allocateProjectAssetFilePathSync,
 } from '../path-allocation.js';
+import {
+  fixedFileStem,
+  requiredSemanticFileStem,
+} from '../naming/safe-segments.js';
 import type {
   DestinationFileInput,
   DestinationOutputNamesInput,
@@ -21,20 +24,26 @@ type CastDestinationKind =
 export async function resolveCastDestinationFile(
   input: DestinationFileInput<CastDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return allocateProjectRelativeVersionedFilePath({
+  return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
     parent: await resolveCastDestinationRoot(input),
-    ...castFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: castGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export function resolveCastDestinationFileSync(
   input: DestinationFileInput<CastDestinationKind>
 ): ProjectRelativePath {
-  return allocateProjectRelativeVersionedFilePathSync({
+  return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
     parent: resolveCastDestinationRootSync(input),
-    ...castFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: castGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
@@ -47,49 +56,37 @@ export async function resolveCastDestinationRoot(
 export function resolveCastDestinationRootSync(
   input: DestinationRootInput<CastDestinationKind>
 ): ProjectRelativePath {
-  const castMember = requireCastMember(
-    input.session,
-    input.destination.castMemberId
-  );
-  const folder =
-    input.destination.kind === 'cast.characterSheet'
-      ? 'character-sheets'
-      : input.destination.kind === 'cast.profile'
-        ? 'profiles'
-        : 'voice-samples';
-  return joinProjectRelativePath(CAST_ROOT, castMember.handle, folder);
+  const castMember = requireCastMember(input.session, input.destination.castMemberId);
+  return joinProjectRelativePath('cast', castMember.handle);
 }
 
 export async function resolveCastDestinationOutputNames(
   input: DestinationOutputNamesInput<CastDestinationKind>
 ): Promise<string[]> {
-  return allocateProjectRelativeVersionedFileNames({
+  return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
     parent: await resolveCastDestinationRoot(input),
-    ...castFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: castGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
   });
 }
 
-function castFileName(
-  input: DestinationFileInput<CastDestinationKind> | DestinationOutputNamesInput<CastDestinationKind>
-): { baseName: string; extension: string } {
+function castGeneratedFileStem(
+  input:
+    | DestinationFileInput<CastDestinationKind>
+    | DestinationOutputNamesInput<CastDestinationKind>
+): string {
+  if (input.namingMode.kind === 'external') {
+    return 'external';
+  }
   if (input.destination.kind === 'cast.characterSheet') {
-    return {
-      baseName: input.destination.titleHint ?? 'character-sheet',
-      extension: extensionForMediaSource(input.sourceProjectRelativePath),
-    };
+    return requiredSemanticFileStem(input.destination.semanticName, 'sheet');
   }
   if (input.destination.kind === 'cast.profile') {
-    return {
-      baseName: input.destination.titleHint ?? 'profile',
-      extension: extensionForMediaSource(input.sourceProjectRelativePath),
-    };
+    return fixedFileStem('profile');
   }
-  return {
-    baseName: input.destination.referenceName,
-    extension:
-      input.outputFormatHint ??
-      extensionForMediaSource(input.sourceProjectRelativePath),
-  };
+  return requiredSemanticFileStem(input.destination.referenceName);
 }

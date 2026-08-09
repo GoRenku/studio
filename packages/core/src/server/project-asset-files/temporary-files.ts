@@ -69,7 +69,7 @@ export async function resolveTemporaryFileRoot(input: {
   const scene = requireSceneStorageContext(input.session, input.destination.sceneId);
   return joinProjectRelativePath(
     STORYBOARDS_ROOT,
-    kebabCasePathSegment(scene.sceneId, 'scene'),
+    scene.displayNumber,
     'tmp'
   );
 }

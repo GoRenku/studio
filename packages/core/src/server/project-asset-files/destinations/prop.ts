@@ -1,12 +1,15 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
-import { PROPS_ROOT, extensionForMediaSource } from '../../files/asset-paths.js';
 import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
 import { requireProp } from '../owner-lookups.js';
 import {
-  allocateProjectRelativeVersionedFileNames,
-  allocateProjectRelativeVersionedFilePath,
-  allocateProjectRelativeVersionedFilePathSync,
+  allocateProjectAssetFileNames,
+  allocateProjectAssetFilePath,
+  allocateProjectAssetFilePathSync,
 } from '../path-allocation.js';
+import {
+  fixedFileStem,
+  requiredSemanticFileStem,
+} from '../naming/safe-segments.js';
 import type {
   DestinationFileInput,
   DestinationOutputNamesInput,
@@ -18,20 +21,26 @@ type PropDestinationKind = 'prop.sheet' | 'prop.hero';
 export async function resolvePropDestinationFile(
   input: DestinationFileInput<PropDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return allocateProjectRelativeVersionedFilePath({
+  return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
     parent: await resolvePropDestinationRoot(input),
-    ...propFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: propGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export function resolvePropDestinationFileSync(
   input: DestinationFileInput<PropDestinationKind>
 ): ProjectRelativePath {
-  return allocateProjectRelativeVersionedFilePathSync({
+  return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
     parent: resolvePropDestinationRootSync(input),
-    ...propFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: propGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
@@ -45,30 +54,32 @@ export function resolvePropDestinationRootSync(
   input: DestinationRootInput<PropDestinationKind>
 ): ProjectRelativePath {
   const prop = requireProp(input.session, input.destination.propId);
-  const folder = input.destination.kind === 'prop.sheet' ? 'prop-sheets' : 'heroes';
-  return joinProjectRelativePath(PROPS_ROOT, prop.handle, folder);
+  return joinProjectRelativePath('props', prop.handle);
 }
 
 export async function resolvePropDestinationOutputNames(
   input: DestinationOutputNamesInput<PropDestinationKind>
 ): Promise<string[]> {
-  return allocateProjectRelativeVersionedFileNames({
+  return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
     parent: await resolvePropDestinationRoot(input),
-    ...propFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: propGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
   });
 }
 
-function propFileName(
+function propGeneratedFileStem(
   input:
     | DestinationFileInput<PropDestinationKind>
     | DestinationOutputNamesInput<PropDestinationKind>
-): { baseName: string; extension: string } {
-  return {
-    baseName: input.destination.kind === 'prop.sheet'
-      ? input.destination.titleHint ?? 'prop-sheet'
-      : 'hero',
-    extension: extensionForMediaSource(input.sourceProjectRelativePath),
-  };
+): string {
+  if (input.namingMode.kind === 'external') {
+    return 'external';
+  }
+  return input.destination.kind === 'prop.sheet'
+    ? requiredSemanticFileStem(input.destination.semanticName, 'sheet')
+    : fixedFileStem('hero');
 }

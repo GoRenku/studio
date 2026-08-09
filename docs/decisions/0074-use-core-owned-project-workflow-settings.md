@@ -39,7 +39,7 @@ Director Context exposes the raw current document for agent coordination. The
 deterministic FDX importer remains limited to canonical import and candidate
 evidence; enabled import preferences tell the movie-director workflow whether
 to continue with continuity facts and bindings, continuity images, screenplay
-analysis, Scene Beat Sheets, and storyboard images after each stage's real
+analysis, Scene Beats, and storyboard images after each stage's real
 prerequisites are satisfied. Core does not run those creative workflows.
 
 Generation Context exposes Preview display preference, preferred execution

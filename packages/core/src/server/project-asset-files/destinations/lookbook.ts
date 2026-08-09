@@ -1,12 +1,12 @@
-import path from 'node:path';
 import type { ProjectRelativePath } from '../../../client/index.js';
-import { VISUAL_LANGUAGE_ROOT, extensionForMediaSource } from '../../files/asset-paths.js';
+import { requireLookbookRecordById } from '../../database/access/lookbook.js';
 import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
 import {
-  allocateProjectRelativeFileNames,
-  allocateProjectRelativeFilePath,
-  allocateProjectRelativeFilePathSync,
+  allocateProjectAssetFileNames,
+  allocateProjectAssetFilePath,
+  allocateProjectAssetFilePathSync,
 } from '../path-allocation.js';
+import { requiredSemanticFileStem } from '../naming/safe-segments.js';
 import type {
   DestinationFileInput,
   DestinationOutputNamesInput,
@@ -20,20 +20,26 @@ type LookbookDestinationKind =
 export async function resolveLookbookDestinationFile(
   input: DestinationFileInput<LookbookDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return allocateProjectRelativeFilePath({
+  return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
     parent: await resolveLookbookDestinationRoot(input),
-    ...lookbookFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: lookbookGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export function resolveLookbookDestinationFileSync(
   input: DestinationFileInput<LookbookDestinationKind>
 ): ProjectRelativePath {
-  return allocateProjectRelativeFilePathSync({
+  return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
     parent: resolveLookbookDestinationRootSync(input),
-    ...lookbookFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: lookbookGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
@@ -44,31 +50,35 @@ export async function resolveLookbookDestinationRoot(
 }
 
 export function resolveLookbookDestinationRootSync(
-  _input: DestinationRootInput<LookbookDestinationKind>
+  input: DestinationRootInput<LookbookDestinationKind>
 ): ProjectRelativePath {
-  return joinProjectRelativePath(VISUAL_LANGUAGE_ROOT, 'lookbook');
+  const lookbook = requireLookbookRecordById(input.session, input.destination.lookbookId);
+  return joinProjectRelativePath('visual-language', 'lookbooks', lookbook.kind);
 }
 
 export async function resolveLookbookDestinationOutputNames(
   input: DestinationOutputNamesInput<LookbookDestinationKind>
 ): Promise<string[]> {
-  return allocateProjectRelativeFileNames({
+  return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
     parent: await resolveLookbookDestinationRoot(input),
-    ...lookbookFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: lookbookGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
   });
 }
 
-function lookbookFileName(
+function lookbookGeneratedFileStem(
   input:
     | DestinationFileInput<LookbookDestinationKind>
     | DestinationOutputNamesInput<LookbookDestinationKind>
-): { baseName: string; extension: string } {
-  return {
-    baseName:
-      input.destination.titleHint ??
-      path.parse(input.sourceProjectRelativePath).name,
-    extension: extensionForMediaSource(input.sourceProjectRelativePath),
-  };
+): string {
+  if (input.namingMode.kind === 'external') {
+    return 'external';
+  }
+  return input.destination.kind === 'visualLanguage.lookbookSheet'
+    ? requiredSemanticFileStem(input.destination.semanticName, 'sheet')
+    : requiredSemanticFileStem(input.destination.semanticName);
 }

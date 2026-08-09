@@ -4,7 +4,7 @@ export {
 } from './structure';
 export {
   readScreenplayScene,
-  readSceneBeatSheetResource,
+  readSceneBeatsResource,
 } from './scenes';
 export {
   deleteSceneDialogueAudioTake,

@@ -1,13 +1,16 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
-import type { DatabaseSession } from '../../database/lifecycle/store.js';
-import { STORYBOARDS_ROOT, extensionForMediaSource, kebabCasePathSegment } from '../../files/asset-paths.js';
-import {
-  joinProjectRelativePath,
-} from '../../files/project-relative-paths.js';
+import { formatProductionNumberForDisplay, isProductionNumber } from '../../../client/production-numbers.js';
+import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { projectPathExistsSync } from '../file-operations.js';
+import { fixedFileStem } from '../naming/safe-segments.js';
 import { requireSceneStorageContext } from '../owner-lookups.js';
-import { allocateProjectRelativeFolderPathSync } from '../path-allocation.js';
+import {
+  allocateProjectAssetFileNames,
+  allocateProjectAssetFilePath,
+  allocateProjectAssetFilePathSync,
+  allocateProjectRelativeFolderPathSync,
+} from '../path-allocation.js';
 import type {
   DestinationFileInput,
   DestinationOutputNamesInput,
@@ -22,30 +25,38 @@ export function allocateSceneStoryboardIterationFolderSync(input: {
   sceneId: string;
 }): ProjectRelativePath {
   const scene = requireSceneStorageContext(input.session, input.sceneId);
+  const parent = joinProjectRelativePath('storyboards', scene.displayNumber);
   return allocateProjectRelativeFolderPathSync({
     projectFolder: input.projectFolder,
-    parent: joinProjectRelativePath(
-      STORYBOARDS_ROOT,
-      kebabCasePathSegment(scene.sceneId, 'scene')
-    ),
-    baseName: `${String(nextStoryboardIterationNumber(input.projectFolder, input.session, input.sceneId)).padStart(2, '0')}-iteration`,
+    parent,
+    baseName: `${String(nextStoryboardIterationNumber(input.projectFolder, parent)).padStart(2, '0')}-iteration`,
   });
 }
 
 export async function resolveSceneStoryboardDestinationFile(
   input: DestinationFileInput<SceneStoryboardDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return resolveSceneStoryboardDestinationFileSync(input);
+  return allocateProjectAssetFilePath({
+    projectFolder: input.projectFolder,
+    parent: await resolveSceneStoryboardDestinationRoot(input),
+    namingMode: input.namingMode,
+    generatedBaseName: storyboardBeatFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
+  });
 }
 
 export function resolveSceneStoryboardDestinationFileSync(
   input: DestinationFileInput<SceneStoryboardDestinationKind>
 ): ProjectRelativePath {
-  requireSceneStorageContext(input.session, input.destination.sceneId);
-  return joinProjectRelativePath(
-    input.destination.iterationFolder,
-    storyboardBeatFileName(input.destination.beatOrdinal, input.sourceProjectRelativePath)
-  );
+  return allocateProjectAssetFilePathSync({
+    projectFolder: input.projectFolder,
+    parent: resolveSceneStoryboardDestinationRootSync(input),
+    namingMode: input.namingMode,
+    generatedBaseName: storyboardBeatFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
+  });
 }
 
 export async function resolveSceneStoryboardDestinationRoot(
@@ -57,44 +68,54 @@ export async function resolveSceneStoryboardDestinationRoot(
 export function resolveSceneStoryboardDestinationRootSync(
   input: DestinationRootInput<SceneStoryboardDestinationKind>
 ): ProjectRelativePath {
-  requireSceneStorageContext(input.session, input.destination.sceneId);
+  const scene = requireSceneStorageContext(input.session, input.destination.sceneId);
+  const expectedParent = joinProjectRelativePath('storyboards', scene.displayNumber);
+  if (!input.destination.iterationFolder.startsWith(`${expectedParent}/`)) {
+    throw new ProjectDataError(
+      'PROJECT_ASSET_FILE_STORYBOARD_ITERATION_MISMATCH',
+      `Storyboard iteration does not belong to Scene ${input.destination.sceneId}.`
+    );
+  }
   return input.destination.iterationFolder;
 }
 
 export async function resolveSceneStoryboardDestinationOutputNames(
   input: DestinationOutputNamesInput<SceneStoryboardDestinationKind>
 ): Promise<string[]> {
-  return Array.from(
-    { length: input.outputCount },
-    (_, index) => storyboardBeatFileName(
-      input.destination.beatOrdinal + index,
-      input.sourceProjectRelativePath
-    )
-  );
+  return allocateProjectAssetFileNames({
+    projectFolder: input.projectFolder,
+    parent: await resolveSceneStoryboardDestinationRoot(input),
+    namingMode: input.namingMode,
+    generatedBaseName: storyboardBeatFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
+    count: input.outputCount,
+  });
 }
 
-function storyboardBeatFileName(
-  beatOrdinal: number,
-  sourceProjectRelativePath: ProjectRelativePath
+function storyboardBeatFileStem(
+  input:
+    | DestinationFileInput<SceneStoryboardDestinationKind>
+    | DestinationOutputNamesInput<SceneStoryboardDestinationKind>
 ): string {
-  return `beat-${String(beatOrdinal).padStart(2, '0')}${extensionForMediaSource(sourceProjectRelativePath)}`;
+  if (!isProductionNumber(input.destination.beatNumber)) {
+    throw new ProjectDataError(
+      'PROJECT_ASSET_FILE_BEAT_NUMBER_INVALID',
+      `Storyboard Beat number is invalid: ${input.destination.beatNumber}.`
+    );
+  }
+  const scene = requireSceneStorageContext(input.session, input.destination.sceneId);
+  return fixedFileStem(
+    `s${scene.displayNumber}-b${formatProductionNumberForDisplay(input.destination.beatNumber)}-image`
+  );
 }
 
 function nextStoryboardIterationNumber(
   projectFolder: string,
-  session: DatabaseSession,
-  sceneId: string
+  parent: ProjectRelativePath
 ): number {
-  const scene = requireSceneStorageContext(session, sceneId);
-  const parent = joinProjectRelativePath(
-    STORYBOARDS_ROOT,
-    kebabCasePathSegment(scene.sceneId, 'scene')
-  );
   for (let index = 0; index < 1000; index += 1) {
-    const candidate = joinProjectRelativePath(
-      parent,
-      `${String(index).padStart(2, '0')}-iteration`
-    );
+    const candidate = joinProjectRelativePath(parent, `${String(index).padStart(2, '0')}-iteration`);
     if (!projectPathExistsSync(projectFolder, candidate)) {
       return index;
     }

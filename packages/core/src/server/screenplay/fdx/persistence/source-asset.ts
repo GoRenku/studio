@@ -36,7 +36,8 @@ export function persistFdxSourceAsset(input: {
   const destinationProjectRelativePath = resolveDurableDestinationFileSync({
     session: input.session,
     projectFolder: input.projectFolder,
-    destination: { kind: 'screenplay.source', sha256: input.source.sha256 },
+    destination: { kind: 'screenplay.source' },
+    namingMode: { kind: 'external' },
     sourceProjectRelativePath,
     mediaKind: 'document',
     now: input.now,

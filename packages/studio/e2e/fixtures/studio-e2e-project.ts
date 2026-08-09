@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   ProjectRelativePath,
-  SceneBeatSheetDocument,
+  SceneBeatsInput,
 } from '@gorenku/studio-core/client';
 import {
   createDeterministicIdGenerator,
@@ -24,7 +24,7 @@ export interface StudioE2eMovieProject extends StudioE2eProject {
   castMemberId: string;
   locationId: string;
   dialogueId: string;
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
   firstBeatId: string;
   secondBeatId: string;
   shotPlanId: string;
@@ -71,7 +71,7 @@ export async function createMinimalMovieProject(input: {
   };
 }
 
-export async function createBeatSheetMovieProject(input: {
+export async function createSceneBeatsMovieProject(input: {
   runtime: StudioE2eRuntime;
   projectName: string;
   title: string;
@@ -128,19 +128,25 @@ export async function createBeatSheetMovieProject(input: {
     projectName: input.projectName,
     projectData,
   });
-  const beatSheet = await projectData.writeSceneBeatSheet({
+  const sceneBeats = await projectData.createSceneBeatsRevision({
     homeDir: input.runtime.isolatedHomeDirectory,
-    document: sampleBeatSheet(ids),
+    document: sampleSceneBeats(ids),
     idGenerator: createDeterministicIdGenerator(),
   });
+  const sceneBeatsRevision = await projectData.readSceneBeatsRevision({
+    homeDir: input.runtime.isolatedHomeDirectory,
+    revisionId: sceneBeats.revision.id,
+  });
+  const firstBeatId = sceneBeatsRevision.sceneBeats!.beats[0]!.id;
+  const secondBeatId = sceneBeatsRevision.sceneBeats!.beats[1]!.id;
   const shotPlan = await projectData.createShotPlan({
     projectName: input.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
     sceneId: ids.sceneId,
     title: 'Gate pressure coverage',
     coverage: {
-      beatSheetId: beatSheet.beatSheet.id,
-      beatIds: ['beat_001', 'beat_002'],
+      sceneBeatsRevisionId: sceneBeats.revision.id,
+      beatIds: [firstBeatId, secondBeatId],
     },
     shots: [
       {
@@ -183,9 +189,9 @@ export async function createBeatSheetMovieProject(input: {
   return {
     ...project,
     ...ids,
-    beatSheetId: beatSheet.beatSheet.id,
-    firstBeatId: 'beat_001',
-    secondBeatId: 'beat_002',
+    sceneBeatsRevisionId: sceneBeats.revision.id,
+    firstBeatId,
+    secondBeatId,
     shotPlanId: shotPlan.shotPlan.id,
     firstShotId: shotPlan.shotPlan.shots[0]!.id,
     secondShotId: shotPlan.shotPlan.shots[1]!.id,
@@ -290,7 +296,7 @@ async function readSampleIds(input: {
   }))[0];
   const dialogue = scene?.blocks.find((block) => block.type === 'dialogue');
   if (!act || !sequence || !scene || !dialogue || !castMember || !location) {
-    throw new Error('Beat Sheet E2E fixture did not create its sample ids.');
+    throw new Error('Scene Beats E2E fixture did not create its sample ids.');
   }
   return {
     actId: act.id,
@@ -311,7 +317,6 @@ function sampleScreenplayInput(): Parameters<
     scenes: [
       {
         key: 'siege-camp',
-        productionNumber: '1',
         heading: 'EXT. CITY GATE - DAY',
         title: 'Ceremony Becomes Physics',
         blocks: [
@@ -395,16 +400,11 @@ function sampleScreenplayInput(): Parameters<
   };
 }
 
-function sampleBeatSheet(ids: SampleIds): SceneBeatSheetDocument {
+function sampleSceneBeats(ids: SampleIds): SceneBeatsInput {
   return {
     sceneId: ids.sceneId,
-    title: 'Bombardment Beats',
-    summary: 'Two narrative Beats for desktop browser verification.',
-    narrativeProgression: 'The gate becomes the center of pressure, then the crew absorbs the consequence.',
-    lookbookInfluence: 'Use the project aspect ratio.',
     beats: [
       {
-        id: 'beat_001',
         title: 'Gate pressure',
         narrativeDevelopment: 'The gate becomes the scene center.',
         narrativePurpose: 'Establish the force pressing against the city.',
@@ -415,7 +415,6 @@ function sampleBeatSheet(ids: SampleIds): SceneBeatSheetDocument {
         screenplayBlockIds: ids.screenplayBlockIds,
       },
       {
-        id: 'beat_002',
         title: 'Crew reaction',
         narrativeDevelopment: 'The cannon crew absorbs the result.',
         narrativePurpose: 'Show consequence through human response.',

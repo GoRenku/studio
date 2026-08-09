@@ -15,7 +15,7 @@ describe('Project Settings document', () => {
   const invalidDocuments: Array<[string, unknown]> = [
     ['null', null],
     ['old version', { ...DEFAULT_PROJECT_SETTINGS, version: 0 }],
-    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 2 }],
+    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 3 }],
     [
       'missing field',
       {
@@ -24,7 +24,7 @@ describe('Project Settings document', () => {
           createContinuitySubjects: true,
           generateContinuityImages: false,
           runScreenplayAnalysis: false,
-          generateSceneBeatSheets: false,
+          generateSceneBeats: false,
         },
       },
     ],

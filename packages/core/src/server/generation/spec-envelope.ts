@@ -30,6 +30,7 @@ const SHOT_PLAN_AUTHORED_PURPOSES = new Set<GenerationSpec['purpose']>([
   'shot-plan.video-first-frame',
   'shot-plan.video-last-frame',
   'shot-plan.video-storyboard',
+  'shot-plan.video-reference',
 ]);
 
 function validateShotPlanVideoEnvelope(

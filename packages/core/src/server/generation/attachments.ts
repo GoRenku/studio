@@ -8,6 +8,7 @@ import { generationRunIdFromReceipt } from '../asset-file-generation/import-prov
 import { readGenerationRunRecord, readGenerationSpecRecord } from '../database/access/media-generation.js';
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
 import {
+  generationAttachmentAssetType,
   generatedMediaAttachmentResourceKeys,
   resolveGeneratedMediaAttachment,
 } from './attachment-destinations.js';
@@ -43,10 +44,17 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   projectFolder: string;
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
-  const attachment = resolveGeneratedMediaAttachment(input);
   const provenance = validateGenerationProvenance({
     ...input,
-    destinationAssetType: attachment.assetType,
+    destinationAssetType: generationAttachmentAssetType(input.purpose),
+  });
+  const shotPlanId = exactAuthoredShotPlanId(input.session, provenance);
+  const attachment = resolveGeneratedMediaAttachment({
+    purpose: input.purpose,
+    target: input.target,
+    session: input.session,
+    ...(input.title ? { title: input.title } : {}),
+    ...(shotPlanId ? { shotPlanId } : {}),
   });
   const resourceKeys = generatedMediaAttachmentResourceKeys({
     attachment,
@@ -103,6 +111,22 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     project: { projectName: project.projectName, id: project.id, projectFolder: input.projectFolder },
     ...(persisted.ownerRecord ? { ownerRecord: persisted.ownerRecord } : {}),
   };
+}
+
+function exactAuthoredShotPlanId(
+  session: DatabaseSession,
+  provenance: ValidatedGenerationProvenance
+): string | null {
+  if (!provenance) {
+    return null;
+  }
+  const spec = provenance.kind === 'renku-managed'
+    ? readGenerationRunRecord(session, provenance.generationRunId)?.specSnapshot
+    : readGenerationSpecRecord(session, provenance.generationSpecId)?.spec;
+  if (!spec?.authoredFrom || spec.authoredFrom.kind !== 'shotPlan') {
+    return null;
+  }
+  return spec.authoredFrom.id;
 }
 
 export type ValidatedGenerationProvenance =
@@ -182,7 +206,8 @@ function requiresExactGenerationProvenance(assetType: string): boolean {
   return assetType === 'shot_plan_video' ||
     assetType === 'shot_plan_video_first_frame' ||
     assetType === 'shot_plan_video_last_frame' ||
-    assetType === 'shot_plan_video_storyboard';
+    assetType === 'shot_plan_video_storyboard' ||
+    assetType === 'shot_plan_video_reference';
 }
 
 function validateAttachmentRequestMatch(

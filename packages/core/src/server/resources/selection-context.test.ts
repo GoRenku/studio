@@ -2,8 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneBeatSheetDocument } from '../../client/scene-beats/index.js';
-import { createProjectDataService } from '../index.js';
+import type { SceneBeatsInput } from '../../client/scene-beats/index.js';
+import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
 import {
   createSampleMovieProject,
   writeConfig,
@@ -25,7 +25,7 @@ describe('readStudioSelectionContext', () => {
   });
 
   it('rejects Beat focus outside the Beats tab', async () => {
-    const { sceneId } = await writeBeatSheet();
+    const { sceneId } = await writeSceneBeatsRevision();
 
     await expect(
       projectData.readStudioSelectionContext({
@@ -35,7 +35,7 @@ describe('readStudioSelectionContext', () => {
           type: 'scene',
           id: sceneId,
           sceneTab: 'narrative',
-          beatId: 'beat_001',
+          beatId: 'beat_test0001',
         },
       })
     ).resolves.toMatchObject({
@@ -110,7 +110,7 @@ describe('readStudioSelectionContext', () => {
     });
   });
 
-  async function writeBeatSheet(): Promise<{ sceneId: string }> {
+  async function writeSceneBeatsRevision(): Promise<{ sceneId: string }> {
     const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
     const scene = screenplay.screenplay.scenes[0]!;
     const cast = await projectData.listCastMembers({ homeDir });
@@ -121,28 +121,25 @@ describe('readStudioSelectionContext', () => {
       locationId: locations[0]!.id,
       blockId: scene.blocks[0]!.id,
     };
-    await projectData.writeSceneBeatSheet({
+    await projectData.createSceneBeatsRevision({
       homeDir,
-      document: sampleBeatSheet(ids),
+      document: sampleSceneBeatsRevision(ids),
+      idGenerator: createDeterministicIdGenerator(),
     });
     return { sceneId: ids.sceneId };
   }
 });
 
-function sampleBeatSheet(ids: {
+function sampleSceneBeatsRevision(ids: {
   sceneId: string;
   castMemberId: string;
   locationId: string;
   blockId: string;
-}): SceneBeatSheetDocument {
+}): SceneBeatsInput {
   return {
     sceneId: ids.sceneId,
-    title: 'Council chamber coverage',
-    summary: 'A restrained coverage plan for the first scene.',
-    narrativeProgression: 'Hold the map table and Mehmed in one composed frame.',
     beats: [
       {
-        id: 'beat_001',
         title: 'Map study',
         description:
           'Mehmed stands at the council table with the city map spread before him.',

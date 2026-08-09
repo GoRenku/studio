@@ -142,12 +142,12 @@ function captureIo(stdout: string[]) {
 
 function projectSettings() {
   return {
-    version: 1 as const,
+    version: 2 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
       runScreenplayAnalysis: false,
-      generateSceneBeatSheets: false,
+      generateSceneBeats: false,
       generateBeatStoryboardImages: false,
     },
     generation: {

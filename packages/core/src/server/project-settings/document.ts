@@ -4,12 +4,12 @@ import type { ProjectSettingsDocument } from '../../client/project-settings.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 1,
+  version: 2,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
     runScreenplayAnalysis: false,
-    generateSceneBeatSheets: false,
+    generateSceneBeats: false,
     generateBeatStoryboardImages: false,
   },
   generation: {
@@ -49,7 +49,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation'],
   properties: {
-    version: { const: 1 },
+    version: { const: 2 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -57,14 +57,14 @@ const projectSettingsSchema = {
         'createContinuitySubjects',
         'generateContinuityImages',
         'runScreenplayAnalysis',
-        'generateSceneBeatSheets',
+        'generateSceneBeats',
         'generateBeatStoryboardImages',
       ],
       properties: {
         createContinuitySubjects: { type: 'boolean' },
         generateContinuityImages: { type: 'boolean' },
         runScreenplayAnalysis: { type: 'boolean' },
-        generateSceneBeatSheets: { type: 'boolean' },
+        generateSceneBeats: { type: 'boolean' },
         generateBeatStoryboardImages: { type: 'boolean' },
       },
     },
@@ -155,7 +155,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 1 Project Settings contract.'
+      'Use the complete current version 2 Project Settings contract.'
     );
   });
 }
@@ -168,7 +168,7 @@ function projectSettingsIssueMessage(error: ErrorObject): string {
     return `Unknown Project Settings field: ${String(error.params.additionalProperty)}.`;
   }
   if (error.keyword === 'const') {
-    return 'Project Settings version must be 1.';
+    return 'Project Settings version must be 2.';
   }
   if (error.keyword === 'minimum' || error.keyword === 'maximum') {
     return 'Maximum concurrent generations must be an integer from 1 through 5.';

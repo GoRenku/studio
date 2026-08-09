@@ -85,11 +85,13 @@ Use this page as the map:
   - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
   - `../decisions/0022-use-cli-backed-studio-skills-for-agent-workflows.md`
   - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
+  - `../decisions/0075-use-stable-production-numbering-and-scene-beats.md`
+  - `../decisions/0076-use-human-readable-project-asset-folders.md`
   - `../decisions/0052-separate-scene-beats-from-shot-authoring.md`
-    for Scene Beat Sheets, the persistence-free Shot authoring reset, and
+    for Scene Beats, the persistence-free Shot authoring reset, and
     removal of the legacy Take domain.
-  - `project-asset-storage-conventions.md`
-    for current filesystem placement rules that supersede older
+  - `project-asset-storage-conventions.md` and Decision 0076 for current
+    filesystem placement rules that supersede older
     `generated/media/`, nested Location Sheet, and
     `screenplay/storyboards/` guidance.
 

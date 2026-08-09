@@ -156,6 +156,8 @@ describe('Shot Plan focused authoring', () => {
     });
     const firstShotId = plan.shotPlan.shots[0]!.id;
     const secondShotId = plan.shotPlan.shots[1]!.id;
+    expect(plan.shotPlan).toMatchObject({ number: 1 });
+    expect(plan.shotPlan.shots.map((shot) => shot.number)).toEqual(['1', '2']);
 
     await projectData.updateShotInPlan({
       projectName: 'constantinople',
@@ -180,6 +182,7 @@ describe('Shot Plan focused authoring', () => {
       'First',
     ]);
     expect(moved.shotPlan.shots.map((shot) => shot.position)).toEqual([0, 1]);
+    expect(moved.shotPlan.shots.map((shot) => shot.number)).toEqual(['2', '1']);
 
     const added = await projectData.addShotToPlan({
       projectName: 'constantinople',
@@ -192,13 +195,25 @@ describe('Shot Plan focused authoring', () => {
       'First',
       'Third',
     ]);
+    expect(added.shotPlan.shots.map((shot) => shot.number)).toEqual(['2', '1', '3']);
+
+    const inserted = await projectData.addShotToPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+      placement: { position: 'before', shotId: firstShotId },
+      shot: { title: 'Inserted', description: 'Inserted.', brief: {} },
+    });
+    expect(inserted.shotPlan.shots.map((shot) => shot.number)).toEqual([
+      '2', '2A', '1', '3',
+    ]);
     await expect(
       projectData.moveShotInPlan({
         projectName: 'constantinople',
         homeDir,
         shotPlanId: plan.shotPlan.id,
         shotId: firstShotId,
-        position: 3,
+        position: 4,
       })
     ).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_INVALID' });
 
@@ -232,11 +247,12 @@ describe('Shot Plan focused authoring', () => {
       shotPlanId: plan.shotPlan.id,
     });
     expect(withoutShot.shotPlan.shots.map((shot) => shot.title)).toEqual([
+      'Inserted',
       'First',
       'Third',
     ]);
     expect(withoutShot.shotPlan.shots.map((shot) => shot.position)).toEqual([
-      0, 1,
+      0, 1, 2,
     ]);
 
     await projectData.restoreTrashItem({
@@ -251,11 +267,47 @@ describe('Shot Plan focused authoring', () => {
     });
     expect(restored.shotPlan.shots.map((shot) => shot.title)).toEqual([
       'Second revised',
+      'Inserted',
       'First',
       'Third',
     ]);
     expect(restored.shotPlan.shots.map((shot) => shot.position)).toEqual([
-      0, 1, 2,
+      0, 1, 2, 3,
     ]);
+    expect(restored.shotPlan.shots.map((shot) => shot.number)).toEqual([
+      '2', '2A', '1', '3',
+    ]);
+
+    const fourth = await projectData.addShotToPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+      shot: { title: 'Fourth', description: 'Fourth.', brief: {} },
+    });
+    expect(fourth.shotPlan.shots.at(-1)?.number).toBe('4');
+
+    await Promise.all([
+      projectData.addShotToPlan({
+        projectName: 'constantinople',
+        homeDir,
+        shotPlanId: plan.shotPlan.id,
+        shot: { title: 'Fifth', description: 'Fifth.', brief: {} },
+      }),
+      projectData.addShotToPlan({
+        projectName: 'constantinople',
+        homeDir,
+        shotPlanId: plan.shotPlan.id,
+        shot: { title: 'Sixth', description: 'Sixth.', brief: {} },
+      }),
+    ]);
+    const afterConcurrentAdds = await projectData.readShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+    });
+    expect(afterConcurrentAdds.shotPlan.shots
+      .filter((shot) => shot.title === 'Fifth' || shot.title === 'Sixth')
+      .map((shot) => shot.number)
+      .sort()).toEqual(['5', '6']);
   });
 });

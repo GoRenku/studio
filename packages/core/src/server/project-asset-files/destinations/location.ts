@@ -1,12 +1,15 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
-import { LOCATIONS_ROOT, extensionForMediaSource } from '../../files/asset-paths.js';
 import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
 import { requireLocation } from '../owner-lookups.js';
 import {
-  allocateProjectRelativeVersionedFileNames,
-  allocateProjectRelativeVersionedFilePath,
-  allocateProjectRelativeVersionedFilePathSync,
+  allocateProjectAssetFileNames,
+  allocateProjectAssetFilePath,
+  allocateProjectAssetFilePathSync,
 } from '../path-allocation.js';
+import {
+  fixedFileStem,
+  requiredSemanticFileStem,
+} from '../naming/safe-segments.js';
 import type {
   DestinationFileInput,
   DestinationOutputNamesInput,
@@ -18,20 +21,26 @@ type LocationDestinationKind = 'location.sheet' | 'location.hero';
 export async function resolveLocationDestinationFile(
   input: DestinationFileInput<LocationDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return allocateProjectRelativeVersionedFilePath({
+  return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
     parent: await resolveLocationDestinationRoot(input),
-    ...locationFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: locationGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export function resolveLocationDestinationFileSync(
   input: DestinationFileInput<LocationDestinationKind>
 ): ProjectRelativePath {
-  return allocateProjectRelativeVersionedFilePathSync({
+  return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
     parent: resolveLocationDestinationRootSync(input),
-    ...locationFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: locationGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
@@ -45,34 +54,32 @@ export function resolveLocationDestinationRootSync(
   input: DestinationRootInput<LocationDestinationKind>
 ): ProjectRelativePath {
   const location = requireLocation(input.session, input.destination.locationId);
-  const folder =
-    input.destination.kind === 'location.sheet'
-      ? 'location-sheets'
-      : 'heroes';
-  return joinProjectRelativePath(LOCATIONS_ROOT, location.handle, folder);
+  return joinProjectRelativePath('locations', location.handle);
 }
 
 export async function resolveLocationDestinationOutputNames(
   input: DestinationOutputNamesInput<LocationDestinationKind>
 ): Promise<string[]> {
-  return allocateProjectRelativeVersionedFileNames({
+  return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
     parent: await resolveLocationDestinationRoot(input),
-    ...locationFileName(input),
+    namingMode: input.namingMode,
+    generatedBaseName: locationGeneratedFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
   });
 }
 
-function locationFileName(
+function locationGeneratedFileStem(
   input:
     | DestinationFileInput<LocationDestinationKind>
     | DestinationOutputNamesInput<LocationDestinationKind>
-): { baseName: string; extension: string } {
-  return {
-    baseName:
-      input.destination.kind === 'location.sheet'
-        ? input.destination.titleHint ?? 'location-sheet'
-        : input.destination.heroName ?? 'hero',
-    extension: extensionForMediaSource(input.sourceProjectRelativePath),
-  };
+): string {
+  if (input.namingMode.kind === 'external') {
+    return 'external';
+  }
+  return input.destination.kind === 'location.sheet'
+    ? requiredSemanticFileStem(input.destination.semanticName, 'sheet')
+    : fixedFileStem('hero');
 }

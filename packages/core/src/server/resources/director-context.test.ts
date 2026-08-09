@@ -2,8 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { SceneBeatSheetDocument } from '../../client/scene-beats/index.js';
-import { createProjectDataService } from '../index.js';
+import type { SceneBeatsInput } from '../../client/scene-beats/index.js';
+import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
 import {
   createBlankMovieProject,
   createSampleMovieProject,
@@ -39,7 +39,7 @@ describe('readDirectorContext', () => {
 
     expect(report.screenplay.exists).toBe(false);
     expect(report.projectSettings).toMatchObject({
-      version: 1,
+      version: 2,
       screenplayImport: { createContinuitySubjects: true },
     });
     expect(report.resourceKeys).toContain('project-settings');
@@ -51,7 +51,7 @@ describe('readDirectorContext', () => {
     );
   });
 
-  it('recommends beat-sheet design for a selected scene without an active Beat Sheet', async () => {
+  it('recommends Scene Beats design for a selected scene without an active revision', async () => {
     const sceneId = await createSampleProjectAndReadSceneId();
     if (!sceneId) {
       return;
@@ -68,9 +68,9 @@ describe('readDirectorContext', () => {
     });
     expect(report.selectedScene).toMatchObject({
       sceneId,
-      activeBeatSheetId: null,
+      activeRevisionId: null,
     });
-    expect(report.nextSteps.map((step) => step.id)).toContain('design-beat-sheet');
+    expect(report.nextSteps.map((step) => step.id)).toContain('design-scene-beats');
     expect(report.diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'DIRECTOR_CONTEXT007' }),
@@ -78,19 +78,20 @@ describe('readDirectorContext', () => {
     );
   });
 
-  it('recommends storyboard generation when the selected scene Beat Sheet has missing images', async () => {
+  it('recommends storyboard generation when the selected scene Scene Beats revision has missing images', async () => {
     const scene = await createSampleProjectAndReadScene();
     if (!scene) {
       return;
     }
-    await projectData.writeSceneBeatSheet({
+    await projectData.createSceneBeatsRevision({
       homeDir,
-      document: sampleBeatSheet({
+      document: sampleSceneBeatsRevision({
         sceneId: scene.sceneId,
         castMemberId: scene.castMemberId,
         locationId: scene.locationId,
         blockId: scene.blockId,
       }),
+      idGenerator: createDeterministicIdGenerator(),
     });
 
     const report = await projectData.readDirectorContext({
@@ -100,10 +101,10 @@ describe('readDirectorContext', () => {
 
     expect(report.selectedScene).toMatchObject({
       sceneId: scene.sceneId,
-      activeBeatSheetId: expect.any(String),
+      activeRevisionId: expect.any(String),
       storyboardStatus: {
         available: true,
-        missingBeatIds: ['beat_001'],
+        missingBeatIds: ['beat_test0001'],
       },
     });
     expect(report.nextSteps.map((step) => step.id)).toContain(
@@ -149,7 +150,6 @@ describe('readDirectorContext', () => {
     if (!created) {
       return;
     }
-    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
     const propReport = await projectData.applyPropOperations({
       homeDir,
       document: {
@@ -290,20 +290,16 @@ function storyboardLookbookDocument() {
   };
 }
 
-function sampleBeatSheet(ids: {
+function sampleSceneBeatsRevision(ids: {
   sceneId: string;
   castMemberId: string;
   locationId: string;
   blockId: string;
-}): SceneBeatSheetDocument {
+}): SceneBeatsInput {
   return {
     sceneId: ids.sceneId,
-    title: 'Council chamber coverage',
-    summary: 'A restrained coverage plan for the first scene.',
-    narrativeProgression: 'Hold the map table and Mehmed in one composed frame.',
     beats: [
       {
-        id: 'beat_001',
         title: 'Map study',
         description:
           'Mehmed stands at the council table with the city map spread before him.',

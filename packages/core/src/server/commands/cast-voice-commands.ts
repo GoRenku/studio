@@ -658,6 +658,9 @@ async function insertCastVoiceWithSampleAsset(input: {
           castVoiceId: voiceId,
           referenceName: input.validated.name,
         },
+        namingMode: input.prepared.origin === 'generated'
+          ? { kind: 'generated' }
+          : { kind: 'external' },
         fileRole: 'primary',
         mediaKind: 'audio',
         mimeType: input.prepared.mimeType,

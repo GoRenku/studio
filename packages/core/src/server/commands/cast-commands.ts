@@ -473,7 +473,7 @@ function castScenes(
     if (referenced) {
       scenes.push({
         sceneId: scene.id,
-        ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
+        ...(scene.productionNumber !== undefined ? { productionNumber: scene.productionNumber } : {}),
         heading: scene.heading,
         ...(scene.title ? { title: scene.title } : {}),
         blocks: scene.blocks,

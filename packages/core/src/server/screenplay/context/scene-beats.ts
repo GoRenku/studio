@@ -1,4 +1,4 @@
-import type { SceneBeatSheetContextReport } from '../../../client/scene-beats/index.js';
+import type { SceneBeatsContextReport } from '../../../client/scene-beats/index.js';
 import type {
   Scene,
   Screenplay,
@@ -6,26 +6,26 @@ import type {
 } from '../../../client/screenplay/index.js';
 import type { ProductionLookbook } from '../../../client/visual-language.js';
 import { listCastMemberRecords } from '../../database/access/cast-members.js';
-import { readActiveSceneBeatSheetRecord, toSceneBeatSheetSummary } from '../../database/access/scene-beat-sheets.js';
+import { readActiveSceneBeatsRevisionRecord, toSceneBeatsRevisionSummary } from '../../database/access/scene-beats.js';
 import { listLocationRecords } from '../../database/access/locations.js';
 import { readLookbookRecordByKind, toLookbook } from '../../database/access/lookbook.js';
 import { listPropRecords } from '../../database/access/props.js';
 import { readProjectInformationResourceFromDatabase } from '../../database/access/project-information.js';
 import { withCurrentProjectSession } from '../../database/lifecycle/current-project.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import type { ReadSceneBeatSheetContextInput } from '../../project-data-service-contracts.js';
-import { sceneBeatSheetResourceKeys } from '../../scene-beat-sheet/storyboard-status.js';
+import type { ReadSceneBeatsContextInput } from '../../project-data-service-contracts.js';
+import { sceneBeatsResourceKeys } from '../../scene-beats/storyboard-status.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
 
-export async function readSceneBeatSheetContext(
-  input: ReadSceneBeatSheetContextInput,
-): Promise<SceneBeatSheetContextReport> {
+export async function readSceneBeatsContext(
+  input: ReadSceneBeatsContextInput,
+): Promise<SceneBeatsContextReport> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
     const screenplay = readCanonicalScreenplay(session);
     const scene = requireScene(screenplay, input.sceneId);
     const project = readProjectInformationResourceFromDatabase(session);
-    const activeBeatSheet = readActiveSceneBeatSheetRecord(session, input.sceneId);
-    const activeBeatSheetId = activeBeatSheet?.id ?? null;
+    const activeRevision = readActiveSceneBeatsRevisionRecord(session, input.sceneId);
+    const activeRevisionId = activeRevision?.id ?? null;
     const subjects = collectSceneSubjectIds(screenplay, scene.id);
     return {
       valid: true,
@@ -44,9 +44,9 @@ export async function readSceneBeatSheetContext(
         ...(project.tones ? { tones: project.tones } : {}),
         ...(project.themes ? { themes: project.themes } : {}),
       },
-      resourceKeys: sceneBeatSheetResourceKeys({
+      resourceKeys: sceneBeatsResourceKeys({
         sceneId: input.sceneId,
-        beatSheetId: activeBeatSheetId,
+        sceneBeatsRevisionId: activeRevisionId,
       }),
       sections: collectContainingSections(screenplay, scene.id),
       scene,
@@ -77,10 +77,10 @@ export async function readSceneBeatSheetContext(
           ...(prop.visualNotes ? { visualNotes: prop.visualNotes } : {}),
         })),
       activeLookbook: readActiveLookbookContext(session),
-      activeBeatSheet: activeBeatSheet
-        ? toSceneBeatSheetSummary({
-            row: activeBeatSheet,
-            activeBeatSheetId,
+      activeRevision: activeRevision
+        ? toSceneBeatsRevisionSummary({
+            row: activeRevision,
+            activeRevisionId,
           })
         : null,
       ...(input.includeVisualReferences
@@ -151,7 +151,7 @@ function collectSceneSubjectIds(screenplay: Screenplay, sceneId: string): {
 
 function readActiveLookbookContext(
   session: Parameters<typeof readLookbookRecordByKind>[0],
-): SceneBeatSheetContextReport['activeLookbook'] {
+): SceneBeatsContextReport['activeLookbook'] {
   const row = readLookbookRecordByKind(session, 'production');
   if (!row) {
     return null;

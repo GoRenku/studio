@@ -99,7 +99,7 @@ Future enforceable check:
 Resolution:
 
 - Decision 0052 replaced the mislabeled scene coverage aggregate with a focused
-  Scene Beat Sheet domain in Core.
+  Scene Beats domain in Core.
 - Beat context, history, operations, storyboard status, and validation are
   separate focused modules behind the Core-owned public contract.
 - The reusable Shot composition, motion, dialogue, and AI Production controls
@@ -109,7 +109,7 @@ Resolution:
 
 Enforceable boundary:
 
-- UI and adapters may consume Beat projections and send Beat Sheet intent to
+- UI and adapters may consume Beat projections and send Scene Beats intent to
   Core, but they may not validate or write Beat metadata directly.
 - Shot authoring components may not import project services or create durable
   Shot/Take state until a future accepted architecture defines that owner.

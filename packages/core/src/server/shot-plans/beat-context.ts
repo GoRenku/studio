@@ -10,10 +10,10 @@ import { assetOwnerKey } from '../assets/owner-keys.js';
 import { readOwnedAsset } from '../assets/projection.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import {
-  readActiveSceneBeatSheetId,
-  readSceneBeatSheetDocument,
-  readSceneBeatSheetRecord,
-} from '../database/access/scene-beat-sheets.js';
+  readActiveSceneBeatsRevisionId,
+  readSceneBeats,
+  readSceneBeatsRevisionRecord,
+} from '../database/access/scene-beats.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export function resolveShotPlanBeatContext(input: {
@@ -24,43 +24,43 @@ export function resolveShotPlanBeatContext(input: {
   if (input.coverage === null) {
     return { coveredBeats: [], warnings: [] };
   }
-  const beatSheet = readSceneBeatSheetRecord(
+  const revision = readSceneBeatsRevisionRecord(
     input.session,
-    input.coverage.beatSheetId
+    input.coverage.sceneBeatsRevisionId
   );
-  if (!beatSheet) {
+  if (!revision) {
     return {
       coveredBeats: [],
       warnings: [
         warning(
-          'CORE_SHOT_PLAN_BEAT_SHEET_MISSING',
-          `Referenced Scene Beat Sheet is unavailable: ${input.coverage.beatSheetId}.`
+          'CORE_SHOT_PLAN_SCENE_BEATS_REVISION_MISSING',
+          `Referenced Scene Beats revision is unavailable: ${input.coverage.sceneBeatsRevisionId}.`
         ),
       ],
     };
   }
 
   const warnings: DiagnosticIssue[] = [];
-  if (beatSheet.sceneId !== input.sceneId) {
+  if (revision.sceneId !== input.sceneId) {
     warnings.push(
       warning(
-        'CORE_SHOT_PLAN_BEAT_SHEET_SCENE_MISMATCH',
-        `Referenced Scene Beat Sheet belongs to Scene ${beatSheet.sceneId}, not ${input.sceneId}.`
+        'CORE_SHOT_PLAN_SCENE_BEATS_REVISION_SCENE_MISMATCH',
+        `Referenced Scene Beats revision belongs to Scene ${revision.sceneId}, not ${input.sceneId}.`
       )
     );
   }
   if (
-    readActiveSceneBeatSheetId(input.session, beatSheet.sceneId) !== beatSheet.id
+    readActiveSceneBeatsRevisionId(input.session, revision.sceneId) !== revision.id
   ) {
     warnings.push(
       warning(
-        'CORE_SHOT_PLAN_BEAT_SHEET_STALE',
-        `Referenced Scene Beat Sheet is not the current sheet: ${beatSheet.id}.`
+        'CORE_SHOT_PLAN_SCENE_BEATS_REVISION_INACTIVE',
+        `Referenced Scene Beats revision is not active: ${revision.id}.`
       )
     );
   }
-  const document = readSceneBeatSheetDocument({
-    row: beatSheet,
+  const document = readSceneBeats({
+    row: revision,
   });
   const beatsById = new Map(document.beats.map((beat) => [beat.id, beat]));
   const coveredBeats: ShotPlanCoveredBeat[] = [];
@@ -69,7 +69,7 @@ export function resolveShotPlanBeatContext(input: {
     if (beat) {
       const owner = {
         kind: 'sceneBeat' as const,
-        sceneId: beatSheet.sceneId,
+        sceneId: revision.sceneId,
         beatId,
       };
       const selectedAssetId = readSelectedAssetRecord(
@@ -94,7 +94,7 @@ export function resolveShotPlanBeatContext(input: {
       warnings.push(
         warning(
           'CORE_SHOT_PLAN_BEAT_MISSING',
-          `Referenced Beat is unavailable in Scene Beat Sheet ${beatSheet.id}: ${beatId}.`
+          `Referenced Beat is unavailable in Scene Beats revision ${revision.id}: ${beatId}.`
         )
       );
     }

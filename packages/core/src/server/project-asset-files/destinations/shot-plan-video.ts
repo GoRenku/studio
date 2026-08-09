@@ -1,14 +1,10 @@
-import path from 'node:path';
 import type { ProjectRelativePath } from '../../../client/index.js';
 import {
-  VIDEOS_ROOT,
-  extensionForMediaSource,
-} from '../../files/asset-paths.js';
-import {
-  allocateProjectRelativeFileNames,
-  allocateProjectRelativeFilePath,
-  allocateProjectRelativeFilePathSync,
+  allocateProjectAssetFileNames,
+  allocateProjectAssetFilePath,
+  allocateProjectAssetFilePathSync,
 } from '../path-allocation.js';
+import { requireShotPlanStorageContext } from './shot-plan.js';
 import type {
   DestinationFileInput,
   DestinationOutputNamesInput,
@@ -18,57 +14,62 @@ import type {
 type ShotPlanVideoDestinationKind = 'shotPlan.video';
 
 export async function resolveShotPlanVideoDestinationFile(
-  input: DestinationFileInput<ShotPlanVideoDestinationKind>,
+  input: DestinationFileInput<ShotPlanVideoDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return allocateProjectRelativeFilePath({
+  return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
-    parent: VIDEOS_ROOT,
-    ...videoFileName(input),
+    parent: await resolveShotPlanVideoDestinationRoot(input),
+    namingMode: input.namingMode,
+    generatedBaseName: videoFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export function resolveShotPlanVideoDestinationFileSync(
-  input: DestinationFileInput<ShotPlanVideoDestinationKind>,
+  input: DestinationFileInput<ShotPlanVideoDestinationKind>
 ): ProjectRelativePath {
-  return allocateProjectRelativeFilePathSync({
+  return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
-    parent: VIDEOS_ROOT,
-    ...videoFileName(input),
+    parent: resolveShotPlanVideoDestinationRootSync(input),
+    namingMode: input.namingMode,
+    generatedBaseName: videoFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export async function resolveShotPlanVideoDestinationRoot(
-  _input: DestinationRootInput<ShotPlanVideoDestinationKind>,
+  input: DestinationRootInput<ShotPlanVideoDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return VIDEOS_ROOT;
+  return resolveShotPlanVideoDestinationRootSync(input);
 }
 
 export function resolveShotPlanVideoDestinationRootSync(
-  _input: DestinationRootInput<ShotPlanVideoDestinationKind>,
+  input: DestinationRootInput<ShotPlanVideoDestinationKind>
 ): ProjectRelativePath {
-  return VIDEOS_ROOT;
+  return requireShotPlanStorageContext(input.session, input.destination.shotPlanId).root;
 }
 
 export async function resolveShotPlanVideoDestinationOutputNames(
-  input: DestinationOutputNamesInput<ShotPlanVideoDestinationKind>,
+  input: DestinationOutputNamesInput<ShotPlanVideoDestinationKind>
 ): Promise<string[]> {
-  return allocateProjectRelativeFileNames({
+  return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
-    parent: VIDEOS_ROOT,
-    ...videoFileName(input),
+    parent: await resolveShotPlanVideoDestinationRoot(input),
+    namingMode: input.namingMode,
+    generatedBaseName: videoFileStem(input),
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
   });
 }
 
-function videoFileName(
+function videoFileStem(
   input:
     | DestinationFileInput<ShotPlanVideoDestinationKind>
-    | DestinationOutputNamesInput<ShotPlanVideoDestinationKind>,
-) {
-  return {
-    baseName:
-      input.destination.titleHint ??
-      path.parse(input.sourceProjectRelativePath).name,
-    extension: extensionForMediaSource(input.sourceProjectRelativePath),
-  };
+    | DestinationOutputNamesInput<ShotPlanVideoDestinationKind>
+): string {
+  const context = requireShotPlanStorageContext(input.session, input.destination.shotPlanId);
+  return `s${context.sceneDisplayNumber}-p${context.shotPlanDisplayNumber}-video`;
 }

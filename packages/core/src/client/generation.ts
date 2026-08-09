@@ -12,6 +12,7 @@ export type GenerationPurpose =
   | 'shot-plan.video-first-frame'
   | 'shot-plan.video-last-frame'
   | 'shot-plan.video-storyboard'
+  | 'shot-plan.video-reference'
   | 'lookbook.image'
   | 'lookbook.video-sheet'
   | 'lookbook.storyboard-sheet'

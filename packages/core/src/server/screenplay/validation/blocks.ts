@@ -157,22 +157,11 @@ function validateScreenplayIdentityScopes(screenplay: Screenplay): DiagnosticIss
   const blockIds = new Set<string>();
   const turnIds = new Set<string>();
   const partIds = new Set<string>();
-  const numbers = new Set<string>();
 
   for (const block of screenplay.opening) {
     addIdentity(blockIds, block.id, ['opening', block.id, 'id'], 'Block', issues);
   }
   for (const scene of screenplay.scenes) {
-    if (scene.productionNumber) {
-      addIdentity(
-        numbers,
-        scene.productionNumber,
-        ['scenes', scene.id, 'productionNumber'],
-        'production number',
-        issues,
-        'SCREENPLAY_PRODUCTION_NUMBER_CONFLICT',
-      );
-    }
     for (const block of scene.blocks) {
       addIdentity(blockIds, block.id, ['scenes', scene.id, 'blocks', block.id], 'Block', issues);
       if (block.type === 'dialogue') {

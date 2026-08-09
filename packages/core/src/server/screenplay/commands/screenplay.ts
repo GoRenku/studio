@@ -36,6 +36,7 @@ import { studioScreenplayResourceKey } from '../../studio-coordination/resource-
 import { readScreenplayAggregate, replaceScreenplayAggregate } from '../persistence/screenplay.js';
 import { insertScreenplayRevision } from '../persistence/revisions.js';
 import { assertValidScreenplayInput } from '../validation/blocks.js';
+import { numberInitialAgentScenes } from '../scene-numbering.js';
 
 export async function createScreenplay(
   input: RenkuConfigPathOptions & {
@@ -65,6 +66,9 @@ export async function createScreenplay(
       screenplay: resolved,
       resolver,
       sourceCommand: 'screenplay.create',
+      prepareTransaction: (session, screenplay, now) => {
+        numberInitialAgentScenes({ session, screenplay, now });
+      },
     });
   } finally {
     session.close();
@@ -75,10 +79,16 @@ export class ScreenplayIdentityResolver {
   readonly generatedIdentities: GeneratedScreenplayIdentity[] = [];
   private readonly generator: ProjectIdGenerator;
   private readonly knownIds = new Map<string, Set<GeneratedScreenplayIdentityKind>>();
+  private readonly unavailableIds: Set<string>;
   private readonly keys = new Map<string, GeneratedScreenplayIdentity>();
 
-  constructor(generator: ProjectIdGenerator, screenplay?: Screenplay) {
+  constructor(
+    generator: ProjectIdGenerator,
+    screenplay?: Screenplay,
+    unavailableIds: Iterable<string> = [],
+  ) {
     this.generator = generator;
+    this.unavailableIds = new Set(unavailableIds);
     if (screenplay) {
       this.seedScreenplay(screenplay);
     }
@@ -137,7 +147,7 @@ export class ScreenplayIdentityResolver {
   private allocateUniqueId(prefix: EntityIdPrefix): string {
     for (let attempt = 0; attempt < 100; attempt += 1) {
       const id = this.generator.next(prefix);
-      if (!this.knownIds.has(id)) {
+      if (!this.knownIds.has(id) && !this.unavailableIds.has(id)) {
         return id;
       }
     }
@@ -231,10 +241,11 @@ export function preallocateReferenceInput(
 export function resolveSceneInput(
   resolver: ScreenplayIdentityResolver,
   input: SceneInput,
+  productionNumber?: string,
 ): Scene {
   return {
     id: resolver.reference(input),
-    ...(input.productionNumber ? { productionNumber: input.productionNumber } : {}),
+    ...(productionNumber !== undefined ? { productionNumber } : {}),
     heading: input.heading,
     ...(input.title ? { title: input.title } : {}),
     blocks: input.blocks.map((block) => resolveBlock(resolver, block)),
@@ -280,6 +291,11 @@ export function commitScreenplayMutation(input: {
   sourceCommand: string;
   summary?: string;
   resourceKeys?: string[];
+  prepareTransaction?: (
+    session: Parameters<typeof readProjectRecord>[0],
+    screenplay: Screenplay,
+    now: string
+  ) => void;
 }): ScreenplayMutationReport {
   const project = readProjectRecord(input.session);
   if (!project) {
@@ -292,6 +308,7 @@ export function commitScreenplayMutation(input: {
   const createdAt = new Date().toISOString();
   input.session.db.transaction((tx) => {
     const txSession = { ...input.session, db: tx };
+    input.prepareTransaction?.(txSession, input.screenplay, createdAt);
     replaceScreenplayAggregate(txSession, input.screenplay);
     insertScreenplayRevision({
       session: txSession,

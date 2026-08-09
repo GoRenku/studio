@@ -1,76 +1,89 @@
 import type {
-  SceneBeatSheetDocument,
-  SceneBeatSheetStoryboardStatus,
+  SceneBeats,
+  SceneStoryboardStatus,
 } from '../../client/scene-beats/index.js';
 import type { Screenplay } from '../../client/screenplay/index.js';
 import {
-  readActiveSceneBeatSheetRecord,
-  readSceneBeatSheetDocument,
-  requireSceneBeatSheetForScene,
-} from '../database/access/scene-beat-sheets.js';
+  readSceneBeats,
+  requireSceneBeatsRevisionForScene,
+} from '../database/access/scene-beats.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { ReadSceneBeatSheetStoryboardStatusInput } from '../project-data-service-contracts.js';
+import type { ReadSceneStoryboardStatusInput } from '../project-data-service-contracts.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { listAssetPageInSession } from '../assets/projection.js';
 import {
   studioSceneNarrativeResourceKey,
-  studioSceneBeatSheetResourceKey,
+  studioSceneBeatsRevisionResourceKey,
   studioBeatResourceKey,
   studioSceneBeatsResourceKey,
 } from '../studio-coordination/resource-keys.js';
 
-export const SCENE_BEAT_SHEET_RESOURCE_KEY = 'scene-beat-sheet';
+export const SCENE_BEATS_RESOURCE_KEY = 'scene-beats';
 
-export async function readSceneBeatSheetStoryboardStatus(
-  input: ReadSceneBeatSheetStoryboardStatusInput
-): Promise<SceneBeatSheetStoryboardStatus> {
+export async function readSceneStoryboardStatus(
+  input: ReadSceneStoryboardStatusInput
+): Promise<SceneStoryboardStatus> {
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
     const screenplay = requireScreenplay(session);
     requireSceneHierarchy(screenplay, input.sceneId);
-    const row = requireSceneBeatSheetForScene({
+    const row = requireSceneBeatsRevisionForScene({
       session,
       sceneId: input.sceneId,
-      beatSheetId: input.beatSheetId,
+      revisionId: input.sceneBeatsRevisionId,
     });
-    return readSceneBeatSheetStoryboardStatusFromSession({
+    return readSceneStoryboardStatusFromSession({
       session,
       currentProject,
       sceneId: input.sceneId,
-      beatSheetId: input.beatSheetId,
-      document: readSceneBeatSheetDocument({ row }),
+      sceneBeatsRevisionId: input.sceneBeatsRevisionId,
+      sceneBeats: readSceneBeats({ row }),
     });
   });
 }
 
-export function readDryRunSceneBeatSheetStoryboardStatusFromSession(input: {
+export function readDryRunSceneStoryboardStatusFromSession(input: {
   session: Parameters<typeof listAssetPageInSession>[0];
   currentProject: { projectName: string; projectId?: string; projectFolder?: string };
   sceneId: string;
-  beatSheetId: string;
-  document: SceneBeatSheetDocument;
-}): SceneBeatSheetStoryboardStatus {
-  return readSceneBeatSheetStoryboardStatusFromSession(input);
+  sceneBeatsRevisionId: string;
+  sceneBeats: SceneBeats;
+  persistedBeatIds: string[];
+}): SceneStoryboardStatus {
+  const persistedBeatIds = new Set(input.persistedBeatIds);
+  return buildSceneStoryboardStatus(input, (beatId) => persistedBeatIds.has(beatId)
+    ? listBeatStoryboardAssets(input, beatId)
+    : { items: [], selectedAssetId: null });
 }
 
-export function readSceneBeatSheetStoryboardStatusFromSession(input: {
+export function readSceneStoryboardStatusFromSession(input: {
   session: Parameters<typeof listAssetPageInSession>[0];
   currentProject: { projectName: string; projectId?: string; projectFolder?: string };
   sceneId: string;
-  beatSheetId: string;
-  document: SceneBeatSheetDocument;
-}): SceneBeatSheetStoryboardStatus {
-  const currentBeatIds = readCurrentBeatIds(input.session, input.sceneId);
-  const beats = input.document.beats.map((beat) => {
-    const page =
-      !currentBeatIds.has(beat.id)
-        ? { items: [], selectedAssetId: null }
-        : listAssetPageInSession(input.session, {
-            owner: { kind: 'sceneBeat', sceneId: input.sceneId, beatId: beat.id },
-            type: 'scene_storyboard_image',
-          });
+  sceneBeatsRevisionId: string;
+  sceneBeats: SceneBeats;
+}): SceneStoryboardStatus {
+  return buildSceneStoryboardStatus(input, (beatId) =>
+    listBeatStoryboardAssets(input, beatId));
+}
+
+function buildSceneStoryboardStatus(
+  input: {
+    currentProject: { projectName: string; projectId?: string; projectFolder?: string };
+    sceneId: string;
+    sceneBeatsRevisionId: string;
+    sceneBeats: SceneBeats;
+  },
+  readAssets: (beatId: string) => {
+    items: SceneStoryboardStatus['beats'][number]['images'];
+    selectedAssetId: string | null;
+  }
+): SceneStoryboardStatus {
+  const beats = input.sceneBeats.beats.map((beat) => {
+    const page = readAssets(beat.id);
     return {
       beatId: beat.id,
+      beatNumber: beat.number,
       images: page.items,
       selectedImageId: page.selectedAssetId,
       needsStoryboardImage: page.selectedAssetId === null,
@@ -85,13 +98,13 @@ export function readSceneBeatSheetStoryboardStatusFromSession(input: {
       id: input.currentProject.projectId,
       projectFolder: input.currentProject.projectFolder,
     },
-    resourceKeys: sceneBeatSheetResourceKeys({
+    resourceKeys: sceneBeatsResourceKeys({
       sceneId: input.sceneId,
-      beatSheetId: input.beatSheetId,
+      sceneBeatsRevisionId: input.sceneBeatsRevisionId,
       beatIds: beats.map((beat) => beat.beatId),
     }),
     sceneId: input.sceneId,
-    beatSheetId: input.beatSheetId,
+    sceneBeatsRevisionId: input.sceneBeatsRevisionId,
     beats,
     missingBeatIds: beats
       .filter((beat) => beat.selectedImageId === null)
@@ -102,33 +115,31 @@ export function readSceneBeatSheetStoryboardStatusFromSession(input: {
   };
 }
 
-function readCurrentBeatIds(
-  session: Parameters<typeof listAssetPageInSession>[0],
-  sceneId: string
-): ReadonlySet<string> {
-  const active = readActiveSceneBeatSheetRecord(session, sceneId);
-  if (!active) {
-    return new Set();
-  }
-  return new Set(
-    readSceneBeatSheetDocument({ row: active }).beats.map(
-      (beat) => beat.id
-    )
-  );
+function listBeatStoryboardAssets(
+  input: {
+    session: Parameters<typeof listAssetPageInSession>[0];
+    sceneId: string;
+  },
+  beatId: string
+) {
+  return listAssetPageInSession(input.session, {
+    owner: { kind: 'sceneBeat', sceneId: input.sceneId, beatId },
+    type: 'scene_storyboard_image',
+  });
 }
 
-export function sceneBeatSheetResourceKeys(input: {
+export function sceneBeatsResourceKeys(input: {
   sceneId: string;
-  beatSheetId?: string | null;
+  sceneBeatsRevisionId?: string | null;
   beatIds?: string[];
 }): string[] {
   return [
     studioSceneBeatsResourceKey(input.sceneId),
-    SCENE_BEAT_SHEET_RESOURCE_KEY,
-    ...(input.beatSheetId ? [studioSceneBeatSheetResourceKey(input.beatSheetId)] : []),
-    ...(input.beatSheetId
+    SCENE_BEATS_RESOURCE_KEY,
+    ...(input.sceneBeatsRevisionId ? [studioSceneBeatsRevisionResourceKey(input.sceneBeatsRevisionId)] : []),
+    ...(input.sceneBeatsRevisionId
       ? (input.beatIds ?? []).map(
-          (beatId) => studioBeatResourceKey(input.beatSheetId as string, beatId)
+          (beatId) => studioBeatResourceKey(input.sceneBeatsRevisionId as string, beatId)
         )
       : []),
     studioSceneNarrativeResourceKey(input.sceneId),

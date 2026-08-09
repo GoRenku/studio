@@ -3,19 +3,7 @@ import type { Asset } from '../assets.js';
 import type { Project } from '../project/index.js';
 import type { Scene, ScreenplayBlock, ScreenplaySection } from '../screenplay/index.js';
 
-export interface SceneBeatSheetDocument {
-  sceneId: string;
-  title: string;
-  summary: string;
-  narrativeProgression: string;
-  baseBeatSheetId?: string;
-  lookbookInfluence?: string;
-  beats: Beat[];
-  openQuestions?: string[];
-}
-
-export interface Beat {
-  id: string;
+export interface BeatInput {
   title: string;
   description: string;
   narrativeDevelopment: string;
@@ -26,57 +14,66 @@ export interface Beat {
   screenplayBlockIds: string[];
 }
 
-export interface SceneBeatSheetOperationDocument {
-  sceneId: string;
-  baseBeatSheetId: string;
-  activate: boolean;
-  title?: string;
-  summary?: string;
-  narrativeProgression?: string;
-  lookbookInfluence?: string;
-  operations: SceneBeatSheetOperation[];
-  openQuestions?: string[];
+export interface Beat extends BeatInput {
+  id: string;
+  number: string;
 }
 
-export type SceneBeatSheetOperation =
-  | { operation: 'beats.insert'; placement: BeatPlacement; beats: Beat[]; storyboardPolicy?: SceneBeatSheetStoryboardPolicy }
-  | { operation: 'beats.replace'; beatIds: string[]; beats: Beat[]; storyboardPolicy?: SceneBeatSheetStoryboardPolicy }
-  | { operation: 'beat.update'; beat: Beat; storyboardPolicy?: SceneBeatSheetStoryboardPolicy }
-  | { operation: 'beats.delete'; beatIds: string[] }
-  | { operation: 'beatSheet.replace'; beats: Beat[]; storyboardPolicy?: SceneBeatSheetStoryboardPolicy };
+export interface SceneBeatsInput {
+  sceneId: string;
+  beats: BeatInput[];
+}
+
+export interface SceneBeats {
+  sceneId: string;
+  beats: Beat[];
+}
+
+export interface SceneBeatsOperationsInput {
+  sceneId: string;
+  baseRevisionId: string;
+  activate: boolean;
+  operations: SceneBeatsOperation[];
+}
+
+export type SceneBeatsOperation =
+  | { operation: 'beats.insert'; placement: BeatPlacement; beats: BeatInput[] }
+  | { operation: 'beat.update'; beatId: string; beat: BeatInput }
+  | { operation: 'beats.delete'; beatIds: string[] };
 
 export type BeatPlacement =
   | { position: 'start' | 'end' }
   | { position: 'before' | 'after'; beatId: string };
 
-export type SceneBeatSheetStoryboardPolicy = 'generate' | 'reuse-if-unchanged' | 'missing-only';
-
-export interface SceneBeatSheetProjectReport {
+export interface SceneBeatsProjectReport {
   projectName: string;
   id?: string;
   projectFolder?: string;
 }
 
-export interface SceneBeatSheetSummary {
+export interface SceneBeatsRevisionSummary {
   id: string;
   sceneId: string;
-  title: string;
-  summary: string;
+  baseRevisionId?: string;
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
-  baseBeatSheetId?: string;
 }
 
-export interface SceneBeatSheetCommandReport {
+export interface SceneBeatsRevision {
+  revision: SceneBeatsRevisionSummary;
+  sceneBeats: SceneBeats;
+}
+
+export interface SceneBeatsCommandReport {
   valid: true;
   warnings: DiagnosticIssue[];
-  project: SceneBeatSheetProjectReport;
+  project: SceneBeatsProjectReport;
   resourceKeys: string[];
 }
 
-export interface SceneBeatSheetContextReport extends SceneBeatSheetCommandReport {
-  project: SceneBeatSheetProjectReport & Pick<Project,
+export interface SceneBeatsContextReport extends SceneBeatsCommandReport {
+  project: SceneBeatsProjectReport & Pick<Project,
     | 'title' | 'aspectRatio' | 'logline' | 'synopsis' | 'premise'
     | 'primaryGenre' | 'secondaryGenres' | 'tones' | 'themes'
   >;
@@ -96,51 +93,52 @@ export interface SceneBeatSheetContextReport extends SceneBeatSheetCommandReport
     composition: string;
     lighting: string;
   } | null;
-  activeBeatSheet: SceneBeatSheetSummary | null;
+  activeRevision: SceneBeatsRevisionSummary | null;
   visualReferences?: { note: string };
 }
 
-export interface SceneBeatSheetListReport extends SceneBeatSheetCommandReport {
+export interface SceneBeatsRevisionListReport extends SceneBeatsCommandReport {
   sceneId: string;
-  beatSheets: SceneBeatSheetSummary[];
-  activeBeatSheetId: string | null;
+  revisions: SceneBeatsRevisionSummary[];
+  activeRevisionId: string | null;
 }
 
-export interface SceneBeatSheetReadReport extends SceneBeatSheetCommandReport {
-  beatSheet: SceneBeatSheetDocument | null;
-  summary: SceneBeatSheetSummary | null;
-  activeBeatSheetId: string | null;
+export interface SceneBeatsRevisionReadReport extends SceneBeatsCommandReport {
+  sceneBeats: SceneBeats | null;
+  revision: SceneBeatsRevisionSummary | null;
+  activeRevisionId: string | null;
 }
 
-export interface SceneBeatSheetValidationReport extends SceneBeatSheetCommandReport {
-  beatSheet: SceneBeatSheetDocument;
+export interface SceneBeatsValidationReport extends SceneBeatsCommandReport {
+  sceneBeats: SceneBeatsInput;
 }
 
-export type SceneBeatSheetChange =
-  | { type: 'sceneBeatSheet.created'; beatSheetId: string; sceneId: string }
-  | { type: 'sceneBeatSheet.activeSet'; beatSheetId: string; sceneId: string };
+export type SceneBeatsChange =
+  | { type: 'sceneBeats.revisionCreated'; revisionId: string; sceneId: string }
+  | { type: 'sceneBeats.activeRevisionSet'; revisionId: string; sceneId: string };
 
-export interface SceneBeatSheetWriteReport extends SceneBeatSheetCommandReport {
-  beatSheet: SceneBeatSheetSummary;
-  activeBeatSheetId: string;
-  changes: SceneBeatSheetChange[];
+export interface SceneBeatsRevisionWriteReport extends SceneBeatsCommandReport {
+  revision: SceneBeatsRevisionSummary;
+  activeRevisionId: string;
+  changes: SceneBeatsChange[];
 }
 
-export interface SceneBeatSheetApplyReport extends SceneBeatSheetCommandReport {
+export interface SceneBeatsOperationsReport extends SceneBeatsCommandReport {
   sceneId: string;
-  baseBeatSheetId: string;
-  createdBeatSheetId: string;
-  activatedBeatSheetId: string | null;
-  beatSheet: SceneBeatSheetSummary;
-  changes: Array<{ type: 'inserted' | 'removed' | 'updated' | 'preserved'; beatIds: string[] }>;
-  storyboard: SceneBeatSheetStoryboardStatus;
+  baseRevisionId: string;
+  createdRevisionId: string;
+  activatedRevisionId: string | null;
+  revision: SceneBeatsRevisionSummary;
+  changes: Array<{ type: 'inserted' | 'updated' | 'deleted'; beatIds: string[] }>;
+  storyboard: SceneStoryboardStatus;
 }
 
-export interface SceneBeatSheetStoryboardStatus extends SceneBeatSheetCommandReport {
+export interface SceneStoryboardStatus extends SceneBeatsCommandReport {
   sceneId: string;
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
   beats: Array<{
     beatId: string;
+    beatNumber: string;
     images: Asset[];
     selectedImageId: string | null;
     needsStoryboardImage: boolean;
@@ -153,7 +151,7 @@ export interface SceneBeatSheetStoryboardStatus extends SceneBeatSheetCommandRep
 export interface SceneStoryboardImagesImportDocument {
   select: boolean;
   title?: string;
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
   beats: Array<{
     beatId: string;
     source: string;
@@ -170,13 +168,13 @@ export interface SceneStoryboardImagesImportedFile {
   projectRelativePath: string;
 }
 
-export interface SceneStoryboardImagesImportReport extends SceneBeatSheetCommandReport {
+export interface SceneStoryboardImagesImportReport extends SceneBeatsCommandReport {
   changes: Array<{ type: string; [key: string]: string }>;
   purpose: 'scene.storyboard-sheet';
   target: { kind: 'scene'; id: string };
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
   imported: Asset[];
   files: SceneStoryboardImagesImportedFile[];
 }
 
-export type SceneBeatSheetBlock = ScreenplayBlock;
+export type SceneBeatsBlock = ScreenplayBlock;

@@ -86,7 +86,6 @@ const screenplayBlockInput = {
 } as const;
 
 const sceneInput = authoringObject(['heading', 'blocks'], {
-  productionNumber: nonEmptyString,
   heading: nonEmptyString,
   title: nonEmptyString,
   blocks: { type: 'array', items: screenplayBlockInput },

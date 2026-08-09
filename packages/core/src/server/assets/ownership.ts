@@ -9,7 +9,7 @@ import {
 import { readProjectRecord } from '../database/access/project.js';
 import { readLookbookRecordById } from '../database/access/lookbook.js';
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
-import { readActiveSceneBeatSheetRecord, readSceneBeatSheetDocument } from '../database/access/scene-beat-sheets.js';
+import { sceneBeatExistsInHistory } from '../database/access/scene-beats.js';
 import { insertAssetMembershipRecord, readAssetMembershipRecord } from '../database/access/asset-memberships.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -82,7 +82,7 @@ function assetOwnerExists(
     case 'shot':
       return readShotRecord(session, owner.id) !== null;
     case 'sceneBeat':
-      return sceneBeatExists(session, owner.sceneId, owner.beatId);
+      return sceneBeatExistsInHistory(session, owner.sceneId, owner.beatId);
   }
 }
 
@@ -97,19 +97,6 @@ function rowExists(
     .from(table)
     .where(eq(idColumn, id))
     .get() !== undefined;
-}
-
-function sceneBeatExists(
-  session: DatabaseSession,
-  sceneId: string,
-  beatId: string
-): boolean {
-  const active = readActiveSceneBeatSheetRecord(session, sceneId);
-  if (!active) {
-    return false;
-  }
-  const document = readSceneBeatSheetDocument({ row: active });
-  return document.beats.some((beat) => beat.id === beatId);
 }
 
 function describeOwner(owner: AssetOwner): string {

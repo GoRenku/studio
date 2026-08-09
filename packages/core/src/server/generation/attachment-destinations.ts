@@ -35,21 +35,20 @@ export interface GeneratedMediaAttachmentDetails {
 
 export function castCharacterSheetAttachmentDestination(
   castMemberId: string,
-  titleHint?: string
+  semanticName?: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'cast.characterSheet', castMemberId, titleHint },
+    file: { kind: 'cast.characterSheet', castMemberId, semanticName },
     owner: { kind: 'castMember', id: castMemberId },
     resourceKeys: [studioCastMemberSurfaceResourceKey(castMemberId)],
   };
 }
 
 export function castProfileAttachmentDestination(
-  castMemberId: string,
-  titleHint?: string
+  castMemberId: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'cast.profile', castMemberId, titleHint },
+    file: { kind: 'cast.profile', castMemberId },
     owner: { kind: 'castMember', id: castMemberId },
     resourceKeys: [studioCastMemberSurfaceResourceKey(castMemberId)],
   };
@@ -57,21 +56,20 @@ export function castProfileAttachmentDestination(
 
 export function locationSheetAttachmentDestination(
   locationId: string,
-  titleHint?: string
+  semanticName?: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'location.sheet', locationId, titleHint },
+    file: { kind: 'location.sheet', locationId, semanticName },
     owner: { kind: 'location', id: locationId },
     resourceKeys: [studioLocationSurfaceResourceKey(locationId)],
   };
 }
 
 export function locationHeroAttachmentDestination(
-  locationId: string,
-  titleHint?: string
+  locationId: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'location.hero', locationId, heroName: titleHint },
+    file: { kind: 'location.hero', locationId },
     owner: { kind: 'location', id: locationId },
     resourceKeys: [studioLocationSurfaceResourceKey(locationId)],
   };
@@ -79,10 +77,10 @@ export function locationHeroAttachmentDestination(
 
 export function propSheetAttachmentDestination(
   propId: string,
-  titleHint?: string
+  semanticName?: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'prop.sheet', propId, titleHint },
+    file: { kind: 'prop.sheet', propId, semanticName },
     owner: { kind: 'prop', id: propId },
     resourceKeys: [studioPropSurfaceResourceKey(propId)],
   };
@@ -100,10 +98,10 @@ export function propHeroAttachmentDestination(
 
 export function lookbookImageAttachmentDestination(
   lookbookId: string,
-  titleHint?: string
+  semanticName?: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'visualLanguage.lookbookImage', titleHint },
+    file: { kind: 'visualLanguage.lookbookImage', lookbookId, semanticName },
     owner: { kind: 'lookbook', id: lookbookId },
     resourceKeys: [studioVisualLanguageLookbookResourceKey(lookbookId)],
   };
@@ -111,10 +109,10 @@ export function lookbookImageAttachmentDestination(
 
 export function lookbookSheetAttachmentDestination(
   lookbookId: string,
-  titleHint?: string
+  semanticName?: string
 ): GeneratedMediaAttachmentDestination {
   return {
-    file: { kind: 'visualLanguage.lookbookSheet', titleHint },
+    file: { kind: 'visualLanguage.lookbookSheet', lookbookId, semanticName },
     owner: { kind: 'lookbook', id: lookbookId },
     resourceKeys: [studioVisualLanguageLookbookResourceKey(lookbookId)],
   };
@@ -125,6 +123,7 @@ export function resolveGeneratedMediaAttachment(input: {
   target: GenerationTarget;
   title?: string;
   session: DatabaseSession;
+  shotPlanId?: string;
 }): GeneratedMediaAttachmentDetails {
   const builder = attachmentBuilders[input.purpose];
   if (!builder) {
@@ -147,7 +146,7 @@ const attachmentBuilders: Partial<
     details(
       requireTarget(input, 'project'),
       {
-        file: { kind: 'shotPlan.video', titleHint: input.title },
+        file: { kind: 'shotPlan.video', shotPlanId: requireShotPlanId(input) },
         owner: { kind: 'project' },
         resourceKeys: [],
       },
@@ -158,23 +157,34 @@ const attachmentBuilders: Partial<
   'shot-plan.video-first-frame': (input) =>
     shotPlanVideoReferenceImageDetails(
       requireTarget(input, 'project'),
-      input.title,
+      requireShotPlanId(input),
+      'first-frame',
       'Shot Plan Video First Frame',
       'shot_plan_video_first_frame',
     ),
   'shot-plan.video-last-frame': (input) =>
     shotPlanVideoReferenceImageDetails(
       requireTarget(input, 'project'),
-      input.title,
+      requireShotPlanId(input),
+      'last-frame',
       'Shot Plan Video Last Frame',
       'shot_plan_video_last_frame',
     ),
   'shot-plan.video-storyboard': (input) =>
     shotPlanVideoReferenceImageDetails(
       requireTarget(input, 'project'),
-      input.title,
+      requireShotPlanId(input),
+      'storyboard',
       'Shot Plan Video Storyboard',
       'shot_plan_video_storyboard',
+    ),
+  'shot-plan.video-reference': (input) =>
+    shotPlanVideoReferenceImageDetails(
+      requireTarget(input, 'project'),
+      requireShotPlanId(input),
+      'reference',
+      'Shot Plan Video Reference',
+      'shot_plan_video_reference',
     ),
   'lookbook.image': (input) =>
     details(
@@ -207,7 +217,7 @@ const attachmentBuilders: Partial<
   'cast.profile': (input) =>
     details(
       requireTarget(input, 'castMember'),
-      castProfileAttachmentDestination(input.target.id, input.title),
+      castProfileAttachmentDestination(input.target.id),
       'Profile',
       'cast_profile'
     ),
@@ -221,7 +231,7 @@ const attachmentBuilders: Partial<
   'location.hero': (input) =>
     details(
       requireTarget(input, 'location'),
-      locationHeroAttachmentDestination(input.target.id, input.title),
+      locationHeroAttachmentDestination(input.target.id),
       'Location Hero',
       'location_hero'
     ),
@@ -250,7 +260,6 @@ const attachmentBuilders: Partial<
           kind: 'shot.image',
           shotPlanId: shot.shotPlanId,
           shotId: shot.id,
-          titleHint: input.title,
         },
         owner: { kind: 'shot', id: shot.id },
         resourceKeys: [studioSceneShotPlansResourceKey(shotPlan.sceneId)],
@@ -260,6 +269,34 @@ const attachmentBuilders: Partial<
     );
   },
 };
+
+export function generationAttachmentAssetType(purpose: GenerationPurpose): string {
+  const assetTypes: Partial<Record<GenerationPurpose, string>> = {
+    'shot-plan.video-generation': 'shot_plan_video',
+    'shot-plan.video-first-frame': 'shot_plan_video_first_frame',
+    'shot-plan.video-last-frame': 'shot_plan_video_last_frame',
+    'shot-plan.video-storyboard': 'shot_plan_video_storyboard',
+    'shot-plan.video-reference': 'shot_plan_video_reference',
+    'lookbook.image': 'lookbook_image',
+    'lookbook.video-sheet': 'lookbook_sheet',
+    'lookbook.storyboard-sheet': 'lookbook_sheet',
+    'cast.character-sheet': 'character_sheet',
+    'cast.profile': 'cast_profile',
+    'location.sheet': 'location_sheet',
+    'location.hero': 'location_hero',
+    'prop.sheet': 'prop_sheet',
+    'prop.hero': 'prop_hero',
+    'shot.image': 'shot_image',
+  };
+  const assetType = assetTypes[purpose];
+  if (!assetType) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_UNSUPPORTED',
+      `Focused media attachment is not available for ${purpose}.`
+    );
+  }
+  return assetType;
+}
 
 export function generatedMediaAttachmentResourceKeys(input: {
   attachment: GeneratedMediaAttachmentDetails;
@@ -283,20 +320,34 @@ export function generatedMediaAttachmentResourceKeys(input: {
 
 function shotPlanVideoReferenceImageDetails(
   _input: unknown,
-  titleHint: string | undefined,
+  shotPlanId: string,
+  role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference',
   label: string,
   assetType: string,
 ): GeneratedMediaAttachmentDetails {
   return details(
     _input,
     {
-      file: { kind: 'shotPlan.videoReferenceImage', titleHint },
+      file: { kind: 'shotPlan.videoReferenceImage', shotPlanId, role },
       owner: { kind: 'project' },
       resourceKeys: [],
     },
     label,
     assetType,
   );
+}
+
+function requireShotPlanId(
+  input: Parameters<typeof resolveGeneratedMediaAttachment>[0]
+): string {
+  if (!input.shotPlanId) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_SHOT_PLAN_PROVENANCE_REQUIRED',
+      'Shot Plan media requires an exact authored Shot Plan from frozen generation provenance.'
+    );
+  }
+  requireShotPlanRecord(input.session, input.shotPlanId);
+  return input.shotPlanId;
 }
 
 function details(

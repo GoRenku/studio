@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../../errors.js';
-import { toSceneBeatSheetResourceResponse } from '../../http/screenplay/responses.js';
+import { toSceneBeatsResourceResponse } from '../../http/screenplay/responses.js';
 import type { CreateScreenplayRouteOptions } from './index.js';
 
 export function createScreenplayScenesRoute({ projectData }: CreateScreenplayRouteOptions) {
@@ -15,12 +15,12 @@ export function createScreenplayScenesRoute({ projectData }: CreateScreenplayRou
         return projectErrorResponse(c, error);
       }
     })
-    .get('/screenplay/scenes/:sceneId/beat-sheet', async (c) => {
+    .get('/screenplay/scenes/:sceneId/beats', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const sceneId = c.req.param('sceneId') as string;
-        const resource = await projectData.readSceneBeatSheetResource({ projectName, sceneId });
-        return c.json({ resource: toSceneBeatSheetResourceResponse(projectName, resource) });
+        const resource = await projectData.readSceneBeatsResource({ projectName, sceneId });
+        return c.json({ resource: toSceneBeatsResourceResponse(projectName, resource) });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

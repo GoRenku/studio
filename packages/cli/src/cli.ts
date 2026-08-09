@@ -120,11 +120,12 @@ Options
   --number             Production scene number for scene-number resolve
   --dialogue           Scene dialogue id
   --take               Scene Dialogue Audio take id
-  --beat-sheet         Scene Beat Sheet id
+  --revision           Scene Beats revision id
   --shot-plan          Shot Plan id
   --shot               Shot id
   --asset              Asset id
   --position           One-based Shot position
+  --placement          Shot add placement: start, end, before, or after
   --beats              Comma-separated Beat ids for storyboard imports
   --kind               Lookbook role
   --selection          Media import selection: select or take
@@ -132,7 +133,7 @@ Options
   --replace-selected   Replace the currently selected prepared input in the same slot
   --select             Select an imported canonical Asset
   --include-visual-references
-                       Include selected visual references in Beat Sheet context
+                       Include selected visual references in Scene Beats revision context
   --sequence           Sequence id for screenplay scene list
   --folder             Inspiration folder id
   --lookbook           Lookbook id
@@ -293,9 +294,6 @@ function createCliFlags() {
     analysis: {
       type: 'string',
     },
-    revision: {
-      type: 'string',
-    },
     scene: {
       type: 'string',
     },
@@ -308,7 +306,7 @@ function createCliFlags() {
     take: {
       type: 'string',
     },
-    beatSheet: {
+    revision: {
       type: 'string',
     },
     shotPlan: {
@@ -322,6 +320,9 @@ function createCliFlags() {
     },
     position: {
       type: 'number',
+    },
+    placement: {
+      type: 'string',
     },
     beats: {
       type: 'string',
@@ -742,7 +743,7 @@ export async function runRenkuCli(
             receipt: cli.flags.receipt,
             sourceSpec: cli.flags.sourceSpec,
             sourceSheet: cli.flags.sourceSheet,
-            beatSheet: cli.flags.beatSheet,
+            revision: cli.flags.revision,
             beats: cli.flags.beats,
             take: cli.flags.take,
             kind: cli.flags.kind,
@@ -796,7 +797,6 @@ export async function runRenkuCli(
             revision: cli.flags.revision,
             scene: cli.flags.scene,
             number: cli.flags.number,
-            beatSheet: cli.flags.beatSheet,
             includeVisualReferences: cli.flags.includeVisualReferences,
             dryRun: cli.flags.dryRun,
             project: cli.flags.project,
@@ -816,6 +816,7 @@ export async function runRenkuCli(
             shot: cli.flags.shot,
             asset: cli.flags.asset,
             position: cli.flags.position,
+            placement: cli.flags.placement,
           },
           json: cli.flags.json,
           io,

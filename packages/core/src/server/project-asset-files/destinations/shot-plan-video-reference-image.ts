@@ -1,78 +1,66 @@
-import path from 'node:path';
 import type { ProjectRelativePath } from '../../../client/index.js';
 import {
-  VIDEOS_ROOT,
-  extensionForMediaSource,
-} from '../../files/asset-paths.js';
-import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
-import {
-  allocateProjectRelativeFileNames,
-  allocateProjectRelativeFilePath,
-  allocateProjectRelativeFilePathSync,
+  allocateProjectAssetFileNames,
+  allocateProjectAssetFilePath,
+  allocateProjectAssetFilePathSync,
 } from '../path-allocation.js';
+import { requireShotPlanStorageContext } from './shot-plan.js';
 import type {
   DestinationFileInput,
   DestinationOutputNamesInput,
   DestinationRootInput,
 } from './types.js';
 
-type ShotPlanVideoReferenceImageDestinationKind =
-  'shotPlan.videoReferenceImage';
-
-const VIDEO_REFERENCES_ROOT = joinProjectRelativePath(VIDEOS_ROOT, 'references');
+type ShotPlanVideoReferenceImageDestinationKind = 'shotPlan.videoReferenceImage';
 
 export async function resolveShotPlanVideoReferenceImageDestinationFile(
-  input: DestinationFileInput<ShotPlanVideoReferenceImageDestinationKind>,
+  input: DestinationFileInput<ShotPlanVideoReferenceImageDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return allocateProjectRelativeFilePath({
+  return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
-    parent: VIDEO_REFERENCES_ROOT,
-    ...referenceFileName(input),
+    parent: await resolveShotPlanVideoReferenceImageDestinationRoot(input),
+    namingMode: input.namingMode,
+    generatedBaseName: input.destination.role,
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export function resolveShotPlanVideoReferenceImageDestinationFileSync(
-  input: DestinationFileInput<ShotPlanVideoReferenceImageDestinationKind>,
+  input: DestinationFileInput<ShotPlanVideoReferenceImageDestinationKind>
 ): ProjectRelativePath {
-  return allocateProjectRelativeFilePathSync({
+  return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
-    parent: VIDEO_REFERENCES_ROOT,
-    ...referenceFileName(input),
+    parent: resolveShotPlanVideoReferenceImageDestinationRootSync(input),
+    namingMode: input.namingMode,
+    generatedBaseName: input.destination.role,
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
   });
 }
 
 export async function resolveShotPlanVideoReferenceImageDestinationRoot(
-  _input: DestinationRootInput<ShotPlanVideoReferenceImageDestinationKind>,
+  input: DestinationRootInput<ShotPlanVideoReferenceImageDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return VIDEO_REFERENCES_ROOT;
+  return resolveShotPlanVideoReferenceImageDestinationRootSync(input);
 }
 
 export function resolveShotPlanVideoReferenceImageDestinationRootSync(
-  _input: DestinationRootInput<ShotPlanVideoReferenceImageDestinationKind>,
+  input: DestinationRootInput<ShotPlanVideoReferenceImageDestinationKind>
 ): ProjectRelativePath {
-  return VIDEO_REFERENCES_ROOT;
+  return requireShotPlanStorageContext(input.session, input.destination.shotPlanId).root;
 }
 
 export async function resolveShotPlanVideoReferenceImageDestinationOutputNames(
-  input: DestinationOutputNamesInput<ShotPlanVideoReferenceImageDestinationKind>,
+  input: DestinationOutputNamesInput<ShotPlanVideoReferenceImageDestinationKind>
 ): Promise<string[]> {
-  return allocateProjectRelativeFileNames({
+  return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
-    parent: VIDEO_REFERENCES_ROOT,
-    ...referenceFileName(input),
+    parent: await resolveShotPlanVideoReferenceImageDestinationRoot(input),
+    namingMode: input.namingMode,
+    generatedBaseName: input.destination.role,
+    sourceProjectRelativePath: input.sourceProjectRelativePath,
+    outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
   });
-}
-
-function referenceFileName(
-  input:
-    | DestinationFileInput<ShotPlanVideoReferenceImageDestinationKind>
-    | DestinationOutputNamesInput<ShotPlanVideoReferenceImageDestinationKind>,
-) {
-  return {
-    baseName:
-      input.destination.titleHint ??
-      path.parse(input.sourceProjectRelativePath).name,
-    extension: extensionForMediaSource(input.sourceProjectRelativePath),
-  };
 }

@@ -64,6 +64,7 @@ export function insertShotPlanRecord(
   input: {
     id: string;
     sceneId: string;
+    number: number;
     title: string;
     coverage: ShotPlanCoverage | null;
     now: string;
@@ -74,6 +75,7 @@ export function insertShotPlanRecord(
     .values({
       id: input.id,
       sceneId: input.sceneId,
+      number: input.number,
       title: input.title,
       coverage: serializeShotPlanCoverage(input.coverage),
       createdAt: input.now,

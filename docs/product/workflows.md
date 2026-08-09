@@ -215,7 +215,7 @@ My pick: **Scene Plan**.
 
 ---
 
-## 5. Beat Sheet
+## 5. Scene Beats
 
 **Purpose:** break a scene into viewer-state changes.
 
@@ -250,13 +250,13 @@ Alternative names:
 
 | Term              | Feel               |
 | ----------------- | ------------------ |
-| Beat Sheet        | Best industry term |
+| Scene Beats       | Current product term |
 | Moment Map        | More accessible    |
 | Story Beats       | Clear              |
 | Viewer-State Plan | Accurate but nerdy |
 | Dramatic Beats    | Good for fiction   |
 
-My pick: **Beat Sheet**.
+My pick: **Scene Beats**.
 
 This is where your tool becomes smarter than a prompt generator.
 
@@ -531,7 +531,7 @@ Sequence Outline
   ↓
 Scene Plan
   ↓
-Beat Sheet
+Scene Beats
   ↓
 Clip Plan
   ↓
@@ -561,7 +561,7 @@ This is the workflow I would build.
 | **Narrative Spine**        | The core journey of the film: how the viewer’s understanding changes.         |
 | **Sequence Outline**       | The film broken into major chapters or sections.                              |
 | **Scene Plan**             | Each sequence broken into concrete scenes.                                    |
-| **Beat Sheet**             | Each scene broken into story beats: moments of change.                        |
+| **Scene Beats**            | Each scene broken into story beats: moments of change.                        |
 | **Clip Plan**              | Beats converted into AI-generation-sized video units.                         |
 | **Shot Design**            | The internal camera structure of each generated clip.                         |
 | **Generation Spec**        | Model-ready instructions for generating a clip.                               |
@@ -811,7 +811,7 @@ Research Dossier
 → Narrative Spine
 → Sequence Outline
 → Scene Plan
-→ Beat Sheet
+→ Scene Beats
 ```
 
 ## Phase 2: Clip Realization
@@ -819,7 +819,7 @@ Research Dossier
 Turns story beats into producible AI video units.
 
 ```text
-Beat Sheet
+Scene Beats
 → Clip Plan
 → Shot Design
 → Generation Spec
@@ -851,7 +851,7 @@ Story Brief
 Narrative Spine
 Sequence Outline
 Scene Plan
-Beat Sheet
+Scene Beats
 Clip Plan
 Shot Design
 Generation Spec
@@ -870,7 +870,7 @@ Narrative Breakdown
   Narrative Spine
   Sequence Outline
   Scene Plan
-  Beat Sheet
+  Scene Beats
 
 Clip Realization
   Clip Plan

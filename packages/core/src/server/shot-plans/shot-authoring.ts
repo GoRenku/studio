@@ -19,6 +19,7 @@ import {
 } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { validateShotInput } from './validation.js';
+import { allocateShotNumber } from './shot-numbering.js';
 
 export function addShotAuthoring(input: {
   command: AddShotToPlanInput;
@@ -31,11 +32,31 @@ export function addShotAuthoring(input: {
   const shotId = createUniqueIdAllocator(
     input.idGenerator ?? createRandomIdGenerator()
   )('shot');
-  insertShotRecord(input.session, {
-    id: shotId,
-    shotPlanId: input.command.shotPlanId,
-    shot,
-    now: input.now,
+  input.session.db.transaction((tx) => {
+    const session = { ...input.session, db: tx };
+    const records = listShotRecords(session, input.command.shotPlanId);
+    const allocated = allocateShotNumber({
+      session,
+      shotPlanId: input.command.shotPlanId,
+      orderedShots: records,
+      placement: input.command.placement ?? { position: 'end' },
+      shotId,
+      now: input.now,
+    });
+    insertShotRecord(session, {
+      id: shotId,
+      shotPlanId: input.command.shotPlanId,
+      shot,
+      number: allocated.number,
+      now: input.now,
+    });
+    const orderedShotIds = records.map((record) => record.id);
+    orderedShotIds.splice(allocated.index, 0, shotId);
+    writeShotOrder(session, {
+      shotPlanId: input.command.shotPlanId,
+      orderedShotIds,
+      now: input.now,
+    });
   });
   return shotId;
 }

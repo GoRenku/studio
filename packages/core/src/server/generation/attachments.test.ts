@@ -93,13 +93,13 @@ describe('generation media attachment', () => {
         projectFolder: created.projectPath,
       });
       if (attachment.purpose === 'prop.sheet') {
-        expect(report.asset.files[0]?.projectRelativePath).toMatch(
-          /^props\/field-cannon\/prop-sheets\/prop-sheet(?:-v\d+)?\.png$/
+        expect(report.asset.files[0]?.projectRelativePath).toBe(
+          'props/field-cannon/attachment.png'
         );
       }
       if (attachment.purpose === 'prop.hero') {
-        expect(report.asset.files[0]?.projectRelativePath).toMatch(
-          /^props\/field-cannon\/heroes\/hero(?:-v\d+)?\.png$/
+        expect(report.asset.files[0]?.projectRelativePath).toBe(
+          'props/field-cannon/attachment-2.png'
         );
       }
     }
@@ -134,7 +134,7 @@ describe('generation media attachment', () => {
 
     expect(report.asset.title).toBe('Field Cannon Presentation Hero');
     expect(report.asset.files[0]?.projectRelativePath).toBe(
-      'props/field-cannon/heroes/hero.png'
+      'props/field-cannon/hero.png'
     );
   });
 
@@ -309,6 +309,7 @@ describe('generation media attachment', () => {
       sourceProjectRelativePath: 'tmp/edited.png',
       receipt: {},
       sourceSpecId: spec.id,
+      title: 'Edited Character Sheet',
     })).rejects.toMatchObject({
       code: 'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
     });
@@ -320,6 +321,7 @@ describe('generation media attachment', () => {
       target: { kind: 'castMember', id: 'cast_test0002' },
       sourceProjectRelativePath: 'tmp/edited.png',
       sourceSpecId: spec.id,
+      title: 'Edited Character Sheet',
     })).rejects.toMatchObject({
       code: 'CORE_GENERATION_ATTACHMENT_IMAGE_EDIT_SOURCE_MISMATCH',
     });
@@ -331,6 +333,7 @@ describe('generation media attachment', () => {
       target: { kind: 'castMember', id: 'cast_test0001' },
       sourceProjectRelativePath: 'tmp/edited.png',
       sourceSpecId: spec.id,
+      title: 'Edited Character Sheet',
     });
     expect(edited.provenance).toEqual({ generationSpecId: spec.id });
     expect(edited.asset.id).not.toBe(source.asset.id);
@@ -428,6 +431,7 @@ describe('generation media attachment', () => {
       target: { kind: 'castMember', id: 'cast_test0001' },
       sourceProjectRelativePath: output,
       receipt: { run: run.run },
+      title: 'Edited Character Sheet',
     })).rejects.toMatchObject({
       code: 'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
     });
@@ -440,6 +444,7 @@ describe('generation media attachment', () => {
       target: { kind: 'castMember', id: 'cast_test0001' },
       sourceProjectRelativePath: output,
       receipt: { run: run.run },
+      title: 'Edited Character Sheet',
     });
     expect(edited.provenance).toEqual({ generationRunId: run.run.id });
     expect(edited.asset.id).not.toBe(source.asset.id);
@@ -500,6 +505,7 @@ describe('generation media attachment', () => {
       target: { kind: 'lookbook', id: lookbooks.storyboard },
       sourceProjectRelativePath: 'tmp/lookbook-edited.png',
       sourceSpecId: spec.id,
+      title: 'Edited Lookbook Image',
     })).rejects.toMatchObject({
       code: 'CORE_GENERATION_ATTACHMENT_IMAGE_EDIT_SOURCE_MISMATCH',
     });
@@ -511,6 +517,7 @@ describe('generation media attachment', () => {
       target: { kind: 'lookbook', id: lookbooks.production },
       sourceProjectRelativePath: 'tmp/lookbook-edited.png',
       sourceSpecId: spec.id,
+      title: 'Edited Lookbook Image',
     });
     expect(edited.provenance).toEqual({ generationSpecId: spec.id });
     expect(edited.ownerRecord).toMatchObject({ kind: 'lookbookImage' });

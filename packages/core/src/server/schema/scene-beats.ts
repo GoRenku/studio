@@ -1,17 +1,16 @@
 import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-export const sceneBeatSheets = sqliteTable(
-  'scene_beat_sheet',
+export const sceneBeatsRevisions = sqliteTable(
+  'scene_beats_revision',
   {
     id: text('id').primaryKey(),
     sceneId: text('scene_id').notNull(),
-    title: text('title').notNull(),
     document: text('document').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    index('scene_beat_sheet_scene_updated_idx').on(
+    index('scene_beats_revision_scene_updated_idx').on(
       table.sceneId,
       table.updatedAt,
       table.id
@@ -19,10 +18,10 @@ export const sceneBeatSheets = sqliteTable(
   ],
 );
 
-export const sceneBeatSheetState = sqliteTable('scene_beat_sheet_state', {
+export const sceneBeatsState = sqliteTable('scene_beats_state', {
   sceneId: text('scene_id').primaryKey(),
-  activeBeatSheetId: text('active_beat_sheet_id').references(
-    () => sceneBeatSheets.id,
+  activeRevisionId: text('active_revision_id').references(
+    () => sceneBeatsRevisions.id,
     { onDelete: 'set null' }
   ),
   createdAt: text('created_at').notNull(),

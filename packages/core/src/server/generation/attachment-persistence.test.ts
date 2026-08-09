@@ -62,7 +62,7 @@ describe('generated media attachment persistence', () => {
         idGenerator: fixedIdGenerator('success'),
         now: '2026-07-17T10:00:00.000Z',
         sourceProjectRelativePath: 'tmp/source.png',
-        destination: castProfileAttachmentDestination('cast_test0001', 'Profile'),
+        destination: castProfileAttachmentDestination('cast_test0001'),
         asset: {
           type: 'cast_profile',
           mediaKind: 'image',
@@ -144,10 +144,7 @@ describe('generated media attachment persistence', () => {
           idGenerator: fixedIdGenerator('failed-provenance'),
           now: '2026-07-17T10:00:45.000Z',
           sourceProjectRelativePath: 'tmp/source.png',
-          destination: castProfileAttachmentDestination(
-            'cast_test0002',
-            'Rejected Profile'
-          ),
+          destination: castProfileAttachmentDestination('cast_test0002'),
           asset: {
             type: 'cast_profile',
             mediaKind: 'image',

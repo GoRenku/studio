@@ -1,6 +1,6 @@
 import type {
   Asset,
-  SceneBeatSheetResource,
+  SceneBeatsResource,
   ScreenplayImageReference,
 } from '../../client/index.js';
 import type { Screenplay, ScreenplaySection } from '../../client/screenplay/index.js';
@@ -9,17 +9,17 @@ import { listCastMemberRecords } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
 import { listPropRecords } from '../database/access/props.js';
 import { readProjectRecord } from '../database/access/project.js';
-import { readActiveSceneBeatSheetRecord } from '../database/access/scene-beat-sheets.js';
+import { readActiveSceneBeatsRevisionRecord } from '../database/access/scene-beats.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import type { ReadSceneBeatSheetResourceInput } from '../project-data-service-contracts.js';
+import type { ReadSceneBeatsResourceInput } from '../project-data-service-contracts.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { projectScreenplayScene } from '../screenplay/projections/scene.js';
 import { readSceneStoryboardProjection } from './storyboard-overviews.js';
 
-export async function readSceneBeatSheetResource(
-  input: ReadSceneBeatSheetResourceInput
-): Promise<SceneBeatSheetResource> {
+export async function readSceneBeatsResource(
+  input: ReadSceneBeatsResourceInput
+): Promise<SceneBeatsResource> {
   const { session } = await openProjectSession(input);
   try {
     const screenplay = readCanonicalScreenplay(session);
@@ -33,8 +33,8 @@ export async function readSceneBeatSheetResource(
       scene,
       sections: collectContainingSections(screenplay, input.sceneId),
       projectAspectRatio: readProjectRecord(session)?.aspectRatio ?? null,
-      activeBeatSheetId: readActiveSceneBeatSheetRecord(session, input.sceneId)?.id ?? null,
-      activeBeatSheet: projection.document,
+      activeRevisionId: readActiveSceneBeatsRevisionRecord(session, input.sceneId)?.id ?? null,
+      activeRevision: projection.document,
       storyboardImagesByBeatId: projection.imagesByBeatId,
       castMemberLabels: Object.fromEntries(castMembers.map((member) => [member.id, member.name])),
       castMemberImages: Object.fromEntries(

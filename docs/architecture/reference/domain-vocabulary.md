@@ -65,7 +65,7 @@ Renku Studio uses Scenes as the canonical Screenplay units:
 Standalone movie project
   -> Screenplay
     -> Scene
-      -> Scene Beat Sheet -> Beat
+      -> Scene Beats revision -> Beat
       -> Shot Plan -> Shot
     -> optional Act / Sequence Sections (organization only)
 
@@ -73,7 +73,7 @@ Series project
   -> Episode
     -> Screenplay
       -> Scene
-        -> Scene Beat Sheet -> Beat
+        -> Scene Beats revision -> Beat
         -> Shot Plan -> Shot
       -> optional Act / Sequence Sections
 ```
@@ -89,21 +89,20 @@ Related terms:
 - **Scene** is canonical and does not require Section ancestry.
 - **Chapter** can be a friendly display label for documentaries, courses,
   serialized web videos, or exports. It should not be the canonical schema term.
-- **Scene Beat Sheet** is a scene-owned narrative breakdown document. It is
-  stored as validated project data with history and one active Beat Sheet per
-  scene. Its Scene and Block ids preserve authoring context and may become
-  unresolved after later Screenplay edits.
-- **Production Scene Number** is an optional exact human-facing value on a
+- **Scene Beats** is a Scene-owned ordered narrative breakdown stored as
+  immutable revisions with one active revision. Its Scene and Block ids preserve
+  authoring context and may become unresolved after later Screenplay edits.
+- **Production Scene Number** is a required exact human-facing value on a
   current Scene, such as `1` or `22A`. It is separate from the durable Scene id
-  and does not define canonical order.
-- **Beat** is one non-camera narrative unit inside a Scene Beat Sheet. Beats
-  are ordered by their array position and contain exactly the accepted
-  nine-field Beat shape with Cast Member, Location, Prop, and stable Screenplay
-  Block ids.
-- **Shot Plan** is one mutable Scene-owned camera plan containing ordered Shots
+  and does not define canonical order. FDX preserves external values; agent
+  authoring uses Core-owned reservations.
+- **Beat** is one non-camera narrative unit inside Scene Beats. Core authors its
+  durable id and stable number; creative inputs contain the eight narrative and
+  contextual fields. Current order remains array order.
+- **Shot Plan** is one numbered mutable Scene-owned camera plan containing ordered Shots
   and optional Beat coverage. Generation and Asset history never freeze the
   plan. Its Shots own planning image Assets but no generated video.
-- **Shot** is one ordered camera-authored unit inside a Shot Plan. It has an
+- **Shot** is one stably numbered, ordered camera-authored unit inside a Shot Plan. It has an
   authored title, opaque description, structured glanceable brief, image
   candidates, and zero or one explicitly selected image. It is
   deliberately separate from narrative Beats. Its optional Optics facts keep
@@ -126,10 +125,10 @@ Related terms:
 | Inspiration Folder            | A project Visual Language folder containing user-provided reference images.                                                              | Folder metadata is stored in SQLite. Images inside the folder are filesystem content, not per-image assets. |
 | Inspiration Analysis          | A validated visual study of one Inspiration Folder.                                                                                      | Stored as tagged JSON through `renku inspiration analysis`; image citations use folder-local filenames.     |
 | Screenplay Analysis           | A validated critique of canonical ordered Scenes with analysis-owned Act segments, optional Scene groups, evidence, and suggested Scenes. | Stored as history through `renku screenplay analyze`; it never depends on optional screenplay Sections.      |
-| Scene Beat Sheet              | A validated scene-context narrative breakdown made of ordered Beats.                                                                       | Stored as history through `renku screenplay beat-sheet`; its Scene id may become obsolete without invalidating or deleting the history. |
-| Beat                          | One non-camera narrative unit inside a Scene Beat Sheet.                                                                                   | Stores a stable `id` plus narrative fields and weak historical Cast Member/Location/Prop/Screenplay Block context ids. |
-| Shot Plan                     | One mutable Scene-owned plan for ordered Shots and optional Beat coverage.                                                                | Remains editable regardless of Run or Asset history. Its Shots own planning-image Assets, never generated video. |
-| Shot                          | One ordered camera-authored unit inside a Shot Plan.                                                                                       | Stores title, opaque `description`, strict glanceable `brief`, candidate images, and an optional selected image; Beat coverage belongs to the plan. |
+| Scene Beats                   | A validated Scene-context narrative breakdown made of ordered Beats.                                                                       | Stored as immutable revisions through `renku screenplay beats`; its Scene id may become obsolete without invalidating or deleting history. |
+| Beat                          | One non-camera narrative unit inside Scene Beats.                                                                                           | Core authors the stable `id` and `number`; narrative fields and weak historical Cast Member/Location/Prop/Screenplay Block ids remain opaque. |
+| Shot Plan                     | One Scene-locally numbered mutable plan for ordered Shots and optional Beat coverage.                                                       | Remains editable regardless of Run or Asset history. Its Shots own planning-image Assets, never generated video. |
+| Shot                          | One stably numbered, ordered camera-authored unit inside a Shot Plan.                                                                       | Stores title, opaque `description`, strict glanceable `brief`, candidate images, and an optional selected image; Beat coverage belongs to the plan. |
 | Lookbook                      | One of the two project-owned visual direction roles.                                                                                       | A project has at most one Production Lookbook and one Storyboard Lookbook. The role is permanent and cannot be discarded. |
 | Production Lookbook           | The project Lookbook for final-video visual language: palette, lighting, texture, composition, camera, and tone/mood.                      | Read directly for movie, cast, location, and future Shot visual-language guidance; it is never selected from alternatives. |
 | Storyboard Lookbook           | The project Lookbook for storyboard drawing language: style brief, line/finish, value/accent, notation, continuity, and guardrails.        | Read directly for `scene.storyboard-sheet`; it has no stored pointer to the Production Lookbook. |
@@ -184,7 +183,7 @@ The important distinction:
 | Voice Casting        | Casting-owned voice identity, delivery, accent, tempo, texture, emotional range, and locale guidance for a Cast Member. | Lives under Cast Design as creative direction. Durable provider handles and playable sample assets live in Cast Voice records and Cast Voice Provider Registrations. Transient Kling voice IDs are shot-video run artifacts, not Cast Voice data. |
 | Cast Voice           | A Cast Member-owned editorial voice reference with a Renku reference name, purpose, linked sample asset, and `sampleSource` provenance. | Stored in `cast_voice`. Attach custom files or existing ElevenLabs provider samples through `renku cast voice attach`; remove through `renku cast voice remove`. |
 | Cast Voice Provider Registration | A provider-specific reusable voice handle for one Cast Voice, such as an ElevenLabs TTS voice id. | Stored in `cast_voice_provider_registration` with provider, registration model, external provider voice id, capabilities, and source sample asset. Do not store Kling `fal-ai/kling-video/create-voice` results here unless provider documentation later establishes a durable reusable handle contract. |
-| Cast Voice Sample    | The playable audio Asset linked to one Cast Voice. | Cast Member-owned Asset type `cast_voice_sample`, stored under `cast/<handle>/voice-samples/`. Sources are custom files, generated samples, or existing ElevenLabs provider samples. |
+| Cast Voice Sample    | The playable audio Asset linked to one Cast Voice. | Cast Member-owned Asset type `cast_voice_sample`, stored directly under `cast/<handle>/` with other Cast media. Sources are custom files, generated samples, or existing ElevenLabs provider samples. |
 | ElevenLabs Provider Voice Sample | An existing sample owned by ElevenLabs for a provider voice, identified by `voiceId + sampleId`. | Renku resolves `sampleId` from the supplied `voiceId`, fetches the MP3, stores it as a Cast Voice Sample, and records `sampleSource.kind = 'elevenlabs_voice_sample'`. |
 | Casting Director     | The specialist agent role that owns Cast Member fact authoring, Cast Design, costume notes, voice casting notes, and cast media handoff. | Uses `renku cast` and `renku cast design`; hands media generation to `media-producer`. |
 | Cast Asset           | A registered Asset exclusively owned by a Cast Member.                      | Examples: portrait, character sheet, costume reference, voice sample, research note. Asset-owned `referenceName` and `purpose` describe named references without showing filenames or ids in UI. |

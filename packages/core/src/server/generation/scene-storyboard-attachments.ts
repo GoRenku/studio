@@ -9,9 +9,9 @@ import { readOwnedAsset } from '../assets/projection.js';
 import { assetSelectionTargetForOwnerType } from '../assets/selection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
-  readSceneBeatSheetDocument,
-  requireSceneBeatSheetForScene,
-} from '../database/access/scene-beat-sheets.js';
+  readSceneBeats,
+  requireSceneBeatsRevisionForScene,
+} from '../database/access/scene-beats.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { createUniqueIdAllocator, type ProjectIdGenerator } from '../entity-ids.js';
 import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
@@ -30,16 +30,16 @@ export function attachSceneStoryboardImages(input: {
   session: DatabaseSession;
   projectFolder: string;
   sceneId: string;
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
   document: SceneStoryboardImagesImportDocument;
   idGenerator: ProjectIdGenerator;
 }): SceneStoryboardImagesImportReport {
   validateDocumentIdentity(input);
-  const beatSheet = readSceneBeatSheetDocument({
-    row: requireSceneBeatSheetForScene({
+  const revision = readSceneBeats({
+    row: requireSceneBeatsRevisionForScene({
       session: input.session,
       sceneId: input.sceneId,
-      beatSheetId: input.beatSheetId,
+      revisionId: input.sceneBeatsRevisionId,
     }),
   });
   const sources = new Set<string>();
@@ -48,7 +48,7 @@ export function attachSceneStoryboardImages(input: {
     if (beatIds.has(file.beatId) || sources.has(file.source)) {
       throw invalidDocument('Storyboard attachment cannot repeat a Beat or source file.');
     }
-    const beat = beatSheet.beats.find((candidate) => candidate.id === file.beatId);
+    const beat = revision.beats.find((candidate) => candidate.id === file.beatId);
     if (!beat) {
       throw invalidDocument(`Storyboard attachment references a missing Beat: ${file.beatId}.`);
     }
@@ -71,7 +71,7 @@ export function attachSceneStoryboardImages(input: {
       ...file,
       source,
       beat,
-      beatOrdinal: beatSheet.beats.indexOf(beat) + 1,
+      beatNumber: beat.number,
       provenance,
     };
   });
@@ -121,7 +121,7 @@ export function attachSceneStoryboardImages(input: {
             kind: 'scene.storyboardImage',
             sceneId: input.sceneId,
             iterationFolder,
-            beatOrdinal: file.beatOrdinal,
+            beatNumber: file.beatNumber,
           },
           owner: file.owner,
           ...(file.selectionTarget ? { selectionTarget: file.selectionTarget } : {}),
@@ -188,11 +188,11 @@ export function attachSceneStoryboardImages(input: {
     changes: [{
       type: 'scene.storyboardImagesImported',
       sceneId: input.sceneId,
-      beatSheetId: input.beatSheetId,
+      sceneBeatsRevisionId: input.sceneBeatsRevisionId,
     }],
     purpose: 'scene.storyboard-sheet',
     target: { kind: 'scene', id: input.sceneId },
-    beatSheetId: input.beatSheetId,
+    sceneBeatsRevisionId: input.sceneBeatsRevisionId,
     imported,
     files,
     resourceKeys: [studioSceneBeatsResourceKey(input.sceneId)],
@@ -201,14 +201,14 @@ export function attachSceneStoryboardImages(input: {
 
 function validateDocumentIdentity(input: {
   document: SceneStoryboardImagesImportDocument;
-  beatSheetId: string;
+  sceneBeatsRevisionId: string;
 }): void {
   if (
-    input.document.beatSheetId !== input.beatSheetId
+    input.document.sceneBeatsRevisionId !== input.sceneBeatsRevisionId
     || typeof input.document.select !== 'boolean'
   ) {
     throw invalidDocument(
-      'Storyboard attachment document, explicit selection intent, and Beat Sheet must match.'
+      'Storyboard attachment document, explicit selection intent, and Scene Beats revision must match.'
     );
   }
   if (input.document.beats.length === 0) {

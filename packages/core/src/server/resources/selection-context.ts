@@ -1,7 +1,7 @@
 import { buildDiagnosticResult, createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type { StudioSelection, StudioSelectionContextResult } from '../../client/index.js';
 import { listCastNavigationPage, listLocationNavigationPage, listPropNavigationPage } from '../database/access/navigation.js';
-import { readActiveSceneBeatSheetRecord, readSceneBeatSheetDocument } from '../database/access/scene-beat-sheets.js';
+import { readActiveSceneBeatsRevisionRecord, readSceneBeats } from '../database/access/scene-beats.js';
 import { readShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { readLookbookRecordByKind } from '../database/access/lookbook.js';
@@ -153,12 +153,12 @@ function sceneShotPlanFocusExists(
 }
 
 function sceneBeatExists(session: DatabaseSession, sceneId: string, beatId: string): boolean {
-  const activeBeatSheet = readActiveSceneBeatSheetRecord(session, sceneId);
-  if (!activeBeatSheet) {
+  const activeRevision = readActiveSceneBeatsRevisionRecord(session, sceneId);
+  if (!activeRevision) {
     return false;
   }
-  const document = readSceneBeatSheetDocument({
-    row: activeBeatSheet,
+  const document = readSceneBeats({
+    row: activeRevision,
   });
   return document.beats.some((beat) => beat.id === beatId);
 }

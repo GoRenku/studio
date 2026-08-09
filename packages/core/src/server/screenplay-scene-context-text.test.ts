@@ -8,6 +8,7 @@ describe('Screenplay Scene context text', () => {
       opening: [],
       scenes: [{
         id: 'scene_harbor',
+        productionNumber: '1',
         heading: 'EXT. HARBOR QUARTER - EVENING',
         title: 'Harbor Quarter',
         blocks: [

@@ -24,7 +24,7 @@ export async function readStoryArcResource(input: ReadProjectInput): Promise<Sto
       scenes: screenplay.scenes.map((scene) => ({
         id: scene.id,
         heading: scene.heading,
-        ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
+        productionNumber: scene.productionNumber,
         ...(scene.title ? { title: scene.title } : {}),
       })),
       activeAnalysis: active ? readStoredScreenplayAnalysis({ row: active }) : null,

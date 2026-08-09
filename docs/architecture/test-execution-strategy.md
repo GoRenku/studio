@@ -517,7 +517,7 @@ Fast coverage should exist for:
 - fixed setting enforcement and untouched provider defaults;
 - generic spec, preview, validation, direct estimate, approval, and run behavior;
 - focused attachment ownership and provenance;
-- Preview, Generation Request inspection, Dialogue Audio, and Scene Beat Sheet use cases;
+- Preview, Generation Request inspection, Dialogue Audio, and Scene Beats use cases;
 - structured diagnostics for invalid state;
 - focused Shot Plan authoring, Shot order/membership, image selection,
   selected-only independent copy, and recoverable exclusive-owner lifecycle.

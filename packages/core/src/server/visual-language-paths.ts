@@ -15,8 +15,6 @@ export const INSPIRATION_ROOT = joinProjectRelativePath(
   VISUAL_LANGUAGE_ROOT,
   'inspiration'
 );
-export const LOOKBOOK_ROOT = joinProjectRelativePath(VISUAL_LANGUAGE_ROOT, 'lookbook');
-
 export function readablePathSegment(name: string): string {
   const slug = name
     .trim()

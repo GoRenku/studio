@@ -1,6 +1,6 @@
 export type * from './model.js';
 export {
-  sceneBeatSheetDocumentSchema,
-  sceneBeatSheetOperationDocumentSchema,
+  sceneBeatsInputSchema,
+  sceneBeatsOperationsInputSchema,
   sceneStoryboardImagesImportDocumentSchema,
 } from './schemas.js';

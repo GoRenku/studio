@@ -54,7 +54,7 @@ describe('Project Settings service', () => {
       fixture.service.replaceProjectSettings({
         projectName: fixture.projectName,
         homeDir: fixture.homeDir,
-        settings: { ...DEFAULT_PROJECT_SETTINGS, version: 2 },
+        settings: { ...DEFAULT_PROJECT_SETTINGS, version: 3 as 2 },
       })
     ).rejects.toMatchObject({ code: 'PROJECT_SETTINGS002' });
     await expect(

@@ -9,9 +9,9 @@ import {
   studioProjectLibraryResourceKey,
   studioProjectShellResourceKey,
   studioSceneNarrativeResourceKey,
-  studioSceneBeatSheetResourceKey,
-  studioBeatResourceKey,
   studioSceneBeatsResourceKey,
+  studioBeatResourceKey,
+  studioSceneBeatsRevisionResourceKey,
   studioSceneDialogueAudioSurfaceResourceKey,
   studioSceneShotPlansResourceKey,
   studioScreenplayResourceKey,
@@ -48,11 +48,11 @@ describe('Studio resource key catalog', () => {
     expect(studioSceneDialogueAudioSurfaceResourceKey('scene_gate')).toBe(
       'surface:scene:scene_gate:dialogue-audio'
     );
-    expect(studioSceneBeatSheetResourceKey('beat_sheet_gate')).toBe(
-      'scene-beat-sheet:beat_sheet_gate'
+    expect(studioSceneBeatsRevisionResourceKey('scene_beats_revision_gate')).toBe(
+      'scene-beats-revision:scene_beats_revision_gate'
     );
-    expect(studioBeatResourceKey('beat_sheet_gate', 'beat_arrival')).toBe(
-      'scene-beat-sheet:beat_sheet_gate:beat:beat_arrival'
+    expect(studioBeatResourceKey('scene_beats_revision_gate', 'beat_arrival')).toBe(
+      'scene-beats:scene_beats_revision_gate:beat:beat_arrival'
     );
   });
 

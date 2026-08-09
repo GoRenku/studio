@@ -19,6 +19,8 @@ import {
   validateShotInput,
   validateShotPlanDetails,
 } from './validation.js';
+import { allocateShotPlanNumber } from './plan-numbering.js';
+import { reserveInitialShotNumbers } from './shot-numbering.js';
 
 export function createShotPlanAuthoring(input: {
   command: CreateShotPlanInput;
@@ -37,19 +39,28 @@ export function createShotPlanAuthoring(input: {
   const shotPlanId = ids('shot_plan');
   input.session.db.transaction((tx) => {
     const session = { ...input.session, db: tx };
+    const number = allocateShotPlanNumber(session, input.command.sceneId);
     insertShotPlanRecord(session, {
       id: shotPlanId,
       sceneId: input.command.sceneId,
+      number,
       title: details.title,
       coverage: details.coverage,
       now: input.now,
     });
+    const shots = authoredShots.map((shot) => ({
+      ...shot,
+      id: ids('shot'),
+    }));
+    const numbers = reserveInitialShotNumbers({
+      session,
+      shotPlanId,
+      shots,
+      now: input.now,
+    });
     insertShotRecords(session, {
       shotPlanId,
-      shots: authoredShots.map((shot) => ({
-        ...shot,
-        id: ids('shot'),
-      })),
+      shots: shots.map((shot, index) => ({ ...shot, number: numbers[index]! })),
       now: input.now,
     });
   });

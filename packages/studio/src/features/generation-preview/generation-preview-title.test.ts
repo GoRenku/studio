@@ -20,6 +20,7 @@ const PREVIEW_TITLE_CASES = {
   'shot-plan.video-first-frame': 'First Frame Generation Preview',
   'shot-plan.video-last-frame': 'Last Frame Generation Preview',
   'shot-plan.video-storyboard': 'Video Storyboard Generation Preview',
+  'shot-plan.video-reference': 'Video Reference Generation Preview',
 } satisfies Record<GenerationPreviewPurpose, string>;
 
 describe('generationPreviewTitle', () => {

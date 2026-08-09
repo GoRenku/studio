@@ -17,7 +17,7 @@ do not validate runtime data once it crosses a CLI, Studio server, agent, or
 database boundary. Project-owned JSON needs a real runtime contract.
 
 The codebase already uses this pattern for Screenplay, Screenplay Analysis, and
-Scene Beat Sheet JSON:
+Scene Beats JSON:
 
 - browser-safe JSON Schema constants live under `packages/core/src/client`;
 - server validators use AJV v8 with JSON Schema draft 2020-12;
@@ -37,7 +37,7 @@ diagnostics instead of returning malformed data.
 Use the same AJV pattern as the feature-owned validators under
 `packages/core/src/server/screenplay/validation/`,
 `packages/core/src/server/screenplay-analysis/validation.ts`, and
-`packages/core/src/server/scene-beat-sheet/validator.ts`:
+`packages/core/src/server/scene-beats/validator.ts`:
 
 ```ts
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -93,7 +93,7 @@ example:
 ```text
 packages/core/src/server/screenplay/validation/blocks.ts
 packages/core/src/server/screenplay-analysis/validation.ts
-packages/core/src/server/scene-beat-sheet/validator.ts
+packages/core/src/server/scene-beats/validator.ts
 packages/core/src/server/visual-language-json/validator.ts
 ```
 

@@ -14,7 +14,7 @@ export const site = {
   name: 'Renku',
   tagline: 'See your film before you shoot a single frame.',
   description:
-    'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, narrative Beat Sheets, and storyboards — one cinematic workspace.',
+    'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, narrative Scene Beats, and storyboards — one cinematic workspace.',
   githubUrl: 'https://github.com/GoRenku/studio',
   studioUrl: 'http://github.com/GoRenku/studio',
 };
@@ -113,13 +113,13 @@ export const features: Feature[] = [
     description:
       'Renku breaks each scene into clear narrative Beats before camera decisions begin. Every Beat carries its people, place, story elements, emotional tone, and narrative function, with storyboard imagery attached as a separate visual layer.',
     bullets: [
-      'Narrative Beat Sheets stay separate from camera and coverage choices',
+      'Narrative Scene Beats stay separate from camera and coverage choices',
       'Each Beat carries narrative development, purpose, cast, and locations',
       'Whole-act overviews show the storyboard flow at a glance',
     ],
     image: sceneBeats,
     imageAlt:
-      'A Scene Beat Sheet in Renku with storyboard thumbnails and the selected Beat details.',
+      'Scene Beats in Renku with storyboard thumbnails and the selected Beat details.',
     secondaryImage: actStoryboard,
     secondaryImageAlt:
       'An act overview showing storyboard frames for every scene.',

@@ -1,6 +1,7 @@
 export type {
   PersistProjectAssetFileInput,
   ProjectAssetFileDestination,
+  ProjectAssetFileNamingMode,
   ProjectAssetFileWriteSet,
   ProjectMediaKind,
   ProjectReferenceFileValidation,

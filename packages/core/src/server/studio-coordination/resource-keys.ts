@@ -103,15 +103,15 @@ export function studioSceneDialogueAudioSurfaceResourceKey(sceneId: string): str
   return `surface:scene:${sceneId}:dialogue-audio`;
 }
 
-export function studioSceneBeatSheetResourceKey(beatSheetId: string): string {
-  return `scene-beat-sheet:${beatSheetId}`;
+export function studioSceneBeatsRevisionResourceKey(sceneBeatsRevisionId: string): string {
+  return `scene-beats-revision:${sceneBeatsRevisionId}`;
 }
 
 export function studioBeatResourceKey(
-  beatSheetId: string,
+  sceneBeatsRevisionId: string,
   beatId: string
 ): string {
-  return `scene-beat-sheet:${beatSheetId}:beat:${beatId}`;
+  return `scene-beats:${sceneBeatsRevisionId}:beat:${beatId}`;
 }
 
 export function studioAssetOwnerSurfaceResourceKeys(owner: AssetOwner): string[] {

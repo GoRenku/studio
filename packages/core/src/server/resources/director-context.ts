@@ -27,9 +27,9 @@ import {
 } from '../screenplay-analysis/persistence.js';
 import { listLocationRecords } from '../database/access/locations.js';
 import {
-  readActiveSceneBeatSheetRecord,
-  readSceneBeatSheetDocument,
-} from '../database/access/scene-beat-sheets.js';
+  readActiveSceneBeatsRevisionRecord,
+  readSceneBeats,
+} from '../database/access/scene-beats.js';
 import {
   readActiveCastDesignId,
 } from '../database/access/cast-designs.js';
@@ -50,7 +50,7 @@ import {
   studioPropNavigationResourceKey,
   studioProjectInformationResourceKey,
   studioProjectSettingsResourceKey,
-  studioSceneBeatSheetResourceKey,
+  studioSceneBeatsRevisionResourceKey,
   studioSceneBeatsResourceKey,
   studioScreenplayResourceKey,
   studioVisualLanguageInspirationResourceKey,
@@ -332,19 +332,19 @@ async function readSelectedSceneReadiness(input: {
     return null;
   }
 
-  const activeBeatSheet = readActiveSceneBeatSheetRecord(session, selection.id);
-  if (!activeBeatSheet) {
+  const activeRevision = readActiveSceneBeatsRevisionRecord(session, selection.id);
+  if (!activeRevision) {
     return {
       sceneId: selection.id,
       beatId: selection.beatId ?? null,
-      activeBeatSheetId: null,
+      activeRevisionId: null,
       beatCount: 0,
       storyboardStatus: { available: false, missingBeatIds: [] },
     };
   }
 
-  const document = readSceneBeatSheetDocument({
-    row: activeBeatSheet,
+  const document = readSceneBeats({
+    row: activeRevision,
   });
   const missingBeatIds = document.beats
     .filter((beat) =>
@@ -367,9 +367,9 @@ async function readSelectedSceneReadiness(input: {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT009',
-        'Selected Beat is not in the active Scene Beat Sheet.',
+        'Selected Beat is not in the active Scene Beats revision.',
         ['selectedScene', 'beatId'],
-        'Select a Beat from the active Scene Beat Sheet.'
+        'Select a Beat from the active Scene Beats revision.'
       )
     );
   }
@@ -377,7 +377,7 @@ async function readSelectedSceneReadiness(input: {
   return {
     sceneId: selection.id,
     beatId: selection.beatId ?? null,
-    activeBeatSheetId: activeBeatSheet.id,
+    activeRevisionId: activeRevision.id,
     beatCount: document.beats.length,
     storyboardStatus: {
       available: true,
@@ -465,13 +465,13 @@ function readinessDiagnostics(input: {
       )
     );
   }
-  if (input.selectedScene && !input.selectedScene.activeBeatSheetId) {
+  if (input.selectedScene && !input.selectedScene.activeRevisionId) {
     diagnostics.push(
       directorWarning(
         'DIRECTOR_CONTEXT007',
-        'The selected scene does not have an active Scene Beat Sheet.',
-        ['selectedScene', 'activeBeatSheetId'],
-        'Create a Scene Beat Sheet before generating storyboard images.'
+        'The selected scene does not have an active Scene Beats revision.',
+        ['selectedScene', 'activeRevisionId'],
+        'Create a Scene Beats revision before generating storyboard images.'
       )
     );
   }
@@ -563,13 +563,13 @@ function buildNextSteps(input: {
       command: 'renku generation context --purpose prop.sheet --target prop:<prop-id> --json',
     });
   }
-  if (input.selectedScene && !input.selectedScene.activeBeatSheetId) {
+  if (input.selectedScene && !input.selectedScene.activeRevisionId) {
     steps.push({
-      id: 'design-beat-sheet',
-      title: 'Design the selected Scene Beat Sheet',
+      id: 'design-scene-beats',
+      title: 'Design the selected Scene Beats revision',
       specialistSkill: 'scene-beat-designer',
-      reason: 'The selected Scene needs an active Scene Beat Sheet before storyboard work.',
-      command: `renku screenplay beat-sheet context --scene ${input.selectedScene.sceneId} --json`,
+      reason: 'The selected Scene needs an active Scene Beats revision before storyboard work.',
+      command: `renku screenplay beats context --scene ${input.selectedScene.sceneId} --json`,
     });
   } else if (
     input.selectedScene?.storyboardStatus.available &&
@@ -579,7 +579,7 @@ function buildNextSteps(input: {
       id: 'generate-storyboards',
       title: 'Generate missing storyboard images',
       specialistSkill: 'media-producer',
-      reason: 'The active Beat Sheet has Beats without durable storyboard images.',
+      reason: 'The active Scene Beats revision has Beats without durable storyboard images.',
       command: `renku generation context --purpose scene.storyboard-sheet --target scene:${input.selectedScene.sceneId} --json`,
     });
   }
@@ -603,8 +603,8 @@ function directorResourceKeys(
     ...(selectedScene
       ? [
           studioSceneBeatsResourceKey(selectedScene.sceneId),
-          ...(selectedScene.activeBeatSheetId
-            ? [studioSceneBeatSheetResourceKey(selectedScene.activeBeatSheetId)]
+          ...(selectedScene.activeRevisionId
+            ? [studioSceneBeatsRevisionResourceKey(selectedScene.activeRevisionId)]
             : []),
         ]
       : []),

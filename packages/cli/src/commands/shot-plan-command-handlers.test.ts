@@ -1,7 +1,7 @@
 import type { ProjectDataService } from '@gorenku/studio-core/server';
 import { describe, expect, it, vi } from 'vitest';
 import { shotPlanCommandHandlers } from './shot-plan-command-handlers.js';
-import { corePosition } from './shot-plan-shot-command-handlers.js';
+import { corePosition, shotPlacement } from './shot-plan-shot-command-handlers.js';
 
 describe('Shot Plan command handlers', () => {
   it('maps one-based CLI positions to zero-based Core positions', () => {
@@ -12,6 +12,21 @@ describe('Shot Plan command handlers', () => {
         expect.objectContaining({ code: 'CLI152' })
       );
     }
+  });
+
+  it('maps explicit Shot placement intent without allocating a number', () => {
+    expect(shotPlacement({})).toEqual({ position: 'end' });
+    expect(shotPlacement({ placement: 'start' })).toEqual({ position: 'start' });
+    expect(shotPlacement({ placement: 'before', shot: 'shot_1' })).toEqual({
+      position: 'before',
+      shotId: 'shot_1',
+    });
+    expect(() => shotPlacement({ placement: 'before' })).toThrowError(
+      expect.objectContaining({ code: 'CLI001' })
+    );
+    expect(() => shotPlacement({ placement: 'middle' })).toThrowError(
+      expect.objectContaining({ code: 'CLI153' })
+    );
   });
 
   it('delegates a move without reading or replacing the Shot Plan', async () => {

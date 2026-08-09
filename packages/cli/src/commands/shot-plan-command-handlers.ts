@@ -11,6 +11,7 @@ export interface ShotPlanCommandFlags {
   shot?: string;
   asset?: string;
   position?: number;
+  placement?: string;
 }
 
 export type ShotPlanCommandRuntime = CliCommandRuntime;

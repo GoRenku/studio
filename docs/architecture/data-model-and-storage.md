@@ -69,24 +69,29 @@ Use the focused documents below for current direction.
   partition the canonical Scenes current when it is authored and do not
   reference screenplay Sections. Stored Analysis reads preserve obsolete Scene
   ids and never revalidate history against the current Screenplay.
-- Scene Beat Sheets are SQLite-owned project data. They store validated,
+- Scene Beats are SQLite-owned project data. They store validated,
   agent-authored narrative breakdown history as tagged JSON in
-  `scene_beat_sheet`, with one active Beat Sheet per scene tracked in
-  `scene_beat_sheet_state`. Scene and Block ids are weak historical context:
-  deleting or revising Screenplay content neither invalidates nor deletes Beat
-  Sheet history.
-- Production Scene Numbers are optional exact non-empty strings stored directly
-  on Scene. They are human-facing references, not identity or canonical order;
-  Core list/resolve queries use current Scenes without a reservation registry.
-- A Beat is a non-camera narrative unit with exactly nine authored fields:
-  `id`, `title`, `description`, `narrativeDevelopment`, `narrativePurpose`,
-  `castMemberIds`, `locationIds`, `propIds`, and `screenplayBlockIds`. Beat
-  order is the JSON array order, and Block relationships use stable IDs rather
-  than array indexes. Missing current context produces authoring warnings and
-  does not invalidate a stored Beat Sheet.
+  `scene_beats_revision`, with one active revision per Scene tracked in
+  `scene_beats_state`. Runtime create, reset, and focused operations append
+  immutable revisions; active selection never deletes history. Scene and Block
+  ids are weak historical context, so revising Screenplay content does not
+  invalidate or delete Scene Beats history.
+- Every Scene has a production number in the shared
+  `[1-9][0-9]*[A-Za-z]*` grammar. FDX-backed Projects preserve exact external
+  numbers, while agent-authored Projects use durable Core-owned reservations.
+  These numbers are human-facing references, not identity or canonical order.
+- A Beat is a non-camera narrative unit with a Core-authored durable `id` and
+  stable `number` plus the eight opaque authored fields `title`, `description`,
+  `narrativeDevelopment`, `narrativePurpose`, `castMemberIds`, `locationIds`,
+  `propIds`, and `screenplayBlockIds`. Beat order is the JSON array order, and
+  Block relationships use stable IDs rather than array indexes. Missing current
+  context produces authoring warnings and does not invalidate stored history.
   Beat descriptions and the other authored fields must not encode framing,
   lenses, camera movement, composition, coverage, or production instructions.
 - Shot Plans are Scene-owned mutable authoring aggregates with ordered Shots.
+  Every Plan has a Scene-local monotonically increasing integer number. Every
+  Shot has a stable production number allocated and reserved by Core; movement
+  changes only position, and deletion never releases the number.
   A plan remains editable regardless of generation, Run, or Asset history.
   Core stores no Shot Plan authoring history, revision, status, output table,
   owned video output, owned references, or dependency graph.

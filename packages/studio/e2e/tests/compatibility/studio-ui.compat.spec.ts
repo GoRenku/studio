@@ -60,7 +60,7 @@ async function screenshot(
   await expect(page).toHaveScreenshot(name, {
     animations: 'disabled',
     caret: 'hide',
-    mask: [page.getByText(/^E2E Beat Sheet /), ...masks],
+    mask: [page.getByText(/^E2E Scene Beats /), ...masks],
   });
 }
 

@@ -68,12 +68,12 @@ describe('ProjectSettingsFields', () => {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 1,
+    version: 2,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
       runScreenplayAnalysis: false,
-      generateSceneBeatSheets: false,
+      generateSceneBeats: false,
       generateBeatStoryboardImages: false,
     },
     generation: {

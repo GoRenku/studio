@@ -389,7 +389,7 @@ function locationScenes(
     if (referenced) {
       scenes.push({
         sceneId: scene.id,
-        ...(scene.productionNumber ? { productionNumber: scene.productionNumber } : {}),
+        ...(scene.productionNumber !== undefined ? { productionNumber: scene.productionNumber } : {}),
         heading: scene.heading,
         ...(scene.title ? { title: scene.title } : {}),
         excerpts: scene.blocks.flatMap((block) =>
