@@ -4,7 +4,9 @@ import { StudioAppHeader } from '@/app/studio-app-header';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import type { ProjectLibraryWithHttp } from '@/services/studio-project-contracts';
+import { deleteProject } from '@/services/studio-projects-api';
 import { EmptyProjectLibrary } from './empty-project-library';
+import { CreateProjectDialog } from './create-project-dialog';
 import { ProjectLibraryCard } from './project-library-card';
 import { useProjectLibrarySearch } from './use-project-library-search';
 
@@ -27,6 +29,13 @@ export function ProjectLibraryScreen({
 }: ProjectLibraryScreenProps) {
   const [query, setQuery] = useState('');
   const filteredProjects = useProjectLibrarySearch(library?.projects ?? [], query);
+  const handleDeleteProject = async (
+    projectName: string,
+    confirmationProjectName: string
+  ) => {
+    await deleteProject(projectName, confirmationProjectName);
+    await onRefresh();
+  };
 
   return (
     <div className='h-screen w-screen bg-background text-foreground p-4 flex flex-col gap-4'>
@@ -70,6 +79,12 @@ export function ProjectLibraryScreen({
               )}
               Refresh
             </Button>
+            {library ? (
+              <CreateProjectDialog
+                storageRoot={library.storageRoot}
+                onCreated={onSelectProject}
+              />
+            ) : null}
           </div>
         </div>
 
@@ -109,6 +124,7 @@ export function ProjectLibraryScreen({
                   project={project}
                   isSelectingProject={isSelectingProject}
                   onSelectProject={onSelectProject}
+                  onDeleteProject={handleDeleteProject}
                 />
               ))}
             </div>

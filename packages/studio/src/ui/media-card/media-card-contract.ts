@@ -1,3 +1,5 @@
+import type { DeleteConfirmationRequirement } from '@/ui/delete-confirm-dialog';
+
 export interface MediaCardProps {
   media: MediaCardMedia | null;
   frame: MediaCardFrame;
@@ -227,7 +229,9 @@ export interface MediaCardDeleteAction {
   label: string;
   confirmationTitle: string;
   confirmationMessage: string;
-  onDelete: () => Promise<void>;
+  confirmation?: DeleteConfirmationRequirement;
+  deleteLabel?: string;
+  onDelete: (confirmationValue?: string) => Promise<void>;
 }
 
 export interface MediaCardEmptyState {

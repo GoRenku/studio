@@ -11,7 +11,7 @@ export function EmptyProjectLibrary({ hasQuery }: { hasQuery: boolean }) {
         <p className='mt-2 text-sm leading-relaxed text-muted-foreground'>
           {hasQuery
             ? 'Try a different title, project name, or logline.'
-            : 'Renku Studio scans immediate child folders in its configured storage root and shows folders that contain .renku/project.sqlite.'}
+            : 'Create an empty Project to initialize its database, then use the agent to import an FDX or develop a screenplay.'}
         </p>
       </div>
     </div>

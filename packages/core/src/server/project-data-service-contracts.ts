@@ -89,6 +89,8 @@ import type {
   PageResponse,
   Project,
   ProjectCreateReport,
+  ProjectCreateRequest,
+  ProjectDeleteReport,
   ProjectInformationResource,
   ProjectInformationPatch,
   ProjectSettingsMutationReport,
@@ -155,6 +157,7 @@ export type { ProjectDatabasePreMigrationBackupReport };
 
 export interface ProjectDataService {
   createMovieProject(input: CreateMovieProjectInput): Promise<ProjectCreateReport>;
+  deleteProject(input: DeleteProjectInput): Promise<ProjectDeleteReport>;
   migrateProjectDatabase(
     input: MigrateProjectDatabaseInput
   ): Promise<ProjectDatabaseMigrationReport>;
@@ -360,13 +363,17 @@ export interface ProjectDataService {
   setLookbookImagePlacement(input: SetLookbookImagePlacementInput): Promise<LookbookImageMutationReport>;
 }
 
-export interface CreateMovieProjectInput extends RenkuConfigPathOptions {
-  projectName: string;
-  title: string;
+export interface CreateMovieProjectInput
+  extends ProjectCreateRequest, RenkuConfigPathOptions {
   aspectRatio?: string;
   logline?: string;
   synopsis?: string;
   idGenerator?: ProjectIdGenerator;
+}
+
+export interface DeleteProjectInput extends RenkuConfigPathOptions {
+  projectName: string;
+  confirmationProjectName: string;
 }
 
 export interface MigrateProjectDatabaseInput extends RenkuConfigPathOptions {

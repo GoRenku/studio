@@ -141,6 +141,8 @@ function MediaCardDeleteControl({
           <DeleteConfirmDialog
             title={action.confirmationTitle}
             message={action.confirmationMessage}
+            confirmation={action.confirmation}
+            deleteLabel={action.deleteLabel}
             onDelete={action.onDelete}
             trigger={
               <Button

@@ -10,6 +10,8 @@ import {
   toProjectShellResponse,
 } from '../http/project-responses.js';
 import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
+import { readProjectCreateRequest } from '../http/project-create-request.js';
+import { readProjectDeleteRequest } from '../http/project-delete-request.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
 import { createContinuityRoute } from './continuity.js';
@@ -33,6 +35,8 @@ export interface CreateProjectsRouteOptions {
 
 export type ProjectsRouteProjectData = Pick<
   ProjectDataService,
+  | 'createMovieProject'
+  | 'deleteProject'
   | 'listLibrary'
   | 'readProject'
   | 'readProjectShell'
@@ -123,6 +127,31 @@ export function createProjectsRoute(
       try {
         const library = await projectData.listLibrary();
         return c.json({ library: toProjectLibraryResponse(library) });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .post('/', requireToken, async (c) => {
+      try {
+        const request = readProjectCreateRequest(
+          await c.req.json().catch(() => undefined)
+        );
+        const report = await projectData.createMovieProject(request);
+        return c.json({ report }, 201);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/:projectName', requireToken, async (c) => {
+      try {
+        const request = readProjectDeleteRequest(
+          await c.req.json().catch(() => undefined)
+        );
+        const report = await projectData.deleteProject({
+          projectName: c.req.param('projectName'),
+          confirmationProjectName: request.confirmationProjectName,
+        });
+        return c.json({ report });
       } catch (error) {
         return projectErrorResponse(c, error);
       }

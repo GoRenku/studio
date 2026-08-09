@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import {
   DEFAULT_PROJECT_LOCALE_TAG,
   SUPPORTED_PROJECT_LOCALES,
@@ -27,6 +28,7 @@ import type { CreateMovieProjectInput } from '../project-data-service-contracts.
 import { DEFAULT_MOVIE_PROJECT_ASPECT_RATIO } from '../database/access/project-information.js';
 import { insertProjectLocaleRecords } from '../database/access/project-locales.js';
 import { insertProjectSettingsRecord } from '../database/access/project-settings.js';
+import { validateProjectName } from './project-name-validation.js';
 import {
   DEFAULT_PROJECT_SETTINGS,
   serializeProjectSettings,
@@ -35,6 +37,7 @@ import {
 export async function createMovieProject(
   input: CreateMovieProjectInput
 ): Promise<ProjectCreateReport> {
+  validateProjectTitle(input.title);
   validateProjectName(input.projectName);
   const defaultLocale = SUPPORTED_PROJECT_LOCALES.find(
     (locale) => locale.localeTag === DEFAULT_PROJECT_LOCALE_TAG
@@ -58,7 +61,18 @@ export async function createMovieProject(
   if (await pathExists(projectFolder)) {
     throw new ProjectDataError(
       'PROJECT_DATA024',
-      `Project folder already exists: ${projectFolder}`
+      `Project folder already exists: ${projectFolder}`,
+      {
+        issues: [
+          createDiagnosticError(
+            'PROJECT_DATA024',
+            `Folder name is already in use: ${input.projectName}`,
+            { path: ['projectName'], context: 'Project creation' },
+            'Choose another Folder name.'
+          ),
+        ],
+        suggestion: 'Choose another Folder name.',
+      }
     );
   }
 
@@ -130,11 +144,22 @@ function emptyMovieCounts(): ProjectCounts {
   };
 }
 
-function validateProjectName(projectName: string): void {
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectName)) {
+function validateProjectTitle(title: string): void {
+  if (title.trim() === '') {
     throw new ProjectDataError(
-      'PROJECT_DATA025',
-      'Project name must be kebab-case and contain only lowercase letters, numbers, and hyphens.'
+      'PROJECT_DATA050',
+      'Project title must not be blank.',
+      {
+        issues: [
+          createDiagnosticError(
+            'PROJECT_DATA050',
+            'Project title is required.',
+            { path: ['title'], context: 'Project creation' },
+            'Enter a Project title.'
+          ),
+        ],
+        suggestion: 'Enter a Project title.',
+      }
     );
   }
 }

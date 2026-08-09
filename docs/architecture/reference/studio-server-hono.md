@@ -110,6 +110,7 @@ packages/studio/server/
     markdown-asset-content-request.ts
     production-export-request.ts
     movie-studio-selection-request.ts
+    project-create-request.ts
     request-validation.ts
     project-responses.ts
     project-cover-url.ts
@@ -136,6 +137,8 @@ File meanings:
 - `routes/studio-events.ts`: Studio coordination event resource route module;
 - `http/*-request.ts`: request readers that translate raw HTTP input into
   core service input and structured diagnostics;
+- `http/project-create-request.ts`: accepts exactly the browser-safe
+  `projectName` and `title` creation intent;
 - `http/asset-file-response.ts`: asset file response mechanics, including
   content type and cache headers;
 - `http/shot-plan-responses.ts`: browser-safe Shot Plan media serialization and
@@ -227,6 +230,48 @@ export type ProjectsRoute = typeof projects;
 The exact route list may change as the product changes. The naming rule does
 not change: route modules are named by resource, and handlers stay near their
 route definitions.
+
+### Project creation
+
+`POST /studio-api/projects` is a token-protected local mutation. The request is
+the Core-owned `ProjectCreateRequest`:
+
+```json
+{
+  "projectName": "the-glass-harbor",
+  "title": "The Glass Harbor"
+}
+```
+
+The route parses that exact envelope, delegates unchanged intent to
+`ProjectDataService.createMovieProject`, and returns `{ "report": ... }` with
+HTTP 201. It does not derive Folder names, inspect storage, choose Project
+defaults, create database rows, or scaffold feature folders. Core owns those
+durable decisions and returns structured field diagnostics when creation is
+invalid.
+
+The older setup-YAML references elsewhere in the architecture documentation
+remain a known documentation cleanup outside this focused browser workflow;
+they are not an alternate contract accepted by this endpoint.
+
+### Project deletion
+
+`DELETE /studio-api/projects/:projectName` is a token-protected permanent local
+mutation. Its exact request envelope is:
+
+```json
+{
+  "confirmationProjectName": "the-glass-harbor"
+}
+```
+
+The route parses the envelope and delegates the route Project name and typed
+confirmation to `ProjectDataService.deleteProject`. Core requires an exact,
+case-sensitive match, verifies that the target under the configured storage
+root is a SQLite-backed Project, closes its current-Project descriptor when
+applicable, and removes the complete Project folder. The HTTP route does not
+inspect or delete filesystem content. It returns `{ "report": ... }` only after
+Core completes the deletion.
 
 ## Route Naming
 

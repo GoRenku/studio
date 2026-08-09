@@ -1,124 +1,93 @@
-# Shot Plans Studio UI — Design QA
+# Design QA — Create Project Dialog
 
-Date: 2026-07-27
+**Source visual truth**
 
-Reference:
+- `plans/active/assets/0175-studio-empty-project-creation-dialog/selected-dialog.png`
+- Source pixels: 1487 × 1058.
 
-- `plans/active/assets/0157-shot-plans-studio-ui/index.html`
-- checked-in 1440×900, 1024×900, and dialog-state screenshots beside the artifact
+**Rendered implementation**
 
-Production verification:
+- `plans/active/assets/0175-studio-empty-project-creation-dialog/implementation-dialog.jpg`
+- Implementation pixels: 1488 × 1059.
+- CSS viewport: 1488 × 1059 at device scale factor 1.
+- State: populated Project Library, dark theme, Create project dialog open,
+  Project title focused with `The Glass Harbor`, and the suggested Folder name
+  visible.
+- Density normalization: none required. The one-pixel source/viewport variance
+  is below the fidelity threshold and does not change the dialog comparison.
 
-- Compared collection, detail, compact detail, Description, still preview,
-  motion preview, Camera glossary, and Motion glossary in same-state,
-  same-viewport side-by-side images.
-- Verified the collection uses the accepted three-column desktop grid,
-  selected-image mosaics, quiet empty state, Beat labels, and `+N` overflow.
-- Verified detail navigation, independent Shot rail/detail scrolling, amber
-  image-only selection, quiet empty Shot, and fixed-width Brief cards that wrap
-  instead of shrinking or stretching.
-- Verified exact long Markdown wraps and scrolls in the read-only Description
-  surface.
-- Verified media previews and the 9/8/10 Framing, Camera, and Motion glossaries,
-  including current/start/end markers and Rack Focus still media.
-- Verified keyboard focus return for plan Back, candidate dialog, media
-  previews, and glossary dialogs.
-- Verified plan delete/Trash restore and candidate select/delete/Trash restore
-  against an isolated clone of `urban-basilica`.
-- Rechecked Shot detail at 1024×900 after the fixed-card correction. Every
-  Brief card measures 204 pixels, wraps without shrinking or stretching, and
-  the Covered Beats group sits below the exact Shot title.
-- Rechecked the Shot rail sizing contract: it starts from the named percentage
-  constant and respects the named 210-pixel hard minimum at compact desktop
-  widths.
+**Full-view comparison evidence**
 
-Resolved deviations:
+- `plans/active/assets/0175-studio-empty-project-creation-dialog/design-qa-comparison.png`
+- The selected centered-modal composition, overlay, header action placement,
+  modal width, and dominant yellow primary action are preserved.
+- The live Project Library card and header geometry use the existing Studio
+  components and current Basilica data rather than ImageGen's incidental card
+  proportions and invented values.
 
-- Made the collection root fill the Scene panel so the grid does not
-  shrink-wrap to one column.
-- Rendered Core’s zero-based Beat positions as one-based product labels.
-- Added specific accessible names for Back and glossary actions.
-- Enabled CodeMirror line wrapping for long authored Shot descriptions.
+**Focused region comparison evidence**
 
-final result: passed
+- `plans/active/assets/0175-studio-empty-project-creation-dialog/design-qa-dialog-comparison.png`
+- A focused dialog comparison was required because field spacing, focus state,
+  footer geometry, and copy are too small to judge reliably in the full view.
 
-## Reusable MediaCard Preview And Collection Dialogs
+**Findings**
 
-Date: 2026-07-28
+- No actionable P0, P1, or P2 differences remain.
+- Fonts and typography: the implementation uses Studio's existing font stack,
+  weights, and text tokens. Hierarchy and wrapping match the reference closely;
+  the minor weight difference is an accepted live-design-system constraint.
+- Spacing and layout rhythm: the final 570 px modal width, 563 px rendered
+  height, body padding, footer height, and button placement align with the
+  reference. The existing Dialog header/footer separators are intentionally
+  retained.
+- Colors and visual tokens: the dark panel, dimmed overlay, border hierarchy,
+  muted copy, yellow focus outline, and yellow primary action use current
+  Studio tokens and preserve the selected direction.
+- Image quality and asset fidelity: no new raster assets are required by the
+  dialog. Existing Renku logo, Project card media treatment, and Lucide UI icons
+  remain source-quality app assets rather than approximations.
+- Copy and content: app-specific text follows the accepted implementation plan.
+  `Automatically suggested` accurately describes the editable UI behavior,
+  and the initialization note deliberately promises only the Project folder
+  and database rather than the mock's inaccurate `core folders` claim.
 
-Source capture:
+**Comparison history**
 
-- Captured from detached pre-refactor commit `97583739` with the same
-  deterministic E2E project, Chromium compatibility project, theme, and
-  viewport used for implementation verification.
-- The locked source images live in
-  `packages/studio/e2e/tests/compatibility/media-card-interactions.compat.spec.ts-snapshots/`.
-  The unchanged-state assertions compare production directly with these
-  pre-refactor files; they were not regenerated to accept refactor drift.
-- Dynamic-media masks: none. The fixture uses deterministic local images, so
-  card imagery, selected-state controls, and viewer controls remain visible in
-  every comparison.
+1. Initial implementation evidence used a 560 px modal with a compressed
+   footer and a neutral title-field focus treatment. These were P2 fidelity
+   differences against the selected dialog.
+2. The modal was widened to 570 px, footer vertical padding and button height
+   were increased, and the focused input adopted the Studio primary accent.
+3. The post-fix full-view and focused-region comparisons listed above show the
+   selected geometry and interaction emphasis without actionable P0/P1/P2
+   drift.
 
-Implementation capture:
+**Primary interactions tested**
 
-- `shot-rail-wide`: 1440×900 CSS pixels, DPR 1.
-- `shot-rail-compact`: 1024×900 CSS pixels, DPR 1.
-- multi-image Shot collection, Reference Picker, and gallery viewer:
-  1024×900 CSS pixels, DPR 1.
-- Shot loading and error collections: 1280×720 CSS pixels, DPR 1.
-- one-image direct viewer and multi-image nested viewer: 1440×900 CSS pixels,
-  DPR 1.
+- Header action opens the dialog.
+- Initial focus lands on Project title.
+- Typing a title derives the Folder name and resolved location.
+- Escape dismisses the dialog when idle.
+- Reopening after dismissal resets both fields.
+- Cancel dismisses the dialog.
+- The temporary-storage browser E2E journey creates the Project, navigates to
+  Project Information, returns home, and finds the new card.
+- Browser console errors checked: none.
 
-Same-input comparison evidence:
+**Open Questions**
 
-- `plans/active/assets/0160-media-card-dialogs/design-qa/rail-full-source-vs-implementation.png`
-- `plans/active/assets/0160-media-card-dialogs/design-qa/candidate-full-source-vs-implementation.png`
-- `plans/active/assets/0160-media-card-dialogs/design-qa/candidate-focused-source-vs-implementation.png`
-- `plans/active/assets/0160-media-card-dialogs/design-qa/reference-full-source-vs-implementation.png`
-- `plans/active/assets/0160-media-card-dialogs/design-qa/reference-focused-source-vs-implementation.png`
-- `plans/active/assets/0160-media-card-dialogs/design-qa/gallery-viewer-source-vs-implementation.png`
-- `plans/active/assets/0160-media-card-dialogs/design-qa/viewer-source-and-new-paths.png`
+- None.
 
-Accepted Shot interaction constraints:
+**Implementation Checklist**
 
-- The rail card still selects the Shot; it does not open a viewer.
-- When images exist, the lower-right rail action opens the image flow for that
-  exact Shot.
-- Zero images leave the placeholder rail card without a lower-right image
-  action or Dialog.
-- One ready image opens the existing shared viewer directly and exposes no
-  choose control or implicit selection.
-- Multiple ready images open the unchanged flush collection. Whole-card
-  activation previews, while the existing lower-right choose control remains
-  the only selection mutation.
-- Direct and nested viewer close both return focus to the exact trigger.
+- [x] Match the selected desktop modal composition and state.
+- [x] Preserve Studio design-system typography, colors, controls, and icons.
+- [x] Keep corrected, product-accurate initialization copy.
+- [x] Verify focus, derivation, dismissal, reset, and successful creation flow.
 
-Comparison findings:
+**Follow-up Polish**
 
-- Wide and compact rail geometry, typography, spacing, colors, borders, image
-  treatment, selected state, and action placement match the source pixels.
-- Flush Shot collection and inset Reference Picker anatomy match the source
-  pixels in both full-view and focused comparisons.
-- Loading, error, ready, and Retry states match the source pixels.
-- Gallery preview activation moved to the semantic shared contract without a
-  visible viewer change.
-- The new direct and nested Shot paths use the accepted shared viewer chrome.
-  Only the deterministic source image and its intrinsic aspect ratio change.
-- No P0, P1, or P2 visual finding remains.
-
-Comparison history:
-
-1. Initial source and implementation captures used exact image-element masks.
-2. Review found that a viewer-sized mask also covered the overlaid close
-   control, weakening the evidence.
-3. All Plan 0160 captures were repeated with deterministic media and no masks.
-4. The empty-state Dialog evidence was removed after product review established
-   that an image-less Shot must not expose the action or Dialog.
-5. Exact Playwright comparisons passed for every unchanged state, and the
-   unmasked same-input review found no unexplained visible difference.
-6. The broad pre-existing `scene-narrative.png` compatibility snapshot still
-   reports the same 101-pixel text antialiasing drift around the `SHOT PLANS`
-   tab that was captured before implementation. Its baseline was not changed;
-   it is unrelated to the Plan 0160 surfaces.
+- No P3 follow-up is required for this slice.
 
 final result: passed

@@ -39,6 +39,31 @@ export function fakeProjectDataService(): NonNullable<
   };
 
   return {
+    async createMovieProject(input) {
+      return {
+        projectName: input.projectName,
+        projectPath: `/tmp/renku/${input.projectName}`,
+        databasePath: `/tmp/renku/${input.projectName}/.renku/project.sqlite`,
+        coverPath: null,
+        created: {
+          languages: 1,
+          castMembers: 0,
+          locations: 0,
+          props: 0,
+          acts: 0,
+          sequences: 0,
+          scenes: 0,
+        },
+        warnings: [],
+      };
+    },
+    async deleteProject(input) {
+      return {
+        projectName: input.projectName,
+        projectPath: `/tmp/renku/${input.projectName}`,
+        deleted: true,
+      };
+    },
     async listLibrary() {
       return library;
     },

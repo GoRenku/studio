@@ -26,6 +26,30 @@ The Studio browser app is organized around clear layers:
 Feature code must use the local UI primitives from `src/ui`; it must not write
 raw browser controls directly.
 
+## Project Library Lifecycle
+
+The Project Library header owns the desktop Create Project entry point. Its
+feature-local dialog collects a Project title and an editable Folder name,
+shows the resolved storage location, and sends only the shared
+`ProjectCreateRequest` through `src/services/studio-projects-api.ts`.
+
+The browser may suggest a kebab-case Folder name while the user types, but that
+suggestion is presentation behavior only. Core remains authoritative for blank
+titles, Project-name grammar, filesystem collisions, default Project data, and
+database initialization. After creation succeeds, the dialog reuses the
+existing Project-selection path so the new empty Project opens on Project
+Information. Importing an FDX or authoring a screenplay remains a later agent
+workflow rather than a creation-dialog branch.
+
+Project Library cards expose the shared Media Card trash action. Project
+deletion is permanent, so its shared confirmation dialog requires the user to
+type the immutable Project name exactly; the human-readable title is not an
+accepted confirmation. The browser sends that exact confirmation through
+`src/services/studio-projects-api.ts`, while Core independently enforces the
+match, verifies the target is a SQLite-backed Project in the configured storage
+root, and owns removal of the complete Project folder. After deletion succeeds,
+the browser refreshes the Project Library.
+
 Generation feature code is an experience projection consumer. Core supplies
 purpose context, exact reference eligibility, focused workspace state, and
 structured diagnostics; Engines supplies provider field capabilities. React may

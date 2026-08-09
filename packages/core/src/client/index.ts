@@ -151,6 +151,8 @@ export type {
   ProjectCoverImage,
   ProjectCounts,
   ProjectCreateReport,
+  ProjectCreateRequest,
+  ProjectDeleteReport,
   ProjectId,
   ProjectRelativePath,
 } from './project/index.js';

@@ -40,6 +40,48 @@ export class ProjectLibraryPage {
       )
     );
   }
+
+  async createEmptyProject(
+    project: Pick<StudioE2eProject, 'title' | 'projectName' | 'projectPath'>
+  ): Promise<void> {
+    await this.page.getByRole('button', { name: 'Create Project' }).click();
+    await this.page.getByLabel('Project title *').fill(project.title);
+    await expect(this.page.getByLabel('Folder name *')).toHaveValue(
+      project.projectName
+    );
+    await expect(this.page.getByText(project.projectPath, { exact: true }))
+      .toBeVisible();
+    await this.page.getByRole('button', { name: 'Create project' }).click();
+    await expect(this.page).toHaveURL(
+      new RegExp(
+        `/projects/${escapeRegex(encodeURIComponent(project.projectName))}/?$`
+      )
+    );
+  }
+
+  async deleteProject(
+    project: Pick<StudioE2eProject, 'title' | 'projectName'>
+  ): Promise<void> {
+    const card = this.projectCard(project).locator(
+      'xpath=ancestor::*[@data-media-card]'
+    );
+    await card.hover();
+    await card.getByRole('button', {
+      name: `Delete ${project.projectName} Project`,
+    }).click();
+
+    const confirmationInput = this.page.getByLabel('Project name');
+    const deleteButton = this.page.getByRole('button', {
+      name: 'Delete Project',
+    });
+    await confirmationInput.fill(project.title);
+    await expect(deleteButton).toBeDisabled();
+    await confirmationInput.fill(project.projectName);
+    await expect(deleteButton).toBeEnabled();
+    await deleteButton.click();
+
+    await expect(this.projectCard(project)).toHaveCount(0);
+  }
 }
 
 function escapeRegex(value: string): string {

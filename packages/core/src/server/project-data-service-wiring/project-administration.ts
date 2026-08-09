@@ -1,4 +1,5 @@
 import { createMovieProject } from '../commands/create-movie-project.js';
+import { deleteProject } from '../commands/delete-project.js';
 import { migrateProjectDatabaseForProject } from '../commands/migrate-database.js';
 import { patchProjectInformation } from '../project-information/index.js';
 import {
@@ -21,6 +22,7 @@ import type { ProjectDataService } from '../project-data-service-contracts.js';
 export function createProjectAdministrationServiceWiring(): Pick<
   ProjectDataService,
   | 'createMovieProject'
+  | 'deleteProject'
   | 'migrateProjectDatabase'
   | 'listLibrary'
   | 'readProject'
@@ -38,6 +40,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
 > {
   return {
     createMovieProject,
+    deleteProject,
     migrateProjectDatabase: migrateProjectDatabaseForProject,
     listLibrary,
     readProject,

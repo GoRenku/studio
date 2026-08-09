@@ -106,6 +106,7 @@ export type {
 
 export type {
   CreateMovieProjectInput,
+  DeleteProjectInput,
   CreateInspirationFolderInput,
   DiscardAssetInput,
   RestoreAssetInput,

@@ -73,4 +73,74 @@ describe('DeleteConfirmDialog', () => {
       screen.getByRole('button', { name: 'Open delete confirmation' })
     );
   });
+
+  it('requires the exact confirmation value and passes it to deletion', async () => {
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DeleteConfirmDialog
+        title='Delete Project?'
+        message='This permanently deletes every file in this Project.'
+        confirmation={{
+          expectedValue: 'the-glass-harbor',
+          instruction: 'Type the-glass-harbor to confirm.',
+          label: 'Project name',
+        }}
+        deleteLabel='Delete Project'
+        onDelete={onDelete}
+        trigger={<Button type='button'>Open delete confirmation</Button>}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open delete confirmation' })
+    );
+    const deleteButton = screen.getByRole('button', {
+      name: 'Delete Project',
+    });
+    const confirmationInput = screen.getByLabelText('Project name');
+
+    fireEvent.change(confirmationInput, { target: { value: 'The Glass Harbor' } });
+    expect(deleteButton.hasAttribute('disabled')).toBe(true);
+
+    fireEvent.change(confirmationInput, {
+      target: { value: 'the-glass-harbor' },
+    });
+    expect(deleteButton.hasAttribute('disabled')).toBe(false);
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(onDelete).toHaveBeenCalledWith('the-glass-harbor');
+    });
+  });
+
+  it('clears the typed confirmation when the dialog is reopened', () => {
+    render(
+      <DeleteConfirmDialog
+        title='Delete Project?'
+        message='This permanently deletes every file in this Project.'
+        confirmation={{
+          expectedValue: 'the-glass-harbor',
+          instruction: 'Type the-glass-harbor to confirm.',
+          label: 'Project name',
+        }}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+        trigger={<Button type='button'>Open delete confirmation</Button>}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open delete confirmation' })
+    );
+    fireEvent.change(screen.getByLabelText('Project name'), {
+      target: { value: 'the-glass-harbor' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open delete confirmation' })
+    );
+
+    expect(
+      (screen.getByLabelText('Project name') as HTMLInputElement).value
+    ).toBe('');
+  });
 });

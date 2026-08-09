@@ -22,6 +22,7 @@ import {
 } from './studio-e2e-runtime';
 
 interface StudioE2eFixtures {
+  emptyProjectCreation: StudioE2eProject;
   minimalMovieProject: StudioE2eProject;
   movieProject: StudioE2eMovieProject;
   generationPromptProject: StudioE2eGenerationPromptProject;
@@ -40,6 +41,31 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
     },
     { scope: 'worker' },
   ],
+
+  emptyProjectCreation: async ({ studioE2eRuntime }, use, testInfo) => {
+    const suffix = createStudioE2eProjectName({
+      prefix: 'browser',
+      workerIndex: testInfo.workerIndex,
+      testIndex: testInfo.testId.length,
+      title: testInfo.title,
+    });
+    const title = `E2E Empty Project ${suffix}`;
+    const projectName = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const project = {
+      projectName,
+      title,
+      projectPath: `${studioE2eRuntime.projectStorageRoot}/${projectName}`,
+    };
+
+    await use(project);
+
+    if (
+      !studioE2eRuntime.keepArtifacts &&
+      testInfo.status === testInfo.expectedStatus
+    ) {
+      await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
+    }
+  },
 
   minimalMovieProject: async ({ studioE2eRuntime }, use, testInfo) => {
     const projectName = createStudioE2eProjectName({

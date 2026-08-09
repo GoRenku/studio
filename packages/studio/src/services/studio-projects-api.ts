@@ -1,4 +1,7 @@
 import type {
+  ProjectCreateReport,
+  ProjectCreateRequest,
+  ProjectDeleteReport,
   ProjectInformationPatch,
   ProjectSettingsDocument,
   ProjectSettingsMutationReport,
@@ -28,6 +31,60 @@ interface ProjectSettingsResourceApiResponse {
 
 interface LibraryResponse {
   library: ProjectLibraryWithHttp;
+}
+
+interface ProjectCreateResponse {
+  report?: ProjectCreateReport;
+}
+
+interface ProjectDeleteResponse {
+  report?: ProjectDeleteReport;
+}
+
+export async function createProject(
+  request: ProjectCreateRequest
+): Promise<ProjectCreateReport> {
+  const response = await fetch('/studio-api/projects', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Renku-Studio-Token': readStudioApiToken(),
+    },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ProjectCreateResponse;
+  if (!body.report) {
+    throw new Error('Renku Studio API returned no Project creation report.');
+  }
+  return body.report;
+}
+
+export async function deleteProject(
+  projectName: string,
+  confirmationProjectName: string
+): Promise<ProjectDeleteReport> {
+  const response = await fetch(
+    `/studio-api/projects/${encodeURIComponent(projectName)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Renku-Studio-Token': readStudioApiToken(),
+      },
+      body: JSON.stringify({ confirmationProjectName }),
+    }
+  );
+  if (!response.ok) {
+    throw await readStudioApiError(response);
+  }
+  const body = (await response.json()) as ProjectDeleteResponse;
+  if (!body.report) {
+    throw new Error('Renku Studio API returned no Project deletion report.');
+  }
+  return body.report;
 }
 
 export async function readProject(projectName: string): Promise<ProjectShellWithHttp> {

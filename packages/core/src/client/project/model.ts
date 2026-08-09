@@ -57,3 +57,14 @@ export interface ProjectCreateReport {
   created: ProjectCounts;
   warnings: DiagnosticIssue[];
 }
+
+export interface ProjectCreateRequest {
+  projectName: string;
+  title: string;
+}
+
+export interface ProjectDeleteReport {
+  projectName: string;
+  projectPath: string;
+  deleted: true;
+}

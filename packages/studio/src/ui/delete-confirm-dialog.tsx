@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Button } from '@/ui/button';
 import {
   Dialog,
@@ -9,6 +9,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/ui/dialog';
+import { Input } from '@/ui/input';
+
+export interface DeleteConfirmationRequirement {
+  expectedValue: string;
+  instruction: string;
+  label: string;
+}
 
 interface DeleteConfirmDialogProps {
   open?: boolean;
@@ -16,7 +23,9 @@ interface DeleteConfirmDialogProps {
   trigger?: ReactNode;
   title: string;
   message: string;
-  onDelete: () => Promise<void>;
+  confirmation?: DeleteConfirmationRequirement;
+  deleteLabel?: string;
+  onDelete: (confirmationValue?: string) => Promise<void>;
 }
 
 export function DeleteConfirmDialog({
@@ -25,11 +34,15 @@ export function DeleteConfirmDialog({
   trigger,
   title,
   message,
+  confirmation,
+  deleteLabel = 'Delete',
   onDelete,
 }: DeleteConfirmDialogProps) {
+  const confirmationInputId = useId();
   const [internalOpen, setInternalOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmationValue, setConfirmationValue] = useState('');
   const controlled = open !== undefined;
   const dialogOpen = controlled ? open : internalOpen;
   const updateOpen = (nextOpen: boolean) => {
@@ -44,6 +57,7 @@ export function DeleteConfirmDialog({
     }
     if (nextOpen) {
       setError(null);
+      setConfirmationValue('');
     }
     updateOpen(nextOpen);
   };
@@ -51,8 +65,9 @@ export function DeleteConfirmDialog({
     setPending(true);
     setError(null);
     try {
-      await onDelete();
+      await onDelete(confirmation ? confirmationValue : undefined);
       updateOpen(false);
+      setConfirmationValue('');
     } catch (deleteError) {
       setError(
         deleteError instanceof Error && deleteError.message.trim()
@@ -75,6 +90,29 @@ export function DeleteConfirmDialog({
           <DialogTitle className='truncate'>{title}</DialogTitle>
           <DialogDescription className='sr-only'>{message}</DialogDescription>
           <p className='mt-3 text-sm leading-6 text-muted-foreground'>{message}</p>
+          {confirmation ? (
+            <div className='mt-5 space-y-2'>
+              <label
+                htmlFor={confirmationInputId}
+                className='text-sm font-medium text-foreground'
+              >
+                {confirmation.label}
+              </label>
+              <p className='text-xs leading-5 text-muted-foreground'>
+                {confirmation.instruction}
+              </p>
+              <Input
+                id={confirmationInputId}
+                value={confirmationValue}
+                onChange={(event) => setConfirmationValue(event.target.value)}
+                autoComplete='off'
+                autoCapitalize='none'
+                autoFocus
+                disabled={pending}
+                spellCheck={false}
+              />
+            </div>
+          ) : null}
           {error ? (
             <p className='mt-3 text-sm text-destructive' role='alert'>
               {error}
@@ -96,10 +134,16 @@ export function DeleteConfirmDialog({
             type='button'
             variant='destructive'
             size='sm'
-            disabled={pending}
+            disabled={
+              pending ||
+              Boolean(
+                confirmation &&
+                  confirmationValue !== confirmation.expectedValue
+              )
+            }
             onClick={() => void handleDelete()}
           >
-            {pending ? 'Deleting...' : 'Delete'}
+            {pending ? 'Deleting...' : deleteLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
