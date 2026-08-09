@@ -25,7 +25,7 @@ export function allocateSceneStoryboardIterationFolderSync(input: {
   sceneId: string;
 }): ProjectRelativePath {
   const scene = requireSceneStorageContext(input.session, input.sceneId);
-  const parent = joinProjectRelativePath('storyboards', scene.displayNumber);
+  const parent = joinProjectRelativePath('storyboards', scene.pathSegment);
   return allocateProjectRelativeFolderPathSync({
     projectFolder: input.projectFolder,
     parent,
@@ -69,7 +69,7 @@ export function resolveSceneStoryboardDestinationRootSync(
   input: DestinationRootInput<SceneStoryboardDestinationKind>
 ): ProjectRelativePath {
   const scene = requireSceneStorageContext(input.session, input.destination.sceneId);
-  const expectedParent = joinProjectRelativePath('storyboards', scene.displayNumber);
+  const expectedParent = joinProjectRelativePath('storyboards', scene.pathSegment);
   if (!input.destination.iterationFolder.startsWith(`${expectedParent}/`)) {
     throw new ProjectDataError(
       'PROJECT_ASSET_FILE_STORYBOARD_ITERATION_MISMATCH',
@@ -106,7 +106,7 @@ function storyboardBeatFileStem(
   }
   const scene = requireSceneStorageContext(input.session, input.destination.sceneId);
   return fixedFileStem(
-    `s${scene.displayNumber}-b${formatProductionNumberForDisplay(input.destination.beatNumber)}-image`
+    `s${scene.pathSegment}-b${formatProductionNumberForDisplay(input.destination.beatNumber)}-image`
   );
 }
 

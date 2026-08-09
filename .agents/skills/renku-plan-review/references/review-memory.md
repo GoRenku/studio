@@ -104,29 +104,22 @@ or architecture decision.
   allocation, and whether users need to sort, cite, restore, or navigate
   generations by that visible value.
 
-### 2026-08-07 — Scope screenplay authority to the Project's actual source workflow
+### 2026-08-09 — Keep FDX-backed Screenplays read-only without building a source-policy system
 
-- **User objection:** A media-storage and Scene-numbering proposal first
-  expanded one-way FDX ingestion into screenplay round-tripping concerns, then
-  overcorrected by treating every Project as FDX-backed and deleting Renku's
-  existing agent-authored screenplay creation, revision, and restore workflow.
-  Renku is not a general screenplay editor, but users may still create a
-  screenplay entirely with the screenplay-drafter agent without importing FDX.
-- **Planning rule:** Treat the already-implemented FDX and agent-authored
-  Screenplay workflows as an unchanged boundary unless the user explicitly asks
-  to redesign them. Preserve the existing importer, warnings/errors, agent-skill
-  remediation, and Settings behavior exactly. If an FDX has no Scene numbers,
-  the existing warning/Agent AI workflow leaves generation to the user; do not
-  add an automatic path or a replacement policy. Carry existing FDX Scene
-  numbers through unchanged. Do not add source modes, runtime mutation gates,
-  permission logic, settings, CLI flags, provenance, fallback warnings, or
-  reconciliation machinery. Treat every supplied or already-stored Scene number
-  as an opaque value: preserve it byte-for-byte and do not apply generated-number
-  grammar, trimming, case folding, non-empty checks, or uniqueness checks to it.
-  The Scene-number allocator is one-way only: it may enforce its grammar for
-  numbers Renku generates, and it may avoid an exact occupied value, but it must
-  never reject, normalize, or reinterpret an existing value. A shared numbering
-  or Asset-path plan must stay out of FDX-versus-agent policy entirely.
+- **User objection:** The proposal first built a broad FDX source-policy system,
+  then overcorrected by leaving FDX-backed Screenplays editable. The intended
+  rule is much smaller: projects without an FDX retain Renku's agent-authored
+  create/apply/restore workflow; when an FDX import backs the Screenplay, Renku
+  simply cannot edit it.
+- **Planning rule:** Use the existing singleton FDX import row as one Core-owned
+  authoring gate. Do not add source modes, permission logic, Settings, CLI flags,
+  overrides, provenance, fallback warnings, or reconciliation machinery. Reads
+  and downstream production workflows remain available. Carry imported Scene
+  numbers through unchanged in domain data: do not apply generated-number
+  grammar, trimming, case folding, non-empty checks, or uniqueness checks. When
+  a number enters a folder or filename, derive a separate safe path label at the
+  Core filesystem boundary without rewriting the stored value. The Scene-number
+  allocator remains one-way for numbers Renku generates.
 - **Apply when:** Planning FDX import, agent-authored screenplay workflows,
   Scene numbering, screenplay provenance, media folders keyed by Scene number,
   or future re-import association.

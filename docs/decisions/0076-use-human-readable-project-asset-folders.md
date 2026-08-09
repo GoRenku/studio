@@ -36,10 +36,10 @@ visual-language/lookbooks/{production,storyboard}/<name>-gxxx.<ext>
 cast/<handle>/<name>-gxxx.<ext>
 locations/<handle>/<name>-gxxx.<ext>
 props/<handle>/<name>-gxxx.<ext>
-storyboards/<scene-number>/<NN>-iteration/<name>-gxxx.<ext>
-scenes/<scene-number>/dialogues/<name>-gxxx.<ext>
-scenes/<scene-number>/<NN>-shot-plan/<plan-media>-gxxx.<ext>
-scenes/<scene-number>/<NN>-shot-plan/shot-images/<shot-number>-gxxx.<ext>
+storyboards/<safe-scene-label>/<NN>-iteration/<name>-gxxx.<ext>
+scenes/<safe-scene-label>/dialogues/<name>-gxxx.<ext>
+scenes/<safe-scene-label>/<NN>-shot-plan/<plan-media>-gxxx.<ext>
+scenes/<safe-scene-label>/<NN>-shot-plan/shot-images/<shot-number>-gxxx.<ext>
 ```
 
 Storyboard iteration folders remain zero-based and append-only. Shot Plan
@@ -52,6 +52,12 @@ Semantic segments are lowercase safe kebab-case and bounded. Fixed words such
 as `profile`, `hero`, `sheet`, `image`, and `video` belong to Core. Skills may
 provide a concise semantic variation name but never calculate folders,
 numbers, tokens, or filenames.
+
+The Scene label is a path-only safe representation of the exact stored Scene
+number. Core never rewrites or validates `Scene.productionNumber`; it applies
+the same bounded safe-segment function only when creating a folder or filename.
+If that produces no usable segment, Core falls back to a safe form of the
+durable Scene id.
 
 Paths remain labels. Runtime code never parses a path to recover identity,
 ownership, selection, production numbers, or provenance.

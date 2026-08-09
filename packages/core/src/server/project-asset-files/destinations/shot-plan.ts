@@ -5,7 +5,7 @@ import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
 import { requireSceneStorageContext } from '../owner-lookups.js';
 
 export interface ShotPlanStorageContext {
-  sceneDisplayNumber: string;
+  scenePathSegment: string;
   shotPlanNumber: number;
   shotPlanDisplayNumber: string;
   root: ProjectRelativePath;
@@ -19,12 +19,12 @@ export function requireShotPlanStorageContext(
   const scene = requireSceneStorageContext(session, shotPlan.sceneId);
   const shotPlanDisplayNumber = String(shotPlan.number).padStart(2, '0');
   return {
-    sceneDisplayNumber: scene.displayNumber,
+    scenePathSegment: scene.pathSegment,
     shotPlanNumber: shotPlan.number,
     shotPlanDisplayNumber,
     root: joinProjectRelativePath(
       'scenes',
-      scene.displayNumber,
+      scene.pathSegment,
       `${shotPlanDisplayNumber}-shot-plan`
     ),
   };

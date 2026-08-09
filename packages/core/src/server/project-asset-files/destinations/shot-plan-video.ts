@@ -71,5 +71,5 @@ function videoFileStem(
     | DestinationOutputNamesInput<ShotPlanVideoDestinationKind>
 ): string {
   const context = requireShotPlanStorageContext(input.session, input.destination.shotPlanId);
-  return `s${context.sceneDisplayNumber}-p${context.shotPlanDisplayNumber}-video`;
+  return `s${context.scenePathSegment}-p${context.shotPlanDisplayNumber}-video`;
 }

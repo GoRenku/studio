@@ -614,6 +614,8 @@ Options:
 Behavior:
 
 - Requires a current authoring project.
+- Fails with `SCREENPLAY_FDX_BACKED_READ_ONLY` when the Screenplay is backed by
+  an FDX import.
 - Creates the initial Screenplay only when its current aggregate is empty.
 - Accepts a complete `opening`, `scenes`, `sections`, `structure`, and
   `references` object without a redundant `kind` envelope.
@@ -649,6 +651,8 @@ Behavior:
   Parentheticals, cue extensions, Dual Dialogue, optional Scene numbers, and
   explicit Act/Sequence markers.
 - Preserves exact supported FDX Scene numbers without inventing missing values.
+- Makes the imported Screenplay read-only to Renku Screenplay authoring
+  commands. Downstream production workflows remain available.
 - Creates no Cast Member, Location, Prop, or identity binding. Report
   candidates are evidence for later user/agent reconciliation.
 - Fails atomically on malformed/unsafe XML, unsupported visible screenplay
@@ -678,6 +682,8 @@ Options:
 Behavior:
 
 - Requires a current authoring project.
+- Fails with `SCREENPLAY_FDX_BACKED_READ_ONLY` when the Screenplay is backed by
+  an FDX import.
 - Applies the closed `opening.replace`, `scene.*`, `section.*`, and
   `reference.*` operation union atomically.
 - Scene and Section add operations use request-local keys plus explicit
@@ -709,6 +715,8 @@ Behavior:
 - `restore` replaces the current screenplay with the stored revision, records a
   new revision history row for the restore operation, and reports shot-list
   impact details for scenes whose narrative changed.
+- `restore` fails with `SCREENPLAY_FDX_BACKED_READ_ONLY` when the Screenplay is
+  backed by an FDX import. Listing and reading revisions remain available.
 
 ## `renku screenplay analyze`
 
@@ -858,6 +866,8 @@ Current-context mismatches in Screenplay Block, Cast Member, Location, and Prop
 ids are warnings. Stored revisions remain readable after upstream context
 changes. Creative Beat text remains opaque and must not carry camera, framing,
 lens, movement, coverage, generated-image, or production-logistics contracts.
+Obvious absolute Unix or Windows filesystem paths in those reference-id arrays
+are invalid; Renku does not rewrite them into ids.
 
 ## `renku screenplay structure`, `section`, and `scene`
 

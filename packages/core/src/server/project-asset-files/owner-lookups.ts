@@ -6,6 +6,7 @@ import { readPropRecord } from '../database/access/props.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { sceneNumberPathSegment } from './naming/safe-segments.js';
 
 export function imageEditSourceFile(
   session: DatabaseSession,
@@ -78,7 +79,7 @@ export function requireProp(session: DatabaseSession, propId: string) {
 export function requireSceneStorageContext(
   session: DatabaseSession | undefined,
   sceneId: string
-): { sceneId: string; productionNumber: string; displayNumber: string } {
+): { sceneId: string; productionNumber: string; pathSegment: string } {
   if (!session) {
     throw new ProjectDataError(
       'PROJECT_ASSET_FILE_OWNER_MISSING',
@@ -106,6 +107,6 @@ export function requireSceneStorageContext(
   return {
     sceneId,
     productionNumber: scene.productionNumber,
-    displayNumber: scene.productionNumber,
+    pathSegment: sceneNumberPathSegment(scene.productionNumber, scene.id),
   };
 }

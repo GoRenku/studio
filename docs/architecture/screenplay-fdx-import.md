@@ -35,6 +35,12 @@ FDX Scene `Number` attributes are opaque. Their exact string values are carried
 into `Scene.productionNumber`; the importer does not trim, parse, validate, or
 deduplicate them.
 
+An FDX-backed Screenplay is read-only in Renku. Core uses the existing singleton
+`screenplay_import` row as a simple gate for Screenplay create/apply and revision
+restore commands. Reads, analysis, Scene Beats, Shot planning, and other
+downstream production workflows remain available; there is no source-mode
+setting or override.
+
 Parentheticals keep semantic order; one conventional outer pair of parentheses
 is removed because the renderer supplies screenplay notation. Empty Dialogue
 and Parenthetical artifacts carry no visible semantics and are ignored. Dialogue

@@ -246,16 +246,39 @@ describe('deterministic FDX import', () => {
         contentHash: report.screenplayImport.sha256,
       }],
     });
+    const importedScene = resource.screenplay.scenes[0]!;
+    await expect(projectData.applyScreenplayOperations({
+      projectName: created.projectName,
+      homeDir,
+      operations: [{
+        operation: 'scene.update',
+        scene: {
+          id: importedScene.id,
+          heading: importedScene.heading,
+          ...(importedScene.title ? { title: importedScene.title } : {}),
+          blocks: importedScene.blocks,
+        },
+      }],
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_BACKED_READ_ONLY' });
+    const revisions = await projectData.listScreenplayRevisions({
+      projectName: created.projectName,
+      homeDir,
+    });
+    await expect(projectData.restoreScreenplayRevision({
+      projectName: created.projectName,
+      homeDir,
+      revisionId: revisions.revisions[0]!.id,
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_BACKED_READ_ONLY' });
+    await expect(projectData.importFdxScreenplay({
+      projectName: created.projectName,
+      homeDir,
+      sourcePath,
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_IMPORT_EXISTS' });
     await fs.unlink(retainedPath);
     await expect(projectData.readScreenplayStructure({
       projectName: created.projectName,
       homeDir,
     })).resolves.toMatchObject({ orderedSceneIds: expect.any(Array) });
-    await expect(projectData.importFdxScreenplay({
-      projectName: created.projectName,
-      homeDir,
-      sourcePath,
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_IMPORT_INVALID' });
     await expect(projectData.discardAsset({
       projectName: created.projectName,
       homeDir,

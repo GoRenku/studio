@@ -34,6 +34,25 @@ The original source archive was not modified.
 - internal audit manifest: `/Users/keremk/renku-movies/urban-basilica/.renku/scene-number-padding-manifest.json`; and
 - external audit manifest: `/Users/keremk/renku-movies-scene-number-padding-manifest-20260809T084701Z.json`.
 
+## Post-Completion Product Amendments
+
+On 2026-08-09, the user explicitly approved two focused corrections that
+supersede contrary FDX and Scene-path statements in the original completed plan:
+
+- A Screenplay with the existing singleton FDX import row is read-only to Renku
+  Screenplay authoring. Core gates create/apply/revision restore with one
+  structured error. Reads and downstream production workflows remain available;
+  there is no source mode, setting, override, or broader permission system.
+- Imported and already-stored Scene numbers remain exact and opaque in domain
+  data. When a Scene number is used in a folder or filename, Core derives a
+  separate bounded safe path label and falls back to the Scene id when needed.
+  It does not rewrite the stored number.
+
+The user also approved reusing the existing narrow Scene Beats check for
+obvious absolute filesystem paths in reference-id arrays added through focused
+insert/update operations. This adds no reference existence validation or
+creative-content inspection.
+
 ## Review Attention — Read Before Accepting
 
 This is the short review surface for Plan 0174. The implementation must not add
@@ -47,7 +66,7 @@ user for explicit review.
 | Exact insertion behavior | New ordered items use stable suffixes such as `1A`; moves do not renumber; deleted numbers are not reused; generated suffixes continue through `Z`, `AA`, and onward. | Concrete behavior needed to make the shared counter stable and reusable |
 | Scene Beats rename | Finish the direct Beat Sheet → Scene Beats rename, retain immutable revision history/active selection, and rename only the existing Project Setting key `generateSceneBeatSheets` → `generateSceneBeats`. No compatibility alias or new Studio reset/restore control is added. | Explicitly accepted naming correction; the setting-key effect is easy to miss |
 | Scene Beats document simplification | Remove the aggregate-level `SceneBeats.title`, `summary`, `narrativeProgression`, `lookbookInfluence`, and `openQuestions` fields. Keep every individual Beat's `title` and other Beat creative fields, as well as the existing revision lifecycle and metadata. | Explicit user acceptance on 2026-08-08; this is a separate product-model decision, not an implied consequence of renaming or numbering |
-| FDX behavior | Remove all FDX policy work already added by the rejected implementation attempt. Preserve the importer, Agent AI remediation, Settings, CLI, and user workflow, except that supplied Scene numbers become fully opaque and the duplicate-number rejection is removed. | Required cleanup plus explicit Scene-number correction on 2026-08-09 |
+| FDX behavior | Preserve the importer and exact opaque Scene numbers, while making an FDX-backed Screenplay read-only to Renku authoring through one Core gate. Add no source mode, setting, flag, override, or fallback workflow. | Explicit user correction on 2026-08-09 |
 | Human-readable files | Replace durable technical roots with the shallow Scene/Plan/Beat-number and owner-handle tree shown below. Generated files use a short `gxxx` collision token; external files keep a safe source basename and use `-2`, `-3`, and so on only on collision. | Direct Plan 0172 folder/filename requirement; exact naming policy needs visible review |
 | Supporting path work | Add the focused destination/naming changes needed to place current Lookbook, Cast, Location, Prop, Dialogue, Storyboard, Shot, and Shot Plan media in that tree. Shot Plan media must resolve the exact Plan from stored provenance rather than whichever Plan is currently selected. This includes one focused custom Shot Plan reference attachment purpose; it does not create a general dependency-copy system. | Necessary to make the requested paths deterministic without using filenames as identity |
 | Migration 0076 | Remove and regenerate the uncommitted 370-line migration from the accepted 0075 baseline. The replacement owns only schema changes and necessary row-preserving transforms for numbering and Scene Beats. It contains no FDX policy and no Urban Basilica-specific row counts or cleanup. | Direct correction requested after the oversized migration |
@@ -104,10 +123,10 @@ This plan keeps the useful implementation and corrects the boundary:
 - `SceneBeats` directly replaces the Beat Sheet product name and document
   shape while preserving immutable revision history and active-revision
   selection.
-- All FDX-related changes from the rejected attempt are removed. The previously
-  accepted importer, warnings/errors, Agent AI remediation, Settings, and
-  Screenplay workflows remain exactly as they were. Plan 0174 adds no FDX-versus-
-  agent policy or behavior.
+- All broad FDX policy changes from the rejected attempt are removed. The
+  importer mapping, warnings/errors, Agent AI remediation, and Settings remain;
+  the later-approved focused Core gate makes an FDX-backed Screenplay read-only
+  to Renku authoring.
 - Renku-authored Scene creation and insertion receive Core-owned stable numbers
   through the common numbering mechanism.
 - Durable Asset Files move to the accepted shallow human-readable tree and use
@@ -137,7 +156,7 @@ boundary. Adjacent policies are excluded unless listed here.
 | Reusable numbering | One grammar, display formatter, case-folding rule, suffix sequence, and ordered allocation algorithm for Core-generated values only | Explicit user request | Core production-number module |
 | Stable Scene numbers | Renku-authored Scene create/insert allocates; update/move preserves; delete does not recycle; restore reuses the Scene id's reservation | Explicit user request | Core Screenplay commands |
 | Supplied Scene numbers | Preserve every supplied or existing value byte-for-byte; do not validate grammar, trim, case-fold, require non-empty, or require uniqueness | Explicit user correction on 2026-08-09 | Core Screenplay contract, persistence, migration, and importer |
-| Existing Screenplay/FDX behavior | Preserve the importer, warnings, Agent AI remediation, Settings, and FDX/agent authoring behavior apart from removing Scene-number validation that contradicted the opaque-value rule | Explicit user correction | Non-regression boundary only |
+| Existing Screenplay/FDX behavior | Preserve importer mapping, warnings, Agent AI remediation, and Settings; preserve exact Scene numbers; gate Screenplay authoring when the singleton FDX import row exists | Explicit user correction on 2026-08-09 | Core Screenplay command boundary |
 | Stable Shot numbers | Shots retain their number through moves and use suffixes for non-end insertion | Explicit user request | Core Shot authoring |
 | Stable Beat numbers | Beats receive Core-owned numbers; focused revisions preserve surviving numbers and reserve deleted numbers | Explicit user request | Core Scene Beats revisions |
 | Stable Shot Plan folders | Each Scene's Shot Plans receive monotonically increasing integers which are not recycled | Human-readable layout requirement | Core Shot Plan authoring |
@@ -244,9 +263,9 @@ reservations when deriving numeric families. Existing Scene values are compared
 only by exact string equality to avoid selecting an identical new label; they
 are never parsed, normalized, or rejected.
 
-### Screenplay and FDX non-regression boundary
+### Screenplay and FDX boundary
 
-FDX behavior is otherwise outside this plan. The corrected contract is:
+The corrected contract is:
 
 - keep the existing FDX importer, warnings, errors, and Settings unchanged
   except for removing Scene-number validation and its duplicate diagnostic;
@@ -254,23 +273,26 @@ FDX behavior is otherwise outside this plan. The corrected contract is:
 - if an FDX has no Scene numbers, the user remains responsible for generating
   them through that existing workflow;
 - keep every FDX Scene number exactly as authored, including whitespace, empty
-  strings, non-generated forms, and duplicates; and
-- keep the existing agent-authored Screenplay create/apply/restore behavior.
+  strings, non-generated forms, and duplicates;
+- keep agent-authored Screenplay create/apply/restore behavior for Screenplays
+  without an FDX import; and
+- reject those authoring mutations with `SCREENPLAY_FDX_BACKED_READ_ONLY` when
+  the existing singleton FDX import row is present.
 
-The only FDX-related implementation work in 0174 is targeted removal of the
-uncommitted additions made by the rejected Plan 0173 attempt:
+The original FDX-related implementation work in 0174 was targeted removal of
+the uncommitted additions made by the rejected Plan 0173 attempt:
 
 - `ScreenplaySourceStatus` and generalized source classification;
-- `source-authority.ts` and all runtime mutation/restore gates;
+- `source-authority.ts` and its broad runtime mutation/restore policy;
 - automatic missing-number allocation;
 - the new Project Setting, CLI flag, Settings UI, and related diagnostics;
 - `sceneNumberSource` schema/contracts; and
 - new tests, docs, and skill guidance describing those additions.
 
-After that targeted cleanup, the only FDX change is removal of Scene-number
-validation that contradicts the opaque-value rule. The common numbering and
-Asset-path work consumes existing canonical Scene numbers without interpreting
-their provenance.
+After that targeted cleanup, the retained FDX changes are removal of
+Scene-number validation that contradicts the opaque-value rule and the simple
+Core read-only gate. The common numbering and Asset-path work consumes existing
+canonical Scene numbers without rewriting them.
 
 ### Scene mutation behavior
 
@@ -414,8 +436,9 @@ new tree.
 ### Filename and destination matrix
 
 Ordinary semantic path segments are lowercase safe-kebab-case. Scene folders and
-Scene filename portions use the exact stored Scene number. Core-generated Beat
-and Shot filename portions may use the shared display formatter.
+Scene filename portions use a separate safe path label derived from the exact
+stored Scene number; the stored value itself remains unchanged. Core-generated
+Beat and Shot filename portions may use the shared display formatter.
 
 Generated durable files end in `-gxxx`, using exactly three lowercase
 Crockford-base32 characters from:
@@ -473,11 +496,10 @@ generation token, or folder to recover durable identity or relationships.
 - No newly initialized or empty Urban Basilica database.
 - No copying the current generation-61 database as the migration source.
 - No mutation of the archived source database.
-- No change whatsoever to the last accepted FDX importer, warning/error
-  behavior, Agent AI remediation, Settings, commands, or user workflow after
-  the rejected attempt's uncommitted additions are removed.
-- No FDX-versus-agent source modes, mutation gates, fallback allocator, new
-  settings/flags, provenance, permission logic, or policy design.
+- No change to FDX mapping, warning behavior, Agent AI remediation, or Settings
+  beyond the explicitly approved read-only authoring gate.
+- No FDX-versus-agent source modes, fallback allocator, new settings/flags,
+  provenance, override, or generalized permission system.
 - No user-editable production numbers.
 - No universal numbering table or domain-kind allocator switch.
 - No compatibility readers for Beat Sheet names, old Project Settings, old
@@ -511,10 +533,10 @@ The current diff mixes these categories:
 | Shot Plan counter and Shot reservations/placement | Keep and verify |
 | Scene Beats model, revision owner, CLI rename, revision-context rename, and labels | Keep and verify behavior parity |
 | Stable number labels in Studio | Keep |
-| Scene reservation lifecycle | Keep for Renku-authored Screenplay commands without adding source detection or policy |
-| Existing FDX import behavior | Preserve the pre-attempt workflow while removing Scene-number validation; preserve authored numbers unchanged and add no replacement enforcement policy |
+| Scene reservation lifecycle | Keep for Renku-authored Screenplay commands and gate those commands when the singleton FDX import row exists |
+| Existing FDX import behavior | Preserve mapping and warnings while removing Scene-number validation; preserve authored numbers unchanged and make the imported Screenplay read-only to Renku authoring |
 | Missing-number Project Setting, CLI flag, provenance field, warning policy, and settings UI | Remove |
-| `ScreenplaySourceStatus`, generalized source classification, and content/restore mutation gates | Remove completely |
+| `ScreenplaySourceStatus`, generalized source classification, and configurable content/restore policy | Remove; replace only with the focused singleton-import-row authoring gate approved after completion |
 | Project Settings version 2 | Keep only for the direct `generateSceneBeatSheets` to `generateSceneBeats` rename |
 | 370-line `0076` migration | Replace before commit |
 | Plan 0172 durable path implementation | Not yet implemented; complete under this plan |
@@ -831,8 +853,8 @@ generation preference is added.
 
 - No wholesale reset of the current useful implementation.
 - No universal production-number database registry.
-- No FDX production change after targeted removal of the rejected attempt's
-  additions.
+- No FDX production change beyond exact-number opacity and the focused
+  singleton-import-row authoring gate.
 - No Project Setting/CLI flag combination or application generation path for
   missing FDX numbers.
 - No project-specific row counts, ids, paths, or Beat JSON validation in the
@@ -903,7 +925,8 @@ catch every programming error and relabel it as allocation exhaustion.
   no source-mode API.
 - Renku-authored restore by Scene id requires the retained reservation and
   fails before write when database integrity is broken.
-- No FDX import-row mutation gate or source-status contract is added.
+- The existing singleton FDX import row gates Screenplay create/apply/revision
+  restore. No public source-status contract or override is added.
 
 ### Shot contract
 
@@ -956,9 +979,9 @@ Retain or add only diagnostics required by the final contract:
 - existing path escape, source missing, copy, hash, and persistence failures.
 
 Remove diagnostics whose only purpose is the rejected public source-mode,
-runtime mutation gates, double-gated fallback, generated-number path, or
-compatibility behavior. Do not add or change an FDX diagnostic policy as part
-of this numbering work; the existing importer behavior remains authoritative.
+double-gated fallback, generated-number path, or compatibility behavior. Keep
+only `SCREENPLAY_FDX_BACKED_READ_ONLY` for the approved Core authoring gate; the
+existing importer behavior otherwise remains authoritative.
 
 ## Corrected Migration Design
 
@@ -1393,9 +1416,10 @@ lesson. Accepted product and architecture docs continue to outrank memory.
 - Append/insert/move/update/delete/restore preserve the accepted lifecycle.
 - Renku-authored commands use the Scene allocator; the FDX importer does not use
   it to replace source values.
-- None of the attempted Project Setting, CLI flag, source status, runtime
-  mutation gate, generated-number path, provenance field, or generated-fallback
-  warning machinery survives; the last accepted warning behavior remains.
+- None of the attempted Project Setting, CLI flag, public source status,
+  generated-number path, provenance field, or generated-fallback warning
+  machinery survives. The focused singleton-import-row authoring gate is
+  covered for apply and restore; existing importer warnings remain.
 
 ### Shot Plan and Shot tests
 
@@ -1715,7 +1739,7 @@ After reconstruction:
 
 ### Documentation And Durable Lessons
 
-- [x] Revise ADR 0075 to cover only the common numbering and Scene Beats contract; remove all FDX policy added by the rejected attempt.
+- [x] Revise ADR 0075 for the common numbering and Scene Beats contract, exact imported Scene values, and the later-approved focused FDX read-only gate.
 - [x] Add ADR 0076 for the final human-readable folder and filename contract.
 - [x] Restore FDX documentation/skill hunks to the focused importer boundary and document the opaque Scene-number exception; update only the numbering, Scene Beats, Project Settings Beat-key rename, media, CLI, and UI documentation in scope.
 - [x] Add concise supersession notices without rewriting historical ADR bodies.

@@ -37,6 +37,7 @@ import { readScreenplayAggregate, replaceScreenplayAggregate } from '../persiste
 import { insertScreenplayRevision } from '../persistence/revisions.js';
 import { assertValidScreenplayInput } from '../validation/blocks.js';
 import { numberInitialAgentScenes } from '../scene-numbering.js';
+import { assertScreenplayIsRenkuEditable } from '../fdx/persistence/import-record.js';
 
 export async function createScreenplay(
   input: RenkuConfigPathOptions & {
@@ -48,6 +49,7 @@ export async function createScreenplay(
   assertValidScreenplayInput(input.screenplay);
   const { session } = await openProjectSession(input);
   try {
+    assertScreenplayIsRenkuEditable(session);
     const current = readScreenplayAggregate(session);
     if (!isEmptyScreenplay(current)) {
       throw new ProjectDataError(
@@ -297,6 +299,7 @@ export function commitScreenplayMutation(input: {
     now: string
   ) => void;
 }): ScreenplayMutationReport {
+  assertScreenplayIsRenkuEditable(input.session);
   const project = readProjectRecord(input.session);
   if (!project) {
     throw new ProjectDataError(

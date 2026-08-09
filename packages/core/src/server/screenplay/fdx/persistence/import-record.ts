@@ -47,6 +47,26 @@ export function readScreenplayImport(
   };
 }
 
+export function assertScreenplayIsRenkuEditable(
+  session: DatabaseSession,
+): void {
+  const row = session.db
+    .select({ id: screenplayImports.id })
+    .from(screenplayImports)
+    .where(eq(screenplayImports.singletonKey, SCREENPLAY_IMPORT_SINGLETON_KEY))
+    .get();
+  if (row) {
+    throw new ProjectDataError(
+      'SCREENPLAY_FDX_BACKED_READ_ONLY',
+      'This Screenplay is backed by an FDX import and cannot be edited in Renku.',
+      {
+        suggestion:
+          'Renku screenplay authoring is available only for Screenplays without an FDX import.',
+      },
+    );
+  }
+}
+
 function assertValidSourceAsset(
   session: DatabaseSession,
   input: { assetId: string; assetFileId: string },
@@ -54,9 +74,6 @@ function assertValidSourceAsset(
   const asset = readAssetRecord(session, input.assetId);
   const file = readAssetFileRecordIncludingDiscarded(session, input);
   const owner = readAssetOwner(session, input.assetId);
-  const expectedPath = file?.contentHash
-    ? `screenplay/sources/${file.contentHash}.fdx`
-    : null;
   if (!asset
     || asset.discardedAt
     || asset.type !== 'screenplay_source'
@@ -69,8 +86,7 @@ function assertValidSourceAsset(
     || file.role !== 'source'
     || file.mediaKind !== 'document'
     || file.mimeType !== 'application/xml'
-    || !file.contentHash?.match(/^[0-9a-f]{64}$/u)
-    || file.projectRelativePath !== expectedPath) {
+    || !file.contentHash?.match(/^[0-9a-f]{64}$/u)) {
     throw invalidImportRecord('retained source Asset/File contract is invalid');
   }
 }

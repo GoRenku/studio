@@ -48,6 +48,27 @@ export function sourceFileStem(sourceProjectRelativePath: string): string {
   return normalized || 'asset';
 }
 
+export function sceneNumberPathSegment(
+  productionNumber: string,
+  sceneId: string
+): string {
+  const number = normalizeSegment(productionNumber)
+    .slice(0, MAX_SEMANTIC_SEGMENT_LENGTH)
+    .replace(/-+$/u, '');
+  if (number) {
+    return number;
+  }
+  const safeSceneId = normalizeSegment(sceneId)
+    .slice(0, MAX_SEMANTIC_SEGMENT_LENGTH - 6)
+    .replace(/-+$/u, '');
+  if (!safeSceneId) {
+    return 'scene-unnumbered';
+  }
+  return safeSceneId.startsWith('scene-')
+    ? safeSceneId
+    : `scene-${safeSceneId}`;
+}
+
 function normalizeSegment(value: string): string {
   return value
     .trim()

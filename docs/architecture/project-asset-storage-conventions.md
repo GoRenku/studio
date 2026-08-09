@@ -41,13 +41,13 @@ Projects create only the folders needed by their current content.
     <prop-handle>/
 
   storyboards/
-    <exact-scene-number>/
+    <safe-scene-label>/
       tmp/
       00-iteration/
       01-iteration/
 
   scenes/
-    <scene-display-number>/
+    <safe-scene-label>/
       dialogues/
       <NN>-shot-plan/
         shot-images/
@@ -63,10 +63,13 @@ Projects create only the folders needed by their current content.
     scratch/
 ```
 
-The Scene folder uses the exact stored Scene number without parsing,
-normalization, or validation. Shot Plan folders use a zero-padded Scene-local
-integer such as `01-shot-plan`. Those numbers remain labels; callers must use
-durable ids for all reads and mutations.
+The Scene folder uses a bounded, lowercase safe path label derived from the
+exact stored Scene number. This transformation happens only at the filesystem
+boundary: `Scene.productionNumber` is never parsed, validated, or rewritten.
+When a number has no usable path characters, Core falls back to a safe form of
+the durable Scene id. Shot Plan folders use a zero-padded Scene-local integer
+such as `01-shot-plan`. All of these values remain labels; callers must use
+durable ids for reads and mutations.
 
 ## Destination Matrix
 
@@ -102,7 +105,7 @@ An iteration contains only the candidate files created in that import; it is
 not a materialized snapshot of every selected image.
 
 Temporary Storyboard source sheets live in
-`storyboards/<scene-display-number>/tmp/` and never create Asset File rows.
+`storyboards/<safe-scene-label>/tmp/` and never create Asset File rows.
 
 ### Shot Plan provenance
 
@@ -121,6 +124,10 @@ are not copied into the Plan folder.
 Semantic segments are lowercase safe kebab-case and bounded to keep complete
 filenames readable. Normalization is presentation and path safety only; Studio
 does not inspect or validate the creative meaning of a semantic name.
+
+Scene numbers follow the same path-safety rule only when used in a destination
+folder or generated filename. For example, the stored number `12/A` stays
+`12/A` in Screenplay data while its path label is `12-a`.
 
 ### Generated files
 

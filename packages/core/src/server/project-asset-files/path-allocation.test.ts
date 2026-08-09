@@ -3,7 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
-import { requiredSemanticFileStem } from './naming/safe-segments.js';
+import {
+  requiredSemanticFileStem,
+  sceneNumberPathSegment,
+} from './naming/safe-segments.js';
 import {
   allocateProjectAssetFileNames,
   allocateProjectAssetFileNamesSync,
@@ -18,6 +21,13 @@ describe('project asset file name allocation', () => {
     expect(() => requiredSemanticFileStem('---', 'sheet')).toThrowError(
       expect.objectContaining({ code: 'PROJECT_ASSET_FILE_SEMANTIC_NAME_REQUIRED' })
     );
+  });
+
+  it('keeps Scene numbers opaque while deriving one safe path segment', () => {
+    expect(sceneNumberPathSegment('1A', 'scene_one')).toBe('1a');
+    expect(sceneNumberPathSegment(' 12/A ', 'scene_twelve')).toBe('12-a');
+    expect(sceneNumberPathSegment('..', 'scene_parent')).toBe('scene-parent');
+    expect(sceneNumberPathSegment('', 'scene_empty')).toBe('scene-empty');
   });
 
   it('uses one three-character token and retries real generated collisions', async () => {

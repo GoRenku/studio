@@ -51,12 +51,31 @@ export function assertSceneBeatsOperationsInput(input: {
   document: SceneBeatsOperationsInput;
   filePath?: string;
 }): DiagnosticIssue[] {
-  return assertShape(
+  const warnings = assertShape(
     input.document,
     sceneBeatsOperationsInputSchema.$id,
     input.filePath,
     'Scene Beats operations JSON failed validation.'
   );
+  input.document.operations.forEach((operation, operationIndex) => {
+    if (operation.operation === 'beats.insert') {
+      operation.beats.forEach((beat, beatIndex) => {
+        validateReferencePaths(
+          beat,
+          ['operations', String(operationIndex), 'beats', String(beatIndex)],
+          input.filePath
+        );
+      });
+    }
+    if (operation.operation === 'beat.update') {
+      validateReferencePaths(
+        operation.beat,
+        ['operations', String(operationIndex), 'beat'],
+        input.filePath
+      );
+    }
+  });
+  return warnings;
 }
 
 export function assertSceneStoryboardImagesImportDocument(input: {

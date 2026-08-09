@@ -62,7 +62,7 @@ export function resolveSceneDialogueAudioDestinationRootSync(
   input: DestinationRootInput<'scene.dialogueAudio'>
 ): ProjectRelativePath {
   const scene = requireSceneStorageContext(input.session, input.destination.sceneId);
-  return joinProjectRelativePath('scenes', scene.displayNumber, 'dialogues');
+  return joinProjectRelativePath('scenes', scene.pathSegment, 'dialogues');
 }
 
 export async function resolveSceneDialogueAudioDestinationOutputNames(
@@ -111,6 +111,6 @@ function sceneDialogueAudioFileStem(
   }
   const scene = requireSceneStorageContext(session, destination.sceneId);
   return requiredSemanticFileStem(
-    `s${scene.displayNumber}-${castMember.handle}-d${String(turnIndex + 1).padStart(2, '0')}`
+    `s${scene.pathSegment}-${castMember.handle}-d${String(turnIndex + 1).padStart(2, '0')}`
   );
 }

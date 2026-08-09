@@ -433,7 +433,7 @@ function dialogueContexts(db, scenes, cast) {
       const index = turnIds.indexOf(row.turn_id);
       if (index < 0) fail('REBUILD_DIALOGUE_TURN_MISSING', `Dialogue Turn was not found: ${row.turn_id}`);
       result.set(row.id, {
-        sceneNumber: exactSceneNumber(scenes, scene.id),
+        scenePathSegment: sceneNumberPathSegment(scenes, scene.id),
         speaker: cast.get(row.cast_member_id),
         turnNumber: index + 1,
       });
@@ -474,27 +474,27 @@ function allocateDestinationPath(row, context, allocated) {
   } else if (row.type === 'scene_dialogue_audio') {
     const audio = context.db.prepare('SELECT scene_dialogue_audio_id FROM scene_dialogue_audio_take WHERE asset_id = ? AND discarded_at IS NULL').get(row.asset_id);
     const dialogue = required(context.dialogue.get(audio?.scene_dialogue_audio_id), row.asset_id);
-    root = `scenes/${dialogue.sceneNumber}/dialogues`;
-    generatedStem = `s${dialogue.sceneNumber}-${dialogue.speaker}-d${String(dialogue.turnNumber).padStart(2, '0')}`;
+    root = `scenes/${dialogue.scenePathSegment}/dialogues`;
+    generatedStem = `s${dialogue.scenePathSegment}-${dialogue.speaker}-d${String(dialogue.turnNumber).padStart(2, '0')}`;
   } else if (row.type === 'scene_storyboard_image') {
     const beat = required(context.activeBeats.get(`${owner.sceneId}:${owner.beatId}`), row.owner_key);
     const iteration = /(?:^|\/)(\d{2}-iteration)(?:\/|$)/u.exec(row.project_relative_path)?.[1];
     if (!iteration) fail('REBUILD_STORYBOARD_ITERATION_MISSING', row.project_relative_path);
-    const sceneNumber = exactSceneNumber(context.scenes, beat.sceneId);
-    root = `storyboards/${sceneNumber}/${iteration}`;
-    generatedStem = `s${sceneNumber}-b${displayNumber(beat.number)}-image`;
+    const scenePathSegment = sceneNumberPathSegment(context.scenes, beat.sceneId);
+    root = `storyboards/${scenePathSegment}/${iteration}`;
+    generatedStem = `s${scenePathSegment}-b${displayNumber(beat.number)}-image`;
   } else if (row.type === 'shot_image') {
     const shot = required(context.shots.get(owner.id), row.owner_key);
     const plan = required(context.planContext.get(shot.planId), shot.planId);
-    const sceneNumber = exactSceneNumber(context.scenes, plan.sceneId);
-    root = `scenes/${sceneNumber}/${String(plan.number).padStart(2, '0')}-shot-plan/shot-images`;
+    const scenePathSegment = sceneNumberPathSegment(context.scenes, plan.sceneId);
+    root = `scenes/${scenePathSegment}/${String(plan.number).padStart(2, '0')}-shot-plan/shot-images`;
     generatedStem = `shot${displayNumber(shot.number)}`;
   } else if (row.type.startsWith('shot_plan_video')) {
     const planId = exactShotPlanId(row, context.db);
     const plan = required(context.planContext.get(planId), planId);
-    const sceneNumber = exactSceneNumber(context.scenes, plan.sceneId);
-    root = `scenes/${sceneNumber}/${String(plan.number).padStart(2, '0')}-shot-plan`;
-    generatedStem = row.type === 'shot_plan_video' ? `s${sceneNumber}-p${String(plan.number).padStart(2, '0')}-video`
+    const scenePathSegment = sceneNumberPathSegment(context.scenes, plan.sceneId);
+    root = `scenes/${scenePathSegment}/${String(plan.number).padStart(2, '0')}-shot-plan`;
+    generatedStem = row.type === 'shot_plan_video' ? `s${scenePathSegment}-p${String(plan.number).padStart(2, '0')}-video`
       : row.type === 'shot_plan_video_first_frame' ? 'first-frame'
         : row.type === 'shot_plan_video_last_frame' ? 'last-frame'
           : row.type === 'shot_plan_video_storyboard' ? 'storyboard' : 'reference';
@@ -640,11 +640,15 @@ function displayNumber(value) {
   return String(value).replace(/^([1-9])(?=[A-Za-z]*$)/u, '0$1');
 }
 
-function exactSceneNumber(scenes, sceneId) {
+function sceneNumberPathSegment(scenes, sceneId) {
   if (!scenes.has(sceneId)) {
     fail('REBUILD_RELATIONSHIP_MISSING', `Scene was not found: ${sceneId}`);
   }
-  return scenes.get(sceneId);
+  const productionNumber = safeSegment(scenes.get(sceneId)).slice(0, 32).replace(/-+$/u, '');
+  if (productionNumber) return productionNumber;
+  const safeSceneId = safeSegment(sceneId).slice(0, 26).replace(/-+$/u, '');
+  if (!safeSceneId) return 'scene-unnumbered';
+  return safeSceneId.startsWith('scene-') ? safeSceneId : `scene-${safeSceneId}`;
 }
 
 function placeholders(values) {

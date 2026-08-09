@@ -171,6 +171,50 @@ describe('Scene Beats revision commands', () => {
     });
   });
 
+  it('rejects filesystem paths in references added by focused operations', async () => {
+    const ids = await sampleIds();
+    const initial = await projectData.createSceneBeatsRevision({
+      homeDir,
+      document: sampleSceneBeats(ids),
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    const initialRead = await projectData.readSceneBeatsRevision({
+      homeDir,
+      revisionId: initial.revision.id,
+    });
+    const beatId = initialRead.sceneBeats!.beats[0]!.id;
+
+    await expect(projectData.applySceneBeatsOperations({
+      homeDir,
+      document: {
+        sceneId: ids.sceneId,
+        baseRevisionId: initial.revision.id,
+        activate: true,
+        operations: [{
+          operation: 'beats.insert',
+          placement: { position: 'end' },
+          beats: [{ ...sampleBeat(ids), castMemberIds: ['/Users/example/cast.png'] }],
+        }],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    })).rejects.toMatchObject({ code: 'SCENE_BEATS_INVALID' });
+
+    await expect(projectData.applySceneBeatsOperations({
+      homeDir,
+      document: {
+        sceneId: ids.sceneId,
+        baseRevisionId: initial.revision.id,
+        activate: true,
+        operations: [{
+          operation: 'beat.update',
+          beatId,
+          beat: { ...sampleBeat(ids), propIds: ['C:\\Users\\example\\prop.png'] },
+        }],
+      },
+      idGenerator: createDeterministicIdGenerator(),
+    })).rejects.toMatchObject({ code: 'SCENE_BEATS_INVALID' });
+  });
+
   async function sampleIds() {
     const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
     const scene = screenplay.screenplay.scenes[0]!;
