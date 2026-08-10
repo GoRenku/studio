@@ -6,7 +6,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=24 <25",
+    "node": "^22.12.0 || ^24.0.0",
     "pnpm": ">=11.7.0 <12"
   },
   "scripts": {
@@ -16,7 +16,7 @@
     "dev:engines": "pnpm --filter @gorenku/studio-engines dev",
     "dev:studio": "pnpm --filter @gorenku/studio dev",
     "dev:website": "pnpm --filter @gorenku/website dev",
-    "build": "pnpm --filter @gorenku/studio-diagnostics build && pnpm --filter @gorenku/studio-engines build && pnpm --filter @gorenku/studio-core build && pnpm --filter @gorenku/studio-cli build && pnpm --filter @gorenku/studio build",
+    "build": "pnpm --filter @gorenku/studio-diagnostics build && pnpm --filter @gorenku/studio-engines build && pnpm --filter @gorenku/studio-core build && pnpm --filter @gorenku/studio build && pnpm --filter @gorenku/studio-cli build",
     "build:diagnostics": "pnpm --filter @gorenku/studio-diagnostics build",
     "build:core": "pnpm --filter @gorenku/studio-core build",
     "build:cli": "pnpm --filter @gorenku/studio-cli build",
@@ -53,6 +53,10 @@
     "catalog:update-fal": "pnpm --filter @gorenku/studio-engines catalog:update-fal",
     "catalog:update-replicate": "pnpm --filter @gorenku/studio-engines catalog:update-replicate",
     "catalog:validate-schemas": "pnpm --filter @gorenku/studio-engines catalog:validate-schemas",
+    "release:assemble": "node scripts/release/assemble-product.mjs",
+    "release:package": "node scripts/release/package-product.mjs",
+    "release:verify": "node scripts/release/verify-product.mjs",
+    "release:publish:beta": "node scripts/release/publish-r2.mjs",
     "check:architecture": "node scripts/check-no-forbidden-reexports.mjs && pnpm --dir packages/core exec vitest run src/server/architecture.test.ts --no-file-parallelism && pnpm --dir packages/cli exec vitest run src/commands/command-architecture.test.ts --no-file-parallelism && pnpm --dir packages/studio exec vitest run server/architecture.test.ts --no-file-parallelism && pnpm --dir packages/studio exec vitest run src/architecture.test.ts --no-file-parallelism",
     "check:test-execution": "node scripts/check-test-execution-partitions.mjs",
     "check": "pnpm type-check && pnpm test:typecheck && pnpm lint && pnpm check:architecture && pnpm check:test-execution"

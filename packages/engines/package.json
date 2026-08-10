@@ -2,6 +2,7 @@
   "name": "@gorenku/studio-engines",
   "version": "0.1.0",
   "description": "Renku Studio AI engine registry, schema validation, simulation, and provider adapters",
+  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,9 +19,6 @@
     }
   },
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
   "files": [
     "dist",
     "catalog",
@@ -60,7 +58,8 @@
     "ajv-formats": "^3.0.1",
     "mediabunny": "^1.24.5",
     "replicate": "^1.2.0",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

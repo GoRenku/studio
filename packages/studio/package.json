@@ -4,6 +4,16 @@
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    "./server": {
+      "types": "./server-dist/index.d.ts",
+      "import": "./server-dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "server-dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && pnpm run build:server && vite build",

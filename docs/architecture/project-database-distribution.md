@@ -45,10 +45,12 @@ are also included in the package.
 
 ## What Users Install
 
-For the CLI distribution, users install `@gorenku/studio-cli`.
+Users install one self-contained Renku product archive through the bootstrap
+installer. Internal workspace packages are private implementation boundaries;
+none is published or presented as a reusable npm package.
 
-That package provides the `renku` binary. Its direct and transitive runtime
-install includes:
+The product archive provides `renku`, the browser Studio, and the agent plugin.
+Its internal runtime deployment includes:
 
 - `@gorenku/studio-core` for project data, migrations, validation, commands, and
   projections;
@@ -58,9 +60,9 @@ install includes:
 - runtime dependencies such as `better-sqlite3`, `drizzle-orm`, and
   `drizzle-kit` through the packages that own those concerns.
 
-For a future packaged Studio application, the same rule applies. The app bundle
-may additionally include the built browser UI and local Node server, but project
-database creation and upgrade must still run through the installed core package.
+The archive also includes the built browser UI and local Node server, but
+project database creation and upgrade still run through the installed core
+package.
 
 The browser bundle must not contain SQLite or migration code. The Node side of
 the installed app must contain core, the SQLite driver, Drizzle runtime
@@ -86,58 +88,19 @@ migration state to the installed package's latest migration state.
 In both cases, Drizzle Kit reads the installed package's migration journal and
 SQL files from `@gorenku/studio-core/drizzle/`.
 
-## First Public Release Baseline
+## First Beta Migration History
 
-Before the first public release, Renku Studio may compact the development
-migration history into a public baseline migration.
+The first beta archive ships the current generated Drizzle migration history
+unchanged. Release assembly copies it but does not rewrite, compact, open, or
+special-case it. Installed-tree verification creates a disposable project from
+that history before an archive qualifies for publication.
 
-This is allowed only because pre-public development migrations are not a user
-upgrade contract. They describe private iteration history, not database states
-that installed users need to migrate from.
+This makes the migration set shipped in the first beta a public upgrade
+contract. Subsequent schema work appends forward migrations; shipped SQL,
+journal entries, and snapshots are not rewritten or renumbered.
 
-The first public release should ship a compact baseline such as:
-
-```text
-drizzle/
-  0000_public_project_database_baseline.sql
-  meta/
-    _journal.json
-    0000_snapshot.json
-```
-
-That baseline migration should create the current schema directly and set the
-first public project-store schema generation:
-
-```sql
-PRAGMA user_version = 1;
-```
-
-After the first public release, the rule changes. Any migration that has shipped
-to users is durable public upgrade history and must not be rewritten, deleted,
-renumbered, compacted, or replaced by a new baseline.
-
-Post-public schema changes must append forward migrations:
-
-```text
-0001_add_current_feature.sql
-0002_rename_current_concept.sql
-```
-
-When a post-public change is breaking for current runtime reads or writes, that
-migration must advance `PRAGMA user_version`. Non-breaking migrations must not
-advance it.
-
-Internal development projects that predate the public baseline are not a reason
-to ship private migration history. Before cutting the baseline, choose an
-explicit internal handling path:
-
-- recreate or import the project into a fresh database built from the baseline;
-- run a one-time internal conversion outside the public runtime contract; or
-- accept that pre-public development databases are not supported by the compact
-  public release.
-
-Do not add compatibility readers, fallback migrations, or obsolete-shape
-recognition to preserve pre-public database states after the baseline is cut.
+Urban Basilica remains an internal development project. It is never a release
+input, migration fixture, installer input, or public sample project.
 
 ## New Project Creation In An Installed CLI
 

@@ -1,7 +1,5 @@
-import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import {
   fetchElevenLabsVoiceSampleAudio,
 } from '@gorenku/studio-engines';
@@ -72,8 +70,6 @@ const DIRECT_ELEVENLABS_TTS_MODELS = new Set([
   'eleven_multilingual_v2',
   'eleven_turbo_v2_5',
 ]);
-const execFileAsync = promisify(execFile);
-
 const AUDIO_EXTENSIONS = new Map([
   ['.mp3', 'audio/mpeg'],
   ['.wav', 'audio/wav'],
@@ -555,14 +551,10 @@ async function prepareFileCastVoiceAttachment(input: {
   if (!fileSample) {
     throw new ProjectDataError('PROJECT_DATA344', 'Cast Voice file sample is required.');
   }
-  const sourcePath = resolveProjectRelativePath(
-    input.projectFolder,
-    fileSample.sourceProjectRelativePath as never
-  );
   return {
     sourceProjectRelativePath: fileSample.sourceProjectRelativePath,
     mimeType: fileSample.mimeType,
-    durationSeconds: await probeMediaDurationSeconds(sourcePath),
+    durationSeconds: undefined,
     origin: fileSample.receipt ? 'generated' : 'imported',
     sampleSource: fileSample.receipt
       ? { kind: 'generated_sample' }
@@ -595,7 +587,7 @@ async function prepareElevenLabsVoiceSampleAttachment(input: {
   return {
     sourceProjectRelativePath: temporaryFile.projectRelativePath,
     mimeType: 'audio/mpeg',
-    durationSeconds: await probeMediaDurationSeconds(temporaryFile.absolutePath),
+    durationSeconds: undefined,
     origin: 'elevenlabs_sample',
     sampleSource: {
       kind: 'elevenlabs_voice_sample',
@@ -1063,26 +1055,6 @@ function assertResolvedPathInsideProject(
       'PROJECT_DATA351',
       `Cast Voice sample file must be inside the project folder: ${absolutePath}.`
     );
-  }
-}
-
-async function probeMediaDurationSeconds(
-  absolutePath: string
-): Promise<number | undefined> {
-  try {
-    const { stdout } = await execFileAsync('ffprobe', [
-      '-v',
-      'error',
-      '-show_entries',
-      'format=duration',
-      '-of',
-      'default=noprint_wrappers=1:nokey=1',
-      absolutePath,
-    ]);
-    const seconds = Number(stdout.trim());
-    return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
-  } catch {
-    return undefined;
   }
 }
 

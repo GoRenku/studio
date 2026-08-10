@@ -10,6 +10,120 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-10 — Preserve implemented plans and consolidate corrective adoption
+
+- **User objection:** An already implemented plan was retroactively rewritten
+  to describe a new release direction, then the correction was split across
+  multiple new plans. That erased the plan's value as an implementation record
+  and made one coordinated adoption harder to review.
+- **Planning rule:** Treat an implemented plan as historical evidence of the
+  working baseline. Restore or leave it unchanged and create one follow-up
+  adoption plan when the user wants the current implementation moved to a new
+  contract. Do not scatter that adoption across separately numbered plans when
+  the user explicitly requests one owner and one completion checklist, even if
+  the plan carefully separates repository and distribution responsibilities.
+- **Apply when:** A working-tree implementation has already completed its plan
+  and later review changes release policy, ownership, distribution, or another
+  cross-cutting contract.
+- **Evidence to inspect:** The implemented plan's status and checked items; the
+  current working-tree behavior; which later edits changed the historical plan;
+  every proposed follow-up plan; and whether one adoption checklist can retain
+  clear ownership without rewriting the baseline.
+
+### 2026-08-10 — Separate repository releases from cross-product installation
+
+- **User objection:** A proposal correctly made Studio and Studio Skills
+  independent repositories but still mixed their release lifecycles with the
+  combined end-user installation journey. It then treated one example version
+  tag as the user's long-lived Codex marketplace source without explaining that
+  this would pin the installation, and implied that the already working plugin
+  package might need restructuring. That made it unclear which project owned
+  tags and versions, encouraged the Studio archive to bundle or rewrite a
+  separately released Codex plugin, and confused immutable release identity
+  with an updateable distribution channel.
+- **Planning rule:** Define each repository's version bump, release commit, tag,
+  GitHub Release, and artifacts entirely within that repository. Then define
+  installation and distribution as a separate consumer of those immutable
+  releases. A cross-product install guide may order the steps and state
+  compatibility, but it must not create a shared version, copy sibling source,
+  expose unreleased development state, pin users to one immutable tag without
+  an explicit update story, or make one repository publish the other. Preserve
+  a working host package structure unless current host behavior proves a
+  concrete incompatibility. For rapidly changing agent-host installation,
+  triangulate the latest fetched primary documentation, the current installed
+  CLI's own help, and the current desktop UI before planning changes; stop and
+  request permission when those sources disagree rather than restructuring the
+  companion repository speculatively.
+- **Apply when:** Planning a product made from separately released runtime,
+  plugin, skills, extension, model, content-pack, or companion repositories;
+  especially when one user journey installs more than one of them.
+- **Evidence to inspect:** Each repository's manifests, tags, GitHub Releases,
+  release scripts, and ownership documents; every cross-repository checkout or
+  copy; the immutable release refs and mutable distribution channel, if any;
+  current primary host installation documentation; current CLI help and desktop
+  behavior; installer side effects; the existing package's proven installation
+  path; and whether the user guide accidentally creates a shared release
+  identity or a non-upgradeable subscription.
+
+### 2026-08-10 — Start releases from repository-owned versioned refs
+
+- **User objection:** A distribution plan treated an arbitrary workflow version
+  input and a sibling repository's current checkout as releasable product
+  contents. It did not first define a product-version source of truth, create a
+  release commit and tag, or publish a GitHub Release, so the same nominal
+  version could package unrelated commits and independently versioned projects.
+  A revision then assumed a pull-request-based release ceremony even though the
+  maintainer's established, successful workflow was a local command that bumps
+  versions, creates the release commit and tag, and publishes the release.
+- **Planning rule:** Every product release plan must begin with the owning
+  repository's version, immutable source ref, release tag, and GitHub Release
+  lifecycle before designing artifact upload. Build and publish only from the
+  tagged commit, require the tag and checked-in version to agree, promote one
+  verified artifact set to mirrors or update channels, and make retries reuse
+  those exact bytes. Inspect and preserve the maintainer's established release
+  command and prepare/publish recovery boundary; do not introduce pull requests,
+  release branches, or manual web forms as ceremony unless the user requests
+  them or a hard operational boundary requires them. Never build a release from
+  a moving, dirty, or unversioned sibling checkout. Separately owned
+  repositories release independently; a cross-repository compatibility
+  statement may be explicit, but it must not become an undeclared lockstep
+  bundle.
+- **Apply when:** Planning installers, archive assembly, GitHub Actions release
+  workflows, package publication, CDN/R2 promotion, plugin distribution, or any
+  product artifact that copies files from another repository.
+- **Evidence to inspect:** Checked-in package/product versions; existing tags
+  and GitHub Releases; package-level release commands; local ship, prepare,
+  preflight, and publish scripts; tag-to-commit and default-branch rules;
+  release manifests and checksums; draft/published release behavior; whether
+  mirrors promote the exact GitHub assets; every cross-repository checkout or
+  local sibling path; and the independent repository's own version and release
+  history.
+
+### 2026-08-10 — Verify the active coding-agent surface before adding a bridge
+
+- **User objection:** A distribution plan assumed a desktop host could not
+  invoke the Renku CLI and added a separate local protocol server. That
+  assumption confused the host's general chat surface with its coding-agent
+  mode. The current desktop coding mode uses the same agent engine as the CLI
+  harness and already has local shell execution, so the added server duplicated
+  an existing capability and expanded installation, packaging, security, and
+  testing without a product need.
+- **Planning rule:** For every named desktop and terminal harness, verify the
+  current execution mode and built-in tools from current primary documentation
+  before designing integration infrastructure. When the supported coding-agent
+  mode already runs local commands and uses the same skill/plugin contract as
+  its terminal counterpart, let skills invoke the installed CLI directly. Add
+  a bridge, daemon, protocol adapter, or second command surface only when the
+  user explicitly needs a distinct host mode that cannot execute the CLI, and
+  surface that expansion for approval.
+- **Apply when:** Planning desktop-agent support, comparing a host's chat and
+  coding modes, or proposing a local server, protocol adapter, daemon, helper
+  executable, or duplicated command API for an existing CLI-backed skill.
+- **Evidence to inspect:** Current official host documentation; the exact host
+  mode the product supports; available shell, filesystem, plugin, and PATH
+  behavior; parity with the terminal harness; the existing CLI/skill contract;
+  and whether the user requested support for a non-coding chat surface.
+
 ### 2026-08-08 — Surface scope expansion before it hides in plan detail
 
 - **User objection:** A simple shared-numbering and project-folder request grew

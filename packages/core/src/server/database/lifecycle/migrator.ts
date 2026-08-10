@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -24,7 +25,7 @@ export function migrateProjectDatabase(
 ): ProjectDatabaseMigrationRunReport {
   const packageRoot = findCorePackageRoot(dirname(fileURLToPath(import.meta.url)));
   const configPath = join(packageRoot, 'drizzle.project-migrate.config.ts');
-  const drizzleKitPath = join(packageRoot, 'node_modules', 'drizzle-kit', 'bin.cjs');
+  const drizzleKitPath = resolveDrizzleKitExecutable(packageRoot);
 
   if (!existsSync(configPath)) {
     throw new ProjectDataError(
@@ -39,6 +40,7 @@ export function migrateProjectDatabase(
     );
   }
 
+  mkdirSync(dirname(databasePath), { recursive: true });
   const preMigrationBackup = createPreMigrationBackup(databasePath);
   const result = spawnSync(
     process.execPath,
@@ -91,6 +93,19 @@ export function migrateProjectDatabase(
     databasePath,
     preMigrationBackup,
   };
+}
+
+function resolveDrizzleKitExecutable(packageRoot: string): string {
+  try {
+    const requireFromCore = createRequire(join(packageRoot, 'package.json'));
+    const drizzleKitEntry = requireFromCore.resolve('drizzle-kit');
+    return join(dirname(drizzleKitEntry), 'bin.cjs');
+  } catch (error) {
+    throw new ProjectDataError(
+      'PROJECT_DATA040',
+      `Drizzle Kit could not be resolved from ${packageRoot}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }
 
 function createPreMigrationBackup(

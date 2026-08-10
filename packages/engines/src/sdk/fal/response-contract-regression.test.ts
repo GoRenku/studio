@@ -194,7 +194,7 @@ describe('fal-ai unified response contract regressions', () => {
     ).toBe(true);
   });
 
-  it('still produces fal video artifacts and derived extractions in simulated mode', async () => {
+  it('still produces a fal video artifact in simulated mode', async () => {
     const schemaRaw = readFixtureSchema(
       '../../../tests/fixtures/unified-provider-contract/fal-video-schema.fixture.json'
     );
@@ -218,33 +218,16 @@ describe('fal-ai unified response contract regressions', () => {
         sdkMapping: {
           Prompt: { field: 'prompt', required: true },
         },
-        produces: [
-          'Artifact:VideoProducer.GeneratedVideo',
-          'Artifact:VideoProducer.FirstFrame',
-          'Artifact:VideoProducer.LastFrame',
-          'Artifact:VideoProducer.AudioTrack',
-        ],
+        produces: ['Artifact:VideoProducer.GeneratedVideo'],
       })
     );
 
     expect(result.status).toBe('succeeded');
-    expect(result.artifacts).toHaveLength(4);
+    expect(result.artifacts).toHaveLength(1);
     expect(
       result.artifacts.find((artifact) => artifact.artifactId === 'Artifact:VideoProducer.GeneratedVideo')
         ?.blob?.mimeType
     ).toBe('video/mp4');
-    expect(
-      result.artifacts.find((artifact) => artifact.artifactId === 'Artifact:VideoProducer.FirstFrame')
-        ?.blob?.mimeType
-    ).toBe('image/png');
-    expect(
-      result.artifacts.find((artifact) => artifact.artifactId === 'Artifact:VideoProducer.LastFrame')
-        ?.blob?.mimeType
-    ).toBe('image/png');
-    expect(
-      result.artifacts.find((artifact) => artifact.artifactId === 'Artifact:VideoProducer.AudioTrack')
-        ?.blob?.mimeType
-    ).toBe('audio/wav');
   });
 
   it('still produces fal audio artifacts in simulated mode after adapter unwrapping', async () => {

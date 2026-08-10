@@ -4,7 +4,7 @@ Status: current
 
 Role: CLI reference
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-09
 
 This file is the living reference for the `renku` command-line surface. Keep it
 updated whenever a command, flag, output shape, or expected error changes.
@@ -1745,6 +1745,20 @@ Behavior:
   empty Trash after reviewing the preview.
 - Restore can return structured warnings when content is restored but an active
   selected or picked replacement remains in place.
+
+## `renku studio start`
+
+Start the local browser Studio in the foreground.
+
+```bash
+renku studio start
+renku studio start --no-browser
+```
+
+The default command binds the canonical local Studio URL at
+`http://localhost:5173`, opens the system browser, and remains attached until
+the user stops it. `--no-browser` starts the same server without opening a
+browser. Renku does not install or launch an Electron/native desktop app.
 
 ## `renku studio current`
 

@@ -12,10 +12,12 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "declaration": true,
     "types": ["node"],
     "paths": {
       "@gorenku/studio-core/client": ["../core/dist/client/index.d.ts"],
-      "@gorenku/studio-core/server": ["../core/dist/server/index.d.ts"]
+      "@gorenku/studio-core/server": ["../core/dist/server/index.d.ts"],
+      "@gorenku/studio/server": ["../studio/server-dist/index.d.ts"]
     },
     "typeRoots": [
       "./node_modules/@types",

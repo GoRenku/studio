@@ -35,7 +35,6 @@ importers:
       yaml:
         specifier: ^2.8.1
         version: 2.8.4
-
   packages/cli:
     dependencies:
       '@gorenku/studio-core':
@@ -44,6 +43,9 @@ importers:
       '@gorenku/studio-diagnostics':
         specifier: workspace:*
         version: link:../diagnostics
+      '@gorenku/studio':
+        specifier: workspace:*
+        version: link:../studio
       meow:
         specifier: ^14.1.0
         version: 14.1.0
@@ -196,6 +198,9 @@ importers:
       yaml:
         specifier: ^2.8.1
         version: 2.8.4
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.3.1

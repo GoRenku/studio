@@ -25,6 +25,10 @@ export default defineConfig({
         find: '@gorenku/studio-engines',
         replacement: new URL('../engines/src/index.ts', import.meta.url).pathname,
       },
+      {
+        find: '@gorenku/studio/server',
+        replacement: new URL('../studio/server/index.ts', import.meta.url).pathname,
+      },
     ],
   },
 });

@@ -24,8 +24,12 @@ import { runProductionDesignCommand } from './commands/production-design-command
 import { runPropCommand } from './commands/prop-command.js';
 import { runScreenplayCommand } from './commands/screenplay/index.js';
 import { runShotPlanCommand } from './commands/shot-plan-command.js';
-import { runStudioCommand } from './commands/studio-command.js';
+import { runStudioCommand } from './commands/studio/index.js';
 import { runTrashCommand } from './commands/trash-command.js';
+import {
+  isRenkuCliEntrypoint,
+  requireSupportedNodeVersion,
+} from './runtime/node-runtime.js';
 
 export interface RenkuCliIo {
   stdout: Pick<typeof console, 'log'>;
@@ -82,6 +86,7 @@ Commands
   screenplay           Inspect, import, create, and revise screenplay content
   shot-plan            Author and inspect Scene Shot Plans
   studio current       Show current Studio focus and context
+  studio start         Start the local Renku Studio web application
   studio server status Show canonical local Studio server status
   trash                List, restore, preview, and empty Trash
 
@@ -146,6 +151,7 @@ Options
   --anchor             Production Lookbook point id for Lookbook image placement
   --dry-run            Validate an operation without writing
   --simulate           Run generation without calling a paid provider
+  --no-browser         Do not open a browser when starting Studio
   --title              Project title
   --aspect-ratio       Project aspect ratio
   --logline            Project logline
@@ -183,10 +189,10 @@ Options
   --version            Show version
 
 Examples
-  $ renku create urban-basilica --title "Urban Basilica"
+  $ renku create midnight-crossing --title "Midnight Crossing"
   $ renku init ~/Movies/renku
   $ renku init /Volumes/Media/Renku --json
-  $ renku generation preview show --file tmp/sheet-1.json --file tmp/sheet-2.json --project urban-basilica --json
+  $ renku generation preview show --file tmp/sheet-1.json --file tmp/sheet-2.json --project midnight-crossing --json
 `;
 
 function createCliFlags() {
@@ -387,6 +393,10 @@ function createCliFlags() {
       type: 'boolean',
       default: false,
     },
+    noBrowser: {
+      type: 'boolean',
+      default: false,
+    },
     aspectRatio: {
       type: 'string',
     },
@@ -524,6 +534,7 @@ export async function runRenkuCli(
   const [command, ...input] = cli.input;
 
   try {
+    requireSupportedNodeVersion();
     const isGenerationPreview =
       command === 'generation' && input.join(' ') === 'preview show';
     const file = isGenerationPreview
@@ -827,6 +838,7 @@ export async function runRenkuCli(
           input,
           project: cli.flags.project,
           resource: cli.flags.resource,
+          noBrowser: cli.flags.noBrowser,
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,
@@ -1001,7 +1013,7 @@ function formatDiagnosticLocation(path: string[]): string {
   }, '');
 }
 
-const isEntrypoint = process.argv[1]?.endsWith('/cli.js') ?? false;
+const isEntrypoint = isRenkuCliEntrypoint(process.argv[1]);
 
 if (isEntrypoint) {
   runRenkuCli()

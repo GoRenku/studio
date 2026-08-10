@@ -5,7 +5,7 @@ import { deflateSync } from 'node:zlib';
  * PNG format: 8-byte signature + IHDR chunk + IDAT chunk + IEND chunk
  *
  * This is used for simulated mode to generate mock image artifacts
- * when ffmpeg extraction is skipped. Generates a 1x1 solid color PNG.
+ * for simulated image output. Generates a 1x1 solid color PNG.
  */
 export function generateMockPng(
   width: number = 1,

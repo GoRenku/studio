@@ -236,7 +236,7 @@ describe('buildArtifactsFromUrls', () => {
     expect(result[0]?.blob?.data).toBeInstanceOf(Buffer);
   });
 
-  it('generates a valid MP4 in simulated mode using the explicit Duration binding', async () => {
+  it('generates a valid deterministic MP4 with the requested duration in simulated mode', async () => {
     const result = await buildArtifactsFromUrls({
       produces: ['Artifact:VideoProducer.GeneratedVideo[segment=0]'],
       durationInputId: 'Input:ClipDuration',
@@ -267,7 +267,7 @@ describe('buildArtifactsFromUrls', () => {
     expect(duration).toBeCloseTo(2, 1);
   });
 
-  it('generates a valid MP3 in simulated mode using the explicit Duration binding', async () => {
+  it('generates a valid deterministic MP3 with the requested duration in simulated mode', async () => {
     const result = await buildArtifactsFromUrls({
       produces: ['Artifact:MusicProducer.GeneratedMusic'],
       durationInputId: 'Input:Duration',

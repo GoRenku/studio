@@ -2,16 +2,20 @@
   "name": "@gorenku/studio-cli",
   "version": "0.1.0",
   "description": "Agent and human command surface for Renku Studio projects",
+  "private": true,
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
   "bin": {
     "renku": "dist/cli.js"
   },
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    }
+  },
   "engines": {
-    "node": ">=24 <25"
+    "node": "^22.12.0 || ^24.0.0"
   },
   "scripts": {
     "build": "tsc",
@@ -32,6 +36,7 @@
   "dependencies": {
     "@gorenku/studio-diagnostics": "workspace:*",
     "@gorenku/studio-core": "workspace:*",
+    "@gorenku/studio": "workspace:*",
     "meow": "^14.1.0"
   },
   "devDependencies": {

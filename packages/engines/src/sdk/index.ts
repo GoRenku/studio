@@ -10,32 +10,7 @@ export {
   resolveSchemaPointer,
   resolveViewerSchemaNode,
 } from './unified/schema-file.js';
-export { generateMp4WithDuration } from './unified/mp4-generator.js';
 export { generateWavWithDuration } from './unified/wav-generator.js';
-
-// FFmpeg extraction exports
-export {
-  extractDerivedArtifacts,
-  detectRequiredExtractions,
-  needsExtraction,
-  checkFfmpegAvailability,
-  resetFfmpegCache,
-  type FfmpegExtractionOptions,
-  type RequiredExtractions,
-  type ExtractionResult,
-} from './unified/ffmpeg-extractor.js';
-
-// FFmpeg image panel extraction exports
-export {
-  extractPanelImages,
-  detectPanelExtractions,
-  needsPanelExtraction,
-  parseGridStyle,
-  type PanelExtractionOptions,
-  type PanelExtractionResult,
-  type RequiredPanelExtractions,
-  type GridDimensions,
-} from './unified/ffmpeg-image-splitter.js';
 
 // Vercel AI Gateway SDK exports
 export {

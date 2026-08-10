@@ -7,18 +7,6 @@ import {
 } from '#core';
 import type { ProviderMode } from '../../types.js';
 import {
-  detectRequiredExtractions,
-  extractDerivedArtifacts,
-  needsExtraction,
-  type RequiredExtractions,
-} from './ffmpeg-extractor.js';
-import {
-  detectPanelExtractions,
-  extractPanelImages,
-  needsPanelExtraction,
-  type RequiredPanelExtractions,
-} from './ffmpeg-image-splitter.js';
-import {
   generateSimulatedDataForMimeType,
   resolveDurationForSimulatedMedia,
 } from './simulated-media.js';
@@ -114,12 +102,6 @@ interface ArtifactExtractionContext {
  * instead of downloading. This keeps timeline/media validation on the same
  * duration-reading path as live mode.
  *
- * For video artifacts, this function also extracts derived artifacts
- * (FirstFrame, LastFrame, AudioTrack) using ffmpeg when they are
- * included in the produces array.
- *
- * For image artifacts, this function can extract panel images from a grid
- * when PanelImages[N] artifacts are included in the produces array.
  */
 export async function buildArtifactsFromUrls(options: BuildArtifactsOptions): Promise<ProducedArtifact[]> {
   const { produces, durationInputId, urls, mimeType, mode, resolvedInputs } = options;
@@ -127,41 +109,14 @@ export async function buildArtifactsFromUrls(options: BuildArtifactsOptions): Pr
   const artifacts: ProducedArtifact[] = [];
   const useMockDownloads = mode === 'simulated';
 
-  // Detect which extractions are needed from video
-  const requiredExtractions = detectRequiredExtractions(produces);
-  const extractionNeeded = needsExtraction(requiredExtractions);
-  const isVideo = isVideoMimeType(mimeType);
-
-  // Detect which panel extractions are needed from image
-  const panelExtractions = detectPanelExtractions(produces);
-  const panelExtractionNeeded = needsPanelExtraction(panelExtractions);
   const isImage = isImageMimeType(mimeType);
-  const gridStyle = resolveGridStyle(resolvedInputs);
   const simulatedDurationSeconds =
     useMockDownloads && !isImage
       ? resolveDurationForSimulatedMedia({ durationInputId, resolvedInputs })
       : undefined;
 
-  // Filter out derived artifact IDs from primary processing
-  // (they will be handled by extraction, not URL download)
-  let primaryProduces = produces;
-  if (extractionNeeded) {
-    primaryProduces = filterPrimaryArtifacts(primaryProduces, requiredExtractions);
-  }
-  if (panelExtractionNeeded) {
-    primaryProduces = filterPanelArtifacts(primaryProduces, panelExtractions);
-  }
-
-  // Track video buffer for extraction
-  let videoBuffer: Buffer | null = null;
-  let primaryVideoArtifactId: string | null = null;
-
-  // Track image buffer for panel extraction
-  let imageBuffer: Buffer | null = null;
-  let primaryImageArtifactId: string | null = null;
-
-  for (let index = 0; index < primaryProduces.length; index += 1) {
-    const providedId = primaryProduces[index];
+  for (let index = 0; index < produces.length; index += 1) {
+    const providedId = produces[index];
     const artifactId = providedId;
     const url = urls[index];
 
@@ -196,18 +151,6 @@ export async function buildArtifactsFromUrls(options: BuildArtifactsOptions): Pr
           sourceUrl: url,
         },
       });
-
-      // Store video buffer for extraction
-      if (isVideo && extractionNeeded && !videoBuffer) {
-        videoBuffer = buffer;
-        primaryVideoArtifactId = artifactId;
-      }
-
-      // Store image buffer for panel extraction
-      if (isImage && panelExtractionNeeded && !imageBuffer) {
-        imageBuffer = buffer;
-        primaryImageArtifactId = artifactId;
-      }
     } catch (error) {
       artifacts.push({
         artifactId,
@@ -221,50 +164,7 @@ export async function buildArtifactsFromUrls(options: BuildArtifactsOptions): Pr
     }
   }
 
-  // Extract derived artifacts from video if needed
-  if (isVideo && extractionNeeded && videoBuffer && primaryVideoArtifactId) {
-    const extracted = await extractDerivedArtifacts({
-      videoBuffer,
-      primaryArtifactId: primaryVideoArtifactId,
-      produces,
-      mode,
-      mockDurationSeconds: simulatedDurationSeconds,
-    });
-
-    // Add extracted artifacts to results
-    if (extracted.firstFrame) {
-      artifacts.push(extracted.firstFrame);
-    }
-    if (extracted.lastFrame) {
-      artifacts.push(extracted.lastFrame);
-    }
-    if (extracted.audioTrack) {
-      artifacts.push(extracted.audioTrack);
-    }
-  }
-
-  // Extract panel images from image grid if needed
-  if (isImage && panelExtractionNeeded && imageBuffer && primaryImageArtifactId && gridStyle) {
-    const extracted = await extractPanelImages({
-      imageBuffer,
-      primaryArtifactId: primaryImageArtifactId,
-      produces,
-      gridStyle,
-      mode,
-    });
-
-    // Add extracted panel artifacts to results
-    artifacts.push(...extracted.panels);
-  }
-
   return artifacts;
-}
-
-/**
- * Check if a MIME type represents a video format.
- */
-function isVideoMimeType(mimeType: string): boolean {
-  return mimeType.startsWith('video/');
 }
 
 /**
@@ -280,47 +180,6 @@ function isImageMimeType(mimeType: string): boolean {
  * Searches for canonical input IDs ending with "GridStyle" (e.g., "Input:GridStyle",
  * "Input:StoryboardImageProducer.GridStyle").
  */
-function resolveGridStyle(resolvedInputs: Record<string, unknown> | undefined): string | undefined {
-  if (!resolvedInputs) {
-    return undefined;
-  }
-  // Look for any key ending with "GridStyle" (canonical input IDs like Input:GridStyle
-  // or Input:Producer.GridStyle)
-  for (const [key, value] of Object.entries(resolvedInputs)) {
-    if (key.endsWith('GridStyle') && typeof value === 'string' && value.length > 0) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Filter out derived artifact IDs from the produces array.
- * Returns only the primary artifacts that have URLs from the provider.
- */
-function filterPrimaryArtifacts(produces: string[], extractions: RequiredExtractions): string[] {
-  const derivedIds = new Set<string>();
-  if (extractions.firstFrameId) {
-    derivedIds.add(extractions.firstFrameId);
-  }
-  if (extractions.lastFrameId) {
-    derivedIds.add(extractions.lastFrameId);
-  }
-  if (extractions.audioTrackId) {
-    derivedIds.add(extractions.audioTrackId);
-  }
-
-  return produces.filter((id) => !derivedIds.has(id));
-}
-
-/**
- * Filter out panel artifact IDs from the produces array.
- * Returns only the primary artifacts that have URLs from the provider.
- */
-function filterPanelArtifacts(produces: string[], extractions: RequiredPanelExtractions): string[] {
-  const panelIds = new Set(extractions.panels.values());
-  return produces.filter((id) => !panelIds.has(id));
-}
 
 /**
  * Downloads binary data from a URL and returns it as a Buffer.

@@ -6,7 +6,7 @@ import {
   initRenkuConfig,
 } from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { runStudioCommand } from './studio-command.js';
+import { runStudioCommand } from './studio/index.js';
 import { notifyStudioProjectResourcesChanged } from './studio-notification-client.js';
 
 vi.mock('./studio-notification-client.js', () => ({
