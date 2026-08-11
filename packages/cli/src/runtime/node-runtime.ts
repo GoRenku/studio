@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { existsSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   StructuredError,
@@ -18,7 +19,20 @@ export function isRenkuCliEntrypoint(argvPath: string | undefined): boolean {
   if (!argvPath) {
     return false;
   }
-  return path.resolve(argvPath) === path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'cli.js');
+  const moduleEntrypoint = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'cli.js'
+  );
+  return canonicalizeEntrypoint(argvPath) === canonicalizeEntrypoint(moduleEntrypoint);
+}
+
+function canonicalizeEntrypoint(entrypoint: string): string {
+  const absolute = path.resolve(entrypoint);
+  if (existsSync(absolute)) {
+    return realpathSync(absolute);
+  }
+  return path.join(realpathSync(path.dirname(absolute)), path.basename(absolute));
 }
 
 export function requireSupportedNodeVersion(): void {

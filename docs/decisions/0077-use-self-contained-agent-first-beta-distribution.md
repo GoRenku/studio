@@ -4,6 +4,11 @@ Date: 2026-08-09
 
 Status: accepted
 
+> **Partially superseded by ADR 0078.** The runtime archive remains
+> self-contained, but it no longer bundles or versions the agent plugin, and
+> releases are now created from repository-owned tags rather than an arbitrary
+> workflow version input. The historical decision below is otherwise preserved.
+
 ## Decision
 
 Distribute Renku as one self-contained, versioned product archive installed by

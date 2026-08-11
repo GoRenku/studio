@@ -2,9 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { requireReleaseTarget } from './release-targets.mjs';
+import {
+  BUNDLED_NODE_VERSION,
+  requireReleaseTarget,
+} from './release-targets.mjs';
 
-const NODE_VERSION = '24.16.0';
 const [targetId, outputArgument] = process.argv.slice(2);
 if (!targetId || !outputArgument) {
   throw new Error('Usage: download-node-runtime.mjs <target> <output-directory>');
@@ -12,8 +14,8 @@ if (!targetId || !outputArgument) {
 const target = requireReleaseTarget(targetId);
 const platformName = target.platform === 'win32' ? 'win' : 'darwin';
 const extension = target.platform === 'win32' ? 'zip' : 'tar.gz';
-const fileName = `node-v${NODE_VERSION}-${platformName}-${target.arch}.${extension}`;
-const baseUrl = `https://nodejs.org/dist/v${NODE_VERSION}`;
+const fileName = `node-v${BUNDLED_NODE_VERSION}-${platformName}-${target.arch}.${extension}`;
+const baseUrl = `https://nodejs.org/dist/v${BUNDLED_NODE_VERSION}`;
 const output = path.resolve(outputArgument);
 if (existsSync(output)) {
   throw new Error(`RELEASE034 Output directory already exists: ${output}`);
@@ -36,7 +38,9 @@ if (expected !== actual) {
 }
 writeFileSync(archive, archiveBytes);
 execFileSync('tar', ['-xf', archive, '-C', output]);
-const extracted = readdirSync(output).find((name) => name.startsWith(`node-v${NODE_VERSION}-`));
+const extracted = readdirSync(output).find((name) =>
+  name.startsWith(`node-v${BUNDLED_NODE_VERSION}-`)
+);
 if (!extracted || !existsSync(path.join(output, extracted))) {
   throw new Error('RELEASE032 Official Node archive did not contain the expected root directory.');
 }

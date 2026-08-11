@@ -16,28 +16,9 @@ case "$(uname -s)-$(uname -m)" in
   *) fail "INSTALL001 Unsupported operating system or architecture. Beta supports macOS arm64 and x64." ;;
 esac
 
-node_command=''
-flavor='bundled-node24'
-if command -v node >/dev/null 2>&1; then
-  node_version="$(node -p 'process.versions.node' 2>/dev/null || true)"
-  node_major="$(printf '%s' "$node_version" | cut -d. -f1)"
-  node_minor="$(printf '%s' "$node_version" | cut -d. -f2)"
-  if [ "$node_major" = '24' ]; then
-    flavor='node24'
-    node_command="$(command -v node)"
-  elif [ "$node_major" = '22' ] && [ "${node_minor:-0}" -ge 12 ] 2>/dev/null; then
-    flavor='node22'
-    node_command="$(command -v node)"
-  fi
-fi
-
-if [ "$flavor" = 'bundled-node24' ]; then
-  printf '%s\n' 'INSTALL006 No supported system Node was found; Renku will use its private Node 24 runtime.'
-fi
-
 temporary="$(mktemp -d "${TMPDIR:-/tmp}/renku-install.XXXXXX")"
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
-archive_url="$BASE_URL/studio/channels/beta/$target/$flavor/renku.tar.gz"
+archive_url="$BASE_URL/studio/channels/beta/$target/renku.tar.gz"
 
 curl -fsSL "$archive_url" -o "$temporary/renku.tar.gz" || fail "INSTALL002 Could not download $archive_url"
 curl -fsSL "$archive_url.sha256" -o "$temporary/renku.tar.gz.sha256" || fail 'INSTALL002 Could not download the Renku checksum.'
@@ -57,10 +38,7 @@ tar -xzf "$temporary/renku.tar.gz" -C "$temporary/extracted" || fail 'INSTALL004
 version="$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "$temporary/extracted/renku/RELEASE.json" | head -n 1)"
 [ -n "$version" ] || fail 'INSTALL004 RELEASE.json has no version.'
 
-smoke_node_command="$node_command"
-if [ "$flavor" = 'bundled-node24' ]; then
-  smoke_node_command="$temporary/extracted/renku/runtime/node/bin/node"
-fi
+smoke_node_command="$temporary/extracted/renku/runtime/node/bin/node"
 "$smoke_node_command" "$temporary/extracted/renku/app/dist/cli.js" about >/dev/null || fail 'INSTALL004 Renku CLI smoke validation failed.'
 
 mkdir -p "$INSTALL_ROOT/versions" "$BIN_ROOT"
@@ -76,9 +54,7 @@ fi
 rm -rf "$backup"
 ln -sfn "$destination" "$INSTALL_ROOT/current"
 
-if [ "$flavor" = 'bundled-node24' ]; then
-  node_command="$destination/runtime/node/bin/node"
-fi
+node_command="$destination/runtime/node/bin/node"
 
 write_launcher() {
   launcher="$1"
@@ -113,5 +89,8 @@ esac
 
 printf '\nRenku %s installed.\n' "$version"
 printf 'Start Studio: %s/renku studio start\n' "$BIN_ROOT"
-printf '%s\n' 'INSTALL007 Enable the bundled Renku plugin in Codex or Claude Code.'
-printf 'Bundled plugin marketplace: %s/plugin\n' "$destination"
+printf '%s\n' 'Install the separately released Renku plugin for Codex:'
+printf '%s\n' '  codex plugin marketplace add GoRenku/studio-skills --ref beta'
+printf '%s\n' '  codex plugin add renku@renku'
+printf '%s\n' 'Or open the Plugins tab in Codex CLI or the ChatGPT desktop app, select the renku marketplace, and install Renku.'
+printf '%s\n' 'Start a new Codex task or CLI session after installation.'

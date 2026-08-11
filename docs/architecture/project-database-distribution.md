@@ -49,8 +49,10 @@ Users install one self-contained Renku product archive through the bootstrap
 installer. Internal workspace packages are private implementation boundaries;
 none is published or presented as a reusable npm package.
 
-The product archive provides `renku`, the browser Studio, and the agent plugin.
-Its internal runtime deployment includes:
+The product archive provides `renku` and the browser Studio. The independently
+released Renku plugin is installed through the Studio Skills Codex marketplace
+and invokes this runtime through the host's local shell capability. The runtime
+archive's internal deployment includes:
 
 - `@gorenku/studio-core` for project data, migrations, validation, commands, and
   projections;
@@ -67,6 +69,13 @@ package.
 The browser bundle must not contain SQLite or migration code. The Node side of
 the installed app must contain core, the SQLite driver, Drizzle runtime
 dependencies, Drizzle Kit, and the generated migration folder.
+
+The installed runtime uses better-sqlite3 13. Its N-API prebuilds support the
+accepted Node 24 runtime without a Node-version-specific addon build, and the
+published package includes the supported macOS and Windows binaries directly.
+Workspace installation does not run better-sqlite3's implicit `node-gyp`
+fallback. Product verification requires the prebuild matching the declared
+release target and rejects any better-sqlite3 dependency on `prebuild-install`.
 
 ## Why Migrations Are Distributed
 

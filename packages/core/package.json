@@ -50,7 +50,7 @@
     "@gorenku/studio-engines": "workspace:*",
     "@rgrove/parse-xml": "^4.2.3",
     "ajv": "^8.20.0",
-    "better-sqlite3": "^12.9.0",
+    "better-sqlite3": "^13.0.2",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "yaml": "^2.8.4"

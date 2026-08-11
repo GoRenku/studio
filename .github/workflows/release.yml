@@ -1,0 +1,120 @@
+name: Release Studio
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing annotated Studio tag (vX.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: release
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" != "tag" || "${GITHUB_REF_NAME}" != "${RELEASE_TAG}" ]]; then
+            echo "RELEASE086 Dispatch release.yml from the exact tag passed as input." >&2
+            exit 1
+          fi
+          node --input-type=module -e "import { assertReleaseTagAtHead } from './scripts/release/release-contract.mjs'; const release = assertReleaseTagAtHead(process.env.RELEASE_TAG); process.stdout.write('version=' + release.version + '\n');" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: darwin-arm64
+            node-version: 24.16.0
+          - runner: macos-15-intel
+            target: darwin-x64
+            node-version: 24.16.0
+          - runner: windows-2025
+            target: win32-x64
+            node-version: 24.16.0
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Download private Node runtime
+        id: bundled-node
+        shell: bash
+        run: |
+          node scripts/release/download-node-runtime.mjs "${{ matrix.target }}" "$RUNNER_TEMP/renku-node" > "$RUNNER_TEMP/node-path.txt"
+          echo "path=$(cat "$RUNNER_TEMP/node-path.txt")" >> "$GITHUB_OUTPUT"
+      - name: Assemble product with private Node
+        shell: bash
+        run: >-
+          node scripts/release/assemble-product.mjs
+          --target "${{ matrix.target }}"
+          --bundled-node-dir "${{ steps.bundled-node.outputs.path }}"
+      - name: Verify and package
+        shell: bash
+        run: |
+          PRODUCT="release/staging/renku-${{ needs.validate.outputs.version }}-${{ matrix.target }}"
+          mkdir -p "release/artifacts/${{ matrix.target }}"
+          node scripts/release/verify-product.mjs "$PRODUCT/renku" --mode runtime --report "release/artifacts/${{ matrix.target }}/verification.json"
+          node scripts/release/package-product.mjs "$PRODUCT" "release/artifacts/${{ matrix.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: renku-${{ matrix.target }}
+          path: release/artifacts
+          if-no-files-found: error
+
+  publish:
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    environment: beta-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: release/artifacts
+          pattern: renku-*
+          merge-multiple: true
+      - name: Create or resume draft GitHub Release
+        run: >-
+          node scripts/release/publish-github-release.mjs
+          --tag "$RELEASE_TAG"
+          --release-dir release/artifacts
+          --staging-dir release/github-assets
+          --download-dir release/github-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+      - name: Mirror verified GitHub Release bytes to R2
+        run: node scripts/release/publish-r2.mjs --release-dir release/github-release
+        env:
+          CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Publish verified GitHub prerelease
+        run: node scripts/release/publish-github-release.mjs --tag "$RELEASE_TAG" --finalize
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}

@@ -4,7 +4,7 @@ Status: current
 
 Role: CLI reference
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-10
 
 This file is the living reference for the `renku` command-line surface. Keep it
 updated whenever a command, flag, output shape, or expected error changes.
@@ -113,7 +113,7 @@ Behavior:
 
 ## `renku about`
 
-Show CLI package information.
+Show released Studio product and CLI package information.
 
 ```bash
 renku about
@@ -121,8 +121,8 @@ renku about
 
 Behavior:
 
-- Prints JSON containing the CLI package name, binary name, and linked core
-  package information.
+- Prints JSON containing the synchronized Studio product `version`, CLI package
+  name, binary name, and linked core package information.
 
 ## `renku project current`
 

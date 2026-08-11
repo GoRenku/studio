@@ -6,6 +6,7 @@ describe('studio-cli scaffold', () => {
     expect(getRenkuCliInfo()).toEqual({
       cli: '@gorenku/studio-cli',
       binary: 'renku',
+      version: '0.1.0',
       core: {
         packageName: '@gorenku/studio-core',
         purpose: 'renku-studio-domain',

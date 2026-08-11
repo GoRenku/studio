@@ -1,3 +1,5 @@
+import { mkdtempSync, symlinkSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -20,5 +22,15 @@ describe('Renku Node runtime', () => {
     const runtimeFile = fileURLToPath(import.meta.url);
     const entrypoint = path.resolve(path.dirname(runtimeFile), '..', 'cli.js');
     expect(isRenkuCliEntrypoint(entrypoint)).toBe(true);
+  });
+
+  it('recognizes an entrypoint reached through an aliased parent path', () => {
+    const runtimeFile = fileURLToPath(import.meta.url);
+    const entrypointDirectory = path.resolve(path.dirname(runtimeFile), '..');
+    const fixture = mkdtempSync(path.join(os.tmpdir(), 'renku-entrypoint-'));
+    const aliasedDirectory = path.join(fixture, 'aliased-src');
+    symlinkSync(entrypointDirectory, aliasedDirectory, 'dir');
+
+    expect(isRenkuCliEntrypoint(path.join(aliasedDirectory, 'cli.js'))).toBe(true);
   });
 });

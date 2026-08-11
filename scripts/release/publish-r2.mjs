@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -5,88 +6,41 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  statSync,
-  writeFileSync,
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { NODE_FLAVORS, RELEASE_TARGETS } from './release-targets.mjs';
+import { pathToFileURL } from 'node:url';
+import { verifyDownloadedReleaseAssets } from './publish-github-release.mjs';
 
 const BUCKET = 'renku-downloads';
 const PUBLIC_BASE_URL = 'https://downloads.gorenku.com';
-const options = readOptions(process.argv.slice(2));
-const releaseRoot = path.resolve(options.releaseDir);
-const token = process.env.CLOUDFLARE_TOKEN;
-const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-if (!options.dryRun && (!token || !accountId)) {
-  throw new Error('RELEASE040 CLOUDFLARE_TOKEN and CLOUDFLARE_ACCOUNT_ID are required.');
-}
 
-const artifacts = collectArtifacts(releaseRoot, options.version);
-const releaseManifestPath = path.join(releaseRoot, 'release.json');
-writeFileSync(
-  releaseManifestPath,
-  `${JSON.stringify(
-    {
-      channel: 'beta',
-      version: options.version,
-      artifacts: artifacts.map(({ file: _file, contentType: _contentType, ...artifact }) => artifact),
-    },
-    null,
-    2
-  )}\n`
-);
-
-if (!options.dryRun) {
-  verifyExistingInfrastructure();
-}
-const reusableImmutableKeys = options.dryRun
-  ? new Set()
-  : findReusableImmutableKeys();
-for (const artifact of artifacts) {
-  if (reusableImmutableKeys.has(artifact.versionKey)) {
-    console.log(`[reuse] ${BUCKET}/${artifact.versionKey}`);
-    continue;
+export function collectR2Artifacts(releaseRoot) {
+  const manifest = verifyDownloadedReleaseAssets(releaseRoot);
+  const artifacts = [];
+  for (const artifact of manifest.artifacts) {
+    artifacts.push({
+      file: path.join(releaseRoot, artifact.assetName),
+      key: artifact.versionKey,
+      channelKey: artifact.channelKey,
+      contentType: 'application/octet-stream',
+    });
+    artifacts.push({
+      file: path.join(releaseRoot, artifact.checksumAssetName),
+      key: `${artifact.versionKey}.sha256`,
+      channelKey: `${artifact.channelKey}.sha256`,
+      contentType: 'text/plain; charset=utf-8',
+    });
   }
-  upload(artifact.file, artifact.versionKey, artifact.contentType, 'public, max-age=31536000, immutable');
-}
-for (const artifact of artifacts) {
-  upload(artifact.file, artifact.channelKey, artifact.contentType, 'no-cache');
-}
-upload(releaseManifestPath, 'studio/channels/beta/release.json', 'application/json; charset=utf-8', 'no-cache');
-upload(path.resolve('distribution/install.sh'), 'install.sh', 'text/x-shellscript; charset=utf-8', 'no-store');
-upload(path.resolve('distribution/install.ps1'), 'install.ps1', 'text/plain; charset=utf-8', 'no-store');
-console.log(options.dryRun ? 'R2 publication dry run complete.' : 'R2 beta publication complete.');
-
-function collectArtifacts(root, version) {
-  const result = [];
-  for (const target of RELEASE_TARGETS) {
-    for (const flavor of NODE_FLAVORS) {
-      const archiveName = target.archive === 'zip' ? 'renku.zip' : 'renku.tar.gz';
-      for (const name of [archiveName, `${archiveName}.sha256`]) {
-        const file = path.join(root, target.id, flavor, name);
-        if (!existsSync(file)) {
-          throw new Error(`RELEASE041 Missing matrix artifact: ${file}`);
-        }
-        result.push({
-          target: target.id,
-          flavor,
-          name,
-          file,
-          bytes: statSync(file).size,
-          sha256: createHash('sha256').update(readFileSync(file)).digest('hex'),
-          contentType: name.endsWith('.sha256') ? 'text/plain; charset=utf-8' : 'application/octet-stream',
-          versionKey: `studio/releases/${version}/${target.id}/${flavor}/${name}`,
-          channelKey: `studio/channels/beta/${target.id}/${flavor}/${name}`,
-        });
-      }
-    }
-  }
-  return result;
+  return { manifest, artifacts };
 }
 
-function verifyExistingInfrastructure() {
-  const response = spawnWrangler(['r2', 'bucket', 'list']);
+export function filesHaveIdenticalBytes(left, right) {
+  return sha256File(left) === sha256File(right);
+}
+
+function verifyExistingInfrastructure(token, accountId) {
+  const response = spawnWrangler(['r2', 'bucket', 'list'], token, accountId);
   if (!response.stdout.includes(BUCKET)) {
     throw new Error(`RELEASE042 Existing R2 bucket ${BUCKET} is not accessible.`);
   }
@@ -100,53 +54,59 @@ function verifyExistingInfrastructure() {
   }
 }
 
-function findReusableImmutableKeys() {
+function findReusableImmutableKeys(artifacts) {
   const reusable = new Set();
   for (const artifact of artifacts) {
     const response = spawnSync(
       'curl',
       [
         '-sS',
-        '--output', '/dev/null',
-        '--write-out', '%{http_code}',
-        `${PUBLIC_BASE_URL}/${artifact.versionKey}?renku-release-probe=${Date.now()}`,
+        '--output',
+        '/dev/null',
+        '--write-out',
+        '%{http_code}',
+        `${PUBLIC_BASE_URL}/${artifact.key}?renku-release-probe=${Date.now()}`,
       ],
       { encoding: 'utf8' }
     );
     if (response.status !== 0) {
-      throw new Error(`RELEASE047 Could not check immutable object ${artifact.versionKey}: ${response.stderr}`);
+      throw new Error(`RELEASE047 Could not check immutable object ${artifact.key}: ${response.stderr}`);
     }
     const status = response.stdout.trim();
     if (status === '404') {
       continue;
     }
     if (status !== '200') {
-      throw new Error(`RELEASE048 Immutable release object returned HTTP ${status}: ${artifact.versionKey}`);
+      throw new Error(`RELEASE048 Immutable release object returned HTTP ${status}: ${artifact.key}`);
     }
-    try {
-      verifyPublicObject(artifact.file, artifact.versionKey);
-    } catch (error) {
-      throw new Error(
-        `RELEASE048 Immutable release object contains different bytes: ${artifact.versionKey}\n${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-    reusable.add(artifact.versionKey);
+    verifyPublicObject(artifact.file, artifact.key);
+    reusable.add(artifact.key);
   }
   return reusable;
 }
 
-function upload(file, key, contentType, cacheControl) {
+function upload(file, key, contentType, cacheControl, options) {
   if (options.dryRun) {
     console.log(`[dry-run] ${BUCKET}/${key} <- ${file}`);
     return;
   }
-  spawnWrangler([
-    'r2', 'object', 'put', `${BUCKET}/${key}`,
-    '--file', file,
-    '--remote',
-    '--content-type', contentType,
-    '--cache-control', cacheControl,
-  ]);
+  spawnWrangler(
+    [
+      'r2',
+      'object',
+      'put',
+      `${BUCKET}/${key}`,
+      '--file',
+      file,
+      '--remote',
+      '--content-type',
+      contentType,
+      '--cache-control',
+      cacheControl,
+    ],
+    options.token,
+    options.accountId
+  );
   verifyPublicObject(file, key);
 }
 
@@ -158,20 +118,22 @@ function verifyPublicObject(localFile, key) {
       'curl',
       [
         '-fsSL',
-        '--retry', '5',
-        '--retry-delay', '2',
-        '-H', 'Cache-Control: no-cache',
+        '--retry',
+        '5',
+        '--retry-delay',
+        '2',
+        '-H',
+        'Cache-Control: no-cache',
         `${PUBLIC_BASE_URL}/${key}?renku-release=${Date.now()}`,
-        '--output', downloaded,
+        '--output',
+        downloaded,
       ],
       { encoding: 'utf8' }
     );
     if (result.status !== 0) {
       throw new Error(`RELEASE045 Public verification download failed for ${key}: ${result.stderr}`);
     }
-    const localHash = createHash('sha256').update(readFileSync(localFile)).digest('hex');
-    const remoteHash = createHash('sha256').update(readFileSync(downloaded)).digest('hex');
-    if (localHash !== remoteHash) {
+    if (!filesHaveIdenticalBytes(localFile, downloaded)) {
       throw new Error(`RELEASE046 Public verification hash mismatch for ${key}.`);
     }
   } finally {
@@ -179,7 +141,7 @@ function verifyPublicObject(localFile, key) {
   }
 }
 
-function spawnWrangler(args) {
+function spawnWrangler(args, token, accountId) {
   const result = spawnSync('npx', ['--yes', 'wrangler@4.73.0', ...args], {
     encoding: 'utf8',
     env: {
@@ -195,12 +157,79 @@ function spawnWrangler(args) {
 }
 
 function readOptions(args) {
-  const versionIndex = args.indexOf('--version');
   const releaseIndex = args.indexOf('--release-dir');
-  const version = versionIndex >= 0 ? args[versionIndex + 1] : undefined;
   const releaseDir = releaseIndex >= 0 ? args[releaseIndex + 1] : undefined;
-  if (!version || !releaseDir) {
-    throw new Error('Usage: publish-r2.mjs --version <version> --release-dir <directory> [--dry-run]');
+  if (!releaseDir) {
+    throw new Error('Usage: publish-r2.mjs --release-dir <downloaded-github-release> [--dry-run]');
   }
-  return { version, releaseDir, dryRun: args.includes('--dry-run') };
+  return { releaseDir, dryRun: args.includes('--dry-run') };
+}
+
+function sha256File(filePath) {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+}
+
+async function main() {
+  const cliOptions = readOptions(process.argv.slice(2));
+  const releaseRoot = path.resolve(cliOptions.releaseDir);
+  if (!existsSync(releaseRoot)) {
+    throw new Error(`RELEASE041 GitHub Release download is missing: ${releaseRoot}`);
+  }
+  const token = process.env.CLOUDFLARE_TOKEN;
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (!cliOptions.dryRun && (!token || !accountId)) {
+    throw new Error('RELEASE040 CLOUDFLARE_TOKEN and CLOUDFLARE_ACCOUNT_ID are required.');
+  }
+  const { manifest, artifacts } = collectR2Artifacts(releaseRoot);
+  const options = { ...cliOptions, token, accountId };
+  if (!options.dryRun) {
+    verifyExistingInfrastructure(token, accountId);
+  }
+  const reusableImmutableKeys = options.dryRun
+    ? new Set()
+    : findReusableImmutableKeys(artifacts);
+  for (const artifact of artifacts) {
+    if (reusableImmutableKeys.has(artifact.key)) {
+      console.log(`[reuse] ${BUCKET}/${artifact.key}`);
+    } else {
+      upload(
+        artifact.file,
+        artifact.key,
+        artifact.contentType,
+        'public, max-age=31536000, immutable',
+        options
+      );
+    }
+  }
+  for (const artifact of artifacts) {
+    upload(artifact.file, artifact.channelKey, artifact.contentType, 'no-cache', options);
+  }
+  upload(
+    path.join(releaseRoot, 'release.json'),
+    'studio/channels/beta/release.json',
+    'application/json; charset=utf-8',
+    'no-cache',
+    options
+  );
+  for (const installer of manifest.installers) {
+    upload(
+      path.join(releaseRoot, installer.assetName),
+      installer.key,
+      installer.name.endsWith('.sh')
+        ? 'text/x-shellscript; charset=utf-8'
+        : 'text/plain; charset=utf-8',
+      'no-store',
+      options
+    );
+  }
+  console.log(
+    options.dryRun ? 'R2 publication dry run complete.' : 'R2 beta publication complete.'
+  );
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    process.stderr.write(`[release:r2] ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  });
 }

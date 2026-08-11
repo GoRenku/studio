@@ -1,0 +1,257 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import test from 'node:test';
+import {
+  STUDIO_VERSION_MANIFESTS,
+  assertReleaseTagAtHead,
+  bumpSemver,
+  parseReleaseTag,
+  parseSemver,
+  readStudioVersion,
+  repositoryRoot,
+  writeStudioVersion,
+} from './release-contract.mjs';
+import {
+  stageGitHubReleaseAssets,
+  verifyDownloadedReleaseAssets,
+} from './publish-github-release.mjs';
+import { filesHaveIdenticalBytes } from './publish-r2.mjs';
+import { assertAboutOutput, assertStudioOnlyProduct } from './verify-product.mjs';
+import { RELEASE_TARGETS } from './release-targets.mjs';
+
+test('strict SemVer and tag contracts reject ambiguous release identities', () => {
+  assert.deepEqual(parseSemver('1.2.3'), { major: 1, minor: 2, patch: 3 });
+  assert.equal(bumpSemver('1.2.3', 'patch'), '1.2.4');
+  assert.equal(bumpSemver('1.2.3', 'minor'), '1.3.0');
+  assert.equal(bumpSemver('1.2.3', 'major'), '2.0.0');
+  assert.equal(parseReleaseTag('v1.2.3'), '1.2.3');
+  assert.throws(() => parseSemver('1.2'), /RELEASE050/);
+  assert.throws(() => parseReleaseTag('release-1.2.3'), /RELEASE052/);
+});
+
+test('Studio runtime manifests share one checked-in version', () => {
+  const root = createVersionFixture('0.1.0');
+  assert.equal(readStudioVersion(root), '0.1.0');
+  writeStudioVersion('0.2.0', root);
+  assert.equal(readStudioVersion(root), '0.2.0');
+  const mismatched = path.join(root, STUDIO_VERSION_MANIFESTS.at(-1));
+  const manifest = JSON.parse(readFileSync(mismatched, 'utf8'));
+  manifest.version = '0.2.1';
+  writeFileSync(mismatched, `${JSON.stringify(manifest, null, 2)}\n`);
+  assert.throws(() => readStudioVersion(root), /RELEASE054/);
+});
+
+test('release validation requires an annotated tag at the versioned HEAD', () => {
+  const root = createVersionFixture('1.0.0');
+  runGit(root, ['init', '-b', 'main']);
+  runGit(root, ['config', 'user.email', 'release-test@gorenku.com']);
+  runGit(root, ['config', 'user.name', 'Renku Release Test']);
+  runGit(root, ['add', '.']);
+  runGit(root, ['commit', '-m', 'release fixture']);
+  runGit(root, ['tag', '-a', 'v1.0.0', '-m', 'release: v1.0.0']);
+  assert.equal(assertReleaseTagAtHead('v1.0.0', root).version, '1.0.0');
+  runGit(root, ['tag', 'v1.0.1']);
+  writeStudioVersion('1.0.1', root);
+  runGit(root, ['add', '.']);
+  runGit(root, ['commit', '-m', 'release: v1.0.1']);
+  runGit(root, ['tag', '-f', 'v1.0.1']);
+  assert.throws(() => assertReleaseTagAtHead('v1.0.1', root), /RELEASE064/);
+});
+
+test('GitHub Release staging verifies the complete native matrix and exact bytes', () => {
+  const releaseRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-release-matrix-'));
+  const stagingRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-release-assets-'));
+  const version = readStudioVersion();
+  for (const target of RELEASE_TARGETS) {
+    writeTargetArtifact(releaseRoot, target, version, 'runtime');
+  }
+  const emptyStagingRoot = path.join(stagingRoot, 'assets');
+  const manifest = stageGitHubReleaseAssets({
+    tag: `v${version}`,
+    releaseRoot,
+    stagingRoot: emptyStagingRoot,
+  });
+  assert.equal(manifest.artifacts.length, 3);
+  assert.equal(verifyDownloadedReleaseAssets(emptyStagingRoot).version, version);
+  writeFileSync(path.join(emptyStagingRoot, manifest.artifacts[0].assetName), 'tampered');
+  assert.throws(() => verifyDownloadedReleaseAssets(emptyStagingRoot), /RELEASE080/);
+});
+
+test('local GitHub Release staging records runtime and structural verification', () => {
+  const releaseRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-local-release-'));
+  const stagingRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-local-assets-'));
+  const version = readStudioVersion();
+  for (const target of RELEASE_TARGETS) {
+    writeTargetArtifact(
+      releaseRoot,
+      target,
+      version,
+      target.id === 'darwin-arm64' ? 'runtime' : 'structural'
+    );
+  }
+  const manifest = stageGitHubReleaseAssets({
+    tag: `v${version}`,
+    releaseRoot,
+    stagingRoot: path.join(stagingRoot, 'assets'),
+  });
+  assert.deepEqual(manifest.targets, RELEASE_TARGETS.map(({ id }) => id));
+  assert.equal(manifest.artifacts.length, 3);
+  assert.deepEqual(
+    manifest.artifacts.map(({ verification }) => verification.level),
+    ['runtime', 'structural', 'structural']
+  );
+  assert.deepEqual(
+    manifest.installers.map(({ name }) => name),
+    ['install.sh', 'install.ps1']
+  );
+  assert.equal(verifyDownloadedReleaseAssets(path.join(stagingRoot, 'assets')).targets.length, 3);
+});
+
+test('R2 resume comparison accepts only identical bytes', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'renku-r2-bytes-'));
+  const left = path.join(root, 'left');
+  const same = path.join(root, 'same');
+  const different = path.join(root, 'different');
+  writeFileSync(left, 'released bytes');
+  writeFileSync(same, 'released bytes');
+  writeFileSync(different, 'different bytes');
+  assert.equal(filesHaveIdenticalBytes(left, same), true);
+  assert.equal(filesHaveIdenticalBytes(left, different), false);
+});
+
+test('official Node acquisition rejects an occupied destination without deleting it', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'renku-node-destination-'));
+  const output = path.join(root, 'occupied');
+  mkdirSync(output);
+  const sentinel = path.join(output, 'keep-me');
+  writeFileSync(sentinel, 'safe');
+  const result = spawnSync(
+    process.execPath,
+    [path.join(repositoryRoot, 'scripts/release/download-node-runtime.mjs'), 'darwin-arm64', output],
+    { encoding: 'utf8' }
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /RELEASE034/);
+  assert.equal(readFileSync(sentinel, 'utf8'), 'safe');
+});
+
+test('installers smoke the extracted CLI before activating a version', () => {
+  const shellInstaller = readFileSync(path.join(repositoryRoot, 'distribution/install.sh'), 'utf8');
+  const windowsInstaller = readFileSync(path.join(repositoryRoot, 'distribution/install.ps1'), 'utf8');
+  assert.ok(shellInstaller.indexOf('Renku CLI smoke validation failed') < shellInstaller.indexOf('destination="$INSTALL_ROOT/versions/$version"'));
+  assert.ok(windowsInstaller.indexOf('Renku CLI smoke validation failed') < windowsInstaller.indexOf('$Destination = Join-Path $VersionsRoot'));
+  for (const installer of [shellInstaller, windowsInstaller]) {
+    assert.doesNotMatch(installer, /Bundled plugin|Claude Code|IDE extension/);
+    assert.match(installer, /GoRenku\/studio-skills --ref beta/);
+  }
+});
+
+test('product verification rejects a no-op CLI smoke response', () => {
+  assert.doesNotThrow(() =>
+    assertAboutOutput(JSON.stringify({ binary: 'renku', version: '0.1.0' }), '0.1.0')
+  );
+  assert.throws(() => assertAboutOutput('', '0.1.0'), /RELEASE020/);
+  assert.throws(
+    () => assertAboutOutput(JSON.stringify({ binary: 'renku', version: '0.2.0' }), '0.1.0'),
+    /RELEASE020/
+  );
+});
+
+test('Studio release machinery has no cross-repository checkout or mutation capability', () => {
+  const releaseFiles = [
+    ...readdirReleaseScripts(),
+    path.join(repositoryRoot, '.github/workflows/release.yml'),
+  ];
+  for (const filePath of releaseFiles) {
+    const contents = readFileSync(filePath, 'utf8');
+    assert.doesNotMatch(contents, /studio-skills|RENKU_SKILLS_DIR|--skills-dir/);
+  }
+  const workflow = readFileSync(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8');
+  assert.match(workflow, /GITHUB_REF_TYPE/);
+  assert.doesNotMatch(workflow, /inputs\.version|release-beta/);
+  const publisher = readFileSync(path.join(repositoryRoot, 'scripts/release/publish-r2.mjs'), 'utf8');
+  assert.doesNotMatch(publisher, /--version/);
+});
+
+test('the default publisher is local and workflow dispatch remains explicit', () => {
+  const rootManifest = JSON.parse(
+    readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8')
+  );
+  const publisher = readFileSync(path.join(repositoryRoot, 'scripts/release/publish.mjs'), 'utf8');
+  const dispatcher = readFileSync(
+    path.join(repositoryRoot, 'scripts/release/dispatch-release-workflow.mjs'),
+    'utf8'
+  );
+  assert.equal(rootManifest.scripts['release:publish'], 'node scripts/release/publish.mjs');
+  assert.equal(
+    rootManifest.scripts['release:dispatch'],
+    'node scripts/release/dispatch-release-workflow.mjs'
+  );
+  assert.doesNotMatch(publisher, /workflow.*run|release\.yml/);
+  assert.match(dispatcher, /workflow.*run/);
+  assert.match(dispatcher, /release\.yml/);
+});
+
+test('Studio-only product verification rejects plugin-owned roots', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'renku-product-boundary-'));
+  assert.doesNotThrow(() => assertStudioOnlyProduct(root));
+  mkdirSync(path.join(root, 'plugin'));
+  assert.throws(() => assertStudioOnlyProduct(root), /RELEASE024/);
+});
+
+function createVersionFixture(version) {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'renku-version-contract-'));
+  for (const relativePath of STUDIO_VERSION_MANIFESTS) {
+    const destination = path.join(root, relativePath);
+    mkdirSync(path.dirname(destination), { recursive: true });
+    writeFileSync(destination, `${JSON.stringify({ name: relativePath, version }, null, 2)}\n`);
+  }
+  return root;
+}
+
+function runGit(root, args) {
+  const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+}
+
+function readdirReleaseScripts() {
+  const releaseRoot = path.join(repositoryRoot, 'scripts/release');
+  return readdirSync(releaseRoot)
+    .filter((name) => name.endsWith('.mjs') && !name.endsWith('.test.mjs'))
+    .map((name) => path.join(releaseRoot, name));
+}
+
+function writeTargetArtifact(releaseRoot, target, version, level) {
+  const directory = path.join(releaseRoot, target.id);
+  mkdirSync(directory, { recursive: true });
+  const archiveName = target.archive === 'zip' ? 'renku.zip' : 'renku.tar.gz';
+  const archive = path.join(directory, archiveName);
+  writeFileSync(archive, target.id);
+  const hash = createHash('sha256').update(readFileSync(archive)).digest('hex');
+  writeFileSync(`${archive}.sha256`, `${hash}  ${archiveName}\n`);
+  writeFileSync(
+    path.join(directory, 'verification.json'),
+    `${JSON.stringify(
+      {
+        product: 'renku',
+        version,
+        target: target.id,
+        level,
+        verifier: 'darwin-arm64',
+        verifiedAt: '2026-08-11T00:00:00.000Z',
+      },
+      null,
+      2
+    )}\n`
+  );
+}
