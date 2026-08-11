@@ -1,0 +1,573 @@
+---
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh';
+const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
+const marketplaceCommand =
+  'codex plugin marketplace add GoRenku/studio-skills --ref beta';
+const pluginCommand = 'codex plugin add renku@renku';
+---
+
+<BaseLayout
+  title="Download Renku — Install for macOS or Windows"
+  description="Install the Renku desktop beta for macOS or Windows, add the Renku plugin to Codex, and start your local previsualization studio."
+>
+  <SiteHeader />
+  <main class="install-page" id="top">
+    <div class="install-glow" aria-hidden="true"></div>
+
+    <section class="container install-hero">
+      <a class="back-link" href="/">← Back to Renku</a>
+      <p class="eyebrow" data-reveal>Desktop beta</p>
+      <h1 data-reveal style="--reveal-delay: 0.06s">
+        Bring the studio <em>home.</em>
+      </h1>
+      <p class="install-intro" data-reveal style="--reveal-delay: 0.12s">
+        Renku runs locally on your computer, close to your screenplay and media.
+        Install the self-contained runtime, connect Codex, and start building your film.
+      </p>
+    </section>
+
+    <section class="container install-workflow" aria-labelledby="install-heading">
+      <div class="install-heading-row" data-reveal>
+        <div>
+          <p class="eyebrow">Installation</p>
+          <h2 id="install-heading">Choose your platform</h2>
+        </div>
+        <p>Apple silicon and Intel Macs · 64-bit Windows</p>
+      </div>
+
+      <div class="platform-tabs" role="tablist" aria-label="Operating system" data-reveal>
+        <button
+          class="platform-tab is-selected"
+          type="button"
+          role="tab"
+          id="mac-tab"
+          aria-controls="mac-panel"
+          aria-selected="true"
+          data-platform-tab="mac"
+        >
+          <span>macOS</span>
+          <small>Apple silicon + Intel</small>
+        </button>
+        <button
+          class="platform-tab"
+          type="button"
+          role="tab"
+          id="windows-tab"
+          aria-controls="windows-panel"
+          aria-selected="false"
+          tabindex="-1"
+          data-platform-tab="windows"
+        >
+          <span>Windows</span>
+          <small>Native 64-bit PowerShell</small>
+        </button>
+      </div>
+
+      <div class="platform-panel" id="mac-panel" role="tabpanel" aria-labelledby="mac-tab" data-platform-panel="mac">
+        <div class="step-intro">
+          <span class="step-number">01</span>
+          <div>
+            <h3>Install Renku</h3>
+            <p>Open Terminal, paste this command, and press Return.</p>
+          </div>
+        </div>
+        <div class="command-block">
+          <span class="command-prompt" aria-hidden="true">$</span>
+          <code>{macCommand}</code>
+          <button class="copy-button" type="button" data-copy={macCommand} aria-label="Copy macOS install command">Copy</button>
+        </div>
+        <p class="command-note">
+          The installer detects your Mac, verifies the download with SHA-256, and adds
+          <code>renku</code> to your path. No separate Node.js install is required.
+        </p>
+      </div>
+
+      <div class="platform-panel" id="windows-panel" role="tabpanel" aria-labelledby="windows-tab" data-platform-panel="windows" hidden>
+        <div class="step-intro">
+          <span class="step-number">01</span>
+          <div>
+            <h3>Install Renku</h3>
+            <p>Open PowerShell, paste this command, and press Enter. WSL is not required.</p>
+          </div>
+        </div>
+        <div class="command-block">
+          <span class="command-prompt" aria-hidden="true">PS</span>
+          <code>{windowsCommand}</code>
+          <button class="copy-button" type="button" data-copy={windowsCommand} aria-label="Copy Windows install command">Copy</button>
+        </div>
+        <p class="command-note">
+          The installer verifies the download with SHA-256, installs the native Windows
+          build, and adds <code>renku</code> to your user path. No separate Node.js install is required.
+        </p>
+      </div>
+
+      <div class="install-step" data-reveal>
+        <div class="step-intro">
+          <span class="step-number">02</span>
+          <div>
+            <h3>Add Renku to Codex</h3>
+            <p>The Studio runtime and the Renku plugin are released separately. Add the beta marketplace once, then install the plugin.</p>
+          </div>
+        </div>
+        <div class="command-stack">
+          <div class="command-block command-block-quiet">
+            <span class="command-prompt" aria-hidden="true">$</span>
+            <code>{marketplaceCommand}</code>
+            <button class="copy-button" type="button" data-copy={marketplaceCommand} aria-label="Copy marketplace command">Copy</button>
+          </div>
+          <div class="command-block command-block-quiet">
+            <span class="command-prompt" aria-hidden="true">$</span>
+            <code>{pluginCommand}</code>
+            <button class="copy-button" type="button" data-copy={pluginCommand} aria-label="Copy plugin install command">Copy</button>
+          </div>
+        </div>
+        <p class="command-note">
+          Prefer the interface? Open <strong>Plugins</strong> in Codex or the ChatGPT desktop app,
+          choose the <strong>renku</strong> marketplace, and install Renku there.
+        </p>
+      </div>
+
+      <div class="install-step launch-step" data-reveal>
+        <div class="step-intro">
+          <span class="step-number">03</span>
+          <div>
+            <h3>Start the studio</h3>
+            <p>Begin a new Codex task, then launch Renku’s local browser studio whenever you are ready to work.</p>
+          </div>
+        </div>
+        <div class="command-block command-block-launch">
+          <span class="command-prompt" aria-hidden="true">$</span>
+          <code>renku studio start</code>
+          <button class="copy-button" type="button" data-copy="renku studio start" aria-label="Copy launch command">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="container install-details" aria-label="Installation details">
+      <div data-reveal>
+        <p class="detail-label">Private by default</p>
+        <h3>Your project stays on your machine.</h3>
+        <p>Studio runs as a local web application. Your project database and media remain in folders you control.</p>
+      </div>
+      <div data-reveal style="--reveal-delay: 0.06s">
+        <p class="detail-label">Safe updates</p>
+        <h3>Versioned and verified.</h3>
+        <p>Every download is checksum-verified before activation, and Renku keeps installations versioned.</p>
+      </div>
+      <div data-reveal style="--reveal-delay: 0.12s">
+        <p class="detail-label">Open development</p>
+        <h3>See how Renku is built.</h3>
+        <p>Browse the source, follow releases, or report an issue on <a href="https://github.com/GoRenku/studio" target="_blank" rel="noreferrer">GitHub →</a></p>
+      </div>
+    </section>
+  </main>
+  <SiteFooter />
+
+  <p class="copy-status" role="status" aria-live="polite"></p>
+
+  <script>
+    const tabs = Array.from(document.querySelectorAll<HTMLElement>('[data-platform-tab]'));
+    const panels = Array.from(document.querySelectorAll<HTMLElement>('[data-platform-panel]'));
+    const status = document.querySelector<HTMLElement>('.copy-status');
+
+    function selectPlatform(platform: string) {
+      for (const tab of tabs) {
+        const selected = tab.dataset.platformTab === platform;
+        tab.classList.toggle('is-selected', selected);
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      }
+
+      for (const panel of panels) {
+        panel.hidden = panel.dataset.platformPanel !== platform;
+      }
+    }
+
+    for (const tab of tabs) {
+      tab.addEventListener('click', () => selectPlatform(tab.dataset.platformTab ?? 'mac'));
+      tab.addEventListener('keydown', (event) => {
+        const isLeft = event.key === 'ArrowLeft' || event.key === 'Left';
+        const isRight = event.key === 'ArrowRight' || event.key === 'Right';
+        if (!isLeft && !isRight) return;
+
+        event.preventDefault();
+        const currentIndex = tabs.indexOf(tab);
+        const direction = isRight ? 1 : -1;
+        const nextTab = tabs[(currentIndex + direction + tabs.length) % tabs.length];
+        selectPlatform(nextTab.dataset.platformTab ?? 'mac');
+        nextTab.focus();
+      });
+    }
+
+    const detectedPlatform = `${navigator.platform} ${navigator.userAgent}`;
+    if (/win/i.test(detectedPlatform)) selectPlatform('windows');
+
+    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+      button.addEventListener('click', async () => {
+        const value = button.dataset.copy;
+        if (!value) return;
+
+        const previous = button.textContent;
+        try {
+          await navigator.clipboard.writeText(value);
+          button.textContent = 'Copied';
+          if (status) status.textContent = 'Command copied to clipboard.';
+        } catch {
+          button.textContent = 'Try again';
+          if (status) status.textContent = 'The command could not be copied.';
+        }
+
+        window.setTimeout(() => {
+          button.textContent = previous;
+          if (status) status.textContent = '';
+        }, 1800);
+      });
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .install-page {
+    position: relative;
+    overflow: hidden;
+    padding-bottom: clamp(5rem, 12vh, 8rem);
+  }
+
+  .install-glow {
+    position: absolute;
+    inset: -12rem -16rem auto;
+    height: 52rem;
+    pointer-events: none;
+    background:
+      radial-gradient(36rem 24rem at 26% 28%, rgba(253, 160, 45, 0.15), transparent 68%),
+      radial-gradient(34rem 22rem at 78% 10%, rgba(30, 179, 176, 0.08), transparent 68%);
+  }
+
+  .install-hero {
+    position: relative;
+    max-width: 54rem;
+    padding-top: clamp(8rem, 17vh, 11rem);
+    padding-bottom: clamp(3.5rem, 8vh, 5rem);
+    text-align: center;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-bottom: 2.4rem;
+    font-size: 0.82rem;
+    color: var(--paper-500);
+    transition: color 0.2s ease;
+  }
+
+  .back-link:hover {
+    color: var(--amber-400);
+  }
+
+  h1 {
+    margin-top: 1.1rem;
+    font-size: clamp(2.8rem, 7vw, 5.4rem);
+  }
+
+  h1 em {
+    color: var(--amber-400);
+    font-weight: 400;
+  }
+
+  .install-intro {
+    max-width: 43rem;
+    margin: 1.5rem auto 0;
+    font-size: clamp(1rem, 1.6vw, 1.16rem);
+    color: var(--paper-300);
+  }
+
+  .install-workflow {
+    position: relative;
+    max-width: 64rem;
+    padding: clamp(1.5rem, 4vw, 3rem);
+    border: 1px solid rgba(244, 239, 230, 0.1);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--ink-850) 82%, transparent);
+    box-shadow: 0 32px 80px -40px rgba(0, 0, 0, 0.9);
+  }
+
+  .install-heading-row {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  .install-heading-row h2 {
+    margin-top: 0.55rem;
+    font-size: clamp(1.9rem, 4vw, 2.7rem);
+  }
+
+  .install-heading-row > p {
+    padding-bottom: 0.25rem;
+    font-size: 0.82rem;
+    color: var(--paper-700);
+  }
+
+  .platform-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.7rem;
+    margin-top: 2.4rem;
+    padding-bottom: 2.4rem;
+    border-bottom: 1px solid rgba(244, 239, 230, 0.08);
+  }
+
+  .platform-tab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.95rem 1.1rem;
+    border: 1px solid var(--ink-600);
+    border-radius: var(--radius-md);
+    background: var(--ink-900);
+    color: var(--paper-300);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+
+  .platform-tab:hover {
+    border-color: rgba(253, 160, 45, 0.5);
+  }
+
+  .platform-tab:focus-visible {
+    outline: 2px solid var(--amber-400);
+    outline-offset: 3px;
+  }
+
+  .platform-tab.is-selected {
+    border-color: var(--amber-500);
+    background: var(--accent-soft);
+    color: var(--paper-100);
+  }
+
+  .platform-tab span {
+    font-weight: 650;
+  }
+
+  .platform-tab small {
+    color: var(--paper-700);
+  }
+
+  .platform-panel,
+  .install-step {
+    padding-top: 2.5rem;
+  }
+
+  .platform-panel[hidden] {
+    display: none;
+  }
+
+  .install-step {
+    margin-top: 2.7rem;
+    border-top: 1px solid rgba(244, 239, 230, 0.08);
+  }
+
+  .step-intro {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr;
+    gap: 1.1rem;
+  }
+
+  .step-number {
+    padding-top: 0.1rem;
+    font-family: var(--font-display);
+    color: var(--amber-500);
+  }
+
+  .step-intro h3 {
+    font-family: var(--font-body);
+    font-size: 1.02rem;
+    font-weight: 650;
+    letter-spacing: 0;
+  }
+
+  .step-intro p {
+    max-width: 46rem;
+    margin-top: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--paper-500);
+  }
+
+  .command-block {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 1.25rem;
+    min-height: 4.5rem;
+    padding: 0.75rem 0.8rem 0.75rem 1.15rem;
+    border: 1px solid rgba(253, 160, 45, 0.68);
+    background: var(--ink-950);
+  }
+
+  .command-block-quiet {
+    border-color: rgba(244, 239, 230, 0.14);
+  }
+
+  .command-block-launch {
+    border-color: rgba(30, 179, 176, 0.55);
+  }
+
+  .command-prompt {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88rem;
+    color: var(--amber-400);
+  }
+
+  .command-block-launch .command-prompt {
+    color: var(--teal-500);
+  }
+
+  .command-block code {
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: clamp(0.78rem, 1.5vw, 0.96rem);
+    white-space: nowrap;
+    color: var(--paper-100);
+  }
+
+  .copy-button {
+    min-width: 4.4rem;
+    padding: 0.62rem 0.75rem;
+    border: 1px solid var(--ink-600);
+    border-radius: 8px;
+    background: var(--ink-850);
+    color: var(--paper-300);
+    font: 600 0.76rem/1 var(--font-body);
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+
+  .copy-button:hover,
+  .copy-button:focus-visible {
+    border-color: var(--amber-500);
+    color: var(--paper-100);
+    background: var(--accent-soft);
+  }
+
+  .command-note {
+    margin: 0.8rem 0 0 3.5rem;
+    font-size: 0.8rem;
+    color: var(--paper-700);
+  }
+
+  .command-note code {
+    color: var(--paper-300);
+  }
+
+  .command-note strong {
+    color: var(--paper-300);
+  }
+
+  .command-stack {
+    margin-left: 3.5rem;
+  }
+
+  .command-stack .command-block + .command-block {
+    margin-top: 0.55rem;
+  }
+
+  .launch-step {
+    padding-bottom: 0.2rem;
+  }
+
+  .launch-step .command-block {
+    margin-left: 3.5rem;
+  }
+
+  .install-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(1.5rem, 4vw, 3rem);
+    max-width: 64rem;
+    padding-top: clamp(3.5rem, 8vh, 5.5rem);
+  }
+
+  .install-details > div + div {
+    border-left: 1px solid rgba(244, 239, 230, 0.08);
+    padding-left: clamp(1.5rem, 4vw, 3rem);
+  }
+
+  .detail-label {
+    font-size: 0.7rem;
+    font-weight: 650;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--teal-500);
+  }
+
+  .install-details h3 {
+    margin-top: 0.65rem;
+    font-size: 1.35rem;
+  }
+
+  .install-details div > p:last-child {
+    margin-top: 0.75rem;
+    font-size: 0.86rem;
+    color: var(--paper-500);
+  }
+
+  .install-details a {
+    color: var(--amber-400);
+  }
+
+  .copy-status {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  @media (max-width: 720px) {
+    .install-heading-row {
+      display: block;
+    }
+
+    .install-heading-row > p {
+      margin-top: 0.7rem;
+    }
+
+    .platform-tabs {
+      grid-template-columns: 1fr;
+    }
+
+    .command-block {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .copy-button {
+      grid-column: 1 / -1;
+      width: 100%;
+    }
+
+    .command-stack,
+    .launch-step .command-block,
+    .command-note {
+      margin-left: 0;
+    }
+
+    .install-details {
+      grid-template-columns: 1fr;
+    }
+
+    .install-details > div + div {
+      border-left: 0;
+      border-top: 1px solid rgba(244, 239, 230, 0.08);
+      padding-top: 1.5rem;
+      padding-left: 0;
+    }
+  }
+</style>

@@ -8,14 +8,14 @@ import { site } from '../data/site';
 
 <header class="site-header">
   <div class="container header-inner">
-    <a href="#top" class="brand">
+    <a href="/#top" class="brand">
       <Image src={logo} alt="" width="34" height="38" loading="eager" />
       <span class="brand-name">renku</span>
     </a>
     <nav class="site-nav" aria-label="Main">
-      <a href="#features">Features</a>
-      <a href="#workflow">Workflow</a>
-      <a href="#audience">Who it’s for</a>
+      <a href="/#features">Features</a>
+      <a href="/#workflow">Workflow</a>
+      <a href="/#audience">Who it’s for</a>
     </nav>
     <div class="header-actions">
       <a
@@ -27,7 +27,7 @@ import { site } from '../data/site';
       >
         <Image src={githubMark} alt="" width="20" height="20" loading="eager" />
       </a>
-      <a href={site.studioUrl} class="btn btn-primary header-cta">Download Studio</a>
+      <a href={site.downloadUrl} class="btn btn-primary header-cta">Download Studio</a>
     </div>
   </div>
 </header>
