@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import packageJson from '../../package.json' with { type: 'json' };
 import { getRenkuCliInfo } from './about-command.js';
 
 describe('studio-cli scaffold', () => {
@@ -6,7 +7,7 @@ describe('studio-cli scaffold', () => {
     expect(getRenkuCliInfo()).toEqual({
       cli: '@gorenku/studio-cli',
       binary: 'renku',
-      version: '0.1.0',
+      version: packageJson.version,
       core: {
         packageName: '@gorenku/studio-core',
         purpose: 'renku-studio-domain',

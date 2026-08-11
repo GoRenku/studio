@@ -128,7 +128,12 @@ pnpm release:publish -- --tag vX.Y.Z
 
 The recovery command revalidates tag, version, commit, and `origin/main`
 ancestry, then safely rebuilds/reuses the release-local private Node runtime
-and resumes the draft release. It never bumps, recommits, or moves the tag.
+and resumes the draft release. When the draft already has the complete declared
+asset set, the command downloads and verifies those existing assets and uses
+those exact bytes for R2 recovery instead of replacing them with a rebuild. An
+incomplete draft is repaired before R2 publication; a complete draft whose
+bytes fail verification stops with an error. The command never bumps,
+recommits, or moves the tag.
 
 To exercise the complete local build, GitHub asset staging, and R2 publication
 plan without changing refs or remote release state:

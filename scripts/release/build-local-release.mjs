@@ -1,5 +1,12 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+} from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -102,14 +109,27 @@ function assertNodeLine(line, expectedMajor) {
   }
 }
 
-function requirePrivateNodeRuntime(target, runtimeRoot) {
+export function requirePrivateNodeRuntime(
+  target,
+  runtimeRoot,
+  downloadRuntime = downloadPrivateNodeRuntime
+) {
   if (!existsSync(runtimeRoot)) {
-    const result = runWithNode(
-      '24',
-      ['node', 'scripts/release/download-node-runtime.mjs', target.id, runtimeRoot],
-      'pipe'
+    const runtimeParent = path.dirname(runtimeRoot);
+    mkdirSync(runtimeParent, { recursive: true });
+    const temporaryParent = mkdtempSync(
+      path.join(runtimeParent, `.${path.basename(runtimeRoot)}-download-`)
     );
-    return assertPrivateNodeRoot(result.stdout.trim().split('\n').at(-1), target);
+    const temporaryRuntimeRoot = path.join(temporaryParent, 'runtime');
+    try {
+      const candidate = downloadRuntime(target, temporaryRuntimeRoot);
+      const verifiedCandidate = assertPrivateNodeRoot(candidate, target);
+      const relativeCandidate = path.relative(temporaryRuntimeRoot, verifiedCandidate);
+      renameSync(temporaryRuntimeRoot, runtimeRoot);
+      return assertPrivateNodeRoot(path.join(runtimeRoot, relativeCandidate), target);
+    } finally {
+      rmSync(temporaryParent, { recursive: true, force: true });
+    }
   }
   const candidates = readdirSync(runtimeRoot, { withFileTypes: true })
     .filter(
@@ -122,6 +142,15 @@ function requirePrivateNodeRuntime(target, runtimeRoot) {
     throw new Error(`RELEASE091 Could not reuse one private Node 24 runtime in ${runtimeRoot}.`);
   }
   return assertPrivateNodeRoot(candidates[0], target);
+}
+
+function downloadPrivateNodeRuntime(target, runtimeRoot) {
+  const result = runWithNode(
+    '24',
+    ['node', 'scripts/release/download-node-runtime.mjs', target.id, runtimeRoot],
+    'pipe'
+  );
+  return result.stdout.trim().split('\n').at(-1);
 }
 
 function assertPrivateNodeRoot(candidate, target) {

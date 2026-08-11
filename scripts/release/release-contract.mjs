@@ -194,6 +194,13 @@ export function assertReleaseTagAtHead(tag, root = repositoryRoot) {
   return { version, commit: head };
 }
 
+export function assertReleaseDispatch(tag, workflowRef, root = repositoryRoot) {
+  if (workflowRef.refType !== 'tag' || workflowRef.refName !== tag) {
+    throw new Error(`RELEASE086 Dispatch release.yml from the exact tag passed as input: ${tag}.`);
+  }
+  return assertReleaseTagAtHead(tag, root);
+}
+
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, 'utf8'));
 }

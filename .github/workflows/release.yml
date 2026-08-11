@@ -25,11 +25,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          if [[ "${GITHUB_REF_TYPE}" != "tag" || "${GITHUB_REF_NAME}" != "${RELEASE_TAG}" ]]; then
-            echo "RELEASE086 Dispatch release.yml from the exact tag passed as input." >&2
-            exit 1
-          fi
-          node --input-type=module -e "import { assertReleaseTagAtHead } from './scripts/release/release-contract.mjs'; const release = assertReleaseTagAtHead(process.env.RELEASE_TAG); process.stdout.write('version=' + release.version + '\n');" >> "$GITHUB_OUTPUT"
+          node --input-type=module -e "import { assertReleaseDispatch } from './scripts/release/release-contract.mjs'; const release = assertReleaseDispatch(process.env.RELEASE_TAG, { refType: process.env.GITHUB_REF_TYPE, refName: process.env.GITHUB_REF_NAME }); process.stdout.write('version=' + release.version + '\n');" >> "$GITHUB_OUTPUT"
 
   build:
     needs: validate

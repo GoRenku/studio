@@ -5,8 +5,10 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -262,7 +264,7 @@ function readOptions(args) {
 function viewRelease(tag) {
   const result = spawnSync(
     'gh',
-    ['release', 'view', tag, '--json', 'tagName,isDraft,isPrerelease,url'],
+    ['release', 'view', tag, '--json', 'tagName,isDraft,isPrerelease,url,assets'],
     { cwd: repositoryRoot, encoding: 'utf8' }
   );
   if (result.status !== 0) {
@@ -285,11 +287,12 @@ function ensureDraftRelease(tag) {
       '--title',
       `Renku ${tag}`,
     ]);
-    return;
+    return null;
   }
   if (current.tagName !== tag || !current.isDraft || !current.isPrerelease) {
     throw new Error(`RELEASE082 Existing GitHub Release ${tag} is not the expected draft prerelease.`);
   }
+  return current;
 }
 
 function copyStagedAssets(source, destination) {
@@ -300,6 +303,65 @@ function copyStagedAssets(source, destination) {
   for (const name of readdirSync(source)) {
     copyFileSync(path.join(source, name), path.join(destination, name));
   }
+}
+
+function assertDraftAssetSetCanResume(release, stagedNames) {
+  const expectedNames = new Set(stagedNames);
+  const actualNames = (release.assets ?? []).map(({ name }) => name);
+  if (new Set(actualNames).size !== actualNames.length) {
+    throw new Error('RELEASE094 Draft GitHub Release has duplicate asset names.');
+  }
+  const unexpectedNames = actualNames.filter((name) => !expectedNames.has(name));
+  if (unexpectedNames.length > 0) {
+    throw new Error(
+      `RELEASE094 Draft GitHub Release has unexpected assets: ${unexpectedNames.join(', ')}.`
+    );
+  }
+  return actualNames.length === expectedNames.size;
+}
+
+function downloadVerifiedReleaseAssets(tag, downloadRoot) {
+  if (existsSync(downloadRoot) && readdirSync(downloadRoot).length > 0) {
+    throw new Error(`RELEASE083 Download directory must be empty: ${downloadRoot}`);
+  }
+  mkdirSync(path.dirname(downloadRoot), { recursive: true });
+  const temporaryRoot = mkdtempSync(path.join(path.dirname(downloadRoot), '.github-download-'));
+  try {
+    runCommand('gh', ['release', 'download', tag, '--dir', temporaryRoot]);
+    verifyDownloadedReleaseAssets(temporaryRoot);
+    copyStagedAssets(temporaryRoot, downloadRoot);
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+}
+
+export function publishDraftReleaseAssets({
+  tag,
+  stagingRoot,
+  downloadRoot,
+  currentRelease,
+  uploadDraftAssets = uploadDraftReleaseAssets,
+  downloadDraftAssets = downloadVerifiedReleaseAssets,
+}) {
+  const stagedNames = readdirSync(stagingRoot);
+  const completeDraft = currentRelease
+    ? assertDraftAssetSetCanResume(currentRelease, stagedNames)
+    : false;
+  if (!completeDraft) {
+    const assets = stagedNames.map((name) => path.join(stagingRoot, name));
+    uploadDraftAssets(tag, assets, { replaceExisting: Boolean(currentRelease) });
+  }
+  downloadDraftAssets(tag, downloadRoot);
+}
+
+function uploadDraftReleaseAssets(tag, assets, options) {
+  runCommand('gh', [
+    'release',
+    'upload',
+    tag,
+    ...assets,
+    ...(options.replaceExisting ? ['--clobber'] : []),
+  ]);
 }
 
 async function main() {
@@ -327,11 +389,13 @@ async function main() {
   if (options.dryRun) {
     copyStagedAssets(stagingRoot, downloadRoot);
   } else {
-    ensureDraftRelease(options.tag);
-    const assets = readdirSync(stagingRoot).map((name) => path.join(stagingRoot, name));
-    runCommand('gh', ['release', 'upload', options.tag, ...assets, '--clobber']);
-    mkdirSync(downloadRoot, { recursive: true });
-    runCommand('gh', ['release', 'download', options.tag, '--dir', downloadRoot, '--clobber']);
+    const currentRelease = ensureDraftRelease(options.tag);
+    publishDraftReleaseAssets({
+      tag: options.tag,
+      stagingRoot,
+      downloadRoot,
+      currentRelease,
+    });
   }
   verifyDownloadedReleaseAssets(downloadRoot);
   process.stdout.write(
