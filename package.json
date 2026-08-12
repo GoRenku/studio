@@ -23,6 +23,8 @@
     "build:engines": "pnpm --filter @gorenku/studio-engines build",
     "build:studio": "pnpm --filter @gorenku/studio build",
     "build:website": "pnpm --filter @gorenku/website build",
+    "build:website:cloudflare": "pnpm --filter @gorenku/website build:cloudflare",
+    "deploy:website": "pnpm --filter @gorenku/website deploy:cloudflare",
     "lint": "pnpm --filter @gorenku/studio-diagnostics lint && pnpm --filter @gorenku/studio-core lint && pnpm --filter @gorenku/studio-cli lint && pnpm --filter @gorenku/studio-engines lint && pnpm --filter @gorenku/studio lint",
     "lint:diagnostics": "pnpm --filter @gorenku/studio-diagnostics lint",
     "lint:core": "pnpm --filter @gorenku/studio-core lint",

@@ -16,3 +16,4 @@ sample-assets/
 /project-before-migration-*.sqlite
 # Astro generated types (packages/website)
 .astro/
+.wrangler/
