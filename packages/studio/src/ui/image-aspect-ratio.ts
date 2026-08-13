@@ -16,6 +16,19 @@ export function imageAspectRatioFromDimensions(
   return fallbackAspectRatio;
 }
 
+export function imageAspectRatioFromString(
+  value: string | null | undefined,
+  fallbackAspectRatio = 16 / 9
+): number {
+  const match = /^\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*$/.exec(
+    value ?? ''
+  );
+  if (!match) {
+    return normalizeAspectRatio(fallbackAspectRatio);
+  }
+  return normalizeAspectRatio(Number(match[1]) / Number(match[2]));
+}
+
 export function useImageAspectRatio(
   initialAspectRatio: number,
   imageKey: string | null = null

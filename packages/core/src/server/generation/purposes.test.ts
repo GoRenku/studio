@@ -50,7 +50,6 @@ describe('generic generation model listing', () => {
       recommendedModel: { provider: 'fal-ai', model: 'nano-banana-2' },
     });
     expect(readGenerationPurpose('scene.storyboard-sheet').settings.fixed).toEqual([
-      { kind: 'aspect-ratio', value: '4:3' },
       { kind: 'quality', value: 'high' },
     ]);
   });
@@ -82,7 +81,7 @@ describe('generic generation model listing', () => {
       purpose('location.hero', 'location', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
       purpose('prop.sheet', 'prop', 'image', [], [aspectRatio('16:9'), quality('high')], gptImage2),
       purpose('prop.hero', 'prop', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
-      purpose('scene.storyboard-sheet', 'scene', 'image', [aspectRatio('4:3'), quality('high')], [], gptImage2),
+      purpose('scene.storyboard-sheet', 'scene', 'image', [quality('high')], [], gptImage2),
       purpose('shot.image', 'shot', 'image', [], [aspectRatio('project'), quality('high')]),
     ]);
   });

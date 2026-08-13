@@ -4,7 +4,7 @@ import { characterSheetSlot, locationSheetSlot } from '../reference-slots/domain
 import { storyboardLookbookSheetSlot } from '../reference-slots/lookbook-sheets.js';
 export const sceneStoryboardSheetPurpose = defineGenerationPurpose({
   purpose: 'scene.storyboard-sheet', targetKind: 'scene', outputMediaKind: 'image',
-  settings: { fixed: [{ kind: 'aspect-ratio', value: '4:3' }, { kind: 'quality', value: 'high' }], recommended: [], recommendedModel: { provider: 'fal-ai', model: 'openai/gpt-image-2' } },
+  settings: { fixed: [{ kind: 'quality', value: 'high' }], recommended: [], recommendedModel: { provider: 'fal-ai', model: 'openai/gpt-image-2' } },
   async buildReferenceGuide(context) {
     const slots: GuideSlotDefinition[] = [storyboardLookbookSheetSlot(context)];
     const sceneCastMemberIds = (context.facts?.sceneCastMemberIds as string[] | undefined) ?? [];

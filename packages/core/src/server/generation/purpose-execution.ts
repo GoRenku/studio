@@ -21,10 +21,11 @@ export async function preparePurposeExecutionSpec(input: {
       prompt: [
         spec.values.prompt,
         '',
-        'Create one 4:3 storyboard sheet as a single finished image.',
-        `Arrange one to four clean ${input.projectAspectRatio} storyboard panels in Shot List order in a 2x2 composite layout.`,
-        'Leave unused panel positions empty; do not invent filler shots.',
-        'Keep labels in the sheet header or margins and outside the shot image regions.',
+        'Create one storyboard sheet as a single finished image using an output canvas supported by the selected model.',
+        `Arrange one to four complete ${input.projectAspectRatio} storyboard panels in Beat order in a clean grid within that canvas.`,
+        `Keep every panel at ${input.projectAspectRatio}; do not crop, stretch, overlap, or merge panel image regions.`,
+        'Preserve clear gutters around every panel, and leave unused canvas space empty rather than inventing filler images.',
+        'Keep labels in the sheet header, margins, or gutters and outside the storyboard panel image regions.',
       ].join('\n'),
     },
   };

@@ -10,8 +10,17 @@ describe('generation purpose settings', () => {
       purpose: readGenerationPurpose('scene.storyboard-sheet'),
     });
 
-    expect(spec.values).toMatchObject({
-      image_size: 'landscape_4_3',
+    expect(spec.values).toEqual({ quality: 'high' });
+  });
+
+  it('leaves the composite canvas aspect ratio under model control', async () => {
+    const spec = await applyFixedGenerationSettings({
+      spec: storyboardSpec({ image_size: 'landscape_3_2' }),
+      purpose: readGenerationPurpose('scene.storyboard-sheet'),
+    });
+
+    expect(spec.values).toEqual({
+      image_size: 'landscape_3_2',
       quality: 'high',
     });
   });

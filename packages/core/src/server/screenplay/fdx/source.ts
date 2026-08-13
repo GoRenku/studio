@@ -16,10 +16,6 @@ export interface FdxSource {
 
 export async function readFdxSource(sourcePath: string): Promise<FdxSource> {
   const absolutePath = path.resolve(sourcePath);
-  if (path.extname(absolutePath).toLowerCase() !== '.fdx') {
-    throw sourceError('SCREENPLAY_FDX_SOURCE_INVALID', 'FDX source must have a .fdx extension.');
-  }
-
   let stats;
   try {
     stats = await fs.stat(absolutePath);
@@ -67,6 +63,6 @@ export async function readFdxSource(sourcePath: string): Promise<FdxSource> {
 
 function sourceError(code: string, message: string): ProjectDataError {
   return new ProjectDataError(code, message, {
-    suggestion: 'Choose a readable Final Draft .fdx screenplay file.',
+    suggestion: 'Choose a readable Final Draft XML screenplay file.',
   });
 }

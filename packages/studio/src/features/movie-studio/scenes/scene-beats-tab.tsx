@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { StudioSelection } from '@gorenku/studio-core/client';
 import { MediaCard } from '@/ui/media-card/media-card';
+import { imageAspectRatioFromString } from '@/ui/image-aspect-ratio';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneBeatsResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneBeatsResource } from '@/services/screenplay';
@@ -91,6 +92,9 @@ export function SceneBeatsTab({
     return beats[0]?.id ?? null;
   }, [beatId, beats]);
   const selectedBeat = beats.find((beat) => beat.id === selectedBeatId) ?? beats[0];
+  const storyboardAspectRatio = imageAspectRatioFromString(
+    resource?.projectAspectRatio
+  );
 
   if (error) {
     return (
@@ -126,12 +130,12 @@ export function SceneBeatsTab({
                         kind: 'image',
                         src: image.url,
                         alt: `${label} - ${beat.title}`,
-                        fit: 'cover',
+                        fit: 'contain',
                         effect: 'zoom-on-hover',
                       }
                     : null
                 }
-                frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
+                frame={{ kind: 'ratio', aspectRatio: storyboardAspectRatio }}
                 presentation={{
                   kind: 'overlay',
                   copy: {
@@ -140,17 +144,45 @@ export function SceneBeatsTab({
                   },
                 }}
                 selected={beat.id === selectedBeatId}
-                activation={{
-                  kind: 'callback',
-                  label: `${label} - ${beat.title}`,
-                  onActivate: () =>
-                    onSelect({
-                      type: 'scene',
-                      id: sceneId,
-                      sceneTab: 'beats',
-                      beatId: beat.id,
-                    }),
-                }}
+                activation={
+                  image
+                    ? {
+                        kind: 'image-preview',
+                        label: `Preview ${label} - ${beat.title}`,
+                        image: {
+                          src: image.url,
+                          alt: `${label} - ${beat.title}`,
+                          title: beat.title,
+                        },
+                      }
+                    : {
+                        kind: 'callback',
+                        label: `${label} - ${beat.title}`,
+                        onActivate: () =>
+                          onSelect({
+                            type: 'scene',
+                            id: sceneId,
+                            sceneTab: 'beats',
+                            beatId: beat.id,
+                          }),
+                      }
+                }
+                cornerAction={
+                  image
+                    ? {
+                        kind: 'inspect',
+                        label: `Inspect ${label}`,
+                        visibility: 'always',
+                        onAction: () =>
+                          onSelect({
+                            type: 'scene',
+                            id: sceneId,
+                            sceneTab: 'beats',
+                            beatId: beat.id,
+                          }),
+                      }
+                    : undefined
+                }
                 emptyState={{ kind: 'image' }}
               />
             );

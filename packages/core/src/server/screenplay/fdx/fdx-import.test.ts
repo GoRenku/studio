@@ -202,6 +202,16 @@ describe('deterministic FDX import', () => {
     });
   });
 
+  it('reads Final Draft XML independently of its filename suffix', async () => {
+    const xmlPath = path.join(homeDir, 'Big-Fish.fdx.xml');
+    await fs.rename(sourcePath, xmlPath);
+
+    const source = await readFdxSource(xmlPath);
+
+    expect(source.filename).toBe('Big-Fish.fdx.xml');
+    expect(() => parseFdxDocument(source.xml)).not.toThrow();
+  });
+
   it('commits the Screenplay, exact source Asset, and singleton provenance atomically', async () => {
     const projectData = createProjectDataService();
     const created = await createBlankMovieProject({
