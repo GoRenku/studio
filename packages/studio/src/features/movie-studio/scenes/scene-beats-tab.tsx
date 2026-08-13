@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type { StudioSelection } from '@gorenku/studio-core/client';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { imageAspectRatioFromString } from '@/ui/image-aspect-ratio';
+import {
+  ImagePreviewDialog,
+  type PreviewImage,
+} from '@/ui/image-preview-dialog';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneBeatsResourceResponse } from '@/services/studio-project-contracts';
 import { readSceneBeatsResource } from '@/services/screenplay';
@@ -32,6 +36,7 @@ export function SceneBeatsTab({
   const [resource, setResource] =
     useState<SceneBeatsResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
 
   const loadResource = useCallback(() => {
     let cancelled = false;
@@ -144,29 +149,17 @@ export function SceneBeatsTab({
                   },
                 }}
                 selected={beat.id === selectedBeatId}
-                activation={
-                  image
-                    ? {
-                        kind: 'image-preview',
-                        label: `Preview ${label} - ${beat.title}`,
-                        image: {
-                          src: image.url,
-                          alt: `${label} - ${beat.title}`,
-                          title: beat.title,
-                        },
-                      }
-                    : {
-                        kind: 'callback',
-                        label: `${label} - ${beat.title}`,
-                        onActivate: () =>
-                          onSelect({
-                            type: 'scene',
-                            id: sceneId,
-                            sceneTab: 'beats',
-                            beatId: beat.id,
-                          }),
-                      }
-                }
+                activation={{
+                  kind: 'callback',
+                  label: `Select ${label} - ${beat.title}`,
+                  onActivate: () =>
+                    onSelect({
+                      type: 'scene',
+                      id: sceneId,
+                      sceneTab: 'beats',
+                      beatId: beat.id,
+                    }),
+                }}
                 cornerAction={
                   image
                     ? {
@@ -174,11 +167,10 @@ export function SceneBeatsTab({
                         label: `Inspect ${label}`,
                         visibility: 'always',
                         onAction: () =>
-                          onSelect({
-                            type: 'scene',
-                            id: sceneId,
-                            sceneTab: 'beats',
-                            beatId: beat.id,
+                          setPreviewImage({
+                            src: image.url,
+                            alt: `${label} - ${beat.title}`,
+                            title: beat.title,
                           }),
                       }
                     : undefined
@@ -223,6 +215,11 @@ export function SceneBeatsTab({
           </div>
         ) : null}
       </aside>
+      <ImagePreviewDialog
+        images={previewImage ? [previewImage] : []}
+        currentIndex={0}
+        onOpenChange={(open) => !open && setPreviewImage(null)}
+      />
     </div>
   );
 }

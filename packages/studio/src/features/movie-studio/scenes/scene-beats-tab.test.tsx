@@ -19,14 +19,9 @@ describe('SceneBeatsTab', () => {
     vi.mocked(readSceneBeatsResource).mockResolvedValue(sceneBeatsResource());
   });
 
-  it('shows the complete storyboard image and opens the shared large preview', async () => {
-    render(
-      <SceneBeatsTab
-        projectName='big-fish'
-        sceneId='scene-3'
-        onSelect={vi.fn()}
-      />
-    );
+  it('shows the complete storyboard image and selects the Beat from the card', async () => {
+    const onSelect = vi.fn();
+    render(<SelectionHarness onSelect={onSelect} />);
 
     const image = await screen.findByRole('img', {
       name: 'Beat 1 - The campfire audience gathers',
@@ -37,15 +32,20 @@ describe('SceneBeatsTab', () => {
     ).toContain(`aspect-ratio: ${16 / 9}`);
 
     fireEvent.click(screen.getByRole('button', {
-      name: 'Preview Beat 1 - The campfire audience gathers',
+      name: 'Select Beat 2 - Gold becomes the true bait',
     }));
-    expect(screen.getByRole('dialog')).not.toBeNull();
-    expect(screen.getByRole('img', {
-      name: 'Beat 1 - The campfire audience gathers',
-    })).not.toBeNull();
+
+    expect(onSelect).toHaveBeenCalledWith({
+      type: 'scene',
+      id: 'scene-3',
+      sceneTab: 'beats',
+      beatId: 'beat-2',
+    });
+    expect(await screen.findByText('The ring becomes the answer.')).not.toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('keeps Beat selection on the standard inspect action', async () => {
+  it('opens the shared large preview from the tab-owned inspect action', async () => {
     const onSelect = vi.fn();
     render(
       <SceneBeatsTab
@@ -59,14 +59,30 @@ describe('SceneBeatsTab', () => {
       name: 'Inspect Beat 1',
     }));
 
-    await waitFor(() => expect(onSelect).toHaveBeenCalledWith({
-      type: 'scene',
-      id: 'scene-3',
-      sceneTab: 'beats',
-      beatId: 'beat-1',
-    }));
+    await waitFor(() => expect(screen.getByRole('dialog')).not.toBeNull());
+    expect(screen.getByRole('img', {
+      name: 'Beat 1 - The campfire audience gathers',
+    })).not.toBeNull();
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });
+
+function SelectionHarness({ onSelect }: { onSelect: ReturnType<typeof vi.fn> }) {
+  const [beatId, setBeatId] = React.useState<string>();
+  return (
+    <SceneBeatsTab
+      projectName='big-fish'
+      sceneId='scene-3'
+      beatId={beatId}
+      onSelect={(selection) => {
+        if (selection.type === 'scene') {
+          setBeatId(selection.beatId);
+        }
+        onSelect(selection);
+      }}
+    />
+  );
+}
 
 function sceneBeatsResource() {
   return {
@@ -83,18 +99,32 @@ function sceneBeatsResource() {
     activeRevisionId: 'revision-1',
     activeRevision: {
       sceneId: 'scene-3',
-      beats: [{
-        id: 'beat-1',
-        number: '1',
-        title: 'The campfire audience gathers',
-        description: 'The group gathers around Edward.',
-        narrativeDevelopment: 'The private story becomes public folklore.',
-        narrativePurpose: 'Show Edward commanding an audience.',
-        castMemberIds: [],
-        locationIds: [],
-        propIds: [],
-        screenplayBlockIds: [],
-      }],
+      beats: [
+        {
+          id: 'beat-1',
+          number: '1',
+          title: 'The campfire audience gathers',
+          description: 'The group gathers around Edward.',
+          narrativeDevelopment: 'The private story becomes public folklore.',
+          narrativePurpose: 'Show Edward commanding an audience.',
+          castMemberIds: [],
+          locationIds: [],
+          propIds: [],
+          screenplayBlockIds: [],
+        },
+        {
+          id: 'beat-2',
+          number: '2',
+          title: 'Gold becomes the true bait',
+          description: 'The ring becomes the answer.',
+          narrativeDevelopment: 'Edward turns romance into adventure.',
+          narrativePurpose: 'Connect the legend to Sandra.',
+          castMemberIds: [],
+          locationIds: [],
+          propIds: [],
+          screenplayBlockIds: [],
+        },
+      ],
     },
     storyboardImagesByBeatId: {
       'beat-1': {
@@ -107,6 +137,17 @@ function sceneBeatsResource() {
         width: 695,
         height: 755,
         url: '/studio-api/projects/big-fish/assets/asset-beat-1/files/asset-file-beat-1',
+      },
+      'beat-2': {
+        assetId: 'asset-beat-2',
+        assetFileId: 'asset-file-beat-2',
+        title: 'Gold becomes the true bait',
+        fileRole: 'primary',
+        mediaKind: 'image',
+        mimeType: 'image/png',
+        width: 800,
+        height: 450,
+        url: '/studio-api/projects/big-fish/assets/asset-beat-2/files/asset-file-beat-2',
       },
     },
     castMemberLabels: {},
