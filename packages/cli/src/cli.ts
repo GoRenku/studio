@@ -192,7 +192,7 @@ Examples
   $ renku create midnight-crossing --title "Midnight Crossing"
   $ renku init ~/Movies/renku
   $ renku init /Volumes/Media/Renku --json
-  $ renku generation preview show --file tmp/sheet-1.json --file tmp/sheet-2.json --project midnight-crossing --json
+  $ renku generation preview show --file tmp/specs/sheet-1.json --file tmp/specs/sheet-2.json --project midnight-crossing --json
 `;
 
 function createCliFlags() {

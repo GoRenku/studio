@@ -52,10 +52,10 @@ export async function resolveTemporaryFileRoot(input: {
     return joinProjectRelativePath(PROJECT_TMP_ROOT, 'media');
   }
   if (input.destination.kind === 'generation.spec') {
-    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'generation-specs');
+    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'specs');
   }
   if (input.destination.kind === 'generation.receipt') {
-    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'generation-receipts');
+    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'receipts');
   }
   if (input.destination.kind === 'operation') {
     return joinProjectRelativePath(PROJECT_TMP_ROOT, 'operations');

@@ -179,6 +179,7 @@ at the project root. There is no `working-assets/` root and no
     project.sqlite
 
   tmp/
+    media/
     specs/
     receipts/
     operations/
@@ -253,8 +254,13 @@ Folder responsibilities:
 - `research/` contains user-owned scratch references. Renku may read these
   files when instructed, and generation specs may use them as one-off reference
   inputs. Renku must not register them as SQLite asset files.
-- `tmp/` contains generated JSON snapshots, receipts, operation files, QA
-  pictures, and other non-durable agent/debug files.
+- `tmp/media/` contains temporary generated, downloaded, transformed, or
+  cropped media.
+- `tmp/specs/` contains temporary Generation Spec JSON exports.
+- `tmp/receipts/` contains temporary provider receipt exports.
+- `tmp/operations/` contains CLI authoring and import documents.
+- `tmp/qa/` contains review evidence, and `tmp/scratch/` contains other
+  non-durable agent/debug files.
 - `production-assets/` contains clean post-production handoff files.
 
 Project creation may create only the folders needed by the current project
