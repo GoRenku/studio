@@ -16,7 +16,10 @@ import type { ImportFdxScreenplayReport, ScreenplayImport } from './contracts.js
 import { FdxIdentityFactory } from './identifiers.js';
 import type { MappedFdxScreenplay } from './mapping/screenplay.js';
 import { updateScreenplayImport } from './persistence/import-record.js';
-import { persistFdxSourceAsset } from './persistence/source-asset.js';
+import {
+  assertRetainedFdxSourceAsset,
+  persistFdxSourceAsset,
+} from './persistence/source-asset.js';
 import { createFdxImportReport, screenplayFdxResourceKeys } from './report.js';
 import type { FdxSource } from './source.js';
 
@@ -44,6 +47,13 @@ export function refreshFdxScreenplay(input: {
     candidates: input.mapped.candidates,
   });
   if (input.source.sha256 === currentSourceSha256) {
+    assertRetainedFdxSourceAsset({
+      session: input.session,
+      projectFolder: input.projectFolder,
+      source: input.source,
+      assetId: input.currentImport.sourceAssetId,
+      assetFileId: input.currentImport.sourceAssetFileId,
+    });
     return createFdxImportReport({
       status: 'unchanged',
       project: input.project,

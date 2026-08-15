@@ -25,35 +25,7 @@ export function persistFdxSourceAsset(input: {
 }): void {
   const existingAsset = readAssetRecord(input.session, input.assetId);
   if (existingAsset) {
-    const existingFile = readAssetFileRecordIncludingDiscarded(input.session, {
-      assetId: input.assetId,
-      assetFileId: input.assetFileId,
-    });
-    const owner = readAssetOwner(input.session, input.assetId);
-    if (existingAsset.discardedAt
-      || existingAsset.type !== 'screenplay_source'
-      || existingAsset.mediaKind !== 'document'
-      || existingAsset.origin !== 'imported'
-      || owner?.kind !== 'project'
-      || !existingFile
-      || existingFile.discardedAt
-      || existingFile.role !== 'source'
-      || existingFile.mediaKind !== 'document'
-      || existingFile.mimeType !== 'application/xml'
-      || existingFile.contentHash !== input.source.sha256
-      || !projectPathExistsSync(
-        input.projectFolder,
-        normalizeProjectRelativePath(existingFile.projectRelativePath),
-      )
-      || hashFileSync(resolveProjectRelativePath(
-        input.projectFolder,
-        normalizeProjectRelativePath(existingFile.projectRelativePath),
-      )) !== input.source.sha256) {
-      throw new ProjectDataError(
-        'SCREENPLAY_FDX_SOURCE_DESTINATION_CONFLICT',
-        `Retained FDX source identity conflicts with SHA-256 ${input.source.sha256}.`,
-      );
-    }
+    assertRetainedFdxSourceAsset(input);
     return;
   }
 
@@ -101,6 +73,46 @@ export function persistFdxSourceAsset(input: {
       'SCREENPLAY_FDX_SOURCE_CHANGED',
       'FDX source changed after it was read and before it was retained.',
       { suggestion: 'Save the source file, then run the import again.' },
+    );
+  }
+}
+
+export function assertRetainedFdxSourceAsset(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  source: FdxSource;
+  assetId: string;
+  assetFileId: string;
+}): void {
+  const existingAsset = readAssetRecord(input.session, input.assetId);
+  const existingFile = readAssetFileRecordIncludingDiscarded(input.session, {
+    assetId: input.assetId,
+    assetFileId: input.assetFileId,
+  });
+  const owner = readAssetOwner(input.session, input.assetId);
+  if (!existingAsset
+    || existingAsset.discardedAt
+    || existingAsset.type !== 'screenplay_source'
+    || existingAsset.mediaKind !== 'document'
+    || existingAsset.origin !== 'imported'
+    || owner?.kind !== 'project'
+    || !existingFile
+    || existingFile.discardedAt
+    || existingFile.role !== 'source'
+    || existingFile.mediaKind !== 'document'
+    || existingFile.mimeType !== 'application/xml'
+    || existingFile.contentHash !== input.source.sha256
+    || !projectPathExistsSync(
+      input.projectFolder,
+      normalizeProjectRelativePath(existingFile.projectRelativePath),
+    )
+    || hashFileSync(resolveProjectRelativePath(
+      input.projectFolder,
+      normalizeProjectRelativePath(existingFile.projectRelativePath),
+    )) !== input.source.sha256) {
+    throw new ProjectDataError(
+      'SCREENPLAY_FDX_SOURCE_DESTINATION_CONFLICT',
+      `Retained FDX source identity conflicts with SHA-256 ${input.source.sha256}.`,
     );
   }
 }

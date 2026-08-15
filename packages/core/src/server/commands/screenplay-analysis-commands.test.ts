@@ -108,6 +108,26 @@ describe('hierarchy-independent Screenplay Analysis', () => {
         reason: expect.stringContaining('only the three-act method'),
       });
     }
+    for (const sceneCount of [0, 1, 2]) {
+      const screenplay = flatScreenplay();
+      screenplay.scenes = screenplay.scenes.slice(0, sceneCount);
+      screenplay.structure = screenplay.structure.slice(0, sceneCount);
+      expect(screenplayAnalysisMethod(screenplay)).toMatchObject({
+        supported: false,
+        sourceActCount: 0,
+        reason: expect.stringContaining(`requires at least three Scenes; this Screenplay has ${sceneCount}`),
+      });
+    }
+
+    const emptySourceAct = threeActScreenplay();
+    emptySourceAct.structure = emptySourceAct.structure.filter((entry) => (
+      entry.parentSectionId !== 'act_three'
+    ));
+    expect(screenplayAnalysisMethod(emptySourceAct)).toMatchObject({
+      supported: false,
+      sourceActCount: 3,
+      reason: expect.stringContaining('each of the three source Acts'),
+    });
 
     const wrongBoundaries = validAnalysis();
     wrongBoundaries.actSegments[0]!.sceneIds = ['scene_one', 'scene_two'];
@@ -274,6 +294,38 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       homeDir,
       analysis: validAnalysis(current.scenes.map((scene) => scene.id)),
     })).rejects.toMatchObject({ code: 'SCREENPLAY_ANALYSIS_THREE_ACT_UNSUPPORTED' });
+    await expect(projectData.listScreenplayAnalyses({ homeDir })).resolves.toMatchObject({ analyses: [] });
+  });
+
+  it('rejects a flat Screenplay with fewer than three Scenes before writing', async () => {
+    const created = await createBlankMovieProject({ homeDir, projectData, projectName: 'short-flat-analysis' });
+    if (!created) {
+      return;
+    }
+    const screenplay = flatScreenplayInput();
+    screenplay.scenes = screenplay.scenes.slice(0, 2);
+    screenplay.structure = screenplay.structure.slice(0, 2);
+    await projectData.createScreenplay({
+      projectName: created.projectName,
+      homeDir,
+      screenplay,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.openCurrentProject({ projectName: created.projectName, homeDir });
+    await expect(projectData.readScreenplayAnalysisContext({ homeDir })).resolves.toMatchObject({
+      analysisMethod: {
+        supported: false,
+        sourceActCount: 0,
+        reason: expect.stringContaining('requires at least three Scenes; this Screenplay has 2'),
+      },
+    });
+    await expect(projectData.writeScreenplayAnalysis({
+      homeDir,
+      analysis: validAnalysis(),
+    })).rejects.toMatchObject({
+      code: 'SCREENPLAY_ANALYSIS_THREE_ACT_UNSUPPORTED',
+      suggestion: expect.stringContaining('at least three Scenes'),
+    });
     await expect(projectData.listScreenplayAnalyses({ homeDir })).resolves.toMatchObject({ analyses: [] });
   });
 });

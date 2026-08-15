@@ -113,6 +113,42 @@ describe('source-authoritative FDX refresh', () => {
     expect(JSON.stringify(context)).not.toContain('<FinalDraft');
   });
 
+  it.each(['missing', 'tampered'] as const)(
+    'rejects an exact-byte no-op when the current retained source is %s',
+    async (retainedSourceState) => {
+      const projectName = await createProject(`fdx-current-source-${retainedSourceState}`);
+      await fs.writeFile(sourcePath, screenplayFdx([
+        ['1', 'INT. ROOM - DAY', 'MARA', 'Original line.'],
+      ]), 'utf8');
+      const imported = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
+      const assets = await projectData.listAssets({
+        projectName,
+        homeDir,
+        owner: { kind: 'project' },
+      });
+      const retainedSourceFile = assets
+        .find((asset) => asset.id === imported.screenplayImport.sourceAssetId)
+        ?.files.find((file) => file.id === imported.screenplayImport.sourceAssetFileId);
+      if (!retainedSourceFile) {
+        throw new Error('Expected the current retained FDX source file.');
+      }
+      const retainedSourcePath = path.join(
+        homeDir,
+        'projects',
+        projectName,
+        retainedSourceFile.projectRelativePath,
+      );
+      if (retainedSourceState === 'missing') {
+        await fs.unlink(retainedSourcePath);
+      } else {
+        await fs.writeFile(retainedSourcePath, 'tampered retained source', 'utf8');
+      }
+
+      await expect(projectData.importFdxScreenplay({ projectName, homeDir, sourcePath }))
+        .rejects.toMatchObject({ code: 'SCREENPLAY_FDX_SOURCE_DESTINATION_CONFLICT' });
+    },
+  );
+
   it('automatically applies add, remove, reorder, and one-character changes with whole-Scene identity', async () => {
     const projectName = await createProject('fdx-replacement');
     await fs.writeFile(sourcePath, screenplayFdx([

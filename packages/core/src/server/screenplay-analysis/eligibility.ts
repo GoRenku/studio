@@ -5,6 +5,12 @@ import { ProjectDataError } from '../project-data-error.js';
 export function screenplayAnalysisMethod(screenplay: Screenplay): ScreenplayAnalysisMethod {
   const acts = screenplay.sections.filter((section) => section.type === 'act');
   if (acts.length === 0) {
+    if (screenplay.scenes.length < 3) {
+      return unsupported(
+        0,
+        `Three-act Screenplay Analysis requires at least three Scenes; this Screenplay has ${screenplay.scenes.length}.`,
+      );
+    }
     return { supported: true, model: 'threeAct', sourceActMode: 'flat' };
   }
   if (acts.length !== 3) {
@@ -17,6 +23,12 @@ export function screenplayAnalysisMethod(screenplay: Screenplay): ScreenplayAnal
     title: act.title,
     sceneIds: descendantSceneIds(act.id, entriesByParent, new Set()),
   }));
+  if (sourceActs.some((act) => act.sceneIds.length === 0)) {
+    return unsupported(
+      acts.length,
+      'Screenplay Analysis requires each of the three source Acts to contain at least one Scene.',
+    );
+  }
   const partition = sourceActs.flatMap((act) => act.sceneIds);
   const orderedSceneIds = screenplay.scenes.map((scene) => scene.id);
   if (new Set(partition).size !== partition.length
@@ -35,7 +47,7 @@ export function requireSupportedScreenplayAnalysis(screenplay: Screenplay): Excl
     throw new ProjectDataError(
       'SCREENPLAY_ANALYSIS_THREE_ACT_UNSUPPORTED',
       method.reason,
-      { suggestion: 'Use a flat Screenplay or exactly three source Acts for the current three-act analysis workflow.' },
+      { suggestion: 'Use a flat Screenplay with at least three Scenes or exactly three non-empty source Acts for the current three-act analysis workflow.' },
     );
   }
   return method;
