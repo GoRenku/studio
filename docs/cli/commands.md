@@ -576,6 +576,9 @@ Behavior:
 - Returns counts for opening elements, Sections (including Act/Sequence type
   counts), Scenes, Blocks, and references. An all-zero result is an empty
   Screenplay.
+- Returns `sourceOwnership: renku|fdx`. Agents must check it before authoring:
+  FDX ownership permits source refresh through `import-fdx` but blocks every
+  generic Screenplay mutation, including organization and references.
 
 Expected no-project failure:
 
@@ -627,8 +630,7 @@ Behavior:
 
 ## `renku screenplay import-fdx`
 
-Import the supported semantic subset of a Final Draft XML screenplay into the
-current empty Project.
+Import or refresh the supported semantic subset of a Final Draft XML screenplay.
 
 ```bash
 renku screenplay import-fdx --file /absolute/path/to/script.fdx
@@ -638,27 +640,35 @@ renku screenplay import-fdx --file /absolute/path/to/script.fdx --json
 Options:
 
 - `--file`: required readable `.fdx` file path; stdin is not supported.
-- `--json`: return stable source IDs, SHA-256, counts, resource keys, and
+- `--json`: return retained source IDs, SHA-256, counts, resource keys, and
   character-cue/Scene-heading/tag candidates.
 
 Behavior:
 
-- Requires an entirely empty Screenplay and no prior FDX import record.
+- An empty Renku-owned Screenplay performs the initial import. An existing
+  FDX-backed Screenplay performs an unchanged check or refresh. A populated
+  Renku-authored Screenplay cannot be converted.
 - Hashes and retains the exact source as the Project-owned
   `screenplay_source` Asset at
   `screenplay/<safe-source-basename>[-<collision-number>].fdx`.
 - Imports opening text, Scenes, supported text blocks, complete Dialogue and
-  Parentheticals, cue extensions, Dual Dialogue, optional Scene numbers, and
-  explicit Act/Sequence markers.
+  Parentheticals, cue extensions, Dual Dialogue, and optional Scene numbers.
+- Always creates a flat source-ordered Scene list. Final Draft New Act, End of
+  Act, Sequence, Summary, Outline, Note, ScriptNote, and editor metadata remain
+  only in the retained source and never create Renku Sections.
 - Preserves exact supported FDX Scene numbers without inventing missing values.
 - Makes the imported Screenplay read-only to Renku Screenplay authoring
   commands. Downstream production workflows remain available.
 - Creates no Cast Member, Location, Prop, or identity binding. Report
   candidates are evidence for later user/agent reconciliation.
 - Fails atomically on malformed/unsafe XML, unsupported visible screenplay
-  content, invalid structure/dialogue, a destination conflict, or persistence
+  content, invalid dialogue, a destination conflict, or persistence
   failure.
-- Has no merge, overwrite, re-import, or replace mode.
+- Returns `status: imported`, `refreshed`, or `unchanged`. An unchanged source
+  writes nothing. Every valid changed source is accepted automatically; an
+  equal canonical projection updates only retained-source state, while a
+  canonical change replaces the complete aggregate and creates one revision.
+- Has no partial merge, FDX export, or Renku-to-FDX conversion mode.
 
 Formatting, ScriptNotes, Title Page layout, revision presentation, pagination,
 and editor state remain only in the retained source. They are intentionally not
@@ -745,11 +755,20 @@ Options:
 Behavior:
 
 - Requires a current authoring project and existing screenplay data.
-- `context` returns direct Project story metadata, opening content, canonical
+- `context` returns `analysisMethod`, direct Project story metadata, opening content, canonical
   ordered Scenes and stable Blocks, Cast Member/Location/Prop references,
   default criteria, and the active analysis summary.
 - `validate` checks a hierarchy-independent Screenplay Analysis without writing.
 - `write` creates a new analysis history row and makes it active.
+- Zero source Acts use analysis-owned three-act segments. Every FDX-backed
+  Screenplay takes this flat path; retained Final Draft planning markers are not
+  analysis context. Exactly three canonical Renku-authored Acts must be
+  reflected by those segments; boundary criticism belongs in critique
+  suggestions. Any other positive Act count is rejected before model work with
+  `SCREENPLAY_ANALYSIS_THREE_ACT_UNSUPPORTED`.
+- Read responses compute `freshness` from existing Screenplay revision and
+  analysis timestamps. `needsRefresh` keeps the analysis readable and uses the
+  help text “Screenplay changed since this analysis.”
 - `set-active` changes only the active analysis pointer.
 - `write` and `set-active` append Studio resource-change events for
   `surface:story-arc`, `screenplay-analysis`, and the specific analysis id.
@@ -794,10 +813,11 @@ validate stored Analysis schema without requiring its historical Scene ids or
 order to match the current Screenplay.
 
 - The current v1 structure model is `threeAct`.
-- Three-act documents contain exactly three analysis-owned `actSegments` with
+- Three-act documents contain exactly three `actSegments` with
   roles `actOne`, `actTwo`, and `actThree`. Their Scene ids partition every
-  current Scene exactly once in canonical order and never reference optional
-  screenplay Sections.
+  current Scene exactly once in canonical order and never store screenplay
+  Section ids. With exactly three source Acts, each segment must match the
+  source Act's returned Scene membership.
 - Default criteria `dramaticEnergy`, `stakes`, and `characterAgency` are
   required. Additional criteria are allowed.
 - Scores must be integers from `0` to `100` and must reference declared

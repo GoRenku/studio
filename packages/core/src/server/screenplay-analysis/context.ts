@@ -12,6 +12,8 @@ import {
   readActiveScreenplayAnalysisRecord,
   toScreenplayAnalysisSummary,
 } from './persistence.js';
+import { screenplayAnalysisMethod } from './eligibility.js';
+import { screenplayAnalysisFreshness } from './freshness.js';
 
 export function projectScreenplayAnalysisContext(input: {
   session: DatabaseSession;
@@ -20,7 +22,12 @@ export function projectScreenplayAnalysisContext(input: {
   const screenplay = readCanonicalScreenplay(input.session);
   const project = readProjectInformationResourceFromDatabase(input.session);
   const active = readActiveScreenplayAnalysisRecord(input.session);
+  const analysisMethod = screenplayAnalysisMethod(screenplay);
+  const activeAnalysisFreshness = active
+    ? screenplayAnalysisFreshness(input.session, active)
+    : 'current';
   return {
+    analysisMethod,
     project: {
       ...input.project,
       title: project.title,
@@ -78,7 +85,8 @@ export function projectScreenplayAnalysisContext(input: {
     })),
     defaultCriteria: [...DEFAULT_SCREENPLAY_ANALYSIS_CRITERIA],
     activeAnalysis: active
-      ? toScreenplayAnalysisSummary({ row: active, activeAnalysisId: active.id })
+      ? toScreenplayAnalysisSummary({ session: input.session, row: active, activeAnalysisId: active.id })
       : null,
+    activeAnalysisFreshness,
   };
 }

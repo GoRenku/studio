@@ -1,8 +1,9 @@
 # FDX Screenplay E2E Data
 
-These real-world Final Draft XML inputs are official Fountain downloads used
-only for E2E interoperability checks. Renku Studio records their source URLs,
-byte lengths, and SHA-256 identities in
+These real-world Final Draft XML inputs are third-party interoperability and
+stress inputs published by Fountain. They are not official Final Draft fixtures
+or a conformance suite. Renku Studio records their source URLs, byte lengths,
+and SHA-256 identities in
 `e2e/fixtures/studio-e2e-screenplay-fdx-sources.ts`; it does not redistribute
 the screenplay files in this repository.
 

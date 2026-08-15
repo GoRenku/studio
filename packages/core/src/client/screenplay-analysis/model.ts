@@ -111,7 +111,25 @@ export interface ScreenplayAnalysisSummary {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
+  freshness: 'current' | 'needsRefresh';
+  needsRefresh: boolean;
 }
+
+export type ScreenplayAnalysisMethod =
+  | { supported: true; model: 'threeAct'; sourceActMode: 'flat' }
+  | {
+      supported: true;
+      model: 'threeAct';
+      sourceActMode: 'sourceThreeAct';
+      sourceActs: Array<{ id: string; title: string; sceneIds: string[] }>;
+    }
+  | {
+      supported: false;
+      model: 'threeAct';
+      sourceActMode: 'unsupported';
+      sourceActCount: number;
+      reason: string;
+    };
 
 export interface ScreenplayAnalysisCommandReport {
   valid: true;
@@ -121,6 +139,7 @@ export interface ScreenplayAnalysisCommandReport {
 }
 
 export interface ScreenplayAnalysisContextReport extends ScreenplayAnalysisCommandReport {
+  analysisMethod: ScreenplayAnalysisMethod;
   project: { id: string; projectName: string } & Pick<Project,
     | 'title' | 'logline' | 'synopsis' | 'premise' | 'intendedAudience'
     | 'format' | 'targetRuntimeMinutes' | 'primaryGenre' | 'secondaryGenres'
@@ -139,6 +158,7 @@ export interface ScreenplayAnalysisContextReport extends ScreenplayAnalysisComma
   props: Array<Pick<Prop, 'id' | 'handle' | 'name' | 'description'>>;
   defaultCriteria: ScreenplayAnalysisCriterion[];
   activeAnalysis: ScreenplayAnalysisSummary | null;
+  activeAnalysisFreshness: 'current' | 'needsRefresh';
 }
 
 export interface ScreenplayAnalysisListReport extends ScreenplayAnalysisCommandReport {
@@ -150,6 +170,9 @@ export interface ScreenplayAnalysisReadReport extends ScreenplayAnalysisCommandR
   analysis: ScreenplayAnalysis | null;
   summary: ScreenplayAnalysisSummary | null;
   activeAnalysisId: ScreenplayAnalysisId | null;
+  freshness: 'current' | 'needsRefresh';
+  needsRefresh: boolean;
+  freshnessHelp: string | null;
 }
 
 export interface ScreenplayAnalysisValidationReport extends ScreenplayAnalysisCommandReport {

@@ -109,6 +109,25 @@ export function insertScreenplayImport(
   }).run();
 }
 
+export function updateScreenplayImport(
+  session: DatabaseSession,
+  value: ScreenplayImport,
+): void {
+  if (value.importerVersion !== FDX_IMPORTER_VERSION || !isTechnicalLog(value.technicalLog)) {
+    throw invalidImportRecord('refresh write does not match the current contract');
+  }
+  const result = session.db.update(screenplayImports).set({
+    sourceAssetId: value.sourceAssetId,
+    sourceAssetFileId: value.sourceAssetFileId,
+    importerVersion: value.importerVersion,
+    importedAt: value.importedAt,
+    technicalLogJson: JSON.stringify(value.technicalLog),
+  }).where(eq(screenplayImports.singletonKey, SCREENPLAY_IMPORT_SINGLETON_KEY)).run();
+  if (result.changes !== 1) {
+    throw invalidImportRecord('refresh could not update the singleton record');
+  }
+}
+
 export function assertAssetIsNotScreenplayImportSource(
   session: DatabaseSession,
   assetId: string,

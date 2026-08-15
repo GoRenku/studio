@@ -15,7 +15,9 @@ export async function runScreenplayFdxImportCommand(
     homeDir: context.homeDir,
     sourcePath: requiredScreenplayFlag(context.flags.file, '--file'),
   });
-  await notifyScreenplayMutation(context, report, 'screenplay import-fdx');
+  if (report.resourceKeys.length > 0) {
+    await notifyScreenplayMutation(context, report, 'screenplay import-fdx');
+  }
   if (context.json) {
     writeScreenplayJson(context.io, report);
   } else {
@@ -28,12 +30,14 @@ function writeHumanReport(
   context: ScreenplayCommandContext,
   report: ImportFdxScreenplayReport,
 ): void {
+  if (report.status === 'unchanged') {
+    context.io.stdout.log(`FDX source is unchanged: ${report.screenplayImport.sourceFilename}`);
+    return;
+  }
   const counts = report.counts;
-  context.io.stdout.log(`Imported ${report.screenplayImport.sourceFilename}`);
+  context.io.stdout.log(`${report.status === 'imported' ? 'Imported' : 'Refreshed'} ${report.screenplayImport.sourceFilename}`);
   context.io.stdout.log(`SHA-256: ${report.screenplayImport.sha256}`);
-  context.io.stdout.log(
-    `Scenes: ${counts.scenes}; Acts: ${counts.acts}; Sequences: ${counts.sequences}`,
-  );
+  context.io.stdout.log(`Scenes: ${counts.scenes}`);
   context.io.stdout.log(
     `Blocks: ${counts.blocks}; Dialogue turns: ${counts.dialogueTurns}; Scene numbers: ${counts.productionSceneNumbers}`,
   );

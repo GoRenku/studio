@@ -8,6 +8,7 @@ import {
   createImportedFdxMovieProject,
   type StudioE2eImportedFdxProject,
 } from '../../fixtures/studio-e2e-screenplay-fdx';
+import { runStudioE2eFdxImport } from '../../fixtures/studio-e2e-cli';
 import {
   cleanStudioE2eProject,
   createStudioE2eProjectName,
@@ -30,8 +31,6 @@ test('imports the full-length Big Fish stress fixture without editor-owned data'
 
   expect(project.importReport.counts).toEqual({
     scenes: 202,
-    acts: 0,
-    sequences: 0,
     blocks: 1655,
     dialogueTurns: 768,
     productionSceneNumbers: 202,
@@ -53,6 +52,17 @@ test('imports the full-length Big Fish stress fixture without editor-owned data'
     project,
     titlePageOnlyText: 'Copyright © 2003 Columbia Pictures',
   });
+  await expect(runStudioE2eFdxImport({
+    runtime: studioE2eRuntime,
+    projectName: project.projectName,
+    sourcePath: project.sourcePath,
+  })).resolves.toMatchObject({ status: 'unchanged', resourceKeys: [] });
+  const unchanged = await createProjectDataService().readScreenplayStructure({
+    projectName: project.projectName,
+    homeDir: studioE2eRuntime.isolatedHomeDirectory,
+  });
+  expect(unchanged.screenplay.sections).toEqual([]);
+  expect(unchanged.screenplay.scenes).toHaveLength(202);
   await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
 });
 
@@ -73,8 +83,6 @@ test('imports Brick and Steel split runs, ordered dialogue, and wrapped Dual Dia
 
   expect(project.importReport.counts).toEqual({
     scenes: 8,
-    acts: 0,
-    sequences: 0,
     blocks: 49,
     dialogueTurns: 20,
     productionSceneNumbers: 0,
@@ -122,8 +130,6 @@ test('imports The Last Birthday Card displayed inserts without inventing speaker
 
   expect(project.importReport.counts).toEqual({
     scenes: 49,
-    acts: 0,
-    sequences: 0,
     blocks: 287,
     dialogueTurns: 134,
     productionSceneNumbers: 0,
@@ -148,6 +154,92 @@ test('imports The Last Birthday Card displayed inserts without inventing speaker
   await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
 });
 
+test('refreshes marker-heavy FDX as a flat read-only Scene tree', async ({
+  page,
+  studioE2eRuntime,
+  minimalMovieProject,
+}) => {
+  const sourcePath = path.join(
+    studioE2eRuntime.isolatedHomeDirectory,
+    `${minimalMovieProject.projectName}.fdx`
+  );
+  await fs.writeFile(sourcePath, markerRefreshFdx([
+    ['INT. FIRST ROOM - DAY', 'First action.'],
+    ['INT. SECOND ROOM - DAY', 'Second action.'],
+  ]), 'utf8');
+
+  const imported = await runStudioE2eFdxImport({
+    runtime: studioE2eRuntime,
+    projectName: minimalMovieProject.projectName,
+    sourcePath,
+  });
+  expect(imported.status).toBe('imported');
+  const projectData = createProjectDataService();
+  const initial = await projectData.readScreenplayStructure({
+    projectName: minimalMovieProject.projectName,
+    homeDir: studioE2eRuntime.isolatedHomeDirectory,
+  });
+  expect(initial.screenplay.sections).toEqual([]);
+  expect(initial.screenplay.structure.every((entry) =>
+    entry.parentSectionId === undefined && entry.content.type === 'scene'
+  )).toBe(true);
+
+  await page.goto(sceneRoute(
+    minimalMovieProject.projectName,
+    initial.screenplay.scenes[0]!.id
+  ));
+  const expandScreenplay = page.getByRole('button', { name: 'Expand Screenplay' });
+  if (await expandScreenplay.isVisible()) {
+    await expandScreenplay.click();
+  }
+  await expect(page.getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
+    .toHaveCount(1);
+  await expect(page.getByRole('button', { name: /INT\. SECOND ROOM - DAY/ }))
+    .toHaveCount(1);
+  await expect(page.getByText('ACT ONE', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('CUSTOM OUTLINE', { exact: true })).toHaveCount(0);
+
+  const unchanged = await runStudioE2eFdxImport({
+    runtime: studioE2eRuntime,
+    projectName: minimalMovieProject.projectName,
+    sourcePath,
+  });
+  expect(unchanged).toMatchObject({ status: 'unchanged', resourceKeys: [] });
+  await page.reload();
+  await expect(page.getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
+    .toHaveCount(1);
+
+  await fs.writeFile(sourcePath, markerRefreshFdx([
+    ['INT. SECOND ROOM - DAY', 'Second action changed.'],
+  ], 'ACT TWO', 'RENAMED OUTLINE'), 'utf8');
+  const refreshed = await runStudioE2eFdxImport({
+    runtime: studioE2eRuntime,
+    projectName: minimalMovieProject.projectName,
+    sourcePath,
+  });
+  expect(refreshed.status).toBe('refreshed');
+  const changed = await projectData.readScreenplayStructure({
+    projectName: minimalMovieProject.projectName,
+    homeDir: studioE2eRuntime.isolatedHomeDirectory,
+  });
+  await page.goto(sceneRoute(
+    minimalMovieProject.projectName,
+    changed.screenplay.scenes[0]!.id
+  ));
+  const changedExpandScreenplay = page.getByRole('button', { name: 'Expand Screenplay' });
+  if (await changedExpandScreenplay.isVisible()) {
+    await changedExpandScreenplay.click();
+  }
+  await expect(page.getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
+    .toHaveCount(0);
+  await expect(page.getByRole('button', { name: /INT\. SECOND ROOM - DAY/ }))
+    .toHaveCount(1);
+  await expect(page.getByText('Second action changed.', { exact: true }))
+    .toBeVisible();
+  await expect(page.getByText('ACT TWO', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('RENAMED OUTLINE', { exact: true })).toHaveCount(0);
+});
+
 async function expectExactRetainedSource(input: {
   runtimeHome: string;
   project: StudioE2eImportedFdxProject;
@@ -155,20 +247,15 @@ async function expectExactRetainedSource(input: {
 }): Promise<void> {
   const sha256 = createHash('sha256').update(input.project.sourceBytes).digest('hex');
   expect(input.project.importReport.screenplayImport.sha256).toBe(sha256);
-  const retainedPath = path.join(
-    input.project.projectPath,
-    'screenplay',
-    'sources',
-    `${sha256}.fdx`
-  );
-  await expect(fs.readFile(retainedPath)).resolves.toEqual(input.project.sourceBytes);
-
   const assets = await createProjectDataService().listAssets({
     projectName: input.project.projectName,
     homeDir: input.runtimeHome,
     owner: { kind: 'project' },
   });
-  expect(assets).toContainEqual(expect.objectContaining({
+  const sourceAsset = assets.find((asset) =>
+    asset.id === input.project.importReport.screenplayImport.sourceAssetId
+  );
+  expect(sourceAsset).toEqual(expect.objectContaining({
     id: input.project.importReport.screenplayImport.sourceAssetId,
     type: 'screenplay_source',
     mediaKind: 'document',
@@ -179,6 +266,17 @@ async function expectExactRetainedSource(input: {
       mimeType: 'application/xml',
     })],
   }));
+  const sourceFile = sourceAsset?.files.find((file) =>
+    file.id === input.project.importReport.screenplayImport.sourceAssetFileId
+  );
+  if (!sourceFile) {
+    throw new Error('Expected the retained FDX source Asset File.');
+  }
+  const retainedPath = path.join(
+    input.project.projectPath,
+    sourceFile.projectRelativePath
+  );
+  await expect(fs.readFile(retainedPath)).resolves.toEqual(input.project.sourceBytes);
 
   const canonical = JSON.stringify(input.project.screenplay);
   const report = JSON.stringify(input.project.importReport);
@@ -224,4 +322,25 @@ function blockText(block: ScreenplayBlock): string[] {
     return block.parts.map((part) => part.text);
   }
   return [block.text];
+}
+
+function sceneRoute(projectName: string, sceneId: string): string {
+  return `/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}`;
+}
+
+function markerRefreshFdx(
+  scenes: Array<[string, string]>,
+  act = 'ACT ONE',
+  outline = 'CUSTOM OUTLINE'
+): string {
+  return '<FinalDraft DocumentType="Script"><Content>'
+    + `<Paragraph Type="New Act"><Text>${act}</Text></Paragraph>`
+    + `<Paragraph Type="Outline 1"><Text>${outline}</Text></Paragraph>`
+    + '<Paragraph Type="Sequence"><Text>SEQUENCE A</Text></Paragraph>'
+    + scenes.map(([heading, action]) =>
+      `<Paragraph Type="Scene Heading"><Text>${heading}</Text></Paragraph>`
+      + `<Paragraph Type="Action"><Text>${action}</Text></Paragraph>`
+    ).join('')
+    + '<Paragraph Type="End of Act"><Text>END OF ACT</Text></Paragraph>'
+    + '</Content></FinalDraft>';
 }

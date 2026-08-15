@@ -9,7 +9,7 @@ audio, or other production artifacts.
 
 ## Navigation
 
-The sidebar screenplay root is **Scenes** and always reports the total Scene
+The sidebar screenplay root is **Screenplay** and always reports the total Scene
 count. Its tree renders the stored screenplay structure directly:
 
 - Scenes may appear at the root or inside an optional Section;
@@ -17,6 +17,10 @@ count. Its tree renders the stored screenplay structure directly:
 - Act and Sequence rows share the same selection and disclosure behavior, with
   distinct icons; and
 - expanding and collapsing Sections is local browser presentation state.
+
+FDX-backed Screenplays always render as a flat Scene tree. Final Draft planning
+paragraphs and outline lanes remain only in the retained source; Studio never
+shows them as Act or Sequence rows.
 
 The current browser routes are:
 
@@ -26,9 +30,18 @@ The current browser routes are:
 /projects/:projectName/scenes/:sceneId
 ```
 
-The Scenes root opens Story Arc. A Section route opens one shared read-only
-Section surface. A Scene route owns Narrative, Beats, Shot Plans, and
-Generations. There are no Act- or Sequence-specific routes.
+The separate top-level **Analysis** section contains **Screenplay Analysis**.
+It reuses the existing Story Arc display and is designed to accept future
+analysis document types without adding empty placeholders now. A Section route
+opens one shared read-only Section surface. A Scene route owns Narrative,
+Beats, Shot Plans, and Generations. There are no Act- or Sequence-specific
+routes.
+
+An active analysis remains visible after screenplay changes. Studio shows a
+keyboard-focusable **Needs refresh** badge with the tooltip “Screenplay changed
+since this analysis.” Historical analysis prose remains readable when a
+referenced Scene no longer exists; navigation to a missing current Scene is
+unavailable rather than crashing the display.
 
 ## Narrative
 

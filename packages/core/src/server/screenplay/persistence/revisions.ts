@@ -37,6 +37,17 @@ export function listScreenplayRevisionSummaries(
     .map(toSummary);
 }
 
+export function readLatestScreenplayRevisionSummary(
+  session: DatabaseSession,
+): ScreenplayRevisionSummary | null {
+  const row = session.db
+    .select()
+    .from(screenplayRevisions)
+    .orderBy(desc(screenplayRevisions.createdAt), desc(screenplayRevisions.id))
+    .get();
+  return row ? toSummary(row) : null;
+}
+
 export function readScreenplayRevision(input: {
   session: DatabaseSession;
   revisionId: string;

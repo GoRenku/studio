@@ -9,6 +9,7 @@ import type {
 import type { Screenplay, ScreenplayInput } from '../../client/screenplay/index.js';
 import { createDeterministicIdGenerator, createProjectDataService } from '../index.js';
 import { validateScreenplayAnalysis } from '../screenplay-analysis/validation.js';
+import { screenplayAnalysisMethod } from '../screenplay-analysis/eligibility.js';
 import { createBlankMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 
 describe('hierarchy-independent Screenplay Analysis', () => {
@@ -77,6 +78,51 @@ describe('hierarchy-independent Screenplay Analysis', () => {
     expect(validateScreenplayAnalysis({ analysis: unknownEvidence, screenplay }).valid).toBe(false);
   });
 
+  it('selects only flat or exactly-three-source-Act analysis and preserves source boundaries', () => {
+    expect(screenplayAnalysisMethod(flatScreenplay())).toEqual({
+      supported: true,
+      model: 'threeAct',
+      sourceActMode: 'flat',
+    });
+    const organized = threeActScreenplay();
+    const method = screenplayAnalysisMethod(organized);
+    expect(method).toMatchObject({
+      supported: true,
+      sourceActMode: 'sourceThreeAct',
+      sourceActs: [
+        { title: 'ACT ONE', sceneIds: ['scene_one'] },
+        { title: 'ACT TWO', sceneIds: ['scene_two'] },
+        { title: 'ACT THREE', sceneIds: ['scene_three'] },
+      ],
+    });
+    for (const count of [1, 2, 4, 5, 6]) {
+      const screenplay = threeActScreenplay();
+      screenplay.sections = Array.from({ length: count }, (_, index) => ({
+        id: `act_${index}`,
+        type: 'act' as const,
+        title: `ACT ${index + 1}`,
+      }));
+      expect(screenplayAnalysisMethod(screenplay)).toMatchObject({
+        supported: false,
+        sourceActCount: count,
+        reason: expect.stringContaining('only the three-act method'),
+      });
+    }
+
+    const wrongBoundaries = validAnalysis();
+    wrongBoundaries.actSegments[0]!.sceneIds = ['scene_one', 'scene_two'];
+    wrongBoundaries.actSegments[1]!.sceneIds = ['scene_three'];
+    const validation = validateScreenplayAnalysis({
+      analysis: wrongBoundaries,
+      screenplay: organized,
+      expectedActSceneIds: [['scene_one'], ['scene_two'], ['scene_three']],
+    });
+    expect(validation.valid).toBe(false);
+    expect(validation.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ message: expect.stringContaining('source Act Scene membership') }),
+    ]));
+  });
+
   it('persists immutable history, active selection, and the Scene-first Story Arc resource', async () => {
     const created = await createBlankMovieProject({ homeDir, projectData });
     if (!created) {
@@ -96,7 +142,15 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       projectName: created.projectName,
       homeDir,
     })).screenplay;
+    await expect(projectData.readScreenplayStatus({
+      projectName: created.projectName,
+      homeDir,
+    })).resolves.toMatchObject({ sourceOwnership: 'renku' });
     const sceneIds = screenplay.scenes.map((scene) => scene.id);
+    await expect(projectData.readScreenplayAnalysisContext({ homeDir })).resolves.toMatchObject({
+      analysisMethod: { supported: true, model: 'threeAct', sourceActMode: 'flat' },
+      activeAnalysisFreshness: 'current',
+    });
     const analysis = validAnalysis(sceneIds);
 
     const analysisIds = createDeterministicIdGenerator();
@@ -128,6 +182,7 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       active: true,
     });
     expect(active.analysis?.title).toBe(analysis.title);
+    expect(active).toMatchObject({ freshness: 'current', needsRefresh: false, freshnessHelp: null });
 
     const storyArc = await projectData.readStoryArcResource({
       projectName: created.projectName,
@@ -147,6 +202,9 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       homeDir,
       analysisId: first.activeAnalysisId,
     })).resolves.toMatchObject({
+      freshness: 'needsRefresh',
+      needsRefresh: true,
+      freshnessHelp: 'Screenplay changed since this analysis.',
       analysis: {
         actSegments: expect.arrayContaining([
           expect.objectContaining({ sceneIds: [sceneIds[0]] }),
@@ -163,6 +221,9 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       projectName: created.projectName,
       homeDir,
     })).resolves.toMatchObject({
+      activeAnalysisFreshness: 'needsRefresh',
+      needsRefresh: true,
+      freshnessHelp: 'Screenplay changed since this analysis.',
       scenes: expect.not.arrayContaining([
         expect.objectContaining({ id: sceneIds[0] }),
       ]),
@@ -172,6 +233,48 @@ describe('hierarchy-independent Screenplay Analysis', () => {
         ]),
       },
     });
+  });
+
+  it('rejects unsupported source Act counts at the command boundary before writing', async () => {
+    const created = await createBlankMovieProject({ homeDir, projectData, projectName: 'unsupported-analysis' });
+    if (!created) {
+      return;
+    }
+    const screenplay = flatScreenplayInput();
+    screenplay.sections = [{ key: 'act-one', type: 'act', title: 'ONLY ACT' }];
+    screenplay.structure = [
+      {
+        key: 'act-entry',
+        content: { type: 'section', section: { key: 'act-one' } },
+        position: 0,
+      },
+      ...['one', 'two', 'three'].map((suffix, position) => ({
+        key: `entry-${suffix}`,
+        parentSection: { key: 'act-one' },
+        content: { type: 'scene' as const, scene: { key: `scene-${suffix}` } },
+        position,
+      })),
+    ];
+    await projectData.createScreenplay({
+      projectName: created.projectName,
+      homeDir,
+      screenplay,
+      idGenerator: createDeterministicIdGenerator(),
+    });
+    await projectData.openCurrentProject({ projectName: created.projectName, homeDir });
+    const current = (await projectData.readScreenplayStructure({ projectName: created.projectName, homeDir })).screenplay;
+    await expect(projectData.readScreenplayAnalysisContext({ homeDir })).resolves.toMatchObject({
+      analysisMethod: {
+        supported: false,
+        sourceActCount: 1,
+        reason: expect.stringContaining('only the three-act method'),
+      },
+    });
+    await expect(projectData.writeScreenplayAnalysis({
+      homeDir,
+      analysis: validAnalysis(current.scenes.map((scene) => scene.id)),
+    })).rejects.toMatchObject({ code: 'SCREENPLAY_ANALYSIS_THREE_ACT_UNSUPPORTED' });
+    await expect(projectData.listScreenplayAnalyses({ homeDir })).resolves.toMatchObject({ analyses: [] });
   });
 });
 
@@ -275,6 +378,29 @@ function flatScreenplay(): Screenplay {
     })),
     references: [],
   };
+}
+
+function threeActScreenplay(): Screenplay {
+  const screenplay = flatScreenplay();
+  screenplay.sections = ['one', 'two', 'three'].map((suffix, index) => ({
+    id: `act_${suffix}`,
+    type: 'act',
+    title: `ACT ${['ONE', 'TWO', 'THREE'][index]}`,
+  }));
+  screenplay.structure = ['one', 'two', 'three'].flatMap((suffix, position) => [
+    {
+      id: `entry_act_${suffix}`,
+      content: { type: 'section' as const, sectionId: `act_${suffix}` },
+      position,
+    },
+    {
+      id: `entry_${suffix}`,
+      parentSectionId: `act_${suffix}`,
+      content: { type: 'scene' as const, sceneId: `scene_${suffix}` },
+      position: 0,
+    },
+  ]);
+  return screenplay;
 }
 
 function flatScreenplayInput(): ScreenplayInput {

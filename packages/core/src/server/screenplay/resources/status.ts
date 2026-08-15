@@ -3,6 +3,7 @@ import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import type { RenkuConfigPathOptions } from '../../renku-config.js';
 import { studioScreenplayResourceKey } from '../../studio-coordination/resource-keys.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
+import { readScreenplayImport } from '../fdx/persistence/import-record.js';
 
 export async function readScreenplayStatus(
   input: RenkuConfigPathOptions & { projectName: string },
@@ -11,6 +12,7 @@ export async function readScreenplayStatus(
   try {
     const screenplay = readCanonicalScreenplay(session);
     return {
+      sourceOwnership: readScreenplayImport(session) ? 'fdx' : 'renku',
       counts: {
         openingElements: screenplay.opening.length,
         sections: screenplay.sections.length,

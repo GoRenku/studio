@@ -9,6 +9,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { screenplayAnalysis, screenplayAnalysisState } from '../schema/index.js';
 import { parseStoredScreenplayAnalysis, serializeScreenplayAnalysis } from './validation.js';
+import { screenplayAnalysisFreshness } from './freshness.js';
 
 const STATE_ID = 'screenplay_analysis_state';
 export type ScreenplayAnalysisRecord = typeof screenplayAnalysis.$inferSelect;
@@ -20,7 +21,7 @@ export function listScreenplayAnalysisRecords(input: {
   const activeAnalysisId = readActiveScreenplayAnalysisId(input.session);
   return input.session.db.select().from(screenplayAnalysis)
     .orderBy(desc(screenplayAnalysis.updatedAt), desc(screenplayAnalysis.id)).all()
-    .map((row) => toScreenplayAnalysisSummary({ row, activeAnalysisId }));
+    .map((row) => toScreenplayAnalysisSummary({ session: input.session, row, activeAnalysisId }));
 }
 
 export function readScreenplayAnalysisRecord(session: DatabaseSession, analysisId: string): ScreenplayAnalysisRecord | null {
@@ -96,10 +97,12 @@ export function setActiveScreenplayAnalysisRecord(
 }
 
 export function toScreenplayAnalysisSummary(input: {
+  session: DatabaseSession;
   row: ScreenplayAnalysisRecord;
   activeAnalysisId?: string | null;
 }): ScreenplayAnalysisSummary {
   const analysis = readStoredScreenplayAnalysis({ row: input.row });
+  const freshness = screenplayAnalysisFreshness(input.session, input.row);
   return {
     id: input.row.id,
     structureModel: input.row.structureModel as ScreenplayAnalysisStructureModel,
@@ -108,5 +111,7 @@ export function toScreenplayAnalysisSummary(input: {
     createdAt: input.row.createdAt,
     updatedAt: input.row.updatedAt,
     isActive: input.activeAnalysisId === input.row.id,
+    freshness,
+    needsRefresh: freshness === 'needsRefresh',
   };
 }

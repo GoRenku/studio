@@ -364,7 +364,15 @@ function buildActBands(resource: StoryArcResourceResponse): StoryArcActBand[] {
             sequenceTitle: '',
             storyFunction: [],
           }]
-        : [];
+        : [{
+            id: sceneId,
+            sequenceId: '',
+            actId: act.role,
+            title: 'Unavailable historical Scene',
+            actTitle: act.title,
+            sequenceTitle: '',
+            storyFunction: [],
+          }];
     });
     const positioned = scenes.map((scene, sceneIndex) => ({
       ...scene,

@@ -1,6 +1,6 @@
-# Deterministic Final Draft FDX Import
+# Source-Authoritative Final Draft FDX Import
 
-Date: 2026-08-06
+Date: 2026-08-15
 
 Status: current
 
@@ -8,114 +8,139 @@ Role: architecture and compatibility reference
 
 ## Boundary
 
-`renku screenplay import-fdx` imports one bounded semantic subset of Final
-Draft XML into an empty Scene-first Screenplay. Core owns source validation,
-XML parsing, mapping, deterministic IDs, canonical validation, source-Asset
-retention, and the atomic transaction. CLI only resolves the Project, passes
-`--file`, and formats Core's report.
+`renku screenplay import-fdx` imports and continuously refreshes one bounded
+semantic subset of Final Draft XML. The FDX is the sole authority for an
+FDX-backed Screenplay: Renku cannot edit its opening, Scenes, dialogue,
+references, or organization. Core owns validation, parsing, flat canonical
+mapping, source retention, exact content identity, and atomic replacement. The
+CLI only passes input and formats Core's typed report.
 
-This is not a universal Final Draft compatibility promise. Unknown visible
-screenplay content fails rather than being dropped or guessed.
+Every FDX import is a flat, source-ordered Scene list. Final Draft planning and
+formatting paragraphs are not a portable narrative hierarchy, so they never
+create Renku Act or Sequence Sections. Unknown visible screenplay content fails
+rather than being dropped or guessed.
 
-## Supported Semantic Content
+## Canonical Content
 
 | FDX content | Canonical result |
 | --- | --- |
-| Content before the first Scene Heading | `Screenplay.opening` text blocks |
+| Supported text before the first Scene Heading | `Screenplay.opening` text blocks |
 | Scene Heading and optional `Number` | Scene `heading` and exact optional `productionNumber` |
-| Action, Transition, Shot, Lyrics, Cast List, Note, Special Heading, Title/Title Card, Super | Matching canonical text block |
+| Action, Transition, Shot, Lyrics, Cast List, Special Heading, Title/Title Card, Super | Matching canonical text block |
 | General | Recognized opening fade form to Transition; otherwise Action, with an internal normalization log entry |
 | Character followed by Parenthetical/Dialogue paragraphs | One ordered Dialogue turn with cue extensions separated |
-| Direct DualDialogue, a DualDialogue inside its common General paragraph wrapper, or supported `DualDialogue="Yes"` cue form | One Dual Dialogue block with two independent turns |
-| Visible Dialogue without a preceding Character inside a Scene | Action preserving the displayed/insert text without inventing a speaker |
-| New Act, Sequence, End of Act | Optional explicit Section/structure entries |
+| Direct DualDialogue, its common General wrapper, or supported `DualDialogue="Yes"` cue form | One Dual Dialogue block with two independent turns |
+| Visible Dialogue without a preceding Character inside a Scene | Action preserving the displayed text without inventing a speaker |
 | Multiple styled Text runs and XML entities | One exact plain-text value in source order |
 
 FDX Scene `Number` attributes are opaque. Their exact string values are carried
-into `Scene.productionNumber`; the importer does not trim, parse, validate, or
-deduplicate them.
-
-An FDX-backed Screenplay is read-only in Renku. Core uses the existing singleton
-`screenplay_import` row as a simple gate for Screenplay create/apply and revision
-restore commands. Reads, analysis, Scene Beats, Shot planning, and other
-downstream production workflows remain available; there is no source-mode
-setting or override.
+into `Scene.productionNumber`; the importer does not trim, parse, validate,
+deduplicate, or use them for ordering or identity.
 
 Parentheticals keep semantic order; one conventional outer pair of parentheses
 is removed because the renderer supplies screenplay notation. Empty Dialogue
-and Parenthetical artifacts carry no visible semantics and are ignored. Dialogue
-before the first Scene, orphan Parenthetical, malformed Dual Dialogue, untitled
-explicit Sections, and a file without a Scene Heading are errors.
+and Parenthetical artifacts carry no visible semantics and are ignored.
+Dialogue before the first Scene, orphan Parenthetical, malformed Dual Dialogue,
+and a file without a Scene Heading are errors.
 
-## Deliberate Exclusions
+## Retained-Only Final Draft Data
 
-Formatting, fonts, margins, alignment, pagination, Title Page layout,
-ScriptNotes, revision presentation, scene colors, editor state, and inert
-proprietary data outside `Content` do not enter canonical data, reports, or the
-technical log. Their bytes remain unchanged in the retained source.
+`New Act`, `End of Act`, `Sequence`, `Summary`, `Outline 1`, `Outline 2`,
+`Outline 3`, `Note`, `ScriptNote`, and `Script Note` paragraphs create no
+canonical content, Section, structure entry, candidate, or warning. Formatting,
+fonts, margins, pagination, Title Page layout, revision presentation, scene
+colors, Outline/Beat Board metadata, editor state, and inert proprietary data
+outside `Content` also remain only in the retained source bytes.
+
+The mapper never looks at prose to infer structure. For example, an Action or
+General paragraph containing `ACT ONE` stays an Action block. It does not become
+an Act and it is available to analysis only as ordinary canonical prose.
 
 The importer creates no Cast Member, Location, Prop, or Screenplay reference.
-Character cues, Scene Headings, and supported tag evidence are
-non-authoritative candidates for later agent/user reconciliation.
+Character cues, Scene Headings, and supported tag evidence are non-authoritative
+candidates for later agent or user work. The FDX read-only gate prevents those
+candidates from being written back as Screenplay references.
 
-After a successful import, Director Context exposes the Project Settings
-document to the movie-director workflow. Enabled import preferences may cause
-that agent workflow to continue, in prerequisite order, with unambiguous
-continuity facts and bindings, continuity images, screenplay analysis, Scene
-Beats, and storyboard images. Explicit task direction may override those
-preferences without changing the saved document.
+## Source Authority And Refresh
 
-These are agent-owned follow-up stages, not importer behavior. Ambiguous
-identity still requires judgment, disabled stages are not proactively
-dispatched, and storyboards require an active Scene Beats revision. The screenplay
-drafter returns import evidence to the movie director instead of orchestrating
-other departments itself.
+The same command handles initial import and later refresh:
 
-## Safety And Determinism
+- first import validates and stores the exact source, flat aggregate, import
+  record, and first Screenplay revision;
+- an identical exact source SHA-256 returns `unchanged`, emits no resource keys,
+  and writes no database row, revision, or file;
+- a changed source whose canonical Screenplay is equal retains the new exact
+  source and advances only the import pointer, with no Screenplay revision or
+  resource keys; and
+- a changed canonical Screenplay is accepted automatically and atomically
+  replaces the complete aggregate, advances the source pointer, and creates one
+  Screenplay revision.
+
+There is no diff, destructive-change preview, approval token, partial merge, or
+conflict policy because Renku has no editable copy to reconcile. A valid source
+may add, remove, reorder, or change any canonical content.
+
+Core hashes each complete canonical Scene value without IDs. If the same exact
+hash occurs once on both sides of a changed import, the entire existing Scene
+graph is reused. A changed Scene receives a completely new Scene graph,
+including all nested Block, Dialogue Turn, and Dialogue Part IDs. Duplicate
+equal Scene hashes are ambiguous and receive new identities; Core makes no
+heading, number, position, neighbor, or fuzzy-text guess.
+
+Analysis reads the canonical database projection, never the retained FDX XML.
+Because FDX projection always has `sections: []`, analysis receives
+`sourceActMode: 'flat'` and owns its three analytical segments. Final Draft
+planning markers cannot supply source Acts.
+
+## Read-Only And Downstream Work
+
+Core uses the singleton `screenplay_import` row as the shared ownership gate for
+Screenplay create/apply, opening, Scene, Section, reference, dialogue-affecting,
+and revision-restore mutations. Reads, analysis, Scene Beats, Shot planning,
+dialogue audio, and other downstream workflows remain available.
+
+Those downstream artifacts keep weak historical Scene and Block IDs. A refresh
+does not inspect, rewrite, delete, cascade, or block on them. They remain
+readable as history and may be marked stale by existing current-context rules.
+
+## Safety And Persistence
 
 - Source size is checked before UTF-8 decoding and tree parsing.
-- Document types/custom entities are rejected; the parser performs no network
+- Document types and custom entities are rejected; parsing performs no network
   or external DTD resolution.
 - Fixed depth, paragraph, attribute, node-text, and aggregate semantic-text
   limits bound the parsed tree.
-- SHA-256 is calculated from exact original bytes before parsing.
-- Importer version, SHA-256, and stable semantic source paths derive every
-  imported identity. Identical repeated paragraphs remain distinct because
-  their source paths differ.
-
-The direct parser dependency is `@rgrove/parse-xml` and package changes must go
-through Socket Firewall (`sfw pnpm ...`).
-
-## Persistence
+- SHA-256 is calculated from exact original bytes.
+- Proposed IDs derive from importer version, source SHA-256, and deterministic
+  semantic source paths; FDX `UUID` and `Id` attributes are not identities.
+- Unknown/custom visible paragraph types fail with
+  `SCREENPLAY_FDX_UNSUPPORTED_VISIBLE_CONTENT`, including their paragraph type
+  and stable FDX path.
 
 The exact source is a Project-owned `screenplay_source` Asset with media kind
-`document`, file role `source`, MIME type `application/xml`, and path:
+`document`, file role `source`, MIME type `application/xml`, and a path under
+`screenplay/`. `screenplay_import` points to the latest accepted Asset/File and
+stores importer version, commit timestamp, and the closed developer-only
+normalization log. Earlier accepted source Assets remain immutable history.
+If a later refresh returns to exact earlier bytes, Core reuses that verified
+immutable source Asset/File; a missing or mismatched historical file fails
+without advancing the current pointer.
 
-```text
-screenplay/<safe-source-basename>[-<collision-number>].fdx
-```
-
-`screenplay_import` stores the import id, source Asset/File ids, importer
-version, commit timestamp, and closed developer-only normalization log. The
-Asset File's `contentHash` is the only persisted SHA-256 value.
-
-The complete canonical aggregate is validated before writes. Source copy,
-Asset/File/membership, provenance, Screenplay rows, and revision commit through
-one SQLite transaction plus the Project Asset file write-set. A failure rolls
-back rows and any copied file. Core prevents discard of the retained source
-while its import record exists. Canonical runtime reads query SQLite only.
+The complete canonical aggregate is validated before persistence. Source
+retention, Asset/File metadata, aggregate replacement, import-pointer update,
+and revision insertion use the existing SQLite transaction and Project Asset
+file write-set boundary. A failure keeps the previous source pointer, aggregate,
+and current revision. Canonical runtime reads query SQLite only.
 
 ## Fixture Provenance
 
-The Core fixture under
-`packages/core/src/server/screenplay/fdx/fixtures/representative.fdx` is a
-synthetic MIT-licensed screenplay authored for Renku Studio. It covers the
-accepted syntax without incorporating a copyrighted screenplay or implying
-support beyond the documented subset.
+The Core `representative.fdx` fixture is synthetic and MIT-licensed. It exercises
+the supported parser/mapper subset, including planning paragraphs that must be
+retained-only; it is not evidence of a universal Final Draft hierarchy.
 
-Real-world E2E inputs come from Fountain's official FDX downloads. Studio pins
-their source URLs, byte lengths, and SHA-256 identities, then downloads them on
-first use into a repository-ignored local cache. The screenplay files are not
-redistributed in this repository. They exercise the production CLI, Core import,
-exact source retention, and browser renderer without becoming bundled product
-samples or a universal Final Draft compatibility claim.
+Real-world E2E inputs are third-party interoperability and stress fixtures from
+Fountain's published FDX downloads. Studio pins source URLs, byte lengths, and
+SHA-256 identities and caches them outside the repository. They exercise the
+production CLI, Core import, exact source retention, and browser renderer
+without becoming bundled product samples or an official Final Draft conformance
+suite.

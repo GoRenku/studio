@@ -9,11 +9,7 @@ export function invalidFdxParagraph(
     || paragraph.type === 'Dialogue'
     || paragraph.type === 'Parenthetical'
     ? 'SCREENPLAY_FDX_INVALID_DIALOGUE'
-    : paragraph.type === 'New Act'
-      || paragraph.type === 'Sequence'
-      || paragraph.type === 'End of Act'
-      ? 'SCREENPLAY_FDX_INVALID_SECTION_STRUCTURE'
-      : 'SCREENPLAY_FDX_UNSUPPORTED_VISIBLE_CONTENT';
+    : 'SCREENPLAY_FDX_UNSUPPORTED_VISIBLE_CONTENT';
   return invalidFdxAt(paragraph.path, `${paragraph.type}: ${value}`, code);
 }
 

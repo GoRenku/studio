@@ -124,6 +124,9 @@ export interface StoryArcResource {
   };
   scenes: StoryArcScene[];
   activeAnalysis: ScreenplayAnalysis | null;
+  activeAnalysisFreshness: 'current' | 'needsRefresh';
+  needsRefresh: boolean;
+  freshnessHelp: string | null;
 }
 
 export interface StoryArcScene {

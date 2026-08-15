@@ -74,7 +74,7 @@ export function resolveStudioSelection(
     case 'props':
       return valid('Props', 'Continuity props.');
     case 'storyArc':
-      return valid('Story Arc', 'Screenplay analysis.');
+      return valid('Screenplay Analysis', 'Three-act screenplay analysis.');
     case 'section': {
       const section = lookup.sections.get(selection.id);
       return section

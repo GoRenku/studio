@@ -53,5 +53,8 @@ export function storyArcResource(active = true): StoryArcResource {
           suggestedScenes: [],
         }
       : null,
+    activeAnalysisFreshness: 'current',
+    needsRefresh: false,
+    freshnessHelp: null,
   };
 }

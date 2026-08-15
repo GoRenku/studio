@@ -4,6 +4,11 @@ Date: 2026-08-08
 
 Status: accepted
 
+Decision 0079 supersedes only the FDX refresh identity consequence below:
+unchanged unique whole-Scene graphs may be reused by exact complete-content
+hash, while changed or duplicate-equal Scenes receive new identities. No
+reconciliation heuristic is used.
+
 ## Context
 
 Scenes, Shot Plans, Shots, and Beats need short human-facing references that
@@ -63,9 +68,10 @@ revision id.
 - FDX-backed Screenplays remain readable and available to downstream
   production workflows, but `screenplay create`, `screenplay apply`, and
   revision restore fail with `SCREENPLAY_FDX_BACKED_READ_ONLY`.
-- There is no universal numbering table, compatibility reader, FDX export or
-  re-import merge, general screenplay editor UI, or Studio Scene Beats reset
-  action.
+- There is no universal numbering table, compatibility reader, FDX export,
+  partial refresh merge, general screenplay editor UI, or Studio Scene Beats
+  reset action. Continuous FDX refresh mirrors the accepted source without
+  treating numbers as order or identity.
 - The renamed Scene Beats contracts replace old names directly; `Sheet` is
   reserved for visual artifacts such as Storyboard Sheets.
 - Human-readable durable media paths are decided separately by Decision 0076.

@@ -3,89 +3,29 @@ import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createProjectDataService } from '../../index.js';
-import {
-  createBlankMovieProject,
-  writeConfig,
-} from '../../testing/project-data-fixtures.js';
+import { describe, expect, it } from 'vitest';
 import { mapFdxScreenplay } from './mapping/screenplay.js';
 import { parseFdxDocument } from './parser/document.js';
 import { MAX_FDX_SOURCE_BYTES, readFdxSource } from './source.js';
 
 const SOURCE_SHA = 'a'.repeat(64);
 
-describe('deterministic FDX import', () => {
-  let homeDir: string;
-  let sourcePath: string;
-
-  beforeEach(async () => {
-    homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-fdx-import-test-'));
-    await writeConfig(homeDir, path.join(homeDir, 'projects'));
-    sourcePath = path.join(homeDir, 'source.fdx');
-    await fs.writeFile(sourcePath, representativeFdx(), 'utf8');
-  });
-
-  it('maps the supported visible subset, dialogue, sections, and deterministic IDs', () => {
+describe('FDX parser and mapper', () => {
+  it('maps supported screenplay content into a deterministic flat Screenplay', () => {
     const first = mapFdxScreenplay(parseFdxDocument(representativeFdx()), SOURCE_SHA);
     const second = mapFdxScreenplay(parseFdxDocument(representativeFdx()), SOURCE_SHA);
 
     expect(second.screenplay).toEqual(first.screenplay);
-    const repeated = mapFdxScreenplay(parseFdxDocument(
-      '<FinalDraft DocumentType="Script"><Content>'
-      + '<Paragraph Type="Scene Heading"><Text>INT. ROOM - DAY</Text></Paragraph>'
-      + '<Paragraph Type="Action"><Text>Same.</Text></Paragraph>'
-      + '<Paragraph Type="Action"><Text>Same.</Text></Paragraph>'
-      + '</Content></FinalDraft>',
-    ), SOURCE_SHA);
-    expect(repeated.screenplay.scenes[0]?.blocks[0]?.id).not.toBe(
-      repeated.screenplay.scenes[0]?.blocks[1]?.id,
-    );
-    const realWorldDialogue = mapFdxScreenplay(parseFdxDocument(
-      '<FinalDraft DocumentType="Script"><Content>'
-      + '<Paragraph Type="Scene Heading"><Text>INT. ROOM - DAY</Text></Paragraph>'
-      + '<Paragraph Type="Action"><Text>A card reads:</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>Meet me at noon.</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text></Text></Paragraph>'
-      + '<Paragraph Type="Parenthetical"><Text></Text></Paragraph>'
-      + '<Paragraph Type="Character"><Text>CALLER</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>One visible line.</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text></Text></Paragraph>'
-      + '<Paragraph Type="General"><DualDialogue>'
-      + '<Paragraph Type="Character"><Text>LEFT</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>Same time.</Text></Paragraph>'
-      + '<Paragraph Type="Character"><Text>RIGHT</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>Same place.</Text></Paragraph>'
-      + '</DualDialogue></Paragraph>'
-      + '</Content></FinalDraft>',
-    ), SOURCE_SHA);
-    expect(realWorldDialogue.screenplay.scenes[0]?.blocks).toMatchObject([
-      { type: 'action', text: 'A card reads:' },
-      { type: 'action', text: 'Meet me at noon.' },
-      {
-        type: 'dialogue',
-        characterName: 'CALLER',
-        parts: [{ type: 'speech', text: 'One visible line.' }],
-      },
-      {
-        type: 'dualDialogue',
-        left: { characterName: 'LEFT', parts: [{ text: 'Same time.' }] },
-        right: { characterName: 'RIGHT', parts: [{ text: 'Same place.' }] },
-      },
-    ]);
-    expect(realWorldDialogue.technicalLog).toEqual([{
-      type: 'orphanDialogueNormalization',
-      sourceParagraphIndex: 2,
-      sourceParagraphType: 'Dialogue',
-      targetBlockType: 'action',
-    }]);
     expect(first.screenplay.opening).toMatchObject([
       { type: 'transition', text: 'FADE IN:' },
     ]);
-    expect(first.screenplay.sections.map((section) => [section.type, section.title])).toEqual([
-      ['act', 'ACT ONE'],
-      ['sequence', 'THE ARRIVAL'],
-    ]);
+    expect(first.screenplay.sections).toEqual([]);
+    expect(first.screenplay.structure).toHaveLength(2);
+    expect(first.screenplay.structure).toEqual(first.screenplay.scenes.map((scene, position) => ({
+      id: expect.any(String),
+      content: { type: 'scene', sceneId: scene.id },
+      position,
+    })));
     expect(first.screenplay.scenes[0]).toMatchObject({
       productionNumber: '1A',
       heading: 'INT. WORKSHOP - NIGHT',
@@ -111,8 +51,6 @@ describe('deterministic FDX import', () => {
     });
     expect(first.counts).toEqual({
       scenes: 2,
-      acts: 1,
-      sequences: 1,
       blocks: 4,
       dialogueTurns: 3,
       productionSceneNumbers: 1,
@@ -131,55 +69,145 @@ describe('deterministic FDX import', () => {
       ['Mara', 'Cast Members', 'dialogueCue'],
       ['Whisper', 'Sound', 'dialoguePart'],
     ]);
-    expect(first.technicalLog).toEqual([
+  });
+
+  it('omits known Final Draft formatting and planning paragraphs without inferring hierarchy', () => {
+    const mapped = mapFdxScreenplay(parseFdxDocument(
+      '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="New Act"><Text>ACT ONE</Text></Paragraph>'
+      + '<Paragraph Type="Summary"><Text>Opening summary.</Text></Paragraph>'
+      + '<Paragraph Type="Outline 1"><Text>Custom lane one.</Text></Paragraph>'
+      + '<Paragraph Type="Outline 2"><Text>Central conflict.</Text></Paragraph>'
+      + '<Paragraph Type="Outline 3"><Text>Possible scene.</Text></Paragraph>'
+      + '<Paragraph Type="Note"><Text>Planning note.</Text></Paragraph>'
+      + '<Paragraph Type="Sequence"><Text>THE ARRIVAL</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading"><Text>INT. FIRST ROOM - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Action"><Text>ACT ONE</Text></Paragraph>'
+      + '<Paragraph Type="General"><Text>Sequence 4</Text></Paragraph>'
+      + '<Paragraph Type="End of Act"><Text>END OF ACT</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading"><Text>INT. SECOND ROOM - DAY</Text></Paragraph>'
+      + '</Content><DisplayBoards><Board Name="Acts"/></DisplayBoards></FinalDraft>',
+    ), SOURCE_SHA);
+
+    expect(mapped.screenplay.sections).toEqual([]);
+    expect(mapped.screenplay.structure.map((entry) => ({
+      parentSectionId: entry.parentSectionId,
+      content: entry.content,
+      position: entry.position,
+    }))).toEqual([
       {
-        type: 'paragraphNormalization',
-        sourceParagraphIndex: 0,
-        sourceParagraphType: 'General',
-        targetBlockType: 'transition',
+        parentSectionId: undefined,
+        content: { type: 'scene', sceneId: mapped.screenplay.scenes[0]!.id },
+        position: 0,
+      },
+      {
+        parentSectionId: undefined,
+        content: { type: 'scene', sceneId: mapped.screenplay.scenes[1]!.id },
+        position: 1,
+      },
+    ]);
+    expect(mapped.screenplay.scenes[0]?.blocks).toMatchObject([
+      { type: 'action', text: 'ACT ONE' },
+      { type: 'action', text: 'Sequence 4' },
+    ]);
+    expect(JSON.stringify(mapped.screenplay)).not.toContain('Central conflict.');
+    expect(mapped.technicalLog).toEqual([{
+      type: 'paragraphNormalization',
+      sourceParagraphIndex: 9,
+      sourceParagraphType: 'General',
+      targetBlockType: 'action',
+    }]);
+  });
+
+  it('rejects an unknown visible paragraph type with its FDX path', () => {
+    expect(() => mapFdxScreenplay(parseFdxDocument(
+      '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="Scene Heading"><Text>INT. ROOM - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Custom Beat"><Text>Visible custom content.</Text></Paragraph>'
+      + '</Content></FinalDraft>',
+    ), SOURCE_SHA)).toThrowError(expect.objectContaining({
+      code: 'SCREENPLAY_FDX_UNSUPPORTED_VISIBLE_CONTENT',
+      message: expect.stringMatching(/Custom Beat.*FinalDraft\/Content\/Paragraph\[1\]|FinalDraft\/Content\/Paragraph\[1\].*Custom Beat/u),
+    }));
+  });
+
+  it('maps orphan and dual dialogue without inventing empty blocks', () => {
+    const mapped = mapFdxScreenplay(parseFdxDocument(
+      '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="Scene Heading"><Text>INT. ROOM - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Action"><Text>A card reads:</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>Meet me at noon.</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text></Text></Paragraph>'
+      + '<Paragraph Type="Parenthetical"><Text></Text></Paragraph>'
+      + '<Paragraph Type="Character"><Text>CALLER</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>One visible line.</Text></Paragraph>'
+      + '<Paragraph Type="General"><DualDialogue>'
+      + '<Paragraph Type="Character"><Text>LEFT</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>Same time.</Text></Paragraph>'
+      + '<Paragraph Type="Character"><Text>RIGHT</Text></Paragraph>'
+      + '<Paragraph Type="Dialogue"><Text>Same place.</Text></Paragraph>'
+      + '</DualDialogue></Paragraph>'
+      + '</Content></FinalDraft>',
+    ), SOURCE_SHA);
+
+    expect(mapped.screenplay.scenes[0]?.blocks).toMatchObject([
+      { type: 'action', text: 'A card reads:' },
+      { type: 'action', text: 'Meet me at noon.' },
+      {
+        type: 'dialogue',
+        characterName: 'CALLER',
+        parts: [{ type: 'speech', text: 'One visible line.' }],
+      },
+      {
+        type: 'dualDialogue',
+        left: { characterName: 'LEFT', parts: [{ text: 'Same time.' }] },
+        right: { characterName: 'RIGHT', parts: [{ text: 'Same place.' }] },
       },
     ]);
   });
 
-  it('assigns distinct identities to consecutive direct DualDialogue containers', () => {
-    const mapped = mapFdxScreenplay(parseFdxDocument(
-      '<FinalDraft DocumentType="Script"><Content>'
-      + '<Paragraph Type="Scene Heading"><Text>INT. ROOM - DAY</Text></Paragraph>'
-      + '<DualDialogue>'
-      + '<Paragraph Type="Character"><Text>LEFT ONE</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>First left.</Text></Paragraph>'
-      + '<Paragraph Type="Character"><Text>RIGHT ONE</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>First right.</Text></Paragraph>'
-      + '</DualDialogue>'
-      + '<DualDialogue>'
-      + '<Paragraph Type="Character"><Text>LEFT TWO</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>Second left.</Text></Paragraph>'
-      + '<Paragraph Type="Character"><Text>RIGHT TWO</Text></Paragraph>'
-      + '<Paragraph Type="Dialogue"><Text>Second right.</Text></Paragraph>'
-      + '</DualDialogue>'
-      + '</Content></FinalDraft>',
-    ), SOURCE_SHA);
+  it('assigns distinct path identities and ignores FDX UUID/Id attributes', () => {
+    const xml = '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="Scene Heading" UUID="same"><Text>INT. ROOM - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Action" Id="same"><Text>Same.</Text></Paragraph>'
+      + '<Paragraph Type="Action" Id="same"><Text>Same.</Text></Paragraph>'
+      + '</Content></FinalDraft>';
+    const first = mapFdxScreenplay(parseFdxDocument(xml), 'a'.repeat(64));
+    const changedSource = mapFdxScreenplay(parseFdxDocument(xml), 'b'.repeat(64));
 
-    const blocks = mapped.screenplay.scenes[0]?.blocks ?? [];
-    expect(blocks).toHaveLength(2);
-    expect(new Set(blocks.map((block) => block.id))).toHaveProperty('size', 2);
+    expect(first.screenplay.scenes[0]?.id).not.toBe(changedSource.screenplay.scenes[0]?.id);
+    expect(first.screenplay.scenes[0]?.blocks[0]?.id).not.toBe(
+      first.screenplay.scenes[0]?.blocks[1]?.id,
+    );
+    expect(parseFdxDocument(xml).content[0]).not.toHaveProperty('sourceId');
   });
 
-  it('preserves supplied Scene numbers exactly without validating or deduplicating them', () => {
+  it('preserves supplied Scene numbers exactly without sorting or invention', () => {
     const mapped = mapFdxScreenplay(parseFdxDocument(
       '<FinalDraft DocumentType="Script"><Content>'
-      + '<Paragraph Type="Scene Heading" Number=" A12 "><Text>INT. ONE - DAY</Text></Paragraph>'
-      + '<Paragraph Type="Scene Heading" Number=" A12 "><Text>INT. TWO - DAY</Text></Paragraph>'
-      + '<Paragraph Type="Scene Heading" Number=""><Text>INT. THREE - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading" Number="9B"><Text>INT. ONE - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading" Number="1"><Text>INT. TWO - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading" Number="1"><Text>INT. THREE - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading" Number=""><Text>INT. FOUR - DAY</Text></Paragraph>'
+      + '<Paragraph Type="Scene Heading"><Text>INT. FIVE - DAY</Text></Paragraph>'
       + '</Content></FinalDraft>',
     ), SOURCE_SHA);
 
-    expect(mapped.screenplay.scenes.map((scene) => scene.productionNumber)).toEqual([
-      ' A12 ',
-      ' A12 ',
-      '',
+    expect(mapped.screenplay.scenes.map((scene) => scene.heading)).toEqual([
+      'INT. ONE - DAY',
+      'INT. TWO - DAY',
+      'INT. THREE - DAY',
+      'INT. FOUR - DAY',
+      'INT. FIVE - DAY',
     ]);
-    expect(mapped.counts.productionSceneNumbers).toBe(3);
+    expect(mapped.screenplay.scenes.map((scene) => scene.productionNumber)).toEqual([
+      '9B',
+      '1',
+      '1',
+      '',
+      undefined,
+    ]);
+    expect(mapped.counts.productionSceneNumbers).toBe(4);
   });
 
   it('rejects unsafe, malformed, unsupported, deeply nested, and oversized input', async () => {
@@ -196,181 +224,13 @@ describe('deterministic FDX import', () => {
     expect(() => parseFdxDocument(
       `<FinalDraft DocumentType="Script"><Content/>${nested}</FinalDraft>`,
     )).toThrowError(expect.objectContaining({ code: 'SCREENPLAY_FDX_LIMIT_EXCEEDED' }));
+
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-fdx-source-test-'));
+    const sourcePath = path.join(homeDir, 'source.fdx');
     await fs.writeFile(sourcePath, Buffer.alloc(MAX_FDX_SOURCE_BYTES + 1));
     await expect(readFdxSource(sourcePath)).rejects.toMatchObject({
       code: 'SCREENPLAY_FDX_SOURCE_TOO_LARGE',
     });
-  });
-
-  it('reads Final Draft XML independently of its filename suffix', async () => {
-    const xmlPath = path.join(homeDir, 'Big-Fish.fdx.xml');
-    await fs.rename(sourcePath, xmlPath);
-
-    const source = await readFdxSource(xmlPath);
-
-    expect(source.filename).toBe('Big-Fish.fdx.xml');
-    expect(() => parseFdxDocument(source.xml)).not.toThrow();
-  });
-
-  it('commits the Screenplay, exact source Asset, and singleton provenance atomically', async () => {
-    const projectData = createProjectDataService();
-    const created = await createBlankMovieProject({
-      homeDir,
-      projectData,
-      projectName: 'fdx-movie',
-      title: 'FDX Movie',
-    });
-    if (!created) {
-      return;
-    }
-
-    const report = await projectData.importFdxScreenplay({
-      projectName: created.projectName,
-      homeDir,
-      sourcePath,
-    });
-    const resource = await projectData.readScreenplayStructure({
-      projectName: created.projectName,
-      homeDir,
-    });
-    const retainedPath = path.join(
-      created.projectPath,
-      'screenplay',
-      'source.fdx',
-    );
-
-    expect(resource.screenplay.scenes).toHaveLength(2);
-    await expect(fs.readFile(retainedPath)).resolves.toEqual(await fs.readFile(sourcePath));
-    expect((await projectData.listAssets({
-      projectName: created.projectName,
-      homeDir,
-      owner: { kind: 'project' },
-    })).find((asset) => asset.id === report.screenplayImport.sourceAssetId)).toMatchObject({
-      owner: { kind: 'project' },
-      type: 'screenplay_source',
-      mediaKind: 'document',
-      files: [{
-        id: report.screenplayImport.sourceAssetFileId,
-        role: 'source',
-        mimeType: 'application/xml',
-        contentHash: report.screenplayImport.sha256,
-      }],
-    });
-    const importedScene = resource.screenplay.scenes[0]!;
-    await expect(projectData.applyScreenplayOperations({
-      projectName: created.projectName,
-      homeDir,
-      operations: [{
-        operation: 'scene.update',
-        scene: {
-          id: importedScene.id,
-          heading: importedScene.heading,
-          ...(importedScene.title ? { title: importedScene.title } : {}),
-          blocks: importedScene.blocks,
-        },
-      }],
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_BACKED_READ_ONLY' });
-    const revisions = await projectData.listScreenplayRevisions({
-      projectName: created.projectName,
-      homeDir,
-    });
-    await expect(projectData.restoreScreenplayRevision({
-      projectName: created.projectName,
-      homeDir,
-      revisionId: revisions.revisions[0]!.id,
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_BACKED_READ_ONLY' });
-    await expect(projectData.importFdxScreenplay({
-      projectName: created.projectName,
-      homeDir,
-      sourcePath,
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_IMPORT_EXISTS' });
-    await fs.unlink(retainedPath);
-    await expect(projectData.readScreenplayStructure({
-      projectName: created.projectName,
-      homeDir,
-    })).resolves.toMatchObject({ orderedSceneIds: expect.any(Array) });
-    await expect(projectData.discardAsset({
-      projectName: created.projectName,
-      homeDir,
-      assetId: report.screenplayImport.sourceAssetId,
-      owner: { kind: 'project' },
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_FDX_SOURCE_IN_USE' });
-  });
-
-  it('preserves an existing external basename and allocates a plain collision suffix', async () => {
-    const projectData = createProjectDataService();
-    const created = await createBlankMovieProject({
-      homeDir,
-      projectData,
-      projectName: 'fdx-conflict',
-      title: 'FDX Conflict',
-    });
-    if (!created) {
-      return;
-    }
-    const destination = path.join(
-      created.projectPath,
-      'screenplay',
-      'source.fdx',
-    );
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.writeFile(destination, 'conflict', 'utf8');
-
-    const report = await projectData.importFdxScreenplay({
-      projectName: created.projectName,
-      homeDir,
-      sourcePath,
-    });
-    const resource = await projectData.readScreenplayStructure({
-      projectName: created.projectName,
-      homeDir,
-    });
-    expect(resource.screenplay.scenes).toHaveLength(2);
-    const sourceAsset = (await projectData.listAssets({
-      projectName: created.projectName,
-      homeDir,
-      owner: { kind: 'project' },
-    })).find((asset) => asset.id === report.screenplayImport.sourceAssetId);
-    expect(sourceAsset?.files[0]?.projectRelativePath).toBe('screenplay/source-2.fdx');
-    await expect(fs.readFile(destination, 'utf8')).resolves.toBe('conflict');
-    await expect(
-      fs.readFile(path.join(created.projectPath, 'screenplay', 'source-2.fdx'))
-    ).resolves.toEqual(await fs.readFile(sourcePath));
-  });
-
-  it('rejects a non-empty Screenplay before creating a retained source', async () => {
-    const projectData = createProjectDataService();
-    const created = await createBlankMovieProject({
-      homeDir,
-      projectData,
-      projectName: 'fdx-non-empty',
-      title: 'FDX Non-empty',
-    });
-    if (!created) {
-      return;
-    }
-    await projectData.createScreenplay({
-      projectName: created.projectName,
-      homeDir,
-      screenplay: {
-        opening: [],
-        scenes: [{ key: 'scene', heading: 'INT. ROOM - DAY', blocks: [] }],
-        sections: [],
-        structure: [{
-          key: 'placement',
-          content: { type: 'scene', scene: { key: 'scene' } },
-          position: 0,
-        }],
-        references: [],
-      },
-    });
-
-    await expect(projectData.importFdxScreenplay({
-      projectName: created.projectName,
-      homeDir,
-      sourcePath,
-    })).rejects.toMatchObject({ code: 'SCREENPLAY_NOT_EMPTY' });
-    await expect(fs.stat(path.join(created.projectPath, 'screenplay', 'sources'))).rejects.toThrow();
   });
 });
 

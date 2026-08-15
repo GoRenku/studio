@@ -59,9 +59,11 @@ Use the focused documents below for current direction.
   and Props to Scenes, headings, Blocks, dialogue cues/parts, and exact text
   ranges without mutating prose or requiring `@handle` tokens.
 - A Project may deterministically import one supported Final Draft `.fdx` into
-  an empty Screenplay. Core stores canonical screenplay data in SQLite and
-  retains the exact source as a hash-addressed Project-owned
-  `screenplay_source` Asset. Runtime Screenplay reads never parse that source.
+  an empty Screenplay and continuously refresh that FDX-backed aggregate. Core
+  stores a flat source-ordered Scene projection in SQLite and points the
+  singleton import record at the latest exact Project-owned `screenplay_source`
+  Asset. Final Draft planning markers never become Act or Sequence Sections.
+  Runtime Screenplay reads never parse that source.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
   agent-authored critique history as hierarchy-independent JSON in
   `screenplay_analysis`, with one active analysis tracked in

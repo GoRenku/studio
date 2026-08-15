@@ -4,6 +4,7 @@ import {
   Clapperboard,
   FileText,
   Images,
+  LineChart,
   Layers3,
   MapPin,
   Palette,
@@ -103,13 +104,8 @@ export function StudioSidebar({
     if (selection.type === 'lookbook') {
       sections.push('visualLanguage', 'lookbooks');
     }
-    if (
-      selection.type === 'storyArc' ||
-      selection.type === 'section' ||
-      selection.type === 'scene'
-    ) {
-      sections.push('scenes');
-    }
+    if (selection.type === 'storyArc') sections.push('analysis');
+    if (selection.type === 'section' || selection.type === 'scene') sections.push('screenplay');
     return { sections };
   }, [selection]);
 
@@ -357,19 +353,42 @@ export function StudioSidebar({
         </StudioSidebarSection>
 
         <StudioSidebarSection
-          title='Scenes'
+          title='Screenplay'
           detail={`${project.project.counts.scenes} scenes`}
           icon={<Clapperboard className='h-4 w-4' />}
-          active={selection.type === 'storyArc'}
-          expanded={visibleExpandedSections.has('scenes')}
-          onSelect={() => onSelect({ type: 'storyArc' })}
-          onToggle={() => toggleSection('scenes')}
+          active={selection.type === 'section' || selection.type === 'scene'}
+          expanded={visibleExpandedSections.has('screenplay')}
+          onSelect={() => {
+            const firstScene = screenplayNavigation.screenplay.screenplay.scenes[0];
+            if (firstScene) onSelect({ type: 'scene', id: firstScene.id });
+          }}
+          onToggle={() => toggleSection('screenplay')}
         >
-          {visibleExpandedSections.has('scenes') ? (
+          {visibleExpandedSections.has('screenplay') ? (
             <ScreenplayTree
               navigation={screenplayNavigation}
               selection={selection}
               onSelect={onSelect}
+            />
+          ) : null}
+        </StudioSidebarSection>
+
+        <StudioSidebarSection
+          title='Analysis'
+          detail='Project analysis documents'
+          icon={<LineChart className='h-4 w-4' />}
+          active={selection.type === 'storyArc'}
+          expanded={visibleExpandedSections.has('analysis')}
+          onSelect={() => onSelect({ type: 'storyArc' })}
+          onToggle={() => toggleSection('analysis')}
+        >
+          {visibleExpandedSections.has('analysis') ? (
+            <StudioSidebarButton
+              active={selection.type === 'storyArc'}
+              icon={<FileText className='h-4 w-4' />}
+              label='Screenplay Analysis'
+              compact
+              onClick={() => onSelect({ type: 'storyArc' })}
             />
           ) : null}
         </StudioSidebarSection>

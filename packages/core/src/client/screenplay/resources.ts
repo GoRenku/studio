@@ -29,6 +29,7 @@ export interface ScreenplayRevisionReadReport {
 }
 
 export interface ScreenplayStatusReport {
+  sourceOwnership: 'renku' | 'fdx';
   counts: {
     openingElements: number;
     sections: number;

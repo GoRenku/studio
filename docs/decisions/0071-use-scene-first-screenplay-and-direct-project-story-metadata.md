@@ -4,6 +4,11 @@ Date: 2026-08-03
 
 Status: accepted
 
+Decision 0079 makes one source-specific organization rule explicit: FDX-backed
+Screenplays always project as a flat Scene list. Final Draft planning paragraphs
+never become the optional Renku-authored Act or Sequence Sections described by
+this decision.
+
 Decision 0075 supersedes this decision's optional Scene-number rule and former
 Beat Sheet terminology. Scene identity, Scene-first structure, and direct
 Project story-metadata ownership remain accepted.
@@ -64,10 +69,11 @@ It aborts on ambiguous or invalid source data instead of guessing.
 - The separate production-number registry and hierarchy tables are removed.
 - Existing callers, routes, docs, and skills move directly to the new contract;
   no compatibility DTOs, aliases, or fallback readers remain.
-- Deterministic Final Draft import maps a supported semantic subset into this
-  aggregate only when it is empty. It retains the exact FDX bytes as a
-  hash-addressed Project Asset and stores one provenance record; canonical
-  runtime reads never depend on or reparse the retained source.
+- Deterministic Final Draft import maps a supported semantic subset into an
+  empty aggregate and continuously refreshes an FDX-backed aggregate from the
+  source. It retains each accepted exact FDX as a Project Asset and keeps one
+  current provenance pointer; canonical runtime reads never depend on or
+  reparse the retained source.
 - Import candidates never create or auto-match Cast Members, Locations, Props,
   or Screenplay references. Those judgments remain in later user/agent
   collaboration through the owning commands.

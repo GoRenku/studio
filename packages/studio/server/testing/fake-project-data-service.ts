@@ -247,6 +247,9 @@ export function fakeProjectDataService(): NonNullable<
           title,
         })),
         activeAnalysis: null,
+        activeAnalysisFreshness: 'current',
+        needsRefresh: false,
+        freshnessHelp: null,
       };
     },
     async readScreenplayStructure() {

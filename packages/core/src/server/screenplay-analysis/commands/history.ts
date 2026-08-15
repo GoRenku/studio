@@ -27,6 +27,8 @@ import {
 } from '../persistence.js';
 import { analysisResourceKeys } from '../story-arc-resource.js';
 import { assertScreenplayAnalysis } from '../validation.js';
+import { SCREENPLAY_ANALYSIS_NEEDS_REFRESH_HELP, screenplayAnalysisFreshness } from '../freshness.js';
+import { requireSupportedScreenplayAnalysis } from '../eligibility.js';
 
 export async function listScreenplayAnalyses(
   input: ScreenplayAnalysisProjectInput = {},
@@ -60,16 +62,23 @@ export async function readScreenplayAnalysis(
         analysis: null,
         summary: null,
         activeAnalysisId,
+        freshness: 'current',
+        needsRefresh: false,
+        freshnessHelp: null,
       };
     }
+    const freshness = screenplayAnalysisFreshness(session, row);
     return {
       valid: true,
       warnings: [],
       project: projectIdentity(currentProject),
       resourceKeys: analysisResourceKeys(row.id),
       analysis: readStoredScreenplayAnalysis({ row }),
-      summary: toScreenplayAnalysisSummary({ row, activeAnalysisId }),
+      summary: toScreenplayAnalysisSummary({ session, row, activeAnalysisId }),
       activeAnalysisId,
+      freshness,
+      needsRefresh: freshness === 'needsRefresh',
+      freshnessHelp: freshness === 'needsRefresh' ? SCREENPLAY_ANALYSIS_NEEDS_REFRESH_HELP : null,
     };
   });
 }
@@ -79,7 +88,15 @@ export async function validateScreenplayAnalysis(
 ): Promise<ScreenplayAnalysisValidationReport> {
   return withCurrentProjectSession(input, ({ currentProject, session }) => {
     const screenplay = readCanonicalScreenplay(session);
-    const warnings = assertScreenplayAnalysis({ analysis: input.analysis, screenplay, filePath: input.filePath });
+    const method = requireSupportedScreenplayAnalysis(screenplay);
+    const warnings = assertScreenplayAnalysis({
+      analysis: input.analysis,
+      screenplay,
+      filePath: input.filePath,
+      ...(method.sourceActMode === 'sourceThreeAct'
+        ? { expectedActSceneIds: method.sourceActs.map((act) => act.sceneIds) }
+        : {}),
+    });
     return {
       valid: true,
       warnings,
@@ -95,7 +112,15 @@ export async function writeScreenplayAnalysis(
 ): Promise<ScreenplayAnalysisWriteReport> {
   return withCurrentProjectSession(input, ({ currentProject, session }) => {
     const screenplay = readCanonicalScreenplay(session);
-    const warnings = assertScreenplayAnalysis({ analysis: input.analysis, screenplay, filePath: input.filePath });
+    const method = requireSupportedScreenplayAnalysis(screenplay);
+    const warnings = assertScreenplayAnalysis({
+      analysis: input.analysis,
+      screenplay,
+      filePath: input.filePath,
+      ...(method.sourceActMode === 'sourceThreeAct'
+        ? { expectedActSceneIds: method.sourceActs.map((act) => act.sceneIds) }
+        : {}),
+    });
     const analysisId = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator())('screenplay_analysis');
     const now = new Date().toISOString();
     session.db.transaction((tx) => {
@@ -109,7 +134,7 @@ export async function writeScreenplayAnalysis(
       warnings,
       project: projectIdentity(currentProject),
       resourceKeys: analysisResourceKeys(analysisId),
-      analysis: toScreenplayAnalysisSummary({ row, activeAnalysisId: analysisId }),
+      analysis: toScreenplayAnalysisSummary({ session, row, activeAnalysisId: analysisId }),
       activeAnalysisId: analysisId,
       changes: [
         { type: 'screenplayAnalysis.created', analysisId },
@@ -131,7 +156,7 @@ export async function setActiveScreenplayAnalysis(
       warnings: [],
       project: projectIdentity(currentProject),
       resourceKeys: analysisResourceKeys(input.analysisId),
-      analysis: toScreenplayAnalysisSummary({ row, activeAnalysisId: input.analysisId }),
+      analysis: toScreenplayAnalysisSummary({ session, row, activeAnalysisId: input.analysisId }),
       activeAnalysisId: input.analysisId,
       changes: [{ type: 'screenplayAnalysis.activeSet', analysisId: input.analysisId }],
     };

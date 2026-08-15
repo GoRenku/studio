@@ -59,7 +59,10 @@ describe('App', () => {
       expect(window.location.pathname).toBe('/projects/constantinople');
     });
     await screen.findByText('Project Name');
-    await screen.findByText('Scenes');
+    await screen.findByText('Screenplay');
+    expect(screen.getByRole('button', { name: 'AnalysisProject analysis documents' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Analysis' }));
+    expect(screen.getByRole('button', { name: 'Screenplay Analysis' })).toBeTruthy();
     fireEvent.click(
       screen.getByRole('button', { name: 'Expand Visual Language' })
     );
@@ -99,7 +102,7 @@ describe('App', () => {
       },
       {
         path: '/projects/constantinople/scenes',
-        expectedText: 'Story Arc',
+        expectedText: 'Screenplay Analysis',
       },
       {
         path: '/projects/constantinople/sections/section_opening',
@@ -188,7 +191,7 @@ describe('App', () => {
 
     renderApp();
 
-    fireEvent.click(await screen.findByLabelText('Expand Scenes'));
+    fireEvent.click(await screen.findByLabelText('Expand Screenplay'));
     fireEvent.click(await screen.findByLabelText('Expand Opening'));
     fireEvent.click(
       await screen.findByRole('button', { name: /Opening Scene/ })
@@ -577,7 +580,7 @@ describe('App', () => {
       expect(eventReadCount).toBeGreaterThan(1);
       expect(window.location.pathname).toBe('/projects/constantinople');
     }, { timeout: 2_500 });
-    await screen.findByText('Scenes');
+    await screen.findByText('Screenplay');
     expect(selectWasCalled).toBe(false);
   });
 
@@ -1077,7 +1080,7 @@ describe('App', () => {
         0
       );
     });
-    expect(screen.getAllByText('Scenes').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Screenplay').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Cast').length).toBeGreaterThan(0);
   });
 
@@ -1570,6 +1573,9 @@ function makeStoryArcResource() {
       },
     ],
     activeAnalysis: null,
+    activeAnalysisFreshness: 'current',
+    needsRefresh: false,
+    freshnessHelp: null,
   };
 }
 

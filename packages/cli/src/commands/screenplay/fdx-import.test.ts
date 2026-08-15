@@ -16,6 +16,7 @@ vi.mock('../studio-resource-event-command.js', () => ({
 
 describe('screenplay import-fdx command', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(appendStudioResourceChangedEvent).mockResolvedValue(undefined);
   });
 
@@ -49,8 +50,26 @@ describe('screenplay import-fdx command', () => {
     await runScreenplayFdxImportCommand(context({ service, json: false, output }));
 
     expect(output.join('\n')).toContain('Imported script.fdx');
-    expect(output.join('\n')).toContain('Scenes: 2; Acts: 1; Sequences: 0');
+    expect(output.join('\n')).toContain('Scenes: 2');
+    expect(output.join('\n')).not.toContain('Acts:');
+    expect(output.join('\n')).not.toContain('Sequences:');
     expect(output.join('\n')).not.toContain('screenplay_import_1');
+  });
+
+  it('prints unchanged without emitting a Studio mutation event', async () => {
+    const service = importService();
+    const unchanged = {
+      ...report(),
+      status: 'unchanged' as const,
+      resourceKeys: [],
+    };
+    vi.mocked(service.importFdxScreenplay).mockResolvedValue(unchanged);
+    const output: string[] = [];
+
+    await runScreenplayFdxImportCommand(context({ service, json: false, output }));
+
+    expect(output).toEqual(['FDX source is unchanged: script.fdx']);
+    expect(appendStudioResourceChangedEvent).not.toHaveBeenCalled();
   });
 
   it('runs the representative CLI adapter through the real Core service', async () => {
@@ -134,6 +153,7 @@ function report() {
   return {
     valid: true as const,
     warnings: [] as [],
+    status: 'imported' as const,
     project: { id: 'project_1', projectName: 'constantinople' },
     screenplayImport: {
       id: 'screenplay_import_1',
@@ -146,8 +166,6 @@ function report() {
     },
     counts: {
       scenes: 2,
-      acts: 1,
-      sequences: 0,
       blocks: 5,
       dialogueTurns: 2,
       productionSceneNumbers: 1,

@@ -94,7 +94,7 @@ export function StoryArcChart({ resource }: StoryArcChartProps) {
     );
   }
 
-  if (model.scenes.length === 0 || !view || !selectedCriterion) {
+  if (!view || !selectedCriterion) {
     return (
       <section className='rounded-(--radius-panel) border border-border/60 bg-card/50 p-6'>
         <p className='text-sm text-muted-foreground'>

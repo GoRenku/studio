@@ -56,6 +56,7 @@ export interface ImportFdxScreenplayInput extends RenkuConfigPathOptions {
 export interface ImportFdxScreenplayReport {
   valid: true;
   warnings: [];
+  status: 'imported' | 'refreshed' | 'unchanged';
   project: { id: string; projectName: string };
   screenplayImport: {
     id: ScreenplayImportId;
@@ -68,8 +69,6 @@ export interface ImportFdxScreenplayReport {
   };
   counts: {
     scenes: number;
-    acts: number;
-    sequences: number;
     blocks: number;
     dialogueTurns: number;
     productionSceneNumbers: number;

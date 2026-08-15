@@ -124,10 +124,11 @@ export const importFdxScreenplayReportSchema = {
   $id: 'https://schemas.gorenku.com/studio/screenplay/fdx-import-report.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   ...closedObject(
-    ['valid', 'warnings', 'project', 'screenplayImport', 'counts', 'candidates', 'resourceKeys'],
+    ['valid', 'warnings', 'status', 'project', 'screenplayImport', 'counts', 'candidates', 'resourceKeys'],
     {
       valid: { const: true },
       warnings: { type: 'array', maxItems: 0 },
+      status: { enum: ['imported', 'refreshed', 'unchanged'] },
       project: closedObject(['id', 'projectName'], {
         id: nonEmptyString,
         projectName: nonEmptyString,
@@ -153,11 +154,9 @@ export const importFdxScreenplayReportSchema = {
         },
       ),
       counts: closedObject(
-        ['scenes', 'acts', 'sequences', 'blocks', 'dialogueTurns', 'productionSceneNumbers'],
+        ['scenes', 'blocks', 'dialogueTurns', 'productionSceneNumbers'],
         {
           scenes: nonNegativeInteger,
-          acts: nonNegativeInteger,
-          sequences: nonNegativeInteger,
           blocks: nonNegativeInteger,
           dialogueTurns: nonNegativeInteger,
           productionSceneNumbers: nonNegativeInteger,

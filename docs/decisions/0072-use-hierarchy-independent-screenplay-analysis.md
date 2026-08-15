@@ -8,6 +8,9 @@ Decision 0073 limits current-Screenplay semantic validation to new Analysis
 validation and writes. Stored Analysis history remains readable when its Scene
 ids or order no longer match the current Screenplay.
 
+Decision 0079 confirms that FDX-backed Screenplays always use the flat analysis
+path. Final Draft planning paragraphs never supply source Act membership.
+
 ## Context
 
 The previous three-act analysis stored Act and Sequence ids from the mandatory
@@ -26,11 +29,14 @@ Screenplay Analysis derives its own structure from canonical ordered Scenes:
   screenplay genuinely embodies that beat; and
 - suggested Scenes anchored before or after exactly one current Scene.
 
-Act segments and Scene groups are analysis-owned interpretation. They never
-reference or infer ownership from screenplay Sections. Scores, criteria,
-critiques, evidence, suggestions, immutable history, and active selection stay
-within Core-owned validated persistence. CLI, HTTP, React, and Skills consume
-that contract without reproducing its partition rules.
+Act segments and Scene groups are analysis-owned interpretation. Flat
+Screenplays, including every FDX-backed Screenplay, derive that interpretation
+without source Act membership. Exactly three canonical Renku-authored Act
+Sections may supply their ordered Scene membership; other positive Act counts
+are unsupported. Scores, criteria, critiques, evidence, suggestions, immutable
+history, and active selection stay within Core-owned validated persistence.
+CLI, HTTP, React, and Skills consume that contract without reproducing its
+partition rules.
 
 ## Consequences
 

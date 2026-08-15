@@ -108,7 +108,7 @@ Options
   --model              Generation model
   --spec               Media Generation Spec id
   --run                Media Generation Run id
-  --approval-token     Approval token returned by generation estimate
+  --approval-token     Approval token returned by a preview or generation estimate
   --authored-from-shot-plan  Shot Plan source id for generation context
   --receipt            Generation Receipt JSON file
   --source-spec        Agent-external Generation Spec id for an imported image

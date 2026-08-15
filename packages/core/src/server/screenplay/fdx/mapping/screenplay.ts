@@ -18,7 +18,19 @@ import {
   mapFdxDualDialogue,
 } from './dialogue.js';
 import { invalidFdxAt, invalidFdxParagraph } from './errors.js';
-import { FdxStructureMapper } from './sections.js';
+
+const RETAINED_ONLY_PARAGRAPH_TYPES = new Set([
+  'New Act',
+  'End of Act',
+  'Sequence',
+  'Summary',
+  'Outline 1',
+  'Outline 2',
+  'Outline 3',
+  'Note',
+  'ScriptNote',
+  'Script Note',
+]);
 
 export interface MappedFdxScreenplay {
   screenplay: Screenplay;
@@ -26,8 +38,6 @@ export interface MappedFdxScreenplay {
   technicalLog: ScreenplayImportLogEntry[];
   counts: {
     scenes: number;
-    acts: number;
-    sequences: number;
     blocks: number;
     dialogueTurns: number;
     productionSceneNumbers: number;
@@ -49,11 +59,7 @@ export function mapFdxScreenplay(
   const technicalLog: ScreenplayImportLogEntry[] = [];
   let productionSceneNumbers = 0;
   const candidates = new FdxCandidateCollector(syntax.tagsByNumber);
-  const structure = new FdxStructureMapper(
-    identities,
-    screenplay.sections,
-    screenplay.structure,
-  );
+  let structurePosition = 0;
   let activeScene: Scene | null = null;
 
   for (let cursor = 0; cursor < syntax.content.length; cursor += 1) {
@@ -78,12 +84,7 @@ export function mapFdxScreenplay(
     }
 
     const paragraph = element;
-    if (paragraph.type === 'New Act' || paragraph.type === 'Sequence') {
-      structure.addSection(paragraph, paragraph.type === 'New Act' ? 'act' : 'sequence');
-      continue;
-    }
-    if (paragraph.type === 'End of Act') {
-      structure.endAct(paragraph);
+    if (RETAINED_ONLY_PARAGRAPH_TYPES.has(paragraph.type)) {
       continue;
     }
     if (paragraph.type === 'Scene Heading') {
@@ -92,7 +93,12 @@ export function mapFdxScreenplay(
         productionSceneNumbers += 1;
       }
       screenplay.scenes.push(activeScene);
-      structure.addScene(activeScene, paragraph);
+      screenplay.structure.push({
+        id: identities.id('screenplay_structure_entry', `${paragraph.path}/structure`),
+        content: { type: 'scene', sceneId: activeScene.id },
+        position: structurePosition,
+      });
+      structurePosition += 1;
       candidates.addTaggedTarget(paragraph.tagNumbers, {
         type: 'sceneHeading',
         sceneId: activeScene.id,
@@ -160,10 +166,6 @@ export function mapFdxScreenplay(
       }
       throw invalidFdxParagraph(paragraph, 'Orphan Parenthetical');
     }
-    if (paragraph.type === 'ScriptNote' || paragraph.type === 'Script Note') {
-      continue;
-    }
-
     const block = mapFdxTextParagraph(paragraph, identities, technicalLog);
     if (block) {
       if (activeScene) {
@@ -197,8 +199,6 @@ export function mapFdxScreenplay(
     technicalLog,
     counts: {
       scenes: screenplay.scenes.length,
-      acts: screenplay.sections.filter((section) => section.type === 'act').length,
-      sequences: screenplay.sections.filter((section) => section.type === 'sequence').length,
       blocks: screenplay.opening.length + allBlocks.length,
       dialogueTurns: allBlocks.reduce(
         (total, block) => total + (block.type === 'dualDialogue' ? 2 : block.type === 'dialogue' ? 1 : 0),

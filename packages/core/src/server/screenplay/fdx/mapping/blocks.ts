@@ -10,7 +10,6 @@ const TEXT_TYPES = new Map<string, TextBlockType>([
   ['Shot', 'shot'],
   ['Lyrics', 'lyrics'],
   ['Cast List', 'castList'],
-  ['Note', 'note'],
   ['Special Heading', 'specialHeading'],
   ['Title', 'titleCard'],
   ['Title Card', 'titleCard'],

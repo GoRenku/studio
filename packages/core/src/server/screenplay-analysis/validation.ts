@@ -36,6 +36,7 @@ export function validateScreenplayAnalysis(input: {
   analysis: ScreenplayAnalysis;
   screenplay: Screenplay;
   filePath?: string;
+  expectedActSceneIds?: string[][];
 }): DiagnosticResult {
   const shapeIssues = validateShape(input.analysis, input.filePath);
   return buildDiagnosticResult(shapeIssues.length > 0 ? shapeIssues : validateSemantics(input));
@@ -45,6 +46,7 @@ export function assertScreenplayAnalysis(input: {
   analysis: ScreenplayAnalysis;
   screenplay: Screenplay;
   filePath?: string;
+  expectedActSceneIds?: string[][];
 }): DiagnosticIssue[] {
   const result = validateScreenplayAnalysis(input);
   throwIfDiagnosticResultInvalid(result, {
@@ -95,6 +97,7 @@ function validateSemantics(input: {
   analysis: ScreenplayAnalysis;
   screenplay: Screenplay;
   filePath?: string;
+  expectedActSceneIds?: string[][];
 }): DiagnosticIssue[] {
   const { analysis, screenplay, filePath } = input;
   const issues: DiagnosticIssue[] = [];
@@ -114,6 +117,14 @@ function validateSemantics(input: {
       issues.push(issue(`Act segment ${index + 1} must use role ${expectedRoles[index]}.`, ['actSegments', String(index), 'role'], filePath));
     }
     validateSceneIds(segment.sceneIds, sceneIds, ['actSegments', String(index), 'sceneIds'], issues, filePath);
+    const expectedSourceScenes = input.expectedActSceneIds?.[index];
+    if (expectedSourceScenes && JSON.stringify(segment.sceneIds) !== JSON.stringify(expectedSourceScenes)) {
+      issues.push(issue(
+        `Act segment ${index + 1} must reflect the current source Act Scene membership. Put boundary criticism in suggestions without creating alternate Act boundaries.`,
+        ['actSegments', String(index), 'sceneIds'],
+        filePath,
+      ));
+    }
     scoreOwners.push({ path: ['actSegments', String(index)], scores: segment.scoreByCriterion, critique: segment.critique });
   });
   requireExactOrder(analysis.actSegments.flatMap((segment) => segment.sceneIds), orderedSceneIds, ['actSegments'], issues, filePath, 'Act segments');

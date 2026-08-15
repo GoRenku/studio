@@ -50,6 +50,8 @@ operational companions that teach agents how to use those contracts.
 `screenplay-drafter`
 
 - Creates and revises the Scene-first Screenplay through `renku screenplay`.
+- Imports and automatically refreshes FDX-backed Screenplays as flat,
+  source-authoritative Scene lists; it never edits or partially merges them.
 - Stores story/development metadata on direct Project fields through
   `renku info`, not in duplicate Screenplay metadata.
 - Authors plain screenplay text and binds existing Cast Members, Locations,
@@ -62,8 +64,11 @@ operational companions that teach agents how to use those contracts.
 - Analyzes the current screenplay through `renku screenplay analyze`.
 - Reads direct Project story fields, canonical ordered Scenes and stable Blocks,
   Cast Member/Location/Prop references, and default analysis criteria.
-- Writes hierarchy-independent Screenplay Analysis JSON with analysis-owned Act
-  segments and optional Scene groups through the CLI.
+- Writes three-act Screenplay Analysis JSON through the CLI. Flat Screenplays
+  use analysis-owned segments. FDX-backed Screenplays are always flat, and
+  Final Draft planning markers never supply analysis Act membership. Exactly
+  three canonical Renku-authored Acts may supply membership; other positive Act
+  counts are unsupported.
 - Suggests scene additions or revisions as critique only; it does not mutate the
   screenplay graph.
 
