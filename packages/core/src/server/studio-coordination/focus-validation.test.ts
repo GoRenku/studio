@@ -6,7 +6,7 @@ import {
 } from './focus-validation.js';
 
 describe('Studio focus validation', () => {
-  it('resolves Project, Section, and independent Scene selections from ProjectShell', () => {
+  it('resolves Project, Screenplay, and independent Scene selections from ProjectShell', () => {
     const shell = makeProjectShell();
 
     expect(resolveStudioSelectionForProject(shell, {
@@ -16,13 +16,11 @@ describe('Studio focus validation', () => {
       context: { kind: 'projectInformation', title: 'Preparation of the Siege' },
     });
     expect(resolveStudioSelectionForProject(shell, {
-      type: 'section',
-      id: 'section_opening',
+      type: 'screenplay',
     })).toMatchObject({
       ok: true,
       context: {
-        kind: 'section',
-        id: 'section_opening',
+        kind: 'screenplay',
         scenes: [{ id: 'scene_1', heading: 'EXT. CITY WALLS - DAWN' }],
       },
     });
@@ -45,8 +43,8 @@ describe('Studio focus validation', () => {
   it('rejects missing entities and invalid tab-specific focus', () => {
     const shell = makeProjectShell();
     expect(resolveStudioSelectionForProject(shell, {
-      type: 'section',
-      id: 'section_missing',
+      type: 'scene',
+      id: 'scene_missing',
     })).toMatchObject({ ok: false, reason: 'selectionNotFound' });
     expect(resolveStudioSelectionForProject(shell, {
       type: 'scene',

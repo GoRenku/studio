@@ -55,6 +55,7 @@ export function parseStudioSelection(
   let selection: StudioSelection | null = null;
   switch (type) {
     case 'projectInformation':
+    case 'screenplay':
     case 'trash':
     case 'cast':
     case 'locations':
@@ -90,7 +91,6 @@ export function parseStudioSelection(
         selection = { type, kind: record.kind };
       }
       break;
-    case 'section':
     case 'castMember':
     case 'location':
     case 'prop': {

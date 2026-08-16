@@ -215,3 +215,17 @@ export function matchesSceneBeatsResource(input: {
         : false)
   );
 }
+
+export function matchesScreenplayBeatGalleryResource(
+  resourceKeys: string[]
+): boolean {
+  return resourceKeys.some(
+    (resourceKey) =>
+      resourceKey === 'screenplay' ||
+      resourceKey === 'screenplay:structure' ||
+      resourceKey === 'scene-beats' ||
+      (resourceKey.startsWith('surface:scene:') &&
+        resourceKey.endsWith(':beats')) ||
+      resourceKey.startsWith('scene-beats:')
+  );
+}

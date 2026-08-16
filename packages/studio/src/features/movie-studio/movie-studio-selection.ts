@@ -33,7 +33,6 @@ export interface ResolvedStudioSelection {
   castMember?: CastNavigationRow;
   location?: LocationNavigationRow;
   prop?: PropNavigationRow;
-  section?: ScreenplaySection;
   scene?: Scene;
 }
 
@@ -58,6 +57,8 @@ export function resolveStudioSelection(
   switch (selection.type) {
     case 'projectInformation':
       return valid('Project Details', 'Project information loaded from project data.');
+    case 'screenplay':
+      return valid('Screenplay', 'Generated beat images by Scene.');
     case 'inspiration':
       return valid('Inspiration', 'Reference grabs and analysis.');
     case 'lookbook':
@@ -75,18 +76,6 @@ export function resolveStudioSelection(
       return valid('Props', 'Continuity props.');
     case 'storyArc':
       return valid('Screenplay Analysis', 'Three-act screenplay analysis.');
-    case 'section': {
-      const section = lookup.sections.get(selection.id);
-      return section
-        ? {
-            ...valid(
-              section.title,
-              section.type === 'act' ? 'Screenplay Act.' : 'Screenplay Sequence.'
-            ),
-            section,
-          }
-        : invalid();
-    }
     case 'castMember': {
       const castMember = lookup.cast.get(selection.id);
       return castMember

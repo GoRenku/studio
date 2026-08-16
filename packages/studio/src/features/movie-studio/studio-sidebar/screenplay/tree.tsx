@@ -47,8 +47,6 @@ export function ScreenplayTree({
           sceneCount={countScenes(section.id, entriesByParent)}
           expanded={expanded}
           onToggle={() => toggleSection(section.id)}
-          selection={selection}
-          onSelect={onSelect}
         />
         {expanded ? (
           <div className='ml-4 space-y-1 border-l border-border/30 pl-2'>

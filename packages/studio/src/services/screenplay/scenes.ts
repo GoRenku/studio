@@ -1,5 +1,6 @@
 import type {
   SceneBeatsResourceResponse,
+  ScreenplayBeatGalleryResourceResponse,
   ScreenplaySceneResourceResponse,
 } from '@/services/studio-project-contracts';
 import { readStudioApiError } from '@/services/studio-api-errors';
@@ -18,6 +19,12 @@ export async function readSceneBeatsResource(
   return readResource(
     screenplayPath(projectName, `/scenes/${encodeURIComponent(sceneId)}/beats`)
   );
+}
+
+export async function readScreenplayBeatGalleryResource(
+  projectName: string
+): Promise<ScreenplayBeatGalleryResourceResponse> {
+  return readResource(screenplayPath(projectName, '/beat-gallery'));
 }
 
 async function readResource<T>(path: string): Promise<T> {

@@ -105,8 +105,8 @@ describe('App', () => {
         expectedText: 'Screenplay Analysis',
       },
       {
-        path: '/projects/constantinople/sections/section_opening',
-        expectedText: 'Opening',
+        path: '/projects/constantinople/screenplay',
+        expectedText: 'Beat 1',
       },
       {
         path: '/projects/constantinople/scenes/scene_1_1',
@@ -156,11 +156,11 @@ describe('App', () => {
     );
   });
 
-  it('keeps Section selection and disclosure independent in the scene tree', async () => {
+  it('uses Sections only as expandable Screenplay navigation groups', async () => {
     window.history.pushState(
       {},
       '',
-      '/projects/constantinople/sections/section_opening'
+      '/projects/constantinople/screenplay'
     );
     mockStudioFetch({
       library: makeLibrary([makeProjectSummary()]),
@@ -169,16 +169,16 @@ describe('App', () => {
 
     renderApp();
 
-    await screen.findByRole('heading', { name: 'Opening' });
-    await screen.findByLabelText('Collapse Opening');
+    expect((await screen.findAllByText('Beat 1')).length).toBeGreaterThan(0);
+    await screen.findByLabelText('Expand Opening');
     expect(window.location.pathname).toBe(
-      '/projects/constantinople/sections/section_opening'
+      '/projects/constantinople/screenplay'
     );
 
-    fireEvent.click(screen.getByLabelText('Collapse Opening'));
-    expect(screen.getByLabelText('Expand Opening')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Opening1 scene$/ }));
+    expect(screen.getByLabelText('Collapse Opening')).not.toBeNull();
     expect(window.location.pathname).toBe(
-      '/projects/constantinople/sections/section_opening'
+      '/projects/constantinople/screenplay'
     );
   });
 
@@ -387,7 +387,8 @@ describe('App', () => {
     const routeCases = [
       {
         path: '/projects/constantinople/sections/section_missing',
-        message: 'Section not found: section_missing',
+        message:
+          'Unknown project route: /projects/constantinople/sections/section_missing',
       },
       {
         path: '/projects/constantinople/scenes/scene_missing',
@@ -608,9 +609,9 @@ describe('App', () => {
     ['Trash', { type: 'trash' }, '/projects/constantinople/trash'],
     ['Story Arc', { type: 'storyArc' }, '/projects/constantinople/scenes'],
     [
-      'Section',
-      { type: 'section', id: 'section_opening' },
-      '/projects/constantinople/sections/section_opening',
+      'Screenplay',
+      { type: 'screenplay' },
+      '/projects/constantinople/screenplay',
     ],
     [
       'Scene',
@@ -1262,12 +1263,9 @@ function mockStudioFetch(input: {
         resource: makeStoryArcResource(),
       });
     }
-    if (
-      url ===
-      '/studio-api/projects/constantinople/screenplay/sections/section_opening'
-    ) {
+    if (url === '/studio-api/projects/constantinople/screenplay/beat-gallery') {
       return jsonResponse({
-        resource: makeSectionResource(),
+        resource: makeScreenplayBeatGalleryResource(),
       });
     }
     if (url === '/studio-api/projects/constantinople/screenplay/scenes/scene_1_1') {
@@ -1380,29 +1378,14 @@ function makeSelectionContextResponse(selection: StudioSelection) {
       resourceKeys: [`surface:prop:${selection.id}`],
     };
   }
-  if (selection.type === 'section') {
+  if (selection.type === 'screenplay') {
     return {
       valid: true,
       selection,
       context: {
-        surface: 'section',
-        section: {
-          section: {
-          id: selection.id,
-          type: 'sequence',
-          title: 'Opening',
-          },
-          structure: [
-            {
-              id: 'entry_scene_1_1',
-              content: { type: 'scene', sceneId: 'scene_1_1' },
-              position: 0,
-            },
-          ],
-          orderedSceneIds: ['scene_1_1'],
-        },
+        surface: 'screenplay',
       },
-      resourceKeys: [`screenplay:section:${selection.id}`],
+      resourceKeys: ['screenplay:structure'],
     };
   }
   if (selection.type === 'scene') {
@@ -1579,21 +1562,28 @@ function makeStoryArcResource() {
   };
 }
 
-function makeSectionResource() {
+function makeScreenplayBeatGalleryResource() {
   return {
-    section: {
-      id: 'section_opening',
-      type: 'sequence',
-      title: 'Opening',
-    },
-    structure: [
+    projectAspectRatio: '16:9',
+    scenes: [
       {
-        id: 'entry_scene_1_1',
-        content: { type: 'scene', sceneId: 'scene_1_1' },
-        position: 0,
+        scene: {
+          id: 'scene_1_1',
+          productionNumber: '1',
+          heading: 'EXT. THEODOSIAN WALLS - DAWN',
+          title: 'Opening Scene',
+        },
+        beats: [
+          {
+            beat: { id: 'beat_001', number: '1', title: 'Beat 1' },
+            image: makeScreenplayImageReference({
+              assetId: 'asset_beat_001',
+              title: 'Beat 1 image',
+            }),
+          },
+        ],
       },
     ],
-    orderedSceneIds: ['scene_1_1'],
   };
 }
 

@@ -157,6 +157,20 @@ export interface SceneBeatsResource {
   propLabels: Record<string, string>;
 }
 
+export interface ScreenplayBeatGalleryResource {
+  projectAspectRatio: string | null;
+  scenes: Array<{
+    scene: Pick<
+      import('./screenplay/index.js').Scene,
+      'id' | 'productionNumber' | 'heading' | 'title'
+    >;
+    beats: Array<{
+      beat: Pick<SceneBeats['beats'][number], 'id' | 'number' | 'title'>;
+      image: ScreenplayImageReference;
+    }>;
+  }>;
+}
+
 export interface SceneNarrativeResource {
   scene: import('./screenplay/index.js').ScreenplaySceneResource;
   sections: import('./screenplay/index.js').ScreenplaySection[];
@@ -352,6 +366,7 @@ export type ScenePanelTab =
 
 export type StudioSelection =
   | { type: 'projectInformation' }
+  | { type: 'screenplay' }
   | { type: 'inspiration'; folderId?: string }
   | { type: 'lookbook'; kind: LookbookKind }
   | { type: 'trash' }
@@ -362,7 +377,6 @@ export type StudioSelection =
   | { type: 'props' }
   | { type: 'prop'; id: string }
   | { type: 'storyArc' }
-  | { type: 'section'; id: string }
   | {
       type: 'scene';
       id: string;
@@ -374,6 +388,7 @@ export type StudioSelection =
 
 export type StudioSelectionContext =
   | { surface: 'project-information' }
+  | { surface: 'screenplay' }
   | { surface: 'trash' }
   | { surface: 'visual-language-inspiration' }
   | { surface: 'visual-language-lookbook' }
@@ -384,7 +399,6 @@ export type StudioSelectionContext =
   | { surface: 'props'; props: PageResponse<PropNavigationRow> }
   | { surface: 'prop'; prop: PropNavigationRow }
   | { surface: 'story-arc' }
-  | { surface: 'section'; section: import('./screenplay/index.js').ScreenplaySectionResource }
   | {
       surface: 'scene';
       scene: import('./screenplay/index.js').ScreenplaySceneResource;

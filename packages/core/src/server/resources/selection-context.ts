@@ -10,7 +10,6 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { projectScreenplayScene } from '../screenplay/projections/scene.js';
-import { descendantSceneIds } from '../screenplay/projections/structure.js';
 import {
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
@@ -21,7 +20,7 @@ import {
   studioPropSurfaceResourceKey,
   studioSceneNarrativeResourceKey,
   studioSceneShotPlansResourceKey,
-  studioScreenplaySectionResourceKey,
+  studioScreenplayStructureResourceKey,
   studioStoryArcSurfaceResourceKey,
   studioTrashResourceKey,
   studioVisualLanguageInspirationResourceKey,
@@ -58,6 +57,8 @@ export function readStudioSelectionContextProjection(
   switch (selection.type) {
     case 'projectInformation':
       return found(selection, { surface: 'project-information' }, [studioProjectInformationResourceKey()]);
+    case 'screenplay':
+      return found(selection, { surface: 'screenplay' }, [studioScreenplayStructureResourceKey()]);
     case 'inspiration':
       return selection.folderId && !readInspirationFolderRecord(session, selection.folderId)
         ? selectionNotFound(selection)
@@ -97,20 +98,6 @@ export function readStudioSelectionContextProjection(
     }
     case 'storyArc':
       return found(selection, { surface: 'story-arc' }, [studioStoryArcSurfaceResourceKey()]);
-    case 'section': {
-      const screenplay = readCanonicalScreenplay(session);
-      const section = screenplay.sections.find((candidate) => candidate.id === selection.id);
-      return section
-        ? found(selection, {
-            surface: 'section',
-            section: {
-              section,
-              structure: screenplay.structure.filter((entry) => entry.parentSectionId === section.id),
-              orderedSceneIds: descendantSceneIds(screenplay, section.id),
-            },
-          }, [studioScreenplaySectionResourceKey(section.id)])
-        : selectionNotFound(selection);
-    }
     case 'scene': {
       const screenplay = readCanonicalScreenplay(session);
       const scene = screenplay.scenes.some((candidate) => candidate.id === selection.id)

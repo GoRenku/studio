@@ -22,7 +22,7 @@ import { PropPanel } from './props/prop-panel';
 import { MOVIE_STUDIO_LAYOUT } from './movie-studio-layout';
 import { PanelShell } from './panel-shell';
 import { ProjectDetailsPanel } from './project-details/project-details-panel';
-import { SectionScreen } from './screenplay/sections/section-screen';
+import { ScreenplayBeatGallery } from './screenplay/screenplay-beat-gallery';
 import { ScenePanel } from './scenes/scene-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
@@ -344,12 +344,9 @@ export function MovieStudioScreen({
                 <StoryArcPanel projectName={project.project.projectName} />
               ) : selection.type === 'trash' ? (
                 <TrashPanel projectName={project.project.projectName} />
-              ) : selection.type === 'section' ? (
-                <SectionScreen
-                  key={selection.id}
+              ) : selection.type === 'screenplay' ? (
+                <ScreenplayBeatGallery
                   projectName={project.project.projectName}
-                  sectionId={selection.id}
-                  scenesById={screenplayNavigation.scenesById}
                   onSelect={selectMovieStudioSurface}
                 />
               ) : (
@@ -399,7 +396,7 @@ function usesFlushPanelContent(selectionType: StudioSelection['type']): boolean 
     selectionType === 'prop' ||
     selectionType === 'lookbook' ||
     selectionType === 'trash' ||
-    selectionType === 'section' ||
+    selectionType === 'screenplay' ||
     selectionType === 'scene'
   );
 }

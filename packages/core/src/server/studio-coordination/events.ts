@@ -215,11 +215,8 @@ export type StudioCurrentContext =
       sceneTab: StudioCurrentSceneTab;
     }
   | {
-      kind: 'section';
-      id: string;
-      sectionType: 'act' | 'sequence';
-      title: string;
-      description?: string;
+      kind: 'screenplay';
+      projectTitle: string;
       scenes: { id: string; heading: string; title?: string }[];
     }
   | {

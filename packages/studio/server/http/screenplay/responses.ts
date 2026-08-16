@@ -1,5 +1,6 @@
 import type {
   SceneBeatsResource,
+  ScreenplayBeatGalleryResource,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,
 } from '@gorenku/studio-core/client';
@@ -10,6 +11,24 @@ export type SceneBeatsResourceResponse = Omit<
 > & {
   storyboardImagesByBeatId: Record<string, ScreenplayImageReferenceWithHttp>;
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
+};
+
+export type ScreenplayBeatGalleryResourceResponse = Omit<
+  ScreenplayBeatGalleryResource,
+  'scenes'
+> & {
+  scenes: Array<
+    Omit<ScreenplayBeatGalleryResource['scenes'][number], 'beats'> & {
+      beats: Array<
+        Omit<
+          ScreenplayBeatGalleryResource['scenes'][number]['beats'][number],
+          'image'
+        > & {
+          image: ScreenplayImageReferenceWithHttp;
+        }
+      >;
+    }
+  >;
 };
 
 export function toSceneBeatsResourceResponse(
@@ -24,6 +43,22 @@ export function toSceneBeatsResourceResponse(
     castMemberImages: Object.fromEntries(
       Object.entries(resource.castMemberImages).map(([castMemberId, image]) => [castMemberId, withImageUrl(projectName, image)]),
     ),
+  };
+}
+
+export function toScreenplayBeatGalleryResourceResponse(
+  projectName: string,
+  resource: ScreenplayBeatGalleryResource,
+): ScreenplayBeatGalleryResourceResponse {
+  return {
+    ...resource,
+    scenes: resource.scenes.map((scene) => ({
+      ...scene,
+      beats: scene.beats.map((beat) => ({
+        ...beat,
+        image: withImageUrl(projectName, beat.image),
+      })),
+    })),
   };
 }
 

@@ -120,6 +120,7 @@ export type {
   SceneDesignResource,
   SceneNarrativeResource,
   SceneBeatsResource,
+  ScreenplayBeatGalleryResource,
   SequenceSceneStoryboardPreview,
   ScreenplayImageReference,
   ScreenplayImageReferenceWithHttp,

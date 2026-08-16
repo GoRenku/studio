@@ -20,11 +20,9 @@ export function useExpandedSections(
   const selectionKey = selectionIdentity(selection);
   const autoExpandedSectionIds = useMemo(() => {
     const selectedSectionId =
-      selection.type === 'section'
-        ? selection.id
-        : selection.type === 'scene'
-          ? sectionForScene(structure, selection.id)
-          : null;
+      selection.type === 'scene'
+        ? sectionForScene(structure, selection.id)
+        : null;
     if (!selectedSectionId) return new Set<string>();
     const ancestors: string[] = [];
     let current: string | null = selectedSectionId;

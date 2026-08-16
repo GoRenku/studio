@@ -1,6 +1,7 @@
 import type {
   Asset,
   SceneBeatsResource,
+  ScreenplayBeatGalleryResource,
   ScreenplayImageReference,
 } from '../../client/index.js';
 import type { Screenplay, ScreenplaySection } from '../../client/screenplay/index.js';
@@ -12,9 +13,13 @@ import { readProjectRecord } from '../database/access/project.js';
 import { readActiveSceneBeatsRevisionRecord } from '../database/access/scene-beats.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import type { ReadSceneBeatsResourceInput } from '../project-data-service-contracts.js';
+import type {
+  ReadProjectInput,
+  ReadSceneBeatsResourceInput,
+} from '../project-data-service-contracts.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { projectScreenplayScene } from '../screenplay/projections/scene.js';
+import { projectCanonicalScreenplayStructure } from '../screenplay/projections/structure.js';
 import { readSceneStoryboardProjection } from './storyboard-overviews.js';
 
 export async function readSceneBeatsResource(
@@ -53,6 +58,48 @@ export async function readSceneBeatsResource(
           .filter((prop) => propIds.has(prop.id))
           .map((prop) => [prop.id, prop.name]),
       ),
+    };
+  } finally {
+    session.close();
+  }
+}
+
+export async function readScreenplayBeatGalleryResource(
+  input: ReadProjectInput
+): Promise<ScreenplayBeatGalleryResource> {
+  const { session } = await openProjectSession(input);
+  try {
+    const screenplay = readCanonicalScreenplay(session);
+    const orderedScenes = projectCanonicalScreenplayStructure(screenplay).scenes;
+    return {
+      projectAspectRatio: readProjectRecord(session)?.aspectRatio ?? null,
+      scenes: orderedScenes.flatMap((scene) => {
+        const projection = readSceneStoryboardProjection(session, scene.id);
+        const beats = (projection.document?.beats ?? []).flatMap((beat) => {
+          const image = projection.imagesByBeatId[beat.id];
+          return image
+            ? [{
+                beat: {
+                  id: beat.id,
+                  number: beat.number,
+                  title: beat.title,
+                },
+                image,
+              }]
+            : [];
+        });
+        return beats.length
+          ? [{
+              scene: {
+                id: scene.id,
+                productionNumber: scene.productionNumber,
+                heading: scene.heading,
+                title: scene.title,
+              },
+              beats,
+            }]
+          : [];
+      }),
     };
   } finally {
     session.close();

@@ -317,6 +317,12 @@ export function fakeProjectDataService(): NonNullable<
         propLabels: {},
       };
     },
+    async readScreenplayBeatGalleryResource() {
+      return {
+        projectAspectRatio: '16:9',
+        scenes: [],
+      };
+    },
     async selectAsset(input) {
       return {
         valid: true,

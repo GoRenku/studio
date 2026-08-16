@@ -26,6 +26,7 @@ import type {
   ProjectShell,
   ProjectSummary,
   SceneBeatsResource,
+  ScreenplayBeatGalleryResource,
   ScreenplaySceneResource,
   ScreenplaySectionResource,
   ScreenplayStructureResource,
@@ -126,6 +127,24 @@ export type SceneBeatsResourceResponse = Omit<
 > & {
   storyboardImagesByBeatId: Record<string, ScreenplayImageReferenceWithHttp>;
   castMemberImages: Record<string, ScreenplayImageReferenceWithHttp>;
+};
+
+export type ScreenplayBeatGalleryResourceResponse = Omit<
+  ScreenplayBeatGalleryResource,
+  'scenes'
+> & {
+  scenes: Array<
+    Omit<ScreenplayBeatGalleryResource['scenes'][number], 'beats'> & {
+      beats: Array<
+        Omit<
+          ScreenplayBeatGalleryResource['scenes'][number]['beats'][number],
+          'image'
+        > & {
+          image: ScreenplayImageReferenceWithHttp;
+        }
+      >;
+    }
+  >;
 };
 
 export type InspirationResourceResponse = InspirationResource;

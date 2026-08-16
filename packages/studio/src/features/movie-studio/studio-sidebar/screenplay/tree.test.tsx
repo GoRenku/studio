@@ -31,11 +31,8 @@ describe('ScreenplayTree', () => {
     fireEvent.click(
       screen.getByRole('button', { name: /^Root Sequence1 scene$/ })
     );
-    expect(onSelect).toHaveBeenLastCalledWith({
-      type: 'section',
-      id: 'section_root_sequence',
-    });
-    expect(screen.getByLabelText('Collapse Root Sequence')).not.toBeNull();
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Expand Root Sequence')).not.toBeNull();
   });
 });
 

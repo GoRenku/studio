@@ -100,6 +100,7 @@ import type {
   UpdateAssetInput,
   StoryArcResource,
   SceneBeatsResource,
+  ScreenplayBeatGalleryResource,
   GarbageCollectionPreview,
   GarbageCollectionReport,
   RecoverableMutationReport,
@@ -200,6 +201,9 @@ export interface ProjectDataService {
   readSceneBeatsResource(
     input: ReadSceneBeatsResourceInput
   ): Promise<SceneBeatsResource>;
+  readScreenplayBeatGalleryResource(
+    input: ReadProjectInput
+  ): Promise<ScreenplayBeatGalleryResource>;
   readStudioSelectionContext(input: {
     projectName: string;
     selection: StudioSelection;

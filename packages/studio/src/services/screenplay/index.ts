@@ -5,6 +5,7 @@ export {
 export {
   readScreenplayScene,
   readSceneBeatsResource,
+  readScreenplayBeatGalleryResource,
 } from './scenes';
 export {
   deleteSceneDialogueAudioTake,

@@ -355,14 +355,14 @@ function readStudioRoute(): StudioRoute {
     };
   }
 
-  const sectionRoute = /^\/projects\/([^/]+)\/sections\/([^/]+)\/?$/.exec(
+  const screenplayRoute = /^\/projects\/([^/]+)\/screenplay\/?$/.exec(
     window.location.pathname
   );
-  if (sectionRoute?.[1] && sectionRoute[2]) {
+  if (screenplayRoute?.[1]) {
     return {
       screen: 'movieStudio',
-      projectName: decodeURIComponent(sectionRoute[1]),
-      selection: { type: 'section', id: decodeURIComponent(sectionRoute[2]) },
+      projectName: decodeURIComponent(screenplayRoute[1]),
+      selection: { type: 'screenplay' },
     };
   }
 
@@ -560,8 +560,8 @@ function selectionTypeLabel(type: StudioSelection['type']): string {
       return 'Location';
     case 'prop':
       return 'Prop';
-    case 'section':
-      return 'Section';
+    case 'screenplay':
+      return 'Screenplay';
     case 'scene':
       return 'Scene';
     case 'projectInformation':
@@ -595,11 +595,6 @@ function canResolveRouteSelection(
   }
   if (selection.type === 'prop') {
     return project.navigation.props.items.some((prop) => prop.id === selection.id);
-  }
-  if (selection.type === 'section') {
-    return project.navigation.screenplay.screenplay.sections.some(
-      (section) => section.id === selection.id
-    );
   }
   if (selection.type === 'scene') {
     return project.navigation.screenplay.screenplay.scenes.some(
@@ -656,8 +651,8 @@ function studioSelectionRoutePath(
   if (selection.type === 'storyArc') {
     return `${projectRoutePath(projectName)}/scenes`;
   }
-  if (selection.type === 'section') {
-    return `${projectRoutePath(projectName)}/sections/${encodeURIComponent(selection.id)}`;
+  if (selection.type === 'screenplay') {
+    return `${projectRoutePath(projectName)}/screenplay`;
   }
   if (selection.type === 'scene') {
     const base = `${projectRoutePath(projectName)}/scenes/${encodeURIComponent(selection.id)}`;

@@ -31,14 +31,19 @@ describe('screenplay Hono route', () => {
     expect(oldPickRoute.status).toBe(404);
   });
 
-  it('serves Scene-first structure, Section, Scene, and Story Arc resources', async () => {
+  it('serves Screenplay gallery, structure, Section data, Scene, and Story Arc resources', async () => {
     const app = createMountedScreenplayRoute();
 
+    const gallery = await app.request('/constantinople/screenplay/beat-gallery');
     const structure = await app.request('/constantinople/screenplay/structure');
     const section = await app.request('/constantinople/screenplay/sections/act_opening');
     const scene = await app.request('/constantinople/screenplay/scenes/scene_opening');
     const storyArc = await app.request('/constantinople/screenplay/story-arc');
 
+    expect(gallery.status).toBe(200);
+    await expect(gallery.json()).resolves.toMatchObject({
+      resource: { projectAspectRatio: '16:9', scenes: [] },
+    });
     expect(structure.status).toBe(200);
     await expect(structure.json()).resolves.toMatchObject({
       resource: {

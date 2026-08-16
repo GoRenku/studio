@@ -11,7 +11,10 @@ import {
   readSceneNarrativeResource,
 } from '../resources/screenplay-ui.js';
 import { readStoryArcResource } from '../screenplay-analysis/story-arc-resource.js';
-import { readSceneBeatsResource } from '../resources/scene-beats.js';
+import {
+  readSceneBeatsResource,
+  readScreenplayBeatGalleryResource,
+} from '../resources/scene-beats.js';
 import { readStudioSelectionContext } from '../resources/selection-context.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
@@ -27,6 +30,7 @@ export function createDesignResourceServiceWiring(): Pick<
   | 'readStoryArcResource'
   | 'readSceneNarrativeResource'
   | 'readSceneBeatsResource'
+  | 'readScreenplayBeatGalleryResource'
   | 'readStudioSelectionContext'
 > {
   return {
@@ -40,6 +44,7 @@ export function createDesignResourceServiceWiring(): Pick<
     readStoryArcResource,
     readSceneNarrativeResource,
     readSceneBeatsResource,
+    readScreenplayBeatGalleryResource,
     readStudioSelectionContext,
   };
 }

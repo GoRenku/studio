@@ -68,6 +68,17 @@ export function resolveStudioSelectionForProject(
       languages: shell.languages,
     });
   }
+  if (selection.type === 'screenplay') {
+    return success(selection, {
+      kind: 'screenplay',
+      projectTitle: project.title,
+      scenes: screenplay.scenes.map((scene) => ({
+        id: scene.id,
+        heading: scene.heading,
+        title: scene.title,
+      })),
+    });
+  }
   if (selection.type === 'inspiration' || selection.type === 'lookbook') {
     return success(selection, {
       kind: 'visualLanguage',
@@ -129,23 +140,6 @@ export function resolveStudioSelectionForProject(
       ? success(selection, { kind: 'prop', id: entry.id, name: entry.name })
       : missing(selection, `Requested Prop '${selection.id}' was not found.`);
   }
-  if (selection.type === 'section') {
-    const section = screenplay.sections.find((value) => value.id === selection.id);
-    if (!section) {
-      return missing(selection, `Requested Section '${selection.id}' was not found.`);
-    }
-    const sceneIds = descendantSceneIds(screenplay, section.id);
-    return success(selection, {
-      kind: 'section',
-      id: section.id,
-      sectionType: section.type,
-      title: section.title,
-      description: section.description,
-      scenes: screenplay.scenes
-        .filter((scene) => sceneIds.includes(scene.id))
-        .map((scene) => ({ id: scene.id, heading: scene.heading, title: scene.title })),
-    });
-  }
   if (selection.type === 'scene') {
     const scene = screenplay.scenes.find((value) => value.id === selection.id);
     if (!scene) {
@@ -191,27 +185,6 @@ function parentSections(
       (value) => value.content.type === 'section' && value.content.sectionId === section.id,
     );
   }
-  return result;
-}
-
-function descendantSceneIds(
-  screenplay: ProjectShell['navigation']['screenplay']['screenplay'],
-  sectionId: string,
-): string[] {
-  const result: string[] = [];
-  const visit = (parentId: string): void => {
-    screenplay.structure
-      .filter((entry) => entry.parentSectionId === parentId)
-      .sort((left, right) => left.position - right.position)
-      .forEach((entry) => {
-        if (entry.content.type === 'scene') {
-          result.push(entry.content.sceneId);
-        } else {
-          visit(entry.content.sectionId);
-        }
-      });
-  };
-  visit(sectionId);
   return result;
 }
 

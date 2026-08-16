@@ -64,6 +64,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'generateSceneDialogueAudioTake'
   | 'deleteSceneDialogueAudioTake'
   | 'readSceneBeatsResource'
+  | 'readScreenplayBeatGalleryResource'
   | 'listGenerationReferences'
   | 'readStudioSelectionContext'
   | 'listSceneShotPlans'

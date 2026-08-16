@@ -7,6 +7,7 @@ import {
   matchesMovieStudioNavigationResource,
   matchesSceneBeatsResource,
   matchesSceneNarrativeResource,
+  matchesScreenplayBeatGalleryResource,
   matchesVisualLanguageLookbookResource,
 } from './use-studio-resource-refresh';
 
@@ -107,5 +108,18 @@ describe('Studio resource refresh matchers', () => {
         sceneId: 'scene_bombardment',
       })
     ).toBe(true);
+  });
+
+  it('refreshes the Screenplay beat gallery for any Scene Beats change', () => {
+    expect(
+      matchesScreenplayBeatGalleryResource([
+        'surface:scene:scene_bombardment:beats',
+      ])
+    ).toBe(true);
+    expect(
+      matchesScreenplayBeatGalleryResource([
+        'surface:scene:scene_opening:video-generations',
+      ])
+    ).toBe(false);
   });
 });

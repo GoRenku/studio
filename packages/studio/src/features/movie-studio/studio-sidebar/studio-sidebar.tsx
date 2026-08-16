@@ -105,7 +105,7 @@ export function StudioSidebar({
       sections.push('visualLanguage', 'lookbooks');
     }
     if (selection.type === 'storyArc') sections.push('analysis');
-    if (selection.type === 'section' || selection.type === 'scene') sections.push('screenplay');
+    if (selection.type === 'screenplay' || selection.type === 'scene') sections.push('screenplay');
     return { sections };
   }, [selection]);
 
@@ -356,12 +356,9 @@ export function StudioSidebar({
           title='Screenplay'
           detail={`${project.project.counts.scenes} scenes`}
           icon={<Clapperboard className='h-4 w-4' />}
-          active={selection.type === 'section' || selection.type === 'scene'}
+          active={selection.type === 'screenplay'}
           expanded={visibleExpandedSections.has('screenplay')}
-          onSelect={() => {
-            const firstScene = screenplayNavigation.screenplay.screenplay.scenes[0];
-            if (firstScene) onSelect({ type: 'scene', id: firstScene.id });
-          }}
+          onSelect={() => onSelect({ type: 'screenplay' })}
           onToggle={() => toggleSection('screenplay')}
         >
           {visibleExpandedSections.has('screenplay') ? (
