@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -8,6 +9,7 @@ import {
   within,
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
 import { readScreenplayBeatGalleryResource } from '@/services/screenplay';
 import { ScreenplayBeatGallery } from './screenplay-beat-gallery';
 
@@ -22,6 +24,7 @@ vi.mock('@/hooks/use-studio-resource-refresh', () => ({
 
 describe('ScreenplayBeatGallery', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(readScreenplayBeatGalleryResource).mockResolvedValue(
       galleryResource()
     );
@@ -71,6 +74,65 @@ describe('ScreenplayBeatGallery', () => {
       })
     ).not.toBeNull();
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps the same asset open across reordering and closes when it disappears', async () => {
+    const reordered = galleryResource();
+    reordered.scenes = [reordered.scenes[1]!, reordered.scenes[0]!];
+    const removed = galleryResource();
+    removed.scenes[0]!.beats = removed.scenes[0]!.beats.slice(1);
+    vi.mocked(readScreenplayBeatGalleryResource)
+      .mockResolvedValueOnce(galleryResource())
+      .mockResolvedValueOnce(reordered)
+      .mockResolvedValueOnce(removed);
+    let refresh:
+      | Parameters<typeof useStudioResourceRefresh>[0]['onRefresh']
+      | undefined;
+    vi.mocked(useStudioResourceRefresh).mockImplementation(({ onRefresh }) => {
+      refresh = onRefresh;
+    });
+    render(
+      <ScreenplayBeatGallery
+        projectName='constantinople'
+        onSelect={vi.fn()}
+      />
+    );
+
+    fireEvent.click(
+      (await screen.findAllByRole('button', { name: 'Inspect Beat 1' }))[0]!
+    );
+    const selectedImageName = '1 - Opening — Beat 1 — The city wakes';
+    expect(
+      within(await screen.findByRole('dialog')).getByRole('img', {
+        name: selectedImageName,
+      })
+    ).not.toBeNull();
+
+    act(() => {
+      void refresh?.({
+        projectName: 'constantinople',
+        resourceKeys: ['screenplay:beat-gallery'],
+      });
+    });
+    await waitFor(() =>
+      expect(readScreenplayBeatGalleryResource).toHaveBeenCalledTimes(2)
+    );
+    expect(
+      within(screen.getByRole('dialog')).getByRole('img', {
+        name: selectedImageName,
+      })
+    ).not.toBeNull();
+
+    act(() => {
+      void refresh?.({
+        projectName: 'constantinople',
+        resourceKeys: ['screenplay:beat-gallery'],
+      });
+    });
+    await waitFor(() =>
+      expect(readScreenplayBeatGalleryResource).toHaveBeenCalledTimes(3)
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });
 

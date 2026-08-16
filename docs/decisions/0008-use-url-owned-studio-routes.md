@@ -47,10 +47,10 @@ The current route contract is:
 /projects/:projectName    -> Movie Studio Project Information
 /projects/:projectName/visual-language
                           -> Movie Studio Visual Language
+/projects/:projectName/screenplay
+                          -> Movie Studio Screenplay beat gallery
 /projects/:projectName/scenes
-                          -> Movie Studio Story Arc
-/projects/:projectName/sections/:sectionId
-                          -> Movie Studio read-only Section
+                          -> Movie Studio Screenplay Analysis
 /projects/:projectName/scenes/:sceneId
                           -> Movie Studio Scene
 /projects/:projectName/cast
@@ -69,8 +69,9 @@ The current route contract is:
                           -> Movie Studio Trash
 ```
 
-Scenes are canonical. Optional Act and Sequence organization uses the shared
-Section route. Obsolete Act- and Sequence-specific paths are not redirected.
+Scenes are canonical. Optional Act and Sequence organization is sidebar-only
+disclosure state: Sections are not selectable surfaces and do not have browser
+routes. Act-, Sequence-, and Section-specific paths are not redirected.
 
 When the browser is at `/`, Studio must show the project library. There must
 not be a `/studio-api/projects/current` route loader that can reinterpret `/`

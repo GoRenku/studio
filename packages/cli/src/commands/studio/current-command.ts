@@ -48,6 +48,8 @@ function focusSummary(current: StudioCurrent): string | null {
   switch (context.kind) {
     case 'projectInformation':
       return 'Project Details';
+    case 'screenplay':
+      return 'Screenplay';
     case 'visualLanguage':
       return 'Visual Language';
     case 'cast':

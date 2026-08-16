@@ -25,17 +25,18 @@ shows them as Act or Sequence rows.
 The current browser routes are:
 
 ```text
+/projects/:projectName/screenplay
 /projects/:projectName/scenes
-/projects/:projectName/sections/:sectionId
 /projects/:projectName/scenes/:sceneId
 ```
 
 The separate top-level **Analysis** section contains **Screenplay Analysis**.
 It reuses the existing Story Arc display and is designed to accept future
-analysis document types without adding empty placeholders now. A Section route
-opens one shared read-only Section surface. A Scene route owns Narrative,
-Beats, Shot Plans, and Generations. There are no Act- or Sequence-specific
-routes.
+analysis document types without adding empty placeholders now. The Screenplay
+route opens the generated beat image gallery grouped by Scene. Act and Sequence
+rows only organize and disclose Scenes in the sidebar; they are not selectable
+surfaces and do not have browser routes. A Scene route owns Narrative, Beats,
+Shot Plans, and Generations.
 
 An active analysis remains visible after screenplay changes. Studio shows a
 keyboard-focusable **Needs refresh** badge with the tooltip “Screenplay changed

@@ -33,7 +33,9 @@ export function ScreenplayBeatGallery({
     useState<ScreenplayBeatGalleryResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [previewSceneBeatKey, setPreviewSceneBeatKey] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +43,12 @@ export function ScreenplayBeatGallery({
       .then((nextResource) => {
         if (!cancelled) {
           setResource(nextResource);
+          setPreviewSceneBeatKey((currentKey) =>
+            currentKey !== null &&
+            !screenplayBeatGalleryHasSceneBeat(nextResource, currentKey)
+              ? null
+              : currentKey
+          );
           setError(null);
         }
       })
@@ -75,17 +83,17 @@ export function ScreenplayBeatGallery({
       ) ?? [],
     [resource]
   );
-  const previewIndexBySceneBeat = useMemo(
+  const previewSceneBeatKeys = useMemo(
     () =>
-      new Map(
-        resource?.scenes
-          .flatMap(({ scene, beats }) =>
-            beats.map(({ beat }) => `${scene.id}:${beat.id}`)
-          )
-          .map((key, index) => [key, index]) ?? []
-      ),
+      resource?.scenes.flatMap(({ scene, beats }) =>
+        beats.map(({ beat }) => `${scene.id}:${beat.id}`)
+      ) ?? [],
     [resource]
   );
+  const previewIndex = previewSceneBeatKey === null
+    ? null
+    : previewSceneBeatKeys.indexOf(previewSceneBeatKey);
+  const resolvedPreviewIndex = previewIndex === -1 ? null : previewIndex;
 
   if (error) {
     return <p className='p-8 text-sm text-destructive'>{error}</p>;
@@ -183,11 +191,7 @@ export function ScreenplayBeatGallery({
                           label: `Inspect ${label}`,
                           visibility: 'always',
                           onAction: () =>
-                            setPreviewIndex(
-                              previewIndexBySceneBeat.get(
-                                `${scene.id}:${beat.id}`
-                              ) ?? null
-                            ),
+                            setPreviewSceneBeatKey(`${scene.id}:${beat.id}`),
                         }}
                       />
                     );
@@ -199,11 +203,22 @@ export function ScreenplayBeatGallery({
         })}
       </div>
       <ImagePreviewDialog
-        images={previewIndex === null ? [] : previewImages}
-        currentIndex={previewIndex ?? 0}
-        onCurrentIndexChange={setPreviewIndex}
-        onOpenChange={(open) => !open && setPreviewIndex(null)}
+        images={resolvedPreviewIndex === null ? [] : previewImages}
+        currentIndex={resolvedPreviewIndex ?? 0}
+        onCurrentIndexChange={(index) =>
+          setPreviewSceneBeatKey(previewSceneBeatKeys[index] ?? null)
+        }
+        onOpenChange={(open) => !open && setPreviewSceneBeatKey(null)}
       />
     </div>
+  );
+}
+
+function screenplayBeatGalleryHasSceneBeat(
+  resource: ScreenplayBeatGalleryResourceResponse,
+  sceneBeatKey: string
+): boolean {
+  return resource.scenes.some(({ scene, beats }) =>
+    beats.some(({ beat }) => `${scene.id}:${beat.id}` === sceneBeatKey)
   );
 }
