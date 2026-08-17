@@ -103,10 +103,10 @@ operational companions that teach agents how to use those contracts.
 `media-producer`
 
 - Generates purpose-specific media from Renku context.
-- Reads `workflowPolicy` from Generation Context before choosing an otherwise
-  unselected execution path or deciding automatic Preview, additional
-  confirmation, and concurrency. Explicit user direction and a path already
-  saved on the GenerationSpec take precedence.
+- Reads the Project generation settings from Generation Context. Codex is the
+  default image-generation choice; explicit user direction and a path already
+  saved on the GenerationSpec take precedence. Preview, confirmation, and
+  concurrency use their existing settings.
 - Authors one generic `GenerationSpec` from Core context and Engines-owned
   provider field descriptors.
 - Preserves exact guide placement and separately assigns every included
@@ -128,10 +128,21 @@ operational companions that teach agents how to use those contracts.
   repeated `--file` values for transient specs or repeated `--spec` values for
   saved specs. Multi-request display never combines estimates, approvals, or
   runs.
-- For `scene.storyboard-sheet`, reads the exact Scene Beats revision, batches one
-  to four Beats, inspects and includes the project Storyboard Lookbook,
-  Cast Member, Location, and Prop references, and stops for user direction when needed
-  continuity media is unavailable.
+- For `scene.storyboard-sheet`, reads the exact Scene Beats revision and current
+  Storyboard Lookbook, requires one exact Storyboard Lookbook Sheet, then
+  partitions only requested saved Beat image work into consecutive groups of
+  up to four without changing the revision.
+- Treats the Storyboard Lookbook as the sole appearance authority. Exact
+  Character, Location, and Prop references preserve canonical subject facts
+  while being re-rendered in that Lookbook's visual language.
+- Uses one Project image-path setting, **Use Codex for image generation**. It
+  is on by default. Turning it off selects the Renku-managed GPT Image 2 edit
+  route;
+  there is no second model recommendation.
+- Synthesizes concrete visible panel direction from opaque narrative evidence,
+  analyzes each composite once, preserves the existing vision-guided crop path,
+  then accepts useful crops or reports the issue and stops without automatic
+  edit, repair, retry, or regeneration.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
   the output to `casting-director` for `renku cast voice attach`.
 
@@ -153,8 +164,9 @@ operational companions that teach agents how to use those contracts.
 
 `shot-planner`
 
-- Creates and revises Scene-owned Shot Plans through focused `renku shot-plan`
-  commands.
+- Creates and revises director/cinematographer production camera plans through
+  focused `renku shot-plan` commands; Beat Storyboard visualization remains a
+  separate pre-production workflow.
 - Resolves exact plan/Shot ids and one-based user-facing Shot numbers without
   whole-plan replacement.
 - Authors readable opaque Markdown with only relevant sections, exact
@@ -169,17 +181,17 @@ operational companions that teach agents how to use those contracts.
 
 `scene-beat-designer`
 
-- Designs and persists Scene Beats for individual screenplay Scenes.
+- Designs and persists the narrative-appropriate number of Scene Beats without
+  a four-Beat generation cap or image grouping.
 - Uses `renku screenplay beats context` to read stable Screenplay Block
   ids, referenced Cast Members, Locations, and Props, Production Lookbook
   guidance, and active Scene Beats history.
 - Writes validated closed Scene Beats JSON through the CLI.
-- Hands storyboard image requests to `media-producer` after a valid Scene Beat
-  Sheet exists and uses the Storyboard Lookbook when available. The
-  media-producer skill owns
-  non-blocking Storyboard Lookbook Sheet guidance, `scene.storyboard-sheet`
-  generation specs, visual inspection, slicing, and per-Beat storyboard image
-  import.
+- Hands Storyboard image requests to `media-producer` after a valid Scene Beats
+  revision exists. Media Producer requires the current Storyboard Lookbook and
+  one exact Sheet, and owns image-only batching, prompt synthesis,
+  `scene.storyboard-sheet` specs, one-pass inspection, slicing, and per-Beat
+  Storyboard image import.
 
 ## Skill Rules
 

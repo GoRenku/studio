@@ -1261,11 +1261,11 @@ Storyboard Lookbook input JSON:
 {
   "kind": "storyboardLookbook",
   "storyboardLookbook": {
-    "name": "Storyboard drawing language",
-    "styleBrief": { "text": "Graphite storyboard frames with clear staging." },
-    "lineAndFinish": { "text": "Loose pencil construction with crisp ink accents." },
-    "valueAndAccent": { "text": "Soft gray values with restrained warm accents." },
-    "guardrails": { "text": "Avoid photoreal stills and decorative text inside panels." }
+    "name": "Naturalistic storyboard language",
+    "styleBrief": { "text": "Naturalistic full-color story visualization." },
+    "lineAndFinish": { "text": "Continuous tonal forms without visible linework." },
+    "valueAndAccent": { "text": "Restrained contrast with selective color emphasis." },
+    "guardrails": { "text": "Keep action and geography immediately legible." }
   },
   "sourceInspirationFolderIds": []
 }
@@ -1474,6 +1474,21 @@ metadata. Fixed settings are applied by Core. Recommendations are guidance and
 are authored only when the user or agent explicitly includes the corresponding
 provider field in `values`. Untouched provider defaults remain absent.
 
+For Scene and Shot targets, `facts` includes ordered
+`sceneCastMemberIds`, `sceneLocationIds`, `scenePropIds`, and
+`sceneDialogueIds`, plus `projectAspectRatio` and opaque `contextText`.
+`scene.storyboard-sheet` guide order is the Storyboard Lookbook Sheet, exact
+Character Sheets, exact Location Sheets, then exact Prop Sheets. Candidate
+slots remain request-scoped and unselected even when only one file is eligible.
+The command returns Core's report without adapter-side filtering or fallback.
+
+The Project's **Use Codex for image generation** setting is on by default. With
+it on, `scene.storyboard-sheet` uses built-in Codex GPT Image 2 as an
+agent-external capability outside Engines. With it off, or when the user
+explicitly chooses Renku for the request, use
+`fal-ai/openai/gpt-image-2/edit`. The purpose exposes no competing
+`recommendedModel`.
+
 A generic `GenerationSpec` has this shape:
 
 ```json
@@ -1561,9 +1576,22 @@ Behavior:
 - `image.edit` targets the exact source asset and uses the
   `source/source-image` slot plus optional exact Cast, Location, and
   Lookbook candidates.
-- `scene.storyboard-sheet` keeps the deterministic 2x2 composite workflow.
-  The agent inspects and splits the returned sheet, then uses the focused
-  storyboard attachment command.
+- `scene.storyboard-sheet` keeps the deterministic one-to-four-panel composite
+  workflow. Scene Beat authoring may use any narrative-appropriate Beat count;
+  the agent partitions only requested saved Beat image work into consecutive
+  groups of up to four without changing the revision or inventing filler.
+- Every Scene Storyboard request uses the current Storyboard Lookbook and one
+  exact Storyboard Lookbook Sheet as the sole appearance authority. Character,
+  Location, and Prop Sheets preserve canonical continuity facts, not source
+  rendering style.
+- With **Use Codex for image generation** on, save and freeze a prompt-only
+  external `codex/gpt-image-2` Spec with logical references. With it off, use
+  GPT Image 2 edit, reference fields, a descriptor-supported custom size, and
+  Core-fixed high quality.
+- The agent analyzes each returned composite once, preserves the existing
+  vision-guided crop and crop-inspection sequence, then accepts useful images
+  or reports the issue and stops without automatic edit, repair, retry, or
+  regeneration.
 - `shot.image` resolves one exact Shot and owning Scene, recommends the project
   aspect ratio, and imports an unselected `shot-image` candidate under the
   Core-owned Shot path.

@@ -104,7 +104,11 @@ individually discardable media.
 
 Production Lookbooks and Storyboard Lookbooks are different typed documents.
 Production Lookbooks steer cinematic generation. Storyboard Lookbooks steer
-storyboard drawing style, panel treatment, notation, and continuity clarity.
+Beat Storyboard appearance. They may define photorealistic, realistic,
+illustrative, graphic, painterly, hand-drawn, abstract, or another deliberate
+visual language. They do not own panel staging, production camera coverage, or
+Scene-specific continuity decisions. Project-wide notation and
+continuity-clarity conventions may remain part of the Storyboard Lookbook.
 
 Production Lookbook input:
 
@@ -131,11 +135,11 @@ Storyboard Lookbook input:
 {
   "kind": "storyboardLookbook",
   "storyboardLookbook": {
-    "name": "Storyboard drawing language",
-    "styleBrief": { "text": "Graphite storyboard frames with clear staging." },
-    "lineAndFinish": { "text": "Loose construction lines with crisp ink accents." },
-    "valueAndAccent": { "text": "Soft gray values with restrained warm accents." },
-    "guardrails": { "text": "Avoid photoreal stills and decorative text inside panels." }
+    "name": "Naturalistic storyboard language",
+    "styleBrief": { "text": "Naturalistic full-color story visualization." },
+    "lineAndFinish": { "text": "Continuous tonal forms without visible linework." },
+    "valueAndAccent": { "text": "Restrained contrast with selective color emphasis." },
+    "guardrails": { "text": "Keep action and geography immediately legible." }
   },
   "sourceInspirationFolderIds": []
 }
@@ -157,6 +161,12 @@ Rules:
 - There is no Lookbook list or selection state. Production and Storyboard are
   fixed project roles.
 - Storyboard Lookbooks do not store a Production Lookbook source pointer.
+- For Beat Storyboard generation, the Storyboard Lookbook is the sole
+  appearance authority. Production Lookbook prose or Sheets are not
+  independent appearance inputs.
+- `styleBrief`, `lineAndFinish`, `valueAndAccent`, and `guardrails` are
+  orthogonal appearance axes. A no-linework style may use `lineAndFinish` to
+  describe edge behavior, tonal modeling, surface treatment, and finish.
 - Lookbook image section placement must use section names valid for the owning
   Lookbook role.
 

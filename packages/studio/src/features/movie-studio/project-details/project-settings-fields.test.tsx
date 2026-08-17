@@ -28,7 +28,7 @@ describe('ProjectSettingsFields', () => {
     expect(codexBuiltIn.getAttribute('aria-expanded')).toBe('false');
 
     fireEvent.click(generation);
-    expect(screen.getByRole('switch', { name: 'Prefer Codex for image generation' }).getAttribute('data-state')).toBe('checked');
+    expect(screen.getByRole('switch', { name: 'Use Codex for image generation' }).getAttribute('data-state')).toBe('checked');
 
     fireEvent.click(renkuManaged);
     fireEvent.click(codexBuiltIn);

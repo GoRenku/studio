@@ -116,6 +116,11 @@ function buildSceneGenerationFacts(
       reference.subject.type === 'location' ? [reference.subject.id] : []),
     ...(revision?.beats.flatMap((beat) => beat.locationIds) ?? []),
   ]);
+  const scenePropIds = orderedUnique([
+    ...sceneReferences.flatMap((reference) =>
+      reference.subject.type === 'prop' ? [reference.subject.id] : []),
+    ...(revision?.beats.flatMap((beat) => beat.propIds) ?? []),
+  ]);
   const sceneDialogueIds = scene.blocks.flatMap((block) =>
     block.type === 'dialogue'
       ? [block.id]
@@ -128,6 +133,7 @@ function buildSceneGenerationFacts(
     contextText: renderScreenplaySceneContextText({ scene, screenplay }),
     sceneCastMemberIds,
     sceneLocationIds,
+    scenePropIds,
     sceneDialogueIds,
     ...(input.authored ?? {}),
   };

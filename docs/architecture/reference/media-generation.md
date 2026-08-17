@@ -50,6 +50,14 @@ The stable target kinds are `project`, `asset`, `lookbook`, `castMember`,
 `location`, `scene`, and `sceneDialogue`. Every target is
 `{ kind, id }`; purpose descriptors own any additional context lookup.
 
+For Scene and Shot targets, Generation Context facts include
+`projectAspectRatio`, opaque `contextText`, `sceneCastMemberIds`,
+`sceneLocationIds`, `scenePropIds`, and `sceneDialogueIds`. Prop ids come from
+canonical Screenplay Scene references followed by active Scene Beat `propIds`,
+preserve first-seen order, and are never inferred from prose. The Scene
+Storyboard guide exposes one exact `prop/prop-sheet` slot per Prop after its
+Storyboard Lookbook, Character, and Location slots.
+
 `authoredFrom` is optional information-only workflow context. Its recognized
 shape currently identifies a Shot Plan by non-empty id. Core does not require
 that plan to exist, use it as a target or owner, resolve its current contents,
@@ -59,6 +67,23 @@ or couple its lifecycle to validation, execution, import, or inspection.
 `agent-external` specs preserve a request executed by the agent, such as a
 Codex image request. They are saved and previewed normally but do not create a
 Renku estimate, run, receipt, provider payload, or approval token.
+
+For Beat Storyboards, one Project setting chooses the image path: **Use Codex
+for image generation**. It is on by default. The Codex request is a frozen
+prompt-only external `codex/gpt-image-2` Spec. Logical image references remain in the Spec without
+provider-field assignments and are supplied to the built-in tool. If the
+setting is off, or the user explicitly chooses Renku, use
+`fal-ai/openai/gpt-image-2/edit`. The purpose exposes no separate model
+recommendation. Core keeps managed quality fixed high.
+
+The Storyboard Lookbook alone controls Beat Storyboard appearance. Continuity
+references preserve Character identity/design, Location geography, and Prop
+construction/state while being re-rendered in the Storyboard Lookbook's visual
+language. This is an agent prompt contract, not runtime semantic validation.
+The agent authors any narrative-appropriate Beat count before partitioning only
+requested image work into consecutive groups of at most four. It uses the
+existing one-output composite and vision-guided crop path, analyzes once, then
+accepts useful crops or reports the issue and stops.
 
 The persisted record adds `frozenAt: string | null`. Draft records are editable.
 Live submission freezes the exact saved revision permanently. Managed run does

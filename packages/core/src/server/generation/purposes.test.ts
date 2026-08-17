@@ -52,6 +52,7 @@ describe('generic generation model listing', () => {
     expect(readGenerationPurpose('scene.storyboard-sheet').settings.fixed).toEqual([
       { kind: 'quality', value: 'high' },
     ]);
+    expect(readGenerationPurpose('scene.storyboard-sheet').settings.recommendedModel).toBeUndefined();
   });
 
   it('keeps every purpose target, output, and product-setting contract explicit', () => {
@@ -81,7 +82,7 @@ describe('generic generation model listing', () => {
       purpose('location.hero', 'location', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
       purpose('prop.sheet', 'prop', 'image', [], [aspectRatio('16:9'), quality('high')], gptImage2),
       purpose('prop.hero', 'prop', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
-      purpose('scene.storyboard-sheet', 'scene', 'image', [quality('high')], [], gptImage2),
+      purpose('scene.storyboard-sheet', 'scene', 'image', [quality('high')]),
       purpose('shot.image', 'shot', 'image', [], [aspectRatio('project'), quality('high')]),
     ]);
   });

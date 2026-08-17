@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PropDesignDocument } from '../../client/department-design.js';
+import type { SceneBeatsInput } from '../../client/scene-beats/index.js';
 import { createProjectDataService } from '../index.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
 import { assetFiles, assetMemberships, assets } from '../schema/index.js';
@@ -70,6 +71,107 @@ describe('Generation purpose context', () => {
       { kind: 'asset-file', assetId: 'asset_location_selected', assetFileId: 'asset_file_location_selected' },
     ]);
 
+  });
+
+  it('projects ordered Scene and Beat Props into exact Storyboard slots and Shot facts', async () => {
+    const created = await createSampleMovieProject({ homeDir, projectData });
+    if (!created) {
+      return;
+    }
+    const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
+    const scene = screenplay.screenplay.scenes[0]!;
+    const castMemberId = screenplay.screenplay.references.find(
+      (reference) => reference.subject.type === 'castMember'
+    )!.subject.id;
+    const locationId = screenplay.screenplay.references.find(
+      (reference) => reference.subject.type === 'location'
+    )!.subject.id;
+    const propIds = await createProps(['Map', 'Seal', 'Unrelated Banner']);
+    await projectData.applyScreenplayOperations({
+      projectName: 'constantinople',
+      homeDir,
+      operations: [{
+        operation: 'reference.add',
+        reference: {
+          key: 'scene-map',
+          subject: { type: 'prop', id: propIds[0]! },
+          target: { type: 'scene', scene: { id: scene.id! } },
+          role: 'presence',
+        },
+      }],
+    });
+    const beats: SceneBeatsInput = {
+      sceneId: scene.id!,
+      beats: [
+        beat('Map decision', scene.blocks[0]!.id, castMemberId, locationId, [propIds[1]!, propIds[0]!]),
+        beat('Seal consequence', scene.blocks[0]!.id, castMemberId, locationId, [propIds[1]!]),
+      ],
+    };
+    await projectData.createSceneBeatsRevision({ homeDir, document: beats });
+    seedPropContinuityAssets(created.projectPath, {
+      selectedPropId: propIds[0]!,
+      unrelatedPropId: propIds[2]!,
+    });
+
+    const context = await projectData.buildGenerationContext({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'scene.storyboard-sheet',
+      target: { kind: 'scene', id: scene.id! },
+    });
+
+    expect(context.facts.scenePropIds).toEqual([propIds[0], propIds[1]]);
+    expect(context.facts).toMatchObject({
+      projectAspectRatio: '16:9',
+      sceneCastMemberIds: [castMemberId],
+      sceneLocationIds: [locationId],
+      sceneDialogueIds: [],
+    });
+    expect(context.referenceGuide.sections.map((section) => section.id)).toEqual([
+      'visual-language',
+      'cast',
+      'location',
+      'prop',
+    ]);
+    const propSlots = context.referenceGuide.sections.find((section) => section.id === 'prop')!.slots;
+    expect(propSlots.map((slot) => slot.subject)).toEqual([
+      { kind: 'prop', id: propIds[0] },
+      { kind: 'prop', id: propIds[1] },
+    ]);
+    expect(propSlots[0]!.eligibleCandidates.map((candidate) => candidate.reference)).toEqual([
+      { kind: 'asset-file', assetId: 'asset_prop_selected', assetFileId: 'asset_file_prop_selected' },
+    ]);
+    expect(propSlots[1]!.eligibleCandidates).toEqual([]);
+    expect(propSlots.flatMap((slot) => slot.eligibleCandidates).some((candidate) =>
+      candidate.reference.kind === 'asset-file' &&
+      candidate.reference.assetId === 'asset_prop_unrelated'
+    )).toBe(false);
+
+    const plan = await projectData.createShotPlan({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: scene.id!,
+      title: 'Prop inheritance',
+      coverage: null,
+      shots: [],
+    });
+    const authored = await projectData.addShotToPlan({
+      projectName: 'constantinople',
+      homeDir,
+      shotPlanId: plan.shotPlan.id,
+      shot: {
+        title: 'Map detail',
+        description: 'The seal lands on the map.',
+        brief: {},
+      },
+    });
+    const shotContext = await projectData.buildGenerationContext({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'shot.image',
+      target: { kind: 'shot', id: authored.shotPlan.shots[0]!.id },
+    });
+    expect(shotContext.facts.scenePropIds).toEqual([propIds[0], propIds[1]]);
   });
 
   it('warns when optional Shot Plan video reference candidates are unavailable', async () => {
@@ -167,7 +269,44 @@ describe('Generation purpose context', () => {
       design,
     ]);
   });
+
+  async function createProps(names: string[]): Promise<string[]> {
+    const report = await projectData.applyPropOperations({
+      homeDir,
+      document: {
+        kind: 'propOperations',
+        operations: names.map((name) => ({
+          operation: 'prop.add' as const,
+          prop: {
+            key: name.toLowerCase().replaceAll(' ', '-'),
+            handle: name.toLowerCase().replaceAll(' ', '-'),
+            name,
+          },
+        })),
+      },
+    });
+    return report.generatedIds?.map((identity) => identity.id) ?? [];
+  }
 });
+
+function beat(
+  title: string,
+  screenplayBlockId: string,
+  castMemberId: string,
+  locationId: string,
+  propIds: string[]
+): SceneBeatsInput['beats'][number] {
+  return {
+    title,
+    description: `${title} is visible in the council chamber.`,
+    narrativeDevelopment: `${title} advances the decision.`,
+    narrativePurpose: `${title} clarifies the Scene's progression.`,
+    screenplayBlockIds: [screenplayBlockId],
+    castMemberIds: [castMemberId],
+    locationIds: [locationId],
+    propIds,
+  };
+}
 
 function seedContinuityAssets(
   projectFolder: string,
@@ -193,6 +332,30 @@ function seedContinuityAssets(
       membership('asset_cast_take', `castMember:${ids.castMemberId}`, now),
       membership('asset_location_selected', `location:${ids.locationId}`, now),
       membership('asset_generic_reference', 'project', now),
+    ]).run();
+  } finally {
+    session.close();
+  }
+}
+
+function seedPropContinuityAssets(
+  projectFolder: string,
+  ids: { selectedPropId: string; unrelatedPropId: string }
+): void {
+  const session = openProjectStore({ projectFolder, create: false });
+  const now = '2026-08-16T10:00:00.000Z';
+  try {
+    session.db.insert(assets).values([
+      asset('asset_prop_selected', 'prop_sheet', 'Selected Prop Sheet', now),
+      asset('asset_prop_unrelated', 'prop_sheet', 'Unrelated Prop Sheet', now),
+    ]).run();
+    session.db.insert(assetFiles).values([
+      assetFile('asset_file_prop_selected', 'asset_prop_selected', 'prop-selected.png', now),
+      assetFile('asset_file_prop_unrelated', 'asset_prop_unrelated', 'prop-unrelated.png', now),
+    ]).run();
+    session.db.insert(assetMemberships).values([
+      membership('asset_prop_selected', `prop:${ids.selectedPropId}`, now),
+      membership('asset_prop_unrelated', `prop:${ids.unrelatedPropId}`, now),
     ]).run();
   } finally {
     session.close();

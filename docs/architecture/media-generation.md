@@ -29,8 +29,8 @@ The resolved cutover inventory is recorded in
 - partial spec persistence without provider-readiness validation;
 - execution-readiness orchestration and structured diagnostics;
 - exact-request approval identity and immutable run persistence;
-- Project Settings validation and the resolved generation workflow policy
-  projected in Generation Context.
+- Project Settings validation and resolved generation behavior projected in
+  Generation Context.
 
 `packages/engines` owns:
 
@@ -107,17 +107,18 @@ Every run has immediate inputs and outputs only. There is no dependency graph,
 recursive estimate, automatic child generation, provider fallback, value
 clamping, semantic retry, or automatic import.
 
-## Project Workflow Policy
+## Project Generation Settings
 
-Generation Context includes the Core-resolved Project workflow policy for the
-requested output media kind. It reports whether Preview should open
-automatically, the preferred execution path, the additional per-run
-confirmation preference, and each lane's effective concurrency limit. When
+Generation Context includes the resolved Project generation settings for the
+requested output media kind. **Use Codex for image generation** is the single
+image-path setting and is on by default. Context also reports whether Preview
+should open automatically, the additional per-run confirmation preference,
+and each execution method's effective concurrency limit. When
 concurrency is disabled, the effective limit is `1` without changing the saved
 maximum.
 
-Execution-path precedence is explicit user direction, an execution path
-already authored on the saved GenerationSpec, then Project policy. Codex
+An explicit user direction or an execution path already authored on the saved
+GenerationSpec takes precedence over the Project setting. Codex
 built-in image generation remains an agent-external capability identified as
 `codex.gpt-image-2`; it is not a Renku provider and is never added to Engines.
 If the current harness lacks that capability, the agent asks for a path rather
@@ -138,6 +139,45 @@ carry placement, subject, label, exact eligible candidates, and optional
 guidance copy. Every slot is one nullable UI choice. Guides never carry
 provider roles/fields, hard provider requirements, generation purposes, cost,
 or provider rules, and they never validate saved selections.
+
+Scene and Shot generation facts expose factual Scene inventories:
+
+```ts
+{
+  projectAspectRatio: string;
+  contextText: string;
+  sceneCastMemberIds: string[];
+  sceneLocationIds: string[];
+  scenePropIds: string[];
+  sceneDialogueIds: string[];
+}
+```
+
+`scenePropIds` preserves first appearance from canonical Screenplay Scene
+references followed by active Scene Beat `propIds`. It does not infer Props from
+narrative text. `scene.storyboard-sheet` adds one exact request-scoped
+`prop/prop-sheet` guide slot per id after Storyboard Lookbook, Character, and
+Location slots. Missing or historical subject media leaves a truthful empty
+slot; Core never substitutes or selects a candidate.
+
+The Storyboard Lookbook is the sole Beat Storyboard appearance authority in the
+agent workflow. Character, Location, and Prop references preserve canonical
+subject facts rather than their source rendering style. Core does not validate
+that a prompt or image follows those creative roles.
+
+Scene Beat cardinality is independent from generation. After a saved revision
+exists, the agent may partition requested Beat image work into consecutive
+groups of at most four. The existing one-output composite transform and
+vision-guided crop workflow remain unchanged; no panel, crop, or batch state is
+persisted.
+
+The Project has one image-generation setting: **Use Codex for image
+generation**. It is on by default. With it on, the agent uses a frozen
+prompt-only external `codex/gpt-image-2` Spec. With it off, or when the user
+explicitly chooses Renku for the request, Scene Storyboards use
+`fal-ai/openai/gpt-image-2/edit`. The purpose exposes no competing model
+recommendation. Managed quality remains fixed high. Visual QA is agent-owned
+and one-pass: analyze, crop and inspect, then accept or report and stop.
 
 All purposes can carry separate ordered Additional References authored by an
 agent or CLI caller. Generation Preview displays those exact references but

@@ -4,6 +4,10 @@ Date: 2026-07-14
 
 Status: accepted
 
+> Terminology narrowed by Decision 0080. The Storyboard Lookbook directs
+> arbitrary Beat Storyboard visual language, not necessarily drawing language.
+> The one-per-role ownership and persistence decision remains unchanged.
+
 ## Decision
 
 Each project owns at most one `ProductionLookbook` and at most one

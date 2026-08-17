@@ -128,8 +128,8 @@ export function ProjectSettingsFields({
         <AccordionContent>
           <SettingsSwitchRow
             id='prefer-codex-image-generation'
-            label='Prefer Codex for image generation'
-            description='Use Codex built-in image generation when the current agent has that capability and the user has not chosen another path.'
+            label='Use Codex for image generation'
+            description='On by default. Turn this off to use Renku-managed image generation.'
             checked={settings.generation.preferCodexImageGeneration}
             onCheckedChange={(checked) =>
               updateGeneration('preferCodexImageGeneration', checked)

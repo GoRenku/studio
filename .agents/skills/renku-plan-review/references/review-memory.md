@@ -10,6 +10,88 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-16 — Separate reference fidelity from target rendering style
+
+- **User objection:** A Storyboard prompt plan treated realistic Production
+  reference images as though their rendering style should influence a
+  hand-drawn Storyboard, instead of using them to preserve the exact Character,
+  Location, or Prop design inside the independently chosen Storyboard style.
+- **Planning rule:** Give every visual reference one explicit role. Continuity
+  references own canonical subject facts such as identity, silhouette,
+  proportions, costume, Prop construction and state, or Location geography;
+  the target Lookbook owns medium, realism, linework, finish, lighting, grade,
+  and detail density. Prompt for faithful reproduction of the referenced
+  subject in the target Lookbook's visual language. A coarse style may simplify
+  detail while keeping the subject unmistakably the same; it must not inherit
+  photographic realism merely because the continuity sheet is realistic.
+- **Apply when:** A generation plan combines Production reference media with a
+  differently styled Storyboard, concept image, animation frame, or other
+  target artifact.
+- **Evidence to inspect:** Exact reference roles and prompt mentions; the
+  Lookbook or other appearance authority; identity, costume, geometry, state,
+  and geography invariants; and evals that pair realistic references with a
+  deliberately non-realistic target style.
+
+### 2026-08-16 — Keep creative cardinality independent from generation batching
+
+- **User objection:** A Storyboard plan made four Beats sound like a Scene Beat
+  design limit even though the Scene may need any number of narrative Beats;
+  four is only the proven cost-saving image-generation batch. The same plan
+  risked changing a working composite/cropping workflow by adding new crop
+  rules or external image-processing machinery.
+- **Planning rule:** Define domain authoring first, with cardinality determined
+  by the creative material. Apply batching only after the durable items exist:
+  partition the requested ordered items into provider requests without adding,
+  deleting, merging, or reordering them. When the current composite and
+  agent-guided crop path is explicitly proven, preserve it as a regression
+  baseline; do not introduce crop libraries, fixed coordinates, detection
+  algorithms, or alternative splitting paths without a separate demonstrated
+  defect and user-approved scope.
+- **Apply when:** Cost or latency optimization batches independently authored
+  Beats, Shots, scenes, prompts, or other creative units into composite media.
+- **Evidence to inspect:** The authoring contract and its cardinality rules; the
+  exact point where batching starts; remainder behavior; existing layout and
+  crop implementation/tests; dependency changes; and an example whose item
+  count exceeds one batch.
+
+### 2026-08-16 — Keep generative visual QA one-pass by default
+
+- **User objection:** A Storyboard workflow proposed generate-analyze-edit or
+  automatic regeneration loops that would consume unnecessary model calls and
+  agent tokens.
+- **Planning rule:** Generate the approved request once, inspect the result,
+  perform only the already accepted deterministic extraction or attachment
+  steps, then accept it or report why it is unusable and stop. Do not plan an
+  automatic image edit, repair prompt, feedback loop, retry, or regeneration.
+  A later fresh generation is a new user-directed request with its own review
+  and cost boundary.
+- **Apply when:** Planning agent QA for generated images, composite sheets,
+  candidate media, or other paid/usage-metered creative outputs.
+- **Evidence to inspect:** Workflow diagrams and evals for retry arrows,
+  regeneration wording, edit calls after inspection, automatic quality gates,
+  and whether a failed result returns control to the user.
+
+### 2026-08-16 — Separate preferred execution from managed model hints
+
+- **User objection:** A Scene Storyboard plan called a Renku-managed GPT Image
+  2 route the recommended initial path even though the intended first recipe
+  was Codex built-in GPT Image 2.
+- **Planning rule:** Treat Generation Context workflowPolicy and an
+  agent-external harness capability as the execution-path decision. Treat a
+  purpose's settings.recommendedModel only as a hint within the
+  Renku-managed Engines model list. Never describe the managed hint as the
+  product's initial path, add Codex to Engines, or create a skill-local default
+  that bypasses Core policy. When both lanes matter, name the primary and
+  secondary request shapes separately and make the representative sample match
+  the primary path.
+- **Apply when:** A media plan mentions Codex built-in image generation,
+  agent-external specs, Renku-managed provider routes, workflow preferences,
+  recommendedModel, or a sample that could imply which lane runs first.
+- **Evidence to inspect:** Decisions 0040 and 0074; Generation Context
+  workflowPolicy and capability fields; the purpose's managed settings and
+  Engines model descriptors; media-producer route precedence; and the exact
+  purpose sample's executionKind, provider, model, values, and references.
+
 ### 2026-08-10 — Preserve implemented plans and consolidate corrective adoption
 
 - **User objection:** An already implemented plan was retroactively rewritten

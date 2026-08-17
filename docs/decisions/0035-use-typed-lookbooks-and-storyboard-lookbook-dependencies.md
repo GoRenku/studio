@@ -4,6 +4,11 @@ Date: 2026-06-20
 
 Status: accepted
 
+> Superseded in part by Decision 0080. The Storyboard Lookbook is now the sole
+> Beat Storyboard appearance authority and may define any visual language;
+> Production Lookbook styling does not influence Beat Storyboard appearance.
+> The accepted typed-Lookbook and concrete-reference architecture remains.
+
 ## Context
 
 Renku Studio originally modeled one project-level Lookbook selection. That was
