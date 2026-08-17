@@ -814,7 +814,7 @@ function asset(id: string, url: string) {
     oneLineSummary: null,
     origin: 'generated',
     referenceName: null,
-    purpose: null,
+    tags: [],
     files: [{
       id: `file_${id}`,
       role: 'primary',

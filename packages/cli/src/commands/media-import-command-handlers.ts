@@ -13,7 +13,7 @@ export interface MediaCommandFlags {
   file?: string;
   summary?: string;
   referenceName?: string;
-  referencePurpose?: string;
+  tag?: string[];
   sections?: string;
   anchor?: string;
   receipt?: string;
@@ -42,6 +42,7 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       await appendStudioResourceChangedEvent({ runtime, report, command: 'media import' });
       return report;
     }
+    const assetMetadata = assetMetadataFromFlags(flags);
     const report = await runtime.projectDataService.attachGenerationMedia({
       projectName: runtime.projectName,
       homeDir: runtime.homeDir,
@@ -49,6 +50,7 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       target: parseGenerationTarget({ purpose, target: requiredFlag(flags.target, '--target') }),
       sourceProjectRelativePath: requiredFlag(flags.source, '--source'),
       title: flags.title,
+      ...(assetMetadata ? { assetMetadata } : {}),
       select: flags.select,
       ...(flags.receipt ? { receipt: await readReceipt(flags.receipt) } : {}),
       ...(flags.sourceSpec ? { sourceSpecId: flags.sourceSpec } : {}),
@@ -61,6 +63,21 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
     return report;
   },
 };
+
+function assetMetadataFromFlags(flags: MediaCommandFlags) {
+  if (
+    flags.summary === undefined
+    && flags.referenceName === undefined
+    && flags.tag === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    ...(flags.summary !== undefined ? { oneLineSummary: flags.summary } : {}),
+    ...(flags.referenceName !== undefined ? { referenceName: flags.referenceName } : {}),
+    ...(flags.tag !== undefined ? { tags: flags.tag } : {}),
+  };
+}
 
 function requiredSingleBeat(value: string | undefined): string {
   const beats = value?.split(',').map((beat) => beat.trim()).filter(Boolean) ?? [];

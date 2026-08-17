@@ -30,6 +30,11 @@ describe('generation references Hono route', () => {
     ]);
     expect(body.items[0]).not.toHaveProperty('projectRelativePath');
     expect(body.items[0].title).toBe('image reference');
+    expect(body.items[0]).toMatchObject({
+      oneLineSummary: 'Image continuity reference',
+      referenceName: 'Image Reference',
+      tags: ['storyboard', 'continuity'],
+    });
     expect(body.items[0].browserUrl).toContain('/assets/asset_image/files/file_image');
     expect(body.nextCursor).toBe('next-page');
     expect(listGenerationReferences).toHaveBeenCalledWith({
@@ -49,6 +54,9 @@ function catalogItem(
   return {
     reference: { kind: 'asset-file' as const, assetId, assetFileId },
     title: `${mediaKind} reference`,
+    oneLineSummary: `${mediaKind[0].toUpperCase()}${mediaKind.slice(1)} continuity reference`,
+    referenceName: `${mediaKind[0].toUpperCase()}${mediaKind.slice(1)} Reference`,
+    tags: ['storyboard', 'continuity'],
     mediaKind,
     mimeType: null,
     sizeBytes: null,

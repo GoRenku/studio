@@ -1675,7 +1675,7 @@ function makeStudioAsset(options: {
     oneLineSummary: null,
     origin: 'imported',
     referenceName: null,
-    purpose: null,
+    tags: [],
     files: [
       {
         id: `${options.assetId}_file`,

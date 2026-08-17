@@ -23,13 +23,16 @@ export interface AssetLocaleContext {
   localeId?: string | null;
 }
 
-export interface UpdateAssetInput {
+export interface AssetMetadataInput {
+  oneLineSummary?: string | null;
+  referenceName?: string | null;
+  tags?: string[];
+}
+
+export interface UpdateAssetInput extends AssetMetadataInput {
   projectName: string;
   assetId: string;
   title?: string | null;
-  oneLineSummary?: string | null;
-  referenceName?: string | null;
-  purpose?: string | null;
   localeId?: string | null;
 }
 
@@ -80,7 +83,7 @@ export interface Asset {
   oneLineSummary: string | null;
   origin: string;
   referenceName: string | null;
-  purpose: string | null;
+  tags: string[];
   files: AssetFile[];
   createdAt: string;
   updatedAt: string;

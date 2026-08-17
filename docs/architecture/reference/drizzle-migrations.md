@@ -250,6 +250,16 @@ Its focused transaction-level regression test proves that the history, active
 pointers, audio setups, and Takes survive both migration and later Scene
 deletion with foreign keys enabled.
 
+`0077_asset_tags.sql` is generated from the direct `asset.purpose` to
+`asset.tags` schema cutover. Drizzle Kit cannot infer scalar text to JSON-array
+data conversion, so the generated migration has one documented custom in-place
+conversion: add `tags`, populate null as JSON `[]`, pass every non-null value
+through SQLite `json_array(purpose)` to preserve quotes, backslashes, case, and
+Unicode as one exact tag, then drop `purpose`. The in-place shape is required
+because Drizzle runs migrations inside a transaction and a populated Asset
+table cannot be dropped while Asset files, memberships, and selections
+reference it. The migration advances project-store schema generation to 62.
+
 ## Project Store Schema Generation
 
 Renku Studio project databases use SQLite's `PRAGMA user_version` as the

@@ -60,4 +60,86 @@ describe('Asset metadata', () => {
       }),
     ]);
   });
+
+  it('normalizes complete tag lists once and preserves omission, replacement, and clearing', async () => {
+    const { projectData, asset } = await createLocationAsset();
+
+    const updated = await projectData.updateAsset({
+      projectName: 'constantinople',
+      homeDir,
+      assetId: asset.id,
+      oneLineSummary: '  Storyboard rendering  ',
+      referenceName: '  siege-storyboard  ',
+      tags: [' storyboard ', 'previs', 'storyboard', 'Storyboard'],
+    });
+    expect(updated.asset).toMatchObject({
+      oneLineSummary: 'Storyboard rendering',
+      referenceName: 'siege-storyboard',
+      tags: ['storyboard', 'previs', 'Storyboard'],
+    });
+
+    await expect(projectData.updateAsset({
+      projectName: 'constantinople',
+      homeDir,
+      assetId: asset.id,
+      title: 'Renamed Location Sheet',
+    })).resolves.toMatchObject({
+      asset: { tags: ['storyboard', 'previs', 'Storyboard'] },
+    });
+    await expect(projectData.updateAsset({
+      projectName: 'constantinople',
+      homeDir,
+      assetId: asset.id,
+      oneLineSummary: '   ',
+      referenceName: null,
+      tags: [],
+    })).resolves.toMatchObject({
+      asset: { oneLineSummary: null, referenceName: null, tags: [] },
+    });
+  });
+
+  it('rejects empty and non-string tags before changing the Asset', async () => {
+    const { projectData, asset } = await createLocationAsset();
+
+    for (const tags of [['valid', '  '], ['valid', 42]]) {
+      await expect(projectData.updateAsset({
+        projectName: 'constantinople',
+        homeDir,
+        assetId: asset.id,
+        tags: tags as string[],
+      })).rejects.toMatchObject({
+        code: 'CORE_ASSET_TAGS_INVALID',
+        issues: [expect.objectContaining({ code: 'CORE_ASSET_TAGS_INVALID' })],
+      });
+    }
+    await expect(projectData.listAssets({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'location', id: 'location_test0001' },
+    })).resolves.toEqual([
+      expect.objectContaining({ id: asset.id, tags: [] }),
+    ]);
+  });
+
+  async function createLocationAsset() {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      throw new Error('Expected sample Project creation.');
+    }
+    const projectRelativePath = 'tmp/reference.png' as ProjectRelativePath;
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, projectRelativePath), 'image');
+    const asset = await createTestAssetFixture({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'location', id: 'location_test0001' },
+      type: 'location_sheet',
+      mediaKind: 'image',
+      title: 'Location Sheet',
+      projectRelativePath,
+      fileRole: 'primary',
+    });
+    return { projectData, asset };
+  }
 });

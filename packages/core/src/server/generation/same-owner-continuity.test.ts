@@ -26,6 +26,9 @@ describe('same-owner generation continuity slots', () => {
     const first = await addAsset(created.projectPath, {
       owner: { kind: 'castMember', id: 'cast_test0001' },
       role: 'character-sheet', filename: 'first.png', title: 'First costume',
+      oneLineSummary: 'Production palace costume.',
+      referenceName: 'palace-production',
+      tags: ['production', 'continuity'],
     });
     const second = await addAsset(created.projectPath, {
       owner: { kind: 'castMember', id: 'cast_test0001' },
@@ -56,6 +59,13 @@ describe('same-owner generation continuity slots', () => {
     expect(slot.eligibleCandidates.some((candidate) =>
       candidate.reference.kind === 'asset-file' && candidate.reference.assetId === unavailable.id
     )).toBe(false);
+    expect(slot.eligibleCandidates.find((candidate) =>
+      candidate.reference.kind === 'asset-file' && candidate.reference.assetId === first.id
+    )).toMatchObject({
+      oneLineSummary: 'Production palace costume.',
+      referenceName: 'palace-production',
+      tags: ['production', 'continuity'],
+    });
     expect('selections' in slot).toBe(false);
   });
 
@@ -126,6 +136,50 @@ describe('same-owner generation continuity slots', () => {
     expect('selections' in slot).toBe(false);
   });
 
+  it('exposes both optional Lookbook appearance slots for every subject-sheet purpose', async () => {
+    await createSampleMovieProject({ projectData, homeDir });
+    const report = await projectData.applyPropOperations({
+      homeDir,
+      document: {
+        kind: 'propOperations',
+        operations: [{
+          operation: 'prop.add',
+          prop: { key: 'cannon', handle: 'cannon', name: 'Cannon' },
+        }],
+      },
+    });
+    const cases = [
+      {
+        purpose: 'cast.character-sheet' as const,
+        target: { kind: 'castMember' as const, id: 'cast_test0001' },
+      },
+      {
+        purpose: 'location.sheet' as const,
+        target: { kind: 'location' as const, id: 'location_test0001' },
+      },
+      {
+        purpose: 'prop.sheet' as const,
+        target: { kind: 'prop' as const, id: report.generatedIds?.[0]?.id as string },
+      },
+    ];
+
+    for (const item of cases) {
+      const context = await projectData.buildGenerationContext({
+        projectName: 'constantinople',
+        homeDir,
+        purpose: item.purpose,
+        target: item.target,
+      });
+      const appearanceSlots = context.referenceGuide.sections
+        .find((section) => section.id === 'visual-language')!.slots;
+      expect(appearanceSlots.map((slot) => slot.id)).toEqual([
+        'production-lookbook-sheet',
+        'storyboard-lookbook-sheet',
+      ]);
+      expect(appearanceSlots.every((slot) => !('selection' in slot))).toBe(true);
+    }
+  });
+
   async function addAsset(
     projectPath: string,
     input: {
@@ -134,6 +188,9 @@ describe('same-owner generation continuity slots', () => {
       filename: string;
       title: string;
       type?: 'character_sheet' | 'prop_sheet';
+      oneLineSummary?: string;
+      referenceName?: string;
+      tags?: string[];
     }
   ) {
     const projectRelativePath = `references/${input.filename}` as ProjectRelativePath;
@@ -142,7 +199,8 @@ describe('same-owner generation continuity slots', () => {
     return createTestAssetFixture({
       projectName: 'constantinople', homeDir, owner: input.owner,
       type: input.type ?? 'character_sheet', mediaKind: 'image', title: input.title,
-      projectRelativePath, fileRole: 'primary',
+      projectRelativePath, fileRole: 'primary', oneLineSummary: input.oneLineSummary,
+      referenceName: input.referenceName, tags: input.tags,
     });
   }
 });

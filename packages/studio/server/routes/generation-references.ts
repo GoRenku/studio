@@ -14,6 +14,9 @@ import {
 export interface GenerationReferenceCatalogResponseItem {
   reference: GenerationReference;
   title?: string;
+  oneLineSummary: string | null;
+  referenceName: string | null;
+  tags: string[];
   mediaKind: GenerationOutputMediaKind;
   mimeType: string | null;
   sizeBytes: number | null;
@@ -54,6 +57,9 @@ export function createGenerationReferencesRoute(options: {
             return {
               reference: item.reference,
               ...(item.title ? { title: item.title } : {}),
+              oneLineSummary: item.oneLineSummary,
+              referenceName: item.referenceName,
+              tags: item.tags,
               mediaKind: item.mediaKind,
               mimeType: item.mimeType,
               sizeBytes: item.sizeBytes,

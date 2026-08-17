@@ -11,6 +11,7 @@ export type {
   AssetAvailability,
   AssetFile,
   AssetLocaleContext,
+  AssetMetadataInput,
   AssetOwner,
   AssetPage,
   AssetSelectionReport,

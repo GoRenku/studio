@@ -25,7 +25,7 @@ export interface TestAssetFixtureInput extends RenkuConfigPathOptions {
   projectRelativePath: ProjectRelativePath;
   fileRole: string;
   referenceName?: string | null;
-  purpose?: string | null;
+  tags?: string[];
 }
 
 export async function createTestAssetFixture(
@@ -61,7 +61,7 @@ export async function createTestAssetFixture(
         createdAt: now,
         updatedAt: now,
         referenceName: normalizedInput.referenceName,
-        purpose: normalizedInput.purpose,
+        tags: normalizedInput.tags,
       });
       insertAssetFileRecord(transactionSession, {
         id: fileId,
@@ -108,7 +108,7 @@ function normalizeTestAssetFixtureInput(
     projectRelativePath: normalizeProjectRelativePath(input.projectRelativePath),
     fileRole: requiredTrimmed(input.fileRole, 'fileRole'),
     referenceName: optionalTrimmed(input.referenceName),
-    purpose: optionalTrimmed(input.purpose),
+    tags: input.tags?.map((tag) => requiredTrimmed(tag, 'tag')),
   };
 }
 

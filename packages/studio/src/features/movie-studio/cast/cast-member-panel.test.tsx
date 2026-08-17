@@ -275,7 +275,7 @@ function castProfileAsset(): StudioAssetResponse {
     oneLineSummary: null,
     origin: 'generated',
     referenceName: null,
-    purpose: null,
+    tags: [],
     files: [
       {
         id: 'asset_file_profile',
@@ -302,8 +302,9 @@ function castCharacterSheetAsset(): StudioAssetResponse {
     type: 'character_sheet',
     mediaKind: 'image',
     title: 'Urban Sheet',
+    oneLineSummary: 'default costume and face reference',
     referenceName: 'standard-sheet',
-    purpose: 'default costume and face reference',
+    tags: ['default costume and face reference'],
     files: [
       {
         id: 'asset_file_character_sheet',
@@ -352,7 +353,7 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
       oneLineSummary: null,
       origin: 'generated',
       referenceName: 'normal-voice',
-      purpose: 'calm strategic baseline',
+      tags: ['calm strategic baseline'],
       files: [
         {
           id: 'asset_file_voice_sample',

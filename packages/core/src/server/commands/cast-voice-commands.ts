@@ -631,7 +631,7 @@ async function insertCastVoiceWithSampleAsset(input: {
         mediaKind: 'audio',
         title: input.validated.sampleTitle,
         referenceName: input.validated.name,
-        purpose: input.validated.purpose,
+        tags: [input.validated.purpose],
         origin: input.prepared.origin,
         availability: 'ready',
         createdAt: now,

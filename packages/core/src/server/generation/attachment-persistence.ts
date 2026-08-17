@@ -38,7 +38,9 @@ export interface PersistGeneratedMediaAttachmentInput {
     type: string;
     mediaKind: 'image' | 'audio' | 'video';
     title: string;
-    oneLineSummary?: string;
+    oneLineSummary?: string | null;
+    referenceName?: string | null;
+    tags?: string[];
     origin: string;
   };
   fileRole: string;
@@ -100,9 +102,13 @@ export function persistOwnedGeneratedMediaAssetInSession(
     type: input.asset.type,
     mediaKind: input.asset.mediaKind,
     title: input.asset.title,
-    ...(input.asset.oneLineSummary
-      ? { oneLineSummary: input.asset.oneLineSummary }
+    ...(input.asset.oneLineSummary !== undefined
+      ? { oneLineSummary: input.asset.oneLineSummary ?? undefined }
       : {}),
+    ...(input.asset.referenceName !== undefined
+      ? { referenceName: input.asset.referenceName }
+      : {}),
+    ...(input.asset.tags !== undefined ? { tags: input.asset.tags } : {}),
     origin: input.asset.origin,
     availability: 'ready',
     createdAt: input.now,

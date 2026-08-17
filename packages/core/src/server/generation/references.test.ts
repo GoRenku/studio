@@ -51,6 +51,11 @@ describe('generation project-file reference safety', () => {
 
     expect(resolved).not.toBeNull();
     expect(resolved).not.toHaveProperty('title');
+    expect(resolved).toMatchObject({
+      oneLineSummary: null,
+      referenceName: null,
+      tags: [],
+    });
     expect(resolved?.projectRelativePath).toBe(
       'research/raw-storage-filename.png',
     );

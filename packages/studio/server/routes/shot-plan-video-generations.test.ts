@@ -124,7 +124,7 @@ function videoAsset(): Asset {
     oneLineSummary: null,
     origin: 'generated',
     referenceName: null,
-    purpose: 'shot-plan.video-generation',
+    tags: ['shot-plan.video-generation'],
     files: [
       {
         id: 'file_video',

@@ -1,4 +1,5 @@
-import type { Asset, GenerationPurpose, GenerationTarget } from '../../client/index.js';
+import type { Asset, AssetMetadataInput, GenerationPurpose, GenerationTarget } from '../../client/index.js';
+import { normalizeAssetMetadata } from '../assets/metadata.js';
 import { readOwnedAsset } from '../assets/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -20,6 +21,7 @@ export interface AttachGenerationMediaInput {
   target: GenerationTarget;
   sourceProjectRelativePath: string;
   title?: string;
+  assetMetadata?: AssetMetadataInput;
   receipt?: unknown;
   sourceSpecId?: string;
   select?: boolean;
@@ -62,6 +64,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     session: input.session,
   });
   validateLookbookKind(input);
+  const assetMetadata = normalizeAssetMetadata(input.assetMetadata ?? {});
   const persisted = persistGeneratedMediaAttachment({
     session: input.session,
     projectFolder: input.projectFolder,
@@ -73,6 +76,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       type: attachment.assetType,
       mediaKind: attachment.mediaKind,
       title: input.title?.trim() || attachment.label,
+      ...assetMetadata,
       origin: provenance ? 'generated' : 'external',
     },
     fileRole: 'primary',

@@ -528,8 +528,9 @@ async function seedProjectMedia(input: {
     projectName: input.projectName,
     assetId: profile.asset.id,
     title: 'Urban profile',
+    oneLineSummary: 'Browser E2E selectable profile image.',
     referenceName: 'urban-profile',
-    purpose: 'Browser E2E selectable profile image.',
+    tags: ['browser-e2e'],
   });
   const characterSheet = await input.projectData.attachGenerationMedia({
       homeDir: input.runtime.isolatedHomeDirectory,
@@ -544,8 +545,9 @@ async function seedProjectMedia(input: {
     projectName: input.projectName,
     assetId: characterSheet.asset.id,
     title: 'Urban character sheet',
+    oneLineSummary: 'Browser E2E character sheet reference.',
     referenceName: 'urban-character-sheet',
-    purpose: 'Browser E2E character sheet reference.',
+    tags: ['browser-e2e'],
   });
   const locationSheet =
     await input.projectData.attachGenerationMedia({
@@ -563,7 +565,7 @@ async function seedProjectMedia(input: {
     title: 'Gate Location Sheet',
     oneLineSummary: 'The gate, approach, and defensive masonry.',
     referenceName: 'gate-location-sheet',
-    purpose: 'Browser E2E location sheet reference.',
+    tags: ['browser-e2e'],
   });
   await input.projectData.attachGenerationMedia({
     homeDir: input.runtime.isolatedHomeDirectory,

@@ -36,7 +36,7 @@ interface AssetRow {
   title: string;
   oneLineSummary: string | null;
   referenceName: string | null;
-  purpose: string | null;
+  tags: string[];
   origin: string;
   availability: string;
   createdAt: string;
@@ -90,7 +90,7 @@ export function listAssetPageInSession(
       title: assets.title,
       oneLineSummary: assets.oneLineSummary,
       referenceName: assets.referenceName,
-      purpose: assets.purpose,
+      tags: assets.tags,
       origin: assets.origin,
       availability: assets.availability,
       createdAt: assets.createdAt,
@@ -210,7 +210,7 @@ function toAsset(
     title: row.title,
     oneLineSummary: row.oneLineSummary,
     referenceName: row.referenceName,
-    purpose: row.purpose,
+    tags: row.tags,
     origin: row.origin,
     files: filesByAssetId.get(row.id) ?? [],
     createdAt: row.createdAt,

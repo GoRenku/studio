@@ -207,7 +207,7 @@ export function createGenerationServiceWiring() {
     async readGenerationRun(input: ProjectInput & { runId: string }) {
       return withGenerationProject(input, ({ session }) => readGenerationRun({ id: input.runId, session }));
     },
-    async attachGenerationMedia(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; sourceProjectRelativePath: string; title?: string; receipt?: unknown; sourceSpecId?: string; select?: boolean }) {
+    async attachGenerationMedia(input: ProjectInput & { purpose: GenerationPurpose; target: GenerationTarget; sourceProjectRelativePath: string; title?: string; assetMetadata?: import('../../client/assets.js').AssetMetadataInput; receipt?: unknown; sourceSpecId?: string; select?: boolean }) {
       return withGenerationProject(input, ({ session, projectFolder }) => attachGenerationMedia({ ...input, session, projectFolder, idGenerator: createRandomIdGenerator() }));
     },
     async attachSceneStoryboardImages(input: ProjectInput & { sceneId: string; sceneBeatsRevisionId: string; document: SceneStoryboardImagesImportDocument }) {

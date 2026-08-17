@@ -138,6 +138,36 @@ describe('generation media attachment', () => {
     );
   });
 
+  it('persists normalized Asset metadata in the focused attachment transaction', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, 'tmp', 'storyboard.png'), 'image');
+
+    const report = await projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'cast.character-sheet',
+      target: { kind: 'castMember', id: 'cast_test0001' },
+      sourceProjectRelativePath: 'tmp/storyboard.png',
+      title: 'Storyboard Character Sheet',
+      assetMetadata: {
+        oneLineSummary: '  Current Storyboard Lookbook rendering. ',
+        referenceName: '  siege-storyboard-continuity ',
+        tags: [' storyboard ', 'previs', 'storyboard'],
+      },
+    });
+
+    expect(report.asset).toMatchObject({
+      oneLineSummary: 'Current Storyboard Lookbook rendering.',
+      referenceName: 'siege-storyboard-continuity',
+      tags: ['storyboard', 'previs'],
+    });
+  });
+
   it('atomically selects canonical imports and rejects request-scoped selection before writes', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });

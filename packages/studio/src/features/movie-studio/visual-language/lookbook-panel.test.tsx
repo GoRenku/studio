@@ -239,7 +239,7 @@ function lookbookImage(): LookbookImage {
       origin: 'generated',
       availability: 'ready',
       referenceName: null,
-      purpose: null,
+      tags: [],
       createdAt: '2026-05-25T00:00:00.000Z',
       updatedAt: '2026-05-25T00:00:00.000Z',
       files: [
@@ -276,7 +276,7 @@ function lookbookSheet(id: string): LookbookSheet {
       origin: 'generated',
       availability: 'ready',
       referenceName: null,
-      purpose: null,
+      tags: [],
       createdAt: '2026-05-25T00:00:00.000Z',
       updatedAt: '2026-05-25T00:00:00.000Z',
       files: [

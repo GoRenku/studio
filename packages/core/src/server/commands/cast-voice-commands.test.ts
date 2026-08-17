@@ -71,7 +71,7 @@ describe('Cast Voice commands', () => {
       sampleSource: { kind: 'custom_file' },
       sample: {
         referenceName: 'normal-voice',
-        purpose: 'calm strategic baseline',
+        tags: ['calm strategic baseline'],
         files: [
           expect.objectContaining({
             projectRelativePath: 'cast/mehmed-ii/normal.mp3',

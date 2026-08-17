@@ -55,7 +55,7 @@ export function copySelectedShotImage(input: {
     title: source.title,
     oneLineSummary: source.oneLineSummary ?? undefined,
     referenceName: source.referenceName,
-    purpose: source.purpose,
+    tags: source.tags,
     origin: source.origin,
     availability: source.availability,
     createdAt: input.now,

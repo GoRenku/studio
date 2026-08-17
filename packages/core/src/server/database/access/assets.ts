@@ -12,7 +12,7 @@ export interface InsertAssetRecord {
   title: string;
   oneLineSummary?: string;
   referenceName?: string | null;
-  purpose?: string | null;
+  tags?: string[];
   origin: string;
   availability: string;
   createdAt: string;
@@ -61,7 +61,7 @@ export function updateAssetRecordMetadata(
     title?: string;
     oneLineSummary?: string | null;
     referenceName?: string | null;
-    purpose?: string | null;
+    tags?: string[];
     localeId?: string | null;
     updatedAt: string;
   }
@@ -78,8 +78,8 @@ export function updateAssetRecordMetadata(
   if (input.referenceName !== undefined) {
     values.referenceName = input.referenceName;
   }
-  if (input.purpose !== undefined) {
-    values.purpose = input.purpose;
+  if (input.tags !== undefined) {
+    values.tags = input.tags;
   }
   if (input.localeId !== undefined) {
     values.localeId = input.localeId;

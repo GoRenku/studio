@@ -98,7 +98,8 @@ Options
   --target             Generation target or Asset selection target
   --purpose            Media purpose key
   --reference-name     Asset reference name
-  --reference-purpose  Asset purpose text
+  --tag                 Repeatable Asset intended-use tag
+  --clear-tags          Clear all Asset intended-use tags
   --source             Project-relative source file for media import
   --resource           Studio resource key for notify-refresh
   --source-sheet       Source Location Sheet asset id for Location Hero import
@@ -223,8 +224,13 @@ function createCliFlags() {
     referenceName: {
       type: 'string',
     },
-    referencePurpose: {
+    tag: {
       type: 'string',
+      isMultiple: true,
+    },
+    clearTags: {
+      type: 'boolean',
+      default: false,
     },
     source: {
       type: 'string',
@@ -580,7 +586,8 @@ export async function runRenkuCli(
             title: cli.flags.title,
             summary: cli.flags.summary,
             referenceName: cli.flags.referenceName,
-            referencePurpose: cli.flags.referencePurpose,
+            tag: cli.flags.tag?.length ? cli.flags.tag : undefined,
+            clearTags: cli.flags.clearTags,
             locale: cli.flags.locale,
           },
           json: cli.flags.json,
@@ -748,7 +755,7 @@ export async function runRenkuCli(
             title: cli.flags.title,
             summary: cli.flags.summary,
             referenceName: cli.flags.referenceName,
-            referencePurpose: cli.flags.referencePurpose,
+            tag: cli.flags.tag?.length ? cli.flags.tag : undefined,
             sections: cli.flags.sections,
             anchor: cli.flags.anchor,
             receipt: cli.flags.receipt,

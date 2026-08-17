@@ -197,6 +197,9 @@ export interface GenerationModelFieldDescriptor {
 export interface GenerationReferenceCatalogItem {
   reference: GenerationReference;
   title?: string;
+  oneLineSummary: string | null;
+  referenceName: string | null;
+  tags: string[];
   mediaKind: GenerationOutputMediaKind;
   mimeType: string | null;
   sizeBytes: number | null;

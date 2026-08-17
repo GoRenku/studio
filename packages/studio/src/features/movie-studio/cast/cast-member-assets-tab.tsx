@@ -145,10 +145,10 @@ function CastAssetSection({
         presentation: {
           kind: 'overlay' as const,
           copy:
-            title || asset.purpose
+            title || asset.oneLineSummary
               ? {
                   title,
-                  description: asset.purpose ?? undefined,
+                  description: asset.oneLineSummary ?? undefined,
                 }
               : undefined,
         },

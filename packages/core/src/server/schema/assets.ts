@@ -5,6 +5,7 @@ import {
   sqliteTable,
   text,
 } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 import { projectLocales } from './project-locales.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
 import { mediaGenerationRuns, mediaGenerationSpecs } from './media-generation.js';
@@ -17,7 +18,10 @@ export const assets = sqliteTable('asset', {
   title: text('title').notNull(),
   oneLineSummary: text('one_line_summary'),
   referenceName: text('reference_name'),
-  purpose: text('purpose'),
+  tags: text('tags', { mode: 'json' })
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'`),
   origin: text('origin').notNull(),
   availability: text('availability').notNull(),
   createdAt: text('created_at').notNull(),

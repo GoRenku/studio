@@ -146,6 +146,11 @@ Use the focused documents below for current direction.
   persisted description. A Location can have many Location Sheets. Video
   requests may select exact Location Sheet files through GenerationSpec
   references without adding Shot Plan relationships.
+- A Storyboard continuity sheet is an ordinary Character, Location, or Prop
+  Sheet whose Asset tags include exact `storyboard`. The tag is agent-owned
+  intended-use metadata, not a new Asset type, owner, selection, or runtime
+  classifier. Production and Storyboard variants remain exact request-scoped
+  candidates.
 - Location Hero Images are Location-owned Assets with canonical type
   `location_hero`. Common selection chooses zero or one Hero for
   overview/detail imagery and does not create a generation reference.
@@ -183,9 +188,12 @@ Use the focused documents below for current direction.
   `cast_voice_sample`; generic Asset deletion must reject that sample while the
   Cast Voice points at it.
 - Every Asset has exactly one row in `asset_membership`. The Asset row owns
-  title, one-line summary, reference name, purpose, locale, origin, type, and
-  media kind. Internal owner keys are shared with `selected_asset` but never
-  enter public contracts.
+  title, one-line summary, reference name, ordered intended-use `tags`, locale,
+  origin, type, and media kind. Tags are non-null JSON text, structurally
+  normalized without semantic interpretation, and default to `[]`. Focused
+  attachment may persist summary, reference name, and tags atomically with the
+  Asset, membership, file, and provenance. Internal owner keys are shared with
+  `selected_asset` but never enter public contracts.
 - Canonical selection exists only for Cast Profile, Location Hero, Prop Hero, Lookbook
   card, Shot image, and Scene Beat Storyboard targets. Character Sheets,
   Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes are selected only

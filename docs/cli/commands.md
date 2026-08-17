@@ -1588,10 +1588,12 @@ Behavior:
   external `codex/gpt-image-2` Spec with logical references. With it off, use
   GPT Image 2 edit, reference fields, a descriptor-supported custom size, and
   Core-fixed high quality.
-- The agent analyzes each returned composite once, preserves the existing
-  vision-guided crop and crop-inspection sequence, then accepts useful images
-  or reports the issue and stops without automatic edit, repair, retry, or
-  regeneration.
+- The agent preserves the existing vision-guided crop and crop-inspection
+  sequence. Review-first mode shows the result, concerns, and recommendation,
+  then waits for accept, regenerate, or discard. Strict iterative mode is an
+  explicit task-scoped opt-in; each creative correction uses a deliberately
+  changed request and a new Spec while preserving ordinary Preview, pricing,
+  confirmation, concurrency, freeze, and provenance gates.
 - `shot.image` resolves one exact Shot and owning Scene, recommends the project
   aspect ratio, and imports an unselected `shot-image` candidate under the
   Core-owned Shot path.
@@ -1646,6 +1648,9 @@ renku media import \
   --target <target> \
   --source <project-relative-path> \
   --title <title> \
+  --summary <one-line-summary> \
+  --reference-name <name> \
+  --tag <tag> \
   --receipt <generation-run-json> \
   --source-spec <agent-external-spec-id> \
   --select \
@@ -1653,6 +1658,9 @@ renku media import \
 ```
 
 `--receipt` and `--source-spec` are alternatives; do not pass both.
+`--tag` is repeatable and the CLI passes every occurrence unchanged to Core.
+Summary, reference name, and tags are persisted atomically with focused single-
+file attachment. Grouped Scene Storyboard import keeps its dedicated shape.
 `--select` is supported only by canonical Profile, Location/Prop Hero, Lookbook Image, Shot
 Image, and Scene Storyboard Image imports.
 
@@ -1734,7 +1742,8 @@ List or update Assets, and select or clear canonical owner-scoped imagery.
 
 ```bash
 renku asset list --project <project-name> --owner <owner> --json
-renku asset update <asset-id> --project <project-name> --title <title> --summary <summary> --reference-name <name> --reference-purpose <purpose> --locale <locale-id> --json
+renku asset update <asset-id> --project <project-name> --title <title> --summary <summary> --reference-name <name> --tag <tag> --tag <tag> --locale <locale-id> --json
+renku asset update <asset-id> --project <project-name> --clear-tags --json
 renku asset select --project <project-name> --target <selection-target> --asset <asset-id> --json
 renku asset clear-selection --project <project-name> --target <selection-target> --json
 ```
@@ -1749,8 +1758,12 @@ Options:
   forms are Cast, Location, Lookbook, Shot, and Scene Beat only.
 - `--asset`: required by `select`.
 - `--type`, `--media-kind`, and `--locale`: optional listing filters.
-- `--title`, `--summary`, `--reference-name`, `--reference-purpose`, and
-  `--locale`: Asset-owned metadata updates.
+- `--title`, `--summary`, `--reference-name`, and `--locale`: Asset-owned
+  metadata updates.
+- repeated `--tag` replaces the complete ordered tag list. `--clear-tags`
+  stores `[]`; it cannot be combined with `--tag`. Omitting both leaves tags
+  unchanged. Core trims, rejects empty entries, and removes exact duplicates
+  without interpreting tag meaning.
 
 Character Sheets, Location Sheets, Lookbook Sheets, and Dialogue Audio Takes
 have no global selection command. Their exact choices belong to the consuming

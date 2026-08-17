@@ -253,6 +253,7 @@ describe('Shot Plans', () => {
       target: { kind: 'shot', id: shot.id },
       sourceProjectRelativePath: 'tmp/shot.png',
       title: 'First candidate',
+      assetMetadata: { tags: ['storyboard', 'approved'] },
       sourceSpecId: sourceSpec.id,
     });
     const second = await projectData.attachGenerationMedia({
@@ -337,6 +338,7 @@ describe('Shot Plans', () => {
       kind: 'shot',
       id: copiedShot.id,
     });
+    expect(copiedShot.images[0]!.tags).toEqual(['storyboard', 'approved']);
     expect(copiedShot.images[0]!.files[0]!.projectRelativePath).not.toBe(
       first.asset.files[0]!.projectRelativePath
     );

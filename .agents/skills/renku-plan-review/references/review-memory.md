@@ -10,6 +10,28 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-17 — Match tag architecture to the accepted ownership level
+
+- **User objection:** The plan oscillated between one long scalar purpose, an
+  opaque agent-only JSON convention, and a first-class schema change without
+  clearly separating those product choices. The accepted direction was a real
+  Asset `tags` contract with a database rename and migration.
+- **Planning rule:** Decide first whether tags are merely an agent convention or
+  first-class domain metadata. If an existing opaque field is intentionally
+  sufficient, avoid a schema cutover. If first-class tags are accepted, name
+  them `tags` end to end across database, public types, commands, projections,
+  and documentation; store one JSON string array; migrate populated scalar
+  values once; and remove the prior scalar directly. Do not mix an opaque
+  serialized convention with a partially typed runtime contract. Keep readable
+  human description in its own summary field.
+- **Apply when:** A plan changes purposes, tags, labels, capabilities, or other
+  classifications used by agents and product surfaces.
+- **Evidence to inspect:** The accepted metadata owner and consumers; whether
+  tags must round-trip through runtime projections or commands; existing
+  populated data; every schema, public-contract, writer, CLI, and documentation
+  caller; the one-way migration; and deliberate fallback behavior when a
+  preferred tag is absent.
+
 ### 2026-08-16 — Separate reference fidelity from target rendering style
 
 - **User objection:** A Storyboard prompt plan treated realistic Production

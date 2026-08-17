@@ -135,14 +135,18 @@ operational companions that teach agents how to use those contracts.
 - Treats the Storyboard Lookbook as the sole appearance authority. Exact
   Character, Location, and Prop references preserve canonical subject facts
   while being re-rendered in that Lookbook's visual language.
+- Reads reference-candidate summary, reference name, tags, pixels, and available
+  provenance; prefers a suitable exact-`storyboard` same-owner sheet without
+  automatic selection and uses a deliberate fallback when none is suitable.
 - Uses one Project image-path setting, **Use Codex for image generation**. It
   is on by default. Turning it off selects the Renku-managed GPT Image 2 edit
   route;
   there is no second model recommendation.
-- Synthesizes concrete visible panel direction from opaque narrative evidence,
-  analyzes each composite once, preserves the existing vision-guided crop path,
-  then accepts useful crops or reports the issue and stops without automatic
-  edit, repair, retry, or regeneration.
+- Synthesizes concrete visible panel direction from opaque narrative evidence
+  and preserves the existing vision-guided crop path. Review-first shows one
+  result and waits for accept/regenerate/discard. Strict iterative review
+  requires explicit user opt-in and a changed, newly reviewed request after
+  each creative failure. Findings remain advisory and add no runtime QA state.
 - Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
   the output to `casting-director` for `renku cast voice attach`.
 

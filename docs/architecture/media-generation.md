@@ -176,8 +176,17 @@ generation**. It is on by default. With it on, the agent uses a frozen
 prompt-only external `codex/gpt-image-2` Spec. With it off, or when the user
 explicitly chooses Renku for the request, Scene Storyboards use
 `fal-ai/openai/gpt-image-2/edit`. The purpose exposes no competing model
-recommendation. Managed quality remains fixed high. Visual QA is agent-owned
-and one-pass: analyze, crop and inspect, then accept or report and stop.
+recommendation. Managed quality remains fixed high. Visual QA is agent-owned:
+review-first analyzes one result and waits for accept, regenerate, or discard;
+strict iteration requires explicit user opt-in and a deliberately revised new
+request for every creative attempt. Neither mode becomes runtime state or an
+attachment gate.
+
+Generation reference candidates expose their Asset's exact one-line summary,
+reference name, and non-null tags. Core preserves eligibility, order, and empty
+selection state and never interprets metadata. `cast.character-sheet`,
+`location.sheet`, and `prop.sheet` expose both optional Production and
+Storyboard Lookbook Sheet slots plus their existing same-owner sheet slot.
 
 All purposes can carry separate ordered Additional References authored by an
 agent or CLI caller. Generation Preview displays those exact references but

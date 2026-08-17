@@ -1,7 +1,7 @@
 import { defineGenerationPurpose } from '../purpose-factory.js';
 import { buildReferenceGuide } from '../purpose-guide.js';
 import { propSheetSlot } from '../reference-slots/domain-assets.js';
-import { productionLookbookSheetSlot } from '../reference-slots/lookbook-sheets.js';
+import { productionLookbookSheetSlot, storyboardLookbookSheetSlot } from '../reference-slots/lookbook-sheets.js';
 
 export const propSheetPurpose = defineGenerationPurpose({
   purpose: 'prop.sheet',
@@ -20,6 +20,7 @@ export const propSheetPurpose = defineGenerationPurpose({
       context,
       slots: [
         productionLookbookSheetSlot(context),
+        storyboardLookbookSheetSlot(context),
         propSheetSlot({ context, propId: context.target.id }),
       ],
     });

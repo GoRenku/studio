@@ -317,7 +317,7 @@ function lookbookImage(title: string, id: string = 'comp'): LookbookImage {
       origin: 'generated',
       availability: 'ready',
       referenceName: null,
-      purpose: null,
+      tags: [],
       createdAt: '2026-06-20T00:00:00.000Z',
       updatedAt: '2026-06-20T00:00:00.000Z',
       files: [

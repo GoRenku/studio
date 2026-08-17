@@ -82,6 +82,9 @@ export function listGenerationReferences(
           assetFileId: file.id,
         },
         ...(title ? { title } : {}),
+        oneLineSummary: asset.oneLineSummary,
+        referenceName: asset.referenceName,
+        tags: asset.tags,
         mediaKind: file.mediaKind,
         mimeType: file.mimeType,
         sizeBytes: file.sizeBytes,
@@ -241,6 +244,9 @@ export async function resolveGenerationReference(input: {
     }
     return {
       reference: input.reference,
+      oneLineSummary: null,
+      referenceName: null,
+      tags: [],
       mediaKind: projectFile.mediaKind,
       mimeType: projectFile.mimeType,
       sizeBytes: projectFile.sizeBytes,
@@ -270,6 +276,9 @@ export async function resolveGenerationReference(input: {
   return {
     reference: input.reference,
     ...(asset.title.trim() ? { title: asset.title.trim() } : {}),
+    oneLineSummary: asset.oneLineSummary,
+    referenceName: asset.referenceName,
+    tags: asset.tags,
     mediaKind,
     mimeType: file.mimeType,
     sizeBytes: file.sizeBytes,

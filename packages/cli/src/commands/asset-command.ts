@@ -33,7 +33,8 @@ export interface AssetCommandFlags {
   title?: string;
   summary?: string;
   referenceName?: string;
-  referencePurpose?: string;
+  tag?: string[];
+  clearTags?: boolean;
   locale?: string;
 }
 
@@ -72,13 +73,18 @@ async function updateAsset(
   assetId?: string
 ): Promise<number> {
   const projectData = createProjectDataService();
+  assertTagFlags(options.flags);
   const report = await projectData.updateAsset({
     projectName: requiredFlag(options, 'project'),
     assetId: requiredAssetId(assetId),
     title: options.flags.title,
     oneLineSummary: options.flags.summary,
     referenceName: options.flags.referenceName,
-    purpose: options.flags.referencePurpose,
+    ...(options.flags.clearTags
+      ? { tags: [] }
+      : options.flags.tag !== undefined
+        ? { tags: options.flags.tag }
+        : {}),
     localeId: options.flags.locale,
     homeDir: options.homeDir,
   });
@@ -89,6 +95,24 @@ async function updateAsset(
     `Updated Asset: ${report.asset.id}`
   );
   return 0;
+}
+
+function assertTagFlags(flags: AssetCommandFlags): void {
+  if (!flags.clearTags || flags.tag === undefined) {
+    return;
+  }
+  throw new StructuredError({
+    code: 'CLI045',
+    message: 'Asset update accepts either --tag or --clear-tags, not both.',
+    issues: [
+      createDiagnosticError(
+        'CLI045',
+        'Asset update tag flags are mutually exclusive.',
+        { path: ['--tag', '--clear-tags'], context: 'renku CLI arguments' },
+        'Remove --tag or --clear-tags.'
+      ),
+    ],
+  });
 }
 
 async function listAssets(options: RunAssetCommandOptions): Promise<number> {

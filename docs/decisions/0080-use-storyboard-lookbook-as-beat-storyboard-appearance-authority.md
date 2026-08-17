@@ -4,6 +4,10 @@ Date: 2026-08-16
 
 Status: accepted
 
+Decision 0081 supersedes only this decision's unconditional one-pass and
+no-automatic-iteration clause. Storyboard appearance authority, continuity
+roles, batching, layouts, opacity, and crop behavior remain unchanged.
+
 ## Context
 
 Beat Storyboards help directors, screenwriters, and collaborators align on

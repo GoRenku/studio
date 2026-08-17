@@ -81,6 +81,47 @@ describe('Asset command', () => {
     );
   });
 
+  it('replaces and clears complete tag lists through Core', async () => {
+    projectData.updateAsset.mockResolvedValue({
+      valid: true,
+      warnings: [],
+      project: { id: 'project_1', projectName: 'movie', projectFolder: '/projects/movie' },
+      asset: { id: 'asset_1', owner: { kind: 'castMember', id: 'cast_1' } },
+      resourceKeys: [],
+    });
+    const io = { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } };
+
+    await runAssetCommand({
+      input: ['update', 'asset_1'],
+      flags: { project: 'movie', tag: ['storyboard', 'previs'] },
+      json: true,
+      io,
+    });
+    expect(projectData.updateAsset).toHaveBeenLastCalledWith(expect.objectContaining({
+      tags: ['storyboard', 'previs'],
+    }));
+
+    await runAssetCommand({
+      input: ['update', 'asset_1'],
+      flags: { project: 'movie', clearTags: true },
+      json: true,
+      io,
+    });
+    expect(projectData.updateAsset).toHaveBeenLastCalledWith(expect.objectContaining({
+      tags: [],
+    }));
+  });
+
+  it('rejects --tag with --clear-tags before Core delegation', async () => {
+    await expect(runAssetCommand({
+      input: ['update', 'asset_1'],
+      flags: { project: 'movie', tag: ['storyboard'], clearTags: true },
+      json: true,
+      io: { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } },
+    })).rejects.toMatchObject({ code: 'CLI045' });
+    expect(projectData.updateAsset).not.toHaveBeenCalled();
+  });
+
   it('lists the selected Asset with the owner candidate page', async () => {
     projectData.listAssetPage.mockResolvedValue({
       items: [

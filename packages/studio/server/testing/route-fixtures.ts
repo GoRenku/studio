@@ -41,7 +41,7 @@ export function makeAsset(assetId: string): Asset {
     oneLineSummary: null,
     origin: 'imported',
     referenceName: null,
-    purpose: null,
+    tags: [],
     files: [{
       id: 'asset_file_cast_reference',
       role: 'primary',

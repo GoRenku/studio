@@ -23,6 +23,20 @@ interface GenerationSpec {
 }
 ```
 
+Registered AssetFile candidates carry exact Asset metadata for deliberate
+request-scoped choice:
+
+```ts
+interface GenerationReferenceCatalogItem {
+  oneLineSummary: string | null;
+  referenceName: string | null;
+  tags: string[];
+}
+```
+
+Safe project-file references use null, null, and `[]`. Metadata never changes
+eligibility, ordering, or selection.
+
 `values` contains actual non-media provider field names and authored values.
 Optional provider-defaulted fields remain absent until explicitly authored.
 Media fields are not stored in `values`; an exact reference may receive an
@@ -79,11 +93,16 @@ recommendation. Core keeps managed quality fixed high.
 The Storyboard Lookbook alone controls Beat Storyboard appearance. Continuity
 references preserve Character identity/design, Location geography, and Prop
 construction/state while being re-rendered in the Storyboard Lookbook's visual
-language. This is an agent prompt contract, not runtime semantic validation.
+language. Storyboard-native continuity sheets reuse the existing subject-sheet
+types and exact `storyboard` Asset tag; candidate metadata informs an agent's
+request-scoped choice but never filters or selects in Core. This is an agent
+prompt contract, not runtime semantic validation.
 The agent authors any narrative-appropriate Beat count before partitioning only
 requested image work into consecutive groups of at most four. It uses the
-existing one-output composite and vision-guided crop path, analyzes once, then
-accepts useful crops or reports the issue and stops.
+existing one-output composite and vision-guided crop path. Review-first shows
+one result and waits for user direction. Explicit strict iteration creates a
+new reviewed request after every creative change and retains all ordinary cost,
+confirmation, freeze, concurrency, and provenance boundaries.
 
 The persisted record adds `frozenAt: string | null`. Draft records are editable.
 Live submission freezes the exact saved revision permanently. Managed run does

@@ -1,7 +1,9 @@
 import type {
+  AssetMetadataInput,
   AssetUpdateReport,
   UpdateAssetInput,
 } from '../../client/assets.js';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { updateAssetRecordMetadata } from '../database/access/assets.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
@@ -19,18 +21,11 @@ export async function updateAsset(
   try {
     const owner = requireAssetOwner(session, input.assetId);
     assertAssetLocaleExists(session, input.localeId);
+    const metadata = normalizeAssetMetadata(input, ['asset']);
     updateAssetRecordMetadata(session, {
       assetId: input.assetId,
       title: optionalTrimmed(input.title) ?? undefined,
-      oneLineSummary: input.oneLineSummary === undefined
-        ? undefined
-        : optionalTrimmed(input.oneLineSummary),
-      referenceName: input.referenceName === undefined
-        ? undefined
-        : optionalTrimmed(input.referenceName),
-      purpose: input.purpose === undefined
-        ? undefined
-        : optionalTrimmed(input.purpose),
+      ...metadata,
       localeId: input.localeId,
       updatedAt: new Date().toISOString(),
     });
@@ -52,6 +47,56 @@ export async function updateAsset(
   } finally {
     session.close();
   }
+}
+
+export function normalizeAssetMetadata(
+  input: AssetMetadataInput,
+  path: string[] = ['assetMetadata']
+): AssetMetadataInput {
+  return {
+    ...(input.oneLineSummary === undefined
+      ? {}
+      : { oneLineSummary: optionalTrimmed(input.oneLineSummary) }),
+    ...(input.referenceName === undefined
+      ? {}
+      : { referenceName: optionalTrimmed(input.referenceName) }),
+    ...(input.tags === undefined
+      ? {}
+      : { tags: normalizeAssetTags(input.tags, path) }),
+  };
+}
+
+function normalizeAssetTags(tags: string[], path: string[]): string[] {
+  if (!Array.isArray(tags)) {
+    throw invalidAssetTags(path, 'Asset tags must be a list of strings.');
+  }
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+  for (const [index, value] of tags.entries()) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw invalidAssetTags(
+        [...path, 'tags', String(index)],
+        'Each Asset tag must be a non-empty string.'
+      );
+    }
+    const tag = value.trim();
+    if (!seen.has(tag)) {
+      seen.add(tag);
+      normalized.push(tag);
+    }
+  }
+  return normalized;
+}
+
+function invalidAssetTags(path: string[], message: string): ProjectDataError {
+  return new ProjectDataError('CORE_ASSET_TAGS_INVALID', message, {
+    issues: [createDiagnosticError(
+      'CORE_ASSET_TAGS_INVALID',
+      message,
+      { path, context: 'Asset metadata' },
+      'Pass a list containing only non-empty tag strings.'
+    )],
+  });
 }
 
 function assertAssetLocaleExists(

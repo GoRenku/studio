@@ -278,7 +278,7 @@ function locationAsset({
     oneLineSummary,
     origin: 'generated',
     referenceName: null,
-    purpose: null,
+    tags: [],
     files: [
       imageFile(fileRole, `${assetId}_primary`, width, height),
     ],

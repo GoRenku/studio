@@ -181,8 +181,9 @@ export async function createStudioE2eGenerationPromptProject(input: {
     homeDir: input.runtime.isolatedHomeDirectory,
     assetId: savedSheet.asset.id,
     title: 'Prompt Editor Saved Character Sheet',
+    oneLineSummary: 'Read-only Generation Request prompt editor browser fixture.',
     referenceName: 'prompt-editor-saved-character-sheet',
-    purpose: 'Read-only Generation Request prompt editor browser fixture.',
+    tags: ['browser-e2e'],
   });
 
   return {

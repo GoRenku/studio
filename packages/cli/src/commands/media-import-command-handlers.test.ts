@@ -30,6 +30,28 @@ describe('media import command handler', () => {
     }));
   });
 
+  it('passes focused Asset metadata without interpreting repeated tags', async () => {
+    const attachGenerationMedia = vi.fn().mockResolvedValue({ valid: true, purpose: 'cast.character-sheet', provenance: null, project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
+    await mediaImportCommandHandler.run({
+      flags: {
+        purpose: 'cast.character-sheet',
+        target: 'cast:hero',
+        source: 'tmp/sheet.png',
+        summary: 'Storyboard continuity rendering.',
+        referenceName: 'hero-storyboard',
+        tag: ['previs', 'storyboard'],
+      },
+      runtime: { projectName: 'movie', projectDataService: { attachGenerationMedia } },
+    } as never);
+    expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({
+      assetMetadata: {
+        oneLineSummary: 'Storyboard continuity rendering.',
+        referenceName: 'hero-storyboard',
+        tags: ['previs', 'storyboard'],
+      },
+    }));
+  });
+
   it('passes an agent-cropped Storyboard image to the focused Scene attachment command', async () => {
     const attachSceneStoryboardImages = vi.fn().mockResolvedValue({ valid: true, purpose: 'scene.storyboard-sheet', project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
     await mediaImportCommandHandler.run({
