@@ -13,6 +13,7 @@ import {
   writeJson,
 } from './command-io.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
+import { runLocationWorldCommand } from './location-world-command.js';
 
 export async function runLocationCommand(options: {
   input: string[];
@@ -27,6 +28,13 @@ export async function runLocationCommand(options: {
 }): Promise<number> {
   const [subcommand, id] = options.input;
   const service = createProjectDataService();
+
+  if (subcommand === 'world') {
+    return runLocationWorldCommand({
+      ...options,
+      input: options.input.slice(1),
+    });
+  }
 
   if (subcommand === 'list') {
     writeJson(options.io, await service.listLocations({ homeDir: options.homeDir }));
@@ -98,7 +106,7 @@ export async function runLocationCommand(options: {
         'CLI111',
         'Unknown location command.',
         { path: ['location', subcommand ?? ''] },
-        'Use list, show, context, validate, or apply.'
+        'Use list, show, context, validate, apply, or world.'
       ),
     ],
     suggestion: 'Use a supported location command.',

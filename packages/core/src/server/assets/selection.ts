@@ -16,10 +16,16 @@ import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { assetOwnerResourceKeys } from './resource-keys.js';
 import { assetOwnerKey } from './owner-keys.js';
 import { assertAssetOwnerExists } from './ownership.js';
+import {
+  assetSelectionTargetForOwner,
+  assetSelectionTargetKey,
+  selectionTargetOwner,
+} from './selection-targets.js';
 
 const selectedAssetTypes: Record<AssetSelectionTarget['kind'], string> = {
   castMember: 'cast_profile',
   location: 'location_hero',
+  locationWorld: 'location_world',
   prop: 'prop_hero',
   lookbook: 'lookbook_image',
   shot: 'shot_image',
@@ -38,7 +44,7 @@ export async function selectAsset(
       assetId: input.assetId,
     });
     writeSelectedAssetRecord(session, {
-      ownerKey: assetOwnerKey(owner),
+      targetKey: assetSelectionTargetKey(input.target),
       assetId: input.assetId,
       now: new Date().toISOString(),
     });
@@ -55,7 +61,7 @@ export async function clearAssetSelection(
   try {
     const owner = selectionTargetOwner(input.target);
     assertAssetOwnerExists(session, owner);
-    clearSelectedAssetRecord(session, assetOwnerKey(owner));
+    clearSelectedAssetRecord(session, assetSelectionTargetKey(input.target));
     return selectionReport(session, projectFolder, input.target, null);
   } finally {
     session.close();
@@ -69,7 +75,7 @@ export function selectAssetInSession(
   const owner = selectionTargetOwner(input.target);
   assertSelectionInSession(session, { ...input, owner });
   writeSelectedAssetRecord(session, {
-    ownerKey: assetOwnerKey(owner),
+    targetKey: assetSelectionTargetKey(input.target),
     assetId: input.assetId,
     now: input.now,
   });
@@ -79,15 +85,9 @@ export function assetSelectionTargetForOwnerType(
   owner: AssetOwner,
   assetType: string
 ): AssetSelectionTarget {
-  const target = owner.kind === 'sceneBeat'
-    ? owner
-    : owner.kind === 'castMember'
-      || owner.kind === 'location'
-      || owner.kind === 'prop'
-      || owner.kind === 'lookbook'
-      || owner.kind === 'shot'
-      ? { kind: owner.kind, id: owner.id }
-      : null;
+  const target = owner.kind === 'location' && assetType === 'location_world'
+    ? { kind: 'locationWorld' as const, id: owner.id }
+    : assetSelectionTargetForOwner(owner);
   if (!target || selectedAssetTypes[target.kind] !== assetType) {
     throw new ProjectDataError(
       'CORE_ASSET_SELECTION_UNSUPPORTED',
@@ -95,14 +95,6 @@ export function assetSelectionTargetForOwnerType(
     );
   }
   return target;
-}
-
-export function selectionTargetOwner(
-  target: AssetSelectionTarget
-): AssetOwner {
-  return target.kind === 'sceneBeat'
-    ? target
-    : { kind: target.kind, id: target.id };
 }
 
 function assertSelectionInSession(

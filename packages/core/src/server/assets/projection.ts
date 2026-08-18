@@ -15,6 +15,10 @@ import { readAssetMembershipRecord } from '../database/access/asset-memberships.
 import { readAssetRecord } from '../database/access/assets.js';
 import { assertAssetOwnerExists } from './ownership.js';
 import { assetOwnerKey } from './owner-keys.js';
+import {
+  assetSelectionTargetForOwner,
+  assetSelectionTargetKey,
+} from './selection-targets.js';
 
 const DEFAULT_ASSET_PAGE_LIMIT = 60;
 const MAX_ASSET_PAGE_LIMIT = 200;
@@ -104,6 +108,10 @@ export function listAssetPageInSession(
     .all();
   const pageRows = rows.slice(0, limit) as AssetRow[];
   const files = readAssetFiles(session, pageRows.map((row) => row.id));
+  const selectionTarget = input.owner.kind === 'location'
+    && input.type === 'location_world'
+    ? { kind: 'locationWorld' as const, id: input.owner.id }
+    : assetSelectionTargetForOwner(input.owner);
   return {
     items: pageRows.map((row) => toAsset(row, input.owner, files)),
     nextCursor: rows.length > limit
@@ -112,7 +120,12 @@ export function listAssetPageInSession(
           assetId: pageRows[pageRows.length - 1]!.id,
         })
       : null,
-    selectedAssetId: readSelectedAssetRecord(session, ownerKey)?.assetId ?? null,
+    selectedAssetId: selectionTarget
+      ? readSelectedAssetRecord(
+          session,
+          assetSelectionTargetKey(selectionTarget)
+        )?.assetId ?? null
+      : null,
   };
 }
 

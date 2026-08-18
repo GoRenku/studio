@@ -34,6 +34,7 @@ import type {
   ReadLocationResourceInput,
   ReadPropResourceInput,
 } from '../project-data-service-contracts.js';
+import { readSelectedLocationWorldInSession } from '../location-worlds/assets.js';
 
 export async function readCastOverviewResource(
   input: ListNavigationInput
@@ -138,6 +139,10 @@ export async function readLocationResource(
         kind: 'location',
         id: input.locationId,
       }),
+      selectedWorld: readSelectedLocationWorldInSession(
+        session,
+        input.locationId
+      ),
     };
   } finally {
     session.close();

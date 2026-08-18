@@ -84,6 +84,7 @@ const castProfileResolver = castResolver<'cast.profile'>();
 const castVoiceSampleResolver = castResolver<'cast.voiceSample'>();
 const locationSheetResolver = locationResolver<'location.sheet'>();
 const locationHeroResolver = locationResolver<'location.hero'>();
+const locationWorldResolver = locationResolver<'location.world'>();
 const propSheetResolver = propResolver<'prop.sheet'>();
 const propHeroResolver = propResolver<'prop.hero'>();
 const lookbookImageResolver = lookbookResolver<'visualLanguage.lookbookImage'>();
@@ -116,6 +117,7 @@ const destinationResolvers = {
   'cast.voiceSample': castVoiceSampleResolver,
   'location.sheet': locationSheetResolver,
   'location.hero': locationHeroResolver,
+  'location.world': locationWorldResolver,
   'prop.sheet': propSheetResolver,
   'prop.hero': propHeroResolver,
   'visualLanguage.lookbookImage': lookbookImageResolver,
@@ -213,7 +215,7 @@ function castResolver<K extends 'cast.characterSheet' | 'cast.profile' | 'cast.v
   } as unknown as DestinationResolver<K>;
 }
 
-function locationResolver<K extends 'location.sheet' | 'location.hero'>(): DestinationResolver<K> {
+function locationResolver<K extends 'location.sheet' | 'location.hero' | 'location.world'>(): DestinationResolver<K> {
   return {
     resolveFile: resolveLocationDestinationFile,
     resolveFileSync: resolveLocationDestinationFileSync,

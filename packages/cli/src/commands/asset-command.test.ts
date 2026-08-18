@@ -81,6 +81,13 @@ describe('Asset command', () => {
     );
   });
 
+  it('parses the independent Location World selection target', () => {
+    expect(parseSelectionTarget('location-world:location_gate')).toEqual({
+      kind: 'locationWorld',
+      id: 'location_gate',
+    });
+  });
+
   it('replaces and clears complete tag lists through Core', async () => {
     projectData.updateAsset.mockResolvedValue({
       valid: true,

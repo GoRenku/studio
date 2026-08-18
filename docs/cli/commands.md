@@ -465,6 +465,8 @@ renku location validate --file <location-operations-json> --json
 renku location validate --file - --json
 renku location apply --file <location-operations-json> --json
 renku location apply --file <location-operations-json> --dry-run --json
+renku location world generate --file <location-world-generation-json> --json
+renku location world show --location <location-id> --json
 ```
 
 Behavior:
@@ -477,11 +479,51 @@ Behavior:
   writing.
 - `apply` creates, updates, deletes, or moves Location facts through the
   canonical location authoring path.
+- `world generate` validates either one temporary panorama path or two to eight
+  temporary reconstruction image paths. Panorama input is sent directly with
+  `is_pano: true`; multi-image input uses reconstruction without directional
+  azimuths. Both preserve an authored prompt without provider recaptioning,
+  download the full-resolution SPZ once, persist a Location-owned
+  `location_world` Asset, and select it. Renku does not persist the provider's
+  panorama asset.
+- `world show` returns the Location and its currently selected World Asset.
 - Location handles must stay unique across Cast Members and Locations.
 - Delete operations fail when the Location is still referenced by the
   screenplay.
 - Successful mutations emit Studio resource keys for location navigation and
   affected Location surfaces.
+
+Panorama World input:
+
+```json
+{
+  "kind": "locationWorldGeneration",
+  "version": 1,
+  "locationId": "location_...",
+  "prompt": "Exact optional World prompt.",
+  "source": {
+    "kind": "panorama",
+    "projectRelativePath": "tmp/media/location-world/example/panorama.png"
+  }
+}
+```
+
+Retained multi-image reconstruction input uses:
+
+```json
+{
+  "kind": "locationWorldGeneration",
+  "version": 1,
+  "locationId": "location_...",
+  "source": {
+    "kind": "multiImage",
+    "images": [
+      { "projectRelativePath": "tmp/media/location-world/example/view-01.png" },
+      { "projectRelativePath": "tmp/media/location-world/example/view-02.png" }
+    ]
+  }
+}
+```
 
 Input JSON shape:
 

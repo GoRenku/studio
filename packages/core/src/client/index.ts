@@ -74,6 +74,7 @@ export type {
 export type {
   Location,
 } from './locations.js';
+export type * from './location-worlds.js';
 export type {
   Prop,
 } from './props.js';

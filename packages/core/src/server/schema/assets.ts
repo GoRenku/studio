@@ -88,7 +88,7 @@ export const assetMemberships = sqliteTable(
 );
 
 export const selectedAssets = sqliteTable('selected_asset', {
-  ownerKey: text('owner_key').primaryKey(),
+  targetKey: text('target_key').primaryKey(),
   assetId: text('asset_id')
     .notNull()
     .references(() => assets.id, { onDelete: 'cascade' }),

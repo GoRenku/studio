@@ -16,7 +16,7 @@ import type {
   DestinationRootInput,
 } from './types.js';
 
-type LocationDestinationKind = 'location.sheet' | 'location.hero';
+type LocationDestinationKind = 'location.sheet' | 'location.hero' | 'location.world';
 
 export async function resolveLocationDestinationFile(
   input: DestinationFileInput<LocationDestinationKind>
@@ -79,7 +79,10 @@ function locationGeneratedFileStem(
   if (input.namingMode.kind === 'external') {
     return 'external';
   }
-  return input.destination.kind === 'location.sheet'
-    ? requiredSemanticFileStem(input.destination.semanticName, 'sheet')
-    : fixedFileStem('hero');
+  if (input.destination.kind === 'location.sheet') {
+    return requiredSemanticFileStem(input.destination.semanticName, 'sheet');
+  }
+  return fixedFileStem(
+    input.destination.kind === 'location.world' ? 'world' : 'hero'
+  );
 }

@@ -3,7 +3,7 @@ import { assetFileGenerations } from '../schema/index.js';
 import { createAssetMembership } from '../assets/ownership.js';
 import { readOwnedAsset } from '../assets/projection.js';
 import { selectAssetInSession } from '../assets/selection.js';
-import { assetOwnerKey } from '../assets/owner-keys.js';
+import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import {
@@ -31,7 +31,7 @@ export function copySelectedShotImage(input: {
   const sourceOwner = { kind: 'shot' as const, id: input.sourceShotId };
   const selectedAssetId = readSelectedAssetRecord(
     input.session,
-    assetOwnerKey(sourceOwner)
+    assetSelectionTargetKey(sourceOwner)
   )?.assetId;
   if (!selectedAssetId) {
     return;

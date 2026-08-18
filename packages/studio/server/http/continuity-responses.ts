@@ -44,8 +44,12 @@ export type LocationOverviewResourceResponse = Omit<
   };
 };
 
-export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
+export type LocationResourceResponse = Omit<
+  LocationResource,
+  'firstImage' | 'selectedWorld'
+> & {
   firstImage?: ScreenplayImageReferenceWithHttp;
+  selectedWorld: StudioAssetResponse | null;
 };
 
 export type PropOverviewResourceResponse = Omit<PropOverviewResource, 'props'> & {
@@ -112,6 +116,9 @@ export function toLocationResourceResponse(
   return {
     ...resource,
     firstImage: withOptionalImageUrl(projectName, resource.firstImage),
+    selectedWorld: resource.selectedWorld
+      ? toStudioAssetResponse(projectName, resource.selectedWorld)
+      : null,
   };
 }
 

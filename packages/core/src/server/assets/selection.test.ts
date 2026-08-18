@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { AssetOwner, AssetSelectionTarget } from '../../client/assets.js';
 import {
   assetSelectionTargetForOwnerType,
-  selectionTargetOwner,
 } from './selection.js';
+import { selectionTargetOwner } from './selection-targets.js';
 
 describe('Asset selection capability', () => {
   it.each<{
@@ -20,6 +20,11 @@ describe('Asset selection capability', () => {
       owner: { kind: 'location', id: 'location_1' },
       type: 'location_hero',
       target: { kind: 'location', id: 'location_1' },
+    },
+    {
+      owner: { kind: 'location', id: 'location_1' },
+      type: 'location_world',
+      target: { kind: 'locationWorld', id: 'location_1' },
     },
     {
       owner: { kind: 'prop', id: 'prop_1' },

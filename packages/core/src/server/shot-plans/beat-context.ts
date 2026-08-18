@@ -6,7 +6,7 @@ import type {
   ShotPlanCoverage,
   ShotPlanCoveredBeat,
 } from '../../client/shot-plans.js';
-import { assetOwnerKey } from '../assets/owner-keys.js';
+import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import { readOwnedAsset } from '../assets/projection.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import {
@@ -74,7 +74,7 @@ export function resolveShotPlanBeatContext(input: {
       };
       const selectedAssetId = readSelectedAssetRecord(
         input.session,
-        assetOwnerKey(owner)
+        assetSelectionTargetKey(owner)
       )?.assetId;
       const storyboardImage = selectedAssetId
         ? readOwnedAsset(input.session, { owner, assetId: selectedAssetId })

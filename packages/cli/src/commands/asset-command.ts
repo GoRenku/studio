@@ -248,6 +248,12 @@ export function parseAssetOwner(value: string): AssetOwner {
 }
 
 export function parseSelectionTarget(value: string): AssetSelectionTarget {
+  if (value.startsWith('location-world:')) {
+    const id = value.slice('location-world:'.length);
+    if (id) {
+      return { kind: 'locationWorld', id };
+    }
+  }
   const owner = parseAssetOwner(value);
   if (
     owner.kind === 'castMember'
@@ -265,9 +271,9 @@ export function parseSelectionTarget(value: string): AssetSelectionTarget {
     issues: [
       createDiagnosticError(
         'CLI046',
-        'Asset selection supports Cast Members, Locations, Props, Lookbooks, Shots, and Scene Beats.',
+        'Asset selection supports Cast Members, Locations, Location Worlds, Props, Lookbooks, Shots, and Scene Beats.',
         { path: ['--target'], context: 'renku CLI arguments' },
-        'Use cast:<id>, location:<id>, prop:<id>, lookbook:<id>, shot:<id>, or beat:<scene-id>:<beat-id>.'
+        'Use cast:<id>, location:<id>, location-world:<id>, prop:<id>, lookbook:<id>, shot:<id>, or beat:<scene-id>:<beat-id>.'
       ),
     ],
   });

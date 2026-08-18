@@ -97,8 +97,12 @@ export type LocationOverviewResourceResponse = Omit<
   };
 };
 
-export type LocationResourceResponse = Omit<LocationResource, 'firstImage'> & {
+export type LocationResourceResponse = Omit<
+  LocationResource,
+  'firstImage' | 'selectedWorld'
+> & {
   firstImage?: ScreenplayImageReferenceWithHttp;
+  selectedWorld: StudioAssetResponse | null;
 };
 
 export type PropOverviewResourceResponse = Omit<PropOverviewResource, 'props'> & {

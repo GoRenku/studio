@@ -14,6 +14,7 @@ export type AssetOwner =
 export type AssetSelectionTarget =
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
+  | { kind: 'locationWorld'; id: string }
   | { kind: 'prop'; id: string }
   | { kind: 'lookbook'; id: string }
   | { kind: 'shot'; id: string }

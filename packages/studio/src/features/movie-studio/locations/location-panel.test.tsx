@@ -43,6 +43,12 @@ vi.mock('@/services/studio-continuity-api', () => ({
   readLocationResource: vi.fn(),
 }));
 
+vi.mock('./spark-location-world-viewer', () => ({
+  SparkLocationWorldViewer: ({ url }: { url: string }) => (
+    <div data-testid='spark-viewer' data-url={url} />
+  ),
+}));
+
 describe('LocationPanel', () => {
   beforeEach(() => {
     vi.mocked(deleteLocationAsset).mockReset();
@@ -158,6 +164,34 @@ describe('LocationPanel', () => {
     ).toBeNull();
   });
 
+  it('adds a display-only 3D World tab backed by the selected local Asset file', async () => {
+    vi.mocked(readLocationResource).mockResolvedValue({
+      ...locationResource(),
+      selectedWorld: locationWorldAsset(),
+    });
+    vi.mocked(readLocationAssets).mockResolvedValue(assetCollection([]));
+
+    render(
+      <LocationPanel projectName='constantinople' locationId='location_gate' />
+    );
+
+    expect((await screen.findAllByRole('tab')).map((tab) => tab.textContent)).toEqual([
+      'Details',
+      'Assets',
+      '3D World',
+    ]);
+    const worldTab = screen.getByRole('tab', { name: '3D World' });
+    fireEvent.pointerDown(worldTab, { button: 0, ctrlKey: false });
+    fireEvent.pointerUp(worldTab);
+    fireEvent.mouseDown(worldTab, { button: 0, ctrlKey: false });
+    fireEvent.mouseUp(worldTab);
+    fireEvent.click(worldTab);
+    expect((await screen.findByTestId('spark-viewer')).getAttribute('data-url')).toBe(
+      '/studio-api/projects/constantinople/assets/asset_location_world/files/asset_location_world_primary'
+    );
+    expect(screen.queryByRole('button', { name: /generate/i })).toBeNull();
+  });
+
   it('deletes a location sheet only after confirmation', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
     vi.mocked(readLocationAssets)
@@ -207,6 +241,7 @@ function assetCollection(
 
 function locationResource(): LocationResourceResponse {
   return {
+    selectedWorld: null,
     location: {
       id: 'location_gate',
       handle: 'gate',
@@ -248,6 +283,36 @@ function locationHeroAsset({
     width: 1600,
     height: 900,
   });
+}
+
+function locationWorldAsset(): StudioAssetResponse {
+  return {
+    id: 'asset_location_world',
+    owner: { kind: 'location', id: 'location_gate' },
+    localeId: null,
+    type: 'location_world',
+    availability: 'ready',
+    mediaKind: 'model',
+    title: 'Gate 3D World',
+    oneLineSummary: null,
+    origin: 'world-labs',
+    referenceName: null,
+    tags: [],
+    files: [{
+      id: 'asset_location_world_primary',
+      role: 'primary',
+      url: '/studio-api/projects/constantinople/assets/asset_location_world/files/asset_location_world_primary',
+      mediaKind: 'model',
+      mimeType: 'application/octet-stream',
+      sizeBytes: 123,
+      contentHash: 'hash',
+      width: null,
+      height: null,
+      durationSeconds: null,
+    }],
+    createdAt: '2026-08-18T00:00:00.000Z',
+    updatedAt: '2026-08-18T00:00:00.000Z',
+  };
 }
 
 function locationAsset({

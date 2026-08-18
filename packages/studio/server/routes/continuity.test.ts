@@ -50,6 +50,7 @@ describe('continuity Hono route', () => {
             name: 'The Gate',
           },
           firstImage,
+          selectedWorld: null,
         };
       },
       async readPropResource() {

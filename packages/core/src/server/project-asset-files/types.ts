@@ -4,7 +4,7 @@ import type {
 } from '../../client/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
-export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'text' | 'json' | 'document';
+export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'model' | 'text' | 'json' | 'document';
 
 export type ProjectAssetFileNamingMode =
   | { kind: 'generated' }
@@ -28,6 +28,7 @@ export type ProjectAssetFileDestination =
     }
   | { kind: 'location.sheet'; locationId: string; semanticName?: string }
   | { kind: 'location.hero'; locationId: string }
+  | { kind: 'location.world'; locationId: string }
   | { kind: 'prop.sheet'; propId: string; semanticName?: string }
   | { kind: 'prop.hero'; propId: string }
   | { kind: 'visualLanguage.lookbookImage'; lookbookId: string; semanticName?: string }
@@ -53,6 +54,7 @@ export type ProjectAssetFileDestination =
 
 export type ProjectTemporaryFileDestination =
   | { kind: 'generation.media'; purpose: GenerationPurpose }
+  | { kind: 'location.world' }
   | { kind: 'generation.spec' }
   | { kind: 'generation.receipt' }
   | { kind: 'operation' }

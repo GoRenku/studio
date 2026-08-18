@@ -60,6 +60,18 @@ experiences:
 - `scene-beats` owns Beat history, active selection, storyboard status,
   and storyboard-image attachment separately from generic generation.
 
+Location World generation is another focused Core workflow, not a generic
+GenerationSpec purpose. An agent creates and reviews one equirectangular
+panorama or two to eight overlapping temporary images through Media Producer,
+then explicitly confirms one external World Labs Marble request. Engines owns
+only the narrow upload, fixed `marble-1.1` direct panorama-to-World or
+multi-image reconstruction call, authored-prompt recaption disablement,
+polling, and full-resolution SPZ download. Core persists that download once as
+a Location-owned `location_world` Asset and selects it through common Asset
+selection. The provider's panorama asset is not a Renku output. This path adds
+no provider catalog entry, estimate token, generic operation framework, or
+Studio generation control.
+
 ## Generic Lifecycle
 
 A `GenerationSpec` is the one saved editing and execution shape. It can be

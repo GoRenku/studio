@@ -1,5 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { AssetPage } from './assets.js';
+import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
@@ -102,6 +103,7 @@ export interface LocationOverviewResource {
 export interface LocationResource {
   location: Location;
   firstImage?: ScreenplayImageReference;
+  selectedWorld: Asset | null;
 }
 
 export interface PropOverviewResource {

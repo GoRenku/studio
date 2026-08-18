@@ -11,6 +11,7 @@ export {
   resolveViewerSchemaNode,
 } from './unified/schema-file.js';
 export { generateWavWithDuration } from './unified/wav-generator.js';
+export * from './world-labs/index.js';
 
 // Vercel AI Gateway SDK exports
 export {

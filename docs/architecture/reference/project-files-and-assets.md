@@ -38,8 +38,8 @@ An **Asset Owner** is the one Project, Cast Member, Location, Prop, Sequence, Sc
 logical Scene Beat, Lookbook, or Shot that exclusively owns an Asset.
 
 A **canonical selection** chooses at most one ready candidate for a Cast
-Profile, Location Hero, Lookbook card image, Shot image, or Scene Beat
-Storyboard surface. It does not affect generation references.
+Profile, Location Hero, Location World, Lookbook card image, Shot image, or
+Scene Beat Storyboard surface. It does not affect generation references.
 
 A **Visual Language Asset** is an asset attached to a project Visual Language
 entry. Initial roles include `guidance`, `prompt`, `reference`, and
@@ -84,6 +84,11 @@ uses canonical type `location_hero` and one primary image file. Common
 selection drives overview and detail display only; it is not a generation
 reference default.
 
+A **Location World** is a navigable Gaussian splat owned by a Location. It uses
+canonical type `location_world`, media kind `model`, and one primary
+full-resolution SPZ file. Common selection chooses the World shown in Studio;
+older candidates remain available for rollback.
+
 A **Prop Sheet** is a Prop-owned image Asset with canonical type
 `prop_sheet`. Its selection is request-scoped to an exact GenerationSpec.
 
@@ -119,7 +124,8 @@ Durable asset-file persistence is centralized in
 `packages/core/src/server/project-asset-files/`. Runtime callers import public
 APIs from `packages/core/src/server/project-asset-files/index.ts`, pass a source
 project-relative path and an owner-aware destination such as a Cast Character
-Sheet, Cast Voice Sample, Location Sheet, Location Hero, Lookbook Image,
+Sheet, Cast Voice Sample, Location Sheet, Location Hero, Location World,
+Lookbook Image,
 Lookbook Sheet, Scene Dialogue Audio take, or Shot image. The
 destination and generation-output submodules are private
 implementation details that own path allocation by domain family and purpose
@@ -239,7 +245,9 @@ Folder responsibilities:
   files may have entered the project as custom local files, generated voice
   sample outputs, or existing ElevenLabs provider samples fetched during
   `renku cast voice attach`.
-- `locations/<handle>/` contains Location Sheets and Hero Images directly.
+- `locations/<handle>/` contains Location Sheets, Hero Images, and generated
+  Location World files directly. World files use `world-gxxx.spz`; SQLite
+  Asset identity and selection, not the collision token, define history.
 - `props/<handle>/` contains Prop Sheets and Hero Images directly.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
   those folders are not per-image assets unless a future command explicitly

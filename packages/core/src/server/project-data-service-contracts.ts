@@ -52,6 +52,9 @@ import type {
   LocationNavigationRow,
   LocationOverviewResource,
   LocationResource,
+  LocationWorldGenerationDocument,
+  LocationWorldGenerationReport,
+  LocationWorldResource,
   PropNavigationRow,
   PropOverviewResource,
   PropResource,
@@ -192,6 +195,8 @@ export interface ProjectDataService {
     input: ListNavigationInput
   ): Promise<LocationOverviewResource>;
   readLocationResource(input: ReadLocationResourceInput): Promise<LocationResource>;
+  generateLocationWorld(input: GenerateLocationWorldInput): Promise<LocationWorldGenerationReport>;
+  readLocationWorldResource(input: ReadLocationWorldResourceInput): Promise<LocationWorldResource>;
   readPropOverviewResource(input: ListNavigationInput): Promise<PropOverviewResource>;
   readPropResource(input: ReadPropResourceInput): Promise<PropResource>;
   readStoryArcResource(input: ReadProjectInput): Promise<StoryArcResource>;
@@ -850,6 +855,16 @@ export interface ReadCastMemberResourceInput extends RenkuConfigPathOptions {
 
 export interface ReadLocationResourceInput extends RenkuConfigPathOptions {
   projectName: string;
+  locationId: string;
+}
+
+export interface GenerateLocationWorldInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  document: LocationWorldGenerationDocument;
+}
+
+export interface ReadLocationWorldResourceInput extends RenkuConfigPathOptions {
+  projectName?: string;
   locationId: string;
 }
 

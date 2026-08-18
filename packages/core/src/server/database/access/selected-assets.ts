@@ -6,30 +6,30 @@ export type SelectedAssetRecord = typeof selectedAssets.$inferSelect;
 
 export function readSelectedAssetRecord(
   session: DatabaseSession,
-  ownerKey: string
+  targetKey: string
 ): SelectedAssetRecord | null {
   return session.db
     .select()
     .from(selectedAssets)
-    .where(eq(selectedAssets.ownerKey, ownerKey))
+    .where(eq(selectedAssets.targetKey, targetKey))
     .get() ?? null;
 }
 
 export function writeSelectedAssetRecord(
   session: DatabaseSession,
-  input: { ownerKey: string; assetId: string; now: string }
+  input: { targetKey: string; assetId: string; now: string }
 ): void {
-  const existing = readSelectedAssetRecord(session, input.ownerKey);
+  const existing = readSelectedAssetRecord(session, input.targetKey);
   if (existing) {
     session.db
       .update(selectedAssets)
       .set({ assetId: input.assetId, updatedAt: input.now })
-      .where(eq(selectedAssets.ownerKey, input.ownerKey))
+      .where(eq(selectedAssets.targetKey, input.targetKey))
       .run();
     return;
   }
   session.db.insert(selectedAssets).values({
-    ownerKey: input.ownerKey,
+    targetKey: input.targetKey,
     assetId: input.assetId,
     createdAt: input.now,
     updatedAt: input.now,
@@ -38,11 +38,11 @@ export function writeSelectedAssetRecord(
 
 export function clearSelectedAssetRecord(
   session: DatabaseSession,
-  ownerKey: string
+  targetKey: string
 ): void {
   session.db
     .delete(selectedAssets)
-    .where(eq(selectedAssets.ownerKey, ownerKey))
+    .where(eq(selectedAssets.targetKey, targetKey))
     .run();
 }
 

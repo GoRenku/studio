@@ -51,6 +51,9 @@ export async function resolveTemporaryFileRoot(input: {
   if (input.destination.kind === 'generation.media') {
     return joinProjectRelativePath(PROJECT_TMP_ROOT, 'media');
   }
+  if (input.destination.kind === 'location.world') {
+    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'media', 'location-world');
+  }
   if (input.destination.kind === 'generation.spec') {
     return joinProjectRelativePath(PROJECT_TMP_ROOT, 'specs');
   }

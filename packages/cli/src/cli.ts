@@ -65,7 +65,7 @@ Commands
   asset                Register and list assets
   cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
-  location             Author location facts
+  location             Author location facts and generate 3D Worlds
   prop                 Author Prop facts
   production-design    Author Location and Prop Design documents
   info show            Show project information

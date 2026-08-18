@@ -33,7 +33,7 @@ import {
 } from '../studio-coordination/resource-keys.js';
 import { lookbookSectionsForType } from '../visual-language-json/validator.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
-import { assetOwnerKey } from '../assets/owner-keys.js';
+import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 
 export async function readProjectLookbooksResource(
   input: ReadProjectLookbooksInput
@@ -91,7 +91,7 @@ function buildLookbookResource(
   const images = listLookbookImages(session, row.id);
   const selectedImageId = readSelectedAssetRecord(
     session,
-    assetOwnerKey({ kind: 'lookbook', id: row.id })
+    assetSelectionTargetKey({ kind: 'lookbook', id: row.id })
   )?.assetId ?? null;
   return {
     valid: true,

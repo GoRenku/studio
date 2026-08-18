@@ -96,6 +96,11 @@ export type * from '../client/generation.js';
 export type * from '../client/generation-preview-resource.js';
 export type * from '../client/shot-plans.js';
 export type * from '../client/shot-plan-video-generations.js';
+export type * from '../client/location-worlds.js';
+export {
+  generateLocationWorld,
+  readLocationWorldResource,
+} from './location-worlds/index.js';
 
 export { recordAssetFileGenerationProvenance } from './asset-file-generation/commands.js';
 export { readAssetFileGenerationProvenance } from './asset-file-generation/queries.js';
@@ -149,6 +154,8 @@ export type {
   ReadLocationContextInput,
   ReadLocationDesignInput,
   ReadLocationInput,
+  GenerateLocationWorldInput,
+  ReadLocationWorldResourceInput,
   ReadPropContextInput,
   ReadPropDesignInput,
   ReadPropInput,

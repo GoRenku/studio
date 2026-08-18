@@ -8,7 +8,7 @@ import type {
   ShotPlanListReport,
   ShotPlanReport,
 } from '../../client/shot-plans.js';
-import { assetOwnerKey } from '../assets/owner-keys.js';
+import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import { listAssetsInSession } from '../assets/projection.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import { readProjectRecord } from '../database/access/project.js';
@@ -125,7 +125,10 @@ function projectShotImages(
       type: 'shot_image',
     }),
     selectedImageId:
-      readSelectedAssetRecord(session, assetOwnerKey(owner))?.assetId ?? null,
+      readSelectedAssetRecord(
+        session,
+        assetSelectionTargetKey(owner)
+      )?.assetId ?? null,
   };
 }
 

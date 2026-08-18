@@ -218,6 +218,7 @@ export function fakeProjectDataService(): NonNullable<
     },
     async readLocationResource() {
       return {
+        selectedWorld: null,
         location: {
           id: 'location_test',
           handle: 'location-test',

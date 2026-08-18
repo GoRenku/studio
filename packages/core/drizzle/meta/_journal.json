@@ -547,6 +547,13 @@
       "when": 1786979529539,
       "tag": "0077_asset_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "6",
+      "when": 1787040500295,
+      "tag": "0078_location_world_selection",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,7 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { LocationDetailsTab } from './location-details-tab';
 import { LocationVisualContentTab } from './location-visual-content-tab';
+import { LocationWorldTab } from './location-world-tab';
 import { useContinuityAssets } from '../continuity/use-continuity-assets';
 
 interface LocationPanelProps {
@@ -108,6 +109,7 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
           value: 'visual',
           label: <span className='inline-flex w-[114px] justify-center'>Assets</span>,
         },
+        { value: 'world', label: '3D World' },
       ]}
     >
       <LineTabsContent value='details'>
@@ -125,6 +127,12 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
           selectedHeroAssetId={assets.collection.selectedAssetId}
           onToggleHeroDisplay={toggleHeroDisplay}
           onDeleteAsset={removeAsset}
+        />
+      </LineTabsContent>
+      <LineTabsContent value='world' className='h-full overflow-hidden'>
+        <LocationWorldTab
+          projectName={projectName}
+          world={resource.selectedWorld}
         />
       </LineTabsContent>
     </LineTabs>

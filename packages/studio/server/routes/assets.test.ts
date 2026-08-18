@@ -1,4 +1,5 @@
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
+import { Readable } from 'node:stream';
 import type { Asset } from '@gorenku/studio-core/client';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono } from 'hono';
@@ -192,7 +193,7 @@ describe('assets Hono route', () => {
   });
 
   it('serves a registered cast member asset file', async () => {
-    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('png bytes'));
+    mockAssetFileStream('png bytes');
     const app = createMountedAssetsRoute();
 
     const response = await app.request(
@@ -208,7 +209,7 @@ describe('assets Hono route', () => {
   });
 
   it('serves a project asset file through the generic asset-file route', async () => {
-    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('generic bytes'));
+    mockAssetFileStream('generic bytes');
     const app = createMountedAssetsRoute();
 
     const response = await app.request(
@@ -221,7 +222,7 @@ describe('assets Hono route', () => {
   });
 
   it('serves a project video file through the generic asset-file route', async () => {
-    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('video bytes'));
+    mockAssetFileStream('video bytes');
     const videoFile = {
       id: 'asset_file_video_primary',
       role: 'primary',
@@ -297,7 +298,7 @@ describe('assets Hono route', () => {
   });
 
   it('lists, selects, unselects, deletes, and serves grouped Location Sheet files through ProjectDataService', async () => {
-    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('location bytes'));
+    mockAssetFileStream('location bytes');
     const discardAsset = vi.fn(async () => ({
       valid: true as const,
       warnings: [],
@@ -455,7 +456,7 @@ describe('assets Hono route', () => {
   });
 
   it('serves a storyboard shot file for a scene target', async () => {
-    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('shot bytes'));
+    mockAssetFileStream('shot bytes');
     const sceneAsset = {
       ...makeAsset('asset_scene_storyboard'),
       owner: { kind: 'scene' as const, id: 'scene_hook' },
@@ -586,3 +587,9 @@ describe('assets Hono route', () => {
     });
   });
 });
+
+function mockAssetFileStream(contents: string): void {
+  vi.spyOn(fs, 'createReadStream').mockReturnValue(
+    Readable.from([Buffer.from(contents)]) as unknown as fs.ReadStream
+  );
+}

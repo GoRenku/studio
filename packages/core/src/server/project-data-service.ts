@@ -11,6 +11,7 @@ import { createTrashServiceWiring } from './project-data-service-wiring/trash.js
 import { createGenerationServiceWiring } from './project-data-service-wiring/generation.js';
 import { createShotPlanServiceWiring } from './project-data-service-wiring/shot-plans.js';
 import { createShotPlanVideoGenerationServiceWiring } from './project-data-service-wiring/shot-plan-video-generations.js';
+import { createLocationWorldServiceWiring } from './project-data-service-wiring/location-worlds.js';
 
 export function createProjectDataService() {
   return {
@@ -27,6 +28,7 @@ export function createProjectDataService() {
     ...createGenerationServiceWiring(),
     ...createShotPlanServiceWiring(),
     ...createShotPlanVideoGenerationServiceWiring(),
+    ...createLocationWorldServiceWiring(),
   };
 }
 

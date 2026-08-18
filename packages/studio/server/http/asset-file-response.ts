@@ -1,4 +1,5 @@
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
+import { Readable } from 'node:stream';
 import type { AssetFile } from '@gorenku/studio-core/server';
 import type { ProjectsRouteProjectData } from '../routes/projects.js';
 
@@ -11,12 +12,15 @@ export async function readProjectAssetFileByIdResponse(
   }
 ): Promise<Response> {
   const resolved = await projectData.resolveProjectAssetFileById(input);
-  const bytes = await fs.readFile(resolved.absolutePath);
-  return new Response(bytes, {
+  const contentLength = resolved.file.sizeBytes
+    ?? (await fs.promises.stat(resolved.absolutePath)).size;
+  const stream = fs.createReadStream(resolved.absolutePath);
+  return new Response(Readable.toWeb(stream) as ReadableStream<Uint8Array>, {
     status: 200,
     headers: {
       'Content-Type': contentTypeForAssetFile(resolved.file),
       'Cache-Control': 'private, max-age=31536000, immutable',
+      'Content-Length': String(contentLength),
     },
   });
 }
