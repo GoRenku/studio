@@ -42,6 +42,9 @@ describe('World Labs Location World generation', () => {
               response: {
                 world_id: 'world_1',
                 assets: {
+                  imagery: {
+                    pano_url: 'https://downloads.example/provider-pano.png',
+                  },
                   splats: {
                     spz_urls: {
                       '100k': 'https://downloads.example/100k.spz',
@@ -110,6 +113,10 @@ describe('World Labs Location World generation', () => {
       contentLength: 9,
       extension: 'spz',
     });
+    expect(result).not.toHaveProperty('panoUrl');
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes('/pano'))
+    ).toBe(false);
     await expect(new Response(result.body).text()).resolves.toBe('spz bytes');
   });
 
