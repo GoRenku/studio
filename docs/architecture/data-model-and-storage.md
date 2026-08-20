@@ -194,8 +194,11 @@ Use the focused documents below for current direction.
   attachment may persist summary, reference name, and tags atomically with the
   Asset, membership, file, and provenance. Internal owner keys are shared with
   `selected_asset` but never enter public contracts.
-- Canonical selection exists only for Cast Profile, Location Hero, Prop Hero, Lookbook
-  card, Shot image, and Scene Beat Storyboard targets. Character Sheets,
+- Canonical selection exists only for Project Cover, Cast Profile, Location
+  Hero, Prop Hero, Lookbook card, Shot image, and Scene Beat Storyboard targets.
+  A selected Project Cover is a Project-owned `project_cover` image Asset with
+  exactly one active primary image file; Project and Project Library project
+  that file's Asset identity rather than a root filename. Character Sheets,
   Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes are selected only
   inside the consuming GenerationSpec references.
 - The canonical project database path is:

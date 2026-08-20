@@ -5,6 +5,8 @@ import type {
 } from '../../client/generation.js';
 import type { ProjectAssetFileDestination } from '../project-asset-files/index.js';
 import {
+  projectCoverCandidateResourceKeys,
+  projectCoverSelectionResourceKeys,
   studioCastMemberSurfaceResourceKey,
   studioLocationSurfaceResourceKey,
   studioPropSurfaceResourceKey,
@@ -12,6 +14,7 @@ import {
   studioSceneShotPlansResourceKey,
   studioSceneVideoGenerationsResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import type { AssetSelectionTarget } from '../../client/assets.js';
 import { requireShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -142,6 +145,17 @@ type AttachmentBuilder = (
 const attachmentBuilders: Partial<
   Record<GenerationPurpose, AttachmentBuilder>
 > = {
+  'project.cover': (input) =>
+    details(
+      requireTarget(input, 'project'),
+      {
+        file: { kind: 'project.cover' },
+        owner: { kind: 'project' },
+        resourceKeys: projectCoverCandidateResourceKeys(),
+      },
+      'Project Cover',
+      'project_cover'
+    ),
   'shot-plan.video-generation': (input) =>
     details(
       requireTarget(input, 'project'),
@@ -272,6 +286,7 @@ const attachmentBuilders: Partial<
 
 export function generationAttachmentAssetType(purpose: GenerationPurpose): string {
   const assetTypes: Partial<Record<GenerationPurpose, string>> = {
+    'project.cover': 'project_cover',
     'shot-plan.video-generation': 'shot_plan_video',
     'shot-plan.video-first-frame': 'shot_plan_video_first_frame',
     'shot-plan.video-last-frame': 'shot_plan_video_last_frame',
@@ -302,7 +317,14 @@ export function generatedMediaAttachmentResourceKeys(input: {
   attachment: GeneratedMediaAttachmentDetails;
   generationSpecId: string | null;
   session: DatabaseSession;
+  selectionTarget: AssetSelectionTarget | null;
 }): string[] {
+  if (input.selectionTarget?.kind === 'project') {
+    return [...new Set([
+      ...input.attachment.resourceKeys,
+      ...projectCoverSelectionResourceKeys(),
+    ])];
+  }
   if (
     input.attachment.assetType !== 'shot_plan_video' ||
     !input.generationSpecId

@@ -7,6 +7,9 @@ Status: accepted
 Decision 0075 replaces Beat Sheet terminology with Scene Beats. This decision's
 exclusive membership and scoped selection rules remain unchanged.
 
+Decision 0083 extends common scoped selection with the Project-owned
+`project_cover` target while preserving the exclusive-membership rule.
+
 ## Context
 
 Studio previously represented Asset ownership through several relationship

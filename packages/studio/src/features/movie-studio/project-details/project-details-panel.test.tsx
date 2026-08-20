@@ -10,9 +10,12 @@ vi.mock('../project-information/project-information-panel', () => ({
 vi.mock('./project-settings-panel', () => ({
   ProjectSettingsPanel: () => <div data-testid='project-settings'>Project Settings form</div>,
 }));
+vi.mock('../project-covers/project-covers-tab', () => ({
+  ProjectCoversTab: () => <div data-testid='project-covers'>Project Covers</div>,
+}));
 
 describe('ProjectDetailsPanel', () => {
-  it('selects Project Info first and keeps both tab contents mounted', () => {
+  it('keeps form tabs mounted and lazy-mounts Covers after Settings', () => {
     render(
       <ProjectDetailsPanel
         project={project()}
@@ -23,13 +26,22 @@ describe('ProjectDetailsPanel', () => {
 
     const projectInfoTab = screen.getByRole('tab', { name: 'Project Info' });
     const settingsTab = screen.getByRole('tab', { name: 'Settings' });
+    const coversTab = screen.getByRole('tab', { name: 'Covers' });
     expect(projectInfoTab.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByTestId('project-information')).toBeTruthy();
     expect(screen.getByTestId('project-settings')).toBeTruthy();
+    expect(screen.queryByTestId('project-covers')).toBeNull();
 
     fireEvent.mouseDown(settingsTab, { button: 0 });
     fireEvent.click(settingsTab);
     expect(settingsTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('project-information')).toBeTruthy();
+    expect(screen.getByTestId('project-settings')).toBeTruthy();
+
+    fireEvent.mouseDown(coversTab, { button: 0 });
+    fireEvent.click(coversTab);
+    expect(coversTab.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('project-covers')).toBeTruthy();
     expect(screen.getByTestId('project-information')).toBeTruthy();
     expect(screen.getByTestId('project-settings')).toBeTruthy();
   });

@@ -197,7 +197,28 @@ describe('LocationPanel', () => {
     vi.mocked(readLocationAssets)
       .mockResolvedValueOnce(assetCollection([locationSheetAsset()]))
       .mockResolvedValueOnce(assetCollection([]));
-    vi.mocked(deleteLocationAsset).mockResolvedValue('asset_location_sheet');
+    vi.mocked(deleteLocationAsset).mockResolvedValue({
+      valid: true,
+      warnings: [],
+      project: {
+        projectName: 'constantinople',
+        id: 'project_1',
+        projectFolder: '/projects/constantinople',
+      },
+      changes: [
+        { type: 'asset.discarded', assetId: 'asset_location_sheet' },
+      ],
+      recovery: {
+        operationId: 'trash_operation_1',
+        trashItemIds: ['trash_item_1'],
+        restorable: true,
+        restoreCommand: {
+          name: 'trash.restore',
+          trashItemId: 'trash_item_1',
+        },
+      },
+      resourceKeys: ['surface:location:location_gate', 'trash:list'],
+    });
 
     render(
       <LocationPanel projectName='constantinople' locationId='location_gate' />

@@ -8,6 +8,7 @@ export type JsonValue = JsonScalar | JsonValue[] | { [key: string]: JsonValue };
 export type GenerationPurpose =
   | 'image.create'
   | 'image.edit'
+  | 'project.cover'
   | 'shot-plan.video-generation'
   | 'shot-plan.video-first-frame'
   | 'shot-plan.video-last-frame'

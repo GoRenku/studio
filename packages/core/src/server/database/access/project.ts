@@ -30,7 +30,6 @@ export interface InsertProjectRecord {
   assumptionsJson?: string | null;
   openQuestionsJson?: string | null;
   nextStepsJson?: string | null;
-  coverFile: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -88,6 +88,10 @@ describe('Asset command', () => {
     });
   });
 
+  it('parses the Project Cover selection target', () => {
+    expect(parseSelectionTarget('project')).toEqual({ kind: 'project' });
+  });
+
   it('replaces and clears complete tag lists through Core', async () => {
     projectData.updateAsset.mockResolvedValue({
       valid: true,

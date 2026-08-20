@@ -32,6 +32,11 @@ describe('generation media attachment', () => {
 
     const cases = [
       {
+        purpose: 'project.cover' as const,
+        target: { kind: 'project' as const, id: 'project' },
+        resourceKey: 'surface:project:covers',
+      },
+      {
         purpose: 'lookbook.image' as const,
         target: { kind: 'lookbook' as const, id: lookbooks.production },
         resourceKey: `surface:visual-language:lookbook:${lookbooks.production}`,
@@ -111,6 +116,66 @@ describe('generation media attachment', () => {
     expect(propContext.assets.map((asset) => asset.type)).toEqual(
       expect.arrayContaining(['prop_sheet', 'prop_hero'])
     );
+  });
+
+  it('persists Project Cover candidates and composes selection resource keys', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, 'tmp', 'first-cover.png'), 'first');
+    await fs.writeFile(path.join(created.projectPath, 'tmp', 'selected-cover.webp'), 'selected');
+
+    const candidate = await projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'project.cover',
+      target: { kind: 'project', id: 'project' },
+      sourceProjectRelativePath: 'tmp/first-cover.png',
+      title: 'First cover direction',
+    });
+    expect(candidate.resourceKeys).toEqual(['surface:project:covers']);
+    expect(candidate.asset).toMatchObject({
+      type: 'project_cover',
+      mediaKind: 'image',
+      owner: { kind: 'project' },
+    });
+    expect(candidate.asset.files).toEqual([
+      expect.objectContaining({
+        role: 'primary',
+        mediaKind: 'image',
+        projectRelativePath: 'covers/first-cover.png',
+      }),
+    ]);
+
+    const selected = await projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'project.cover',
+      target: { kind: 'project', id: 'project' },
+      sourceProjectRelativePath: 'tmp/selected-cover.webp',
+      title: 'Selected cover direction',
+      select: true,
+    });
+    expect(selected.resourceKeys).toEqual([
+      'surface:project:covers',
+      'project-shell',
+      'project-library',
+    ]);
+    const page = await projectData.listAssetPage({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'project' },
+      type: 'project_cover',
+      mediaKind: 'image',
+    });
+    expect(page.selectedAssetId).toBe(selected.asset.id);
+    expect(page.items.map((asset) => asset.id)).toEqual([
+      selected.asset.id,
+      candidate.asset.id,
+    ]);
   });
 
   it('keeps Prop Hero storage naming independent from the Asset title', async () => {

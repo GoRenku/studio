@@ -14,6 +14,8 @@ import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../renku-config.js';
 import { assetOwnerResourceKeys } from './resource-keys.js';
+import { projectCoverSelectionResourceKeys } from '../studio-coordination/resource-keys.js';
+import { requireProjectCoverPrimaryImage } from '../project-covers/primary-image.js';
 import { assetOwnerKey } from './owner-keys.js';
 import { assertAssetOwnerExists } from './ownership.js';
 import {
@@ -23,6 +25,7 @@ import {
 } from './selection-targets.js';
 
 const selectedAssetTypes: Record<AssetSelectionTarget['kind'], string> = {
+  project: 'project_cover',
   castMember: 'cast_profile',
   location: 'location_hero',
   locationWorld: 'location_world',
@@ -85,9 +88,11 @@ export function assetSelectionTargetForOwnerType(
   owner: AssetOwner,
   assetType: string
 ): AssetSelectionTarget {
-  const target = owner.kind === 'location' && assetType === 'location_world'
-    ? { kind: 'locationWorld' as const, id: owner.id }
-    : assetSelectionTargetForOwner(owner);
+  const target = owner.kind === 'project' && assetType === 'project_cover'
+    ? { kind: 'project' as const }
+    : owner.kind === 'location' && assetType === 'location_world'
+      ? { kind: 'locationWorld' as const, id: owner.id }
+      : assetSelectionTargetForOwner(owner);
   if (!target || selectedAssetTypes[target.kind] !== assetType) {
     throw new ProjectDataError(
       'CORE_ASSET_SELECTION_UNSUPPORTED',
@@ -120,6 +125,12 @@ function assertSelectionInSession(
       'Selected Asset must be an active canonical candidate owned by the exact selection target.'
     );
   }
+  if (input.target.kind === 'project') {
+    requireProjectCoverPrimaryImage(session, {
+      assetId: input.assetId,
+      errorCode: 'CORE_ASSET_SELECTION_INVALID',
+    });
+  }
 }
 
 function selectionReport(
@@ -141,9 +152,8 @@ function selectionReport(
     project: { id: project.id, projectName: project.projectName, projectFolder },
     target,
     selectedAssetId,
-    resourceKeys: assetOwnerResourceKeys(
-      session,
-      selectionTargetOwner(target)
-    ),
+    resourceKeys: target.kind === 'project'
+      ? projectCoverSelectionResourceKeys()
+      : assetOwnerResourceKeys(session, selectionTargetOwner(target)),
   };
 }

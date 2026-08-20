@@ -96,7 +96,6 @@ export async function createMovieProject(
           logline: input.logline ?? null,
           aspectRatio: input.aspectRatio ?? DEFAULT_MOVIE_PROJECT_ASPECT_RATIO,
           synopsis: input.synopsis ?? null,
-          coverFile: null,
           createdAt: now,
           updatedAt: now,
         }
@@ -123,7 +122,6 @@ export async function createMovieProject(
       projectName: input.projectName,
       projectPath: projectFolder,
       databasePath: resolveProjectDatabasePath(projectFolder),
-      coverPath: null,
       created: emptyMovieCounts(),
       warnings: [],
     };

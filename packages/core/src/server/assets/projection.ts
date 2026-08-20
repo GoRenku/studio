@@ -108,7 +108,10 @@ export function listAssetPageInSession(
     .all();
   const pageRows = rows.slice(0, limit) as AssetRow[];
   const files = readAssetFiles(session, pageRows.map((row) => row.id));
-  const selectionTarget = input.owner.kind === 'location'
+  const selectionTarget = input.owner.kind === 'project'
+    && input.type === 'project_cover'
+    ? { kind: 'project' as const }
+    : input.owner.kind === 'location'
     && input.type === 'location_world'
     ? { kind: 'locationWorld' as const, id: input.owner.id }
     : assetSelectionTargetForOwner(input.owner);

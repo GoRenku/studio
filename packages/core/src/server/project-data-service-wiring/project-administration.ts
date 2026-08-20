@@ -10,7 +10,7 @@ import {
 import { readDirectorContext } from '../resources/director-context.js';
 import { readProject } from '../resources/full-project.js';
 import { readProjectInformationResourceForProject } from '../resources/project-information.js';
-import { listLibrary, resolveCoverImage } from '../resources/project-library.js';
+import { listLibrary } from '../resources/project-library.js';
 import { readProjectShell } from '../resources/project-shell.js';
 import {
   readProjectSettings,
@@ -32,7 +32,6 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'readProjectSettings'
   | 'replaceProjectSettings'
   | 'patchProjectInformation'
-  | 'resolveCoverImage'
   | 'openCurrentProject'
   | 'readCurrentProject'
   | 'closeCurrentProject'
@@ -50,7 +49,6 @@ export function createProjectAdministrationServiceWiring(): Pick<
     readProjectSettings,
     replaceProjectSettings,
     patchProjectInformation,
-    resolveCoverImage,
     openCurrentProject,
     readCurrentProject,
     closeCurrentProject,

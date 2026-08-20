@@ -62,6 +62,13 @@ Generated files include Drizzle's migration journal and schema snapshots. Those
 files are part of the migration history and should be committed together with
 the SQL migration.
 
+Migration 0079 is an intentional custom-precondition exception around generated
+Drizzle SQL. Drizzle Kit generated the table rebuild that removes
+`project.cover_file`; the migration adds a leading temporary CHECK-table guard
+that aborts before mutation when any legacy value is non-null. This preserves
+the rule that a breaking cutover must not silently discard cover data. The
+generated rebuild and snapshots remain otherwise unchanged.
+
 ## Applying Migrations In Development
 
 Each Renku project owns its own SQLite database:

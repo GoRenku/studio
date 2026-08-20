@@ -17,6 +17,7 @@ import {
   studioVisualLanguageLookbookResourceKey,
   studioVisualLanguageLookbooksResourceKey,
   studioSceneShotPlansResourceKey,
+  projectCoverCandidateResourceKeys,
 } from '../studio-coordination/resource-keys.js';
 import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -40,6 +41,7 @@ import { requireAssetOwner } from '../assets/ownership.js';
 import { clearSelectedAssetRecordForAsset } from '../database/access/selected-assets.js';
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
+import { readAssetRecord } from '../database/access/assets.js';
 
 export function inspirationImageTrashItemId(input: {
   folderId: string;
@@ -358,6 +360,10 @@ const assetDefinition: TrashObjectDefinition = {
   },
   resourceKeys(input) {
     const owner = requireAssetOwner(input.session, input.itemId);
+    const asset = readAssetRecord(input.session, input.itemId);
+    if (owner.kind === 'project' && asset?.type === 'project_cover') {
+      return projectCoverCandidateResourceKeys();
+    }
     const videoGenerationKeys = shotPlanVideoAssetResourceKeys(
       input.session,
       input.itemId,

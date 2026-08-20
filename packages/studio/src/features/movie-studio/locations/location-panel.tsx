@@ -16,7 +16,7 @@ import {
 import { LocationDetailsTab } from './location-details-tab';
 import { LocationVisualContentTab } from './location-visual-content-tab';
 import { LocationWorldTab } from './location-world-tab';
-import { useContinuityAssets } from '../continuity/use-continuity-assets';
+import { useSelectableAssetCollection } from '@/hooks/use-selectable-asset-collection';
 
 interface LocationPanelProps {
   projectName: string;
@@ -27,7 +27,7 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
   const [resource, setResource] = useState<LocationResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
-  const assets = useContinuityAssets({
+  const assets = useSelectableAssetCollection({
     readAssets: useCallback(
       () => readLocationAssets(projectName, locationId),
       [locationId, projectName]

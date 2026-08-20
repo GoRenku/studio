@@ -554,6 +554,13 @@
       "when": 1787040500295,
       "tag": "0078_location_world_selection",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "6",
+      "when": 1787138408921,
+      "tag": "0079_project_cover_assets",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,22 @@ export function studioProjectLibraryResourceKey(): string {
   return 'project-library';
 }
 
+export function studioProjectCoversResourceKey(): string {
+  return 'surface:project:covers';
+}
+
+export function projectCoverCandidateResourceKeys(): string[] {
+  return [studioProjectCoversResourceKey()];
+}
+
+export function projectCoverSelectionResourceKeys(): string[] {
+  return [
+    studioProjectCoversResourceKey(),
+    studioProjectShellResourceKey(),
+    studioProjectLibraryResourceKey(),
+  ];
+}
+
 export function studioProjectInformationResourceKey(): string {
   return 'project-information';
 }

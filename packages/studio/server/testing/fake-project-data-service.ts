@@ -44,7 +44,6 @@ export function fakeProjectDataService(): NonNullable<
         projectName: input.projectName,
         projectPath: `/tmp/renku/${input.projectName}`,
         databasePath: `/tmp/renku/${input.projectName}/.renku/project.sqlite`,
-        coverPath: null,
         created: {
           languages: 1,
           castMembers: 0,
@@ -100,9 +99,6 @@ export function fakeProjectDataService(): NonNullable<
         logline: project.logline,
         languages: makeProjectShell(project).languages,
       };
-    },
-    async resolveCoverImage() {
-      return '/tmp/renku/constantinople/cover.png';
     },
     async resolveProjectAssetFileById(input) {
       const asset = makeAsset(input.assetId);

@@ -6,6 +6,7 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ReadProjectInput } from '../project-data-service-contracts.js';
+import { readSelectedProjectCoverImage } from '../project-covers/projection.js';
 
 export async function readProject(input: ReadProjectInput): Promise<Project> {
   const { session } = await openProjectSession(input);
@@ -33,7 +34,7 @@ export function readProjectFromSession(input: {
     id: row.id,
     projectName: row.projectName,
     ...metadata,
-    coverImage: row.coverFile === 'cover.png' ? { fileName: 'cover.png' } : null,
+    coverImage: readSelectedProjectCoverImage(input.session),
     counts: readProjectCounts(input.session),
   };
 }

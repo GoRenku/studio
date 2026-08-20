@@ -78,7 +78,10 @@ export function makeProject(): Project {
     projectName: 'constantinople',
     title: 'Preparation of the Siege',
     aspectRatio: '16:9',
-    coverImage: { fileName: 'cover.png' },
+    coverImage: {
+      assetId: 'asset_project_cover',
+      assetFileId: 'asset_file_project_cover',
+    },
     counts: {
       languages: 0,
       castMembers: 1,

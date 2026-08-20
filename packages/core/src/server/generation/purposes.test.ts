@@ -25,6 +25,7 @@ describe('generic generation model listing', () => {
     expect(listGenerationPurposes().map((purpose) => purpose.purpose)).toEqual([
       'image.create',
       'image.edit',
+      'project.cover',
       'shot-plan.video-generation',
       'shot-plan.video-first-frame',
       'shot-plan.video-last-frame',
@@ -66,6 +67,7 @@ describe('generic generation model listing', () => {
     }))).toEqual([
       purpose('image.create', 'project', 'image'),
       purpose('image.edit', 'asset', 'image'),
+      purpose('project.cover', 'project', 'image', [aspectRatio('16:9')], [quality('medium')], nanoBanana2),
       purpose('shot-plan.video-generation', 'project', 'video'),
       purpose('shot-plan.video-first-frame', 'project', 'image'),
       purpose('shot-plan.video-last-frame', 'project', 'image'),

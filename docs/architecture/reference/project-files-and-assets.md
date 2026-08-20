@@ -37,9 +37,16 @@ Dialogue Audio Take. Common Asset membership does not carry Take state.
 An **Asset Owner** is the one Project, Cast Member, Location, Prop, Sequence, Scene,
 logical Scene Beat, Lookbook, or Shot that exclusively owns an Asset.
 
-A **canonical selection** chooses at most one ready candidate for a Cast
-Profile, Location Hero, Location World, Lookbook card image, Shot image, or
-Scene Beat Storyboard surface. It does not affect generation references.
+A **canonical selection** chooses at most one ready candidate for a Project
+Cover, Cast Profile, Location Hero, Location World, Lookbook card image, Shot
+image, or Scene Beat Storyboard surface. It does not affect generation
+references.
+
+A **Project Cover** is a Project-owned image Asset with canonical type
+`project_cover` and exactly one active primary image Asset File. Common
+selection chooses the image used by Project Library and Studio sidebar
+projections. Candidate files live beneath `covers/`; ownership and selection
+come from SQLite rather than their path.
 
 A **Visual Language Asset** is an asset attached to a project Visual Language
 entry. Initial roles include `guidance`, `prompt`, `reference`, and
@@ -123,8 +130,8 @@ it into the relevant owner folder and registers that destination path.
 Durable asset-file persistence is centralized in
 `packages/core/src/server/project-asset-files/`. Runtime callers import public
 APIs from `packages/core/src/server/project-asset-files/index.ts`, pass a source
-project-relative path and an owner-aware destination such as a Cast Character
-Sheet, Cast Voice Sample, Location Sheet, Location Hero, Location World,
+project-relative path and an owner-aware destination such as a Project Cover,
+Cast Character Sheet, Cast Voice Sample, Location Sheet, Location Hero, Location World,
 Lookbook Image,
 Lookbook Sheet, Scene Dialogue Audio take, or Shot image. The
 destination and generation-output submodules are private

@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import {
   createProjectDataService,
   type ProjectDataService,
@@ -71,7 +70,6 @@ export type ProjectsRouteProjectData = Pick<
   | 'readShotPlan'
   | 'deleteShotPlan'
   | 'patchProjectInformation'
-  | 'resolveCoverImage'
   | 'listAssets'
   | 'resolveProjectAssetFileById'
   | 'selectAsset'
@@ -202,34 +200,7 @@ export function createProjectsRoute(
     .route(
       '/:projectName',
       createMovieStudioSelectionContextRoute({ projectData })
-    )
-    .get('/:projectName/cover', async (c) => {
-      try {
-        const projectName = c.req.param('projectName');
-        const coverPath = await projectData.resolveCoverImage({ projectName });
-        if (!coverPath) {
-          return c.json(
-            {
-              error: {
-                code: 'STUDIO_SERVER004',
-                message: 'Project cover image not found.',
-              },
-            },
-            404
-          );
-        }
-        const bytes = await fs.readFile(coverPath);
-        return new Response(bytes, {
-          status: 200,
-          headers: {
-            'Content-Type': 'image/png',
-            'Cache-Control': 'no-cache',
-          },
-        });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    });
+    );
 }
 
 const projects = createProjectsRoute();

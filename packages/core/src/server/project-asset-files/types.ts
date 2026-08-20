@@ -11,6 +11,7 @@ export type ProjectAssetFileNamingMode =
   | { kind: 'external' };
 
 export type ProjectAssetFileDestination =
+  | { kind: 'project.cover' }
   | { kind: 'screenplay.source' }
   | { kind: 'shotPlan.video'; shotPlanId: string }
   | {

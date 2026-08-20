@@ -4,6 +4,11 @@ Date: 2026-08-09
 
 Status: accepted
 
+Notice: Decision
+[0083](0083-use-project-owned-cover-assets-and-conversation-directed-generation.md)
+adds the Core-owned `covers/cover-gxxx.<ext>` destination under this naming
+contract.
+
 ## Context
 
 Durable project media was spread across technical roots and id-based folders

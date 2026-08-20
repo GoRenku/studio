@@ -77,7 +77,18 @@ describe('CastMemberPanel', () => {
     vi.mocked(readCastAssets)
       .mockResolvedValueOnce(assetCollection([castProfileAsset()], 'asset_profile'))
       .mockResolvedValueOnce(assetCollection([castProfileAsset()]));
-    vi.mocked(clearSelectedCastProfile).mockResolvedValue(undefined);
+    vi.mocked(clearSelectedCastProfile).mockResolvedValue({
+      valid: true,
+      warnings: [],
+      project: {
+        projectName: 'constantinople',
+        id: 'project_1',
+        projectFolder: '/projects/constantinople',
+      },
+      target: { kind: 'castMember', id: 'cast_urban' },
+      selectedAssetId: null,
+      resourceKeys: ['surface:cast:cast_urban'],
+    });
 
     render(
       <CastMemberPanel

@@ -309,7 +309,8 @@ export type ProjectType = 'standaloneMovie' | 'series';
 
 ### `ProjectCoverImage`
 
-`ProjectCoverImage` describes a project-local cover image known to core.
+`ProjectCoverImage` identifies the selected Project Cover Asset File known to
+Core.
 
 Core should expose the file information. Studio server may add an HTTP URL in
 its own response adapter because URLs are transport concerns.
@@ -318,7 +319,8 @@ Expected shape:
 
 ```ts
 export interface ProjectCoverImage {
-  fileName: 'cover.png';
+  assetId: string;
+  assetFileId: string;
 }
 ```
 
@@ -576,9 +578,9 @@ ProjectDataService
 
 Definition:
 
-> `ProjectDataService` is the Node-side core facade used by CLI and Studio
-> server for project creation, project listing, project reading, and project
-> cover resolution.
+> `ProjectDataService` is the Node-side Core facade used by CLI and Studio
+> server for project creation, project listing, project reading, and focused
+> domain mutations.
 
 Expected public interface:
 
@@ -587,7 +589,6 @@ export interface ProjectDataService {
   createFromSetup(input: CreateProjectFromSetupInput): Promise<ProjectCreateReport>;
   listLibrary(): Promise<ProjectLibrary>;
   readProject(input: ReadProjectInput): Promise<Project>;
-  resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
 }
 ```
 
@@ -596,8 +597,7 @@ Naming rationale:
 - `ProjectDataService` names the boundary, not an implementation detail;
 - `createFromSetup` is explicit that setup YAML is a creation input;
 - `listLibrary` returns the project library contract;
-- `readProject` returns the full public `Project` contract;
-- `resolveCoverImage` returns a filesystem path, not an HTTP URL.
+- `readProject` returns the full public `Project` contract.
 
 Internal data-layer files should be named by responsibility, not by one-off
 function:
@@ -613,7 +613,7 @@ database/access/narrative.ts
 resources/full-project.ts
 resources/project-library.ts
 project-paths.ts
-cover-image-files.ts
+project-covers/projection.ts
 entity-ids.ts
 ```
 
@@ -626,7 +626,8 @@ These names mean:
 - `resources/full-project.ts`: assembles the public `Project` contract from records;
 - `resources/project-library.ts`: assembles the public `ProjectLibrary` contract;
 - `project-paths.ts`: allocates and validates project folder/database paths;
-- `cover-image-files.ts`: copies and resolves project-local cover images;
+- `project-covers/projection.ts`: validates and projects selected Project Cover
+  Asset identity;
 - `entity-ids.ts`: creates short opaque project-local IDs.
 
 Do not create files named only after a verb, such as:
@@ -781,11 +782,9 @@ Reasons:
   `/studio-api/projects/:projectName` scope instead of naming the bounded
   resource.
 
-The Studio server may add HTTP-only fields such as `coverUrl`.
-
-Core should expose `coverImage.fileName` and safe filesystem path resolution.
-The Studio server should translate that into an HTTP URL because URLs are
-transport concerns.
+The Studio server may add HTTP-only fields such as `coverUrl`. Core exposes the
+selected `coverImage.assetId` and `assetFileId`; the Studio server mechanically
+builds the generic Asset File URL because URLs are transport concerns.
 
 See `docs/architecture/reference/studio-server-hono.md` for the full server routing
 architecture.

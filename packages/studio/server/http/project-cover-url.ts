@@ -7,5 +7,5 @@ export function projectCoverUrl(input: {
   if (!input.coverImage) {
     return null;
   }
-  return `/studio-api/projects/${encodeURIComponent(input.projectName)}/cover`;
+  return `/studio-api/projects/${encodeURIComponent(input.projectName)}/assets/${encodeURIComponent(input.coverImage.assetId)}/files/${encodeURIComponent(input.coverImage.assetFileId)}`;
 }

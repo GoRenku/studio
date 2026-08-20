@@ -52,6 +52,47 @@ export function createAssetsRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .post('/selected-cover/:assetId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const assetId = c.req.param('assetId') as string;
+        const report = await projectData.selectAsset({
+          projectName,
+          target: { kind: 'project' },
+          assetId,
+        });
+        return c.json(report);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/selected-cover', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const report = await projectData.clearAssetSelection({
+          projectName,
+          target: { kind: 'project' },
+        });
+        return c.json(report);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/covers/:assetId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const assetId = c.req.param('assetId') as string;
+        const report = await projectData.discardAsset({
+          projectName,
+          owner: { kind: 'project' },
+          assetId,
+          expectedType: 'project_cover',
+        });
+        return c.json(report);
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/cast/:castMemberId/assets', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

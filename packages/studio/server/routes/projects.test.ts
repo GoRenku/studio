@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import { StructuredError, createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
@@ -250,7 +249,7 @@ describe('projects Hono route', () => {
         projects: [
           {
             projectName: 'constantinople',
-            coverUrl: '/studio-api/projects/constantinople/cover',
+            coverUrl: '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover',
           },
         ],
       },
@@ -269,7 +268,7 @@ describe('projects Hono route', () => {
     expect(body).toMatchObject({
       project: {
         project: { projectName: 'constantinople' },
-        coverUrl: '/studio-api/projects/constantinople/cover',
+        coverUrl: '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover',
         navigation: {
           cast: {
             items: [
@@ -285,18 +284,14 @@ describe('projects Hono route', () => {
     expect(body?.project).not.toHaveProperty('sequences');
   });
 
-  it('serves project cover images', async () => {
-    vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('cover bytes'));
+  it('does not expose the retired special Project cover route', async () => {
     const app = createProjectsRoute({
       projectData: fakeProjectDataService(),
     });
 
     const response = await app.request('/constantinople/cover');
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toBe('image/png');
-    expect(response.headers.get('Cache-Control')).toBe('no-cache');
-    await expect(response.text()).resolves.toBe('cover bytes');
+    expect(response.status).toBe(404);
   });
 
   it('serializes structured errors with issues', async () => {

@@ -8,7 +8,6 @@ export const projects = sqliteTable(
     projectName: text('project_name').notNull(),
     title: text('title').notNull(),
     aspectRatio: text('aspect_ratio').notNull(),
-    coverFile: text('cover_file'),
     logline: text('logline'),
     synopsis: text('synopsis'),
     premise: text('premise'),
@@ -41,10 +40,6 @@ export const projects = sqliteTable(
     check(
       'project_runtime_non_negative_check',
       sql`${table.targetRuntimeMinutes} is null or ${table.targetRuntimeMinutes} >= 0`,
-    ),
-    check(
-      'project_cover_file_check',
-      sql`${table.coverFile} is null or ${table.coverFile} = 'cover.png'`,
     ),
   ],
 );

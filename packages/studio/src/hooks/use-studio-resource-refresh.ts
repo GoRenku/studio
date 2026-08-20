@@ -79,6 +79,10 @@ export function matchesProjectLibraryResource(resourceKeys: string[]): boolean {
   return resourceKeys.includes('project-library');
 }
 
+export function matchesProjectCoversResource(resourceKeys: string[]): boolean {
+  return resourceKeys.includes('surface:project:covers');
+}
+
 export function matchesCastOverviewResource(resourceKeys: string[]): boolean {
   return resourceKeys.some(
     (resourceKey) =>

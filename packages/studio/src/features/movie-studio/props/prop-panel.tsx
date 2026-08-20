@@ -12,7 +12,7 @@ import {
   matchesPropResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { useContinuityAssets } from '../continuity/use-continuity-assets';
+import { useSelectableAssetCollection } from '@/hooks/use-selectable-asset-collection';
 import { useContinuityResource } from '../continuity/use-continuity-resource';
 import { PropAssetsTab } from './prop-assets-tab';
 import { PropDetailsTab } from './prop-details-tab';
@@ -52,7 +52,7 @@ export function PropPanel({
     (assetId: string) => deletePropAsset(projectName, propId, assetId),
     [projectName, propId]
   );
-  const assets = useContinuityAssets({
+  const assets = useSelectableAssetCollection({
     readAssets,
     selectCanonicalAsset: selectHero,
     clearCanonicalAsset: clearHero,

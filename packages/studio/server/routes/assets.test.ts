@@ -176,6 +176,53 @@ describe('assets Hono route', () => {
     });
   });
 
+  it('forwards Project Cover selection, clear, and discard intent to Core', async () => {
+    const projectData = fakeProjectDataService();
+    const selectAsset = vi.spyOn(projectData, 'selectAsset');
+    const clearAssetSelection = vi.spyOn(projectData, 'clearAssetSelection');
+    const discardAsset = vi.spyOn(projectData, 'discardAsset');
+    const app = new Hono().route(
+      '/:projectName',
+      createAssetsRoute({
+        projectData,
+        requireToken: async (_c, next) => {
+          await next();
+        },
+      })
+    );
+
+    const selected = await app.request(
+      '/constantinople/selected-cover/asset_project_cover',
+      { method: 'POST' }
+    );
+    const cleared = await app.request('/constantinople/selected-cover', {
+      method: 'DELETE',
+    });
+    const discarded = await app.request(
+      '/constantinople/covers/asset_project_cover',
+      { method: 'DELETE' }
+    );
+
+    expect(selected.status).toBe(200);
+    expect(cleared.status).toBe(200);
+    expect(discarded.status).toBe(200);
+    expect(selectAsset).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      target: { kind: 'project' },
+      assetId: 'asset_project_cover',
+    });
+    expect(clearAssetSelection).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      target: { kind: 'project' },
+    });
+    expect(discardAsset).toHaveBeenCalledWith({
+      projectName: 'constantinople',
+      owner: { kind: 'project' },
+      assetId: 'asset_project_cover',
+      expectedType: 'project_cover',
+    });
+  });
+
   it('deletes cast member assets through ProjectDataService', async () => {
     const app = createMountedAssetsRoute();
 

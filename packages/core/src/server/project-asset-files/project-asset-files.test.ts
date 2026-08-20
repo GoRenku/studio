@@ -64,6 +64,36 @@ describe('project asset file storage', () => {
     ).toBe(0);
   });
 
+  it('persists generated Project Covers under the shallow covers destination', async () => {
+    await writeProjectFile('tmp/source/project-cover.webp', 'cover bytes');
+    insertReadyAsset(session, {
+      assetId: 'asset_project_cover',
+      type: 'project_cover',
+      mediaKind: 'image',
+      title: 'Project Cover',
+    });
+
+    const file = persistProjectAssetFileSync({
+      session,
+      projectFolder: projectPath,
+      assetId: 'asset_project_cover',
+      assetFileId: 'asset_file_project_cover',
+      sourceProjectRelativePath: projectRelativePath('tmp/source/project-cover.webp'),
+      destination: { kind: 'project.cover' },
+      namingMode: { kind: 'generated' },
+      fileRole: 'primary',
+      mediaKind: 'image',
+      now: NOW,
+    });
+
+    expect(file.projectRelativePath).toMatch(
+      /^covers\/cover-g[0123456789abcdefghjkmnpqrstvwxyz]{3}\.webp$/
+    );
+    await expect(
+      fs.readFile(path.join(projectPath, file.projectRelativePath), 'utf8')
+    ).resolves.toBe('cover bytes');
+  });
+
   it('allocates provider output roots under the project temporary media folder', async () => {
     const outputRoot = await resolveGenerationRunOutputRoot({
       projectFolder: projectPath,

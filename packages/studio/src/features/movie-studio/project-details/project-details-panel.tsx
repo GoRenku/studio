@@ -9,6 +9,7 @@ import {
 } from '../detail-save-notification';
 import { ProjectInformationPanel } from '../project-information/project-information-panel';
 import { ProjectSettingsPanel } from './project-settings-panel';
+import { ProjectCoversTab } from '../project-covers/project-covers-tab';
 
 interface ProjectDetailsPanelProps {
   project: ProjectShellWithHttp;
@@ -70,6 +71,7 @@ export function ProjectDetailsPanel({
       items={[
         { value: 'project-info', label: 'Project Info' },
         { value: 'settings', label: 'Settings' },
+        { value: 'covers', label: 'Covers' },
       ]}
     >
       <LineTabsContent
@@ -91,6 +93,12 @@ export function ProjectDetailsPanel({
         <ProjectSettingsPanel
           projectName={project.project.projectName}
           onSaveStatusChange={handleSettingsStatus}
+        />
+      </LineTabsContent>
+      <LineTabsContent value='covers' className='min-h-0 flex-1 overflow-hidden'>
+        <ProjectCoversTab
+          project={project}
+          onProjectChange={onProjectChange}
         />
       </LineTabsContent>
     </LineTabs>

@@ -4,6 +4,7 @@ import { generationPreviewTitle } from './generation-preview-title';
 
 const PREVIEW_TITLE_CASES = {
   'image.edit': 'Image Edit Generation Preview',
+  'project.cover': 'Project Cover Generation Preview',
   'lookbook.image': 'Lookbook Image Generation Preview',
   'lookbook.video-sheet': 'Lookbook Sheet Generation Preview',
   'lookbook.storyboard-sheet': 'Lookbook Sheet Generation Preview',

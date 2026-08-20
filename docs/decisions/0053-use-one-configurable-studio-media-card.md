@@ -16,6 +16,11 @@ Notice: Decision
 preview activation and card-collection Dialog ownership into bounded shared
 MediaCard contracts.
 
+Notice: Decision
+[0083](0083-use-project-owned-cover-assets-and-conversation-directed-generation.md)
+composes the same MediaCard preview, selection, and Trash contracts for the
+Project Covers gallery without adding another card variant.
+
 ## Context
 
 Studio visual media cards had grown into several independent implementations.

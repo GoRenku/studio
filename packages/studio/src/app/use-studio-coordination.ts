@@ -20,7 +20,10 @@ import type {
   StudioPendingRequest,
   StudioProjectRef,
 } from '@/services/studio-current-contracts';
-import { matchesProjectShellResource } from '@/hooks/use-studio-resource-refresh';
+import {
+  matchesProjectLibraryResource,
+  matchesProjectShellResource,
+} from '@/hooks/use-studio-resource-refresh';
 
 const BROWSER_SESSION_KEY = 'renku.studio.browserSessionId';
 const POLLING_INTERVAL_MS = 2_000;
@@ -285,6 +288,9 @@ async function applyStudioEventBatch(input: {
         projectRef: StudioProjectRef;
         resourceKeys: string[];
       };
+      if (matchesProjectLibraryResource(resourceEvent.resourceKeys)) {
+        await input.projectSessionRef.current.refreshProjectLibrary();
+      }
       if (
         input.currentProjectRef.current?.project.id ===
         resourceEvent.projectRef.id

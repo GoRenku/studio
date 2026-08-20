@@ -60,6 +60,14 @@ experiences:
 - `scene-beats` owns Beat history, active selection, storyboard status,
   and storyboard-image attachment separately from generic generation.
 
+`project.cover` is the focused Project Cover image purpose. Its Generation
+Context fixes the current display surface to 16:9, recommends medium quality
+and Nano Banana 2 for managed generation, and deliberately exposes an empty
+reference guide. Media Producer begins with the conversation and reads only
+missing, request-relevant Project information and exact media. Accepted outputs
+attach as Project-owned `project_cover` Assets; selection is a separate common
+Asset operation unless the focused import explicitly requests it.
+
 Location World generation is another focused Core workflow, not a generic
 GenerationSpec purpose. An agent creates and reviews one equirectangular
 panorama or two to eight overlapping temporary images through Media Producer,

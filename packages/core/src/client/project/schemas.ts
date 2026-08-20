@@ -28,8 +28,11 @@ export const projectSchema = {
         { type: 'null' },
         {
           type: 'object',
-          required: ['fileName'],
-          properties: { fileName: { const: 'cover.png' } },
+          required: ['assetId', 'assetFileId'],
+          properties: {
+            assetId: nonEmptyString,
+            assetFileId: nonEmptyString,
+          },
           additionalProperties: false,
         },
       ],

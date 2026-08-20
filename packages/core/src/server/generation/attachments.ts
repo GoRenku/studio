@@ -15,6 +15,7 @@ import {
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { validateImageEditAttachment } from './image-edit-attachment.js';
+import { assetSelectionTargetForOwnerType } from '../assets/selection.js';
 
 export interface AttachGenerationMediaInput {
   purpose: GenerationPurpose;
@@ -58,10 +59,17 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     ...(input.title ? { title: input.title } : {}),
     ...(shotPlanId ? { shotPlanId } : {}),
   });
+  const selectionTarget = input.select
+    ? assetSelectionTargetForOwnerType(
+        attachment.destination.owner,
+        attachment.assetType
+      )
+    : null;
   const resourceKeys = generatedMediaAttachmentResourceKeys({
     attachment,
     generationSpecId: provenance?.generationSpecId ?? null,
     session: input.session,
+    selectionTarget,
   });
   validateLookbookKind(input);
   const assetMetadata = normalizeAssetMetadata(input.assetMetadata ?? {});
@@ -80,7 +88,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       origin: provenance ? 'generated' : 'external',
     },
     fileRole: 'primary',
-    select: input.select,
+    ...(selectionTarget ? { selectionTarget } : {}),
     ...(provenance?.kind === 'renku-managed'
       ? {
           selectedGenerationOutput: {

@@ -1432,7 +1432,7 @@ function makeProject(
 ): ProjectShellWithHttp {
   const coverUrl =
     options.coverUrl === undefined
-      ? '/studio-api/projects/constantinople/cover'
+      ? '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover'
       : options.coverUrl;
 
   return {
@@ -1441,7 +1441,12 @@ function makeProject(
       projectName: 'constantinople',
       title: 'Preparation of the Siege',
       aspectRatio: '16:9',
-      coverImage: coverUrl ? { fileName: 'cover.png' } : null,
+      coverImage: coverUrl
+        ? {
+            assetId: 'asset_project_cover',
+            assetFileId: 'asset_file_project_cover',
+          }
+        : null,
       counts: {
         languages: 0,
         castMembers: 1,
@@ -1707,8 +1712,12 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
     projectName: 'constantinople',
     title: 'Preparation of the Siege',
     folderPath: '/tmp/constantinople',
-    coverImage: { fileName: 'cover.png' },
-    coverUrl: '/studio-api/projects/constantinople/cover',
+    coverImage: {
+      assetId: 'asset_project_cover',
+      assetFileId: 'asset_file_project_cover',
+    },
+    coverUrl:
+      '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover',
     logline: 'A documentary about preparation before 1453.',
     counts: {
       languages: 0,

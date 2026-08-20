@@ -4,6 +4,13 @@ import { ProjectDataError } from '../../project-data-error.js';
 import type { ProjectAssetFileDestination, ProjectMediaKind } from '../types.js';
 import type { ProjectAssetFileNamingMode } from '../types.js';
 import {
+  resolveProjectCoverDestinationFile,
+  resolveProjectCoverDestinationFileSync,
+  resolveProjectCoverDestinationOutputNames,
+  resolveProjectCoverDestinationRoot,
+  resolveProjectCoverDestinationRootSync,
+} from './project-cover.js';
+import {
   resolveCastDestinationFile,
   resolveCastDestinationFileSync,
   resolveCastDestinationOutputNames,
@@ -91,6 +98,13 @@ const lookbookImageResolver = lookbookResolver<'visualLanguage.lookbookImage'>()
 const lookbookSheetResolver = lookbookResolver<'visualLanguage.lookbookSheet'>();
 
 const destinationResolvers = {
+  'project.cover': {
+    resolveFile: resolveProjectCoverDestinationFile,
+    resolveFileSync: resolveProjectCoverDestinationFileSync,
+    resolveRoot: resolveProjectCoverDestinationRoot,
+    resolveRootSync: resolveProjectCoverDestinationRootSync,
+    resolveOutputNames: resolveProjectCoverDestinationOutputNames,
+  },
   'screenplay.source': {
     resolveFile: resolveScreenplaySourceDestinationFile,
     resolveFileSync: resolveScreenplaySourceDestinationFileSync,

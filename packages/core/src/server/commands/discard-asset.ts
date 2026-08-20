@@ -11,6 +11,13 @@ import { assetOwnerResourceKeys } from '../assets/resource-keys.js';
 import type { DiscardAssetInput } from '../project-data-service-contracts.js';
 import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 import { assertAssetIsNotScreenplayImportSource } from '../screenplay/fdx/persistence/import-record.js';
+import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
+import { assetSelectionTargetKey } from '../assets/selection-targets.js';
+import {
+  projectCoverCandidateResourceKeys,
+  projectCoverSelectionResourceKeys,
+  studioTrashResourceKey,
+} from '../studio-coordination/resource-keys.js';
 
 export async function discardAsset(
   input: DiscardAssetInput
@@ -35,8 +42,24 @@ export async function discardAsset(
         `Asset ${input.assetId} is not owned by the requested owner.`
       );
     }
+    if (
+      input.expectedType !== undefined
+      && asset.type !== input.expectedType
+    ) {
+      throw new ProjectDataError(
+        'CORE_ASSET_TYPE_MISMATCH',
+        `Asset ${input.assetId} does not have the expected type ${input.expectedType}.`
+      );
+    }
     assertAssetIsNotCastVoiceSample(session, input.assetId);
     assertAssetIsNotScreenplayImportSource(session, input.assetId);
+    const isProjectCover = owner.kind === 'project'
+      && asset.type === 'project_cover';
+    const isSelectedProjectCover = isProjectCover
+      && readSelectedAssetRecord(
+        session,
+        assetSelectionTargetKey({ kind: 'project' })
+      )?.assetId === asset.id;
 
     return discardTrashObject({
       session,
@@ -47,8 +70,13 @@ export async function discardAsset(
       commandName: 'asset.discard',
       changes: [{ type: 'asset.discarded', assetId: input.assetId }],
       resourceKeys: [
-        ...assetOwnerResourceKeys(session, owner),
+        ...(isSelectedProjectCover
+          ? projectCoverSelectionResourceKeys()
+          : isProjectCover
+            ? projectCoverCandidateResourceKeys()
+            : assetOwnerResourceKeys(session, owner)),
         ...shotPlanVideoAssetResourceKeys(session, input.assetId),
+        ...(isProjectCover ? [studioTrashResourceKey()] : []),
       ],
     });
   } finally {

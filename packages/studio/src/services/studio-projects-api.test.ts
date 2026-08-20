@@ -57,7 +57,6 @@ describe('studio-projects-api', () => {
       projectName: 'the-glass-harbor',
       projectPath: '/tmp/renku/the-glass-harbor',
       databasePath: '/tmp/renku/the-glass-harbor/.renku/project.sqlite',
-      coverPath: null,
       created: {
         languages: 1,
         castMembers: 0,

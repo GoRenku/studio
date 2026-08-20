@@ -4,6 +4,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import type { GenerationPurposeDescriptor } from './purpose-contract.js';
 import { imageCreatePurpose } from './purposes/image-create.js';
 import { imageEditPurpose } from './purposes/image-edit.js';
+import { projectCoverPurpose } from './purposes/project-cover.js';
 import { lookbookImagePurpose } from './purposes/lookbook-image.js';
 import { lookbookVideoSheetPurpose } from './purposes/lookbook-video-sheet.js';
 import { lookbookStoryboardSheetPurpose } from './purposes/lookbook-storyboard-sheet.js';
@@ -23,7 +24,7 @@ import { shotPlanVideoLastFramePurpose } from './purposes/shot-plan-video-last-f
 import { shotPlanVideoStoryboardPurpose } from './purposes/shot-plan-video-storyboard.js';
 import { shotPlanVideoReferencePurpose } from './purposes/shot-plan-video-reference.js';
 
-const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, shotPlanVideoGenerationPurpose, shotPlanVideoFirstFramePurpose, shotPlanVideoLastFramePurpose, shotPlanVideoStoryboardPurpose, shotPlanVideoReferencePurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, propSheetPurpose, propHeroPurpose, sceneStoryboardSheetPurpose, shotImagePurpose];
+const descriptors: GenerationPurposeDescriptor[] = [imageCreatePurpose, imageEditPurpose, projectCoverPurpose, shotPlanVideoGenerationPurpose, shotPlanVideoFirstFramePurpose, shotPlanVideoLastFramePurpose, shotPlanVideoStoryboardPurpose, shotPlanVideoReferencePurpose, lookbookImagePurpose, lookbookVideoSheetPurpose, lookbookStoryboardSheetPurpose, castCharacterSheetPurpose, castProfilePurpose, castVoiceSamplePurpose, sceneDialogueAudioPurpose, locationSheetPurpose, locationHeroPurpose, propSheetPurpose, propHeroPurpose, sceneStoryboardSheetPurpose, shotImagePurpose];
 const descriptorByPurpose = new Map(descriptors.map((descriptor) => [descriptor.purpose, descriptor]));
 
 export function listGenerationPurposes(): GenerationPurposeDescriptor[] { return [...descriptors]; }

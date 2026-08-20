@@ -12,6 +12,7 @@ export type AssetOwner =
   | { kind: 'shot'; id: string };
 
 export type AssetSelectionTarget =
+  | { kind: 'project' }
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
   | { kind: 'locationWorld'; id: string }

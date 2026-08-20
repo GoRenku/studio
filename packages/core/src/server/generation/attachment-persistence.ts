@@ -1,7 +1,7 @@
 import { recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
 import { recordSelectedGenerationOutputProvenanceInSession } from '../asset-file-generation/commands.js';
 import { createAssetMembership } from '../assets/ownership.js';
-import { assetSelectionTargetForOwnerType, selectAssetInSession } from '../assets/selection.js';
+import { selectAssetInSession } from '../assets/selection.js';
 import type { AssetOwner, AssetSelectionTarget } from '../../client/assets.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { setAssetFileSourceGenerationSpec } from '../database/access/asset-files.js';
@@ -44,7 +44,7 @@ export interface PersistGeneratedMediaAttachmentInput {
     origin: string;
   };
   fileRole: string;
-  select?: boolean;
+  selectionTarget?: AssetSelectionTarget;
   provenanceReceipt?: unknown;
   selectedGenerationOutput?: {
     generationRunId: string;
@@ -201,10 +201,6 @@ export function persistGeneratedMediaAttachment(
   const writeSet = createProjectAssetFileWriteSet({
     projectFolder: input.projectFolder,
   });
-  const selectionTarget = input.select
-    ? assetSelectionTargetForOwnerType(input.destination.owner, input.asset.type)
-    : null;
-
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
@@ -218,7 +214,7 @@ export function persistGeneratedMediaAttachment(
         sourceProjectRelativePath: input.sourceProjectRelativePath,
         destination: input.destination.file,
         owner: input.destination.owner,
-        ...(selectionTarget ? { selectionTarget } : {}),
+        ...(input.selectionTarget ? { selectionTarget: input.selectionTarget } : {}),
         asset: input.asset,
         fileRole: input.fileRole,
         ...(input.provenanceReceipt !== undefined

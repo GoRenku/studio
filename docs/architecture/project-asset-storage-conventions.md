@@ -25,6 +25,8 @@ Projects create only the folders needed by their current content.
 
   screenplay/
 
+  covers/
+
   visual-language/
     inspiration/
     lookbooks/
@@ -76,6 +78,7 @@ durable ids for reads and mutations.
 | Media | Durable folder | Generated filename stem |
 | --- | --- | --- |
 | Screenplay source | `screenplay/` | external basename only |
+| Project Cover | `covers/` | `cover-gxxx` |
 | Production Lookbook media | `visual-language/lookbooks/production/` | `<semantic>[-sheet]-gxxx` |
 | Storyboard Lookbook media | `visual-language/lookbooks/storyboard/` | `<semantic>[-sheet]-gxxx` |
 | Cast Profile | `cast/<handle>/` | `profile-gxxx` |
@@ -151,6 +154,11 @@ screenplay/urban-basilica-2.fdx
 
 External files do not receive `gxxx`. A basename is a human-readable label,
 not identity or provenance.
+
+For Project Cover imports this means generated media uses
+`covers/cover-gxxx.<ext>`, while an external source keeps its normalized
+basename beneath `covers/`. Neither path is parsed to determine active cover
+selection.
 
 ## Temporary And User-Owned Files
 

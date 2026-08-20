@@ -64,6 +64,14 @@ The stable target kinds are `project`, `asset`, `lookbook`, `castMember`,
 `location`, `scene`, and `sceneDialogue`. Every target is
 `{ kind, id }`; purpose descriptors own any additional context lookup.
 
+`project.cover` targets `project`, fixes 16:9, recommends medium quality and
+Nano Banana 2 for managed execution, and returns only the small Project target
+facts with no reference-guide sections. The agent gathers optional creative
+context progressively; Core never sends or semantically evaluates a complete
+Project media catalog for this purpose. Focused import creates a Project-owned
+`project_cover` image Asset beneath `covers/` and may atomically select it when
+explicitly requested.
+
 For Scene and Shot targets, Generation Context facts include
 `projectAspectRatio`, opaque `contextText`, `sceneCastMemberIds`,
 `sceneLocationIds`, `scenePropIds`, and `sceneDialogueIds`. Prop ids come from
@@ -212,6 +220,15 @@ Copying a Shot Plan copies only each source Shot's selected image. Core
 allocates new Asset and AssetFile ids, copies bytes to new Shot-owned paths, and
 preserves existing provenance links. The copied image and source image then
 have independent ownership and Trash lifecycles.
+
+## Database Generation 64
+
+Migration `0079_project_cover_assets.sql` drops the retired
+`project.cover_file` column after a custom precondition proves every existing
+value is null. Project cover display is derived from common Asset membership,
+Asset Files, and the Project selection target. The migration preserves all
+unrelated Assets and selections and advances the project database to generation
+64.
 
 ## Database Generation 53
 

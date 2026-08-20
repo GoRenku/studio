@@ -103,6 +103,11 @@ operational companions that teach agents how to use those contracts.
 `media-producer`
 
 - Generates purpose-specific media from Renku context.
+- Handles `project.cover` from the user's conversation, then progressively
+  reads only missing Project Info and exact useful Production Lookbook or named
+  subject context. It reads the Storyboard Lookbook only for an explicitly
+  storyboard-like cover direction and imports retained candidates through the
+  focused purpose.
 - Reads the Project generation settings from Generation Context. Codex is the
   default image-generation choice; explicit user direction and a path already
   saved on the GenerationSpec take precedence. Preview, confirmation, and

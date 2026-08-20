@@ -36,7 +36,8 @@ export interface Project {
 }
 
 export interface ProjectCoverImage {
-  fileName: 'cover.png';
+  assetId: string;
+  assetFileId: string;
 }
 
 export interface ProjectCounts {
@@ -53,7 +54,6 @@ export interface ProjectCreateReport {
   projectName: string;
   projectPath: string;
   databasePath: string;
-  coverPath: string | null;
   created: ProjectCounts;
   warnings: DiagnosticIssue[];
 }

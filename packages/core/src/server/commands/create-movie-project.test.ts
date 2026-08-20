@@ -50,7 +50,6 @@ describe('createMovieProject', () => {
         '.renku',
         'project.sqlite'
       ),
-      coverPath: null,
       created: {
         languages: 1,
         castMembers: 0,

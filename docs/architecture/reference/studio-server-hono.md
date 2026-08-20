@@ -216,11 +216,6 @@ const projects = new Hono()
     const projectName = c.req.param('projectName');
     const project = await projectData.readProject({ projectName });
     return c.json({ project: toProjectResponse(project) });
-  })
-  .get('/:projectName/cover', async (c) => {
-    const projectName = c.req.param('projectName');
-    const coverPath = await projectData.resolveCoverImage({ projectName });
-    return streamCoverImage(c, coverPath);
   });
 
 export default projects;
@@ -298,7 +293,6 @@ Inside `routes/projects.ts`, use resource-relative paths:
 .get('/:projectName')
 .route('/:projectName', createNavigationRoute(...))
 .route('/:projectName', createAssetsRoute(...))
-.get('/:projectName/cover')
 ```
 
 Child resource modules mounted below `/:projectName` should use paths relative
@@ -327,13 +321,16 @@ The Studio server may need HTTP-only fields. For example, core should know that
 a project has:
 
 ```ts
-coverImage: { fileName: 'cover.png' }
+coverImage: {
+  assetId: 'asset_cover',
+  assetFileId: 'asset_file_cover'
+}
 ```
 
 The Studio server may translate that into:
 
 ```ts
-coverUrl: '/studio-api/projects/constantinople/cover'
+coverUrl: '/studio-api/projects/constantinople/assets/asset_cover/files/asset_file_cover'
 ```
 
 That translation belongs in:
@@ -343,8 +340,9 @@ packages/studio/server/http/project-responses.ts
 packages/studio/server/http/project-cover-url.ts
 ```
 
-The response adapter must stay mechanical. It should not scan project folders,
-open SQLite, or infer domain relationships.
+The response adapter must stay mechanical: it builds the generic Asset File URL
+and must not scan project folders, open SQLite, or infer domain relationships.
+There is no special Project cover streaming route.
 
 Project-open responses follow ADR 0017. The Studio project route should adapt a
 bounded project shell, not construct a project-wide eager surface snapshot.

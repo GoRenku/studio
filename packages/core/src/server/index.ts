@@ -170,7 +170,6 @@ export type {
   ReorderInspirationFoldersInput,
   ResolveProjectAssetFileByIdInput,
   ResolveProjectAssetFileInput,
-  ResolveProjectCoverImageInput,
   ResolvedProjectAssetFileById,
   ResolvedProjectAssetFile,
   ScreenplayAnalysisProjectInput,

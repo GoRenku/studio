@@ -1,6 +1,7 @@
 import type { GenerationPreviewPurpose } from '@gorenku/studio-core/client';
 
 const GENERATION_PREVIEW_TITLES = {
+  'project.cover': 'Project Cover Generation Preview',
   'image.edit': 'Image Edit Generation Preview',
   'lookbook.image': 'Lookbook Image Generation Preview',
   'lookbook.video-sheet': 'Lookbook Sheet Generation Preview',

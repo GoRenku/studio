@@ -4,6 +4,11 @@ Date: 2026-07-08
 
 Status: accepted
 
+Notice: Decision
+[0083](0083-use-project-owned-cover-assets-and-conversation-directed-generation.md)
+adds the focused `project.cover` attachment purpose; generic `image.create`
+remains unattached Project-scoped generation.
+
 ## Context
 
 Shot Video Take first frames, last frames, reference images, and video prompt

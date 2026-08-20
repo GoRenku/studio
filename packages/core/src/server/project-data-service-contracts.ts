@@ -217,7 +217,6 @@ export interface ProjectDataService {
   patchProjectInformation(
     input: PatchProjectInformationInput
   ): Promise<ProjectInformationResource>;
-  resolveCoverImage(input: ResolveProjectCoverImageInput): Promise<string | null>;
   resolveProjectAssetFile(
     input: ResolveProjectAssetFileInput
   ): Promise<ResolvedProjectAssetFile>;
@@ -897,10 +896,6 @@ export interface PatchProjectInformationInput extends RenkuConfigPathOptions {
   patch: ProjectInformationPatch;
 }
 
-export interface ResolveProjectCoverImageInput extends RenkuConfigPathOptions {
-  projectName: string;
-}
-
 export interface ResolveProjectAssetFileInput extends RenkuConfigPathOptions {
   projectName: string;
   owner: AssetOwner;
@@ -939,6 +934,7 @@ export interface DiscardAssetInput extends RenkuConfigPathOptions {
   projectName: string;
   owner: AssetOwner;
   assetId: string;
+  expectedType?: string;
 }
 
 export interface RestoreAssetInput extends RenkuConfigPathOptions {

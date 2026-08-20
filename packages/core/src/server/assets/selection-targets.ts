@@ -12,6 +12,9 @@ export function assetSelectionTargetKey(target: AssetSelectionTarget): string {
 export function selectionTargetOwner(
   target: AssetSelectionTarget
 ): AssetOwner {
+  if (target.kind === 'project') {
+    return { kind: 'project' };
+  }
   if (target.kind === 'locationWorld') {
     return { kind: 'location', id: target.id };
   }

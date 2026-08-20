@@ -59,4 +59,48 @@ describe('discard Asset', () => {
       resourceKeys: ['surface:location:location_test0001'],
     });
   });
+
+  it('rejects a mismatched expected type before moving the Asset to Trash', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    const projectRelativePath = 'tmp/shot-plan.mp4' as ProjectRelativePath;
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, projectRelativePath), 'video');
+    const asset = await createTestAssetFixture({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'project' },
+      type: 'shot_plan_video',
+      mediaKind: 'video',
+      title: 'Shot Plan Video',
+      projectRelativePath,
+      fileRole: 'primary',
+    });
+
+    await expect(projectData.discardAsset({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'project' },
+      assetId: asset.id,
+      expectedType: 'project_cover',
+    })).rejects.toMatchObject({
+      code: 'CORE_ASSET_TYPE_MISMATCH',
+    });
+
+    await expect(projectData.listAssetPage({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'project' },
+      type: 'shot_plan_video',
+    })).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: asset.id })],
+    });
+    await expect(projectData.listTrash({
+      projectName: 'constantinople',
+      homeDir,
+    })).resolves.toMatchObject({ items: [] });
+  });
 });

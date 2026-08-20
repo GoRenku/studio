@@ -2,27 +2,40 @@ import { useCallback, useEffect, useState } from 'react';
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
 import type { StudioAssetCollection } from '@/services/studio-project-assets-api';
 
-export function useContinuityAssets({
+interface AssetMutationReport {
+  resourceKeys: string[];
+}
+
+export function useSelectableAssetCollection({
   readAssets,
   selectCanonicalAsset,
   clearCanonicalAsset,
   discardAsset,
 }: {
   readAssets: () => Promise<StudioAssetCollection>;
-  selectCanonicalAsset: (assetId: string) => Promise<void>;
-  clearCanonicalAsset: () => Promise<void>;
-  discardAsset: (assetId: string) => Promise<string>;
+  selectCanonicalAsset: (assetId: string) => Promise<AssetMutationReport>;
+  clearCanonicalAsset: () => Promise<AssetMutationReport>;
+  discardAsset: (assetId: string) => Promise<AssetMutationReport>;
 }) {
   const [collection, setCollection] = useState<StudioAssetCollection>({
     items: [],
     selectedAssetId: null,
   });
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const next = await readAssets();
-    setCollection(next);
-    setError(null);
+    setLoading(true);
+    try {
+      const next = await readAssets();
+      setCollection(next);
+      setError(null);
+    } catch (loadError) {
+      setError(errorMessage(loadError));
+      throw loadError;
+    } finally {
+      setLoading(false);
+    }
   }, [readAssets]);
 
   useEffect(() => {
@@ -38,6 +51,11 @@ export function useContinuityAssets({
         if (!cancelled) {
           setError(errorMessage(loadError));
         }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -45,13 +63,12 @@ export function useContinuityAssets({
   }, [readAssets]);
 
   const toggleCanonical = useCallback(
-    async (asset: StudioAssetResponse) => {
-      if (collection.selectedAssetId === asset.id) {
-        await clearCanonicalAsset();
-      } else {
-        await selectCanonicalAsset(asset.id);
-      }
+    async (asset: StudioAssetResponse): Promise<AssetMutationReport> => {
+      const report = collection.selectedAssetId === asset.id
+        ? await clearCanonicalAsset()
+        : await selectCanonicalAsset(asset.id);
       await refresh();
+      return report;
     },
     [
       clearCanonicalAsset,
@@ -62,9 +79,10 @@ export function useContinuityAssets({
   );
 
   const remove = useCallback(
-    async (asset: StudioAssetResponse) => {
-      await discardAsset(asset.id);
+    async (asset: StudioAssetResponse): Promise<AssetMutationReport> => {
+      const report = await discardAsset(asset.id);
       await refresh();
+      return report;
     },
     [discardAsset, refresh]
   );
@@ -72,6 +90,7 @@ export function useContinuityAssets({
   return {
     collection,
     error,
+    loading,
     refresh,
     toggleCanonical,
     remove,
@@ -79,5 +98,5 @@ export function useContinuityAssets({
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Continuity asset request failed.';
+  return error instanceof Error ? error.message : 'Asset request failed.';
 }

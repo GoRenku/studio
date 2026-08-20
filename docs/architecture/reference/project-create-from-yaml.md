@@ -102,9 +102,8 @@ must contain an explicit `storageRoot`. There is no default storage root.
 If the target project folder already exists, creation should fail with a clear
 error unless a future explicit recovery/resume flow is designed.
 
-If `project.coverFile` is provided, it must be a setup-file-relative PNG path.
-The source image is copied into the created project as `cover.png`. This is the
-only visual asset that belongs in create YAML.
+Project creation YAML does not accept visual assets. Project Covers are added
+after creation through the focused `project.cover` media workflow.
 
 ## Responsibility Split
 
@@ -174,7 +173,7 @@ SQLite stores the real identity and relationships.
 
 The create YAML should not contain:
 
-- generated or selected visual asset paths, except `project.coverFile`;
+- generated or selected visual asset paths;
 - non-narrative import/export manifests;
 - durable project state after creation;
 - SQLite IDs;
@@ -825,8 +824,6 @@ when:
 - `project.type` is missing;
 - `project.type` is not `standaloneMovie` or `series`;
 - `project.name` is present but is not a valid project name;
-- `project.coverFile` is absolute, escapes the setup directory, does not exist,
-  is not a file, or is not a PNG;
 - both an inline text field and its `*File` field are provided, such as
   `summary` and `summaryFile`;
 - `project.type: series` includes top-level `sequences`;
@@ -893,7 +890,6 @@ Example report:
   "projectName": "constantinople-movie",
   "projectPath": "/configured/storageRoot/constantinople-movie",
   "databasePath": "/configured/storageRoot/constantinople-movie/.renku/project.sqlite",
-  "coverPath": "/configured/storageRoot/constantinople-movie/cover.png",
   "created": {
     "languages": 2,
     "visualLanguageCategories": 2,
@@ -931,7 +927,7 @@ For V0, keep the create YAML plain and forgiving:
 - no durations;
 - no generation state;
 - no recipes;
-- optional `project.coverFile`, which is the only create-time visual asset;
+- no create-time visual assets;
 - optional Markdown file references for narrative text fields;
 - no attempts to make this file a source of truth.
 
