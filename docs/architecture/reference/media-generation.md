@@ -285,6 +285,8 @@ previews are read-only. Generation Request inspection projects original request
 context as read-only Prompt, selected References, and static Config tabs by
 reusing the same resource. Image editing is an agent-owned new `image.edit`
 request with the exact source AssetFile locked in `source/source-image`.
+An accepted edit may be imported through any focused image destination; Core
+does not require the destination owner to match the source Asset owner.
 
 `prop.sheet` and `prop.hero` are focused image purposes targeting
 `{ kind: "prop", id }`. Prop Sheets expose ready same-owner prior sheets as

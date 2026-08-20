@@ -52,9 +52,9 @@ experiences:
   Preview experience;
 - `asset-file-generation-request` projects the exact saved request for one
   AssetFile into the shared read-only inspector resource;
-- `generation/image-edit-attachment` owns the narrow rule that an accepted
-  agent-owned `image.edit` output may return to the current owner of its exact
-  locked source AssetFile;
+- an accepted agent-owned `image.edit` output may be imported through any
+  focused image destination; the edit source and import destination are
+  independent contracts;
 - `scene-dialogue-audio-workspace` owns dialogue setup, generic audio
   generation, takes, playback metadata, and recoverable deletion;
 - `scene-beats` owns Beat history, active selection, storyboard status,
@@ -274,8 +274,10 @@ data and are projected to authenticated browser URLs.
 Image editing is agent-owned through a new generic `image.edit` spec with the
 exact source AssetFile locked in `source/source-image`. Preview reviews the
 request; a managed receipt or frozen external source spec proves execution; and
-the accepted result is imported through the source owner's real focused
-destination. Studio inspection never edits, executes, or attaches output.
+the accepted result is imported through any currently supported focused image
+destination chosen for that output. The destination validates its own target
+without requiring ownership continuity with the edit source. Studio inspection
+never edits, executes, or attaches output.
 
 ## Prop generation
 

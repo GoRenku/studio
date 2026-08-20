@@ -152,6 +152,62 @@ describe('Scene storyboard attachment', () => {
       unselected.imported[0]!.id
     );
 
+    const sourceAsset = report.imported[0]!;
+    const sourceFile = sourceAsset.files[0]!;
+    const editSpec = await projectData.createGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      spec: {
+        executionKind: 'agent-external',
+        purpose: 'image.edit',
+        target: { kind: 'asset', id: sourceAsset.id },
+        model: { provider: 'codex', model: 'gpt-image-2' },
+        values: { prompt: 'Preserve the source and repair the wall.' },
+        references: [{
+          placement: {
+            kind: 'slot',
+            sectionId: 'source',
+            slotId: 'source-image',
+          },
+          reference: {
+            kind: 'asset-file',
+            assetId: sourceAsset.id,
+            assetFileId: sourceFile.id,
+          },
+        }],
+      },
+    });
+    await projectData.freezeGenerationSpec({
+      projectName: 'constantinople',
+      homeDir,
+      specId: editSpec.id,
+    });
+    await fs.writeFile(
+      path.join(created.projectPath, 'tmp', 'beat-edited.png'),
+      'edited image'
+    );
+    const edited = await projectData.attachSceneStoryboardImages({
+      projectName: 'constantinople',
+      homeDir,
+      sceneId: scene!.id!,
+      sceneBeatsRevisionId: revision.activeRevisionId,
+      document: {
+        sceneBeatsRevisionId: revision.activeRevisionId,
+        select: true,
+        beats: [{
+          beatId,
+          source: 'tmp/beat-edited.png',
+          sourceSpecId: editSpec.id,
+        }],
+      },
+    });
+    const afterEdit = await projectData.readSceneStoryboardStatus({
+      homeDir,
+      sceneId: scene!.id!,
+      sceneBeatsRevisionId: revision.activeRevisionId,
+    });
+    expect(afterEdit.beats[0]!.selectedImageId).toBe(edited.imported[0]!.id);
+
     const reset = await projectData.resetSceneBeats({
       homeDir,
       document: revisionDocument(
@@ -175,7 +231,7 @@ describe('Scene storyboard attachment', () => {
     })).resolves.toMatchObject({
       beats: [expect.objectContaining({
         beatId,
-        selectedImageId: unselected.imported[0]!.id,
+        selectedImageId: edited.imported[0]!.id,
       })],
     });
     await expect(projectData.readSceneStoryboardStatus({
@@ -202,7 +258,7 @@ describe('Scene storyboard attachment', () => {
     })).resolves.toMatchObject({
       beats: [expect.objectContaining({
         beatId,
-        selectedImageId: unselected.imported[0]!.id,
+        selectedImageId: edited.imported[0]!.id,
       })],
     });
 

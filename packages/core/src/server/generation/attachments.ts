@@ -14,7 +14,6 @@ import {
   resolveGeneratedMediaAttachment,
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
-import { validateImageEditAttachment } from './image-edit-attachment.js';
 import { assetSelectionTargetForOwnerType } from '../assets/selection.js';
 
 export interface AttachGenerationMediaInput {
@@ -176,7 +175,9 @@ export function validateGenerationProvenance(input: AttachGenerationMediaInput &
         { suggestion: 'Freeze the final reviewed request immediately before external generation.' }
       );
     }
-    validateAttachmentRequestMatch(input, record.spec);
+    if (record.spec.purpose !== 'image.edit') {
+      validateAttachmentRequestMatch(input, record.spec);
+    }
     return {
       kind: 'agent-external',
       generationSpecId: record.id,
@@ -199,7 +200,9 @@ export function validateGenerationProvenance(input: AttachGenerationMediaInput &
   if (!run) {
     throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'Generation run purpose and target must match the focused attachment.');
   }
-  validateAttachmentRequestMatch(input, run.specSnapshot);
+  if (run.specSnapshot.purpose !== 'image.edit') {
+    validateAttachmentRequestMatch(input, run.specSnapshot);
+  }
   const selectedOutput = run.outputs.find(
     (output) => output.projectRelativePath === input.sourceProjectRelativePath
   );
@@ -223,10 +226,7 @@ function requiresExactGenerationProvenance(assetType: string): boolean {
 }
 
 function validateAttachmentRequestMatch(
-  input: AttachGenerationMediaInput & {
-    session: DatabaseSession;
-    destinationAssetType: string;
-  },
+  input: Pick<AttachGenerationMediaInput, 'purpose' | 'target'>,
   spec: import('../../client/generation.js').GenerationSpec,
 ): void {
   if (spec.purpose === input.purpose &&
@@ -234,13 +234,10 @@ function validateAttachmentRequestMatch(
       spec.target.id === input.target.id) {
     return;
   }
-  validateImageEditAttachment({
-    session: input.session,
-    spec,
-    destinationPurpose: input.purpose,
-    destinationTarget: input.target,
-    destinationAssetType: input.destinationAssetType,
-  });
+  throw new ProjectDataError(
+    'CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID',
+    'Generation request purpose and target must match the focused attachment.',
+  );
 }
 
 function validateLookbookKind(

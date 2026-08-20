@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { readLookbookImageRecordByAsset } from '../database/access/lookbook-images.js';
 import { insertLookbookRecord, readLookbookRecordByKind } from '../database/access/lookbook.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { createProjectDataService } from '../project-data-service.js';
@@ -348,7 +347,7 @@ describe('generation media attachment', () => {
     );
   });
 
-  it('attaches a frozen external image edit to the exact current source owner', async () => {
+  it('attaches a frozen external image edit through an independently selected focused destination', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -409,7 +408,7 @@ describe('generation media attachment', () => {
       code: 'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
     });
 
-    await expect(projectData.attachGenerationMedia({
+    const edited = await projectData.attachGenerationMedia({
       projectName: 'constantinople',
       homeDir,
       purpose: 'cast.character-sheet',
@@ -417,28 +416,20 @@ describe('generation media attachment', () => {
       sourceProjectRelativePath: 'tmp/edited.png',
       sourceSpecId: spec.id,
       title: 'Edited Character Sheet',
-    })).rejects.toMatchObject({
-      code: 'CORE_GENERATION_ATTACHMENT_IMAGE_EDIT_SOURCE_MISMATCH',
-    });
-
-    const edited = await projectData.attachGenerationMedia({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'cast.character-sheet',
-      target: { kind: 'castMember', id: 'cast_test0001' },
-      sourceProjectRelativePath: 'tmp/edited.png',
-      sourceSpecId: spec.id,
-      title: 'Edited Character Sheet',
     });
     expect(edited.provenance).toEqual({ generationSpecId: spec.id });
     expect(edited.asset.id).not.toBe(source.asset.id);
+    expect(edited.asset.owner).toEqual({
+      kind: 'castMember',
+      id: 'cast_test0002',
+    });
     expect(await fs.readFile(
       path.join(created.projectPath, sourceFile.projectRelativePath),
       'utf8',
     )).toBe('source');
   });
 
-  it('attaches an exact managed image edit receipt to the source owner', async () => {
+  it('attaches an exact managed image edit receipt through an independently selected focused destination', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -510,8 +501,8 @@ describe('generation media attachment', () => {
     await expect(projectData.attachGenerationMedia({
       projectName: 'constantinople',
       homeDir,
-      purpose: 'cast.character-sheet',
-      target: { kind: 'castMember', id: 'cast_test0001' },
+      purpose: 'location.sheet',
+      target: { kind: 'location', id: 'location_test0001' },
       sourceProjectRelativePath: 'tmp/wrong-output.png',
       receipt: { run: run.run },
     })).rejects.toMatchObject({
@@ -522,11 +513,11 @@ describe('generation media attachment', () => {
     await expect(projectData.attachGenerationMedia({
       projectName: 'constantinople',
       homeDir,
-      purpose: 'cast.character-sheet',
-      target: { kind: 'castMember', id: 'cast_test0001' },
+      purpose: 'location.sheet',
+      target: { kind: 'location', id: 'location_test0001' },
       sourceProjectRelativePath: output,
       receipt: { run: run.run },
-      title: 'Edited Character Sheet',
+      title: 'Edited Location Sheet',
     })).rejects.toMatchObject({
       code: 'CORE_ASSET_FILE_GENERATION_OUTPUT_MISMATCH',
     });
@@ -535,17 +526,21 @@ describe('generation media attachment', () => {
     const edited = await projectData.attachGenerationMedia({
       projectName: 'constantinople',
       homeDir,
-      purpose: 'cast.character-sheet',
-      target: { kind: 'castMember', id: 'cast_test0001' },
+      purpose: 'location.sheet',
+      target: { kind: 'location', id: 'location_test0001' },
       sourceProjectRelativePath: output,
       receipt: { run: run.run },
-      title: 'Edited Character Sheet',
+      title: 'Edited Location Sheet',
     });
     expect(edited.provenance).toEqual({ generationRunId: run.run.id });
     expect(edited.asset.id).not.toBe(source.asset.id);
+    expect(edited.asset.owner).toEqual({
+      kind: 'location',
+      id: 'location_test0001',
+    });
   });
 
-  it('attaches an external image edit through Lookbook membership only', async () => {
+  it('attaches an external image edit through an independently selected Lookbook destination', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });
     if (!created) {
@@ -593,7 +588,7 @@ describe('generation media attachment', () => {
       specId: spec.id,
     });
 
-    await expect(projectData.attachGenerationMedia({
+    const edited = await projectData.attachGenerationMedia({
       projectName: 'constantinople',
       homeDir,
       purpose: 'lookbook.storyboard-sheet',
@@ -601,39 +596,14 @@ describe('generation media attachment', () => {
       sourceProjectRelativePath: 'tmp/lookbook-edited.png',
       sourceSpecId: spec.id,
       title: 'Edited Lookbook Image',
-    })).rejects.toMatchObject({
-      code: 'CORE_GENERATION_ATTACHMENT_IMAGE_EDIT_SOURCE_MISMATCH',
-    });
-
-    const edited = await projectData.attachGenerationMedia({
-      projectName: 'constantinople',
-      homeDir,
-      purpose: 'lookbook.image',
-      target: { kind: 'lookbook', id: lookbooks.production },
-      sourceProjectRelativePath: 'tmp/lookbook-edited.png',
-      sourceSpecId: spec.id,
-      title: 'Edited Lookbook Image',
     });
     expect(edited.provenance).toEqual({ generationSpecId: spec.id });
-    expect(edited.ownerRecord).toMatchObject({ kind: 'lookbookImage' });
+    expect(edited.ownerRecord).toMatchObject({ kind: 'lookbookSheet' });
     expect(edited.asset.id).not.toBe(source.asset.id);
     expect(edited.asset.owner).toEqual({
       kind: 'lookbook',
-      id: lookbooks.production,
+      id: lookbooks.storyboard,
     });
-
-    const { session } = await openProjectSession({
-      projectName: 'constantinople',
-      homeDir,
-    });
-    try {
-      expect(readLookbookImageRecordByAsset(session, {
-        lookbookId: lookbooks.production,
-        assetId: edited.asset.id,
-      })).not.toBeNull();
-    } finally {
-      session.close();
-    }
   });
 });
 
