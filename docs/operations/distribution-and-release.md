@@ -23,7 +23,6 @@ loads Cloudflare credentials from the repository-root `.env` file when present.
 
 ```bash
 gh auth status
-pnpm release:preflight
 pnpm release -- --dry-run
 pnpm release
 ```
