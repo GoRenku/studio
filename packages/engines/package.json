@@ -1,6 +1,6 @@
 {
   "name": "@gorenku/studio-engines",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Renku Studio AI engine registry, schema validation, simulation, and provider adapters",
   "private": true,
   "type": "module",
