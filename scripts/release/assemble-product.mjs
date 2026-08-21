@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { commandOutput, readStudioVersion } from './release-contract.mjs';
@@ -33,9 +41,11 @@ execFileSync(
   ],
   { cwd: repositoryRoot, stdio: 'inherit' }
 );
-rmSync(path.join(productRoot, 'app', 'node_modules', '.modules.yaml'), {
-  force: true,
-});
+const appRoot = path.join(productRoot, 'app');
+rmSync(path.join(appRoot, 'node_modules', '.modules.yaml'), { force: true });
+rmSync(path.join(appRoot, 'node_modules', '.pnpm', 'lock.yaml'), { force: true });
+rmSync(path.join(appRoot, 'pnpm-lock.yaml'), { force: true });
+sanitizeBundledCliManifest(appRoot);
 
 if (!options.bundledNodeDir || !existsSync(options.bundledNodeDir)) {
   throw new Error(
@@ -97,6 +107,21 @@ function assertRequiredRuntime(root) {
   if (missing.length > 0) {
     throw new Error(`RELEASE004 Incomplete product tree:\n${missing.join('\n')}`);
   }
+}
+
+function sanitizeBundledCliManifest(appRoot) {
+  const manifestPath = path.join(appRoot, 'package.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  for (const field of [
+    'dependencies',
+    'devDependencies',
+    'optionalDependencies',
+    'peerDependencies',
+    'peerDependenciesMeta',
+  ]) {
+    delete manifest[field];
+  }
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 function assertReleaseOutput(output) {

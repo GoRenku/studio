@@ -341,6 +341,8 @@ test('product assembly deploys into staging without legacy workspace purging', (
   );
   assert.match(assembly, /--config\.inject-workspace-packages=true/);
   assert.doesNotMatch(assembly, /--legacy/);
+  assert.match(assembly, /node_modules', '\.pnpm', 'lock\.yaml/);
+  assert.match(assembly, /path\.join\(appRoot, 'pnpm-lock\.yaml'\)/);
 });
 
 test('release dependency policy is strict and installers do not resolve dependencies', () => {
