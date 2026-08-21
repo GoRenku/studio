@@ -23,7 +23,14 @@ mkdirSync(productRoot, { recursive: true });
 
 execFileSync(
   'pnpm',
-  ['--filter', '@gorenku/studio-cli', 'deploy', '--prod', '--legacy', path.join(productRoot, 'app')],
+  [
+    '--config.inject-workspace-packages=true',
+    '--filter',
+    '@gorenku/studio-cli',
+    'deploy',
+    '--prod',
+    path.join(productRoot, 'app'),
+  ],
   { cwd: repositoryRoot, stdio: 'inherit' }
 );
 rmSync(path.join(productRoot, 'app', 'node_modules', '.modules.yaml'), {

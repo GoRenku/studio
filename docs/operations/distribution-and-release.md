@@ -113,7 +113,8 @@ The local machine must have:
 
 - `fnm` with Node 24;
 - pnpm 11, `gh` authenticated for the Studio repository, and `tar`;
-- `CLOUDFLARE_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for the existing R2 bucket;
+- `CLOUDFLARE_ACCOUNT_ID` and an R2 API token's S3 credentials for the existing
+  R2 bucket;
   and
 - a native host matching one accepted release target. The current maintainer
   machine executes the full installed-product verification for `darwin-arm64`
@@ -123,9 +124,30 @@ The local release pnpm commands load the repository-root `.env` file when it is
 present. Keep that file gitignored and add:
 
 ```dotenv
-CLOUDFLARE_TOKEN=your-token
 CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_R2_ACCESS_KEY_ID=your-r2-access-key-id
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
 ```
+
+The release publisher uses the R2 S3-compatible API. Create the S3 credentials
+from Cloudflare Dashboard → R2 → Manage R2 API Tokens, grant Object Read &
+Write access to `renku-downloads`, and copy both values when the token is
+created. The publisher uses multipart upload for large archives, so the R2
+access key and secret are required in addition to the account ID.
+
+The repository configures pnpm's dependency-status check to warn instead of
+automatically running `pnpm install` before a script. This prevents a stale
+workspace install from deleting development modules during a release command;
+it does not modify or repair the workspace. Run `pnpm install` deliberately
+only when you want to refresh dependencies.
+
+Dependency installation is also protected by the repository's supply-chain
+policy: package versions must be at least 10,080 minutes (7 days) old,
+versions that do not satisfy that age fail resolution, missing registry publish
+times fail resolution, and lockfiles are rechecked rather than trusted
+blindly. The product assembler applies this policy while creating the bundled
+dependency tree. End-user installers do not run a package manager; they
+download the exact checksum-verified archive produced by that step.
 
 Explicitly exported environment variables and CI-provided secrets remain
 available when `.env` is absent.
@@ -160,6 +182,11 @@ tag. Publish then:
    their complete manifest, names, hashes, and bytes;
 10. promotes those exact downloaded bytes to immutable and beta R2 keys; and
 11. publishes the GitHub prerelease only after R2 verification succeeds.
+
+Product assembly uses pnpm's modern isolated deploy mode with the workspace
+injection setting enabled only for that command. It installs dependencies into
+the release staging directory and does not remove or reinstall the development
+workspace's `node_modules` directories.
 
 This is an explicit alpha policy. A cross-packaged Intel Mac or Windows
 artifact is structurally verified but is not described as runtime verified.

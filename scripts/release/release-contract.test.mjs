@@ -30,7 +30,7 @@ import {
   stageGitHubReleaseAssets,
   verifyDownloadedReleaseAssets,
 } from './publish-github-release.mjs';
-import { filesHaveIdenticalBytes } from './publish-r2.mjs';
+import { filesHaveIdenticalBytes, usesMultipartUpload } from './publish-r2.mjs';
 import { assertAboutOutput, assertStudioOnlyProduct } from './verify-product.mjs';
 import {
   BUNDLED_NODE_VERSION,
@@ -162,6 +162,11 @@ test('R2 resume comparison accepts only identical bytes', () => {
   writeFileSync(different, 'different bytes');
   assert.equal(filesHaveIdenticalBytes(left, same), true);
   assert.equal(filesHaveIdenticalBytes(left, different), false);
+});
+
+test('R2 publication uses multipart uploads for large release archives', () => {
+  assert.equal(usesMultipartUpload(64 * 1024 * 1024 - 1), false);
+  assert.equal(usesMultipartUpload(64 * 1024 * 1024), true);
 });
 
 test('GitHub publication reuses a complete verified draft instead of rebuilt bytes', () => {
@@ -327,6 +332,30 @@ test('local publication and workflow dispatch remain separate public commands', 
     rootManifest.scripts['release:dispatch'],
     'node --env-file-if-exists=.env scripts/release/dispatch-release-workflow.mjs'
   );
+});
+
+test('product assembly deploys into staging without legacy workspace purging', () => {
+  const assembly = readFileSync(
+    path.join(repositoryRoot, 'scripts/release/assemble-product.mjs'),
+    'utf8'
+  );
+  assert.match(assembly, /--config\.inject-workspace-packages=true/);
+  assert.doesNotMatch(assembly, /--legacy/);
+});
+
+test('release dependency policy is strict and installers do not resolve dependencies', () => {
+  const workspace = readFileSync(path.join(repositoryRoot, 'pnpm-workspace.yaml'), 'utf8');
+  assert.match(workspace, /minimumReleaseAge:\s*10080/);
+  assert.match(workspace, /minimumReleaseAgeStrict:\s*true/);
+  assert.match(workspace, /minimumReleaseAgeIgnoreMissingTime:\s*false/);
+  assert.match(workspace, /trustLockfile:\s*false/);
+  const installers = [
+    readFileSync(path.join(repositoryRoot, 'distribution/install.sh'), 'utf8'),
+    readFileSync(path.join(repositoryRoot, 'distribution/install.ps1'), 'utf8'),
+  ];
+  for (const installer of installers) {
+    assert.doesNotMatch(installer, /\b(?:pnpm|npm|yarn)\s+(?:install|i)\b/);
+  }
 });
 
 test('Studio-only product verification rejects plugin-owned roots', () => {

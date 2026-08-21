@@ -10,6 +10,8 @@ blockExoticSubdeps: true
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
 minimumReleaseAgeIgnoreMissingTime: false
+trustLockfile: false
+verifyDepsBeforeRun: warn
 allowBuilds:
   better-sqlite3: false
   bufferutil: true
