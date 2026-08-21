@@ -10,6 +10,7 @@ import {
   assertReleaseTagAtHead,
   fetchOriginMain,
   requireCommand,
+  readStudioVersion,
   runCommand,
 } from './release-contract.mjs';
 
@@ -84,9 +85,12 @@ try {
 
 function readTag(args) {
   const index = args.indexOf('--tag');
-  const tag = index >= 0 ? args[index + 1] : undefined;
-  if (!tag) {
-    throw new Error('RELEASE067 Usage: publish.mjs --tag vX.Y.Z [--dry-run]');
+  if (index < 0) {
+    return `v${readStudioVersion()}`;
+  }
+  const tag = args[index + 1];
+  if (!tag || tag.startsWith('--')) {
+    throw new Error('RELEASE067 Usage: publish.mjs [--tag vX.Y.Z] [--dry-run]');
   }
   return tag;
 }

@@ -16,6 +16,44 @@ Renku is installed as two independently released products:
 The repositories do not share versions, tags, release commits, or publication
 commands. Studio artifacts never contain plugin, marketplace, or skills paths.
 
+## Fast Track (TL;DR)
+
+Run these commands from a clean local `main` checkout. This patch-release path
+loads Cloudflare credentials from the repository-root `.env` file when present.
+
+```bash
+gh auth status
+pnpm release:preflight
+pnpm release -- --dry-run
+pnpm release
+```
+
+`pnpm release` creates and publishes the next patch release. For a minor or
+major release, replace both `release` commands with the matching pair:
+
+```bash
+pnpm release:minor -- --dry-run
+pnpm release:minor
+```
+
+or:
+
+```bash
+pnpm release:major -- --dry-run
+pnpm release:major
+```
+
+If publication stops after the release has been prepared, resume with:
+
+```bash
+pnpm release:publish
+```
+
+The command uses the current checked-in Studio version to resolve the expected
+`vX.Y.Z` tag and still verifies that the annotated tag exists and points at
+`HEAD`. Pass `-- --tag vX.Y.Z` only when intentionally publishing a specific
+prepared tag.
+
 ## User Installation
 
 Install and verify the runtime first.
@@ -82,6 +120,17 @@ The local machine must have:
   machine executes the full installed-product verification for `darwin-arm64`
   and cross-packages the other declared targets.
 
+The local release pnpm commands load the repository-root `.env` file when it is
+present. Keep that file gitignored and add:
+
+```dotenv
+CLOUDFLARE_TOKEN=your-token
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+```
+
+Explicitly exported environment variables and CI-provided secrets remain
+available when `.env` is absent.
+
 From a clean local `main` that exactly matches `origin/main`:
 
 ```bash
@@ -123,7 +172,7 @@ implied.
 If prepare succeeded but publication needs to be resumed:
 
 ```bash
-pnpm release:publish -- --tag vX.Y.Z
+pnpm release:publish
 ```
 
 The recovery command revalidates tag, version, commit, and `origin/main`
@@ -139,7 +188,7 @@ To exercise the complete local build, GitHub asset staging, and R2 publication
 plan without changing refs or remote release state:
 
 ```bash
-pnpm release:publish -- --tag vX.Y.Z --dry-run
+pnpm release:publish -- --dry-run
 ```
 
 Generated local products and archives stay under the ignored
@@ -187,7 +236,7 @@ GitHub Release, verifies that release exists, and then fast-forwards remote
 Resume publication with:
 
 ```bash
-pnpm release:publish -- --tag vX.Y.Z
+pnpm release:publish
 ```
 
 The release tooling does not change the marketplace catalogs, plugin manifest

@@ -319,10 +319,13 @@ test('local publication and workflow dispatch remain separate public commands', 
   const rootManifest = JSON.parse(
     readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8')
   );
-  assert.equal(rootManifest.scripts['release:publish'], 'node scripts/release/publish.mjs');
+  assert.equal(
+    rootManifest.scripts['release:publish'],
+    'node --env-file-if-exists=.env scripts/release/publish.mjs'
+  );
   assert.equal(
     rootManifest.scripts['release:dispatch'],
-    'node scripts/release/dispatch-release-workflow.mjs'
+    'node --env-file-if-exists=.env scripts/release/dispatch-release-workflow.mjs'
   );
 });
 

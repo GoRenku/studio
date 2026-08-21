@@ -37,7 +37,7 @@ try {
   runCommand('git', ['tag', '-a', tag, '-m', `release: ${tag}`]);
 
   process.stdout.write(`Prepared Studio ${tag}.\n`);
-  process.stdout.write(`Next: pnpm release:publish -- --tag ${tag}\n`);
+  process.stdout.write('Next: pnpm release:publish\n');
 } catch (error) {
   process.stderr.write(`[release:prepare] ${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
