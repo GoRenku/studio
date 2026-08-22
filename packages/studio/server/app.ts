@@ -3,6 +3,7 @@ import { getRequestListener } from '@hono/node-server';
 import type { Connect } from 'vite';
 import health from './routes/health.js';
 import { createProjectsRoute } from './routes/projects.js';
+import { createProviderCredentialsRoute } from './routes/provider-credentials.js';
 import { createStudioEventsRoute } from './routes/studio-events.js';
 import { createStudioRuntimeToken, type StudioRuntimeToken } from './studio-runtime-token.js';
 
@@ -10,6 +11,7 @@ export interface CreateStudioServerAppOptions {
   token?: StudioRuntimeToken;
   cliNotificationToken?: string;
   serverInstanceId?: string;
+  homeDir?: string;
 }
 
 export function createStudioServerApp(options: CreateStudioServerAppOptions = {}) {
@@ -17,6 +19,10 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
   return new Hono()
     .route('/studio-api/health', health)
     .route('/studio-api/projects', createProjectsRoute({ token }))
+    .route(
+      '/studio-api/provider-credentials',
+      createProviderCredentialsRoute({ token, homeDir: options.homeDir })
+    )
     .route(
       '/studio-api/studio/events',
       createStudioEventsRoute({

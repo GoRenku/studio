@@ -43,4 +43,5 @@ export {
   type LoadProviderEnvFilesOptions,
   type LoadProviderEnvFilesResult,
 } from './provider-env-files.js';
+export * from './provider-credentials/index.js';
 export * from './generation/index.js';

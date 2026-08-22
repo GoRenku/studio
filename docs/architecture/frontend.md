@@ -50,6 +50,14 @@ match, verifies the target is a SQLite-backed Project in the configured storage
 root, and owns removal of the complete Project folder. After deletion succeeds,
 the browser refreshes the Project Library.
 
+Application-global Settings is available immediately before ThemeToggle in the
+Project Library header and Movie Studio sidebar. Its provider credential editor
+loads one sanitized Core resource, keeps replacement drafts in memory, and
+persists only through explicit Save. `src/features/settings` owns the reusable
+fields and draft controller; `src/services/studio-provider-credentials-api.ts`
+owns the token-protected no-store HTTP calls. React never receives an existing
+key or reads provider credential files.
+
 Generation feature code is an experience projection consumer. Core supplies
 purpose context, exact reference eligibility, focused workspace state, and
 structured diagnostics; Engines supplies provider field capabilities. React may

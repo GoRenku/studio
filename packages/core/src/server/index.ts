@@ -52,6 +52,7 @@ export {
 export { buildGenerationContext } from './generation/context.js';
 export { DEFAULT_PROJECT_SETTINGS } from './project-settings/document.js';
 export { resolveGenerationWorkflowPolicy } from './project-settings/index.js';
+export * from './provider-credentials/index.js';
 export {
   createGenerationSpec,
   listGenerationSpecs,

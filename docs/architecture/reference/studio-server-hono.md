@@ -94,6 +94,7 @@ packages/studio/server/
   routes/
     health.ts
     projects.ts
+    provider-credentials.ts
     navigation.ts
     assets.ts
     project-information.ts
@@ -103,6 +104,7 @@ packages/studio/server/
     studio-events.ts
 
   http/
+    provider-credentials-request.ts
     pagination-request.ts
     asset-file-response.ts
     asset-request.ts
@@ -126,6 +128,8 @@ File meanings:
 - `errors.ts`: translates structured core errors into HTTP responses;
 - `routes/health.ts`: health-check resource route module;
 - `routes/projects.ts`: top-level `/studio-api/projects` resource route module;
+- `routes/provider-credentials.ts`: token-protected application-global
+  provider credential status/update resource;
 - `routes/navigation.ts`: navigation page routes mounted below one project;
 - `routes/assets.ts`: asset page, selection, and file routes mounted below one project;
 - `routes/shot-plans.ts`: Scene Shot Plan list/delete and Shot-image
@@ -137,6 +141,8 @@ File meanings:
 - `routes/studio-events.ts`: Studio coordination event resource route module;
 - `http/*-request.ts`: request readers that translate raw HTTP input into
   core service input and structured diagnostics;
+- `http/provider-credentials-request.ts`: parses the exact replacement update
+  envelope without reading files or validating provider semantics;
 - `http/project-create-request.ts`: accepts exactly the browser-safe
   `projectName` and `title` creation intent;
 - `http/asset-file-response.ts`: asset file response mechanics, including
@@ -185,11 +191,13 @@ Example shape:
 import { Hono } from 'hono';
 import health from './routes/health.js';
 import { createProjectsRoute } from './routes/projects.js';
+import { createProviderCredentialsRoute } from './routes/provider-credentials.js';
 import { createStudioEventsRoute } from './routes/studio-events.js';
 
 export const app = new Hono()
   .route('/studio-api/health', health)
   .route('/studio-api/projects', createProjectsRoute({ token }))
+  .route('/studio-api/provider-credentials', createProviderCredentialsRoute({ token }))
   .route('/studio-api/studio/events', createStudioEventsRoute({ token }));
 
 export type StudioServerApp = typeof app;
@@ -225,6 +233,18 @@ export type ProjectsRoute = typeof projects;
 The exact route list may change as the product changes. The naming rule does
 not change: route modules are named by resource, and handlers stay near their
 route definitions.
+
+### Provider credentials
+
+`GET` and `PATCH /studio-api/provider-credentials` are both protected by the
+local Studio runtime token and return `Cache-Control: no-store`. GET returns a
+Core-owned sanitized resource containing no secret values. PATCH accepts one
+`changes` array of provider/value replacements, delegates semantic validation and the
+atomic write to Core, and returns the post-write sanitized resource.
+
+The route and request reader must not inspect `process.env`, read or write the
+Renku `.env`, maintain a provider list, echo request bodies, or call providers
+to test credentials.
 
 ### Project creation
 

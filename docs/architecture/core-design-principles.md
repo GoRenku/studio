@@ -62,6 +62,22 @@ Decision history:
 - UI, server, CLI, and agents should all reach metadata mutations through the
   same core command handlers.
 
+## Global Provider Credentials
+
+- Keep application-global provider secrets outside Project databases and
+  Project Settings.
+- Let Engines own the exact managed-provider catalog, Renku `.env` document
+  mechanics, and fresh saved-credential resolution.
+- Let Core own sanitized status projection, update validation, and the focused
+  replacement mutation boundary.
+- Never return existing secret values, fragments, hashes, or credential paths
+  to browser or adapter contracts.
+- Preserve unmanaged `.env` content and commit managed changes atomically with
+  owner-only permissions.
+- Keep Hono and React as thin consumers of the Core credential commands; they
+  must not read files, enumerate providers independently, or validate provider
+  accounts.
+
 ## Generation
 
 - Generation definitions are code-owned system behavior in the current

@@ -4,8 +4,8 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
+  createRenkuProviderSecretResolver,
   generateWorldLabsLocationWorld,
-  loadProviderEnvFiles,
   type GenerateWorldLabsLocationWorldInput,
   type WorldLabsLocationWorldResult,
 } from '@gorenku/studio-engines';
@@ -76,7 +76,6 @@ export async function generateLocationWorld(
             kind: 'multiImage',
             images: await Promise.all(validated.source.images.map(readImage)),
           };
-    loadProviderEnvFiles({ homeDir: input.homeDir });
     let generated: WorldLabsLocationWorldResult;
     try {
       generated = await (dependencies.generate ?? generateWorldLabsLocationWorld)({
@@ -85,11 +84,9 @@ export async function generateLocationWorld(
           ? {}
           : { prompt: validated.document.prompt }),
         source,
-        secretResolver: {
-          async getSecret(key) {
-            return process.env[key] ?? null;
-          },
-        },
+        secretResolver: createRenkuProviderSecretResolver({
+          homeDir: input.homeDir,
+        }),
       });
     } catch (error) {
       throw new ProjectDataError(

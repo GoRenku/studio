@@ -125,23 +125,25 @@ Provider credentials are not required to browse projects, edit project data,
 or run the normal local test suite. They are only needed when using the
 corresponding live generation provider.
 
-Renku reads provider credentials from exported environment variables first and
-then, for keys that are still unset, from:
+Use the top-level Settings button immediately left of the theme switcher to
+store the API keys used by Studio. Renku saves those keys in:
 
 ```text
 ~/.config/renku/.env
 ```
 
-Add only the providers you use:
+The managed provider keys are:
 
 ```dotenv
 FAL_KEY=...
-REPLICATE_API_TOKEN=...
-OPENAI_API_KEY=...
-AI_GATEWAY_API_KEY=...
 ELEVENLABS_API_KEY=...
-WAVESPEED_API_KEY=...
+WLT_API_KEY=...
 ```
+
+These Renku-saved values are the only provider keys used by the production
+credential resolver; exported shell values do not override them. Existing keys
+are never returned to the browser. The same file may be edited manually when
+Studio is not running; unmanaged assignments are preserved by Settings updates.
 
 Do not commit credentials. Live provider tests are opt-in because they can
 create paid requests.

@@ -80,6 +80,7 @@ export type {
 } from './props.js';
 export type * from './trash.js';
 export * from './project-settings.js';
+export * from './provider-credentials.js';
 export * from './production-numbers.js';
 export type * from './generation.js';
 export type * from './generation-preview-resource.js';

@@ -338,6 +338,17 @@ Dialog sizes:
 - Extra-wide: `sm:max-w-[620px]` (timeline editor)
 - Viewport-based: `w-[46vw]` to `w-[72vw]` (code editors)
 
+Credential Settings dialogs use the same header/body/footer anatomy with a
+scrollable body and fixed actions. Render providers as one subtly elevated,
+quiet divided list, not nested cards or a premature Settings navigation rail.
+Let each provider name stand alone; do not add media-capability subtitles
+because provider capabilities overlap and change. A configured key uses a
+fixed-length mask with a neutral Replace action, while a missing key uses the
+placeholder `Enter API key`. Never prefill or reveal an existing secret. Reveal
+controls apply only to text typed in the current draft, and the primary Save
+action stays neutral and disabled until the draft contains a valid change.
+Cancel and ordinary dismissal discard the draft; saving is never implicit.
+
 ### Cards
 
 **MediaCard** is the single visual-card system for the included Studio media

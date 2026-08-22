@@ -1,4 +1,3 @@
-import process from 'node:process';
 import type {
   ProducerHandler,
   ProviderDescriptor,
@@ -8,14 +7,13 @@ import type {
   ProviderRegistryOptions,
   ProviderVariantMatch,
   ResolvedProviderHandler,
-  SecretResolver,
 } from './types.js';
 import {
   loadModelInputSchema,
   lookupModel,
   type LoadedModelCatalog,
 } from './model-catalog.js';
-import { loadProviderEnvFiles } from './provider-env-files.js';
+import { createRenkuProviderSecretResolver } from './provider-credentials/index.js';
 import { generateProviderImplementations } from './registry-generator.js';
 import { createSimulatedFallbackProducerHandler } from './simulated-fallback-producers.js';
 
@@ -48,7 +46,7 @@ export function createProviderRegistry(
   const mode: ProviderMode = options.mode ?? 'simulated';
   const logger = options.logger;
   const notifications = options.notifications;
-  const secretResolver = options.secretResolver ?? createEnvSecretResolver();
+  const secretResolver = options.secretResolver ?? createRenkuProviderSecretResolver();
   const handlerCache = new Map<string, ProducerHandler>();
 
   // Generate implementations from catalog if provided, otherwise use minimal defaults
@@ -180,19 +178,6 @@ function toCacheKey(
     descriptor.model,
     descriptor.environment,
   ].join('|');
-}
-
-function createEnvSecretResolver(): SecretResolver {
-  let envFilesLoaded = false;
-  return {
-    async getSecret(key: string): Promise<string | null> {
-      if (!envFilesLoaded) {
-        loadProviderEnvFiles();
-        envFilesLoaded = true;
-      }
-      return process.env[key] ?? null;
-    },
-  };
 }
 
 /**

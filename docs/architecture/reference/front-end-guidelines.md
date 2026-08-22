@@ -319,6 +319,7 @@ Recommended shape:
 ```text
 src/services/
   studio-projects-api.ts
+  studio-provider-credentials-api.ts
   studio-api-errors.ts
   studio-project-contracts.ts
 ```
@@ -328,6 +329,8 @@ File meanings:
 - `studio-projects-api.ts`: functions such as `readProject`,
   `readProjectLibrary`, `patchProjectInformation`, and
   `exportProductionAssets`.
+- `studio-provider-credentials-api.ts`: token-protected, no-store reads and
+  explicit updates for the application-global credential resource.
 - `studio-api-errors.ts`: response error parsing and typed frontend API errors.
 - `studio-project-contracts.ts`: HTTP-decorated project contracts such as
   `ProjectShellWithHttp` and `ProjectLibraryWithHttp`, unless these are later
@@ -351,6 +354,13 @@ contracts before calling a service. For example, Project Information compares
 its latest draft with the last persisted resource and sends a
 `ProjectInformationPatch`; the browser service forwards that patch and does not
 merge hidden fields or reproduce Core validation.
+
+Application Settings lives under `src/features/settings/`. Keep reusable
+provider fields and draft/save behavior separate from Settings-specific Dialog
+chrome so a later onboarding step can compose the same editor. Credential
+fields start empty even when a saved value exists; React receives only a
+`configured` flag, represents it with a fixed mask, stages replacements
+locally, and persists only through an explicit container-owned action.
 
 Avoid:
 

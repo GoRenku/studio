@@ -1,5 +1,5 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
-import { loadProviderEnvFiles } from '../../provider-env-files.js';
+import { createRenkuProviderSecretResolver } from '../../provider-credentials/index.js';
 import type { ProviderLogger, SecretResolver } from '../../types.js';
 import { createProviderError, SdkErrorCode } from '../errors.js';
 import { parseElevenlabsError, runWithRetries } from './retry.js';
@@ -100,8 +100,13 @@ export async function fetchElevenLabsVoiceSampleAudio(
   request: ElevenLabsVoiceSampleAudioRequest
 ): Promise<ElevenLabsVoiceSampleAudio> {
   const voiceId = requireVoiceId(request.voiceId);
-  const apiBaseUrl = resolveApiBaseUrl(request.apiBaseUrl);
-  const apiKey = await resolveApiKey(request.secretResolver);
+  const secretResolver =
+    request.secretResolver ?? createRenkuProviderSecretResolver();
+  const apiBaseUrl = await resolveApiBaseUrl(
+    request.apiBaseUrl,
+    secretResolver
+  );
+  const apiKey = await resolveApiKey(secretResolver);
   const fetchOperation = request.fetch ?? fetch;
   const client = createElevenLabsClient({ apiBaseUrl, apiKey, fetchOperation });
 
@@ -226,9 +231,12 @@ function requireVoiceId(input: string): string {
   return voiceId;
 }
 
-function resolveApiBaseUrl(input: string | undefined): string {
-  loadProviderEnvFiles();
-  const apiBaseUrl = (input ?? process.env[ELEVENLABS_API_BASE_URL] ?? DEFAULT_API_BASE_URL).trim();
+async function resolveApiBaseUrl(
+  input: string | undefined,
+  secretResolver: SecretResolver
+): Promise<string> {
+  const configured = input ?? await secretResolver.getSecret(ELEVENLABS_API_BASE_URL);
+  const apiBaseUrl = (configured ?? DEFAULT_API_BASE_URL).trim();
   if (!ACCEPTED_API_BASE_URLS.has(apiBaseUrl)) {
     throw createProviderError(
       SdkErrorCode.PROVIDER_PREDICTION_FAILED,
@@ -243,11 +251,8 @@ function resolveApiBaseUrl(input: string | undefined): string {
   return apiBaseUrl;
 }
 
-async function resolveApiKey(secretResolver: SecretResolver | undefined): Promise<string> {
-  loadProviderEnvFiles();
-  const apiKey = secretResolver
-    ? await secretResolver.getSecret(ELEVENLABS_API_KEY)
-    : process.env[ELEVENLABS_API_KEY] ?? null;
+async function resolveApiKey(secretResolver: SecretResolver): Promise<string> {
+  const apiKey = await secretResolver.getSecret(ELEVENLABS_API_KEY);
   if (!apiKey?.trim()) {
     throw createProviderError(
       SdkErrorCode.INVALID_API_KEY,

@@ -10,6 +10,69 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-22 — Establish the visual target before implementing design-sensitive UI
+
+- **User objection:** A credential dialog met the functional and copy
+  requirements but still shipped as a cramped stack of generic secret fields
+  with weak typography, margins, scale, and visual hierarchy, even after the
+  user explicitly requested design-skill involvement.
+- **Planning rule:** For a design-sensitive Studio surface, do not treat
+  component-library compliance or reduced copy as sufficient design work. Audit
+  the current surface at the real desktop scale, create distinct visual
+  directions grounded in the existing product language, obtain the user's
+  selection, and make that selected composition the implementation and visual
+  verification target. Plans must name typography, spacing, grouping, dialog
+  proportions, and surrounding-app context when those qualities materially
+  define the requested result.
+- **Apply when:** Planning or revising dialogs, onboarding steps, Settings
+  surfaces, or other focused UI where the user asks for a polished, tasteful,
+  attractive, or design-led result.
+- **Evidence to inspect:** A current full-window screenshot; the surface at its
+  actual desktop dimensions; nearby Studio typography, spacing, surfaces, and
+  actions; the chosen visual reference; and final screenshots compared with
+  that reference before calling the implementation complete.
+
+### 2026-08-22 — Give credential Settings one user-facing source of truth
+
+- **User objection:** A provider-key dialog exposed legacy environment-variable
+  precedence, status pills, repetitive hidden-key explanations, and per-row
+  removal actions. The result made a simple saved-key form feel like a secret
+  administration system and left users unsure which key Renku would use.
+- **Planning rule:** Treat credential-source precedence as an explicit product
+  decision, not a compatibility default. Start from the user's model of the
+  key Renku will use; do not preserve or explain a second runtime source unless
+  the product genuinely needs it. Represent an existing write-only secret
+  primarily through the field state and concise replacement behavior. Add
+  badges, source labels, helper copy, or deletion only when each supports a
+  current user goal. If an accepted ADR encodes different precedence, surface
+  that conflict and revise the ADR after approval instead of hiding the choice
+  in implementation detail.
+- **Apply when:** Planning API-key Settings, onboarding credential steps,
+  password-like write-only fields, secret rotation, or a migration from shell
+  environment setup to product-managed credentials.
+- **Evidence to inspect:** The accepted source-of-truth decision, every runtime
+  credential resolver, current setup documentation, the visible copy/action
+  inventory for each key row, and established write-only secret UI patterns.
+
+### 2026-08-22 — Scope provider Settings to accepted product use
+
+- **User objection:** A global credential Settings plan exposed every provider
+  integration found in the repository instead of the smaller provider set the
+  user confirmed the product actually uses.
+- **Planning rule:** Treat a credential Settings catalog as an explicit product
+  allowlist. Do not infer its providers from all adapters, environment-variable
+  names, model catalogs, or historical integrations present in the repository.
+  Verify the current accepted provider set, expose and manage only that set,
+  and leave unaccepted integrations outside the UI and persistence contract
+  unless the user separately requests their removal or redesign.
+- **Apply when:** Planning provider credential UI, onboarding credential steps,
+  provider enablement, managed secret storage, or capability catalogs that
+  could accidentally mirror every implementation found in the codebase.
+- **Evidence to inspect:** The user's accepted provider list, current product
+  workflows and model routes, active provider documentation, credential
+  consumers used by those workflows, and whether repository-only integrations
+  are being mistaken for supported product scope.
+
 ### 2026-08-17 — Match tag architecture to the accepted ownership level
 
 - **User objection:** The plan oscillated between one long scalar purpose, an

@@ -1,6 +1,7 @@
 import { Film } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { ThemeToggle } from '@/ui/theme-toggle';
+import { AppSettingsDialog } from '@/features/settings/app-settings-dialog';
 import renkuLogo from '@/assets/renku-logo.svg';
 
 interface StudioAppHeaderProps {
@@ -46,6 +47,7 @@ export function StudioAppHeader({
               </span>
             </div>
           ) : null}
+          <AppSettingsDialog />
           <ThemeToggle />
         </div>
       </div>

@@ -29,6 +29,9 @@ export function projectErrorResponse(c: Context, error: unknown): Response {
 }
 
 function statusForStructuredError(code: string): 400 | 404 | 500 {
+  if (code === 'PROVIDER_CREDENTIALS001') {
+    return 400;
+  }
   if (
     code === 'PROJECT_DATA020' ||
     code === 'PROJECT_DATA040' ||

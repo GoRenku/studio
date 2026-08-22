@@ -1,5 +1,5 @@
 import { createProviderError } from '../errors.js';
-import { loadProviderEnvFiles } from '../../provider-env-files.js';
+import { createRenkuProviderSecretResolver } from '../../provider-credentials/index.js';
 import type {
   GenerateWorldLabsLocationWorldInput,
   WorldLabsCompletedWorld,
@@ -261,16 +261,11 @@ function readCompletedWorld(value: unknown): WorldLabsCompletedWorld {
 async function resolveApiKey(
   input: GenerateWorldLabsLocationWorldInput
 ): Promise<string> {
-  if (input.secretResolver) {
-    const key = await input.secretResolver.getSecret('WLT_API_KEY');
-    if (key) {
-      return key;
-    }
-  } else {
-    loadProviderEnvFiles();
-    if (process.env.WLT_API_KEY) {
-      return process.env.WLT_API_KEY;
-    }
+  const secretResolver =
+    input.secretResolver ?? createRenkuProviderSecretResolver();
+  const key = await secretResolver.getSecret('WLT_API_KEY');
+  if (key) {
+    return key;
   }
   throw createProviderError(
     'WORLD_LABS_API_KEY_MISSING',
