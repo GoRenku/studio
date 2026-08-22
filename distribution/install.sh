@@ -89,6 +89,8 @@ esac
 
 printf '\nRenku %s installed.\n' "$version"
 printf 'Start Studio: %s/renku studio start\n' "$BIN_ROOT"
+printf '%s\n' 'Studio will guide you through choosing its recommended Project Library on first launch.'
+printf '%s\n' 'For a custom location, run renku init <storage-root> before completing setup.'
 printf '%s\n' 'Install the separately released Renku plugin for Codex:'
 printf '%s\n' '  codex plugin marketplace add GoRenku/studio-skills --ref beta'
 printf '%s\n' '  codex plugin add renku@renku'

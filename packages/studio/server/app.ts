@@ -4,6 +4,7 @@ import type { Connect } from 'vite';
 import health from './routes/health.js';
 import { createProjectsRoute } from './routes/projects.js';
 import { createProviderCredentialsRoute } from './routes/provider-credentials.js';
+import { createSetupRoute } from './routes/setup.js';
 import { createStudioEventsRoute } from './routes/studio-events.js';
 import { createStudioRuntimeToken, type StudioRuntimeToken } from './studio-runtime-token.js';
 
@@ -18,6 +19,10 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
   const token = options.token ?? createStudioRuntimeToken();
   return new Hono()
     .route('/studio-api/health', health)
+    .route(
+      '/studio-api/setup',
+      createSetupRoute({ token, homeDir: options.homeDir })
+    )
     .route('/studio-api/projects', createProjectsRoute({ token }))
     .route(
       '/studio-api/provider-credentials',

@@ -362,6 +362,13 @@ fields start empty even when a saved value exists; React receives only a
 `configured` flag, represents it with a fixed mask, stages replacements
 locally, and persists only through an explicit container-owned action.
 
+First-run onboarding lives under `src/features/onboarding/` and is selected by
+the app-owned setup gate before configured Project hooks mount. The Project
+Library recommendation is read-only text: onboarding must not add a path input,
+folder picker, browser filesystem handle, or local path rule. The optional
+provider step composes the existing credential fields and draft controller;
+configuration existence remains the setup marker.
+
 Avoid:
 
 ```ts

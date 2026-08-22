@@ -76,9 +76,16 @@ Arguments:
 
 Behavior:
 
-- Creates `~/.config/renku/config.yaml` if it does not exist.
+- Creates the platform config file if it does not exist:
+  - macOS: `$HOME/.config/renku/config.yaml`;
+  - Windows: `%LOCALAPPDATA%\Renku\Studio\config.yaml`;
+  - Linux/Unix: `${XDG_CONFIG_HOME:-$HOME/.config}/renku/config.yaml`.
 - Leaves an existing config in place and reports its current storage root.
 - Fails when the storage root argument is missing.
+
+Studio can create its recommended Project Library during first-run setup. Run
+this command before completing onboarding when a custom Project Library is
+required; Studio does not offer a folder picker or relocate an existing library.
 
 ## `renku create`
 

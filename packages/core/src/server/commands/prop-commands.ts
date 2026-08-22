@@ -30,7 +30,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { assertPropOperationDocument } from '../department-design-json/validator.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 import {
   studioProjectShellResourceKey,
   studioPropNavigationResourceKey,

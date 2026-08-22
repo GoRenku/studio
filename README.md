@@ -104,20 +104,21 @@ while working on it.
 
 ### Choose where projects are stored
 
-By default, Renku Studio stores local projects under:
+On first launch, Studio offers one read-only recommended Project Library ending
+in `Renku`: `$HOME/Movies/Renku` on macOS, `%USERPROFILE%\Videos\Renku` on
+Windows, and `$HOME/Videos/Renku` on Linux/Unix. Confirming it creates the
+Project Library and global config.
 
-```text
-~/renku-studio-projects
-```
-
-Set `RENKU_STUDIO_STORAGE_ROOT` to use a different folder:
+For a custom Project Library, close Studio and run this before completing
+onboarding:
 
 ```bash
-RENKU_STUDIO_STORAGE_ROOT=/path/to/projects pnpm dev:studio
+renku init /absolute/path/to/projects
 ```
 
-Project databases, registered media, and durable creative documents live in
-that project storage root rather than in this source repository.
+Existing valid config is used unchanged. Project databases, registered media,
+and durable creative documents remain inside the configured Project Library,
+not this source repository.
 
 ### Configure generation providers (optional)
 
@@ -125,11 +126,14 @@ Provider credentials are not required to browse projects, edit project data,
 or run the normal local test suite. They are only needed when using the
 corresponding live generation provider.
 
-Use the top-level Settings button immediately left of the theme switcher to
-store the API keys used by Studio. Renku saves those keys in:
+Use the optional first-run provider step or the top-level Settings button
+immediately left of the theme switcher to store the API keys used by Studio.
+Renku saves those keys in the platform config directory as `.env`:
 
 ```text
-~/.config/renku/.env
+macOS:   $HOME/.config/renku/.env
+Windows: %LOCALAPPDATA%\Renku\Studio\.env
+Linux:   ${XDG_CONFIG_HOME:-$HOME/.config}/renku/.env
 ```
 
 The managed provider keys are:

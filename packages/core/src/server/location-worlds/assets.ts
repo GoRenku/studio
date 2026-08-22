@@ -6,7 +6,7 @@ import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { readLocationRecord } from '../database/access/locations.js';
 import { withGenerationProject } from '../generation/project-operation.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 
 export async function readLocationWorldResource(
   input: RenkuConfigPathOptions & { projectName?: string; locationId: string }

@@ -208,6 +208,7 @@ describe('runGeneration', () => {
     await expect(
       runGeneration({
         mode: 'live',
+        secretResolver: { getSecret: async () => null },
         catalog: createCatalog(),
         policy: {
           provider: 'test-provider',

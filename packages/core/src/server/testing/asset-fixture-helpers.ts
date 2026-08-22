@@ -12,7 +12,7 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 
 export interface TestAssetFixtureInput extends RenkuConfigPathOptions {
   projectName: string;

@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import {
   readVisualLanguageCatalog,
   readVisualLanguageCatalogEntry,
+  readVisualLanguageCatalogEntryFromRoot,
+  readVisualLanguageCatalogFromRoot,
 } from './reader.js';
 
 describe('visual language catalog reader', () => {
@@ -15,7 +17,7 @@ describe('visual language catalog reader', () => {
       entrySlug: 'locked-off-tripod',
     });
 
-    const catalog = await readVisualLanguageCatalog({ catalogRoot });
+    const catalog = await readVisualLanguageCatalogFromRoot(catalogRoot);
 
     expect(catalog.entries).toHaveLength(1);
     expect(catalog.entries[0]).toMatchObject({
@@ -35,10 +37,10 @@ describe('visual language catalog reader', () => {
     });
 
     await expect(
-      readVisualLanguageCatalogEntry({
+      readVisualLanguageCatalogEntryFromRoot(
         catalogRoot,
-        id: 'camera.locked-off-tripod',
-      })
+        'camera.locked-off-tripod'
+      )
     ).resolves.toMatchObject({ name: 'Locked-off tripod' });
   });
 
@@ -50,9 +52,19 @@ describe('visual language catalog reader', () => {
       skipPromptTemplate: true,
     });
 
-    await expect(readVisualLanguageCatalog({ catalogRoot })).rejects.toMatchObject({
-      code: 'VISUAL_LANGUAGE_CATALOG999',
-    });
+    await expect(
+      readVisualLanguageCatalogFromRoot(catalogRoot)
+    ).rejects.toMatchObject({ code: 'VISUAL_LANGUAGE_CATALOG999' });
+  });
+
+  it('reads the bundled catalog without exposing its absolute root', async () => {
+    const catalog = await readVisualLanguageCatalog();
+
+    expect(catalog.entries.length).toBeGreaterThan(0);
+    expect(catalog).not.toHaveProperty('catalogRoot');
+    await expect(
+      readVisualLanguageCatalogEntry({ id: catalog.entries[0]!.id })
+    ).resolves.toMatchObject({ id: catalog.entries[0]!.id });
   });
 });
 

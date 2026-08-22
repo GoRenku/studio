@@ -25,6 +25,9 @@ describeIf('ElevenLabs provider voice sample retrieval', () => {
   it('downloads a playable provider sample without generation', async () => {
     const audio = await fetchElevenLabsVoiceSampleAudio({
       voiceId: SHARED_VOICE_ID!,
+      secretResolver: {
+        getSecret: async (key) => process.env[key] ?? null,
+      },
     });
 
     expect(audio.provider).toBe('elevenlabs');

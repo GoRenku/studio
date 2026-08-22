@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { ProjectCreateReport } from '../../client/index.js';
 import { createProjectDataService } from '../index.js';
 import { resolveProjectDatabasePath, resolveProjectFolder } from '../files/project-paths.js';
-import { resolveRenkuStorageRoot } from '../renku-config.js';
+import { resolveRenkuStorageRoot } from '../config/index.js';
 import {
   createCommandBuiltBlankMovieProject,
   createCommandBuiltSampleMovieProject,

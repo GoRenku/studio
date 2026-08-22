@@ -1,5 +1,5 @@
 import { ProjectDataError } from '../project-data-error.js';
-import { resolveRenkuStorageRoot } from '../renku-config.js';
+import { resolveRenkuStorageRoot } from '../config/index.js';
 import { migrateProjectDatabase } from '../database/lifecycle/migrator.js';
 import { pathExists } from '../files/path-existence.js';
 import {

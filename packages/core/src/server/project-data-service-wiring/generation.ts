@@ -14,7 +14,8 @@ import { attachGenerationMedia } from '../generation/attachments.js';
 import { preparePurposeExecutionSpec } from '../generation/purpose-execution.js';
 import { effectiveProjectAspectRatio } from '../database/access/project-information.js';
 import { readProjectRecord } from '../database/access/project.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
+import { createRenkuProviderSecretResolver } from '../provider-credentials/index.js';
 import type { SceneStoryboardImagesImportDocument } from '../../client/scene-beats/index.js';
 import { attachSceneStoryboardImages } from '../generation/scene-storyboard-attachments.js';
 import { projectGenerationPreviewResource } from '../generation-preview-resource/projection.js';
@@ -165,6 +166,9 @@ export function createGenerationServiceWiring() {
           ...input,
           session,
           projectFolder,
+          secretResolver: createRenkuProviderSecretResolver({
+            homeDir: input.homeDir,
+          }),
           idGenerator: createRandomIdGenerator(),
           now: new Date().toISOString(),
         })
@@ -201,7 +205,7 @@ export function createGenerationServiceWiring() {
           runId: id,
           purpose: purpose.purpose,
         });
-        return runGeneration({ id, specRecord: record, purpose, projectAspectRatio: projectAspectRatio(session), approvalToken: input.approvalToken, mode: input.mode, session, projectFolder, outputRoot: outputRoot.absoluteRoot, outputProjectRelativeRoot: outputRoot.projectRelativeRoot, now: new Date().toISOString() });
+        return runGeneration({ id, specRecord: record, purpose, projectAspectRatio: projectAspectRatio(session), approvalToken: input.approvalToken, mode: input.mode, session, projectFolder, outputRoot: outputRoot.absoluteRoot, outputProjectRelativeRoot: outputRoot.projectRelativeRoot, secretResolver: createRenkuProviderSecretResolver({ homeDir: input.homeDir }), now: new Date().toISOString() });
       });
     },
     async readGenerationRun(input: ProjectInput & { runId: string }) {

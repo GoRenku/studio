@@ -7,7 +7,7 @@ import {
   createProjectDataService,
 } from '../index.js';
 import { resolveProjectDatabasePath, resolveProjectFolder } from '../files/project-paths.js';
-import { resolveRenkuStorageRoot } from '../renku-config.js';
+import { resolveRenkuStorageRoot } from '../config/index.js';
 import {
   createCommandBuiltBlankMovieProject,
   writeConfig,

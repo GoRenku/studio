@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectLibrary, ProjectSummary } from '../../client/index.js';
-import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../renku-config.js';
+import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../config/index.js';
 import {
   resolveProjectDatabasePath,
   resolveProjectFolder,

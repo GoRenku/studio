@@ -23,7 +23,7 @@ import {
 } from '../files/project-paths.js';
 import { pathExists } from '../files/path-existence.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { resolveRenkuStorageRoot } from '../renku-config.js';
+import { resolveRenkuStorageRoot } from '../config/index.js';
 import type { CreateMovieProjectInput } from '../project-data-service-contracts.js';
 import { DEFAULT_MOVIE_PROJECT_ASPECT_RATIO } from '../database/access/project-information.js';
 import { insertProjectLocaleRecords } from '../database/access/project-locales.js';

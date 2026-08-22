@@ -8,7 +8,7 @@ import type {
 import { createRandomIdGenerator, type ProjectIdGenerator } from '../../entity-ids.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 import { readScreenplayAggregate } from '../persistence/screenplay.js';
 import { assertValidScreenplayOperations } from '../validation/blocks.js';
 import { replaceScreenplayOpening } from './opening.js';

@@ -4,7 +4,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import {
   resolveRenkuStorageRoot,
   type RenkuConfigPathOptions,
-} from '../renku-config.js';
+} from '../config/index.js';
 import type { StudioProjectRef } from './events.js';
 
 export async function resolveStudioProjectRef(

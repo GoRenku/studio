@@ -8,7 +8,11 @@ import {
   type LoadedModelCatalog,
 } from '../../model-catalog.js';
 import { createSimulatedFallbackArtifacts } from '../../simulated-fallback-output.js';
-import type { ProviderJobContext, ProviderMode } from '../../types.js';
+import type {
+  ProviderJobContext,
+  ProviderMode,
+  SecretResolver,
+} from '../../types.js';
 import {
   modelTypeToMediaKind,
   type GenerationOutput,
@@ -40,6 +44,7 @@ export interface RunGenerationOptions {
   outputRoot?: string;
   outputProjectRelativeRoot?: string;
   inputRoot?: string;
+  secretResolver?: SecretResolver;
 }
 
 export async function runGeneration(
@@ -119,6 +124,7 @@ export async function runGeneration(
           catalogModelsDir,
           policy: options.policy,
           jobContext,
+          secretResolver: requireLiveSecretResolver(options.secretResolver),
         });
   const outputs = await persistOutputs({
     artifacts: result.artifacts,
@@ -275,11 +281,13 @@ async function runLiveGeneration(input: {
   catalogModelsDir: string;
   policy: GenerationPolicy;
   jobContext: ProviderJobContext;
+  secretResolver: SecretResolver;
 }) {
   const registry = createProviderRegistry({
     mode: 'live',
     catalog: input.catalog,
     catalogModelsDir: input.catalogModelsDir,
+    secretResolver: input.secretResolver,
   });
   const handler = registry.resolve({
     provider: input.policy.provider,
@@ -287,6 +295,15 @@ async function runLiveGeneration(input: {
     environment: 'cloud',
   });
   return handler.invoke(input.jobContext);
+}
+
+function requireLiveSecretResolver(
+  secretResolver: SecretResolver | undefined
+): SecretResolver {
+  if (!secretResolver) {
+    throw new Error('A SecretResolver is required for live generation.');
+  }
+  return secretResolver;
 }
 
 function artifactKindForMedia(mediaKind: string): string {

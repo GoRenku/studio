@@ -150,6 +150,11 @@ Each test should use:
 - a Renku config written into that E2E home;
 - guarded cleanup that refuses to remove paths outside the E2E root.
 
+The normal configured suite prewrites that isolated config. The focused
+first-run suite from [Decision 0085](./0085-use-platform-config-paths-and-first-run-setup.md)
+starts with no config and owns its missing, custom-configured, and invalid-config
+fixtures separately so it cannot disrupt ordinary Project E2E coverage.
+
 Passing tests should clean their project folders. Failed local tests should be
 able to keep project folders and Playwright artifacts for inspection.
 
@@ -208,4 +213,3 @@ intentionally triggers them.
 - `0027-use-details-header-for-save-notifications.md`
 - `0030-use-unified-studio-resource-refresh-components.md`
 - `0031-use-studio-server-owned-coordination-delivery.md`
-

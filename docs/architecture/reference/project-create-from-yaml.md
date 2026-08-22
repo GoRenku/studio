@@ -96,8 +96,13 @@ The `storageRoot` is configured in the global Renku config created by:
 renku init <storage-root>
 ```
 
-The config file lives at `~/.config/renku/config.yaml`, uses camelCase keys, and
-must contain an explicit `storageRoot`. There is no default storage root.
+The config file uses camelCase keys and must contain an explicit `storageRoot`.
+It lives at `$HOME/.config/renku/config.yaml` on macOS,
+`%LOCALAPPDATA%\Renku\Studio\config.yaml` on Windows, and
+`${XDG_CONFIG_HOME:-$HOME/.config}/renku/config.yaml` on Linux/Unix. Studio
+first-run setup can create the recommended Project Library; a custom location
+must be configured with `renku init <storage-root>` before onboarding is
+completed.
 
 If the target project folder already exists, creation should fail with a clear
 error unless a future explicit recovery/resume flow is designed.

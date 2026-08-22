@@ -1,18 +1,18 @@
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 import {
   findProviderCredentialDescriptor,
   listProviderCredentialDescriptors,
   type ProviderCredentialId,
-} from './catalog.js';
+} from '@gorenku/studio-engines';
+import {
+  resolveRenkuConfigDir,
+  type RenkuConfigPathOptions,
+} from '../config/index.js';
 
 const PROVIDER_ENV_FILE_NAME = '.env' as const;
 
-export interface ProviderCredentialStoreOptions {
-  homeDir?: string;
-  renkuConfigDir?: string;
-}
+export interface ProviderCredentialStoreOptions extends RenkuConfigPathOptions {}
 
 export interface ProviderCredentialStoreEntry {
   provider: ProviderCredentialId;
@@ -41,11 +41,7 @@ export class ProviderCredentialStoreError extends Error {
 export function resolveProviderCredentialFilePath(
   options: ProviderCredentialStoreOptions = {}
 ): string {
-  return path.join(
-    options.renkuConfigDir ??
-      path.join(options.homeDir ?? os.homedir(), '.config', 'renku'),
-    PROVIDER_ENV_FILE_NAME
-  );
+  return path.join(resolveRenkuConfigDir(options), PROVIDER_ENV_FILE_NAME);
 }
 
 export async function readProviderCredentialStore(
@@ -53,15 +49,12 @@ export async function readProviderCredentialStore(
 ): Promise<ProviderCredentialStoreState> {
   const document = await readProviderEnvironmentDocument(options);
   return {
-    providers: listProviderCredentialDescriptors().map((descriptor) => {
-      const storedValue = usableValue(
-        document.assignments.get(descriptor.environmentVariable)
-      );
-      return {
-        provider: descriptor.provider,
-        configured: Boolean(storedValue),
-      };
-    }),
+    providers: listProviderCredentialDescriptors().map((descriptor) => ({
+      provider: descriptor.provider,
+      configured: Boolean(
+        usableValue(document.assignments.get(descriptor.environmentVariable))
+      ),
+    })),
   };
 }
 
@@ -104,9 +97,7 @@ export async function writeProviderCredentials(
   for (const descriptor of listProviderCredentialDescriptors()) {
     const value = managedValues.get(descriptor.environmentVariable);
     if (value !== undefined) {
-      lines.push(
-        `${descriptor.environmentVariable}=${JSON.stringify(value)}`
-      );
+      lines.push(`${descriptor.environmentVariable}=${JSON.stringify(value)}`);
     }
   }
 
@@ -246,8 +237,6 @@ function usableValue(value: string | undefined): string | null {
   return value?.trim() ? value : null;
 }
 
-function isNodeError(
-  error: unknown
-): error is Error & { code: string } {
+function isNodeError(error: unknown): error is Error & { code: string } {
   return error instanceof Error && 'code' in error;
 }

@@ -8,7 +8,7 @@ import { updateAssetRecordMetadata } from '../database/access/assets.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 import { requireAssetOwner } from './ownership.js';
 import { readOwnedAsset } from './projection.js';
 import { assetOwnerResourceKeys } from './resource-keys.js';

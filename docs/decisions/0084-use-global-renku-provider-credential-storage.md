@@ -4,6 +4,11 @@ Date: 2026-08-22
 
 Status: accepted
 
+> **Path ownership update:** [Decision 0085](./0085-use-platform-config-paths-and-first-run-setup.md)
+> makes Core the platform config and credential-file owner and adds optional
+> reuse of this credential editor during first-run onboarding. The provider
+> catalog and write-only browser contract remain unchanged.
+
 ## Context
 
 Provider API keys apply to every Project on one device, but Renku previously

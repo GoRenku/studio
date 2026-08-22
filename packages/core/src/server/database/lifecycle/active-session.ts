@@ -1,4 +1,4 @@
-import { resolveRenkuStorageRoot } from '../../renku-config.js';
+import { resolveRenkuStorageRoot } from '../../config/index.js';
 import { resolveProjectFolder } from '../../files/project-paths.js';
 import { openProjectStore, type DatabaseSession } from './store.js';
 

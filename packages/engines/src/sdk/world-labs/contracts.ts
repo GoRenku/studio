@@ -23,7 +23,7 @@ export interface GenerateWorldLabsLocationWorldInput {
   displayName: string;
   prompt?: string;
   source: WorldLabsLocationWorldSource;
-  secretResolver?: SecretResolver;
+  secretResolver: SecretResolver;
   logger?: ProviderLogger;
   signal?: AbortSignal;
   fetch?: typeof fetch;

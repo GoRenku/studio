@@ -3,7 +3,7 @@ import type {
   SceneId,
   ScreenplayReferenceTarget,
 } from '../../../client/screenplay/index.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 
 export const FDX_IMPORTER_VERSION = 1;
 

@@ -65,6 +65,8 @@ try {
 
   Write-Host "`nRenku $($Release.version) installed."
   Write-Host "Start Studio: $BinRoot\renku.cmd studio start"
+  Write-Host 'Studio will guide you through choosing its recommended Project Library on first launch.'
+  Write-Host 'For a custom location, run renku init <storage-root> before completing setup.'
   Write-Host 'Install the separately released Renku plugin for Codex:'
   Write-Host '  codex plugin marketplace add GoRenku/studio-skills --ref beta'
   Write-Host '  codex plugin add renku@renku'

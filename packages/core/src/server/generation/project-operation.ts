@@ -1,7 +1,7 @@
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { openCurrentProjectHandle } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 
 export async function withGenerationProject<T>(
   input: RenkuConfigPathOptions & { projectName?: string },

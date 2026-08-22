@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 import {
   STUDIO_COORDINATION_EVENT_VERSION,
   type AppendStudioEventInput,

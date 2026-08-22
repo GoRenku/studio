@@ -1,8 +1,8 @@
-import type { SecretResolver } from '../types.js';
+import type { SecretResolver } from '@gorenku/studio-engines';
 import {
   readSavedProviderCredential,
   type ProviderCredentialStoreOptions,
-} from './env-file.js';
+} from './store.js';
 
 export function createRenkuProviderSecretResolver(
   options: ProviderCredentialStoreOptions = {}

@@ -7,11 +7,10 @@ import {
 } from '@gorenku/studio-diagnostics';
 import type {
   ReadVisualLanguageCatalogEntryInput,
-  ReadVisualLanguageCatalogInput,
   VisualLanguageCatalog,
   VisualLanguageCatalogEntry,
 } from '../../../client/index.js';
-import { ensureVisualLanguageCatalogRoot } from './paths.js';
+import { resolveBundledVisualLanguageCatalogRoot } from './bundled-catalog.js';
 import { VisualLanguageCatalogError } from './errors.js';
 import type { CatalogReadContext } from './contracts.js';
 import {
@@ -26,9 +25,15 @@ import {
 } from './frontmatter.js';
 
 export async function readVisualLanguageCatalog(
-  input: ReadVisualLanguageCatalogInput = {}
 ): Promise<VisualLanguageCatalog> {
-  const catalogRoot = await ensureVisualLanguageCatalogRoot(input);
+  return readVisualLanguageCatalogFromRoot(
+    await resolveBundledVisualLanguageCatalogRoot()
+  );
+}
+
+export async function readVisualLanguageCatalogFromRoot(
+  catalogRoot: string
+): Promise<VisualLanguageCatalog> {
   const context: CatalogReadContext = { catalogRoot, issues: [] };
   const explanationPaths = await findExplanationFiles(catalogRoot);
   const entries = (
@@ -62,7 +67,6 @@ export async function readVisualLanguageCatalog(
   });
 
   return {
-    catalogRoot,
     entries: entries.sort((left, right) => left.id.localeCompare(right.id)),
     warnings: result.warnings,
   };
@@ -71,12 +75,22 @@ export async function readVisualLanguageCatalog(
 export async function readVisualLanguageCatalogEntry(
   input: ReadVisualLanguageCatalogEntryInput
 ): Promise<VisualLanguageCatalogEntry> {
-  const catalog = await readVisualLanguageCatalog(input);
-  const entry = catalog.entries.find((candidate) => candidate.id === input.id);
+  return readVisualLanguageCatalogEntryFromRoot(
+    await resolveBundledVisualLanguageCatalogRoot(),
+    input.id
+  );
+}
+
+export async function readVisualLanguageCatalogEntryFromRoot(
+  catalogRoot: string,
+  id: string
+): Promise<VisualLanguageCatalogEntry> {
+  const catalog = await readVisualLanguageCatalogFromRoot(catalogRoot);
+  const entry = catalog.entries.find((candidate) => candidate.id === id);
   if (!entry) {
     throw new VisualLanguageCatalogError(
       'VISUAL_LANGUAGE_CATALOG011',
-      `Visual language catalog entry ${input.id} was not found.`,
+      `Visual language catalog entry ${id} was not found.`,
       {
         suggestion:
           'List the catalog entries and use one of the returned stable entry ids.',

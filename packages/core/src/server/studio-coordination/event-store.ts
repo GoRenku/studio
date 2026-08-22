@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { resolveRenkuConfigDir, type RenkuConfigPathOptions } from '../renku-config.js';
+import { resolveRenkuConfigDir, type RenkuConfigPathOptions } from '../config/index.js';
 import { studioCoordinationWarning, StudioCoordinationError } from './errors.js';
 import { formatStudioEventCursor, parseStudioEventCursor } from './event-cursors.js';
 import { validateStudioEvent } from './event-validation.js';

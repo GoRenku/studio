@@ -22,6 +22,7 @@ import type {
   CastVoiceValidationReport,
 } from '../../client/index.js';
 import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
+import { createRenkuProviderSecretResolver } from '../provider-credentials/index.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { createAssetMembership } from '../assets/ownership.js';
 import { readOwnedAsset } from '../assets/projection.js';
@@ -54,7 +55,7 @@ import {
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import {
@@ -271,6 +272,7 @@ export async function attachCastVoice(
       projectFolder,
       validated,
       document: input.document,
+      homeDir: input.homeDir,
       elevenLabsVoiceSampleFetcher: input.elevenLabsVoiceSampleFetcher,
     });
     const inserted = await insertCastVoiceWithSampleAsset({
@@ -535,6 +537,7 @@ async function prepareCastVoiceSampleAttachment(input: {
   projectFolder: string;
   validated: ValidatedCastVoiceAttachment;
   document: CastVoiceAttachmentCommandDocument;
+  homeDir?: string;
   elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
 }): Promise<PreparedCastVoiceSample> {
   if (input.document.kind === 'castVoiceElevenLabsSampleAttachment') {
@@ -565,9 +568,16 @@ async function prepareFileCastVoiceAttachment(input: {
 async function prepareElevenLabsVoiceSampleAttachment(input: {
   projectFolder: string;
   validated: ValidatedCastVoiceAttachment;
+  homeDir?: string;
   elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
 }): Promise<PreparedCastVoiceSample> {
-  const fetcher = input.elevenLabsVoiceSampleFetcher ?? fetchElevenLabsVoiceSampleAudio;
+  const fetcher = input.elevenLabsVoiceSampleFetcher ?? ((request) =>
+    fetchElevenLabsVoiceSampleAudio({
+      ...request,
+      secretResolver: createRenkuProviderSecretResolver({
+        homeDir: input.homeDir,
+      }),
+    }));
   const fetched = await fetcher({ voiceId: input.validated.voiceId });
   const temporaryFile = await writeProjectTemporaryFile({
     projectFolder: input.projectFolder,

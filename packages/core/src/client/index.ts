@@ -165,6 +165,10 @@ export type {
   ProjectSummary,
 } from './project-library.js';
 export type {
+  RenkuSetup,
+  RenkuSetupInitializationReport,
+} from './renku-setup.js';
+export type {
   CameraSection,
   ColorSwatch,
   InspirationAnalysis,
@@ -246,7 +250,6 @@ export {
 } from './visual-language-json-schemas.js';
 export type {
   ReadVisualLanguageCatalogEntryInput,
-  ReadVisualLanguageCatalogInput,
   VisualLanguageCatalog,
   VisualLanguageCatalogDifficulty,
   VisualLanguageCatalogEntry,

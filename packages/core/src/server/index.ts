@@ -7,26 +7,25 @@ export {
   readRenkuConfig,
   resolveRenkuConfigDir,
   resolveRenkuConfigPath,
+  resolveRecommendedRenkuStorageRoot,
   resolveRenkuStorageRoot,
-} from './renku-config.js';
+  initializeRenkuSetup,
+  readRenkuSetup,
+} from './config/index.js';
 export type {
   InitRenkuConfigOptions,
   InitRenkuConfigResult,
   ReadRenkuConfigOptions,
   RenkuConfig,
   RenkuConfigPathOptions,
-} from './renku-config.js';
+} from './config/index.js';
 export {
-  VISUAL_LANGUAGE_CATALOG_DIR_NAME,
   VisualLanguageCatalogError,
-  ensureVisualLanguageCatalogRoot,
   readVisualLanguageCatalog,
   readVisualLanguageCatalogEntry,
-  resolveVisualLanguageCatalogRoot,
 } from './catalog/visual-language/index.js';
 export type {
   ReadVisualLanguageCatalogEntryInput,
-  ReadVisualLanguageCatalogInput,
   VisualLanguageCatalog,
   VisualLanguageCatalogDifficulty,
   VisualLanguageCatalogEntry,

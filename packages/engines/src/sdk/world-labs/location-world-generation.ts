@@ -1,5 +1,4 @@
 import { createProviderError } from '../errors.js';
-import { createRenkuProviderSecretResolver } from '../../provider-credentials/index.js';
 import type {
   GenerateWorldLabsLocationWorldInput,
   WorldLabsCompletedWorld,
@@ -261,9 +260,7 @@ function readCompletedWorld(value: unknown): WorldLabsCompletedWorld {
 async function resolveApiKey(
   input: GenerateWorldLabsLocationWorldInput
 ): Promise<string> {
-  const secretResolver =
-    input.secretResolver ?? createRenkuProviderSecretResolver();
-  const key = await secretResolver.getSecret('WLT_API_KEY');
+  const key = await input.secretResolver.getSecret('WLT_API_KEY');
   if (key) {
     return key;
   }

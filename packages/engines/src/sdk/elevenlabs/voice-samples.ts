@@ -1,5 +1,4 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
-import { createRenkuProviderSecretResolver } from '../../provider-credentials/index.js';
 import type { ProviderLogger, SecretResolver } from '../../types.js';
 import { createProviderError, SdkErrorCode } from '../errors.js';
 import { parseElevenlabsError, runWithRetries } from './retry.js';
@@ -19,7 +18,7 @@ const ACCEPTED_API_BASE_URLS = new Set([
 export interface ElevenLabsVoiceSampleAudioRequest {
   voiceId: string;
   apiBaseUrl?: string;
-  secretResolver?: SecretResolver;
+  secretResolver: SecretResolver;
   logger?: ProviderLogger;
   signal?: AbortSignal;
   fetch?: typeof fetch;
@@ -100,8 +99,7 @@ export async function fetchElevenLabsVoiceSampleAudio(
   request: ElevenLabsVoiceSampleAudioRequest
 ): Promise<ElevenLabsVoiceSampleAudio> {
   const voiceId = requireVoiceId(request.voiceId);
-  const secretResolver =
-    request.secretResolver ?? createRenkuProviderSecretResolver();
+  const secretResolver = request.secretResolver;
   const apiBaseUrl = await resolveApiBaseUrl(
     request.apiBaseUrl,
     secretResolver

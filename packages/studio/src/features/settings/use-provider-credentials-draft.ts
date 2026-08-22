@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type {
   ProviderCredentialStatus,
   ProviderCredentialsResource,
@@ -41,7 +41,7 @@ export function useProviderCredentialsDraft(): ProviderCredentialsDraftControlle
     setError(null);
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -52,7 +52,7 @@ export function useProviderCredentialsDraft(): ProviderCredentialsDraftControlle
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const setValue = (provider: string, value: string) => {
     setDraftValues((current) => {

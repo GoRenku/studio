@@ -12,7 +12,7 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 import { assetOwnerResourceKeys } from './resource-keys.js';
 import { projectCoverSelectionResourceKeys } from '../studio-coordination/resource-keys.js';
 import { requireProjectCoverPrimaryImage } from '../project-covers/primary-image.js';

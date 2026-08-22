@@ -4,7 +4,6 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
-  createRenkuProviderSecretResolver,
   generateWorldLabsLocationWorld,
   type GenerateWorldLabsLocationWorldInput,
   type WorldLabsLocationWorldResult,
@@ -30,7 +29,8 @@ import {
 } from '../project-asset-files/index.js';
 import { joinProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
+import { createRenkuProviderSecretResolver } from '../provider-credentials/index.js';
 import { locationWorldTitle } from './assets.js';
 import { validateLocationWorldInput } from './input.js';
 

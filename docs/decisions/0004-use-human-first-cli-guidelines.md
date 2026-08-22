@@ -4,6 +4,11 @@ Date: 2026-05-05
 
 Status: accepted
 
+> **Path and onboarding update:** [Decision 0085](./0085-use-platform-config-paths-and-first-run-setup.md)
+> supersedes this decision's single all-platform config path and CLI-only
+> first-run requirement. The `renku init <storage-root>` command and YAML
+> contract remain unchanged.
+
 ## Context
 
 Renku Studio needs a command-line interface for humans and agents working with

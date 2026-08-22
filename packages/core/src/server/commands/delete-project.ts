@@ -12,7 +12,7 @@ import {
 } from '../files/project-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { DeleteProjectInput } from '../project-data-service-contracts.js';
-import { resolveRenkuStorageRoot } from '../renku-config.js';
+import { resolveRenkuStorageRoot } from '../config/index.js';
 import { validateProjectName } from './project-name-validation.js';
 
 export async function deleteProject(

@@ -6,7 +6,7 @@ import type {
   DepartmentCommandReport,
 } from '../../client/department-design.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';

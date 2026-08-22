@@ -1,6 +1,6 @@
 import type { ScreenplaySceneResource } from '../../../client/screenplay/index.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
 import { projectScreenplayScene } from '../projections/scene.js';
 

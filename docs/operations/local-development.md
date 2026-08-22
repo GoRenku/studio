@@ -24,12 +24,11 @@ pnpm test:cli
 pnpm dev:studio
 ```
 
-The Studio app uses `RENKU_STUDIO_STORAGE_ROOT` when set. Otherwise it uses the
-default local project folder:
-
-```text
-~/renku-studio-projects
-```
+Studio reads the normal Core-owned config. On this macOS development machine,
+that remains `$HOME/.config/renku/config.yaml`; existing configured Project
+Libraries are not moved or rewritten. Use `renku init <storage-root>` in an
+isolated test home when testing a custom location, or use the first-run browser
+flow when testing missing configuration.
 
 Engine e2e tests call real providers and can cost money. They stay behind
 explicit environment flags, for example:

@@ -8,7 +8,7 @@ import {
   resolveRenkuConfigDir,
   resolveRenkuStorageRoot,
   type RenkuConfigPathOptions,
-} from '../../renku-config.js';
+} from '../../config/index.js';
 import { openProjectStore, type DatabaseSession } from './store.js';
 
 const CURRENT_PROJECT_FILE = 'current-project.json';

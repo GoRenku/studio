@@ -11,9 +11,21 @@ import type {
   StudioAssetResponse,
 } from '@/services/studio-project-contracts';
 
+const readRenkuSetupMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/services/studio-setup-api', () => ({
+  readRenkuSetup: readRenkuSetupMock,
+  initializeRenkuSetup: vi.fn(),
+}));
+
 describe('App', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    readRenkuSetupMock.mockReset();
+    readRenkuSetupMock.mockResolvedValue({
+      status: 'configured',
+      storageRoot: '/tmp/projects',
+    });
     vi.useRealTimers();
     window.history.pushState({}, '', '/');
     window.__RENKU_STUDIO_BOOTSTRAP__ = { studioApiToken: 'test-token' };

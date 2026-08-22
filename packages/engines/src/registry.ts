@@ -13,7 +13,6 @@ import {
   lookupModel,
   type LoadedModelCatalog,
 } from './model-catalog.js';
-import { createRenkuProviderSecretResolver } from './provider-credentials/index.js';
 import { generateProviderImplementations } from './registry-generator.js';
 import { createSimulatedFallbackProducerHandler } from './simulated-fallback-producers.js';
 
@@ -46,7 +45,14 @@ export function createProviderRegistry(
   const mode: ProviderMode = options.mode ?? 'simulated';
   const logger = options.logger;
   const notifications = options.notifications;
-  const secretResolver = options.secretResolver ?? createRenkuProviderSecretResolver();
+  if (mode === 'live' && !options.secretResolver) {
+    throw new Error('A SecretResolver is required for live provider execution.');
+  }
+  const secretResolver = options.secretResolver ?? {
+    async getSecret() {
+      return null;
+    },
+  };
   const handlerCache = new Map<string, ProducerHandler>();
 
   // Generate implementations from catalog if provided, otherwise use minimal defaults

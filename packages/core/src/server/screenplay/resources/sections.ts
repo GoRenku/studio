@@ -1,7 +1,7 @@
 import type { ScreenplaySectionResource } from '../../../client/screenplay/index.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
 import { descendantSceneIds } from '../projections/structure.js';
 

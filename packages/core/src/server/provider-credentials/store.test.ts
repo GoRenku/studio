@@ -2,13 +2,13 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listProviderCredentialDescriptors } from './catalog.js';
+import { listProviderCredentialDescriptors } from '@gorenku/studio-engines';
+import { createRenkuProviderSecretResolver } from './resolver.js';
 import {
   readProviderCredentialStore,
   resolveProviderCredentialFilePath,
   writeProviderCredentials,
-} from './env-file.js';
-import { createRenkuProviderSecretResolver } from './resolver.js';
+} from './store.js';
 
 const temporaryRoots: string[] = [];
 
@@ -21,27 +21,7 @@ afterEach(async () => {
 });
 
 describe('provider credential store', () => {
-  it('defines only the accepted Settings providers in order', () => {
-    expect(listProviderCredentialDescriptors()).toEqual([
-      {
-        provider: 'fal-ai',
-        label: 'fal.ai',
-        environmentVariable: 'FAL_KEY',
-      },
-      {
-        provider: 'elevenlabs',
-        label: 'ElevenLabs',
-        environmentVariable: 'ELEVENLABS_API_KEY',
-      },
-      {
-        provider: 'world-labs',
-        label: 'World Labs',
-        environmentVariable: 'WLT_API_KEY',
-      },
-    ]);
-  });
-
-  it('projects sanitized configured status from the Renku credential file', async () => {
+  it('projects sanitized configured status from the Core-owned credential file', async () => {
     const options = await createOptions();
     await writeEnvironmentFile(
       options.homeDir,
@@ -50,23 +30,14 @@ describe('provider credential store', () => {
 
     await expect(readProviderCredentialStore(options)).resolves.toEqual({
       providers: [
-        {
-          provider: 'fal-ai',
-          configured: true,
-        },
-        {
-          provider: 'elevenlabs',
-          configured: true,
-        },
-        {
-          provider: 'world-labs',
-          configured: false,
-        },
+        { provider: 'fal-ai', configured: true },
+        { provider: 'elevenlabs', configured: true },
+        { provider: 'world-labs', configured: false },
       ],
     });
   });
 
-  it('ignores exported values and resolves the Renku-saved key', async () => {
+  it('ignores exported values and resolves only the Renku-saved key', async () => {
     const options = await createOptions();
     await writeEnvironmentFile(options.homeDir, 'FAL_KEY="saved-fal-key"\n');
     const originalValue = process.env.FAL_KEY;
@@ -83,7 +54,7 @@ describe('provider credential store', () => {
     }
   });
 
-  it('preserves unmanaged content and writes managed values atomically with owner-only permissions', async () => {
+  it('preserves unmanaged content and writes owner-only managed values', async () => {
     const options = await createOptions();
     await writeEnvironmentFile(
       options.homeDir,
@@ -93,7 +64,7 @@ describe('provider credential store', () => {
         '',
         'FAL_KEY=old-value',
         'FAL_KEY=duplicate-value',
-        'WLT_API_KEY=remove-me',
+        'WLT_API_KEY=keep-world-labs',
         '',
       ].join('\n')
     );
@@ -101,10 +72,7 @@ describe('provider credential store', () => {
     await writeProviderCredentials(
       [
         { provider: 'fal-ai', value: 'new-fal-value' },
-        {
-          provider: 'elevenlabs',
-          value: 'new-elevenlabs-value',
-        },
+        { provider: 'elevenlabs', value: 'new-elevenlabs-value' },
       ],
       options
     );
@@ -115,14 +83,14 @@ describe('provider credential store', () => {
     expect(contents).toContain('UNMANAGED_VALUE=keep-me\n');
     expect(contents.match(/FAL_KEY=/g)).toHaveLength(1);
     expect(contents).toContain('FAL_KEY="new-fal-value"\n');
-    expect(contents).toContain(
-      'ELEVENLABS_API_KEY="new-elevenlabs-value"\n'
-    );
-    expect(contents).toContain('WLT_API_KEY="remove-me"\n');
-    expect((await fs.stat(filePath)).mode & 0o777).toBe(0o600);
+    expect(contents).toContain('ELEVENLABS_API_KEY="new-elevenlabs-value"\n');
+    expect(contents).toContain('WLT_API_KEY="keep-world-labs"\n');
+    if (process.platform !== 'win32') {
+      expect((await fs.stat(filePath)).mode & 0o777).toBe(0o600);
+    }
   });
 
-  it('returns replacements on the next resolver lookup', async () => {
+  it('returns replacements on consecutive resolver lookups', async () => {
     const options = await createOptions();
     const resolver = createRenkuProviderSecretResolver(options);
 
@@ -137,7 +105,6 @@ describe('provider credential store', () => {
       options
     );
     await expect(resolver.getSecret('FAL_KEY')).resolves.toBe('second-value');
-
   });
 
   it('leaves the original file intact when atomic replacement fails', async () => {
@@ -169,7 +136,7 @@ describe('provider credential store', () => {
     rename.mockRestore();
   });
 
-  it('keeps generic resolution for unlisted consumers without exposing them as descriptors', async () => {
+  it('resolves unlisted keys without exposing them as Settings providers', async () => {
     const options = await createOptions();
     await writeEnvironmentFile(options.homeDir, 'UNLISTED_PROVIDER_KEY=saved-value\n');
     const resolver = createRenkuProviderSecretResolver(options);

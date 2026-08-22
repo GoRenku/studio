@@ -1,7 +1,7 @@
 import { openProjectSession } from './active-session.js';
 import { withCurrentProjectSession } from './current-project.js';
 import type { DatabaseSession } from './store.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 
 export async function withProjectDatabaseSession<T>(
   input: RenkuConfigPathOptions & { projectName?: string },

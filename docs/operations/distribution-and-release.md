@@ -71,6 +71,12 @@ irm https://downloads.gorenku.com/install.ps1 | iex
 renku about
 ```
 
+The installer does not create user configuration, choose a Project Library, or
+save provider credentials. Run `renku studio start` after installation and
+complete the browser setup. Studio recommends a whitespace-free `Renku`
+directory for the platform. To use a custom Project Library, run
+`renku init <storage-root>` before completing that setup.
+
 Add the released Studio Skills channel once:
 
 ```bash

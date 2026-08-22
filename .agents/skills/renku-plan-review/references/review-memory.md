@@ -10,6 +10,24 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-08-22 — Keep product-chosen filesystem names free of spaces
+
+- **User objection:** A proposed default Project Library folder was named
+  `Renku Projects`, but the user does not want spaces in folder paths or
+  filenames and chose the simpler name `Renku`.
+- **Planning rule:** When Renku chooses a filesystem name rather than preserving
+  a user-authored or externally defined name, prefer a concise whitespace-free
+  directory or filename. Show the exact generated path in plans, contracts,
+  examples, tests, and checklists; do not silently reintroduce a display label
+  such as “Renku Projects” as the on-disk name.
+- **Apply when:** Planning default roots, Project Library locations, generated
+  folders, filenames, installer paths, fixtures, or CLI examples whose on-disk
+  names are controlled by Renku.
+- **Evidence to inspect:** Platform path tables, filesystem resolvers, visible
+  onboarding copy, HTTP examples, CLI documentation, tests, and fixtures that
+  contain product-generated directory or file names. Preserve existing paths
+  unless the user separately authorizes a rename or migration.
+
 ### 2026-08-22 — Establish the visual target before implementing design-sensitive UI
 
 - **User objection:** A credential dialog met the functional and copy

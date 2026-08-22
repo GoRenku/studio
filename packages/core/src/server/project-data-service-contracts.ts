@@ -150,7 +150,7 @@ import type {
   StudioCurrent,
   StudioProjectRef,
 } from './studio-coordination/events.js';
-import type { RenkuConfigPathOptions } from './renku-config.js';
+import type { RenkuConfigPathOptions } from './config/index.js';
 import type { ProjectIdGenerator } from './entity-ids.js';
 import type {
   ImportFdxScreenplayInput,

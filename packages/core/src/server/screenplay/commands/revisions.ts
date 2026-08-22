@@ -5,7 +5,7 @@ import type {
 } from '../../../client/screenplay/index.js';
 import { createRandomIdGenerator } from '../../entity-ids.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 import {
   listScreenplayRevisionSummaries,
   readScreenplayRevision as readStoredScreenplayRevision,

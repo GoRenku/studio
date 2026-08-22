@@ -1,4 +1,7 @@
-import { runGeneration as runEngineGeneration } from '@gorenku/studio-engines';
+import {
+  runGeneration as runEngineGeneration,
+  type SecretResolver,
+} from '@gorenku/studio-engines';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
   GenerationRun,
@@ -30,6 +33,7 @@ export async function runGeneration(input: {
   outputRoot?: string;
   outputProjectRelativeRoot?: string;
   now: string;
+  secretResolver?: SecretResolver;
 }): Promise<GenerationRunReport> {
   const spec = await preparePurposeExecutionSpec({
     spec: input.specRecord.spec,
@@ -87,6 +91,7 @@ export async function runGeneration(input: {
       inputRoot: input.projectFolder,
       outputRoot: input.outputRoot,
       outputProjectRelativeRoot: input.outputProjectRelativeRoot,
+      secretResolver: input.secretResolver,
     });
     const run = insertGenerationRunRecord(input.session, {
         ...baseRun,

@@ -119,10 +119,11 @@ Visual Language prompt and guidance prose belongs in Markdown assets, not in
 SQLite text columns. SQLite owns the entry identity, category, priority,
 ordering, exclusive Asset membership, and focused domain links.
 
-The system Visual Language Catalog is outside project SQLite. Catalog entries
-live under the Renku config visual-language catalog folder and are copied into a
-project only when a user chooses to create an editable project Visual Language
-entry from them.
+The system Visual Language Catalog is immutable installed application content
+read directly from the Core package. It is outside project SQLite and is never
+copied into the Renku config directory. Project-authored Visual Language
+records, Markdown guidance and prompt templates, Inspiration content,
+analyses, Lookbooks, and related media remain beneath the Project directory.
 
 ## Markdown Frontmatter
 

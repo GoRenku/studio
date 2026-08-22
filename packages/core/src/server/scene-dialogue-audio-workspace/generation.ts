@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import {
   bindGenerationSemanticValues,
   describeGenerationModelInputs,
+  type SecretResolver,
 } from '@gorenku/studio-engines';
 import type {
   GenerationSpec,
@@ -67,6 +68,7 @@ export async function generateSceneDialogueAudioTake(input: {
   approveLiveProviderRun?: boolean;
   idGenerator: ProjectIdGenerator;
   now: string;
+  secretResolver: SecretResolver;
 }): Promise<SceneDialogueAudioWorkspaceMutationReport> {
   if (!input.simulate && input.approveLiveProviderRun !== true) {
     throw new ProjectDataError(
@@ -125,6 +127,7 @@ export async function generateSceneDialogueAudioTake(input: {
     projectFolder: input.projectFolder,
     outputRoot: outputRoot.absoluteRoot,
     outputProjectRelativeRoot: outputRoot.projectRelativeRoot,
+    secretResolver: input.secretResolver,
     now: input.now,
   });
   if (!report.valid) {

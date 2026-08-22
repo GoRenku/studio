@@ -1,4 +1,4 @@
-import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../renku-config.js';
+import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../config/index.js';
 import { createProjectDataService } from '../project-data-service.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {

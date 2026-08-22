@@ -6,7 +6,7 @@ import type {
 import { readProjectRecord } from '../../database/access/project.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 import { studioScreenplayResourceKey } from '../../studio-coordination/resource-keys.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
 

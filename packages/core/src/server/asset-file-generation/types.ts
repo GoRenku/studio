@@ -1,5 +1,5 @@
 import type { ProjectIdGenerator } from '../entity-ids.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 
 export interface ReadAssetFileGenerationProvenanceInput
   extends RenkuConfigPathOptions {

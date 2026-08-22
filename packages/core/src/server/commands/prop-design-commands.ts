@@ -24,7 +24,7 @@ import {
   type ProjectIdGenerator,
 } from '../entity-ids.js';
 import { ProjectDataError } from '../project-data-error.js';
-import type { RenkuConfigPathOptions } from '../renku-config.js';
+import type { RenkuConfigPathOptions } from '../config/index.js';
 import { projectSummary } from './department-command-support.js';
 import { propResourceKeys } from './prop-commands.js';
 

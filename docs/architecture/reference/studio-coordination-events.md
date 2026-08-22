@@ -251,7 +251,7 @@ For example, a CLI command can request focus:
   "projectRef": {
     "name": "constantinople",
     "id": "project_01HT...",
-    "storageRoot": "/Users/me/Movies/renku"
+    "storageRoot": "/Users/me/Movies/Renku"
   },
   "focus": {
     "screen": "movieStudio",
@@ -269,7 +269,7 @@ applied result separately:
   "projectRef": {
     "name": "constantinople",
     "id": "project_01HT...",
-    "storageRoot": "/Users/me/Movies/renku"
+    "storageRoot": "/Users/me/Movies/Renku"
   },
   "focus": {
     "screen": "movieStudio",
@@ -305,10 +305,12 @@ Do not keep aliases or shims for obsolete event names.
 
 ## Location
 
-The event store lives under the Renku config directory:
+The event store lives under the Core-resolved Renku config directory:
 
 ```text
-~/.config/renku/studio-events.jsonl
+macOS:   $HOME/.config/renku/studio-events.jsonl
+Windows: %LOCALAPPDATA%\Renku\Studio\studio-events.jsonl
+Linux:   ${XDG_CONFIG_HOME:-$HOME/.config}/renku/studio-events.jsonl
 ```
 
 Each line is one JSON event.
@@ -316,10 +318,10 @@ Each line is one JSON event.
 The event store path should be owned by `@gorenku/studio-core/server` so the CLI,
 Studio server, and tests use one implementation.
 
-The global config remains:
+The global config uses the same directory:
 
 ```text
-~/.config/renku/config.yaml
+<Renku config directory>/config.yaml
 ```
 
 Do not put Studio focus or current UI selection inside `config.yaml`.
@@ -593,7 +595,7 @@ Example:
   "projectRef": {
     "name": "constantinople",
     "id": "project_01HT...",
-    "storageRoot": "/Users/me/Movies/renku"
+    "storageRoot": "/Users/me/Movies/Renku"
   },
   "surface": "projectInformation",
   "changedFields": ["title", "logline"],
@@ -717,7 +719,7 @@ Example:
   "projectRef": {
     "name": "constantinople",
     "id": "project_01HT...",
-    "storageRoot": "/Users/me/Movies/renku"
+    "storageRoot": "/Users/me/Movies/Renku"
   },
   "focus": {
     "screen": "movieStudio",
@@ -763,7 +765,7 @@ Example:
   "projectRef": {
     "name": "constantinople",
     "id": "project_01HT...",
-    "storageRoot": "/Users/me/Movies/renku"
+    "storageRoot": "/Users/me/Movies/Renku"
   },
   "focus": {
     "screen": "movieStudio",
@@ -1231,7 +1233,7 @@ Example when Studio is not running but a focus request is pending:
     "projectRef": {
       "name": "constantinople",
       "id": "project_01HT...",
-      "storageRoot": "/Users/me/Movies/renku"
+      "storageRoot": "/Users/me/Movies/Renku"
     },
     "focus": {
       "screen": "movieStudio",

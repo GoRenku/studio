@@ -1,25 +1,18 @@
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
-import {
-  StructuredError,
-  createDiagnosticError,
-  type DiagnosticIssue,
-} from '@gorenku/studio-diagnostics';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { RenkuConfigError } from './errors.js';
+import {
+  resolveRenkuConfigPath,
+  type RenkuConfigPathOptions,
+} from './paths.js';
 
 export const RENKU_CONFIG_VERSION = '0.1.0' as const;
-export const RENKU_CONFIG_DIR_NAME = 'renku' as const;
-export const RENKU_CONFIG_FILE_NAME = 'config.yaml' as const;
 
 export interface RenkuConfig {
   version: typeof RENKU_CONFIG_VERSION;
   storageRoot: string;
-}
-
-export interface RenkuConfigPathOptions {
-  homeDir?: string;
-  storageRoot?: string;
 }
 
 export interface ReadRenkuConfigOptions extends RenkuConfigPathOptions {
@@ -36,37 +29,6 @@ export interface InitRenkuConfigResult {
   configDir: string;
   configPath: string;
   storageRoot: string;
-}
-
-export class RenkuConfigError extends StructuredError {
-  constructor(
-    code: string,
-    message: string,
-    options: {
-      issues?: DiagnosticIssue[];
-      suggestion?: string;
-    } = {}
-  ) {
-    super({
-      code,
-      message,
-      issues: options.issues,
-      suggestion: options.suggestion,
-    });
-    this.name = 'RenkuConfigError';
-  }
-}
-
-export function resolveRenkuConfigDir(
-  options: RenkuConfigPathOptions = {}
-): string {
-  return path.join(options.homeDir ?? os.homedir(), '.config', RENKU_CONFIG_DIR_NAME);
-}
-
-export function resolveRenkuConfigPath(
-  options: RenkuConfigPathOptions = {}
-): string {
-  return path.join(resolveRenkuConfigDir(options), RENKU_CONFIG_FILE_NAME);
 }
 
 export async function readRenkuConfig(
@@ -102,7 +64,7 @@ export async function initRenkuConfig(
   const configPath = options.configPath ?? resolveRenkuConfigPath(options);
   const configDir = path.dirname(configPath);
 
-  if (await fileExists(configPath)) {
+  if (await configFileExists(configPath)) {
     const config = await readRenkuConfig({ ...options, configPath });
     return {
       status: 'existing',
@@ -134,10 +96,41 @@ export async function initRenkuConfig(
   };
 }
 
+export async function configFileExists(configPath: string): Promise<boolean> {
+  try {
+    const stats = await fs.stat(configPath);
+    if (!stats.isFile()) {
+      throw new RenkuConfigError(
+        'CONFIG009',
+        `Renku config path exists but is not a file: ${configPath}.`
+      );
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof RenkuConfigError) {
+      throw error;
+    }
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function readConfigFile(configPath: string): Promise<string> {
   try {
+    const stats = await fs.stat(configPath);
+    if (!stats.isFile()) {
+      throw new RenkuConfigError(
+        'CONFIG009',
+        `Renku config path exists but is not a file: ${configPath}.`
+      );
+    }
     return await fs.readFile(configPath, 'utf8');
   } catch (error) {
+    if (error instanceof RenkuConfigError) {
+      throw error;
+    }
     if (isNodeError(error) && error.code === 'ENOENT') {
       throw new RenkuConfigError(
         'CONFIG002',
@@ -178,7 +171,7 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
     }
   }
 
-  assertAllowedKeys(value, ['version', 'storageRoot'], [], configPath);
+  assertAllowedKeys(value, ['version', 'storageRoot'], configPath);
 
   if (value.version !== RENKU_CONFIG_VERSION) {
     throw new RenkuConfigError(
@@ -203,7 +196,6 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
 function assertAllowedKeys(
   value: Record<string, unknown>,
   allowedKeys: readonly string[],
-  pathSegments: readonly string[],
   configPath: string
 ): void {
   const allowed = new Set(allowedKeys);
@@ -211,16 +203,15 @@ function assertAllowedKeys(
   if (!unknownKey) {
     return;
   }
-  const fullPath = [...pathSegments, unknownKey].join('.');
   throw new RenkuConfigError(
     'CONFIG013',
-    `Unknown Renku config key "${fullPath}" at ${configPath}.`,
+    `Unknown Renku config key "${unknownKey}" at ${configPath}.`,
     {
       issues: [
         createDiagnosticError(
           'CONFIG013',
-          `Unknown Renku config key "${fullPath}".`,
-          { path: [...pathSegments, unknownKey], context: 'Renku config' },
+          `Unknown Renku config key "${unknownKey}".`,
+          { path: [unknownKey], context: 'Renku config' },
           'Remove the unknown key or update Renku to a version that supports it.'
         ),
       ],
@@ -246,27 +237,6 @@ async function ensureDirectory(directoryPath: string, label: string): Promise<vo
     if (isNodeError(error) && error.code === 'ENOENT') {
       await fs.mkdir(directoryPath, { recursive: true });
       return;
-    }
-    throw error;
-  }
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    const stats = await fs.stat(filePath);
-    if (!stats.isFile()) {
-      throw new RenkuConfigError(
-        'CONFIG009',
-        `Renku config path exists but is not a file: ${filePath}.`
-      );
-    }
-    return true;
-  } catch (error) {
-    if (error instanceof RenkuConfigError) {
-      throw error;
-    }
-    if (isNodeError(error) && error.code === 'ENOENT') {
-      return false;
     }
     throw error;
   }

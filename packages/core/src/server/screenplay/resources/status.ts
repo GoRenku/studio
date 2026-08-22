@@ -1,6 +1,6 @@
 import type { ScreenplayStatusReport } from '../../../client/screenplay/index.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
-import type { RenkuConfigPathOptions } from '../../renku-config.js';
+import type { RenkuConfigPathOptions } from '../../config/index.js';
 import { studioScreenplayResourceKey } from '../../studio-coordination/resource-keys.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
 import { readScreenplayImport } from '../fdx/persistence/import-record.js';

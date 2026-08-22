@@ -1,7 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 
 export interface VisualLanguageCatalog {
-  catalogRoot: string;
   entries: VisualLanguageCatalogEntry[];
   warnings: DiagnosticIssue[];
 }
@@ -29,12 +28,6 @@ export type VisualLanguageCatalogDifficulty =
   | 'intermediate'
   | 'advanced';
 
-export interface ReadVisualLanguageCatalogInput {
-  homeDir?: string;
-  catalogRoot?: string;
-}
-
-export interface ReadVisualLanguageCatalogEntryInput
-  extends ReadVisualLanguageCatalogInput {
+export interface ReadVisualLanguageCatalogEntryInput {
   id: string;
 }

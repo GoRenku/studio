@@ -5,7 +5,7 @@ import type {
   AssetPage,
 } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../renku-config.js';
+import { resolveRenkuStorageRoot, type RenkuConfigPathOptions } from '../config/index.js';
 import { openProjectStore, type DatabaseSession } from '../database/lifecycle/store.js';
 import { isPathInside, resolveProjectFolder } from '../files/project-paths.js';
 import { normalizeProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';

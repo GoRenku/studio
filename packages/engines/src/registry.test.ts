@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { createProviderRegistry } from './index.js';
 
 describe('createProviderRegistry', () => {
+  it('requires an injected secret resolver for live providers', () => {
+    expect(() => createProviderRegistry({ mode: 'live' })).toThrow(
+      'A SecretResolver is required for live provider execution.'
+    );
+  });
+
   it('returns simulated handlers by default', async () => {
     const registry = createProviderRegistry();
     const handler = registry.resolve({

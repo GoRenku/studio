@@ -13,7 +13,7 @@ import { readGenerationPurpose } from './generation/purposes.js';
 import { resolveGenerationReferenceProjectFile } from './generation/references.js';
 import { projectGenerationPreviewResource } from './generation-preview-resource/projection.js';
 import { ProjectDataError } from './project-data-error.js';
-import type { RenkuConfigPathOptions } from './renku-config.js';
+import type { RenkuConfigPathOptions } from './config/index.js';
 
 export interface ReadAssetFileGenerationRequestInput
   extends RenkuConfigPathOptions {
