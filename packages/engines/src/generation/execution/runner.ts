@@ -36,16 +36,20 @@ import {
 import { hashGenerationRequest } from './request-hash.js';
 import { validateGenerationProviderPayload } from './provider-payload-validation.js';
 
-export interface RunGenerationOptions {
+interface RunGenerationBaseOptions {
   policy: GenerationPolicy;
   request: GenerationRequest;
-  mode: ProviderMode;
   catalog?: LoadedModelCatalog;
   outputRoot?: string;
   outputProjectRelativeRoot?: string;
   inputRoot?: string;
-  secretResolver?: SecretResolver;
 }
+
+export type RunGenerationOptions = RunGenerationBaseOptions &
+  (
+    | { mode: 'simulated'; secretResolver?: never }
+    | { mode: Exclude<ProviderMode, 'simulated'>; secretResolver: SecretResolver }
+  );
 
 export async function runGeneration(
   options: RunGenerationOptions
@@ -124,7 +128,7 @@ export async function runGeneration(
           catalogModelsDir,
           policy: options.policy,
           jobContext,
-          secretResolver: requireLiveSecretResolver(options.secretResolver),
+          secretResolver: options.secretResolver,
         });
   const outputs = await persistOutputs({
     artifacts: result.artifacts,
@@ -295,15 +299,6 @@ async function runLiveGeneration(input: {
     environment: 'cloud',
   });
   return handler.invoke(input.jobContext);
-}
-
-function requireLiveSecretResolver(
-  secretResolver: SecretResolver | undefined
-): SecretResolver {
-  if (!secretResolver) {
-    throw new Error('A SecretResolver is required for live generation.');
-  }
-  return secretResolver;
 }
 
 function artifactKindForMedia(mediaKind: string): string {

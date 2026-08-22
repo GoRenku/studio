@@ -2,30 +2,30 @@
  * Qwen Image Provider Integration Test (native provider uploads)
  *
  * Run with: RUN_QWEN_IMAGE_TEST=1 pnpm test:e2e
- * Requires env vars in ~/.config/renku/.env:
+ * Requires a credential in the Renku provider credential file:
  *   - REPLICATE_API_TOKEN
  *
  * To save output for visual inspection:
  * RUN_QWEN_IMAGE_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:e2e
  */
 
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createProviderRegistry } from '../../src/registry.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
 import { buildImageExtras, type ImageModel } from './schema-helpers.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 import { saveTestArtifact } from './test-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const RUN_TEST = process.env.RUN_QWEN_IMAGE_TEST;
-const API_TOKEN = process.env.REPLICATE_API_TOKEN;
-const hasRequiredEnvVars = RUN_TEST && API_TOKEN;
+const RUN_TEST = process.env.RUN_QWEN_IMAGE_TEST === '1';
 
-const describeIf = hasRequiredEnvVars ? describe : describe.skip;
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
 function loadFixture(filename: string): { data: Buffer; mimeType: string } {
   const fixturePath = join(__dirname, 'fixtures', filename);
@@ -40,6 +40,12 @@ function loadFixture(filename: string): { data: Buffer; mimeType: string } {
 }
 
 describeIf('Qwen Image provider integration (native uploads)', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver(
+      'REPLICATE_API_TOKEN'
+    );
+  });
+
   it('generates image with multiple image inputs via provider upload', async () => {
     const provider = 'replicate';
     const model: ImageModel = 'qwen/qwen-image';
@@ -51,11 +57,7 @@ describeIf('Qwen Image provider integration (native uploads)', () => {
     // Create registry (adapter handles native file uploads)
     const registry = createProviderRegistry({
       mode: 'live',
-      secretResolver: {
-        async getSecret(key) {
-          return process.env[key] ?? null;
-        },
-      },
+      secretResolver,
     });
 
     const handler = registry.resolve({ provider, model, environment: 'local' });

@@ -452,8 +452,8 @@ than retaining two file owners. Keep only the provider descriptor catalog under
 `packages/engines/src/provider-credentials/`; update its `index.ts` to remain a
 thin entrypoint for that catalog. Delete the unused production-default
 `packages/engines/src/provider-env-files.ts` and make provider E2E setup receive
-credentials from its explicit test environment instead of a production path
-fallback.
+the Core-owned filesystem resolver through explicit test injection. E2E tests
+must not load API keys into `process.env` or accept exported API-key values.
 
 ### Intended Studio module shape
 
@@ -716,8 +716,9 @@ their owning Core workflow:
   updated directly before the Engines default resolver is deleted.
 
 Simulated generation does not require a resolver. Provider unit tests inject
-test resolvers. Provider E2E tests receive credentials through an explicit test
-environment and must not discover a user config path inside Engines.
+test resolvers. Provider E2E tests use the Core-owned filesystem resolver and
+must not discover a user config path inside Engines, load API keys into
+`process.env`, or accept exported API-key values.
 
 ### Bundled Visual Language Catalog
 
@@ -1125,7 +1126,7 @@ transition.
 - [x] Delete Engines' config-file store, resolver, and unused default provider env loader.
 - [x] Preserve unmanaged `.env` lines, current write-only API behavior, fresh per-operation reads, and POSIX `0600` writes.
 - [x] Preserve the existing Settings dialog behavior after the filesystem-owner move.
-- [x] Keep provider tests and E2E credential setup explicit and isolated from the real user directory.
+- [x] Keep provider unit-test credentials explicit and isolated; make live E2E tests use the same Core-owned saved-credential resolver as production.
 
 ### Visual Language Slice
 

@@ -11,22 +11,31 @@
  * Examples:
  *
  * # Run text response test
- * RUN_OPENAI_TEXT=1 pnpm test:integration
+ * RUN_OPENAI_TEXT=1 pnpm test:e2e
  *
  * # Run all OpenAI tests
- * RUN_ALL_OPENAI_TESTS=1 pnpm test:integration
+ * RUN_ALL_OPENAI_TESTS=1 pnpm test:e2e
+ *
+ * Requires OPENAI_API_KEY in the Renku provider credential file.
  */
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createOpenAiLlmHandler } from '../../src/producers/llm/openai.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 
-const describeIfKey = process.env.OPENAI_API_KEY ? describe : describe.skip;
-const describeIfText =
-  process.env.RUN_OPENAI_TEXT || process.env.RUN_ALL_OPENAI_TESTS ? describe : describe.skip;
+const RUN_TEST =
+  process.env.RUN_OPENAI_TEXT === '1' ||
+  process.env.RUN_ALL_OPENAI_TESTS === '1';
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
-describeIfKey('OpenAI integration', () => {
-  describeIfText('text response', () => {
+describeIf('OpenAI integration', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver('OPENAI_API_KEY');
+  });
+
+  describe('text response', () => {
     it('executes live Responses API and returns artifacts', async () => {
     const handler = createOpenAiLlmHandler()({
       descriptor: {
@@ -35,11 +44,7 @@ describeIfKey('OpenAI integration', () => {
         environment: 'local',
       },
       mode: 'live',
-      secretResolver: {
-        async getSecret(key) {
-          return key === 'OPENAI_API_KEY' ? process.env.OPENAI_API_KEY ?? null : null;
-        },
-      },
+      secretResolver,
       logger: undefined,
     });
 

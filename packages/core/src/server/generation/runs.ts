@@ -84,15 +84,20 @@ export async function runGeneration(input: {
     startedAt: input.now,
   };
   try {
-    const result = await runEngineGeneration({
+    const engineInput = {
       policy: assembly.policy,
       request: assembly.request,
-      mode: input.mode,
       inputRoot: input.projectFolder,
       outputRoot: input.outputRoot,
       outputProjectRelativeRoot: input.outputProjectRelativeRoot,
-      secretResolver: input.secretResolver,
-    });
+    };
+    const result = input.mode === 'simulated'
+      ? await runEngineGeneration({ ...engineInput, mode: 'simulated' })
+      : await runEngineGeneration({
+          ...engineInput,
+          mode: 'live',
+          secretResolver: requireLiveSecretResolver(input.secretResolver),
+        });
     const run = insertGenerationRunRecord(input.session, {
         ...baseRun,
         status: input.mode === 'simulated' ? 'simulated' : 'completed',
@@ -129,6 +134,15 @@ export async function runGeneration(input: {
     });
     return { valid: true, run, diagnostics: [diagnostic] };
   }
+}
+
+function requireLiveSecretResolver(
+  secretResolver: SecretResolver | undefined
+): SecretResolver {
+  if (!secretResolver) {
+    throw new Error('Live generation requires the Core provider credential resolver.');
+  }
+  return secretResolver;
 }
 
 export function readGenerationRun(input: {

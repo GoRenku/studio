@@ -25,6 +25,10 @@ ignores exported shell values and reads each saved value for the next provider
 operation, while only catalog entries are exposed or writable through Studio
 Settings.
 
+Live-provider E2E tests and provider catalog tooling receive that same Core
+resolver. They never read API keys from `process.env`; selecting an operation
+without a saved key fails with the missing credential name.
+
 The Core environment-file owner preserves unmanaged lines, rewrites managed entries
 in catalog order, uses an atomic sibling-file replacement, and sets the
 resulting credential file to `0600`. Read projections contain presence and

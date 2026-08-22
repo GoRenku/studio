@@ -1,25 +1,32 @@
 /**
  * Replicate Provider Integration Test
  *
- * Run with: RUN_REPLICATE_TEST=1 pnpm test:integration
- * Requires: REPLICATE_API_TOKEN env var
+ * Run with: RUN_REPLICATE_TEST=1 pnpm test:e2e
+ * Requires REPLICATE_API_TOKEN in the Renku provider credential file.
  *
  * To save output for visual inspection:
- * RUN_REPLICATE_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:integration
+ * RUN_REPLICATE_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:e2e
  */
 
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { createProviderRegistry } from '../../src/registry.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
 import { buildImageExtras, type ImageModel } from './schema-helpers.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 import { saveTestArtifact } from './test-utils.js';
 
-const RUN_TEST = process.env.RUN_REPLICATE_TEST;
-const API_TOKEN = process.env.REPLICATE_API_TOKEN;
+const RUN_TEST = process.env.RUN_REPLICATE_TEST === '1';
 
-const describeIf = RUN_TEST && API_TOKEN ? describe : describe.skip;
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
 describeIf('Replicate provider integration', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver(
+      'REPLICATE_API_TOKEN'
+    );
+  });
+
   it('generates image via registry lookup (end-to-end)', async () => {
     const provider = 'replicate';
     const model: ImageModel = 'bytedance/seedream-4';
@@ -27,11 +34,7 @@ describeIf('Replicate provider integration', () => {
     // Full end-to-end: use registry like CLI does
     const registry = createProviderRegistry({
       mode: 'live',
-      secretResolver: {
-        async getSecret(key) {
-          return process.env[key] ?? null;
-        },
-      },
+      secretResolver,
     });
 
     const handler = registry.resolve({ provider, model, environment: 'local' });

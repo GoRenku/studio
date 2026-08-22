@@ -2,7 +2,7 @@
  * ElevenLabs Provider Integration Test
  *
  * Run with: RUN_ELEVENLABS_TEST=1 pnpm test:e2e
- * Requires: ELEVENLABS_API_KEY env var
+ * Requires ELEVENLABS_API_KEY in the Renku provider credential file.
  *
  * To save output for visual inspection:
  * RUN_ELEVENLABS_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:e2e
@@ -11,21 +11,25 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createProviderRegistry, type CreateProviderRegistryOptions } from '../../src/registry.js';
 import { loadModelCatalog, type LoadedModelCatalog } from '../../src/model-catalog.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
 import { buildElevenlabsTTSExtras, buildElevenlabsMusicExtras } from './schema-helpers.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 import { saveTestArtifact } from './test-utils.js';
 import { CATALOG_MODELS_ROOT } from '../test-catalog-paths.js';
 
-const RUN_TEST = process.env.RUN_ELEVENLABS_TEST;
-const API_KEY = process.env.ELEVENLABS_API_KEY;
+const RUN_TEST = process.env.RUN_ELEVENLABS_TEST === '1';
 
-const describeIf = RUN_TEST && API_KEY ? describe : describe.skip;
+const describeIf = RUN_TEST ? describe : describe.skip;
 
 // Shared catalog loaded once for all tests
 let catalog: LoadedModelCatalog;
+let secretResolver: SecretResolver;
 
 describeIf('ElevenLabs provider integration', () => {
   beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver(
+      'ELEVENLABS_API_KEY'
+    );
     catalog = await loadModelCatalog(CATALOG_MODELS_ROOT);
   });
 
@@ -38,11 +42,7 @@ describeIf('ElevenLabs provider integration', () => {
       mode: 'live',
       catalog,
       catalogModelsDir: CATALOG_MODELS_ROOT,
-      secretResolver: {
-        async getSecret(key) {
-          return process.env[key] ?? null;
-        },
-      },
+      secretResolver,
     };
     const registry = createProviderRegistry(registryOptions);
 
@@ -90,11 +90,7 @@ describeIf('ElevenLabs provider integration', () => {
       mode: 'live',
       catalog,
       catalogModelsDir: CATALOG_MODELS_ROOT,
-      secretResolver: {
-        async getSecret(key) {
-          return process.env[key] ?? null;
-        },
-      },
+      secretResolver,
     };
     const registry = createProviderRegistry(registryOptions);
 
@@ -141,11 +137,7 @@ describeIf('ElevenLabs provider integration', () => {
       mode: 'live',
       catalog,
       catalogModelsDir: CATALOG_MODELS_ROOT,
-      secretResolver: {
-        async getSecret(key) {
-          return process.env[key] ?? null;
-        },
-      },
+      secretResolver,
     };
     const registry = createProviderRegistry(registryOptions);
 

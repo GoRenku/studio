@@ -31,10 +31,12 @@ ordered descriptor catalog. Repository integrations outside the catalog do not
 appear in Settings and cannot be updated through its resource.
 
 UI-managed credentials remain in `~/.config/renku/.env`. That file is the sole
-production source for provider keys managed by Renku; exported process
-environment values do not override it. Engines reads the current saved value
-for each new provider operation without copying values into `process.env` or
-caching secrets across operations.
+source for provider keys used by Renku production operations, live-provider E2E
+tests, and provider catalog tooling; exported process environment values do not
+override it. Every consumer receives the Core-owned filesystem-backed resolver
+and reads the current saved value without copying values into `process.env` or
+caching secrets across operations. A requested operation with no saved key
+fails with the missing credential name.
 
 Core owns the sanitized read and explicit replacement command. Browser
 responses contain only provider identity, display label, and whether a

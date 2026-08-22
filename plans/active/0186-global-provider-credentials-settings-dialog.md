@@ -15,8 +15,9 @@ below.
 
 ### Current product behavior
 
-- Renku-saved provider keys in `~/.config/renku/.env` are the sole production
-  credential source. Exported shell values do not override them.
+- Renku-saved provider keys in `~/.config/renku/.env` are the sole credential
+  source for production, live-provider E2E tests, and provider catalog tooling.
+  Exported shell values do not override them.
 - The Settings dialog manages exactly fal.ai, ElevenLabs, and World Labs.
 - A configured provider renders an empty password input with the fixed-length
   placeholder `••••••••••••••••` and a **Replace** action; the mask is a status

@@ -1,25 +1,32 @@
 /**
  * Wavespeed.ai Provider Integration Test
  *
- * Run with: RUN_WAVESPEED_TEST=1 pnpm test:integration
- * Requires: WAVESPEED_API_KEY env var
+ * Run with: RUN_WAVESPEED_TEST=1 pnpm test:e2e
+ * Requires WAVESPEED_API_KEY in the Renku provider credential file.
  *
  * To save output for visual inspection:
- * RUN_WAVESPEED_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:integration
+ * RUN_WAVESPEED_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:e2e
  */
 
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { createProviderRegistry } from '../../src/registry.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
 import { buildWavespeedImageExtras, type WavespeedImageModel } from './schema-helpers.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 import { saveTestArtifact } from './test-utils.js';
 
-const RUN_TEST = process.env.RUN_WAVESPEED_TEST;
-const API_KEY = process.env.WAVESPEED_API_KEY;
+const RUN_TEST = process.env.RUN_WAVESPEED_TEST === '1';
 
-const describeIf = RUN_TEST && API_KEY ? describe : describe.skip;
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
 describeIf('Wavespeed.ai provider integration', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver(
+      'WAVESPEED_API_KEY'
+    );
+  });
+
   it('generates image via registry lookup (end-to-end)', async () => {
     const provider = 'wavespeed-ai';
     const model: WavespeedImageModel = 'bytedance/seedream-v4.5';
@@ -27,11 +34,7 @@ describeIf('Wavespeed.ai provider integration', () => {
     // Full end-to-end: use registry like CLI does
     const registry = createProviderRegistry({
       mode: 'live',
-      secretResolver: {
-        async getSecret(key) {
-          return process.env[key] ?? null;
-        },
-      },
+      secretResolver,
     });
 
     const handler = registry.resolve({ provider, model, environment: 'local' });

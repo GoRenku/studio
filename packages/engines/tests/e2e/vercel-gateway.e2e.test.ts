@@ -8,30 +8,36 @@
  * - RUN_VERCEL_TEXT=1          (text response test)
  * - RUN_ALL_VERCEL_TESTS=1     (runs all Vercel gateway tests)
  *
- * Required environment variables:
- * - AI_GATEWAY_API_KEY         (Vercel AI Gateway API key)
+ * Requires AI_GATEWAY_API_KEY in the Renku provider credential file.
  *
  * Examples:
  *
  * # Run text response test
- * RUN_VERCEL_TEXT=1 pnpm test:integration
+ * RUN_VERCEL_TEXT=1 pnpm test:e2e
  *
  * # Run all Vercel gateway tests
- * RUN_ALL_VERCEL_TESTS=1 pnpm test:integration
+ * RUN_ALL_VERCEL_TESTS=1 pnpm test:e2e
  */
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createVercelAiGatewayHandler } from '../../src/producers/llm/vercel-ai-gateway.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 
-const hasGatewayCredentials = Boolean(process.env.AI_GATEWAY_API_KEY);
+const RUN_TEST =
+  process.env.RUN_VERCEL_TEXT === '1' ||
+  process.env.RUN_ALL_VERCEL_TESTS === '1';
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
-const describeIfCredentials = hasGatewayCredentials ? describe : describe.skip;
-const describeIfText =
-  process.env.RUN_VERCEL_TEXT || process.env.RUN_ALL_VERCEL_TESTS ? describe : describe.skip;
+describeIf('Vercel AI Gateway integration', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver(
+      'AI_GATEWAY_API_KEY'
+    );
+  });
 
-describeIfCredentials('Vercel AI Gateway integration', () => {
-  describeIfText('text response', () => {
+  describe('text response', () => {
     it('executes live generation and returns artifacts using google/gemini-3-flash', async () => {
       const handler = createVercelAiGatewayHandler()({
         descriptor: {
@@ -40,14 +46,7 @@ describeIfCredentials('Vercel AI Gateway integration', () => {
           environment: 'local',
         },
         mode: 'live',
-        secretResolver: {
-          async getSecret(key) {
-            if (key === 'AI_GATEWAY_API_KEY') {
-              return process.env.AI_GATEWAY_API_KEY ?? null;
-            }
-            return null;
-          },
-        },
+        secretResolver,
         logger: undefined,
       });
 

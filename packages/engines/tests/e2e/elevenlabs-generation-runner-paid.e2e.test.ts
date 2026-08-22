@@ -7,8 +7,7 @@
  * Run with:
  * RUN_ELEVENLABS_GENERATION_RUNNER_PAID_TEST=1 pnpm test:e2e -- elevenlabs-generation-runner-paid
  *
- * Requires:
- * ELEVENLABS_API_KEY
+ * Requires ELEVENLABS_API_KEY in the Renku provider credential file.
  *
  * Optional:
  * ELEVENLABS_TEST_TTS_VOICE_ID or ELEVENLABS_TEST_SHARED_VOICE_ID
@@ -26,21 +25,26 @@ import {
   type GenerationRequest,
 } from '../../src/generation/index.js';
 import type { LoadedModelCatalog } from '../../src/model-catalog.js';
+import type { SecretResolver } from '../../src/types.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 import { saveTestArtifact } from './test-utils.js';
 
-const RUN_TEST = process.env.RUN_ELEVENLABS_GENERATION_RUNNER_PAID_TEST;
-const API_KEY = process.env.ELEVENLABS_API_KEY;
+const RUN_TEST = process.env.RUN_ELEVENLABS_GENERATION_RUNNER_PAID_TEST === '1';
 const TEST_VOICE_ID =
   process.env.ELEVENLABS_TEST_TTS_VOICE_ID ??
   process.env.ELEVENLABS_TEST_SHARED_VOICE_ID ??
   'EXAVITQu4vr4xnSDxMaL';
 
-const describeIf = RUN_TEST && API_KEY ? describe : describe.skip;
+const describeIf = RUN_TEST ? describe : describe.skip;
 
 let catalog: LoadedModelCatalog;
+let secretResolver: SecretResolver;
 
 describeIf('ElevenLabs paid shared generation runner E2E', () => {
   beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver(
+      'ELEVENLABS_API_KEY'
+    );
     catalog = await loadBundledGenerationCatalog();
   });
 
@@ -101,6 +105,7 @@ describeIf('ElevenLabs paid shared generation runner E2E', () => {
       outputProjectRelativeRoot: 'generated/media',
       policy,
       request,
+      secretResolver,
     });
 
     expect(result.outputs).toMatchObject([

@@ -2,8 +2,6 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Note: provider environment variables are loaded by vitest.e2e.config.ts.
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

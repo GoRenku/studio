@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -25,13 +24,17 @@ import {
  *   node scripts/fetch-replicate-schema.mjs minimax/speech-02-hd --type=audio
  *   node scripts/fetch-replicate-schema.mjs bytedance/seedream-4 --type=image
  *
- * Requires REPLICATE_API_TOKEN environment variable.
+ * Requires REPLICATE_API_TOKEN in the Renku provider credential file.
  */
 
 const REPLICATE_API_BASE = 'https://api.replicate.com/v1/models';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
+const coreServerEntrypoint = new URL(
+  '../../core/dist/server/index.js',
+  import.meta.url
+).href;
 const REPLICATE_SCHEMA_OVERRIDES_PATH = resolve(
   repoRoot,
   'catalog',
@@ -39,13 +42,6 @@ const REPLICATE_SCHEMA_OVERRIDES_PATH = resolve(
   'replicate',
   'schema-overrides.yaml'
 );
-
-// Load provider credentials from the single Renku config env file.
-try {
-  process.loadEnvFile(resolve(homedir(), '.config', 'renku', '.env'));
-} catch {
-  // ~/.config/renku/.env may not exist; token can still come from environment.
-}
 
 /**
  * Convert model name to filename (kebab-case with .json extension)
@@ -127,13 +123,7 @@ export async function fetchReplicateInputSchema(
   existingSchema,
   options = {}
 ) {
-  const token = process.env.REPLICATE_API_TOKEN;
-  if (!token) {
-    throw new Error(
-      'REPLICATE_API_TOKEN environment variable is required. ' +
-        'Get your token at https://replicate.com/account/api-tokens'
-    );
-  }
+  const token = await requireReplicateApiToken();
 
   const url = `${REPLICATE_API_BASE}/${modelName}`;
 
@@ -217,6 +207,18 @@ export async function fetchReplicateInputSchema(
   return normalizedSchema;
 }
 
+export async function requireReplicateApiToken() {
+  const core = await import(coreServerEntrypoint);
+  const secretResolver = core.createRenkuProviderSecretResolver();
+  const token = await secretResolver.getSecret('REPLICATE_API_TOKEN');
+  if (!token) {
+    throw new Error(
+      'REPLICATE_API_TOKEN is not configured in the Renku provider credential file.'
+    );
+  }
+  return token;
+}
+
 async function readExistingSchemaIfAny(schemaPath) {
   let content;
   try {
@@ -279,7 +281,9 @@ async function main() {
       '  node scripts/fetch-replicate-schema.mjs minimax/speech-02-hd --type=audio'
     );
     console.error('');
-    console.error('Requires REPLICATE_API_TOKEN environment variable.');
+    console.error(
+      'Requires REPLICATE_API_TOKEN in the Renku provider credential file.'
+    );
     process.exit(1);
   }
 

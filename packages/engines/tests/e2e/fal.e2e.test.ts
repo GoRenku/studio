@@ -1,25 +1,30 @@
 /**
  * Fal.ai Provider Integration Test
  *
- * Run with: RUN_FAL_TEST=1 pnpm test:integration
- * Requires: FAL_KEY env var
+ * Run with: RUN_FAL_TEST=1 pnpm test:e2e
+ * Requires FAL_KEY in the Renku provider credential file.
  *
  * To save output for visual inspection:
- * RUN_FAL_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:integration
+ * RUN_FAL_TEST=1 SAVE_TEST_ARTIFACTS=1 pnpm test:e2e
  */
 
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, it, expect } from 'vitest';
 import { createProviderRegistry } from '../../src/registry.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
 import { buildFalImageExtras, type FalImageModel } from './schema-helpers.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 import { saveTestArtifact } from './test-utils.js';
 
-const RUN_TEST = process.env.RUN_FAL_TEST;
-const API_KEY = process.env.FAL_KEY;
+const RUN_TEST = process.env.RUN_FAL_TEST === '1';
 
-const describeIf = RUN_TEST && API_KEY ? describe : describe.skip;
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
 describeIf('Fal.ai provider integration', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver('FAL_KEY');
+  });
+
   it('generates image via registry lookup (end-to-end)', async () => {
     const provider = 'fal-ai';
     const model: FalImageModel = 'bytedance/seedream/v4.5/text-to-image';
@@ -27,11 +32,7 @@ describeIf('Fal.ai provider integration', () => {
     // Full end-to-end: use registry like CLI does
     const registry = createProviderRegistry({
       mode: 'live',
-      secretResolver: {
-        async getSecret(key) {
-          return process.env[key] ?? null;
-        },
-      },
+      secretResolver,
     });
 
     const handler = registry.resolve({ provider, model, environment: 'local' });

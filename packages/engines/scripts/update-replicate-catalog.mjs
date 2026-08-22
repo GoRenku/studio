@@ -6,6 +6,7 @@ import { parse as parseYaml } from 'yaml';
 import {
   fetchReplicateInputSchema,
   modelNameToFilename,
+  requireReplicateApiToken,
 } from './fetch-replicate-schema.mjs';
 import { normalizeSchemaFileForCatalog } from './schema-file-validation.mjs';
 import {
@@ -25,7 +26,8 @@ import {
  *   node scripts/update-replicate-catalog.mjs <yaml-path> --check-diff [--model=<owner/model>] [--dry-run]
  *   node scripts/update-replicate-catalog.mjs <yaml-path> --update-diff [--model=<owner/model>] [--dry-run]
  *
- * Requires REPLICATE_API_TOKEN whenever an API fetch is needed.
+ * Requires REPLICATE_API_TOKEN in the Renku provider credential file whenever
+ * an API fetch is needed.
  */
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -212,10 +214,8 @@ async function main() {
         return state?.state === 'missing' || state?.state === 'invalid';
       }));
 
-  if (requiresFetch && !process.env.REPLICATE_API_TOKEN) {
-    throw new Error(
-      'REPLICATE_API_TOKEN is required for this mode. Get your token at https://replicate.com/account/api-tokens'
-    );
+  if (requiresFetch) {
+    await requireReplicateApiToken();
   }
 
   console.log(`[update-replicate] Loading catalog from ${yamlPath}`);

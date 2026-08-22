@@ -11,24 +11,31 @@
  * Examples:
  *
  * # Run structured output test
- * RUN_OPENAI_STRUCTURED=1 pnpm test:integration
+ * RUN_OPENAI_STRUCTURED=1 pnpm test:e2e
  *
  * # Run all OpenAI tests
- * RUN_ALL_OPENAI_TESTS=1 pnpm test:integration
+ * RUN_ALL_OPENAI_TESTS=1 pnpm test:e2e
+ *
+ * Requires OPENAI_API_KEY in the Renku provider credential file.
  */
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createOpenAiLlmHandler } from '../../src/producers/llm/openai.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 
-const describeIfHasKey = process.env.OPENAI_API_KEY ? describe : describe.skip;
-const describeIfStructured =
-  process.env.RUN_OPENAI_STRUCTURED || process.env.RUN_ALL_OPENAI_TESTS
-    ? describe
-    : describe.skip;
+const RUN_TEST =
+  process.env.RUN_OPENAI_STRUCTURED === '1' ||
+  process.env.RUN_ALL_OPENAI_TESTS === '1';
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
-describeIfHasKey('OpenAI structured integration', () => {
-  describeIfStructured('structured output', () => {
+describeIf('OpenAI structured integration', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver('OPENAI_API_KEY');
+  });
+
+  describe('structured output', () => {
     it('returns artifacts for structured JSON schema outputs', async () => {
     const handler = createOpenAiLlmHandler()({
       descriptor: {
@@ -37,14 +44,7 @@ describeIfHasKey('OpenAI structured integration', () => {
         environment: 'local',
       },
       mode: 'live',
-      secretResolver: {
-        async getSecret(key) {
-          if (key === 'OPENAI_API_KEY') {
-            return process.env.OPENAI_API_KEY ?? null;
-          }
-          return null;
-        },
-      },
+      secretResolver,
       logger: undefined,
     });
 

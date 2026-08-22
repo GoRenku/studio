@@ -75,4 +75,3 @@ Project-local.
   reason to create an empty writable catalog.
 - Renku adds no compatibility reads, migration, native app shell, Linux
   installer, or Project database change.
-

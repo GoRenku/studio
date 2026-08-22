@@ -8,32 +8,36 @@
  * - RUN_VERCEL_STRUCTURED=1    (structured output test)
  * - RUN_ALL_VERCEL_TESTS=1     (runs all Vercel gateway tests)
  *
- * Required environment variables:
- * - AI_GATEWAY_API_KEY         (Vercel AI Gateway API key)
+ * Requires AI_GATEWAY_API_KEY in the Renku provider credential file.
  *
  * Examples:
  *
  * # Run structured output test
- * RUN_VERCEL_STRUCTURED=1 pnpm test:integration
+ * RUN_VERCEL_STRUCTURED=1 pnpm test:e2e
  *
  * # Run all Vercel gateway tests
- * RUN_ALL_VERCEL_TESTS=1 pnpm test:integration
+ * RUN_ALL_VERCEL_TESTS=1 pnpm test:e2e
  */
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createVercelAiGatewayHandler } from '../../src/producers/llm/vercel-ai-gateway.js';
-import type { ProviderJobContext } from '../../src/types.js';
+import type { ProviderJobContext, SecretResolver } from '../../src/types.js';
+import { requireRenkuProviderSecretResolver } from './renku-provider-credentials.js';
 
-const hasGatewayCredentials = Boolean(process.env.AI_GATEWAY_API_KEY);
+const RUN_TEST =
+  process.env.RUN_VERCEL_STRUCTURED === '1' ||
+  process.env.RUN_ALL_VERCEL_TESTS === '1';
+const describeIf = RUN_TEST ? describe : describe.skip;
+let secretResolver: SecretResolver;
 
-const describeIfCredentials = hasGatewayCredentials ? describe : describe.skip;
-const describeIfStructured =
-  process.env.RUN_VERCEL_STRUCTURED || process.env.RUN_ALL_VERCEL_TESTS
-    ? describe
-    : describe.skip;
+describeIf('Vercel AI Gateway structured integration', () => {
+  beforeAll(async () => {
+    secretResolver = await requireRenkuProviderSecretResolver(
+      'AI_GATEWAY_API_KEY'
+    );
+  });
 
-describeIfCredentials('Vercel AI Gateway structured integration', () => {
-  describeIfStructured('structured output', () => {
+  describe('structured output', () => {
     it('returns artifacts for structured JSON schema outputs using anthropic/claude-haiku-4.5', async () => {
       const handler = createVercelAiGatewayHandler()({
         descriptor: {
@@ -42,14 +46,7 @@ describeIfCredentials('Vercel AI Gateway structured integration', () => {
           environment: 'local',
         },
         mode: 'live',
-        secretResolver: {
-          async getSecret(key) {
-            if (key === 'AI_GATEWAY_API_KEY') {
-              return process.env.AI_GATEWAY_API_KEY ?? null;
-            }
-            return null;
-          },
-        },
+        secretResolver,
         logger: undefined,
       });
 
