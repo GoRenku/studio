@@ -18,20 +18,61 @@ or architecture decision.
   the smaller product-visible subset.
 - **Planning rule:** Design a provider integration around the provider-level
   capability contract the user requested. Do not turn a representative model,
-  pricing example, test fixture, or current Studio route into an Engines
-  allowlist. Keep provider discovery, schema adaptation, pricing capability,
-  and execution in Engines; keep product model-family curation in Studio. When
-  the provider catalog spans materially different execution families, such as
-  asynchronous media and synchronous LLM protocols, surface that boundary for
-  confirmation instead of silently narrowing it.
+  pricing example, test fixture, or current Studio route into an allowlist.
+  Before designing a provider-neutral runtime, establish whether the product
+  itself must execute provider requests or whether an agent can use a
+  provider-owned skill/tool and attach the resulting Asset through the existing
+  Core boundary. Prefer independent provider skills with live provider-native
+  schemas when Studio needs only the accepted output; do not build a shared
+  request schema, transforms, catalogs, pricing layer, and execution runtime
+  merely to make agent-owned generation look provider-neutral. Build a shared
+  runtime only when a non-agent product surface genuinely must execute the same
+  logical request across providers, and keep pre-submit validation even when
+  checked-in schemas are removed. When the provider catalog spans materially
+  different execution families, such as asynchronous media and synchronous LLM
+  protocols, surface that boundary for confirmation instead of silently
+  narrowing it.
 - **Apply when:** Planning a new generation provider, dynamic provider catalog,
   runtime schema integration, model registry, or Studio model picker where a
   convenient initial operation could be mistaken for the provider's supported
   scope.
-- **Evidence to inspect:** The provider's complete live catalog and protocol
-  families; Engines list/read/describe/estimate/execute contracts; Studio's
-  curated image, video, and audio model-family catalogs; and every proposed
-  allowlist, fixed operation id, example, fixture, and capability filter.
+- **Evidence to inspect:** The provider's agent-readable documentation, official
+  CLI or MCP support, live catalog and protocol families; the existing Asset
+  attachment boundary; whether provider requests must be durable project data;
+  paid-run approval requirements; current Engines
+  list/read/describe/estimate/execute contracts; Project provider Settings; and
+  every proposed shared schema, transform, allowlist, fixed operation id,
+  example, fixture, and capability filter.
+
+### 2026-08-23 — Separate generation execution from request review and provenance
+
+- **User objection:** A simplification moved provider execution into agent
+  skills but also proposed deleting Generation Preview, prompt editing,
+  reference and configuration review, saved request provenance, and the shared
+  read-only inspector. Those are valuable user capabilities even when Studio no
+  longer executes the provider request.
+- **Planning rule:** Decompose generation before deleting it. Provider catalog,
+  schema validation, uploads, pricing, retries, polling, and execution may move
+  to provider-owned skills while Studio retains the exact reviewed request,
+  prompt editing, generalized reference and configuration presentation, and
+  Asset provenance inspection. Do not recreate provider schemas as a shared UI
+  presentation map: per-field JSON pointers, labels, formats, groups, and media
+  bindings still require active maintenance for every provider, model, and
+  variant. Prefer one schema-free renderer driven by the runtime JSON values,
+  plus only the irreducible request-time facts the user experience needs, such
+  as the editable prompt text and concrete local reference paths. Reuse the
+  same dialog and components for editable Preview and read-only inspection
+  instead of creating provider-specific React renderers or duplicated surfaces.
+- **Apply when:** Moving a provider adapter or generation runtime into an agent
+  skill, removing GenerationSpec or GenerationRun machinery, changing request
+  persistence, or proposing to delete Preview/Inspector UI as part of backend
+  simplification.
+- **Evidence to inspect:** The existing Preview and Inspector component reuse;
+  prompt-update path; whether reference files can be represented by their
+  concrete project paths without leaking internal Asset/AssetFile identity;
+  the schema-free configuration fallback; Asset provenance; preview-safety
+  rules; and which current contracts exist only for execution rather than user
+  review or inspection.
 
 ### 2026-08-22 — Keep product-chosen filesystem names free of spaces
 
