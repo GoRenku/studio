@@ -44,6 +44,67 @@ or architecture decision.
   every proposed shared schema, transform, allowlist, fixed operation id,
   example, fixture, and capability filter.
 
+### 2026-08-24 — Put reusable provider protocol in tooling, not repeated agent reasoning
+
+- **User objection:** A provider-Skill plan said the Skill would fetch full
+  provider documentation, extract schemas, construct requests, upload, retry,
+  poll, and download for each generation, but did not define a reusable client
+  boundary. Read literally, the agent would repeatedly reinterpret docs and
+  recreate an API client, which is inefficient and unreliable.
+- **Planning rule:** A provider Skill should orchestrate a stable installed
+  provider client/tool, not implement the provider protocol through repeated
+  agent reasoning. Before proposing a new client, inventory the existing
+  provider adapters and their tests; when they already own correct transport,
+  upload, retry, polling, recovery, and output behavior, refactor those proven
+  implementations out of an obsolete generic runtime instead of rebuilding
+  parallel clients. Use an official provider SDK or CLI when it owns auth,
+  upload, queueing, polling, retry, and response handling. When no official
+  media SDK exists, implement one small model-agnostic client for the provider's
+  stable protocol and reuse it across operations. Fetch only the selected
+  operation's machine-readable live metadata/schema when model inputs must be
+  current; use the full agent-readable documentation for initial discovery,
+  protocol-version changes, or unsupported cases, not as the normal execution
+  path. Keep the Skill focused on selecting the operation, supplying the
+  provider-native request, invoking Preview, calling the client, reviewing the
+  artifact, and attaching it.
+- **Apply when:** Planning provider Skills, agent-native media integrations,
+  runtime schema discovery, or “basic tooling” where the plan assigns auth,
+  uploads, retries, queueing, polling, or downloads to instructions rather than
+  a named reusable implementation.
+- **Evidence to inspect:** Existing provider adapters and their focused tests;
+  which behavior belongs to the provider implementation versus a generic
+  schema, simulation, catalog, run, or domain wrapper; official SDK/CLI support;
+  stable provider-wide protocol endpoints; machine-readable catalog/schema
+  APIs; the exact Skill-to-tool commands and data handoff; which documentation
+  is fetched during an ordinary known-model generation; caching/revalidation
+  behavior; and whether adding a model requires code changes or only a
+  different native request and live schema.
+
+### 2026-08-24 — Give Skill tooling an explicit release and installation owner
+
+- **User objection:** A plan invented provider executables beside Skills
+  without saying whether each provider had its own CLI, where those programs
+  lived, how dependencies were packaged, or how users received them through
+  Renku's existing runtime and plugin releases.
+- **Planning rule:** Do not name executable Skill tooling until its source,
+  build, release, installation, invocation, update, and compatibility owner are
+  explicit. Start from the accepted product distribution: if Skills already
+  invoke one separately installed self-contained runtime, prefer provider-
+  scoped commands in that runtime unless the user explicitly accepts expanding
+  the plugin release to package and launch executable code and dependencies.
+  Never assume a marketplace-installed Skill will install npm packages, find a
+  system language runtime, or make a sibling executable available on `PATH`.
+  If independent provider updates are the goal, design and approve that plugin-
+  tool distribution boundary before relying on it.
+- **Apply when:** Planning scripts, helper binaries, MCP servers, provider
+  clients, SDK dependencies, or generated bundles referenced by Skills or
+  plugins, especially when runtime and Skills are released independently.
+- **Evidence to inspect:** Current plugin manifest and installed file tree;
+  Skill invocation paths; package dependencies and build artifacts; native or
+  language runtime availability; runtime archive assembly; marketplace release
+  and update behavior; supported agent hosts; and the compatibility rule when a
+  Skill version requires a newer executable command.
+
 ### 2026-08-23 — Separate generation execution from request review and provenance
 
 - **User objection:** A simplification moved provider execution into agent
@@ -63,16 +124,27 @@ or architecture decision.
   as the editable prompt text and concrete local reference paths. Reuse the
   same dialog and components for editable Preview and read-only inspection
   instead of creating provider-specific React renderers or duplicated surfaces.
+  When Preview belongs to an agent-driven workflow, use the existing
+  conversation as the default continuation boundary: open Preview, let the user
+  edit the authoritative temporary request, return from the opening command,
+  and let the agent reread that request after the user confirms. Do not add an
+  app-to-agent callback, resumable job, correlation protocol, wait service, or
+  Generate event merely to automate that normal conversational pause. Add such
+  coordination only when the user separately accepts a Studio action that must
+  resume unattended agent execution.
 - **Apply when:** Moving a provider adapter or generation runtime into an agent
   skill, removing GenerationSpec or GenerationRun machinery, changing request
-  persistence, or proposing to delete Preview/Inspector UI as part of backend
-  simplification.
+  persistence, proposing to delete Preview/Inspector UI as part of backend
+  simplification, or claiming that a Preview edit or Generate button returns
+  control to an agent.
 - **Evidence to inspect:** The existing Preview and Inspector component reuse;
-  prompt-update path; whether reference files can be represented by their
-  concrete project paths without leaking internal Asset/AssetFile identity;
-  the schema-free configuration fallback; Asset provenance; preview-safety
-  rules; and which current contracts exist only for execution rather than user
-  review or inspection.
+  prompt-update path; the direction and lifetime of the Preview coordination
+  event; whether the opening CLI command returns immediately; the existing
+  conversational pause in the Skill; whether reference files can be represented
+  by their concrete project paths without leaking internal Asset/AssetFile
+  identity; the schema-free configuration fallback; Asset provenance;
+  preview-safety rules; and which current contracts exist only for execution
+  rather than user review or inspection.
 
 ### 2026-08-22 — Keep product-chosen filesystem names free of spaces
 
@@ -247,17 +319,23 @@ or architecture decision.
   agent-external harness capability as the execution-path decision. Treat a
   purpose's settings.recommendedModel only as a hint within the
   Renku-managed Engines model list. Never describe the managed hint as the
-  product's initial path, add Codex to Engines, or create a skill-local default
-  that bypasses Core policy. When both lanes matter, name the primary and
-  secondary request shapes separately and make the representative sample match
-  the primary path.
+  product's initial path, add a harness-owned generator to Engines, or create a
+  skill-local default that bypasses Core policy. Offer a harness-owned path only
+  when the active harness actually exposes that built-in capability; another
+  harness must not be told to call a tool it does not have. Do not invent a
+  provider adapter or generic cross-harness abstraction merely to hide that
+  capability difference. When both lanes matter, name the primary and secondary
+  request shapes separately and make the representative sample match the
+  primary path.
 - **Apply when:** A media plan mentions Codex built-in image generation,
   agent-external specs, Renku-managed provider routes, workflow preferences,
   recommendedModel, or a sample that could imply which lane runs first.
 - **Evidence to inspect:** Decisions 0040 and 0074; Generation Context
-  workflowPolicy and capability fields; the purpose's managed settings and
-  Engines model descriptors; media-producer route precedence; and the exact
-  purpose sample's executionKind, provider, model, values, and references.
+  workflowPolicy and capability fields; the active harness's actual built-in
+  tools; the purpose's managed settings and Engines model descriptors;
+  media-producer route precedence; behavior when the preferred harness
+  capability is absent; and the exact purpose sample's executionKind, provider,
+  model, values, and references.
 
 ### 2026-08-10 — Preserve implemented plans and consolidate corrective adoption
 
@@ -695,11 +773,22 @@ or architecture decision.
   every accepted UX detail, workflow step, supported variant, data effect,
   implementation owner, verification, and checkable completion item. Prefer
   extending the existing owner and remove repeated explanation, not requirement
-  detail. When the accepted work has independently implementable and reviewable
+  detail. When revising an already detailed plan to correct one foundational
+  boundary, compare the replacement section-by-section with the prior plan and
+  carry every unaffected accepted behavior, contract, migration rule, default,
+  diagnostic, and verification item forward; do not let a cleaner architecture
+  summary replace the implementation specification. When the accepted work has
+  independently implementable and reviewable
   delivery gates with different owners—such as a backend contract cutover, a
   UI restoration, a format importer, or an adjacent persisted-analysis
   redesign—use separately numbered plans with explicit dependencies and
   self-contained acceptance gates instead of one massive plan and checklist.
+  In particular, separate a provider-ready architecture refactor from the first
+  production provider integration when the foundation can be completed and
+  proven through existing providers plus a test-only fixture. The foundation
+  plan must leave production provider code, credentials, Settings adoption,
+  Skill guidance, and paid E2E coverage to the dependent provider plan; the
+  provider plan must consume the established seam rather than redesign it.
   A coordinated release or migration may still require multiple plans to pass
   before it is applied; separate plan ownership does not require a temporary
   runtime compatibility stage. Do not apply that split when the explicit
@@ -728,6 +817,9 @@ or architecture decision.
   Also apply when one phase is explicitly allowed to leave another layer broken
   or when backend, UI, importer, migration, or agent work can reach meaningful
   completion in sequence without sharing one completion status. Apply when a
+  provider architecture refactor and a new production provider have distinct
+  completion/verification gates, even when the provider is the reason the seam
+  is being prepared. Apply when a
   foundational model change exposes a separate pre-existing subsystem defect
   that deserves its own contract, migration, and verification even if both
   changes must ship together. Apply the shared-reference check when several
@@ -738,6 +830,9 @@ or architecture decision.
   new concept, proposed file, validation, documentation target, verification
   step, and checklist group; identify existing owners that can be changed
   directly, then confirm no accepted requirement disappeared during compression.
+  For a revision, diff the old and new requirement ledgers, product-behavior
+  sections, public contracts, migration rules, tests, and checklists; explain
+  every removed detail as either superseded or deliberately unchanged elsewhere.
   Compare the pre-split source with the phase plans, preserve cross-cutting
   material in a clearly linked supporting reference, and confirm every phase
   names the exact sections it depends on.
