@@ -46,10 +46,10 @@ export async function readProjectLookbooksResource(
       warnings: [],
       project: toProjectReport(project, projectFolder),
       production: production
-        ? buildLookbookResource(session, projectFolder, project, production)
+        ? readLookbookResourceFromSession(session, projectFolder, project, production)
         : null,
       storyboard: storyboard
-        ? buildLookbookResource(session, projectFolder, project, storyboard)
+        ? readLookbookResourceFromSession(session, projectFolder, project, storyboard)
         : null,
       resourceKeys: [studioVisualLanguageLookbooksResourceKey()],
     };
@@ -73,7 +73,7 @@ async function readLookbookByKindResource(
   kind: LookbookKind
 ): Promise<LookbookResource> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) =>
-    buildLookbookResource(
+    readLookbookResourceFromSession(
       session,
       projectFolder,
       project,
@@ -82,7 +82,7 @@ async function readLookbookByKindResource(
   );
 }
 
-function buildLookbookResource(
+export function readLookbookResourceFromSession(
   session: DatabaseSession,
   projectFolder: string,
   project: Pick<ProjectRecord, 'id' | 'projectName'>,

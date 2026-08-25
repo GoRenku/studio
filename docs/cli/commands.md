@@ -1472,318 +1472,146 @@ shared deep-focus legibility belongs in `optics.intent`.
 
 ## `renku generation`
 
-Use the generic Core generation lifecycle for one explicit provider request.
-Generation and domain attachment are separate operations.
-
-Current purposes:
-
-```text
-image.create
-image.edit
-lookbook.image
-lookbook.video-sheet
-lookbook.storyboard-sheet
-cast.character-sheet
-cast.profile
-cast.voice-sample
-scene.dialogue-audio
-location.sheet
-location.hero
-prop.sheet
-prop.hero
-scene.storyboard-sheet
-shot.image
-```
-
-Target formats are derived from the purpose contract:
-
-```text
-project
-asset:<asset-id>
-lookbook:<lookbook-id>
-cast:<cast-member-id>
-scene:<scene-id>:dialogue:<scene-dialogue-id>
-location:<location-id>
-prop:<prop-id>
-scene:<scene-id>
-shot:<shot-id>
-```
-
-Read the Core-owned context, reusable catalog, and model descriptors:
+Read the complete current Core-owned Project briefing for one media purpose and
+target before authoring a provider request:
 
 ```bash
-renku generation context --purpose <purpose> --target <target> --json
-renku generation reference list --media-kind image --json
-renku generation model list --purpose <purpose> --json
+renku generation context \
+  --purpose <purpose> \
+  --target <target> \
+  --json
+
+renku generation context \
+  --purpose scene.storyboard-sheet \
+  --target scene:<scene-id> \
+  --revision <scene-beats-revision-id> \
+  --beat <beat-id> \
+  --beat <beat-id> \
+  --json
 ```
 
-The context report contains fixed and recommended product settings, exact guide
-slots and candidates, initial selections, notices, and selectable model
-metadata. Fixed settings are applied by Core. Recommendations are guidance and
-are authored only when the user or agent explicitly includes the corresponding
-provider field in `values`. Untouched provider defaults remain absent.
+The report contains current Project and target facts, workflow policy,
+purpose-level output guidance, relevant Lookbooks and domain relationships, and
+exact relationship-derived AssetFile suggestions. Suggestions are advisory and
+non-exhaustive: they are not selection, priority, readiness, provider-field
+assignment, or permission. Missing creative context returns warnings rather
+than preventing a later generation. Invalid purpose/target identity, a revision
+from another Scene, or Beats outside the requested revision fail with structured
+diagnostics. `context` is read-only and emits no Studio mutation event.
 
-For Scene and Shot targets, `facts` includes ordered
-`sceneCastMemberIds`, `sceneLocationIds`, `scenePropIds`, and
-`sceneDialogueIds`, plus `projectAspectRatio` and opaque `contextText`.
-`scene.storyboard-sheet` guide order is the Storyboard Lookbook Sheet, exact
-Character Sheets, exact Location Sheets, then exact Prop Sheets. Candidate
-slots remain request-scoped and unselected even when only one file is eligible.
-The command returns Core's report without adapter-side filtering or fallback.
+Provider Skills write one temporary review document under
+`tmp/operations/media-generation/`. The document contains only provider, model,
+media kind, prompt, and opaque provider-native request JSON. Local project media
+uses exact recursive `{ "$file": "path", "mimeType": "..." }` markers.
 
-The Project's **Use Codex for image generation** setting is on by default. With
-it on, `scene.storyboard-sheet` uses built-in Codex GPT Image 2 as an
-agent-external capability outside Engines. With it off, or when the user
-explicitly chooses Renku for the request, use
-`fal-ai/openai/gpt-image-2/edit`. The purpose exposes no competing
-`recommendedModel`.
-
-A generic `GenerationSpec` has this shape:
-
-```json
-{
-  "executionKind": "renku-managed",
-  "purpose": "image.create",
-  "target": { "kind": "project", "id": "project" },
-  "authoredFrom": { "kind": "shotPlan", "id": "shot_plan_bombardment" },
-  "model": {
-    "provider": "fal-ai",
-    "model": "openai/gpt-image-2"
-  },
-  "values": {
-    "prompt": "An authored planning image..."
-  },
-  "references": [],
-  "title": "Bombardment wide"
-}
-```
-
-`authoredFrom` is optional information-only context. It does not change the
-project target, require the Shot Plan to exist, attach output to that plan, or
-include current Shot Plan contents in request inspection.
-
-Exact references use stable guide placements:
-
-```json
-{
-  "placement": {
-    "kind": "slot",
-    "sectionId": "source",
-    "slotId": "source-image"
-  },
-  "reference": {
-    "kind": "asset-file",
-    "assetId": "asset_source",
-    "assetFileId": "asset_file_source"
-  }
-}
-```
-
-Use `{ "kind": "additional" }` only for an extra exact reference. Slot
-occupancy is guidance, not a dependency graph. Provider-required fields are
-validated against the selected direct endpoint.
-
-Manage specs and Preview:
+Validate an Engines-owned provider request:
 
 ```bash
-renku generation validate --file <spec-json> --json
-renku generation spec create --file <spec-json> --json
-renku generation spec update --spec <spec-id> --file <spec-json> --json
-renku generation spec freeze --spec <spec-id> --json
-renku generation spec show --spec <spec-id> --json
-renku generation spec list --purpose <purpose> --json
-renku generation preview show --file <spec-json> --json
-renku generation preview show --spec <spec-id> --json
-renku generation preview show --file <first-spec-json> --file <second-spec-json> --json
-renku generation preview show --spec <first-spec-id> --spec <second-spec-id> --json
+renku generation validate \\
+  --file tmp/operations/media-generation/request.json \\
+  --json
 ```
 
-Estimate and run only the saved current request:
+Show one or more review files in Studio in command-line order:
 
 ```bash
-renku generation estimate --spec <spec-id> --json
-renku generation run --spec <spec-id> --approval-token <approval-token> --json
-renku generation run --spec <spec-id> --approval-token <approval-token> --simulate --json
-renku generation run show --run <run-id> --json
+renku generation preview show \\
+  --file tmp/operations/media-generation/first.json \\
+  --file tmp/operations/media-generation/second.json \\
+  --json
 ```
 
-The approval token comes from the exact estimate and becomes invalid when the
-request changes. Simulation validates and records the same request without a
-paid provider call or freezing the draft. Live managed run freezes the exact
-saved revision before provider execution.
+Preview accepts a `codex` review document. It returns promptly after delivery and
+never executes generation. Studio may update only the top-level prompt; the Skill
+rereads the document and rebuilds provider-native request JSON conversationally.
 
-Behavior:
+Execute through the selected standalone Engines provider and download artifacts
+under a Project-relative output directory:
 
-- Prompt and generated media contents are opaque to runtime validation.
-- Engines owns direct provider fields, schemas, capability metadata, request
-  assembly, pricing, execution, outputs, and receipts.
-- Core owns purpose settings, exact eligible guide candidates, spec persistence,
-  validation, direct estimates, runs, and provenance.
-- Estimates cover only the current provider request; they never walk references
-  or construct child work.
-- `image.create` has Additional References only and no named slot.
-- `image.edit` targets the exact source asset and uses the
-  `source/source-image` slot plus optional exact Cast, Location, and
-  Lookbook candidates.
-- `scene.storyboard-sheet` keeps the deterministic one-to-four-panel composite
-  workflow. Scene Beat authoring may use any narrative-appropriate Beat count;
-  the agent partitions only requested saved Beat image work into consecutive
-  groups of up to four without changing the revision or inventing filler.
-- Every Scene Storyboard request uses the current Storyboard Lookbook and one
-  exact Storyboard Lookbook Sheet as the sole appearance authority. Character,
-  Location, and Prop Sheets preserve canonical continuity facts, not source
-  rendering style.
-- With **Use Codex for image generation** on, save and freeze a prompt-only
-  external `codex/gpt-image-2` Spec with logical references. With it off, use
-  GPT Image 2 edit, reference fields, a descriptor-supported custom size, and
-  Core-fixed high quality.
-- The agent preserves the existing vision-guided crop and crop-inspection
-  sequence. Review-first mode shows the result, concerns, and recommendation,
-  then waits for accept, regenerate, or discard. Strict iterative mode is an
-  explicit task-scoped opt-in; each creative correction uses a deliberately
-  changed request and a new Spec while preserving ordinary Preview, pricing,
-  confirmation, concurrency, freeze, and provenance gates.
-- `shot.image` resolves one exact Shot and owning Scene, recommends the project
-  aspect ratio, and imports an unselected `shot-image` candidate under the
-  Core-owned Shot path.
-- Generation output is not attached automatically. Inspect the output, then use
-  the focused `renku media import` purpose with the run receipt. Omit the
-  receipt for external files. A Codex-generated image can instead retain its
-  saved agent-external spec through `--source-spec`.
-
-For Codex image generation, save the exact request before invoking Codex:
-
-```json
-{
-  "executionKind": "agent-external",
-  "purpose": "cast.profile",
-  "target": { "kind": "castMember", "id": "cast_..." },
-  "model": { "provider": "codex", "model": "<actual-model>" },
-  "values": { "prompt": "Exact prompt sent to Codex." },
-  "references": []
-}
+```bash
+renku generation execute \\
+  --file tmp/operations/media-generation/request.json \\
+  --output tmp/operations/media-generation/output \\
+  --json
 ```
 
-Create and preview this spec normally. Preview returns its data in JSON even
-when Studio is not running. After approval, show the final saved spec, freeze it
-with `generation spec freeze`, and pass the frozen record's exact
-`spec.values.prompt` to Codex unchanged. Attach the accepted output with the
-frozen id through `--source-spec`. Do not estimate or run an agent-external spec.
+Recover a provider job when that provider supports stateless recovery:
+
+```bash
+renku generation recover \\
+  --file tmp/operations/media-generation/request.json \\
+  --request-id <provider-job-id> \\
+  --output tmp/operations/media-generation/output \\
+  --json
+```
+
+Validate, execute, and recover reject `codex`; Codex built-in image generation is
+harness-gated and invoked directly by Media Producer. World Labs Location World
+generation remains under `renku location world generate`.
+
+Successful execute/recover JSON contains downloaded `artifacts`, optional
+`requestId`, and exact safe `provenance` ready to save and pass to attachment.
+There is no Spec, Run, estimate, approval token, freeze, or simulation command.
 
 ## `renku media import`
 
-Attach an inspected project-relative media file through a focused Core-owned
-destination. Import is separate from generation.
-
-Supported single-file purposes:
-
-```text
-lookbook.image
-lookbook.video-sheet
-lookbook.storyboard-sheet
-cast.character-sheet
-cast.profile
-location.sheet
-location.hero
-prop.sheet
-prop.hero
-```
+Attach an inspected Project-relative media file through its focused Core owner.
+Generation and attachment remain separate.
 
 General form:
 
 ```bash
-renku media import \
-  --purpose <purpose> \
-  --target <target> \
-  --source <project-relative-path> \
-  --title <title> \
-  --summary <one-line-summary> \
-  --reference-name <name> \
-  --tag <tag> \
-  --receipt <generation-run-json> \
-  --source-spec <agent-external-spec-id> \
-  --select \
+renku media import \\
+  --purpose <purpose> \\
+  --target <target> \\
+  --source <project-relative-path> \\
+  --title <title> \\
+  --summary <one-line-summary> \\
+  --reference-name <name> \\
+  --tag <tag> \\
+  --provenance <media-generation-provenance-json> \\
+  --select \\
   --json
 ```
 
-`--receipt` and `--source-spec` are alternatives; do not pass both.
-`--tag` is repeatable and the CLI passes every occurrence unchanged to Core.
-Summary, reference name, and tags are persisted atomically with focused single-
-file attachment. Grouped Scene Storyboard import keeps its dedicated shape.
-`--select` is supported only by canonical Profile, Location/Prop Hero, Lookbook Image, Shot
-Image, and Scene Storyboard Image imports.
+`--provenance` is optional for purposes that accept ordinary external media and
+required for purposes whose domain contract requires generated media. Its JSON is
+preserved exactly on the attached Asset after Core safety and relationship
+validation. `--tag` is repeatable. Summary, reference name, tags, provenance,
+and attachment are persisted atomically.
+
+Supported focused purposes include Project cover; Lookbook image/video/storyboard
+sheets; Cast character sheet/profile/voice sample; Location and Prop sheets/heroes;
+Scene storyboard images; Shot images; Shot Plan video and its supporting image
+roles; image create/edit; and Scene Dialogue Audio. Each purpose accepts only its
+Core-owned target kind.
 
 Examples:
 
 ```bash
-renku media import --purpose lookbook.image --target lookbook:<lookbook-id> --source tmp/media/lookbook-image.png --title "Lookbook image" --select --json
-renku media import --purpose lookbook.video-sheet --target lookbook:<lookbook-id> --source tmp/media/video-lookbook-sheet.png --title "Video Lookbook Sheet" --json
-renku media import --purpose lookbook.storyboard-sheet --target lookbook:<lookbook-id> --source tmp/media/storyboard-lookbook-sheet.png --title "Storyboard Lookbook Sheet" --json
-renku media import --purpose cast.character-sheet --target cast:<cast-member-id> --source tmp/media/character-sheet.png --title "Character Sheet" --json
-renku media import --purpose cast.profile --target cast:<cast-member-id> --source tmp/media/profile.png --title "Profile" --select --json
-renku media import --purpose location.sheet --target location:<location-id> --source tmp/media/location-sheet.png --title "Location Sheet" --json
-renku media import --purpose location.hero --target location:<location-id> --source tmp/media/location-hero.png --title "Location Hero" --select --json
-renku media import --purpose prop.sheet --target prop:<prop-id> --source tmp/media/prop-sheet.png --title "Prop Sheet" --json
-renku media import --purpose prop.hero --target prop:<prop-id> --source tmp/media/prop-hero.png --title "Prop Hero" --select --json
+renku media import --purpose cast.profile --target cast:<cast-member-id> \\
+  --source tmp/operations/media-generation/output/profile.png \\
+  --provenance tmp/operations/media-generation/provenance.json \\
+  --title "Profile" --select --json
+
+renku media import --purpose lookbook.image --target lookbook:<lookbook-id> \\
+  --source media/lookbook-reference.png --title "Lookbook image" --select --json
 ```
 
-Pass `--receipt` only for an exact output from a Renku run whose purpose and
-target match the focused attachment. Pass `--source-spec` for a Codex-generated
-output after saving and freezing the matching agent-external request.
-Supported purposes may omit both for uploaded, downloaded, manually created,
-or other external media with no saved generation request.
-
-Scene Storyboard Sheet uses the focused cropped-image attachment:
+Scene Storyboard Sheet keeps its focused grouped attachment document:
 
 ```bash
-renku media import \
-  --purpose scene.storyboard-sheet \
-  --target scene:<scene-id> \
-  --revision <scene-beats-revision-id> \
-  --file <scene-storyboard-images-import.json> \
-  --json
-
-renku media import \
-  --purpose scene.storyboard-sheet \
-  --target scene:<scene-id> \
-  --revision <scene-beats-revision-id> \
-  --beats <beat-id> \
-  --source <cropped-beat-image-path> \
+renku media import \\
+  --purpose scene.storyboard-sheet \\
+  --target scene:<scene-id> \\
+  --revision <scene-beats-revision-id> \\
+  --file <scene-storyboard-images-import.json> \\
   --json
 ```
 
-Grouped document:
-
-```json
-{
-  "kind": "sceneStoryboardImagesImport",
-  "sceneBeatsRevisionId": "scene_beats_revision_control_room_v1",
-  "title": "Control room storyboard images",
-  "select": true,
-  "beats": [
-    {
-      "beatId": "beat_001",
-      "source": "tmp/media/storyboards/control-room-beat-001.png",
-      "sourcePurpose": "scene.storyboard-sheet"
-    },
-    {
-      "beatId": "beat_002",
-      "source": "tmp/media/storyboards/control-room-beat-002.png",
-      "sourcePurpose": "scene.storyboard-sheet"
-    }
-  ]
-}
-```
-
-The agent owns visual inspection and splitting of the deterministic composite;
-Core owns Beat and file ownership validation plus durable attachment. The
-required `select` boolean either selects every imported Beat candidate
-atomically or leaves every existing Beat selection unchanged. No runtime
-automatic splitting or creative-content validation occurs.
-
-Every successful import reports Studio resource keys. The CLI appends a Studio
-resource-change event so the existing Cast, Location, Lookbook, Scene, dialogue,
-and Take surfaces refresh without a browser reload.
+Each grouped Beat entry may contain `generationProvenance`. A single Beat may use
+`--beats <beat-id> --source <path> --provenance <file>`. Core validates the
+current Scene Beats revision and writes all accepted images atomically.
 
 ## `renku asset`
 
@@ -1816,7 +1644,7 @@ Options:
 
 Character Sheets, Location Sheets, Lookbook Sheets, and Dialogue Audio Takes
 have no global selection command. Their exact choices belong to the consuming
-GenerationSpec references.
+provider request inputs.
 
 JSON listing returns an `AssetPage` with `items`, `nextCursor`, and
 `selectedAssetId`, so callers receive the owner’s current canonical choice with

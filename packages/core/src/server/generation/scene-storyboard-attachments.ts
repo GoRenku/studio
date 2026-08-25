@@ -23,7 +23,7 @@ import {
 } from '../project-asset-files/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { studioSceneBeatsResourceKey } from '../studio-coordination/resource-keys.js';
-import { validateGenerationProvenance } from './attachments.js';
+import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
 import { persistOwnedGeneratedMediaAssetInSession } from './attachment-persistence.js';
 
 export function attachSceneStoryboardImages(input: {
@@ -58,21 +58,18 @@ export function attachSceneStoryboardImages(input: {
     }
     beatIds.add(file.beatId);
     sources.add(source);
-    const provenance = validateGenerationProvenance({
-      session: input.session,
-      purpose: 'scene.storyboard-sheet',
-      target: { kind: 'scene', id: input.sceneId },
-      sourceProjectRelativePath: source,
-      destinationAssetType: 'scene_storyboard_image',
-      ...(file.sourceSpecId ? { sourceSpecId: file.sourceSpecId } : {}),
-      ...(file.sourceRunId ? { receipt: { id: file.sourceRunId } } : {}),
-    });
+    const generationProvenance = file.generationProvenance
+      ? validateMediaGenerationProvenance(file.generationProvenance)
+      : null;
+    if (generationProvenance && generationProvenance.mediaKind !== 'image') {
+      throw invalidDocument('Storyboard generation provenance must describe image media.');
+    }
     return {
       ...file,
       source,
       beat,
       beatNumber: beat.number,
-      provenance,
+      generationProvenance,
     };
   });
   const ids = createUniqueIdAllocator(input.idGenerator);
@@ -129,19 +126,11 @@ export function attachSceneStoryboardImages(input: {
             type: 'scene_storyboard_image',
             mediaKind: 'image',
             title: file.title,
-            origin: file.sourceSpecId || file.sourceRunId ? 'generated' : 'external',
+            origin: file.generationProvenance ? 'generated' : 'external',
           },
           fileRole: 'storyboard_image',
-          ...(file.provenance?.kind === 'agent-external'
-            ? { sourceSpecId: file.provenance.generationSpecId }
-            : {}),
-          ...(file.provenance?.kind === 'renku-managed'
-            ? {
-                selectedGenerationOutput: {
-                  generationRunId: file.provenance.generationRunId,
-                  outputArtifactId: file.provenance.outputArtifactId,
-                },
-              }
+          ...(file.generationProvenance
+            ? { generationProvenance: file.generationProvenance }
             : {}),
         });
         importedIds.push({ beatId: file.beatId, assetId: file.assetId });

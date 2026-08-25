@@ -8,7 +8,6 @@ const failures = [];
 const rootPackage = await readJson('package.json');
 const corePackage = await readJson('packages/core/package.json');
 const cliPackage = await readJson('packages/cli/package.json');
-const enginesPackage = await readJson('packages/engines/package.json');
 const studioPackage = await readJson('packages/studio/package.json');
 
 const coreFastConfig = await readText('packages/core/vitest.config.ts');
@@ -19,10 +18,6 @@ const cliFastConfig = await readText('packages/cli/vitest.config.ts');
 const cliIntegrationConfig = await readText(
   'packages/cli/vitest.integration.config.ts'
 );
-const enginesFastConfig = await readText('packages/engines/vitest.config.ts');
-const enginesIntegrationConfig = await readText(
-  'packages/engines/vitest.integration.config.ts'
-);
 const studioFastConfig = await readText('packages/studio/vitest.config.ts');
 const studioIntegrationConfig = await readText(
   'packages/studio/vitest.integration.config.ts'
@@ -32,7 +27,6 @@ expectScript(rootPackage, 'test:integration');
 expectScript(rootPackage, 'test:final');
 expectScript(corePackage, 'test:integration');
 expectScript(cliPackage, 'test:integration');
-expectScript(enginesPackage, 'test:integration');
 expectScript(studioPackage, 'test:integration');
 
 rejectConfigNeedle(
@@ -59,18 +53,6 @@ expectConfigNeedle(
   'tests/integration/**/*.test.ts'
 );
 
-rejectConfigNeedle(
-  enginesFastConfig,
-  'packages/engines/vitest.config.ts',
-  'tests/integration/**/*.test.ts',
-  'Engines integration tests must stay out of the fast config.'
-);
-expectConfigNeedle(
-  enginesIntegrationConfig,
-  'packages/engines/vitest.integration.config.ts',
-  'tests/integration/**/*.test.ts'
-);
-
 expectConfigNeedle(
   studioFastConfig,
   'packages/studio/vitest.config.ts',
@@ -93,7 +75,6 @@ expectConfigNeedle(
 );
 
 await expectPath('packages/cli/tests/integration/cli-workflows.test.ts');
-await expectPath('packages/engines/tests/integration/unified-simulation-flow.test.ts');
 
 if (failures.length > 0) {
   console.error('Test execution partition issues found:');

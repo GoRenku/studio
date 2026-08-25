@@ -1,8 +1,8 @@
 import type { AssetOwner } from '../../client/assets.js';
 import type {
-  GenerationPurpose,
-  GenerationTarget,
-} from '../../client/generation.js';
+  MediaPurpose,
+  MediaTarget,
+} from '../../client/media-attachments.js';
 import type { ProjectAssetFileDestination } from '../project-asset-files/index.js';
 import {
   projectCoverCandidateResourceKeys,
@@ -19,8 +19,6 @@ import { requireShotRecord } from '../database/access/shot-plans/shot-records.js
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { readGenerationSpecRecord } from '../database/access/media-generation.js';
-import { shotPlanVideoSourceSceneId } from '../shot-plan-video-generations/source-provenance.js';
 
 export interface GeneratedMediaAttachmentDestination {
   file: ProjectAssetFileDestination;
@@ -122,11 +120,10 @@ export function lookbookSheetAttachmentDestination(
 }
 
 export function resolveGeneratedMediaAttachment(input: {
-  purpose: GenerationPurpose;
-  target: GenerationTarget;
+  purpose: MediaPurpose;
+  target: MediaTarget;
   title?: string;
   session: DatabaseSession;
-  shotPlanId?: string;
 }): GeneratedMediaAttachmentDetails {
   const builder = attachmentBuilders[input.purpose];
   if (!builder) {
@@ -143,7 +140,7 @@ type AttachmentBuilder = (
 ) => GeneratedMediaAttachmentDetails;
 
 const attachmentBuilders: Partial<
-  Record<GenerationPurpose, AttachmentBuilder>
+  Record<MediaPurpose, AttachmentBuilder>
 > = {
   'project.cover': (input) =>
     details(
@@ -158,7 +155,7 @@ const attachmentBuilders: Partial<
     ),
   'shot-plan.video-generation': (input) =>
     details(
-      requireTarget(input, 'project'),
+      requireTarget(input, 'shotPlan'),
       {
         file: { kind: 'shotPlan.video', shotPlanId: requireShotPlanId(input) },
         owner: { kind: 'project' },
@@ -170,7 +167,7 @@ const attachmentBuilders: Partial<
     ),
   'shot-plan.video-first-frame': (input) =>
     shotPlanVideoReferenceImageDetails(
-      requireTarget(input, 'project'),
+      requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'first-frame',
       'Shot Plan Video First Frame',
@@ -178,7 +175,7 @@ const attachmentBuilders: Partial<
     ),
   'shot-plan.video-last-frame': (input) =>
     shotPlanVideoReferenceImageDetails(
-      requireTarget(input, 'project'),
+      requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'last-frame',
       'Shot Plan Video Last Frame',
@@ -186,7 +183,7 @@ const attachmentBuilders: Partial<
     ),
   'shot-plan.video-storyboard': (input) =>
     shotPlanVideoReferenceImageDetails(
-      requireTarget(input, 'project'),
+      requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'storyboard',
       'Shot Plan Video Storyboard',
@@ -194,7 +191,7 @@ const attachmentBuilders: Partial<
     ),
   'shot-plan.video-reference': (input) =>
     shotPlanVideoReferenceImageDetails(
-      requireTarget(input, 'project'),
+      requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'reference',
       'Shot Plan Video Reference',
@@ -284,8 +281,8 @@ const attachmentBuilders: Partial<
   },
 };
 
-export function generationAttachmentAssetType(purpose: GenerationPurpose): string {
-  const assetTypes: Partial<Record<GenerationPurpose, string>> = {
+export function generationAttachmentAssetType(purpose: MediaPurpose): string {
+  const assetTypes: Partial<Record<MediaPurpose, string>> = {
     'project.cover': 'project_cover',
     'shot-plan.video-generation': 'shot_plan_video',
     'shot-plan.video-first-frame': 'shot_plan_video_first_frame',
@@ -315,7 +312,7 @@ export function generationAttachmentAssetType(purpose: GenerationPurpose): strin
 
 export function generatedMediaAttachmentResourceKeys(input: {
   attachment: GeneratedMediaAttachmentDetails;
-  generationSpecId: string | null;
+  authoredFromShotPlanId: string | null;
   session: DatabaseSession;
   selectionTarget: AssetSelectionTarget | null;
 }): string[] {
@@ -327,17 +324,12 @@ export function generatedMediaAttachmentResourceKeys(input: {
   }
   if (
     input.attachment.assetType !== 'shot_plan_video' ||
-    !input.generationSpecId
+    !input.authoredFromShotPlanId
   ) {
     return input.attachment.resourceKeys;
   }
-  const source = readGenerationSpecRecord(input.session, input.generationSpecId);
-  const sceneId = source
-    ? shotPlanVideoSourceSceneId(input.session, source.spec)
-    : null;
-  return sceneId
-    ? [studioSceneVideoGenerationsResourceKey(sceneId)]
-    : [];
+  const source = requireShotPlanRecord(input.session, input.authoredFromShotPlanId);
+  return [studioSceneVideoGenerationsResourceKey(source.sceneId)];
 }
 
 function shotPlanVideoReferenceImageDetails(
@@ -362,14 +354,9 @@ function shotPlanVideoReferenceImageDetails(
 function requireShotPlanId(
   input: Parameters<typeof resolveGeneratedMediaAttachment>[0]
 ): string {
-  if (!input.shotPlanId) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_ATTACHMENT_SHOT_PLAN_PROVENANCE_REQUIRED',
-      'Shot Plan media requires an exact authored Shot Plan from frozen generation provenance.'
-    );
-  }
-  requireShotPlanRecord(input.session, input.shotPlanId);
-  return input.shotPlanId;
+  requireTarget(input, 'shotPlan');
+  requireShotPlanRecord(input.session, input.target.id);
+  return input.target.id;
 }
 
 function details(
@@ -388,11 +375,11 @@ function details(
   };
 }
 
-function requireTarget<K extends GenerationTarget['kind']>(
+function requireTarget<K extends MediaTarget['kind']>(
   input: Parameters<typeof resolveGeneratedMediaAttachment>[0],
   kind: K
 ): asserts input is Parameters<typeof resolveGeneratedMediaAttachment>[0] & {
-  target: Extract<GenerationTarget, { kind: K }>;
+  target: Extract<MediaTarget, { kind: K }>;
 } {
   if (input.target.kind !== kind) {
     throw new ProjectDataError(

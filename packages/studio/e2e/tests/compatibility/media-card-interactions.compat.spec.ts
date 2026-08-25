@@ -1,6 +1,3 @@
-import type {
-  GenerationPreviewResource,
-} from '@gorenku/studio-core/client';
 import type { Locator, Page, Route } from '@playwright/test';
 import { test, expect } from '../../fixtures/studio-e2e-test';
 
@@ -9,7 +6,6 @@ test.setTimeout(120_000);
 test('preserves MediaCard collection and preview surfaces', async ({
   page,
   movieProject,
-  generationPromptProject,
 }) => {
   const browserMessages = collectBrowserWarnings(page);
   const shotPlanRoute =
@@ -39,14 +35,6 @@ test('preserves MediaCard collection and preview surfaces', async ({
 
   await page.keyboard.press('Escape');
   await expect(secondShotAction).toBeFocused();
-
-  await openReferencePicker(
-    page,
-    referencePickerPreview(generationPromptProject.preview)
-  );
-  await screenshot(page, 'reference-picker.png', []);
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('Escape');
 
   await page.goto(
     `/projects/${encodeURIComponent(movieProject.projectName)}` +
@@ -169,65 +157,6 @@ test('preserves Shot candidate loading and error states', async ({
   await screenshot(page, 'shot-candidate-error.png', []);
   await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
 });
-
-async function openReferencePicker(
-  page: Page,
-  preview: GenerationPreviewResource,
-): Promise<void> {
-  await page.goto(`/projects/${encodeURIComponent(preview.project.name)}`);
-  await page.evaluate((resource) => {
-    window.dispatchEvent(new CustomEvent('renku:generation-preview-requested', {
-      detail: {
-        projectName: resource.project.name,
-        previews: [resource],
-        eventId: `media-card-compat-${Date.now()}`,
-        createdAt: '2026-07-28T10:00:00.000Z',
-      },
-    }));
-  }, preview);
-  await page.getByRole('tab', { name: 'References' }).click();
-  const slot = preview.references.slots[0]!;
-  await page.getByRole('button', {
-    name: slot.current?.label ?? slot.eligibleCandidates[0]!.label,
-    exact: true,
-  }).click();
-  await expect(
-    page.getByRole('heading', { name: slot.label })
-  ).toBeVisible();
-}
-
-function referencePickerPreview(
-  source: GenerationPreviewResource,
-): GenerationPreviewResource {
-  const preview = structuredClone(source);
-  const slot = preview.references.slots.find((candidate) => !candidate.locked);
-  const candidates = [
-    ...preview.references.additional,
-    ...preview.references.slots.flatMap(
-      (candidate) => candidate.eligibleCandidates
-    ),
-  ].filter(
-    (candidate, index, all) =>
-      all.findIndex((item) => referenceKey(item) === referenceKey(candidate)) ===
-      index
-  );
-  if (!slot || candidates.length < 2) {
-    throw new Error(
-      'Reference Picker compatibility fixture needs one editable slot and two candidates.'
-    );
-  }
-  slot.current = candidates[0]!;
-  slot.eligibleCandidates = candidates.slice(0, 2);
-  return preview;
-}
-
-function referenceKey(
-  reference: GenerationPreviewResource['references']['additional'][number],
-): string {
-  return reference.identity.kind === 'asset-file'
-    ? `${reference.identity.assetId}:${reference.identity.assetFileId}`
-    : reference.browserUrl;
-}
 
 function shotPlanRoute(
   project: {

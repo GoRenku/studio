@@ -1,5 +1,7 @@
 # Freeze Generation Specs At Live Execution
 
+> **Superseded by Decision 0086:** Generation Spec freezing, `generation spec freeze`, and frozen-Spec attachment requirements are removed for provider and Codex paths.
+
 Date: 2026-07-18
 
 Status: accepted

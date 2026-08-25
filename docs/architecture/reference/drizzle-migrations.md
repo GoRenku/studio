@@ -267,6 +267,17 @@ because Drizzle runs migrations inside a transaction and a populated Asset
 table cannot be dropped while Asset files, memberships, and selections
 reference it. The migration advances project-store schema generation to 62.
 
+`0080_provider_skill_media_provenance.sql` adds a custom conversion before its
+generated destructive drops. It projects every attached legacy request into
+safe Asset-level generation provenance, aborts on conflicting compound-Asset
+sources or unsafe transport data, migrates Project Settings, and then removes
+the retired request lifecycle tables. Because Drizzle Kit runs inside a
+transaction, its generated `foreign_keys=OFF` statement cannot make an
+`asset_file` parent-table rebuild safe. The custom migration instead drops the
+obsolete nullable source column in place, preserving retained dialogue and
+screenplay children. Its transaction-level regression test proves a retained
+child row survives with foreign keys enabled.
+
 ## Project Store Schema Generation
 
 Renku Studio project databases use SQLite's `PRAGMA user_version` as the

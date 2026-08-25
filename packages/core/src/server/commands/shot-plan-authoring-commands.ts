@@ -13,7 +13,7 @@ import type { RecoverableMutationReport } from '../../client/trash.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { requireShotInPlan } from '../database/access/shot-plans/shot-records.js';
-import { withGenerationProject } from '../generation/project-operation.js';
+import { withProject } from '../project-operation.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { copyShotPlanAuthoring } from '../shot-plans/copying.js';
 import {
@@ -35,7 +35,7 @@ import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 export async function createShotPlan(
   input: CreateShotPlanInput
 ): Promise<ShotPlanReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     const shotPlanId = createShotPlanAuthoring({
       command: input,
       session,
@@ -48,7 +48,7 @@ export async function createShotPlan(
 export async function updateShotPlanDetails(
   input: UpdateShotPlanDetailsInput
 ): Promise<ShotPlanReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     updateShotPlanDetailsAuthoring({
       command: input,
       session,
@@ -72,7 +72,7 @@ export async function updateShotPlanDetails(
 export async function addShotToPlan(
   input: AddShotToPlanInput
 ): Promise<ShotPlanReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     addShotAuthoring({
       command: input,
       session,
@@ -89,7 +89,7 @@ export async function addShotToPlan(
 export async function updateShotInPlan(
   input: UpdateShotInPlanInput
 ): Promise<ShotPlanReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     updateShotAuthoring({
       command: input,
       session,
@@ -106,7 +106,7 @@ export async function updateShotInPlan(
 export async function moveShotInPlan(
   input: MoveShotInPlanInput
 ): Promise<ShotPlanReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     moveShotAuthoring({
       command: input,
       session,
@@ -123,7 +123,7 @@ export async function moveShotInPlan(
 export async function removeShotFromPlan(
   input: RemoveShotFromPlanInput
 ): Promise<RecoverableMutationReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     const plan = requireShotPlanRecord(session, input.shotPlanId);
     requireShotInPlan(session, input);
     return discardShotPlanObject({
@@ -143,7 +143,7 @@ export async function removeShotFromPlan(
 export async function copyShotPlan(
   input: CopyShotPlanInput
 ): Promise<ShotPlanReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     const shotPlanId = copyShotPlanAuthoring({
       command: input,
       session,
@@ -157,7 +157,7 @@ export async function copyShotPlan(
 export async function deleteShotPlan(
   input: DeleteShotPlanInput
 ): Promise<RecoverableMutationReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) =>
+  return withProject(input, ({ session, projectFolder }) =>
     discardShotPlanObject({
       session,
       projectFolder,

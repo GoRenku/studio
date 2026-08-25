@@ -20,10 +20,6 @@ export {
   removeCopiedProjectAssetFile,
   removeCopiedProjectAssetFileSync,
 } from './persistence.js';
-export {
-  resolveGenerationRunOutputRoot,
-  resolveTemporaryFileRoot,
-  writeProjectTemporaryFile,
-} from './temporary-files.js';
+export { resolveTemporaryFileRoot, writeProjectTemporaryFile } from './temporary-files.js';
 export { allocateSceneStoryboardIterationFolderSync } from './destinations/scene-storyboard.js';
 export { assertSceneDialogueAudioDestinationReady } from './destinations/scene-dialogue-audio.js';

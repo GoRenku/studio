@@ -1,41 +1,42 @@
-import type { Asset, AssetMetadataInput, GenerationPurpose, GenerationTarget } from '../../client/index.js';
+import type {
+  Asset,
+  AssetMetadataInput,
+} from '../../client/assets.js';
+import type { MediaPurpose, MediaTarget } from '../../client/media-attachments.js';
+import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 import { normalizeAssetMetadata } from '../assets/metadata.js';
+import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
 import { readOwnedAsset } from '../assets/projection.js';
+import { assetSelectionTargetForOwnerType } from '../assets/selection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { ProjectDataError } from '../project-data-error.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
-import { generationRunIdFromReceipt } from '../asset-file-generation/import-provenance.js';
-import { readGenerationRunRecord, readGenerationSpecRecord } from '../database/access/media-generation.js';
 import { requireLookbookRecordById } from '../database/access/lookbook.js';
+import { ProjectDataError } from '../project-data-error.js';
 import {
-  generationAttachmentAssetType,
   generatedMediaAttachmentResourceKeys,
+  generationAttachmentAssetType,
   resolveGeneratedMediaAttachment,
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
-import { assetSelectionTargetForOwnerType } from '../assets/selection.js';
+import { attachSceneDialogueAudioMedia } from '../scene-dialogue-audio-workspace/attachments.js';
 
 export interface AttachGenerationMediaInput {
-  purpose: GenerationPurpose;
-  target: GenerationTarget;
+  purpose: MediaPurpose;
+  target: MediaTarget;
   sourceProjectRelativePath: string;
   title?: string;
   assetMetadata?: AssetMetadataInput;
-  receipt?: unknown;
-  sourceSpecId?: string;
+  generationProvenance?: MediaGenerationProvenance;
   select?: boolean;
 }
 
 export interface GenerationMediaAttachmentReport {
   valid: true;
-  purpose: GenerationPurpose;
-  target: GenerationTarget;
+  purpose: MediaPurpose;
+  target: MediaTarget;
   asset: Asset;
-  provenance:
-    | { generationRunId: string }
-    | { generationSpecId: string }
-    | null;
+  generationProvenance: MediaGenerationProvenance | null;
   resourceKeys: string[];
   project: { projectName: string; id: string; projectFolder: string };
   ownerRecord?: { kind: 'lookbookImage' | 'lookbookSheet'; id: string };
@@ -46,32 +47,60 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   projectFolder: string;
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
-  const provenance = validateGenerationProvenance({
-    ...input,
-    destinationAssetType: generationAttachmentAssetType(input.purpose),
-  });
-  const shotPlanId = exactAuthoredShotPlanId(input.session, provenance);
+  const generationProvenance = input.generationProvenance === undefined
+    ? null
+    : validateMediaGenerationProvenance(input.generationProvenance);
+  if (input.purpose === 'scene.dialogue-audio') {
+    if (input.target.kind !== 'sceneDialogue' || !generationProvenance) {
+      throw new ProjectDataError(
+        'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
+        'Scene Dialogue Audio attachment requires a Dialogue target and exact provenance.',
+      );
+    }
+    const attached = attachSceneDialogueAudioMedia({
+      ...input,
+      turnId: input.target.id,
+      generationProvenance,
+    });
+    return {
+      valid: true,
+      purpose: input.purpose,
+      target: input.target,
+      asset: attached.asset,
+      generationProvenance,
+      resourceKeys: attached.resourceKeys,
+      project: attached.project,
+    };
+  }
+  const assetType = generationAttachmentAssetType(input.purpose);
+  if (requiresGenerationProvenance(assetType) && !generationProvenance) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
+      `${input.purpose} attachments require exact media generation provenance.`,
+    );
+  }
   const attachment = resolveGeneratedMediaAttachment({
     purpose: input.purpose,
     target: input.target,
     session: input.session,
     ...(input.title ? { title: input.title } : {}),
-    ...(shotPlanId ? { shotPlanId } : {}),
   });
+  if (generationProvenance && generationProvenance.mediaKind !== attachment.mediaKind) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_PROVENANCE_INVALID',
+      `Provenance media kind ${generationProvenance.mediaKind} does not match ${attachment.mediaKind} attachment.`,
+    );
+  }
+  validateLookbookKind(input);
   const selectionTarget = input.select
     ? assetSelectionTargetForOwnerType(
         attachment.destination.owner,
-        attachment.assetType
+        attachment.assetType,
       )
     : null;
-  const resourceKeys = generatedMediaAttachmentResourceKeys({
-    attachment,
-    generationSpecId: provenance?.generationSpecId ?? null,
-    session: input.session,
-    selectionTarget,
-  });
-  validateLookbookKind(input);
-  const assetMetadata = normalizeAssetMetadata(input.assetMetadata ?? {});
+  const authoredFromShotPlanId = input.target.kind === 'shotPlan'
+    ? input.target.id
+    : null;
   const persisted = persistGeneratedMediaAttachment({
     session: input.session,
     projectFolder: input.projectFolder,
@@ -83,165 +112,56 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       type: attachment.assetType,
       mediaKind: attachment.mediaKind,
       title: input.title?.trim() || attachment.label,
-      ...assetMetadata,
-      origin: provenance ? 'generated' : 'external',
+      ...normalizeAssetMetadata(input.assetMetadata ?? {}),
+      origin: generationProvenance ? 'generated' : 'external',
     },
     fileRole: 'primary',
     ...(selectionTarget ? { selectionTarget } : {}),
-    ...(provenance?.kind === 'renku-managed'
-      ? {
-          selectedGenerationOutput: {
-            generationRunId: provenance.generationRunId,
-            outputArtifactId: provenance.outputArtifactId,
-          },
-        }
-      : {}),
-    ...(provenance?.kind === 'agent-external'
-      ? { sourceSpecId: provenance.generationSpecId }
-      : {}),
+    ...(generationProvenance ? { generationProvenance } : {}),
+    ...(authoredFromShotPlanId ? { authoredFromShotPlanId } : {}),
   });
   const project = readProjectRecord(input.session);
-  const attached = readOwnedAsset(input.session, {
+  const asset = readOwnedAsset(input.session, {
     owner: attachment.destination.owner,
     assetId: persisted.assetId,
   });
-  if (!project || !attached) {
-    throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_FAILED', 'Generation media attachment was not persisted.');
+  if (!project || !asset) {
+    throw new ProjectDataError(
+      'CORE_GENERATION_ATTACHMENT_FAILED',
+      'Media attachment was not persisted.',
+    );
   }
   return {
     valid: true,
     purpose: input.purpose,
     target: input.target,
-    asset: attached,
-    provenance: provenance?.kind === 'renku-managed'
-      ? { generationRunId: provenance.generationRunId }
-      : provenance?.kind === 'agent-external'
-        ? { generationSpecId: provenance.generationSpecId }
-        : null,
-    resourceKeys,
-    project: { projectName: project.projectName, id: project.id, projectFolder: input.projectFolder },
+    asset,
+    generationProvenance,
+    resourceKeys: generatedMediaAttachmentResourceKeys({
+      attachment,
+      authoredFromShotPlanId,
+      session: input.session,
+      selectionTarget,
+    }),
+    project: {
+      projectName: project.projectName,
+      id: project.id,
+      projectFolder: input.projectFolder,
+    },
     ...(persisted.ownerRecord ? { ownerRecord: persisted.ownerRecord } : {}),
   };
 }
 
-function exactAuthoredShotPlanId(
-  session: DatabaseSession,
-  provenance: ValidatedGenerationProvenance
-): string | null {
-  if (!provenance) {
-    return null;
-  }
-  const spec = provenance.kind === 'renku-managed'
-    ? readGenerationRunRecord(session, provenance.generationRunId)?.specSnapshot
-    : readGenerationSpecRecord(session, provenance.generationSpecId)?.spec;
-  if (!spec?.authoredFrom || spec.authoredFrom.kind !== 'shotPlan') {
-    return null;
-  }
-  return spec.authoredFrom.id;
-}
-
-export type ValidatedGenerationProvenance =
-  | {
-      kind: 'renku-managed';
-      generationRunId: string;
-      generationSpecId: string;
-      outputArtifactId: string;
-    }
-  | { kind: 'agent-external'; generationSpecId: string }
-  | null;
-
-export function validateGenerationProvenance(input: AttachGenerationMediaInput & {
-  session: DatabaseSession;
-  destinationAssetType: string;
-}): ValidatedGenerationProvenance {
-  if (input.receipt !== undefined && input.sourceSpecId) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
-      'Generation media attachment accepts either a receipt or a source spec, not both.',
-    );
-  }
-  if (input.sourceSpecId) {
-    const record = readGenerationSpecRecord(input.session, input.sourceSpecId);
-    if (!record || record.spec.executionKind !== 'agent-external') {
-      throw new ProjectDataError(
-      'CORE_GENERATION_ATTACHMENT_SOURCE_SPEC_INVALID',
-        'The source spec must be an agent-external request for this attachment.',
-      );
-    }
-    if (record.frozenAt === null) {
-      throw new ProjectDataError(
-        'CORE_GENERATION_ATTACHMENT_SOURCE_SPEC_MUTABLE',
-        'The agent-external source spec must be frozen before generated media can be attached.',
-        { suggestion: 'Freeze the final reviewed request immediately before external generation.' }
-      );
-    }
-    if (record.spec.purpose !== 'image.edit') {
-      validateAttachmentRequestMatch(input, record.spec);
-    }
-    return {
-      kind: 'agent-external',
-      generationSpecId: record.id,
-    };
-  }
-  if (input.receipt === undefined) {
-    if (requiresExactGenerationProvenance(input.destinationAssetType)) {
-      throw new ProjectDataError(
-        'CORE_GENERATION_ATTACHMENT_PROVENANCE_REQUIRED',
-        'Shot Plan video generation attachments require exact frozen-spec or managed-run provenance.',
-      );
-    }
-    return null;
-  }
-  const generationRunId = generationRunIdFromReceipt(input.receipt);
-  if (!generationRunId) {
-    throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'Generation receipt does not identify a Renku generation run.');
-  }
-  const run = readGenerationRunRecord(input.session, generationRunId);
-  if (!run) {
-    throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'Generation run purpose and target must match the focused attachment.');
-  }
-  if (run.specSnapshot.purpose !== 'image.edit') {
-    validateAttachmentRequestMatch(input, run.specSnapshot);
-  }
-  const selectedOutput = run.outputs.find(
-    (output) => output.projectRelativePath === input.sourceProjectRelativePath
-  );
-  if (!selectedOutput) {
-    throw new ProjectDataError('CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID', 'The attached source must be an exact output of the supplied generation run.');
-  }
-  return {
-    kind: 'renku-managed',
-    generationRunId,
-    generationSpecId: run.specId,
-    outputArtifactId: selectedOutput.artifactId,
-  };
-}
-
-function requiresExactGenerationProvenance(assetType: string): boolean {
-  return assetType === 'shot_plan_video' ||
-    assetType === 'shot_plan_video_first_frame' ||
-    assetType === 'shot_plan_video_last_frame' ||
-    assetType === 'shot_plan_video_storyboard' ||
-    assetType === 'shot_plan_video_reference';
-}
-
-function validateAttachmentRequestMatch(
-  input: Pick<AttachGenerationMediaInput, 'purpose' | 'target'>,
-  spec: import('../../client/generation.js').GenerationSpec,
-): void {
-  if (spec.purpose === input.purpose &&
-      spec.target.kind === input.target.kind &&
-      spec.target.id === input.target.id) {
-    return;
-  }
-  throw new ProjectDataError(
-    'CORE_GENERATION_ATTACHMENT_PROVENANCE_INVALID',
-    'Generation request purpose and target must match the focused attachment.',
-  );
+function requiresGenerationProvenance(assetType: string): boolean {
+  return assetType === 'shot_plan_video'
+    || assetType === 'shot_plan_video_first_frame'
+    || assetType === 'shot_plan_video_last_frame'
+    || assetType === 'shot_plan_video_storyboard'
+    || assetType === 'shot_plan_video_reference';
 }
 
 function validateLookbookKind(
-  input: AttachGenerationMediaInput & { session: DatabaseSession }
+  input: AttachGenerationMediaInput & { session: DatabaseSession },
 ): void {
   if (input.target.kind !== 'lookbook') {
     return;
@@ -255,7 +175,7 @@ function validateLookbookKind(
   if (requiredKind && lookbook.kind !== requiredKind) {
     throw new ProjectDataError(
       'CORE_LOOKBOOK_TARGET_KIND_INVALID',
-      `${input.purpose} requires the current ${requiredKind} Lookbook.`
+      `${input.purpose} requires the current ${requiredKind} Lookbook.`,
     );
   }
 }

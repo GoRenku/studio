@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
 import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/screenplay';
-import { idleSaveNotification } from '../detail-save-notification';
 import {
   useSceneDialogueAudio,
   type SceneDialogueAudioPlayer,
 } from './use-scene-dialogue-audio';
 import { SceneDialogueAudioAdvancedTab } from './scene-dialogue-audio-advanced-tab';
 import { SceneDialogueAudioDialogTab } from './scene-dialogue-audio-dialog-tab';
-import { SceneDialogueAudioFooter } from './scene-dialogue-audio-footer';
 import { SceneDialogueAudioTakesTab } from './scene-dialogue-audio-takes-tab';
 
 interface SceneDialogueAudioPanelProps {
@@ -40,9 +38,6 @@ export function SceneDialogueAudioPanel({
   onSaveNotificationChange,
 }: SceneDialogueAudioPanelProps) {
   const [activeTab, setActiveTab] = useState<DialogueAudioPanelTab>('dialog');
-  const [generationNotification, setGenerationNotification] =
-    useState<SaveNotificationStatus>(idleSaveNotification);
-  const generationNotificationTimeout = useRef<number | null>(null);
   const dialogueAudio = useSceneDialogueAudio({
     projectName,
     sceneId,
@@ -52,56 +47,9 @@ export function SceneDialogueAudioPanel({
     onContextChange,
   });
   const controlsDisabled = dialogueAudio.actionBusy;
-  const activeSaveNotification =
-    generationNotification.state === 'idle'
-      ? dialogueAudio.autosave
-      : generationNotification;
-
-  const clearGenerationNotificationTimeout = useCallback(() => {
-    if (generationNotificationTimeout.current !== null) {
-      window.clearTimeout(generationNotificationTimeout.current);
-      generationNotificationTimeout.current = null;
-    }
-  }, []);
-
   useEffect(() => {
-    onSaveNotificationChange?.(activeSaveNotification);
-    return () => onSaveNotificationChange?.(idleSaveNotification);
-  }, [activeSaveNotification, onSaveNotificationChange]);
-
-  useEffect(
-    () => () => {
-      clearGenerationNotificationTimeout();
-    },
-    [clearGenerationNotificationTimeout]
-  );
-
-  const handleGenerate = useCallback(async () => {
-    clearGenerationNotificationTimeout();
-    setGenerationNotification({
-      state: 'saving',
-      message: 'Generating audio',
-    });
-    try {
-      await dialogueAudio.generateTake();
-      setGenerationNotification({
-        state: 'saved',
-        message: 'Dialogue audio generated',
-      });
-      generationNotificationTimeout.current = window.setTimeout(() => {
-        setGenerationNotification(idleSaveNotification);
-        generationNotificationTimeout.current = null;
-      }, 1800);
-    } catch (error) {
-      setGenerationNotification({
-        state: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Dialogue audio generation failed.',
-      });
-    }
-  }, [clearGenerationNotificationTimeout, dialogueAudio]);
+    onSaveNotificationChange?.(dialogueAudio.autosave);
+  }, [dialogueAudio.autosave, onSaveNotificationChange]);
 
   return (
     <aside className='flex w-[25rem] shrink-0 flex-col border-l border-border/40 bg-panel-bg/80'>
@@ -181,14 +129,6 @@ export function SceneDialogueAudioPanel({
           </TabsContent>
         </div>
       </Tabs>
-
-      <SceneDialogueAudioFooter
-        canGenerateCurrentEstimate={dialogueAudio.canGenerateCurrentEstimate}
-        blocked={dialogueAudio.blocked}
-        busy={dialogueAudio.actionBusy}
-        estimate={dialogueAudio.estimate}
-        onGenerate={handleGenerate}
-      />
     </aside>
   );
 }

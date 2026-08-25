@@ -15,7 +15,6 @@ import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
 import { createContinuityRoute } from './continuity.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
-import { createGenerationReferencesRoute } from './generation-references.js';
 import { createGenerationRequestsRoute } from './generation-requests.js';
 import { createMovieStudioSelectionContextRoute } from './movie-studio-selection-context.js';
 import { createNavigationRoute } from './navigation.js';
@@ -58,13 +57,10 @@ export type ProjectsRouteProjectData = Pick<
   | 'readScreenplaySection'
   | 'readScreenplayScene'
   | 'readSceneDialogueAudioWorkspace'
-  | 'estimateSceneDialogueAudioDraft'
   | 'updateSceneDialogueAudioSetup'
-  | 'generateSceneDialogueAudioTake'
   | 'deleteSceneDialogueAudioTake'
   | 'readSceneBeatsResource'
   | 'readScreenplayBeatGalleryResource'
-  | 'listGenerationReferences'
   | 'readStudioSelectionContext'
   | 'listSceneShotPlans'
   | 'readShotPlan'
@@ -107,6 +103,9 @@ export type ProjectsRouteProjectData = Pick<
   | 'deleteLookbookImage'
   | 'deleteLookbookSheet'
   | 'setLookbookImagePlacement'
+  | 'readMediaGenerationPreview'
+  | 'updateMediaGenerationPreviewPrompt'
+  | 'readAssetMediaGenerationRequest'
 >;
 
 export function createProjectsRoute(
@@ -181,13 +180,9 @@ export function createProjectsRoute(
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
     .route(
       '/:projectName',
-      createGenerationPreviewRoute({ requireToken })
+      createGenerationPreviewRoute({ projectData, requireToken })
     )
-    .route(
-      '/:projectName',
-      createGenerationReferencesRoute({ projectData, requireToken })
-    )
-    .route('/:projectName', createGenerationRequestsRoute({ requireToken }))
+    .route('/:projectName', createGenerationRequestsRoute({ projectData, requireToken }))
     .route('/:projectName', createTrashRoute({ projectData, requireToken }))
     .route(
       '/:projectName',

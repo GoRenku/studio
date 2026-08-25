@@ -1,5 +1,7 @@
 # 0043 Use Explicit Live Provider Run Approval
 
+> **Superseded by Decision 0086:** Live-run flags, approval tokens, and estimate-bound approval are removed. Ask Before Generating is an ordinary conversational Project workflow preference.
+
 Date: 2026-07-04
 
 Status: accepted

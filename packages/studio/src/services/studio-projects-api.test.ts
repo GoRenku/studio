@@ -231,7 +231,7 @@ describe('studio-projects-api', () => {
 
 function projectSettings() {
   return {
-    version: 2 as const,
+    version: 3 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -240,17 +240,24 @@ function projectSettings() {
       generateBeatStoryboardImages: false,
     },
     generation: {
-      preferCodexImageGeneration: true,
       displayPreview: true,
-      renkuManaged: {
-        requirePerRunConfirmation: true,
-        allowConcurrentGenerations: false,
+      image: {
+        provider: 'codex' as const,
+        askBeforeGenerating: false,
+        runGenerationsConcurrently: true,
+        maxConcurrentGenerations: 5,
+      },
+      video: {
+        provider: 'fal-ai' as const,
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
         maxConcurrentGenerations: 1,
       },
-      codexBuiltIn: {
-        requirePerRunConfirmation: false,
-        allowConcurrentGenerations: true,
-        maxConcurrentGenerations: 5,
+      audio: {
+        provider: 'elevenlabs' as const,
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
+        maxConcurrentGenerations: 1,
       },
     },
   };

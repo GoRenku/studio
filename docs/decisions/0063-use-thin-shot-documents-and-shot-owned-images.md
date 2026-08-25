@@ -1,5 +1,7 @@
 # Use Thin Shot Documents And Shot-Owned Images
 
+> **Decision 0086 update:** Thin Shot documents, Shot-owned image candidates, and focused selection remain. The Codex saved/approved/frozen Spec workflow is replaced by capability-gated generation, conversational Preview, and Asset provenance.
+
 Date: 2026-07-26
 
 Status: accepted

@@ -498,6 +498,12 @@ async function seedProjectMedia(input: {
   await writeProjectFile({
     projectData: input.projectData,
     homeDir: input.runtime.isolatedHomeDirectory,
+    projectRelativePath: 'generated/audio/urban-dialogue-take.mp3',
+    contents: Buffer.from('urban dialogue take'),
+  });
+  await writeProjectFile({
+    projectData: input.projectData,
+    homeDir: input.runtime.isolatedHomeDirectory,
     projectRelativePath: 'generated/media/shot-one-wide.png',
     contents: wideShotImage,
   });
@@ -608,7 +614,7 @@ async function seedProjectMedia(input: {
       },
     },
   });
-  await input.projectData.generateSceneDialogueAudioTake({
+  await input.projectData.updateSceneDialogueAudioSetup({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     sceneId: input.ids.sceneId,
@@ -621,7 +627,27 @@ async function seedProjectMedia(input: {
       outputFormat: 'mp3_44100_128',
       languageCode: 'en',
     },
-    simulate: true,
+  });
+  await input.projectData.attachGenerationMedia({
+    homeDir: input.runtime.isolatedHomeDirectory,
+    projectName: input.projectName,
+    purpose: 'scene.dialogue-audio',
+    target: { kind: 'sceneDialogue', id: input.ids.dialogueId },
+    sourceProjectRelativePath: 'generated/audio/urban-dialogue-take.mp3',
+    title: 'Urban dialogue take',
+    generationProvenance: {
+      provider: 'elevenlabs',
+      model: 'eleven_v3',
+      mediaKind: 'audio',
+      prompt: 'Hold the gate.',
+      request: {
+        text: 'Hold the gate.',
+        voice_id: 'voice_urban_primary',
+        output_format: 'mp3_44100_128',
+        language_code: 'en',
+      },
+      receipt: { request_id: 'e2e_urban_dialogue_take' },
+    },
   });
   const firstShotImage = await input.projectData.attachGenerationMedia({
     homeDir: input.runtime.isolatedHomeDirectory,

@@ -34,6 +34,27 @@ describe('Core server architecture boundaries', () => {
     );
     expect(clientSources.join('\n')).not.toMatch(/screenplay\/fdx/);
   });
+
+  it('keeps Core independent from Engines and provider SDKs', async () => {
+    const coreFolder = join(dirname(fileURLToPath(import.meta.url)), '..');
+    const sources = await Promise.all(
+      (await sourceFiles(coreFolder)).map((file) => readFile(file, 'utf8')),
+    );
+    expect(sources.join('\n')).not.toMatch(
+      /from ['"](?:@gorenku\/studio-engines|@fal-ai\/client|replicate|@elevenlabs\/elevenlabs-js)['"]/,
+    );
+  });
+
+  it('keeps media generation context independent from provider and UI capabilities', async () => {
+    const folder = join(dirname(fileURLToPath(import.meta.url)), 'media-generation-context');
+    const sources = await Promise.all(
+      (await sourceFiles(folder)).map((file) => readFile(file, 'utf8')),
+    );
+    const source = sources.join('\n');
+
+    expect(source).not.toMatch(/from ['"](?:@gorenku\/studio-engines|react|hono|meow)['"]/);
+    expect(source).not.toMatch(/provider-credentials|provider-registry|supported-models/);
+  });
 });
 
 async function sourceFiles(folder: string): Promise<string[]> {

@@ -1,12 +1,17 @@
 import {
-  generateLocationWorld,
+  persistLocationWorldGeneration,
+  prepareLocationWorldGeneration,
   readLocationWorldResource,
 } from '../location-worlds/index.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createLocationWorldServiceWiring(): Pick<
   ProjectDataService,
-  'generateLocationWorld' | 'readLocationWorldResource'
+  'persistLocationWorldGeneration' | 'prepareLocationWorldGeneration' | 'readLocationWorldResource'
 > {
-  return { generateLocationWorld, readLocationWorldResource };
+  return {
+    persistLocationWorldGeneration,
+    prepareLocationWorldGeneration,
+    readLocationWorldResource,
+  };
 }

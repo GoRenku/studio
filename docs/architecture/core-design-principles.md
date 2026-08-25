@@ -27,8 +27,9 @@ Decision history:
 ## Source Of Truth
 
 - Keep all durable metadata in one source of truth.
-- Use SQLite for metadata, relationships, selects, pins, bindings, task state,
-  provider run records, generation records, budget records, and cost records.
+- Use SQLite for durable metadata, relationships, selects, pins, bindings, and
+  accepted task state. Temporary media-generation context and review documents
+  are not durable domain records.
 - Store content files and generated media on the filesystem.
 - Treat Inspiration folder images as filesystem-owned content, not per-image
   assets.
@@ -83,25 +84,32 @@ Decision history:
 - Generation definitions are code-owned system behavior in the current
   direction, not project-authored source folders.
 - Project files provide context and outputs for generation.
-- Persist user-editable generation specs before estimate or execution.
-- Store generation run records with spec, provider-payload, estimate, output,
-  and diagnostic snapshots.
-- Build estimates from the same schema-validated provider request used by the
-  run boundary, including exact selected files and their current hashes.
-- Treat estimates as display-only. Require explicit live provider approval at
-  the run boundary and store the durable run facts without a separate approval
-  marker.
-- Do not create dependency cost plans, child specs, recursive estimates, or
-  non-current-request price projections.
+- Core deterministically projects current Project facts, domain relationships,
+  and relationship-derived AssetFile suggestions for the exact media purpose
+  and target.
+- **Context is evidence, not permission.** Missing creative context is
+  informational, suggested references are non-exhaustive, their order is not
+  priority, and the user or agent may ignore, supplement, or replace them.
+- Validate only truthful target/scope identity and safe registered file facts;
+  do not turn context into a creative allowlist, readiness gate, or execution
+  authorization.
+- Keep provider/model selection and exact provider-native request authoring in
+  provider Skills.
+- Validate and execute provider protocols only in standalone Engines.
+- Keep temporary review documents Project-relative and store exact safe
+  generation provenance only on attached Assets.
+- Keep Core focused on envelope safety, Settings, attachment ownership,
+  persistence, copy, and Inspection; it does not estimate or execute providers.
 - Keep generation and media import separate. A generated file is not attached to
   project metadata until an import command succeeds.
 - Generated candidates are assets and may be treated as takes.
 - Durable chosen takes/assets should be modeled as selects.
 - Production-ready selects can be exported into `production-assets/`.
-- Use focused Core purpose descriptors for target context, settings, and exact
-  reference guides while sharing one generic generation lifecycle.
-- Keep provider fields, request assembly, schema validation, pricing, and
-  execution in Engines. Keep focused attachment ownership in Core.
+- Use focused Core purpose builders for typed target context, output guidance,
+  and advisory relationship-derived reference roles.
+- Keep provider fields and request assembly in provider Skills; keep live
+  provider validation and execution in Engines; keep focused attachment
+  ownership in Core.
 - Do not introduce provider capability YAML, schema overlays, plugin-style
   purpose frameworks, or generic prompt frameworks unless concrete current
   implementation work proves the additional abstraction is needed.

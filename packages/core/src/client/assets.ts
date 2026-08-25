@@ -1,5 +1,6 @@
 import type { ProjectRelativePath } from './project/index.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
+import type { MediaGenerationProvenance } from './media-generation-review.js';
 
 export type AssetOwner =
   | { kind: 'project' }
@@ -86,6 +87,8 @@ export interface Asset {
   origin: string;
   referenceName: string | null;
   tags: string[];
+  generationProvenance: MediaGenerationProvenance | null;
+  authoredFrom: { kind: 'shotPlan'; id: string } | null;
   files: AssetFile[];
   createdAt: string;
   updatedAt: string;

@@ -1,4 +1,7 @@
-export { generateLocationWorld } from './generation.js';
+export {
+  persistLocationWorldGeneration,
+  prepareLocationWorldGeneration,
+} from './persistence.js';
 export {
   readLocationWorldResource,
   readSelectedLocationWorldInSession,

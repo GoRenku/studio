@@ -12,7 +12,7 @@ import {
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-continuity-api';
 import { LocationPanel } from './location-panel';
-import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
+import { MediaGenerationRequestInspectorProvider as GenerationRequestInspectorProvider } from '@/features/media-generation-request/media-generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(
@@ -317,6 +317,8 @@ function locationWorldAsset(): StudioAssetResponse {
     title: 'Gate 3D World',
     oneLineSummary: null,
     origin: 'world-labs',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: [],
     files: [{
@@ -363,6 +365,8 @@ function locationAsset({
     title,
     oneLineSummary,
     origin: 'generated',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: [],
     files: [

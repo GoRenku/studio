@@ -47,6 +47,9 @@ importers:
       '@gorenku/studio-diagnostics':
         specifier: workspace:*
         version: link:../diagnostics
+      '@gorenku/studio-engines':
+        specifier: workspace:*
+        version: link:../engines
       meow:
         specifier: ^14.1.0
         version: 14.1.0
@@ -84,9 +87,6 @@ importers:
       '@gorenku/studio-diagnostics':
         specifier: workspace:*
         version: link:../diagnostics
-      '@gorenku/studio-engines':
-        specifier: workspace:*
-        version: link:../engines
       '@rgrove/parse-xml':
         specifier: ^4.2.3
         version: 4.2.3
@@ -169,39 +169,21 @@ importers:
 
   packages/engines:
     dependencies:
-      '@ai-sdk/openai':
-        specifier: ^3.0.1
-        version: 3.0.60(zod@4.4.3)
       '@elevenlabs/elevenlabs-js':
         specifier: ^2.31.0
         version: 2.45.0
       '@fal-ai/client':
         specifier: ^1.7.2
         version: 1.10.1
-      '@gorenku/studio-diagnostics':
-        specifier: workspace:*
-        version: link:../diagnostics
-      ai:
-        specifier: ^6.0.3
-        version: 6.0.175(zod@4.4.3)
       ajv:
         specifier: ^8.17.1
         version: 8.20.0
       ajv-formats:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.20.0)
-      mediabunny:
-        specifier: ^1.24.5
-        version: 1.44.0
       replicate:
         specifier: ^1.2.0
         version: 1.4.0
-      yaml:
-        specifier: ^2.8.1
-        version: 2.8.4
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.3.1

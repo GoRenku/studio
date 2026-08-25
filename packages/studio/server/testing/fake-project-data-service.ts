@@ -1,5 +1,5 @@
 import type {
-  GenerationPreviewResourceData,
+  MediaGenerationPreviewResource,
   LookbookSection,
   Lookbook,
   LookbookResource,
@@ -271,26 +271,15 @@ export function fakeProjectDataService(): NonNullable<
     async readSceneDialogueAudioWorkspace() {
       return makeSceneDialogueAudioWorkspace(project);
     },
-    async estimateSceneDialogueAudioDraft(input) {
-      return {
-        provider: 'elevenlabs',
-        model: input.estimate.modelChoice.replace('elevenlabs/', ''),
-        estimatedCostUsd: 0.01,
-        billableUnits: { characterCount: input.estimate.text.length },
-      };
-    },
     async updateSceneDialogueAudioSetup() {
       return {
         context: makeSceneDialogueAudioWorkspace(project),
         resourceKeys: [],
       };
     },
-    async generateSceneDialogueAudioTake() {
-      return {
-        context: makeSceneDialogueAudioWorkspace(project),
-        resourceKeys: [],
-      };
-    },
+    async readMediaGenerationPreview() { return generationPreviewResource(); },
+    async updateMediaGenerationPreviewPrompt() { return generationPreviewResource(); },
+    async readAssetMediaGenerationRequest() { return { ...generationPreviewResource(), documentPath: undefined, editable: false }; },
     async deleteSceneDialogueAudioTake() {
       return {
         context: makeSceneDialogueAudioWorkspace(project),
@@ -583,7 +572,7 @@ export function fakeProjectDataService(): NonNullable<
         purpose: input.purpose,
         target: input.target,
         asset,
-        provenance: null,
+        generationProvenance: null,
         resourceKeys: [],
         project: {
           projectName: project.projectName,
@@ -603,9 +592,6 @@ export function fakeProjectDataService(): NonNullable<
         ...makeLookbookImage(input.imageId),
         sections: input.sections,
       });
-    },
-    async listGenerationReferences() {
-      return { items: [], nextCursor: null };
     },
   };
 }
@@ -792,35 +778,17 @@ function makeVisualLanguageCommandReport(type: string) {
   };
 }
 
-function generationPreviewResource(): GenerationPreviewResourceData {
+function generationPreviewResource(): MediaGenerationPreviewResource {
   return {
-    kind: 'generationPreview',
-    previewId: 'generation_preview_test',
-    generationSpec: { id: 'media_generation_spec_test', frozenAt: null },
-    purpose: 'cast.character-sheet',
-    project: {
-      id: 'project_test0001',
-      projectName: 'constantinople',
-    },
-    target: { kind: 'castMember', id: 'cast_narrator' },
-    title: 'Narrator Character Sheet',
-    subject: {
-      projectLabel: 'Constantinople',
-      castMemberLabel: 'Narrator',
-    },
-    model: {
-      provider: 'fal-ai',
-      modelId: 'openai/gpt-image-2/edit',
-      mediaKind: 'image',
-      executionPath: 'renku-managed',
-    },
-    finalPrompt: {
-      authoredText: 'Create a lean character sheet.',
-      providerText: 'Create a lean character sheet.',
-    },
-    references: { slots: [], additional: [] },
-    configuration: { sections: [] },
-    authoring: { kind: 'image', selectedModelFamilyId: '', modelFamilies: [], controls: [] },
+    kind: 'mediaGenerationPreview',
+    documentPath: 'tmp/operations/media-generation/request.json' as ProjectRelativePath,
+    provider: 'fal-ai',
+    model: 'openai/gpt-image-2/edit',
+    mediaKind: 'image',
+    prompt: 'Create a lean character sheet.',
+    references: [],
+    configuration: {},
+    editable: true,
     diagnostics: [],
   };
 }
@@ -877,13 +845,5 @@ function makeLookbookSheetMutationReport(
     ...makeVisualLanguageCommandReport('lookbook.sheetChanged'),
     lookbookId,
     ...(sheet ? { sheet } : {}),
-  };
-}
-
-export function fakeGenerationPreviewCommands() {
-  return {
-    async updateGenerationPreviewResource() {
-      return generationPreviewResource();
-    },
   };
 }

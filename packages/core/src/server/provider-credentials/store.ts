@@ -4,7 +4,7 @@ import {
   findProviderCredentialDescriptor,
   listProviderCredentialDescriptors,
   type ProviderCredentialId,
-} from '@gorenku/studio-engines';
+} from './catalog.js';
 import {
   resolveRenkuConfigDir,
   type RenkuConfigPathOptions,

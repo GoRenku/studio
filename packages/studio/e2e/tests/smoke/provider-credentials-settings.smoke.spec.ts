@@ -21,10 +21,12 @@ test('saves global provider credentials explicitly from both Studio shells', asy
   await openSettings.click();
 
   const dialog = page.getByRole('dialog', { name: 'Settings' });
-  await expect(dialog.getByText('fal.ai', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Fal.ai', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Replicate', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('WaveSpeed', { exact: true })).toBeVisible();
   await expect(dialog.getByText('ElevenLabs', { exact: true })).toBeVisible();
   await expect(dialog.getByText('World Labs', { exact: true })).toBeVisible();
-  const falKeyInput = dialog.getByLabel('fal.ai', { exact: true });
+  const falKeyInput = dialog.getByLabel('Fal.ai', { exact: true });
   await falKeyInput.fill('fake-fal-key-for-e2e-only');
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(fs.readFile(credentialFilePath, 'utf8')).rejects.toMatchObject({

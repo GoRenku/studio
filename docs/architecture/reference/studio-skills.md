@@ -17,6 +17,7 @@ Decision history:
 - `../../decisions/0071-use-scene-first-screenplay-and-direct-project-story-metadata.md`
 - `../../decisions/0072-use-hierarchy-independent-screenplay-analysis.md`
 - `../../decisions/0074-use-core-owned-project-workflow-settings.md`
+- `../../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md`
 
 ## Skills Location
 
@@ -102,58 +103,42 @@ operational companions that teach agents how to use those contracts.
 
 `media-producer`
 
-- Generates purpose-specific media from Renku context.
-- Handles `project.cover` from the user's conversation, then progressively
-  reads only missing Project Info and exact useful Production Lookbook or named
-  subject context. It reads the Storyboard Lookbook only for an explicitly
-  storyboard-like cover direction and imports retained candidates through the
-  focused purpose.
-- Reads the Project generation settings from Generation Context. Codex is the
-  default image-generation choice; explicit user direction and a path already
-  saved on the GenerationSpec take precedence. Preview, confirmation, and
-  concurrency use their existing settings.
-- Authors one generic `GenerationSpec` from Core context and Engines-owned
-  provider field descriptors.
-- Preserves exact guide placement and separately assigns every included
-  exact reference to a real provider media field.
-- Treats `facts.contextText` as opaque authored source context and keeps
-  continuity relevance, Beat batching, and creative fallback decisions in the
-  agent workflow.
-- Uses exact registered `asset-file` references or normalized `project-file`
-  references; it never invents asset identities or provenance.
-- Creates or updates persisted generation specs only after the draft request is
-  explicit enough to review.
-- Estimates cost and runs only approved specs.
-- Imports finished files only through current focused attachment purposes.
-- Does not create Shot Video Takes, Take-owned media, or Shot video generation
-  specs. Those contracts were removed by Decision 0052.
-- Treats Lookbook Image import and Lookbook section/point placement as separate
-  owning commands.
-- Shows one or more ordinary requests in the Generation Preview Dialog with
-  repeated `--file` values for transient specs or repeated `--spec` values for
-  saved specs. Multi-request display never combines estimates, approvals, or
-  runs.
-- For `scene.storyboard-sheet`, reads the exact Scene Beats revision and current
-  Storyboard Lookbook, requires one exact Storyboard Lookbook Sheet, then
-  partitions only requested saved Beat image work into consecutive groups of
-  up to four without changing the revision.
-- Treats the Storyboard Lookbook as the sole appearance authority. Exact
-  Character, Location, and Prop references preserve canonical subject facts
-  while being re-rendered in that Lookbook's visual language.
-- Reads reference-candidate summary, reference name, tags, pixels, and available
-  provenance; prefers a suitable exact-`storyboard` same-owner sheet without
-  automatic selection and uses a deliberate fallback when none is suitable.
-- Uses one Project image-path setting, **Use Codex for image generation**. It
-  is on by default. Turning it off selects the Renku-managed GPT Image 2 edit
-  route;
-  there is no second model recommendation.
-- Synthesizes concrete visible panel direction from opaque narrative evidence
-  and preserves the existing vision-guided crop path. Review-first shows one
-  result and waits for accept/regenerate/discard. Strict iterative review
-  requires explicit user opt-in and a changed, newly reviewed request after
-  each creative failure. Findings remain advisory and add no runtime QA state.
-- Generates `cast.voice-sample` audio with direct ElevenLabs models and hands
-  the output to `casting-director` for `renku cast voice attach`.
+- Begins every purpose-specific request with `renku generation context
+  --purpose <purpose> --target <target> --json`.
+- Treats the returned current facts and relationship-derived references as
+  advisory evidence. It may ignore, supplement, or replace suggestions and
+  never interprets their order or display selection as a creative choice.
+- Reads the per-media Project generation policy from that report, including
+  Preview, conversational confirmation, concurrency, and maximum concurrency.
+- Uses the Codex image lane only when the active harness exposes the built-in
+  image-generation capability; otherwise it reports unavailability and asks
+  before choosing Fal.ai.
+- Writes one temporary review document under
+  `tmp/operations/media-generation/`, opens Preview when policy or the user
+  requests it, pauses in the ordinary conversation, and rereads the document
+  before generation.
+- Delegates Fal.ai, Replicate, WaveSpeed, and ElevenLabs request authorship to
+  their provider Skills. World Labs remains owned by `location-world-producer`.
+- Reviews returned artifacts, persists the exact safe provenance value, and
+  attaches through the existing focused command with `renku media import
+  --provenance` or another focused domain attachment.
+- Keeps creative interpretation, Beat batching, reference choice, and artifact
+  acceptance in the agent workflow. Studio runtime treats prompts, requests,
+  receipts, and media as opaque.
+
+Provider Skills
+
+- `fal-ai-media-provider`, `replicate-media-provider`,
+  `wavespeed-media-provider`, and `elevenlabs-media-provider` own supported-model
+  indexes containing identity, human name, and input modes, plus internal links
+  to model/operation guides. They read all other current request facts from the
+  selected provider operation rather than duplicating request schemas.
+- They author provider-native request JSON with local-file markers at the exact
+  native media fields, then call only the installed `renku generation`
+  validate/execute/recover commands.
+- They contain no provider client or SDK. Engines owns upload, submission,
+  polling, retry, recovery, normalization, download, and safe execution results.
+- `location-world-producer` keeps the focused World Labs Location World flow.
 
 `movie-director`
 
@@ -214,8 +199,8 @@ Skills must not:
 - use obsolete command aliases;
 - register Inspiration folder images as assets;
 - store absolute paths in authored JSON documents;
-- run paid generation without the exact current Renku estimate and approval
-  token required by the live-run contract;
+- run generation without satisfying the current conversational confirmation
+  policy;
 - override user-selected generation controls.
 - store generated storyboard image paths inside Scene Beats JSON;
 - add framing, lens, camera movement, coverage, analog shooting logistics, or
@@ -239,8 +224,6 @@ When a Renku architecture contract changes, update the architecture/reference
 docs and CLI docs in this repository first, then update the external skill
 references to match the current contract.
 
-Shot Plan video workflow guidance lives separately from reusable provider
-research. The media-producer route registry maps exactly the nine
-Engines-activated Seedance routes to guide files and is checked against current
-CLI JSON. Inactive Kling and Veo research stays outside that registry and
-cannot activate runtime routes.
+Provider/model activation belongs to each provider Skill's supported-model
+index. A guide documents request authorship but cannot register a runtime model;
+Engines remains the authoritative execution allowlist.

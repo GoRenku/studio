@@ -1,5 +1,7 @@
 # Detach Shot Plans From Generated Video Assets
 
+> **Decision 0086 update:** Independent video Assets, mutable Shot Plans, and weak `authoredFrom` context remain. Last-Spec continuation and frozen Spec/Run provenance are removed; Asset provenance stores generation facts.
+
 Date: 2026-07-24
 
 Status: accepted

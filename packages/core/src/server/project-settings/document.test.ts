@@ -15,7 +15,7 @@ describe('Project Settings document', () => {
   const invalidDocuments: Array<[string, unknown]> = [
     ['null', null],
     ['old version', { ...DEFAULT_PROJECT_SETTINGS, version: 0 }],
-    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 3 }],
+    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 4 }],
     [
       'missing field',
       {
@@ -45,8 +45,8 @@ describe('Project Settings document', () => {
         ...DEFAULT_PROJECT_SETTINGS,
         generation: {
           ...DEFAULT_PROJECT_SETTINGS.generation,
-          codexBuiltIn: {
-            ...DEFAULT_PROJECT_SETTINGS.generation.codexBuiltIn,
+          image: {
+            ...DEFAULT_PROJECT_SETTINGS.generation.image,
             maxConcurrentGenerations: maximum,
           },
         },

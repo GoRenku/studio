@@ -31,8 +31,18 @@ describe('provider credential service', () => {
       providers: [
         {
           provider: 'fal-ai',
-          label: 'fal.ai',
+          label: 'Fal.ai',
           configured: true,
+        },
+        {
+          provider: 'replicate',
+          label: 'Replicate',
+          configured: false,
+        },
+        {
+          provider: 'wavespeed-ai',
+          label: 'WaveSpeed',
+          configured: false,
         },
         {
           provider: 'elevenlabs',
@@ -71,6 +81,8 @@ describe('provider credential service', () => {
 
     expect(resource.providers.map((provider) => provider.configured)).toEqual([
       true,
+      false,
+      false,
       true,
       true,
     ]);

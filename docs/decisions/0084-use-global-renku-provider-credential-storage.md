@@ -1,5 +1,7 @@
 # 0084 Use Global Renku Provider Credential Storage
 
+> **Decision 0086 update:** Global write-only credential storage and Core secret-file ownership remain. Core now owns the five-provider descriptor catalog; standalone Engines E2E tests receive explicit opt-in test credentials and never import Core.
+
 Date: 2026-08-22
 
 Status: accepted

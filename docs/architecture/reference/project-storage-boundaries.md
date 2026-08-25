@@ -44,7 +44,7 @@ This means SQLite stores facts such as:
 - Inspiration folder metadata and persisted Inspiration Analysis JSON;
 - Lookbooks, source Inspiration relationships, and Lookbook image placement;
 - task, generation, provider run, budget, and cost records;
-- media generation specs and media generation runs;
+- Asset-level safe media generation provenance;
 - optional Shot Plan Beat coverage and Shot briefs as validated JSON text;
 - validation state and structured diagnostics.
 

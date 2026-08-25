@@ -98,6 +98,8 @@ import type {
   ProjectInformationPatch,
   ProjectSettingsMutationReport,
   ProjectSettingsResource,
+  MediaGenerationContextReport,
+  ReadMediaGenerationContextInput,
   ProjectLibrary,
   ProjectShell,
   UpdateAssetInput,
@@ -173,6 +175,9 @@ export interface ProjectDataService {
     input: ReadProjectInput
   ): Promise<ProjectInformationResource>;
   readProjectSettings(input: ReadProjectInput): Promise<ProjectSettingsResource>;
+  readMediaGenerationContext(
+    input: ReadMediaGenerationContextInput
+  ): Promise<MediaGenerationContextReport>;
   replaceProjectSettings(
     input: ReadProjectInput & { settings: unknown }
   ): Promise<ProjectSettingsMutationReport>;
@@ -195,7 +200,12 @@ export interface ProjectDataService {
     input: ListNavigationInput
   ): Promise<LocationOverviewResource>;
   readLocationResource(input: ReadLocationResourceInput): Promise<LocationResource>;
-  generateLocationWorld(input: GenerateLocationWorldInput): Promise<LocationWorldGenerationReport>;
+  prepareLocationWorldGeneration(
+    input: PrepareLocationWorldGenerationInput
+  ): Promise<import('./location-worlds/input.js').ValidatedLocationWorldInput>;
+  persistLocationWorldGeneration(
+    input: PersistLocationWorldGenerationInput
+  ): Promise<LocationWorldGenerationReport>;
   readLocationWorldResource(input: ReadLocationWorldResourceInput): Promise<LocationWorldResource>;
   readPropOverviewResource(input: ListNavigationInput): Promise<PropOverviewResource>;
   readPropResource(input: ReadPropResourceInput): Promise<PropResource>;
@@ -857,9 +867,15 @@ export interface ReadLocationResourceInput extends RenkuConfigPathOptions {
   locationId: string;
 }
 
-export interface GenerateLocationWorldInput extends RenkuConfigPathOptions {
+export interface PrepareLocationWorldGenerationInput extends RenkuConfigPathOptions {
   projectName?: string;
   document: LocationWorldGenerationDocument;
+}
+
+export interface PersistLocationWorldGenerationInput
+  extends PrepareLocationWorldGenerationInput {
+  sourceProjectRelativePath: string;
+  provider: { operationId: string; worldId: string };
 }
 
 export interface ReadLocationWorldResourceInput extends RenkuConfigPathOptions {

@@ -1,5 +1,7 @@
 # Use Agent Media Execution Policy For External Built-In Image Generation
 
+> **Decision 0086 update:** Codex remains an external harness capability outside Engines and normal media import remains explicit. Saved/frozen external Specs and approval machinery are replaced by temporary conversational Preview and Asset provenance; the invoking Skill verifies the capability exists.
+
 Date: 2026-06-30
 
 Status: accepted

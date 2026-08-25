@@ -2,6 +2,11 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { Asset } from '../assets.js';
 import type { Project } from '../project/index.js';
 import type { Scene, ScreenplayBlock, ScreenplaySection } from '../screenplay/index.js';
+import type { MediaGenerationProvenance } from '../media-generation-review.js';
+import type {
+  MediaGenerationLookbookContext,
+  MediaGenerationReferenceSuggestion,
+} from '../media-generation-context.js';
 
 export interface BeatInput {
   title: string;
@@ -94,7 +99,10 @@ export interface SceneBeatsContextReport extends SceneBeatsCommandReport {
     lighting: string;
   } | null;
   activeRevision: SceneBeatsRevisionSummary | null;
-  visualReferences?: { note: string };
+  visualReferences?: {
+    visualLanguage: MediaGenerationLookbookContext[];
+    suggestedReferences: MediaGenerationReferenceSuggestion[];
+  };
 }
 
 export interface SceneBeatsRevisionListReport extends SceneBeatsCommandReport {
@@ -157,8 +165,7 @@ export interface SceneStoryboardImagesImportDocument {
     source: string;
     title?: string;
     sourcePurpose?: 'scene.storyboard-sheet';
-    sourceSpecId?: string;
-    sourceRunId?: string;
+    generationProvenance?: MediaGenerationProvenance;
   }>;
 }
 

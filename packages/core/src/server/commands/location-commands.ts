@@ -49,6 +49,7 @@ import {
   studioLocationSurfaceResourceKey,
   studioProjectShellResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import { readDepartmentProductionLookbookContext } from '../media-generation-context/visual-language-context.js';
 
 export async function listLocations(
   input: RenkuConfigPathOptions = {}
@@ -100,7 +101,10 @@ export async function readLocationContext(
           })
         : null,
       scenes: locationScenes(screenplay, input.locationId),
-      activeLookbook: null,
+      activeLookbook: readDepartmentProductionLookbookContext({
+        session,
+        projectFolder: currentProject.projectFolder,
+      }),
       assets: ownedAssets,
       assetTypeCounts: typeCounts(assets),
       generationReadiness: {

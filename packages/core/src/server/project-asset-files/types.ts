@@ -1,7 +1,4 @@
-import type {
-  GenerationPurpose,
-  ProjectRelativePath,
-} from '../../client/index.js';
+import type { ProjectRelativePath } from '../../client/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'model' | 'text' | 'json' | 'document';
@@ -54,10 +51,7 @@ export type ProjectAssetFileDestination =
     };
 
 export type ProjectTemporaryFileDestination =
-  | { kind: 'generation.media'; purpose: GenerationPurpose }
   | { kind: 'location.world' }
-  | { kind: 'generation.spec' }
-  | { kind: 'generation.receipt' }
   | { kind: 'operation' }
   | { kind: 'qa' }
   | { kind: 'scratch' }

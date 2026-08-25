@@ -1,5 +1,5 @@
 import type { ProjectDataService } from '../project-data-service-contracts.js';
-import { withGenerationProject } from '../generation/project-operation.js';
+import { withProject } from '../project-operation.js';
 import { projectSceneShotPlanVideoGenerations } from '../shot-plan-video-generations/projection.js';
 
 export function createShotPlanVideoGenerationServiceWiring(): Pick<
@@ -8,7 +8,7 @@ export function createShotPlanVideoGenerationServiceWiring(): Pick<
 > {
   return {
     listSceneShotPlanVideoGenerations(input) {
-      return withGenerationProject(input, ({ session }) =>
+      return withProject(input, ({ session }) =>
         projectSceneShotPlanVideoGenerations(session, input.sceneId)
       );
     },

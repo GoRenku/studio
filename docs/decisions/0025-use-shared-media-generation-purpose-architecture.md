@@ -1,5 +1,9 @@
 # 0025 Use Shared Media Generation Purpose Architecture
 
+> **Superseded by Decision 0086:** The shared generation lifecycle, purpose registry, dependency, pricing, and execution orchestration are removed. Focused Core purpose/target validation and attachment ownership remain.
+
+> **Decision 0087 update:** A bounded purpose registry again owns deterministic target context, output guidance, and advisory relationship-derived references. It does not restore provider or lifecycle orchestration.
+
 Date: 2026-06-03
 
 Status: accepted

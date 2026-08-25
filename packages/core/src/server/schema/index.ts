@@ -3,7 +3,6 @@ export * from './cast-members.js';
 export * from './cast-voices.js';
 export * from './department-design.js';
 export * from './locations.js';
-export * from './media-generation.js';
 export * from './project.js';
 export * from './project-locales.js';
 export * from './project-settings.js';

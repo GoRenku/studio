@@ -37,6 +37,27 @@ describe('Scene Beats revision commands', () => {
       expect.arrayContaining([expect.objectContaining({ id: ids.locationId })])
     );
     expect(context.activeRevision).toBeNull();
+    expect(context).not.toHaveProperty('visualReferences');
+
+    const visualContext = await projectData.readSceneBeatsContext({
+      homeDir,
+      sceneId: ids.sceneId,
+      includeVisualReferences: true,
+    });
+    expect(visualContext.visualReferences).toMatchObject({
+      visualLanguage: [],
+      suggestedReferences: expect.arrayContaining([
+        expect.objectContaining({
+          id: 'cast-continuity',
+          subject: { kind: 'castMember', id: ids.castMemberId },
+        }),
+        expect.objectContaining({
+          id: 'location-continuity',
+          subject: { kind: 'location', id: ids.locationId },
+        }),
+      ]),
+    });
+    expect(visualContext.visualReferences).not.toHaveProperty('note');
   });
 
   it('validates input while treating unavailable creative references as warnings', async () => {

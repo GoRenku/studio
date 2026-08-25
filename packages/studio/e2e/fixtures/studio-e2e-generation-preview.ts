@@ -1,7 +1,7 @@
-import type { GenerationPreviewResource } from '@gorenku/studio-core/client';
+import type { MediaGenerationPreviewResource } from '@gorenku/studio-core/client';
 import { createProjectDataService } from '@gorenku/studio-core/server';
 import fs from 'node:fs/promises';
-import { buildGenerationPreviewResource } from '../../server/projections/generation-preview';
+import path from 'node:path';
 import {
   type StudioE2eMovieProject,
   writeStudioE2eImageSource,
@@ -9,7 +9,7 @@ import {
 import type { StudioE2eRuntime } from './studio-e2e-runtime';
 
 export interface StudioE2eGenerationPromptProject {
-  preview: GenerationPreviewResource;
+  preview: MediaGenerationPreviewResource;
   inspectorAssetId: string;
   inspectorAssetFileId: string;
   inspectorCardTitle: string;
@@ -18,7 +18,7 @@ export interface StudioE2eGenerationPromptProject {
 export const generationPromptDocument = [
   '# Imperial Council Chamber',
   '',
-  'Create one polished **16:9 production reference board** for the Imperial Council Chamber in Constantinople, late 1452, using @Reference1 as the primary location reference. This is a production-design and spatial-continuity document, not a poster.',
+  'Create one polished **16:9 production reference board** for the Imperial Council Chamber in Constantinople, late 1452.',
   '',
   '## Visual direction',
   '',
@@ -26,17 +26,9 @@ export const generationPromptDocument = [
   '- Keep cold gray daylight dominant and amber practical light insufficient.',
   '- Preserve tactile stone, worn vellum, dulled gold leaf, and smoke-softened air.',
   '',
-  'Use @Reference1 for the depleted Byzantine palette, cold daylight, and restrained illustrated-cinematic finish. Use @Reference2 for the disciplined production-board rhythm and material specificity.',
+  'The emperor remains at the long map table while Urban presents the cannon design from the room axis.',
   '',
-  '## Spatial continuity',
-  '',
-  'The emperor remains at the long map table while Urban presents the cannon design from the room axis. Loukas Notaras holds the shadowed edge of the group. Leave enough negative space for the chamber to feel diminished around them.',
-  '',
-  'Unknown authored tokens such as @Unknown remain ordinary prompt text.',
-  '',
-  '## Final frame language',
-  '',
-  'End on a measured wide composition where maps, unpaid ledgers, and broken arrowheads turn administration into pressure. Keep the image sober, legible, historically tactile, and emotionally restrained.',
+  'End on a measured wide composition where maps, unpaid ledgers, and broken arrowheads turn administration into pressure.',
 ].join('\n');
 
 export async function createStudioE2eGenerationPromptProject(input: {
@@ -44,10 +36,7 @@ export async function createStudioE2eGenerationPromptProject(input: {
   project: StudioE2eMovieProject;
 }): Promise<StudioE2eGenerationPromptProject> {
   const projectData = createProjectDataService();
-  await projectData.openCurrentProject({
-    projectName: input.project.projectName,
-    homeDir: input.runtime.isolatedHomeDirectory,
-  });
+  const projectFolder = input.project.projectPath;
   const [chamberImage, lookbookImage, savedSheetImage] = await Promise.all([
     fs.readFile(new URL(
       '../../src/features/movie-studio/shot-design/generated/images/shot-size-establishing-shot.png',
@@ -101,71 +90,30 @@ export async function createStudioE2eGenerationPromptProject(input: {
   });
   const chamberFile = firstAssetFile(chamberReference.asset);
   const lookbookFile = firstAssetFile(lookbookReference.asset);
-  const references = [
-    {
-      placement: { kind: 'additional' as const },
-      promptMention: '@Reference1',
-      reference: {
-        kind: 'asset-file' as const,
-        assetId: chamberReference.asset.id,
-        assetFileId: chamberFile.id,
-      },
-    },
-    {
-      placement: { kind: 'additional' as const },
-      promptMention: '@Reference2',
-      reference: {
-        kind: 'asset-file' as const,
-        assetId: lookbookReference.asset.id,
-        assetFileId: lookbookFile.id,
-      },
-    },
-  ];
-
-  const mutableSpec = await projectData.createGenerationSpec({
+  const request = {
+    prompt: generationPromptDocument,
+    image_size: 'landscape_16_9',
+    quality: 'high',
+    image_urls: [
+      { $file: chamberFile.projectRelativePath, mimeType: 'image/png' },
+      { $file: lookbookFile.projectRelativePath, mimeType: 'image/png' },
+    ],
+  };
+  const documentPath = 'tmp/operations/media-generation/prompt-editor.json';
+  await fs.mkdir(path.dirname(path.join(projectFolder, documentPath)), { recursive: true });
+  await fs.writeFile(path.join(projectFolder, documentPath), JSON.stringify({
+    provider: 'fal-ai',
+    model: 'openai/gpt-image-2/edit',
+    mediaKind: 'image',
+    prompt: generationPromptDocument,
+    request,
+  }, null, 2));
+  const preview = await projectData.readMediaGenerationPreview({
     projectName: input.project.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
-    spec: {
-      executionKind: 'agent-external',
-      purpose: 'cast.character-sheet',
-      target: { kind: 'castMember', id: input.project.castMemberId },
-      model: { provider: 'codex', model: 'gpt-image-2' },
-      values: { prompt: generationPromptDocument },
-      references,
-      nextPromptMentionNumber: 3,
-      title: 'Prompt editor browser fixture',
-    },
-  });
-  const preview = await projectData.buildGenerationPreview({
-    projectName: input.project.projectName,
-    homeDir: input.runtime.isolatedHomeDirectory,
-    specId: mutableSpec.id,
-  });
-  const previewData = await projectData.buildGenerationPreviewResource({
-    projectName: input.project.projectName,
-    homeDir: input.runtime.isolatedHomeDirectory,
-    preview,
+    documentPath,
   });
 
-  const inspectorSpec = await projectData.createGenerationSpec({
-    projectName: input.project.projectName,
-    homeDir: input.runtime.isolatedHomeDirectory,
-    spec: {
-      executionKind: 'agent-external',
-      purpose: 'cast.character-sheet',
-      target: { kind: 'castMember', id: input.project.castMemberId },
-      model: { provider: 'codex', model: 'gpt-image-2' },
-      values: { prompt: generationPromptDocument },
-      references,
-      nextPromptMentionNumber: 3,
-      title: 'Saved prompt editor request',
-    },
-  });
-  await projectData.freezeGenerationSpec({
-    projectName: input.project.projectName,
-    homeDir: input.runtime.isolatedHomeDirectory,
-    specId: inspectorSpec.id,
-  });
   const savedSheet = await projectData.attachGenerationMedia({
     projectName: input.project.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
@@ -173,7 +121,14 @@ export async function createStudioE2eGenerationPromptProject(input: {
     target: { kind: 'castMember', id: input.project.castMemberId },
     sourceProjectRelativePath: 'generated/media/prompt-editor-saved-character-sheet.png',
     title: 'Prompt Editor Saved Character Sheet',
-    sourceSpecId: inspectorSpec.id,
+    generationProvenance: {
+      provider: 'fal-ai',
+      model: 'openai/gpt-image-2/edit',
+      mediaKind: 'image',
+      prompt: generationPromptDocument,
+      request,
+      receipt: { requestId: 'e2e_prompt_editor_request' },
+    },
   });
   const savedFile = firstAssetFile(savedSheet.asset);
   await projectData.updateAsset({
@@ -181,16 +136,13 @@ export async function createStudioE2eGenerationPromptProject(input: {
     homeDir: input.runtime.isolatedHomeDirectory,
     assetId: savedSheet.asset.id,
     title: 'Prompt Editor Saved Character Sheet',
-    oneLineSummary: 'Read-only Generation Request prompt editor browser fixture.',
+    oneLineSummary: 'Read-only media generation request browser fixture.',
     referenceName: 'prompt-editor-saved-character-sheet',
     tags: ['browser-e2e'],
   });
 
   return {
-    preview: await buildGenerationPreviewResource({
-      projectName: input.project.projectName,
-      preview: previewData,
-    }),
+    preview,
     inspectorAssetId: savedSheet.asset.id,
     inspectorAssetFileId: savedFile.id,
     inspectorCardTitle: 'Prompt Editor Saved Character Sheet',
@@ -198,9 +150,11 @@ export async function createStudioE2eGenerationPromptProject(input: {
 }
 
 function firstAssetFile(
-  asset: { files: Array<{ id: string }> },
-): { id: string } {
-  const id = asset.files[0]?.id;
-  if (!id) throw new Error('Expected the E2E attachment to expose an AssetFile.');
-  return { id };
+  asset: { files: Array<{ id: string; projectRelativePath: string }> },
+): { id: string; projectRelativePath: string } {
+  const file = asset.files[0];
+  if (!file) {
+    throw new Error('Expected the E2E attachment to expose an AssetFile.');
+  }
+  return file;
 }

@@ -1,12 +1,15 @@
 import {
+  parseMediaGenerationProvenance,
+  type MediaGenerationProvenance,
   type SceneStoryboardImagesImportDocument,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import { readJsonFile } from './structured-command.js';
 
-export async function readReceipt(filePath: string): Promise<unknown> {
-  const parsed = (await readJsonFile(filePath)) as { receipt?: unknown };
-  return parsed.receipt ?? parsed;
+export async function readProvenance(
+  filePath: string
+): Promise<MediaGenerationProvenance> {
+  return parseMediaGenerationProvenance(await readJsonFile(filePath));
 }
 
 export async function readSceneStoryboardImagesImportDocument(
@@ -50,11 +53,8 @@ function readSceneStoryboardImagesImportBeat(
     ...(value.sourcePurpose === 'scene.storyboard-sheet'
       ? { sourcePurpose: value.sourcePurpose }
       : {}),
-    ...(typeof value.sourceSpecId === 'string'
-      ? { sourceSpecId: value.sourceSpecId }
-      : {}),
-    ...(typeof value.sourceRunId === 'string'
-      ? { sourceRunId: value.sourceRunId }
+    ...(value.generationProvenance !== undefined
+      ? { generationProvenance: parseMediaGenerationProvenance(value.generationProvenance) }
       : {}),
   };
 }

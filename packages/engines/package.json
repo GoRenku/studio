@@ -1,7 +1,7 @@
 {
   "name": "@gorenku/studio-engines",
   "version": "0.1.3",
-  "description": "Renku Studio AI engine registry, schema validation, simulation, and provider adapters",
+  "description": "Standalone media provider execution library",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -12,16 +12,15 @@
       "import": "./dist/index.js"
     }
   },
-  "imports": {
-    "#core": {
-      "types": "./dist/contracts/core.d.ts",
-      "default": "./dist/contracts/core.js"
-    }
-  },
   "license": "MIT",
   "files": [
-    "dist",
-    "catalog",
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/index.d.ts.map",
+    "dist/media",
+    "dist/providers",
+    "dist/shared",
+    "docs",
     "README.md"
   ],
   "scripts": {
@@ -31,39 +30,22 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:typecheck": "tsc --project tsconfig.vitest.json --noEmit",
-    "test:integration": "vitest run --config vitest.integration.config.ts",
-    "build:core-credential-runtime": "pnpm --dir ../.. --filter @gorenku/studio-core... build",
-    "pretest:e2e": "pnpm run build:core-credential-runtime",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "catalog:fetch-fal": "node scripts/fetch-fal-schema.mjs",
-    "catalog:update-fal": "node scripts/update-fal-catalog.mjs catalog/models/fal-ai/fal-ai.yaml",
-    "precatalog:fetch-replicate": "pnpm run build:core-credential-runtime",
-    "catalog:fetch-replicate": "node scripts/fetch-replicate-schema.mjs",
-    "precatalog:update-replicate": "pnpm run build:core-credential-runtime",
-    "catalog:update-replicate": "node scripts/update-replicate-catalog.mjs catalog/models/replicate/replicate.yaml",
-    "catalog:validate-schemas": "vitest run --config vitest.config.ts tests/schemas/validate-schemas.test.ts"
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "keywords": [
     "ai",
     "renku-studio",
     "engines",
-    "openai",
     "replicate",
     "fal",
     "elevenlabs"
   ],
   "dependencies": {
-    "@gorenku/studio-diagnostics": "workspace:*",
-    "@ai-sdk/openai": "^3.0.1",
     "@elevenlabs/elevenlabs-js": "^2.31.0",
     "@fal-ai/client": "^1.7.2",
-    "ai": "^6.0.3",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "mediabunny": "^1.24.5",
-    "replicate": "^1.2.0",
-    "yaml": "^2.8.1",
-    "zod": "^4.4.3"
+    "replicate": "^1.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

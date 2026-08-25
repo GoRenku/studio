@@ -1,15 +1,18 @@
-import type { SecretResolver } from '@gorenku/studio-engines';
+import {
+  findProviderCredentialDescriptor,
+  type ProviderCredentialId,
+} from './catalog.js';
 import {
   readSavedProviderCredential,
   type ProviderCredentialStoreOptions,
 } from './store.js';
 
-export function createRenkuProviderSecretResolver(
+export async function resolveRenkuProviderCredential(
+  provider: ProviderCredentialId,
   options: ProviderCredentialStoreOptions = {}
-): SecretResolver {
-  return {
-    async getSecret(key: string): Promise<string | null> {
-      return readSavedProviderCredential(key, options);
-    },
-  };
+): Promise<string | null> {
+  const descriptor = findProviderCredentialDescriptor(provider);
+  return descriptor
+    ? readSavedProviderCredential(descriptor.environmentVariable, options)
+    : null;
 }

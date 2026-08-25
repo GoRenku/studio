@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ProjectRelativePath } from '../../client/index.js';
-import type { GenerationPurpose } from '../../client/generation.js';
 import { PROJECT_TMP_ROOT, STORYBOARDS_ROOT, kebabCasePathSegment } from '../files/asset-paths.js';
 import { joinProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import { requireSceneStorageContext } from './owner-lookups.js';
@@ -48,17 +47,8 @@ export async function resolveTemporaryFileRoot(input: {
   projectFolder: string;
   destination: ProjectTemporaryFileDestination;
 }): Promise<ProjectRelativePath> {
-  if (input.destination.kind === 'generation.media') {
-    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'media');
-  }
   if (input.destination.kind === 'location.world') {
     return joinProjectRelativePath(PROJECT_TMP_ROOT, 'media', 'location-world');
-  }
-  if (input.destination.kind === 'generation.spec') {
-    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'specs');
-  }
-  if (input.destination.kind === 'generation.receipt') {
-    return joinProjectRelativePath(PROJECT_TMP_ROOT, 'receipts');
   }
   if (input.destination.kind === 'operation') {
     return joinProjectRelativePath(PROJECT_TMP_ROOT, 'operations');
@@ -75,28 +65,4 @@ export async function resolveTemporaryFileRoot(input: {
     scene.pathSegment,
     'tmp'
   );
-}
-
-export async function resolveGenerationRunOutputRoot(input: {
-  projectFolder: string;
-  runId: string;
-  purpose: GenerationPurpose;
-}): Promise<{
-  projectRelativeRoot: ProjectRelativePath;
-  absoluteRoot: string;
-}> {
-  const temporaryMediaRoot = await resolveTemporaryFileRoot({
-    projectFolder: input.projectFolder,
-    destination: { kind: 'generation.media', purpose: input.purpose },
-  });
-  const projectRelativeRoot = joinProjectRelativePath(
-    temporaryMediaRoot,
-    kebabCasePathSegment(input.runId, 'generation-run')
-  );
-  const absoluteRoot = resolveProjectRelativePath(
-    input.projectFolder,
-    projectRelativeRoot
-  );
-  assertResolvedPathInsideProject(input.projectFolder, absoluteRoot);
-  return { projectRelativeRoot, absoluteRoot };
 }

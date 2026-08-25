@@ -28,10 +28,17 @@ or architecture decision.
   merely to make agent-owned generation look provider-neutral. Build a shared
   runtime only when a non-agent product surface genuinely must execute the same
   logical request across providers, and keep pre-submit validation even when
-  checked-in schemas are removed. When the provider catalog spans materially
-  different execution families, such as asynchronous media and synchronous LLM
-  protocols, surface that boundary for confirmation instead of silently
-  narrowing it.
+  checked-in schemas are removed. Do not recreate deleted catalogs or schemas
+  as Skill-authored control descriptors, request-scoped setup documents,
+  transient presentation schemas, normalized form contracts, or a new Studio
+  model-selection dialog when agent-owned conversational selection already
+  satisfies the product. Keep a Skill model index to the irreducible curated
+  identity, display name, and supported input modes; obtain request fields and
+  constraints from the selected provider through the existing provider tooling
+  rather than copying them into another definition. When the provider catalog
+  spans materially different execution families, such as asynchronous media
+  and synchronous LLM protocols, surface that boundary for confirmation instead
+  of silently narrowing it.
 - **Apply when:** Planning a new generation provider, dynamic provider catalog,
   runtime schema integration, model registry, or Studio model picker where a
   convenient initial operation could be mistaken for the provider's supported
@@ -42,7 +49,8 @@ or architecture decision.
   paid-run approval requirements; current Engines
   list/read/describe/estimate/execute contracts; Project provider Settings; and
   every proposed shared schema, transform, allowlist, fixed operation id,
-  example, fixture, and capability filter.
+  example, fixture, capability filter, duplicated provider fact, setup
+  document, and model-selection surface.
 
 ### 2026-08-24 — Put reusable provider protocol in tooling, not repeated agent reasoning
 
@@ -124,6 +132,11 @@ or architecture decision.
   as the editable prompt text and concrete local reference paths. Reuse the
   same dialog and components for editable Preview and read-only inspection
   instead of creating provider-specific React renderers or duplicated surfaces.
+  Sharing only the inner tab body is not enough when the dialogs must remain
+  visually identical: the DialogContent dimensions/grid, header, content insets,
+  loading/error placement, footer, and Close action must also have one visual
+  owner, while Preview/Inspection controllers retain only their distinct state
+  and actions.
   When Preview belongs to an agent-driven workflow, use the existing
   conversation as the default continuation boundary: open Preview, let the user
   edit the authoritative temporary request, return from the opening command,
@@ -145,6 +158,67 @@ or architecture decision.
   identity; the schema-free configuration fallback; Asset provenance;
   preview-safety rules; and which current contracts exist only for execution
   rather than user review or inspection.
+
+### 2026-08-24 — Prove retained UI behavior before removing its presentation metadata
+
+- **User objection:** A plan removed the schema-backed control descriptors that
+  powered a rich Configuration UI while claiming the same UI could be
+  reconstructed from opaque JSON. The implementation preserved values but
+  regressed to generic text rows because the plan never separated visual facts
+  recoverable from JSON from select options, bounds, sliders, model families,
+  input modes, and grouping that existed only in the deleted metadata.
+- **Planning rule:** Before deleting metadata that drives a UI the user expects
+  to retain, inventory every visible behavior and identify its exact source.
+  State which behavior survives in the replacement contract and which
+  information is irrecoverable. Define a deterministic reconstruction from the
+  surviving data, name the visual measurements and control states that must be
+  preserved, and require representative full-surface screenshots before
+  completion. Do not hide an information loss behind field-name heuristics,
+  provider/model switches, guessed bounds, one-option controls, or a generic
+  fallback. When exact fidelity requires metadata that the proposed architecture
+  removes, surface that conflict as an explicit approval gate rather than
+  promising both outcomes.
+- **Apply when:** Removing schemas, catalogs, descriptors, annotations, model
+  families, or other metadata while retaining Preview, Inspection, Settings,
+  configuration, form, or control-rich UI.
+- **Evidence to inspect:** The former component's actual input types and visual
+  composition; screenshots at the real desktop scale; the replacement DTO and
+  every field it preserves; representative current Project values; schema and
+  catalog deletion scope; focused projection/component tests; and final
+  full-dialog screenshot comparisons rather than isolated DOM assertions.
+
+### 2026-08-24 — Preserve deterministic domain context when removing provider machinery
+
+- **User objection:** A provider simplification deleted the purpose-to-domain
+  context that supplied related Cast, Locations, Props, Lookbooks, dialogue,
+  Shots, Beats, and relationship-derived continuity media, then left Skills to
+  rediscover those relationships from prose and unrelated commands. A
+  corrective plan then overreached by turning the restored context into
+  eligibility, required-slot, readiness-blocker, and fixed-guidance rules. Both
+  mistakes weaken Renku: the first withholds its Project knowledge, while the
+  second converts useful knowledge into creative permission.
+- **Planning rule:** Before removing a generation or purpose system, separate
+  provider execution/schema/lifecycle responsibilities from Core-owned domain
+  projection. Inventory every purpose's target facts, related subjects,
+  Lookbooks, dialogue/voice context, workflow policy, reference roles, and exact
+  relationship-derived media suggestions. Treat context as evidence, not
+  permission: agents must receive the deterministic Project briefing, but may
+  ignore, supplement, or replace its suggestions using user direction, creative
+  judgment, or provider needs. Do not turn related media into an allowlist,
+  missing creative context into a readiness blocker, or product guidance into a
+  hard constraint. Reserve rejection for a separately established integrity,
+  security, authorization, or provider-contract invariant. Do not restore
+  deleted provider machinery merely because it was previously co-located with
+  valuable context.
+- **Apply when:** Removing or restructuring generation Specs/Runs, provider
+  catalogs or schemas, purpose registries, context commands, or moving provider
+  execution into Skills.
+- **Evidence to inspect:** Current and deleted Core context contracts; the full
+  purpose/target matrix; explicit domain relationships and suggestion
+  derivation; context callers in CLI, docs, Skills, and evals; real populated
+  Project data; whether the report contains required/eligible/fixed/readiness
+  semantics; and whether a deletion boundary combines provider mechanics with
+  domain knowledge that no adapter or Skill can own reliably.
 
 ### 2026-08-22 — Keep product-chosen filesystem names free of spaces
 

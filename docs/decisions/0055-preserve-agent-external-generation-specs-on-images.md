@@ -1,5 +1,7 @@
 # Preserve Agent-External Generation Specs On Images
 
+> **Superseded by Decision 0086:** Agent-external Generation Specs are removed. Codex provenance is stored directly on the attached Asset without an invented Engines receipt.
+
 Date: 2026-07-17
 
 Status: accepted

@@ -44,7 +44,7 @@
     "test:e2e:studio": "pnpm --filter @gorenku/studio test:e2e",
     "test:e2e:studio:onboarding": "pnpm --filter @gorenku/studio test:e2e:onboarding",
     "test:e2e:studio:smoke": "pnpm --filter @gorenku/studio test:e2e:smoke",
-    "test:integration": "pnpm --filter @gorenku/studio-core test:integration && pnpm --filter @gorenku/studio-cli test:integration && pnpm --filter @gorenku/studio-engines test:integration && pnpm --filter @gorenku/studio test:integration",
+    "test:integration": "pnpm --filter @gorenku/studio-core test:integration && pnpm --filter @gorenku/studio-cli test:integration && pnpm --filter @gorenku/studio test:integration",
     "test:final": "pnpm check && pnpm test && pnpm test:integration && pnpm test:e2e:studio:smoke",
     "test:studio": "pnpm --filter @gorenku/studio test",
     "test:typecheck": "pnpm --filter @gorenku/studio-diagnostics test:typecheck && pnpm --filter @gorenku/studio-engines test:typecheck && pnpm --filter @gorenku/studio-core test:typecheck && pnpm --filter @gorenku/studio-cli test:typecheck && pnpm --filter @gorenku/studio test:typecheck",

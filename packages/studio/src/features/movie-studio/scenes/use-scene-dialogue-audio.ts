@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
-  SceneDialogueAudioEstimateInput,
   SceneDialogueAudioSetup,
   SceneDialogueAudioModelChoice,
   SceneDialogueAudioVoiceSettings,
 } from '@gorenku/studio-core/client';
 import {
-  estimateSceneDialogueAudioDraft,
-  generateSceneDialogueAudioTake,
   deleteSceneDialogueAudioTake,
   saveSceneDialogueAudioSetup,
   type SceneDialogueAudioWorkspaceWithUrls,
@@ -24,12 +21,6 @@ export interface SceneDialogueAudioDraft {
   languageCode: string | null;
 }
 
-export interface SceneDialogueAudioEstimateState {
-  state: 'idle' | 'loading' | 'ready' | 'error';
-  label: string;
-  message: string | null;
-}
-
 export interface SceneDialogueAudioPlayer {
   playingUrl: string | null;
   progressByUrl: Record<string, number>;
@@ -37,12 +28,6 @@ export interface SceneDialogueAudioPlayer {
   toggle: (url: string) => void;
   seek: (url: string, seconds: number) => void;
 }
-
-const idleEstimate: SceneDialogueAudioEstimateState = {
-  state: 'idle',
-  label: 'Calculating...',
-  message: null,
-};
 
 export function useSceneDialogueAudio(input: {
   projectName: string;
@@ -109,10 +94,6 @@ export function useSceneDialogueAudio(input: {
   ]);
 
   const [draft, setDraft] = useState<SceneDialogueAudioDraft>(initialDraft);
-  const [estimateState, setEstimateState] = useState<{
-    estimateSignature: string;
-    estimate: SceneDialogueAudioEstimateState;
-  }>({ estimateSignature: '', estimate: idleEstimate });
   const [actionBusy, setActionBusy] = useState(false);
 
   const selectedModel = useMemo(
@@ -152,25 +133,6 @@ export function useSceneDialogueAudio(input: {
     }),
     [draft, sceneId, turnId]
   );
-
-  const estimateInput = useMemo<SceneDialogueAudioEstimateInput>(
-    () => ({
-      modelChoice: draft.modelChoice,
-      text:
-        draft.modelChoice === 'elevenlabs/eleven_v3'
-          ? draft.v3Text
-          : draft.plainText,
-    }),
-    [draft.modelChoice, draft.plainText, draft.v3Text]
-  );
-  const estimateSignature = useMemo(
-    () => JSON.stringify(estimateInput),
-    [estimateInput]
-  );
-  const estimate = estimateState.estimateSignature === estimateSignature
-    ? estimateState.estimate
-    : idleEstimate;
-  const canGenerateCurrentEstimate = !blocked && estimate.state === 'ready';
 
   const autosave = useDebouncedAutosave({
     value: spec,
@@ -251,90 +213,6 @@ export function useSceneDialogueAudio(input: {
     selectedModel,
   ]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void estimateSceneDialogueAudioDraft(
-      projectName,
-      sceneId,
-      turnId,
-      estimateInput
-    )
-      .then((report) => {
-        if (cancelled) {
-          return;
-        }
-        setEstimateState({
-          estimateSignature,
-          estimate: {
-            state: 'ready',
-            label: `$${report.estimatedCostUsd.toFixed(4)}`,
-            message: null,
-          },
-        });
-      })
-      .catch((error: unknown) => {
-        if (cancelled) {
-          return;
-        }
-        setEstimateState({
-          estimateSignature,
-          estimate: {
-            state: 'error',
-            label: 'Unavailable',
-            message:
-              error instanceof Error
-                ? error.message
-                : 'Dialogue audio estimate failed.',
-          },
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    turnId,
-    estimateInput,
-    estimateSignature,
-    projectName,
-    sceneId,
-  ]);
-
-  const generateTake = useCallback(async () => {
-    if (blocked) {
-      throw new Error(blockedIssue ?? 'Dialogue audio cannot be generated.');
-    }
-    if (actionBusy) {
-      return;
-    }
-    if (!canGenerateCurrentEstimate) {
-      throw new Error('Wait for the current estimate before generating audio.');
-    }
-    setActionBusy(true);
-    try {
-      const report = await generateSceneDialogueAudioTake(
-        projectName,
-        sceneId,
-        turnId,
-        { setup: spec, approveLiveProviderRun: true }
-      );
-      onContextChange(report.context);
-    } finally {
-      setActionBusy(false);
-    }
-  }, [
-    actionBusy,
-    blocked,
-    blockedIssue,
-    canGenerateCurrentEstimate,
-    turnId,
-    onContextChange,
-    projectName,
-    sceneId,
-    spec,
-  ]);
-
   const deleteTake = useCallback(
     async (takeId: string) => {
       setActionBusy(true);
@@ -355,14 +233,12 @@ export function useSceneDialogueAudio(input: {
 
   return {
     actionBusy,
-    canGenerateCurrentEstimate,
     autosave,
     blocked,
     blockedIssue,
     context,
     dialogue,
     draft,
-    estimate,
     existing,
     nonV3,
     selectedModel,
@@ -372,7 +248,6 @@ export function useSceneDialogueAudio(input: {
     usableVoices,
     chooseModel,
     deleteTake,
-    generateTake,
     resetAdvancedValues,
     updateDraft,
     updateVoiceSettings,

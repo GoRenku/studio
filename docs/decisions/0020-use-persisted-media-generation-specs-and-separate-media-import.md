@@ -1,5 +1,7 @@
 # 0020 Use Persisted Media Generation Specs And Separate Media Import
 
+> **Superseded by Decision 0086:** Persisted Generation Specs and Runs are removed. Explicit `renku media import` remains, now with optional Asset provenance instead of Spec/Run identity.
+
 Date: 2026-05-26
 
 Status: accepted

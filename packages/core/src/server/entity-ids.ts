@@ -33,8 +33,6 @@ export type EntityIdPrefix =
   | 'scene_dialogue'
   | 'asset'
   | 'asset_file'
-  | 'media_generation_spec'
-  | 'media_generation_run'
   | 'scene_beats_revision'
   | 'beat'
   | 'shot_plan'

@@ -43,6 +43,8 @@ interface AssetRow {
   tags: string[];
   origin: string;
   availability: string;
+  generationProvenance: import('../../client/media-generation-review.js').MediaGenerationProvenance | null;
+  authoredFromShotPlanId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -97,6 +99,8 @@ export function listAssetPageInSession(
       tags: assets.tags,
       origin: assets.origin,
       availability: assets.availability,
+      generationProvenance: assets.generationProvenance,
+      authoredFromShotPlanId: assets.authoredFromShotPlanId,
       createdAt: assets.createdAt,
       updatedAt: assets.updatedAt,
     })
@@ -228,6 +232,10 @@ function toAsset(
     referenceName: row.referenceName,
     tags: row.tags,
     origin: row.origin,
+    generationProvenance: row.generationProvenance,
+    authoredFrom: row.authoredFromShotPlanId
+      ? { kind: 'shotPlan', id: row.authoredFromShotPlanId }
+      : null,
     files: filesByAssetId.get(row.id) ?? [],
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

@@ -14,19 +14,23 @@ describe('media import command handler', () => {
     expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'cast.profile', target: { kind: 'castMember', id: 'hero' }, sourceProjectRelativePath: 'tmp/profile.png' }));
   });
 
-  it('passes the saved agent-external spec id to Core', async () => {
-    const attachGenerationMedia = vi.fn().mockResolvedValue({ valid: true, purpose: 'cast.profile', provenance: { generationSpecId: 'spec_codex' }, project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
+  it('passes exact saved provenance to Core', async () => {
+    const provenance = { provider: 'codex', model: 'gpt-image-2', mediaKind: 'image', prompt: 'portrait', request: { prompt: 'portrait' } } as const;
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-media-provenance-'));
+    const provenanceFile = path.join(directory, 'provenance.json');
+    await fs.writeFile(provenanceFile, JSON.stringify(provenance));
+    const attachGenerationMedia = vi.fn().mockResolvedValue({ valid: true, purpose: 'cast.profile', generationProvenance: provenance, project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
     await mediaImportCommandHandler.run({
       flags: {
         purpose: 'cast.profile',
         target: 'cast:hero',
         source: 'tmp/profile.png',
-        sourceSpec: 'spec_codex',
+        provenance: provenanceFile,
       },
       runtime: { projectName: 'movie', projectDataService: { attachGenerationMedia } },
     } as never);
     expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({
-      sourceSpecId: 'spec_codex',
+      generationProvenance: provenance,
     }));
   });
 
@@ -65,3 +69,6 @@ describe('media import command handler', () => {
     }));
   });
 });
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';

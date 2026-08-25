@@ -6,69 +6,37 @@ import type { ProjectSettingsDocument } from '@gorenku/studio-core/client';
 import { ProjectSettingsFields } from './project-settings-fields';
 
 describe('ProjectSettingsFields', () => {
-  it('shows four independent accordion groups with the accepted copy, controls, and defaults', () => {
-    render(
-      <ProjectSettingsFields settings={settings()} onChange={() => undefined} />
-    );
-
-    expect(screen.getByText('Screenplay Import')).toBeTruthy();
-    expect(screen.getByRole('switch', { name: 'Create cast, locations, and props' }).getAttribute('data-state')).toBe('checked');
-    expect(screen.getByRole('switch', { name: 'Generate profile and hero images' }).getAttribute('data-state')).toBe('unchecked');
-    expect(screen.getByText('After importing Final Draft, continue with unambiguous continuity facts and screenplay reference bindings.')).toBeTruthy();
-
-    const generation = screen.getByRole('button', { name: 'Generation' });
-    const renkuManaged = screen.getByRole('button', {
-      name: 'Renku-managed generation',
-    });
-    const codexBuiltIn = screen.getByRole('button', {
-      name: 'Codex built-in image generation',
-    });
-    expect(generation.getAttribute('aria-expanded')).toBe('false');
-    expect(renkuManaged.getAttribute('aria-expanded')).toBe('false');
-    expect(codexBuiltIn.getAttribute('aria-expanded')).toBe('false');
-
-    fireEvent.click(generation);
-    expect(screen.getByRole('switch', { name: 'Use Codex for image generation' }).getAttribute('data-state')).toBe('checked');
-
-    fireEvent.click(renkuManaged);
-    fireEvent.click(codexBuiltIn);
-    expect(renkuManaged.getAttribute('aria-expanded')).toBe('true');
-    expect(codexBuiltIn.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getAllByText('Max concurrent generations')).toHaveLength(2);
+  it('renders the accepted generation sections, provider choices, and defaults', () => {
+    render(<ProjectSettingsFields settings={settings()} onChange={() => undefined} />);
+    expect(screen.getByRole('button', { name: 'Generation' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Image Generation' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Video Generation' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Audio Generation' })).toBeTruthy();
+    expect(screen.getByText('GPT Image 2 (Codex)')).toBeTruthy();
+    expect(screen.getByText('ElevenLabs')).toBeTruthy();
+    expect(screen.queryByText('Replicate')).toBeNull();
+    expect(screen.queryByText('WaveSpeed')).toBeNull();
+    expect(screen.queryByText('World Labs')).toBeNull();
   });
 
-  it('disables a lane maximum without changing its stored value', () => {
+  it('retains the configured maximum when concurrency is switched off', () => {
     const onChange = vi.fn();
     const value = settings();
-    value.generation.renkuManaged.allowConcurrentGenerations = true;
-    value.generation.renkuManaged.maxConcurrentGenerations = 3;
+    value.generation.video.runGenerationsConcurrently = true;
+    value.generation.video.maxConcurrentGenerations = 3;
     render(<ProjectSettingsFields settings={value} onChange={onChange} />);
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Renku-managed generation' })
-    );
-
-    fireEvent.click(
-      screen.getByRole('switch', {
-        name: 'Run generations concurrently',
-        description: /Renku-managed/,
-      })
-    );
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        generation: expect.objectContaining({
-          renkuManaged: expect.objectContaining({
-            allowConcurrentGenerations: false,
-            maxConcurrentGenerations: 3,
-          }),
-        }),
-      })
-    );
+    fireEvent.click(screen.getAllByRole('switch', { name: 'Run Generations Concurrently' })[1]!);
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      generation: expect.objectContaining({
+        video: expect.objectContaining({ runGenerationsConcurrently: false, maxConcurrentGenerations: 3 }),
+      }),
+    }));
   });
 });
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 2,
+    version: 3,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -77,18 +45,10 @@ function settings(): ProjectSettingsDocument {
       generateBeatStoryboardImages: false,
     },
     generation: {
-      preferCodexImageGeneration: true,
       displayPreview: true,
-      renkuManaged: {
-        requirePerRunConfirmation: true,
-        allowConcurrentGenerations: false,
-        maxConcurrentGenerations: 1,
-      },
-      codexBuiltIn: {
-        requirePerRunConfirmation: false,
-        allowConcurrentGenerations: true,
-        maxConcurrentGenerations: 5,
-      },
+      image: { provider: 'codex', askBeforeGenerating: false, runGenerationsConcurrently: true, maxConcurrentGenerations: 5 },
+      video: { provider: 'fal-ai', askBeforeGenerating: true, runGenerationsConcurrently: false, maxConcurrentGenerations: 1 },
+      audio: { provider: 'elevenlabs', askBeforeGenerating: true, runGenerationsConcurrently: false, maxConcurrentGenerations: 1 },
     },
   };
 }

@@ -1,5 +1,9 @@
 # 0049: Use Request-Scoped Generation Reference Choices
 
+> **Decision 0086 update:** Persisted GenerationSpec reference choices and Core Preview selection commands are superseded. The user and agent still choose exact references; the Skill rebuilds the request conversationally.
+
+> **Decision 0087 update:** Core deterministically suggests exact relationship-derived AssetFiles, but suggestions remain non-exhaustive evidence and never become selection or permission.
+
 Date: 2026-07-14
 
 Status: generic request-scoped choices retained; Take-specific clauses

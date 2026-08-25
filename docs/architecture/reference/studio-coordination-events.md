@@ -165,33 +165,29 @@ To keep that boundary from regressing:
   coordination state rather than durable project state.
 
 `studio.generationPreviewsRequested` is a UI coordination event. Agents request
-one or more ordinary previews from saved generation spec ids or transient
-`GenerationSpec` JSON files. The CLI notification carries an ordered array of
-Core-built `GenerationPreview` values with logical project references only.
-Before appending the event, the Studio server asks Core to resolve each
-`assetId + assetFileId` into an active project asset file and to build
-meaningful subject labels for every entry. It appends nothing unless every
-projection succeeds. The stored event carries the ordered browser display
-projections with Studio-safe asset-file URLs and subject labels so the running
-browser can open one Generation Preview Dialog at `1 / N`.
+one or more ordinary previews from temporary review documents under
+`tmp/operations/media-generation/`. The CLI asks Core to parse each document,
+validate its safe Project-relative path, recursively project local-media markers
+as browser-safe reference resources, and preserve command-line order. The
+stored event carries the completed browser projections so the running browser
+can open one Generation Preview Dialog at `1 / N`.
 
-The preview may include final prompt text, model identity, configuration,
-provider-token ordering, diagnostics, prompt-sheet metadata, and a sanitized
-provider payload preview, because its purpose is local review of the exact
-generator-bound handoff. The preview must not encode prompt-sheet internals such
-as panels, captions, annotation keys, or shot-coverage checks.
+The review surface contains only the small Core-owned envelope: provider, model,
+media kind, exact top-level prompt, opaque provider-native request, recursively
+discovered references, and envelope diagnostics. Configuration presentation is
+a read-only recursive view of the opaque request. It must not infer provider
+schemas or validate creative contents.
 
-The prompt contract separates persisted `finalPrompt.authoredText` from
-provider-facing `finalPrompt.providerText`. Editing a saved preview does not
-mutate the coordination event. The browser sends the authored prompt and final
-editable reference selections to the saved-preview update endpoint; Core
-persists the media generation spec and rebuilds a fresh preview for the still
-open dialog. Draft previews without `generationSpec` and saved previews whose
-`generationSpec.frozenAt` is non-null remain read-only.
+Prompt Update writes only the top-level `prompt` in the temporary review
+document. It does not search or rewrite prompt-like fields inside the opaque
+request. References and configuration remain read-only. Update and Close emit
+no generation intent and do not wake, resume, or correlate with an agent; the
+user continues through the ordinary conversation and the agent rereads the
+document before execution.
 
-It must not be consumed by project data services, used to reconstruct generation
-history, or stored as a substitute for media generation specs, estimates, runs,
-receipts, assets, or take metadata. The Studio server appends the event only
+The event must not be consumed by project data services or used to reconstruct
+generation history. Durable generation facts belong to Asset-level generation
+provenance after focused attachment. The Studio server appends the event only
 after receiving a live notification at:
 
 ```text
@@ -201,22 +197,19 @@ POST /studio-api/studio/events/generation-previews
 The CLI command is:
 
 ```bash
-renku generation preview show --file <media-generation-spec-json> --json
-renku generation preview show --spec <media-generation-spec-id> --json
-renku generation preview show --file <first-spec-json> --file <second-spec-json> --json
-renku generation preview show --spec <first-spec-id> --spec <second-spec-id> --json
+renku generation preview show --file <media-generation-review-json> --json
+renku generation preview show --file <first-review-json> --file <second-review-json> --json
 ```
 
-Repeated inputs preserve command-line order and may not mix `--file` with
-`--spec`. The array is a display request only: every preview retains its own
-spec, estimate, approval, update, run, receipt, and attachment lifecycle.
+Repeated inputs preserve command-line order. The array is a display request
+only; each document remains independent temporary Project data.
 
 Unlike resource refresh, generation previews do not have an offline backlog. If
 Studio is not running, the command fails because the requested result is a
 visible dialog. Preview references must be logical project references and must
 not include browser URLs, provider upload URLs, secrets, or local absolute paths.
-Studio resolves logical references into `/studio-api/projects/.../assets/...`
-file URLs only after the notification reaches the server.
+Studio resolves logical references through its protected Project reference-file
+route only after the notification reaches the server.
 
 Tests should reinforce this boundary:
 

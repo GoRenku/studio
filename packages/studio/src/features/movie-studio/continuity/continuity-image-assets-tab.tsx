@@ -1,6 +1,6 @@
 import type { StudioAssetResponse } from '@/services/studio-project-contracts';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
-import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
+import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
 import {
   continuityImageAspectRatio,
   continuityImageAssets,
@@ -98,7 +98,6 @@ export function ContinuityImageAssetsTab({
               openGenerationRequestInspector({
                 projectName,
                 assetId: asset.id,
-                assetFileId: file.id,
               });
             },
           },

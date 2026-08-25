@@ -87,8 +87,6 @@ describe('migrate database command', () => {
           'lookbook_sheet',
           'asset_membership',
           'selected_asset',
-          'media_generation_spec',
-          'media_generation_run',
           'screenplay_analysis',
           'screenplay_analysis_state',
           'screenplay_revision',
@@ -102,6 +100,11 @@ describe('migrate database command', () => {
           'cast_voice_provider_registration',
         ])
       );
+      expect(readTableNames(sqlite)).not.toEqual(expect.arrayContaining([
+        'media_generation_spec',
+        'media_generation_run',
+        'asset_file_generation',
+      ]));
       expect(readColumnNames(sqlite, 'lookbook_image_section')).toEqual(
         expect.arrayContaining(['point_id'])
       );

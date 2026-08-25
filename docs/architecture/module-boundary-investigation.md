@@ -22,77 +22,23 @@ real package, folder, public contract, or runtime behavior.
 
 ## Findings
 
-### 1. Media Generation Cost Rail Is Not A Stable Module Boundary
+### 1. Media generation now has a stable package boundary
 
-Current direction:
+Decision 0086 removed the Core-owned generic estimate, Spec, Run, and execution
+rail that motivated this finding. `packages/engines` now owns only standalone
+provider protocols and execution mechanics. Core owns focused Asset attachment,
+safe provenance, Project settings, and credentials; CLI is the installed
+composition root. Architecture checks can therefore protect package imports and
+public capability without naming private helpers.
 
-- Estimates are a separate cost rail.
-- Estimates may price a full dependency to-do list.
-- Estimates must not prepare provider payloads, validate generation readiness,
-  resolve provider inputs, or run generation.
+### 2. Engines provider modules are explicit owners
 
-Current smell:
-
-- Cost-related code lives under `packages/core/src/server/media-generation`, but
-  the broader media-generation folder also owns readiness, provider payload
-  construction, dependency inventory, media import, generation runs, and
-  purpose-specific mutation code.
-- Because those responsibilities are close siblings, a static test cannot cleanly
-  say "cost rail cannot import execution rail" without naming today's files.
-
-Missing boundary:
-
-- A stable Core cost module, for example a cost-rail folder or package-owned
-  module, whose public API is limited to pricing projection and estimate reports.
-
-Desired shape:
-
-- Cost rail may depend on browser-safe spec contracts, pricing facts, model/route
-  pricing data, and the engine pricing API.
-- Cost rail must not depend on provider payload construction, live generation,
-  media import, file resolution, readiness/preflight validation, or durable
-  mutation services.
-
-Future enforceable check:
-
-- Once the cost rail has an explicit folder boundary, add an import-boundary test
-  for that folder. Do not add a source-text blacklist before the folder boundary
-  exists.
-
-### 2. Engines Pricing And Execution Are Intermixed In One Generation Folder
-
-Current direction:
-
-- Engine cost estimation is a pricing API.
-- Engine live generation is an execution API.
-- Execution may build provider payloads, validate provider schemas, read input
-  files, invoke providers, and persist outputs.
-- Pricing should use declared pricing inputs and catalog pricing facts.
-
-Current smell:
-
-- Pricing, request hashing, provider payload construction, provider payload
-  validation, input-file payload handling, model discovery, and live runner code
-  are all peers in `packages/engines/src/generation`.
-- A test that tries to protect pricing purity has to know private file names
-  because there is no pricing-vs-execution module boundary.
-
-Missing boundary:
-
-- A stable engines pricing module separated from execution/payload/provider
-  modules.
-
-Desired shape:
-
-- `generation/pricing` owns estimates and billable-unit normalization.
-- `generation/execution` owns live/simulated execution, provider payload
-  validation, SDK handoff, input file loading, and output persistence.
-- Shared contracts stay in a deliberately named contract module.
-
-Future enforceable check:
-
-- Once pricing and execution are separate modules, add an import-boundary test
-  that pricing cannot import execution, payload, SDK, or filesystem modules.
+Each production provider owns its protocol mapping, request validation,
+provider-specific retry classification, polling/recovery behavior, and output
+normalization. Shared Engines modules are limited to the public engine contract,
+schema execution, metadata cache, local-file traversal, retry timing, downloads,
+and closed error codes. Pricing, simulation, Studio purpose catalogs, and durable
+Project state are not Engines capabilities.
 
 ### 3. Scene Beats And Shot Authoring Needed Separate Owners
 
@@ -120,33 +66,13 @@ Future enforceable check:
   example, planning should not import live generation, and HTTP/CLI adapters
   should call public core commands rather than submodule internals.
 
-### 4. Purpose Lifecycle And Purpose Implementations Need Clearer Ownership
+### 4. Focused attachment replaces the purpose lifecycle
 
-Current direction:
-
-- Shared media-generation lifecycle should own context, model list, validation,
-  spec persistence, estimate, run, and import orchestration.
-- Purpose definitions should own purpose-specific context, provider payloads,
-  dependency declarations, output naming, and import behavior.
-
-Current smell:
-
-- The registry, shared service, purpose-specific modules, and dependency helpers
-  are close enough that boundaries are easy to blur.
-- Some checks currently protect outcomes through runtime tests, but the module
-  shape does not make ownership obvious from imports alone.
-
-Missing boundary:
-
-- A clearer split between lifecycle orchestration, purpose definitions, dependency
-  inventory utilities, and purpose-specific implementations.
-
-Future enforceable check:
-
-- Once these are stable modules, architecture tests can check dependency
-  direction, such as purpose implementations depending on lifecycle contracts but
-  lifecycle orchestration not depending on purpose-private helpers except through
-  registered definitions.
+Decision 0086 removed the generic purpose registry and lifecycle. Skills own
+creative/provider request authoring, Engines executes provider-native requests,
+and focused Core commands validate Asset ownership and attach exact safe
+provenance. CLI and Studio remain adapters to those public owning-layer
+contracts.
 
 ## Removed Static Checks
 
@@ -154,25 +80,17 @@ The cleanup removed static checks that tried to enforce these concerns by naming
 current private implementation paths. Those checks were not wrong about the
 desired architecture, but they were wrong as tests.
 
-Until the module boundaries above exist, use runtime tests and focused code review
-to protect the behavior:
-
-- estimates remain cost projections, not generation preparation;
-- pricing code does not execute providers;
-- live generation remains one approved run at a time;
-- invalid state fails before durable mutation;
-- adapters call core-owned commands and services.
+The replacement boundaries are protected through import checks, public contract
+tests, runtime validation-before-write tests, and focused code review. Tests do
+not enumerate private provider helpers or command inventories.
 
 ## Recommendation
 
-The missing boundaries described in this investigation have been accepted as the
-implementation direction in
-`plans/active/0108-media-generation-module-boundary-refactor.md` and
-`docs/decisions/0044-use-media-generation-module-boundaries.md`.
-
-The follow-up refactor creates the missing modules so the boundary is visible in
-the filesystem and public APIs. Narrow import-boundary tests should name those
-module boundaries, not private implementation files or helper names.
+The original follow-up was accepted in Decision 0044. Decision 0086 now
+supersedes its generic lifecycle/pricing shape while retaining the rule that
+boundaries must be visible in packages and public APIs. Narrow import-boundary
+tests should name those stable boundaries, not private implementation files or
+helper names.
 
 The target is a codebase where architecture tests can say "this module must not
 import that module" instead of "this file must not mention today's private

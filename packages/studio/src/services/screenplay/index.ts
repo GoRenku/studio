@@ -9,8 +9,6 @@ export {
 } from './scenes';
 export {
   deleteSceneDialogueAudioTake,
-  estimateSceneDialogueAudioDraft,
-  generateSceneDialogueAudioTake,
   readSceneDialogueAudioWorkspace,
   saveSceneDialogueAudioSetup,
   type SceneDialogueAudioMutationWithUrls,

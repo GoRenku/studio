@@ -37,6 +37,7 @@
     "@gorenku/studio-diagnostics": "workspace:*",
     "@gorenku/studio-core": "workspace:*",
     "@gorenku/studio": "workspace:*",
+    "@gorenku/studio-engines": "workspace:*",
     "meow": "^14.1.0"
   },
   "devDependencies": {

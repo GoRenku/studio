@@ -813,6 +813,8 @@ function asset(id: string, url: string) {
     title: 'Shot image',
     oneLineSummary: null,
     origin: 'generated',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: [],
     files: [{

@@ -1,5 +1,9 @@
 # 0047 Use Context-First Provider-Valid Generation
 
+> **Decision 0086 update:** Generic GenerationSpec authoring/runtime, pricing, catalog, and Run contracts are superseded. Context-first Skill authoring, exact Engines validation, and focused attachment remain.
+
+> **Decision 0087 update:** Core now supplies one typed current Project briefing per purpose/target. Provider-native validity remains owned by the selected provider and Engines.
+
 Date: 2026-07-12
 
 Status: accepted

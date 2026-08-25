@@ -12,7 +12,7 @@ import {
 } from '../continuity/continuity-image-assets';
 import { humanizeReferenceName } from './cast-reference-labels';
 import { CastVoiceSampleCard } from './cast-voice-sample-card';
-import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
+import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
 
 interface CastMemberAssetsTabProps {
   projectName: string;
@@ -72,7 +72,6 @@ export function CastMemberAssetsTab({
             openGenerationRequestInspector({
               projectName,
               assetId: asset.id,
-              assetFileId: file.id,
             });
           }}
           onDeleteAsset={onDeleteAsset}

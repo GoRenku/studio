@@ -1,5 +1,5 @@
 import type {
-  GenerationPreviewResource,
+  MediaGenerationPreviewResource,
   StudioSelection,
 } from '@gorenku/studio-core/client';
 
@@ -60,7 +60,7 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
 export interface GenerationPreviewsResourceRequestedEvent extends StudioEventBase {
   type: 'studio.generationPreviewsRequested';
   projectRef: StudioProjectRef;
-  previews: GenerationPreviewResource[];
+  previews: MediaGenerationPreviewResource[];
 }
 
 export type StudioEvent =

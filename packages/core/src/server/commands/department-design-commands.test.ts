@@ -130,6 +130,10 @@ describe('department design commands', () => {
 
   it('writes Cast, Location, and Prop Design documents', async () => {
     await createSampleMovieProject({ homeDir, projectData });
+    const productionLookbook = await projectData.writeProductionLookbook({
+      homeDir,
+      document: productionLookbookDocument(),
+    });
 
     const screenplay = await projectData.readScreenplayStructure({ projectName: 'constantinople', homeDir });
     const cast = await projectData.listCastMembers({ homeDir });
@@ -155,6 +159,7 @@ describe('department design commands', () => {
         castMemberId,
         voiceCasting: 'Measured young sovereign voice',
       },
+      activeLookbook: { lookbook: { id: productionLookbook.lookbook.id } },
     });
 
     const locationDesign = locationDesignDocument(locationId);
@@ -174,6 +179,7 @@ describe('department design commands', () => {
         locationId,
         spatialThesis: 'Ceremony squeezed into a tactical planning room.',
       },
+      activeLookbook: { lookbook: { id: productionLookbook.lookbook.id } },
     });
 
     const propReport = await projectData.applyPropOperations({
@@ -209,6 +215,7 @@ describe('department design commands', () => {
         propId,
         designThesis: 'Ceremonial authority built for close visual scrutiny.',
       },
+      activeLookbook: { lookbook: { id: productionLookbook.lookbook.id } },
     });
   });
 
@@ -517,5 +524,37 @@ function propDesignDocument(propId: string): PropDesignDocument {
       propSheetGuidance: ['Show front, profile, rear, and interior construction'],
       generationGuidance: ['Ottoman ceremonial helmet', 'historically grounded metalwork'],
     },
+  };
+}
+
+function productionLookbookDocument() {
+  return {
+    kind: 'productionLookbook' as const,
+    productionLookbook: {
+      name: 'Production Language',
+      thesis: { statement: 'Held monumental frames.', principles: ['Keep scale legible.'] },
+      palette: {
+        description: 'Stone and ember.',
+        colors: [{ hex: '#8A6437', name: 'Worked bronze', meaning: 'Engineered force.' }],
+        observations: [],
+      },
+      toneMood: { tone: 'severe', moodTags: ['monumental'], description: 'Restrained pressure.' },
+      composition: {
+        description: 'Stable axes.',
+        patterns: [{ name: 'Held center', description: 'Keep mass legible.' }],
+      },
+      lighting: {
+        description: 'Low sun and fire.',
+        patterns: [{ name: 'Ember edge', description: 'Use fire as a narrow accent.' }],
+      },
+      texture: { description: 'Stone and smoke.', observations: [] },
+      camera: {
+        description: 'Measured movement.',
+        movement: [{ name: 'Slow push', description: 'Move only as decisions harden.' }],
+        motion: [{ name: 'Held weight', description: 'Let labor remain deliberate.' }],
+        framing: [{ name: 'Human scale', description: 'Keep bodies small against masonry.' }],
+      },
+    },
+    sourceInspirationFolderIds: [],
   };
 }

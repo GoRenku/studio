@@ -48,66 +48,40 @@ export {
   createProjectDataService,
   type ProjectDataService,
 } from './project-data-service.js';
-export { buildGenerationContext } from './generation/context.js';
 export { DEFAULT_PROJECT_SETTINGS } from './project-settings/document.js';
 export { resolveGenerationWorkflowPolicy } from './project-settings/index.js';
 export * from './provider-credentials/index.js';
-export {
-  createGenerationSpec,
-  listGenerationSpecs,
-  readGenerationSpec,
-  updateGenerationSpec,
-} from './generation/specs.js';
-export { freezeGenerationSpec } from './generation/spec-lifecycle.js';
-export {
-  applyGenerationGenericReferences,
-  listGenerationReferences,
-  resolveGenerationReference,
-  resolveGenerationReferenceProjectFile,
-  type ListGenerationReferencesInput,
-} from './generation/references.js';
-export {
-  readAssetFileGenerationRequest,
-  readGenerationReferenceProjectFile,
-  type ReadAssetFileGenerationRequestInput,
-} from './asset-file-generation-request.js';
-export {
-  listGenerationModels,
-  listGenerationPurposes,
-  readGenerationPurpose,
-  isGenerationPurpose,
-} from './generation/purposes.js';
-export type {
-  GenerationPurposeContract,
-  GenerationPurposeDescriptor,
-} from './generation/purpose-contract.js';
-export { applyFixedGenerationSettings } from './generation/purpose-settings.js';
 export { attachGenerationMedia, type AttachGenerationMediaInput, type GenerationMediaAttachmentReport } from './generation/attachments.js';
 export { attachSceneStoryboardImages } from './generation/scene-storyboard-attachments.js';
-export { validateGenerationSpec } from './generation/validation.js';
-export { buildGenerationPreview } from './generation/previews.js';
 export {
-  estimateGeneration,
-  estimateGenerationCost,
-  type GenerationCostEstimateInput,
-} from './generation/estimates.js';
-export { readGenerationRun, runGeneration } from './generation/runs.js';
-export type * from '../client/generation.js';
-export type * from '../client/generation-preview-resource.js';
+  parseMediaGenerationProvenance,
+  parseMediaGenerationReviewDocument,
+} from './media-generation-review/document.js';
+export { readMediaGenerationPreview } from './media-generation-review/preview.js';
+export { updateMediaGenerationPreviewPrompt } from './media-generation-review/prompt.js';
+export { readAssetMediaGenerationRequest } from './media-generation-review/inspection.js';
+export { readMediaGenerationContext } from './media-generation-context/index.js';
+export { validateMediaGenerationProvenance } from './assets/generation-provenance.js';
+export { assertSafeMediaGenerationRequest } from './media-generation-review/safety.js';
+export {
+  normalizeReviewDocumentPath,
+  resolveReviewDocumentPath,
+} from './media-generation-review/review-path.js';
+export {
+  readMediaGenerationReferenceProjectFile,
+  replaceLocalMediaPaths,
+} from './media-generation-review/local-media.js';
+export type * from '../client/media-generation-review.js';
+export type * from '../client/media-attachments.js';
+export type * from '../client/media-generation-context.js';
 export type * from '../client/shot-plans.js';
 export type * from '../client/shot-plan-video-generations.js';
 export type * from '../client/location-worlds.js';
 export {
-  generateLocationWorld,
+  persistLocationWorldGeneration,
+  prepareLocationWorldGeneration,
   readLocationWorldResource,
 } from './location-worlds/index.js';
-
-export { recordAssetFileGenerationProvenance } from './asset-file-generation/commands.js';
-export { readAssetFileGenerationProvenance } from './asset-file-generation/queries.js';
-export type {
-  ReadAssetFileGenerationProvenanceInput,
-  RecordAssetFileGenerationProvenanceInput,
-} from './asset-file-generation/types.js';
 
 export type {
   CreateMovieProjectInput,
@@ -154,7 +128,8 @@ export type {
   ReadLocationContextInput,
   ReadLocationDesignInput,
   ReadLocationInput,
-  GenerateLocationWorldInput,
+  PrepareLocationWorldGenerationInput,
+  PersistLocationWorldGenerationInput,
   ReadLocationWorldResourceInput,
   ReadPropContextInput,
   ReadPropDesignInput,

@@ -23,7 +23,7 @@ describe('Project Settings service', () => {
 
     const settings = structuredClone(DEFAULT_PROJECT_SETTINGS);
     settings.screenplayImport.runScreenplayAnalysis = true;
-    settings.generation.renkuManaged.maxConcurrentGenerations = 4;
+    settings.generation.video.maxConcurrentGenerations = 4;
     const report = await fixture.service.replaceProjectSettings({
       projectName: fixture.projectName,
       homeDir: fixture.homeDir,
@@ -54,7 +54,7 @@ describe('Project Settings service', () => {
       fixture.service.replaceProjectSettings({
         projectName: fixture.projectName,
         homeDir: fixture.homeDir,
-        settings: { ...DEFAULT_PROJECT_SETTINGS, version: 3 as 2 },
+        settings: { ...DEFAULT_PROJECT_SETTINGS, version: 4 as 3 },
       })
     ).rejects.toMatchObject({ code: 'PROJECT_SETTINGS002' });
     await expect(

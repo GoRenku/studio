@@ -1,5 +1,7 @@
 # 0074 Use Core-Owned Project Workflow Settings
 
+> **Decision 0086 update:** Core-owned versioned Project Settings and agent-owned concurrency remain. Generation settings are now per-media; estimates and approval tokens are removed, while Preview and Ask confirmation remain conversational.
+
 Date: 2026-08-06
 
 Status: accepted

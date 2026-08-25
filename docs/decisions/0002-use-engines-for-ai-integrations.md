@@ -1,5 +1,7 @@
 # 0002 Use Engines for AI Integrations
 
+> **Decision 0086 update:** The Engines name and provider-adapter ownership remain, narrowed to standalone asset-generation provider protocols with no workspace dependency or Studio/Core product concepts.
+
 Date: 2026-05-05
 
 Status: accepted

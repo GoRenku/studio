@@ -1,6 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
-  GenerationPreviewResource,
+  MediaGenerationPreviewResource,
   ProjectLanguage,
   ScenePanelTab,
   StudioSelection,
@@ -98,7 +98,7 @@ export interface StudioProjectResourcesChangedEvent extends StudioEventBase {
 export interface StudioGenerationPreviewsRequestedEvent extends StudioEventBase {
   type: 'studio.generationPreviewsRequested';
   projectRef: StudioProjectRef;
-  previews: GenerationPreviewResource[];
+  previews: MediaGenerationPreviewResource[];
 }
 
 export interface StudioFocusRequestedEvent extends StudioEventBase {

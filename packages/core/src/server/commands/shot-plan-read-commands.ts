@@ -4,7 +4,7 @@ import type {
   ShotPlanListReport,
   ShotPlanReport,
 } from '../../client/shot-plans.js';
-import { withGenerationProject } from '../generation/project-operation.js';
+import { withProject } from '../project-operation.js';
 import {
   projectSceneShotPlanListReport,
   projectShotPlanReport,
@@ -13,7 +13,7 @@ import {
 export async function readShotPlan(
   input: ReadShotPlanInput
 ): Promise<ShotPlanReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) =>
+  return withProject(input, ({ session, projectFolder }) =>
     projectShotPlanReport({
       session,
       projectFolder,
@@ -25,7 +25,7 @@ export async function readShotPlan(
 export async function listSceneShotPlans(
   input: ListSceneShotPlansInput
 ): Promise<ShotPlanListReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) =>
+  return withProject(input, ({ session, projectFolder }) =>
     projectSceneShotPlanListReport({
       session,
       projectFolder,

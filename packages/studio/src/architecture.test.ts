@@ -6,6 +6,11 @@ import { describe, expect, it } from 'vitest';
 const studioSourceRoot = path.dirname(fileURLToPath(import.meta.url));
 const uiSourceRoot = path.join(studioSourceRoot, 'ui');
 const mediaCardSourceRoot = path.join(uiSourceRoot, 'media-card');
+const mediaGenerationRequestSourceRoot = path.join(
+  studioSourceRoot,
+  'features',
+  'media-generation-request'
+);
 
 interface ForbiddenSourcePattern {
   label: string;
@@ -22,6 +27,16 @@ interface ArchitectureFinding {
 }
 
 const featureForbiddenImports: ForbiddenSourcePattern[] = [
+  {
+    label: 'Engines import',
+    pattern: /^@gorenku\/studio-engines(?:\/|$)/,
+    reason: 'browser feature code must consume Core projections, not provider execution',
+  },
+  {
+    label: 'provider SDK import',
+    pattern: /^(?:@fal-ai\/client|replicate|@elevenlabs\/elevenlabs-js)$/,
+    reason: 'browser feature code must not execute provider protocols',
+  },
   {
     label: 'server-only core import',
     pattern: /^@gorenku\/studio-core\/server(?:\/|$)/,
@@ -191,6 +206,27 @@ describe('Studio frontend architecture', () => {
         'Feature behavior, Studio services, server code, and Core domain contracts must stay outside it.',
       ].join(' ')
     ).toEqual([]);
+  });
+
+  it('keeps the media generation Preview and Inspection dialog shell in one owner', async () => {
+    const files = (await listTypeScriptFiles(mediaGenerationRequestSourceRoot)).filter(
+      (file) => file.endsWith('.tsx') && !isTestFile(file)
+    );
+    const dialogImporters: string[] = [];
+
+    for (const file of files) {
+      const source = await fs.readFile(file, 'utf8');
+      if (extractImportSources(source).includes('@/ui/dialog')) {
+        dialogImporters.push(relativeSourcePath(file));
+      }
+    }
+
+    expect(
+      dialogImporters,
+      'Preview and Inspection must share one complete dialog shell so their dimensions, header, content insets, and footer cannot drift.'
+    ).toEqual([
+      'features/media-generation-request/media-generation-request-dialog.tsx',
+    ]);
   });
 });
 

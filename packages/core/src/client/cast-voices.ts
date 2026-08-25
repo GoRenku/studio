@@ -1,5 +1,6 @@
 import type { Asset } from './assets.js';
 import type { ProjectRelativePath } from './project/index.js';
+import type { MediaGenerationProvenance } from './media-generation-review.js';
 
 export interface CastVoice {
   id: string;
@@ -59,7 +60,7 @@ export interface CastVoiceAttachmentDocument {
   sample: {
     sourceProjectRelativePath: ProjectRelativePath;
     title: string;
-    receipt?: unknown;
+    generationProvenance?: MediaGenerationProvenance;
   };
 }
 

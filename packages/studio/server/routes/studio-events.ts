@@ -4,8 +4,7 @@ import {
   createStudioOperationId,
   parseStudioSelection,
   validateStudioFocusRequestForProject,
-  type GenerationPreview,
-  type GenerationPreviewResource,
+  type MediaGenerationPreviewResource,
   type StudioBrowserSessionActivityKind,
   type ProjectDataService,
   type StudioCoordinationService,
@@ -24,9 +23,6 @@ import {
   createStudioApiTokenMiddleware,
   createStudioNotificationTokenMiddleware,
 } from '../http/studio-api-token.js';
-import {
-  buildGenerationPreviewResource,
-} from '../projections/generation-preview.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 
 const PROJECT_RESOURCES_CHANGED_NOTIFICATION_CONTEXT =
@@ -41,21 +37,12 @@ export interface CreateStudioEventsRouteOptions {
   cliNotificationToken?: string;
   serverInstanceId?: string;
   homeDir?: string;
-  generationPreviewProjection?: GenerationPreviewResourceProjection;
 }
-
-type GenerationPreviewResourceProjection = (input: {
-  projectName: string;
-  preview: Awaited<
-    ReturnType<ProjectDataService['buildGenerationPreviewResource']>
-  >;
-}) => Promise<GenerationPreviewResource>;
 
 type StudioEventsRouteProjectData = Pick<
   ProjectDataService,
   | 'readProjectShell'
   | 'readStudioSelectionContext'
-  | 'buildGenerationPreviewResource'
 >;
 
 export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions) {
@@ -65,8 +52,6 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
   const requireNotificationToken = createStudioNotificationTokenMiddleware(
     options.cliNotificationToken
   );
-  const projectGenerationPreview =
-    options.generationPreviewProjection ?? buildGenerationPreviewResource;
 
   return new Hono()
     .get('/', async (c) => {
@@ -106,17 +91,7 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
       try {
         const body = await c.req.json();
         const request = readGenerationPreviewRequest(body);
-        const previews = await Promise.all(request.previews.map(async (requestedPreview) => {
-          const corePreview = await projectData.buildGenerationPreviewResource({
-            projectName: request.projectRef.name,
-            homeDir: options.homeDir,
-            preview: requestedPreview,
-          });
-          return projectGenerationPreview({
-            projectName: request.projectRef.name,
-            preview: corePreview,
-          });
-        }));
+        const previews = request.previews;
         const event = await coordination.appendStudioEvent({
           type: 'studio.generationPreviewsRequested',
           projectRef: request.projectRef,
@@ -126,7 +101,6 @@ export function createStudioEventsRoute(options: CreateStudioEventsRouteOptions)
         });
         return c.json({
           eventId: event.id,
-          previewIds: previews.map((preview) => preview.previewId),
           event,
         });
       } catch (error) {
@@ -261,7 +235,7 @@ function readGenerationPreviewRequest(body: unknown) {
       message: 'Generation preview notification body must be an object.',
     });
   }
-  const previews = readGenericGenerationPreviews(request.previews, issues);
+  const previews = readMediaGenerationPreviews(request.previews, issues);
   const projectRef = readProjectRef(
     request.projectRef,
     issues,
@@ -300,35 +274,44 @@ function readGenerationPreviewRequest(body: unknown) {
   };
 }
 
-function readGenericGenerationPreviews(
+function readMediaGenerationPreviews(
   value: unknown,
   issues: DiagnosticIssue[]
-): GenerationPreview[] | null {
+): MediaGenerationPreviewResource[] | null {
   if (!Array.isArray(value) || value.length === 0) {
     issues.push(
       notificationIssue(
-        'previews must be a non-empty array of generic generation previews.',
+        'previews must be a non-empty array of media generation previews.',
         ['previews'],
         GENERATION_PREVIEW_NOTIFICATION_CONTEXT
       )
     );
     return null;
   }
-  const previews: GenerationPreview[] = [];
+  const previews: MediaGenerationPreviewResource[] = [];
   for (const [index, candidate] of value.entries()) {
     const preview = readRecord(candidate);
-    const spec = readRecord(preview?.spec);
-    if (!preview || !spec || !Array.isArray(preview.references)) {
+    if (
+      !preview
+      || preview.kind !== 'mediaGenerationPreview'
+      || typeof preview.provider !== 'string'
+      || typeof preview.model !== 'string'
+      || (preview.mediaKind !== 'image' && preview.mediaKind !== 'video' && preview.mediaKind !== 'audio')
+      || (preview.prompt !== null && typeof preview.prompt !== 'string')
+      || !Array.isArray(preview.references)
+      || typeof preview.editable !== 'boolean'
+      || !Array.isArray(preview.diagnostics)
+    ) {
       issues.push(
         notificationIssue(
-          'previews entries must be generic generation previews with a spec and references.',
+          'previews entries must be projected media generation preview resources.',
           ['previews', String(index)],
           GENERATION_PREVIEW_NOTIFICATION_CONTEXT
         )
       );
       continue;
     }
-    previews.push(candidate as GenerationPreview);
+    previews.push(candidate as unknown as MediaGenerationPreviewResource);
   }
   return previews.length === value.length ? previews : null;
 }

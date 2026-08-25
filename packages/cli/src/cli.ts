@@ -11,7 +11,7 @@ import { runAssetCommand } from './commands/asset-command.js';
 import { runCastCommand } from './commands/cast-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runDirectorCommand } from './commands/director-command.js';
-import { runGenerationCommand } from './commands/generation-command.js';
+import { runGenerationCommand } from './commands/generation/command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
 import { runLookbookCommand } from './commands/lookbook-command.js';
@@ -75,7 +75,7 @@ Commands
   settings show        Show the complete Project Settings document
   settings set         Replace Project Settings from a complete JSON document
   inspiration          Manage Inspiration folders and analysis
-  generation           Gather media context, inspect models, estimate cost, and run generation
+  generation           Read context, validate, preview, execute, or recover a provider request
   lookbook             Manage Lookbooks and Lookbook images
   media                Import media files for a purpose
   project current      Show the current authoring project
@@ -105,14 +105,9 @@ Options
   --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
   --media-kind         Asset media kind
-  --provider           Generation provider
-  --model              Generation model
-  --spec               Media Generation Spec id
-  --run                Media Generation Run id
-  --approval-token     Approval token returned by a preview or generation estimate
-  --authored-from-shot-plan  Shot Plan source id for generation context
-  --receipt            Generation Receipt JSON file
-  --source-spec        Agent-external Generation Spec id for an imported image
+  --output             Project-relative provider output directory
+  --request-id         Provider request id for generation recovery
+  --provenance         Media Generation Provenance JSON file
   --locale             Project locale id
   --cast               Cast member id for cast commands
   --voice              Cast Voice id or reference name
@@ -133,6 +128,7 @@ Options
   --position           One-based Shot position
   --placement          Shot add placement: start, end, before, or after
   --beats              Comma-separated Beat ids for storyboard imports
+  --beat               Repeatable Beat id for generation context
   --kind               Lookbook role
   --selection          Media import selection: select or take
                        Director context selection: Studio selection JSON
@@ -151,7 +147,6 @@ Options
   --sections           Comma-separated Lookbook section keys
   --anchor             Production Lookbook point id for Lookbook image placement
   --dry-run            Validate an operation without writing
-  --simulate           Run generation without calling a paid provider
   --no-browser         Do not open a browser when starting Studio
   --title              Project title
   --aspect-ratio       Project aspect ratio
@@ -193,7 +188,7 @@ Examples
   $ renku create midnight-crossing --title "Midnight Crossing"
   $ renku init ~/Movies/Renku
   $ renku init /Volumes/Media/Renku --json
-  $ renku generation preview show --file tmp/specs/sheet-1.json --file tmp/specs/sheet-2.json --project midnight-crossing --json
+  $ renku generation preview show --file tmp/operations/media-generation/sheet-1.json --project midnight-crossing --json
 `;
 
 function createCliFlags() {
@@ -245,29 +240,13 @@ function createCliFlags() {
     mediaKind: {
       type: 'string',
     },
-    provider: {
+    output: {
       type: 'string',
     },
-    model: {
+    requestId: {
       type: 'string',
     },
-    spec: {
-      type: 'string',
-      isMultiple: true,
-    },
-    run: {
-      type: 'string',
-    },
-    approvalToken: {
-      type: 'string',
-    },
-    authoredFromShotPlan: {
-      type: 'string',
-    },
-    receipt: {
-      type: 'string',
-    },
-    sourceSpec: {
+    provenance: {
       type: 'string',
     },
     sourceSheet: {
@@ -339,6 +318,10 @@ function createCliFlags() {
     beats: {
       type: 'string',
     },
+    beat: {
+      type: 'string',
+      isMultiple: true,
+    },
     kind: {
       type: 'string',
     },
@@ -392,10 +375,6 @@ function createCliFlags() {
       type: 'string',
     },
     dryRun: {
-      type: 'boolean',
-      default: false,
-    },
-    simulate: {
       type: 'boolean',
       default: false,
     },
@@ -546,10 +525,6 @@ export async function runRenkuCli(
     const file = isGenerationPreview
       ? undefined
       : singleCommandFlagValue(cli.flags.file, '--file');
-    const spec = isGenerationPreview
-      ? undefined
-      : singleCommandFlagValue(cli.flags.spec, '--spec');
-
     switch (command) {
       case 'create':
         return await runCreateCommand({
@@ -603,7 +578,6 @@ export async function runRenkuCli(
             cast: cli.flags.cast,
             voice: cli.flags.voice,
             registration: cli.flags.registration,
-            simulate: cli.flags.simulate,
             design: cli.flags.design,
             active: cli.flags.active,
             dryRun: cli.flags.dryRun,
@@ -704,23 +678,13 @@ export async function runRenkuCli(
           input,
           flags: {
             project: cli.flags.project,
+            file: isGenerationPreview ? cli.flags.file : file,
+            output: cli.flags.output,
+            requestId: cli.flags.requestId,
             purpose: cli.flags.purpose,
             target: cli.flags.target,
-            mediaKind: cli.flags.mediaKind,
-            provider: cli.flags.provider,
-            model: cli.flags.model,
-            file: isGenerationPreview ? cli.flags.file : file,
-            spec: isGenerationPreview ? cli.flags.spec : spec,
-            run: cli.flags.run,
-            scene: cli.flags.scene,
-            dialogue: cli.flags.dialogue,
-            take: cli.flags.take,
-            kind: cli.flags.kind,
-            approvalToken: cli.flags.approvalToken,
-            simulate: cli.flags.simulate,
-            authoredFromShotPlan: input.join(' ') === 'context'
-              ? cli.flags.authoredFromShotPlan
-              : undefined,
+            revision: cli.flags.revision,
+            beat: cli.flags.beat?.length ? cli.flags.beat : undefined,
           },
           json: cli.flags.json,
           io,
@@ -758,8 +722,7 @@ export async function runRenkuCli(
             tag: cli.flags.tag?.length ? cli.flags.tag : undefined,
             sections: cli.flags.sections,
             anchor: cli.flags.anchor,
-            receipt: cli.flags.receipt,
-            sourceSpec: cli.flags.sourceSpec,
+            provenance: cli.flags.provenance,
             sourceSheet: cli.flags.sourceSheet,
             revision: cli.flags.revision,
             beats: cli.flags.beats,
@@ -896,7 +859,7 @@ export async function runRenkuCli(
 
 function singleCommandFlagValue(
   values: readonly string[] | undefined,
-  flagName: '--file' | '--spec'
+  flagName: '--file'
 ): string | undefined {
   if (!values) {
     return undefined;

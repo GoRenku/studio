@@ -320,16 +320,17 @@ describe('Cast Voice commands', () => {
           sample: {
             sourceProjectRelativePath: 'generated/audio/normal.mp3' as ProjectRelativePath,
             title: 'Mehmed normal voice sample',
-            receipt: {
-              run: {
-                provider: 'elevenlabs',
-                model: 'eleven_multilingual_v2',
-              },
+            generationProvenance: {
+              provider: 'elevenlabs',
+              model: 'eleven_multilingual_v2',
+              mediaKind: 'audio',
+              prompt: 'voice sample',
+              request: { voice: 'voice_urban_normal' },
             },
           },
         }),
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA354' });
+    ).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_PROVENANCE_INVALID' });
 
     await expect(
       projectData.validateCastVoiceAttachment({
@@ -340,19 +341,17 @@ describe('Cast Voice commands', () => {
           sample: {
             sourceProjectRelativePath: 'generated/audio/normal.mp3' as ProjectRelativePath,
             title: 'Mehmed normal voice sample',
-            receipt: {
-              run: {
-                provider: 'elevenlabs',
-                model: 'eleven_v3',
-                providerPayload: {
-                  voice: 'voice_urban_normal',
-                },
-              },
+            generationProvenance: {
+              provider: 'elevenlabs',
+              model: 'eleven_v3',
+              mediaKind: 'audio',
+              prompt: 'voice sample',
+              request: { voice: 'voice_urban_normal' },
             },
           },
         }),
       })
-    ).rejects.toMatchObject({ code: 'PROJECT_DATA354' });
+    ).resolves.toEqual({ valid: true, warnings: [] });
   });
 
   it('attaches an existing ElevenLabs provider voice sample without generation records', async () => {
@@ -443,7 +442,13 @@ describe('Cast Voice commands', () => {
           ...elevenLabsSampleAttachmentDocument(),
           sample: {
             title: 'Mehmed provider voice sample',
-            receipt: { run: { provider: 'elevenlabs' } },
+            generationProvenance: {
+              provider: 'elevenlabs',
+              model: 'eleven_v3',
+              mediaKind: 'audio',
+              prompt: 'sample',
+              request: {},
+            },
           },
         } as never,
       })
@@ -461,14 +466,12 @@ describe('Cast Voice commands', () => {
         sample: {
           sourceProjectRelativePath: 'generated/audio/receipt.mp3' as ProjectRelativePath,
           title: 'Mehmed generated voice sample',
-          receipt: {
-            run: {
-              provider: 'elevenlabs',
-              model: 'eleven_v3',
-              providerPayload: {
-                voice: 'voice_urban_normal',
-              },
-            },
+          generationProvenance: {
+            provider: 'elevenlabs',
+            model: 'eleven_v3',
+            mediaKind: 'audio',
+            prompt: 'voice sample',
+            request: { voice: 'voice_urban_normal' },
           },
         },
       }),

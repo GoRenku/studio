@@ -15,7 +15,7 @@ import {
   readProjectLookbooks,
 } from '@/services/studio-visual-language-api';
 import { LookbookPanel } from './lookbook-panel';
-import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
+import { MediaGenerationRequestInspectorProvider as GenerationRequestInspectorProvider } from '@/features/media-generation-request/media-generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(
@@ -237,6 +237,8 @@ function lookbookImage(): LookbookImage {
       title: 'Palette frame',
       oneLineSummary: 'Muted color frame.',
       origin: 'generated',
+      generationProvenance: null,
+      authoredFrom: null,
       availability: 'ready',
       referenceName: null,
       tags: [],
@@ -274,6 +276,8 @@ function lookbookSheet(id: string): LookbookSheet {
       title: 'Lookbook sheet',
       oneLineSummary: 'A generated lookbook sheet.',
       origin: 'generated',
+      generationProvenance: null,
+      authoredFrom: null,
       availability: 'ready',
       referenceName: null,
       tags: [],

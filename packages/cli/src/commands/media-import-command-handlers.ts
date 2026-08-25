@@ -1,8 +1,8 @@
 import { StructuredError } from '@gorenku/studio-diagnostics';
-import { parseGenerationPurpose, parseGenerationTarget } from './generation-purpose-command-registry.js';
+import { parseGenerationPurpose, parseGenerationTarget } from './media-purpose.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 import { requiredFlag, type CliCommandHandler } from './structured-command.js';
-import { readReceipt, readSceneStoryboardImagesImportDocument } from './media-import-documents.js';
+import { readProvenance, readSceneStoryboardImagesImportDocument } from './media-import-documents.js';
 
 export interface MediaCommandFlags {
   project?: string;
@@ -16,8 +16,7 @@ export interface MediaCommandFlags {
   tag?: string[];
   sections?: string;
   anchor?: string;
-  receipt?: string;
-  sourceSpec?: string;
+  provenance?: string;
   sourceSheet?: string;
   revision?: string;
   beats?: string;
@@ -37,7 +36,16 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       const sceneBeatsRevisionId = requiredFlag(flags.revision, '--revision');
       const document = flags.file
         ? await readSceneStoryboardImagesImportDocument(flags.file)
-        : singleStoryboardImageDocument({ sceneBeatsRevisionId, beatId: requiredSingleBeat(flags.beats), source: requiredFlag(flags.source, '--source'), title: flags.title, select: flags.select ?? false });
+        : singleStoryboardImageDocument({
+            sceneBeatsRevisionId,
+            beatId: requiredSingleBeat(flags.beats),
+            source: requiredFlag(flags.source, '--source'),
+            title: flags.title,
+            select: flags.select ?? false,
+            ...(flags.provenance
+              ? { generationProvenance: await readProvenance(flags.provenance) }
+              : {}),
+          });
       const report = await runtime.projectDataService.attachSceneStoryboardImages({ projectName: runtime.projectName, homeDir: runtime.homeDir, sceneId: target.id, sceneBeatsRevisionId, document });
       await appendStudioResourceChangedEvent({ runtime, report, command: 'media import' });
       return report;
@@ -52,8 +60,9 @@ export const mediaImportCommandHandler: CliCommandHandler<MediaCommandFlags> = {
       title: flags.title,
       ...(assetMetadata ? { assetMetadata } : {}),
       select: flags.select,
-      ...(flags.receipt ? { receipt: await readReceipt(flags.receipt) } : {}),
-      ...(flags.sourceSpec ? { sourceSpecId: flags.sourceSpec } : {}),
+      ...(flags.provenance
+        ? { generationProvenance: await readProvenance(flags.provenance) }
+        : {}),
     });
     await appendStudioResourceChangedEvent({
       runtime,
@@ -87,8 +96,28 @@ function requiredSingleBeat(value: string | undefined): string {
   return beats[0]!;
 }
 
-function singleStoryboardImageDocument(input: { sceneBeatsRevisionId: string; beatId: string; source: string; title?: string; select: boolean }) {
-  return { sceneBeatsRevisionId: input.sceneBeatsRevisionId, select: input.select, ...(input.title ? { title: input.title } : {}), beats: [{ beatId: input.beatId, source: input.source, ...(input.title ? { title: input.title } : {}), sourcePurpose: 'scene.storyboard-sheet' as const }] };
+function singleStoryboardImageDocument(input: {
+  sceneBeatsRevisionId: string;
+  beatId: string;
+  source: string;
+  title?: string;
+  select: boolean;
+  generationProvenance?: import('@gorenku/studio-core/client').MediaGenerationProvenance;
+}) {
+  return {
+    sceneBeatsRevisionId: input.sceneBeatsRevisionId,
+    select: input.select,
+    ...(input.title ? { title: input.title } : {}),
+    beats: [{
+      beatId: input.beatId,
+      source: input.source,
+      ...(input.title ? { title: input.title } : {}),
+      sourcePurpose: 'scene.storyboard-sheet' as const,
+      ...(input.generationProvenance
+        ? { generationProvenance: input.generationProvenance }
+        : {}),
+    }],
+  };
 }
 
 export function unsupportedMediaPurpose(purpose: string): StructuredError {

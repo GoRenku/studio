@@ -4,7 +4,7 @@ import type { ProjectSettingsDocument } from '../../client/project-settings.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 2,
+  version: 3,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -13,17 +13,24 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
     generateBeatStoryboardImages: false,
   },
   generation: {
-    preferCodexImageGeneration: true,
     displayPreview: true,
-    renkuManaged: {
-      requirePerRunConfirmation: true,
-      allowConcurrentGenerations: false,
+    image: {
+      provider: 'codex',
+      askBeforeGenerating: false,
+      runGenerationsConcurrently: true,
+      maxConcurrentGenerations: 5,
+    },
+    video: {
+      provider: 'fal-ai',
+      askBeforeGenerating: true,
+      runGenerationsConcurrently: false,
       maxConcurrentGenerations: 1,
     },
-    codexBuiltIn: {
-      requirePerRunConfirmation: false,
-      allowConcurrentGenerations: true,
-      maxConcurrentGenerations: 5,
+    audio: {
+      provider: 'elevenlabs',
+      askBeforeGenerating: true,
+      runGenerationsConcurrently: false,
+      maxConcurrentGenerations: 1,
     },
   },
 };
@@ -32,13 +39,15 @@ const concurrencySchema = {
   type: 'object',
   additionalProperties: false,
   required: [
-    'requirePerRunConfirmation',
-    'allowConcurrentGenerations',
+    'provider',
+    'askBeforeGenerating',
+    'runGenerationsConcurrently',
     'maxConcurrentGenerations',
   ],
   properties: {
-    requirePerRunConfirmation: { type: 'boolean' },
-    allowConcurrentGenerations: { type: 'boolean' },
+    provider: { type: 'string' },
+    askBeforeGenerating: { type: 'boolean' },
+    runGenerationsConcurrently: { type: 'boolean' },
     maxConcurrentGenerations: { type: 'integer', minimum: 1, maximum: 5 },
   },
 } as const;
@@ -49,7 +58,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation'],
   properties: {
-    version: { const: 2 },
+    version: { const: 3 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -72,16 +81,34 @@ const projectSettingsSchema = {
       type: 'object',
       additionalProperties: false,
       required: [
-        'preferCodexImageGeneration',
         'displayPreview',
-        'renkuManaged',
-        'codexBuiltIn',
+        'image',
+        'video',
+        'audio',
       ],
       properties: {
-        preferCodexImageGeneration: { type: 'boolean' },
         displayPreview: { type: 'boolean' },
-        renkuManaged: concurrencySchema,
-        codexBuiltIn: concurrencySchema,
+        image: {
+          ...concurrencySchema,
+          properties: {
+            ...concurrencySchema.properties,
+            provider: { enum: ['codex', 'fal-ai'] },
+          },
+        },
+        video: {
+          ...concurrencySchema,
+          properties: {
+            ...concurrencySchema.properties,
+            provider: { const: 'fal-ai' },
+          },
+        },
+        audio: {
+          ...concurrencySchema,
+          properties: {
+            ...concurrencySchema.properties,
+            provider: { const: 'elevenlabs' },
+          },
+        },
       },
     },
   },
@@ -155,7 +182,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 2 Project Settings contract.'
+      'Use the complete current version 3 Project Settings contract.'
     );
   });
 }
@@ -168,7 +195,7 @@ function projectSettingsIssueMessage(error: ErrorObject): string {
     return `Unknown Project Settings field: ${String(error.params.additionalProperty)}.`;
   }
   if (error.keyword === 'const') {
-    return 'Project Settings version must be 2.';
+    return 'Project Settings version must be 3.';
   }
   if (error.keyword === 'minimum' || error.keyword === 'maximum') {
     return 'Maximum concurrent generations must be an integer from 1 through 5.';

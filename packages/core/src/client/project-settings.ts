@@ -1,7 +1,7 @@
 export const STUDIO_PROJECT_SETTINGS_RESOURCE_KEY = 'project-settings' as const;
 
 export interface ProjectSettingsDocument {
-  version: 2;
+  version: 3;
   screenplayImport: {
     createContinuitySubjects: boolean;
     generateContinuityImages: boolean;
@@ -9,20 +9,21 @@ export interface ProjectSettingsDocument {
     generateSceneBeats: boolean;
     generateBeatStoryboardImages: boolean;
   };
-  generation: {
-    preferCodexImageGeneration: boolean;
-    displayPreview: boolean;
-    renkuManaged: {
-      requirePerRunConfirmation: boolean;
-      allowConcurrentGenerations: boolean;
-      maxConcurrentGenerations: number;
-    };
-    codexBuiltIn: {
-      requirePerRunConfirmation: boolean;
-      allowConcurrentGenerations: boolean;
-      maxConcurrentGenerations: number;
-    };
-  };
+  generation: ProjectGenerationSettings;
+}
+
+export interface ProjectGenerationSettings {
+  displayPreview: boolean;
+  image: GenerationMediaSettings<'codex' | 'fal-ai'>;
+  video: GenerationMediaSettings<'fal-ai'>;
+  audio: GenerationMediaSettings<'elevenlabs'>;
+}
+
+export interface GenerationMediaSettings<Provider extends string> {
+  provider: Provider;
+  askBeforeGenerating: boolean;
+  runGenerationsConcurrently: boolean;
+  maxConcurrentGenerations: number;
 }
 
 export interface ProjectSettingsResource {
@@ -40,19 +41,7 @@ export interface ProjectSettingsMutationReport {
 
 export interface GenerationWorkflowPolicy {
   displayPreview: boolean;
-  preferredExecutionPath: 'codex-built-in' | 'renku-managed';
-  renkuManaged: {
-    executionKind: 'renku-managed';
-    requirePerRunConfirmation: boolean;
-    concurrencyLimit: number;
-  };
-  codexBuiltIn: {
-    applicable: boolean;
-    executionKind: 'agent-external';
-    capability: 'codex.gpt-image-2';
-    availableInRenku: false;
-    requiresHarnessTool: true;
-    requirePerRunConfirmation: boolean;
-    concurrencyLimit: number;
-  };
+  provider: 'codex' | 'fal-ai' | 'elevenlabs';
+  askBeforeGenerating: boolean;
+  concurrencyLimit: number;
 }

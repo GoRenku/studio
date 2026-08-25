@@ -132,6 +132,8 @@ function storyboardImage(
       title,
       oneLineSummary: 'A storyboard frame.',
       origin: 'generated',
+      generationProvenance: null,
+      authoredFrom: null,
       availability: 'ready',
       referenceName: null,
       tags: [],

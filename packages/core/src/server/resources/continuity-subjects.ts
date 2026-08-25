@@ -64,15 +64,25 @@ export async function readCastMemberResource(
 ): Promise<CastMemberResource> {
   const { session } = await openProjectSession(input);
   try {
-    return {
-      castMember: requireCastMember(session, input.castMemberId),
+    return readCastMemberResourceFromSession(session, input.castMemberId);
+  } finally {
+    session.close();
+  }
+}
+
+export function readCastMemberResourceFromSession(
+  session: DatabaseSession,
+  castMemberId: string,
+): CastMemberResource {
+  return {
+      castMember: requireCastMember(session, castMemberId),
       firstImage: firstImageForContinuitySubject(session, {
         kind: 'castMember',
-        id: input.castMemberId,
+        id: castMemberId,
       }),
-      voices: listCastVoiceRecords(session, input.castMemberId).map((voice) => {
+      voices: listCastVoiceRecords(session, castMemberId).map((voice) => {
         const sample = readOwnedAsset(session, {
-          owner: { kind: 'castMember', id: input.castMemberId },
+          owner: { kind: 'castMember', id: castMemberId },
           assetId: voice.sampleAssetId,
         });
         if (!sample) {
@@ -100,9 +110,6 @@ export async function readCastMemberResource(
         };
       }),
     };
-  } finally {
-    session.close();
-  }
 }
 
 export async function readLocationOverviewResource(

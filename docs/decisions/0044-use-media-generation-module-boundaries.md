@@ -1,5 +1,7 @@
 # 0044 Use Media Generation Module Boundaries
 
+> **Decision 0086 update:** The old Core lifecycle/dependency/cost and Engines catalog/pricing layout is superseded. Architecture tests continue to protect stable boundaries rather than private implementation names.
+
 Date: 2026-07-04
 
 Status: accepted

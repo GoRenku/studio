@@ -1,7 +1,10 @@
-import type {
-  CastVoiceAttachmentCommandDocument,
-  CreateCastVoiceProviderRegistrationInput,
+import {
+  resolveRenkuProviderCredential,
+  type CastVoiceAttachmentCommandDocument,
+  type CreateCastVoiceProviderRegistrationInput,
 } from '@gorenku/studio-core/server';
+import { fetchElevenLabsVoiceSampleAudio } from '@gorenku/studio-engines';
+import { StructuredError } from '@gorenku/studio-diagnostics';
 import {
   readRequiredJsonInput,
 } from './command-io.js';
@@ -10,6 +13,7 @@ import {
   type CliCommandHandler,
   type CliCommandRuntime,
 } from './structured-command.js';
+import { throwEngineError } from './generation/engine-errors.js';
 
 export interface CastVoiceCommandFlags {
   file?: string;
@@ -17,7 +21,6 @@ export interface CastVoiceCommandFlags {
   cast?: string;
   voice?: string;
   registration?: string;
-  simulate?: boolean;
 }
 
 export const castVoiceCommandHandlers = [
@@ -88,12 +91,37 @@ async function runValidate(input: CastVoiceCommandInput): Promise<unknown> {
 
 async function runAttach(input: CastVoiceCommandInput): Promise<unknown> {
   const filePath = requiredFlag(input.flags.file, '--file');
-  const document = await readRequiredJsonInput(filePath, 'cast voice attach');
+  const document = await readRequiredJsonInput(
+    filePath,
+    'cast voice attach',
+  ) as CastVoiceAttachmentCommandDocument;
+  const elevenLabsVoiceSampleFetcher = document.kind === 'castVoiceElevenLabsSampleAttachment'
+    ? await createElevenLabsVoiceSampleFetcher(input.runtime.homeDir)
+    : undefined;
   return input.runtime.projectDataService.attachCastVoice({
     homeDir: input.runtime.homeDir,
     projectName: input.flags.project,
-    document: document as CastVoiceAttachmentCommandDocument,
+    document,
+    ...(elevenLabsVoiceSampleFetcher ? { elevenLabsVoiceSampleFetcher } : {}),
   });
+}
+
+async function createElevenLabsVoiceSampleFetcher(homeDir?: string) {
+  const credential = await resolveRenkuProviderCredential('elevenlabs', { homeDir });
+  if (!credential) {
+    throw new StructuredError({
+      code: 'PROVIDER_CREDENTIALS004',
+      message: 'ElevenLabs credentials are not configured.',
+      suggestion: 'Configure ELEVENLABS_API_KEY in Renku Settings and try again.',
+    });
+  }
+  return async ({ voiceId }: { voiceId: string }) => {
+    try {
+      return await fetchElevenLabsVoiceSampleAudio({ voiceId, credential });
+    } catch (error) {
+      throwEngineError(error);
+    }
+  };
 }
 
 async function runRemove(input: CastVoiceCommandInput): Promise<unknown> {

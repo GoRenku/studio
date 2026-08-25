@@ -315,6 +315,8 @@ function lookbookImage(title: string, id: string = 'comp'): LookbookImage {
       title,
       oneLineSummary: 'A movie lookbook frame.',
       origin: 'generated',
+      generationProvenance: null,
+      authoredFrom: null,
       availability: 'ready',
       referenceName: null,
       tags: [],

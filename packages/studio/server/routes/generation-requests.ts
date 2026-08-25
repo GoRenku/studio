@@ -1,51 +1,33 @@
 import fs from 'node:fs/promises';
 import {
-  readAssetFileGenerationRequest as coreReadAssetFileGenerationRequest,
-  readGenerationReferenceProjectFile as coreReadGenerationReferenceProjectFile,
+  createProjectDataService,
+  readMediaGenerationReferenceProjectFile,
+  type ProjectDataService,
 } from '@gorenku/studio-core/server';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
-import { buildGenerationPreviewResource } from '../projections/generation-preview.js';
-
-export interface GenerationRequestRouteCommands {
-  readAssetFileGenerationRequest: typeof coreReadAssetFileGenerationRequest;
-  readGenerationReferenceProjectFile: typeof coreReadGenerationReferenceProjectFile;
-}
 
 export function createGenerationRequestsRoute(options: {
-  commands?: GenerationRequestRouteCommands;
+  projectData?: Pick<ProjectDataService, 'readAssetMediaGenerationRequest'>;
   requireToken: MiddlewareHandler;
 }) {
-  const commands = options.commands ?? {
-    readAssetFileGenerationRequest: coreReadAssetFileGenerationRequest,
-    readGenerationReferenceProjectFile: coreReadGenerationReferenceProjectFile,
-  };
+  const projectData = options.projectData ?? createProjectDataService();
   return new Hono()
-    .get(
-      '/assets/:assetId/files/:assetFileId/generation-request',
-      options.requireToken,
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const preview = await commands.readAssetFileGenerationRequest({
-            projectName,
+    .get('/assets/:assetId/generation-request', options.requireToken, async (c) => {
+      try {
+        return c.json({
+          preview: await projectData.readAssetMediaGenerationRequest({
+            projectName: c.req.param('projectName') as string,
             assetId: c.req.param('assetId') as string,
-            assetFileId: c.req.param('assetFileId') as string,
-          });
-          return c.json({
-            preview: await buildGenerationPreviewResource({
-              projectName,
-              preview,
-            }),
-          });
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      },
-    )
+          }),
+        });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/generation-reference-file', async (c) => {
       try {
-        const resolved = await commands.readGenerationReferenceProjectFile({
+        const resolved = await readMediaGenerationReferenceProjectFile({
           projectName: c.req.param('projectName') as string,
           projectRelativePath: c.req.query('path') ?? '',
         });

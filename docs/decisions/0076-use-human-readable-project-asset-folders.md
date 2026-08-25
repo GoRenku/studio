@@ -1,5 +1,7 @@
 # 0076 Use Human-Readable Project Asset Folders
 
+> **Decision 0086 update:** The human-readable folder contract and Core path ownership remain. Shot Plan destinations now derive from safe Asset provenance rather than a frozen Spec or Run.
+
 Date: 2026-08-09
 
 Status: accepted

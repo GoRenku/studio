@@ -39,7 +39,7 @@ describe('readDirectorContext', () => {
 
     expect(report.screenplay.exists).toBe(false);
     expect(report.projectSettings).toMatchObject({
-      version: 2,
+      version: 3,
       screenplayImport: { createContinuitySubjects: true },
     });
     expect(report.resourceKeys).toContain('project-settings');
@@ -208,7 +208,7 @@ describe('readDirectorContext', () => {
         expect.objectContaining({
           id: 'design-props',
           command:
-            'renku generation context --purpose prop.sheet --target prop:<prop-id> --json',
+            'renku production-design prop context --prop <prop-id> --json',
         }),
       ])
     );

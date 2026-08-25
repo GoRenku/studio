@@ -58,12 +58,14 @@ fields and draft controller; `src/services/studio-provider-credentials-api.ts`
 owns the token-protected no-store HTTP calls. React never receives an existing
 key or reads provider credential files.
 
-Generation feature code is an experience projection consumer. Core supplies
-purpose context, exact reference eligibility, focused workspace state, and
-structured diagnostics; Engines supplies provider field capabilities. React may
-hold draft interaction state and bind those fields to existing controls, but it
-must not classify project assets, guess provider field names, construct missing
-generation work, or calculate cost.
+Generation feature code is a request-view projection consumer. The Core-owned
+deterministic context report is an agent/CLI briefing and is not reconstructed
+or exposed as a Studio setup surface. Preview and Inspection share one view of
+the exact temporary or saved review document: authored prompt, selected local
+files, and provider-native configuration. React may project that opaque request
+for review, but it must not discover Project relationships, classify candidate
+Assets, choose references, provide a model picker, guess provider fields, or
+construct generation work.
 
 The Movie Studio screenplay surface is Scene-first. Browser services consume
 Core's Screenplay, Scene, Section, structure, block, and reference contracts

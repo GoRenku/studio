@@ -123,6 +123,8 @@ function videoAsset(): Asset {
     title: 'Council master',
     oneLineSummary: null,
     origin: 'generated',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: ['shot-plan.video-generation'],
     files: [

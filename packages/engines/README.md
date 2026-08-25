@@ -1,35 +1,52 @@
 # @gorenku/studio-engines
 
-Renku Studio AI engine package.
+Standalone media-provider execution for Renku.
 
-This package owns:
+The package owns provider protocols and shared provider mechanisms:
 
-- provider-organized model catalog data;
-- schema-first payload validation;
-- live and simulated engine invocation;
-- provider adapters for model APIs.
+- exact-model metadata/schema retrieval and raw conditional caching;
+- provider-native request validation;
+- recursive `LocalMediaFile` discovery and upload substitution;
+- provider-classified retry, polling, cancellation, and recovery;
+- normalized output discovery, safe download, MIME/size checks, and atomic files;
+- closed, secret-safe `EngineErrorCode` failures.
 
-It intentionally does not own final movie assembly, timeline rendering,
-Remotion, FFmpeg export producers, or the legacy Renku execution-plan bridge.
+It does not depend on another workspace package. It knows nothing about Projects,
+Assets, purposes, targets, Preview, Studio UI, Project Settings, credentials on
+disk, pricing, approvals, or agent workflows. Callers pass one opaque credential
+and all runtime dependencies through `ProviderContext`.
 
-## Provider credentials
+## Public surface
 
-Engines owns the ordered Settings credential catalog for fal.ai (`FAL_KEY`),
-ElevenLabs (`ELEVENLABS_API_KEY`), and World Labs (`WLT_API_KEY`). The catalog
-is an explicit product allowlist rather than a projection of every provider
-adapter present in the package.
+Create a `MediaEngine` with provider factories and call `validate`, `execute`,
+or `recover` by provider id. Requests contain only a model string and opaque JSON
+input. A local file is represented exactly as:
 
-Core owns the Renku `.env` file and injects a `SecretResolver` into live Engines
-operations. Engines never discovers a user config directory. The Core resolver
-ignores exported shell values and reads each saved value for the next provider
-operation, while only catalog entries are exposed or writable through Studio
-Settings.
+```ts
+interface LocalMediaFile {
+  $file: string;
+  mimeType?: string;
+}
+```
 
-Live-provider E2E tests and provider catalog tooling receive that same Core
-resolver. They never read API keys from `process.env`; selecting an operation
-without a saved key fails with the missing credential name.
+Execution returns normalized downloaded artifact paths and an optional opaque
+provider receipt. The caller decides how those facts are stored or attached.
 
-The Core environment-file owner preserves unmanaged lines, rewrites managed entries
-in catalog order, uses an atomic sibling-file replacement, and sets the
-resulting credential file to `0600`. Read projections contain presence and
-effective-source metadata only, never secret values.
+Production factories currently cover Fal.ai, Replicate, WaveSpeed, and
+ElevenLabs. World Labs is a focused Location World API because a 3D World is not
+ordinary image/video/audio generation. Codex built-in image generation is not an
+Engines provider.
+
+## Checks
+
+```bash
+pnpm --dir packages/engines type-check
+pnpm --dir packages/engines test:typecheck
+pnpm --dir packages/engines test
+pnpm --dir packages/engines build
+pnpm --dir packages/engines lint
+```
+
+Paid smoke tests are manual and explicit. See
+[`tests/e2e/README.md`](tests/e2e/README.md). For the provider extension contract,
+see [`docs/adding-a-provider.md`](docs/adding-a-provider.md).

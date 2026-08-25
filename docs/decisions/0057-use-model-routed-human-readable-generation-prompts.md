@@ -1,5 +1,7 @@
 # 0057 Use Model-Routed Human-Readable Image Prompts
 
+> **Decision 0086 update:** Exact opaque prompts and Skill-owned model guidance remain. The Studio model catalog, route resolution, Spec-backed configuration, and rich request lifecycle are superseded; Preview configuration is read-only provider-native JSON.
+
 Date: 2026-07-18
 
 Status: accepted

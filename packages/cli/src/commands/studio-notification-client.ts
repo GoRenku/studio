@@ -1,7 +1,7 @@
 import {
   isStudioRuntimeDescriptorUsable,
   readStudioRuntimeDescriptor,
-  type GenerationPreview,
+  type MediaGenerationPreviewResource,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 
@@ -26,7 +26,7 @@ export interface StudioProjectResourcesChangedNotification {
 
 export interface StudioGenerationPreviewsNotification {
   projectRef: StudioProjectRef;
-  previews: GenerationPreview[];
+  previews: MediaGenerationPreviewResource[];
   source: { kind: 'cli'; command: string };
   operationId?: string;
 }

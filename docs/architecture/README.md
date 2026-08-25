@@ -58,8 +58,8 @@ Use this page as the map:
   restore conflicts, Empty Trash blockers, and replacement-flow audit results.
 - `reference/visual-language.md` defines current Inspiration Analysis,
   Lookbook, source Inspiration, and Lookbook image rules.
-- `reference/media-generation.md` defines current persisted generation spec,
-  run, and media import rules.
+- `reference/media-generation.md` defines current Skill-directed provider
+  execution, temporary Preview, Asset provenance, and media import rules.
 - `reference/studio-skills.md` defines how external Studio Skills use CLI and
   architecture contracts.
 - `reference/drizzle-migrations.md` defines the Drizzle Kit migration workflow.
@@ -142,11 +142,8 @@ Use this page as the map:
 
 ## Generation And Engines
 
-- `media-generation.md` explains the current implemented Lookbook Image
-  generation slice, persisted generation specs, generation runs, and separate
-  media import.
-- `generation-preview-purpose-bindings.md` defines saved-spec generation
-  preview ownership and shared image preview configuration.
+- `media-generation.md` explains standalone provider Engines, conversational
+  Preview, focused media attachment, and Asset provenance.
 - `reference/media-generation.md` defines the current exact generation and
   import contract.
 - `plans/exploration/project-generation-definitions.md` explores a broader
@@ -158,6 +155,8 @@ Use this page as the map:
 - Related ADRs:
   - `../decisions/0002-use-engines-for-ai-integrations.md`
   - `../decisions/0020-use-persisted-media-generation-specs-and-separate-media-import.md`
+  - `../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md`
+  - `../decisions/0087-use-deterministic-advisory-media-generation-context.md`
   - `../decisions/0021-defer-generic-media-purpose-frameworks-until-concrete-duplication-exists.md`
   - `../decisions/0025-use-shared-media-generation-purpose-architecture.md`
   - `../decisions/0045-use-generation-preview-purpose-bindings.md`

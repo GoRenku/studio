@@ -16,6 +16,12 @@ Renku is installed as two independently released products:
 The repositories do not share versions, tags, release commits, or publication
 commands. Studio artifacts never contain plugin, marketplace, or skills paths.
 
+The Studio runtime bundles CLI, Engines, and provider runtime dependencies. The
+separate Skills release delivers Media Producer routing plus provider-native
+request and prompting instructions. Provider Skills invoke the installed
+`renku generation` commands; they do not ship provider clients, SDKs, or extra
+executables on `PATH`.
+
 ## Fast Track (TL;DR)
 
 Run these commands from a clean local `main` checkout. This patch-release path

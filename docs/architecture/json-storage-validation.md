@@ -147,5 +147,5 @@ caller-caused JSON validation failures.
   this pattern instead of inventing local validation rules.
 - Current examples include Screenplay Analysis documents, Inspiration Analysis
   documents, Lookbook documents, Lookbook source Inspiration documents,
-  Lookbook Image generation specs, Shot Plan Beat coverage, Shot briefs, and
-  media generation run snapshots.
+  Lookbook definitions, Asset generation provenance, Shot Plan Beat coverage,
+  and Shot briefs.

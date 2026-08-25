@@ -294,7 +294,7 @@ Each clip usually maps to one beat, but not always.
 * characters
 * camera behavior
 * continuity constraints
-* generation model target
+* intended media-generation route
 * prompt strategy
 * negative constraints
 * output requirements
@@ -657,7 +657,7 @@ ResearchDossier
           Beat[]
             Clip[]
               ShotDesign[]
-              GenerationSpec
+              GenerationRequest
               Take[]
 ```
 

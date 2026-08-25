@@ -6,7 +6,7 @@ import { readOwnedAsset } from '../assets/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { requireShotInPlan } from '../database/access/shot-plans/shot-records.js';
-import { withGenerationProject } from '../generation/project-operation.js';
+import { withProject } from '../project-operation.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { studioSceneShotPlansResourceKey } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
@@ -14,7 +14,7 @@ import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 export async function discardShotImageCandidate(
   input: DiscardShotImageCandidateInput
 ): Promise<RecoverableMutationReport> {
-  return withGenerationProject(input, ({ session, projectFolder }) => {
+  return withProject(input, ({ session, projectFolder }) => {
     const plan = requireShotPlanRecord(session, input.shotPlanId);
     requireShotInPlan(session, input);
     const asset = readOwnedAsset(session, {

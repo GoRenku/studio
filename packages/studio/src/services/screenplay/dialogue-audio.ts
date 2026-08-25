@@ -1,6 +1,4 @@
 import type {
-  SceneDialogueAudioEstimateReport,
-  SceneDialogueAudioEstimateInput,
   SceneDialogueAudioWorkspace,
   SceneDialogueAudioSetup,
   SceneDialogueAudioWorkspaceMutationReport,
@@ -51,46 +49,6 @@ export async function saveSceneDialogueAudioSetup(
     `${turnAudioPath(projectName, sceneId, turnId)}/setup`,
     'PATCH',
     setup,
-    projectName,
-    sceneId
-  );
-}
-
-export async function estimateSceneDialogueAudioDraft(
-  projectName: string,
-  sceneId: string,
-  turnId: string,
-  estimate: SceneDialogueAudioEstimateInput
-): Promise<SceneDialogueAudioEstimateReport> {
-  const response = await fetch(
-    `${turnAudioPath(projectName, sceneId, turnId)}/estimate`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estimate }),
-    }
-  );
-  if (!response.ok) {
-    throw await readStudioApiError(response);
-  }
-  const body = (await response.json()) as { estimate: SceneDialogueAudioEstimateReport };
-  return body.estimate;
-}
-
-export async function generateSceneDialogueAudioTake(
-  projectName: string,
-  sceneId: string,
-  turnId: string,
-  input: {
-    setup: Partial<SceneDialogueAudioSetup>;
-    simulate?: boolean;
-    approveLiveProviderRun?: boolean;
-  }
-): Promise<SceneDialogueAudioMutationWithUrls> {
-  return sendMutation(
-    `${turnAudioPath(projectName, sceneId, turnId)}/generate`,
-    'POST',
-    input,
     projectName,
     sceneId
   );

@@ -1,43 +1,51 @@
-export {
-  createProviderRegistry,
-  type CreateProviderRegistryOptions,
-} from './registry.js';
-export { SchemaRegistry } from './schema-registry.js';
-export * from './sdk/index.js';
-export {
-  loadModelCatalog,
-  lookupModel,
-  loadModelInputSchema,
-  loadModelSchemaFile,
-  getAvailableModelsForNestedSlot,
-  type LoadedModelCatalog,
-  type ModelDefinition,
-  type ModelType,
-  type ProducerModelEntry,
-  type SchemaFile,
-  type NestedModelDeclaration,
-  type ViewerAnnotation,
-  type ViewerAnnotationNode,
-  type ViewerAnnotationVariant,
-  type ViewerComponent,
-  type ModelPriceConfig,
-} from './model-catalog.js';
+export { createMediaEngine } from './media/engine.js';
 export type {
-  ProviderRegistry,
-  ProviderRegistryOptions,
-  ProviderDescriptor,
-  ProviderMode,
-  ProducerHandler,
-  ProviderJobContext,
-  ProviderResult,
-  ProviderContextPayload,
-  SecretResolver,
-  ResolvedProviderHandler,
-  ConditionHints,
-  VaryingFieldHint,
-} from './types.js';
+  CachedProviderMetadata,
+  EngineLogger,
+  GeneratedMediaArtifact,
+  JsonValue,
+  LocalMediaFile,
+  MediaEngine,
+  MediaProvider,
+  ProviderContext,
+  ProviderExecutionContext,
+  ProviderExecutionResult,
+  ProviderMetadataCache,
+  ProviderMetadataCacheKey,
+  ProviderRecoveryRequest,
+  ProviderRequest,
+} from './media/contracts.js';
 export {
-  createSimulatedFallbackArtifacts,
-} from './simulated-fallback-output.js';
-export * from './provider-credentials/index.js';
-export * from './generation/index.js';
+  findLocalMediaFiles,
+  isLocalMediaFile,
+  replaceLocalMediaFilesWithValidationUrls,
+  substituteLocalMediaFiles,
+  type ResolvedLocalMediaFile,
+} from './media/local-files.js';
+export {
+  EngineError,
+  isEngineError,
+  type EngineErrorCode,
+  type EngineErrorOptions,
+} from './shared/errors.js';
+export {
+  createFileSystemProviderMetadataCache,
+  createMemoryProviderMetadataCache,
+} from './shared/metadata-cache.js';
+export { createFalMediaProvider } from './providers/fal-ai/index.js';
+export { createReplicateMediaProvider } from './providers/replicate/index.js';
+export { createWaveSpeedMediaProvider } from './providers/wavespeed/index.js';
+export {
+  createElevenLabsMediaProvider,
+  fetchElevenLabsVoiceSampleAudio,
+  type ElevenLabsVoiceSampleAudio,
+  type ElevenLabsVoiceSampleAudioRequest,
+} from './providers/elevenlabs/index.js';
+export {
+  generateWorldLabsLocationWorld,
+  type GenerateWorldLabsLocationWorldInput,
+  type WorldLabsImageExtension,
+  type WorldLabsLocationWorldImage,
+  type WorldLabsLocationWorldResult,
+  type WorldLabsLocationWorldSource,
+} from './providers/world-labs/index.js';

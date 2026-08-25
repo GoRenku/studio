@@ -54,8 +54,10 @@ It should contain:
 - import/export helpers;
 - shared DTOs for UI and CLI.
 - Visual Language analysis and Lookbook mutation commands.
-- persisted media generation specs and run records.
-- exact-request generation estimates and approval-token checks.
+- temporary media-review and Asset-provenance envelope validation.
+- Project workflow Settings, credential ownership, and focused media import.
+- deterministic purpose/target media-generation context and advisory
+  relationship-derived AssetFile suggestions.
 - media import behavior that registers generated or imported files as assets.
 
 Broader future generation/task responsibilities also belong in core once
@@ -63,16 +65,11 @@ accepted and implemented. Those include queue state, general task transition
 logic, stale-state calculation, and broader cost approval state. They are
 architectural direction, not current implemented tables or services.
 
-The current accepted generation implementation covers fourteen focused media
-purposes through one generic spec/estimate/run lifecycle owned by Core, with
-provider schema projection, request assembly, pricing, and execution delegated
-to Engines.
-
-Generation estimate endpoints are Core-owned exact-request projections. They
-read a persisted Generation Spec, use Engines to assemble and validate the same
-provider request that would run, and return a `GenerationEstimate` plus an
-approval token bound to that request. There is no dependency or candidate-cost
-plan.
+The current accepted generation implementation uses Core to project current
+Project evidence, Media Producer to make creative choices, provider Skills to
+author exact native requests, standalone Engines to validate and execute
+provider protocols, and focused Core commands to attach accepted output with
+Asset provenance.
 
 `studio-core` should be the only package that knows how to apply a metadata
 mutation correctly.
@@ -92,7 +89,7 @@ Examples of core-owned mutations:
 - register generated media files as assets.
 - write Inspiration Analysis documents;
 - create, update, activate, and link Lookbooks to source Inspiration folders;
-- create and run Lookbook Image generation specs.
+- attach inspected Lookbook media with optional exact generation provenance.
 
 Future generation examples, after that model is accepted, include queueing a
 generation task, marking a task completed, and computing whether a clip is
@@ -186,8 +183,8 @@ The server should not own:
 - schema definitions;
 - project mutation logic;
 - validation rules;
-- generation reference eligibility, canonical Asset selection, and Take media
-  ownership rules;
+- Project relationship projection for advisory generation context, canonical
+  Asset selection, and Take media ownership rules;
 - cast pinning or clip binding behavior;
 - queue transition rules.
 - generation cost rules or live provider approval policy.
@@ -282,11 +279,10 @@ Examples:
 - adding or enabling a supported language;
 - registering a subtitle track or timed transcript;
 - setting a budget;
-- approving an estimated cost;
 - queueing a generation task.
 - writing Screenplay Analysis, Inspiration Analysis, or Lookbook JSON into
   project metadata;
-- creating or updating a persisted generation spec;
+- reading or updating a temporary media-generation review prompt;
 - importing generated media into a Lookbook.
 
 If an agent creates a new file directly, that file is not project metadata until

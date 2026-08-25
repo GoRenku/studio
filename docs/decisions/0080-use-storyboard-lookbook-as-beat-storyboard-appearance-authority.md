@@ -1,5 +1,9 @@
 # 0080 Use Storyboard Lookbook As Beat Storyboard Appearance Authority
 
+> **Decision 0086 update:** Storyboard authority, reference roles, Beat batching, composite/crop behavior, and agent review remain. The Codex saved/frozen Spec lane is replaced by capability-gated conversational Preview, per-media settings, and Asset provenance.
+
+> **Decision 0087 update:** Core resolves the exact Storyboard Lookbook, Scene Beats revision, optional Beat batch, related subjects, and AssetFiles. These facts inform Media Producer without becoming a creative allowlist.
+
 Date: 2026-08-16
 
 Status: accepted

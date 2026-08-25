@@ -55,6 +55,8 @@ function coverAsset(): StudioAssetResponse {
     title: 'Project Cover',
     oneLineSummary: 'Quiet dramatic cover',
     origin: 'generated',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: [],
     files: [{

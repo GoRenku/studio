@@ -542,7 +542,7 @@ function buildNextSteps(input: {
       title: 'Establish cast visuals',
       specialistSkill: 'media-producer',
       reason: 'Cast members need available character-sheet or profile media for visual continuity.',
-      command: 'renku generation context --purpose cast.character-sheet --target cast:<cast-member-id> --json',
+      command: 'renku cast design context --cast <cast-member-id> --json',
     });
   }
   if (!input.productionDesign.everyLocationHasEnvironmentSheet) {
@@ -551,7 +551,7 @@ function buildNextSteps(input: {
       title: 'Establish production-design visuals',
       specialistSkill: 'media-producer',
       reason: 'Locations need available Location Sheet media before shots rely on their visuals.',
-      command: 'renku generation context --purpose location.sheet --target location:<location-id> --json',
+      command: 'renku production-design location context --location <location-id> --json',
     });
   }
   if (!input.productionDesign.everyPropHasPropSheet) {
@@ -560,7 +560,7 @@ function buildNextSteps(input: {
       title: 'Establish Prop visuals',
       specialistSkill: 'media-producer',
       reason: 'Authored Props need available Prop Sheet media before shots rely on their visuals.',
-      command: 'renku generation context --purpose prop.sheet --target prop:<prop-id> --json',
+      command: 'renku production-design prop context --prop <prop-id> --json',
     });
   }
   if (input.selectedScene && !input.selectedScene.activeRevisionId) {
@@ -580,7 +580,7 @@ function buildNextSteps(input: {
       title: 'Generate missing storyboard images',
       specialistSkill: 'media-producer',
       reason: 'The active Scene Beats revision has Beats without durable storyboard images.',
-      command: `renku generation context --purpose scene.storyboard-sheet --target scene:${input.selectedScene.sceneId} --json`,
+      command: `renku screenplay beats context --scene ${input.selectedScene.sceneId} --include-visual-references --json`,
     });
   }
   return steps;

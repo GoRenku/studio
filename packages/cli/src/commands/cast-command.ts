@@ -31,7 +31,6 @@ export async function runCastCommand(options: {
     cast?: string;
     voice?: string;
     registration?: string;
-    simulate?: boolean;
     design?: string;
     active?: boolean;
     dryRun?: boolean;

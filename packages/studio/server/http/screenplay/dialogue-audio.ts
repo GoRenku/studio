@@ -1,5 +1,5 @@
 import { createDiagnosticError, createStructuredError } from '@gorenku/studio-diagnostics';
-import type { SceneDialogueAudioEstimateInput, SceneDialogueAudioSetup } from '@gorenku/studio-core/client';
+import type { SceneDialogueAudioSetup } from '@gorenku/studio-core/client';
 import { readHttpRequestRecord } from '../request-validation.js';
 
 const CONTEXT = 'Scene Dialogue Audio request';
@@ -11,49 +11,6 @@ export function readSceneDialogueAudioSetupRequest(input: unknown): Partial<Scen
   const setup = optionalSetup(record);
   if (issues.length > 0) throw invalidRequest(issues);
   return setup;
-}
-
-export function readSceneDialogueAudioGenerateRequest(input: unknown): {
-  setup: Partial<SceneDialogueAudioSetup>;
-  simulate?: boolean;
-  approveLiveProviderRun?: boolean;
-} {
-  const issues: ReturnType<typeof createDiagnosticError>[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) throw invalidRequest(issues);
-  const setup = optionalSetup(
-    typeof record.setup === 'object' && record.setup !== null
-      ? record.setup as Record<string, unknown>
-      : record,
-  );
-  return {
-    setup,
-    ...(typeof record.simulate === 'boolean' ? { simulate: record.simulate } : {}),
-    ...(typeof record.approveLiveProviderRun === 'boolean'
-      ? { approveLiveProviderRun: record.approveLiveProviderRun }
-      : {}),
-  };
-}
-
-export function readSceneDialogueAudioEstimateRequest(input: unknown): SceneDialogueAudioEstimateInput {
-  const issues: ReturnType<typeof createDiagnosticError>[] = [];
-  const record = readHttpRequestRecord(input, [], issues, CONTEXT);
-  if (!record) throw invalidRequest(issues);
-  const estimate = record.estimate;
-  const estimateRecord = estimate && typeof estimate === 'object'
-    ? estimate as Record<string, unknown>
-    : undefined;
-  if (!estimateRecord) {
-    issues.push(createDiagnosticError('STUDIO_SERVER120', 'Scene Dialogue Audio estimate inputs are required.', { path: ['estimate'], context: CONTEXT }, 'Send the selected model and dialogue text.'));
-  }
-  if (typeof estimateRecord?.modelChoice !== 'string') {
-    issues.push(createDiagnosticError('STUDIO_SERVER120', 'Scene Dialogue Audio estimate requires a model choice.', { path: ['estimate', 'modelChoice'], context: CONTEXT }, 'Send the selected model.'));
-  }
-  if (typeof estimateRecord?.text !== 'string') {
-    issues.push(createDiagnosticError('STUDIO_SERVER120', 'Scene Dialogue Audio estimate requires dialogue text.', { path: ['estimate', 'text'], context: CONTEXT }, 'Send the current dialogue text.'));
-  }
-  if (issues.length > 0) throw invalidRequest(issues);
-  return estimateRecord as unknown as SceneDialogueAudioEstimateInput;
 }
 
 function optionalSetup(record: Record<string, unknown>): Partial<SceneDialogueAudioSetup> {

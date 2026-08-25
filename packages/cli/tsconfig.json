@@ -17,6 +17,7 @@
     "paths": {
       "@gorenku/studio-core/client": ["../core/dist/client/index.d.ts"],
       "@gorenku/studio-core/server": ["../core/dist/server/index.d.ts"],
+      "@gorenku/studio-engines": ["../engines/dist/index.d.ts"],
       "@gorenku/studio/server": ["../studio/server-dist/index.d.ts"]
     },
     "typeRoots": [

@@ -4,4 +4,10 @@ export {
   type ReadProviderCredentialsInput,
   type UpdateProviderCredentialsInput,
 } from './service.js';
-export { createRenkuProviderSecretResolver } from './resolver.js';
+export { resolveRenkuProviderCredential } from './resolver.js';
+export {
+  findProviderCredentialDescriptor,
+  listProviderCredentialDescriptors,
+  type ProviderCredentialDescriptor,
+  type ProviderCredentialId,
+} from './catalog.js';

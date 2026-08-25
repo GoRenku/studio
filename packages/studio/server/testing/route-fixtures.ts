@@ -40,6 +40,8 @@ export function makeAsset(assetId: string): Asset {
     title: 'Narrator reference',
     oneLineSummary: null,
     origin: 'imported',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: [],
     files: [{

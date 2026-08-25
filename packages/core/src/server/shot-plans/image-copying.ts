@@ -1,15 +1,9 @@
-import { eq } from 'drizzle-orm';
-import { assetFileGenerations } from '../schema/index.js';
 import { createAssetMembership } from '../assets/ownership.js';
 import { readOwnedAsset } from '../assets/projection.js';
 import { selectAssetInSession } from '../assets/selection.js';
 import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import { insertAssetRecord } from '../database/access/assets.js';
-import {
-  readAssetFileRecordIncludingDiscarded,
-  setAssetFileSourceGenerationSpec,
-} from '../database/access/asset-files.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import {
@@ -58,6 +52,8 @@ export function copySelectedShotImage(input: {
     tags: source.tags,
     origin: source.origin,
     availability: source.availability,
+    generationProvenance: source.generationProvenance,
+    authoredFromShotPlanId: source.authoredFrom?.id ?? null,
     createdAt: input.now,
     updatedAt: input.now,
   });
@@ -67,13 +63,12 @@ export function copySelectedShotImage(input: {
     now: input.now,
   });
   for (const sourceFile of source.files) {
-    const assetFileId = input.ids('asset_file');
     persistProjectAssetFileSync({
       session: input.session,
       projectFolder: input.projectFolder,
       writeSet: input.writeSet,
       assetId,
-      assetFileId,
+      assetFileId: input.ids('asset_file'),
       sourceProjectRelativePath: sourceFile.projectRelativePath,
       destination: {
         kind: 'shot.image',
@@ -91,54 +86,10 @@ export function copySelectedShotImage(input: {
       durationSeconds: sourceFile.durationSeconds ?? undefined,
       now: input.now,
     });
-    copyAssetFileProvenance(input.session, {
-      sourceAssetId: source.id,
-      sourceAssetFileId: sourceFile.id,
-      destinationAssetFileId: assetFileId,
-      now: input.now,
-    });
   }
   selectAssetInSession(input.session, {
     target: { kind: 'shot', id: input.destinationShotId },
     assetId,
     now: input.now,
   });
-}
-
-function copyAssetFileProvenance(
-  session: DatabaseSession,
-  input: {
-    sourceAssetId: string;
-    sourceAssetFileId: string;
-    destinationAssetFileId: string;
-    now: string;
-  }
-): void {
-  const sourceFile = readAssetFileRecordIncludingDiscarded(session, {
-    assetId: input.sourceAssetId,
-    assetFileId: input.sourceAssetFileId,
-  });
-  if (!sourceFile) {
-    throw new ProjectDataError(
-      'CORE_SHOT_PLAN_STORAGE_INVALID',
-      `Selected Shot image file is missing: ${input.sourceAssetFileId}.`
-    );
-  }
-  if (sourceFile.sourceGenerationSpecId) {
-    setAssetFileSourceGenerationSpec(session, {
-      assetFileId: input.destinationAssetFileId,
-      sourceGenerationSpecId: sourceFile.sourceGenerationSpecId,
-    });
-  }
-  const generation = session.db.select().from(assetFileGenerations)
-    .where(eq(assetFileGenerations.assetFileId, input.sourceAssetFileId))
-    .get();
-  if (generation) {
-    session.db.insert(assetFileGenerations).values({
-      assetFileId: input.destinationAssetFileId,
-      mediaGenerationRunId: generation.mediaGenerationRunId,
-      outputArtifactId: generation.outputArtifactId,
-      createdAt: input.now,
-    }).run();
-  }
 }

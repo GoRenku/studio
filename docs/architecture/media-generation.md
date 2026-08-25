@@ -1,297 +1,194 @@
-# Media Generation Architecture
+# Media Generation
 
-Date: 2026-08-06
-
-Status: current
-
-Role: topic overview
-
-## Current Architecture
-
-Decision `0047` replaces the old generation dependency, lifecycle, purpose
-provider, preview-binding, recursive-cost, and Shot route/input-mode backend
-with a context-first, provider-valid foundation.
-
-Plans `0134` and `0136` completed the coordinated replacement across Engines,
-Core, CLI, Studio server, React, and Studio Skills. There is no compatibility
-API, second runtime, dependency planner, or purpose-specific lifecycle.
-
-The resolved cutover inventory is recorded in
-`reference/context-first-generation-caller-handoff.md`.
+Decisions [0086](../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md)
+and [0087](../decisions/0087-use-deterministic-advisory-media-generation-context.md)
+define the current media-generation architecture.
 
 ## Ownership
 
-`packages/core` owns:
+- Core deterministically projects current Project facts, target relationships,
+  workflow policy, visual language, and relationship-derived reference
+  suggestions for one purpose and target.
+- Media Producer considers that evidence, makes creative reference choices, and
+  coordinates conversational review.
+- Provider Skills expose curated model identity/name/input modes, read current
+  native operation facts from the provider, and author exact provider-native
+  JSON.
+- `packages/engines` owns standalone provider protocols: live metadata/schema
+  validation, uploads, retry/poll/recovery, output normalization, and downloads.
+- `packages/cli` composes providers, resolves one Core-owned credential, replaces
+  local-file paths, delegates once to Engines, and serializes artifacts plus safe
+  provenance.
+- `packages/core` owns Project paths, credentials, deterministic generation
+  context, the small review/provenance envelope, safety, per-media Settings,
+  focused attachment, Asset provenance, copies, Inspection, and database
+  migration.
+- `packages/studio` projects Core resources. It neither imports provider SDKs nor
+  validates provider fields.
 
-- the generic purpose, target, context, reference-guide, spec, preview,
-  estimate, and run contracts;
-- exact reference catalog queries and project-file resolution;
-- partial spec persistence without provider-readiness validation;
-- execution-readiness orchestration and structured diagnostics;
-- exact-request approval identity and immutable run persistence;
-- Project Settings validation and resolved generation behavior projected in
-  Generation Context.
+```text
+Core purpose + target context
+        |
+        | current facts + advisory suggestions
+        v
+Media Producer / provider Skill
+        |
+        | temporary review JSON
+        v
+Core Preview projection ---> Studio shared review dialog
+        |
+        | exact provider-native request
+        v
+CLI composition root ---> standalone Engines provider
+        |
+        | artifact paths + exact provenance
+        v
+focused Core attachment ---> Asset.generationProvenance
+                                      |
+                                      v
+                           Studio read-only Inspection
+```
 
-`packages/engines` owns:
+## Review document and provenance
 
-- provider/model discovery and provider JSON schemas;
-- provider field descriptors, including media type/cardinality and
-  aspect-ratio/quality classification;
-- full payload assembly from authored values and provider-assigned exact files;
-- provider payload validation, pricing, uploads, execution, outputs, and
-  receipts.
+A temporary review document lives under
+`tmp/operations/media-generation/*.json`:
 
-Core owns one purpose descriptor tree. Purpose descriptors provide context,
-reference guides, candidate queries, product settings, and model presentation.
-Generic provider validation does not interpret guide slots as requirements.
-
-Focused Core resources compose that generic lifecycle for the existing Studio
-experiences:
-
-- `generation-preview-resource` projects and updates the saved or draft
-  Preview experience;
-- `asset-file-generation-request` projects the exact saved request for one
-  AssetFile into the shared read-only inspector resource;
-- an accepted agent-owned `image.edit` output may be imported through any
-  focused image destination; the edit source and import destination are
-  independent contracts;
-- `scene-dialogue-audio-workspace` owns dialogue setup, generic audio
-  generation, takes, playback metadata, and recoverable deletion;
-- `scene-beats` owns Beat history, active selection, storyboard status,
-  and storyboard-image attachment separately from generic generation.
-
-`project.cover` is the focused Project Cover image purpose. Its Generation
-Context fixes the current display surface to 16:9, recommends medium quality
-and Nano Banana 2 for managed generation, and deliberately exposes an empty
-reference guide. Media Producer begins with the conversation and reads only
-missing, request-relevant Project information and exact media. Accepted outputs
-attach as Project-owned `project_cover` Assets; selection is a separate common
-Asset operation unless the focused import explicitly requests it.
-
-Location World generation is another focused Core workflow, not a generic
-GenerationSpec purpose. An agent creates and reviews one equirectangular
-panorama or two to eight overlapping temporary images through Media Producer,
-then explicitly confirms one external World Labs Marble request. Engines owns
-only the narrow upload, fixed `marble-1.1` direct panorama-to-World or
-multi-image reconstruction call, authored-prompt recaption disablement,
-polling, and full-resolution SPZ download. Core persists that download once as
-a Location-owned `location_world` Asset and selects it through common Asset
-selection. The provider's panorama asset is not a Renku output. This path adds
-no provider catalog entry, estimate token, generic operation framework, or
-Studio generation control.
-
-## Generic Lifecycle
-
-A `GenerationSpec` is the one saved editing and execution shape. It can be
-incomplete. Create and update validate its durable JSON envelope, immutable
-purpose/target identity, optional structurally valid `authoredFrom` context,
-structurally readable slot placement, and owning Take lifecycle. They do not
-validate current guide placement, candidate membership, typed ownership,
-provider readiness, insert defaults, assign media fields, select references, or
-repair authored values.
-
-A saved spec is mutable only while `frozenAt` is null. Live managed submission
-conditionally freezes the exact saved revision before Engines is called;
-agent-external execution uses the focused freeze command immediately before the
-external tool call. Estimate and simulation do not freeze. Frozen specs remain
-readable, previewable, retryable unchanged, and attachable, but every mutation
-is rejected by Core.
-
-An estimate consumes pricing inputs only: provider, model, output media kind,
-explicitly authored pricing settings, provider-owned pricing defaults where
-available, and intended input-media counts. Estimation does not resolve files,
-require prompts or references, assemble an executable payload, or invoke
-execution validation. Duration is an ordinary optional provider value: absent
-means `Unspecified`, and Studio never writes `Auto`, an enum choice, a schema
-minimum, or another default.
-
-Before preview with a provider payload or run:
-
-1. Core resolves every exact selected file without substitution.
-2. Engines reads the selected provider/model endpoint.
-3. Engines combines authored provider fields with ordered exact media
-   assignments.
-4. Engines validates the complete logical payload against the provider schema.
-5. Run repeats readiness validation immediately before execution.
-
-The approval token approves the provider/model price returned from pricing
-inputs. Changing creative prompt text or file contents does not invalidate an
-unchanged price approval. Run compares the current estimate first, then performs
-full execution validation as a separate operation.
-
-References without a provider assignment remain valid editing state. Presence
-in `GenerationSpec.references` means inclusion; inactive alternatives are not
-persisted. Unassigned references do not enter the provider payload.
-
-Every run has immediate inputs and outputs only. There is no dependency graph,
-recursive estimate, automatic child generation, provider fallback, value
-clamping, semantic retry, or automatic import.
-
-## Project Generation Settings
-
-Generation Context includes the resolved Project generation settings for the
-requested output media kind. **Use Codex for image generation** is the single
-image-path setting and is on by default. Context also reports whether Preview
-should open automatically, the additional per-run confirmation preference,
-and each execution method's effective concurrency limit. When
-concurrency is disabled, the effective limit is `1` without changing the saved
-maximum.
-
-An explicit user direction or an execution path already authored on the saved
-GenerationSpec takes precedence over the Project setting. Codex
-built-in image generation remains an agent-external capability identified as
-`codex.gpt-image-2`; it is not a Renku provider and is never added to Engines.
-If the current harness lacks that capability, the agent asks for a path rather
-than silently falling back to a paid Renku run. Audio and video remain
-Renku-managed.
-
-`displayPreview` controls only automatic display. Explicit Preview access and
-Preview revalidation remain available. `requirePerRunConfirmation` controls an
-additional conversational pause; every Renku-managed run still validates the
-saved spec, gets the exact current estimate and approval token, and passes that
-token unchanged. Concurrency is agent-owned scheduling of independent
-requests, not a durable queue or execution graph.
-
-## Context And Guidance
-
-A `GenerationReferenceGuide` is Draft presentation guidance. Sections and slots
-carry placement, subject, label, exact eligible candidates, and optional
-guidance copy. Every slot is one nullable UI choice. Guides never carry
-provider roles/fields, hard provider requirements, generation purposes, cost,
-or provider rules, and they never validate saved selections.
-
-Scene and Shot generation facts expose factual Scene inventories:
-
-```ts
+```json
 {
-  projectAspectRatio: string;
-  contextText: string;
-  sceneCastMemberIds: string[];
-  sceneLocationIds: string[];
-  scenePropIds: string[];
-  sceneDialogueIds: string[];
+  "provider": "fal-ai",
+  "model": "provider/model",
+  "mediaKind": "image",
+  "prompt": "Exact authored prompt",
+  "request": { "prompt": "Exact provider-native request" }
 }
 ```
 
-`scenePropIds` preserves first appearance from canonical Screenplay Scene
-references followed by active Scene Beat `propIds`. It does not infer Props from
-narrative text. `scene.storyboard-sheet` adds one exact request-scoped
-`prop/prop-sheet` guide slot per id after Storyboard Lookbook, Character, and
-Location slots. Missing or historical subject media leaves a truthful empty
-slot; Core never substitutes or selects a candidate.
+Only these top-level fields are accepted. `prompt` may be `null`. `request` is
+opaque JSON and may contain recursive exact local-media markers:
 
-The Storyboard Lookbook is the sole Beat Storyboard appearance authority in the
-agent workflow. Character, Location, and Prop references preserve canonical
-subject facts rather than their source rendering style. Core does not validate
-that a prompt or image follows those creative roles.
+```json
+{ "$file": "media/reference.png", "mimeType": "image/png" }
+```
 
-Scene Beat cardinality is independent from generation. After a saved revision
-exists, the agent may partition requested Beat image work into consecutive
-groups of at most four. The existing one-output composite transform and
-vision-guided crop workflow remain unchanged; no panel, crop, or batch state is
-persisted.
+Preview displays prompt, references, read-only configuration, and diagnostics.
+It may atomically update only the top-level prompt. Update does not rebuild
+provider-native request JSON; the provider Skill rereads the file and does that
+work conversationally. Preview has no Generate action and no continuation event.
 
-The Project has one image-generation setting: **Use Codex for image
-generation**. It is on by default. With it on, the agent uses a frozen
-prompt-only external `codex/gpt-image-2` Spec. With it off, or when the user
-explicitly chooses Renku for the request, Scene Storyboards use
-`fal-ai/openai/gpt-image-2/edit`. The purpose exposes no competing model
-recommendation. Managed quality remains fixed high. Visual QA is agent-owned:
-review-first analyzes one result and waits for accept, regenerate, or discard;
-strict iteration requires explicit user opt-in and a deliberately revised new
-request for every creative attempt. Neither mode becomes runtime state or an
-attachment gate.
+Preview and Inspection render through one complete Studio dialog owner. The
+shared owner controls the DialogContent dimensions and grid, header, tabs,
+content insets, loading/unavailable placement, footer, and Close action. Preview
+adds only editable prompt state, Update, and optional multi-request navigation;
+Inspection adds no parallel visual shell.
 
-Generation reference candidates expose their Asset's exact one-line summary,
-reference name, and non-null tags. Core preserves eligibility, order, and empty
-selection state and never interprets metadata. `cast.character-sheet`,
-`location.sheet`, and `prop.sheet` expose both optional Production and
-Storyboard Lookbook Sheet slots plus their existing same-owner sheet slot.
+Configuration presentation is schema-free and read-only. The browser resource
+remains `JsonValue`; Studio may project only exact JSON structure, insertion
+order, array order, primitive types, values, and deterministic key humanization:
 
-All purposes can carry separate ordered Additional References authored by an
-agent or CLI caller. Generation Preview displays those exact references but
-does not provide a generic Add Media action or project-media picker. Typed
-controls list only explicitly registered assets for their exact domain subject.
-A generic reference is never promoted into a typed slot automatically. Creative
-prompts and media remain opaque under Decision `0041`.
+- strings and numbers use read-only shadcn Input controls;
+- booleans use disabled shadcn Switch controls;
+- null uses the same value surface with `Not set`;
+- objects and arrays use ordered visual groups derived only from JSON nesting;
+  and
+- excessive depth or size uses a bounded formatted-JSON fallback.
 
-Studio currently exposes no product video-generation purpose. Engines retains
-generic video descriptors, schemas, validation, pricing, simulation, and
-provider adapters independently from the Studio purpose registry.
+Studio must not infer select options, slider constraints, units, provider
+groups, model capabilities, or labels from provider/model ids, field names,
+familiar values, or documentation. A value-only resource cannot truthfully
+reconstruct those removed schema facts. Exact provider control semantics would
+require a separately accepted presentation-metadata contract; they must not be
+approximated through heuristics or one-option controls.
 
-A Spec may retain information-only
-`authoredFrom: { kind: 'shotPlan', id }` context. Core does not resolve that
-value into purpose facts or use it as a target, owner, foreign key, lifecycle
-rule, or execution requirement. Shot Plans contain no GenerationSpec state;
-copy and Trash behavior never read, copy, or mutate generation records.
+`MediaGenerationProvenance` uses the same envelope and may add an opaque safe
+`receipt`. It is stored once on Asset, not AssetFile. Inspection projects the
+same view without a document path and with `editable: false`.
 
-## Persistence
+Core rejects unknown envelope fields, non-JSON values, excessive size/depth,
+absolute or traversing local paths, secret-bearing fields, signed URLs, and
+temporary provider media URLs. It does not semantically inspect prompts,
+provider-native fields, receipts, or media contents.
 
-`media_generation_spec` stores purpose, target, nullable provider/model,
-title, authored values JSON, ordered references JSON, optional soft Shot Plan
-authoring context, `frozen_at`, and timestamps. It does not store a mirrored
-complete spec JSON blob.
+## Deterministic Project context
 
-`media_generation_run` stores the immutable spec snapshot, exact provider
-payload, estimate and approval token, outputs, receipt, diagnostics, status, and
-timestamps.
+Every purpose-specific Media Producer workflow begins with:
 
-Migration `0059_scene_beats_and_shot_authoring_reset.sql` historically converted every Scene
-Shot List revision into the then-current Scene Beats shape, preserved active
-revision selection and suitable storyboard image relationships, recomputes
-content fingerprints, and removes all retired Shot Video Take, Shot membership,
-Take media, Take generation, and Take asset records. It also removes the retired
-tables and advances the project database to generation 46. The migration fails
-on invalid non-retired ownership rather than guessing how to repair it.
+```bash
+renku generation context --purpose <purpose> --target <target> --json
+```
 
-## Public Foundation
+For `scene.storyboard-sheet`, `--revision` chooses the exact Scene Beats
+revision and repeatable `--beat` narrows the report to a reviewed Beat batch.
+Core validates only target identity and requested scope. Missing Lookbooks,
+designs, Beats, voices, dialogue Takes, or related media are returned as empty
+context or structured warnings; they do not make the request unauthorized.
 
-The accepted Core contract is
-`packages/core/src/client/generation.ts`. The accepted Core services are the
-focused modules in `packages/core/src/server/generation`:
+The report includes current Project story facts and languages, effective
+workflow policy, purpose-level output guidance, exact target/design context,
+relevant Production or Storyboard Lookbooks, Scene/Beat/Shot/Shot Plan and
+dialogue relationships, and exact relationship-derived AssetFiles.
 
-- `buildGenerationContext`;
-- `listGenerationReferences`;
-- `listGenerationModels`;
-- `createGenerationSpec`, `updateGenerationSpec`, `freezeGenerationSpec`,
-  `readGenerationSpec`, and `listGenerationSpecs`;
-- `validateGenerationSpec`;
-- `buildGenerationPreview`;
-- `estimateGenerationCost` and `estimateGeneration`;
-- `runGeneration` and `readGenerationRun`.
+**Context is evidence, not permission.** Suggestions are advisory and
+non-exhaustive. Their stable order is not priority. A user or agent may ignore,
+supplement, or replace them, including with an unrelated Project Asset or an
+external reference. Canonical display selection is reported as a fact and is
+never treated as generation selection. Core does not inspect creative content
+or decide which reference should be sent to a provider.
 
-The Core server entrypoint also exports focused Preview, exact AssetFile
-Generation Request inspection, Dialogue Audio, Scene Beats, and storyboard
-attachment commands. CLI and HTTP callers remain thin projections of these
-Core-owned contracts.
+The report is a fresh read projection. It is not persisted, hashed, frozen, or
+copied into provenance. It contains no provider/model alternatives, native
+request fields, provider schema, controls, prices, approval state, or execution
+permission. It has no Studio route or model-selection dialog.
 
-Generation Request inspection reads the immutable managed run snapshot or exact
-frozen external source spec recorded for the displayed AssetFile. It reuses the
-Generation Preview resource to show the exact prompt, selected references, and
-saved configuration as read-only data. Project-file paths remain Core/server
-data and are projected to authenticated browser URLs.
+## CLI
 
-Image editing is agent-owned through a new generic `image.edit` spec with the
-exact source AssetFile locked in `source/source-image`. Preview reviews the
-request; a managed receipt or frozen external source spec proves execution; and
-the accepted result is imported through any currently supported focused image
-destination chosen for that output. The destination validates its own target
-without requiring ownership continuity with the edit source. Studio inspection
-never edits, executes, or attaches output.
+The current provider execution commands are:
 
-## Prop generation
+```bash
+renku generation context --purpose <purpose> --target <target> --json
+renku generation validate --file tmp/operations/media-generation/request.json --json
+renku generation preview show --file tmp/operations/media-generation/request.json --json
+renku generation execute --file tmp/operations/media-generation/request.json --output tmp/operations/media-generation/output --json
+renku generation recover --file tmp/operations/media-generation/request.json --request-id <provider-job-id> --output tmp/operations/media-generation/output --json
+renku media import --purpose <purpose> --target <target> --source <path> --provenance <provenance-json> --json
+```
 
-`prop.sheet` and `prop.hero` target one durable Prop. Core projects Prop facts
-and active Prop Design guidance without interpreting creative prompt or image
-contents. Prior same-Prop Sheets are optional explicit reference candidates;
-Core never selects one automatically. Attachments create exclusively Prop-owned
-`prop_sheet` or `prop_hero` Assets. Only a Hero may be selected canonically.
+Preview accepts `codex` because built-in image generation can share the review
+envelope. Validate, execute, and recover reject `codex`; it is a harness-gated
+Media Producer capability, never an Engines provider. World Labs Location World
+generation remains under the focused `renku location world` command.
 
-## Shot Plan video generation
+## Providers and Settings
 
-`shot-plan.video-generation` targets Project, carries a weak Shot Plan source,
-and requires an explicit text-only, first-frame, first-last-frame, or reference
-input mode. Core owns exact catalog route selection, schema-backed values,
-reference routing, provenance, and attachment. The three auxiliary Shot Plan
-video image purposes follow the same weak source contract. Prompts and media
-remain opaque.
+Core owns credentials for Fal.ai, Replicate, WaveSpeed, ElevenLabs, and World
+Labs. Engines receives only one opaque credential string. The generation CLI
+registers Fal.ai, Replicate, WaveSpeed, and ElevenLabs. World Labs is exposed by
+its focused location-world Engines API.
+
+Project Settings has global Preview plus independent Image, Video, and Audio
+sections. Image chooses Codex or Fal.ai; Video is Fal.ai; Audio is ElevenLabs.
+Each media kind owns Ask Before Generating, concurrent scheduling, and a retained
+maximum. Effective concurrency is one while concurrent scheduling is off.
+Replicate, WaveSpeed, and World Labs credentials remain available for explicit
+Skill workflows but are not Project provider preferences.
+
+Provider Skill indexes contain only exact model identity, human name, supported
+input modes, and an internal guide link. They do not duplicate request fields,
+defaults, enums, ranges, durations, pricing, or capability summaries. Current
+native request facts come from the selected provider operation.
+
+## Removed concepts
+
+There is no production Generation Spec, Generation Run, estimate, pricing,
+approval token, freeze lifecycle, simulation, generic model catalog, persisted
+reference selection, file-level generation identity, or Core-owned provider
+execution. No compatibility reader or alias recognizes those concepts.
+
+## Provider extension rule
+
+A normal provider addition changes the standalone Engines provider module, CLI
+registration, provider Skill guide/index, deterministic tests, and release
+metadata. It does not change Core, Studio, the database, Preview, or a shared
+request schema. Credentials and Project Settings choices require separate
+product decisions. See
+[`packages/engines/docs/adding-a-provider.md`](../../packages/engines/docs/adding-a-provider.md).

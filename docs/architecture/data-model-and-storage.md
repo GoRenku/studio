@@ -126,26 +126,26 @@ Use the focused documents below for current direction.
   not embedded section JSON. A Lookbook may select one `lookbook_image` for
   canonical card imagery; there is no Storyboard-to-Production source
   relationship.
-- Media generation specs and runs are SQLite-owned records. Generated output
-  files remain filesystem content until an explicit media import registers and
-  attaches them as assets. A saved spec is mutable while `frozen_at` is null and
-  permanently frozen when live execution begins.
+- Temporary media-generation review documents are filesystem operation files,
+  not SQLite records. Generated output remains unregistered until a focused
+  media import attaches it. An attached Asset may store exact safe generation
+  provenance; there is no Generation Spec or Run lifecycle.
 - A Shot Plan stores authoring state only: Scene ownership, title, optional Beat
   coverage, ordered Shots, selected/candidate Shot images, timestamps, and
-  Trash lifecycle. It stores no GenerationSpec id or generation lifecycle
+  Trash lifecycle. It stores no generation request id or generation lifecycle
   state. Copy and Trash operations never read, copy, or mutate generation
   records.
 - Durable generated and imported asset files live under the folder for the
   domain object that owns them. Current asset paths must not start with
   `generated/`; temporary agent/debug files belong under top-level `tmp/`;
   user scratch references under `research/` must not be registered as asset
-  files. Generation specs may still name a `research/` file as a one-off
+  files. Temporary provider review requests may still name a `research/` file as a one-off
   reference input when the file is not reusable project state.
 - Location Sheets are durable image Assets owned by Locations with canonical
   type `location_sheet`. Each sheet has one `primary` image file and a concise
   persisted description. A Location can have many Location Sheets. Video
-  requests may select exact Location Sheet files through GenerationSpec
-  references without adding Shot Plan relationships.
+  requests may use exact Location Sheet files without adding Shot Plan
+  relationships.
 - A Storyboard continuity sheet is an ordinary Character, Location, or Prop
   Sheet whose Asset tags include exact `storyboard`. The tag is agent-owned
   intended-use metadata, not a new Asset type, owner, selection, or runtime
@@ -156,16 +156,16 @@ Use the focused documents below for current direction.
   overview/detail imagery and does not create a generation reference.
 - Props are ordered durable continuity subjects in `prop`. Prop Design history
   lives in `prop_design` with active state in `prop_design_state`.
-- Prop Sheets are Prop-owned `prop_sheet` Assets chosen only by consuming
-  GenerationSpecs. Prop Heroes are Prop-owned `prop_hero` Assets with optional
+- Prop Sheets are Prop-owned `prop_sheet` Assets chosen explicitly by provider
+  requests. Prop Heroes are Prop-owned `prop_hero` Assets with optional
   canonical owner-scoped selection.
 - Scene dialogue audio takes are durable scene dialogue media assets. They may
-  be selected as exact GenerationSpec references; Shot Plans do not own or
+  be used as exact provider request references; Shot Plans do not own or
   retain them.
-- GenerationSpecs may retain optional
-  `authoredFrom: { kind: 'shotPlan', id }` context. The stored value is nullable,
-  indexed, one-way, and has no foreign key. Missing or discarded source plans
-  never invalidate generation history or independently owned Assets.
+- Generated Shot Plan media Assets may retain optional weak
+  `authoredFromShotPlanId` context. The stored value is nullable, indexed,
+  one-way, and has no foreign key. Missing or discarded source plans never
+  invalidate independently owned Assets.
 - `shot.image` outputs are exclusively Shot-owned planning image candidates
   with canonical type `shot_image`. Common selection chooses zero or one
   candidate. Import may atomically select when that is the accepted intent.
@@ -199,8 +199,8 @@ Use the focused documents below for current direction.
   A selected Project Cover is a Project-owned `project_cover` image Asset with
   exactly one active primary image file; Project and Project Library project
   that file's Asset identity rather than a root filename. Character Sheets,
-  Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes are selected only
-  inside the consuming GenerationSpec references.
+  Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes have
+  no canonical selection; provider requests choose exact Asset Files explicitly.
 - The canonical project database path is:
 
 ```text
@@ -278,8 +278,8 @@ direction is superseded by ADR 0017.
   and Lookbook image placement.
 
 - `docs/architecture/reference/media-generation.md`
-  Defines persisted generation specs, generation runs, and separate media
-  import for the current media purposes.
+  Defines standalone provider execution, temporary review documents, Asset
+  provenance, and separate focused media import.
 
 - `docs/architecture/json-storage-validation.md`
   Defines the AJV and JSON Schema validation rule for SQLite JSON columns.
@@ -317,8 +317,9 @@ Current related exploration:
 
 ## Weak Shot Plan generation source
 
-`media_generation_spec.authored_from_shot_plan_id` is a nullable one-way source
-id with no foreign key. `shot_plan_video_input_mode` is nullable storage that
-is required only by the Shot Plan video purpose. Generated videos and
-auxiliary images use ordinary Project Asset membership; Shot Plans do not
-store request, video, dependency, selection, or completion pointers.
+Generated Shot Plan media uses ordinary Project Asset membership. The Asset may
+retain weak `authoredFrom` Shot Plan context for grouping, reference, and
+invalidation behavior, but Shot Plans do not own the generated Asset and do not
+store request, video, dependency, selection, or completion pointers. Durable
+provider or Codex generation facts live only in the Asset's optional
+`generationProvenance` document.

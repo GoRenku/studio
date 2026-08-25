@@ -1,5 +1,7 @@
 # 0045 Use Purpose Bindings For Saved Generation Previews
 
+> **Decision 0086 update:** Saved-Spec Preview bindings and provider-specific builders are superseded. Preview remains shared and is projected from a temporary review document or Asset provenance.
+
 Date: 2026-07-06
 
 Status: accepted

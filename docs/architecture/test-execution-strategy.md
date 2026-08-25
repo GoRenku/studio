@@ -49,8 +49,8 @@ Original test-file shape:
 | Studio service tests | 4 | API client parsing and service-level DTO tests. |
 | Studio route tests | 12 | Hono route tests, generally using fake project services. |
 | Architecture tests | 5 | Static boundary and ownership checks. |
-| Engines schema tests | 2 | Catalog/schema validation tests. |
-| Integration tests | 8 | Core integration tests, Engines integration tests, and one source-file test that was named `simulation-integration`. |
+| Engines schema tests | 2 | Provider metadata and request-schema validation tests. |
+| Integration tests | 8 | Core, CLI, and Studio integration tests. |
 | E2E-shaped tests | 26 | Studio Playwright specs, live provider e2e tests, and Studio in-process `.e2e.test.*` suites. |
 
 The important issue is not merely the number of tests. The important issue is
@@ -97,15 +97,10 @@ Core integration tests run through:
 pnpm --filter @gorenku/studio-core test:integration
 ```
 
-The Core integration bucket includes high-signal files such as:
-
-- `packages/core/tests/integration/context-first-generation-lifecycle.test.ts`
-- `packages/core/tests/integration/focused-generation-workspaces.test.ts`
-
-These tests exercise the generic lifecycle and focused Studio use cases through
-real temporary project databases. They verify exact references, direct
-estimates, attachment/provenance, take state, and structured failure boundaries
-without a live provider call.
+The Core integration bucket contains database-backed workflows that are too
+broad for source-adjacent tests, including screenplay FDX refresh. Media
+generation ownership and provenance rules remain covered at their focused Core
+modules with temporary project databases and no live provider call.
 
 ### Studio
 
@@ -167,9 +162,10 @@ The live provider e2e tests under `packages/engines/tests/e2e` are correctly
 outside the default Engines test command. They require provider credentials and
 may spend money or time. They should remain opt-in final checks.
 
-The former source-local unified simulation integration test now lives under
-`packages/engines/tests/integration/unified-simulation-flow.test.ts`, so it runs
-through Engines `test:integration` instead of the default fast suite.
+Engines has no generic simulation integration suite. Provider protocol,
+metadata/cache, file, retry, polling, recovery, output, and error behavior is
+covered with deterministic fast tests. Credentialed live-provider tests remain
+an explicit manual-only `test:e2e` surface.
 
 ### CLI
 
@@ -199,10 +195,10 @@ after a code change.
 Examples:
 
 ```bash
-pnpm --dir packages/core exec vitest run src/server/media-generation/cost/cost-projection.test.ts
+pnpm --dir packages/core exec vitest run src/server/assets/generation-provenance.test.ts
 pnpm --dir packages/studio exec vitest run src/features/movie-studio/shot-design/shot-design-media.test.ts
-pnpm --dir packages/cli exec vitest run src/commands/generation-command-handlers.test.ts
-pnpm --dir packages/engines exec vitest run src/sdk/replicate/retry.test.ts
+pnpm --dir packages/cli exec vitest run src/commands/generation/command.test.ts
+pnpm --dir packages/engines exec vitest run src/providers/replicate/index.test.ts
 ```
 
 Tier 1 tests should own most bug-catching during development.
@@ -263,10 +259,10 @@ provider credentials.
 
 Examples of Tier 3 coverage:
 
-- Core context-first generation lifecycle integration.
-- Core focused Preview, Generation Request inspection, Dialogue Audio, and Shot workspace
-  integration.
-- Studio in-process AI Production estimate matrix.
+- Core database-backed screenplay refresh integration.
+- CLI workflows against temporary Projects, including temporary Preview and
+  focused media attachment.
+- Studio in-process application integration.
 - Studio take-state persistence through service/API paths.
 - Studio route plus React integration where a route response is rendered by a
   real component.
@@ -279,7 +275,6 @@ Target commands should be explicit, for example:
 pnpm --filter @gorenku/studio-core test:integration
 pnpm --filter @gorenku/studio-cli test:integration
 pnpm --filter @gorenku/studio test:integration
-pnpm --filter @gorenku/studio-engines test:integration
 ```
 
 Root `pnpm test:integration` runs the local deterministic integration gate.
@@ -306,8 +301,8 @@ depend on external service behavior. They should never be part of the default
 development loop.
 
 Live provider e2e should run only when the change touches provider adapters,
-provider request/response contracts, model catalogs, schema mappings, pricing,
-or generation execution behavior that cannot be proven with local simulation.
+provider request/response contracts, metadata/schema mapping, or execution
+behavior that cannot be proven with mocked protocol tests.
 
 ## Protected Slow Tests
 
@@ -317,8 +312,6 @@ delete them merely to speed up development.
 Protected examples:
 
 - `packages/studio/src/app/app.e2e.test.tsx`
-- `packages/studio/src/features/generation-preview/generation-preview-dialog-host.e2e.test.tsx`
-- `packages/core/tests/integration/context-first-generation-lifecycle.test.ts`
 - `packages/studio/e2e/tests/smoke/*.spec.ts`
 - provider e2e tests under `packages/engines/tests/e2e` when provider behavior
   is being changed intentionally.
@@ -331,19 +324,13 @@ The correct optimization for these tests is:
 4. Run the slow test once at the end, or when its exact integration surface is
    changed.
 
-For example, the AI Production estimate matrix should remain the final
-end-to-end guard for model/input-mode pricing behavior. Fast coverage around it
-should include:
+For example, the shared Preview and Inspection surfaces should retain final
+browser coverage. Fast coverage around them should include Core temporary-file
+review validation, safe provenance parsing, route serialization, and React
+projection/navigation behavior.
 
-- Core cost projection arithmetic.
-- Purpose lifecycle estimate behavior.
-- Dependency line materialization states.
-- Studio API serializer/deserializer behavior.
-- Route coverage key generation.
-- React projection formatting for estimate lines.
-
-When one of those fast tests fails, the estimate matrix usually does not need to
-be re-run until the final gate.
+When one of those fast tests fails, the full browser suite usually does not need
+to be re-run until the final gate.
 
 ## When A Slow Test Finds A Bug
 
@@ -361,12 +348,10 @@ Use this loop:
 
 Example:
 
-If the estimate matrix finds that `first-last-frame` pricing is wrong, the
-repeatable development loop should not be the full 2,000-line matrix test. The
-fast regression should usually live in Core pricing, dependency line planning,
-or Studio API serialization, depending on where the incorrect value was
-introduced. The full matrix remains the final proof that the route, service,
-and catalog still agree.
+If browser Preview finds that a multi-request document cannot navigate, the
+repeatable development loop should not be the full browser suite. The fast
+regression should live in the shared review component or temporary review
+document parser, depending on where the incorrect behavior was introduced.
 
 ## Current Risk Areas
 
@@ -512,21 +497,19 @@ Fast Core tests should catch most domain mistakes before integration tests run.
 
 Fast coverage should exist for:
 
-- the complete purpose/settings/model inventory;
-- stable guide placements, exact candidates, and initial selections;
-- fixed setting enforcement and untouched provider defaults;
-- generic spec, preview, validation, direct estimate, approval, and run behavior;
+- the accepted settings and credential inventories;
+- temporary review-document validation and safe local-media resolution;
+- exact Asset-level generation provenance;
 - focused attachment ownership and provenance;
-- Preview, Generation Request inspection, Dialogue Audio, and Scene Beats use cases;
+- Dialogue Audio, Scene Storyboard, Shot, and copied-image use cases;
 - structured diagnostics for invalid state;
 - focused Shot Plan authoring, Shot order/membership, image selection,
   selected-only independent copy, and recoverable exclusive-owner lifecycle.
 
 Core integration should remain for:
 
-- end-to-end lifecycle behavior through `ProjectDataService`;
-- interactions between exact reference selections, provider validation, direct
-  pricing, focused attachment, Trash, and structured diagnostics.
+- broad database-backed workflows through `ProjectDataService` that are too
+  expensive or cross-cutting for source-adjacent tests.
 
 ### Studio Server
 
@@ -579,11 +562,10 @@ CLI integration should cover:
 
 Fast Engines tests should cover:
 
-- schema validation;
+- provider request and metadata-schema validation;
 - provider payload mapping;
-- pricing estimate calculation;
 - retry policy with fake timers;
-- simulated output handling;
+- output normalization and download handling;
 - provider adapter contracts using mocked SDK responses.
 
 Integration and e2e should cover:
@@ -647,8 +629,8 @@ do not add a mobile viewport to this journey.
   developers do not need to run integration tests repeatedly.
 - [x] Split CLI broad workflow tests from fast command-handler tests when the CLI
   test suite becomes a development-loop bottleneck.
-- [x] Move `packages/engines/src/sdk/unified/simulation-integration.test.ts`
-  to Engines integration.
+- [x] Keep provider protocol tests deterministic and leave paid provider checks
+  in the manual-only Engines e2e bucket.
 - [x] Add root `test:integration` and `test:final` scripts only after package-level
   split commands exist.
 - [x] Document which final suites are required for each kind of change.

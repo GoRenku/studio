@@ -14,7 +14,7 @@ import {
 } from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-continuity-api';
 import { CastMemberPanel } from './cast-member-panel';
-import { GenerationRequestInspectorProvider } from '@/features/generation-request-inspector/generation-request-inspector-provider';
+import { MediaGenerationRequestInspectorProvider as GenerationRequestInspectorProvider } from '@/features/media-generation-request/media-generation-request-inspector-provider';
 
 function render(ui: React.ReactElement) {
   return renderTestingLibrary(
@@ -285,6 +285,8 @@ function castProfileAsset(): StudioAssetResponse {
     title: 'Urban profile',
     oneLineSummary: null,
     origin: 'generated',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: [],
     files: [
@@ -363,6 +365,8 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
       title: 'Urban normal voice sample',
       oneLineSummary: null,
       origin: 'generated',
+      generationProvenance: null,
+      authoredFrom: null,
       referenceName: 'normal-voice',
       tags: ['calm strategic baseline'],
       files: [

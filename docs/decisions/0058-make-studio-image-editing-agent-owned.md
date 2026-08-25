@@ -1,5 +1,7 @@
 # 0058 Make Studio Image Editing Agent-Owned
 
+> **Decision 0086 update:** Agent-owned image editing, artifact inspection, output acceptance, and focused attachment remain. Spec/Run/freeze provenance is replaced by temporary review plus Asset provenance.
+
 Date: 2026-07-19
 
 Status: accepted

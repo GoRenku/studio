@@ -11,7 +11,7 @@ import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
-import { assetFileGenerations, sceneDialogueAudio, sceneDialogueAudioTakes } from '../schema/index.js';
+import { sceneDialogueAudio, sceneDialogueAudioTakes } from '../schema/index.js';
 import { studioSceneDialogueAudioSurfaceResourceKey } from '../studio-coordination/resource-keys.js';
 import { listSceneDialogueTurns } from './turns.js';
 
@@ -40,18 +40,16 @@ export function readSceneDialogueAudioWorkspace(input: {
     .where(eq(sceneDialogueAudio.sceneId, input.sceneId)).all();
   const audioByTurnId = Object.fromEntries(audioRows.map((audio) => {
     const takes = input.session.db
-      .select({ take: sceneDialogueAudioTakes, generationRunId: assetFileGenerations.mediaGenerationRunId })
+      .select({ take: sceneDialogueAudioTakes })
       .from(sceneDialogueAudioTakes)
-      .leftJoin(assetFileGenerations, eq(assetFileGenerations.assetFileId, sceneDialogueAudioTakes.assetFileId))
       .where(and(eq(sceneDialogueAudioTakes.sceneDialogueAudioId, audio.id), isNull(sceneDialogueAudioTakes.discardedAt)))
       .orderBy(asc(sceneDialogueAudioTakes.createdAt))
       .all()
-      .map(({ take, generationRunId }) => ({
+      .map(({ take }) => ({
         takeId: take.id,
         sceneDialogueAudioId: take.sceneDialogueAudioId,
         assetId: take.assetId,
         assetFileId: take.assetFileId,
-        generationRunId: generationRunId ?? '',
         modelChoice: requireModelChoice(take.modelChoice),
         castVoiceId: take.castVoiceId,
         castVoiceName: take.castVoiceName,

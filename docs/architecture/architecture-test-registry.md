@@ -163,84 +163,75 @@ Maintenance owner:
   prove bad state fails before a write. Static tests should protect the owner
   boundary, not require a central list of every focused command.
 
-### Context-First Generation Foundation
+### Core Media Review And Provenance
 
 Owner docs:
 
-- `docs/decisions/0047-use-context-first-provider-valid-generation.md`
+- `docs/decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md`
 - `docs/architecture/media-generation.md`
-- `docs/architecture/reference/context-first-generation-foundation-manifest.md`
+- `docs/architecture/reference/media-generation.md`
 
 Static tests:
 
-- `packages/core/src/server/generation/architecture.test.ts`
 - `packages/core/src/server/architecture.test.ts`
-- `packages/engines/src/generation/architecture.test.ts`
+- `packages/studio/src/architecture.test.ts`
 
 Runtime tests:
 
-- `packages/core/src/server/generation/specs.test.ts`
-- `packages/core/src/server/generation/validation.test.ts`
-- `packages/engines/src/generation/catalog/model-input-descriptors.test.ts`
-- `packages/engines/src/generation/execution/provider-request-assembly.test.ts`
+- `packages/core/src/server/media-generation-review/document.test.ts`
+- `packages/core/src/server/media-generation-review/preview.test.ts`
+- `packages/studio/src/features/media-generation-request/media-generation-request-view.test.tsx`
 
 Forbidden capabilities:
 
-- provider validation importing context, purpose guide, candidate, slot, or
-  dependency-planning modules;
-- Core or adapters guessing provider media fields or duplicating provider
-  schemas;
-- provider defaults being copied into authored values or assembled payloads;
-- validation substituting files, assigning fields, switching models, clamping
-  values, or repairing requests;
-- generation services importing Studio code or provider SDK adapters;
+- Core or Studio interpreting provider-native request fields or creative
+  contents;
+- routes or UI owning provenance, path, or attachment validation;
+- Studio importing Engines or provider SDKs;
+- Preview editing nested provider request fields or emitting execution intent;
+- durable provider upload URLs, credentials, signed URLs, or unsafe paths;
 - direct Drizzle schema imports outside database access and schema modules;
-- a compatibility CLI, HTTP, or Studio runtime between the Plan `0134` backend
-  replacement and Plan `0135` product integration.
+- compatibility routes, commands, or fields for removed request/job lifecycles.
 
 Maintenance owner:
 
-- Generic generation work must keep persistence, reference projection,
-  validation, preview, pricing, and execution in focused modules. Runtime tests
-  prove partial-save and provider-validity behavior. Static tests protect stable
-  package/import boundaries and must not inventory function or helper names.
+- Core owns the small review/provenance envelope, safety, local reference
+  projection, prompt update, Asset provenance, and focused attachment. Studio
+  renders Core projections. Tests protect behavior and import boundaries rather
+  than private helper names.
 
-The older cost/lifecycle/dependency registrations below describe the
-pre-replacement backend. Plan `0134` removes them; they are not boundaries for
-new foundation code. Plan `0135` must not recreate them for old callers.
-
-### Engines Generation Pricing Rail
+### Standalone Media Engines Boundary
 
 Owner docs:
 
 - `docs/architecture/media-generation.md`
 - `docs/architecture/reference/media-generation.md`
-- `plans/active/0108-media-generation-module-boundary-refactor.md`
+- `docs/decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md`
 
 Static tests:
 
-- `packages/engines/src/generation/architecture.test.ts`
+- `packages/engines/src/media/engine.test.ts`
+- `packages/core/src/server/architecture.test.ts`
+- `packages/cli/src/commands/command-architecture.test.ts`
 
 Runtime tests:
 
-- `packages/engines/src/generation/pricing/estimate-generation-cost.test.ts`
-- `packages/engines/src/generation/execution/runner.test.ts`
-- `packages/engines/src/generation/execution/provider-payload-validation.test.ts`
+- `packages/engines/src/providers/supported-models.test.ts`
+- `packages/engines/src/shared/metadata-cache.test.ts`
+- `packages/engines/src/shared/retry.test.ts`
 
 Forbidden capabilities:
 
-- importing generation execution modules;
-- importing provider SDK modules;
-- reading or writing provider input/output files;
-- building or validating provider payloads;
-- loading generation input files;
-- importing generation runners.
+- Engines depending on a Studio workspace package or Project concepts;
+- Core or Studio importing Engines/provider SDKs;
+- CLI handlers implementing provider validation, upload, polling, retry,
+  recovery, normalization, or download;
+- production registration of unindexed providers or models;
+- generic catalog, pricing, simulation, Spec, Run, or approval lifecycle state.
 
 Maintenance owner:
 
-- Engine pricing work must stay inside
-  `packages/engines/src/generation/pricing` and depend only on generation
-  pricing contracts, catalog facts, and deterministic cost hashing. Execution
-  work belongs in `packages/engines/src/generation/execution`. Static tests
-  should protect those module folders, while runtime tests prove pricing math,
-  payload validation, and runner behavior.
+- Engines owns provider protocol execution behind `MediaProvider` and
+  `MediaEngine`. Core owns review/provenance and focused attachment. CLI is the
+  thin composition root. Static tests protect stable import/public boundaries;
+  runtime tests prove execution, cache, retry, request, and error behavior.

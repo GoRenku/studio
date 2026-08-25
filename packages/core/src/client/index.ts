@@ -21,7 +21,9 @@ export type {
   SelectAssetInput,
   UpdateAssetInput,
 } from './assets.js';
-export type * from './asset-file-generation.js';
+export type * from './media-generation-review.js';
+export * from './media-attachments.js';
+export type * from './media-generation-context.js';
 export type {
   CastMember,
 } from './cast-members.js';
@@ -82,8 +84,6 @@ export type * from './trash.js';
 export * from './project-settings.js';
 export * from './provider-credentials.js';
 export * from './production-numbers.js';
-export type * from './generation.js';
-export type * from './generation-preview-resource.js';
 export type * from './scene-dialogue-audio-workspace.js';
 export type * from './scene-beats/index.js';
 export type * from './shot-plans.js';

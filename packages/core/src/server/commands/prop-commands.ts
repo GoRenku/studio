@@ -46,6 +46,7 @@ import {
   projectSummary,
   throwIfDepartmentIssues,
 } from './department-command-support.js';
+import { readDepartmentProductionLookbookContext } from '../media-generation-context/visual-language-context.js';
 
 export async function listProps(
   input: RenkuConfigPathOptions = {}
@@ -88,7 +89,10 @@ export async function readPropContext(
       activeDesignSummary: activeDesign
         ? toPropDesignSummary({ id: activeDesign.id, document: activeDesign.document })
         : null,
-      activeLookbook: null,
+      activeLookbook: readDepartmentProductionLookbookContext({
+        session,
+        projectFolder: currentProject.projectFolder,
+      }),
       assets,
       assetTypeCounts,
       generationReadiness: {

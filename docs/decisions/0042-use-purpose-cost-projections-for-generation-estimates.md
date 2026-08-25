@@ -1,5 +1,7 @@
 # Use Purpose Cost Projections For Generation Estimates
 
+> **Superseded by Decision 0086:** Purpose cost projections and generation estimates are removed.
+
 Date: 2026-07-03
 
 Status: accepted

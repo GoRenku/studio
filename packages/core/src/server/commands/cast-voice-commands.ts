@@ -1,8 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-  fetchElevenLabsVoiceSampleAudio,
-} from '@gorenku/studio-engines';
 import type {
   CastVoice,
   CastVoiceAttachmentCommandDocument,
@@ -22,7 +19,7 @@ import type {
   CastVoiceValidationReport,
 } from '../../client/index.js';
 import type { ElevenLabsVoiceSampleFetcher } from '../project-data-service-contracts.js';
-import { createRenkuProviderSecretResolver } from '../provider-credentials/index.js';
+import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { createAssetMembership } from '../assets/ownership.js';
 import { readOwnedAsset } from '../assets/projection.js';
@@ -428,7 +425,7 @@ interface ValidatedCastVoiceAttachment {
   sampleTitle: string;
   fileSample?: {
     sourceProjectRelativePath: string;
-    receipt?: unknown;
+    generationProvenance?: import('../../client/media-generation-review.js').MediaGenerationProvenance;
     mimeType: string;
     sizeBytes: number;
   };
@@ -500,12 +497,18 @@ async function validateAttachmentDocument(input: {
       sampleTitle,
     };
   }
-  assertReceiptMatchesVoice({
-    receipt: document.sample.receipt,
-    provider,
-    model,
-    voiceId,
-  });
+  const generationProvenance = document.sample.generationProvenance
+    ? validateMediaGenerationProvenance(document.sample.generationProvenance)
+    : undefined;
+  if (generationProvenance
+    && (generationProvenance.provider !== provider
+      || generationProvenance.model !== model
+      || generationProvenance.mediaKind !== 'audio')) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_PROVENANCE_INVALID',
+      'Cast Voice provenance provider, model, and audio kind must match the attachment.',
+    );
+  }
   const sourceProjectRelativePath = normalizeProjectRelativePath(
     document.sample.sourceProjectRelativePath
   );
@@ -526,7 +529,7 @@ async function validateAttachmentDocument(input: {
     sampleTitle,
     fileSample: {
       sourceProjectRelativePath,
-      receipt: document.sample.receipt,
+      ...(generationProvenance ? { generationProvenance } : {}),
       mimeType,
       sizeBytes: stats.size,
     },
@@ -558,8 +561,8 @@ async function prepareFileCastVoiceAttachment(input: {
     sourceProjectRelativePath: fileSample.sourceProjectRelativePath,
     mimeType: fileSample.mimeType,
     durationSeconds: undefined,
-    origin: fileSample.receipt ? 'generated' : 'imported',
-    sampleSource: fileSample.receipt
+    origin: fileSample.generationProvenance ? 'generated' : 'imported',
+    sampleSource: fileSample.generationProvenance
       ? { kind: 'generated_sample' }
       : { kind: 'custom_file' },
   };
@@ -571,17 +574,17 @@ async function prepareElevenLabsVoiceSampleAttachment(input: {
   homeDir?: string;
   elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
 }): Promise<PreparedCastVoiceSample> {
-  const fetcher = input.elevenLabsVoiceSampleFetcher ?? ((request) =>
-    fetchElevenLabsVoiceSampleAudio({
-      ...request,
-      secretResolver: createRenkuProviderSecretResolver({
-        homeDir: input.homeDir,
-      }),
-    }));
+  const fetcher = input.elevenLabsVoiceSampleFetcher;
+  if (!fetcher) {
+    throw new ProjectDataError(
+      'CORE_PROVIDER_EXECUTION_UNAVAILABLE',
+      'ElevenLabs voice sample retrieval requires a provider operation supplied by the caller.',
+    );
+  }
   const fetched = await fetcher({ voiceId: input.validated.voiceId });
   const temporaryFile = await writeProjectTemporaryFile({
     projectFolder: input.projectFolder,
-    destination: { kind: 'generation.media', purpose: 'cast.voice-sample' },
+    destination: { kind: 'operation' },
     fileNameHint: `${input.validated.name}.mp3`,
     contents: fetched.audioBytes,
   });
@@ -644,6 +647,9 @@ async function insertCastVoiceWithSampleAsset(input: {
         tags: [input.validated.purpose],
         origin: input.prepared.origin,
         availability: 'ready',
+        ...(input.validated.fileSample?.generationProvenance
+          ? { generationProvenance: input.validated.fileSample.generationProvenance }
+          : {}),
         createdAt: now,
         updatedAt: now,
       });
@@ -842,59 +848,6 @@ function requiredReferenceName(input: string): string {
   return value;
 }
 
-function assertReceiptMatchesVoice(input: {
-  receipt: unknown;
-  provider: string;
-  model: string;
-  voiceId: string;
-}): void {
-  const receipt = unwrapReceiptRun(input.receipt);
-  if (!receipt) {
-    return;
-  }
-  if (
-    typeof receipt.provider === 'string' &&
-    receipt.provider !== input.provider
-  ) {
-    throw new ProjectDataError(
-      'PROJECT_DATA354',
-      `Cast Voice receipt provider ${receipt.provider} does not match attachment provider ${input.provider}.`
-    );
-  }
-  if (typeof receipt.model === 'string' && receipt.model !== input.model) {
-    throw new ProjectDataError(
-      'PROJECT_DATA354',
-      `Cast Voice receipt model ${receipt.model} does not match attachment model ${input.model}.`
-    );
-  }
-  const providerPayload = receipt.providerPayload;
-  if (!providerPayload || typeof providerPayload !== 'object') {
-    return;
-  }
-  const receiptVoice = (providerPayload as Record<string, unknown>).voice;
-  if (typeof receiptVoice === 'string' && receiptVoice !== input.voiceId) {
-    throw new ProjectDataError(
-      'PROJECT_DATA354',
-      `Cast Voice receipt voice ${receiptVoice} does not match attachment voiceId ${input.voiceId}.`
-    );
-  }
-}
-
-function unwrapReceiptRun(
-  receipt: unknown
-): { provider?: unknown; model?: unknown; providerPayload?: unknown } | null {
-  if (!receipt || typeof receipt !== 'object') {
-    return null;
-  }
-  if ('run' in receipt) {
-    const run = (receipt as { run?: unknown }).run;
-    return run && typeof run === 'object'
-      ? (run as { provider?: unknown; model?: unknown; providerPayload?: unknown })
-      : null;
-  }
-  return receipt as { provider?: unknown; model?: unknown; providerPayload?: unknown };
-}
-
 function assertProviderSampleDocumentHasNoFileFields(sample: object): void {
   if ('sourceProjectRelativePath' in sample) {
     throw new ProjectDataError(
@@ -902,10 +855,10 @@ function assertProviderSampleDocumentHasNoFileFields(sample: object): void {
       'ElevenLabs provider sample attachments must not include sample.sourceProjectRelativePath.'
     );
   }
-  if ('receipt' in sample) {
+  if ('generationProvenance' in sample) {
     throw new ProjectDataError(
       'PROJECT_DATA356',
-      'ElevenLabs provider sample attachments must not include sample.receipt.'
+      'ElevenLabs provider sample attachments must not include sample.generationProvenance.'
     );
   }
 }

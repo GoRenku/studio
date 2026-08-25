@@ -112,9 +112,10 @@ Temporary Storyboard source sheets live in
 
 ### Shot Plan provenance
 
-A generated Shot Plan video or reference image resolves its Plan from exact
-frozen GenerationSpec or Run provenance before Core allocates a destination.
-A title, current Studio selection, or path never chooses the Plan.
+A generated Shot Plan video or reference image carries an exact weak
+`authoredFrom` Shot Plan id through the focused attachment boundary before Core
+allocates a destination. A title, current Studio selection, or path never
+chooses the Plan.
 
 `shot-plan.video-reference` is the focused purpose for a durable reference
 image authored for a Plan. Ordinary input dependencies remain references and
@@ -162,10 +163,10 @@ selection.
 
 ## Temporary And User-Owned Files
 
-Generated media staging, draft specs, receipts, operation documents, QA
-images, and scratch files belong under top-level `tmp/`. Media Generation Specs
-and Runs remain durable SQLite records; temporary JSON exports are inspection
-artifacts only.
+Generated media staging, review/provenance documents, provider receipts,
+operation documents, QA images, and scratch files belong under top-level
+`tmp/`. Review documents are temporary operation artifacts; durable generation
+facts live only on an attached Asset's provenance.
 
 `.renku/tmp/` is reserved for hidden operational state. Runtime media staging
 must not use it as normal project-visible storage.

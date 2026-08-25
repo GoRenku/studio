@@ -1,5 +1,9 @@
 # Use Shot Plan Video Generation With Weak Context
 
+> **Decision 0086 update:** Shot Plan video purposes, weak context, independent Assets, and Scene projection remain. Skill-authored requests, Engines execution, and Asset provenance replace the Core catalog/Spec/estimate/freeze lifecycle.
+
+> **Decision 0087 update:** Shot Plan context now includes exact covered Beats, subjects including Props, selected Shot images, Beat Storyboards, same-plan auxiliary Assets, and dialogue audio as advisory evidence.
+
 Date: 2026-07-30
 
 Status: accepted

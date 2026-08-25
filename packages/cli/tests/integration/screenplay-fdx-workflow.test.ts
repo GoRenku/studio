@@ -55,7 +55,6 @@ describe('screenplay FDX CLI workflow', () => {
     });
     expect(imported).not.toHaveProperty('operation');
     expect(imported).not.toHaveProperty('changes');
-    expect(imported).not.toHaveProperty('approvalToken');
 
     const unchanged = await importFdx();
     expect(unchanged).toMatchObject({ status: 'unchanged', resourceKeys: [] });

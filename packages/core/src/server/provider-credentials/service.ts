@@ -1,7 +1,7 @@
 import {
   findProviderCredentialDescriptor,
   listProviderCredentialDescriptors,
-} from '@gorenku/studio-engines';
+} from './catalog.js';
 import {
   StructuredError,
   createDiagnosticError,

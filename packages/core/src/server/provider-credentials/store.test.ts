@@ -2,8 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listProviderCredentialDescriptors } from '@gorenku/studio-engines';
-import { createRenkuProviderSecretResolver } from './resolver.js';
+import { listProviderCredentialDescriptors } from './catalog.js';
+import { resolveRenkuProviderCredential } from './resolver.js';
 import {
   readProviderCredentialStore,
   resolveProviderCredentialFilePath,
@@ -31,6 +31,8 @@ describe('provider credential store', () => {
     await expect(readProviderCredentialStore(options)).resolves.toEqual({
       providers: [
         { provider: 'fal-ai', configured: true },
+        { provider: 'replicate', configured: false },
+        { provider: 'wavespeed-ai', configured: false },
         { provider: 'elevenlabs', configured: true },
         { provider: 'world-labs', configured: false },
       ],
@@ -43,8 +45,7 @@ describe('provider credential store', () => {
     const originalValue = process.env.FAL_KEY;
     process.env.FAL_KEY = 'exported-fal-key';
     try {
-      const resolver = createRenkuProviderSecretResolver(options);
-      await expect(resolver.getSecret('FAL_KEY')).resolves.toBe('saved-fal-key');
+      await expect(resolveRenkuProviderCredential('fal-ai', options)).resolves.toBe('saved-fal-key');
     } finally {
       if (originalValue === undefined) {
         delete process.env.FAL_KEY;
@@ -92,19 +93,17 @@ describe('provider credential store', () => {
 
   it('returns replacements on consecutive resolver lookups', async () => {
     const options = await createOptions();
-    const resolver = createRenkuProviderSecretResolver(options);
-
     await writeProviderCredentials(
       [{ provider: 'fal-ai', value: 'first-value' }],
       options
     );
-    await expect(resolver.getSecret('FAL_KEY')).resolves.toBe('first-value');
+    await expect(resolveRenkuProviderCredential('fal-ai', options)).resolves.toBe('first-value');
 
     await writeProviderCredentials(
       [{ provider: 'fal-ai', value: 'second-value' }],
       options
     );
-    await expect(resolver.getSecret('FAL_KEY')).resolves.toBe('second-value');
+    await expect(resolveRenkuProviderCredential('fal-ai', options)).resolves.toBe('second-value');
   });
 
   it('leaves the original file intact when atomic replacement fails', async () => {
@@ -136,14 +135,9 @@ describe('provider credential store', () => {
     rename.mockRestore();
   });
 
-  it('resolves unlisted keys without exposing them as Settings providers', async () => {
+  it('does not expose unlisted credential keys', async () => {
     const options = await createOptions();
     await writeEnvironmentFile(options.homeDir, 'UNLISTED_PROVIDER_KEY=saved-value\n');
-    const resolver = createRenkuProviderSecretResolver(options);
-
-    await expect(resolver.getSecret('UNLISTED_PROVIDER_KEY')).resolves.toBe(
-      'saved-value'
-    );
     expect(
       listProviderCredentialDescriptors().some(
         (descriptor) => descriptor.environmentVariable === 'UNLISTED_PROVIDER_KEY'

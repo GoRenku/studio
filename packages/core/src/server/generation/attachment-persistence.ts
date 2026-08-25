@@ -1,10 +1,7 @@
-import { recordImportedAssetFileGenerationProvenanceInSession } from '../asset-file-generation/import-provenance.js';
-import { recordSelectedGenerationOutputProvenanceInSession } from '../asset-file-generation/commands.js';
 import { createAssetMembership } from '../assets/ownership.js';
 import { selectAssetInSession } from '../assets/selection.js';
 import type { AssetOwner, AssetSelectionTarget } from '../../client/assets.js';
 import { insertAssetRecord } from '../database/access/assets.js';
-import { setAssetFileSourceGenerationSpec } from '../database/access/asset-files.js';
 import {
   insertLookbookImageRecord,
   nextLookbookImageSortOrder,
@@ -15,7 +12,6 @@ import {
 } from '../database/access/lookbook-sheets.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
-import { ProjectDataError } from '../project-data-error.js';
 import {
   createProjectAssetFileWriteSet,
   persistProjectAssetFileSync,
@@ -26,6 +22,7 @@ import type {
   ProjectAssetFileDestination,
   ProjectAssetFileWriteSet,
 } from '../project-asset-files/index.js';
+import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 
 export interface PersistGeneratedMediaAttachmentInput {
   session: DatabaseSession;
@@ -45,12 +42,8 @@ export interface PersistGeneratedMediaAttachmentInput {
   };
   fileRole: string;
   selectionTarget?: AssetSelectionTarget;
-  provenanceReceipt?: unknown;
-  selectedGenerationOutput?: {
-    generationRunId: string;
-    outputArtifactId: string;
-  };
-  sourceSpecId?: string;
+  generationProvenance?: MediaGenerationProvenance;
+  authoredFromShotPlanId?: string;
 }
 
 export interface PersistedGeneratedMediaAttachment {
@@ -75,28 +68,13 @@ export interface PersistGeneratedMediaAssetInSessionInput {
   selectionTarget?: AssetSelectionTarget;
   asset: PersistGeneratedMediaAttachmentInput['asset'];
   fileRole: string;
-  provenanceReceipt?: unknown;
-  selectedGenerationOutput?: {
-    generationRunId: string;
-    outputArtifactId: string;
-  };
-  sourceSpecId?: string;
+  generationProvenance?: MediaGenerationProvenance;
+  authoredFromShotPlanId?: string;
 }
 
 export function persistOwnedGeneratedMediaAssetInSession(
   input: PersistGeneratedMediaAssetInSessionInput
 ): ReturnType<typeof persistProjectAssetFileSync> {
-  const provenanceSourceCount = [
-    input.provenanceReceipt !== undefined,
-    input.selectedGenerationOutput !== undefined,
-    input.sourceSpecId !== undefined,
-  ].filter(Boolean).length;
-  if (provenanceSourceCount > 1) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
-      'Generated media attachment accepts one generation source.'
-    );
-  }
   insertAssetRecord(input.session, {
     id: input.assetId,
     type: input.asset.type,
@@ -111,6 +89,12 @@ export function persistOwnedGeneratedMediaAssetInSession(
     ...(input.asset.tags !== undefined ? { tags: input.asset.tags } : {}),
     origin: input.asset.origin,
     availability: 'ready',
+    ...(input.generationProvenance
+      ? { generationProvenance: input.generationProvenance }
+      : {}),
+    ...(input.authoredFromShotPlanId
+      ? { authoredFromShotPlanId: input.authoredFromShotPlanId }
+      : {}),
     createdAt: input.now,
     updatedAt: input.now,
   });
@@ -134,29 +118,6 @@ export function persistOwnedGeneratedMediaAssetInSession(
     mediaKind: input.asset.mediaKind,
     now: input.now,
   });
-  if (input.provenanceReceipt !== undefined) {
-    recordImportedAssetFileGenerationProvenanceInSession({
-      session: input.session,
-      assetFileId: input.assetFileId,
-      receipt: input.provenanceReceipt,
-    });
-  }
-  if (input.selectedGenerationOutput) {
-    recordSelectedGenerationOutputProvenanceInSession(input.session, {
-      assetFileId: input.assetFileId,
-      mediaGenerationRunId:
-        input.selectedGenerationOutput.generationRunId,
-      outputArtifactId: input.selectedGenerationOutput.outputArtifactId,
-      sourceProjectRelativePath: input.sourceProjectRelativePath,
-      createdAt: input.now,
-    });
-  }
-  if (input.sourceSpecId) {
-    setAssetFileSourceGenerationSpec(input.session, {
-      assetFileId: input.assetFileId,
-      sourceGenerationSpecId: input.sourceSpecId,
-    });
-  }
   if (input.selectionTarget) {
     selectAssetInSession(input.session, {
       target: input.selectionTarget,
@@ -170,17 +131,6 @@ export function persistOwnedGeneratedMediaAssetInSession(
 export function persistGeneratedMediaAttachment(
   input: PersistGeneratedMediaAttachmentInput
 ): PersistedGeneratedMediaAttachment {
-  const provenanceSourceCount = [
-    input.provenanceReceipt !== undefined,
-    input.selectedGenerationOutput !== undefined,
-    input.sourceSpecId !== undefined,
-  ].filter(Boolean).length;
-  if (provenanceSourceCount > 1) {
-    throw new ProjectDataError(
-      'CORE_GENERATION_ATTACHMENT_PROVENANCE_CONFLICT',
-      'Generated media attachment accepts one generation source.',
-    );
-  }
   const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
   const lookbookDetailKind = input.destination.owner.kind === 'lookbook'
@@ -217,13 +167,12 @@ export function persistGeneratedMediaAttachment(
         ...(input.selectionTarget ? { selectionTarget: input.selectionTarget } : {}),
         asset: input.asset,
         fileRole: input.fileRole,
-        ...(input.provenanceReceipt !== undefined
-          ? { provenanceReceipt: input.provenanceReceipt }
+        ...(input.generationProvenance
+          ? { generationProvenance: input.generationProvenance }
           : {}),
-        ...(input.selectedGenerationOutput
-          ? { selectedGenerationOutput: input.selectedGenerationOutput }
+        ...(input.authoredFromShotPlanId
+          ? { authoredFromShotPlanId: input.authoredFromShotPlanId }
           : {}),
-        ...(input.sourceSpecId ? { sourceSpecId: input.sourceSpecId } : {}),
       });
       if (input.destination.owner.kind === 'lookbook' && ownerRecord?.kind === 'lookbookImage') {
         insertLookbookImageRecord(session, {

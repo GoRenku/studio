@@ -55,6 +55,7 @@ import {
   studioCastNavigationResourceKey,
   studioProjectShellResourceKey,
 } from '../studio-coordination/resource-keys.js';
+import { readDepartmentProductionLookbookContext } from '../media-generation-context/visual-language-context.js';
 
 export async function listCastMembers(
   input: RenkuConfigPathOptions = {}
@@ -116,7 +117,10 @@ export async function readCastContext(
           })
         : null,
       scenes: castScenes(screenplay, input.castMemberId),
-      activeLookbook: null,
+      activeLookbook: readDepartmentProductionLookbookContext({
+        session,
+        projectFolder: currentProject.projectFolder,
+      }),
       assets: ownedAssets,
       assetTypeCounts: typeCounts(assets),
       generationReadiness: castGenerationReadiness(castMember, assets),

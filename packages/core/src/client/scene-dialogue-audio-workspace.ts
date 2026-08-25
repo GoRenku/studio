@@ -1,5 +1,3 @@
-import type { GenerationCostEstimate } from './generation.js';
-
 export type SceneDialogueAudioModelChoice =
   | 'elevenlabs/eleven_v3'
   | 'elevenlabs/eleven_multilingual_v2'
@@ -56,7 +54,6 @@ export interface SceneDialogueAudioTake {
   sceneDialogueAudioId: string;
   assetId: string;
   assetFileId: string;
-  generationRunId: string;
   modelChoice: SceneDialogueAudioModelChoice;
   castVoiceId: string;
   castVoiceName: string;
@@ -122,13 +119,6 @@ export interface SceneDialogueAudioWorkspaceMutationReport {
   recovery?: import('./trash.js').RecoverableMutationReport['recovery'];
   resourceKeys: string[];
 }
-
-export interface SceneDialogueAudioEstimateInput {
-  modelChoice: SceneDialogueAudioModelChoice;
-  text: string;
-}
-
-export type SceneDialogueAudioEstimateReport = GenerationCostEstimate;
 
 export interface SceneDialogueAudioModelChoiceReport {
   modelChoice: SceneDialogueAudioModelChoice;

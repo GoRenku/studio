@@ -548,7 +548,6 @@ Use `src/ui/media-card` for the current included visual-card surfaces:
 - Scene, Act, and Sequence storyboard cards;
 - Project Library;
 - Generation Preview and Generation Request inspector references;
-- Reference Picker candidates;
 - Shot Design Composition and Motion options.
 - Shot Plan collection cards, Shot rail cards, and Shot-image candidates.
 
@@ -936,8 +935,12 @@ snapshot update, skipped test, or weaker assertion. A backend fixture may use a
 different identifier or exact media record, but it must drive the same visible
 state before a pixel comparison is treated as compatibility evidence.
 
-Managed video Preview Config uses a desktop three-column surface for model
-family, input mode, and setup. It consumes the Core `video` authoring
-discriminant and uses local shadcn controls. Scene Generations uses the exact
-`surface:scene:<scene-id>:video-generations` refresh key and must not subscribe
-to a broad Project Asset surface.
+Generation Preview and generated-Asset Inspection share the same request view.
+Prompt uses the shared read-only/editor presentation, References is a quiet flat
+`MediaCard` grid of the exact local files already selected in the native
+request, and Configuration projects that exact opaque request with the shared
+rich read-only controls. This surface does not offer model or input-mode
+selection, expose deterministic context suggestions, reconstruct Project
+relationships, or show filenames and domain-slot labels. Scene Generations
+uses the exact `surface:scene:<scene-id>:video-generations` refresh key and must
+not subscribe to a broad Project Asset surface.

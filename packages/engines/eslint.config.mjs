@@ -50,7 +50,7 @@ const eslintConfig = [
     },
   }),
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
     plugins: {
       '@typescript-eslint': tseslint,
     },

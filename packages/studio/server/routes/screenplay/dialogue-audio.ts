@@ -2,11 +2,7 @@ import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../../errors.js';
 import { readProjectAssetFileByIdResponse } from '../../http/asset-file-response.js';
-import {
-  readSceneDialogueAudioEstimateRequest,
-  readSceneDialogueAudioGenerateRequest,
-  readSceneDialogueAudioSetupRequest,
-} from '../../http/screenplay/dialogue-audio.js';
+import { readSceneDialogueAudioSetupRequest } from '../../http/screenplay/dialogue-audio.js';
 import type { CreateScreenplayRouteOptions } from './index.js';
 
 export function createScreenplayDialogueAudioRoute({ projectData, requireToken }: CreateScreenplayRouteOptions) {
@@ -27,29 +23,6 @@ export function createScreenplayDialogueAudioRoute({ projectData, requireToken }
         const turnId = c.req.param('turnId') as string;
         const setup = readSceneDialogueAudioSetupRequest(await c.req.json());
         return c.json(await projectData.updateSceneDialogueAudioSetup({ projectName, sceneId, turnId, setup }));
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .post('/screenplay/scenes/:sceneId/dialogue-turns/:turnId/audio/estimate', async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const estimate = await projectData.estimateSceneDialogueAudioDraft({
-          projectName,
-          estimate: readSceneDialogueAudioEstimateRequest(await c.req.json()),
-        });
-        return c.json({ estimate });
-      } catch (error) {
-        return projectErrorResponse(c, error);
-      }
-    })
-    .post('/screenplay/scenes/:sceneId/dialogue-turns/:turnId/audio/generate', requireToken, async (c) => {
-      try {
-        const projectName = c.req.param('projectName') as string;
-        const sceneId = c.req.param('sceneId') as string;
-        const turnId = c.req.param('turnId') as string;
-        const request = readSceneDialogueAudioGenerateRequest(await c.req.json());
-        return c.json(await projectData.generateSceneDialogueAudioTake({ projectName, sceneId, turnId, ...request }));
       } catch (error) {
         return projectErrorResponse(c, error);
       }

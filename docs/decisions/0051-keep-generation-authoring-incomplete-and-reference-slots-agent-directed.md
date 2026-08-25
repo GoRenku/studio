@@ -1,5 +1,9 @@
 # 0051: Keep Generation Authoring Incomplete And Reference Slots Agent-Directed
 
+> **Decision 0086 update:** Persisted incomplete-generation authoring, typed slots, and provider-field authoring in Core are superseded. Creative/reference choices remain agent-owned and provider validation remains in Engines.
+
+> **Decision 0087 update:** Core reference roles describe why relationship-derived files may be useful; they do not constrain the agent's request-scoped creative choices or map provider fields.
+
 Date: 2026-07-15
 
 Status: accepted for generic generation authoring; Shot/Take-specific clauses

@@ -2,6 +2,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ProjectSettingsDocument } from '@gorenku/studio-core/client';
 import {
   readProjectSettings,
   replaceProjectSettings,
@@ -40,7 +41,7 @@ describe('ProjectSettingsPanel', () => {
     expect(replaceProjectSettings).toHaveBeenCalledWith(
       'constantinople',
       expect.objectContaining({
-        version: 2,
+        version: 3,
         screenplayImport: expect.objectContaining({
           createContinuitySubjects: true,
           runScreenplayAnalysis: true,
@@ -115,9 +116,9 @@ function resource(value: ReturnType<typeof settings>) {
   };
 }
 
-function settings() {
+function settings(): ProjectSettingsDocument {
   return {
-    version: 2 as const,
+    version: 3 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -126,17 +127,24 @@ function settings() {
       generateBeatStoryboardImages: false,
     },
     generation: {
-      preferCodexImageGeneration: true,
       displayPreview: true,
-      renkuManaged: {
-        requirePerRunConfirmation: true,
-        allowConcurrentGenerations: false,
+      image: {
+        provider: 'codex',
+        askBeforeGenerating: false,
+        runGenerationsConcurrently: true,
+        maxConcurrentGenerations: 5,
+      },
+      video: {
+        provider: 'fal-ai',
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
         maxConcurrentGenerations: 1,
       },
-      codexBuiltIn: {
-        requirePerRunConfirmation: false,
-        allowConcurrentGenerations: true,
-        maxConcurrentGenerations: 5,
+      audio: {
+        provider: 'elevenlabs',
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
+        maxConcurrentGenerations: 1,
       },
     },
   };

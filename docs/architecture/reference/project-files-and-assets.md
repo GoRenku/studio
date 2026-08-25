@@ -97,7 +97,8 @@ full-resolution SPZ file. Common selection chooses the World shown in Studio;
 older candidates remain available for rollback.
 
 A **Prop Sheet** is a Prop-owned image Asset with canonical type
-`prop_sheet`. Its selection is request-scoped to an exact GenerationSpec.
+`prop_sheet`. A generation request may choose one exact Asset File explicitly;
+there is no canonical Prop Sheet selection.
 
 A **Prop Hero** is a Prop-owned image Asset with canonical type `prop_hero`.
 One Hero may be selected as the Prop's compact Studio image.
@@ -108,11 +109,12 @@ top-level `storyboards/<scene-display-number>/<NN>-iteration>/`.
 Temporary storyboard sheets generated for slicing or review live under that
 scene storyboard folder's `tmp/` subfolder and are not assets.
 
-A **Shot Plan Video** is a Project-owned Asset stored under the exact frozen
-Plan provenance folder
+A **Shot Plan Video** is a Project-owned Asset stored under the weak authored
+Shot Plan context folder
 `scenes/<scene-display-number>/<NN>-shot-plan/`. Its primary Asset File records
-exact managed-Run or frozen agent-external-Spec provenance. The Plan remains
-authoring context rather than Asset membership.
+no generation identity. Exact safe provider/Codex generation provenance is
+stored on the Asset. The Plan remains authoring context rather than Asset
+membership.
 
 A **Shot Image Candidate** is an image Asset exclusively owned by one Shot with
 canonical type `shot_image`. A Shot may own several candidates and explicitly
@@ -122,9 +124,9 @@ files live under
 membership, not path segments, defines ownership.
 
 The **Research folder** is user-owned scratch space for external references.
-Files in `research/` are not asset files. A generation spec may reference a
-`research/` file as a one-off input when the file is only evidence for that
-generation. When a research file becomes a durable project asset, Core copies
+Files in `research/` are not asset files. A temporary provider review request
+may reference a `research/` file as a one-off input. When a research file
+becomes a durable project asset, Core copies
 it into the relevant owner folder and registers that destination path.
 
 Durable asset-file persistence is centralized in
@@ -267,13 +269,13 @@ Folder responsibilities:
 - `scenes/<scene-display-number>/<NN>-shot-plan/` contains Shot images, Plan
   video-reference images, and Plan video Assets resolved from exact provenance.
 - `research/` contains user-owned scratch references. Renku may read these
-  files when instructed, and generation specs may use them as one-off reference
+  files when instructed, and provider requests may use them as one-off reference
   inputs. Renku must not register them as SQLite asset files.
 - `tmp/media/` contains temporary generated, downloaded, transformed, or
   cropped media.
-- `tmp/specs/` contains temporary Generation Spec JSON exports.
-- `tmp/receipts/` contains temporary provider receipt exports.
-- `tmp/operations/` contains CLI authoring and import documents.
+- `tmp/operations/media-generation/` contains temporary review, provenance,
+  and provider output documents.
+- `tmp/operations/` also contains other CLI authoring and import documents.
 - `tmp/qa/` contains review evidence, and `tmp/scratch/` contains other
   non-durable agent/debug files.
 - `production-assets/` contains clean post-production handoff files.

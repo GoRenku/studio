@@ -5,13 +5,13 @@ import { readOwnedAsset } from '../assets/projection.js';
 import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { readLocationRecord } from '../database/access/locations.js';
-import { withGenerationProject } from '../generation/project-operation.js';
+import { withProject } from '../project-operation.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
 
 export async function readLocationWorldResource(
   input: RenkuConfigPathOptions & { projectName?: string; locationId: string }
 ): Promise<LocationWorldResource> {
-  return withGenerationProject(input, ({ session }) => {
+  return withProject(input, ({ session }) => {
     const row = readLocationRecord(session, input.locationId);
     if (!row) {
       throw new ProjectDataError('PROJECT_DATA205', 'Location was not found.');

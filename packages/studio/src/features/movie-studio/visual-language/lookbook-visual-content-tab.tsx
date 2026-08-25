@@ -5,7 +5,7 @@ import type {
 } from '@gorenku/studio-core/client';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 import type { PreviewImage } from '@/ui/image-preview-dialog';
-import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
+import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
 import {
   lookbookImageFileUrl,
   lookbookSheetFileUrl,
@@ -75,7 +75,6 @@ export function LookbookVisualContentTab({
                     openGenerationRequestInspector({
                       projectName,
                       assetId: image.asset.id,
-                      assetFileId: file.id,
                     });
                   },
                 },
@@ -138,7 +137,6 @@ export function LookbookVisualContentTab({
                     openGenerationRequestInspector({
                       projectName,
                       assetId: sheet.asset.id,
-                      assetFileId: file.id,
                     });
                   },
                 },

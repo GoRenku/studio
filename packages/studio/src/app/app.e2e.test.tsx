@@ -1691,6 +1691,8 @@ function makeStudioAsset(options: {
     title: options.title,
     oneLineSummary: null,
     origin: 'imported',
+    generationProvenance: null,
+    authoredFrom: null,
     referenceName: null,
     tags: [],
     files: [

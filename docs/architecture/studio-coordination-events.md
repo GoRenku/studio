@@ -45,28 +45,18 @@ collection and in-page detail use the same URL-backed selection; Back clears
 only the nested plan and Shot focus.
 
 Generation previews use `studio.generationPreviewsRequested`. This event opens or
-updates the Generation Preview Dialog with an ordered array of one or more
-ordinary Core Previews. Each entry retains its own exact prompt and model,
-resolved references, provider preview data, typed configuration projection,
-diagnostics, and prompt-sheet metadata that an agent is about to submit. The
-CLI/agent request uses logical project references only; the Studio server
-resolves those references into Studio-safe browser URLs before appending the
-event.
+updates the Generation Preview Dialog with an ordered array projected from
+temporary review documents. Each entry retains the exact provider, model, media
+kind, top-level prompt, opaque native request, recursively discovered local
+references, and envelope diagnostics. The Studio server resolves those logical
+references into protected browser URLs before appending the event.
 
-`preview.configuration` is a Core-authored sectioned review projection. It
-describes the model route, provider route, and effective parameter values that
-Renku will send or deliberately leave to provider defaults. Studio renders that
-projection as read-only UI and must not inspect `providerPreview.payload`, parse
-provider schemas, or infer model-specific field support.
-
-The user-facing dialog intentionally renders only the review surface users
-need: prompt prose, resolved references, user-relevant configuration, footer
-cost estimate when present, and diagnostics when Core reports them. Low-level
-provider payloads and provider token order can remain in the event contract for
-CLI, agent, and future developer tooling without being visible in the Studio
-dialog. It is live UI coordination only: closed Studio sessions do not
-accumulate preview backlogs, and project services must not treat preview events
-as generation history.
+Preview and Asset Inspection render the same request view. Preview alone allows
+editing the top-level prompt; references and recursively presented configuration
+remain read-only. Update and Close do not generate media or resume an agent. The
+event is live UI coordination only: closed Studio sessions do not accumulate
+preview backlogs, and project services must not treat preview events as
+generation history or durable provenance.
 
 Decision history:
 
@@ -77,3 +67,4 @@ Decision history:
 - `../decisions/0030-use-unified-studio-resource-refresh-components.md`
 - `../decisions/0031-use-studio-server-owned-coordination-delivery.md`
 - `../decisions/0054-use-string-resource-keys-for-studio-projection-invalidation.md`
+- `../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md`

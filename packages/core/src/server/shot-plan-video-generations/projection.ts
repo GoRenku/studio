@@ -8,7 +8,6 @@ import { listSceneShotPlanRecords } from '../database/access/shot-plans/plan-rec
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { trashItems } from '../schema/index.js';
 import { studioSceneVideoGenerationsResourceKey } from '../studio-coordination/resource-keys.js';
-import { readShotPlanVideoSourceSpec } from './source-provenance.js';
 
 export function projectSceneShotPlanVideoGenerations(
   session: DatabaseSession,
@@ -20,8 +19,7 @@ export function projectSceneShotPlanVideoGenerations(
   const miscellaneous: ReturnType<typeof listProjectVideos> = [];
 
   for (const asset of listProjectVideos(session)) {
-    const spec = readShotPlanVideoSourceSpec(session, asset);
-    const shotPlanId = spec?.authoredFrom?.id;
+    const shotPlanId = asset.authoredFrom?.id;
     if (!shotPlanId) {
       continue;
     }

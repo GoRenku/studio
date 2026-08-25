@@ -16,6 +16,9 @@ import { ProjectDataError } from '../../project-data-error.js';
 import type { ReadSceneBeatsContextInput } from '../../project-data-service-contracts.js';
 import { sceneBeatsResourceKeys } from '../../scene-beats/storyboard-status.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
+import { projectMediaGenerationSceneContext } from '../../media-generation-context/scene-context.js';
+import { suggestBeatStoryboards, suggestLookbookMedia, suggestSceneSubjectMedia } from '../../media-generation-context/reference-suggestions.js';
+import { readMediaGenerationLookbooks } from '../../media-generation-context/visual-language-context.js';
 
 export async function readSceneBeatsContext(
   input: ReadSceneBeatsContextInput,
@@ -27,9 +30,19 @@ export async function readSceneBeatsContext(
     const activeRevision = readActiveSceneBeatsRevisionRecord(session, input.sceneId);
     const activeRevisionId = activeRevision?.id ?? null;
     const subjects = collectSceneSubjectIds(screenplay, scene.id);
+    const warnings: SceneBeatsContextReport['warnings'] = [];
+    const visualReferences = input.includeVisualReferences
+      ? projectVisualReferences({
+          session,
+          projectFolder: currentProject.projectFolder,
+          screenplay,
+          sceneId: scene.id,
+          warnings,
+        })
+      : undefined;
     return {
       valid: true,
-      warnings: [],
+      warnings,
       project: {
         projectName: currentProject.projectName,
         id: currentProject.projectId,
@@ -83,15 +96,37 @@ export async function readSceneBeatsContext(
             activeRevisionId,
           })
         : null,
-      ...(input.includeVisualReferences
-        ? {
-            visualReferences: {
-              note: 'Visual reference metadata is not included in context; inspect project assets when visual review is requested.',
-            },
-          }
-        : {}),
+      ...(visualReferences ? { visualReferences } : {}),
     };
   });
+}
+
+function projectVisualReferences(input: {
+  session: Parameters<typeof readMediaGenerationLookbooks>[0]['session'];
+  projectFolder: string;
+  screenplay: Screenplay;
+  sceneId: string;
+  warnings: SceneBeatsContextReport['warnings'];
+}): NonNullable<SceneBeatsContextReport['visualReferences']> {
+  const sceneContext = projectMediaGenerationSceneContext({
+    session: input.session,
+    screenplay: input.screenplay,
+    sceneId: input.sceneId,
+    warnings: input.warnings,
+  });
+  const visualLanguage = readMediaGenerationLookbooks({
+    session: input.session,
+    projectFolder: input.projectFolder,
+    kinds: ['production', 'storyboard'],
+  });
+  return {
+    visualLanguage,
+    suggestedReferences: [
+      ...suggestLookbookMedia({ lookbooks: visualLanguage, role: 'appearance', projectFolder: input.projectFolder, warnings: input.warnings }),
+      ...suggestSceneSubjectMedia({ sceneContext, projectFolder: input.projectFolder, warnings: input.warnings }),
+      ...suggestBeatStoryboards({ session: input.session, sceneId: input.sceneId, beatIds: sceneContext.selectedBeatIds, projectFolder: input.projectFolder, warnings: input.warnings }),
+    ],
+  };
 }
 
 function requireScene(screenplay: Screenplay, sceneId: string): Scene {

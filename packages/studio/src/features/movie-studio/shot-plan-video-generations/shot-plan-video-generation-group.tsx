@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useGenerationRequestInspectorDialog } from '@/features/generation-request-inspector/use-generation-request-inspector';
+import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
 import { deleteProjectVideoAsset } from '@/services/studio-shot-plan-video-generations-api';
 import type { StudioShotPlanVideoAsset } from '@/services/studio-shot-plan-video-generations-contracts';
 import { MediaCard } from '@/ui/media-card/media-card';
@@ -60,7 +60,6 @@ export function ShotPlanVideoGenerationGroup({
                   openGenerationRequestInspector({
                     projectName,
                     assetId: asset.id,
-                    assetFileId: file.id,
                   }),
               }}
               deleteAction={{
