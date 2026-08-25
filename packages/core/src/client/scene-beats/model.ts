@@ -156,6 +156,15 @@ export interface SceneStoryboardStatus extends SceneBeatsCommandReport {
   readyBeatIds: string[];
 }
 
+export interface SceneStoryboardImageCandidateInput {
+  projectName: string;
+  homeDir?: string;
+  sceneId: string;
+  sceneBeatsRevisionId: string;
+  beatId: string;
+  assetId: string;
+}
+
 export interface SceneStoryboardImagesImportDocument {
   select: boolean;
   title?: string;

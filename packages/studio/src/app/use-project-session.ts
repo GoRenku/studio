@@ -374,6 +374,7 @@ function readStudioRoute(): StudioRoute {
     const sceneTabParam = search.get('sceneTab');
     const beatParam = search.get('beat');
     const shotPlanParam = search.get('shotPlan');
+    const shotPlanTabParam = search.get('shotPlanTab');
     const shotParam = search.get('shot');
     const sceneTab = sceneTabParam ? readScenePanelTab(sceneTabParam) : undefined;
     if (sceneTabParam && !sceneTab) {
@@ -408,12 +409,39 @@ function readStudioRoute(): StudioRoute {
         routeError: 'Shot route state requires a Shot Plan.',
       };
     }
+    if (shotPlanTabParam && shotPlanTabParam !== 'shots' && shotPlanTabParam !== 'assets') {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: `Unknown Shot Plan detail tab: ${shotPlanTabParam}`,
+      };
+    }
+    if (shotPlanTabParam && !shotPlanParam) {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: 'Shot Plan detail tab requires a Shot Plan.',
+      };
+    }
+    if (shotPlanTabParam === 'assets' && shotParam) {
+      return {
+        screen: 'movieStudio',
+        projectName: decodeURIComponent(sceneRoute[1]),
+        selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
+        routeError: 'Shot focus is not valid on the Shot Plan Assets tab.',
+      };
+    }
     const selection: StudioSelection = {
       type: 'scene',
       id: decodeURIComponent(sceneRoute[2]),
       ...(sceneTab ? { sceneTab } : {}),
       ...(beatParam ? { beatId: beatParam } : {}),
       ...(shotPlanParam ? { shotPlanId: shotPlanParam } : {}),
+      ...(shotPlanTabParam === 'shots' || shotPlanTabParam === 'assets'
+        ? { shotPlanTab: shotPlanTabParam }
+        : {}),
       ...(shotParam ? { shotId: shotParam } : {}),
     };
     return {
@@ -666,6 +694,9 @@ function studioSelectionRoutePath(
     }
     if (selection.shotPlanId) {
       params.set('shotPlan', selection.shotPlanId);
+    }
+    if (selection.shotPlanTab && selection.shotPlanTab !== 'shots') {
+      params.set('shotPlanTab', selection.shotPlanTab);
     }
     if (selection.shotId) {
       params.set('shot', selection.shotId);

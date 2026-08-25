@@ -54,7 +54,7 @@ export function MediaGenerationRequestView({
             <div className='mx-auto grid w-full max-w-[900px] grid-cols-[repeat(2,minmax(0,420px))] gap-5 pt-[38px] pb-12'>
               {preview.references.map((reference) => (
                 <MediaGenerationReferenceCard
-                  key={`${reference.kind}:${reference.projectRelativePath}`}
+                  key={reference.requestPointer}
                   reference={reference}
                 />
               ))}

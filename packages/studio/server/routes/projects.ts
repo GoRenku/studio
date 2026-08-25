@@ -25,6 +25,7 @@ import { createShotPlansRoute } from './shot-plans.js';
 import { createTrashRoute } from './trash.js';
 import { createVisualLanguageRoute } from './visual-language.js';
 import { createShotPlanVideoGenerationsRoute } from './shot-plan-video-generations.js';
+import { createSceneStoryboardImagesRoute } from './scene-storyboard-images.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectsRouteProjectData;
@@ -64,6 +65,11 @@ export type ProjectsRouteProjectData = Pick<
   | 'readStudioSelectionContext'
   | 'listSceneShotPlans'
   | 'readShotPlan'
+  | 'readShotPlanImageAssets'
+  | 'discardShotPlanImageAsset'
+  | 'readSceneStoryboardStatus'
+  | 'selectSceneStoryboardImageCandidate'
+  | 'discardSceneStoryboardImageCandidate'
   | 'deleteShotPlan'
   | 'patchProjectInformation'
   | 'listAssets'
@@ -172,6 +178,7 @@ export function createProjectsRoute(
     .route('/:projectName', createContinuityRoute({ projectData, requireToken }))
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
     .route('/:projectName', createShotPlansRoute({ projectData, requireToken }))
+    .route('/:projectName', createSceneStoryboardImagesRoute({ projectData, requireToken }))
     .route(
       '/:projectName',
       createShotPlanVideoGenerationsRoute({ projectData, requireToken }),

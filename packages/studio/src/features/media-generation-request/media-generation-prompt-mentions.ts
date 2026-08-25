@@ -22,7 +22,7 @@ export function mediaGenerationPromptMentionQuery(
   caret: number,
 ): MediaGenerationPromptMentionQuery | null {
   const before = value.slice(0, caret);
-  const match = /(?:^|[\s([{])(@[A-Za-z0-9]*)$/.exec(before);
+  const match = /(?:^|[\s([{])(@\S*)$/.exec(before);
   if (!match) return null;
   const query = match[1]!;
   return { start: caret - query.length, end: caret, query };
@@ -60,10 +60,14 @@ export function filterMediaGenerationPromptMentions(
   mentions: MediaGenerationPromptMention[],
   query: string,
 ): MediaGenerationPromptMention[] {
-  const normalized = query.slice(1).toLocaleLowerCase();
+  const atMentionQuery = query.startsWith('@');
+  const normalized = atMentionQuery ? query.slice(1).toLocaleLowerCase() : query.toLocaleLowerCase();
   return mentions.filter((mention) =>
-    mention.value.slice(1).toLocaleLowerCase().includes(normalized) ||
-    mention.accessibleName.toLocaleLowerCase().includes(normalized)
+    (!atMentionQuery || mention.value.startsWith('@')) && (
+      (mention.value.startsWith('@') ? mention.value.slice(1) : mention.value)
+      .toLocaleLowerCase().includes(normalized) ||
+      mention.accessibleName.toLocaleLowerCase().includes(normalized)
+    )
   );
 }
 

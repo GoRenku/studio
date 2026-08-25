@@ -35,7 +35,7 @@ describe('Renku CLI generation surface', () => {
     const { io, stdout } = createIo();
     await expect(runRenkuCli(['--help'], { io })).resolves.toBe(0);
     const help = stdout.mock.calls.flat().join('\n');
-    expect(help).toContain('generation           Read context, validate, preview, execute, or recover');
+    expect(help).toContain('generation           Read context/schema, validate, preview, execute, or recover a provider request');
     expect(help).not.toMatch(/--simulate|--approval-token|--receipt|--source-spec/);
     expect(help).not.toMatch(/generation (model|spec|estimate|run)/);
   });

@@ -357,6 +357,7 @@ export function MovieStudioScreen({
                   sceneTab={selection.sceneTab}
                   beatId={selection.beatId}
                   shotPlanId={selection.shotPlanId}
+                  shotPlanTab={selection.shotPlanTab}
                   shotId={selection.shotId}
                   onSelect={selectMovieStudioSurface}
                   onHeaderActionChange={handleActiveSceneHeaderActionChange}

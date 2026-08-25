@@ -18,6 +18,17 @@ export function createMediaEngine(providers: Iterable<MediaProvider>): MediaEngi
   }
 
   return {
+    readInputSchema(providerId, model, context) {
+      const provider = requireProvider(registry, providerId, model);
+      if (!provider.readInputSchema) {
+        throw new EngineError(
+          'ENGINE_INPUT_SCHEMA_UNAVAILABLE',
+          `Provider "${providerId}" does not expose a live input schema.`,
+          { provider: providerId, model },
+        );
+      }
+      return provider.readInputSchema(model, context);
+    },
     validate(providerId, request, context) {
       return requireProvider(registry, providerId, request.model).validate(request, context);
     },

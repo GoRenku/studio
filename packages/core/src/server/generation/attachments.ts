@@ -20,6 +20,7 @@ import {
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { attachSceneDialogueAudioMedia } from '../scene-dialogue-audio-workspace/attachments.js';
+import { attachImageEditMedia } from '../image-edit-attachments/index.js';
 
 export interface AttachGenerationMediaInput {
   purpose: MediaPurpose;
@@ -50,6 +51,20 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   const generationProvenance = input.generationProvenance === undefined
     ? null
     : validateMediaGenerationProvenance(input.generationProvenance);
+  if (input.purpose === 'image.edit') {
+    if (input.target.kind !== 'asset' || !generationProvenance) {
+      throw new ProjectDataError(
+        'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
+        'image.edit attachment requires an Asset target and exact provenance.',
+      );
+    }
+    return attachImageEditMedia({
+      ...input,
+      purpose: 'image.edit',
+      target: input.target,
+      generationProvenance,
+    });
+  }
   if (input.purpose === 'scene.dialogue-audio') {
     if (input.target.kind !== 'sceneDialogue' || !generationProvenance) {
       throw new ProjectDataError(

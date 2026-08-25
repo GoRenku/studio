@@ -2,7 +2,8 @@
 
 This is the compact contract reference for the architecture accepted by
 [Decision 0086](../../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md)
-and [Decision 0087](../../decisions/0087-use-deterministic-advisory-media-generation-context.md).
+[Decision 0087](../../decisions/0087-use-deterministic-advisory-media-generation-context.md),
+and [Decision 0088](../../decisions/0088-use-exact-request-references-and-source-derived-image-continuation.md).
 
 ## Public Core contracts
 
@@ -50,10 +51,12 @@ interface MediaGenerationContextReport {
 `Asset.generationProvenance` is nullable. `Asset.authoredFrom` is nullable weak
 Shot Plan context used only by current video grouping/invalidation behavior.
 
-Preview and Inspection share `MediaGenerationPreviewResource`. Preview includes
+Preview and Inspection share `MediaGenerationPreviewResource`. Its references
+contain `requestPointer`, media kind, Project-relative path, required
+`reviewLabel`, optional exact `promptMention`, optional browser URL, and
+availability; they expose no Asset ids. Preview includes
 `documentPath` and is editable only when a prompt exists. Inspection omits the
-path and is never editable. References contain only media kind, Project-relative
-path, optional browser URL, and availability; they expose no Asset ids.
+path and is never editable.
 
 `MediaGenerationContextReport` is a current, non-durable Core projection.
 Suggested references are relationship-derived evidence, not an allowlist,
@@ -63,11 +66,14 @@ availability, and canonical display-selection state.
 
 ## Public Engines contract
 
-`MediaEngine` delegates `validate`, `execute`, and `recover` by exact provider id.
+`MediaEngine` delegates `readInputSchema`, `validate`, `execute`, and `recover`
+by exact provider id.
 Providers receive `ProviderRequest { model, input }`, opaque credentials, cache,
 fetch, cancellation, timing, and—during execution—an output directory. Results
 contain normalized downloaded artifacts, optional provider request id, and an
-optional opaque receipt. Exact local files use `{ $file, mimeType? }`.
+optional opaque receipt. Exact local files use
+`{ $file, mimeType?, reviewLabel?, promptMention? }`; substitution replaces the
+whole marker so review annotations never reach provider validation or upload.
 
 Supported production provider ids are `fal-ai`, `replicate`, `wavespeed-ai`, and
 `elevenlabs`. World Labs uses the focused location-world API. `codex` is review
@@ -83,6 +89,10 @@ Core review/provenance codes:
 - `CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND`
 - `CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT`
 - `CORE_MEDIA_GENERATION_LOCAL_MEDIA_UNSUPPORTED`
+- `CORE_MEDIA_GENERATION_REFERENCE_MARKER_INVALID`
+- `CORE_MEDIA_GENERATION_REFERENCE_LABEL_INVALID`
+- `CORE_MEDIA_GENERATION_REFERENCE_MENTION_INVALID`
+- `CORE_MEDIA_GENERATION_REFERENCE_MENTION_DUPLICATE`
 - `CORE_MEDIA_GENERATION_PROVENANCE_INVALID`
 - `CORE_MEDIA_GENERATION_PROVENANCE_UNSAFE`
 - `CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED`
@@ -92,6 +102,17 @@ Core review/provenance codes:
 - `CORE_MEDIA_GENERATION_CONTEXT_SCOPE_INVALID`
 - `CORE_MEDIA_GENERATION_CONTEXT_GAP` (warning)
 - `CORE_MEDIA_GENERATION_CONTEXT_REFERENCE_FILE_UNAVAILABLE` (warning)
+- `CORE_IMAGE_EDIT_SOURCE_INVALID`
+- `CORE_IMAGE_EDIT_SOURCE_REFERENCE_MISSING`
+- `CORE_IMAGE_EDIT_CONTINUATION_UNSUPPORTED`
+- `CORE_IMAGE_EDIT_OWNER_INVALID`
+- `CORE_IMAGE_EDIT_SURFACE_UNAVAILABLE`
+- `CORE_SHOT_PLAN_IMAGE_ASSETS_NOT_FOUND`
+- `CORE_SCENE_STORYBOARD_CANDIDATE_CONTEXT_INVALID`
+
+Engines reports `ENGINE_INPUT_SCHEMA_UNAVAILABLE` when the selected provider
+does not expose live schema inspection and `ENGINE_LOCAL_MEDIA_INVALID` when an
+exact local-file marker has malformed file or annotation values.
 
 The CLI preserves closed `EngineErrorCode` values and uses
 `PROVIDER_CREDENTIALS004` for a missing configured credential, `CLI144` when

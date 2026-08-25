@@ -27,6 +27,10 @@ import {
   validateSceneBeatsOperations,
 } from '../scene-beats/operations.js';
 import { readSceneStoryboardStatus } from '../scene-beats/storyboard-status.js';
+import {
+  discardSceneStoryboardImageCandidate,
+  selectSceneStoryboardImageCandidate,
+} from '../scene-beats/storyboard-image-candidates.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createScreenplayServiceWiring(): Pick<
@@ -45,6 +49,7 @@ export function createScreenplayServiceWiring(): Pick<
   | 'setActiveSceneBeatsRevision'
   | 'validateSceneBeatsOperations' | 'applySceneBeatsOperations'
   | 'readSceneStoryboardStatus'
+  | 'selectSceneStoryboardImageCandidate' | 'discardSceneStoryboardImageCandidate'
 > {
   return {
     readScreenplayStatus, readScreenplayStructure,
@@ -60,5 +65,6 @@ export function createScreenplayServiceWiring(): Pick<
     setActiveSceneBeatsRevision,
     validateSceneBeatsOperations, applySceneBeatsOperations,
     readSceneStoryboardStatus,
+    selectSceneStoryboardImageCandidate, discardSceneStoryboardImageCandidate,
   };
 }

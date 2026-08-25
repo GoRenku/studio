@@ -20,13 +20,18 @@ export function mediaGenerationPromptReferenceCompletion(
 ): Extension {
   const source: CompletionSource = (context: CompletionContext) => {
     const value = context.state.doc.toString();
-    const query = mediaGenerationPromptMentionQuery(value, context.pos);
-    if (!query) return null;
-    const matchingMentions = filterMediaGenerationPromptMentions(mentions, query.query);
+    const query = context.explicit
+      ? null
+      : mediaGenerationPromptMentionQuery(value, context.pos);
+    if (!query && !context.explicit) return null;
+    const matchingMentions = filterMediaGenerationPromptMentions(
+      mentions,
+      query?.query ?? '',
+    );
     if (matchingMentions.length === 0) return null;
     return {
-      from: query.start,
-      to: query.end,
+      from: query?.start ?? context.pos,
+      to: query?.end ?? context.pos,
       filter: false,
       options: matchingMentions.map((mention) => completionForMention(mention)),
     };

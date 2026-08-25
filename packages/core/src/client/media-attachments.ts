@@ -34,7 +34,7 @@ export type MediaTarget =
   | { kind: 'sceneDialogue'; id: string };
 
 export const MEDIA_PURPOSE_TARGET_KINDS: Record<MediaPurpose, MediaTarget['kind']> = {
-  'image.create': 'project',
+  'image.create': 'shotPlan',
   'image.edit': 'asset',
   'project.cover': 'project',
   'shot-plan.video-generation': 'shotPlan',

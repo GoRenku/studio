@@ -12,10 +12,17 @@ export function isLocalMediaFile(value: unknown): value is LocalMediaFile {
   }
   const record = value as Record<string, unknown>;
   const keys = Object.keys(record);
-  return keys.every((key) => key === '$file' || key === 'mimeType')
+  return keys.every((key) => (
+    key === '$file'
+    || key === 'mimeType'
+    || key === 'reviewLabel'
+    || key === 'promptMention'
+  ))
     && typeof record.$file === 'string'
     && record.$file.length > 0
-    && (record.mimeType === undefined || typeof record.mimeType === 'string');
+    && (record.mimeType === undefined || typeof record.mimeType === 'string')
+    && (record.reviewLabel === undefined || typeof record.reviewLabel === 'string')
+    && (record.promptMention === undefined || typeof record.promptMention === 'string');
 }
 
 export function findLocalMediaFiles(value: JsonValue): LocalMediaFile[] {
@@ -30,6 +37,7 @@ export async function substituteLocalMediaFiles(
   model: string,
   upload: (file: ResolvedLocalMediaFile) => Promise<string>,
 ): Promise<JsonValue> {
+  assertValidLocalMediaMarker(value, provider, model);
   if (isLocalMediaFile(value)) {
     const file = await resolveLocalFile(value, provider, model);
     try {
@@ -63,6 +71,7 @@ export async function substituteLocalMediaFiles(
 }
 
 export function replaceLocalMediaFilesWithValidationUrls(value: JsonValue): JsonValue {
+  assertValidLocalMediaMarker(value, 'engines');
   if (isLocalMediaFile(value)) {
     return `https://local-media.invalid/${encodeURIComponent(value.$file)}`;
   }
@@ -81,6 +90,7 @@ export function replaceLocalMediaFilesWithValidationUrls(value: JsonValue): Json
 }
 
 function visit(value: JsonValue, onMarker: (marker: LocalMediaFile) => void): void {
+  assertValidLocalMediaMarker(value, 'engines');
   if (isLocalMediaFile(value)) {
     onMarker(value);
     return;
@@ -91,6 +101,34 @@ function visit(value: JsonValue, onMarker: (marker: LocalMediaFile) => void): vo
   }
   if (value !== null && typeof value === 'object') {
     Object.values(value).forEach((entry) => visit(entry, onMarker));
+  }
+}
+
+function assertValidLocalMediaMarker(
+  value: JsonValue,
+  provider: string,
+  model?: string,
+): void {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return;
+  }
+  const record = value as Record<string, JsonValue>;
+  if (!Object.hasOwn(record, '$file')) {
+    return;
+  }
+  const keys = Object.keys(record);
+  const markerKeysOnly = keys.every((key) => (
+    key === '$file'
+    || key === 'mimeType'
+    || key === 'reviewLabel'
+    || key === 'promptMention'
+  ));
+  if (markerKeysOnly && !isLocalMediaFile(value)) {
+    throw new EngineError(
+      'ENGINE_LOCAL_MEDIA_INVALID',
+      'Local media markers require a non-empty $file string and string annotation values.',
+      { provider, model },
+    );
   }
 }
 

@@ -1502,7 +1502,23 @@ diagnostics. `context` is read-only and emits no Studio mutation event.
 Provider Skills write one temporary review document under
 `tmp/operations/media-generation/`. The document contains only provider, model,
 media kind, prompt, and opaque provider-native request JSON. Local project media
-uses exact recursive `{ "$file": "path", "mimeType": "..." }` markers.
+uses exact recursive
+`{ "$file": "path", "mimeType": "...", "reviewLabel": "meaning", "promptMention": "exact token" }`
+markers. `reviewLabel` is required for Renku review; `promptMention` is optional
+and is never derived from media kind.
+
+Inspect the selected provider/model's live raw input schema before authoring its
+native request:
+
+```bash
+renku generation schema show \
+  --provider <provider> \
+  --model <model> \
+  --json
+```
+
+This command supplies technical fields and constraints only. Retained model
+prompt guides remain the editorial authority for writing an effective prompt.
 
 Validate an Engines-owned provider request:
 
@@ -1596,7 +1612,21 @@ renku media import --purpose cast.profile --target cast:<cast-member-id> \\
 
 renku media import --purpose lookbook.image --target lookbook:<lookbook-id> \\
   --source media/lookbook-reference.png --title "Lookbook image" --select --json
+
+renku media import --purpose image.create --target shot-plan:<shot-plan-id> \\
+  --source tmp/operations/media-generation/output/reference.png \\
+  --provenance tmp/operations/media-generation/provenance.json --json
+
+renku media import --purpose image.edit --target asset:<source-asset-id> \\
+  --source tmp/operations/media-generation/output/edited.png \\
+  --provenance tmp/operations/media-generation/provenance.json --json
 ```
+
+`image.create` becomes an unselected generic Reference Image beside that exact
+Shot Plan. `image.edit` accepts no destination flag: Core verifies that
+provenance references a current source file and derives the new unselected
+candidate's same-place owner, type, canonical path, and surface from the source
+Asset's durable relationships.
 
 Scene Storyboard Sheet keeps its focused grouped attachment document:
 

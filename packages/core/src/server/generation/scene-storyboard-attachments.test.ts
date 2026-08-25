@@ -43,7 +43,7 @@ describe('Scene storyboard attachment', () => {
       prompt: 'One exact storyboard panel.',
       request: {
         prompt: 'One exact storyboard panel.',
-        image_urls: [{ $file: 'lookbooks/storyboard/sheet.png', mimeType: 'image/png' }],
+        image_urls: [{ $file: 'lookbooks/storyboard/sheet.png', mimeType: 'image/png', reviewLabel: 'Storyboard sheet source' }],
       },
       receipt: { requestId: 'fal_storyboard_1' },
     };

@@ -4,6 +4,7 @@ import type {
   StudioShotImageCandidateCollection,
   StudioShotImageCandidatePage,
   StudioShotPlansResponse,
+  StudioShotPlanImageAssets,
   StudioShotSelectionMutationResponse,
 } from './studio-shot-plans-contracts';
 
@@ -25,6 +26,29 @@ export async function deleteStudioShotPlan(input: {
   return readJson<StudioRecoverableMutationResponse>(
     shotPlanUrl(input.projectName, input.shotPlanId),
     mutationRequest('DELETE')
+  );
+}
+
+export async function readStudioShotPlanImageAssets(input: {
+  projectName: string;
+  shotPlanId: string;
+  signal?: AbortSignal;
+}): Promise<StudioShotPlanImageAssets> {
+  const body = await readJson<{ resource: StudioShotPlanImageAssets }>(
+    `${shotPlanUrl(input.projectName, input.shotPlanId)}/image-assets`,
+    { signal: input.signal },
+  );
+  return body.resource;
+}
+
+export async function deleteStudioShotPlanImageAsset(input: {
+  projectName: string;
+  shotPlanId: string;
+  assetId: string;
+}): Promise<StudioRecoverableMutationResponse> {
+  return readJson<StudioRecoverableMutationResponse>(
+    `${shotPlanUrl(input.projectName, input.shotPlanId)}/image-assets/${encodeURIComponent(input.assetId)}`,
+    mutationRequest('DELETE'),
   );
 }
 

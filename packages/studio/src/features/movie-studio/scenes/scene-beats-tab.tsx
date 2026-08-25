@@ -15,6 +15,8 @@ import {
 } from '@/hooks/use-studio-resource-refresh';
 import { SceneBeatsEmpty } from './scene-beats-empty';
 import { beatLabel } from './scene-beat-labels';
+import { Button } from '@/ui/button';
+import { BeatStoryboardImageCandidatesDialog } from './beat-storyboard-image-candidates-dialog';
 
 interface SceneBeatsTabProps {
   projectName: string;
@@ -37,6 +39,7 @@ export function SceneBeatsTab({
     useState<SceneBeatsResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
+  const [candidateBeatId, setCandidateBeatId] = useState<string | null>(null);
 
   const loadResource = useCallback(() => {
     let cancelled = false;
@@ -192,6 +195,13 @@ export function SceneBeatsTab({
                 {selectedBeat.title}
               </h2>
             </div>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setCandidateBeatId(selectedBeat.id)}
+            >
+              Manage Storyboard Images
+            </Button>
             <ReviewField label='Description' value={selectedBeat.description} />
             <ReviewField label='Narrative Development' value={selectedBeat.narrativeDevelopment} />
             <ReviewField
@@ -220,6 +230,21 @@ export function SceneBeatsTab({
         currentIndex={0}
         onOpenChange={(open) => !open && setPreviewImage(null)}
       />
+      {candidateBeatId ? (
+        <BeatStoryboardImageCandidatesDialog
+          projectName={projectName}
+          sceneId={sceneId}
+          sceneBeatsRevisionId={resource.activeRevisionId!}
+          beatId={candidateBeatId}
+          beatTitle={beats.find((beat) => beat.id === candidateBeatId)?.title ?? ''}
+          aspectRatio={storyboardAspectRatio}
+          open
+          onOpenChange={(open) => {
+            if (!open) setCandidateBeatId(null);
+          }}
+          onSceneBeatsChange={loadResource}
+        />
+      ) : null}
     </div>
   );
 }

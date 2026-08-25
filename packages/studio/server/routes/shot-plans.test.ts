@@ -124,6 +124,35 @@ describe('Shot Plans Hono route', () => {
     });
     expect(JSON.stringify(discardedBody)).not.toContain('/tmp/renku');
   });
+
+  it('delegates exact Shot Plan image projection and focused discard once', async () => {
+    const asset = { ...makeAsset('asset_plan'), owner: { kind: 'project' as const } };
+    const readShotPlanImageAssets = vi.fn(async () => ({
+      shotPlan: { id: 'plan one', sceneId: 'scene_opening', title: 'Plan' },
+      groups: [{ role: 'reference' as const, assets: [asset] }],
+      resourceKeys: ['surface:shotPlan:plan one:image-assets'],
+    }));
+    const discardShotPlanImageAsset = vi.fn(async () => recoverableReport());
+    const app = mountedRoute({ readShotPlanImageAssets, discardShotPlanImageAsset });
+
+    const read = await app.request(
+      '/constantinople/screenplay/shot-plans/plan%20one/image-assets',
+    );
+    const discarded = await app.request(
+      '/constantinople/screenplay/shot-plans/plan%20one/image-assets/asset_plan',
+      { method: 'DELETE' },
+    );
+
+    expect(readShotPlanImageAssets).toHaveBeenCalledWith({
+      projectName: 'constantinople', shotPlanId: 'plan one',
+    });
+    expect((await read.json()).resource.groups[0].assets[0].files[0].url)
+      .toContain('/assets/asset_plan/files/');
+    expect(discardShotPlanImageAsset).toHaveBeenCalledWith({
+      projectName: 'constantinople', shotPlanId: 'plan one', assetId: 'asset_plan',
+    });
+    expect(discarded.status).toBe(200);
+  });
 });
 
 function mountedRoute(

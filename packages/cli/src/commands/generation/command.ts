@@ -17,6 +17,7 @@ import { recoverGenerationRequest } from './recover.js';
 import { showGenerationPreview } from './preview.js';
 import { validateGenerationRequest } from './validate.js';
 import { showGenerationContext } from './context.js';
+import { showGenerationSchema } from './schema.js';
 
 export interface GenerationCommandFlags {
   project?: string;
@@ -27,6 +28,8 @@ export interface GenerationCommandFlags {
   target?: string;
   revision?: string;
   beat?: string | string[];
+  provider?: string;
+  model?: string;
 }
 
 export type GenerationCommandRuntime = CliCommandRuntime & {
@@ -49,6 +52,7 @@ export type GenerationCommandInput = Parameters<
 
 const handlers = [
   { path: ['context'], run: showGenerationContext },
+  { path: ['schema', 'show'], run: showGenerationSchema },
   { path: ['validate'], run: validateGenerationRequest },
   { path: ['preview', 'show'], run: showGenerationPreview },
   { path: ['execute'], run: executeGenerationRequest },
@@ -77,7 +81,7 @@ export async function runGenerationCommand(options: {
     unknownCommand: (commandPath) => new StructuredError({
       code: 'CLI019',
       message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,
-      suggestion: 'Use generation context, validate, preview show, execute, or recover.',
+      suggestion: 'Use generation context, schema show, validate, preview show, execute, or recover.',
     }),
   });
   writeJson(options.io, result);

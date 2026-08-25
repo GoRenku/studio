@@ -41,8 +41,8 @@ describe('standalone MediaEngine provider seam', () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-engine-local-media-'));
     const filePath = path.join(directory, 'reference.png');
     await fs.writeFile(filePath, 'pixels');
-    const input = { nested: [{ $file: filePath, mimeType: 'image/png' }], untouched: { $file: filePath, extra: true } };
-    expect(findLocalMediaFiles(input)).toEqual([{ $file: filePath, mimeType: 'image/png' }]);
+    const input = { nested: [{ $file: filePath, mimeType: 'image/png', reviewLabel: 'Reference', promptMention: 'Image 1' }], untouched: { $file: filePath, extra: true } };
+    expect(findLocalMediaFiles(input)).toEqual([{ $file: filePath, mimeType: 'image/png', reviewLabel: 'Reference', promptMention: 'Image 1' }]);
     await expect(substituteLocalMediaFiles(input, 'atlas', 'model', async (file) => {
       expect(Buffer.from(file.bytes).toString()).toBe('pixels');
       return 'https://provider.invalid/upload/reference';
@@ -50,6 +50,37 @@ describe('standalone MediaEngine provider seam', () => {
       nested: ['https://provider.invalid/upload/reference'],
       untouched: { $file: filePath, extra: true },
     });
+  });
+
+  it('fails clearly when an exact local media marker has malformed annotations', async () => {
+    expect(() => findLocalMediaFiles({
+      reference: { $file: '/tmp/reference.png', reviewLabel: 42 },
+    })).toThrowError(expect.objectContaining({ code: 'ENGINE_LOCAL_MEDIA_INVALID' }));
+    await expect(substituteLocalMediaFiles(
+      { reference: { $file: '/tmp/reference.png', promptMention: false } },
+      'atlas',
+      'model',
+      async () => 'https://provider.invalid/upload/reference',
+    )).rejects.toMatchObject({
+      code: 'ENGINE_LOCAL_MEDIA_INVALID',
+      provider: 'atlas',
+      model: 'model',
+    });
+  });
+
+  it('reads exact provider schema and fails closed when the capability is absent', async () => {
+    const readInputSchema = vi.fn(async () => ({ type: 'object', properties: { prompt: { type: 'string' } } }));
+    const engine = createMediaEngine([{ ...atlasProvider(), readInputSchema }]);
+    await expect(engine.readInputSchema('atlas', 'model', providerContext())).resolves.toEqual({
+      type: 'object',
+      properties: { prompt: { type: 'string' } },
+    });
+    expect(readInputSchema).toHaveBeenCalledWith('model', expect.any(Object));
+    expect(() => createMediaEngine([atlasProvider()]).readInputSchema(
+      'atlas',
+      'model',
+      providerContext(),
+    )).toThrowError(expect.objectContaining({ code: 'ENGINE_INPUT_SCHEMA_UNAVAILABLE' }));
   });
 
   it('preserves cancellation and structured provider failures', async () => {

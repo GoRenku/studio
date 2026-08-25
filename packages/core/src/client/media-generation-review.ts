@@ -24,8 +24,11 @@ export interface MediaGenerationProvenance extends MediaGenerationReviewDocument
 }
 
 export interface MediaGenerationReferenceView {
+  requestPointer: string;
   kind: MediaGenerationKind;
   projectRelativePath: ProjectRelativePath;
+  reviewLabel: string;
+  promptMention?: string;
   browserUrl?: string;
   available: boolean;
 }

@@ -13,6 +13,7 @@ import {
   studioVisualLanguageLookbookResourceKey,
   studioSceneShotPlansResourceKey,
   studioSceneVideoGenerationsResourceKey,
+  studioShotPlanImageAssetsResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import type { AssetSelectionTarget } from '../../client/assets.js';
 import { requireShotRecord } from '../database/access/shot-plans/shot-records.js';
@@ -142,6 +143,14 @@ type AttachmentBuilder = (
 const attachmentBuilders: Partial<
   Record<MediaPurpose, AttachmentBuilder>
 > = {
+  'image.create': (input) =>
+    shotPlanVideoReferenceImageDetails(
+      requireTarget(input, 'shotPlan'),
+      requireShotPlanId(input),
+      'reference',
+      'Shot Plan Reference Image',
+      'shot_plan_video_reference',
+    ),
   'project.cover': (input) =>
     details(
       requireTarget(input, 'project'),
@@ -283,6 +292,7 @@ const attachmentBuilders: Partial<
 
 export function generationAttachmentAssetType(purpose: MediaPurpose): string {
   const assetTypes: Partial<Record<MediaPurpose, string>> = {
+    'image.create': 'shot_plan_video_reference',
     'project.cover': 'project_cover',
     'shot-plan.video-generation': 'shot_plan_video',
     'shot-plan.video-first-frame': 'shot_plan_video_first_frame',
@@ -344,7 +354,7 @@ function shotPlanVideoReferenceImageDetails(
     {
       file: { kind: 'shotPlan.videoReferenceImage', shotPlanId, role },
       owner: { kind: 'project' },
-      resourceKeys: [],
+      resourceKeys: [studioShotPlanImageAssetsResourceKey(shotPlanId)],
     },
     label,
     assetType,

@@ -1,7 +1,8 @@
 # Media Generation
 
-Decisions [0086](../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md)
-and [0087](../decisions/0087-use-deterministic-advisory-media-generation-context.md)
+Decisions [0086](../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md),
+[0087](../decisions/0087-use-deterministic-advisory-media-generation-context.md),
+and [0088](../decisions/0088-use-exact-request-references-and-source-derived-image-continuation.md)
 define the current media-generation architecture.
 
 ## Ownership
@@ -68,8 +69,19 @@ Only these top-level fields are accepted. `prompt` may be `null`. `request` is
 opaque JSON and may contain recursive exact local-media markers:
 
 ```json
-{ "$file": "media/reference.png", "mimeType": "image/png" }
+{
+  "$file": "media/reference.png",
+  "mimeType": "image/png",
+  "reviewLabel": "Council chamber — Location reference",
+  "promptMention": "@Image1"
+}
 ```
+
+`reviewLabel` is required for every reviewed Renku marker. `promptMention` is
+optional and is the exact provider/model-native text to insert; it may contain
+spaces or omit `@`. Repeated use of one file remains separate by request JSON
+Pointer. Studio completion uses only markers in this request and never all
+context suggestions or all Project Assets.
 
 Preview displays prompt, references, read-only configuration, and diagnostics.
 It may atomically update only the top-level prompt. Update does not rebuild
@@ -115,6 +127,7 @@ Every purpose-specific Media Producer workflow begins with:
 
 ```bash
 renku generation context --purpose <purpose> --target <target> --json
+renku generation schema show --provider <provider> --model <model> --json
 ```
 
 For `scene.storyboard-sheet`, `--revision` chooses the exact Scene Beats
@@ -152,6 +165,13 @@ renku generation execute --file tmp/operations/media-generation/request.json --o
 renku generation recover --file tmp/operations/media-generation/request.json --request-id <provider-job-id> --output tmp/operations/media-generation/output --json
 renku media import --purpose <purpose> --target <target> --source <path> --provenance <provenance-json> --json
 ```
+
+Schema inspection returns the selected provider's live raw input schema. It is
+technical field authority, not editorial prompting guidance. `image.create`
+uses `--target shot-plan:<id>` and appears as a generic Reference Image in that
+Plan's Assets tab. `image.edit` uses `--target asset:<id>`; Core derives the
+same-place destination from the exact source Asset and accepts no separate
+destination choice.
 
 Preview accepts `codex` because built-in image generation can share the review
 envelope. Validate, execute, and recover reject `codex`; it is a harness-gated

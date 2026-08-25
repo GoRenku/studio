@@ -174,6 +174,20 @@ export function fakeProjectDataService(): NonNullable<
     async readShotPlan() {
       throw new Error('Shot Plan fixture was not configured.');
     },
+    async readShotPlanImageAssets(input) {
+      return {
+        shotPlan: { id: input.shotPlanId, sceneId: 'scene_opening', title: 'Opening' },
+        groups: [],
+        resourceKeys: [`surface:shotPlan:${input.shotPlanId}:image-assets`],
+      };
+    },
+    async discardShotPlanImageAsset() {
+      return makeRecoverableMutationReport({
+        changeType: 'shotPlan.imageAssetDiscarded',
+        itemId: 'asset_image',
+        resourceKeys: [],
+      });
+    },
     async deleteShotPlan() {
       throw new Error('Shot Plan deletion fixture was not configured.');
     },
@@ -302,6 +316,36 @@ export function fakeProjectDataService(): NonNullable<
         locationLabels: {},
         propLabels: {},
       };
+    },
+    async readSceneStoryboardStatus(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { projectName: project.projectName, id: project.id },
+        resourceKeys: [],
+        sceneId: input.sceneId,
+        sceneBeatsRevisionId: input.sceneBeatsRevisionId,
+        beats: [],
+        missingBeatIds: [],
+        readyBeatIds: [],
+      };
+    },
+    async selectSceneStoryboardImageCandidate(input) {
+      return {
+        valid: true,
+        warnings: [],
+        project: { projectName: project.projectName, id: project.id, projectFolder: '/tmp/renku/constantinople' },
+        target: { kind: 'sceneBeat' as const, sceneId: input.sceneId, beatId: input.beatId },
+        selectedAssetId: input.assetId,
+        resourceKeys: [],
+      };
+    },
+    async discardSceneStoryboardImageCandidate() {
+      return makeRecoverableMutationReport({
+        changeType: 'sceneBeat.storyboardImageDiscarded',
+        itemId: 'asset_storyboard',
+        resourceKeys: [],
+      });
     },
     async readScreenplayBeatGalleryResource() {
       return {

@@ -75,7 +75,7 @@ Commands
   settings show        Show the complete Project Settings document
   settings set         Replace Project Settings from a complete JSON document
   inspiration          Manage Inspiration folders and analysis
-  generation           Read context, validate, preview, execute, or recover a provider request
+  generation           Read context/schema, validate, preview, execute, or recover a provider request
   lookbook             Manage Lookbooks and Lookbook images
   media                Import media files for a purpose
   project current      Show the current authoring project
@@ -107,6 +107,8 @@ Options
   --media-kind         Asset media kind
   --output             Project-relative provider output directory
   --request-id         Provider request id for generation recovery
+  --provider           Provider id for generation schema inspection
+  --model              Provider-native model id for generation schema inspection
   --provenance         Media Generation Provenance JSON file
   --locale             Project locale id
   --cast               Cast member id for cast commands
@@ -244,6 +246,12 @@ function createCliFlags() {
       type: 'string',
     },
     requestId: {
+      type: 'string',
+    },
+    provider: {
+      type: 'string',
+    },
+    model: {
       type: 'string',
     },
     provenance: {
@@ -685,6 +693,8 @@ export async function runRenkuCli(
             target: cli.flags.target,
             revision: cli.flags.revision,
             beat: cli.flags.beat?.length ? cli.flags.beat : undefined,
+            provider: cli.flags.provider,
+            model: cli.flags.model,
           },
           json: cli.flags.json,
           io,

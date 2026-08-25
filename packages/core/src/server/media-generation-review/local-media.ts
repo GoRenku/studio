@@ -20,7 +20,17 @@ import { withProject } from '../project-operation.js';
 interface Marker {
   $file: string;
   mimeType?: string;
+  reviewLabel?: string;
+  promptMention?: string;
 }
+
+interface MarkerOccurrence {
+  marker: Marker;
+  requestPointer: string;
+}
+
+const MAX_REVIEW_LABEL_LENGTH = 256;
+const MAX_PROMPT_MENTION_LENGTH = 128;
 
 export function projectLocalMediaReferences(input: {
   request: JsonValue;
@@ -32,14 +42,20 @@ export function projectLocalMediaReferences(input: {
   diagnostics: DiagnosticIssue[];
 } {
   const diagnostics: DiagnosticIssue[] = [];
-  const seen = new Set<string>();
   const references: MediaGenerationReferenceView[] = [];
-  for (const marker of findMarkers(input.request)) {
-    const projectRelativePath = normalizeReferencePath(marker.$file);
-    if (seen.has(projectRelativePath)) {
-      continue;
+  const mentions = new Set<string>();
+  for (const { marker, requestPointer } of findMarkers(input.request)) {
+    validateMarkerAnnotations(marker);
+    if (marker.promptMention !== undefined) {
+      if (mentions.has(marker.promptMention)) {
+        throw new ProjectDataError(
+          'CORE_MEDIA_GENERATION_REFERENCE_MENTION_DUPLICATE',
+          `Media generation prompt mention is used more than once: ${marker.promptMention}.`,
+        );
+      }
+      mentions.add(marker.promptMention);
     }
-    seen.add(projectRelativePath);
+    const projectRelativePath = normalizeReferencePath(marker.$file);
     const record = input.session.db
       .select({ mimeType: assetFiles.mimeType, mediaKind: assetFiles.mediaKind })
       .from(assetFiles)
@@ -66,8 +82,11 @@ export function projectLocalMediaReferences(input: {
       ));
     }
     references.push({
+      requestPointer,
       kind,
       projectRelativePath,
+      reviewLabel: marker.reviewLabel,
+      ...(marker.promptMention === undefined ? {} : { promptMention: marker.promptMention }),
       available,
       ...(available ? {
         browserUrl: `/studio-api/projects/${encodeURIComponent(input.projectName)}/generation-reference-file?path=${encodeURIComponent(projectRelativePath)}`,
@@ -77,15 +96,40 @@ export function projectLocalMediaReferences(input: {
   return { references, diagnostics };
 }
 
+export function validateMediaGenerationReferenceMarkers(request: JsonValue): void {
+  const mentions = new Set<string>();
+  for (const { marker } of findMarkers(request)) {
+    validateMarkerAnnotations(marker);
+    if (marker.promptMention !== undefined) {
+      if (mentions.has(marker.promptMention)) {
+        throw new ProjectDataError(
+          'CORE_MEDIA_GENERATION_REFERENCE_MENTION_DUPLICATE',
+          `Media generation prompt mention is used more than once: ${marker.promptMention}.`,
+        );
+      }
+      mentions.add(marker.promptMention);
+    }
+  }
+}
+
+export function mediaGenerationReferenceProjectPaths(
+  request: JsonValue,
+): ProjectRelativePath[] {
+  return findMarkers(request).map(({ marker }) => normalizeReferencePath(marker.$file));
+}
+
 export function replaceLocalMediaPaths(
   value: JsonValue,
   resolve: (projectRelativePath: ProjectRelativePath) => string,
 ): JsonValue {
   if (isMarker(value)) {
+    validateMarkerAnnotations(value);
     const projectRelativePath = normalizeReferencePath(value.$file);
     return {
       $file: resolve(projectRelativePath),
       ...(value.mimeType ? { mimeType: value.mimeType } : {}),
+      reviewLabel: value.reviewLabel,
+      ...(value.promptMention === undefined ? {} : { promptMention: value.promptMention }),
     };
   }
   if (Array.isArray(value)) {
@@ -133,24 +177,43 @@ export async function readMediaGenerationReferenceProjectFile(
   });
 }
 
-function findMarkers(value: JsonValue): Marker[] {
-  const result: Marker[] = [];
-  visit(value, (marker) => result.push(marker));
+function findMarkers(value: JsonValue): MarkerOccurrence[] {
+  const result: MarkerOccurrence[] = [];
+  visit(value, '', (marker, requestPointer) => result.push({ marker, requestPointer }));
   return result;
 }
 
-function visit(value: JsonValue, onMarker: (marker: Marker) => void): void {
+function visit(
+  value: JsonValue,
+  requestPointer: string,
+  onMarker: (marker: Marker, requestPointer: string) => void,
+): void {
   if (isMarker(value)) {
-    onMarker(value);
+    onMarker(value, requestPointer);
     return;
   }
+  if (hasReservedFileField(value)) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_REFERENCE_MARKER_INVALID',
+      `Local media marker is invalid at request${requestPointer || '/'}.`,
+    );
+  }
   if (Array.isArray(value)) {
-    value.forEach((entry) => visit(entry, onMarker));
+    value.forEach((entry, index) => visit(entry, `${requestPointer}/${index}`, onMarker));
     return;
   }
   if (value !== null && typeof value === 'object') {
-    Object.values(value).forEach((entry) => visit(entry, onMarker));
+    Object.entries(value).forEach(([key, entry]) => {
+      visit(entry, `${requestPointer}/${escapeJsonPointer(key)}`, onMarker);
+    });
   }
+}
+
+function hasReservedFileField(value: unknown): boolean {
+  return value !== null
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && Object.prototype.hasOwnProperty.call(value, '$file');
 }
 
 function isMarker(value: unknown): value is Marker {
@@ -159,10 +222,53 @@ function isMarker(value: unknown): value is Marker {
   }
   const record = value as Record<string, unknown>;
   const keys = Object.keys(record);
-  return keys.every((key) => key === '$file' || key === 'mimeType')
+  return keys.every((key) => (
+    key === '$file'
+    || key === 'mimeType'
+    || key === 'reviewLabel'
+    || key === 'promptMention'
+  ))
     && typeof record.$file === 'string'
     && record.$file.length > 0
-    && (record.mimeType === undefined || typeof record.mimeType === 'string');
+    && (record.mimeType === undefined || typeof record.mimeType === 'string')
+    && (record.reviewLabel === undefined || typeof record.reviewLabel === 'string')
+    && (record.promptMention === undefined || typeof record.promptMention === 'string');
+}
+
+function validateMarkerAnnotations(
+  marker: Marker,
+): asserts marker is Marker & { reviewLabel: string } {
+  if (!isBoundedDisplayString(marker.reviewLabel, MAX_REVIEW_LABEL_LENGTH)) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_REFERENCE_LABEL_INVALID',
+      'Every local media reference must have a non-empty reviewLabel without control characters.',
+    );
+  }
+  if (marker.promptMention !== undefined
+    && !isBoundedDisplayString(marker.promptMention, MAX_PROMPT_MENTION_LENGTH)) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_REFERENCE_MENTION_INVALID',
+      'A promptMention must be a non-empty bounded string without control characters.',
+    );
+  }
+}
+
+function isBoundedDisplayString(value: unknown, maximumLength: number): value is string {
+  return typeof value === 'string'
+    && value.trim().length > 0
+    && value.length <= maximumLength
+    && !containsControlCharacter(value);
+}
+
+function containsControlCharacter(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || (code >= 127 && code <= 159);
+  });
+}
+
+function escapeJsonPointer(value: string): string {
+  return value.replaceAll('~', '~0').replaceAll('/', '~1');
 }
 
 function normalizeReferencePath(value: string): ProjectRelativePath {

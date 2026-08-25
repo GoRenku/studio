@@ -640,6 +640,7 @@ than direct `window` listeners. Current examples include:
 - `surface:visual-language:lookbook:<lookbookId>`;
 - `surface:scene:<sceneId>:beats`;
 - `surface:scene:<sceneId>:dialogue-audio`.
+- `surface:shotPlan:<shotPlanId>:image-assets`.
 
 Durable media attachments invalidate their current owner surface:
 
@@ -651,12 +652,13 @@ Durable media attachments invalidate their current owner surface:
 | Prop Sheet, Hero, or accepted image edit | `surface:prop:<propId>` |
 | Scene Beat storyboard image | `surface:scene:<sceneId>:beats` |
 | Scene Dialogue Audio | `surface:scene:<sceneId>:dialogue-audio` |
+| Shot Plan first/last/storyboard/reference image, including `image.create` or same-role edit | `surface:shotPlan:<shotPlanId>:image-assets` |
 
 There are no generic `assets:*` keys. Cast and Location Assets tabs are part of
 their owner surfaces, and Studio has no generic project, Sequence, or Scene
-Assets projection. Attaching ordinary `image.create` or `image.edit` output is
-also not implicit; an owning workflow must persist a durable attachment before
-it reports a project resource change.
+Assets projection. `image.create` refreshes its exact Shot Plan Assets
+projection. `image.edit` refreshes the exact source-derived same-place surface;
+neither command emits a generic Project Asset refresh.
 
 For CLI mutations, Core returns the durable project identity and resource keys
 in the successful mutation report. The CLI forwards that report once to the

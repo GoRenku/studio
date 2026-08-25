@@ -42,7 +42,7 @@ export type MediaGenerationPurposeBuilder = (
 ) => MediaGenerationPurposeBuildResult;
 
 export const MEDIA_GENERATION_PURPOSE_BUILDERS: Record<MediaPurpose, MediaGenerationPurposeBuilder> = {
-  'image.create': buildProjectPurposeContext,
+  'image.create': buildShotPlanPurposeContext,
   'image.edit': buildAssetPurposeContext,
   'project.cover': buildProjectPurposeContext,
   'lookbook.image': buildLookbookPurposeContext,

@@ -6,6 +6,7 @@ import {
   toStudioShotSelectionMutationResponse,
 } from '../http/shot-plan-responses.js';
 import type { ProjectsRouteProjectData } from './projects.js';
+import { toStudioAssetResponse } from '../http/asset-responses.js';
 
 export interface CreateShotPlansRouteOptions {
   projectData: ProjectsRouteProjectData;
@@ -30,6 +31,39 @@ export function createShotPlansRoute({
         return projectErrorResponse(c, error);
       }
     })
+    .get('/screenplay/shot-plans/:shotPlanId/image-assets', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const shotPlanId = c.req.param('shotPlanId') as string;
+        const resource = await projectData.readShotPlanImageAssets({ projectName, shotPlanId });
+        return c.json({
+          resource: {
+            ...resource,
+            groups: resource.groups.map((group) => ({
+              ...group,
+              assets: group.assets.map((asset) => toStudioAssetResponse(projectName, asset)),
+            })),
+          },
+        });
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete(
+      '/screenplay/shot-plans/:shotPlanId/image-assets/:assetId',
+      requireToken,
+      async (c) => {
+        try {
+          return c.json(await projectData.discardShotPlanImageAsset({
+            projectName: c.req.param('projectName') as string,
+            shotPlanId: c.req.param('shotPlanId') as string,
+            assetId: c.req.param('assetId') as string,
+          }));
+        } catch (error) {
+          return projectErrorResponse(c, error);
+        }
+      },
+    )
     .delete(
       '/screenplay/shot-plans/:shotPlanId',
       requireToken,

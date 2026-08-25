@@ -29,7 +29,23 @@ describe('media generation Preview and Inspection', () => {
       model: 'gpt-image-2',
       prompt: 'Original prompt',
       editable: true,
-      references: [{ kind: 'image', projectRelativePath: 'media/reference.png', available: true }],
+      references: [
+        {
+          requestPointer: '/image',
+          kind: 'image',
+          projectRelativePath: 'media/reference.png',
+          reviewLabel: 'Stone arch reference',
+          promptMention: '@Image1',
+          available: true,
+        },
+        {
+          requestPointer: '/secondary',
+          kind: 'image',
+          projectRelativePath: 'media/reference.png',
+          reviewLabel: 'Same file in an implicit field',
+          available: true,
+        },
+      ],
       configuration: { nested: [{ nestedPrompt: 'unchanged' }] },
     });
     expect(JSON.stringify(preview)).not.toContain('asset_reference');
@@ -47,7 +63,8 @@ describe('media generation Preview and Inspection', () => {
       prompt: 'Updated prompt',
       request: {
         prompt: 'provider prompt remains unchanged',
-        image: { $file: 'media/reference.png', mimeType: 'image/png' },
+        image: { $file: 'media/reference.png', mimeType: 'image/png', reviewLabel: 'Stone arch reference', promptMention: '@Image1' },
+        secondary: { $file: 'media/reference.png', mimeType: 'image/png', reviewLabel: 'Same file in an implicit field' },
         nested: [{ nestedPrompt: 'unchanged' }],
       },
     });
@@ -90,7 +107,12 @@ async function createFixture() {
     model: 'gpt-image-2',
     mediaKind: 'image' as const,
     prompt: 'Original prompt',
-    request: { prompt: 'provider prompt remains unchanged', image: { $file: 'media/reference.png', mimeType: 'image/png' }, nested: [{ nestedPrompt: 'unchanged' }] },
+    request: {
+      prompt: 'provider prompt remains unchanged',
+      image: { $file: 'media/reference.png', mimeType: 'image/png', reviewLabel: 'Stone arch reference', promptMention: '@Image1' },
+      secondary: { $file: 'media/reference.png', mimeType: 'image/png', reviewLabel: 'Same file in an implicit field' },
+      nested: [{ nestedPrompt: 'unchanged' }],
+    },
   };
   const session = openProjectStore({ projectFolder, create: false });
   try {

@@ -4,6 +4,7 @@ import type {
   MediaGenerationReviewDocument,
 } from '../../client/media-generation-review.js';
 import { ProjectDataError } from '../project-data-error.js';
+import { validateMediaGenerationReferenceMarkers } from './local-media.js';
 
 const REVIEW_FIELDS = new Set(['provider', 'model', 'mediaKind', 'prompt', 'request']);
 const PROVENANCE_FIELDS = new Set([...REVIEW_FIELDS, 'receipt']);
@@ -54,6 +55,7 @@ function parseEnvelope(
     throw invalid(allowReceipt, 'Media generation prompt must be a string or null.');
   }
   const request = requireJsonValue(value.request, ['request'], allowReceipt);
+  validateMediaGenerationReferenceMarkers(request);
   assertSerializedSize(value, allowReceipt);
   return {
     provider,

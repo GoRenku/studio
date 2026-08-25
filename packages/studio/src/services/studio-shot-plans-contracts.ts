@@ -60,6 +60,15 @@ export interface StudioShotImageCandidateCollection {
   selectedAssetId: string | null;
 }
 
+export interface StudioShotPlanImageAssets {
+  shotPlan: { id: string; sceneId: string; title: string };
+  groups: Array<{
+    role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference';
+    assets: StudioShotAsset[];
+  }>;
+  resourceKeys: string[];
+}
+
 export type StudioShotSelectionMutationResponse = Pick<
   AssetSelectionReport,
   'valid' | 'warnings' | 'selectedAssetId' | 'resourceKeys'

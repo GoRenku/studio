@@ -74,12 +74,25 @@ describe('MediaGenerationRequestView', () => {
     render(<MediaGenerationRequestView
       preview={{
         ...preview(),
-        references: [{
-          kind: 'image',
-          projectRelativePath: 'scenes/02/first-frame.png' as never,
-          browserUrl: '/studio-api/projects/movie/generation-reference-file?path=scenes%2F02%2Ffirst-frame.png',
-          available: true,
-        }],
+        references: [
+          {
+            requestPointer: '/image_urls/0',
+            kind: 'image',
+            projectRelativePath: 'scenes/02/first-frame.png' as never,
+            reviewLabel: 'Opening frame',
+            promptMention: '@Image1',
+            browserUrl: '/studio-api/projects/movie/generation-reference-file?path=scenes%2F02%2Ffirst-frame.png',
+            available: true,
+          },
+          {
+            requestPointer: '/implicit_reference',
+            kind: 'image',
+            projectRelativePath: 'scenes/02/implicit.png' as never,
+            reviewLabel: 'Implicit endpoint reference',
+            browserUrl: '/studio-api/projects/movie/generation-reference-file?path=scenes%2F02%2Fimplicit.png',
+            available: true,
+          },
+        ],
       }}
       prompt='Use @Image1.'
       tab='references'
@@ -87,7 +100,8 @@ describe('MediaGenerationRequestView', () => {
       onTabChange={() => undefined}
     />);
 
-    expect(screen.getByRole('img', { name: 'scenes/02/first-frame.png' }).getAttribute('src')).toContain('generation-reference-file');
+    expect(screen.getByRole('img', { name: 'Opening frame' }).getAttribute('src')).toContain('generation-reference-file');
+    expect(screen.getByRole('img', { name: 'Implicit endpoint reference' })).toBeTruthy();
     expect(screen.queryByText('scenes/02/first-frame.png')).toBeNull();
     expect(document.querySelector('[data-media-card-presentation="overlay"]')).toBeTruthy();
   });

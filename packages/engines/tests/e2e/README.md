@@ -17,3 +17,15 @@ Do not add a Core import or a credential-file reader to this package.
 
 Run no paid test without separate user approval. Keep fixtures small, cap output,
 and clean provider jobs/artifacts when the provider supports it.
+
+Each suite is independently enabled:
+
+- `RUN_FAL_TEST=1`
+- `RUN_REPLICATE_TEST=1`
+- `RUN_WAVESPEED_TEST=1`
+- `RUN_ELEVENLABS_TEST=1`
+- `RUN_ELEVENLABS_VOICE_SAMPLE_TEST=1` (read/download only)
+- `RUN_ELEVENLABS_MEDIA_ENGINE_TEST=1`
+
+Run the selected suite with `pnpm --dir packages/engines test:e2e -- <name>`
+only after the operator approves the external request and its possible cost.

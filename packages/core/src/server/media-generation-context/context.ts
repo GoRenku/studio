@@ -99,8 +99,7 @@ function validateInput(input: ReadMediaGenerationContextInput): void {
 }
 
 function purposeExpectsVisualLanguage(purpose: ReadMediaGenerationContextInput['purpose']): boolean {
-  return purpose !== 'image.create'
-    && purpose !== 'image.edit'
+  return purpose !== 'image.edit'
     && purpose !== 'cast.voice-sample'
     && purpose !== 'scene.dialogue-audio';
 }

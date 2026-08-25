@@ -24,6 +24,10 @@ import { normalizeFalOutput } from './outputs.js';
 export function createFalMediaProvider(): MediaProvider {
   return {
     id: 'fal-ai',
+    async readInputSchema(model, context) {
+      requireCredential(model, context);
+      return loadFalInputSchema(model, context);
+    },
     async validate(request, context) {
       requireCredential(request.model, context);
       validateJsonSchema({

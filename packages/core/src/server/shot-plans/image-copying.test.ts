@@ -45,7 +45,7 @@ describe('Shot image copying', () => {
       prompt: 'An exact Shot image.',
       request: {
         prompt: 'An exact Shot image.',
-        image: { $file: 'tmp/reference.png', mimeType: 'image/png' },
+        image: { $file: 'tmp/reference.png', mimeType: 'image/png', reviewLabel: 'Shot image source' },
       },
     };
     const attached = await projectData.attachGenerationMedia({

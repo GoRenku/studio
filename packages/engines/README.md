@@ -18,16 +18,23 @@ and all runtime dependencies through `ProviderContext`.
 
 ## Public surface
 
-Create a `MediaEngine` with provider factories and call `validate`, `execute`,
-or `recover` by provider id. Requests contain only a model string and opaque JSON
+Create a `MediaEngine` with provider factories and call `readInputSchema`,
+`validate`, `execute`, or `recover` by provider id. Schema inspection returns
+the existing provider loader's raw live input schema. Requests contain only a model string and opaque JSON
 input. A local file is represented exactly as:
 
 ```ts
 interface LocalMediaFile {
   $file: string;
   mimeType?: string;
+  reviewLabel?: string;
+  promptMention?: string;
 }
 ```
+
+The two annotations are opaque caller review metadata. Engines replaces the
+entire marker during validation/upload and never interprets provider prompt
+syntax.
 
 Execution returns normalized downloaded artifact paths and an optional opaque
 provider receipt. The caller decides how those facts are stored or attached.

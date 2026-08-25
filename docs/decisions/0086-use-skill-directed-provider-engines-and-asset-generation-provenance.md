@@ -1,6 +1,11 @@
 # 0086 Use Skill-Directed Provider Engines And Asset Generation Provenance
 
 > **Decision 0087 update:** Provider-native authorship and execution ownership remain unchanged. Core additionally owns deterministic, advisory Project context and relationship-derived media suggestions for each purpose and target.
+>
+> **Decision 0088 update:** Engines expose existing live provider input schemas
+> through a read-only engine method and thin CLI command. Exact request reference
+> labels/tokens and source-derived image attachment remain outside provider
+> schema ownership.
 
 Date: 2026-08-24
 

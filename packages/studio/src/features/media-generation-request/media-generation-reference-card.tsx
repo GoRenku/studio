@@ -14,7 +14,7 @@ export function MediaGenerationReferenceCard({
   reference: MediaGenerationReferenceView;
 }) {
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
-  const accessibleName = reference.projectRelativePath;
+  const accessibleName = reference.reviewLabel;
   return (
     <>
       <MediaCard

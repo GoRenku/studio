@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { StudioSelection } from '@gorenku/studio-core/client';
+import type { ShotPlanDetailTab, StudioSelection } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import {
   ResizableHandle,
@@ -11,6 +11,10 @@ import { ShotImageCandidatesDialog } from './shot-image-candidates-dialog';
 import { ShotPlanShotContent } from './shot-plan-shot-content';
 import { ShotPlanShotRail } from './shot-plan-shot-rail';
 import { useSceneShotPlans } from './use-scene-shot-plans';
+import { Tabs } from '@/ui/tabs';
+import { LineTabBar } from '@/ui/line-tab-bar';
+import { LineTabsContent } from '@/ui/line-tabs';
+import { ShotPlanImageAssetsView } from './shot-plan-image-assets';
 
 // Resizable-panel proportions.
 const SHOT_PLAN_RAIL_DEFAULT_WIDTH_PERCENT = 18;
@@ -25,12 +29,14 @@ export function ShotPlanDetailPage({
   projectName,
   sceneId,
   shotPlanId,
+  shotPlanTab = 'shots',
   shotId,
   onSelect,
 }: {
   projectName: string;
   sceneId: string;
   shotPlanId: string;
+  shotPlanTab?: ShotPlanDetailTab;
   shotId?: string;
   onSelect: (selection: StudioSelection) => void;
 }) {
@@ -44,7 +50,7 @@ export function ShotPlanDetailPage({
     item?.shotPlan.shots.find((candidate) => candidate.id === shotId) ?? null;
 
   useEffect(() => {
-    if (!item || shotId || !item.shotPlan.shots[0]) {
+    if (!item || shotPlanTab !== 'shots' || shotId || !item.shotPlan.shots[0]) {
       return;
     }
     onSelect({
@@ -52,9 +58,10 @@ export function ShotPlanDetailPage({
       id: sceneId,
       sceneTab: 'shotPlans',
       shotPlanId,
+      shotPlanTab: 'shots',
       shotId: item.shotPlan.shots[0].id,
     });
-  }, [item, onSelect, sceneId, shotId, shotPlanId]);
+  }, [item, onSelect, sceneId, shotId, shotPlanId, shotPlanTab]);
 
   return (
     <div className='flex h-full min-h-0 min-w-0 flex-1 flex-col'>
@@ -91,11 +98,23 @@ export function ShotPlanDetailPage({
         </div>
       ) : (
         <section className='flex min-h-0 flex-1 flex-col overflow-hidden'>
-          {item.shotPlan.shots.length === 0 ? (
-            <p className='p-8 text-sm text-muted-foreground'>
-              This Shot Plan has no Shots.
-            </p>
-          ) : (
+          <Tabs
+            value={shotPlanTab}
+            onValueChange={(value) => onSelect({
+              type: 'scene',
+              id: sceneId,
+              sceneTab: 'shotPlans',
+              shotPlanId,
+              shotPlanTab: value as ShotPlanDetailTab,
+              ...(value === 'shots' && shotId ? { shotId } : {}),
+            })}
+            className='flex min-h-0 flex-1 flex-col'
+          >
+            <LineTabBar items={shotPlanDetailTabs} />
+            <LineTabsContent value='shots' className='mt-0 flex min-h-0 flex-1 overflow-hidden'>
+            {item.shotPlan.shots.length === 0 ? (
+              <p className='p-8 text-sm text-muted-foreground'>This Shot Plan has no Shots.</p>
+            ) : (
             <ResizablePanelGroup
               direction='horizontal'
               className='min-h-0 flex-1'
@@ -144,7 +163,12 @@ export function ShotPlanDetailPage({
                 )}
               </ResizablePanel>
             </ResizablePanelGroup>
-          )}
+            )}
+            </LineTabsContent>
+            <LineTabsContent value='assets' className='mt-0 min-h-0 flex-1 overflow-hidden'>
+              <ShotPlanImageAssetsView projectName={projectName} shotPlanId={shotPlanId} />
+            </LineTabsContent>
+          </Tabs>
         </section>
       )}
       {item ? (
@@ -173,3 +197,8 @@ export function ShotPlanDetailPage({
     </div>
   );
 }
+
+const shotPlanDetailTabs = [
+  { value: 'shots', label: 'Shots' },
+  { value: 'assets', label: 'Assets' },
+];

@@ -62,13 +62,11 @@ export function MediaGenerationPromptEditor({
 function referenceMentions(
   references: MediaGenerationReferenceView[],
 ): MediaGenerationPromptMention[] {
-  const counters = { image: 0, video: 0, audio: 0 };
-  return references.map((reference) => {
-    counters[reference.kind] += 1;
-    const value = `@${reference.kind[0]!.toLocaleUpperCase()}${reference.kind.slice(1)}${counters[reference.kind]}`;
+  return references.flatMap((reference) => {
+    if (!reference.promptMention) return [];
     return {
-      value,
-      accessibleName: reference.projectRelativePath,
+      value: reference.promptMention,
+      accessibleName: reference.reviewLabel,
       kind: reference.kind,
       ...(reference.kind === 'image' && reference.browserUrl
         ? { previewImageUrl: reference.browserUrl }

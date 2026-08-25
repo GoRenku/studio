@@ -126,6 +126,10 @@ import type {
   DeleteShotPlanInput,
   ListSceneShotPlanVideoGenerationsInput,
   SceneShotPlanVideoGenerations,
+  ReadShotPlanImageAssetsInput,
+  ShotPlanImageAssets,
+  DiscardShotPlanImageAssetInput,
+  SceneStoryboardImageCandidateInput,
 } from '../client/index.js';
 import type {
   ScreenplayInput,
@@ -270,6 +274,18 @@ export interface ProjectDataService {
   listSceneShotPlans(
     input: ListSceneShotPlansInput
   ): Promise<ShotPlanListReport>;
+  readShotPlanImageAssets(
+    input: ReadShotPlanImageAssetsInput
+  ): Promise<ShotPlanImageAssets>;
+  discardShotPlanImageAsset(
+    input: DiscardShotPlanImageAssetInput
+  ): Promise<RecoverableMutationReport>;
+  selectSceneStoryboardImageCandidate(
+    input: SceneStoryboardImageCandidateInput
+  ): Promise<AssetSelectionReport>;
+  discardSceneStoryboardImageCandidate(
+    input: SceneStoryboardImageCandidateInput
+  ): Promise<RecoverableMutationReport>;
   listSceneShotPlanVideoGenerations(
     input: ListSceneShotPlanVideoGenerationsInput
   ): Promise<SceneShotPlanVideoGenerations>;
@@ -723,6 +739,7 @@ export interface ApplySceneBeatsOperationsInput
 
 export interface ReadSceneStoryboardStatusInput
   extends SceneBeatsProjectInput {
+  projectName?: string;
   sceneId: string;
   sceneBeatsRevisionId: string;
 }

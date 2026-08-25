@@ -30,6 +30,10 @@ interface WaveSpeedResult {
 export function createWaveSpeedMediaProvider(): MediaProvider {
   return {
     id: 'wavespeed-ai',
+    async readInputSchema(model, context) {
+      requireCredential(model, context);
+      return loadWaveSpeedInputSchema(model, context);
+    },
     async validate(request, context) {
       requireCredential(request.model, context);
       validateJsonSchema({

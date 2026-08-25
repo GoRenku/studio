@@ -6,6 +6,7 @@ import { createMemoryProviderMetadataCache, EngineError } from '@gorenku/studio-
 import { executeGenerationRequest } from './execute.js';
 import { recoverGenerationRequest } from './recover.js';
 import { validateGenerationRequest } from './validate.js';
+import { showGenerationSchema } from './schema.js';
 
 describe('generation CLI provider delegation', () => {
   it('parses once, resolves local media, delegates once, and serializes safe provenance', async () => {
@@ -15,7 +16,12 @@ describe('generation CLI provider delegation', () => {
         model: 'atlas/image-v1',
         input: {
           prompt: 'A stone arch',
-          image: { $file: path.join(fixture.projectFolder, 'media/reference.png'), mimeType: 'image/png' },
+          image: {
+            $file: path.join(fixture.projectFolder, 'media/reference.png'),
+            mimeType: 'image/png',
+            reviewLabel: 'Stone arch reference',
+            promptMention: '@Image1',
+          },
         },
       });
       return {
@@ -27,7 +33,7 @@ describe('generation CLI provider delegation', () => {
       };
     });
     const result = await executeGenerationRequest(commandInput(fixture, {
-      mediaEngine: { validate: vi.fn(), execute, recover: vi.fn() },
+      mediaEngine: { readInputSchema: vi.fn(), validate: vi.fn(), execute, recover: vi.fn() },
     }));
     expect(execute).toHaveBeenCalledOnce();
     expect(result).toMatchObject({
@@ -47,7 +53,7 @@ describe('generation CLI provider delegation', () => {
     const fixture = await requestFixture();
     const validate = vi.fn(async () => undefined);
     const recover = vi.fn(async (_provider, request) => ({ provider: 'atlas', model: request.model, requestId: request.requestId, artifacts: [] }));
-    const mediaEngine = { validate, execute: vi.fn(), recover };
+    const mediaEngine = { readInputSchema: vi.fn(), validate, execute: vi.fn(), recover };
     await expect(validateGenerationRequest(commandInput(fixture, { mediaEngine }))).resolves.toMatchObject({ valid: true, provider: 'atlas' });
     await expect(recoverGenerationRequest(commandInput(fixture, { mediaEngine }, { requestId: 'job_2' }))).resolves.toMatchObject({ requestId: 'job_2' });
     expect(validate).toHaveBeenCalledOnce();
@@ -58,11 +64,22 @@ describe('generation CLI provider delegation', () => {
     const fixture = await requestFixture();
     await expect(validateGenerationRequest(commandInput(fixture, {
       mediaEngine: {
+        readInputSchema: vi.fn(),
         validate: async () => { throw new EngineError('ENGINE_REQUEST_INVALID', 'Invalid request.', { provider: 'atlas', model: 'atlas/image-v1' }); },
         execute: vi.fn(),
         recover: vi.fn(),
       },
     }))).rejects.toMatchObject({ code: 'ENGINE_REQUEST_INVALID' });
+  });
+
+  it('returns the raw live provider schema without normalizing it', async () => {
+    const fixture = await requestFixture();
+    const schema = { type: 'object', properties: { image_url: { type: 'string', format: 'uri' } } };
+    const readInputSchema = vi.fn(async () => schema);
+    await expect(showGenerationSchema(commandInput(fixture, {
+      mediaEngine: { readInputSchema, validate: vi.fn(), execute: vi.fn(), recover: vi.fn() },
+    }, { provider: 'atlas', model: 'atlas/image-v1' }))).resolves.toBe(schema);
+    expect(readInputSchema).toHaveBeenCalledWith('atlas', 'atlas/image-v1', expect.any(Object));
   });
 });
 
@@ -79,7 +96,7 @@ async function requestFixture() {
     model: 'atlas/image-v1',
     mediaKind: 'image',
     prompt: 'A stone arch',
-    request: { prompt: 'A stone arch', image: { $file: 'media/reference.png', mimeType: 'image/png' } },
+    request: { prompt: 'A stone arch', image: { $file: 'media/reference.png', mimeType: 'image/png', reviewLabel: 'Stone arch reference', promptMention: '@Image1' } },
   }));
   return { storageRoot, projectName, projectFolder, documentPath };
 }
@@ -87,7 +104,7 @@ async function requestFixture() {
 function commandInput(
   fixture: Awaited<ReturnType<typeof requestFixture>>,
   overrides: Record<string, unknown>,
-  flags: { requestId?: string } = {},
+  flags: { requestId?: string; provider?: string; model?: string } = {},
 ) {
   return {
     flags: { file: fixture.documentPath, output: 'generated', ...flags },

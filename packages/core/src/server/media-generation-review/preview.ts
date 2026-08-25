@@ -95,6 +95,11 @@ function isLocalMediaMarker(value: unknown): boolean {
   }
   const record = value as Record<string, unknown>;
   const keys = Object.keys(record);
-  return keys.every((key) => key === '$file' || key === 'mimeType')
+  return keys.every((key) => (
+    key === '$file'
+    || key === 'mimeType'
+    || key === 'reviewLabel'
+    || key === 'promptMention'
+  ))
     && typeof record.$file === 'string';
 }

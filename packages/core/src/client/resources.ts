@@ -366,6 +366,8 @@ export type ScenePanelTab =
   | 'shotPlans'
   | 'generations';
 
+export type ShotPlanDetailTab = 'shots' | 'assets';
+
 export type StudioSelection =
   | { type: 'projectInformation' }
   | { type: 'screenplay' }
@@ -385,6 +387,7 @@ export type StudioSelection =
       sceneTab?: ScenePanelTab;
       beatId?: string;
       shotPlanId?: string;
+      shotPlanTab?: ShotPlanDetailTab;
       shotId?: string;
     };
 

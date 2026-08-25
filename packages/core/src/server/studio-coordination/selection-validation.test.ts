@@ -70,5 +70,42 @@ describe('Studio selection validation', () => {
       valid: false,
       issues: [{ code: 'STUDIO_COORDINATION040' }],
     });
+    expect(parseStudioSelection({
+      type: 'scene',
+      id: 'scene_opening',
+      sceneTab: 'shotPlans',
+      shotPlanId: 'plan_primary',
+      shotPlanTab: 'assets',
+      shotId: 'shot_wide',
+    })).toMatchObject({
+      valid: false,
+      issues: [{ code: 'STUDIO_COORDINATION040', location: { path: ['shotId'] } }],
+    });
+  });
+
+  it('accepts the exact Shot Plan Assets selection and rejects unknown detail tabs', () => {
+    expect(parseStudioSelection({
+      type: 'scene',
+      id: 'scene_opening',
+      sceneTab: 'shotPlans',
+      shotPlanId: 'plan_primary',
+      shotPlanTab: 'assets',
+    })).toEqual({
+      valid: true,
+      selection: {
+        type: 'scene',
+        id: 'scene_opening',
+        sceneTab: 'shotPlans',
+        shotPlanId: 'plan_primary',
+        shotPlanTab: 'assets',
+      },
+    });
+    expect(parseStudioSelection({
+      type: 'scene',
+      id: 'scene_opening',
+      sceneTab: 'shotPlans',
+      shotPlanId: 'plan_primary',
+      shotPlanTab: 'unknown',
+    })).toMatchObject({ valid: false, issues: [{ code: 'STUDIO_COORDINATION005' }] });
   });
 });

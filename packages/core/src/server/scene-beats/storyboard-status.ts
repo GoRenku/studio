@@ -7,7 +7,8 @@ import {
   readSceneBeats,
   requireSceneBeatsRevisionForScene,
 } from '../database/access/scene-beats.js';
-import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
+import { withProject } from '../project-operation.js';
+import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ReadSceneStoryboardStatusInput } from '../project-data-service-contracts.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
@@ -24,7 +25,11 @@ export const SCENE_BEATS_RESOURCE_KEY = 'scene-beats';
 export async function readSceneStoryboardStatus(
   input: ReadSceneStoryboardStatusInput
 ): Promise<SceneStoryboardStatus> {
-  return await withCurrentProjectSession(input, ({ currentProject, session }) => {
+  return await withProject(input, ({ session, projectFolder }) => {
+    const project = readProjectRecord(session);
+    if (!project) {
+      throw new ProjectDataError('PROJECT_DATA021', 'Project database has no Project row.');
+    }
     const screenplay = requireScreenplay(session);
     requireSceneHierarchy(screenplay, input.sceneId);
     const row = requireSceneBeatsRevisionForScene({
@@ -34,7 +39,11 @@ export async function readSceneStoryboardStatus(
     });
     return readSceneStoryboardStatusFromSession({
       session,
-      currentProject,
+      currentProject: {
+        projectName: project.projectName,
+        projectId: project.id,
+        projectFolder,
+      },
       sceneId: input.sceneId,
       sceneBeatsRevisionId: input.sceneBeatsRevisionId,
       sceneBeats: readSceneBeats({ row }),

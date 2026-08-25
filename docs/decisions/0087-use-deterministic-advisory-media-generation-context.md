@@ -1,5 +1,9 @@
 # 0087 Use Deterministic Advisory Media Generation Context
 
+> **Decision 0088 update:** completion candidates come only from exact references
+> authored into the provider request, not from this advisory context projection.
+> Generic `image.create` uses the existing Shot Plan context projector.
+
 Date: 2026-08-25
 
 Status: accepted

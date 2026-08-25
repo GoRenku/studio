@@ -268,6 +268,15 @@ Folder responsibilities:
   storyboard sheets.
 - `scenes/<scene-display-number>/<NN>-shot-plan/` contains Shot images, Plan
   video-reference images, and Plan video Assets resolved from exact provenance.
+  Generic `image.create` is stored as `reference-gxxx.<ext>` for one exact Plan.
+  The selected Plan's Assets tab groups First Frames, Last Frames, Storyboards,
+  and Reference Images by weak `authoredFrom` identity rather than by path.
+
+Accepted `image.edit` output follows the source Asset's existing canonical
+destination: Project Cover, Cast, Location, Prop, Lookbook detail collection,
+active Beat Storyboard iteration, Shot, or weakly authored Shot Plan image role.
+Core derives that continuation from durable relationships and creates a new
+unselected candidate; agents and adapters do not supply or infer a destination.
 - `research/` contains user-owned scratch references. Renku may read these
   files when instructed, and provider requests may use them as one-off reference
   inputs. Renku must not register them as SQLite asset files.

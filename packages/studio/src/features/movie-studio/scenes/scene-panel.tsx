@@ -37,6 +37,7 @@ interface ScenePanelProps {
   sceneTab?: ScenePanelTab;
   beatId?: string;
   shotPlanId?: string;
+  shotPlanTab?: import('@gorenku/studio-core/client').ShotPlanDetailTab;
   shotId?: string;
   onSelect: (selection: StudioSelection) => void;
   onHeaderActionChange?: (action: ReactNode | null) => void;
@@ -54,6 +55,7 @@ export function ScenePanel({
   sceneTab,
   beatId,
   shotPlanId,
+  shotPlanTab,
   shotId,
   onSelect,
   onHeaderActionChange,
@@ -265,6 +267,7 @@ export function ScenePanel({
               projectName={projectName}
               sceneId={sceneId}
               shotPlanId={shotPlanId}
+              shotPlanTab={shotPlanTab}
               shotId={shotId}
               onSelect={onSelect}
             />

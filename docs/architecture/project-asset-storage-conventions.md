@@ -118,8 +118,17 @@ allocates a destination. A title, current Studio selection, or path never
 chooses the Plan.
 
 `shot-plan.video-reference` is the focused purpose for a durable reference
-image authored for a Plan. Ordinary input dependencies remain references and
-are not copied into the Plan folder.
+image authored for a Plan. Generic `image.create` uses the same reference-image
+destination for its exact Shot Plan and is shown in that Plan's Assets tab.
+Ordinary input dependencies remain references and are not copied into the Plan
+folder.
+
+An accepted `image.edit` never chooses a folder from its output path or a caller
+destination flag. Core resolves the source Asset's exact current type and owner,
+then reuses the matching row in this matrix. Beat edits allocate a new
+Storyboard iteration; Lookbook edits create the corresponding new detail row;
+Plan-role edits preserve exact weak authorship. Every result is a separate
+unselected candidate beside its source.
 
 ## Filename Allocation
 

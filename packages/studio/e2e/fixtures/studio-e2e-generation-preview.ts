@@ -18,7 +18,7 @@ export interface StudioE2eGenerationPromptProject {
 export const generationPromptDocument = [
   '# Imperial Council Chamber',
   '',
-  'Create one polished **16:9 production reference board** for the Imperial Council Chamber in Constantinople, late 1452.',
+  'Create one polished **16:9 production reference board** for the Imperial Council Chamber in Constantinople, late 1452, using @Reference1 as the primary location reference. This is a production-design and spatial-continuity document, not a poster.',
   '',
   '## Visual direction',
   '',
@@ -26,9 +26,17 @@ export const generationPromptDocument = [
   '- Keep cold gray daylight dominant and amber practical light insufficient.',
   '- Preserve tactile stone, worn vellum, dulled gold leaf, and smoke-softened air.',
   '',
-  'The emperor remains at the long map table while Urban presents the cannon design from the room axis.',
+  'Use @Reference1 for the depleted Byzantine palette, cold daylight, and restrained illustrated-cinematic finish. Use @Reference2 for the disciplined production-board rhythm and material specificity.',
   '',
-  'End on a measured wide composition where maps, unpaid ledgers, and broken arrowheads turn administration into pressure.',
+  '## Spatial continuity',
+  '',
+  'The emperor remains at the long map table while Urban presents the cannon design from the room axis. Loukas Notaras holds the shadowed edge of the group. Leave enough negative space for the chamber to feel diminished around them.',
+  '',
+  'Unknown authored tokens such as @Unknown remain ordinary prompt text.',
+  '',
+  '## Final frame language',
+  '',
+  'End on a measured wide composition where maps, unpaid ledgers, and broken arrowheads turn administration into pressure. Keep the image sober, legible, historically tactile, and emotionally restrained.',
 ].join('\n');
 
 export async function createStudioE2eGenerationPromptProject(input: {
@@ -95,9 +103,30 @@ export async function createStudioE2eGenerationPromptProject(input: {
     image_size: 'landscape_16_9',
     quality: 'high',
     image_urls: [
-      { $file: chamberFile.projectRelativePath, mimeType: 'image/png' },
-      { $file: lookbookFile.projectRelativePath, mimeType: 'image/png' },
+      {
+        $file: chamberFile.projectRelativePath,
+        mimeType: 'image/png',
+        reviewLabel: 'Imperial Council Chamber — Location reference',
+        promptMention: '@Reference1',
+      },
+      {
+        $file: lookbookFile.projectRelativePath,
+        mimeType: 'image/png',
+        reviewLabel: 'Imperial Wound — Production Lookbook',
+        promptMention: '@Reference2',
+      },
     ],
+    implicit_reference: {
+      $file: chamberFile.projectRelativePath,
+      mimeType: 'image/png',
+      reviewLabel: 'Imperial Council Chamber — implicit model reference',
+      promptMention: 'Image 1',
+    },
+    unmentioned_reference: {
+      $file: lookbookFile.projectRelativePath,
+      mimeType: 'image/png',
+      reviewLabel: 'Imperial Wound — reference-only context',
+    },
   };
   const documentPath = 'tmp/operations/media-generation/prompt-editor.json';
   await fs.mkdir(path.dirname(path.join(projectFolder, documentPath)), { recursive: true });

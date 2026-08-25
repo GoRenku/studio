@@ -1,5 +1,9 @@
 # Use Generic Image Create Generation Purpose
 
+> **Decision 0088 update:** `image.create` now targets an exact Shot Plan and
+> attaches a generic Reference Image beside that Plan. It is no longer
+> Project-scoped.
+
 Date: 2026-07-08
 
 Status: accepted

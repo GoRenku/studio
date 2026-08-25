@@ -323,8 +323,15 @@ describe('media generation context', () => {
       projectName: 'constantinople',
       homeDir,
     });
+    const imageCreateShotPlan = await projectData.createShotPlan({
+      homeDir,
+      sceneId: screenplay.screenplay.scenes[0]!.id,
+      title: 'Image Create references',
+      coverage: null,
+      shots: [],
+    });
     const cases = [
-      ['image.create', { kind: 'project', id: 'project' }, 'project'],
+      ['image.create', { kind: 'shotPlan', id: imageCreateShotPlan.shotPlan.id }, 'shotPlan'],
       ['image.edit', { kind: 'asset', id: sourceAsset.id }, 'asset'],
       ['project.cover', { kind: 'project', id: 'project' }, 'project'],
       ['lookbook.image', { kind: 'lookbook', id: production.lookbook.id }, 'lookbook'],

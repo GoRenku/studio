@@ -104,7 +104,7 @@ export function parseStudioSelection(
     case 'scene': {
       validateFields(
         record,
-        ['type', 'id', 'sceneTab', 'beatId', 'shotPlanId', 'shotId'],
+        ['type', 'id', 'sceneTab', 'beatId', 'shotPlanId', 'shotPlanTab', 'shotId'],
         path,
         context,
         issues,
@@ -129,6 +129,13 @@ export function parseStudioSelection(
       const shotId = readOptionalString(
         record,
         'shotId',
+        path,
+        context,
+        issues
+      );
+      const shotPlanTab = readOptionalString(
+        record,
+        'shotPlanTab',
         path,
         context,
         issues
@@ -163,6 +170,30 @@ export function parseStudioSelection(
           )
         );
       }
+      if (shotPlanTab && shotPlanTab !== 'shots' && shotPlanTab !== 'assets') {
+        issues.push(selectionIssue(
+          'STUDIO_COORDINATION005',
+          'Shot Plan detail tab must be shots or assets.',
+          [...path, 'shotPlanTab'],
+          context,
+        ));
+      }
+      if (shotPlanTab && !shotPlanId) {
+        issues.push(selectionIssue(
+          'STUDIO_COORDINATION040',
+          'Shot Plan detail tab requires a Shot Plan.',
+          [...path, 'shotPlanId'],
+          context,
+        ));
+      }
+      if (shotPlanTab === 'assets' && shotId) {
+        issues.push(selectionIssue(
+          'STUDIO_COORDINATION040',
+          'Shot focus is not valid on the Shot Plan Assets tab.',
+          [...path, 'shotId'],
+          context,
+        ));
+      }
       if (id !== null) {
         selection = {
           type,
@@ -170,6 +201,7 @@ export function parseStudioSelection(
           ...(sceneTab ? { sceneTab } : {}),
           ...(beatId ? { beatId } : {}),
           ...(shotPlanId ? { shotPlanId } : {}),
+          ...(shotPlanTab === 'shots' || shotPlanTab === 'assets' ? { shotPlanTab } : {}),
           ...(shotId ? { shotId } : {}),
         };
       }

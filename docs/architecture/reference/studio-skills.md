@@ -18,6 +18,7 @@ Decision history:
 - `../../decisions/0072-use-hierarchy-independent-screenplay-analysis.md`
 - `../../decisions/0074-use-core-owned-project-workflow-settings.md`
 - `../../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md`
+- `../../decisions/0088-use-exact-request-references-and-source-derived-image-continuation.md`
 
 ## Skills Location
 
@@ -119,6 +120,11 @@ operational companions that teach agents how to use those contracts.
   before generation.
 - Delegates Fal.ai, Replicate, WaveSpeed, and ElevenLabs request authorship to
   their provider Skills. World Labs remains owned by `location-world-producer`.
+- Gives every selected local-file marker a meaningful `reviewLabel`. Provider
+  Skills preserve that label and add `promptMention` only when an existing
+  model prompt guide defines an exact reference token for the request order.
+  References without a prompt token remain visible in review but do not appear
+  in prompt completion.
 - Reviews returned artifacts, persists the exact safe provenance value, and
   attaches through the existing focused command with `renku media import
   --provenance` or another focused domain attachment.
@@ -134,8 +140,11 @@ Provider Skills
   to model/operation guides. They read all other current request facts from the
   selected provider operation rather than duplicating request schemas.
 - They author provider-native request JSON with local-file markers at the exact
-  native media fields, then call only the installed `renku generation`
-  validate/execute/recover commands.
+  native media fields. They inspect the selected operation through
+  `renku generation schema show --provider <provider> --model <model> --json`,
+  then call only the installed `renku generation` validate/execute/recover
+  commands. Prompt guides provide editorial craft and exact prompt-reference
+  notation; they never replace or reproduce the live provider schema.
 - They contain no provider client or SDK. Engines owns upload, submission,
   polling, retry, recovery, normalization, download, and safe execution results.
 - `location-world-producer` keeps the focused World Labs Location World flow.
@@ -219,6 +228,28 @@ Skills must not:
 Each skill should keep `SKILL.md` short and operational. Detailed CLI workflows,
 JSON contracts, craft guidance, and samples belong in the skill's
 `references/` and `samples/` folders.
+
+The retained Media Producer prompt guides use this organization:
+
+```text
+skills/media-producer/references/prompt-guides/
+├── shared/
+├── image/
+│   ├── guide-registry.json
+│   ├── shared/
+│   └── models/<existing-guided-model>/
+└── video/
+    ├── guide-registry.json
+    ├── shared/
+    └── models/<existing-guided-model>/
+```
+
+The registries route only models that already have curated guidance. Missing
+models do not receive invented generic or provider-derived guidance. The
+release contract validates the two registries, purpose coverage, structural
+generation examples, and forward-evaluation scenarios. These validators are
+agent-workflow checks; they do not move prompt interpretation into Studio
+runtime code.
 
 When a Renku architecture contract changes, update the architecture/reference
 docs and CLI docs in this repository first, then update the external skill

@@ -9,6 +9,8 @@ export type JsonValue =
 export interface LocalMediaFile {
   $file: string;
   mimeType?: string;
+  reviewLabel?: string;
+  promptMention?: string;
 }
 
 export interface ProviderRequest {
@@ -46,6 +48,10 @@ export interface ProviderExecutionContext extends ProviderContext {
 
 export interface MediaProvider {
   readonly id: string;
+  readInputSchema?(
+    model: string,
+    context: ProviderContext,
+  ): Promise<JsonValue>;
   validate(request: ProviderRequest, context: ProviderContext): Promise<void>;
   execute(
     request: ProviderRequest,
@@ -66,6 +72,11 @@ export interface ProviderExecutionResult {
 }
 
 export interface MediaEngine {
+  readInputSchema(
+    provider: string,
+    model: string,
+    context: ProviderContext,
+  ): Promise<JsonValue>;
   validate(
     provider: string,
     request: ProviderRequest,

@@ -24,6 +24,10 @@ import { normalizeReplicateOutput } from './outputs.js';
 export function createReplicateMediaProvider(): MediaProvider {
   return {
     id: 'replicate',
+    async readInputSchema(model, context) {
+      requireCredential(model, context);
+      return loadReplicateInputSchema(model, context);
+    },
     async validate(request, context) {
       requireCredential(request.model, context);
       validateJsonSchema({

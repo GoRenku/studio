@@ -87,6 +87,7 @@ export * from './production-numbers.js';
 export type * from './scene-dialogue-audio-workspace.js';
 export type * from './scene-beats/index.js';
 export type * from './shot-plans.js';
+export type * from './shot-plan-image-assets.js';
 export type * from './shot-plan-video-generations.js';
 export * from './shot-authoring.js';
 export {
@@ -132,6 +133,7 @@ export type {
   ProjectShell,
   ProjectShellNavigation,
   ScenePanelTab,
+  ShotPlanDetailTab,
   StoryArcResource,
   StudioSelection,
   StudioSelectionContext,
