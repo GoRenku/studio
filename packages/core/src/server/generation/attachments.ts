@@ -74,7 +74,8 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     }
     const attached = attachSceneDialogueAudioMedia({
       ...input,
-      turnId: input.target.id,
+      sceneId: input.target.sceneId,
+      turnId: input.target.turnId,
       generationProvenance,
     });
     return {

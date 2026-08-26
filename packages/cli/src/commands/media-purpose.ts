@@ -25,13 +25,17 @@ export function parseGenerationPurpose(purpose: string): MediaPurpose {
   });
 }
 
-export function parseGenerationTarget(input: {
-  purpose: MediaPurpose;
+export function parseGenerationTarget<TPurpose extends MediaPurpose>(input: {
+  purpose: TPurpose;
   target: string;
-}): MediaTarget {
+}): Extract<MediaTarget, {
+  kind: (typeof MEDIA_PURPOSE_TARGET_KINDS)[TPurpose];
+}> {
   const targetKind = MEDIA_PURPOSE_TARGET_KINDS[input.purpose];
   const parser = targetParsers[targetKind];
-  return parser(input.target, input.purpose);
+  return parser(input.target, input.purpose) as Extract<MediaTarget, {
+    kind: (typeof MEDIA_PURPOSE_TARGET_KINDS)[TPurpose];
+  }>;
 }
 
 const targetParsers: Record<
@@ -49,10 +53,14 @@ const targetParsers: Record<
   scene: (value) => ({ kind: 'scene', id: parseSceneTarget(value, 'Media attachment') }),
   shot: (value, purpose) => ({ kind: 'shot', id: parsePrefixedTarget(value, 'shot', purpose) }),
   shotPlan: (value, purpose) => ({ kind: 'shotPlan', id: parsePrefixedTarget(value, 'shot-plan', purpose) }),
-  sceneDialogue: (value) => ({
-    kind: 'sceneDialogue',
-    id: parseSceneDialogueTarget(value, 'Dialogue media attachment').dialogueId,
-  }),
+  sceneDialogue: (value) => {
+    const target = parseSceneDialogueTarget(value, 'Dialogue media attachment');
+    return {
+      kind: 'sceneDialogue',
+      sceneId: target.sceneId,
+      turnId: target.dialogueId,
+    };
+  },
 };
 
 function parsePrefixedTarget(value: string, prefix: string, purpose: MediaPurpose): string {

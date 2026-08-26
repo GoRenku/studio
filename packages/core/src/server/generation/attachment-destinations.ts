@@ -208,70 +208,70 @@ const attachmentBuilders: Partial<
     ),
   'lookbook.image': (input) =>
     details(
-      requireTarget(input, 'lookbook'),
-      lookbookImageAttachmentDestination(input.target.id, input.title),
+      input,
+      lookbookImageAttachmentDestination(requireTarget(input, 'lookbook').id, input.title),
       'Lookbook Image',
       'lookbook_image'
     ),
   'lookbook.video-sheet': (input) =>
     details(
-      requireTarget(input, 'lookbook'),
-      lookbookSheetAttachmentDestination(input.target.id, input.title),
+      input,
+      lookbookSheetAttachmentDestination(requireTarget(input, 'lookbook').id, input.title),
       'Video Lookbook Sheet',
       'lookbook_sheet'
     ),
   'lookbook.storyboard-sheet': (input) =>
     details(
-      requireTarget(input, 'lookbook'),
-      lookbookSheetAttachmentDestination(input.target.id, input.title),
+      input,
+      lookbookSheetAttachmentDestination(requireTarget(input, 'lookbook').id, input.title),
       'Storyboard Lookbook Sheet',
       'lookbook_sheet'
     ),
   'cast.character-sheet': (input) =>
     details(
-      requireTarget(input, 'castMember'),
-      castCharacterSheetAttachmentDestination(input.target.id, input.title),
+      input,
+      castCharacterSheetAttachmentDestination(requireTarget(input, 'castMember').id, input.title),
       'Character Sheet',
       'character_sheet'
     ),
   'cast.profile': (input) =>
     details(
-      requireTarget(input, 'castMember'),
-      castProfileAttachmentDestination(input.target.id),
+      input,
+      castProfileAttachmentDestination(requireTarget(input, 'castMember').id),
       'Profile',
       'cast_profile'
     ),
   'location.sheet': (input) =>
     details(
-      requireTarget(input, 'location'),
-      locationSheetAttachmentDestination(input.target.id, input.title),
+      input,
+      locationSheetAttachmentDestination(requireTarget(input, 'location').id, input.title),
       'Location Sheet',
       'location_sheet'
     ),
   'location.hero': (input) =>
     details(
-      requireTarget(input, 'location'),
-      locationHeroAttachmentDestination(input.target.id),
+      input,
+      locationHeroAttachmentDestination(requireTarget(input, 'location').id),
       'Location Hero',
       'location_hero'
     ),
   'prop.sheet': (input) =>
     details(
-      requireTarget(input, 'prop'),
-      propSheetAttachmentDestination(input.target.id, input.title),
+      input,
+      propSheetAttachmentDestination(requireTarget(input, 'prop').id, input.title),
       'Prop Sheet',
       'prop_sheet'
     ),
   'prop.hero': (input) =>
     details(
-      requireTarget(input, 'prop'),
-      propHeroAttachmentDestination(input.target.id),
+      input,
+      propHeroAttachmentDestination(requireTarget(input, 'prop').id),
       'Prop Hero',
       'prop_hero'
     ),
   'shot.image': (input) => {
-    requireTarget(input, 'shot');
-    const shot = requireShotRecord(input.session, input.target.id);
+    const target = requireTarget(input, 'shot');
+    const shot = requireShotRecord(input.session, target.id);
     const shotPlan = requireShotPlanRecord(input.session, shot.shotPlanId);
     return details(
       input,
@@ -364,9 +364,9 @@ function shotPlanVideoReferenceImageDetails(
 function requireShotPlanId(
   input: Parameters<typeof resolveGeneratedMediaAttachment>[0]
 ): string {
-  requireTarget(input, 'shotPlan');
-  requireShotPlanRecord(input.session, input.target.id);
-  return input.target.id;
+  const target = requireTarget(input, 'shotPlan');
+  requireShotPlanRecord(input.session, target.id);
+  return target.id;
 }
 
 function details(
@@ -388,13 +388,12 @@ function details(
 function requireTarget<K extends MediaTarget['kind']>(
   input: Parameters<typeof resolveGeneratedMediaAttachment>[0],
   kind: K
-): asserts input is Parameters<typeof resolveGeneratedMediaAttachment>[0] & {
-  target: Extract<MediaTarget, { kind: K }>;
-} {
+): Extract<MediaTarget, { kind: K }> {
   if (input.target.kind !== kind) {
     throw new ProjectDataError(
       'CORE_GENERATION_TARGET_INVALID',
       `${input.purpose} cannot attach media to ${input.target.kind}.`
     );
   }
+  return input.target as Extract<MediaTarget, { kind: K }>;
 }

@@ -36,8 +36,10 @@ export async function runLocationWorldCommand(options: {
       requiredFlag(options.flags.file, '--file'),
       'location world generate',
     ) as LocationWorldGenerationDocument;
+    const projectRef = await service.resolveStudioProjectRef({ homeDir: options.homeDir });
     const prepared = await service.prepareLocationWorldGeneration({
       homeDir: options.homeDir,
+      projectName: projectRef.name,
       document,
     });
     const credential = await resolveRenkuProviderCredential('world-labs', {
@@ -71,7 +73,6 @@ export async function runLocationWorldCommand(options: {
       }
       throw error;
     }
-    const projectRef = await service.resolveStudioProjectRef({ homeDir: options.homeDir });
     const projectFolder = path.join(projectRef.storageRoot, projectRef.name);
     const stagingRelativePath = `tmp/operations/location-world/${randomUUID()}.spz`;
     const stagingPath = path.join(projectFolder, stagingRelativePath);
@@ -83,6 +84,7 @@ export async function runLocationWorldCommand(options: {
       );
       const report = await service.persistLocationWorldGeneration({
         homeDir: options.homeDir,
+        projectName: projectRef.name,
         document,
         sourceProjectRelativePath: stagingRelativePath,
         provider: {

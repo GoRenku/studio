@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Asset } from '../../client/assets.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -18,6 +18,7 @@ import { studioSceneDialogueAudioSurfaceResourceKey } from '../studio-coordinati
 export function attachSceneDialogueAudioMedia(input: {
   session: DatabaseSession;
   projectFolder: string;
+  sceneId: string;
   turnId: string;
   sourceProjectRelativePath: string;
   title?: string;
@@ -29,7 +30,10 @@ export function attachSceneDialogueAudioMedia(input: {
   project: { projectName: string; id: string; projectFolder: string };
 } {
   const audio = input.session.db.select().from(sceneDialogueAudio)
-    .where(eq(sceneDialogueAudio.turnId, input.turnId)).get();
+    .where(and(
+      eq(sceneDialogueAudio.sceneId, input.sceneId),
+      eq(sceneDialogueAudio.turnId, input.turnId),
+    )).get();
   if (!audio || !audio.castVoiceId) {
     throw new ProjectDataError(
       'CORE_DIALOGUE_AUDIO_SETUP_REQUIRED',

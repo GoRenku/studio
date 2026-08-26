@@ -632,7 +632,11 @@ async function seedProjectMedia(input: {
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     purpose: 'scene.dialogue-audio',
-    target: { kind: 'sceneDialogue', id: input.ids.dialogueId },
+    target: {
+      kind: 'sceneDialogue',
+      sceneId: input.ids.sceneId,
+      turnId: input.ids.dialogueId,
+    },
     sourceProjectRelativePath: 'generated/audio/urban-dialogue-take.mp3',
     title: 'Urban dialogue take',
     generationProvenance: {

@@ -153,6 +153,12 @@ function readScopedRevision(input: {
     );
   }
   if (!row) {
+    if ((input.scope?.beatIds.length ?? 0) > 0) {
+      throw new ProjectDataError(
+        'CORE_MEDIA_GENERATION_CONTEXT_SCOPE_INVALID',
+        `Requested Beats cannot be resolved because Scene ${input.sceneId} has no active Scene Beats revision.`,
+      );
+    }
     input.warnings.push(createDiagnosticWarning(
       'CORE_MEDIA_GENERATION_CONTEXT_GAP',
       `No active Scene Beats revision is available for Scene ${input.sceneId}.`,

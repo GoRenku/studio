@@ -42,4 +42,23 @@ describe('generation context command', () => {
       target: { kind: 'castMember', id: 'cast_1' },
     });
   });
+
+  it('preserves the exact Scene and dialogue identities', async () => {
+    const readMediaGenerationContext = vi.fn(async (input) => input);
+    await showGenerationContext({
+      flags: {
+        purpose: 'scene.dialogue-audio',
+        target: 'scene:scene_1:dialogue:dialogue_1',
+      },
+      runtime: { projectDataService: { readMediaGenerationContext } },
+    } as never);
+    expect(readMediaGenerationContext).toHaveBeenCalledWith({
+      purpose: 'scene.dialogue-audio',
+      target: {
+        kind: 'sceneDialogue',
+        sceneId: 'scene_1',
+        turnId: 'dialogue_1',
+      },
+    });
+  });
 });

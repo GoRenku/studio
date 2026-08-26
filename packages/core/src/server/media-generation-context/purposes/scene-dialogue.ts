@@ -8,25 +8,28 @@ export const buildSceneDialoguePurposeContext: MediaGenerationPurposeBuilder = (
   if (input.target.kind !== 'sceneDialogue') {
     throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', 'Scene Dialogue Audio generation requires a Scene dialogue target.');
   }
-  const matches = input.screenplay.scenes.flatMap((scene) =>
-    listSceneDialogueTurns(input.screenplay, scene.id)
-      .filter((turn) => turn.turn.id === input.target.id)
-      .map((turn) => ({ scene, turn }))
-  );
-  if (matches.length !== 1) {
-    throw new ProjectDataError('CORE_MEDIA_GENERATION_CONTEXT_TARGET_NOT_FOUND', `Media generation target dialogue turn was not found: ${input.target.id}.`);
+  const target = input.target;
+  const scene = input.screenplay.scenes.find((candidate) => candidate.id === target.sceneId);
+  const turn = scene
+    ? listSceneDialogueTurns(input.screenplay, scene.id)
+      .find((candidate) => candidate.turn.id === target.turnId)
+    : null;
+  if (!scene || !turn) {
+    throw new ProjectDataError(
+      'CORE_MEDIA_GENERATION_CONTEXT_TARGET_NOT_FOUND',
+      `Media generation target dialogue turn was not found in Scene ${target.sceneId}: ${target.turnId}.`,
+    );
   }
-  const match = matches[0]!;
-  const workspace = readSceneDialogueAudioWorkspace({ session: input.session, sceneId: match.scene.id });
-  const dialogue = workspace.dialogues.find((candidate) => candidate.turnId === input.target.id)!;
+  const workspace = readSceneDialogueAudioWorkspace({ session: input.session, sceneId: scene.id });
+  const dialogue = workspace.dialogues.find((candidate) => candidate.turnId === target.turnId)!;
   const speaker = dialogue.castMemberId
     ? readCastMemberResourceFromSession(input.session, dialogue.castMemberId).castMember
     : null;
-  const setup = workspace.audioByTurnId[input.target.id] ?? null;
+  const setup = workspace.audioByTurnId[target.turnId] ?? null;
   return {
     targetContext: {
       kind: 'sceneDialogue',
-      scene: match.scene,
+      scene,
       turn: dialogue,
       speaker,
       castVoices: dialogue.castMemberId

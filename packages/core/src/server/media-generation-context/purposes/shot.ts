@@ -10,11 +10,12 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
   if (input.target.kind !== 'shot') {
     throw invalidTarget();
   }
-  const shotRecord = readShotRecord(input.session, input.target.id);
+  const target = input.target;
+  const shotRecord = readShotRecord(input.session, target.id);
   if (!shotRecord) {
     throw new ProjectDataError(
       'CORE_MEDIA_GENERATION_CONTEXT_TARGET_NOT_FOUND',
-      `Media generation target Shot was not found: ${input.target.id}.`,
+      `Media generation target Shot was not found: ${target.id}.`,
     );
   }
   const plan = projectShotPlanReport({
@@ -22,11 +23,11 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
     projectFolder: input.projectFolder,
     shotPlanId: shotRecord.shotPlanId,
   });
-  const shot = plan.shotPlan.shots.find((candidate) => candidate.id === input.target.id);
+  const shot = plan.shotPlan.shots.find((candidate) => candidate.id === target.id);
   if (!shot) {
     throw new ProjectDataError(
       'CORE_MEDIA_GENERATION_CONTEXT_TARGET_NOT_FOUND',
-      `Media generation target Shot was not found: ${input.target.id}.`,
+      `Media generation target Shot was not found: ${target.id}.`,
     );
   }
   const sceneContext = projectMediaGenerationSceneContext({

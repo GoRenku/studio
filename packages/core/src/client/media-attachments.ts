@@ -31,9 +31,9 @@ export type MediaTarget =
   | { kind: 'scene'; id: string }
   | { kind: 'shot'; id: string }
   | { kind: 'shotPlan'; id: string }
-  | { kind: 'sceneDialogue'; id: string };
+  | { kind: 'sceneDialogue'; sceneId: string; turnId: string };
 
-export const MEDIA_PURPOSE_TARGET_KINDS: Record<MediaPurpose, MediaTarget['kind']> = {
+export const MEDIA_PURPOSE_TARGET_KINDS = {
   'image.create': 'shotPlan',
   'image.edit': 'asset',
   'project.cover': 'project',
@@ -55,7 +55,7 @@ export const MEDIA_PURPOSE_TARGET_KINDS: Record<MediaPurpose, MediaTarget['kind'
   'prop.hero': 'prop',
   'scene.storyboard-sheet': 'scene',
   'shot.image': 'shot',
-};
+} as const satisfies Record<MediaPurpose, MediaTarget['kind']>;
 
 export const MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS: Record<
   MediaPurpose,

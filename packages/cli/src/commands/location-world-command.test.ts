@@ -87,11 +87,17 @@ describe('Location World command', () => {
 
     expect(prepareLocationWorldGeneration).toHaveBeenCalledWith({
       homeDir: '/tmp/home',
+      projectName,
       document,
     });
+    expect(resolveStudioProjectRef).toHaveBeenCalledOnce();
+    expect(resolveStudioProjectRef).toHaveBeenCalledWith({ homeDir: '/tmp/home' });
+    expect(resolveStudioProjectRef.mock.invocationCallOrder[0]!)
+      .toBeLessThan(prepareLocationWorldGeneration.mock.invocationCallOrder[0]!);
     expect(generateWorldLabsLocationWorld).toHaveBeenCalledOnce();
     expect(persistLocationWorldGeneration).toHaveBeenCalledWith(expect.objectContaining({
       homeDir: '/tmp/home',
+      projectName,
       document,
       provider: { operationId: 'operation_1', worldId: 'world_1' },
     }));

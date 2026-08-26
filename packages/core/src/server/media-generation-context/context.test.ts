@@ -161,6 +161,12 @@ describe('media generation context', () => {
       target: { kind: 'scene', id: sceneId },
       sceneStoryboardScope: { sceneBeatsRevisionId: 'scene_beats_revision_missing', beatIds: [] },
     })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_CONTEXT_SCOPE_INVALID' });
+    await expect(projectData.readMediaGenerationContext({
+      homeDir,
+      purpose: 'scene.storyboard-sheet',
+      target: { kind: 'scene', id: sceneId },
+      sceneStoryboardScope: { beatIds: ['beat_missing'] },
+    })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_CONTEXT_SCOPE_INVALID' });
 
     const report = await projectData.readMediaGenerationContext({
       homeDir,
@@ -369,7 +375,11 @@ describe('media generation context', () => {
     const report = await ready.projectData.readMediaGenerationContext({
       homeDir: ready.homeDir,
       purpose: 'scene.dialogue-audio',
-      target: { kind: 'sceneDialogue', id: ready.dialogueId },
+      target: {
+        kind: 'sceneDialogue',
+        sceneId: ready.sceneId,
+        turnId: ready.dialogueId,
+      },
     });
 
     expect(report.targetContext).toMatchObject({
@@ -382,6 +392,18 @@ describe('media generation context', () => {
       },
       speaker: { id: 'cast_test0001', name: 'Urban' },
       priorTakes: [],
+    });
+
+    await expect(ready.projectData.readMediaGenerationContext({
+      homeDir: ready.homeDir,
+      purpose: 'scene.dialogue-audio',
+      target: {
+        kind: 'sceneDialogue',
+        sceneId: 'scene_wrong',
+        turnId: ready.dialogueId,
+      },
+    })).rejects.toMatchObject({
+      code: 'CORE_MEDIA_GENERATION_CONTEXT_TARGET_NOT_FOUND',
     });
   });
 
