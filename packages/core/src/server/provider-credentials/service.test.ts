@@ -35,6 +35,11 @@ describe('provider credential service', () => {
           configured: true,
         },
         {
+          provider: 'pika',
+          label: 'Pika',
+          configured: false,
+        },
+        {
           provider: 'replicate',
           label: 'Replicate',
           configured: false,
@@ -81,6 +86,7 @@ describe('provider credential service', () => {
 
     expect(resource.providers.map((provider) => provider.configured)).toEqual([
       true,
+      false,
       false,
       false,
       true,

@@ -75,9 +75,11 @@ optional opaque receipt. Exact local files use
 `{ $file, mimeType?, reviewLabel?, promptMention? }`; substitution replaces the
 whole marker so review annotations never reach provider validation or upload.
 
-Supported production provider ids are `fal-ai`, `replicate`, `wavespeed-ai`, and
-`elevenlabs`. World Labs uses the focused location-world API. `codex` is review
-and provenance only.
+Supported production provider ids are `fal-ai`, `pika`, `replicate`,
+`wavespeed-ai`, and `elevenlabs`. Pika accepts any live asynchronous media
+operation with the implemented catalog contract; its Skill separately curates
+the initial image/video choices. World Labs uses the focused location-world API.
+`codex` is review and provenance only.
 
 ## Diagnostics
 

@@ -39,10 +39,13 @@ syntax.
 Execution returns normalized downloaded artifact paths and an optional opaque
 provider receipt. The caller decides how those facts are stored or attached.
 
-Production factories currently cover Fal.ai, Replicate, WaveSpeed, and
-ElevenLabs. World Labs is a focused Location World API because a 3D World is not
-ordinary image/video/audio generation. Codex built-in image generation is not an
-Engines provider.
+Production factories currently cover Fal.ai, Pika, Replicate, WaveSpeed, and
+ElevenLabs. Pika uses provider id `pika`, receives one opaque `PIKA_API_KEY`
+value from its caller, and reads the exact selected operation from Pika's live
+catalog. It has no Engines model allowlist or checked-in schema fallback. World
+Labs is a focused Location World API because a 3D World is not ordinary
+image/video/audio generation. Codex built-in image generation is not an Engines
+provider.
 
 ## Checks
 

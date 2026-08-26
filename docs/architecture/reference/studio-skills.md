@@ -113,13 +113,14 @@ operational companions that teach agents how to use those contracts.
   Preview, conversational confirmation, concurrency, and maximum concurrency.
 - Uses the Codex image lane only when the active harness exposes the built-in
   image-generation capability; otherwise it reports unavailability and asks
-  before choosing Fal.ai.
+  before choosing Fal.ai or Pika.
 - Writes one temporary review document under
   `tmp/operations/media-generation/`, opens Preview when policy or the user
   requests it, pauses in the ordinary conversation, and rereads the document
   before generation.
-- Delegates Fal.ai, Replicate, WaveSpeed, and ElevenLabs request authorship to
-  their provider Skills. World Labs remains owned by `location-world-producer`.
+- Delegates Fal.ai, Pika, Replicate, WaveSpeed, and ElevenLabs request
+  authorship to their provider Skills. World Labs remains owned by
+  `location-world-producer`.
 - Gives every selected local-file marker a meaningful `reviewLabel`. Provider
   Skills preserve that label and add `promptMention` only when an existing
   model prompt guide defines an exact reference token for the request order.
@@ -134,7 +135,7 @@ operational companions that teach agents how to use those contracts.
 
 Provider Skills
 
-- `fal-ai-media-provider`, `replicate-media-provider`,
+- `fal-ai-media-provider`, `pika-media-provider`, `replicate-media-provider`,
   `wavespeed-media-provider`, and `elevenlabs-media-provider` own supported-model
   indexes containing identity, human name, and input modes, plus internal links
   to model/operation guides. They read all other current request facts from the

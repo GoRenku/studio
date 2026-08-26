@@ -6,6 +6,11 @@
 > through a read-only engine method and thin CLI command. Exact request reference
 > labels/tokens and source-derived image attachment remain outside provider
 > schema ownership.
+>
+> **Pika application:** The Pika provider uses the accepted standalone provider
+> seam, raw schema-read capability, and whole annotated-marker substitution.
+> Its addition required no new Engines request/result/error contract, Preview
+> contract, provenance shape, attachment path, or CLI command.
 
 Date: 2026-08-24
 

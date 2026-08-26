@@ -38,6 +38,7 @@
     "engines",
     "replicate",
     "fal",
+    "pika",
     "elevenlabs"
   ],
   "dependencies": {

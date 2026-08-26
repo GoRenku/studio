@@ -180,13 +180,16 @@ generation remains under the focused `renku location world` command.
 
 ## Providers and Settings
 
-Core owns credentials for Fal.ai, Replicate, WaveSpeed, ElevenLabs, and World
-Labs. Engines receives only one opaque credential string. The generation CLI
-registers Fal.ai, Replicate, WaveSpeed, and ElevenLabs. World Labs is exposed by
-its focused location-world Engines API.
+Core owns credentials for Fal.ai, Pika, Replicate, WaveSpeed, ElevenLabs, and
+World Labs. Engines receives only one opaque credential string. The generation
+CLI registers Fal.ai, Pika, Replicate, WaveSpeed, and ElevenLabs. Pika resolves
+exact operation ids through its live catalog and has no Engines allowlist;
+Media Producer's Pika Skill curates the initial operation set. World Labs is
+exposed by its focused location-world Engines API.
 
-Project Settings has global Preview plus independent Image, Video, and Audio
-sections. Image chooses Codex or Fal.ai; Video is Fal.ai; Audio is ElevenLabs.
+Project Settings version 4 has global Preview plus independent Image, Video,
+and Audio sections. Image chooses Codex, Fal.ai, or Pika; Video chooses Fal.ai
+or Pika; Audio remains ElevenLabs.
 Each media kind owns Ask Before Generating, concurrent scheduling, and a retained
 maximum. Effective concurrency is one while concurrent scheduling is off.
 Replicate, WaveSpeed, and World Labs credentials remain available for explicit

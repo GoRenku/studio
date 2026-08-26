@@ -1,6 +1,10 @@
 # 0074 Use Core-Owned Project Workflow Settings
 
 > **Decision 0086 update:** Core-owned versioned Project Settings and agent-owned concurrency remain. Generation settings are now per-media; estimates and approval tokens are removed, while Preview and Ask confirmation remain conversational.
+>
+> **Pika application:** Project Settings version 4 adds Pika to Image and Video
+> provider choices. Defaults and Audio remain unchanged; migration 0081 advances
+> only the JSON document version and preserves every current value.
 
 Date: 2026-08-06
 

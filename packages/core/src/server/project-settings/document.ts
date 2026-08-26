@@ -4,7 +4,7 @@ import type { ProjectSettingsDocument } from '../../client/project-settings.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 3,
+  version: 4,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -58,7 +58,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation'],
   properties: {
-    version: { const: 3 },
+    version: { const: 4 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -92,14 +92,14 @@ const projectSettingsSchema = {
           ...concurrencySchema,
           properties: {
             ...concurrencySchema.properties,
-            provider: { enum: ['codex', 'fal-ai'] },
+            provider: { enum: ['codex', 'fal-ai', 'pika'] },
           },
         },
         video: {
           ...concurrencySchema,
           properties: {
             ...concurrencySchema.properties,
-            provider: { const: 'fal-ai' },
+            provider: { enum: ['fal-ai', 'pika'] },
           },
         },
         audio: {
@@ -182,7 +182,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 3 Project Settings contract.'
+      'Use the complete current version 4 Project Settings contract.'
     );
   });
 }
@@ -195,7 +195,7 @@ function projectSettingsIssueMessage(error: ErrorObject): string {
     return `Unknown Project Settings field: ${String(error.params.additionalProperty)}.`;
   }
   if (error.keyword === 'const') {
-    return 'Project Settings version must be 3.';
+    return 'Project Settings version must be 4.';
   }
   if (error.keyword === 'minimum' || error.keyword === 'maximum') {
     return 'Maximum concurrent generations must be an integer from 1 through 5.';

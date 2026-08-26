@@ -1520,6 +1520,38 @@ renku generation schema show \
 This command supplies technical fields and constraints only. Retained model
 prompt guides remain the editorial authority for writing an effective prompt.
 
+For example, a Pika image-to-video request first inspects the exact operation:
+
+```bash
+renku generation schema show \
+  --provider pika \
+  --model minimax/h3/image-to-video \
+  --json
+```
+
+Its temporary review JSON keeps the provider-native field and annotated local
+marker intact for Preview and provenance:
+
+```json
+{
+  "provider": "pika",
+  "model": "minimax/h3/image-to-video",
+  "mediaKind": "video",
+  "prompt": "Slow forward movement through soft changing light.",
+  "request": {
+    "prompt": "Slow forward movement through soft changing light.",
+    "first_frame_image": {
+      "$file": "tmp/scratch/first-frame.png",
+      "mimeType": "image/png",
+      "reviewLabel": "Reviewed opening frame"
+    }
+  }
+}
+```
+
+The Pika Skill uses the live schema for all remaining native fields and values;
+the CLI adds no Pika-specific command or request interpretation.
+
 Validate an Engines-owned provider request:
 
 ```bash

@@ -33,8 +33,8 @@ export function ProjectSettingsFields({ settings, onChange }: {
           <SettingsSwitchRow id='display-generation-previews' label='Show Generation Previews' description='Open Generation Preview automatically before execution. Explicit Preview requests still work when this is off.' checked={settings.generation.displayPreview} onCheckedChange={(displayPreview) => updateGeneration({ ...settings.generation, displayPreview })} last />
         </AccordionContent>
       </AccordionItem>
-      <MediaGenerationSection title='Image Generation' value='image-generation' id='image' settings={settings.generation.image} providers={[{ value: 'codex', label: 'GPT Image 2 (Codex)' }, { value: 'fal-ai', label: 'Fal.ai' }]} onChange={(image) => updateGeneration({ ...settings.generation, image })} />
-      <MediaGenerationSection title='Video Generation' value='video-generation' id='video' settings={settings.generation.video} providers={[{ value: 'fal-ai', label: 'Fal.ai' }]} onChange={(video) => updateGeneration({ ...settings.generation, video })} />
+      <MediaGenerationSection title='Image Generation' value='image-generation' id='image' settings={settings.generation.image} providers={[{ value: 'codex', label: 'GPT Image 2 (Codex)' }, { value: 'fal-ai', label: 'Fal.ai' }, { value: 'pika', label: 'Pika' }]} onChange={(image) => updateGeneration({ ...settings.generation, image })} />
+      <MediaGenerationSection title='Video Generation' value='video-generation' id='video' settings={settings.generation.video} providers={[{ value: 'fal-ai', label: 'Fal.ai' }, { value: 'pika', label: 'Pika' }]} onChange={(video) => updateGeneration({ ...settings.generation, video })} />
       <MediaGenerationSection title='Audio Generation' value='audio-generation' id='audio' settings={settings.generation.audio} providers={[{ value: 'elevenlabs', label: 'ElevenLabs' }]} onChange={(audio) => updateGeneration({ ...settings.generation, audio })} />
     </Accordion>
   );

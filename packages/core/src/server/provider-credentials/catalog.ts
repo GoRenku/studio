@@ -1,5 +1,6 @@
 export type ProviderCredentialId =
   | 'fal-ai'
+  | 'pika'
   | 'replicate'
   | 'wavespeed-ai'
   | 'elevenlabs'
@@ -13,6 +14,7 @@ export interface ProviderCredentialDescriptor {
 
 const PROVIDER_CREDENTIAL_DESCRIPTORS = [
   { provider: 'fal-ai', label: 'Fal.ai', environmentVariable: 'FAL_KEY' },
+  { provider: 'pika', label: 'Pika', environmentVariable: 'PIKA_API_KEY' },
   { provider: 'replicate', label: 'Replicate', environmentVariable: 'REPLICATE_API_TOKEN' },
   { provider: 'wavespeed-ai', label: 'WaveSpeed', environmentVariable: 'WAVESPEED_API_KEY' },
   { provider: 'elevenlabs', label: 'ElevenLabs', environmentVariable: 'ELEVENLABS_API_KEY' },

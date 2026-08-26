@@ -278,6 +278,12 @@ obsolete nullable source column in place, preserving retained dialogue and
 screenplay children. Its transaction-level regression test proves a retained
 child row survives with foreign keys enabled.
 
+`0081_pika_provider_settings.sql` is a data-only custom migration for Project
+Settings version 4. It aborts when an existing singleton is not the accepted
+version-3 document, changes only `$.version` through `json_set`, preserves every
+other JSON value exactly, succeeds for a fresh database with no Settings row,
+and does not change `PRAGMA user_version`.
+
 ## Project Store Schema Generation
 
 Renku Studio project databases use SQLite's `PRAGMA user_version` as the

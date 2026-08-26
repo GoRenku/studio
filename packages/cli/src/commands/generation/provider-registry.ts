@@ -2,6 +2,7 @@ import {
   createElevenLabsMediaProvider,
   createFalMediaProvider,
   createMediaEngine,
+  createPikaMediaProvider,
   createReplicateMediaProvider,
   createWaveSpeedMediaProvider,
   type MediaEngine,
@@ -10,6 +11,7 @@ import {
 export function createRenkuMediaEngine(): MediaEngine {
   return createMediaEngine([
     createFalMediaProvider(),
+    createPikaMediaProvider(),
     createReplicateMediaProvider(),
     createWaveSpeedMediaProvider(),
     createElevenLabsMediaProvider(),

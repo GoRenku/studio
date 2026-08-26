@@ -18,8 +18,18 @@ describe('MediaGenerationRequestView', () => {
   });
 
   it('makes Inspection prompt read-only while preserving the same view', () => {
-    render(<MediaGenerationRequestView preview={{ ...preview(), documentPath: undefined, editable: false }} prompt='Stone arch' tab='prompt' onPromptChange={() => undefined} onTabChange={() => undefined} />);
+    const inspection = {
+      ...preview(),
+      documentPath: undefined,
+      provider: 'pika',
+      model: 'bytedance/seedream-5.0-pro/image-to-image',
+      editable: false,
+    };
+    const { rerender } = render(<MediaGenerationRequestView preview={inspection} prompt='Stone arch' tab='prompt' onPromptChange={() => undefined} onTabChange={() => undefined} />);
     expect(screen.getByLabelText('Media generation prompt').getAttribute('aria-readonly')).toBe('true');
+    rerender(<MediaGenerationRequestView preview={inspection} prompt='Stone arch' tab='configuration' onPromptChange={() => undefined} onTabChange={() => undefined} />);
+    expect((screen.getByRole('textbox', { name: 'Provider' }) as HTMLInputElement).value).toBe('pika');
+    expect((screen.getByRole('textbox', { name: 'Model' }) as HTMLInputElement).value).toBe('bytedance/seedream-5.0-pro/image-to-image');
   });
 
   it('renders nested objects, arrays, primitives, null, and empty values without provider schemas', () => {

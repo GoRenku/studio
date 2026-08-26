@@ -22,6 +22,10 @@ request and prompting instructions. Provider Skills invoke the installed
 `renku generation` commands; they do not ship provider clients, SDKs, or extra
 executables on `PATH`.
 
+Pika ships as another provider module inside the existing Engines/runtime
+bundle. It adds no SDK package, standalone executable, installer step, or PATH
+entry; the separate Skills release supplies only its request-authoring guides.
+
 ## Fast Track (TL;DR)
 
 Run these commands from a clean local `main` checkout. This patch-release path

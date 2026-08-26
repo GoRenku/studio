@@ -35,6 +35,7 @@ export {
 export { createFalMediaProvider } from './providers/fal-ai/index.js';
 export { createReplicateMediaProvider } from './providers/replicate/index.js';
 export { createWaveSpeedMediaProvider } from './providers/wavespeed/index.js';
+export { createPikaMediaProvider } from './providers/pika/index.js';
 export {
   createElevenLabsMediaProvider,
   fetchElevenLabsVoiceSampleAudio,

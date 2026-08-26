@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ProjectSettingsDocument } from '@gorenku/studio-core/client';
 import { ProjectSettingsFields } from './project-settings-fields';
+
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
 
 describe('ProjectSettingsFields', () => {
   it('renders the accepted generation sections, provider choices, and defaults', () => {
@@ -14,6 +18,15 @@ describe('ProjectSettingsFields', () => {
     expect(screen.getByRole('button', { name: 'Audio Generation' })).toBeTruthy();
     expect(screen.getByText('GPT Image 2 (Codex)')).toBeTruthy();
     expect(screen.getByText('ElevenLabs')).toBeTruthy();
+    const providerSelects = screen.getAllByRole('combobox', { name: 'Provider' });
+    fireEvent.click(providerSelects[0]!);
+    expect(screen.getByRole('option', { name: 'Pika' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(providerSelects[1]!);
+    expect(screen.getByRole('option', { name: 'Pika' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(providerSelects[2]!);
+    expect(screen.queryByRole('option', { name: 'Pika' })).toBeNull();
     expect(screen.queryByText('Replicate')).toBeNull();
     expect(screen.queryByText('WaveSpeed')).toBeNull();
     expect(screen.queryByText('World Labs')).toBeNull();
@@ -36,7 +49,7 @@ describe('ProjectSettingsFields', () => {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 3,
+    version: 4,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,

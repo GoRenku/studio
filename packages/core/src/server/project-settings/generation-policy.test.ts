@@ -23,4 +23,12 @@ describe('Project generation workflow policy', () => {
     settings.generation.video.runGenerationsConcurrently = true;
     expect(resolveGenerationWorkflowPolicy({ settings, outputMediaKind: 'video' }).concurrencyLimit).toBe(4);
   });
+
+  it('projects Pika through the existing image and video policy lanes', () => {
+    const settings = structuredClone(DEFAULT_PROJECT_SETTINGS);
+    settings.generation.image.provider = 'pika';
+    settings.generation.video.provider = 'pika';
+    expect(resolveGenerationWorkflowPolicy({ settings, outputMediaKind: 'image' }).provider).toBe('pika');
+    expect(resolveGenerationWorkflowPolicy({ settings, outputMediaKind: 'video' }).provider).toBe('pika');
+  });
 });

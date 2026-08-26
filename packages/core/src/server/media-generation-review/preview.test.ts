@@ -25,8 +25,8 @@ describe('media generation Preview and Inspection', () => {
     expect(preview).toMatchObject({
       kind: 'mediaGenerationPreview',
       documentPath: fixture.documentPath,
-      provider: 'codex',
-      model: 'gpt-image-2',
+      provider: 'pika',
+      model: 'bytedance/seedream-5.0-pro/image-to-image',
       prompt: 'Original prompt',
       editable: true,
       references: [
@@ -57,8 +57,8 @@ describe('media generation Preview and Inspection', () => {
     });
     expect(updated.prompt).toBe('Updated prompt');
     expect(JSON.parse(await fs.readFile(path.join(fixture.projectFolder, fixture.documentPath), 'utf8'))).toEqual({
-      provider: 'codex',
-      model: 'gpt-image-2',
+      provider: 'pika',
+      model: 'bytedance/seedream-5.0-pro/image-to-image',
       mediaKind: 'image',
       prompt: 'Updated prompt',
       request: {
@@ -77,7 +77,11 @@ describe('media generation Preview and Inspection', () => {
       projectName: fixture.projectName,
       assetId: 'asset_generated',
     });
-    expect(preview).toMatchObject({ provider: 'codex', model: 'gpt-image-2', editable: false });
+    expect(preview).toMatchObject({
+      provider: 'pika',
+      model: 'bytedance/seedream-5.0-pro/image-to-image',
+      editable: false,
+    });
     expect(preview.documentPath).toBeUndefined();
   });
 
@@ -103,8 +107,8 @@ async function createFixture() {
   const projectFolder = path.join(storageRoot, projectName);
   const now = '2026-08-24T00:00:00.000Z';
   const generationProvenance = {
-    provider: 'codex',
-    model: 'gpt-image-2',
+    provider: 'pika',
+    model: 'bytedance/seedream-5.0-pro/image-to-image',
     mediaKind: 'image' as const,
     prompt: 'Original prompt',
     request: {

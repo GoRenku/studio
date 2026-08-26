@@ -31,6 +31,7 @@ describe('provider credential store', () => {
     await expect(readProviderCredentialStore(options)).resolves.toEqual({
       providers: [
         { provider: 'fal-ai', configured: true },
+        { provider: 'pika', configured: false },
         { provider: 'replicate', configured: false },
         { provider: 'wavespeed-ai', configured: false },
         { provider: 'elevenlabs', configured: true },
