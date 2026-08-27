@@ -20,8 +20,9 @@ and all runtime dependencies through `ProviderContext`.
 
 Create a `MediaEngine` with provider factories and call `readInputSchema`,
 `validate`, `execute`, or `recover` by provider id. Schema inspection returns
-the existing provider loader's raw live input schema. Requests contain only a model string and opaque JSON
-input. A local file is represented exactly as:
+the existing provider loader's raw live input schema. Requests contain the exact
+provider API model id, passed unchanged to the provider, and opaque JSON input.
+A local file is represented exactly as:
 
 ```ts
 interface LocalMediaFile {

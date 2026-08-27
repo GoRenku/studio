@@ -18,7 +18,7 @@ import { EngineError } from '../../shared/errors.js';
 import { pollProviderJob } from '../../shared/polling.js';
 import { withProviderRetries } from '../../shared/retry.js';
 import { createRequestTimeoutFetch } from '../../shared/request-timeout.js';
-import { loadFalInputSchema, normalizeModel } from './metadata.js';
+import { loadFalInputSchema } from './metadata.js';
 import { normalizeFalOutput } from './outputs.js';
 
 export function createFalMediaProvider(): MediaProvider {
@@ -52,7 +52,7 @@ export function createFalMediaProvider(): MediaProvider {
         submitted = await withProviderRetries({
           provider: 'fal-ai', model: request.model, context, maxAttempts: 3,
           classify: classifyRetry,
-          operation: () => client.queue.submit(normalizeModel(request.model), {
+          operation: () => client.queue.submit(request.model, {
             input: asObject(input, request.model),
             abortSignal: context.signal,
           }),
@@ -75,7 +75,7 @@ async function recoverFal(
   requestId: string,
   context: ProviderExecutionContext,
 ): Promise<ProviderExecutionResult> {
-  const endpoint = normalizeModel(request.model);
+  const endpoint = request.model;
   await pollProviderJob({
     provider: 'fal-ai',
     model: request.model,

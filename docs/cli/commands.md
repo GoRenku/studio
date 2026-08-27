@@ -1513,12 +1513,14 @@ native request:
 ```bash
 renku generation schema show \
   --provider <provider> \
-  --model <model> \
+  --model <exact-provider-api-id> \
   --json
 ```
 
 This command supplies technical fields and constraints only. Retained model
 prompt guides remain the editorial authority for writing an effective prompt.
+The provider Skill's canonical model-guide key is not accepted as a substitute
+for the exact provider API id.
 
 For example, a Pika image-to-video request first inspects the exact operation:
 

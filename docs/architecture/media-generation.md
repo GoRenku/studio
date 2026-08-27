@@ -195,8 +195,10 @@ maximum. Effective concurrency is one while concurrent scheduling is off.
 Replicate, WaveSpeed, and World Labs credentials remain available for explicit
 Skill workflows but are not Project provider preferences.
 
-Provider Skill indexes contain only exact model identity, human name, supported
-input modes, and an internal guide link. They do not duplicate request fields,
+Provider Skill indexes contain the exact provider API id, human name, supported
+input modes, and a canonical editorial model-guide key. The API id is copied
+verbatim into the temporary review document and Engines calls; the guide key is
+never executable provider identity. The indexes do not duplicate request fields,
 defaults, enums, ranges, durations, pricing, or capability summaries. Current
 native request facts come from the selected provider operation.
 

@@ -267,7 +267,7 @@ Money storage rules:
 | --------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Catalog               | System-level definitions bundled with Renku or Renku Studio.    | Use only for accepted product catalogs. Media-generation models and schemas are retrieved/provider-guided rather than stored in a generic Studio catalog. |
 | Provider              | A service or runtime that supplies a model.                     | Example: OpenAI, Replicate, ElevenLabs, local runtime.                                                                                                          |
-| Model                 | A provider-specific generation model.                           | The provider Skill chooses and records the exact model string in the temporary review document and Asset provenance. |
+| Model                 | A provider-specific generation model.                           | The provider Skill copies the exact provider API id into the temporary review document and Asset provenance. Editorial model-guide keys are not executable model ids. |
 | Model Schema          | A JSON Schema describing valid parameters for a provider model. | Engines retrieves the exact current provider schema when supported and validates native request JSON before execution. |
 | Model Capability YAML | Avoid for current media generation.                             | Do not add capability YAML or schema overlays; validate final provider payloads against real model schemas.                                                     |
 

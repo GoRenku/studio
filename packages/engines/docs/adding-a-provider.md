@@ -49,7 +49,9 @@ Keep curated exact model ids and selection guidance in the provider Skill's
 supported-model index. Engines does not maintain a model allowlist or product
 catalog: the selected model remains the exact string authored by the provider
 Skill, and the provider module validates it through the provider's live metadata
-and implemented protocol family.
+and implemented protocol family. Pass that exact string unchanged to metadata,
+submission, polling, and recovery APIs. Do not add provider namespaces or infer
+an executable id from an editorial model-guide key.
 
 A provider marketplace may expose more operations than Renku initially guides.
 Keep these three scopes distinct:
