@@ -1,0 +1,159 @@
+---
+interface Props {
+  feature: {
+    id: string;
+    eyebrow: string;
+    title: string;
+    description: string;
+    bullets: string[];
+    video: string;
+    videoLabel: string;
+  };
+}
+
+const { feature } = Astro.props;
+---
+
+<section id={feature.id} class="feature video-feature">
+  <div class="container feature-inner">
+    <div class="feature-copy" data-reveal>
+      <p class="eyebrow">{feature.eyebrow}</p>
+      <h2>{feature.title}</h2>
+      <p class="feature-desc">{feature.description}</p>
+      <ul class="feature-bullets">
+        {
+          feature.bullets.map((bullet) => (
+            <li>
+              <svg
+                viewBox="0 0 16 16"
+                width="16"
+                height="16"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2.5 8.5l3.5 3.5 7.5-8" />
+              </svg>
+              <span>{bullet}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="feature-media" data-reveal style="--reveal-delay: 0.12s">
+      <figure class="shot video-shot">
+        <video
+          autoplay
+          muted
+          playsinline
+          preload="metadata"
+          aria-label={feature.videoLabel}
+        >
+          <source src={feature.video} type="video/mp4" />
+        </video>
+        <figcaption>
+          <span class="live-mark" aria-hidden="true"></span>
+          The First Patron · Shot Plan Video · 12 seconds
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<style>
+  .feature {
+    padding-block: clamp(3.5rem, 9vh, 6.5rem);
+  }
+
+  .video-feature {
+    padding-top: clamp(2rem, 5vh, 3.5rem);
+  }
+
+  .feature-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  h2 {
+    font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+    margin-top: 0.9rem;
+  }
+
+  .feature-desc {
+    margin-top: 1.1rem;
+    color: var(--paper-300);
+  }
+
+  .feature-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .feature-bullets li {
+    display: flex;
+    gap: 0.65rem;
+    align-items: baseline;
+    font-size: 0.95rem;
+    color: var(--paper-300);
+  }
+
+  .feature-bullets svg {
+    flex-shrink: 0;
+    color: var(--amber-500);
+    transform: translateY(2px);
+  }
+
+  .shot {
+    margin: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid rgba(244, 239, 230, 0.1);
+    box-shadow:
+      0 30px 70px -25px rgba(0, 0, 0, 0.75),
+      0 0 80px -35px rgba(253, 160, 45, 0.35);
+    background: var(--ink-850);
+  }
+
+  video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 7 / 4;
+    object-fit: cover;
+    background: var(--ink-900);
+  }
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.75rem 1rem;
+    color: var(--paper-500);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    background: var(--ink-850);
+    border-top: 1px solid rgba(244, 239, 230, 0.07);
+  }
+
+  .live-mark {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--amber-500);
+    box-shadow: 0 0 0 0.25rem rgba(253, 160, 45, 0.12);
+  }
+
+  @media (max-width: 60rem) {
+    .feature-inner {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,20 +1,22 @@
 import type { ImageMetadata } from 'astro';
 
+import firstPatronShotPlanVideo from '../assets/media/first-patron-shot-plan.mp4';
 import actStoryboard from '../assets/screens/act-storyboard.png';
 import castGrid from '../assets/screens/cast-grid.png';
 import castSheets from '../assets/screens/cast-sheets.png';
-import inspirationGrid from '../assets/screens/inspiration-grid.png';
 import locationDetail from '../assets/screens/location-detail.png';
-import lookbookPalette from '../assets/screens/lookbook-palette.png';
 import sceneBeats from '../assets/screens/scene-beats.png';
 import sceneNarrative from '../assets/screens/scene-narrative.png';
-import storyArc from '../assets/screens/story-arc.png';
+import screenplayAnalysis from '../assets/screens/screenplay-analysis.png';
+import shotPlan from '../assets/screens/shot-plan.png';
+import wesAndersonAnalysis from '../assets/screens/wes-anderson-analysis.png';
+import wesAndersonGrabs from '../assets/screens/wes-anderson-grabs.png';
 
 export const site = {
   name: 'Renku',
   tagline: 'See your film before you shoot a single frame.',
   description:
-    'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, narrative Scene Beats, and storyboards — one cinematic workspace.',
+    'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, narrative Scene Beats, storyboards, Shot Plans, and video previews — one cinematic workspace.',
   githubUrl: 'https://github.com/GoRenku/studio',
   downloadUrl: '/download',
 };
@@ -32,7 +34,7 @@ export interface Feature {
 }
 
 export const heroImage = {
-  image: storyArc,
+  image: screenplayAnalysis,
   alt: 'Renku Studio showing the dramatic-energy story arc of a screenplay across three acts, with plot points from hook to climax.',
 };
 
@@ -51,7 +53,7 @@ export const features: Feature[] = [
     image: sceneNarrative,
     imageAlt:
       'A screenplay page in Renku with character and location names highlighted and linked.',
-    secondaryImage: storyArc,
+    secondaryImage: screenplayAnalysis,
     secondaryImageAlt:
       'Story arc chart plotting dramatic energy across three acts.',
   },
@@ -71,22 +73,22 @@ export const features: Feature[] = [
       'A cast gallery in Renku with generated portraits for each character in the screenplay.',
     secondaryImage: castSheets,
     secondaryImageAlt:
-      'Character sheets showing full-body turnarounds and expression studies.',
+      'Mehmed II character assets showing armored, battlefield, and palace turnarounds and expression studies.',
   },
   {
     id: 'locations',
     eyebrow: 'Locations',
     title: 'Scout places that don’t exist yet',
     description:
-      'Build a location library straight from the script — each with period, season, and visual notes. Generate hero images to lock the mood of every set before anyone drives to a scout.',
+      'Build a location library straight from the script — each with period, season, and visual notes. Develop reference imagery, then step inside an explorable 3D World before anyone drives to a scout.',
     bullets: [
       'Every location extracted from the screenplay, with context',
-      'Visual notes that carry into image generation',
-      'Hero images that set the mood for each scene',
+      'Visual notes and reference images that carry into production design',
+      '3D Worlds that make space, scale, and camera possibilities tangible',
     ],
     image: locationDetail,
     imageAlt:
-      'A location page in Renku showing a generated hero image and visual notes.',
+      'The Imperial Council Chamber 3D World open in Renku, showing an explorable Byzantine council room.',
   },
   {
     id: 'visual-language',
@@ -99,12 +101,12 @@ export const features: Feature[] = [
       'AI analysis: core idea, principles, and a named color palette',
       'Production and storyboard lookbooks steer every generation',
     ],
-    image: inspirationGrid,
+    image: wesAndersonGrabs,
     imageAlt:
-      'An inspiration folder in Renku filled with film stills arranged in a grid.',
-    secondaryImage: lookbookPalette,
+      'The Wes Anderson inspiration folder in Renku with film stills arranged in a grid.',
+    secondaryImage: wesAndersonAnalysis,
     secondaryImageAlt:
-      'A lookbook color palette with named swatches and usage notes.',
+      'The Wes Anderson inspiration analysis showing its visual thesis, reference stills, and named color palette.',
   },
   {
     id: 'storyboards',
@@ -119,12 +121,43 @@ export const features: Feature[] = [
     ],
     image: sceneBeats,
     imageAlt:
-      'Scene Beats in Renku with storyboard thumbnails and the selected Beat details.',
+      'The Renku Screenplay view showing storyboard images for The First Patron and its surrounding scenes.',
     secondaryImage: actStoryboard,
     secondaryImageAlt:
-      'An act overview showing storyboard frames for every scene.',
+      'The First Patron Beats view with storyboard thumbnails and the selected Beat details.',
+  },
+  {
+    id: 'shot-plans',
+    eyebrow: 'Shot Planning',
+    title: 'Turn story intent into camera decisions',
+    description:
+      'Build a Shot Plan only after the narrative is clear. Each Shot stays tied to the Beats it covers, while framing, camera angle, movement, optics, focus, and lighting intent live together in one practical brief.',
+    bullets: [
+      'Author the visual relationship from the opening frame to the closing frame',
+      'Plan camera angle, movement, optics, focus, and lighting intent together',
+      'Keep every Shot visibly connected to the narrative Beats it covers',
+    ],
+    image: shotPlan,
+    imageAlt:
+      'The First Patron Shot Plan in Renku, showing the selected shot’s framing, camera, motion, optics, and lighting brief.',
   },
 ];
+
+export const shotPlanVideoFeature = {
+  id: 'shot-plan-video',
+  eyebrow: 'Generated Previs',
+  title: 'See the Shot Plan move',
+  description:
+    'Generate a video preview from the plan and judge the result in motion. This 12-second take from The First Patron carries its intended slow push through the Imperial Council Chamber into a concrete piece of previs.',
+  bullets: [
+    'Review composition, camera movement, and pacing before production',
+    'Keep each generated preview connected to its Scene and Shot Plan',
+    'Compare motion against the authored visual intent while it is still easy to change',
+  ],
+  video: firstPatronShotPlanVideo,
+  videoLabel:
+    'A silent 12-second generated Shot Plan Video for The First Patron, showing Urban leaning over the council table before Constantine and Notaras.',
+};
 
 export const workflow = [
   {
@@ -146,6 +179,11 @@ export const workflow = [
     step: '04',
     title: 'Design scene Beats',
     text: 'Narrative units and storyboards with clear intent.',
+  },
+  {
+    step: '05',
+    title: 'Plan shots & preview motion',
+    text: 'Camera decisions become generated video previews.',
   },
 ];
 
