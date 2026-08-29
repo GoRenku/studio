@@ -486,8 +486,12 @@ interface MediaGenerationProvenance {
 This is the irreducible Studio envelope, not a provider schema. `request` and
 `receipt` remain opaque and provider-specific. Local-file markers remain in the
 stored request so Inspection can display durable references; temporary upload
-URLs, signed output URLs, credentials, and headers are never stored. The receipt
-may contain provider request/job ids and response facts, but no Renku Run state.
+URLs, credentials, and headers are never stored there. The receipt may contain
+provider request/job ids, unsigned provider output URLs, and other response facts,
+but no Renku Run state. Those output URLs are opaque historical facts only: the
+imported local AssetFile remains canonical, and runtime code does not fetch or
+recover media from a receipt URL. Signed or credential-bearing URLs are never
+stored in either request or receipt.
 
 Copying a generated Asset copies immutable provenance JSON. Ordinary external
 media imports have `null` provenance. The attachment boundary treats provenance
@@ -504,8 +508,8 @@ invent one. Before attachment, Core recursively rejects:
 
 - credential values, authorization/cookie headers, and known secret field names;
 - absolute local paths and Project traversal;
-- presigned upload/download URLs, temporary provider media URLs, and signed query
-  parameters; and
+- provider upload/transport URLs in the request, plus credential-bearing URLs
+  and signed query parameters in either request or receipt; and
 - non-JSON, cyclic, over-depth, or over-size values.
 
 These checks protect durable data and UI safety; they do not semantically inspect

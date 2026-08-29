@@ -10,20 +10,30 @@ export function assertSafeMediaGenerationRequest(
   value: JsonValue,
   kind: 'review' | 'provenance',
 ): void {
-  visit(value, [], kind);
+  visit(value, [], kind, false);
+}
+
+export function assertSafeMediaGenerationReceipt(value: JsonValue): void {
+  visit(value, [], 'provenance', true);
 }
 
 function visit(
   value: JsonValue,
   pathSegments: Array<string | number>,
   kind: 'review' | 'provenance',
+  allowProviderMediaUrls: boolean,
 ): void {
   if (typeof value === 'string') {
-    assertSafeString(value, pathSegments, kind);
+    assertSafeString(value, pathSegments, kind, allowProviderMediaUrls);
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => visit(entry, [...pathSegments, index], kind));
+    value.forEach((entry, index) => visit(
+      entry,
+      [...pathSegments, index],
+      kind,
+      allowProviderMediaUrls,
+    ));
     return;
   }
   if (value !== null && typeof value === 'object') {
@@ -31,7 +41,7 @@ function visit(
       if (SECRET_FIELD.test(key)) {
         throw unsafe(kind, `Secret-bearing field is not allowed at ${formatPath([...pathSegments, key])}.`);
       }
-      visit(entry, [...pathSegments, key], kind);
+      visit(entry, [...pathSegments, key], kind, allowProviderMediaUrls);
     }
   }
 }
@@ -40,6 +50,7 @@ function assertSafeString(
   value: string,
   pathSegments: Array<string | number>,
   kind: 'review' | 'provenance',
+  allowProviderMediaUrls: boolean,
 ): void {
   if (path.isAbsolute(value) || path.win32.isAbsolute(value)) {
     throw unsafe(kind, `Absolute local path is not allowed at ${formatPath(pathSegments)}.`);
@@ -50,11 +61,13 @@ function assertSafeString(
   } catch {
     return;
   }
-  if (![...url.searchParams.keys()].some((key) => SIGNED_QUERY_FIELD.test(key))
-    && !TEMPORARY_MEDIA_HOST.test(url.hostname)) {
-    return;
+  if (url.username || url.password
+    || [...url.searchParams.keys()].some((key) => SIGNED_QUERY_FIELD.test(key))) {
+    throw unsafe(kind, `Credential-bearing URL is not allowed at ${formatPath(pathSegments)}.`);
   }
-  throw unsafe(kind, `Temporary or signed provider URL is not allowed at ${formatPath(pathSegments)}.`);
+  if (!allowProviderMediaUrls && TEMPORARY_MEDIA_HOST.test(url.hostname)) {
+    throw unsafe(kind, `Provider transport URL is not allowed at ${formatPath(pathSegments)}.`);
+  }
 }
 
 function unsafe(kind: 'review' | 'provenance', message: string): ProjectDataError {

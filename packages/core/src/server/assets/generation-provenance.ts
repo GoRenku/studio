@@ -5,7 +5,10 @@ import { readAssetRecord } from '../database/access/assets.js';
 import { assets } from '../schema/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { parseMediaGenerationProvenance } from '../media-generation-review/document.js';
-import { assertSafeMediaGenerationRequest } from '../media-generation-review/safety.js';
+import {
+  assertSafeMediaGenerationReceipt,
+  assertSafeMediaGenerationRequest,
+} from '../media-generation-review/safety.js';
 
 export function validateMediaGenerationProvenance(
   value: unknown,
@@ -13,7 +16,7 @@ export function validateMediaGenerationProvenance(
   const provenance = parseMediaGenerationProvenance(value);
   assertSafeMediaGenerationRequest(provenance.request, 'provenance');
   if (provenance.receipt !== undefined) {
-    assertSafeMediaGenerationRequest(provenance.receipt, 'provenance');
+    assertSafeMediaGenerationReceipt(provenance.receipt);
   }
   return provenance;
 }

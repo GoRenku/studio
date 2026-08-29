@@ -11,6 +11,13 @@
 > seam, raw schema-read capability, and whole annotated-marker substitution.
 > Its addition required no new Engines request/result/error contract, Preview
 > contract, provenance shape, attachment path, or CLI command.
+>
+> **Provider receipt URL clarification:** An unsigned provider output URL may be
+> retained inside the opaque receipt as a historical response fact. The imported
+> local AssetFile remains the canonical media source, and Studio does not fetch or
+> recover media from the receipt URL. Provider upload/transport URLs remain
+> forbidden in the stored request, while signed or credential-bearing URLs remain
+> forbidden everywhere in durable provenance.
 
 Date: 2026-08-24
 
@@ -55,7 +62,9 @@ Each generated Asset may store one exact `MediaGenerationProvenance` value:
 provider, model, media kind, prompt, native request, and optional opaque receipt.
 `renku media import --provenance` passes that value to the focused Core attachment
 owner. Provenance is Asset-level rather than AssetFile-level. Asset copies retain
-it immutably. Codex built-in image generation uses provider `codex` in the same
+it immutably. An unsigned provider output URL may remain in the receipt as an
+opaque historical fact; it is not a durable media source or recovery path.
+Codex built-in image generation uses provider `codex` in the same
 review/provenance envelope only when the current harness exposes the capability;
 Codex is never registered in Engines and has no invented provider receipt.
 

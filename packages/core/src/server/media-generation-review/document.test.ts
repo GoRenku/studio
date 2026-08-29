@@ -59,14 +59,44 @@ describe('media generation review and provenance documents', () => {
     }));
   });
 
+  it('retains unsigned provider output URLs as opaque receipt facts', () => {
+    const provenance = {
+      ...review,
+      receipt: {
+        requestId: 'fal_job_1',
+        output: {
+          video: {
+            url: 'https://v3b.fal.media/files/output.mp4',
+            content_type: 'video/mp4',
+          },
+        },
+      },
+    };
+
+    expect(validateMediaGenerationProvenance(provenance)).toEqual(provenance);
+  });
+
   it.each([
     [{ apiKey: 'secret' }, 'review'],
     [{ image: '/Users/example/reference.png' }, 'review'],
     [{ image: 'https://storage.googleapis.com/private/image.png' }, 'provenance'],
     [{ image: 'https://example.com/image.png?x-amz-signature=signed' }, 'provenance'],
-  ] as const)('rejects secret, absolute, and temporary values', (request, kind) => {
+    [{ image: 'https://user:password@example.com/image.png' }, 'provenance'],
+  ] as const)('rejects secret, absolute, and transport values in requests', (request, kind) => {
     expect(() => assertSafeMediaGenerationRequest(request, kind)).toThrowError(expect.objectContaining({
       code: kind === 'review' ? 'CORE_MEDIA_GENERATION_REVIEW_UNSAFE' : 'CORE_MEDIA_GENERATION_PROVENANCE_UNSAFE',
+    }));
+  });
+
+  it.each([
+    'https://example.com/image.png?x-amz-signature=signed',
+    'https://user:password@example.com/image.png',
+  ])('rejects credential-bearing receipt URL %s', (url) => {
+    expect(() => validateMediaGenerationProvenance({
+      ...review,
+      receipt: { output: { image: { url } } },
+    })).toThrowError(expect.objectContaining({
+      code: 'CORE_MEDIA_GENERATION_PROVENANCE_UNSAFE',
     }));
   });
 });

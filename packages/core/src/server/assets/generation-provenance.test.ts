@@ -15,6 +15,50 @@ describe('Asset generation provenance', () => {
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
   });
 
+  it('persists an unsigned provider output URL in the attachment receipt', async () => {
+    const projectData = createProjectDataService();
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, 'tmp', 'image.png'), 'image');
+    const generationProvenance = {
+      provider: 'fal-ai',
+      model: 'fal-ai/example-image-model',
+      mediaKind: 'image' as const,
+      prompt: 'A generated image',
+      request: { prompt: 'A generated image' },
+      receipt: {
+        requestId: 'fal_job_1',
+        output: {
+          image: {
+            url: 'https://v3b.fal.media/files/output.png',
+            content_type: 'image/png',
+          },
+        },
+      },
+    };
+
+    const attached = await projectData.attachGenerationMedia({
+      projectName: 'constantinople',
+      homeDir,
+      purpose: 'project.cover',
+      target: { kind: 'project', id: 'project' },
+      sourceProjectRelativePath: 'tmp/image.png',
+      generationProvenance,
+    });
+
+    expect(attached.generationProvenance).toEqual(generationProvenance);
+    const assets = await projectData.listAssets({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'project' },
+    });
+    expect(assets.find((asset) => asset.id === attached.asset.id)?.generationProvenance)
+      .toEqual(generationProvenance);
+  });
+
   it('rejects a different second provenance value without replacing the first', async () => {
     const projectData = createProjectDataService();
     const created = await createSampleMovieProject({ projectData, homeDir });

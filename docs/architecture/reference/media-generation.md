@@ -50,6 +50,10 @@ interface MediaGenerationContextReport {
 
 `Asset.generationProvenance` is nullable. `Asset.authoredFrom` is nullable weak
 Shot Plan context used only by current video grouping/invalidation behavior.
+An unsigned provider output URL may be retained as an opaque receipt fact. The
+imported local AssetFile is still the canonical media source, and runtime code
+does not fetch or recover media from receipt URLs. Stored requests reject provider
+transport URLs, and all provenance rejects signed or credential-bearing URLs.
 
 Preview and Inspection share `MediaGenerationPreviewResource`. Its references
 contain `requestPointer`, media kind, Project-relative path, required
