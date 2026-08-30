@@ -44,6 +44,7 @@ export type MediaGenerationPurposeBuilder = (
 export const MEDIA_GENERATION_PURPOSE_BUILDERS: Record<MediaPurpose, MediaGenerationPurposeBuilder> = {
   'image.create': buildShotPlanPurposeContext,
   'image.edit': buildAssetPurposeContext,
+  'video.edit': buildAssetPurposeContext,
   'project.cover': buildProjectPurposeContext,
   'lookbook.image': buildLookbookPurposeContext,
   'lookbook.video-sheet': buildLookbookPurposeContext,

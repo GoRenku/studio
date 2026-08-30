@@ -32,6 +32,7 @@ export interface PersistGeneratedMediaAttachmentInput {
   sourceProjectRelativePath: string;
   destination: GeneratedMediaAttachmentDestination;
   asset: {
+    localeId?: string | null;
     type: string;
     mediaKind: 'image' | 'audio' | 'video';
     title: string;
@@ -77,6 +78,9 @@ export function persistOwnedGeneratedMediaAssetInSession(
 ): ReturnType<typeof persistProjectAssetFileSync> {
   insertAssetRecord(input.session, {
     id: input.assetId,
+    ...(input.asset.localeId !== undefined
+      ? { localeId: input.asset.localeId }
+      : {}),
     type: input.asset.type,
     mediaKind: input.asset.mediaKind,
     title: input.asset.title,

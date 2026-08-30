@@ -100,6 +100,7 @@ function validateInput(input: ReadMediaGenerationContextInput): void {
 
 function purposeExpectsVisualLanguage(purpose: ReadMediaGenerationContextInput['purpose']): boolean {
   return purpose !== 'image.edit'
+    && purpose !== 'video.edit'
     && purpose !== 'cast.voice-sample'
     && purpose !== 'scene.dialogue-audio';
 }

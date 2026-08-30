@@ -94,6 +94,7 @@ durable ids for reads and mutations.
 | Plan first/last frame | `scenes/<scene>/<NN>-shot-plan/` | `first-frame-gxxx` / `last-frame-gxxx` |
 | Plan Storyboard/reference | `scenes/<scene>/<NN>-shot-plan/` | `storyboard-gxxx` / `reference-gxxx` |
 | Plan video | `scenes/<scene>/<NN>-shot-plan/` | `s<scene>-p<plan>-video-gxxx` |
+| Edited video | exact source file parent | `edited-video-gxxx` |
 
 All files retain a normalized extension. Core owns fixed role words such as
 `profile`, `hero`, `sheet`, `image`, and `video`. A skill may supply a concise
@@ -129,6 +130,13 @@ then reuses the matching row in this matrix. Beat edits allocate a new
 Storyboard iteration; Lookbook edits create the corresponding new detail row;
 Plan-role edits preserve exact weak authorship. Every result is a separate
 unselected candidate beside its source.
+
+An accepted `video.edit` applies to any active registered video Asset. Core
+uses the exact current source AssetFile parent only as the destination root and
+allocates `edited-video-gxxx.<ext>`. Owner, Asset type, locale, metadata, weak
+authorship, and selection behavior come from SQLite, never from the filename or
+directory. The result is a separate unselected candidate and the source remains
+unchanged.
 
 ## Filename Allocation
 

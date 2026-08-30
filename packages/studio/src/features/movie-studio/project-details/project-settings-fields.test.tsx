@@ -18,6 +18,9 @@ describe('ProjectSettingsFields', () => {
     expect(screen.getByRole('button', { name: 'Audio Generation' })).toBeTruthy();
     expect(screen.getByText('GPT Image 2 (Codex)')).toBeTruthy();
     expect(screen.getByText('ElevenLabs')).toBeTruthy();
+    expect((screen.getByRole('switch', {
+      name: 'Enable prompt expansion at the provider level when available for a model',
+    }) as HTMLButtonElement).getAttribute('data-state')).toBe('checked');
     const providerSelects = screen.getAllByRole('combobox', { name: 'Provider' });
     fireEvent.click(providerSelects[0]!);
     expect(screen.getByRole('option', { name: 'Pika' })).toBeTruthy();
@@ -49,7 +52,7 @@ describe('ProjectSettingsFields', () => {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 4,
+    version: 5,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -59,6 +62,7 @@ function settings(): ProjectSettingsDocument {
     },
     generation: {
       displayPreview: true,
+      enableProviderPromptExpansion: true,
       image: { provider: 'codex', askBeforeGenerating: false, runGenerationsConcurrently: true, maxConcurrentGenerations: 5 },
       video: { provider: 'fal-ai', askBeforeGenerating: true, runGenerationsConcurrently: false, maxConcurrentGenerations: 1 },
       audio: { provider: 'elevenlabs', askBeforeGenerating: true, runGenerationsConcurrently: false, maxConcurrentGenerations: 1 },

@@ -44,6 +44,7 @@ export interface SceneDialogueAudio {
   voiceSettings: SceneDialogueAudioVoiceSettings;
   outputFormat: string;
   languageCode: string | null;
+  selectedTakeId: string | null;
   takes: SceneDialogueAudioTake[];
   createdAt: string;
   updatedAt: string;

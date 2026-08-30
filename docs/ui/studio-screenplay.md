@@ -60,9 +60,12 @@ punctuation, whitespace, repeated names, and Unicode. Presence-only references
 do not fabricate inline highlights.
 
 Dialogue text in the screenplay remains immutable. The dialogue audio panel has
-its own editable generation text and continues to own preview, autosave,
-estimate, generation, Takes, playback, and Advanced settings by Dialogue Turn
-ID.
+its own editable generation text and owns setup autosave, Takes, playback, and
+Advanced settings by Dialogue Turn ID. The Takes tab marks the selected
+workflow Take, allows **Pick**, and provides **Clear selection**. A newly
+attached or restored Take remains unselected; discarding the selected Take
+clears the choice. Dialogue Audio generation remains in the conversational
+Media Producer workflow rather than a Studio Generate button.
 
 ## Deliberate Absences
 

@@ -129,6 +129,11 @@ function dialogueAudioSuggestions(input: {
       role: 'dialogue-audio',
       subject: { kind: 'dialogueTurn', id: turn.turnId },
       assets,
+      workflowSelectedAssetIds: workspace.audioByTurnId[turn.turnId]?.selectedTakeId
+        ? workspace.audioByTurnId[turn.turnId]!.takes
+            .filter((take) => take.takeId === workspace.audioByTurnId[turn.turnId]!.selectedTakeId)
+            .map((take) => take.assetId)
+        : [],
       projectFolder: input.input.projectFolder,
       warnings: input.input.warnings,
     });

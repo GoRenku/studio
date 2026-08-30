@@ -11,7 +11,11 @@ import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
-import { sceneDialogueAudio, sceneDialogueAudioTakes } from '../schema/index.js';
+import {
+  sceneDialogueAudio,
+  sceneDialogueAudioTakeSelections,
+  sceneDialogueAudioTakes,
+} from '../schema/index.js';
 import { studioSceneDialogueAudioSurfaceResourceKey } from '../studio-coordination/resource-keys.js';
 import { listSceneDialogueTurns } from './turns.js';
 
@@ -39,6 +43,11 @@ export function readSceneDialogueAudioWorkspace(input: {
   const audioRows = input.session.db.select().from(sceneDialogueAudio)
     .where(eq(sceneDialogueAudio.sceneId, input.sceneId)).all();
   const audioByTurnId = Object.fromEntries(audioRows.map((audio) => {
+    const selectedTakeId = input.session.db
+      .select({ takeId: sceneDialogueAudioTakeSelections.takeId })
+      .from(sceneDialogueAudioTakeSelections)
+      .where(eq(sceneDialogueAudioTakeSelections.sceneDialogueAudioId, audio.id))
+      .get()?.takeId ?? null;
     const takes = input.session.db
       .select({ take: sceneDialogueAudioTakes })
       .from(sceneDialogueAudioTakes)
@@ -76,6 +85,9 @@ export function readSceneDialogueAudioWorkspace(input: {
       voiceSettings: parseVoiceSettings(audio.voiceSettingsJson),
       outputFormat: audio.outputFormat,
       languageCode: audio.languageCode,
+      selectedTakeId: takes.some((take) => take.takeId === selectedTakeId)
+        ? selectedTakeId
+        : null,
       takes,
       createdAt: audio.createdAt,
       updatedAt: audio.updatedAt,

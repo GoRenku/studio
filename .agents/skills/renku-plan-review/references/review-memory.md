@@ -18,7 +18,11 @@ or architecture decision.
   the smaller product-visible subset.
 - **Planning rule:** Design a provider integration around the provider-level
   capability contract the user requested. Do not turn a representative model,
-  pricing example, test fixture, or current Studio route into an allowlist.
+  pricing example, test fixture, current Studio route, or the only Asset type
+  currently exercising a media operation into an allowlist. When the requested
+  operation is defined by media kind or provider capability, validate that
+  capability at the owning boundary and keep current model/type examples as
+  coverage, not product scope.
   Before designing a provider-neutral runtime, establish whether the product
   itself must execute provider requests or whether an agent can use a
   provider-owned skill/tool and attach the resulting Asset through the existing
@@ -40,17 +44,17 @@ or architecture decision.
   and synchronous LLM protocols, surface that boundary for confirmation instead
   of silently narrowing it.
 - **Apply when:** Planning a new generation provider, dynamic provider catalog,
-  runtime schema integration, model registry, or Studio model picker where a
-  convenient initial operation could be mistaken for the provider's supported
-  scope.
+  runtime schema integration, model registry, Studio model picker, reference
+  modality, or source-derived media operation where a convenient initial model,
+  route, or Asset type could be mistaken for the supported scope.
 - **Evidence to inspect:** The provider's agent-readable documentation, official
   CLI or MCP support, live catalog and protocol families; the existing Asset
   attachment boundary; whether provider requests must be durable project data;
   paid-run approval requirements; current Engines
   list/read/describe/estimate/execute contracts; Project provider Settings; and
   every proposed shared schema, transform, allowlist, fixed operation id,
-  example, fixture, capability filter, duplicated provider fact, setup
-  document, and model-selection surface.
+  example, fixture, Asset-type gate, capability filter, duplicated provider
+  fact, setup document, and model-selection surface.
 
 ### 2026-08-24 — Put reusable provider protocol in tooling, not repeated agent reasoning
 

@@ -11,6 +11,7 @@ import { runAssetCommand } from './commands/asset-command.js';
 import { runCastCommand } from './commands/cast-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runDirectorCommand } from './commands/director-command.js';
+import { runDialogueAudioCommand } from './commands/dialogue-audio/command.js';
 import { runGenerationCommand } from './commands/generation/command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
@@ -65,6 +66,7 @@ Commands
   asset                Register and list assets
   cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
+  dialogue-audio       Inspect and set up Scene Dialogue Audio
   location             Author location facts and generate 3D Worlds
   prop                 Author Prop facts
   production-design    Author Location and Prop Design documents
@@ -599,6 +601,19 @@ export async function runRenkuCli(
           input,
           flags: {
             selection: cli.flags.selection,
+          },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'dialogue-audio':
+        return await runDialogueAudioCommand({
+          input,
+          flags: {
+            project: cli.flags.project,
+            file,
+            scene: cli.flags.scene,
+            dialogue: cli.flags.dialogue,
           },
           json: cli.flags.json,
           io,

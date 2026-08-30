@@ -41,7 +41,7 @@ describe('ProjectSettingsPanel', () => {
     expect(replaceProjectSettings).toHaveBeenCalledWith(
       'constantinople',
       expect.objectContaining({
-        version: 4,
+        version: 5,
         screenplayImport: expect.objectContaining({
           createContinuitySubjects: true,
           runScreenplayAnalysis: true,
@@ -118,7 +118,7 @@ function resource(value: ReturnType<typeof settings>) {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 4 as const,
+    version: 5 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -128,6 +128,7 @@ function settings(): ProjectSettingsDocument {
     },
     generation: {
       displayPreview: true,
+      enableProviderPromptExpansion: true,
       image: {
         provider: 'codex',
         askBeforeGenerating: false,

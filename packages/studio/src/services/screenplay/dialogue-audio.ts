@@ -69,6 +69,35 @@ export async function deleteSceneDialogueAudioTake(
   );
 }
 
+export async function selectSceneDialogueAudioTake(
+  projectName: string,
+  sceneId: string,
+  turnId: string,
+  takeId: string
+): Promise<SceneDialogueAudioMutationWithUrls> {
+  return sendMutation(
+    `${turnAudioPath(projectName, sceneId, turnId)}/selected-take/${encodeURIComponent(takeId)}`,
+    'PUT',
+    undefined,
+    projectName,
+    sceneId
+  );
+}
+
+export async function clearSceneDialogueAudioTakeSelection(
+  projectName: string,
+  sceneId: string,
+  turnId: string
+): Promise<SceneDialogueAudioMutationWithUrls> {
+  return sendMutation(
+    `${turnAudioPath(projectName, sceneId, turnId)}/selected-take`,
+    'DELETE',
+    undefined,
+    projectName,
+    sceneId
+  );
+}
+
 function decorateSceneDialogueAudioWorkspace(
   projectName: string,
   sceneId: string,
@@ -93,7 +122,7 @@ function decorateSceneDialogueAudioWorkspace(
 
 async function sendMutation(
   path: string,
-  method: 'DELETE' | 'PATCH' | 'POST',
+  method: 'DELETE' | 'PATCH' | 'POST' | 'PUT',
   body: unknown,
   projectName: string,
   sceneId: string
@@ -101,7 +130,7 @@ async function sendMutation(
   const response = await fetch(path, {
     method,
     headers: jsonHeaders(),
-    body: JSON.stringify(body),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   if (!response.ok) {
     throw await readStudioApiError(response);

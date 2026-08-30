@@ -10,6 +10,11 @@ export type ProjectAssetFileNamingMode =
 export type ProjectAssetFileDestination =
   | { kind: 'project.cover' }
   | { kind: 'screenplay.source' }
+  | {
+      kind: 'asset.videoEdit';
+      sourceAssetId: string;
+      sourceAssetFileId: string;
+    }
   | { kind: 'shotPlan.video'; shotPlanId: string }
   | {
       kind: 'shotPlan.videoReferenceImage';

@@ -21,6 +21,7 @@ import {
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { attachSceneDialogueAudioMedia } from '../scene-dialogue-audio-workspace/attachments.js';
 import { attachImageEditMedia } from '../image-edit-attachments/index.js';
+import { attachVideoEditMedia } from '../video-edit-attachments/index.js';
 
 export interface AttachGenerationMediaInput {
   purpose: MediaPurpose;
@@ -61,6 +62,20 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     return attachImageEditMedia({
       ...input,
       purpose: 'image.edit',
+      target: input.target,
+      generationProvenance,
+    });
+  }
+  if (input.purpose === 'video.edit') {
+    if (input.target.kind !== 'asset' || !generationProvenance) {
+      throw new ProjectDataError(
+        'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
+        'video.edit attachment requires an Asset target and exact provenance.',
+      );
+    }
+    return attachVideoEditMedia({
+      ...input,
+      purpose: 'video.edit',
       target: input.target,
       generationProvenance,
     });

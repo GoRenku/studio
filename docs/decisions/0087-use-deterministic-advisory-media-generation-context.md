@@ -3,6 +3,11 @@
 > **Decision 0088 update:** completion candidates come only from exact references
 > authored into the provider request, not from this advisory context projection.
 > Generic `image.create` uses the existing Shot Plan context projector.
+>
+> **Decision 0089 update:** reference candidates now distinguish informational
+> display selection from exact workflow selection. Dialogue Audio context marks
+> only a persisted selected Take as `isWorkflowSelected`; every active candidate
+> remains visible and suggestions remain advisory.
 
 Date: 2026-08-25
 

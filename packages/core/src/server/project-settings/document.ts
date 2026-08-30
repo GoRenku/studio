@@ -4,7 +4,7 @@ import type { ProjectSettingsDocument } from '../../client/project-settings.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 4,
+  version: 5,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -14,6 +14,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
   },
   generation: {
     displayPreview: true,
+    enableProviderPromptExpansion: true,
     image: {
       provider: 'codex',
       askBeforeGenerating: false,
@@ -58,7 +59,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation'],
   properties: {
-    version: { const: 4 },
+    version: { const: 5 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -82,12 +83,14 @@ const projectSettingsSchema = {
       additionalProperties: false,
       required: [
         'displayPreview',
+        'enableProviderPromptExpansion',
         'image',
         'video',
         'audio',
       ],
       properties: {
         displayPreview: { type: 'boolean' },
+        enableProviderPromptExpansion: { type: 'boolean' },
         image: {
           ...concurrencySchema,
           properties: {
@@ -182,7 +185,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 4 Project Settings contract.'
+      'Use the complete current version 5 Project Settings contract.'
     );
   });
 }
@@ -195,7 +198,7 @@ function projectSettingsIssueMessage(error: ErrorObject): string {
     return `Unknown Project Settings field: ${String(error.params.additionalProperty)}.`;
   }
   if (error.keyword === 'const') {
-    return 'Project Settings version must be 4.';
+    return 'Project Settings version must be 5.';
   }
   if (error.keyword === 'minimum' || error.keyword === 'maximum') {
     return 'Maximum concurrent generations must be an integer from 1 through 5.';

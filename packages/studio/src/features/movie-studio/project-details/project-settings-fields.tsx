@@ -30,7 +30,8 @@ export function ProjectSettingsFields({ settings, onChange }: {
       <AccordionItem value='generation'>
         <AccordionTrigger>Generation</AccordionTrigger>
         <AccordionContent>
-          <SettingsSwitchRow id='display-generation-previews' label='Show Generation Previews' description='Open Generation Preview automatically before execution. Explicit Preview requests still work when this is off.' checked={settings.generation.displayPreview} onCheckedChange={(displayPreview) => updateGeneration({ ...settings.generation, displayPreview })} last />
+          <SettingsSwitchRow id='display-generation-previews' label='Show Generation Previews' description='Open Generation Preview automatically before execution. Explicit Preview requests still work when this is off.' checked={settings.generation.displayPreview} onCheckedChange={(displayPreview) => updateGeneration({ ...settings.generation, displayPreview })} />
+          <SettingsSwitchRow id='enable-provider-prompt-expansion' label='Enable prompt expansion at the provider level when available for a model' description='Apply this preference only when the selected provider route exposes an unambiguous prompt-expansion control in its live schema.' checked={settings.generation.enableProviderPromptExpansion} onCheckedChange={(enableProviderPromptExpansion) => updateGeneration({ ...settings.generation, enableProviderPromptExpansion })} last />
         </AccordionContent>
       </AccordionItem>
       <MediaGenerationSection title='Image Generation' value='image-generation' id='image' settings={settings.generation.image} providers={[{ value: 'codex', label: 'GPT Image 2 (Codex)' }, { value: 'fal-ai', label: 'Fal.ai' }, { value: 'pika', label: 'Pika' }]} onChange={(image) => updateGeneration({ ...settings.generation, image })} />

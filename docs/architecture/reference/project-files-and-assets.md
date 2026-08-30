@@ -157,6 +157,11 @@ The stable Dialogue Turn id and its Core-validated speaker reference determine
 the filename prefix. File allocation never depends on optional Section ancestry
 or the Dialogue Turn's current array index.
 
+Each Dialogue Audio workspace may persist one selected active Take. This is a
+focused continuity default, not common Asset display selection. New and restored
+Takes remain unselected; discarding the selected Take clears the relationship in
+the same transaction.
+
 ## Working Assets Versus Production Assets
 
 Working assets are for development and iteration.
@@ -277,6 +282,11 @@ destination: Project Cover, Cast, Location, Prop, Lookbook detail collection,
 active Beat Storyboard iteration, Shot, or weakly authored Shot Plan image role.
 Core derives that continuation from durable relationships and creates a new
 unselected candidate; agents and adapters do not supply or infer a destination.
+- Accepted `video.edit` output applies to any current video Asset, keeps the
+  source's durable owner/type/metadata/locale/weak authorship, and is stored as
+  a new unselected `edited-video-gxxx.<ext>` beside the exact source file. Core
+  requires that source path exactly once in safe video provenance and does not
+  infer relationships from the path.
 - `research/` contains user-owned scratch references. Renku may read these
   files when instructed, and provider requests may use them as one-off reference
   inputs. Renku must not register them as SQLite asset files.

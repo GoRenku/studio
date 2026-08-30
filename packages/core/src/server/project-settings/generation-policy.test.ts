@@ -10,6 +10,7 @@ describe('Project generation workflow policy', () => {
   ] as const)('projects %s policy', (outputMediaKind, provider, askBeforeGenerating, concurrencyLimit) => {
     expect(resolveGenerationWorkflowPolicy({ settings: DEFAULT_PROJECT_SETTINGS, outputMediaKind })).toEqual({
       displayPreview: true,
+      enableProviderPromptExpansion: true,
       provider,
       askBeforeGenerating,
       concurrencyLimit,
@@ -30,5 +31,16 @@ describe('Project generation workflow policy', () => {
     settings.generation.video.provider = 'pika';
     expect(resolveGenerationWorkflowPolicy({ settings, outputMediaKind: 'image' }).provider).toBe('pika');
     expect(resolveGenerationWorkflowPolicy({ settings, outputMediaKind: 'video' }).provider).toBe('pika');
+  });
+
+  it('projects a disabled provider prompt-expansion preference through every media lane', () => {
+    const settings = structuredClone(DEFAULT_PROJECT_SETTINGS);
+    settings.generation.enableProviderPromptExpansion = false;
+    for (const outputMediaKind of ['image', 'video', 'audio'] as const) {
+      expect(resolveGenerationWorkflowPolicy({
+        settings,
+        outputMediaKind,
+      }).enableProviderPromptExpansion).toBe(false);
+    }
   });
 });

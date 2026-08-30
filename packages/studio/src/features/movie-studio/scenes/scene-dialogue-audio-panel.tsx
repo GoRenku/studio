@@ -112,8 +112,11 @@ export function SceneDialogueAudioPanel({
             <SceneDialogueAudioTakesTab
               actionDisabled={dialogueAudio.actionBusy}
               player={player}
+              selectedTakeId={dialogueAudio.selectedTakeId}
               takes={dialogueAudio.takes}
+              onClearSelection={dialogueAudio.clearTakeSelection}
               onDeleteTake={dialogueAudio.deleteTake}
+              onPickTake={dialogueAudio.pickTake}
             />
           </TabsContent>
           <TabsContent value='advanced' className='m-0'>

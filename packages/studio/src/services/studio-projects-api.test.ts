@@ -231,7 +231,7 @@ describe('studio-projects-api', () => {
 
 function projectSettings() {
   return {
-    version: 4 as const,
+    version: 5 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -241,6 +241,7 @@ function projectSettings() {
     },
     generation: {
       displayPreview: true,
+      enableProviderPromptExpansion: true,
       image: {
         provider: 'codex' as const,
         askBeforeGenerating: false,

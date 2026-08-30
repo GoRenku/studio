@@ -15,17 +15,19 @@ export class SceneDetailPage {
 
   async expectNarrativeVisible(): Promise<void> {
     await expect(
-      this.page.getByRole('heading', { name: '01 - Ceremony Becomes Physics' })
+      this.page.getByRole('heading', { name: '1 - Ceremony Becomes Physics' })
     ).toBeVisible();
     await expect(
-      this.page.getByRole('button', { name: /01 - Ceremony Becomes Physics/ })
+      this.page.getByRole('button', { name: /1 - Ceremony Becomes Physics/ })
     ).toBeVisible();
     await expect(this.page.getByText('Urban stands near the cannon')).toBeVisible();
     await expect(this.page.getByText('Hold the gate.')).toBeVisible();
   }
 
   async openDialogueAudioPanel(): Promise<void> {
-    await this.page.getByRole('button', { name: 'Urban', exact: true }).click();
+    await this.page.getByRole('button', {
+      name: 'Open URBAN dialogue audio takes',
+    }).click();
     await expect(
       this.page.getByRole('button', { name: 'Close dialogue audio panel' })
     ).toBeVisible();
@@ -46,7 +48,7 @@ export class SceneDetailPage {
 
   async expectGeneratedDialogueAudioAvailable(): Promise<void> {
     await expect(
-      this.page.getByLabel('Open dialogue audio takes')
+      this.page.getByRole('button', { name: 'Open URBAN dialogue audio takes' })
     ).toBeVisible();
   }
 }

@@ -8,6 +8,7 @@ import {
   lookbookImages,
   lookbookSheets,
   sceneDialogueAudioTakes,
+  sceneDialogueAudioTakeSelections,
 } from '../schema/index.js';
 import {
   studioAssetOwnerSurfaceResourceKeys,
@@ -515,6 +516,10 @@ const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
     if (!take) {
       return;
     }
+    input.session.db
+      .delete(sceneDialogueAudioTakeSelections)
+      .where(eq(sceneDialogueAudioTakeSelections.takeId, input.itemId))
+      .run();
     input.session.db
       .update(sceneDialogueAudioTakes)
       .set({

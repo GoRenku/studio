@@ -38,6 +38,36 @@ export function createScreenplayDialogueAudioRoute({ projectData, requireToken }
         return projectErrorResponse(c, error);
       }
     })
+    .put('/screenplay/scenes/:sceneId/dialogue-turns/:turnId/audio/selected-take/:takeId', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sceneId = c.req.param('sceneId') as string;
+        const turnId = c.req.param('turnId') as string;
+        const takeId = c.req.param('takeId') as string;
+        return c.json(await projectData.selectSceneDialogueAudioTake({
+          projectName,
+          sceneId,
+          turnId,
+          takeId,
+        }));
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
+    .delete('/screenplay/scenes/:sceneId/dialogue-turns/:turnId/audio/selected-take', requireToken, async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const sceneId = c.req.param('sceneId') as string;
+        const turnId = c.req.param('turnId') as string;
+        return c.json(await projectData.clearSceneDialogueAudioTakeSelection({
+          projectName,
+          sceneId,
+          turnId,
+        }));
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/screenplay/scenes/:sceneId/dialogue-turns/:turnId/audio/takes/:takeId/files/:assetFileId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

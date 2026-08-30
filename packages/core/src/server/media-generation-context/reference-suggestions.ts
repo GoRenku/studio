@@ -127,10 +127,14 @@ export function createReferenceSuggestion(input: {
   subject?: { kind: string; id: string };
   assets: Asset[];
   selectedAssetIds?: string[];
+  workflowSelectedAssetIds?: string[];
   projectFolder: string;
   warnings: DiagnosticIssue[];
 }): MediaGenerationReferenceSuggestion {
   const selectedAssetIds = new Set(input.selectedAssetIds ?? []);
+  const workflowSelectedAssetIds = new Set(
+    input.workflowSelectedAssetIds ?? [],
+  );
   const candidates = [...input.assets]
     .sort((left, right) =>
       right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id)
@@ -162,6 +166,7 @@ export function createReferenceSuggestion(input: {
           generationProvenance: asset.generationProvenance,
           authoredFrom: asset.authoredFrom,
           isDisplaySelected: selectedAssetIds.has(asset.id),
+          isWorkflowSelected: workflowSelectedAssetIds.has(asset.id),
           available,
         } satisfies MediaGenerationReferenceCandidate];
       }));

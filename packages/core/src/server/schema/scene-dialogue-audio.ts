@@ -78,3 +78,21 @@ export const sceneDialogueAudioTakes = sqliteTable(
     uniqueIndex('scene_dialogue_audio_take_asset_idx').on(table.assetId),
   ]
 );
+
+export const sceneDialogueAudioTakeSelections = sqliteTable(
+  'scene_dialogue_audio_take_selection',
+  {
+    sceneDialogueAudioId: text('scene_dialogue_audio_id')
+      .primaryKey()
+      .references(() => sceneDialogueAudio.id, { onDelete: 'cascade' }),
+    takeId: text('take_id')
+      .notNull()
+      .unique()
+      .references(() => sceneDialogueAudioTakes.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('scene_dialogue_audio_take_selection_take_idx').on(table.takeId),
+  ]
+);

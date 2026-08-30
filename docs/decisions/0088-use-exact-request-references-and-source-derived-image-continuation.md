@@ -1,5 +1,10 @@
 # 0088 Use Exact Request References And Source-Derived Image Continuation
 
+> **Decision 0089 update:** `video.edit` extends the source-derived pattern to
+> every active registered video Asset. It is media-kind-wide rather than a type
+> allowlist and creates a separate unselected sibling Asset with
+> `edited-video-gxxx` storage.
+
 Date: 2026-08-25
 
 Status: accepted

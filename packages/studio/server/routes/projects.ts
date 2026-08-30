@@ -60,6 +60,8 @@ export type ProjectsRouteProjectData = Pick<
   | 'readSceneDialogueAudioWorkspace'
   | 'updateSceneDialogueAudioSetup'
   | 'deleteSceneDialogueAudioTake'
+  | 'selectSceneDialogueAudioTake'
+  | 'clearSceneDialogueAudioTakeSelection'
   | 'readSceneBeatsResource'
   | 'readScreenplayBeatGalleryResource'
   | 'readStudioSelectionContext'

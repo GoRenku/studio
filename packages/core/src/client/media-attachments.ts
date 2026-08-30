@@ -1,6 +1,7 @@
 export type MediaPurpose =
   | 'image.create'
   | 'image.edit'
+  | 'video.edit'
   | 'project.cover'
   | 'shot-plan.video-generation'
   | 'shot-plan.video-first-frame'
@@ -36,6 +37,7 @@ export type MediaTarget =
 export const MEDIA_PURPOSE_TARGET_KINDS = {
   'image.create': 'shotPlan',
   'image.edit': 'asset',
+  'video.edit': 'asset',
   'project.cover': 'project',
   'shot-plan.video-generation': 'shotPlan',
   'shot-plan.video-first-frame': 'shotPlan',
@@ -63,6 +65,7 @@ export const MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS: Record<
 > = {
   'image.create': 'image',
   'image.edit': 'image',
+  'video.edit': 'video',
   'project.cover': 'image',
   'shot-plan.video-generation': 'video',
   'shot-plan.video-first-frame': 'image',

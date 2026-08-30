@@ -11,6 +11,8 @@ export function resolveGenerationWorkflowPolicy(input: {
   const settings = input.settings.generation[input.outputMediaKind];
   return {
     displayPreview: input.settings.generation.displayPreview,
+    enableProviderPromptExpansion:
+      input.settings.generation.enableProviderPromptExpansion,
     provider: settings.provider,
     askBeforeGenerating: settings.askBeforeGenerating,
     concurrencyLimit: effectiveConcurrencyLimit(settings),

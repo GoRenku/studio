@@ -41,7 +41,9 @@ Use the focused documents below for current direction.
   validation, reads, and full-document replacement. Studio, CLI, and skills do
   not merge fields or calculate settings policy. Future document versions use
   one-way Drizzle data migrations rather than runtime compatibility readers or
-  per-setting columns.
+  per-setting columns. Version 5 includes the default-on provider prompt
+  expansion preference; Skills apply it only against the selected route's live
+  schema.
 - Inspiration folder images are filesystem-owned content and are not registered
   as per-image assets. The persisted Inspiration Analysis JSON is SQLite-owned
   project data.
@@ -159,9 +161,12 @@ Use the focused documents below for current direction.
 - Prop Sheets are Prop-owned `prop_sheet` Assets chosen explicitly by provider
   requests. Prop Heroes are Prop-owned `prop_hero` Assets with optional
   canonical owner-scoped selection.
-- Scene dialogue audio takes are durable scene dialogue media assets. They may
-  be used as exact provider request references; Shot Plans do not own or
-  retain them.
+- Scene dialogue audio takes are durable scene dialogue media assets. Each
+  Dialogue Audio workspace may select zero or one active Take through
+  `scene_dialogue_audio_take_selection`. This workflow selection is distinct
+  from common Asset display selection. It clears with selected-Take discard and
+  is not restored or assigned automatically. Takes may be used as exact provider
+  request references; Shot Plans do not own or retain them.
 - Generated Shot Plan media Assets may retain optional weak
   `authoredFromShotPlanId` context. The stored value is nullable, indexed,
   one-way, and has no foreign key. Missing or discarded source plans never
@@ -200,7 +205,9 @@ Use the focused documents below for current direction.
   exactly one active primary image file; Project and Project Library project
   that file's Asset identity rather than a root filename. Character Sheets,
   Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes have
-  no canonical selection; provider requests choose exact Asset Files explicitly.
+  no canonical common-Asset selection. Dialogue Audio instead has the focused
+  per-workspace workflow selection described above; provider requests still
+  choose exact Asset Files explicitly.
 - The canonical project database path is:
 
 ```text

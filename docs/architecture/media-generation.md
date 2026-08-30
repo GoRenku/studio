@@ -187,9 +187,12 @@ exact operation ids through its live catalog and has no Engines allowlist;
 Media Producer's Pika Skill curates the initial operation set. World Labs is
 exposed by its focused location-world Engines API.
 
-Project Settings version 4 has global Preview plus independent Image, Video,
-and Audio sections. Image chooses Codex, Fal.ai, or Pika; Video chooses Fal.ai
-or Pika; Audio remains ElevenLabs.
+Project Settings version 5 has global Preview and provider prompt-expansion
+preferences plus independent Image, Video, and Audio sections. Image chooses
+Codex, Fal.ai, or Pika; Video chooses Fal.ai or Pika; Audio remains ElevenLabs.
+Media Producer applies the expansion preference only when the selected live
+schema unambiguously exposes such a control; runtime code has no native-field
+map.
 Each media kind owns Ask Before Generating, concurrent scheduling, and a retained
 maximum. Effective concurrency is one while concurrent scheduling is off.
 Replicate, WaveSpeed, and World Labs credentials remain available for explicit

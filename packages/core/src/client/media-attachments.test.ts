@@ -7,6 +7,7 @@ import {
 const mediaPurposes = [
   'image.create',
   'image.edit',
+  'video.edit',
   'project.cover',
   'shot-plan.video-generation',
   'shot-plan.video-first-frame',

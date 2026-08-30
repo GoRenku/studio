@@ -142,7 +142,7 @@ function captureIo(stdout: string[]) {
 
 function projectSettings() {
   return {
-    version: 2 as const,
+    version: 5 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,
@@ -151,17 +151,25 @@ function projectSettings() {
       generateBeatStoryboardImages: false,
     },
     generation: {
-      preferCodexImageGeneration: true,
       displayPreview: true,
-      renkuManaged: {
-        requirePerRunConfirmation: true,
-        allowConcurrentGenerations: false,
+      enableProviderPromptExpansion: true,
+      image: {
+        provider: 'codex',
+        askBeforeGenerating: false,
+        runGenerationsConcurrently: true,
+        maxConcurrentGenerations: 5,
+      },
+      video: {
+        provider: 'fal-ai',
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
         maxConcurrentGenerations: 1,
       },
-      codexBuiltIn: {
-        requirePerRunConfirmation: false,
-        allowConcurrentGenerations: true,
-        maxConcurrentGenerations: 5,
+      audio: {
+        provider: 'elevenlabs',
+        askBeforeGenerating: true,
+        runGenerationsConcurrently: false,
+        maxConcurrentGenerations: 1,
       },
     },
   };

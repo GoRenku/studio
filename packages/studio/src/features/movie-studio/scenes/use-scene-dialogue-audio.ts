@@ -5,8 +5,10 @@ import type {
   SceneDialogueAudioVoiceSettings,
 } from '@gorenku/studio-core/client';
 import {
+  clearSceneDialogueAudioTakeSelection,
   deleteSceneDialogueAudioTake,
   saveSceneDialogueAudioSetup,
+  selectSceneDialogueAudioTake,
   type SceneDialogueAudioWorkspaceWithUrls,
 } from '@/services/screenplay';
 import { useDebouncedAutosave } from '@/hooks/use-debounced-autosave';
@@ -231,6 +233,38 @@ export function useSceneDialogueAudio(input: {
     [onContextChange, projectName, sceneId, turnId]
   );
 
+  const pickTake = useCallback(
+    async (takeId: string) => {
+      setActionBusy(true);
+      try {
+        const report = await selectSceneDialogueAudioTake(
+          projectName,
+          sceneId,
+          turnId,
+          takeId
+        );
+        onContextChange(report.context);
+      } finally {
+        setActionBusy(false);
+      }
+    },
+    [onContextChange, projectName, sceneId, turnId]
+  );
+
+  const clearTakeSelection = useCallback(async () => {
+    setActionBusy(true);
+    try {
+      const report = await clearSceneDialogueAudioTakeSelection(
+        projectName,
+        sceneId,
+        turnId
+      );
+      onContextChange(report.context);
+    } finally {
+      setActionBusy(false);
+    }
+  }, [onContextChange, projectName, sceneId, turnId]);
+
   return {
     actionBusy,
     autosave,
@@ -244,10 +278,13 @@ export function useSceneDialogueAudio(input: {
     selectedModel,
     selectedVoice,
     spec,
+    selectedTakeId: existing?.selectedTakeId ?? null,
     takes,
     usableVoices,
     chooseModel,
+    clearTakeSelection,
     deleteTake,
+    pickTake,
     resetAdvancedValues,
     updateDraft,
     updateVoiceSettings,

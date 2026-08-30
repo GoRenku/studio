@@ -11,8 +11,15 @@ import { readAssetMediaGenerationRequest } from '../media-generation-review/insp
 import { readMediaGenerationPreview } from '../media-generation-review/preview.js';
 import { updateMediaGenerationPreviewPrompt } from '../media-generation-review/prompt.js';
 import { readSceneDialogueAudioWorkspace } from '../scene-dialogue-audio-workspace/context.js';
-import { updateSceneDialogueAudioSetup } from '../scene-dialogue-audio-workspace/setup.js';
+import {
+  replaceSceneDialogueAudioSetup,
+  updateSceneDialogueAudioSetup,
+} from '../scene-dialogue-audio-workspace/setup.js';
 import { discardSceneDialogueAudioTake } from '../scene-dialogue-audio-workspace/takes.js';
+import {
+  clearSceneDialogueAudioTakeSelection,
+  selectSceneDialogueAudioTake,
+} from '../scene-dialogue-audio-workspace/selection.js';
 import { readMediaGenerationContext } from '../media-generation-context/index.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
@@ -42,6 +49,20 @@ export function createGenerationServiceWiring() {
         })
       );
     },
+    async replaceSceneDialogueAudioSetup(input: ProjectInput & {
+      sceneId: string;
+      turnId: string;
+      setup: unknown;
+    }) {
+      return withProject(input, ({ session }) =>
+        replaceSceneDialogueAudioSetup({
+          ...input,
+          session,
+          idGenerator: createRandomIdGenerator(),
+          now: new Date().toISOString(),
+        })
+      );
+    },
     async deleteSceneDialogueAudioTake(input: ProjectInput & {
       sceneId: string;
       turnId: string;
@@ -49,6 +70,27 @@ export function createGenerationServiceWiring() {
     }) {
       return withProject(input, ({ session, projectFolder }) =>
         discardSceneDialogueAudioTake({ ...input, session, projectFolder })
+      );
+    },
+    async selectSceneDialogueAudioTake(input: ProjectInput & {
+      sceneId: string;
+      turnId: string;
+      takeId: string;
+    }) {
+      return withProject(input, ({ session }) =>
+        selectSceneDialogueAudioTake({
+          ...input,
+          session,
+          now: new Date().toISOString(),
+        })
+      );
+    },
+    async clearSceneDialogueAudioTakeSelection(input: ProjectInput & {
+      sceneId: string;
+      turnId: string;
+    }) {
+      return withProject(input, ({ session }) =>
+        clearSceneDialogueAudioTakeSelection({ ...input, session })
       );
     },
     async attachGenerationMedia(input: ProjectInput & {

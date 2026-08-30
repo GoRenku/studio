@@ -325,6 +325,18 @@ describe('media generation context', () => {
       projectRelativePath: sourcePath,
       fileRole: 'primary',
     });
+    const videoSourcePath = 'tmp/source.mp4' as ProjectRelativePath;
+    await fs.writeFile(path.join(created.projectPath, videoSourcePath), 'video source');
+    const videoSourceAsset = await createTestAssetFixture({
+      projectName: 'constantinople',
+      homeDir,
+      owner: { kind: 'castMember', id: 'cast_test0002' },
+      type: 'rehearsal_video',
+      mediaKind: 'video',
+      title: 'Source video',
+      projectRelativePath: videoSourcePath,
+      fileRole: 'primary',
+    });
     const screenplay = await projectData.readScreenplayStructure({
       projectName: 'constantinople',
       homeDir,
@@ -339,6 +351,7 @@ describe('media generation context', () => {
     const cases = [
       ['image.create', { kind: 'shotPlan', id: imageCreateShotPlan.shotPlan.id }, 'shotPlan'],
       ['image.edit', { kind: 'asset', id: sourceAsset.id }, 'asset'],
+      ['video.edit', { kind: 'asset', id: videoSourceAsset.id }, 'asset'],
       ['project.cover', { kind: 'project', id: 'project' }, 'project'],
       ['lookbook.image', { kind: 'lookbook', id: production.lookbook.id }, 'lookbook'],
       ['lookbook.video-sheet', { kind: 'lookbook', id: production.lookbook.id }, 'lookbook'],
@@ -354,13 +367,15 @@ describe('media generation context', () => {
     ] as const;
 
     for (const [purpose, target, contextKind] of cases) {
-      await expect(projectData.readMediaGenerationContext({
+      const report = await projectData.readMediaGenerationContext({
         homeDir,
         purpose,
         target,
-      })).resolves.toMatchObject({
+      });
+      expect(report).toMatchObject({
         valid: true,
         purpose,
+        workflowPolicy: { enableProviderPromptExpansion: true },
         targetContext: { kind: contextKind },
       });
     }
@@ -393,6 +408,7 @@ describe('media generation context', () => {
       speaker: { id: 'cast_test0001', name: 'Urban' },
       priorTakes: [],
     });
+    expect(report.workflowPolicy.enableProviderPromptExpansion).toBe(true);
 
     await expect(ready.projectData.readMediaGenerationContext({
       homeDir: ready.homeDir,
@@ -411,6 +427,7 @@ describe('media generation context', () => {
     const expected: Record<MediaPurpose, [string | null, 'medium' | 'high' | null]> = {
       'image.create': [null, null],
       'image.edit': [null, null],
+      'video.edit': [null, null],
       'project.cover': ['16:9', 'medium'],
       'shot-plan.video-generation': [null, null],
       'shot-plan.video-first-frame': [null, null],

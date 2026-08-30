@@ -14,6 +14,8 @@ interface SceneDialogueAudioTakesTabProps {
   actionDisabled: boolean;
   player: SceneDialogueAudioPlayer;
   takes: SceneDialogueAudioTakeWithUrl[];
+  selectedTakeId: string | null;
+  onClearSelection?: () => void;
   onDeleteTake?: (takeId: string) => void;
   onPickTake?: (takeId: string) => void;
 }
@@ -22,6 +24,8 @@ export function SceneDialogueAudioTakesTab({
   actionDisabled,
   player,
   takes,
+  selectedTakeId,
+  onClearSelection,
   onDeleteTake,
   onPickTake,
 }: SceneDialogueAudioTakesTabProps) {
@@ -42,13 +46,26 @@ export function SceneDialogueAudioTakesTab({
 
   return (
     <div className='flex flex-col gap-3'>
+      {selectedTakeId && onClearSelection ? (
+        <div className='flex justify-end'>
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            disabled={actionDisabled}
+            onClick={onClearSelection}
+          >
+            Clear selection
+          </Button>
+        </div>
+      ) : null}
       {orderedTakes.map((take) => (
         <SceneDialogueAudioTakeRow
           key={take.takeId}
           actionDisabled={actionDisabled}
           label={labels.get(take.takeId) ?? 'Take'}
           player={player}
-          selected={false}
+          selected={take.takeId === selectedTakeId}
           take={take}
           onDeleteTake={onDeleteTake}
           onPickTake={onPickTake}

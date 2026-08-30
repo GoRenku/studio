@@ -64,6 +64,20 @@ export function updateSceneDialogueAudioSetup(input: {
   return { context, resourceKeys: context.resourceKeys };
 }
 
+export function replaceSceneDialogueAudioSetup(input: {
+  session: DatabaseSession;
+  sceneId: string;
+  turnId: string;
+  setup: unknown;
+  idGenerator: ProjectIdGenerator;
+  now: string;
+}): SceneDialogueAudioWorkspaceMutationReport {
+  return updateSceneDialogueAudioSetup({
+    ...input,
+    setup: requireCompleteSetupDocument(input.setup, input),
+  });
+}
+
 export function requireSceneDialogueAudioSetup(input: {
   session: DatabaseSession;
   sceneId: string;
@@ -175,5 +189,65 @@ function modelChoice(value: string) {
   throw new ProjectDataError(
     'CORE_DIALOGUE_AUDIO_MODEL_INVALID',
     `Unsupported Scene Dialogue Audio model: ${value}.`
+  );
+}
+
+function requireCompleteSetupDocument(
+  value: unknown,
+  target: { sceneId: string; turnId: string },
+): SceneDialogueAudioSetup {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw setupDocumentInvalid();
+  }
+  const setup = value as Record<string, unknown>;
+  const setupTarget = setup.target;
+  const voiceSettings = setup.voiceSettings;
+  if (
+    setup.purpose !== 'scene.dialogue-audio'
+    || !setupTarget
+    || typeof setupTarget !== 'object'
+    || Array.isArray(setupTarget)
+    || (setupTarget as Record<string, unknown>).kind !== 'sceneDialogue'
+    || (setupTarget as Record<string, unknown>).sceneId !== target.sceneId
+    || (setupTarget as Record<string, unknown>).turnId !== target.turnId
+    || typeof setup.modelChoice !== 'string'
+    || typeof setup.castVoiceId !== 'string'
+    || typeof setup.plainText !== 'string'
+    || typeof setup.v3Text !== 'string'
+    || !voiceSettings
+    || typeof voiceSettings !== 'object'
+    || Array.isArray(voiceSettings)
+    || typeof setup.outputFormat !== 'string'
+    || (typeof setup.languageCode !== 'string' && setup.languageCode !== null)
+    || (setup.title !== undefined && typeof setup.title !== 'string')
+  ) {
+    throw setupDocumentInvalid();
+  }
+  const allowedKeys = new Set([
+    'purpose',
+    'target',
+    'modelChoice',
+    'castVoiceId',
+    'plainText',
+    'v3Text',
+    'voiceSettings',
+    'outputFormat',
+    'languageCode',
+    'title',
+  ]);
+  if (Object.keys(setup).some((key) => !allowedKeys.has(key))) {
+    throw setupDocumentInvalid();
+  }
+  return setup as unknown as SceneDialogueAudioSetup;
+}
+
+function setupDocumentInvalid(): ProjectDataError {
+  return new ProjectDataError(
+    'CORE_DIALOGUE_AUDIO_SETUP_DOCUMENT_INVALID',
+    'Scene Dialogue Audio setup must be one complete current setup document for the requested Dialogue Turn.',
+    {
+      suggestion:
+        'Use dialogue-audio show to inspect the current Scene workspace, then provide the complete scene.dialogue-audio setup document.',
+    },
   );
 }

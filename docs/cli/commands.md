@@ -1603,6 +1603,27 @@ Successful execute/recover JSON contains downloaded `artifacts`, optional
 `requestId`, and exact safe `provenance` ready to save and pass to attachment.
 There is no Spec, Run, estimate, approval token, freeze, or simulation command.
 
+## `renku dialogue-audio`
+
+Read a Scene's current per-turn Dialogue Audio workspace or replace one exact
+turn's complete current setup document:
+
+```bash
+renku dialogue-audio show --scene <scene-id> --json
+renku dialogue-audio setup \\
+  --scene <scene-id> \\
+  --dialogue <turn-id> \\
+  --file tmp/operations/media-generation/dialogue-setup.json \\
+  --json
+```
+
+`show` is read-only. `setup` parses JSON and delegates complete-document
+validation and replacement to Core, then emits the returned resource event.
+There is no `dialogue-audio generate` command. One-turn and whole-Scene work is
+Media Producer orchestration over the existing per-turn
+`scene.dialogue-audio` purpose, with one provider request, file, provenance, and
+Take per Dialogue Turn.
+
 ## `renku media import`
 
 Attach an inspected Project-relative media file through its focused Core owner.
@@ -1633,8 +1654,8 @@ and attachment are persisted atomically.
 Supported focused purposes include Project cover; Lookbook image/video/storyboard
 sheets; Cast character sheet/profile/voice sample; Location and Prop sheets/heroes;
 Scene storyboard images; Shot images; Shot Plan video and its supporting image
-roles; image create/edit; and Scene Dialogue Audio. Each purpose accepts only its
-Core-owned target kind.
+roles; image create/edit; source-derived video edit; and Scene Dialogue Audio.
+Each purpose accepts only its Core-owned target kind.
 
 Examples:
 
@@ -1654,6 +1675,10 @@ renku media import --purpose image.create --target shot-plan:<shot-plan-id> \\
 renku media import --purpose image.edit --target asset:<source-asset-id> \\
   --source tmp/operations/media-generation/output/edited.png \\
   --provenance tmp/operations/media-generation/provenance.json --json
+
+renku media import --purpose video.edit --target asset:<source-asset-id> \\
+  --source tmp/operations/media-generation/output/edited.mp4 \\
+  --provenance tmp/operations/media-generation/provenance.json --json
 ```
 
 `image.create` becomes an unselected generic Reference Image beside that exact
@@ -1661,6 +1686,11 @@ Shot Plan. `image.edit` accepts no destination flag: Core verifies that
 provenance references a current source file and derives the new unselected
 candidate's same-place owner, type, canonical path, and surface from the source
 Asset's durable relationships.
+
+`video.edit` accepts any active registered Asset with a current video file,
+regardless of type or owner. Core requires that exact source path once in safe
+video provenance and creates a separate unselected Asset beside it with an
+`edited-video-gxxx` name. The source remains unchanged.
 
 Scene Storyboard Sheet keeps its focused grouped attachment document:
 

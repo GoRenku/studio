@@ -127,6 +127,7 @@ export type MediaGenerationTargetContext =
 
 export type MediaGenerationReferenceRole =
   | 'source-image'
+  | 'source-video'
   | 'appearance'
   | 'continuity'
   | 'shot-image'
@@ -160,6 +161,7 @@ export interface MediaGenerationReferenceCandidate {
   generationProvenance: MediaGenerationProvenance | null;
   authoredFrom: { kind: 'shotPlan'; id: string } | null;
   isDisplaySelected: boolean;
+  isWorkflowSelected: boolean;
   available: boolean;
 }
 

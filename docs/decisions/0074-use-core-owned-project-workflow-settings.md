@@ -5,6 +5,11 @@
 > **Pika application:** Project Settings version 4 adds Pika to Image and Video
 > provider choices. Defaults and Audio remain unchanged; migration 0081 advances
 > only the JSON document version and preserves every current value.
+>
+> **Decision 0089 update:** Project Settings version 5 adds default-on
+> `generation.enableProviderPromptExpansion`. Generation Context projects the
+> effective value; Skills apply it through semantic inspection of the selected
+> live schema, with no runtime provider-field map.
 
 Date: 2026-08-06
 

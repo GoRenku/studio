@@ -85,6 +85,13 @@ import {
   resolveScreenplaySourceDestinationRoot,
   resolveScreenplaySourceDestinationRootSync,
 } from './screenplay-source.js';
+import {
+  resolveAssetVideoEditDestinationFile,
+  resolveAssetVideoEditDestinationFileSync,
+  resolveAssetVideoEditDestinationOutputNames,
+  resolveAssetVideoEditDestinationRoot,
+  resolveAssetVideoEditDestinationRootSync,
+} from './asset-video-edit.js';
 
 const castCharacterSheetResolver = castResolver<'cast.characterSheet'>();
 const castProfileResolver = castResolver<'cast.profile'>();
@@ -111,6 +118,13 @@ const destinationResolvers = {
     resolveRoot: resolveScreenplaySourceDestinationRoot,
     resolveRootSync: resolveScreenplaySourceDestinationRootSync,
     resolveOutputNames: resolveScreenplaySourceDestinationOutputNames,
+  },
+  'asset.videoEdit': {
+    resolveFile: resolveAssetVideoEditDestinationFile,
+    resolveFileSync: resolveAssetVideoEditDestinationFileSync,
+    resolveRoot: resolveAssetVideoEditDestinationRoot,
+    resolveRootSync: resolveAssetVideoEditDestinationRootSync,
+    resolveOutputNames: resolveAssetVideoEditDestinationOutputNames,
   },
   'shotPlan.video': {
     resolveFile: resolveShotPlanVideoDestinationFile,

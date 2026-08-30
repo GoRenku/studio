@@ -300,6 +300,18 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [],
       };
     },
+    async selectSceneDialogueAudioTake() {
+      return {
+        context: makeSceneDialogueAudioWorkspace(project),
+        resourceKeys: [],
+      };
+    },
+    async clearSceneDialogueAudioTakeSelection() {
+      return {
+        context: makeSceneDialogueAudioWorkspace(project),
+        resourceKeys: [],
+      };
+    },
     async readSceneBeatsResource() {
       return {
         scene: {
