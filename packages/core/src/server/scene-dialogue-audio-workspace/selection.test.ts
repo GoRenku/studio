@@ -144,6 +144,47 @@ describe('Scene Dialogue Audio Take selection', () => {
     });
     expect(cleared.context.audioByTurnId[ready.dialogueId]?.selectedTakeId).toBeNull();
   });
+
+  it('rejects generic Asset discard for an active Dialogue Take', async () => {
+    const ready = await createDialogueAudioReadyProject();
+    if (!ready) {
+      return;
+    }
+    await prepareDialogueAudio(ready);
+    const take = await attachTake(ready, 'tmp/dialogue-generic-discard.mp3');
+    await ready.projectData.selectSceneDialogueAudioTake({
+      homeDir: ready.homeDir,
+      sceneId: ready.sceneId,
+      turnId: ready.dialogueId,
+      takeId: take.takeId,
+    });
+
+    await expect(ready.projectData.discardAsset({
+      projectName: 'dialogue-audio-test',
+      homeDir: ready.homeDir,
+      owner: { kind: 'scene', id: ready.sceneId },
+      assetId: take.assetId,
+    })).rejects.toMatchObject({
+      code: 'CORE_DIALOGUE_AUDIO_TAKE_ASSET_DISCARD_INVALID',
+    });
+
+    const workspace = await ready.projectData.readSceneDialogueAudioWorkspace({
+      homeDir: ready.homeDir,
+      sceneId: ready.sceneId,
+    });
+    expect(workspace.audioByTurnId[ready.dialogueId]).toMatchObject({
+      selectedTakeId: take.takeId,
+      takes: [expect.objectContaining({ takeId: take.takeId, assetId: take.assetId })],
+    });
+    await expect(ready.projectData.listAssets({
+      projectName: 'dialogue-audio-test',
+      homeDir: ready.homeDir,
+      owner: { kind: 'scene', id: ready.sceneId },
+      type: 'scene_dialogue_audio',
+    })).resolves.toEqual([
+      expect.objectContaining({ id: take.assetId }),
+    ]);
+  });
 });
 
 async function prepareDialogueAudio(

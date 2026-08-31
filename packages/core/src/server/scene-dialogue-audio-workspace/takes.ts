@@ -7,6 +7,28 @@ import { sceneDialogueAudio, sceneDialogueAudioTakes } from '../schema/index.js'
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import { readSceneDialogueAudioWorkspace } from './context.js';
 
+export function assertAssetIsNotSceneDialogueAudioTake(
+  session: DatabaseSession,
+  assetId: string,
+): void {
+  const take = session.db
+    .select({ id: sceneDialogueAudioTakes.id })
+    .from(sceneDialogueAudioTakes)
+    .where(and(
+      eq(sceneDialogueAudioTakes.assetId, assetId),
+      isNull(sceneDialogueAudioTakes.discardedAt),
+    ))
+    .get();
+  if (!take) {
+    return;
+  }
+  throw new ProjectDataError(
+    'CORE_DIALOGUE_AUDIO_TAKE_ASSET_DISCARD_INVALID',
+    `Asset ${assetId} belongs to active Scene Dialogue Audio Take ${take.id} and cannot be discarded directly.`,
+    { suggestion: 'Discard the Scene Dialogue Audio Take instead.' },
+  );
+}
+
 export function discardSceneDialogueAudioTake(input: {
   session: DatabaseSession;
   projectFolder: string;

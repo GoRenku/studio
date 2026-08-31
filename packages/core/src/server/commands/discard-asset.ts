@@ -11,6 +11,7 @@ import { assetOwnerResourceKeys } from '../assets/resource-keys.js';
 import type { DiscardAssetInput } from '../project-data-service-contracts.js';
 import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 import { assertAssetIsNotScreenplayImportSource } from '../screenplay/fdx/persistence/import-record.js';
+import { assertAssetIsNotSceneDialogueAudioTake } from '../scene-dialogue-audio-workspace/takes.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import {
@@ -53,6 +54,7 @@ export async function discardAsset(
     }
     assertAssetIsNotCastVoiceSample(session, input.assetId);
     assertAssetIsNotScreenplayImportSource(session, input.assetId);
+    assertAssetIsNotSceneDialogueAudioTake(session, input.assetId);
     const isProjectCover = owner.kind === 'project'
       && asset.type === 'project_cover';
     const isSelectedProjectCover = isProjectCover
