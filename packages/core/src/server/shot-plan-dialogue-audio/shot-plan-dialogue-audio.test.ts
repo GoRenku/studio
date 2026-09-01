@@ -72,6 +72,12 @@ describe('Shot Plan Dialogue Audio', () => {
       turnRange: { start: 1, end: 1 },
       generationProvenance: provenance,
     });
+    expect(first.asset.files[0]?.projectRelativePath).toMatch(
+      /^scenes\/[^/]+\/01-shot-plan\/dialogues\/turn-01-g[a-z0-9]+\.mp3$/
+    );
+    expect(second.asset.files[0]?.projectRelativePath).toMatch(
+      /^scenes\/[^/]+\/01-shot-plan\/dialogues\/turns-02-03-g[a-z0-9]+\.mp3$/
+    );
     const initial = await projectData.readShotPlanDialogueAudio({
       projectName: 'constantinople',
       homeDir,

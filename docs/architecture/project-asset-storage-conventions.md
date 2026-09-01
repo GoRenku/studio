@@ -88,7 +88,7 @@ durable ids for reads and mutations.
 | Location Sheet | `locations/<handle>/` | `<variation>-sheet-gxxx` |
 | Prop Hero | `props/<handle>/` | `hero-gxxx` |
 | Prop Sheet | `props/<handle>/` | `<variation>-sheet-gxxx` |
-| Dialogue Audio | `scenes/<scene>/<NN>-shot-plan/audio/` | `turn-<NN>-gxxx` / `turns-<NN>-<NN>-gxxx` |
+| Dialogue Audio | `scenes/<scene>/<NN>-shot-plan/dialogues/` | `turn-<NN>-gxxx` / `turns-<NN>-<NN>-gxxx` |
 | Beat Storyboard | `storyboards/<scene>/<NN>-iteration/` | `s<scene>-b<beat>-image-gxxx` |
 | Shot image | `scenes/<scene>/<NN>-shot-plan/shot-images/` | `shot<shot>-gxxx` |
 | Plan first/last frame | `scenes/<scene>/<NN>-shot-plan/` | `first-frame-gxxx` / `last-frame-gxxx` |
@@ -223,7 +223,7 @@ selection, Scene/Plan/Shot/Beat identity, or generation provenance.
 Current runtime code must not create durable media beneath the retired root-level
 paths `generated/`, `audio/`, `scene-dialogue-audio/`, `shot-plans/`, `shots/`,
 or `videos/`. This does not prohibit an owning destination's deliberate nested
-segment, such as `scenes/<scene>/<NN>-shot-plan/audio/`.
+segment, such as `scenes/<scene>/<NN>-shot-plan/dialogues/`.
 It must not use nested `character-sheets/`, `profiles/`, `voice-samples/`,
 `heroes/`, `location-sheets/`, or `prop-sheets/` directories.
 

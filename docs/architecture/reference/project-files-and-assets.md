@@ -150,8 +150,8 @@ later materializes them into an owner folder.
 Shot Plan Dialogue Audio paths use:
 
 ```text
-scenes/<scene-display-number>/<NN>-shot-plan/audio/turn-<NN>-gxxx.<ext>
-scenes/<scene-display-number>/<NN>-shot-plan/audio/turns-<NN>-<NN>-gxxx.<ext>
+scenes/<scene-display-number>/<NN>-shot-plan/dialogues/turn-<NN>-gxxx.<ext>
+scenes/<scene-display-number>/<NN>-shot-plan/dialogues/turns-<NN>-<NN>-gxxx.<ext>
 ```
 
 The stored inclusive Turn range determines the generated filename stem. The
@@ -228,7 +228,7 @@ at the project root. There is no `working-assets/` root and no
   scenes/
     <scene-display-number>/
       <NN>-shot-plan/
-        audio/
+        dialogues/
         shot-images/
 
   research/
@@ -269,8 +269,9 @@ Folder responsibilities:
 - `storyboards/<scene-display-number>/` contains durable storyboard
   image iteration folders and a scene-local `tmp/` folder for temporary
   storyboard sheets.
-- `scenes/<scene-display-number>/<NN>-shot-plan/` contains Shot images, Plan
-  video-reference images, and Plan video Assets resolved from exact provenance.
+- `scenes/<scene-display-number>/<NN>-shot-plan/` contains Dialogue Audio, Shot
+  images, Plan video-reference images, and Plan video Assets resolved from exact
+  provenance.
   Generic `image.create` is stored as `reference-gxxx.<ext>` for one exact Plan.
   The selected Plan's Assets tab groups First Frames, Last Frames, Storyboards,
   and Reference Images by weak `authoredFrom` identity rather than by path.

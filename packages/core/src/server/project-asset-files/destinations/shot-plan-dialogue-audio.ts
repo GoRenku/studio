@@ -48,7 +48,7 @@ export function resolveShotPlanDialogueAudioDestinationRootSync(
   input: DestinationRootInput<'shotPlan.dialogueAudio'>
 ): ProjectRelativePath {
   const shotPlan = requireShotPlanStorageContext(input.session, input.destination.shotPlanId);
-  return joinProjectRelativePath(shotPlan.root, 'audio');
+  return joinProjectRelativePath(shotPlan.root, 'dialogues');
 }
 
 export async function resolveShotPlanDialogueAudioDestinationOutputNames(
