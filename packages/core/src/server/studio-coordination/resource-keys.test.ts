@@ -12,7 +12,7 @@ import {
   studioSceneBeatsResourceKey,
   studioBeatResourceKey,
   studioSceneBeatsRevisionResourceKey,
-  studioSceneDialogueAudioSurfaceResourceKey,
+  studioShotPlanDialogueAudioResourceKey,
   studioSceneShotPlansResourceKey,
   studioScreenplayResourceKey,
   studioVisualLanguageInspirationFolderResourceKey,
@@ -45,8 +45,8 @@ describe('Studio resource key catalog', () => {
     expect(studioSceneBeatsResourceKey('scene_gate')).toBe(
       'surface:scene:scene_gate:beats'
     );
-    expect(studioSceneDialogueAudioSurfaceResourceKey('scene_gate')).toBe(
-      'surface:scene:scene_gate:dialogue-audio'
+    expect(studioShotPlanDialogueAudioResourceKey('shot_plan_gate')).toBe(
+      'surface:shotPlan:shot_plan_gate:dialogue-audio'
     );
     expect(studioSceneBeatsRevisionResourceKey('scene_beats_revision_gate')).toBe(
       'scene-beats-revision:scene_beats_revision_gate'

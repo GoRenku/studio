@@ -10,12 +10,14 @@ or architecture decision.
 
 ## Learned Constraints
 
-### 2026-08-22 — Separate provider capability from product model curation
+### 2026-08-31 — Separate provider capability from product model curation
 
 - **User objection:** A provider plan restricted Engines to two convenient
   MiniMax H3 operations even though the requested provider boundary was meant
   to support Pika's catalog generally; Renku Studio, not Engines, should choose
-  the smaller product-visible subset.
+  the smaller product-visible subset. A later audio plan also preserved
+  ElevenLabs-only provider, model, capability, sample-retrieval, and voice-id
+  contracts in Core after provider generation had been extracted.
 - **Planning rule:** Design a provider integration around the provider-level
   capability contract the user requested. Do not turn a representative model,
   pricing example, test fixture, current Studio route, or the only Asset type
@@ -42,11 +44,19 @@ or architecture decision.
   rather than copying them into another definition. When the provider catalog
   spans materially different execution families, such as asynchronous media
   and synchronous LLM protocols, surface that boundary for confirmation instead
-  of silently narrowing it.
+  of silently narrowing it. Treat provider-specific types, model allowlists,
+  capability unions, provider sample retrieval, and provider compatibility
+  decisions that remain in Core after this extraction as architecture residue,
+  not precedent. Move their interpretation and execution to the provider
+  Skill/Engines boundary. Core may retain only an already accepted opaque
+  persistence envelope or domain fact that does not branch on provider/model
+  identity and does not require a Core change when another provider is added.
 - **Apply when:** Planning a new generation provider, dynamic provider catalog,
   runtime schema integration, model registry, Studio model picker, reference
-  modality, or source-derived media operation where a convenient initial model,
-  route, or Asset type could be mistaken for the supported scope.
+  modality, provider voice/sample workflow, reusable external media handle, or
+  source-derived media operation where a convenient initial model, route, Asset
+  type, or surviving provider-specific Core contract could be mistaken for the
+  supported architecture.
 - **Evidence to inspect:** The provider's agent-readable documentation, official
   CLI or MCP support, live catalog and protocol families; the existing Asset
   attachment boundary; whether provider requests must be durable project data;
@@ -54,7 +64,9 @@ or architecture decision.
   list/read/describe/estimate/execute contracts; Project provider Settings; and
   every proposed shared schema, transform, allowlist, fixed operation id,
   example, fixture, Asset-type gate, capability filter, duplicated provider
-  fact, setup document, and model-selection surface.
+  fact, setup document, model-selection surface, Core provider/model union,
+  provider-specific command branch, provider fetcher injection, and provider
+  registration table or projection.
 
 ### 2026-08-24 — Put reusable provider protocol in tooling, not repeated agent reasoning
 

@@ -22,7 +22,6 @@ export type EntityIdPrefix =
   | 'cast'
   | 'cast_design'
   | 'cast_voice'
-  | 'cast_voice_provider_registration'
   | 'location'
   | 'location_design'
   | 'prop'
@@ -37,8 +36,7 @@ export type EntityIdPrefix =
   | 'beat'
   | 'shot_plan'
   | 'shot'
-  | 'scene_dialogue_audio'
-  | 'scene_dialogue_audio_take'
+  | 'shot_plan_dialogue_audio_take'
   | 'trash_operation'
   | 'trash_item';
 

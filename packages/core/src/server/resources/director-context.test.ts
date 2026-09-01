@@ -39,7 +39,7 @@ describe('readDirectorContext', () => {
 
     expect(report.screenplay.exists).toBe(false);
     expect(report.projectSettings).toMatchObject({
-      version: 5,
+      version: 6,
       screenplayImport: { createContinuitySubjects: true },
     });
     expect(report.resourceKeys).toContain('project-settings');

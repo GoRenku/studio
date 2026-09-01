@@ -639,7 +639,7 @@ than direct `window` listeners. Current examples include:
 - `surface:prop:<propId>`;
 - `surface:visual-language:lookbook:<lookbookId>`;
 - `surface:scene:<sceneId>:beats`;
-- `surface:scene:<sceneId>:dialogue-audio`.
+- `surface:shotPlan:<shotPlanId>:dialogue-audio`;
 - `surface:shotPlan:<shotPlanId>:image-assets`.
 
 Durable media attachments invalidate their current owner surface:
@@ -651,7 +651,7 @@ Durable media attachments invalidate their current owner surface:
 | Location Sheet, Hero, or accepted image edit | `surface:location:<locationId>` |
 | Prop Sheet, Hero, or accepted image edit | `surface:prop:<propId>` |
 | Scene Beat storyboard image | `surface:scene:<sceneId>:beats` |
-| Scene Dialogue Audio | `surface:scene:<sceneId>:dialogue-audio` |
+| Shot Plan Dialogue Audio | `surface:shotPlan:<shotPlanId>:dialogue-audio` |
 | Shot Plan first/last/storyboard/reference image, including `image.create` or same-role edit | `surface:shotPlan:<shotPlanId>:image-assets` |
 
 There are no generic `assets:*` keys. Cast and Location Assets tabs are part of

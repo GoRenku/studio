@@ -75,11 +75,11 @@ A **Cast Profile** is a Cast Member-owned image Asset with canonical type
 `cast/<handle>/`.
 
 A **Cast Voice Sample** is a Cast Member-owned audio Asset with canonical type
-`cast_voice_sample` and is linked from exactly one Cast Voice record. Custom audio
-files, generated `cast.voice-sample` outputs, and existing ElevenLabs provider
-samples are all stored directly under `cast/<handle>/` after attachment.
-The Cast Voice record, not the filename, supplies the provider voice identity,
-reference name, purpose, and structured `sampleSource` provenance.
+`cast_voice_sample` and is linked from exactly one Cast Voice record. Imported,
+generated, and provider-retrieved samples are stored directly under
+`cast/<handle>/` after attachment. The Cast Voice record supplies the reference
+name, purpose, default state, and optional opaque provider-owned identity; Asset
+provenance records how a generated or retrieved sample was produced.
 
 A **Location Sheet** is a full-image production reference board owned by a
 Location with canonical type `location_sheet`. It has one primary image file and a
@@ -135,7 +135,7 @@ APIs from `packages/core/src/server/project-asset-files/index.ts`, pass a source
 project-relative path and an owner-aware destination such as a Project Cover,
 Cast Character Sheet, Cast Voice Sample, Location Sheet, Location Hero, Location World,
 Lookbook Image,
-Lookbook Sheet, Scene Dialogue Audio take, or Shot image. The
+Lookbook Sheet, Shot Plan Dialogue Audio Take, or Shot image. The
 destination and generation-output submodules are private
 implementation details that own path allocation by domain family and purpose
 family.
@@ -147,20 +147,19 @@ directly. Temporary project files use the module's temporary destination
 contract and never become SQLite asset files unless a domain import command
 later materializes them into an owner folder.
 
-Scene-owned Dialogue Audio paths use:
+Shot Plan Dialogue Audio paths use:
 
 ```text
-scenes/<scene-display-number>/dialogues/s<scene>-<speaker>-d<turn>-gxxx.<ext>
+scenes/<scene-display-number>/<NN>-shot-plan/audio/turn-<NN>-gxxx.<ext>
+scenes/<scene-display-number>/<NN>-shot-plan/audio/turns-<NN>-<NN>-gxxx.<ext>
 ```
 
-The stable Dialogue Turn id and its Core-validated speaker reference determine
-the filename prefix. File allocation never depends on optional Section ancestry
-or the Dialogue Turn's current array index.
-
-Each Dialogue Audio workspace may persist one selected active Take. This is a
-focused continuity default, not common Asset display selection. New and restored
-Takes remain unselected; discarding the selected Take clears the relationship in
-the same transaction.
+The stored inclusive Turn range determines the generated filename stem. The
+numbers remain lightweight UI references and do not create Dialogue Turn
+relations.
+Each Take is independently selected or unselected for provider-reference
+context. New and restored Takes remain unselected; discarding one Take removes
+only that Take's selection with it.
 
 ## Working Assets Versus Production Assets
 
@@ -228,8 +227,8 @@ at the project root. There is no `working-assets/` root and no
 
   scenes/
     <scene-display-number>/
-      dialogues/
       <NN>-shot-plan/
+        audio/
         shot-images/
 
   research/
@@ -256,9 +255,8 @@ Folder responsibilities:
   feature-owned definitions, reference material, and working files.
 - `cast/<handle>/` contains imported or generated character sheets, profiles,
   and Cast Voice sample files. These
-  files may have entered the project as custom local files, generated voice
-  sample outputs, or existing ElevenLabs provider samples fetched during
-  `renku cast voice attach`.
+  files may have entered the project as local files, generated voice sample
+  outputs, or provider-retrieved samples.
 - `locations/<handle>/` contains Location Sheets, Hero Images, and generated
   Location World files directly. World files use `world-gxxx.spz`; SQLite
   Asset identity and selection, not the collision token, define history.

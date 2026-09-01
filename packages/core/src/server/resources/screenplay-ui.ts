@@ -8,7 +8,6 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type {
   ReadSceneNarrativeResourceInput,
 } from '../project-data-service-contracts.js';
-import { readSceneDialogueAudioWorkspace } from '../scene-dialogue-audio-workspace/context.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { projectScreenplayScene } from '../screenplay/projections/scene.js';
 import { firstImageForContinuitySubject } from './continuity-subjects.js';
@@ -41,7 +40,6 @@ export async function readSceneNarrativeResource(
           return image ? [[location.id, image]] : [];
         }),
       ),
-      dialogueAudio: readSceneDialogueAudioWorkspace({ session, sceneId: input.sceneId }),
     };
   } finally {
     session.close();

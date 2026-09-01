@@ -134,6 +134,27 @@ describe('Fal.ai media provider', () => {
       message: 'Fal.ai endpoint "xai/grok-imagine-image" was not found in live provider metadata.',
     });
   });
+
+  it('rejects more than three Seed Audio voice references before metadata lookup', async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-fal-provider-'));
+    const provider = createFalMediaProvider();
+
+    await expect(provider.validate({
+      model: 'bytedance/seed-audio-1.0',
+      input: {
+        prompt: 'Four speakers.',
+        audio_urls: [1, 2, 3, 4].map((number) => ({
+          $file: path.join(directory, `voice-${number}.mp3`),
+          mimeType: 'audio/mpeg',
+        })),
+      },
+    }, await providerContext(directory, fetchMock))).rejects.toMatchObject({
+      code: 'ENGINE_REQUEST_INVALID',
+      message: 'Seed Audio 1.0 accepts at most three local voice references.',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 function modelSearchResponse(model: string) {

@@ -14,7 +14,7 @@ export type MediaPurpose =
   | 'cast.character-sheet'
   | 'cast.profile'
   | 'cast.voice-sample'
-  | 'scene.dialogue-audio'
+  | 'shot-plan.dialogue-audio'
   | 'location.sheet'
   | 'location.hero'
   | 'prop.sheet'
@@ -31,8 +31,7 @@ export type MediaTarget =
   | { kind: 'prop'; id: string }
   | { kind: 'scene'; id: string }
   | { kind: 'shot'; id: string }
-  | { kind: 'shotPlan'; id: string }
-  | { kind: 'sceneDialogue'; sceneId: string; turnId: string };
+  | { kind: 'shotPlan'; id: string };
 
 export const MEDIA_PURPOSE_TARGET_KINDS = {
   'image.create': 'shotPlan',
@@ -50,7 +49,7 @@ export const MEDIA_PURPOSE_TARGET_KINDS = {
   'cast.character-sheet': 'castMember',
   'cast.profile': 'castMember',
   'cast.voice-sample': 'castMember',
-  'scene.dialogue-audio': 'sceneDialogue',
+  'shot-plan.dialogue-audio': 'shotPlan',
   'location.sheet': 'location',
   'location.hero': 'location',
   'prop.sheet': 'prop',
@@ -78,7 +77,7 @@ export const MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS: Record<
   'cast.character-sheet': 'image',
   'cast.profile': 'image',
   'cast.voice-sample': 'audio',
-  'scene.dialogue-audio': 'audio',
+  'shot-plan.dialogue-audio': 'audio',
   'location.sheet': 'image',
   'location.hero': 'image',
   'prop.sheet': 'image',

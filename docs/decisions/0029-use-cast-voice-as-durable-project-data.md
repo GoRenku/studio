@@ -1,5 +1,10 @@
 # 0029 Use Cast Voice As Durable Project Data
 
+> **Decision 0090 update:** Cast Voice remains durable Cast-owned data. File
+> attachment is provider-neutral, one Cast Voice may be selected as the Cast
+> Member default, and optional provider identity is opaque JSON. Typed provider
+> registrations and provider-specific sample-source fields are superseded.
+
 Date: 2026-06-08
 
 Status: accepted

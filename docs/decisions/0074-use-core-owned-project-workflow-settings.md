@@ -1,5 +1,10 @@
 # 0074 Use Core-Owned Project Workflow Settings
 
+> **Decision 0090 update:** Project Settings version 6 allows Fal.ai or
+> ElevenLabs as the Audio provider preference. The value remains an opaque
+> Project default; provider/model semantics and request controls stay in Engines
+> and Skills, and request-time changes are not persisted.
+
 > **Decision 0086 update:** Core-owned versioned Project Settings and agent-owned concurrency remain. Generation settings are now per-media; estimates and approval tokens are removed, while Preview and Ask confirmation remain conversational.
 >
 > **Pika application:** Project Settings version 4 adds Pika to Image and Video

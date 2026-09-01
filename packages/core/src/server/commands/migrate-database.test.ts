@@ -95,9 +95,8 @@ describe('migrate database command', () => {
           'agent_scene_number_reservation',
           'scene_shot_plan_number',
           'shot_number_reservation',
-          'scene_dialogue_audio',
-          'scene_dialogue_audio_take',
-          'cast_voice_provider_registration',
+          'cast_voice_default',
+          'shot_plan_dialogue_audio_take',
         ])
       );
       expect(readTableNames(sqlite)).not.toEqual(expect.arrayContaining([

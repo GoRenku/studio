@@ -1,10 +1,4 @@
-import {
-  resolveRenkuProviderCredential,
-  type CastVoiceAttachmentCommandDocument,
-  type CreateCastVoiceProviderRegistrationInput,
-} from '@gorenku/studio-core/server';
-import { fetchElevenLabsVoiceSampleAudio } from '@gorenku/studio-engines';
-import { StructuredError } from '@gorenku/studio-diagnostics';
+import type { CastVoiceFileAttachmentDocument } from '@gorenku/studio-core/client';
 import {
   readRequiredJsonInput,
 } from './command-io.js';
@@ -13,14 +7,12 @@ import {
   type CliCommandHandler,
   type CliCommandRuntime,
 } from './structured-command.js';
-import { throwEngineError } from './generation/engine-errors.js';
 
 export interface CastVoiceCommandFlags {
   file?: string;
   project?: string;
   cast?: string;
   voice?: string;
-  registration?: string;
 }
 
 export const castVoiceCommandHandlers = [
@@ -43,22 +35,6 @@ export const castVoiceCommandHandlers = [
   {
     path: ['remove'],
     run: runRemove,
-  },
-  {
-    path: ['registrations', 'list'],
-    run: runRegistrationList,
-  },
-  {
-    path: ['registrations', 'show'],
-    run: runRegistrationShow,
-  },
-  {
-    path: ['registrations', 'create'],
-    run: runRegistrationCreate,
-  },
-  {
-    path: ['registrations', 'remove'],
-    run: runRegistrationRemove,
   },
 ] satisfies CliCommandHandler<CastVoiceCommandFlags>[];
 
@@ -85,7 +61,7 @@ async function runValidate(input: CastVoiceCommandInput): Promise<unknown> {
   return input.runtime.projectDataService.validateCastVoiceAttachment({
     homeDir: input.runtime.homeDir,
     projectName: input.flags.project,
-    document: document as CastVoiceAttachmentCommandDocument,
+    document: document as CastVoiceFileAttachmentDocument,
   });
 }
 
@@ -94,34 +70,12 @@ async function runAttach(input: CastVoiceCommandInput): Promise<unknown> {
   const document = await readRequiredJsonInput(
     filePath,
     'cast voice attach',
-  ) as CastVoiceAttachmentCommandDocument;
-  const elevenLabsVoiceSampleFetcher = document.kind === 'castVoiceElevenLabsSampleAttachment'
-    ? await createElevenLabsVoiceSampleFetcher(input.runtime.homeDir)
-    : undefined;
+  ) as CastVoiceFileAttachmentDocument;
   return input.runtime.projectDataService.attachCastVoice({
     homeDir: input.runtime.homeDir,
     projectName: input.flags.project,
     document,
-    ...(elevenLabsVoiceSampleFetcher ? { elevenLabsVoiceSampleFetcher } : {}),
   });
-}
-
-async function createElevenLabsVoiceSampleFetcher(homeDir?: string) {
-  const credential = await resolveRenkuProviderCredential('elevenlabs', { homeDir });
-  if (!credential) {
-    throw new StructuredError({
-      code: 'PROVIDER_CREDENTIALS004',
-      message: 'ElevenLabs credentials are not configured.',
-      suggestion: 'Configure ELEVENLABS_API_KEY in Renku Settings and try again.',
-    });
-  }
-  return async ({ voiceId }: { voiceId: string }) => {
-    try {
-      return await fetchElevenLabsVoiceSampleAudio({ voiceId, credential });
-    } catch (error) {
-      throwEngineError(error);
-    }
-  };
 }
 
 async function runRemove(input: CastVoiceCommandInput): Promise<unknown> {
@@ -130,50 +84,6 @@ async function runRemove(input: CastVoiceCommandInput): Promise<unknown> {
     projectName: input.flags.project,
     castMemberId: requiredFlag(input.flags.cast, '--cast'),
     voiceIdOrName: requiredFlag(input.flags.voice, '--voice'),
-  });
-}
-
-async function runRegistrationList(input: CastVoiceCommandInput): Promise<unknown> {
-  return input.runtime.projectDataService.listCastVoiceProviderRegistrations({
-    homeDir: input.runtime.homeDir,
-    projectName: input.flags.project,
-    castMemberId: requiredFlag(input.flags.cast, '--cast'),
-    voiceIdOrName: requiredFlag(input.flags.voice, '--voice'),
-  });
-}
-
-async function runRegistrationShow(input: CastVoiceCommandInput): Promise<unknown> {
-  return input.runtime.projectDataService.readCastVoiceProviderRegistration({
-    homeDir: input.runtime.homeDir,
-    projectName: input.flags.project,
-    castMemberId: requiredFlag(input.flags.cast, '--cast'),
-    voiceIdOrName: requiredFlag(input.flags.voice, '--voice'),
-    registrationId: requiredFlag(input.flags.registration, '--registration'),
-  });
-}
-
-async function runRegistrationCreate(input: CastVoiceCommandInput): Promise<unknown> {
-  const filePath = requiredFlag(input.flags.file, '--file');
-  const document = (await readRequiredJsonInput(
-    filePath,
-    'cast voice registrations create'
-  )) as CreateCastVoiceProviderRegistrationInput['registration'];
-  return input.runtime.projectDataService.createCastVoiceProviderRegistration({
-    homeDir: input.runtime.homeDir,
-    projectName: input.flags.project,
-    castMemberId: requiredFlag(input.flags.cast, '--cast'),
-    voiceIdOrName: requiredFlag(input.flags.voice, '--voice'),
-    registration: document,
-  });
-}
-
-async function runRegistrationRemove(input: CastVoiceCommandInput): Promise<unknown> {
-  return input.runtime.projectDataService.removeCastVoiceProviderRegistration({
-    homeDir: input.runtime.homeDir,
-    projectName: input.flags.project,
-    castMemberId: requiredFlag(input.flags.cast, '--cast'),
-    voiceIdOrName: requiredFlag(input.flags.voice, '--voice'),
-    registrationId: requiredFlag(input.flags.registration, '--registration'),
   });
 }
 

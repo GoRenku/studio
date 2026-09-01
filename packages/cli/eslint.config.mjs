@@ -99,7 +99,7 @@ const eslintConfig = [
       'src/commands/generation-command-handlers.ts',
       'src/commands/generation-purpose-command-registry.ts',
       'src/commands/media-command.ts',
-      'src/commands/media-import-command-handlers.ts',
+      'src/commands/media-import/**/*.ts',
       'src/commands/media-import-documents.ts',
       'src/commands/structured-command.ts',
       'src/commands/studio-resource-event-command.ts',

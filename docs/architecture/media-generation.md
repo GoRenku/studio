@@ -166,6 +166,10 @@ renku generation recover --file tmp/operations/media-generation/request.json --r
 renku media import --purpose <purpose> --target <target> --source <path> --provenance <provenance-json> --json
 ```
 
+`shot-plan.dialogue-audio` additionally requires `--turns <N-or-N-M>` and a
+`shot-plan:<id>` target. Core stores that one inclusive range with the attached
+Take and exact provenance; it does not interpret the provider/model request.
+
 Schema inspection returns the selected provider's live raw input schema. It is
 technical field authority, not editorial prompting guidance. `image.create`
 uses `--target shot-plan:<id>` and appears as a generic Reference Image in that
@@ -187,9 +191,10 @@ exact operation ids through its live catalog and has no Engines allowlist;
 Media Producer's Pika Skill curates the initial operation set. World Labs is
 exposed by its focused location-world Engines API.
 
-Project Settings version 5 has global Preview and provider prompt-expansion
+Project Settings version 6 has global Preview and provider prompt-expansion
 preferences plus independent Image, Video, and Audio sections. Image chooses
-Codex, Fal.ai, or Pika; Video chooses Fal.ai or Pika; Audio remains ElevenLabs.
+Codex, Fal.ai, or Pika; Video chooses Fal.ai or Pika; Audio chooses ElevenLabs
+or Fal.ai.
 Media Producer applies the expansion preference only when the selected live
 schema unambiguously exposes such a control; runtime code has no native-field
 map.

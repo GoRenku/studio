@@ -10,11 +10,7 @@ import {
 import { Button } from '@/ui/button';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { SaveNotificationStatus } from '@/ui/save-notification';
-import {
-  readSceneDialogueAudioWorkspace,
-  readScreenplayScene,
-  type SceneDialogueAudioWorkspaceWithUrls,
-} from '@/services/screenplay';
+import { readScreenplayScene } from '@/services/screenplay';
 import {
   matchesSceneNarrativeResource,
   useStudioResourceRefresh,
@@ -67,8 +63,6 @@ export function ScenePanel({
   openingReferences = [],
 }: ScenePanelProps) {
   const [resource, setResource] = useState<ScreenplaySceneResource | null>(null);
-  const [dialogueAudio, setDialogueAudio] =
-    useState<SceneDialogueAudioWorkspaceWithUrls | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
   const [tabBarAction, setTabBarAction] = useState<ReactNode | null>(null);
@@ -115,15 +109,11 @@ export function ScenePanel({
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([
-      readScreenplayScene(projectName, sceneId),
-      readSceneDialogueAudioWorkspace(projectName, sceneId),
-    ])
-      .then(([nextResource, nextDialogueAudio]) => {
+    void readScreenplayScene(projectName, sceneId)
+      .then((nextResource) => {
         if (!cancelled) {
           setError(null);
           setResource(nextResource);
-          setDialogueAudio(nextDialogueAudio);
         }
       })
       .catch((loadError) => {
@@ -185,7 +175,7 @@ export function ScenePanel({
   if (error) {
     return <p className='p-6 text-sm text-destructive'>{error}</p>;
   }
-  if (!resource || !dialogueAudio) {
+  if (!resource) {
     return <p className='p-6 text-sm text-muted-foreground'>Loading scene...</p>;
   }
 
@@ -222,11 +212,8 @@ export function ScenePanel({
             resource={resource}
             opening={opening}
             openingReferences={openingReferences}
-            audio={dialogueAudio}
             previousScene={previousScene}
             nextScene={nextScene}
-            onAudioChange={setDialogueAudio}
-            onSaveNotificationChange={onSaveNotificationChange}
             onSelect={onSelect}
           />
         ) : null}

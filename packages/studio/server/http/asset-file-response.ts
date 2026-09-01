@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import { Readable } from 'node:stream';
-import type { AssetFile } from '@gorenku/studio-core/server';
+import type {
+  AssetFile,
+  ResolvedProjectAssetFileById,
+} from '@gorenku/studio-core/server';
 import type { ProjectsRouteProjectData } from '../routes/projects.js';
 
 export async function readProjectAssetFileByIdResponse(
@@ -12,6 +15,12 @@ export async function readProjectAssetFileByIdResponse(
   }
 ): Promise<Response> {
   const resolved = await projectData.resolveProjectAssetFileById(input);
+  return projectAssetFileResponse(resolved);
+}
+
+export async function projectAssetFileResponse(
+  resolved: ResolvedProjectAssetFileById,
+): Promise<Response> {
   const contentLength = resolved.file.sizeBytes
     ?? (await fs.promises.stat(resolved.absolutePath)).size;
   const stream = fs.createReadStream(resolved.absolutePath);

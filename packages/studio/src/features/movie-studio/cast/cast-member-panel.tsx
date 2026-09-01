@@ -11,6 +11,7 @@ import {
   readCastAssets,
   clearSelectedCastProfile,
   selectCastProfileAsset,
+  selectDefaultCastVoice,
   type StudioAssetCollection,
 } from '@/services/studio-project-assets-api';
 import {
@@ -124,6 +125,17 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
     }
   };
 
+  const selectVoiceDefault = async (
+    voice: CastMemberResourceResponse['voices'][number]
+  ) => {
+    try {
+      await selectDefaultCastVoice(projectName, castMemberId, voice.id);
+      await refreshCastMember();
+    } catch (selectError) {
+      toast.error(errorMessage(selectError));
+    }
+  };
+
   if (error) {
     return <p className='text-sm text-destructive'>{error}</p>;
   }
@@ -157,6 +169,7 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
           onTogglePick={togglePick}
           onDeleteAsset={removeAsset}
           onDeleteVoice={removeVoice}
+          onSelectDefaultVoice={selectVoiceDefault}
         />
       </LineTabsContent>
     </LineTabs>

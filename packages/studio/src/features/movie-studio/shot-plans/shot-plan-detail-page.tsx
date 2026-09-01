@@ -15,6 +15,7 @@ import { Tabs } from '@/ui/tabs';
 import { LineTabBar } from '@/ui/line-tab-bar';
 import { LineTabsContent } from '@/ui/line-tabs';
 import { ShotPlanImageAssetsView } from './shot-plan-image-assets';
+import { ShotPlanDialogueAudio } from './shot-plan-dialogue-audio';
 
 // Resizable-panel proportions.
 const SHOT_PLAN_RAIL_DEFAULT_WIDTH_PERCENT = 18;
@@ -168,6 +169,9 @@ export function ShotPlanDetailPage({
             <LineTabsContent value='assets' className='mt-0 min-h-0 flex-1 overflow-hidden'>
               <ShotPlanImageAssetsView projectName={projectName} shotPlanId={shotPlanId} />
             </LineTabsContent>
+            <LineTabsContent value='audio' className='mt-0 min-h-0 flex-1 overflow-hidden'>
+              <ShotPlanDialogueAudio projectName={projectName} shotPlanId={shotPlanId} />
+            </LineTabsContent>
           </Tabs>
         </section>
       )}
@@ -201,4 +205,5 @@ export function ShotPlanDetailPage({
 const shotPlanDetailTabs = [
   { value: 'shots', label: 'Shots' },
   { value: 'assets', label: 'Assets' },
+  { value: 'audio', label: 'Audio' },
 ];

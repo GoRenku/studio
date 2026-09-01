@@ -26,6 +26,8 @@ import { createTrashRoute } from './trash.js';
 import { createVisualLanguageRoute } from './visual-language.js';
 import { createShotPlanVideoGenerationsRoute } from './shot-plan-video-generations.js';
 import { createSceneStoryboardImagesRoute } from './scene-storyboard-images.js';
+import { createShotPlanDialogueAudioRoute } from './shot-plan-dialogue-audio.js';
+import { createCastVoicesRoute } from './cast-voices.js';
 
 export interface CreateProjectsRouteOptions {
   projectData?: ProjectsRouteProjectData;
@@ -57,11 +59,11 @@ export type ProjectsRouteProjectData = Pick<
   | 'readScreenplayStructure'
   | 'readScreenplaySection'
   | 'readScreenplayScene'
-  | 'readSceneDialogueAudioWorkspace'
-  | 'updateSceneDialogueAudioSetup'
-  | 'deleteSceneDialogueAudioTake'
-  | 'selectSceneDialogueAudioTake'
-  | 'clearSceneDialogueAudioTakeSelection'
+  | 'readShotPlanDialogueAudio'
+  | 'discardShotPlanDialogueAudioTake'
+  | 'selectShotPlanDialogueAudioTake'
+  | 'clearShotPlanDialogueAudioTakeSelection'
+  | 'resolveShotPlanDialogueAudioTakeFile'
   | 'readSceneBeatsResource'
   | 'readScreenplayBeatGalleryResource'
   | 'readStudioSelectionContext'
@@ -87,6 +89,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'listCastVoices'
   | 'readCastVoice'
   | 'removeCastVoice'
+  | 'selectDefaultCastVoice'
   | 'readInspirationResource'
   | 'readInspirationFolder'
   | 'createInspirationFolder'
@@ -179,6 +182,7 @@ export function createProjectsRoute(
     .route('/:projectName', createNavigationRoute({ projectData }))
     .route('/:projectName', createContinuityRoute({ projectData, requireToken }))
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
+    .route('/:projectName', createShotPlanDialogueAudioRoute({ projectData, requireToken }))
     .route('/:projectName', createShotPlansRoute({ projectData, requireToken }))
     .route('/:projectName', createSceneStoryboardImagesRoute({ projectData, requireToken }))
     .route(
@@ -187,6 +191,7 @@ export function createProjectsRoute(
     )
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
+    .route('/:projectName', createCastVoicesRoute({ projectData, requireToken }))
     .route(
       '/:projectName',
       createGenerationPreviewRoute({ projectData, requireToken })

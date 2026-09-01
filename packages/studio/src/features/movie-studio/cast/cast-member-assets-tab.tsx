@@ -24,6 +24,9 @@ interface CastMemberAssetsTabProps {
   onDeleteVoice: (
     voice: CastMemberResourceResponse['voices'][number]
   ) => Promise<void>;
+  onSelectDefaultVoice: (
+    voice: CastMemberResourceResponse['voices'][number]
+  ) => Promise<void>;
 }
 
 export function CastMemberAssetsTab({
@@ -34,6 +37,7 @@ export function CastMemberAssetsTab({
   onTogglePick,
   onDeleteAsset,
   onDeleteVoice,
+  onSelectDefaultVoice,
 }: CastMemberAssetsTabProps) {
   const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
   const profileAssets = continuityImageAssets(assets, ['cast_profile']);
@@ -79,6 +83,7 @@ export function CastMemberAssetsTab({
         <VoiceSamplesSection
           voices={resource.voices}
           onDeleteVoice={onDeleteVoice}
+          onSelectDefaultVoice={onSelectDefaultVoice}
         />
       </div>
     </div>
@@ -201,9 +206,13 @@ function CastAssetSection({
 function VoiceSamplesSection({
   voices,
   onDeleteVoice,
+  onSelectDefaultVoice,
 }: {
   voices: CastMemberResourceResponse['voices'];
   onDeleteVoice: (
+    voice: CastMemberResourceResponse['voices'][number]
+  ) => Promise<void>;
+  onSelectDefaultVoice: (
     voice: CastMemberResourceResponse['voices'][number]
   ) => Promise<void>;
 }) {
@@ -231,6 +240,7 @@ function VoiceSamplesSection({
               key={voice.id}
               voice={voice}
               onDelete={onDeleteVoice}
+              onSelectDefault={onSelectDefaultVoice}
             />
           ))}
         </div>

@@ -4,7 +4,7 @@ import type { RenkuCliIo } from '../cli.js';
 import {
   mediaImportCommandHandler,
   type MediaCommandFlags,
-} from './media-import-command-handlers.js';
+} from './media-import/command.js';
 import {
   dispatchCliCommand,
   writeJson,

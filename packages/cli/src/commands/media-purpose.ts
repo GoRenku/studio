@@ -10,7 +10,6 @@ import {
   parseLocationTarget,
   parsePropTarget,
   parseLookbookTarget,
-  parseSceneDialogueTarget,
   parseSceneTarget,
 } from './studio-target-parsing.js';
 
@@ -53,14 +52,6 @@ const targetParsers: Record<
   scene: (value) => ({ kind: 'scene', id: parseSceneTarget(value, 'Media attachment') }),
   shot: (value, purpose) => ({ kind: 'shot', id: parsePrefixedTarget(value, 'shot', purpose) }),
   shotPlan: (value, purpose) => ({ kind: 'shotPlan', id: parsePrefixedTarget(value, 'shot-plan', purpose) }),
-  sceneDialogue: (value) => {
-    const target = parseSceneDialogueTarget(value, 'Dialogue media attachment');
-    return {
-      kind: 'sceneDialogue',
-      sceneId: target.sceneId,
-      turnId: target.dialogueId,
-    };
-  },
 };
 
 function parsePrefixedTarget(value: string, prefix: string, purpose: MediaPurpose): string {

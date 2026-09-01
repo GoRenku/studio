@@ -1,27 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pause, Play, Trash2, Volume2 } from 'lucide-react';
+import { Pause, Play, Volume2 } from 'lucide-react';
 import type { CastMemberResourceResponse } from '@/services/studio-project-contracts';
 import { Button } from '@/ui/button';
 import { Card } from '@/ui/card';
-import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/ui/tooltip';
-import { cn } from '@/lib/utils';
 import { humanizeReferenceName } from './cast-reference-labels';
+import { MediaCardActions } from '@/ui/media-card/media-card-actions';
 
 type CastVoiceResponse = CastMemberResourceResponse['voices'][number];
 
 interface CastVoiceSampleCardProps {
   voice: CastVoiceResponse;
   onDelete: (voice: CastVoiceResponse) => Promise<void>;
+  onSelectDefault: (voice: CastVoiceResponse) => Promise<void>;
 }
 
 export function CastVoiceSampleCard({
   voice,
   onDelete,
+  onSelectDefault,
 }: CastVoiceSampleCardProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -71,7 +72,7 @@ export function CastVoiceSampleCard({
   };
 
   return (
-    <Card className='group relative overflow-hidden rounded-md border border-border/40 bg-card p-0 shadow-[0_14px_30px_rgba(0,0,0,0.16)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-border/70 hover:shadow-[0_20px_42px_rgba(0,0,0,0.22)]'>
+    <Card className={`group relative overflow-hidden rounded-md border bg-card p-0 shadow-[0_14px_30px_rgba(0,0,0,0.16)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[0_20px_42px_rgba(0,0,0,0.22)] ${voice.isDefault ? 'border-primary' : 'border-border/40 hover:border-border/70'}`}>
       <div className='grid min-h-[156px] grid-rows-[1fr_auto]'>
         <div className='flex items-center gap-4 p-4'>
           <Tooltip>
@@ -125,29 +126,21 @@ export function CastVoiceSampleCard({
         </div>
       </div>
       {file ? <audio ref={audioRef} src={file.url} preload='metadata' /> : null}
-      <div
-        className={cn(
-          'absolute right-2 top-2 rounded-md bg-black/48 text-white opacity-0 shadow-sm backdrop-blur-sm transition-opacity',
-          'group-hover:opacity-100 group-focus-within:opacity-100'
-        )}
-      >
-        <DeleteConfirmDialog
-          title='Delete Voice Sample?'
-          message='Remove this Cast Voice and its linked sample. This cannot be undone.'
-          onDelete={() => onDelete(voice)}
-          trigger={
-            <Button
-              type='button'
-              size='icon'
-              variant='ghost'
-              className='h-7 w-7 text-white/75 hover:bg-destructive/80 hover:text-white'
-              aria-label='Delete voice sample'
-            >
-              <Trash2 className='h-4 w-4' />
-            </Button>
-          }
-        />
-      </div>
+      <MediaCardActions
+        selection={{
+          kind: 'choose',
+          selected: voice.isDefault,
+          selectedLabel: 'Default voice sample',
+          unselectedLabel: 'Set as default voice sample',
+          onChoose: () => onSelectDefault(voice),
+        }}
+        deleteAction={{
+          label: 'Delete voice sample',
+          confirmationTitle: 'Delete Voice Sample?',
+          confirmationMessage: 'Remove this Cast Voice and its linked sample. This cannot be undone.',
+          onDelete: () => onDelete(voice),
+        }}
+      />
     </Card>
   );
 }

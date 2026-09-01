@@ -15,7 +15,7 @@ describe('Project Settings document', () => {
   const invalidDocuments: Array<[string, unknown]> = [
     ['null', null],
     ['old version', { ...DEFAULT_PROJECT_SETTINGS, version: 0 }],
-    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 6 }],
+    ['new version', { ...DEFAULT_PROJECT_SETTINGS, version: 7 }],
     [
       'missing field',
       {

@@ -18,9 +18,8 @@ owns that selected or picked slot, the restore keeps the restored content but
 leaves the newer active choice in place. The report includes a structured
 warning so agents and Studio can tell the user what happened.
 
-Current conflict examples include a restored Scene Dialogue Audio Take when a
-newer active audio choice remains in place. The restored media stays available
-without silently replacing the newer choice.
+Shot Plan Dialogue Audio uses independent multi-selection, so restoring one
+Take does not need to displace another. The restored Take remains unselected.
 
 ## Replacement Flow Audit
 

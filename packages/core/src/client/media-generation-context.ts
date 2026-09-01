@@ -18,7 +18,7 @@ import type { ProjectRelativePath } from './project/index.js';
 import type { GenerationWorkflowPolicy } from './project-settings.js';
 import type { Prop } from './props.js';
 import type { SceneBeatsRevision } from './scene-beats/index.js';
-import type { SceneDialogueAudio, SceneDialogueAudioCastVoiceOption } from './scene-dialogue-audio-workspace.js';
+import type { DialogueTurnRange } from './shot-plan-dialogue-audio.js';
 import type { Scene } from './screenplay/index.js';
 import type { Shot, ShotPlan, ShotPlanCoveredBeat } from './shot-plans.js';
 import type { InspirationFolderWithResolvedPath, Lookbook, LookbookImage, LookbookSheet } from './visual-language.js';
@@ -80,6 +80,7 @@ export type MediaGenerationPropContext = {
 } & MediaGenerationSubjectDetails<PropDesignDocument, PropDesignSummary>;
 
 export interface MediaGenerationDialogueTurnContext {
+  number: number;
   turnId: string;
   castMemberId: string | null;
   speakerName: string;
@@ -96,6 +97,7 @@ export interface MediaGenerationSceneContext {
   locations: MediaGenerationLocationContext[];
   props: MediaGenerationPropContext[];
   dialogueTurns: MediaGenerationDialogueTurnContext[];
+  castVoicesByCastMemberId: Record<string, CastVoice[]>;
 }
 
 export type MediaGenerationTargetContext =
@@ -114,16 +116,7 @@ export type MediaGenerationTargetContext =
   | ({ kind: 'prop'; scenes: Scene[] } & MediaGenerationPropContext)
   | MediaGenerationSceneContext
   | { kind: 'shot'; shot: Shot; shotPlan: ShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext }
-  | { kind: 'shotPlan'; shotPlan: ShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext }
-  | {
-      kind: 'sceneDialogue';
-      scene: Scene;
-      turn: MediaGenerationDialogueTurnContext;
-      speaker: CastMember | null;
-      castVoices: SceneDialogueAudioCastVoiceOption[];
-      setup: SceneDialogueAudio | null;
-      priorTakes: SceneDialogueAudio['takes'];
-    };
+  | { kind: 'shotPlan'; shotPlan: ShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext };
 
 export type MediaGenerationReferenceRole =
   | 'source-image'
@@ -136,6 +129,7 @@ export type MediaGenerationReferenceRole =
   | 'last-frame'
   | 'video-storyboard'
   | 'video-reference'
+  | 'voice-sample'
   | 'dialogue-audio';
 
 export interface MediaGenerationReferenceSuggestion {
@@ -160,6 +154,7 @@ export interface MediaGenerationReferenceCandidate {
   tags: string[];
   generationProvenance: MediaGenerationProvenance | null;
   authoredFrom: { kind: 'shotPlan'; id: string } | null;
+  dialogueTurnRange?: DialogueTurnRange;
   isDisplaySelected: boolean;
   isWorkflowSelected: boolean;
   available: boolean;

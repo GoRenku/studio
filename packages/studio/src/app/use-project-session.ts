@@ -409,7 +409,12 @@ function readStudioRoute(): StudioRoute {
         routeError: 'Shot route state requires a Shot Plan.',
       };
     }
-    if (shotPlanTabParam && shotPlanTabParam !== 'shots' && shotPlanTabParam !== 'assets') {
+    if (
+      shotPlanTabParam
+      && shotPlanTabParam !== 'shots'
+      && shotPlanTabParam !== 'assets'
+      && shotPlanTabParam !== 'audio'
+    ) {
       return {
         screen: 'movieStudio',
         projectName: decodeURIComponent(sceneRoute[1]),
@@ -425,12 +430,12 @@ function readStudioRoute(): StudioRoute {
         routeError: 'Shot Plan detail tab requires a Shot Plan.',
       };
     }
-    if (shotPlanTabParam === 'assets' && shotParam) {
+    if ((shotPlanTabParam === 'assets' || shotPlanTabParam === 'audio') && shotParam) {
       return {
         screen: 'movieStudio',
         projectName: decodeURIComponent(sceneRoute[1]),
         selection: { type: 'scene', id: decodeURIComponent(sceneRoute[2]) },
-        routeError: 'Shot focus is not valid on the Shot Plan Assets tab.',
+        routeError: 'Shot focus is not valid on this Shot Plan detail tab.',
       };
     }
     const selection: StudioSelection = {
@@ -439,7 +444,9 @@ function readStudioRoute(): StudioRoute {
       ...(sceneTab ? { sceneTab } : {}),
       ...(beatParam ? { beatId: beatParam } : {}),
       ...(shotPlanParam ? { shotPlanId: shotPlanParam } : {}),
-      ...(shotPlanTabParam === 'shots' || shotPlanTabParam === 'assets'
+      ...(shotPlanTabParam === 'shots'
+        || shotPlanTabParam === 'assets'
+        || shotPlanTabParam === 'audio'
         ? { shotPlanTab: shotPlanTabParam }
         : {}),
       ...(shotParam ? { shotId: shotParam } : {}),

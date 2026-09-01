@@ -183,11 +183,8 @@ export function matchesSceneNarrativeResource(
     (resourceKey) =>
       resourceKey === 'screenplay' ||
       resourceKey === `scene:${sceneId}` ||
-      resourceKey === `surface:scene:${sceneId}:dialogue-audio` ||
       resourceKey.startsWith('surface:castMember:') ||
-      resourceKey.startsWith('surface:location:') ||
-      resourceKey.startsWith('scene-dialogue-audio:') ||
-      resourceKey.startsWith('scene-dialogue-audio-take:')
+      resourceKey.startsWith('surface:location:')
   );
 }
 
@@ -197,6 +194,15 @@ export function matchesSceneVideoGenerationsResource(
 ): boolean {
   return resourceKeys.includes(
     `surface:scene:${sceneId}:video-generations`,
+  );
+}
+
+export function matchesShotPlanDialogueAudioResource(
+  resourceKeys: string[],
+  shotPlanId: string,
+): boolean {
+  return resourceKeys.includes(
+    `surface:shotPlan:${shotPlanId}:dialogue-audio`,
   );
 }
 
@@ -210,9 +216,6 @@ export function matchesSceneBeatsResource(input: {
       resourceKey === `scene:${input.sceneId}` ||
       resourceKey === 'scene-beats' ||
       resourceKey === `surface:scene:${input.sceneId}:beats` ||
-      resourceKey === `surface:scene:${input.sceneId}:dialogue-audio` ||
-      resourceKey.startsWith('scene-dialogue-audio:') ||
-      resourceKey.startsWith('scene-dialogue-audio-take:') ||
       (input.sceneBeatsRevisionId
         ? resourceKey.startsWith(`scene-beats:${input.sceneBeatsRevisionId}:`) ||
           resourceKey === `scene-beats:${input.sceneBeatsRevisionId}`

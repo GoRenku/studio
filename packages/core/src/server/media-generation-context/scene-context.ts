@@ -25,7 +25,8 @@ import {
 } from '../database/access/scene-beats.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { listSceneDialogueTurns } from '../scene-dialogue-audio-workspace/turns.js';
+import { listCastVoicesInSession } from '../cast-voices/projection.js';
+import { listNumberedDialogueTurns } from '../screenplay/dialogue-turns.js';
 import { renderScreenplaySceneContextText } from '../screenplay/context/scene-text.js';
 
 export function projectMediaGenerationSceneContext(input: {
@@ -60,6 +61,11 @@ export function projectMediaGenerationSceneContext(input: {
       const record = propRecords.get(id);
       return record ? [projectPropContext(input.session, record)] : [];
     });
+  const dialogueTurns = listNumberedDialogueTurns(input.screenplay, scene.id);
+  const castVoicesByCastMemberId = Object.fromEntries(
+    [...new Set(dialogueTurns.flatMap((turn) => turn.castMemberId ? [turn.castMemberId] : []))]
+      .map((castMemberId) => [castMemberId, listCastVoicesInSession(input.session, castMemberId)])
+  );
   return {
     kind: 'scene',
     scene,
@@ -69,12 +75,14 @@ export function projectMediaGenerationSceneContext(input: {
     castMembers,
     locations,
     props,
-    dialogueTurns: listSceneDialogueTurns(input.screenplay, scene.id).map((turn) => ({
+    dialogueTurns: dialogueTurns.map((turn) => ({
+      number: turn.number,
       turnId: turn.turn.id,
       castMemberId: turn.castMemberId,
       speakerName: turn.turn.characterName,
       plainText: turn.plainText,
     })),
+    castVoicesByCastMemberId,
   };
 }
 

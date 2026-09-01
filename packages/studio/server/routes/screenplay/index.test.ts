@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fakeProjectDataService } from '../../testing/fake-project-data-service.js';
 import { createScreenplayRoute } from './index.js';
 
@@ -16,50 +16,6 @@ function createMountedScreenplayRoute() {
 }
 
 describe('screenplay Hono route', () => {
-  it('delegates selected Take writes and clears without route-local membership rules', async () => {
-    const projectData = fakeProjectDataService();
-    const selectSceneDialogueAudioTake = vi.fn(
-      projectData.selectSceneDialogueAudioTake,
-    );
-    const clearSceneDialogueAudioTakeSelection = vi.fn(
-      projectData.clearSceneDialogueAudioTakeSelection,
-    );
-    const app = new Hono().route(
-      '/:projectName',
-      createScreenplayRoute({
-        projectData: {
-          ...projectData,
-          selectSceneDialogueAudioTake,
-          clearSceneDialogueAudioTakeSelection,
-        },
-        requireToken: async (_c, next) => { await next(); },
-      }),
-    );
-
-    const selected = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/dialogue-turns/turn_urban/audio/selected-take/take_2',
-      { method: 'PUT' },
-    );
-    const cleared = await app.request(
-      '/constantinople/screenplay/scenes/scene_opening/dialogue-turns/turn_urban/audio/selected-take',
-      { method: 'DELETE' },
-    );
-
-    expect(selected.status).toBe(200);
-    expect(selectSceneDialogueAudioTake).toHaveBeenCalledWith({
-      projectName: 'constantinople',
-      sceneId: 'scene_opening',
-      turnId: 'turn_urban',
-      takeId: 'take_2',
-    });
-    expect(cleared.status).toBe(200);
-    expect(clearSceneDialogueAudioTakeSelection).toHaveBeenCalledWith({
-      projectName: 'constantinople',
-      sceneId: 'scene_opening',
-      turnId: 'turn_urban',
-    });
-  });
-
   it('does not expose retired hierarchy routes', async () => {
     const app = createMountedScreenplayRoute();
 

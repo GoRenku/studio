@@ -1,5 +1,6 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import type { JsonValue } from '../../client/json.js';
 import { assets } from './assets.js';
 import { castMembers } from './cast-members.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
@@ -16,10 +17,7 @@ export const castVoices = sqliteTable(
     sampleAssetId: text('sample_asset_id')
       .notNull()
       .references(() => assets.id),
-    sampleSourceKind: text('sample_source_kind').notNull().default('custom_file'),
-    sampleId: text('sample_id'),
-    sampleFetchedAt: text('sample_fetched_at'),
-    sampleApiBaseUrl: text('sample_api_base_url'),
+    voiceIdentity: text('voice_identity', { mode: 'json' }).$type<JsonValue>(),
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -40,31 +38,20 @@ export const castVoices = sqliteTable(
   ],
 );
 
-export const castVoiceProviderRegistrations = sqliteTable(
-  'cast_voice_provider_registration',
+export const castVoiceDefaults = sqliteTable(
+  'cast_voice_default',
   {
-    id: text('id').primaryKey(),
+    castMemberId: text('cast_member_id')
+      .primaryKey()
+      .references(() => castMembers.id),
     castVoiceId: text('cast_voice_id')
       .notNull()
+      .unique()
       .references(() => castVoices.id),
-    provider: text('provider').notNull(),
-    registrationModel: text('registration_model').notNull(),
-    externalVoiceId: text('external_voice_id').notNull(),
-    capabilitiesJson: text('capabilities_json').notNull(),
-    sourceSampleAssetId: text('source_sample_asset_id').references(() => assets.id),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
-    ...discardLifecycleColumns(),
   },
   (table) => [
-    index('cast_voice_provider_registration_voice_idx').on(
-      table.castVoiceId,
-      table.provider
-    ),
-    index('cast_voice_provider_registration_external_idx').on(
-      table.provider,
-      table.registrationModel,
-      table.externalVoiceId
-    ),
+    index('cast_voice_default_voice_idx').on(table.castVoiceId),
   ],
 );

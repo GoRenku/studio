@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { JsonValue } from '../../client/media-generation-review.js';
+import type { JsonValue } from '../../client/json.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 const SECRET_FIELD = /^(?:authorization|cookie|set-cookie|api[-_]?key|token|access[-_]?token|secret|credential|password)$/i;

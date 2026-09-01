@@ -22,37 +22,33 @@ export class SceneDetailPage {
     ).toBeVisible();
     await expect(this.page.getByText('Urban stands near the cannon')).toBeVisible();
     await expect(this.page.getByText('Hold the gate.')).toBeVisible();
-  }
-
-  async openDialogueAudioPanel(): Promise<void> {
-    await this.page.getByRole('button', {
-      name: 'Open URBAN dialogue audio takes',
-    }).click();
     await expect(
-      this.page.getByRole('button', { name: 'Close dialogue audio panel' })
-    ).toBeVisible();
+      this.page.getByRole('group', { name: 'Dialogue by URBAN' })
+        .locator('[data-dialogue-turn-number="1"]')
+    ).toHaveText('1');
   }
 
-  async expectSimulatedDialogueAudioTakeVisible(): Promise<void> {
-    await this.page
-      .getByRole('complementary')
-      .last()
-      .getByRole('tab', { name: 'Takes' })
-      .click();
-    await expect(this.page.getByText('Take 1')).toBeVisible();
-    await expect(this.page.getByRole('button', { name: 'Play Take 1' }))
-      .toBeVisible();
-    await expect(this.page.getByRole('button', { name: 'Delete Take 1' }))
-      .toBeVisible();
+  async gotoShotPlanAudio(project: StudioE2eMovieProject): Promise<void> {
+    await this.page.goto(shotPlanAudioRoute(project));
+    await expect(this.page.getByRole('tab', { name: 'Audio' })).toHaveAttribute(
+      'data-state',
+      'active'
+    );
   }
 
-  async expectGeneratedDialogueAudioAvailable(): Promise<void> {
-    await expect(
-      this.page.getByRole('button', { name: 'Open URBAN dialogue audio takes' })
-    ).toBeVisible();
+  async expectDialogueAudioTakeVisible(): Promise<void> {
+    await expect(this.page.getByText('Turn 1', { exact: true })).toBeVisible();
+    await expect(this.page.getByRole('button', { name: 'Play Turn 1' }))
+      .toBeVisible();
+    await expect(this.page.getByRole('button', { name: 'Select Turn 1 as audio context' }))
+      .toBeVisible();
   }
 }
 
 export function sceneRoute(project: StudioE2eMovieProject): string {
   return `/projects/${encodeURIComponent(project.projectName)}/scenes/${encodeURIComponent(project.sceneId)}`;
+}
+
+export function shotPlanAudioRoute(project: StudioE2eMovieProject): string {
+  return `${sceneRoute(project)}?sceneTab=shotPlans&shotPlan=${encodeURIComponent(project.shotPlanId)}&shotPlanTab=audio`;
 }

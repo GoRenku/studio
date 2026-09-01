@@ -9,6 +9,7 @@ import type {
   ProviderRequest,
 } from '../../media/contracts.js';
 import {
+  findLocalMediaFiles,
   replaceLocalMediaFilesWithValidationUrls,
   substituteLocalMediaFiles,
 } from '../../media/local-files.js';
@@ -30,6 +31,7 @@ export function createFalMediaProvider(): MediaProvider {
     },
     async validate(request, context) {
       requireCredential(request.model, context);
+      validateSeedAudioReferenceCount(request);
       validateJsonSchema({
         provider: 'fal-ai',
         model: request.model,
@@ -67,6 +69,20 @@ export function createFalMediaProvider(): MediaProvider {
       return recoverFal(createClient(context, request.model), request, request.requestId, context);
     },
   };
+}
+
+function validateSeedAudioReferenceCount(request: ProviderRequest): void {
+  if (request.model !== 'bytedance/seed-audio-1.0') {
+    return;
+  }
+  const referenceCount = findLocalMediaFiles(request.input).length;
+  if (referenceCount > 3) {
+    throw new EngineError(
+      'ENGINE_REQUEST_INVALID',
+      'Seed Audio 1.0 accepts at most three local voice references.',
+      { provider: 'fal-ai', model: request.model },
+    );
+  }
 }
 
 async function recoverFal(

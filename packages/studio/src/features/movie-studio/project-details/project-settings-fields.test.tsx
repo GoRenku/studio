@@ -52,7 +52,7 @@ describe('ProjectSettingsFields', () => {
 
 function settings(): ProjectSettingsDocument {
   return {
-    version: 5,
+    version: 6,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,

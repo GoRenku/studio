@@ -81,9 +81,9 @@ operational companions that teach agents how to use those contracts.
 - Owns casting interpretation, appearance, performance, costume continuity,
   voice casting notes, and cast media readiness.
 - Owns Cast Voice attachment guidance through `renku cast voice attach` when a
-  provider voice id and sample audio are ready.
-- Keeps provider voice ids and sample assets in Cast Voice records, not Cast
-  Design JSON.
+  playable sample audio is ready.
+- Keeps optional opaque provider identity and sample Assets in Cast Voice
+  records, not Cast Design JSON.
 - Hands `cast.character-sheet` and `cast.profile` generation to
   `media-producer`.
 - Hands `cast.voice-sample` generation to `media-producer` when the user wants

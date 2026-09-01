@@ -182,6 +182,7 @@ export async function createSceneBeatsMovieProject(input: {
     projectData,
     projectName: input.projectName,
     ids,
+    shotPlanId: shotPlan.shotPlan.id,
     firstShotId: shotPlan.shotPlan.shots[0]!.id,
     secondShotId: shotPlan.shotPlan.shots[1]!.id,
   });
@@ -433,6 +434,7 @@ async function seedProjectMedia(input: {
   projectData: ProjectDataService;
   projectName: string;
   ids: SampleIds;
+  shotPlanId: string;
   firstShotId: string;
   secondShotId: string;
 }): Promise<{
@@ -596,16 +598,17 @@ async function seedProjectMedia(input: {
     sourceProjectRelativePath: 'generated/media/lookbook-sheet.png',
     title: 'Imperial Wound Sheet',
   });
-  const voice = await input.projectData.attachCastVoice({
+  await input.projectData.attachCastVoice({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
     document: {
-      kind: 'castVoiceAttachment',
+      kind: 'castVoiceFileAttachment',
       castMemberId: input.ids.castMemberId,
       name: 'urban-primary',
-      provider: 'elevenlabs',
-      model: 'eleven_v3',
-      voiceId: 'voice_urban_primary',
+      voiceIdentity: {
+        provider: 'elevenlabs',
+        voiceId: 'voice_urban_primary',
+      },
       purpose: 'Primary speaking voice for dialogue audio browser tests.',
       sample: {
         sourceProjectRelativePath:
@@ -614,29 +617,12 @@ async function seedProjectMedia(input: {
       },
     },
   });
-  await input.projectData.updateSceneDialogueAudioSetup({
-    homeDir: input.runtime.isolatedHomeDirectory,
-    projectName: input.projectName,
-    sceneId: input.ids.sceneId,
-    turnId: input.ids.dialogueId,
-    setup: {
-      modelChoice: 'elevenlabs/eleven_v3',
-      castVoiceId: voice.voice.id,
-      plainText: 'Hold the gate.',
-      v3Text: 'Hold the gate.',
-      outputFormat: 'mp3_44100_128',
-      languageCode: 'en',
-    },
-  });
   await input.projectData.attachGenerationMedia({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
-    purpose: 'scene.dialogue-audio',
-    target: {
-      kind: 'sceneDialogue',
-      sceneId: input.ids.sceneId,
-      turnId: input.ids.dialogueId,
-    },
+    purpose: 'shot-plan.dialogue-audio',
+    target: { kind: 'shotPlan', id: input.shotPlanId },
+    turnRange: { start: 1, end: 1 },
     sourceProjectRelativePath: 'generated/audio/urban-dialogue-take.mp3',
     title: 'Urban dialogue take',
     generationProvenance: {

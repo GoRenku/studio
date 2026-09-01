@@ -341,20 +341,8 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
     castMemberId: 'cast_urban',
     name: 'normal-voice',
     purpose: 'calm strategic baseline',
-    sampleSource: { kind: 'generated_sample' },
-    providerRegistrations: [
-      {
-        id: 'cast_voice_provider_registration_normal',
-        castVoiceId: 'cast_voice_normal',
-        provider: 'elevenlabs',
-        registrationModel: 'eleven_v3',
-        externalVoiceId: 'voice_urban_normal',
-        capabilities: ['dialogue-audio-tts'],
-        sourceSampleAssetId: 'asset_voice_sample',
-        createdAt: '2026-05-26T00:00:00.000Z',
-        updatedAt: '2026-05-26T00:00:00.000Z',
-      },
-    ],
+    isDefault: true,
+    voiceIdentity: { provider: 'elevenlabs', voiceId: 'voice_urban_normal' },
     sample: {
       id: 'asset_voice_sample',
       owner: { kind: 'castMember', id: 'cast_urban' },

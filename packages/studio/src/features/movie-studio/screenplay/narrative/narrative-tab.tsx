@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type {
   OpeningElement,
   ScreenplayReference,
@@ -8,10 +8,6 @@ import type {
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
-import type { SaveNotificationStatus } from '@/ui/save-notification';
-import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/screenplay';
-import { SceneDialogueAudioPanel } from '../../scenes/scene-dialogue-audio-panel';
-import { useSceneDialogueAudioPlayer } from '../../scenes/use-scene-dialogue-audio';
 import { NarrativeBlock } from './block';
 import { NarrativeOpening } from './opening';
 import { NarrativeSceneHeading } from './scene-heading';
@@ -26,50 +22,30 @@ export function NarrativeTab({
   resource,
   opening,
   openingReferences,
-  audio,
   previousScene,
   nextScene,
-  onAudioChange,
-  onSaveNotificationChange,
   onSelect,
 }: {
   projectName: string;
   resource: ScreenplaySceneResource;
   opening: OpeningElement[];
   openingReferences: ScreenplayReference[];
-  audio: SceneDialogueAudioWorkspaceWithUrls;
   previousScene?: SceneNeighbor | null;
   nextScene?: SceneNeighbor | null;
-  onAudioChange: (audio: SceneDialogueAudioWorkspaceWithUrls) => void;
-  onSaveNotificationChange?: (status: SaveNotificationStatus) => void;
   onSelect: (selection: StudioSelection) => void;
 }) {
-  const [selectedTurnId, setSelectedTurnId] = useState<string | null>(null);
-  const [dialogueTextPreviews, setDialogueTextPreviews] = useState<
-    Record<string, string>
-  >({});
-  const player = useSceneDialogueAudioPlayer();
-  const turnIds = useMemo(() => {
-    const ids = new Set<string>();
+  const turnNumbers = useMemo(() => {
+    const numbers = new Map<string, number>();
+    let number = 1;
     for (const block of resource.scene.blocks) {
-      if (block.type === 'dialogue') ids.add(block.id);
+      if (block.type === 'dialogue') numbers.set(block.id, number++);
       if (block.type === 'dualDialogue') {
-        ids.add(block.left.id);
-        ids.add(block.right.id);
+        numbers.set(block.left.id, number++);
+        numbers.set(block.right.id, number++);
       }
     }
-    return ids;
+    return numbers;
   }, [resource.scene.blocks]);
-  const activeTurnId =
-    selectedTurnId && turnIds.has(selectedTurnId) ? selectedTurnId : null;
-  const closeDialogueAudioPanel = () => {
-    if (activeTurnId) {
-      setDialogueTextPreviews((current) =>
-        updateDialogueTextPreview(current, activeTurnId, null)
-      );
-    }
-    setSelectedTurnId(null);
-  };
 
   return (
     <div className='flex h-full min-h-0 min-w-0'>
@@ -102,10 +78,7 @@ export function NarrativeTab({
                 projectName={projectName}
                 block={block}
                 references={resource.references}
-                audio={audio}
-                selectedTurnId={activeTurnId}
-                textPreviews={dialogueTextPreviews}
-                onOpenAudio={setSelectedTurnId}
+                turnNumbers={turnNumbers}
                 onSelect={onSelect}
               />
             ))}
@@ -118,25 +91,6 @@ export function NarrativeTab({
           />
         </article>
       </div>
-
-      {activeTurnId ? (
-        <SceneDialogueAudioPanel
-          key={activeTurnId}
-          projectName={projectName}
-          sceneId={resource.scene.id}
-          turnId={activeTurnId}
-          context={audio}
-          player={player}
-          onClose={closeDialogueAudioPanel}
-          onDraftTextPreviewChange={(text) =>
-            setDialogueTextPreviews((current) =>
-              updateDialogueTextPreview(current, activeTurnId, text)
-            )
-          }
-          onContextChange={onAudioChange}
-          onSaveNotificationChange={onSaveNotificationChange}
-        />
-      ) : null}
     </div>
   );
 }
@@ -243,19 +197,4 @@ function SceneNavLink({
       {!isPrevious ? <Chevron className='h-4 w-4 shrink-0 text-primary' /> : null}
     </Button>
   );
-}
-
-function updateDialogueTextPreview(
-  current: Record<string, string>,
-  turnId: string,
-  text: string | null
-): Record<string, string> {
-  if (text === null) {
-    if (!(turnId in current)) return current;
-    const next = { ...current };
-    delete next[turnId];
-    return next;
-  }
-  if (current[turnId] === text) return current;
-  return { ...current, [turnId]: text };
 }

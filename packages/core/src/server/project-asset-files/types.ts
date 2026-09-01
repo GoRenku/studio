@@ -42,11 +42,10 @@ export type ProjectAssetFileDestination =
       shotId: string;
     }
   | {
-      kind: 'scene.dialogueAudio';
-      sceneId: string;
-      turnId: string;
-      sceneDialogueAudioId: string;
-      dialogueAudioTakeId: string;
+      kind: 'shotPlan.dialogueAudio';
+      shotPlanId: string;
+      turnStartNumber: number;
+      turnEndNumber: number;
     }
   | {
       kind: 'scene.storyboardImage';

@@ -4,7 +4,7 @@ import type { ProjectSettingsDocument } from '../../client/project-settings.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettingsDocument = {
-  version: 5,
+  version: 6,
   screenplayImport: {
     createContinuitySubjects: true,
     generateContinuityImages: false,
@@ -46,7 +46,7 @@ const concurrencySchema = {
     'maxConcurrentGenerations',
   ],
   properties: {
-    provider: { type: 'string' },
+    provider: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
     askBeforeGenerating: { type: 'boolean' },
     runGenerationsConcurrently: { type: 'boolean' },
     maxConcurrentGenerations: { type: 'integer', minimum: 1, maximum: 5 },
@@ -59,7 +59,7 @@ const projectSettingsSchema = {
   additionalProperties: false,
   required: ['version', 'screenplayImport', 'generation'],
   properties: {
-    version: { const: 5 },
+    version: { const: 6 },
     screenplayImport: {
       type: 'object',
       additionalProperties: false,
@@ -91,27 +91,9 @@ const projectSettingsSchema = {
       properties: {
         displayPreview: { type: 'boolean' },
         enableProviderPromptExpansion: { type: 'boolean' },
-        image: {
-          ...concurrencySchema,
-          properties: {
-            ...concurrencySchema.properties,
-            provider: { enum: ['codex', 'fal-ai', 'pika'] },
-          },
-        },
-        video: {
-          ...concurrencySchema,
-          properties: {
-            ...concurrencySchema.properties,
-            provider: { enum: ['fal-ai', 'pika'] },
-          },
-        },
-        audio: {
-          ...concurrencySchema,
-          properties: {
-            ...concurrencySchema.properties,
-            provider: { const: 'elevenlabs' },
-          },
-        },
+        image: concurrencySchema,
+        video: concurrencySchema,
+        audio: concurrencySchema,
       },
     },
   },
@@ -185,7 +167,7 @@ function mapAjvErrors(errors: ErrorObject[], basePath: string[]): DiagnosticIssu
       'PROJECT_SETTINGS002',
       projectSettingsIssueMessage(error),
       { path: issuePath, context: 'Project Settings' },
-      'Use the complete current version 5 Project Settings contract.'
+      'Use the complete current version 6 Project Settings contract.'
     );
   });
 }
@@ -198,7 +180,7 @@ function projectSettingsIssueMessage(error: ErrorObject): string {
     return `Unknown Project Settings field: ${String(error.params.additionalProperty)}.`;
   }
   if (error.keyword === 'const') {
-    return 'Project Settings version must be 5.';
+    return 'Project Settings version must be 6.';
   }
   if (error.keyword === 'minimum' || error.keyword === 'maximum') {
     return 'Maximum concurrent generations must be an integer from 1 through 5.';

@@ -13,7 +13,6 @@ import type {
   Project,
 } from './project/index.js';
 import type { ProjectLanguage } from './project-languages.js';
-import type { SceneDialogueAudioWorkspace } from './scene-dialogue-audio-workspace.js';
 import type {
   InspirationAnalysis,
   InspirationFolder,
@@ -180,7 +179,6 @@ export interface SceneNarrativeResource {
   castMemberImages: Record<string, ScreenplayImageReference>;
   locationLabels: Record<string, string>;
   locationImages: Record<string, ScreenplayImageReference>;
-  dialogueAudio: SceneDialogueAudioWorkspace;
 }
 
 export interface SceneDesignResource {
@@ -366,7 +364,7 @@ export type ScenePanelTab =
   | 'shotPlans'
   | 'generations';
 
-export type ShotPlanDetailTab = 'shots' | 'assets';
+export type ShotPlanDetailTab = 'shots' | 'assets' | 'audio';
 
 export type StudioSelection =
   | { type: 'projectInformation' }

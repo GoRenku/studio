@@ -1,62 +1,26 @@
 import type { Asset } from './assets.js';
-import type { ProjectRelativePath } from './project/index.js';
+import type { JsonValue } from './json.js';
 import type { MediaGenerationProvenance } from './media-generation-review.js';
+import type { ProjectRelativePath } from './project/index.js';
 
 export interface CastVoice {
   id: string;
   castMemberId: string;
   name: string;
   purpose: string;
-  providerRegistrations: CastVoiceProviderRegistration[];
-  sampleSource: CastVoiceSampleSource;
+  isDefault: boolean;
+  voiceIdentity: JsonValue | null;
   sample: Asset;
   createdAt: string;
   updatedAt: string;
 }
 
-export type CastVoiceProvider = 'elevenlabs';
-
-export type CastVoiceProviderRegistrationModel =
-  | 'eleven_v3'
-  | 'eleven_multilingual_v2'
-  | 'eleven_turbo_v2_5';
-
-export type CastVoiceProviderCapability = 'dialogue-audio-tts';
-
-export interface CastVoiceProviderRegistration {
-  id: string;
-  castVoiceId: string;
-  provider: CastVoiceProvider;
-  registrationModel: CastVoiceProviderRegistrationModel;
-  externalVoiceId: string;
-  capabilities: CastVoiceProviderCapability[];
-  sourceSampleAssetId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type CastVoiceSampleSource =
-  | {
-      kind: 'custom_file';
-    }
-  | {
-      kind: 'generated_sample';
-    }
-  | {
-      kind: 'elevenlabs_voice_sample';
-      sampleId: string;
-      fetchedAt: string;
-      apiBaseUrl: string;
-    };
-
-export interface CastVoiceAttachmentDocument {
-  kind: 'castVoiceAttachment';
+export interface CastVoiceFileAttachmentDocument {
+  kind: 'castVoiceFileAttachment';
   castMemberId: string;
   name: string;
-  provider: string;
-  model: string;
-  voiceId: string;
   purpose: string;
+  voiceIdentity?: JsonValue;
   sample: {
     sourceProjectRelativePath: ProjectRelativePath;
     title: string;
@@ -64,60 +28,12 @@ export interface CastVoiceAttachmentDocument {
   };
 }
 
-export interface CastVoiceElevenLabsSampleAttachmentDocument {
-  kind: 'castVoiceElevenLabsSampleAttachment';
-  castMemberId: string;
-  name: string;
-  provider: 'elevenlabs';
-  model: 'eleven_v3' | 'eleven_multilingual_v2' | 'eleven_turbo_v2_5';
-  voiceId: string;
-  purpose: string;
-  sample: {
-    title: string;
-  };
-}
-
-export type CastVoiceAttachmentCommandDocument =
-  | CastVoiceAttachmentDocument
-  | CastVoiceElevenLabsSampleAttachmentDocument;
-
 export interface CastVoiceListReport {
   voices: CastVoice[];
 }
 
 export interface CastVoiceReadReport {
   voice: CastVoice;
-}
-
-export interface CastVoiceProviderRegistrationListReport {
-  registrations: CastVoiceProviderRegistration[];
-}
-
-export interface CastVoiceProviderRegistrationReadReport {
-  registration: CastVoiceProviderRegistration;
-}
-
-export interface CastVoiceProviderRegistrationWriteReport {
-  project: {
-    id?: string;
-    projectName: string;
-  };
-  voice: CastVoice;
-  registration: CastVoiceProviderRegistration;
-  resourceKeys: string[];
-}
-
-export interface CastVoiceProviderRegistrationRemoveReport {
-  project: {
-    id?: string;
-    projectName: string;
-  };
-  removed: {
-    castMemberId: string;
-    castVoiceId: string;
-    registrationId: string;
-  };
-  resourceKeys: string[];
 }
 
 export interface CastVoiceValidationReport {
@@ -138,16 +54,20 @@ export interface CastVoiceAttachmentReport {
     name: string;
   };
   voice: CastVoice;
-  sampleRetrieval?: {
-    provider: 'elevenlabs';
-    voiceId: string;
-    sampleId: string;
-    mimeType: 'audio/mpeg';
-    sizeBytes: number;
-    fetchedAt: string;
-    apiBaseUrl: string;
-  };
   changes: Array<{ type: 'castVoice.attached'; castMemberId: string; voiceId: string }>;
+  resourceKeys: string[];
+}
+
+export interface CastVoiceDefaultSelectionReport {
+  valid: true;
+  warnings: unknown[];
+  project: {
+    id?: string;
+    projectName: string;
+  };
+  castMemberId: string;
+  selectedCastVoiceId: string;
+  voices: CastVoice[];
   resourceKeys: string[];
 }
 

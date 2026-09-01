@@ -1,10 +1,10 @@
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
-import { castVoiceProviderRegistrations, castVoices } from '../../schema/index.js';
+import { castVoiceDefaults, castVoices } from '../../schema/index.js';
+import type { JsonValue } from '../../../client/json.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type CastVoiceRecord = typeof castVoices.$inferSelect;
-export type CastVoiceProviderRegistrationRecord =
-  typeof castVoiceProviderRegistrations.$inferSelect;
+export type CastVoiceDefaultRecord = typeof castVoiceDefaults.$inferSelect;
 
 export interface InsertCastVoiceRecord {
   id: string;
@@ -12,23 +12,8 @@ export interface InsertCastVoiceRecord {
   name: string;
   purpose: string;
   sampleAssetId: string;
-  sampleSourceKind: string;
-  sampleId?: string | null;
-  sampleFetchedAt?: string | null;
-  sampleApiBaseUrl?: string | null;
+  voiceIdentity?: JsonValue | null;
   sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface InsertCastVoiceProviderRegistrationRecord {
-  id: string;
-  castVoiceId: string;
-  provider: string;
-  registrationModel: string;
-  externalVoiceId: string;
-  capabilitiesJson: string;
-  sourceSampleAssetId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,78 +35,6 @@ export function listCastVoiceRecords(
     .where(and(eq(castVoices.castMemberId, castMemberId), isNull(castVoices.discardedAt)))
     .orderBy(asc(castVoices.sortOrder), asc(castVoices.name), asc(castVoices.id))
     .all();
-}
-
-export function insertCastVoiceProviderRegistrationRecord(
-  session: DatabaseSession,
-  record: InsertCastVoiceProviderRegistrationRecord
-): void {
-  session.db.insert(castVoiceProviderRegistrations).values(record).run();
-}
-
-export function listCastVoiceProviderRegistrationRecords(
-  session: DatabaseSession,
-  castVoiceId: string
-): CastVoiceProviderRegistrationRecord[] {
-  return session.db
-    .select()
-    .from(castVoiceProviderRegistrations)
-    .where(
-      and(
-        eq(castVoiceProviderRegistrations.castVoiceId, castVoiceId),
-        isNull(castVoiceProviderRegistrations.discardedAt)
-      )
-    )
-    .orderBy(
-      asc(castVoiceProviderRegistrations.provider),
-      asc(castVoiceProviderRegistrations.registrationModel),
-      asc(castVoiceProviderRegistrations.id)
-    )
-    .all();
-}
-
-export function readCastVoiceProviderRegistrationRecord(
-  session: DatabaseSession,
-  input: { castVoiceId: string; registrationId: string }
-): CastVoiceProviderRegistrationRecord | null {
-  return (
-    session.db
-      .select()
-      .from(castVoiceProviderRegistrations)
-      .where(
-        and(
-          eq(castVoiceProviderRegistrations.castVoiceId, input.castVoiceId),
-          eq(castVoiceProviderRegistrations.id, input.registrationId),
-          isNull(castVoiceProviderRegistrations.discardedAt)
-        )
-      )
-      .get() ?? null
-  );
-}
-
-export function deleteCastVoiceProviderRegistrationRecords(
-  session: DatabaseSession,
-  castVoiceId: string
-): void {
-  session.db
-    .delete(castVoiceProviderRegistrations)
-    .where(eq(castVoiceProviderRegistrations.castVoiceId, castVoiceId))
-    .run();
-}
-
-export function deleteCastVoiceProviderRegistrationRecord(
-  session: DatabaseSession,
-  input: { castVoiceId: string; registrationId: string }
-): void {
-  session.db
-    .delete(castVoiceProviderRegistrations)
-    .where(
-      and(
-        eq(castVoiceProviderRegistrations.castVoiceId, input.castVoiceId),
-        eq(castVoiceProviderRegistrations.id, input.registrationId)
-      )
-    )
-    .run();
 }
 
 export function readCastVoiceRecord(
@@ -189,17 +102,49 @@ export function nextCastVoiceSortOrder(
   return (row?.maxSortOrder ?? 0) + 1;
 }
 
-export function deleteCastVoiceRecord(
+export function readCastVoiceDefaultRecord(
   session: DatabaseSession,
-  input: { castMemberId: string; voiceId: string }
+  castMemberId: string
+): CastVoiceDefaultRecord | null {
+  return session.db
+    .select()
+    .from(castVoiceDefaults)
+    .where(eq(castVoiceDefaults.castMemberId, castMemberId))
+    .get() ?? null;
+}
+
+export function selectCastVoiceDefaultRecord(
+  session: DatabaseSession,
+  input: { castMemberId: string; castVoiceId: string; now: string }
 ): void {
   session.db
-    .delete(castVoices)
+    .insert(castVoiceDefaults)
+    .values({
+      castMemberId: input.castMemberId,
+      castVoiceId: input.castVoiceId,
+      createdAt: input.now,
+      updatedAt: input.now,
+    })
+    .onConflictDoUpdate({
+      target: castVoiceDefaults.castMemberId,
+      set: { castVoiceId: input.castVoiceId, updatedAt: input.now },
+    })
+    .run();
+}
+
+export function clearCastVoiceDefaultRecord(
+  session: DatabaseSession,
+  input: { castMemberId: string; castVoiceId?: string }
+): void {
+  session.db
+    .delete(castVoiceDefaults)
     .where(
-      and(
-        eq(castVoices.castMemberId, input.castMemberId),
-        eq(castVoices.id, input.voiceId)
-      )
+      input.castVoiceId
+        ? and(
+            eq(castVoiceDefaults.castMemberId, input.castMemberId),
+            eq(castVoiceDefaults.castVoiceId, input.castVoiceId),
+          )
+        : eq(castVoiceDefaults.castMemberId, input.castMemberId)
     )
     .run();
 }

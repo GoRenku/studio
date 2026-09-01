@@ -5,9 +5,9 @@ import type {
 } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import {
-  isSceneDialogueAudioTag,
-  SCENE_DIALOGUE_AUDIO_TAG_CLASS_NAME,
-} from '../../scenes/scene-dialogue-audio-tags';
+  isDialoguePerformanceTag,
+  DIALOGUE_PERFORMANCE_TAG_CLASS_NAME,
+} from '../../scenes/dialogue-performance-tags';
 import { SubjectPreview } from './subject-preview';
 
 export function ReferenceText({
@@ -99,8 +99,8 @@ function renderAudioTags(text: string): ReactNode {
   while ((match = tagPattern.exec(text)) !== null) {
     if (match.index > cursor) nodes.push(text.slice(cursor, match.index));
     nodes.push(
-      isSceneDialogueAudioTag(match[0]) ? (
-        <span key={`${match.index}-${match[0]}`} className={SCENE_DIALOGUE_AUDIO_TAG_CLASS_NAME}>
+      isDialoguePerformanceTag(match[0]) ? (
+        <span key={`${match.index}-${match[0]}`} className={DIALOGUE_PERFORMANCE_TAG_CLASS_NAME}>
           {match[0]}
         </span>
       ) : (

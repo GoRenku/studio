@@ -49,7 +49,9 @@ unavailable rather than crashing the display.
 Narrative renders semantic screenplay elements with the existing Studio visual
 language: Scene Headings, Action, Transition, Shot, Lyrics, Cast List, visible
 Note, Special Heading, Title Card, Super, Dialogue, and Dual Dialogue. Dual
-Dialogue keeps each turn's audio action independent.
+Dialogue keeps its authored side-by-side layout. Every canonical Dialogue Turn
+shows a small current-order number in the top-right corner of its block. The
+number is a user/agent aid only and is recomputed from current screenplay order.
 
 Opening elements appear immediately before the first canonical Scene. They do
 not gain a Scene number, Scene tabs, production actions, or Scene ownership.
@@ -59,13 +61,25 @@ ranges. Studio preserves the authored text around each exact range, including
 punctuation, whitespace, repeated names, and Unicode. Presence-only references
 do not fabricate inline highlights.
 
-Dialogue text in the screenplay remains immutable. The dialogue audio panel has
-its own editable generation text and owns setup autosave, Takes, playback, and
-Advanced settings by Dialogue Turn ID. The Takes tab marks the selected
-workflow Take, allows **Pick**, and provides **Clear selection**. A newly
-attached or restored Take remains unselected; discarding the selected Take
-clears the choice. Dialogue Audio generation remains in the conversational
-Media Producer workflow rather than a Studio Generate button.
+Dialogue text in the screenplay remains immutable. Narrative has no Dialog,
+Takes, or Advanced audio panel and no generation controls. Dialogue Audio is
+generated only through the conversational Media Producer workflow.
+
+## Shot Plan Detail
+
+Shot Plan detail exposes **Shots**, **Assets**, and **Audio** tabs. Audio shows
+one full-width Media Card per independent Dialogue Audio Take. A card shows its
+single Turn or consecutive Turn range, selected Cast Profile portraits (with an
+empty portrait state when no Profile is selected), one waveform/player, generic
+generation provenance, date, the shared selection control, and a hover/focus
+Trash action. It deliberately omits dialogue text, speaker names, aggregate
+labels, duplicate duration, links, a right action column, headings, and any New
+Take button.
+
+Audio selection is multi-select. Each selected single- or multi-Turn Take is
+projected as one exact reference for a later video request. Studio does not
+combine Takes, infer groups, validate stale Turn numbers after screenplay
+changes, or generate audio itself.
 
 ## Deliberate Absences
 

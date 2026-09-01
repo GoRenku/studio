@@ -17,34 +17,6 @@ vi.mock('@/services/screenplay', () => ({
       references: [],
     })
   ),
-  readSceneDialogueAudioWorkspace: vi.fn(() =>
-    Promise.resolve({
-      purpose: 'scene.dialogue-audio',
-      target: { kind: 'scene', sceneId: 'scene_bombardment' },
-      project: {
-        projectName: 'basilica',
-        title: 'Basilica',
-        baseLanguageCode: null,
-      },
-      scene: {
-        id: 'scene_bombardment',
-        heading: 'EXT. THEODOSIAN WALLS - DAWN',
-        title: 'Bombardment',
-      },
-      dialogues: [],
-      castMemberLabels: {},
-      castVoicesByCastMemberId: {},
-      audioByTurnId: {},
-      models: [],
-      defaults: {
-        modelChoice: 'elevenlabs/eleven_v3',
-        outputFormat: 'mp3_44100_128',
-        languageCode: null,
-        voiceSettings: {},
-      },
-      resourceKeys: [],
-    })
-  ),
 }));
 
 vi.mock('../shot-plans/scene-shot-plans-tab', () => ({

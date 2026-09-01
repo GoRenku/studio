@@ -102,5 +102,5 @@ function purposeExpectsVisualLanguage(purpose: ReadMediaGenerationContextInput['
   return purpose !== 'image.edit'
     && purpose !== 'video.edit'
     && purpose !== 'cast.voice-sample'
-    && purpose !== 'scene.dialogue-audio';
+    && purpose !== 'shot-plan.dialogue-audio';
 }

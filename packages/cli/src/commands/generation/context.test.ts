@@ -43,22 +43,18 @@ describe('generation context command', () => {
     });
   });
 
-  it('preserves the exact Scene and dialogue identities', async () => {
+  it('preserves the exact Shot Plan dialogue target', async () => {
     const readMediaGenerationContext = vi.fn(async (input) => input);
     await showGenerationContext({
       flags: {
-        purpose: 'scene.dialogue-audio',
-        target: 'scene:scene_1:dialogue:dialogue_1',
+        purpose: 'shot-plan.dialogue-audio',
+        target: 'shot-plan:shot_plan_1',
       },
       runtime: { projectDataService: { readMediaGenerationContext } },
     } as never);
     expect(readMediaGenerationContext).toHaveBeenCalledWith({
-      purpose: 'scene.dialogue-audio',
-      target: {
-        kind: 'sceneDialogue',
-        sceneId: 'scene_1',
-        turnId: 'dialogue_1',
-      },
+      purpose: 'shot-plan.dialogue-audio',
+      target: { kind: 'shotPlan', id: 'shot_plan_1' },
     });
   });
 });

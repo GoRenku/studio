@@ -1,13 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { ProjectRelativePath } from './project/index.js';
-
-export type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+import type { JsonValue } from './json.js';
 
 export type MediaGenerationKind = 'image' | 'video' | 'audio';
 

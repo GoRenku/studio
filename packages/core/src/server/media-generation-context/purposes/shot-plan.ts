@@ -1,6 +1,5 @@
 import { ProjectDataError } from '../../project-data-error.js';
-import { readOwnedAsset } from '../../assets/projection.js';
-import { readSceneDialogueAudioWorkspace } from '../../scene-dialogue-audio-workspace/context.js';
+import { readShotPlanDialogueAudio } from '../../shot-plan-dialogue-audio/projection.js';
 import { projectShotPlanReport } from '../../shot-plans/projection.js';
 import type { MediaGenerationPurposeBuilder } from '../purpose-registry.js';
 import { createReferenceSuggestion, suggestBeatStoryboards, suggestLookbookMedia, suggestSceneSubjectMedia, suggestSelectedShotImages, suggestShotPlanMedia } from '../reference-suggestions.js';
@@ -42,12 +41,14 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
   const visualLanguage = readMediaGenerationLookbooks({
     session: input.session,
     projectFolder: input.projectFolder,
-    kinds: ['production'],
+    kinds: input.purpose === 'shot-plan.dialogue-audio' ? [] : ['production'],
   });
   return {
     targetContext: { kind: 'shotPlan', shotPlan: plan.shotPlan, coveredBeats: plan.coveredBeats, sceneContext },
     visualLanguage,
-    suggestedReferences: [
+    suggestedReferences: input.purpose === 'shot-plan.dialogue-audio'
+      ? dialogueVoiceSampleSuggestions({ input, sceneContext })
+      : [
       ...suggestLookbookMedia({
         lookbooks: visualLanguage,
         role: 'appearance',
@@ -79,7 +80,7 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
         warnings: input.warnings,
       }),
       ...(input.purpose === 'shot-plan.video-generation'
-        ? dialogueAudioSuggestions({ input, sceneContext })
+        ? dialogueAudioSuggestions({ input })
         : []),
     ],
     resourceKeys: plan.resourceKeys,
@@ -110,36 +111,46 @@ function auxiliaryRoles(purpose: Parameters<MediaGenerationPurposeBuilder>[0]['p
 
 function dialogueAudioSuggestions(input: {
   input: Parameters<MediaGenerationPurposeBuilder>[0];
+}) {
+  const resource = readShotPlanDialogueAudio({
+    session: input.input.session,
+    shotPlanId: input.input.target.kind === 'shotPlan' ? input.input.target.id : '',
+  });
+  return [createReferenceSuggestion({
+    id: 'dialogue-audio',
+    role: 'dialogue-audio',
+    subject: { kind: 'shotPlan', id: resource.shotPlan.id },
+    assets: resource.takes.map((take) => take.asset),
+    workflowSelectedAssetIds: resource.takes
+      .filter((take) => take.selected)
+      .map((take) => take.asset.id),
+    dialogueTurnRangesByAssetId: new Map(
+      resource.takes.map((take) => [take.asset.id, take.turnRange])
+    ),
+    projectFolder: input.input.projectFolder,
+    warnings: input.input.warnings,
+  })];
+}
+
+function dialogueVoiceSampleSuggestions(input: {
+  input: Parameters<MediaGenerationPurposeBuilder>[0];
   sceneContext: ReturnType<typeof projectMediaGenerationSceneContext>;
 }) {
-  const workspace = readSceneDialogueAudioWorkspace({
-    session: input.input.session,
-    sceneId: input.sceneContext.scene.id,
-  });
-  return input.sceneContext.dialogueTurns.map((turn) => {
-    const assets = (workspace.audioByTurnId[turn.turnId]?.takes ?? []).flatMap((take) => {
-      const asset = readOwnedAsset(input.input.session, {
-        owner: { kind: 'scene', id: input.sceneContext.scene.id },
-        assetId: take.assetId,
-      });
-      return asset ? [asset] : [];
-    });
-    return createReferenceSuggestion({
-      id: 'dialogue-audio',
-      role: 'dialogue-audio',
-      subject: { kind: 'dialogueTurn', id: turn.turnId },
-      assets,
-      workflowSelectedAssetIds: workspace.audioByTurnId[turn.turnId]?.selectedTakeId
-        ? workspace.audioByTurnId[turn.turnId]!.takes
-            .filter((take) => take.takeId === workspace.audioByTurnId[turn.turnId]!.selectedTakeId)
-            .map((take) => take.assetId)
-        : [],
+  return Object.entries(input.sceneContext.castVoicesByCastMemberId).map(
+    ([castMemberId, voices]) => createReferenceSuggestion({
+      id: 'voice-sample',
+      role: 'voice-sample',
+      subject: { kind: 'castMember', id: castMemberId },
+      assets: voices.map((voice) => voice.sample),
+      workflowSelectedAssetIds: voices
+        .filter((voice) => voice.isDefault)
+        .map((voice) => voice.sample.id),
       projectFolder: input.input.projectFolder,
       warnings: input.input.warnings,
-    });
-  });
+    })
+  );
 }
 
 function invalidTarget(): ProjectDataError {
-  return new ProjectDataError('CORE_GENERATION_TARGET_INVALID', 'Shot Plan video generation requires a Shot Plan target.');
+  return new ProjectDataError('CORE_GENERATION_TARGET_INVALID', 'Shot Plan media generation requires a Shot Plan target.');
 }

@@ -9,7 +9,7 @@ export type TrashItemKind =
   | 'inspirationImage'
   | 'lookbookImage'
   | 'lookbookSheet'
-  | 'sceneDialogueAudioTake'
+  | 'shotPlanDialogueAudioTake'
   | 'shot'
   | 'shotPlan';
 

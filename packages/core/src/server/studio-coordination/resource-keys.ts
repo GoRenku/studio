@@ -119,8 +119,8 @@ export function studioSceneBeatsResourceKey(sceneId: string): string {
   return `surface:scene:${sceneId}:beats`;
 }
 
-export function studioSceneDialogueAudioSurfaceResourceKey(sceneId: string): string {
-  return `surface:scene:${sceneId}:dialogue-audio`;
+export function studioShotPlanDialogueAudioResourceKey(shotPlanId: string): string {
+  return `surface:shotPlan:${shotPlanId}:dialogue-audio`;
 }
 
 export function studioSceneBeatsRevisionResourceKey(sceneBeatsRevisionId: string): string {

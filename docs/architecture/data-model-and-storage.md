@@ -161,12 +161,13 @@ Use the focused documents below for current direction.
 - Prop Sheets are Prop-owned `prop_sheet` Assets chosen explicitly by provider
   requests. Prop Heroes are Prop-owned `prop_hero` Assets with optional
   canonical owner-scoped selection.
-- Scene dialogue audio takes are durable scene dialogue media assets. Each
-  Dialogue Audio workspace may select zero or one active Take through
-  `scene_dialogue_audio_take_selection`. This workflow selection is distinct
-  from common Asset display selection. It clears with selected-Take discard and
-  is not restored or assigned automatically. Takes may be used as exact provider
-  request references; Shot Plans do not own or retain them.
+- Shot Plan Dialogue Audio Takes are Project-owned audio Assets with one durable
+  `shot_plan_dialogue_audio_take` row. Each row stores the exact Shot Plan, one
+  positive consecutive inclusive Turn range, the audio Asset/File, and optional
+  independent selection. Turn numbers are lightweight current-screenplay aids;
+  Core stores no Dialogue Turn ids, stale-range relations, grouping, or repair
+  behavior. Any number of active Takes may be selected as separate exact
+  provider request references.
 - Generated Shot Plan media Assets may retain optional weak
   `authoredFromShotPlanId` context. The stored value is nullable, indexed,
   one-way, and has no foreign key. Missing or discarded source plans never
@@ -185,10 +186,11 @@ Use the focused documents below for current direction.
   cells, or extraction metadata for storyboard slicing.
 - Cast Voices are durable Cast Member-owned records in `cast_voice`. A Cast
   Voice stores the Renku reference name, editorial purpose, playable sample
-  asset, and `sampleSource` provenance. Provider-specific handles live in
-  `cast_voice_provider_registration`, so the same Cast Voice can carry an
-  ElevenLabs dialogue-audio TTS registration and a Kling video voice-control
-  registration without treating either provider id as the Cast Voice itself.
+  Asset, and optional opaque provider-owned `voiceIdentity` JSON. Core validates
+  only the bounded JSON envelope and never interprets provider, model, or
+  capability fields. `cast_voice_default` selects at most one current default
+  per Cast Member. Provider Skills decide whether a request uses the sample file
+  or understands the opaque identity.
   The playable sample is still a normal Cast Member-owned audio Asset with type
   `cast_voice_sample`; generic Asset deletion must reject that sample while the
   Cast Voice points at it.
@@ -205,9 +207,9 @@ Use the focused documents below for current direction.
   exactly one active primary image file; Project and Project Library project
   that file's Asset identity rather than a root filename. Character Sheets,
   Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes have
-  no canonical common-Asset selection. Dialogue Audio instead has the focused
-  per-workspace workflow selection described above; provider requests still
-  choose exact Asset Files explicitly.
+  no canonical common-Asset selection. Dialogue Audio uses its focused
+  multi-selection described above; provider requests receive only those exact
+  selected Asset Files.
 - The canonical project database path is:
 
 ```text

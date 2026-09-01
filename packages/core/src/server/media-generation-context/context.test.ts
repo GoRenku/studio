@@ -6,7 +6,6 @@ import type { MediaPurpose, ProjectRelativePath } from '../../client/index.js';
 import { createDeterministicIdGenerator } from '../entity-ids.js';
 import { createProjectDataService } from '../project-data-service.js';
 import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
-import { createDialogueAudioReadyProject } from '../testing/dialogue-audio-template-fixtures.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 import { mediaGenerationOutputGuidance } from './purpose-registry.js';
 
@@ -381,48 +380,6 @@ describe('media generation context', () => {
     }
   });
 
-  it('projects exact dialogue, speaker, voice options, setup, and prior Takes', async () => {
-    const ready = await createDialogueAudioReadyProject();
-    if (!ready) {
-      return;
-    }
-
-    const report = await ready.projectData.readMediaGenerationContext({
-      homeDir: ready.homeDir,
-      purpose: 'scene.dialogue-audio',
-      target: {
-        kind: 'sceneDialogue',
-        sceneId: ready.sceneId,
-        turnId: ready.dialogueId,
-      },
-    });
-
-    expect(report.targetContext).toMatchObject({
-      kind: 'sceneDialogue',
-      scene: { id: ready.sceneId },
-      turn: {
-        turnId: ready.dialogueId,
-        castMemberId: 'cast_test0001',
-        plainText: 'Bronze has no temper. Men give it one.',
-      },
-      speaker: { id: 'cast_test0001', name: 'Urban' },
-      priorTakes: [],
-    });
-    expect(report.workflowPolicy.enableProviderPromptExpansion).toBe(true);
-
-    await expect(ready.projectData.readMediaGenerationContext({
-      homeDir: ready.homeDir,
-      purpose: 'scene.dialogue-audio',
-      target: {
-        kind: 'sceneDialogue',
-        sceneId: 'scene_wrong',
-        turnId: ready.dialogueId,
-      },
-    })).rejects.toMatchObject({
-      code: 'CORE_MEDIA_GENERATION_CONTEXT_TARGET_NOT_FOUND',
-    });
-  });
-
   it('defines the complete purpose-level output guidance without provider fields', () => {
     const expected: Record<MediaPurpose, [string | null, 'medium' | 'high' | null]> = {
       'image.create': [null, null],
@@ -440,7 +397,7 @@ describe('media generation context', () => {
       'cast.character-sheet': ['16:9', 'high'],
       'cast.profile': ['1:1', 'medium'],
       'cast.voice-sample': [null, null],
-      'scene.dialogue-audio': [null, null],
+      'shot-plan.dialogue-audio': [null, null],
       'location.sheet': ['16:9', 'high'],
       'location.hero': ['16:9', 'medium'],
       'prop.sheet': ['16:9', 'high'],

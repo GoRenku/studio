@@ -71,6 +71,47 @@ describe('ElevenLabs media provider', () => {
       code: 'ENGINE_LOCAL_MEDIA_INVALID',
     });
   });
+
+  it('retrieves an existing voice sample through the normal provider contract', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-elevenlabs-provider-'));
+    const fetchMock = vi.fn<typeof fetch>(async (url, init) => {
+      if (String(url) === 'https://api.elevenlabs.io/v1/voices/voice_1') {
+        expect(new Headers(init?.headers).get('xi-api-key')).toBe('elevenlabs-secret');
+        return Response.json({
+          name: 'Mara',
+          preview_url: 'https://audio.example/mara.mp3',
+          samples: [{ sample_id: 'sample_1', file_name: 'mara.mp3' }],
+        });
+      }
+      if (String(url) === 'https://audio.example/mara.mp3') {
+        return new Response(new TextEncoder().encode('sample-audio'), {
+          headers: { 'content-type': 'audio/mpeg' },
+        });
+      }
+      throw new Error(`Unexpected request: ${String(url)}`);
+    });
+    const context = { ...providerContext(directory, []), fetch: fetchMock };
+    const provider = createElevenLabsMediaProvider();
+
+    await expect(provider.readInputSchema!('voice-sample-audio', context))
+      .resolves.toMatchObject({ required: ['voiceId'] });
+    const result = await provider.execute({
+      model: 'voice-sample-audio',
+      input: { voiceId: 'voice_1' },
+    }, context);
+
+    expect(result).toMatchObject({
+      provider: 'elevenlabs',
+      model: 'voice-sample-audio',
+      artifacts: [{ mimeType: 'audio/mpeg', byteLength: 12 }],
+      receipt: {
+        voiceId: 'voice_1',
+        sampleId: 'sample_1',
+        voiceName: 'Mara',
+      },
+    });
+    await expect(fs.readFile(result.artifacts[0].path, 'utf8')).resolves.toBe('sample-audio');
+  });
 });
 
 function audioStream(value: string): ReadableStream<Uint8Array> {

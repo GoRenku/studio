@@ -4,6 +4,7 @@ import type {
 } from '../../client/assets.js';
 import type { MediaPurpose, MediaTarget } from '../../client/media-attachments.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
+import type { DialogueTurnRange } from '../../client/shot-plan-dialogue-audio.js';
 import { normalizeAssetMetadata } from '../assets/metadata.js';
 import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
 import { readOwnedAsset } from '../assets/projection.js';
@@ -19,7 +20,7 @@ import {
   resolveGeneratedMediaAttachment,
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
-import { attachSceneDialogueAudioMedia } from '../scene-dialogue-audio-workspace/attachments.js';
+import { attachShotPlanDialogueAudio } from '../shot-plan-dialogue-audio/attachment.js';
 import { attachImageEditMedia } from '../image-edit-attachments/index.js';
 import { attachVideoEditMedia } from '../video-edit-attachments/index.js';
 
@@ -31,6 +32,7 @@ export interface AttachGenerationMediaInput {
   assetMetadata?: AssetMetadataInput;
   generationProvenance?: MediaGenerationProvenance;
   select?: boolean;
+  turnRange?: DialogueTurnRange;
 }
 
 export interface GenerationMediaAttachmentReport {
@@ -80,19 +82,26 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       generationProvenance,
     });
   }
-  if (input.purpose === 'scene.dialogue-audio') {
-    if (input.target.kind !== 'sceneDialogue' || !generationProvenance) {
+  if (input.purpose === 'shot-plan.dialogue-audio') {
+    if (input.target.kind !== 'shotPlan' || !generationProvenance || !input.turnRange) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
-        'Scene Dialogue Audio attachment requires a Dialogue target and exact provenance.',
+        'Shot Plan Dialogue Audio attachment requires a Shot Plan target, turn range, and exact provenance.',
       );
     }
-    const attached = attachSceneDialogueAudioMedia({
+    const attached = attachShotPlanDialogueAudio({
       ...input,
-      sceneId: input.target.sceneId,
-      turnId: input.target.turnId,
+      shotPlanId: input.target.id,
+      turnRange: input.turnRange,
       generationProvenance,
     });
+    const project = readProjectRecord(input.session);
+    if (!project) {
+      throw new ProjectDataError(
+        'CORE_GENERATION_ATTACHMENT_FAILED',
+        'Shot Plan Dialogue Audio project was not found.',
+      );
+    }
     return {
       valid: true,
       purpose: input.purpose,
@@ -100,7 +109,11 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       asset: attached.asset,
       generationProvenance,
       resourceKeys: attached.resourceKeys,
-      project: attached.project,
+      project: {
+        projectName: project.projectName,
+        id: project.id,
+        projectFolder: input.projectFolder,
+      },
     };
   }
   const assetType = generationAttachmentAssetType(input.purpose);

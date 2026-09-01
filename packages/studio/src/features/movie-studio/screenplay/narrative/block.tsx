@@ -4,7 +4,6 @@ import type {
   ScreenplayReference,
   StudioSelection,
 } from '@gorenku/studio-core/client';
-import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/screenplay';
 import { NarrativeDialogueBlock } from './dialogue-block';
 import { NarrativeDualDialogueBlock } from './dual-dialogue-block';
 import { NarrativeTextBlock } from './text-block';
@@ -13,19 +12,13 @@ export function NarrativeBlock({
   projectName,
   block,
   references,
-  audio,
-  selectedTurnId,
-  textPreviews,
-  onOpenAudio,
+  turnNumbers,
   onSelect,
 }: {
   projectName: string;
   block: ScreenplayBlock;
   references: ScreenplayReference[];
-  audio: SceneDialogueAudioWorkspaceWithUrls;
-  selectedTurnId: string | null;
-  textPreviews: Record<string, string>;
-  onOpenAudio: (turnId: string) => void;
+  turnNumbers: ReadonlyMap<string, number>;
   onSelect: (selection: StudioSelection) => void;
 }) {
   switch (block.type) {
@@ -35,10 +28,7 @@ export function NarrativeBlock({
           projectName={projectName}
           turn={asDialogueTurn(block)}
           references={references}
-          audio={audio}
-          selected={selectedTurnId === block.id}
-          textPreview={textPreviews[block.id] ?? null}
-          onOpenAudio={onOpenAudio}
+          turnNumber={turnNumbers.get(block.id)!}
           onSelect={onSelect}
         />
       );
@@ -48,10 +38,7 @@ export function NarrativeBlock({
           projectName={projectName}
           block={block}
           references={references}
-          audio={audio}
-          selectedTurnId={selectedTurnId}
-          textPreviews={textPreviews}
-          onOpenAudio={onOpenAudio}
+          turnNumbers={turnNumbers}
           onSelect={onSelect}
         />
       );

@@ -3,6 +3,7 @@ import type { MediaPurpose, MediaTarget } from '../../client/media-attachments.j
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 import type { SceneStoryboardImagesImportDocument } from '../../client/scene-beats/index.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
+import { resolveProjectAssetFileById } from '../assets/resources.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { attachGenerationMedia } from '../generation/attachments.js';
 import { attachSceneStoryboardImages } from '../generation/scene-storyboard-attachments.js';
@@ -10,17 +11,16 @@ import { withProject } from '../project-operation.js';
 import { readAssetMediaGenerationRequest } from '../media-generation-review/inspection.js';
 import { readMediaGenerationPreview } from '../media-generation-review/preview.js';
 import { updateMediaGenerationPreviewPrompt } from '../media-generation-review/prompt.js';
-import { readSceneDialogueAudioWorkspace } from '../scene-dialogue-audio-workspace/context.js';
 import {
-  replaceSceneDialogueAudioSetup,
-  updateSceneDialogueAudioSetup,
-} from '../scene-dialogue-audio-workspace/setup.js';
-import { discardSceneDialogueAudioTake } from '../scene-dialogue-audio-workspace/takes.js';
-import {
-  clearSceneDialogueAudioTakeSelection,
-  selectSceneDialogueAudioTake,
-} from '../scene-dialogue-audio-workspace/selection.js';
+  attachShotPlanDialogueAudio,
+  clearShotPlanDialogueAudioTakeSelection,
+  discardShotPlanDialogueAudioTake,
+  readShotPlanDialogueAudio,
+  requireShotPlanDialogueAudioTakeFile,
+  selectShotPlanDialogueAudioTake,
+} from '../shot-plan-dialogue-audio/index.js';
 import { readMediaGenerationContext } from '../media-generation-context/index.js';
+import { resolveStudioProjectRef } from '../studio-coordination/project-reference.js';
 
 type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 
@@ -30,68 +30,75 @@ export function createGenerationServiceWiring() {
     updateMediaGenerationPreviewPrompt,
     readAssetMediaGenerationRequest,
     readMediaGenerationContext,
-    async readSceneDialogueAudioWorkspace(input: ProjectInput & { sceneId: string }) {
+    async readShotPlanDialogueAudio(input: ProjectInput & { shotPlanId: string }) {
       return withProject(input, ({ session }) =>
-        readSceneDialogueAudioWorkspace({ session, sceneId: input.sceneId })
+        readShotPlanDialogueAudio({ session, shotPlanId: input.shotPlanId })
       );
     },
-    async updateSceneDialogueAudioSetup(input: ProjectInput & {
-      sceneId: string;
-      turnId: string;
-      setup: Partial<import('../../client/scene-dialogue-audio-workspace.js').SceneDialogueAudioSetup>;
+    async attachShotPlanDialogueAudio(input: ProjectInput & {
+      shotPlanId: string;
+      sourceProjectRelativePath: string;
+      turnRange: import('../../client/shot-plan-dialogue-audio.js').DialogueTurnRange;
+      generationProvenance: MediaGenerationProvenance;
+      title?: string;
+      assetMetadata?: AssetMetadataInput;
     }) {
-      return withProject(input, ({ session }) =>
-        updateSceneDialogueAudioSetup({
+      return withProject(input, ({ session, projectFolder }) =>
+        attachShotPlanDialogueAudio({
           ...input,
           session,
+          projectFolder,
           idGenerator: createRandomIdGenerator(),
-          now: new Date().toISOString(),
         })
       );
     },
-    async replaceSceneDialogueAudioSetup(input: ProjectInput & {
-      sceneId: string;
-      turnId: string;
-      setup: unknown;
-    }) {
-      return withProject(input, ({ session }) =>
-        replaceSceneDialogueAudioSetup({
-          ...input,
-          session,
-          idGenerator: createRandomIdGenerator(),
-          now: new Date().toISOString(),
-        })
-      );
-    },
-    async deleteSceneDialogueAudioTake(input: ProjectInput & {
-      sceneId: string;
-      turnId: string;
+    async discardShotPlanDialogueAudioTake(input: ProjectInput & {
+      shotPlanId: string;
       takeId: string;
     }) {
       return withProject(input, ({ session, projectFolder }) =>
-        discardSceneDialogueAudioTake({ ...input, session, projectFolder })
+        discardShotPlanDialogueAudioTake({ ...input, session, projectFolder })
       );
     },
-    async selectSceneDialogueAudioTake(input: ProjectInput & {
-      sceneId: string;
-      turnId: string;
+    async selectShotPlanDialogueAudioTake(input: ProjectInput & {
+      shotPlanId: string;
       takeId: string;
     }) {
       return withProject(input, ({ session }) =>
-        selectSceneDialogueAudioTake({
+        selectShotPlanDialogueAudioTake({
           ...input,
           session,
           now: new Date().toISOString(),
         })
       );
     },
-    async clearSceneDialogueAudioTakeSelection(input: ProjectInput & {
-      sceneId: string;
-      turnId: string;
+    async clearShotPlanDialogueAudioTakeSelection(input: ProjectInput & {
+      shotPlanId: string;
+      takeId: string;
     }) {
       return withProject(input, ({ session }) =>
-        clearSceneDialogueAudioTakeSelection({ ...input, session })
+        clearShotPlanDialogueAudioTakeSelection({
+          ...input,
+          session,
+          now: new Date().toISOString(),
+        })
       );
+    },
+    async resolveShotPlanDialogueAudioTakeFile(input: ProjectInput & {
+      shotPlanId: string;
+      takeId: string;
+      assetFileId: string;
+    }) {
+      const project = await resolveStudioProjectRef(input);
+      const coordinates = await withProject(
+        { ...input, projectName: project.name },
+        ({ session }) => requireShotPlanDialogueAudioTakeFile({ ...input, session }),
+      );
+      return resolveProjectAssetFileById({
+        homeDir: input.homeDir,
+        projectName: project.name,
+        ...coordinates,
+      });
     },
     async attachGenerationMedia(input: ProjectInput & {
       purpose: MediaPurpose;
@@ -101,6 +108,7 @@ export function createGenerationServiceWiring() {
       assetMetadata?: AssetMetadataInput;
       generationProvenance?: MediaGenerationProvenance;
       select?: boolean;
+      turnRange?: import('../../client/shot-plan-dialogue-audio.js').DialogueTurnRange;
     }) {
       return withProject(input, ({ session, projectFolder }) =>
         attachGenerationMedia({

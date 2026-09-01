@@ -1,7 +1,7 @@
 export const STUDIO_PROJECT_SETTINGS_RESOURCE_KEY = 'project-settings' as const;
 
 export interface ProjectSettingsDocument {
-  version: 5;
+  version: 6;
   screenplayImport: {
     createContinuitySubjects: boolean;
     generateContinuityImages: boolean;
@@ -15,9 +15,9 @@ export interface ProjectSettingsDocument {
 export interface ProjectGenerationSettings {
   displayPreview: boolean;
   enableProviderPromptExpansion: boolean;
-  image: GenerationMediaSettings<'codex' | 'fal-ai' | 'pika'>;
-  video: GenerationMediaSettings<'fal-ai' | 'pika'>;
-  audio: GenerationMediaSettings<'elevenlabs'>;
+  image: GenerationMediaSettings<string>;
+  video: GenerationMediaSettings<string>;
+  audio: GenerationMediaSettings<string>;
 }
 
 export interface GenerationMediaSettings<Provider extends string> {
@@ -43,7 +43,7 @@ export interface ProjectSettingsMutationReport {
 export interface GenerationWorkflowPolicy {
   displayPreview: boolean;
   enableProviderPromptExpansion: boolean;
-  provider: 'codex' | 'fal-ai' | 'pika' | 'elevenlabs';
+  provider: string;
   askBeforeGenerating: boolean;
   concurrencyLimit: number;
 }

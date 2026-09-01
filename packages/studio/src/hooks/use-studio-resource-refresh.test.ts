@@ -8,6 +8,7 @@ import {
   matchesSceneBeatsResource,
   matchesSceneNarrativeResource,
   matchesScreenplayBeatGalleryResource,
+  matchesShotPlanDialogueAudioResource,
   matchesVisualLanguageLookbookResource,
 } from './use-studio-resource-refresh';
 
@@ -121,5 +122,16 @@ describe('Studio resource refresh matchers', () => {
         'surface:scene:scene_opening:video-generations',
       ])
     ).toBe(false);
+  });
+
+  it('matches only the exact Shot Plan Dialogue Audio surface', () => {
+    expect(matchesShotPlanDialogueAudioResource(
+      ['surface:shotPlan:shot_plan_1:dialogue-audio'],
+      'shot_plan_1',
+    )).toBe(true);
+    expect(matchesShotPlanDialogueAudioResource(
+      ['surface:shotPlan:shot_plan_2:dialogue-audio'],
+      'shot_plan_1',
+    )).toBe(false);
   });
 });

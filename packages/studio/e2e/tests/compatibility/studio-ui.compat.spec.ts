@@ -18,8 +18,9 @@ test('matches the locked desktop Studio experience across current surfaces', asy
   await scene.gotoNarrative(movieProject);
   await screenshot(page, 'scene-narrative.png');
 
-  await scene.openDialogueAudioPanel();
-  await screenshot(page, 'scene-dialogue-audio.png');
+  await scene.gotoShotPlanAudio(movieProject);
+  await scene.expectDialogueAudioTakeVisible();
+  await screenshot(page, 'shot-plan-audio.png');
 
   await page.goto(
     `${sceneRoute}?sceneTab=beats&beat=${movieProject.firstBeatId}`

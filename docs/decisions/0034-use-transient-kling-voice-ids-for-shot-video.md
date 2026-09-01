@@ -1,5 +1,9 @@
 # 0034 Use Transient Kling Voice IDs For Shot Video
 
+> **Decision 0090 update:** Transient Kling behavior remains. Any retained typed
+> ElevenLabs Cast Voice provider-registration contract is superseded by optional
+> provider-Skill-owned opaque Cast Voice identity.
+
 ## Status
 
 Accepted.

@@ -7,6 +7,7 @@ import type {
   MediaGenerationReferenceSuggestion,
   MediaGenerationSceneContext,
 } from '../../client/media-generation-context.js';
+import type { DialogueTurnRange } from '../../client/shot-plan-dialogue-audio.js';
 import { listAssetsInSession } from '../assets/projection.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { resolveProjectRelativePath } from '../files/project-relative-paths.js';
@@ -128,6 +129,7 @@ export function createReferenceSuggestion(input: {
   assets: Asset[];
   selectedAssetIds?: string[];
   workflowSelectedAssetIds?: string[];
+  dialogueTurnRangesByAssetId?: Map<string, DialogueTurnRange>;
   projectFolder: string;
   warnings: DiagnosticIssue[];
 }): MediaGenerationReferenceSuggestion {
@@ -165,6 +167,9 @@ export function createReferenceSuggestion(input: {
           tags: asset.tags,
           generationProvenance: asset.generationProvenance,
           authoredFrom: asset.authoredFrom,
+          ...(input.dialogueTurnRangesByAssetId?.get(asset.id)
+            ? { dialogueTurnRange: input.dialogueTurnRangesByAssetId.get(asset.id)! }
+            : {}),
           isDisplaySelected: selectedAssetIds.has(asset.id),
           isWorkflowSelected: workflowSelectedAssetIds.has(asset.id),
           available,

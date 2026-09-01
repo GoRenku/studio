@@ -7,12 +7,14 @@ import type {
   MediaProvider,
   ProviderContext,
   ProviderExecutionContext,
+  ProviderExecutionResult,
   ProviderRequest,
 } from '../../media/contracts.js';
 import { findLocalMediaFiles } from '../../media/local-files.js';
 import { EngineError } from '../../shared/errors.js';
 import { withProviderRetries } from '../../shared/retry.js';
 import { createRequestTimeoutFetch } from '../../shared/request-timeout.js';
+import { fetchElevenLabsVoiceSampleAudio } from './voice-samples.js';
 export {
   fetchElevenLabsVoiceSampleAudio,
   type ElevenLabsVoiceSampleAudio,
@@ -30,6 +32,25 @@ interface VoiceSettings {
 export function createElevenLabsMediaProvider(): MediaProvider {
   return {
     id: 'elevenlabs',
+    async readInputSchema(model, context) {
+      requireCredential(model, context);
+      if (model !== 'voice-sample-audio') {
+        throw new EngineError(
+          'ENGINE_INPUT_SCHEMA_UNAVAILABLE',
+          `ElevenLabs does not expose an input schema for ${model}.`,
+          { provider: 'elevenlabs', model },
+        );
+      }
+      return {
+        type: 'object',
+        additionalProperties: false,
+        required: ['voiceId'],
+        properties: {
+          voiceId: { type: 'string', minLength: 1 },
+          apiBaseUrl: { type: 'string', minLength: 1 },
+        },
+      };
+    },
     async validate(request, context) {
       requireCredential(request.model, context);
       if (findLocalMediaFiles(request.input).length > 0) {
@@ -40,6 +61,13 @@ export function createElevenLabsMediaProvider(): MediaProvider {
         );
       }
       const input = asObject(request.input, request.model);
+      if (request.model === 'voice-sample-audio') {
+        requireString(input.voiceId, 'voiceId', request.model);
+        if (input.apiBaseUrl !== undefined) {
+          requireString(input.apiBaseUrl, 'apiBaseUrl', request.model);
+        }
+        return;
+      }
       if (request.model === 'music_v1') {
         requireString(input.prompt, 'prompt', request.model);
         return;
@@ -47,9 +75,40 @@ export function createElevenLabsMediaProvider(): MediaProvider {
       requireString(input.text, 'text', request.model);
       requireString(input.voice, 'voice', request.model);
     },
-    async execute(request, context) {
+    async execute(request, context): Promise<ProviderExecutionResult> {
       await this.validate(request, context);
       const input = asObject(request.input, request.model);
+      if (request.model === 'voice-sample-audio') {
+        const sample = await fetchElevenLabsVoiceSampleAudio({
+          voiceId: input.voiceId as string,
+          credential: context.credential,
+          ...(typeof input.apiBaseUrl === 'string' ? { apiBaseUrl: input.apiBaseUrl } : {}),
+          ...(context.logger ? { logger: context.logger } : {}),
+          signal: context.signal,
+          fetch: context.fetch,
+        });
+        const artifact = await writeAudio(
+          sample.audioBytes,
+          sample.mimeType,
+          'mp3',
+          request,
+          context,
+        );
+        return {
+          provider: 'elevenlabs',
+          model: request.model,
+          artifacts: [artifact],
+          receipt: {
+            voiceId: sample.voiceId,
+            sampleId: sample.sampleId,
+            voiceName: sample.voiceName,
+            sampleFileName: sample.sampleFileName,
+            fetchedAt: sample.fetchedAt,
+            apiBaseUrl: sample.apiBaseUrl,
+            contentLength: sample.contentLength,
+          },
+        };
+      }
       const client = new ElevenLabsClient({
         apiKey: context.credential,
         fetch: createRequestTimeoutFetch({

@@ -20,7 +20,7 @@ const mediaPurposes = [
   'cast.character-sheet',
   'cast.profile',
   'cast.voice-sample',
-  'scene.dialogue-audio',
+  'shot-plan.dialogue-audio',
   'location.sheet',
   'location.hero',
   'prop.sheet',
@@ -34,7 +34,7 @@ describe('media purpose identity maps', () => {
     expect(Object.keys(MEDIA_PURPOSE_TARGET_KINDS)).toEqual(mediaPurposes);
     expect(Object.keys(MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS)).toEqual(mediaPurposes);
     expect(MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS['cast.voice-sample']).toBe('audio');
-    expect(MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS['scene.dialogue-audio']).toBe('audio');
+    expect(MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS['shot-plan.dialogue-audio']).toBe('audio');
     expect(MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS['shot-plan.video-generation']).toBe('video');
   });
 });

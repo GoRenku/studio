@@ -61,8 +61,8 @@ export async function readMediaGenerationPreview(
 }
 
 export function projectConfiguration(
-  request: import('../../client/media-generation-review.js').JsonValue,
-): import('../../client/media-generation-review.js').JsonValue {
+  request: import('../../client/json.js').JsonValue,
+): import('../../client/json.js').JsonValue {
   const omitted = omitLocalMediaMarkers(request);
   if (omitted !== null && typeof omitted === 'object' && !Array.isArray(omitted)) {
     return Object.fromEntries(Object.entries(omitted).filter(([key]) => key !== 'prompt'));
@@ -71,8 +71,8 @@ export function projectConfiguration(
 }
 
 function omitLocalMediaMarkers(
-  value: import('../../client/media-generation-review.js').JsonValue,
-): import('../../client/media-generation-review.js').JsonValue {
+  value: import('../../client/json.js').JsonValue,
+): import('../../client/json.js').JsonValue {
   if (isLocalMediaMarker(value)) {
     return null;
   }

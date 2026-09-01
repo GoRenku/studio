@@ -967,12 +967,13 @@ describe('renku CLI', () => {
       attachmentPath,
       JSON.stringify(
         {
-          kind: 'castVoiceAttachment',
+          kind: 'castVoiceFileAttachment',
           castMemberId,
           name: 'normal-voice',
-          provider: 'elevenlabs',
-          model: 'eleven_v3',
-          voiceId: 'voice_urban_normal',
+          voiceIdentity: {
+            provider: 'elevenlabs',
+            voiceId: 'voice_urban_normal',
+          },
           purpose: 'calm strategic baseline',
           sample: {
             sourceProjectRelativePath: samplePath,
@@ -1001,49 +1002,6 @@ describe('renku CLI', () => {
     expect(validateExitCode).toBe(0);
     expect(JSON.parse(stdout.join('\n'))).toEqual({ valid: true, warnings: [] });
 
-    const providerAttachmentPath = path.join(
-      homeDir,
-      'cast-voice-elevenlabs-sample-attachment.json'
-    );
-    await fs.writeFile(
-      providerAttachmentPath,
-      JSON.stringify(
-        {
-          kind: 'castVoiceElevenLabsSampleAttachment',
-          castMemberId,
-          name: 'provider-voice',
-          provider: 'elevenlabs',
-          model: 'eleven_v3',
-          voiceId: 'voice_urban_provider',
-          purpose: 'calm strategic baseline',
-          sample: {
-            title: 'Urban provider voice sample',
-          },
-        },
-        null,
-        2
-      ),
-      'utf8'
-    );
-
-    stdout = [];
-    stderr = [];
-    const providerValidateExitCode = await runRenkuCli(
-      [
-        'cast',
-        'voice',
-        'validate',
-        '--project',
-        'constantinople',
-        '--file',
-        providerAttachmentPath,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(providerValidateExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toEqual({ valid: true, warnings: [] });
-
     stdout = [];
     stderr = [];
     const attachExitCode = await runRenkuCli(
@@ -1056,21 +1014,18 @@ describe('renku CLI', () => {
         id: string;
         name: string;
         sample: { id: string };
-        providerRegistrations: Array<{ id: string }>;
+        isDefault: boolean;
+        voiceIdentity: unknown;
       };
     };
     expect(attached).toMatchObject({
       voice: {
         name: 'normal-voice',
-        sampleSource: { kind: 'generated_sample' },
-        providerRegistrations: [
-          expect.objectContaining({
-            provider: 'elevenlabs',
-            registrationModel: 'eleven_v3',
-            externalVoiceId: 'voice_urban_normal',
-            capabilities: ['dialogue-audio-tts'],
-          }),
-        ],
+        isDefault: true,
+        voiceIdentity: {
+          provider: 'elevenlabs',
+          voiceId: 'voice_urban_normal',
+        },
         sample: {
           files: [
             {

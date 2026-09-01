@@ -22,6 +22,7 @@ export type {
   UpdateAssetInput,
 } from './assets.js';
 export type * from './media-generation-review.js';
+export type * from './json.js';
 export * from './media-attachments.js';
 export type * from './media-generation-context.js';
 export type {
@@ -29,22 +30,12 @@ export type {
 } from './cast-members.js';
 export type {
   CastVoice,
-  CastVoiceAttachmentCommandDocument,
-  CastVoiceAttachmentDocument,
   CastVoiceAttachmentReport,
-  CastVoiceElevenLabsSampleAttachmentDocument,
+  CastVoiceDefaultSelectionReport,
+  CastVoiceFileAttachmentDocument,
   CastVoiceListReport,
-  CastVoiceProvider,
-  CastVoiceProviderCapability,
-  CastVoiceProviderRegistrationListReport,
-  CastVoiceProviderRegistration,
-  CastVoiceProviderRegistrationModel,
-  CastVoiceProviderRegistrationReadReport,
-  CastVoiceProviderRegistrationRemoveReport,
-  CastVoiceProviderRegistrationWriteReport,
   CastVoiceReadReport,
   CastVoiceRemoveReport,
-  CastVoiceSampleSource,
   CastVoiceValidationReport,
 } from './cast-voices.js';
 export type {
@@ -84,7 +75,7 @@ export type * from './trash.js';
 export * from './project-settings.js';
 export * from './provider-credentials.js';
 export * from './production-numbers.js';
-export type * from './scene-dialogue-audio-workspace.js';
+export type * from './shot-plan-dialogue-audio.js';
 export type * from './scene-beats/index.js';
 export type * from './shot-plans.js';
 export type * from './shot-plan-image-assets.js';

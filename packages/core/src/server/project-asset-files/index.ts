@@ -22,4 +22,3 @@ export {
 } from './persistence.js';
 export { resolveTemporaryFileRoot, writeProjectTemporaryFile } from './temporary-files.js';
 export { allocateSceneStoryboardIterationFolderSync } from './destinations/scene-storyboard.js';
-export { assertSceneDialogueAudioDestinationReady } from './destinations/scene-dialogue-audio.js';

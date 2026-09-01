@@ -7,7 +7,6 @@ import type {
   StoryboardLookbook,
   ProjectRelativePath,
   ProjectLibrary,
-  SceneDialogueAudioWorkspace,
   ProjectSettingsDocument,
 } from '@gorenku/studio-core/client';
 import { DEFAULT_PROJECT_SETTINGS } from '@gorenku/studio-core/server';
@@ -282,35 +281,26 @@ export function fakeProjectDataService(): NonNullable<
         references: [],
       };
     },
-    async readSceneDialogueAudioWorkspace() {
-      return makeSceneDialogueAudioWorkspace(project);
-    },
-    async updateSceneDialogueAudioSetup() {
-      return {
-        context: makeSceneDialogueAudioWorkspace(project),
-        resourceKeys: [],
-      };
+    async readShotPlanDialogueAudio() {
+      return { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] };
     },
     async readMediaGenerationPreview() { return generationPreviewResource(); },
     async updateMediaGenerationPreviewPrompt() { return generationPreviewResource(); },
     async readAssetMediaGenerationRequest() { return { ...generationPreviewResource(), documentPath: undefined, editable: false }; },
-    async deleteSceneDialogueAudioTake() {
-      return {
-        context: makeSceneDialogueAudioWorkspace(project),
-        resourceKeys: [],
-      };
+    async discardShotPlanDialogueAudioTake() {
+      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] }, resourceKeys: [] };
     },
-    async selectSceneDialogueAudioTake() {
-      return {
-        context: makeSceneDialogueAudioWorkspace(project),
-        resourceKeys: [],
-      };
+    async selectShotPlanDialogueAudioTake() {
+      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] }, resourceKeys: [] };
     },
-    async clearSceneDialogueAudioTakeSelection() {
-      return {
-        context: makeSceneDialogueAudioWorkspace(project),
-        resourceKeys: [],
-      };
+    async clearShotPlanDialogueAudioTakeSelection() {
+      return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] }, resourceKeys: [] };
+    },
+    async resolveShotPlanDialogueAudioTakeFile() {
+      throw new Error('No dialogue audio fixture file.');
+    },
+    async selectDefaultCastVoice() {
+      return { valid: true, warnings: [], project: { id: project.id, projectName: project.projectName }, castMemberId: 'cast_urban', selectedCastVoiceId: 'cast_voice_1', voices: [], resourceKeys: [] };
     },
     async readSceneBeatsResource() {
       return {
@@ -656,37 +646,6 @@ function projectSettingsResource(id: string, name: string) {
   return {
     project: { id, name },
     settings: structuredClone(DEFAULT_PROJECT_SETTINGS),
-  };
-}
-
-function makeSceneDialogueAudioWorkspace(
-  project: ReturnType<typeof makeProject>
-): SceneDialogueAudioWorkspace {
-  return {
-    purpose: 'scene.dialogue-audio',
-    target: { kind: 'scene', sceneId: 'scene_opening' },
-    project: {
-      projectName: project.projectName,
-      title: project.title,
-      baseLanguageCode: null,
-    },
-    scene: {
-      id: 'scene_opening',
-      heading: 'EXT. THEODOSIAN WALLS - DAWN',
-      title: 'Opening Scene',
-    },
-    dialogues: [],
-    castMemberLabels: {},
-    castVoicesByCastMemberId: {},
-    audioByTurnId: {},
-    models: [],
-    defaults: {
-      modelChoice: 'elevenlabs/eleven_v3',
-      outputFormat: 'mp3_44100_128',
-      languageCode: null,
-      voiceSettings: {},
-    },
-    resourceKeys: [],
   };
 }
 

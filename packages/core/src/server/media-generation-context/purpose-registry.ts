@@ -15,7 +15,6 @@ import { buildLocationPurposeContext } from './purposes/location.js';
 import { buildLookbookPurposeContext } from './purposes/lookbook.js';
 import { buildProjectPurposeContext } from './purposes/project.js';
 import { buildPropPurposeContext } from './purposes/prop.js';
-import { buildSceneDialoguePurposeContext } from './purposes/scene-dialogue.js';
 import { buildScenePurposeContext } from './purposes/scene.js';
 import { buildShotPlanPurposeContext } from './purposes/shot-plan.js';
 import { buildShotPurposeContext } from './purposes/shot.js';
@@ -63,7 +62,7 @@ export const MEDIA_GENERATION_PURPOSE_BUILDERS: Record<MediaPurpose, MediaGenera
   'shot-plan.video-last-frame': buildShotPlanPurposeContext,
   'shot-plan.video-storyboard': buildShotPlanPurposeContext,
   'shot-plan.video-reference': buildShotPlanPurposeContext,
-  'scene.dialogue-audio': buildSceneDialoguePurposeContext,
+  'shot-plan.dialogue-audio': buildShotPlanPurposeContext,
 };
 
 export function mediaGenerationOutputGuidance(

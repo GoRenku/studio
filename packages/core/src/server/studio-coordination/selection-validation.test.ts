@@ -83,7 +83,23 @@ describe('Studio selection validation', () => {
     });
   });
 
-  it('accepts the exact Shot Plan Assets selection and rejects unknown detail tabs', () => {
+  it('accepts the exact Shot Plan Assets and Audio selections and rejects unknown detail tabs', () => {
+    expect(parseStudioSelection({
+      type: 'scene',
+      id: 'scene_opening',
+      sceneTab: 'shotPlans',
+      shotPlanId: 'plan_primary',
+      shotPlanTab: 'audio',
+    })).toEqual({
+      valid: true,
+      selection: {
+        type: 'scene',
+        id: 'scene_opening',
+        sceneTab: 'shotPlans',
+        shotPlanId: 'plan_primary',
+        shotPlanTab: 'audio',
+      },
+    });
     expect(parseStudioSelection({
       type: 'scene',
       id: 'scene_opening',

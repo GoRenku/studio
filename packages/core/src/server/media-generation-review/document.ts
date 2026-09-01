@@ -1,8 +1,8 @@
 import type {
-  JsonValue,
   MediaGenerationProvenance,
   MediaGenerationReviewDocument,
 } from '../../client/media-generation-review.js';
+import type { JsonValue } from '../../client/json.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { validateMediaGenerationReferenceMarkers } from './local-media.js';
 

@@ -39,12 +39,12 @@ import {
   resolveLookbookDestinationRootSync,
 } from './lookbook.js';
 import {
-  resolveSceneDialogueAudioDestinationFile,
-  resolveSceneDialogueAudioDestinationFileSync,
-  resolveSceneDialogueAudioDestinationOutputNames,
-  resolveSceneDialogueAudioDestinationRoot,
-  resolveSceneDialogueAudioDestinationRootSync,
-} from './scene-dialogue-audio.js';
+  resolveShotPlanDialogueAudioDestinationFile,
+  resolveShotPlanDialogueAudioDestinationFileSync,
+  resolveShotPlanDialogueAudioDestinationOutputNames,
+  resolveShotPlanDialogueAudioDestinationRoot,
+  resolveShotPlanDialogueAudioDestinationRootSync,
+} from './shot-plan-dialogue-audio.js';
 import {
   resolveSceneStoryboardDestinationFile,
   resolveSceneStoryboardDestinationFileSync,
@@ -150,12 +150,12 @@ const destinationResolvers = {
   'prop.hero': propHeroResolver,
   'visualLanguage.lookbookImage': lookbookImageResolver,
   'visualLanguage.lookbookSheet': lookbookSheetResolver,
-  'scene.dialogueAudio': {
-    resolveFile: resolveSceneDialogueAudioDestinationFile,
-    resolveFileSync: resolveSceneDialogueAudioDestinationFileSync,
-    resolveRoot: resolveSceneDialogueAudioDestinationRoot,
-    resolveRootSync: resolveSceneDialogueAudioDestinationRootSync,
-    resolveOutputNames: resolveSceneDialogueAudioDestinationOutputNames,
+  'shotPlan.dialogueAudio': {
+    resolveFile: resolveShotPlanDialogueAudioDestinationFile,
+    resolveFileSync: resolveShotPlanDialogueAudioDestinationFileSync,
+    resolveRoot: resolveShotPlanDialogueAudioDestinationRoot,
+    resolveRootSync: resolveShotPlanDialogueAudioDestinationRootSync,
+    resolveOutputNames: resolveShotPlanDialogueAudioDestinationOutputNames,
   },
   'scene.storyboardImage': {
     resolveFile: resolveSceneStoryboardDestinationFile,

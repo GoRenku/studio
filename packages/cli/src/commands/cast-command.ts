@@ -186,9 +186,7 @@ export async function runCastCommand(options: {
     });
     if (
       nested === 'attach' ||
-      nested === 'remove' ||
-      (nested === 'registrations' &&
-        (options.input[2] === 'create' || options.input[2] === 'remove'))
+      nested === 'remove'
     ) {
       await appendStudioResourceChangedEvent({
         runtime,

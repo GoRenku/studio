@@ -36,7 +36,7 @@ export function ProjectSettingsFields({ settings, onChange }: {
       </AccordionItem>
       <MediaGenerationSection title='Image Generation' value='image-generation' id='image' settings={settings.generation.image} providers={[{ value: 'codex', label: 'GPT Image 2 (Codex)' }, { value: 'fal-ai', label: 'Fal.ai' }, { value: 'pika', label: 'Pika' }]} onChange={(image) => updateGeneration({ ...settings.generation, image })} />
       <MediaGenerationSection title='Video Generation' value='video-generation' id='video' settings={settings.generation.video} providers={[{ value: 'fal-ai', label: 'Fal.ai' }, { value: 'pika', label: 'Pika' }]} onChange={(video) => updateGeneration({ ...settings.generation, video })} />
-      <MediaGenerationSection title='Audio Generation' value='audio-generation' id='audio' settings={settings.generation.audio} providers={[{ value: 'elevenlabs', label: 'ElevenLabs' }]} onChange={(audio) => updateGeneration({ ...settings.generation, audio })} />
+      <MediaGenerationSection title='Audio Generation' value='audio-generation' id='audio' settings={settings.generation.audio} providers={[{ value: 'elevenlabs', label: 'ElevenLabs' }, { value: 'fal-ai', label: 'Fal.ai' }]} onChange={(audio) => updateGeneration({ ...settings.generation, audio })} />
     </Accordion>
   );
 }

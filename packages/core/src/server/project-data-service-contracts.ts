@@ -16,16 +16,10 @@ import type {
   CastDesignListReport,
   CastDesignReadReport,
   CastDesignWriteReport,
-  CastVoiceAttachmentCommandDocument,
   CastVoiceAttachmentReport,
+  CastVoiceDefaultSelectionReport,
+  CastVoiceFileAttachmentDocument,
   CastVoiceListReport,
-  CastVoiceProvider,
-  CastVoiceProviderCapability,
-  CastVoiceProviderRegistrationListReport,
-  CastVoiceProviderRegistrationModel,
-  CastVoiceProviderRegistrationReadReport,
-  CastVoiceProviderRegistrationRemoveReport,
-  CastVoiceProviderRegistrationWriteReport,
   CastVoiceReadReport,
   CastVoiceRemoveReport,
   CastVoiceValidationReport,
@@ -130,6 +124,11 @@ import type {
   ShotPlanImageAssets,
   DiscardShotPlanImageAssetInput,
   SceneStoryboardImageCandidateInput,
+  ShotPlanDialogueAudioMutationReport,
+  ShotPlanDialogueAudioResource,
+  DialogueTurnRange,
+  MediaGenerationProvenance,
+  AssetMetadataInput,
 } from '../client/index.js';
 import type {
   ScreenplayInput,
@@ -271,6 +270,24 @@ export interface ProjectDataService {
   ): Promise<RecoverableMutationReport>;
   copyShotPlan(input: CopyShotPlanInput): Promise<ShotPlanReport>;
   readShotPlan(input: ReadShotPlanInput): Promise<ShotPlanReport>;
+  readShotPlanDialogueAudio(
+    input: ReadShotPlanDialogueAudioInput
+  ): Promise<ShotPlanDialogueAudioResource>;
+  attachShotPlanDialogueAudio(
+    input: AttachShotPlanDialogueAudioProjectInput
+  ): Promise<ShotPlanDialogueAudioMutationReport>;
+  selectShotPlanDialogueAudioTake(
+    input: MutateShotPlanDialogueAudioTakeInput
+  ): Promise<ShotPlanDialogueAudioMutationReport>;
+  clearShotPlanDialogueAudioTakeSelection(
+    input: MutateShotPlanDialogueAudioTakeInput
+  ): Promise<ShotPlanDialogueAudioMutationReport>;
+  discardShotPlanDialogueAudioTake(
+    input: MutateShotPlanDialogueAudioTakeInput
+  ): Promise<ShotPlanDialogueAudioMutationReport>;
+  resolveShotPlanDialogueAudioTakeFile(
+    input: ResolveShotPlanDialogueAudioTakeFileInput
+  ): Promise<ResolvedProjectAssetFileById>;
   listSceneShotPlans(
     input: ListSceneShotPlansInput
   ): Promise<ShotPlanListReport>;
@@ -305,12 +322,9 @@ export interface ProjectDataService {
   readCastMember(input: ReadCastMemberInput): Promise<import('../client/cast-members.js').CastMember>;
   listCastVoices(input: ListCastVoicesInput): Promise<CastVoiceListReport>;
   readCastVoice(input: ReadCastVoiceInput): Promise<CastVoiceReadReport>;
-  listCastVoiceProviderRegistrations(input: ReadCastVoiceInput): Promise<CastVoiceProviderRegistrationListReport>;
-  readCastVoiceProviderRegistration(input: ReadCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationReadReport>;
-  createCastVoiceProviderRegistration(input: CreateCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationWriteReport>;
-  removeCastVoiceProviderRegistration(input: RemoveCastVoiceProviderRegistrationInput): Promise<CastVoiceProviderRegistrationRemoveReport>;
   validateCastVoiceAttachment(input: ValidateCastVoiceAttachmentInput): Promise<CastVoiceValidationReport>;
   attachCastVoice(input: AttachCastVoiceInput): Promise<CastVoiceAttachmentReport>;
+  selectDefaultCastVoice(input: SelectDefaultCastVoiceInput): Promise<CastVoiceDefaultSelectionReport>;
   removeCastVoice(input: RemoveCastVoiceInput): Promise<CastVoiceRemoveReport>;
   readCastContext(input: ReadCastContextInput): Promise<CastDesignContextReport>;
   updateCastMemberVoiceOverStatus(
@@ -466,51 +480,44 @@ export interface ReadCastVoiceInput extends ListCastVoicesInput {
   voiceIdOrName: string;
 }
 
-export interface ReadCastVoiceProviderRegistrationInput extends ReadCastVoiceInput {
-  registrationId: string;
-}
-
-export interface CreateCastVoiceProviderRegistrationInput extends ReadCastVoiceInput {
-  registration: {
-    provider: CastVoiceProvider;
-    registrationModel: CastVoiceProviderRegistrationModel;
-    externalVoiceId: string;
-    capabilities: CastVoiceProviderCapability[];
-    sourceSampleAssetId?: string | null;
-  };
-  idGenerator?: ProjectIdGenerator;
-}
-
-export interface RemoveCastVoiceProviderRegistrationInput
-  extends ReadCastVoiceProviderRegistrationInput {}
-
 export interface ValidateCastVoiceAttachmentInput extends RenkuConfigPathOptions {
   projectName?: string;
-  document: CastVoiceAttachmentCommandDocument;
+  document: CastVoiceFileAttachmentDocument;
 }
 
 export interface AttachCastVoiceInput extends ValidateCastVoiceAttachmentInput {
   idGenerator?: ProjectIdGenerator;
-  elevenLabsVoiceSampleFetcher?: ElevenLabsVoiceSampleFetcher;
+}
+
+export interface SelectDefaultCastVoiceInput extends ListCastVoicesInput {
+  castVoiceId: string;
 }
 
 export interface RemoveCastVoiceInput extends ReadCastVoiceInput {}
 
-export interface ElevenLabsVoiceSampleFetcher {
-  (input: {
-    voiceId: string;
-  }): Promise<{
-    provider: 'elevenlabs';
-    voiceId: string;
-    sampleId: string;
-    voiceName: string | null;
-    sampleFileName: string | null;
-    mimeType: 'audio/mpeg';
-    audioBytes: Buffer;
-    fetchedAt: string;
-    apiBaseUrl: string;
-    contentLength: number;
-  }>;
+export interface ReadShotPlanDialogueAudioInput extends RenkuConfigPathOptions {
+  projectName?: string;
+  shotPlanId: string;
+}
+
+export interface AttachShotPlanDialogueAudioProjectInput
+  extends ReadShotPlanDialogueAudioInput {
+  sourceProjectRelativePath: string;
+  turnRange: DialogueTurnRange;
+  generationProvenance: MediaGenerationProvenance;
+  title?: string;
+  assetMetadata?: AssetMetadataInput;
+  idGenerator?: ProjectIdGenerator;
+}
+
+export interface MutateShotPlanDialogueAudioTakeInput
+  extends ReadShotPlanDialogueAudioInput {
+  takeId: string;
+}
+
+export interface ResolveShotPlanDialogueAudioTakeFileInput
+  extends MutateShotPlanDialogueAudioTakeInput {
+  assetFileId: string;
 }
 
 export interface ReadCastContextInput extends RenkuConfigPathOptions {

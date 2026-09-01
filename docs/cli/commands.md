@@ -339,8 +339,8 @@ New Cast Members use `key`, not `id`. Existing Cast Members use durable `id`.
 
 List, inspect, validate, attach, and remove durable Cast Voice references for a
 Cast Member. Cast Voice records own the Renku reference name, purpose, sample
-asset, and sample provenance. Provider-specific reusable voice handles live in
-Cast Voice Provider Registrations.
+Asset, sample provenance, default state, and optional opaque provider-owned
+voice identity. Core does not interpret provider/model fields in that identity.
 
 ```bash
 renku cast voice list --cast <cast-member-id> --json
@@ -350,21 +350,14 @@ renku cast voice validate --file - --json
 renku cast voice attach --file <cast-voice-attachment-json> --json
 renku cast voice attach --file - --json
 renku cast voice remove --cast <cast-member-id> --voice <cast-voice-id-or-name> --json
-renku cast voice registrations list --voice <cast-voice-id-or-name> --json
-renku cast voice registrations show --registration <registration-id> --json
-renku cast voice registrations create --voice <cast-voice-id-or-name> --file <registration-json> --json
-renku cast voice registrations remove --registration <registration-id> --json
 ```
 
 Options:
 
 - `--cast`: required for `list`, `show`, and `remove`.
 - `--voice`: required for `show` and `remove`; accepts either the durable Cast
-  Voice id or the Cast Voice reference name. Provider-registration commands use
-  it to scope list/create operations to one Cast Voice.
-- `--registration`: required for provider-registration `show` and `remove`.
-- `--file`: required for `validate`, `attach`, and provider-registration
-  `create`. Use `-` to read stdin.
+  Voice id or the Cast Voice reference name.
+- `--file`: required for `validate` and `attach`. Use `-` to read stdin.
 - `--json`: print machine-readable JSON.
 
 Behavior:
@@ -374,21 +367,16 @@ Behavior:
   JSON fields.
 - `attach` copies the sample audio file into the Cast Member voice sample asset
   folder, registers a `cast_voice_sample` audio asset, and creates the Cast
-  Voice record with an initial ElevenLabs provider registration.
-- `registrations create` attaches an explicit durable provider handle to an
-  existing Cast Voice. ElevenLabs registrations require
-  `dialogue-audio-tts`.
-- Kling `fal-ai/kling-video/create-voice` is not exposed as a Cast Voice
-  registration command. Shot-video generation creates or reuses transient Kling
-  `voice_id` values internally when selected dialogue audio is bound to a
-  supported video-backed Kling element.
-- `remove` discards the Cast Voice, its provider registrations, and linked
+  Voice record. The first attached voice becomes that Cast Member's default;
+  Studio lets the user select another default in Cast Assets.
+- `voiceIdentity` is optional bounded JSON owned by the provider Skill. A
+  file-backed Seed Audio sample needs no extra identity; an ElevenLabs sample
+  may carry `{"provider":"elevenlabs","voiceId":"<exact-id>"}`.
+- `remove` discards the Cast Voice and linked
   sample asset metadata into Trash. The copied audio file remains in place until
   Empty Trash runs.
 - Generic asset discard fails for Cast Voice sample assets. Remove the Cast
   Voice instead, then restore through `renku trash restore` if needed.
-- The current direct ElevenLabs models are `eleven_v3`,
-  `eleven_multilingual_v2`, and `eleven_turbo_v2_5`.
 - Successful mutations emit Studio resource keys for the affected Cast Member
   asset rail and surface.
 
@@ -396,33 +384,25 @@ Input JSON shape:
 
 ```json
 {
-  "kind": "castVoiceAttachment",
+  "kind": "castVoiceFileAttachment",
   "castMemberId": "cast_ada",
   "name": "urban-normal",
   "purpose": "Normal speaking voice for dialogue and testing",
-  "provider": "elevenlabs",
-  "model": "eleven_v3",
-  "voiceId": "21m00Tcm4TlvDq8ikWAM",
+  "voiceIdentity": {
+    "provider": "elevenlabs",
+    "voiceId": "21m00Tcm4TlvDq8ikWAM"
+  },
   "sample": {
     "sourceProjectRelativePath": "generated/ada-urban-normal.mp3",
     "title": "Ada urban normal voice sample",
-    "receipt": {
+    "generationProvenance": {
       "provider": "elevenlabs",
-      "model": "eleven_v3"
+      "model": "voice-sample-audio",
+      "mediaKind": "audio",
+      "prompt": null,
+      "request": { "voiceId": "21m00Tcm4TlvDq8ikWAM" }
     }
   }
-}
-```
-
-Provider registration JSON shape:
-
-```json
-{
-  "provider": "elevenlabs",
-  "registrationModel": "eleven_v3",
-  "externalVoiceId": "21m00Tcm4TlvDq8ikWAM",
-  "capabilities": ["dialogue-audio-tts"],
-  "sourceSampleAssetId": "asset_ada_voice_sample"
 }
 ```
 
@@ -1603,27 +1583,6 @@ Successful execute/recover JSON contains downloaded `artifacts`, optional
 `requestId`, and exact safe `provenance` ready to save and pass to attachment.
 There is no Spec, Run, estimate, approval token, freeze, or simulation command.
 
-## `renku dialogue-audio`
-
-Read a Scene's current per-turn Dialogue Audio workspace or replace one exact
-turn's complete current setup document:
-
-```bash
-renku dialogue-audio show --scene <scene-id> --json
-renku dialogue-audio setup \\
-  --scene <scene-id> \\
-  --dialogue <turn-id> \\
-  --file tmp/operations/media-generation/dialogue-setup.json \\
-  --json
-```
-
-`show` is read-only. `setup` parses JSON and delegates complete-document
-validation and replacement to Core, then emits the returned resource event.
-There is no `dialogue-audio generate` command. One-turn and whole-Scene work is
-Media Producer orchestration over the existing per-turn
-`scene.dialogue-audio` purpose, with one provider request, file, provenance, and
-Take per Dialogue Turn.
-
 ## `renku media import`
 
 Attach an inspected Project-relative media file through its focused Core owner.
@@ -1641,6 +1600,7 @@ renku media import \\
   --reference-name <name> \\
   --tag <tag> \\
   --provenance <media-generation-provenance-json> \\
+  --turns <N-or-N-M> \\
   --select \\
   --json
 ```
@@ -1654,7 +1614,7 @@ and attachment are persisted atomically.
 Supported focused purposes include Project cover; Lookbook image/video/storyboard
 sheets; Cast character sheet/profile/voice sample; Location and Prop sheets/heroes;
 Scene storyboard images; Shot images; Shot Plan video and its supporting image
-roles; image create/edit; source-derived video edit; and Scene Dialogue Audio.
+roles; image create/edit; source-derived video edit; and Shot Plan Dialogue Audio.
 Each purpose accepts only its Core-owned target kind.
 
 Examples:
@@ -1679,7 +1639,16 @@ renku media import --purpose image.edit --target asset:<source-asset-id> \\
 renku media import --purpose video.edit --target asset:<source-asset-id> \\
   --source tmp/operations/media-generation/output/edited.mp4 \\
   --provenance tmp/operations/media-generation/provenance.json --json
+
+renku media import --purpose shot-plan.dialogue-audio \\
+  --target shot-plan:<shot-plan-id> --turns 2-4 \\
+  --source tmp/operations/media-generation/output/dialogue.mp3 \\
+  --provenance tmp/operations/media-generation/provenance.json --json
 ```
+
+`--turns` is required only for `shot-plan.dialogue-audio`. It accepts one
+positive Turn number or one ascending consecutive inclusive range. It does not
+accept lists or create durable Dialogue Turn relations.
 
 `image.create` becomes an unselected generic Reference Image beside that exact
 Shot Plan. `image.edit` accepts no destination flag: Core verifies that

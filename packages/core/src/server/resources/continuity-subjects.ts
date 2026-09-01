@@ -3,20 +3,14 @@ import type {
   AssetOwner,
   CastMemberResource,
   CastOverviewResource,
-  CastVoiceProviderCapability,
-  CastVoiceProviderRegistration,
   LocationOverviewResource,
   LocationResource,
   PropOverviewResource,
   PropResource,
   ScreenplayImageReference,
 } from '../../client/index.js';
-import { listAssetPageInSession, readOwnedAsset } from '../assets/projection.js';
-import {
-  listCastVoiceProviderRegistrationRecords,
-  listCastVoiceRecords,
-  type CastVoiceProviderRegistrationRecord,
-} from '../database/access/cast-voices.js';
+import { listAssetPageInSession } from '../assets/projection.js';
+import { listCastVoicesInSession } from '../cast-voices/projection.js';
 import {
   listCastNavigationPage,
   listLocationNavigationPage,
@@ -80,35 +74,7 @@ export function readCastMemberResourceFromSession(
         kind: 'castMember',
         id: castMemberId,
       }),
-      voices: listCastVoiceRecords(session, castMemberId).map((voice) => {
-        const sample = readOwnedAsset(session, {
-          owner: { kind: 'castMember', id: castMemberId },
-          assetId: voice.sampleAssetId,
-        });
-        if (!sample) {
-          throw new ProjectDataError(
-            'PROJECT_DATA352',
-            `Cast Voice sample asset is missing: ${voice.sampleAssetId}.`
-          );
-        }
-        return {
-          id: voice.id,
-          castMemberId: voice.castMemberId,
-          name: voice.name,
-          purpose: voice.purpose,
-          providerRegistrations: listCastVoiceProviderRegistrationRecords(
-            session,
-            voice.id
-          ).map(toCastVoiceProviderRegistration),
-          sampleSource: castVoiceSampleSource(voice),
-          sample: {
-            ...sample,
-            files: sample.files.filter((file) => file.mediaKind === 'audio'),
-          },
-          createdAt: voice.createdAt,
-          updatedAt: voice.updatedAt,
-        };
-      }),
+      voices: listCastVoicesInSession(session, castMemberId),
     };
 }
 
@@ -232,102 +198,6 @@ function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | un
         height: file.height,
       }
     : undefined;
-}
-
-function castVoiceSampleSource(voice: ReturnType<typeof listCastVoiceRecords>[number]) {
-  if (voice.sampleSourceKind === 'elevenlabs_voice_sample') {
-    if (!voice.sampleId || !voice.sampleFetchedAt || !voice.sampleApiBaseUrl) {
-      throw new ProjectDataError(
-        'PROJECT_DATA357',
-        `Cast Voice ${voice.id} is missing ElevenLabs sample provenance.`
-      );
-    }
-    return {
-      kind: 'elevenlabs_voice_sample' as const,
-      sampleId: voice.sampleId,
-      fetchedAt: voice.sampleFetchedAt,
-      apiBaseUrl: voice.sampleApiBaseUrl,
-    };
-  }
-  return voice.sampleSourceKind === 'generated_sample'
-    ? { kind: 'generated_sample' as const }
-    : { kind: 'custom_file' as const };
-}
-
-function toCastVoiceProviderRegistration(
-  record: CastVoiceProviderRegistrationRecord
-): CastVoiceProviderRegistration {
-  return {
-    id: record.id,
-    castVoiceId: record.castVoiceId,
-    provider: toCastVoiceProvider(record.provider, record.id),
-    registrationModel: toCastVoiceProviderRegistrationModel(
-      record.registrationModel,
-      record.id
-    ),
-    externalVoiceId: record.externalVoiceId,
-    capabilities: parseRegistrationCapabilities(record),
-    sourceSampleAssetId: record.sourceSampleAssetId,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-  };
-}
-
-function toCastVoiceProvider(
-  provider: string,
-  registrationId: string
-): CastVoiceProviderRegistration['provider'] {
-  if (provider === 'elevenlabs') {
-    return provider;
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA358',
-    `Cast Voice provider registration ${registrationId} has unsupported provider: ${provider}.`
-  );
-}
-
-function toCastVoiceProviderRegistrationModel(
-  model: string,
-  registrationId: string
-): CastVoiceProviderRegistration['registrationModel'] {
-  if (
-    model === 'eleven_v3' ||
-    model === 'eleven_multilingual_v2' ||
-    model === 'eleven_turbo_v2_5'
-  ) {
-    return model;
-  }
-  throw new ProjectDataError(
-    'PROJECT_DATA358',
-    `Cast Voice provider registration ${registrationId} has unsupported model: ${model}.`
-  );
-}
-
-function parseRegistrationCapabilities(
-  record: CastVoiceProviderRegistrationRecord
-): CastVoiceProviderCapability[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(record.capabilitiesJson);
-  } catch {
-    throw invalidRegistrationCapabilities(record.id);
-  }
-  if (!Array.isArray(parsed)) {
-    throw invalidRegistrationCapabilities(record.id);
-  }
-  return Array.from(new Set(parsed.map((candidate) => {
-    if (candidate === 'dialogue-audio-tts') {
-      return candidate;
-    }
-    throw invalidRegistrationCapabilities(record.id);
-  })));
-}
-
-function invalidRegistrationCapabilities(registrationId: string): ProjectDataError {
-  return new ProjectDataError(
-    'PROJECT_DATA358',
-    `Cast Voice provider registration ${registrationId} has invalid capabilities.`
-  );
 }
 
 function requireCastMember(session: DatabaseSession, castMemberId: string) {

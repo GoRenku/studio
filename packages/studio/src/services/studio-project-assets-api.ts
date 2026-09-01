@@ -237,6 +237,21 @@ export async function deleteCastVoice(
   return body.removed;
 }
 
+export async function selectDefaultCastVoice(
+  projectName: string,
+  castMemberId: string,
+  castVoiceId: string
+): Promise<void> {
+  const response = await fetch(
+    `${castVoiceUrl(projectName, castMemberId, castVoiceId)}/default`,
+    {
+      method: 'PUT',
+      headers: { 'X-Renku-Studio-Token': readStudioApiToken() },
+    }
+  );
+  if (!response.ok) throw await readStudioApiError(response);
+}
+
 export async function selectLocationHeroAsset(
   projectName: string,
   locationId: string,

@@ -3,9 +3,9 @@ import path from 'node:path';
 import { and, eq, isNull } from 'drizzle-orm';
 import { createDiagnosticWarning, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
-  JsonValue,
   MediaGenerationReferenceView,
 } from '../../client/media-generation-review.js';
+import type { JsonValue } from '../../client/json.js';
 import type { ProjectRelativePath } from '../../client/project/index.js';
 import { assetFiles } from '../schema/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';

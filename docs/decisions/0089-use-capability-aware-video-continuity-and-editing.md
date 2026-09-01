@@ -1,5 +1,10 @@
 # 0089 Use Capability-Aware Video Continuity And Editing
 
+> **Decision 0090 update:** Shot Plan Dialogue Audio supersedes this ADR's
+> per-Turn `scene.dialogue-audio`, zero-or-one selection, sole-Take fallback,
+> Scene setup CLI, and Narrative setup/selection UI. Capability-aware video
+> references, provider prompt expansion, and source-derived video editing remain.
+
 Date: 2026-08-30
 
 Status: accepted

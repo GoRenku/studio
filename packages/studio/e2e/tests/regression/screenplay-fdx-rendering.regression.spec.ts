@@ -34,13 +34,9 @@ test('renders Brick and Steel Dual Dialogue as independent side-by-side turns', 
   expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThan(2);
   expect(boxes[0]!.x + boxes[0]!.width).toBeLessThanOrEqual(boxes[1]!.x);
 
-  await dualDialogue.getByRole('button', { name: 'STEEL', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Close dialogue audio panel' }))
-    .toBeVisible();
-  await page.getByRole('button', { name: 'Close dialogue audio panel' }).click();
-  await dualDialogue.getByRole('button', { name: 'BRICK', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Close dialogue audio panel' }))
-    .toBeVisible();
+  await expect(dualDialogue.locator('[data-dialogue-turn-number]')).toHaveCount(2);
+  await expect(dualDialogue.locator('[data-dialogue-turn-number]').nth(0)).toHaveText('1');
+  await expect(dualDialogue.locator('[data-dialogue-turn-number]').nth(1)).toHaveText('2');
 });
 
 test('renders ordered Parenthetical and speech parts in a single complex turn', async ({

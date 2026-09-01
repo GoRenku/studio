@@ -11,7 +11,6 @@ import { runAssetCommand } from './commands/asset-command.js';
 import { runCastCommand } from './commands/cast-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
 import { runDirectorCommand } from './commands/director-command.js';
-import { runDialogueAudioCommand } from './commands/dialogue-audio/command.js';
 import { runGenerationCommand } from './commands/generation/command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
 import { runInspirationCommand } from './commands/inspiration-command.js';
@@ -66,7 +65,6 @@ Commands
   asset                Register and list assets
   cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
-  dialogue-audio       Inspect and set up Scene Dialogue Audio
   location             Author location facts and generate 3D Worlds
   prop                 Author Prop facts
   production-design    Author Location and Prop Design documents
@@ -103,6 +101,7 @@ Options
   --tag                 Repeatable Asset intended-use tag
   --clear-tags          Clear all Asset intended-use tags
   --source             Project-relative source file for media import
+  --turns              Dialogue turn number or inclusive range for Shot Plan Audio
   --resource           Studio resource key for notify-refresh
   --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
@@ -123,8 +122,6 @@ Options
   --revision           Screenplay revision id
   --scene              Scene id for scene-owned commands
   --number             Production scene number for scene-number resolve
-  --dialogue           Scene dialogue id
-  --take               Scene Dialogue Audio take id
   --revision           Scene Beats revision id
   --shot-plan          Shot Plan id
   --shot               Shot id
@@ -234,6 +231,9 @@ function createCliFlags() {
     source: {
       type: 'string',
     },
+    turns: {
+      type: 'string',
+    },
     resource: {
       type: 'string',
       isMultiple: true,
@@ -275,9 +275,6 @@ function createCliFlags() {
       type: 'string',
     },
     voice: {
-      type: 'string',
-    },
-    registration: {
       type: 'string',
     },
     location: {
@@ -587,7 +584,6 @@ export async function runRenkuCli(
             project: cli.flags.project,
             cast: cli.flags.cast,
             voice: cli.flags.voice,
-            registration: cli.flags.registration,
             design: cli.flags.design,
             active: cli.flags.active,
             dryRun: cli.flags.dryRun,
@@ -601,19 +597,6 @@ export async function runRenkuCli(
           input,
           flags: {
             selection: cli.flags.selection,
-          },
-          json: cli.flags.json,
-          io,
-          homeDir: options.homeDir,
-        });
-      case 'dialogue-audio':
-        return await runDialogueAudioCommand({
-          input,
-          flags: {
-            project: cli.flags.project,
-            file,
-            scene: cli.flags.scene,
-            dialogue: cli.flags.dialogue,
           },
           json: cli.flags.json,
           io,
@@ -741,6 +724,7 @@ export async function runRenkuCli(
             target: cli.flags.target,
             file,
             source: cli.flags.source,
+            turns: cli.flags.turns,
             title: cli.flags.title,
             summary: cli.flags.summary,
             referenceName: cli.flags.referenceName,

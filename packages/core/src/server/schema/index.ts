@@ -8,7 +8,7 @@ export * from './project-locales.js';
 export * from './project-settings.js';
 export * from './props.js';
 export * from './scene-beats.js';
-export * from './scene-dialogue-audio.js';
+export * from './shot-plan-dialogue-audio.js';
 export * from './screenplay-analysis.js';
 export * from './screenplay/index.js';
 export * from './shot-plans.js';

@@ -231,7 +231,7 @@ describe('studio-projects-api', () => {
 
 function projectSettings() {
   return {
-    version: 5 as const,
+    version: 6 as const,
     screenplayImport: {
       createContinuitySubjects: true,
       generateContinuityImages: false,

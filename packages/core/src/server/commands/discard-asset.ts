@@ -1,7 +1,7 @@
 import type { RecoverableMutationReport } from '../../client/index.js';
 import { readAssetRecord } from '../database/access/assets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
-import { assertAssetIsNotCastVoiceSample } from './cast-voice-commands.js';
+import { assertAssetIsNotCastVoiceSample } from '../cast-voices/lifecycle.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
@@ -11,7 +11,7 @@ import { assetOwnerResourceKeys } from '../assets/resource-keys.js';
 import type { DiscardAssetInput } from '../project-data-service-contracts.js';
 import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 import { assertAssetIsNotScreenplayImportSource } from '../screenplay/fdx/persistence/import-record.js';
-import { assertAssetIsNotSceneDialogueAudioTake } from '../scene-dialogue-audio-workspace/takes.js';
+import { assertAssetIsNotShotPlanDialogueAudioTake } from '../shot-plan-dialogue-audio/lifecycle.js';
 import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
 import { assetSelectionTargetKey } from '../assets/selection-targets.js';
 import {
@@ -54,7 +54,7 @@ export async function discardAsset(
     }
     assertAssetIsNotCastVoiceSample(session, input.assetId);
     assertAssetIsNotScreenplayImportSource(session, input.assetId);
-    assertAssetIsNotSceneDialogueAudioTake(session, input.assetId);
+    assertAssetIsNotShotPlanDialogueAudioTake(session, input.assetId);
     const isProjectCover = owner.kind === 'project'
       && asset.type === 'project_cover';
     const isSelectedProjectCover = isProjectCover

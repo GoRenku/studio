@@ -1,6 +1,5 @@
 import { Hono, type MiddlewareHandler } from 'hono';
 import type { ProjectsRouteProjectData } from '../projects.js';
-import { createScreenplayDialogueAudioRoute } from './dialogue-audio.js';
 import { createScreenplayScenesRoute } from './scenes.js';
 import { createScreenplaySectionsRoute } from './sections.js';
 import { createScreenplayStoryArcRoute } from './story-arc.js';
@@ -16,6 +15,5 @@ export function createScreenplayRoute(options: CreateScreenplayRouteOptions) {
     .route('/', createScreenplayStructureRoute(options))
     .route('/', createScreenplaySectionsRoute(options))
     .route('/', createScreenplayScenesRoute(options))
-    .route('/', createScreenplayDialogueAudioRoute(options))
     .route('/', createScreenplayStoryArcRoute(options));
 }

@@ -1,5 +1,10 @@
 # 0033 Use Explicit Kling Source-Video and Voice Registration Contracts
 
+> **Decision 0090 update:** The source-video route decision remains. The Cast
+> Voice Provider Registration table, typed model/capability contract, and Core
+> provider interpretation are superseded by provider-neutral Cast Voice files
+> with optional opaque provider-owned identity.
+
 ## Status
 
 Accepted.

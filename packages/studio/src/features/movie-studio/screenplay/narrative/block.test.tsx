@@ -1,14 +1,12 @@
 // @vitest-environment jsdom
 import React from 'react';
 import type { ScreenplayBlock } from '@gorenku/studio-core/client';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import type { SceneDialogueAudioWorkspaceWithUrls } from '@/services/screenplay';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { NarrativeBlock } from './block';
 
 describe('NarrativeBlock', () => {
-  it('renders the complete block union and keeps Dual Dialogue audio actions independent', () => {
-    const onOpenAudio = vi.fn<(turnId: string) => void>();
+  it('renders the complete block union and canonical dialogue turn numbers', () => {
     const blocks: ScreenplayBlock[] = [
       ...(['action', 'transition', 'shot', 'lyrics', 'castList', 'note',
         'specialHeading', 'titleCard', 'super'] as const).map((type) => ({
@@ -52,10 +50,11 @@ describe('NarrativeBlock', () => {
             projectName='basilica'
             block={block}
             references={[]}
-            audio={emptyAudioWorkspace()}
-            selectedTurnId={null}
-            textPreviews={{}}
-            onOpenAudio={onOpenAudio}
+            turnNumbers={new Map([
+              ['turn_single', 1],
+              ['turn_left', 2],
+              ['turn_right', 3],
+            ])}
             onSelect={() => undefined}
           />
         ))}
@@ -68,29 +67,8 @@ describe('NarrativeBlock', () => {
     }
     expect(screen.getByText('quietly').parentElement?.textContent).toBe('(quietly)');
     expect(screen.getByRole('region', { name: 'Dual Dialogue' })).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'ANA' }));
-    fireEvent.click(screen.getByRole('button', { name: 'MARA' }));
-    expect(onOpenAudio.mock.calls).toEqual([['turn_left'], ['turn_right']]);
+    expect(screen.getByText('1')).not.toBeNull();
+    expect(screen.getByText('2')).not.toBeNull();
+    expect(screen.getByText('3')).not.toBeNull();
   });
 });
-
-function emptyAudioWorkspace(): SceneDialogueAudioWorkspaceWithUrls {
-  return {
-    purpose: 'scene.dialogue-audio',
-    target: { kind: 'scene', sceneId: 'scene_one' },
-    project: { projectName: 'basilica', title: 'Basilica', baseLanguageCode: 'en' },
-    scene: { id: 'scene_one', heading: 'INT. ROOM - DAY' },
-    dialogues: [],
-    castMemberLabels: {},
-    castVoicesByCastMemberId: {},
-    audioByTurnId: {},
-    models: [],
-    defaults: {
-      modelChoice: 'elevenlabs/eleven_v3',
-      outputFormat: 'mp3_44100_128',
-      languageCode: 'en',
-      voiceSettings: {},
-    },
-    resourceKeys: [],
-  };
-}

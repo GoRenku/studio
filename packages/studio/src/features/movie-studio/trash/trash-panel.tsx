@@ -222,8 +222,8 @@ function trashItemKindLabel(kind: TrashItem['itemKind']): string {
       return 'Lookbook Image';
     case 'lookbookSheet':
       return 'Lookbook Sheet';
-    case 'sceneDialogueAudioTake':
-      return 'Dialogue Take';
+    case 'shotPlanDialogueAudioTake':
+      return 'Dialogue Audio';
     case 'shot':
       return 'Shot';
     case 'shotPlan':

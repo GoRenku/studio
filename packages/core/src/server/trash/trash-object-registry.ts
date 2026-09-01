@@ -1,14 +1,13 @@
+import { createDiagnosticWarning } from '@gorenku/studio-diagnostics';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { TrashItemKind } from '../../client/index.js';
 import {
   assets,
-  castVoiceProviderRegistrations,
   castVoices,
   inspirationFolders,
   lookbookImages,
   lookbookSheets,
-  sceneDialogueAudioTakes,
-  sceneDialogueAudioTakeSelections,
+  shotPlanDialogueAudioTakes,
 } from '../schema/index.js';
 import {
   studioAssetOwnerSurfaceResourceKeys,
@@ -19,6 +18,7 @@ import {
   studioVisualLanguageLookbooksResourceKey,
   studioSceneShotPlansResourceKey,
   projectCoverCandidateResourceKeys,
+  studioShotPlanDialogueAudioResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -43,6 +43,11 @@ import { clearSelectedAssetRecordForAsset } from '../database/access/selected-as
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { readAssetRecord } from '../database/access/assets.js';
+import {
+  clearCastVoiceDefaultRecord,
+  readCastVoiceDefaultRecord,
+  selectCastVoiceDefaultRecord,
+} from '../database/access/cast-voices.js';
 
 export function inspirationImageTrashItemId(input: {
   folderId: string;
@@ -405,6 +410,10 @@ const castVoiceDefinition: TrashObjectDefinition = {
     if (!voice) {
       return [];
     }
+    const defaultVoice = readCastVoiceDefaultRecord(
+      input.session,
+      voice.castMemberId
+    );
     return [
       {
         itemKind: 'castVoice',
@@ -415,6 +424,7 @@ const castVoiceDefinition: TrashObjectDefinition = {
         restoreSnapshot: {
           castMemberId: voice.castMemberId,
           sampleAssetId: voice.sampleAssetId,
+          wasDefault: defaultVoice?.castVoiceId === voice.id,
         },
       },
     ];
@@ -437,15 +447,10 @@ const castVoiceDefinition: TrashObjectDefinition = {
       })
       .where(eq(castVoices.id, input.itemId))
       .run();
-    input.session.db
-      .update(castVoiceProviderRegistrations)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-      })
-      .where(eq(castVoiceProviderRegistrations.castVoiceId, input.itemId))
-      .run();
+    clearCastVoiceDefaultRecord(input.session, {
+      castMemberId: voice.castMemberId,
+      castVoiceId: voice.id,
+    });
     markAssetTreeDiscarded({
       ...input,
       itemId: voice.sampleAssetId,
@@ -458,15 +463,36 @@ const castVoiceDefinition: TrashObjectDefinition = {
       .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
       .where(eq(castVoices.id, input.trashItem.itemId))
       .run();
-    input.session.db
-      .update(castVoiceProviderRegistrations)
-      .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-      .where(eq(castVoiceProviderRegistrations.castVoiceId, input.trashItem.itemId))
-      .run();
     restoreAssetTree({
       ...input,
       trashItem: { ...input.trashItem, itemId: snapshot.sampleAssetId },
     });
+    if (!snapshot.wasDefault) {
+      return [];
+    }
+    const currentDefault = readCastVoiceDefaultRecord(
+      input.session,
+      snapshot.castMemberId
+    );
+    if (!currentDefault) {
+      selectCastVoiceDefaultRecord(input.session, {
+        castMemberId: snapshot.castMemberId,
+        castVoiceId: input.trashItem.itemId,
+        now: input.now,
+      });
+      return [];
+    }
+    if (currentDefault.castVoiceId === input.trashItem.itemId) {
+      return [];
+    }
+    return [
+      createDiagnosticWarning(
+        'CORE_TRASH_CAST_VOICE_DEFAULT_CONFLICT',
+        `Restored Cast Voice ${input.trashItem.itemId}, but kept the newer default Cast Voice ${currentDefault.castVoiceId}.`,
+        { path: ['castMember', snapshot.castMemberId, 'defaultCastVoice'] },
+        'Select the restored Cast Voice again if it should replace the current default.'
+      ),
+    ];
   },
   collectFiles(input) {
     const snapshot = requireCastVoiceSnapshot(input.snapshot, input.trashItem.id);
@@ -482,26 +508,29 @@ const castVoiceDefinition: TrashObjectDefinition = {
   },
 };
 
-const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
-  itemKind: 'sceneDialogueAudioTake',
+const shotPlanDialogueAudioTakeDefinition: TrashObjectDefinition = {
+  itemKind: 'shotPlanDialogueAudioTake',
   readTrashItems(input) {
     const take = input.session.db
       .select()
-      .from(sceneDialogueAudioTakes)
-      .where(and(eq(sceneDialogueAudioTakes.id, input.itemId), isNull(sceneDialogueAudioTakes.discardedAt)))
+      .from(shotPlanDialogueAudioTakes)
+      .where(and(
+        eq(shotPlanDialogueAudioTakes.id, input.itemId),
+        isNull(shotPlanDialogueAudioTakes.discardedAt),
+      ))
       .get();
     if (!take) {
       return [];
     }
     return [
       {
-        itemKind: 'sceneDialogueAudioTake',
+        itemKind: 'shotPlanDialogueAudioTake',
         itemId: take.id,
-        ownerKind: 'sceneDialogueAudio',
-        ownerId: take.sceneDialogueAudioId,
+        ownerKind: 'shotPlan',
+        ownerId: take.shotPlanId,
         title: take.id,
         restoreSnapshot: {
-          sceneDialogueAudioId: take.sceneDialogueAudioId,
+          shotPlanId: take.shotPlanId,
           assetId: take.assetId,
         },
       },
@@ -510,51 +539,65 @@ const sceneDialogueAudioTakeDefinition: TrashObjectDefinition = {
   applyDiscard(input) {
     const take = input.session.db
       .select()
-      .from(sceneDialogueAudioTakes)
-      .where(eq(sceneDialogueAudioTakes.id, input.itemId))
+      .from(shotPlanDialogueAudioTakes)
+      .where(eq(shotPlanDialogueAudioTakes.id, input.itemId))
       .get();
     if (!take) {
       return;
     }
     input.session.db
-      .delete(sceneDialogueAudioTakeSelections)
-      .where(eq(sceneDialogueAudioTakeSelections.takeId, input.itemId))
-      .run();
-    input.session.db
-      .update(sceneDialogueAudioTakes)
+      .update(shotPlanDialogueAudioTakes)
       .set({
+        selectedAt: null,
         discardedAt: input.now,
         discardOperationId: input.operationId,
         restoredAt: null,
         updatedAt: input.now,
       })
-      .where(eq(sceneDialogueAudioTakes.id, input.itemId))
+      .where(eq(shotPlanDialogueAudioTakes.id, input.itemId))
       .run();
+    markAssetTreeDiscarded({ ...input, itemId: take.assetId });
   },
   applyRestore(input) {
+    const snapshot = requireDialogueTakeSnapshot(input.snapshot, input.trashItem.id);
     input.session.db
-      .update(sceneDialogueAudioTakes)
-      .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
-      .where(eq(sceneDialogueAudioTakes.id, input.trashItem.itemId))
+      .update(shotPlanDialogueAudioTakes)
+      .set({
+        selectedAt: null,
+        discardedAt: null,
+        discardOperationId: null,
+        restoredAt: input.now,
+        updatedAt: input.now,
+      })
+      .where(eq(shotPlanDialogueAudioTakes.id, input.trashItem.itemId))
       .run();
+    restoreAssetTree({
+      ...input,
+      trashItem: { ...input.trashItem, itemId: snapshot.assetId },
+    });
     return [];
   },
   collectFiles(input) {
     const snapshot = requireDialogueTakeSnapshot(input.snapshot, input.trashItem.id);
     return collectAssetFiles(input, snapshot.assetId);
   },
-  resourceKeys() {
-    return ['trash:list'];
+  resourceKeys(input) {
+    return [
+      'trash:list',
+      studioShotPlanDialogueAudioResourceKey(
+        requireTrashOwnerId(input, 'shotPlanDialogueAudioTake')
+      ),
+    ];
   },
   restoredChanges(input) {
-    return [{ type: 'sceneDialogueAudioTake.restored', takeId: input.itemId }];
+    return [{ type: 'shotPlanDialogueAudioTake.restored', takeId: input.itemId }];
   },
 };
 
 const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinition>> = {
   asset: assetDefinition,
   castVoice: castVoiceDefinition,
-  sceneDialogueAudioTake: sceneDialogueAudioTakeDefinition,
+  shotPlanDialogueAudioTake: shotPlanDialogueAudioTakeDefinition,
   shot: shotTrashDefinition,
   shotPlan: shotPlanTrashDefinition,
 
@@ -635,14 +678,16 @@ function restoreLookbookSheet(input: TrashObjectRestoreContext): void {
 function requireCastVoiceSnapshot(
   snapshot: Record<string, unknown>,
   trashItemId: string
-): { castMemberId: string; sampleAssetId: string } {
+): { castMemberId: string; sampleAssetId: string; wasDefault: boolean } {
   if (
     typeof snapshot.castMemberId === 'string' &&
-    typeof snapshot.sampleAssetId === 'string'
+    typeof snapshot.sampleAssetId === 'string' &&
+    typeof snapshot.wasDefault === 'boolean'
   ) {
     return {
       castMemberId: snapshot.castMemberId,
       sampleAssetId: snapshot.sampleAssetId,
+      wasDefault: snapshot.wasDefault,
     };
   }
   throw new ProjectDataError(
@@ -654,18 +699,18 @@ function requireCastVoiceSnapshot(
 function requireDialogueTakeSnapshot(
   snapshot: Record<string, unknown>,
   trashItemId: string
-): { sceneDialogueAudioId: string; assetId: string } {
+): { shotPlanId: string; assetId: string } {
   if (
-    typeof snapshot.sceneDialogueAudioId === 'string' &&
+    typeof snapshot.shotPlanId === 'string' &&
     typeof snapshot.assetId === 'string'
   ) {
     return {
-      sceneDialogueAudioId: snapshot.sceneDialogueAudioId,
+      shotPlanId: snapshot.shotPlanId,
       assetId: snapshot.assetId,
     };
   }
   throw new ProjectDataError(
     'PROJECT_DATA270',
-    `Scene Dialogue Audio take trash item snapshot is invalid: ${trashItemId}.`
+    `Shot Plan Dialogue Audio take trash item snapshot is invalid: ${trashItemId}.`
   );
 }
