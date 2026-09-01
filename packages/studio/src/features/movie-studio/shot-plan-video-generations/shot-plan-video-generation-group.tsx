@@ -21,11 +21,20 @@ export function ShotPlanVideoGenerationGroup({
   } | null>(null);
   const { openGenerationRequestInspector } =
     useGenerationRequestInspectorDialog();
+  const takes = [...assets]
+    .sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt)
+      || right.id.localeCompare(left.id)
+    )
+    .map((asset, index) => ({
+      asset,
+      title: `Take ${assets.length - index}`,
+    }));
 
   return (
     <>
       <MediaCardGrid minimumCardWidthPx={280} gap='roomy'>
-        {assets.map((asset) => {
+        {takes.map(({ asset, title }) => {
           const file = asset.files.find((candidate) =>
             candidate.mediaKind === 'video'
           );
@@ -38,19 +47,22 @@ export function ShotPlanVideoGenerationGroup({
               media={{
                 kind: 'video',
                 src: file.browserUrl,
-                title: asset.title,
+                title,
                 playback: 'hover-muted',
               }}
               frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
               presentation={{
                 kind: 'overlay',
-                copy: asset.title ? { title: asset.title } : undefined,
+                copy: {
+                  title,
+                  description: formatCreatedAt(asset.createdAt),
+                },
               }}
               activation={{
                 kind: 'callback',
-                label: `Preview ${asset.title}`,
+                label: `Preview ${title}`,
                 onActivate: () =>
-                  setPreview({ src: file.browserUrl, title: asset.title }),
+                  setPreview({ src: file.browserUrl, title }),
               }}
               cornerAction={{
                 kind: 'inspect',
@@ -88,4 +100,11 @@ export function ShotPlanVideoGenerationGroup({
       ) : null}
     </>
   );
+}
+
+function formatCreatedAt(createdAt: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(createdAt));
 }
