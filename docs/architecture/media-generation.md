@@ -10,8 +10,9 @@ define the current media-generation architecture.
 - Core deterministically projects current Project facts, target relationships,
   workflow policy, visual language, and relationship-derived reference
   suggestions for one purpose and target.
-- Media Producer considers that evidence, makes creative reference choices, and
-  coordinates conversational review.
+- Media Producer considers that evidence, makes creative reference choices,
+  presents request-scoped provider/model/native controls through the shared
+  inline Codex configuration step, and coordinates conversational review.
 - Provider Skills expose curated model identity/name/input modes, read current
   native operation facts from the provider, and author exact provider-native
   JSON.
@@ -34,6 +35,14 @@ Core purpose + target context
         v
 Media Producer / provider Skill
         |
+        | transient authored prompt + route schemas + exact references
+        v
+Codex inline configuration
+        |
+        | editable prompt + exact request-scoped settings
+        v
+Media Producer / provider Skill
+        |
         | temporary review JSON
         v
 Core Preview projection ---> Studio shared review dialog
@@ -49,6 +58,56 @@ focused Core attachment ---> Asset.generationProvenance
                                       v
                            Studio read-only Inspection
 ```
+
+## Transient Codex configuration
+
+When the Media Producer Skill runs in Codex with the Visualize capability, it
+shows one transient inline configuration before authoring each image, video, or
+audio review document. The component starts from explicit user direction or the
+matching Project Setting, but that value only preselects the control. The
+component lists every Renku provider with an indexed route compatible with the
+request, including advanced providers, and all compatible models for the
+selected provider. Choosing one is an explicit one-request override and never
+changes Project Settings. Selector choices come from the small provider route
+indexes; the agent does not read alternative provider guides or schemas merely
+to populate them.
+
+The component is one tab-free Configuration surface. It does not render exact
+references, thumbnails, paths, labels, or marker objects; those remain available
+in the existing Generation Preview. A purpose may retain a bounded reference
+choice, such as a Cast Voice sample, as a configuration control. Configuration
+uses the exact live schemas inspected by the agent for the currently prepared
+provider/model only: finite choices use selects, truthful bounded numbers use
+sliders with visible values, and unsupported or non-user-facing
+transport/runtime fields are omitted. No schema or provider request is fetched
+from the component itself.
+
+Changing Provider or Model is a staged reconfiguration, not an in-browser model
+catalog. The component hides the old route's controls, explains that the new
+selection must prepare settings and may recreate the prompt, and sends a
+follow-up. The agent then reads only the selected route's Skill, guide, adapter,
+and live schema, verifies required references, and updates the same
+request-scoped visualization source path with the newly prepared controls. No
+alternative schemas are prefetched and no global or cross-task component cache
+is introduced.
+
+The continuation action returns the editable authored prompt followed by
+pretty-printed JSON containing exact purpose, target, provider, model,
+references, and provider-native raw values. This is temporary conversation
+state. It is not a Core contract, saved request, Project Setting, provider
+schema, or generation-resume event. A provider/model reconfiguration follow-up
+updates the same pending component and does not author the review document. Only
+**Continue with these settings** for the prepared selection advances to the
+normal review document and existing validation and Preview behavior. A
+canonical model change causes the agent to re-author the prompt using the
+selected model and operation guides while preserving the user's creative
+intent. A provider-only change that keeps the canonical model retains the prompt
+and applies only adapter-required native notation.
+
+This rich component does not change Studio's Configuration tab. Studio still
+receives only the saved opaque request and renders it schema-free and read-only,
+as described below. Generation Preview remains the larger prompt editor and
+exact request review surface.
 
 ## Review document and provenance
 

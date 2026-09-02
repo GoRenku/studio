@@ -111,6 +111,32 @@ operational companions that teach agents how to use those contracts.
   never interprets their order or display selection as a creative choice.
 - Reads the per-media Project generation policy from that report, including
   Preview, conversational confirmation, concurrency, and maximum concurrency.
+- In Codex, prepares the initial authored prompt, exact references, and native
+  values, then uses one shared transient Visualize configuration for every
+  image, video, and audio purpose before authoring the review document.
+- The inline configuration uses explicit direction or the matching Project
+  provider only as its initial selection. It lists every compatible provider
+  and all compatible indexed models, including advanced providers as explicit
+  one-request choices. Alternative choices come only from their small route
+  indexes; only the currently prepared provider/model's Skill, guide, adapter,
+  and live schema are read.
+- It renders one tab-free Configuration surface. Exact references are not shown
+  inline; they remain available in the existing Generation Preview. Bounded
+  purpose-owned reference choices, such as a Cast Voice selection, may appear
+  as configuration controls. It returns the editable prompt followed by
+  pretty-printed exact settings to the ordinary conversation.
+- A canonical model change makes the agent re-author the prompt from the newly
+  selected model and operation guides before Preview. A provider-only change
+  for the same canonical model retains the prompt and applies the destination
+  adapter's native notation.
+- A provider/model selector change first shows that reconfiguration is required,
+  hides the old route's controls, and sends a non-accepting follow-up. The agent
+  reads only that selected route and updates the same request-scoped Visualize
+  source path with its controls. It prefetches no alternative schemas and
+  creates no global or cross-task cache.
+- Keeps the component browser-local and request-scoped: it calls no Renku or
+  provider API, persists no Project Setting or request state, and does not
+  replace the existing Generation Preview.
 - Uses the Codex image lane only when the active harness exposes the built-in
   image-generation capability; otherwise it reports unavailability and asks
   before choosing Fal.ai or Pika.
