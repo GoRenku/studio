@@ -78,8 +78,22 @@ describe('generation CLI provider delegation', () => {
     const readInputSchema = vi.fn(async () => schema);
     await expect(showGenerationSchema(commandInput(fixture, {
       mediaEngine: { readInputSchema, validate: vi.fn(), execute: vi.fn(), recover: vi.fn() },
-    }, { provider: 'atlas', model: 'atlas/image-v1' }))).resolves.toBe(schema);
+    }, { provider: 'atlas', model: 'atlas/image-v1', output: undefined }))).resolves.toBe(schema);
     expect(readInputSchema).toHaveBeenCalledWith('atlas', 'atlas/image-v1', expect.any(Object));
+  });
+
+  it('can persist the raw live provider schema for a cache refresh', async () => {
+    const fixture = await requestFixture();
+    const schema = { type: 'object', properties: { quality: { enum: ['low', 'high'] } } };
+    const output = path.join(fixture.storageRoot, 'schema.json');
+    const readInputSchema = vi.fn(async () => schema);
+    await expect(showGenerationSchema(commandInput(fixture, {
+      mediaEngine: { readInputSchema, validate: vi.fn(), execute: vi.fn(), recover: vi.fn() },
+    }, { provider: 'atlas', model: 'atlas/image-v1', output }))).resolves.toEqual({
+      schema,
+      outputPath: output,
+    });
+    await expect(fs.readFile(output, 'utf8')).resolves.toBe(`${JSON.stringify(schema, null, 2)}\n`);
   });
 });
 
@@ -104,7 +118,7 @@ async function requestFixture() {
 function commandInput(
   fixture: Awaited<ReturnType<typeof requestFixture>>,
   overrides: Record<string, unknown>,
-  flags: { requestId?: string; provider?: string; model?: string } = {},
+  flags: { requestId?: string; provider?: string; model?: string; output?: string } = {},
 ) {
   return {
     flags: { file: fixture.documentPath, output: 'generated', ...flags },

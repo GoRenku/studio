@@ -65,6 +65,7 @@ export { readAssetMediaGenerationRequest } from './media-generation-review/inspe
 export { readMediaGenerationContext } from './media-generation-context/index.js';
 export { validateMediaGenerationProvenance } from './assets/generation-provenance.js';
 export { assertSafeMediaGenerationRequest } from './media-generation-review/safety.js';
+export * from './generation-configuration-visualizations/index.js';
 export {
   normalizeReviewDocumentPath,
   resolveReviewDocumentPath,

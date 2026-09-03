@@ -186,8 +186,15 @@ Every purpose-specific Media Producer workflow begins with:
 
 ```bash
 renku generation context --purpose <purpose> --target <target> --json
-renku generation schema show --provider <provider> --model <model> --json
 ```
+
+After route selection, a Codex workflow inspects the Core-owned generation
+configuration visualization cache. A fresh entry supplies its schema snapshot
+and route template. A missing or expired entry performs one `renku generation
+schema show --provider <provider> --model <model> --output <path> --json` and
+stores or refreshes the cache. The fixed 24-hour freshness policy applies only
+to pre-review configuration; final provider validation and execution remain
+live boundaries.
 
 For `scene.storyboard-sheet`, `--revision` chooses the exact Scene Beats
 revision and repeatable `--beat` narrows the report to a reviewed Beat batch.

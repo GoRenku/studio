@@ -167,11 +167,15 @@ Provider Skills
   to model/operation guides. They read all other current request facts from the
   selected provider operation rather than duplicating request schemas.
 - They author provider-native request JSON with local-file markers at the exact
-  native media fields. They inspect the selected operation through
-  `renku generation schema show --provider <provider> --model <model> --json`,
-  then call only the installed `renku generation` validate/execute/recover
-  commands. Prompt guides provide editorial craft and exact prompt-reference
-  notation; they never replace or reproduce the live provider schema.
+  native media fields. In Codex they first inspect the Core-owned 24-hour
+  generation configuration visualization cache. A fresh entry supplies the
+  selected schema snapshot and reusable route template without a live request;
+  a miss or expired entry uses `renku generation schema show --provider
+  <provider> --model <model> --output <path> --json` once and stores or refreshes
+  the template. They then call only the installed `renku generation`
+  validate/execute/recover commands. Prompt guides provide editorial craft and
+  exact prompt-reference notation; they never replace or reproduce the current
+  provider schema.
 - They contain no provider client or SDK. Engines owns upload, submission,
   polling, retry, recovery, normalization, download, and safe execution results.
 - `location-world-producer` keeps the focused World Labs Location World flow.

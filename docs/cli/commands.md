@@ -1487,13 +1487,15 @@ uses exact recursive
 markers. `reviewLabel` is required for Renku review; `promptMention` is optional
 and is never derived from media kind.
 
-Inspect the selected provider/model's live raw input schema before authoring its
-native request:
+Inspect the selected provider/model's current raw input schema before authoring
+its native request. `--output` atomically saves the same unmodified JSON for the
+generation configuration visualization cache:
 
 ```bash
 renku generation schema show \
   --provider <provider> \
   --model <exact-provider-api-id> \
+  --output tmp/scratch/current-input-schema.json \
   --json
 ```
 
@@ -1501,6 +1503,57 @@ This command supplies technical fields and constraints only. Retained model
 prompt guides remain the editorial authority for writing an effective prompt.
 The provider Skill's canonical model-guide key is not accepted as a substitute
 for the exact provider API id.
+
+In the Codex inline-configuration flow, inspect the Core-owned system cache
+before calling `schema show`:
+
+```bash
+renku generation configuration-visualization inspect \
+  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
+  --json
+```
+
+The descriptor names the exact provider, executable model, operation, and input
+mode, and fingerprints the route catalogs, installed Visualize Skill, and
+template contract. A `fresh` result returns absolute `schemaPath` and
+`templatePath` values and requires no live schema request. Entries expire
+exactly 24 hours after the manifest's `checkedAt`, regardless of file
+modification times.
+
+After obtaining one current schema for an expired entry, refresh it:
+
+```bash
+renku generation configuration-visualization refresh \
+  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
+  --schema tmp/scratch/current-input-schema.json \
+  --json
+```
+
+An unchanged semantic schema returns `refreshed` and keeps the existing
+template. `schema-changed`, `miss`, `invalid`, or `incompatible` requires a new
+request-independent template, stored with:
+
+```bash
+renku generation configuration-visualization store \
+  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
+  --schema tmp/scratch/current-input-schema.json \
+  --template tmp/scratch/generation-configuration-template.html \
+  --json
+```
+
+The cache lives under the Core-resolved Renku platform config directory, not a
+Project. Templates contain one Renku request-payload placeholder; prompts,
+targets, references, selections, credentials, and browser state stay in fresh
+task-local instances. An expired entry is never used when refresh fails.
+
+If final live provider validation rejects a cached-schema value, expire that
+exact entry before rebuilding it:
+
+```bash
+renku generation configuration-visualization invalidate \
+  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
+  --json
+```
 
 For example, a Pika image-to-video request first inspects the exact operation:
 
@@ -1531,7 +1584,7 @@ marker intact for Preview and provenance:
 }
 ```
 
-The Pika Skill uses the live schema for all remaining native fields and values;
+The Pika Skill uses the current schema for all remaining native fields and values;
 the CLI adds no Pika-specific command or request interpretation.
 
 Validate an Engines-owned provider request:

@@ -18,6 +18,12 @@ import { showGenerationPreview } from './preview.js';
 import { validateGenerationRequest } from './validate.js';
 import { showGenerationContext } from './context.js';
 import { showGenerationSchema } from './schema.js';
+import {
+  inspectGenerationConfigurationVisualization,
+  invalidateGenerationConfigurationVisualization,
+  refreshGenerationConfigurationVisualization,
+  storeGenerationConfigurationVisualization,
+} from './configuration-visualization.js';
 
 export interface GenerationCommandFlags {
   project?: string;
@@ -30,6 +36,8 @@ export interface GenerationCommandFlags {
   beat?: string | string[];
   provider?: string;
   model?: string;
+  schema?: string;
+  template?: string;
 }
 
 export type GenerationCommandRuntime = CliCommandRuntime & {
@@ -53,6 +61,10 @@ export type GenerationCommandInput = Parameters<
 const handlers = [
   { path: ['context'], run: showGenerationContext },
   { path: ['schema', 'show'], run: showGenerationSchema },
+  { path: ['configuration-visualization', 'inspect'], run: inspectGenerationConfigurationVisualization },
+  { path: ['configuration-visualization', 'store'], run: storeGenerationConfigurationVisualization },
+  { path: ['configuration-visualization', 'refresh'], run: refreshGenerationConfigurationVisualization },
+  { path: ['configuration-visualization', 'invalidate'], run: invalidateGenerationConfigurationVisualization },
   { path: ['validate'], run: validateGenerationRequest },
   { path: ['preview', 'show'], run: showGenerationPreview },
   { path: ['execute'], run: executeGenerationRequest },
@@ -81,7 +93,7 @@ export async function runGenerationCommand(options: {
     unknownCommand: (commandPath) => new StructuredError({
       code: 'CLI019',
       message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,
-      suggestion: 'Use generation context, schema show, validate, preview show, execute, or recover.',
+      suggestion: 'Use generation context, schema show, configuration-visualization, validate, preview show, execute, or recover.',
     }),
   });
   writeJson(options.io, result);

@@ -75,7 +75,7 @@ Commands
   settings show        Show the complete Project Settings document
   settings set         Replace Project Settings from a complete JSON document
   inspiration          Manage Inspiration folders and analysis
-  generation           Read context/schema, validate, preview, execute, or recover a provider request
+  generation           Read context/schema, cache configuration visuals, validate, preview, execute, or recover
   lookbook             Manage Lookbooks and Lookbook images
   media                Import media files for a purpose
   project current      Show the current authoring project
@@ -91,7 +91,7 @@ Commands
   trash                List, restore, preview, and empty Trash
 
 Options
-  --file               Input file for screenplay JSON or FDX import commands
+  --file               Input document or generation visualization cache descriptor
   --storage-root       Override configured storage root for this command
   --project            Project name for project information commands
   --owner              Asset owner for Asset listing
@@ -106,10 +106,12 @@ Options
   --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
   --media-kind         Asset media kind
-  --output             Project-relative provider output directory
+  --output             Provider output directory or generation schema snapshot path
   --request-id         Provider request id for generation recovery
   --provider           Provider id for generation schema inspection
   --model              Provider-native model id for generation schema inspection
+  --schema             Provider schema JSON for generation visualization cache updates
+  --template           HTML fragment for generation visualization cache updates
   --provenance         Media Generation Provenance JSON file
   --locale             Project locale id
   --cast               Cast member id for cast commands
@@ -254,6 +256,12 @@ function createCliFlags() {
       type: 'string',
     },
     model: {
+      type: 'string',
+    },
+    schema: {
+      type: 'string',
+    },
+    template: {
       type: 'string',
     },
     provenance: {
@@ -693,6 +701,8 @@ export async function runRenkuCli(
             beat: cli.flags.beat?.length ? cli.flags.beat : undefined,
             provider: cli.flags.provider,
             model: cli.flags.model,
+            schema: cli.flags.schema,
+            template: cli.flags.template,
           },
           json: cli.flags.json,
           io,
