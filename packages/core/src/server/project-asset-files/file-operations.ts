@@ -60,13 +60,28 @@ export function statProjectFileSync(
 
 export async function hashFile(absolutePath: string): Promise<string> {
   const hash = crypto.createHash('sha256');
-  hash.update(await fs.readFile(absolutePath));
+  const stream = fsSync.createReadStream(absolutePath);
+  for await (const chunk of stream) {
+    hash.update(chunk);
+  }
   return hash.digest('hex');
 }
 
 export function hashFileSync(absolutePath: string): string {
   const hash = crypto.createHash('sha256');
-  hash.update(fsSync.readFileSync(absolutePath));
+  const file = fsSync.openSync(absolutePath, 'r');
+  const buffer = Buffer.allocUnsafe(64 * 1024);
+  try {
+    let bytesRead = 0;
+    do {
+      bytesRead = fsSync.readSync(file, buffer, 0, buffer.length, null);
+      if (bytesRead > 0) {
+        hash.update(buffer.subarray(0, bytesRead));
+      }
+    } while (bytesRead > 0);
+  } finally {
+    fsSync.closeSync(file);
+  }
   return hash.digest('hex');
 }
 
@@ -83,6 +98,9 @@ export function mimeTypeForProjectPath(
   }
   if (mediaKind === 'video') {
     return extension === '.mov' ? 'video/quicktime' : 'video/mp4';
+  }
+  if (mediaKind === 'file') {
+    return 'application/octet-stream';
   }
   if (extension === '.jpg' || extension === '.jpeg') {
     return 'image/jpeg';

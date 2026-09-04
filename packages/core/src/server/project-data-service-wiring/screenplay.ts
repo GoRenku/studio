@@ -2,6 +2,7 @@ import {
   applyScreenplayOperations,
   createScreenplay,
   importFdxScreenplay,
+  importScreenplaySupportingMaterial,
   listSceneProductionNumbers,
   listScreenplayRevisions,
   readScreenplayRevision,
@@ -38,7 +39,8 @@ export function createScreenplayServiceWiring(): Pick<
   | 'readScreenplayStatus' | 'readScreenplayStructure'
   | 'readScreenplaySection' | 'readScreenplayScene'
   | 'listSceneProductionNumbers' | 'resolveSceneProductionNumber'
-  | 'createScreenplay' | 'importFdxScreenplay' | 'applyScreenplayOperations'
+  | 'createScreenplay' | 'importFdxScreenplay' | 'importScreenplaySupportingMaterial'
+  | 'applyScreenplayOperations'
   | 'listScreenplayRevisions' | 'readScreenplayRevision'
   | 'restoreScreenplayRevision'
   | 'readScreenplayAnalysisContext' | 'listScreenplayAnalyses'
@@ -55,7 +57,8 @@ export function createScreenplayServiceWiring(): Pick<
     readScreenplayStatus, readScreenplayStructure,
     readScreenplaySection, readScreenplayScene,
     listSceneProductionNumbers, resolveSceneProductionNumber,
-    createScreenplay, importFdxScreenplay, applyScreenplayOperations,
+    createScreenplay, importFdxScreenplay, importScreenplaySupportingMaterial,
+    applyScreenplayOperations,
     listScreenplayRevisions, readScreenplayRevision, restoreScreenplayRevision,
     readScreenplayAnalysisContext, listScreenplayAnalyses,
     readScreenplayAnalysis, validateScreenplayAnalysis,

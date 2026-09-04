@@ -78,6 +78,7 @@ durable ids for reads and mutations.
 | Media | Durable folder | Generated filename stem |
 | --- | --- | --- |
 | Screenplay source | `screenplay/` | external basename only |
+| Screenplay supporting material | `screenplay/` | external basename only |
 | Project Cover | `covers/` | `cover-gxxx` |
 | Production Lookbook media | `visual-language/lookbooks/production/` | `<semantic>[-sheet]-gxxx` |
 | Storyboard Lookbook media | `visual-language/lookbooks/storyboard/` | `<semantic>[-sheet]-gxxx` |
@@ -168,10 +169,13 @@ adds `-2`, then `-3`, and so on. For example:
 ```text
 screenplay/urban-basilica.fdx
 screenplay/urban-basilica-2.fdx
+screenplay/research-notes.pdf
+screenplay/research-notes-2.pdf
 ```
 
 External files do not receive `gxxx`. A basename is a human-readable label,
-not identity or provenance.
+not identity or provenance. Supporting material preserves any source extension;
+an extensionless source receives `.bin`. Its bytes are otherwise unchanged.
 
 For Project Cover imports this means generated media uses
 `covers/cover-gxxx.<ext>`, while an external source keeps its normalized

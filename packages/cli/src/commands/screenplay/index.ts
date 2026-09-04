@@ -9,6 +9,7 @@ import { runScreenplayFdxImportCommand } from './fdx-import.js';
 import { runScreenplayReadingCommand } from './reading.js';
 import { runScreenplayRevisionCommand } from './revisions.js';
 import { runScreenplaySceneNumberCommand } from './scene-numbers.js';
+import { runScreenplaySupportingMaterialCommand } from './supporting-material.js';
 
 export interface ScreenplayCommandOptions {
   input: string[];
@@ -55,6 +56,9 @@ export async function runScreenplayCommand(options: ScreenplayCommandOptions): P
   }
   if (subcommand === 'import-fdx') {
     return runScreenplayFdxImportCommand(context);
+  }
+  if (subcommand === 'supporting-material') {
+    return runScreenplaySupportingMaterialCommand(context);
   }
   if (subcommand === 'create' || subcommand === 'apply') {
     return runScreenplayAuthoringCommand(context);
@@ -117,7 +121,7 @@ export function unknownScreenplayCommand(subcommand: string | undefined): Struct
       'CLI081',
       'Unknown screenplay command.',
       { path: ['screenplay', subcommand ?? ''] },
-      'Use status, show, structure, section, scene, create, apply, import-fdx, revision, analyze, beats, or scene-number.',
+      'Use status, show, structure, section, scene, create, apply, import-fdx, supporting-material, revision, analyze, beats, or scene-number.',
     )],
     suggestion: 'Use a supported screenplay command.',
   });

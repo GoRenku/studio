@@ -250,7 +250,9 @@ at the project root. There is no `working-assets/` root and no
 
 Folder responsibilities:
 
-- `screenplay/` contains authored screenplay source files.
+- `screenplay/` contains exact screenplay source files and opaque imported
+  screenplay supporting material. Supporting material is registered as a
+  Project-owned Asset and may exist before any screenplay is authored.
 - `cast/`, `locations/`, `props/`, and `visual-language/` contain
   feature-owned definitions, reference material, and working files.
 - `cast/<handle>/` contains imported or generated character sheets, profiles,

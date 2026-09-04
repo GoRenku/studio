@@ -79,12 +79,12 @@ import {
   resolveShotPlanVideoReferenceImageDestinationRootSync,
 } from './shot-plan-video-reference-image.js';
 import {
-  resolveScreenplaySourceDestinationFile,
-  resolveScreenplaySourceDestinationFileSync,
-  resolveScreenplaySourceDestinationOutputNames,
-  resolveScreenplaySourceDestinationRoot,
-  resolveScreenplaySourceDestinationRootSync,
-} from './screenplay-source.js';
+  resolveScreenplayDestinationFile,
+  resolveScreenplayDestinationFileSync,
+  resolveScreenplayDestinationOutputNames,
+  resolveScreenplayDestinationRoot,
+  resolveScreenplayDestinationRootSync,
+} from './screenplay.js';
 import {
   resolveAssetVideoEditDestinationFile,
   resolveAssetVideoEditDestinationFileSync,
@@ -113,11 +113,18 @@ const destinationResolvers = {
     resolveOutputNames: resolveProjectCoverDestinationOutputNames,
   },
   'screenplay.source': {
-    resolveFile: resolveScreenplaySourceDestinationFile,
-    resolveFileSync: resolveScreenplaySourceDestinationFileSync,
-    resolveRoot: resolveScreenplaySourceDestinationRoot,
-    resolveRootSync: resolveScreenplaySourceDestinationRootSync,
-    resolveOutputNames: resolveScreenplaySourceDestinationOutputNames,
+    resolveFile: resolveScreenplayDestinationFile,
+    resolveFileSync: resolveScreenplayDestinationFileSync,
+    resolveRoot: resolveScreenplayDestinationRoot,
+    resolveRootSync: resolveScreenplayDestinationRootSync,
+    resolveOutputNames: resolveScreenplayDestinationOutputNames,
+  },
+  'screenplay.supportingMaterial': {
+    resolveFile: resolveScreenplayDestinationFile,
+    resolveFileSync: resolveScreenplayDestinationFileSync,
+    resolveRoot: resolveScreenplayDestinationRoot,
+    resolveRootSync: resolveScreenplayDestinationRootSync,
+    resolveOutputNames: resolveScreenplayDestinationOutputNames,
   },
   'asset.videoEdit': {
     resolveFile: resolveAssetVideoEditDestinationFile,

@@ -705,6 +705,50 @@ reported as omissions. See
 [`screenplay-fdx-import.md`](../architecture/screenplay-fdx-import.md) for the
 exact supported subset.
 
+## `renku screenplay supporting-material import`
+
+Import one opaque source file for later screenplay, Cast Member, Location, or
+Prop authoring. Import itself does not change the Screenplay.
+
+```bash
+renku screenplay supporting-material import \
+  --file /absolute/path/to/research.pdf \
+  --json
+```
+
+Options:
+
+- `--file`: required path to any readable regular file.
+- `--project`: optional Project name; otherwise the current Project is used.
+- `--json`: return the typed Project-owned Asset and exact retained path.
+
+Behavior:
+
+- Works in every Renku Project, whether its Screenplay is empty,
+  Renku-authored, or FDX-backed.
+- Applies no extension, MIME, media-format, content, or byte-size allowlist.
+- Stores exact bytes as a `screenplay_supporting_material` Asset with neutral
+  media kind `file`, role `source`, and `application/octet-stream` MIME type
+  under `screenplay/`.
+- Preserves recognized and unknown extensions. An extensionless source is
+  retained with `.bin`.
+- Returns `imported` for a new byte identity and `unchanged` when an active
+  exact-byte Asset already exists. Same-name changed bytes allocate `-2`, `-3`,
+  and so on as a new immutable Asset.
+- Does not parse, summarize, index, update descriptions, mutate screenplay
+  content, or supply raw source files to downstream generation and planning
+  contexts.
+
+List active imports with the existing Asset command:
+
+```bash
+renku asset list \
+  --project <project-name> \
+  --owner project \
+  --type screenplay_supporting_material \
+  --json
+```
+
 ## `renku screenplay apply`
 
 Apply focused screenplay operations.

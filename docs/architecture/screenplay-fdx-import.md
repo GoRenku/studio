@@ -126,6 +126,16 @@ If a later refresh returns to exact earlier bytes, Core reuses that verified
 immutable source Asset/File; a missing or mismatched historical file fails
 without advancing the current pointer.
 
+Project-owned `screenplay_supporting_material` Assets may share the
+`screenplay/` folder, but they are independent of the FDX import pointer and
+authority model. They may be imported into empty, Renku-authored, or FDX-backed
+Projects. FDX parsing and Screenplay Analysis never read them. Agent casting
+and production-design passes may use the raw files to author durable
+descriptions; Screenplay Drafter may use them for a separate Renku-authored
+Screenplay, but never to mutate this FDX projection. Later production workflows
+consume the canonical Screenplay and durable descriptions without receiving
+the source files again.
+
 The complete canonical aggregate is validated before persistence. Source
 retention, Asset/File metadata, aggregate replacement, import-pointer update,
 and revision insertion use the existing SQLite transaction and Project Asset

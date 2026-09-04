@@ -66,6 +66,16 @@ Use the focused documents below for current direction.
   singleton import record at the latest exact Project-owned `screenplay_source`
   Asset. Final Draft planning markers never become Act or Sequence Sections.
   Runtime Screenplay reads never parse that source.
+- A Project may also own any number of immutable
+  `screenplay_supporting_material` Assets independently of screenplay source
+  ownership or content state. Each Asset retains one exact opaque file under
+  `screenplay/` with neutral media kind `file`, role `source`, and MIME type
+  `application/octet-stream`. Core validates and hashes the file envelope but
+  never parses or summarizes its creative contents. Agents may use these files
+  to author the Screenplay plus richer Cast Member, Location, and Prop
+  descriptions and `CastMember.arc`; downstream workflows read those durable
+  outputs rather than receiving the raw files again. FDX-backed Screenplays
+  remain source-authoritative.
 - Screenplay Analysis is SQLite-owned project data. It stores validated,
   agent-authored critique history as hierarchy-independent JSON in
   `screenplay_analysis`, with one active analysis tracked in

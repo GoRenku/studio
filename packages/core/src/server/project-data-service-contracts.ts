@@ -161,6 +161,10 @@ import type {
   ImportFdxScreenplayInput,
   ImportFdxScreenplayReport,
 } from './screenplay/fdx/contracts.js';
+import type {
+  ImportScreenplaySupportingMaterialInput,
+  ImportScreenplaySupportingMaterialReport,
+} from './screenplay/supporting-material/contracts.js';
 
 export type { ProjectDatabasePreMigrationBackupReport };
 
@@ -365,6 +369,9 @@ export interface ProjectDataService {
   resolveSceneProductionNumber(input: ResolveSceneProductionNumberInput): Promise<SceneProductionNumberResolveReport>;
   createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayMutationReport>;
   importFdxScreenplay(input: ImportFdxScreenplayInput): Promise<ImportFdxScreenplayReport>;
+  importScreenplaySupportingMaterial(
+    input: ImportScreenplaySupportingMaterialInput
+  ): Promise<ImportScreenplaySupportingMaterialReport>;
   applyScreenplayOperations(input: ApplyScreenplayOperationsInput): Promise<ScreenplayMutationReport>;
   listScreenplayRevisions(input: ScreenplayProjectInput): Promise<ScreenplayRevisionListReport>;
   readScreenplayRevision(input: ReadScreenplayRevisionInput): Promise<ScreenplayRevisionReadReport>;

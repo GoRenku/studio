@@ -1,7 +1,7 @@
 import type { ProjectRelativePath } from '../../client/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
-export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'model' | 'text' | 'json' | 'document';
+export type ProjectMediaKind = 'image' | 'audio' | 'video' | 'model' | 'text' | 'json' | 'document' | 'file';
 
 export type ProjectAssetFileNamingMode =
   | { kind: 'generated' }
@@ -10,6 +10,7 @@ export type ProjectAssetFileNamingMode =
 export type ProjectAssetFileDestination =
   | { kind: 'project.cover' }
   | { kind: 'screenplay.source' }
+  | { kind: 'screenplay.supportingMaterial' }
   | {
       kind: 'asset.videoEdit';
       sourceAssetId: string;

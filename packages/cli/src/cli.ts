@@ -192,6 +192,7 @@ Examples
   $ renku init ~/Movies/Renku
   $ renku init /Volumes/Media/Renku --json
   $ renku generation preview show --file tmp/operations/media-generation/sheet-1.json --project midnight-crossing --json
+  $ renku screenplay supporting-material import --file /absolute/path/to/research.pdf --project midnight-crossing --json
 `;
 
 function createCliFlags() {

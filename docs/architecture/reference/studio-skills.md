@@ -60,6 +60,22 @@ operational companions that teach agents how to use those contracts.
   and Props with focused references.
 - Treats Scenes as canonical and Acts/Sequences as optional non-owning
   Sections; uses stable IDs for Blocks and dialogue values.
+- Reads all active supporting material before initial screenplay creation and
+  for explicit source-driven revision of a Renku-authored Screenplay. It does
+  not revise an FDX-backed Screenplay from those files or forward the raw files
+  downstream.
+
+`screenplay-supporting-material-importer`
+
+- Imports any readable regular file unchanged through
+  `renku screenplay supporting-material import`.
+- Does not require an FDX-backed or non-empty Screenplay and never authors
+  screenplay or continuity facts itself.
+- Routes screenplay authoring to `screenplay-drafter` and description
+  enrichment to `casting-director` and `production-designer`.
+- Stops raw-source context at those authoring skills; analysis, media, sheets,
+  Scene Beats, Shot Plans, Lookbooks, and storyboards continue from the
+  canonical Screenplay plus durable facts and designs.
 
 `screenplay-analyst`
 
@@ -88,6 +104,10 @@ operational companions that teach agents how to use those contracts.
   `media-producer`.
 - Hands `cast.voice-sample` generation to `media-producer` when the user wants
   Renku to create the sample audio.
+- Before initial Cast fact authoring, or for an explicit later source-driven
+  refresh, reads the complete canonical Screenplay and all active supporting
+  material to enrich Cast descriptions and `CastMember.arc`, then keeps raw
+  files out of media handoffs.
 
 `production-designer`
 
@@ -101,6 +121,10 @@ operational companions that teach agents how to use those contracts.
   atmosphere, and continuity risks.
 - Hands `location.sheet` and `location.hero` generation to `media-producer`.
 - Hands `prop.sheet` and `prop.hero` generation to `media-producer`.
+- Before initial Location/Prop fact authoring, or for an explicit later
+  source-driven refresh, reads the complete canonical Screenplay and all active
+  supporting material to enrich descriptions, then keeps raw files out of media
+  handoffs.
 
 `media-producer`
 

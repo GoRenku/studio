@@ -230,6 +230,10 @@ export type {
   ScreenplayImportId,
   ScreenplayImportLogEntry,
 } from './screenplay/fdx/contracts.js';
+export type {
+  ImportScreenplaySupportingMaterialInput,
+  ImportScreenplaySupportingMaterialReport,
+} from './screenplay/supporting-material/contracts.js';
 export {
   importFdxScreenplayReportSchema,
   screenplayImportCandidatesSchema,

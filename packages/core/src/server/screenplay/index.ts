@@ -10,6 +10,11 @@ export {
 } from './commands/scene-numbers.js';
 export { createScreenplay } from './commands/screenplay.js';
 export { importFdxScreenplay } from './commands/fdx-import.js';
+export {
+  importScreenplaySupportingMaterial,
+  type ImportScreenplaySupportingMaterialInput,
+  type ImportScreenplaySupportingMaterialReport,
+} from './supporting-material/index.js';
 export type {
   ImportFdxScreenplayInput,
   ImportFdxScreenplayReport,
