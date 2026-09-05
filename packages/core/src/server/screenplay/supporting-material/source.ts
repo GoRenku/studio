@@ -44,13 +44,3 @@ export function supportingMaterialInvalidSource(message: string): ProjectDataErr
     { suggestion: 'Choose a readable regular file.' },
   );
 }
-
-export function isSupportingMaterialSourceReadFailure(
-  error: unknown,
-  absolutePath: string,
-): boolean {
-  return typeof error === 'object'
-    && error !== null
-    && 'path' in error
-    && error.path === absolutePath;
-}

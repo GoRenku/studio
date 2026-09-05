@@ -26,6 +26,7 @@ export async function resolveScreenplayDestinationFile<K extends ScreenplayDesti
     generatedBaseName: 'screenplay',
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: outputFormatHint(input),
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -39,6 +40,7 @@ export function resolveScreenplayDestinationFileSync<K extends ScreenplayDestina
     generatedBaseName: 'screenplay',
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: outputFormatHint(input),
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -65,6 +67,7 @@ export async function resolveScreenplayDestinationOutputNames<K extends Screenpl
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: outputFormatHint(input),
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 

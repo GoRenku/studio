@@ -31,6 +31,7 @@ export async function resolveCastDestinationFile(
     generatedBaseName: castGeneratedFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -44,6 +45,7 @@ export function resolveCastDestinationFileSync(
     generatedBaseName: castGeneratedFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -71,6 +73,7 @@ export async function resolveCastDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 

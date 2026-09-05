@@ -13,12 +13,14 @@ import type {
 } from './contracts.js';
 import {
   destinationConflict,
+  destinationWriteFailure,
   findExistingScreenplaySupportingMaterial,
   isProjectAssetDestinationConflict,
+  isProjectAssetDestinationWriteFailure,
+  isProjectAssetSourceReadFailure,
   persistScreenplaySupportingMaterial,
 } from './persistence.js';
 import {
-  isSupportingMaterialSourceReadFailure,
   readScreenplaySupportingMaterialSource,
   supportingMaterialInvalidSource,
 } from './source.js';
@@ -84,10 +86,13 @@ export async function importScreenplaySupportingMaterial(
     if (isProjectAssetDestinationConflict(error)) {
       throw destinationConflict('Could not allocate a supporting-material destination under screenplay/.');
     }
-    if (isSupportingMaterialSourceReadFailure(error, source.absolutePath)) {
+    if (isProjectAssetSourceReadFailure(error)) {
       throw supportingMaterialInvalidSource(
         `Supporting material became unreadable during import: ${source.absolutePath}.`,
       );
+    }
+    if (isProjectAssetDestinationWriteFailure(error)) {
+      throw destinationWriteFailure();
     }
     throw error;
   } finally {

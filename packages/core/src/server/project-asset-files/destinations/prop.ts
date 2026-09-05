@@ -28,6 +28,7 @@ export async function resolvePropDestinationFile(
     generatedBaseName: propGeneratedFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -41,6 +42,7 @@ export function resolvePropDestinationFileSync(
     generatedBaseName: propGeneratedFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -68,6 +70,7 @@ export async function resolvePropDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 

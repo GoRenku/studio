@@ -43,6 +43,7 @@ export async function resolveSceneStoryboardDestinationFile(
     generatedBaseName: storyboardBeatFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -56,6 +57,7 @@ export function resolveSceneStoryboardDestinationFileSync(
     generatedBaseName: storyboardBeatFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -90,6 +92,7 @@ export async function resolveSceneStoryboardDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 

@@ -151,6 +151,8 @@ describe('Asset command', () => {
       flags: {
         project: 'movie',
         owner: 'shot:shot_1',
+        limit: 25,
+        cursor: 'cursor_1',
       },
       json: true,
       io: { stdout, stderr: { error: vi.fn() } },
@@ -164,6 +166,8 @@ describe('Asset command', () => {
       locale: {},
       type: undefined,
       mediaKind: undefined,
+      limit: 25,
+      cursor: 'cursor_1',
       homeDir: '/test-home',
     });
     expect(JSON.parse(stdout.log.mock.calls[0]![0])).toEqual({
@@ -171,5 +175,23 @@ describe('Asset command', () => {
       nextCursor: null,
       selectedAssetId: 'asset_1',
     });
+  });
+
+  it('prints the next cursor for paged human-readable listings', async () => {
+    projectData.listAssetPage.mockResolvedValue({
+      items: [{ id: 'asset_1', type: 'shot_image' }],
+      nextCursor: 'cursor_2',
+      selectedAssetId: null,
+    });
+    const stdout = { log: vi.fn() };
+
+    await runAssetCommand({
+      input: ['list'],
+      flags: { project: 'movie', owner: 'shot:shot_1' },
+      json: false,
+      io: { stdout, stderr: { error: vi.fn() } },
+    });
+
+    expect(stdout.log).toHaveBeenLastCalledWith('Next cursor: cursor_2');
   });
 });

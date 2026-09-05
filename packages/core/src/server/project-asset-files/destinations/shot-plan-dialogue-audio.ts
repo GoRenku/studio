@@ -22,6 +22,7 @@ export async function resolveShotPlanDialogueAudioDestinationFile(
     generatedBaseName: dialogueAudioFileStem(input.destination),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -35,6 +36,7 @@ export function resolveShotPlanDialogueAudioDestinationFileSync(
     generatedBaseName: dialogueAudioFileStem(input.destination),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -62,6 +64,7 @@ export async function resolveShotPlanDialogueAudioDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 

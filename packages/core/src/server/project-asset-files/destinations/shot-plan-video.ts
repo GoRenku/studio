@@ -23,6 +23,7 @@ export async function resolveShotPlanVideoDestinationFile(
     generatedBaseName: videoFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -36,6 +37,7 @@ export function resolveShotPlanVideoDestinationFileSync(
     generatedBaseName: videoFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -62,6 +64,7 @@ export async function resolveShotPlanVideoDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 

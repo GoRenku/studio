@@ -1,15 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { runAssetCommand } from './commands/asset-command.js';
 import { runGenerationCommand } from './commands/generation/command.js';
 import { runRenkuCli, type RenkuCliIo } from './cli.js';
 
 vi.mock('./commands/generation/command.js', () => ({
   runGenerationCommand: vi.fn(),
 }));
+vi.mock('./commands/asset-command.js', () => ({
+  runAssetCommand: vi.fn(),
+}));
 
-describe('Renku CLI generation surface', () => {
+describe('Renku CLI command surfaces', () => {
   beforeEach(() => {
     vi.mocked(runGenerationCommand).mockReset();
     vi.mocked(runGenerationCommand).mockResolvedValue(0);
+    vi.mocked(runAssetCommand).mockReset();
+    vi.mocked(runAssetCommand).mockResolvedValue(0);
   });
 
   it('passes repeated Preview files in command-line order', async () => {
@@ -46,6 +52,25 @@ describe('Renku CLI generation surface', () => {
         file: 'descriptor.json',
         schema: 'schema.json',
         template: 'template.html',
+      }),
+    }));
+  });
+
+  it('passes Asset pagination flags to the focused command', async () => {
+    const { io } = createIo();
+    await expect(runRenkuCli([
+      'asset', 'list',
+      '--project', 'movie',
+      '--owner', 'project',
+      '--limit', '200',
+      '--cursor', 'cursor_1',
+      '--json',
+    ], { io })).resolves.toBe(0);
+    expect(runAssetCommand).toHaveBeenCalledWith(expect.objectContaining({
+      input: ['list'],
+      flags: expect.objectContaining({
+        limit: 200,
+        cursor: 'cursor_1',
       }),
     }));
   });

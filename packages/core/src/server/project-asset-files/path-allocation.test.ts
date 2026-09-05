@@ -81,4 +81,34 @@ describe('project asset file name allocation', () => {
       count: 2,
     })).toEqual(['urban-basilica-2.fdx', 'urban-basilica-3.fdx']);
   });
+
+  it('reserves recorded AssetFile paths even when no file exists there', async () => {
+    const projectFolder = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-file-recorded-'));
+    const screenplayFolder = normalizeProjectRelativePath('screenplay');
+
+    expect(allocateProjectAssetFileNamesSync({
+      projectFolder,
+      parent: screenplayFolder,
+      namingMode: { kind: 'external' },
+      generatedBaseName: 'unused',
+      sourceProjectRelativePath: 'notes.md',
+      count: 1,
+      reservedProjectRelativePaths: new Set([
+        normalizeProjectRelativePath('screenplay/notes.md'),
+      ]),
+    })).toEqual(['notes-2.md']);
+  });
+
+  it('encodes path-significant extension characters into one safe segment', async () => {
+    const projectFolder = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-file-extension-'));
+
+    expect(allocateProjectAssetFileNamesSync({
+      projectFolder,
+      parent: normalizeProjectRelativePath('screenplay'),
+      namingMode: { kind: 'external' },
+      generatedBaseName: 'unused',
+      sourceProjectRelativePath: 'notes.foo\\bar',
+      count: 1,
+    })).toEqual(['notes.foo%5cbar']);
+  });
 });

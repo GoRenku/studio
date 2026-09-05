@@ -24,6 +24,7 @@ export async function resolveProjectCoverDestinationFile(
     generatedBaseName: fixedFileStem('cover'),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -37,6 +38,7 @@ export function resolveProjectCoverDestinationFileSync(
     generatedBaseName: fixedFileStem('cover'),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -63,5 +65,6 @@ export async function resolveProjectCoverDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }

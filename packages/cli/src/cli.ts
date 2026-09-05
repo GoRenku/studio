@@ -95,6 +95,8 @@ Options
   --storage-root       Override configured storage root for this command
   --project            Project name for project information commands
   --owner              Asset owner for Asset listing
+  --limit              Maximum Asset rows to return in one page
+  --cursor             Opaque cursor from the previous Asset listing page
   --target             Generation target or Asset selection target
   --purpose            Media purpose key
   --reference-name     Asset reference name
@@ -272,6 +274,12 @@ function createCliFlags() {
       type: 'string',
     },
     owner: {
+      type: 'string',
+    },
+    limit: {
+      type: 'number',
+    },
+    cursor: {
       type: 'string',
     },
     order: {
@@ -580,6 +588,8 @@ export async function runRenkuCli(
             tag: cli.flags.tag?.length ? cli.flags.tag : undefined,
             clearTags: cli.flags.clearTags,
             locale: cli.flags.locale,
+            limit: cli.flags.limit,
+            cursor: cli.flags.cursor,
           },
           json: cli.flags.json,
           io,

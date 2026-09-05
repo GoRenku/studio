@@ -28,6 +28,7 @@ export async function resolveLocationDestinationFile(
     generatedBaseName: locationGeneratedFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -41,6 +42,7 @@ export function resolveLocationDestinationFileSync(
     generatedBaseName: locationGeneratedFileStem(input),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -68,6 +70,7 @@ export async function resolveLocationDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 

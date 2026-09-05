@@ -133,7 +133,11 @@ async function persistProjectAssetFileAtDestination(
   assertResolvedPathInsideProject(input.projectFolder, destinationPath);
   let copied = false;
   try {
-    await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+    try {
+      await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+    } catch {
+      throw destinationWriteFailure(input.destinationProjectRelativePath);
+    }
     if (input.sourcePath !== destinationPath) {
       try {
         await fs.copyFile(input.sourcePath, destinationPath, fsSync.constants.COPYFILE_EXCL);
@@ -141,7 +145,10 @@ async function persistProjectAssetFileAtDestination(
         if (isFileExistsError(error)) {
           throw destinationConflict(input.destinationProjectRelativePath);
         }
-        throw error;
+        if (!(await fileIsReadable(input.sourcePath))) {
+          throw sourceReadFailure(input.sourcePath);
+        }
+        throw destinationWriteFailure(input.destinationProjectRelativePath);
       }
       copied = true;
       input.writeSet?.recordCreatedFile(input.destinationProjectRelativePath);
@@ -150,6 +157,12 @@ async function persistProjectAssetFileAtDestination(
       code: 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND',
       message: `Persisted project asset file was not found: ${input.destinationProjectRelativePath}.`,
     });
+    let contentHash: string;
+    try {
+      contentHash = await hashFile(destinationPath);
+    } catch {
+      throw destinationWriteFailure(input.destinationProjectRelativePath);
+    }
     insertAssetFileRecord(input.session, {
       id: input.assetFileId,
       assetId: input.assetId,
@@ -158,7 +171,7 @@ async function persistProjectAssetFileAtDestination(
       mimeType: input.mimeType ?? mimeTypeForProjectPath(input.destinationProjectRelativePath, input.mediaKind),
       mediaKind: input.mediaKind,
       sizeBytes: stats.size,
-      contentHash: await hashFile(destinationPath),
+      contentHash,
       width: input.width,
       height: input.height,
       durationSeconds: input.durationSeconds,
@@ -225,7 +238,11 @@ export function persistProjectAssetFileAtDestinationSync(input: {
   assertResolvedPathInsideProject(input.projectFolder, destinationPath);
   let copied = false;
   try {
-    fsSync.mkdirSync(path.dirname(destinationPath), { recursive: true });
+    try {
+      fsSync.mkdirSync(path.dirname(destinationPath), { recursive: true });
+    } catch {
+      throw destinationWriteFailure(input.destinationProjectRelativePath);
+    }
     if (input.sourcePath !== destinationPath) {
       try {
         fsSync.copyFileSync(input.sourcePath, destinationPath, fsSync.constants.COPYFILE_EXCL);
@@ -233,7 +250,10 @@ export function persistProjectAssetFileAtDestinationSync(input: {
         if (isFileExistsError(error)) {
           throw destinationConflict(input.destinationProjectRelativePath);
         }
-        throw error;
+        if (!fileIsReadableSync(input.sourcePath)) {
+          throw sourceReadFailure(input.sourcePath);
+        }
+        throw destinationWriteFailure(input.destinationProjectRelativePath);
       }
       copied = true;
       input.writeSet?.recordCreatedFile(input.destinationProjectRelativePath);
@@ -242,6 +262,12 @@ export function persistProjectAssetFileAtDestinationSync(input: {
       code: 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND',
       message: `Persisted project asset file was not found: ${input.destinationProjectRelativePath}.`,
     });
+    let contentHash: string;
+    try {
+      contentHash = hashFileSync(destinationPath);
+    } catch {
+      throw destinationWriteFailure(input.destinationProjectRelativePath);
+    }
     insertAssetFileRecord(input.session, {
       id: input.assetFileId,
       assetId: input.assetId,
@@ -250,7 +276,7 @@ export function persistProjectAssetFileAtDestinationSync(input: {
       mimeType: input.mimeType ?? mimeTypeForProjectPath(input.destinationProjectRelativePath, input.mediaKind),
       mediaKind: input.mediaKind,
       sizeBytes: stats.size,
-      contentHash: hashFileSync(destinationPath),
+      contentHash,
       width: input.width,
       height: input.height,
       durationSeconds: input.durationSeconds,
@@ -284,6 +310,45 @@ function isDestinationConflict(error: unknown): boolean {
 function isFileExistsError(error: unknown): boolean {
   return typeof error === 'object' && error !== null &&
     'code' in error && error.code === 'EEXIST';
+}
+
+async function fileIsReadable(absolutePath: string): Promise<boolean> {
+  try {
+    await hashFile(absolutePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function fileIsReadableSync(absolutePath: string): boolean {
+  try {
+    hashFileSync(absolutePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sourceReadFailure(absolutePath: string): ProjectDataError {
+  return new ProjectDataError(
+    'PROJECT_ASSET_FILE_SOURCE_READ_FAILED',
+    `Project asset file source could not be read: ${absolutePath}.`,
+    { suggestion: 'Choose a readable regular source file and retry.' }
+  );
+}
+
+function destinationWriteFailure(
+  projectRelativePath: ProjectRelativePath,
+): ProjectDataError {
+  return new ProjectDataError(
+    'PROJECT_ASSET_FILE_DESTINATION_WRITE_FAILED',
+    `Project asset file destination could not be written: ${projectRelativePath}.`,
+    {
+      suggestion:
+        'Check that the Project folder is writable and has sufficient free space, then retry.',
+    }
+  );
 }
 
 function destinationConflict(path: ProjectRelativePath): ProjectDataError {

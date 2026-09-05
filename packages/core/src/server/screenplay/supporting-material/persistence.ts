@@ -132,10 +132,37 @@ export function isProjectAssetDestinationConflict(error: unknown): boolean {
     );
 }
 
+export function isProjectAssetSourceReadFailure(error: unknown): boolean {
+  return error instanceof ProjectDataError
+    && (
+      error.code === 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND'
+      || error.code === 'PROJECT_ASSET_FILE_SOURCE_READ_FAILED'
+    );
+}
+
+export function isProjectAssetDestinationWriteFailure(error: unknown): boolean {
+  return error instanceof ProjectDataError
+    && (
+      error.code === 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND'
+      || error.code === 'PROJECT_ASSET_FILE_DESTINATION_WRITE_FAILED'
+    );
+}
+
 export function destinationConflict(message: string): ProjectDataError {
   return new ProjectDataError(
     'SCREENPLAY_SUPPORTING_MATERIAL_DESTINATION_CONFLICT',
     message,
     { suggestion: 'Inspect the registered supporting-material Asset and retained project file.' },
+  );
+}
+
+export function destinationWriteFailure(): ProjectDataError {
+  return new ProjectDataError(
+    'SCREENPLAY_SUPPORTING_MATERIAL_DESTINATION_WRITE_FAILED',
+    'Could not retain supporting material under screenplay/.',
+    {
+      suggestion:
+        'Check that the Project folder is writable and has sufficient free space, then retry.',
+    },
   );
 }

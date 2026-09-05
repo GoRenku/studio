@@ -1,5 +1,7 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
+import { listAssetFileRecords } from '../../database/access/asset-files.js';
+import { normalizeProjectRelativePath } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { ProjectAssetFileDestination, ProjectMediaKind } from '../types.js';
 import type { ProjectAssetFileNamingMode } from '../types.js';
@@ -189,7 +191,10 @@ export async function resolveDurableDestinationFile(input: {
   mediaKind: ProjectMediaKind;
   now: string;
 }): Promise<ProjectRelativePath> {
-  return resolverFor(input.destination).resolveFile(input as never);
+  return resolverFor(input.destination).resolveFile({
+    ...input,
+    reservedProjectRelativePaths: activeAssetFilePathReservations(input.session),
+  } as never);
 }
 
 export function resolveDurableDestinationFileSync(input: {
@@ -201,7 +206,10 @@ export function resolveDurableDestinationFileSync(input: {
   mediaKind: ProjectMediaKind;
   now: string;
 }): ProjectRelativePath {
-  return resolverFor(input.destination).resolveFileSync(input as never);
+  return resolverFor(input.destination).resolveFileSync({
+    ...input,
+    reservedProjectRelativePaths: activeAssetFilePathReservations(input.session),
+  } as never);
 }
 
 export async function resolveDurableDestinationRoot(input: {
@@ -237,7 +245,20 @@ export async function resolveDurableDestinationOutputNames(input: {
   now: string;
   outputFormatHint?: string;
 }): Promise<string[]> {
-  return resolverFor(input.destination).resolveOutputNames(input as never);
+  return resolverFor(input.destination).resolveOutputNames({
+    ...input,
+    reservedProjectRelativePaths: activeAssetFilePathReservations(input.session),
+  } as never);
+}
+
+function activeAssetFilePathReservations(
+  session: DatabaseSession,
+): ReadonlySet<ProjectRelativePath> {
+  return new Set(
+    listAssetFileRecords(session).map((file) =>
+      normalizeProjectRelativePath(file.projectRelativePath)
+    ),
+  );
 }
 
 function castResolver<K extends 'cast.characterSheet' | 'cast.profile' | 'cast.voiceSample'>(): DestinationResolver<K> {

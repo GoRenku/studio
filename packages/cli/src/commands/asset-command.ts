@@ -36,6 +36,8 @@ export interface AssetCommandFlags {
   tag?: string[];
   clearTags?: boolean;
   locale?: string;
+  limit?: number;
+  cursor?: string;
 }
 
 export async function runAssetCommand(
@@ -122,6 +124,8 @@ async function listAssets(options: RunAssetCommandOptions): Promise<number> {
     locale: readLocale(options),
     type: optionalTrimmed(options.flags.type),
     mediaKind: optionalTrimmed(options.flags.mediaKind),
+    limit: options.flags.limit,
+    cursor: optionalTrimmed(options.flags.cursor),
     homeDir: options.homeDir,
   });
   writeAssetList(options, page);
@@ -215,6 +219,9 @@ function writeAssetList(options: RunAssetCommandOptions, page: AssetPage): void 
     options.io.stdout.log(
       `${asset.id} ${asset.type}${asset.id === page.selectedAssetId ? ' (selected)' : ''}`
     );
+  }
+  if (page.nextCursor) {
+    options.io.stdout.log(`Next cursor: ${page.nextCursor}`);
   }
 }
 

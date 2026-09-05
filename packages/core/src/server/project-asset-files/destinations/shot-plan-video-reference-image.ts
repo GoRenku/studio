@@ -23,6 +23,7 @@ export async function resolveShotPlanVideoReferenceImageDestinationFile(
     generatedBaseName: input.destination.role,
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -36,6 +37,7 @@ export function resolveShotPlanVideoReferenceImageDestinationFileSync(
     generatedBaseName: input.destination.role,
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -62,5 +64,6 @@ export async function resolveShotPlanVideoReferenceImageDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }

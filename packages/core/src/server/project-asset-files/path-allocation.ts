@@ -81,6 +81,7 @@ export async function allocateProjectAssetFilePath(input: {
   sourceProjectRelativePath: string;
   outputFormatHint?: string;
   tokenSource?: GenerationFileTokenSource;
+  reservedProjectRelativePaths?: ReadonlySet<ProjectRelativePath>;
 }): Promise<ProjectRelativePath> {
   const names = await allocateProjectAssetFileNames({ ...input, count: 1 });
   return joinProjectRelativePath(input.parent, names[0]!);
@@ -94,6 +95,7 @@ export function allocateProjectAssetFilePathSync(input: {
   sourceProjectRelativePath: string;
   outputFormatHint?: string;
   tokenSource?: GenerationFileTokenSource;
+  reservedProjectRelativePaths?: ReadonlySet<ProjectRelativePath>;
 }): ProjectRelativePath {
   const names = allocateProjectAssetFileNamesSync({ ...input, count: 1 });
   return joinProjectRelativePath(input.parent, names[0]!);
@@ -108,13 +110,14 @@ export async function allocateProjectAssetFileNames(input: {
   outputFormatHint?: string;
   count: number;
   tokenSource?: GenerationFileTokenSource;
+  reservedProjectRelativePaths?: ReadonlySet<ProjectRelativePath>;
 }): Promise<string[]> {
   return input.namingMode.kind === 'generated'
     ? allocateGeneratedNames(input, async (name) =>
-        projectPathExists(input.projectFolder, joinProjectRelativePath(input.parent, name))
+        projectAssetFilePathIsOccupied(input, name)
       )
     : allocateExternalNames(input, async (name) =>
-        projectPathExists(input.projectFolder, joinProjectRelativePath(input.parent, name))
+        projectAssetFilePathIsOccupied(input, name)
       );
 }
 
@@ -127,14 +130,41 @@ export function allocateProjectAssetFileNamesSync(input: {
   outputFormatHint?: string;
   count: number;
   tokenSource?: GenerationFileTokenSource;
+  reservedProjectRelativePaths?: ReadonlySet<ProjectRelativePath>;
 }): string[] {
   return input.namingMode.kind === 'generated'
     ? allocateGeneratedNamesSync(input, (name) =>
-        projectPathExistsSync(input.projectFolder, joinProjectRelativePath(input.parent, name))
+        projectAssetFilePathIsOccupiedSync(input, name)
       )
     : allocateExternalNamesSync(input, (name) =>
-        projectPathExistsSync(input.projectFolder, joinProjectRelativePath(input.parent, name))
+        projectAssetFilePathIsOccupiedSync(input, name)
       );
+}
+
+async function projectAssetFilePathIsOccupied(
+  input: {
+    projectFolder: string;
+    parent: ProjectRelativePath;
+    reservedProjectRelativePaths?: ReadonlySet<ProjectRelativePath>;
+  },
+  name: string,
+): Promise<boolean> {
+  const candidate = joinProjectRelativePath(input.parent, name);
+  return input.reservedProjectRelativePaths?.has(candidate) === true
+    || await projectPathExists(input.projectFolder, candidate);
+}
+
+function projectAssetFilePathIsOccupiedSync(
+  input: {
+    projectFolder: string;
+    parent: ProjectRelativePath;
+    reservedProjectRelativePaths?: ReadonlySet<ProjectRelativePath>;
+  },
+  name: string,
+): boolean {
+  const candidate = joinProjectRelativePath(input.parent, name);
+  return input.reservedProjectRelativePaths?.has(candidate) === true
+    || projectPathExistsSync(input.projectFolder, candidate);
 }
 
 async function allocateGeneratedNames(

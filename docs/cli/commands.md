@@ -746,8 +746,14 @@ renku asset list \
   --project <project-name> \
   --owner project \
   --type screenplay_supporting_material \
+  --limit 200 \
   --json
 ```
+
+Asset listing is paginated. When `nextCursor` is not `null`, repeat the same
+command with `--cursor <nextCursor>` and accumulate `items` until the response
+returns `nextCursor: null`. Reading every active supporting-material source
+requires exhausting all pages.
 
 ## `renku screenplay apply`
 
@@ -1795,6 +1801,10 @@ Options:
   forms are Cast, Location, Lookbook, Shot, and Scene Beat only.
 - `--asset`: required by `select`.
 - `--type`, `--media-kind`, and `--locale`: optional listing filters.
+- `--limit`: optional listing page size. Core accepts at most 200 Assets per
+  page and defaults to 60.
+- `--cursor`: optional opaque `nextCursor` returned by the previous listing
+  page. Keep all other listing filters unchanged when requesting the next page.
 - `--title`, `--summary`, `--reference-name`, and `--locale`: Asset-owned
   metadata updates.
 - repeated `--tag` replaces the complete ordered tag list. `--clear-tags`
@@ -1808,7 +1818,8 @@ provider request inputs.
 
 JSON listing returns an `AssetPage` with `items`, `nextCursor`, and
 `selectedAssetId`, so callers receive the owner’s current canonical choice with
-the candidate collection.
+the candidate collection. Callers that require the complete collection must
+request pages until `nextCursor` is `null`.
 
 ## `renku trash`
 

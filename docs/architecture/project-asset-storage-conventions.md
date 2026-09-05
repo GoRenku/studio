@@ -175,7 +175,16 @@ screenplay/research-notes-2.pdf
 
 External files do not receive `gxxx`. A basename is a human-readable label,
 not identity or provenance. Supporting material preserves any source extension;
-an extensionless source receives `.bin`. Its bytes are otherwise unchanged.
+an extensionless source receives `.bin`. Characters in an arbitrary extension
+that could change project-path structure are encoded into the filename segment;
+for example, the POSIX filename `notes.foo\bar` is retained as
+`notes.foo%5cbar`, not as a nested folder. This is filename safety rather than
+a content-type allowlist. The retained bytes are otherwise unchanged.
+
+Active AssetFile paths remain reserved even if their physical files are
+missing. A new external file with the same normalized name receives the next
+numeric suffix instead of reusing a path whose recorded content identity
+belongs to another AssetFile.
 
 For Project Cover imports this means generated media uses
 `covers/cover-gxxx.<ext>`, while an external source keeps its normalized

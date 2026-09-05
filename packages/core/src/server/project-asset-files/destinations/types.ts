@@ -22,6 +22,7 @@ export interface DestinationFileInput<K extends DestinationKind> {
   mediaKind: ProjectMediaKind;
   now: string;
   outputFormatHint?: string;
+  reservedProjectRelativePaths: ReadonlySet<ProjectRelativePath>;
 }
 
 export interface DestinationRootInput<K extends DestinationKind> {
@@ -43,6 +44,7 @@ export interface DestinationOutputNamesInput<K extends DestinationKind> {
   outputCount: number;
   now: string;
   outputFormatHint?: string;
+  reservedProjectRelativePaths: ReadonlySet<ProjectRelativePath>;
 }
 
 export interface DestinationResolver<K extends DestinationKind> {

@@ -7,18 +7,23 @@ import { createBlankMovieProject, writeConfig } from '../../testing/project-data
 
 describe('Screenplay supporting material import', () => {
   let homeDir: string;
+  let projectFolder: string;
   let service = createProjectDataService();
 
   beforeEach(async () => {
     homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-supporting-material-'));
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
     service = createProjectDataService();
-    await createBlankMovieProject({
+    const created = await createBlankMovieProject({
       homeDir,
       projectData: service,
       projectName: 'source-context',
       title: 'Source Context',
     });
+    if (!created) {
+      throw new Error('Project fixture was not created.');
+    }
+    projectFolder = created.projectPath;
   });
 
   it('retains arbitrary and empty source files as exact opaque Project assets', async () => {
@@ -108,6 +113,57 @@ describe('Screenplay supporting material import', () => {
     expect(second.material.id).not.toBe(first.material.id);
   });
 
+  it('reserves an active AssetFile path when its retained file is missing', async () => {
+    const firstFolder = path.join(homeDir, 'first');
+    const secondFolder = path.join(homeDir, 'second');
+    await fs.mkdir(firstFolder);
+    await fs.mkdir(secondFolder);
+    const firstPath = path.join(firstFolder, 'notes.md');
+    const secondPath = path.join(secondFolder, 'notes.md');
+    await fs.writeFile(firstPath, 'first edition');
+    await fs.writeFile(secondPath, 'second edition');
+    const first = await service.importScreenplaySupportingMaterial({
+      projectName: 'source-context', sourcePath: firstPath, homeDir,
+    });
+    await fs.rm(path.join(
+      first.project.projectFolder,
+      first.material.files[0]!.projectRelativePath,
+    ));
+
+    const second = await service.importScreenplaySupportingMaterial({
+      projectName: 'source-context', sourcePath: secondPath, homeDir,
+    });
+
+    expect(first.material.files[0]!.projectRelativePath).toBe('screenplay/notes.md');
+    expect(second.material.files[0]!.projectRelativePath).toBe('screenplay/notes-2.md');
+    expect(second.material.id).not.toBe(first.material.id);
+    await expect(fs.readFile(path.join(
+      second.project.projectFolder,
+      second.material.files[0]!.projectRelativePath,
+    ), 'utf8')).resolves.toBe('second edition');
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'keeps arbitrary extensions inside one retained filename segment',
+    async () => {
+      const sourcePath = path.join(homeDir, 'notes.foo\\bar');
+      await fs.writeFile(sourcePath, 'opaque source');
+
+      const imported = await service.importScreenplaySupportingMaterial({
+        projectName: 'source-context', sourcePath, homeDir,
+      });
+
+      expect(imported.material.title).toBe('notes.foo\\bar');
+      expect(imported.material.files[0]!.projectRelativePath).toBe(
+        'screenplay/notes.foo%5cbar',
+      );
+      await expect(fs.readFile(path.join(
+        imported.project.projectFolder,
+        imported.material.files[0]!.projectRelativePath,
+      ), 'utf8')).resolves.toBe('opaque source');
+    },
+  );
+
   it('does not require or mutate screenplay content', async () => {
     await service.createScreenplay({
       projectName: 'source-context',
@@ -173,6 +229,51 @@ describe('Screenplay supporting material import', () => {
     })).resolves.toMatchObject({ orderedSceneIds: [expect.any(String)] });
   });
 
+  it('reserves a missing retained FDX AssetFile path during refresh', async () => {
+    const fdxPath = path.join(homeDir, 'script.fdx');
+    await fs.writeFile(
+      fdxPath,
+      '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="Scene Heading"><Text>EXT. FIELD - DAY</Text></Paragraph>'
+      + '</Content></FinalDraft>',
+      'utf8',
+    );
+    await service.importFdxScreenplay({
+      projectName: 'source-context', sourcePath: fdxPath, homeDir,
+    });
+    const [firstSource] = await service.listAssets({
+      projectName: 'source-context',
+      owner: { kind: 'project' },
+      type: 'screenplay_source',
+      homeDir,
+    });
+    await fs.rm(path.join(
+      projectFolder,
+      firstSource!.files[0]!.projectRelativePath,
+    ));
+    await fs.writeFile(
+      fdxPath,
+      '<FinalDraft DocumentType="Script"><Content>'
+      + '<Paragraph Type="Scene Heading"><Text>INT. BARN - NIGHT</Text></Paragraph>'
+      + '</Content></FinalDraft>',
+      'utf8',
+    );
+
+    await service.importFdxScreenplay({
+      projectName: 'source-context', sourcePath: fdxPath, homeDir,
+    });
+
+    const sources = await service.listAssets({
+      projectName: 'source-context',
+      owner: { kind: 'project' },
+      type: 'screenplay_source',
+      homeDir,
+    });
+    expect(sources.map((asset) => asset.files[0]!.projectRelativePath)).toEqual(
+      expect.arrayContaining(['screenplay/script.fdx', 'screenplay/script-2.fdx']),
+    );
+  });
+
   it('keeps raw supporting material out of downstream media generation context', async () => {
     await service.openCurrentProject({
       projectName: 'source-context', homeDir,
@@ -224,6 +325,26 @@ describe('Screenplay supporting material import', () => {
       sourcePath: homeDir,
       homeDir,
     })).rejects.toMatchObject({ code: 'SCREENPLAY_SUPPORTING_MATERIAL_INVALID_SOURCE' });
+    await expect(service.listAssets({
+      projectName: 'source-context',
+      owner: { kind: 'project' },
+      type: 'screenplay_supporting_material',
+      homeDir,
+    })).resolves.toEqual([]);
+  });
+
+  it('reports a structured destination failure when screenplay storage is not writable', async () => {
+    await fs.writeFile(path.join(projectFolder, 'screenplay'), 'blocks directory creation');
+    const sourcePath = path.join(homeDir, 'notes.md');
+    await fs.writeFile(sourcePath, 'source remains readable');
+
+    await expect(service.importScreenplaySupportingMaterial({
+      projectName: 'source-context', sourcePath, homeDir,
+    })).rejects.toMatchObject({
+      code: 'SCREENPLAY_SUPPORTING_MATERIAL_DESTINATION_WRITE_FAILED',
+      suggestion:
+        'Check that the Project folder is writable and has sufficient free space, then retry.',
+    });
     await expect(service.listAssets({
       projectName: 'source-context',
       owner: { kind: 'project' },

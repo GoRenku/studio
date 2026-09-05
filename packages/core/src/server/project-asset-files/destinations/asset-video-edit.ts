@@ -28,6 +28,7 @@ export async function resolveAssetVideoEditDestinationFile(
     generatedBaseName: fixedFileStem('edited-video'),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -41,6 +42,7 @@ export function resolveAssetVideoEditDestinationFileSync(
     generatedBaseName: fixedFileStem('edited-video'),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
@@ -90,6 +92,7 @@ export async function resolveAssetVideoEditDestinationOutputNames(
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     outputFormatHint: input.outputFormatHint,
     count: input.outputCount,
+    reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
 }
 
