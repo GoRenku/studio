@@ -10,6 +10,25 @@ import { fakeProjectDataService } from '../testing/fake-project-data-service.js'
 import { makeAsset } from '../testing/route-fixtures.js';
 
 describe('supporting file routes', () => {
+  it('requires a token for upload and delegates exact bytes to Core', async () => {
+    const { projectData, app } = fixture();
+    projectData.uploadScreenplaySupportingMaterial = vi.fn().mockResolvedValue({ status: 'imported' });
+    const url = '/projects/movie/supporting-files?fileName=Research%20notes.md';
+    expect((await app.request(url, { method: 'POST', body: 'notes' })).status).toBe(403);
+    const response = await app.request(url, { method: 'POST', body: 'notes', headers: { 'X-Renku-Studio-Token': 'test-token' } });
+    expect(response.status).toBe(201);
+    const input = vi.mocked(projectData.uploadScreenplaySupportingMaterial).mock.calls[0]![0];
+    expect(input.fileName).toBe('Research notes.md');
+    expect(new TextDecoder().decode(input.contents)).toBe('notes');
+  });
+  it('returns 200 when Core deduplicates an existing supporting file', async () => {
+    const { projectData, app } = fixture();
+    projectData.uploadScreenplaySupportingMaterial = vi.fn().mockResolvedValue({ status: 'unchanged' });
+    const response = await app.request('/projects/movie/supporting-files?fileName=notes.md', {
+      method: 'POST', body: 'notes', headers: { 'X-Renku-Studio-Token': 'test-token' },
+    });
+    expect(response.status).toBe(200);
+  });
   function fixture() {
     const projectData = fakeProjectDataService();
     const app = new Hono().route('/projects/:projectName', createSupportingFilesRoute({

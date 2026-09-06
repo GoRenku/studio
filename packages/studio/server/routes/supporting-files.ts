@@ -8,11 +8,20 @@ import type { ProjectsRouteProjectData } from './projects.js';
 export function createSupportingFilesRoute({ projectData, requireToken }: {
   projectData: Pick<ProjectsRouteProjectData,
     'listProjectSupportingFiles' | 'readProjectSupportingFileInformation'
+    | 'uploadScreenplaySupportingMaterial'
     | 'resolveProjectSupportingFile' | 'discardProjectSupportingFile'>;
   requireToken: MiddlewareHandler;
 }) {
   const route = new Hono();
   route.onError((error, c) => projectErrorResponse(c, error));
+  route.post('/supporting-files', requireToken, async (c) => {
+    const report = await projectData.uploadScreenplaySupportingMaterial({
+      projectName: c.req.param('projectName')!,
+      fileName: c.req.query('fileName') ?? '',
+      contents: await c.req.arrayBuffer(),
+    });
+    return c.json(report, report.status === 'imported' ? 201 : 200);
+  });
   route.get('/supporting-files', async (c) => c.json(
     await projectData.listProjectSupportingFiles({
       projectName: c.req.param('projectName')!, ...readPageRequest(c.req.query()),

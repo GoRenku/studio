@@ -2,6 +2,7 @@ import type {
   ProjectSupportingFileInformation, ProjectSupportingFilePage, RecoverableMutationReport,
 } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
+import { uploadFileBatch } from './file-uploads';
 
 export interface SupportingFileInformationResponse extends ProjectSupportingFileInformation {
   folderActionLabel: string;
@@ -11,6 +12,10 @@ export async function readProjectSupportingFiles(projectName: string, cursor?: s
   const search = new URLSearchParams({ limit: '60' });
   if (cursor) search.set('cursor', cursor);
   return readResponse(await fetch(`${supportingFilesUrl(projectName)}?${search}`));
+}
+
+export async function uploadSupportingMaterial(projectName: string, files: File[]): Promise<void> {
+  await uploadFileBatch(supportingFilesUrl(projectName), files);
 }
 
 export async function readSupportingFileInformation(projectName: string, assetId: string): Promise<SupportingFileInformationResponse> {

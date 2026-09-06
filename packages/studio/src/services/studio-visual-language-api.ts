@@ -7,6 +7,7 @@ import type {
 } from './studio-project-contracts';
 import type { LookbookKind } from '@gorenku/studio-core/client';
 import { readStudioApiError } from './studio-api-errors';
+import { uploadFileBatch } from './file-uploads';
 
 interface InspirationResourceApiResponse {
   resource: InspirationResourceResponse;
@@ -77,26 +78,11 @@ export async function uploadInspirationImages(
   folderId: string,
   files: File[]
 ): Promise<InspirationFolderResourceResponse> {
-  let resource: InspirationFolderResourceResponse | null = null;
-  for (const file of files) {
-    const response = await fetch(
-      `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/inspiration/folders/${encodeURIComponent(folderId)}/images?fileName=${encodeURIComponent(file.name)}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': file.type || 'application/octet-stream',
-          'X-Renku-Studio-Token': readStudioApiToken(),
-        },
-        body: await file.arrayBuffer(),
-      }
-    );
-    if (!response.ok) {
-      throw await readStudioApiError(response);
-    }
-    resource = ((await response.json()) as InspirationFolderResourceApiResponse)
-      .resource;
-  }
-  return resource ?? readInspirationFolder(projectName, folderId);
+  const result = await uploadFileBatch<InspirationFolderResourceApiResponse>(
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/inspiration/folders/${encodeURIComponent(folderId)}/images`,
+    files,
+  );
+  return result?.resource ?? readInspirationFolder(projectName, folderId);
 }
 
 export async function deleteInspirationImage(

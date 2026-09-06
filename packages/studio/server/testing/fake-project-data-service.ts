@@ -38,6 +38,9 @@ export function fakeProjectDataService(): NonNullable<
   };
 
   return {
+    async uploadScreenplaySupportingMaterial() {
+      throw new Error('No supporting upload in this fixture.');
+    },
     async listProjectSupportingFiles() {
       return { items: [], nextCursor: null };
     },

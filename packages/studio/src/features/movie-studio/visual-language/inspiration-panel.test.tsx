@@ -99,7 +99,7 @@ describe('InspirationPanel', () => {
       />
     );
 
-    expect(await screen.findByText('Drop grabs here or upload images.')).not.toBeNull();
+    expect(await screen.findByText('Upload images')).not.toBeNull();
 
     const input = container.querySelector(
       'input[type="file"]'

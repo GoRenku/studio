@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectRelativePath, ProjectSupportingFile } from '@gorenku/studio-core/client';
 import { SupportingFilesTab } from './supporting-files-tab';
 import * as api from '@/services/supporting-files';
 
+vi.mock('@/ui/slider', () => ({ Slider: () => null }));
+
 vi.mock('@/services/supporting-files', () => ({
   readProjectSupportingFiles: vi.fn(), readSupportingFileInformation: vi.fn(),
   discardSupportingFile: vi.fn(), openSupportingFileFolder: vi.fn(),
   openSupportingFileTab: vi.fn(),
+  uploadSupportingMaterial: vi.fn(),
 }));
 
 const notes: ProjectSupportingFile = {
@@ -38,6 +41,34 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Supporting Files tab', () => {
+  it.each(['jpg', 'mp4'])('opens %s in the shared media dialog instead of a browser tab', async (extension) => {
+    const title = `reference.${extension}`;
+    const file = { ...notes, asset: { ...notes.asset, title, files: [{ ...notes.asset.files[0]!, projectRelativePath: `screenplay/${title}` as ProjectRelativePath }] } };
+    vi.mocked(api.readProjectSupportingFiles).mockResolvedValue({ items: [file], nextCursor: null });
+    render(<SupportingFilesTab projectName='basilica' />);
+    fireEvent.click(await screen.findByRole('button', { name: `Open ${title}` }));
+    const dialog = await screen.findByRole('dialog');
+    if (extension === 'mp4') {
+      expect(dialog.querySelector('video')?.getAttribute('src')).toContain('/notes/content');
+      const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Play shot' }));
+      expect(play).toHaveBeenCalled();
+      play.mockRestore();
+    } else {
+      expect(within(dialog).getByRole('img', { name: title }).getAttribute('src')).toContain('/notes/content');
+    }
+    expect(api.openSupportingFileTab).not.toHaveBeenCalled();
+  });
+
+  it('uploads any file type through the trailing picker and refreshes the cards', async () => {
+    vi.mocked(api.uploadSupportingMaterial).mockResolvedValue(undefined);
+    render(<SupportingFilesTab projectName='basilica' />);
+    const input = screen.getByLabelText('Upload Supporting Material');
+    const files = [new File(['notes'], 'notes.pdf'), new File(['script'], 'script.fdx')];
+    fireEvent.change(input, { target: { files } });
+    await waitFor(() => expect(api.uploadSupportingMaterial).toHaveBeenCalledWith('basilica', files));
+    await waitFor(() => expect(api.readProjectSupportingFiles).toHaveBeenCalledTimes(2));
+  });
   it('uses native image and video cards beside document cards with a shared frame', async () => {
     const files = ['research.pdf', 'notes.md', 'reference.jpg', 'reference.mp4'].map((title) => ({
       ...notes,

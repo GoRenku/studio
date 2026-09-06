@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 interface FileUploadDropzoneProps {
   accept?: string;
   multiple?: boolean;
+  disabled?: boolean;
   title: string;
   description?: string;
   className?: string;
@@ -15,6 +16,7 @@ interface FileUploadDropzoneProps {
 export function FileUploadDropzone({
   accept,
   multiple = false,
+  disabled = false,
   title,
   description,
   className,
@@ -27,7 +29,8 @@ export function FileUploadDropzone({
       htmlFor={inputId}
       className={cn(
         'flex min-h-40 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border/40 bg-muted/20 p-8 text-center transition-colors hover:border-border/60 hover:bg-item-hover-bg',
-        className
+        className,
+        disabled ? 'cursor-wait opacity-60' : 'focus-within:ring-2 focus-within:ring-ring'
       )}
     >
       <Input
@@ -35,6 +38,8 @@ export function FileUploadDropzone({
         type='file'
         accept={accept}
         multiple={multiple}
+        disabled={disabled}
+        aria-label={title}
         className='sr-only'
         onChange={(event) => {
           onFilesSelected(event.currentTarget.files);

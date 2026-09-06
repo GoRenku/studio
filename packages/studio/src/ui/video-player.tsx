@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
-import { Pause, Play } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Maximize, Minimize, Pause, Play } from 'lucide-react';
 import { Button } from './button';
 import { Slider } from './slider';
 
@@ -30,9 +30,31 @@ function VideoPlayerSurface({
   className,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const playerRef = useRef<HTMLDivElement | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const updateFullscreen = () => setFullscreen(document.fullscreenElement === playerRef.current);
+    document.addEventListener('fullscreenchange', updateFullscreen);
+    return () => document.removeEventListener('fullscreenchange', updateFullscreen);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    setFullscreenError(null);
+    try {
+      if (document.fullscreenElement === playerRef.current) {
+        await document.exitFullscreen();
+      } else {
+        await playerRef.current?.requestFullscreen();
+      }
+    } catch {
+      setFullscreenError('Fullscreen could not be opened or closed. Please try again.');
+    }
+  };
 
   const togglePlayback = useCallback(() => {
     const video = videoRef.current;
@@ -56,7 +78,7 @@ function VideoPlayerSurface({
   }, []);
 
   return (
-    <div className='flex h-full min-h-0 flex-col gap-3'>
+    <div ref={playerRef} className='flex h-full min-h-0 flex-col gap-3 fullscreen:bg-background fullscreen:p-5'>
       <div className='min-h-0 w-full flex-1 overflow-hidden rounded-lg border border-border/40 bg-black'>
         <video
           ref={videoRef}
@@ -64,7 +86,7 @@ function VideoPlayerSurface({
           title={title}
           playsInline
           preload='metadata'
-          className={className}
+          className={fullscreen ? 'h-full w-full object-contain' : className}
           onLoadedMetadata={(event) => {
             setDuration(event.currentTarget.duration || 0);
           }}
@@ -104,7 +126,19 @@ function VideoPlayerSurface({
         <span className='shrink-0 font-mono text-xs tabular-nums text-muted-foreground'>
           {formatMediaTime(currentTime)} / {formatMediaTime(duration)}
         </span>
+        <Button
+          type='button'
+          size='icon'
+          variant='ghost'
+          aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          title={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          className='h-8 w-8 shrink-0'
+          onClick={() => void toggleFullscreen()}
+        >
+          {fullscreen ? <Minimize /> : <Maximize />}
+        </Button>
       </div>
+      {fullscreenError ? <p role='alert' className='text-xs text-destructive'>{fullscreenError}</p> : null}
     </div>
   );
 }

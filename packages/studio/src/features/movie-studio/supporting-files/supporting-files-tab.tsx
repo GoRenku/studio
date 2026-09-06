@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FileText } from 'lucide-react';
+import { FileUploadArea } from '@/ui/file-upload-area';
 import type { ProjectSupportingFile, ProjectSupportingFilePage } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
 import { matchesProjectAssetsResource, useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
-import { discardSupportingFile, readProjectSupportingFiles } from '@/services/supporting-files';
+import { discardSupportingFile, readProjectSupportingFiles, uploadSupportingMaterial } from '@/services/supporting-files';
 import { SupportingFileCards } from './supporting-file-cards';
 import { SupportingFileInfoDialog } from './supporting-file-info-dialog';
 
@@ -50,20 +50,29 @@ export function SupportingFilesTab({ projectName }: { projectName: string }) {
     }));
     void load();
   };
+  const upload = async (files: File[]) => {
+    try {
+      await uploadSupportingMaterial(projectName, files);
+    } finally {
+      await load();
+    }
+  };
 
   return (
-    <div className='h-full space-y-4 overflow-y-auto bg-panel-bg px-4 py-5'>
+    <div className='flex h-full flex-col gap-4 overflow-y-auto bg-panel-bg px-4 py-5'>
       <div className='flex items-center justify-between border-b border-border/40 pb-4'>
         <h2 className='text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground'>Supporting Files</h2>
       </div>
       {loading && !page.items.length ? <p className='py-5 text-sm text-muted-foreground'>Loading supporting files…</p> : null}
-      {!loading && !error && !page.items.length ? (
-        <div className='flex min-h-40 flex-col items-center justify-center rounded-md border border-dashed border-border/50 bg-muted/15 p-6 text-center'>
-          <FileText className='mb-3 h-5 w-5 text-muted-foreground' />
-          <p className='text-sm font-medium'>No supporting files yet.</p>
-        </div>
-      ) : null}
-      <SupportingFileCards projectName={projectName} files={page.items} onInspect={setInspected} onDelete={remove} />
+      <FileUploadArea
+        label='Supporting material drop target'
+        title='Upload Supporting Material'
+        onUpload={upload}
+        className='min-h-64 flex-1 p-0'
+        cardClassName='aspect-[13/8] h-auto min-h-0 rounded-lg border border-border/40 bg-panel-header-bg p-4'
+      >
+        {(uploadCard) => <SupportingFileCards projectName={projectName} files={page.items} onInspect={setInspected} onDelete={remove} uploadCard={uploadCard} />}
+      </FileUploadArea>
       {error ? <div className='space-y-3'><p role='alert' className='text-sm text-destructive'>{error}</p><Button variant='outline' onClick={() => void reload(failedCursor.current)}>Retry</Button></div> : null}
       {page.nextCursor && !error ? <Button variant='outline' disabled={loading} onClick={() => void reload(page.nextCursor)}>{loading ? 'Loading…' : 'Load more'}</Button> : null}
       {inspected ? <SupportingFileInfoDialog key={inspected.asset.id} projectName={projectName} file={inspected} onClose={() => setInspected(null)} /> : null}

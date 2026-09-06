@@ -166,13 +166,21 @@ only that Take's selection with it.
 Project Details places **Supporting Files** immediately after Covers. Its lazy,
 paged media-card grid contains active Project-owned screenplay source and
 supporting-material Assets. It never enumerates unregistered research files.
+The trailing **Upload Supporting Material** card accepts multiple files through
+the picker or a drop anywhere in the upload region. It shares upload interaction
+and sequential HTTP transport with Inspiration Grabs. New files use the existing
+opaque supporting-material importer, including byte-based deduplication; an FDX
+uploaded here does not replace the authoritative Screenplay. Uploading is disabled
+while a batch is running, failures are shown inline, and successful files remain
+visible if a later upload fails.
 The lower-right information action shows Asset creation/update times. Those
 dates describe Studio metadata, not external-file modification times. The dialog
 omits the file path and offers **Open In Folder** on every platform.
 
-Cards open the file response directly in a separate browser tab, without a
-Studio viewer or iframe. Text, including FDX/XML, is presented literally;
-browser-supported PDF and media use native viewing. Unsupported formats
+Image and video cards open the shared Studio image and video preview dialogs.
+Document cards open the file response directly in a separate browser tab,
+without a Studio viewer or iframe. Text, including FDX/XML, is presented literally;
+browser-supported PDF uses native viewing. Unsupported formats
 download directly. Imported MIME metadata and bytes remain
 unchanged. No document conversion, semantic validation, or online viewer is used.
 

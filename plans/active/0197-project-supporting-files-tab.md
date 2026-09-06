@@ -5,6 +5,19 @@ Date: 2026-09-06
 
 ## Accepted Implementation Correction
 
+User-requested upload addition: `ui/file-upload-area.tsx` owns shared whole-region
+drag state, picker submission, busy exclusion, and inline errors. Both GrabsTab
+and SupportingFilesTab compose it with their own grid sizing. The trailing card
+uses the existing FileUploadDropzone. `services/file-uploads.ts` owns shared
+sequential byte uploads; the two feature APIs supply their endpoint.
+`POST /studio-api/projects/:projectName/supporting-files?fileName=` is token-protected
+and delegates to Core `uploadScreenplaySupportingMaterial`, whose focused
+`screenplay/supporting-material/uploads.ts` validates a filename, stages bytes in
+an isolated temporary directory, calls the existing importer, and cleans staging.
+No schema or canonical screenplay behavior changes. Uploaded FDX is opaque
+supporting material, not an authoritative-screenplay refresh. The existing
+Core importer continues to own deduplication, durable file placement, and Assets.
+
 Approved card design: a uniform 13:8 media grid with a 240px minimum width,
 wrapped regular-weight filenames on the shared bottom gradient, and the same
 info action placement for every format. Document cards use the selected large

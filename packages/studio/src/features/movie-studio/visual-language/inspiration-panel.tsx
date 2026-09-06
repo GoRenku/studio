@@ -87,9 +87,15 @@ export function InspirationPanel({
 
   const uploadImages = async (files: File[]) => {
     if (!selectedFolderId || !files.length) return;
-    const nextResource = await uploadInspirationImages(projectName, selectedFolderId, files);
-    setResource(nextResource);
-    setInspirationResource(await readInspirationResource(projectName));
+    try {
+      const nextResource = await uploadInspirationImages(projectName, selectedFolderId, files);
+      setResource(nextResource);
+    } catch (error) {
+      setResource(await readInspirationFolder(projectName, selectedFolderId));
+      throw error;
+    } finally {
+      setInspirationResource(await readInspirationResource(projectName));
+    }
   };
 
   const removeImage = async (fileName: string) => {
@@ -136,6 +142,7 @@ export function InspirationPanel({
         >
           <LineTabsContent value='grabs'>
             <GrabsTab
+              key={resource.folder.id}
               projectName={projectName}
               resource={resource}
               onUpload={uploadImages}

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createProjectDataService } from '../../project-data-service.js';
 import { createBlankMovieProject, writeConfig } from '../../testing/project-data-fixtures.js';
 
@@ -21,6 +21,49 @@ describe('Project supporting files', () => {
     await fs.writeFile(sourcePath, contents);
     return service.importScreenplaySupportingMaterial({ projectName, homeDir, sourcePath });
   }
+
+  it('uploads opaque bytes through the existing importer and rejects path filenames', async () => {
+    const contents = new TextEncoder().encode('Opaque source notes').buffer;
+    const input = { projectName, homeDir, fileName: 'research.md', contents };
+    const report = await service.uploadScreenplaySupportingMaterial(input);
+    expect(report.status).toBe('imported');
+    expect(report.material.title).toBe('research.md');
+    const information = await service.resolveProjectSupportingFile({ projectName, homeDir, assetId: report.material.id });
+    expect(await fs.readFile(information.absolutePath, 'utf8')).toBe('Opaque source notes');
+    expect((await service.uploadScreenplaySupportingMaterial(input)).status).toBe('unchanged');
+    for (const fileName of ['../notes.txt', 'C:\\notes.txt', '', '..']) {
+      await expect(service.uploadScreenplaySupportingMaterial({ ...input, fileName }))
+        .rejects.toMatchObject({ code: 'SCREENPLAY_SUPPORTING_MATERIAL_INVALID_SOURCE' });
+    }
+  });
+
+  it('preserves a successful upload and reports a warning when temporary cleanup fails', async () => {
+    const rm = vi.spyOn(fs, 'rm').mockRejectedValueOnce(new Error('temporary folder is locked'));
+    try {
+      const report = await service.uploadScreenplaySupportingMaterial({
+        projectName,
+        homeDir,
+        fileName: 'cleanup-warning.md',
+        contents: new TextEncoder().encode('Imported before cleanup').buffer,
+      });
+      expect(report.status).toBe('imported');
+      expect(report.warnings).toMatchObject([{
+        code: 'SCREENPLAY_SUPPORTING_MATERIAL_UPLOAD_CLEANUP_FAILED',
+        severity: 'warning',
+        location: { filePath: expect.stringContaining('renku-supporting-upload-') },
+      }]);
+      const information = await service.resolveProjectSupportingFile({ projectName, homeDir, assetId: report.material.id });
+      expect(await fs.readFile(information.absolutePath, 'utf8')).toBe('Imported before cleanup');
+      expect(rm).toHaveBeenCalledWith(expect.any(String), {
+        recursive: true,
+        force: true,
+        maxRetries: 3,
+        retryDelay: 100,
+      });
+    } finally {
+      rm.mockRestore();
+    }
+  });
 
   async function importFdx(extra = '') {
     const sourcePath = path.join(homeDir, 'screenplay.fdx');

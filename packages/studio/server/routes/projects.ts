@@ -49,6 +49,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'listLocationNavigation'
   | 'listAssetPage'
   | 'listProjectSupportingFiles'
+  | 'uploadScreenplaySupportingMaterial'
   | 'readProjectSupportingFileInformation'
   | 'resolveProjectSupportingFile'
   | 'discardProjectSupportingFile'

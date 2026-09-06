@@ -169,6 +169,7 @@ import type {
 export type { ProjectDatabasePreMigrationBackupReport };
 
 export interface ProjectDataService {
+  uploadScreenplaySupportingMaterial(input: import('./screenplay/supporting-material/uploads.js').UploadScreenplaySupportingMaterialInput): Promise<ImportScreenplaySupportingMaterialReport>;
   listProjectSupportingFiles(input: { projectName: string; homeDir?: string; cursor?: string | null; limit?: number }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFilePage>;
   readProjectSupportingFileInformation(input: { projectName: string; homeDir?: string; assetId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;
   resolveProjectSupportingFile(input: { projectName: string; homeDir?: string; assetId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;

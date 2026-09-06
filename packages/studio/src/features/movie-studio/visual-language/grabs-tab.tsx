@@ -1,9 +1,7 @@
-import { useState, type DragEvent } from 'react';
 import type { InspirationFolderResource } from '@gorenku/studio-core/client';
-import { FileUploadDropzone } from '@/ui/file-upload-dropzone';
+import { FileUploadArea } from '@/ui/file-upload-area';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
-import { cn } from '@/lib/utils';
 import { inspirationImageUrl } from './visual-language-image-urls';
 
 interface GrabsTabProps {
@@ -20,46 +18,16 @@ export function GrabsTab({
   onDeleteImage,
 }: GrabsTabProps) {
   const images = resource.images;
-  const [draggingFiles, setDraggingFiles] = useState(false);
-  const uploadDroppedFiles = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDraggingFiles(false);
-    const files = Array.from(event.dataTransfer.files ?? []).filter((file) =>
-      file.type.startsWith('image/')
-    );
-    if (files.length) {
-      void onUpload(files);
-    }
-  };
-
   return (
-    <div
-      role='region'
-      aria-label='Inspiration grabs drop target'
-      className={cn(
-        'min-h-full border border-dashed p-4 transition-colors',
-        draggingFiles
-          ? 'border-primary bg-primary/5'
-          : 'border-transparent bg-transparent'
-      )}
-      onDragEnter={(event) => {
-        event.preventDefault();
-        if (event.dataTransfer.types.includes('Files')) {
-          setDraggingFiles(true);
-        }
-      }}
-      onDragOver={(event) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'copy';
-      }}
-      onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setDraggingFiles(false);
-        }
-      }}
-      onDrop={uploadDroppedFiles}
+    <FileUploadArea
+      label='Inspiration grabs drop target'
+      title='Upload images'
+      accept='image/*'
+      acceptsFile={(file) => file.type.startsWith('image/')}
+      onUpload={onUpload}
+      cardClassName='aspect-video h-auto min-h-0 border border-border/40 bg-card/35 p-0'
     >
-      {images.length ? (
+      {(uploadCard) => (
         <MediaCardGrid minimumCardWidthPx={180}>
           {images.map((image) => {
             const src = inspirationImageUrl(
@@ -98,29 +66,9 @@ export function GrabsTab({
               />
             );
           })}
-          <FileButton onFiles={(files) => void onUpload(files)} />
+          {uploadCard}
         </MediaCardGrid>
-      ) : (
-        <FileUploadDropzone
-          accept='image/*'
-          multiple
-          title='Drop grabs here or upload images.'
-          description='Reference frames for this inspiration folder.'
-          onFilesSelected={(files) => void onUpload(Array.from(files ?? []))}
-        />
       )}
-    </div>
-  );
-}
-
-function FileButton({ onFiles }: { onFiles: (files: File[]) => void }) {
-  return (
-    <FileUploadDropzone
-      accept='image/*'
-      multiple
-      title='Upload images'
-      className='aspect-video h-auto min-h-0 border border-border/40 bg-card/35 p-0'
-      onFilesSelected={(files) => onFiles(Array.from(files ?? []))}
-    />
+    </FileUploadArea>
   );
 }

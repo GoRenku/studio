@@ -33,10 +33,12 @@ import {
   selectSceneStoryboardImageCandidate,
 } from '../scene-beats/storyboard-image-candidates.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
+import { uploadScreenplaySupportingMaterial } from '../screenplay/supporting-material/uploads.js';
 import { listProjectSupportingFiles, readProjectSupportingFileInformation, resolveProjectSupportingFile, discardProjectSupportingFile } from '../screenplay/supporting-files/index.js';
 
 export function createScreenplayServiceWiring(): Pick<
   ProjectDataService,
+  | 'uploadScreenplaySupportingMaterial'
   | 'listProjectSupportingFiles' | 'readProjectSupportingFileInformation'
   | 'resolveProjectSupportingFile' | 'discardProjectSupportingFile'
   | 'readScreenplayStatus' | 'readScreenplayStructure'
@@ -57,6 +59,7 @@ export function createScreenplayServiceWiring(): Pick<
   | 'selectSceneStoryboardImageCandidate' | 'discardSceneStoryboardImageCandidate'
 > {
   return {
+    uploadScreenplaySupportingMaterial,
     listProjectSupportingFiles, readProjectSupportingFileInformation,
     resolveProjectSupportingFile, discardProjectSupportingFile,
     readScreenplayStatus, readScreenplayStructure,
