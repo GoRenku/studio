@@ -69,7 +69,7 @@ describe('Studio resource key catalog', () => {
         id: 'location_gate',
       })
     ).toEqual(['surface:location:location_gate']);
-    expect(studioAssetOwnerSurfaceResourceKeys({ kind: 'project' })).toEqual([]);
+    expect(studioAssetOwnerSurfaceResourceKeys({ kind: 'project' })).toEqual(['surface:project:assets']);
     expect(
       studioAssetOwnerSurfaceResourceKeys({ kind: 'scene', id: 'scene_1' })
     ).toEqual([]);

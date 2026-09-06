@@ -610,6 +610,20 @@ meaningful product text.
 
 ## Image Aspect Ratios
 
+Supporting-file collections use the same MediaCard with a uniform 13:8 frame
+and a meaningful imported filename over the shared bottom gradient. The overlay
+`titleTreatment: 'filename'` wraps filenames using regular weight instead of
+truncating them. Document visuals use an extension label and an oversized outline
+icon: FDX amber, PDF terracotta, Markdown slate blue, other formats neutral.
+Images and videos use the existing image and hover-muted video visuals without
+detecting or changing the card aspect ratio. The `info`
+corner action uses an information icon in the existing lower-right action slot;
+`inspect` remains the request-inspection action. Document cards do not invent
+canonical selection or generate content thumbnails. File information dialogs
+use a single padded surface, a filename-led heading, aligned label/value date
+rows, and a separate readable path. Keep one folder action and the standard
+close icon; omit explanatory paragraphs and a redundant Close footer.
+
 Aspect ratio is part of the media-card contract. Callers must pass the intended
 numeric aspect ratio when using a reusable image card.
 

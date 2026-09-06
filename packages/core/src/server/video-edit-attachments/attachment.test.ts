@@ -158,6 +158,7 @@ describe('video.edit source-derived attachment', () => {
     expect(edited.asset.authoredFrom).toEqual({ kind: 'shotPlan', id: plan.shotPlan.id });
     expect(edited.asset.owner).toEqual(source.asset.owner);
     expect(edited.resourceKeys).toEqual([
+      'surface:project:assets',
       `surface:scene:${screenplay.screenplay.scenes[0]!.id}:video-generations`,
     ]);
     const videos = await projectData.listSceneShotPlanVideoGenerations({

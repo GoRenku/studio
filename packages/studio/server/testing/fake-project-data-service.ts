@@ -38,6 +38,18 @@ export function fakeProjectDataService(): NonNullable<
   };
 
   return {
+    async listProjectSupportingFiles() {
+      return { items: [], nextCursor: null };
+    },
+    async readProjectSupportingFileInformation() {
+      throw new Error('No supporting file in this fixture.');
+    },
+    async resolveProjectSupportingFile() {
+      throw new Error('No supporting file in this fixture.');
+    },
+    async discardProjectSupportingFile() {
+      throw new Error('No supporting file in this fixture.');
+    },
     async createMovieProject(input) {
       return {
         projectName: input.projectName,

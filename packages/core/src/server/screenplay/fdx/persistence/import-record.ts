@@ -132,18 +132,18 @@ export function assertAssetIsNotScreenplayImportSource(
   session: DatabaseSession,
   assetId: string,
 ): void {
-  const row = session.db
-    .select({ id: screenplayImports.id })
-    .from(screenplayImports)
-    .where(eq(screenplayImports.sourceAssetId, assetId))
-    .get();
-  if (row) {
-    throw new ProjectDataError(
-      'SCREENPLAY_FDX_SOURCE_IN_USE',
-      `Asset ${assetId} is the retained source of Screenplay Import ${row.id}.`,
-      { suggestion: 'Keep the retained FDX source while its Screenplay Import exists.' },
-    );
+  const asset = readAssetRecord(session, assetId);
+  const block = screenplaySourceDeleteBlock(asset?.type);
+  if (block) {
+    throw new ProjectDataError(block.code, block.message);
   }
+}
+
+export function screenplaySourceDeleteBlock(type: string | undefined) {
+  return type === 'screenplay_source' ? {
+    code: 'SCREENPLAY_FDX_SOURCE_PROTECTED',
+    message: 'Retained screenplay source files cannot be deleted.',
+  } : null;
 }
 
 function isTechnicalLog(value: unknown): value is ScreenplayImportLogEntry[] {

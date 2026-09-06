@@ -248,3 +248,4 @@ export type {
   VisualLanguageCatalogEntry,
   VisualLanguageCatalogIllustration,
 } from './visual-language-catalog.js';
+export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportingFileInformation } from './screenplay/supporting-files.js';

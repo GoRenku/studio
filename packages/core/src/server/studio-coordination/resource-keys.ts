@@ -149,7 +149,12 @@ export function studioAssetOwnerSurfaceResourceKeys(owner: AssetOwner): string[]
     case 'shot':
       return [];
     case 'project':
+      return [studioProjectAssetsResourceKey()];
     case 'scene':
       return [];
   }
+}
+
+export function studioProjectAssetsResourceKey(): string {
+  return 'surface:project:assets';
 }

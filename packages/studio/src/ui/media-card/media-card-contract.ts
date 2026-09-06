@@ -13,6 +13,7 @@ export interface MediaCardProps {
 }
 
 export type MediaCardMedia =
+  | { kind: 'document'; extension: string }
   | MediaCardImage
   | MediaCardAudio
   | MediaCardVideo
@@ -95,6 +96,7 @@ export type MediaCardPresentation =
       kind: 'overlay';
       copy?: {
         title?: string;
+        titleTreatment?: 'filename';
         description?: string;
       };
     }
@@ -212,6 +214,12 @@ export type MediaCardSelection =
     };
 
 export type MediaCardCornerAction =
+  | {
+      kind: 'info';
+      label: string;
+      visibility: 'always' | 'hover-or-focus';
+      onAction: () => void;
+    }
   | {
       kind: 'inspect';
       label: string;

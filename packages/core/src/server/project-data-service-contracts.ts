@@ -169,6 +169,10 @@ import type {
 export type { ProjectDatabasePreMigrationBackupReport };
 
 export interface ProjectDataService {
+  listProjectSupportingFiles(input: { projectName: string; homeDir?: string; cursor?: string | null; limit?: number }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFilePage>;
+  readProjectSupportingFileInformation(input: { projectName: string; homeDir?: string; assetId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;
+  resolveProjectSupportingFile(input: { projectName: string; homeDir?: string; assetId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;
+  discardProjectSupportingFile(input: { projectName: string; homeDir?: string; assetId: string }): Promise<RecoverableMutationReport>;
   createMovieProject(input: CreateMovieProjectInput): Promise<ProjectCreateReport>;
   deleteProject(input: DeleteProjectInput): Promise<ProjectDeleteReport>;
   migrateProjectDatabase(

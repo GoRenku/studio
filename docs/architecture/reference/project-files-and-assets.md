@@ -161,6 +161,35 @@ Each Take is independently selected or unselected for provider-reference
 context. New and restored Takes remain unselected; discarding one Take removes
 only that Take's selection with it.
 
+## Project Supporting Files
+
+Project Details places **Supporting Files** immediately after Covers. Its lazy,
+paged media-card grid contains active Project-owned screenplay source and
+supporting-material Assets. It never enumerates unregistered research files.
+The lower-right information action shows Asset creation/update times. Those
+dates describe Studio metadata, not external-file modification times. The dialog
+omits the file path and offers **Open In Folder** on every platform.
+
+Cards open the file response directly in a separate browser tab, without a
+Studio viewer or iframe. Text, including FDX/XML, is presented literally;
+browser-supported PDF and media use native viewing. Unsupported formats
+download directly. Imported MIME metadata and bytes remain
+unchanged. No document conversion, semantic validation, or online viewer is used.
+
+Supporting material uses recoverable Studio Trash. All retained FDX sources,
+including historical editions, are protected by Core as documented in
+`../../decisions/0092-protect-retained-screenplay-sources.md`.
+
+Open In Folder launches the
+containing folder on the Studio server computer. The token-protected action
+accepts an Asset ID, resolves its active registered file in Core, and invokes a
+platform launcher without a shell. It does not accept an arbitrary browser path.
+Headless servers report an explicit launch failure.
+
+The Project Asset refresh key is `surface:project:assets`. New imports, source
+refreshes, discard, and restore invalidate this collection without forcing a
+Project-shell reload or a canonical screenplay revision.
+
 ## Working Assets Versus Production Assets
 
 Working assets are for development and iteration.

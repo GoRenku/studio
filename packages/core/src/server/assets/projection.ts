@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, or, type SQL } from 'drizzle-orm';
 import type {
   Asset,
   AssetFile,
@@ -27,6 +27,7 @@ export interface ListAssetPageInSessionInput {
   owner: AssetOwner;
   localeId?: string | null;
   type?: string;
+  types?: string[];
   mediaKind?: string;
   limit?: number;
   cursor?: string | null;
@@ -66,6 +67,9 @@ export function listAssetPageInSession(
   ];
   if (input.type) {
     conditions.push(eq(assets.type, input.type));
+  }
+  if (input.types) {
+    conditions.push(inArray(assets.type, input.types));
   }
   if (input.mediaKind) {
     conditions.push(eq(assets.mediaKind, input.mediaKind));

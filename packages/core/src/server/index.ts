@@ -449,3 +449,4 @@ export type {
   StudioRuntimeDescriptor,
   StudioSelectionParseResult,
 } from './studio-coordination/index.js';
+export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportingFileInformation } from '../client/screenplay/supporting-files.js';

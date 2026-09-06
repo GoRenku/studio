@@ -13,6 +13,9 @@ vi.mock('./project-settings-panel', () => ({
 vi.mock('../project-covers/project-covers-tab', () => ({
   ProjectCoversTab: () => <div data-testid='project-covers'>Project Covers</div>,
 }));
+vi.mock('../supporting-files/supporting-files-tab', () => ({
+  SupportingFilesTab: () => <div data-testid='supporting-files'>Supporting files</div>,
+}));
 
 describe('ProjectDetailsPanel', () => {
   it('keeps form tabs mounted and lazy-mounts Covers after Settings', () => {
@@ -27,6 +30,9 @@ describe('ProjectDetailsPanel', () => {
     const projectInfoTab = screen.getByRole('tab', { name: 'Project Info' });
     const settingsTab = screen.getByRole('tab', { name: 'Settings' });
     const coversTab = screen.getByRole('tab', { name: 'Covers' });
+    const supportingTab = screen.getByRole('tab', { name: 'Supporting Files' });
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Project Info', 'Settings', 'Covers', 'Supporting Files']);
+    expect(screen.queryByTestId('supporting-files')).toBeNull();
     expect(projectInfoTab.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByTestId('project-information')).toBeTruthy();
     expect(screen.getByTestId('project-settings')).toBeTruthy();
@@ -42,6 +48,9 @@ describe('ProjectDetailsPanel', () => {
     fireEvent.click(coversTab);
     expect(coversTab.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByTestId('project-covers')).toBeTruthy();
+    fireEvent.mouseDown(supportingTab, { button: 0 });
+    fireEvent.click(supportingTab);
+    expect(screen.getByTestId('supporting-files')).toBeTruthy();
     expect(screen.getByTestId('project-information')).toBeTruthy();
     expect(screen.getByTestId('project-settings')).toBeTruthy();
   });

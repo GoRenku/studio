@@ -10,6 +10,7 @@ import {
 import { ProjectInformationPanel } from '../project-information/project-information-panel';
 import { ProjectSettingsPanel } from './project-settings-panel';
 import { ProjectCoversTab } from '../project-covers/project-covers-tab';
+import { SupportingFilesTab } from '../supporting-files/supporting-files-tab';
 
 interface ProjectDetailsPanelProps {
   project: ProjectShellWithHttp;
@@ -72,6 +73,7 @@ export function ProjectDetailsPanel({
         { value: 'project-info', label: 'Project Info' },
         { value: 'settings', label: 'Settings' },
         { value: 'covers', label: 'Covers' },
+        { value: 'supporting-files', label: 'Supporting Files' },
       ]}
     >
       <LineTabsContent
@@ -100,6 +102,9 @@ export function ProjectDetailsPanel({
           project={project}
           onProjectChange={onProjectChange}
         />
+      </LineTabsContent>
+      <LineTabsContent value='supporting-files' className='min-h-0 flex-1 overflow-hidden'>
+        <SupportingFilesTab key={project.project.projectName} projectName={project.project.projectName} />
       </LineTabsContent>
     </LineTabs>
   );

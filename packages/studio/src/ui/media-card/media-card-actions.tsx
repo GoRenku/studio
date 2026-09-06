@@ -1,4 +1,4 @@
-import { Check, CircleDot, FileSearch, Pencil, Trash2 } from 'lucide-react';
+import { Check, CircleDot, FileSearch, Info, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
@@ -104,7 +104,7 @@ function MediaCardSelectionControl({
 }
 
 function MediaCardCornerControl({ action }: { action: MediaCardCornerAction }) {
-  const Icon = action.kind === 'inspect' ? FileSearch : Pencil;
+  const Icon = { inspect: FileSearch, edit: Pencil, info: Info }[action.kind];
   return (
     <Tooltip>
       <TooltipTrigger asChild>

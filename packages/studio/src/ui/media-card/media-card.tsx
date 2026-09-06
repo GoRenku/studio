@@ -116,7 +116,12 @@ function MediaCardVisualCopy({
         {presentation.copy ? (
           <div className={cn('min-w-0', hasLowerActions ? 'pr-12' : null)}>
             {presentation.copy.title ? (
-              <h3 className='truncate text-sm font-semibold leading-5 text-white'>
+              <h3 className={cn(
+                'text-sm leading-5 text-white',
+                presentation.copy.titleTreatment === 'filename'
+                  ? 'break-words [overflow-wrap:anywhere] font-normal'
+                  : 'truncate font-semibold'
+              )} title={presentation.copy.title}>
                 {presentation.copy.title}
               </h3>
             ) : null}

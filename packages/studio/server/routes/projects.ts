@@ -13,6 +13,7 @@ import { readProjectCreateRequest } from '../http/project-create-request.js';
 import { readProjectDeleteRequest } from '../http/project-delete-request.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
 import { createAssetsRoute } from './assets.js';
+import { createSupportingFilesRoute } from './supporting-files.js';
 import { createContinuityRoute } from './continuity.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
 import { createGenerationRequestsRoute } from './generation-requests.js';
@@ -47,6 +48,10 @@ export type ProjectsRouteProjectData = Pick<
   | 'listCastNavigation'
   | 'listLocationNavigation'
   | 'listAssetPage'
+  | 'listProjectSupportingFiles'
+  | 'readProjectSupportingFileInformation'
+  | 'resolveProjectSupportingFile'
+  | 'discardProjectSupportingFile'
   | 'readSceneDesignResource'
   | 'readCastOverviewResource'
   | 'readCastMemberResource'
@@ -191,6 +196,7 @@ export function createProjectsRoute(
     )
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
     .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
+    .route('/:projectName', createSupportingFilesRoute({ projectData, requireToken }))
     .route('/:projectName', createCastVoicesRoute({ projectData, requireToken }))
     .route(
       '/:projectName',

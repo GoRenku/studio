@@ -71,7 +71,7 @@ The same command handles initial import and later refresh:
   and writes no database row, revision, or file;
 - a changed source whose canonical Screenplay is equal retains the new exact
   source and advances only the import pointer, with no Screenplay revision or
-  resource keys; and
+  screenplay resource keys; it emits the Project Asset collection key; and
 - a changed canonical Screenplay is accepted automatically and atomically
   replaces the complete aggregate, advances the source pointer, and creates one
   Screenplay revision.
@@ -122,6 +122,8 @@ The exact source is a Project-owned `screenplay_source` Asset with media kind
 `screenplay/`. `screenplay_import` points to the latest accepted Asset/File and
 stores importer version, commit timestamp, and the closed developer-only
 normalization log. Earlier accepted source Assets remain immutable history.
+All retained source Assets are protected from deletion, including historical
+imports; see `../decisions/0092-protect-retained-screenplay-sources.md`.
 If a later refresh returns to exact earlier bytes, Core reuses that verified
 immutable source Asset/File; a missing or mismatched historical file fails
 without advancing the current pointer.

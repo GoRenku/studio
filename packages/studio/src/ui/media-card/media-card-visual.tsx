@@ -4,7 +4,7 @@ import {
   type CSSProperties,
   type SyntheticEvent,
 } from 'react';
-import { Film, ImageOff } from 'lucide-react';
+import { FileText, Film, ImageOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AudioPreview } from '@/ui/audio-preview';
 import { VoiceOverProfilePlaceholder } from '@/ui/voice-over-profile-placeholder';
@@ -16,6 +16,13 @@ import type {
   MediaCardVideo,
 } from './media-card-contract';
 import { MediaCardMosaicGridVisual } from './media-card-mosaic-grid';
+
+const documentColors: Record<string, string> = {
+  FDX: 'text-[#bfa16c]',
+  PDF: 'text-[#c47d65]',
+  MD: 'text-[#7d9fb5]',
+  MARKDOWN: 'text-[#7d9fb5]',
+};
 
 interface MediaCardVisualProps {
   media: MediaCardMedia | null;
@@ -96,6 +103,17 @@ function MediaCardMediaVisual({
           title={media.title}
           className='w-full'
         />
+      </div>
+    );
+  }
+  if (media.kind === 'document') {
+    return (
+      <div className={cn(
+        'relative h-full w-full overflow-hidden bg-panel-header-bg',
+        documentColors[media.extension] ?? 'text-[#9b9da4]'
+      )}>
+        <span className='absolute left-4 top-4 rounded border border-current/40 px-1.5 py-0.5 text-[11px] font-medium leading-4 tracking-wide'>{media.extension || 'FILE'}</span>
+        <FileText className='absolute -right-3 top-5 h-[82%] w-auto opacity-35' strokeWidth={0.8} aria-hidden='true' />
       </div>
     );
   }

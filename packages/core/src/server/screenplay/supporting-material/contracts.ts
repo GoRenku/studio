@@ -17,5 +17,5 @@ export interface ImportScreenplaySupportingMaterialReport {
     projectFolder: string;
   };
   material: Asset;
-  resourceKeys: [];
+  resourceKeys: string[];
 }

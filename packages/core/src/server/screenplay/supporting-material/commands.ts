@@ -2,6 +2,7 @@ import { readProjectRecord } from '../../database/access/project.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import { createRandomIdGenerator, type ProjectIdGenerator } from '../../entity-ids.js';
 import { ProjectDataError } from '../../project-data-error.js';
+import { studioProjectAssetsResourceKey } from '../../studio-coordination/resource-keys.js';
 import {
   commitProjectAssetFileWriteSet,
   createProjectAssetFileWriteSet,
@@ -116,6 +117,6 @@ function report(input: {
       projectFolder: input.projectFolder,
     },
     material: input.material,
-    resourceKeys: [],
+    resourceKeys: input.status === 'imported' ? [studioProjectAssetsResourceKey()] : [],
   };
 }
