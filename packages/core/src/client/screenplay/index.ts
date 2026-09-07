@@ -92,3 +92,6 @@ export {
   screenplayOperationSchema,
   screenplayOperationsInputSchema,
 } from './schemas/operations.js';
+
+export type { FdxUpdateStatus, FdxUpdateReview, FdxSceneUpdateLabel, FdxSceneUpdateImpact } from './fdx-updates.js';
+export { fdxUpdateStatusSchema, fdxUpdateReviewSchema } from './fdx-updates.js';

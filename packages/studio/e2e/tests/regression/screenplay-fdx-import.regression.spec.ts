@@ -192,9 +192,9 @@ test('refreshes marker-heavy FDX as a flat read-only Scene tree', async ({
   if (await expandScreenplay.isVisible()) {
     await expandScreenplay.click();
   }
-  await expect(page.getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
+  await expect(page.getByRole('complementary').getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
     .toHaveCount(1);
-  await expect(page.getByRole('button', { name: /INT\. SECOND ROOM - DAY/ }))
+  await expect(page.getByRole('complementary').getByRole('button', { name: /INT\. SECOND ROOM - DAY/ }))
     .toHaveCount(1);
   await expect(page.getByText('ACT ONE', { exact: true })).toHaveCount(0);
   await expect(page.getByText('CUSTOM OUTLINE', { exact: true })).toHaveCount(0);
@@ -206,7 +206,7 @@ test('refreshes marker-heavy FDX as a flat read-only Scene tree', async ({
   });
   expect(unchanged).toMatchObject({ status: 'unchanged', resourceKeys: [] });
   await page.reload();
-  await expect(page.getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
+  await expect(page.getByRole('complementary').getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
     .toHaveCount(1);
 
   await fs.writeFile(sourcePath, markerRefreshFdx([
@@ -230,9 +230,9 @@ test('refreshes marker-heavy FDX as a flat read-only Scene tree', async ({
   if (await changedExpandScreenplay.isVisible()) {
     await changedExpandScreenplay.click();
   }
-  await expect(page.getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
+  await expect(page.getByRole('complementary').getByRole('button', { name: /INT\. FIRST ROOM - DAY/ }))
     .toHaveCount(0);
-  await expect(page.getByRole('button', { name: /INT\. SECOND ROOM - DAY/ }))
+  await expect(page.getByRole('complementary').getByRole('button', { name: /INT\. SECOND ROOM - DAY/ }))
     .toHaveCount(1);
   await expect(page.getByText('Second action changed.', { exact: true }))
     .toBeVisible();

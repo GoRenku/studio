@@ -2,6 +2,7 @@ import {
   applyScreenplayOperations,
   createScreenplay,
   importFdxScreenplay,
+  readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate,
   importScreenplaySupportingMaterial,
   listSceneProductionNumbers,
   listScreenplayRevisions,
@@ -45,6 +46,7 @@ export function createScreenplayServiceWiring(): Pick<
   | 'readScreenplaySection' | 'readScreenplayScene'
   | 'listSceneProductionNumbers' | 'resolveSceneProductionNumber'
   | 'createScreenplay' | 'importFdxScreenplay' | 'importScreenplaySupportingMaterial'
+  | 'readFdxUpdateStatus' | 'prepareFdxExportFolder' | 'reviewFdxUpdate' | 'applyFdxUpdate'
   | 'applyScreenplayOperations'
   | 'listScreenplayRevisions' | 'readScreenplayRevision'
   | 'restoreScreenplayRevision'
@@ -59,6 +61,7 @@ export function createScreenplayServiceWiring(): Pick<
   | 'selectSceneStoryboardImageCandidate' | 'discardSceneStoryboardImageCandidate'
 > {
   return {
+    readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate,
     uploadScreenplaySupportingMaterial,
     listProjectSupportingFiles, readProjectSupportingFileInformation,
     resolveProjectSupportingFile, discardProjectSupportingFile,

@@ -450,3 +450,5 @@ export type {
   StudioSelectionParseResult,
 } from './studio-coordination/index.js';
 export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportingFileInformation } from '../client/screenplay/supporting-files.js';
+
+export { readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate } from './screenplay/index.js';

@@ -38,6 +38,10 @@ export function fakeProjectDataService(): NonNullable<
   };
 
   return {
+    async readFdxUpdateStatus() { return { state: 'notApplicable' }; },
+    async prepareFdxExportFolder() { throw new Error('No FDX export fixture.'); },
+    async reviewFdxUpdate() { throw new Error('No FDX review fixture.'); },
+    async applyFdxUpdate() { throw new Error('No FDX apply fixture.'); },
     async uploadScreenplaySupportingMaterial() {
       throw new Error('No supporting upload in this fixture.');
     },

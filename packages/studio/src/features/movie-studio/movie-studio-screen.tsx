@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { StudioSelection } from '@gorenku/studio-core/client';
 import type { DebouncedSaveStatus } from '@/hooks/use-debounced-autosave';
 import { createInspirationFolder } from '@/services/studio-visual-language-api';
@@ -23,6 +23,9 @@ import { MOVIE_STUDIO_LAYOUT } from './movie-studio-layout';
 import { PanelShell } from './panel-shell';
 import { ProjectDetailsPanel } from './project-details/project-details-panel';
 import { ScreenplayBeatGallery } from './screenplay/screenplay-beat-gallery';
+import { Button } from '@/ui/button';
+import { useFdxUpdate } from './screenplay/external-file/use-fdx-update';
+import { FdxUpdateDialog } from './screenplay/external-file/fdx-update-dialog';
 import { ScenePanel } from './scenes/scene-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
@@ -56,6 +59,7 @@ export function MovieStudioScreen({
   onNavigateSelection,
   selection: routeSelection,
 }: MovieStudioScreenProps) {
+  const fdxUpdate = useFdxUpdate(project.project.projectName, project.project.id);
   const screenplayNavigation = useMovieStudioNavigation(
     project,
     routeSelection ?? { type: 'projectInformation' }
@@ -66,6 +70,11 @@ export function MovieStudioScreen({
     screenplayNavigation
   );
   const { selection, resolvedSelection } = studioSelection;
+  useEffect(() => {
+    if (selection.type === 'scene' && !resolvedSelection.valid) {
+      void onNavigateSelection({ type: 'screenplay' });
+    }
+  }, [selection, resolvedSelection.valid, onNavigateSelection]);
   const [projectInformationAutosave, setProjectInformationAutosave] =
     useState<DebouncedSaveStatus>({
       state: 'idle',
@@ -244,6 +253,7 @@ export function MovieStudioScreen({
 
   return (
     <div className='h-screen w-screen bg-background text-foreground p-3 flex flex-col gap-3'>
+      <FdxUpdateDialog controller={fdxUpdate} />
       <main className='flex-1 min-h-0'>
         <ResizablePanelGroup
           id='movie-studio-shell-layout'
@@ -346,6 +356,9 @@ export function MovieStudioScreen({
                 <TrashPanel projectName={project.project.projectName} />
               ) : selection.type === 'screenplay' ? (
                 <ScreenplayBeatGallery
+                  externalScreenplayAction={fdxUpdate.status && fdxUpdate.status.state !== 'notApplicable' ? (
+                    <Button variant='outline' onClick={fdxUpdate.show}>{fdxUpdate.status.state === 'pending' ? 'Screenplay update available' : 'External screenplay'}</Button>
+                  ) : null}
                   projectName={project.project.projectName}
                   onSelect={selectMovieStudioSurface}
                 />

@@ -88,7 +88,7 @@ describe('source-authoritative FDX refresh', () => {
 
     await fs.writeFile(sourcePath, markerFdx('ACT TWO', 'RENAMED OUTLINE'), 'utf8');
     const refreshed = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
-    expect(refreshed).toMatchObject({ status: 'refreshed', resourceKeys: [] });
+    expect(refreshed).toMatchObject({ status: 'refreshed', resourceKeys: ['surface:project:assets'] });
     expect(refreshed.screenplayImport.sourceAssetId).not.toBe(imported.screenplayImport.sourceAssetId);
     await expect(projectData.readScreenplayStructure({ projectName, homeDir })).resolves.toEqual(initial);
     await expect(projectData.listScreenplayRevisions({ projectName, homeDir })).resolves.toEqual(initialRevisions);

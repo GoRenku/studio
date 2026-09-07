@@ -8,7 +8,7 @@ export type ScreenplayAnalysisFreshness = 'current' | 'needsRefresh';
 
 export function screenplayAnalysisFreshness(
   session: DatabaseSession,
-  row: ScreenplayAnalysisRecord,
+  row: Pick<ScreenplayAnalysisRecord, 'updatedAt'>,
 ): ScreenplayAnalysisFreshness {
   const revision = readLatestScreenplayRevisionSummary(session);
   return revision && revision.createdAt > row.updatedAt ? 'needsRefresh' : 'current';

@@ -1,3 +1,4 @@
+import type { FdxUpdateStatus, FdxUpdateReview } from '../client/screenplay/fdx-updates.js';
 import type {
   Asset,
   AssetFile,
@@ -373,6 +374,10 @@ export interface ProjectDataService {
   listSceneProductionNumbers(input: ScreenplayProjectInput): Promise<SceneProductionNumberListReport>;
   resolveSceneProductionNumber(input: ResolveSceneProductionNumberInput): Promise<SceneProductionNumberResolveReport>;
   createScreenplay(input: CreateScreenplayInput): Promise<ScreenplayMutationReport>;
+  readFdxUpdateStatus(input: RenkuConfigPathOptions & { projectName: string }): Promise<FdxUpdateStatus>;
+  prepareFdxExportFolder(input: RenkuConfigPathOptions & { projectName: string }): Promise<{ exportPath: string }>;
+  reviewFdxUpdate(input: RenkuConfigPathOptions & { projectName: string; sourceSha256: string }): Promise<FdxUpdateReview>;
+  applyFdxUpdate(input: RenkuConfigPathOptions & { projectName: string; reviewFingerprint: string }): Promise<ImportFdxScreenplayReport>;
   importFdxScreenplay(input: ImportFdxScreenplayInput): Promise<ImportFdxScreenplayReport>;
   importScreenplaySupportingMaterial(
     input: ImportScreenplaySupportingMaterialInput

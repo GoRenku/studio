@@ -4,6 +4,8 @@ Date: 2026-08-15
 
 Status: accepted
 
+Detected-file Studio updates now require review under [ADR 0093](0093-review-detected-external-fdx-updates.md). Explicit manual CLI imports retain the immediate refresh contract below.
+
 ## Context
 
 An FDX-backed Screenplay cannot be changed in Renku. The earlier refresh design

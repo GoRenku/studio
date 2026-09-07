@@ -1,3 +1,4 @@
+import { createFdxUpdatesRoute } from './fdx-updates.js';
 import { Hono, type MiddlewareHandler } from 'hono';
 import type { ProjectsRouteProjectData } from '../projects.js';
 import { createScreenplayScenesRoute } from './scenes.js';
@@ -12,6 +13,7 @@ export interface CreateScreenplayRouteOptions {
 
 export function createScreenplayRoute(options: CreateScreenplayRouteOptions) {
   return new Hono()
+    .route('/', createFdxUpdatesRoute(options))
     .route('/', createScreenplayStructureRoute(options))
     .route('/', createScreenplaySectionsRoute(options))
     .route('/', createScreenplayScenesRoute(options))

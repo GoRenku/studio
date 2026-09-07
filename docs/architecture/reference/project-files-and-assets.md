@@ -466,3 +466,12 @@ Project-owned `shot_plan_video` Assets whose exact managed run snapshot or
 frozen external source spec identifies a Shot Plan video request. A restorable
 trashed plan supplies Scene context for `Miscellaneous`; a permanently
 collected plan supplies none.
+
+## External Screenplay Handoff
+
+`screenplay/edit/script.fdx` is the fixed mutable export destination for an
+FDX-backed Project. It is not an Asset. External editors replace it; Renku only
+reads it and prepares `screenplay/edit/` when the user opens the folder.
+Accepted sources remain in the existing immutable retained source destinations.
+Never overwrite a retained `screenplay_source` file to deliver an update.
+Supporting Files uploads and other FDX paths do not participate in detection.

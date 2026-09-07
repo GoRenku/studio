@@ -1,5 +1,4 @@
 import { createRandomIdGenerator, createUniqueIdAllocator } from '../../entity-ids.js';
-import { commitProjectAssetFileWriteSet } from '../../project-asset-files/index.js';
 import type { ProjectAssetFileWriteSet } from '../../project-asset-files/types.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { insertScreenplayRevision } from '../persistence/revisions.js';
@@ -37,28 +36,24 @@ export function applyInitialFdxImport(input: {
     technicalLog: input.mapped.technicalLog,
   };
   const revisionId = createUniqueIdAllocator(createRandomIdGenerator())('screenplay_revision');
-  input.session.db.transaction((tx) => {
-    const txSession = { ...input.session, db: tx };
-    persistFdxSourceAsset({
-      session: txSession,
-      projectFolder: input.projectFolder,
-      source: input.source,
-      assetId: screenplayImport.sourceAssetId,
-      assetFileId: screenplayImport.sourceAssetFileId,
-      now,
-      writeSet: input.writeSet,
-    });
-    insertScreenplayImport(txSession, screenplayImport);
-    replaceScreenplayAggregate(txSession, input.mapped.screenplay);
-    insertScreenplayRevision({
-      session: txSession,
-      id: revisionId,
-      screenplay: input.mapped.screenplay,
-      sourceCommand: 'screenplay.import-fdx',
-      createdAt: now,
-    });
+  persistFdxSourceAsset({
+    session: input.session,
+    projectFolder: input.projectFolder,
+    source: input.source,
+    assetId: screenplayImport.sourceAssetId,
+    assetFileId: screenplayImport.sourceAssetFileId,
+    now,
+    writeSet: input.writeSet,
   });
-  commitProjectAssetFileWriteSet(input.writeSet);
+  insertScreenplayImport(input.session, screenplayImport);
+  replaceScreenplayAggregate(input.session, input.mapped.screenplay);
+  insertScreenplayRevision({
+    session: input.session,
+    id: revisionId,
+    screenplay: input.mapped.screenplay,
+    sourceCommand: 'screenplay.import-fdx',
+    createdAt: now,
+  });
   return createFdxImportReport({
     status: 'imported',
     project: input.project,

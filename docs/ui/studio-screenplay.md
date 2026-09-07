@@ -87,3 +87,28 @@ Studio does not provide screenplay prose editing, formatting controls,
 ScriptNote UI, Section organization controls, or FDX upload. Creative prompt,
 Shot-description, and other AI-authored text remains opaque and is displayed
 without semantic handle parsing or content repair.
+
+## External Screenplay Updates
+
+FDX-backed Projects show **External screenplay** on the Screenplay root. The
+dialog provides the exact copyable export path, the platform folder action,
+and **Check for changes**. Export repeatedly to `screenplay/edit/script.fdx`.
+Missing exports show instructions without changing the screenplay.
+
+One Project-level controller checks on entry, focus, browser connection recovery,
+and every three seconds while visible. A stable changed export opens **Update
+screenplay?** in the focused browser when no other dialog is open. **Later**
+keeps current state and remembers that candidate for this browser session;
+**Screenplay update available** reopens it. Another export can prompt again.
+
+Review shows retained, new, and removed-or-replaced Scenes, order changes, and
+production history counts. Even a small dialogue edit may sever current Scene
+connections. History is retained without automatic reattachment. Long lists
+scroll while the warning and actions remain visible. Focus starts on **Later**;
+there is no automatic or default-submit acceptance.
+
+Changes to the file, accepted baseline, or material impact disable confirmation.
+**Review latest export** explicitly loads a new review. An uncertain response
+causes a status recheck, never an automatic mutation retry. Successful application
+refreshes resources across tabs and returns a removed selected Scene to Screenplay.
+Narrative remains read-only and the external editor remains the author.

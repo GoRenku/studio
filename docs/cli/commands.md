@@ -1922,3 +1922,15 @@ When adding or changing a CLI command:
   Studio selection, an explicit `--project`, or a positional project name.
 - Keep obsolete command names out of this file unless the document is explicitly
   explaining a historical decision.
+
+### Manual FDX Refresh Versus Studio Detection
+
+`renku screenplay import-fdx --file /absolute/path/to/script.fdx --json` remains
+an explicit immediate import. It has no review flag or approval token and may
+replace an affected Scene and all its nested identities even for a punctuation
+edit. Historical production work stays attached to old identities.
+
+For the interactive Studio workflow, export to the exact path shown by
+**External screenplay**: `<project>/screenplay/edit/script.fdx`. Studio detects,
+reviews, and confirms that version. Do not automatically invoke the CLI to
+bypass a pending Studio review, and never overwrite a retained source Asset.

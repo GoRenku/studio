@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { StudioSelection } from '@gorenku/studio-core/client';
 import { readScreenplayBeatGalleryResource } from '@/services/screenplay';
 import type { ScreenplayBeatGalleryResourceResponse } from '@/services/studio-project-contracts';
@@ -21,6 +21,7 @@ import { beatLabel } from '../scenes/scene-beat-labels';
 import { sceneDisplayLabel } from './scene-label';
 
 interface ScreenplayBeatGalleryProps {
+  externalScreenplayAction?: ReactNode;
   projectName: string;
   onSelect: (selection: StudioSelection) => void;
 }
@@ -28,6 +29,7 @@ interface ScreenplayBeatGalleryProps {
 export function ScreenplayBeatGallery({
   projectName,
   onSelect,
+  externalScreenplayAction,
 }: ScreenplayBeatGalleryProps) {
   const [resource, setResource] =
     useState<ScreenplayBeatGalleryResourceResponse | null>(null);
@@ -107,7 +109,8 @@ export function ScreenplayBeatGallery({
   }
   if (!resource.scenes.length) {
     return (
-      <div className='flex h-full items-center justify-center p-8'>
+      <div className='flex h-full flex-col items-center justify-center gap-4 p-8'>
+        {externalScreenplayAction}
         <p className='rounded-lg border border-dashed border-border/50 px-6 py-10 text-center text-sm text-muted-foreground'>
           The Screenplay has no generated beat images yet.
         </p>
@@ -122,6 +125,7 @@ export function ScreenplayBeatGallery({
   return (
     <div className='h-full overflow-y-auto bg-panel-bg px-4 py-5 sm:px-6 sm:py-6'>
       <div className='mx-auto max-w-[1440px] space-y-4'>
+        {externalScreenplayAction && <div className='flex justify-end'>{externalScreenplayAction}</div>}
         {resource.scenes.map(({ scene, beats }) => {
           const sceneLabel = sceneDisplayLabel(scene);
           return (

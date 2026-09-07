@@ -172,3 +172,17 @@ function invalidImportRecord(reason: string): ProjectDataError {
     `Screenplay Import ${reason}.`,
   );
 }
+
+export function requireImportSourceSha256(session: DatabaseSession, screenplayImport: ScreenplayImport): string {
+  const file = readAssetFileRecordIncludingDiscarded(session, {
+    assetId: screenplayImport.sourceAssetId,
+    assetFileId: screenplayImport.sourceAssetFileId,
+  });
+  if (!file?.contentHash?.match(/^[0-9a-f]{64}$/u)) {
+    throw new ProjectDataError(
+      'SCREENPLAY_FDX_IMPORT_INVALID',
+      'Screenplay Import retained source hash is unavailable.',
+    );
+  }
+  return file.contentHash;
+}

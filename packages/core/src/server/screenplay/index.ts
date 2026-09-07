@@ -9,7 +9,7 @@ export {
   resolveSceneProductionNumber,
 } from './commands/scene-numbers.js';
 export { createScreenplay } from './commands/screenplay.js';
-export { importFdxScreenplay } from './commands/fdx-import.js';
+export { importFdxScreenplay, applyFdxUpdate } from './commands/fdx-import.js';
 export {
   importScreenplaySupportingMaterial,
   type ImportScreenplaySupportingMaterialInput,
@@ -33,3 +33,6 @@ export { readScreenplaySection } from './resources/sections.js';
 export { readScreenplayScene } from './resources/scenes.js';
 export { readScreenplayStatus } from './resources/status.js';
 export { readScreenplayStructure } from './resources/structure.js';
+
+export { readFdxUpdateStatus, prepareFdxExportFolder } from './fdx/external-file.js';
+export { reviewFdxUpdate } from './fdx/update-review.js';

@@ -62,6 +62,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'readPropOverviewResource'
   | 'readPropResource'
   | 'readStoryArcResource'
+  | 'readFdxUpdateStatus' | 'prepareFdxExportFolder' | 'reviewFdxUpdate' | 'applyFdxUpdate'
   | 'readScreenplayStructure'
   | 'readScreenplaySection'
   | 'readScreenplayScene'

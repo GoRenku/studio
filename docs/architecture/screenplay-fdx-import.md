@@ -156,3 +156,34 @@ SHA-256 identities and caches them outside the repository. They exercise the
 production CLI, Core import, exact source retention, and browser renderer
 without becoming bundled product samples or an official Final Draft conformance
 suite.
+
+## Detected External Exports
+
+FDX-backed Projects expose the fixed mutable handoff
+`<project>/screenplay/edit/script.fdx`. It is filesystem-owned, separate from
+all retained source Assets and Supporting Files. The folder action creates only
+its directories. Renku never initializes or rewrites the file.
+
+Core exposes `readFdxUpdateStatus`, `prepareFdxExportFolder`, `reviewFdxUpdate`,
+and `applyFdxUpdate` through ProjectDataService. Status uses bounded content
+hashing, not timestamps as identity; differing bytes require two stable reads
+750 ms apart. Missing, settling, and unavailable exports preserve accepted state.
+Symlinked handoff segments and aliases of retained source files are rejected.
+
+Review reuses canonical mapping and whole-Scene equality, reporting disappearing
+IDs, introduced IDs, relative survivor order, opening changes, and metadata-only
+production counts. Its fingerprint binds candidate bytes, Project/import identity,
+accepted source, import timestamp, current revision, importer version, and
+material impact evidence. Apply rechecks under an immediate transaction shared
+with CLI imports, retaining exact bytes with rollback protection. Concurrent
+acceptance of the same bytes is unchanged. Source-only acceptance refreshes
+Assets without adding a canonical revision.
+
+The four Studio endpoints are GET `/screenplay/fdx-update` and POST
+`/screenplay/fdx-update/open-folder`, `/review`, and `/apply` beneath each Project.
+POSTs require the runtime token; review accepts only `sourceSha256`, apply only
+`reviewFingerprint`. Status and review are not cached. No route accepts a path.
+
+Explicit CLI `screenplay import-fdx --file …` still imports immediately. It may
+replace an entire Scene graph for a tiny edit. Production history survives but
+is not attached to replacement Scenes. See [ADR 0093](../decisions/0093-review-detected-external-fdx-updates.md).

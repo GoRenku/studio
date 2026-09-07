@@ -116,3 +116,14 @@ Studio server adapters serialize `StructuredError` as:
 
 HTTP adapters should map status codes from code prefixes and should not depend
 on package-specific error classes.
+
+## Detected FDX Update Diagnostics
+
+- `SCREENPLAY_FDX_UPDATE_NOT_APPLICABLE`: the focused operation requires an FDX-backed Project; status returns `notApplicable` instead.
+- `SCREENPLAY_FDX_EXPORT_PATH_INVALID`: the fixed handoff is unsafe, has the wrong kind, uses symlinked segments, or aliases retained history.
+- `SCREENPLAY_FDX_UPDATE_REVIEW_STALE`: source, baseline, revision, or material impact changed; review the latest export before confirming.
+- `SCREENPLAY_FDX_UPDATE_REPLACES_SCENES` (warning): current Scene identities disappear; retained production work does not automatically attach to replacements.
+
+Source I/O, size, XML, unsupported-content, source-changed, and retained-source
+conflicts reuse existing FDX diagnostics. Missing exports are expected status,
+not deletion instructions. No durable pending state or migration is required.

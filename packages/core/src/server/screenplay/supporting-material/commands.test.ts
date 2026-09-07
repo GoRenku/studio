@@ -60,7 +60,8 @@ describe('Screenplay supporting material import', () => {
         imported.project.projectFolder,
         imported.material.files[0]!.projectRelativePath,
       );
-      await expect(fs.readFile(retained)).resolves.toEqual(bytes);
+      const retainedBytes = await fs.readFile(retained);
+      expect(retainedBytes.equals(bytes)).toBe(true);
       expect(imported.material.files[0]!.projectRelativePath).toBe(
         filename === 'extensionless' ? 'screenplay/extensionless.bin' : `screenplay/${filename}`,
       );

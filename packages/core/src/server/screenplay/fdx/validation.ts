@@ -1,3 +1,4 @@
+import { fdxUpdateReviewSchema } from '../../../client/screenplay/fdx-updates.js';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { ImportFdxScreenplayReport } from './contracts.js';
@@ -20,5 +21,14 @@ export function assertValidFdxImportReport(
       'SCREENPLAY_FDX_IMPORT_INVALID',
       `FDX import report failed validation: ${ajv.errorsText(reportValidator.errors)}.`,
     );
+  }
+}
+
+const updateReviewValidator = ajv.compile(fdxUpdateReviewSchema);
+
+export function assertValidFdxUpdateReview(value: unknown): void {
+  if (!updateReviewValidator(value)) {
+    throw new ProjectDataError('SCREENPLAY_FDX_IMPORT_INVALID',
+      `FDX update review failed validation: ${ajv.errorsText(updateReviewValidator.errors)}.`);
   }
 }
