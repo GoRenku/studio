@@ -98,6 +98,7 @@ export function fakeProjectDataService(): NonNullable<
         languages: makeProjectShell(project).languages,
       };
     },
+    async cleanProjectTemporaryFiles() { return { removedFiles: 0, removedBytes: 0 }; },
     async readProjectSettings() {
       return projectSettingsResource(project.id, project.projectName);
     },

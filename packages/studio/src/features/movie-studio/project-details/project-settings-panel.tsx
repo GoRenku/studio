@@ -10,6 +10,7 @@ import {
   readProjectSettings,
   replaceProjectSettings,
 } from '@/services/studio-projects-api';
+import { ProjectTemporaryFilesSection } from './project-temporary-files-section';
 import { ProjectSettingsFields } from './project-settings-fields';
 
 interface ProjectSettingsPanelProps {
@@ -116,6 +117,7 @@ export function ProjectSettingsPanel({
   return (
     <div className='mx-auto w-full max-w-4xl pb-6'>
       <ProjectSettingsFields settings={draft} onChange={setDraft} />
+      <ProjectTemporaryFilesSection key={projectName} projectName={projectName} />
     </div>
   );
 }

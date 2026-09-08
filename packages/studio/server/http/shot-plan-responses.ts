@@ -92,6 +92,7 @@ function toStudioShotPlanListItemResponse(
   return {
     shotPlan: {
       id: item.shotPlan.id,
+      type: item.shotPlan.type,
       number: item.shotPlan.number,
       sceneId: item.shotPlan.sceneId,
       title: item.shotPlan.title,

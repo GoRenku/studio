@@ -144,6 +144,7 @@ describe('Shot Plan focused authoring', () => {
       return;
     }
     const plan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId,
@@ -218,6 +219,7 @@ describe('Shot Plan focused authoring', () => {
     ).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_INVALID' });
 
     const otherPlan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId,

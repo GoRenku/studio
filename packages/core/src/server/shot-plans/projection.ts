@@ -94,6 +94,7 @@ function projectShotPlan(
   return {
     shotPlan: {
       id: record.id,
+      type: record.type,
       number: record.number,
       sceneId: record.sceneId,
       title: record.title,

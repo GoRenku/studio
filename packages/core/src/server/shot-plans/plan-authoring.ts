@@ -1,3 +1,4 @@
+import { ProjectDataError } from '../project-data-error.js';
 import type {
   CreateShotPlanInput,
   UpdateShotPlanDetailsInput,
@@ -29,6 +30,10 @@ export function createShotPlanAuthoring(input: {
   now: string;
 }): string {
   requireScene(input.session, input.command.sceneId);
+  if (!['shot-list', 'previs'].includes(input.command.type)
+    || (input.command.type === 'previs' && input.command.shots.length > 0)) {
+    throw new ProjectDataError('CORE_SHOT_PLAN_TYPE_INVALID', 'Choose Shot List or Previs; only Shot List plans contain Shots.');
+  }
   const details = validateShotPlanDetails(input.command);
   const authoredShots = input.command.shots.map((shot, index) =>
     validateShotInput(shot, ['shots', String(index)])
@@ -42,6 +47,7 @@ export function createShotPlanAuthoring(input: {
     const number = allocateShotPlanNumber(session, input.command.sceneId);
     insertShotPlanRecord(session, {
       id: shotPlanId,
+      type: input.command.type,
       sceneId: input.command.sceneId,
       number,
       title: details.title,

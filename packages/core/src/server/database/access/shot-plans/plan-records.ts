@@ -63,6 +63,7 @@ export function insertShotPlanRecord(
   session: DatabaseSession,
   input: {
     id: string;
+    type: 'shot-list' | 'previs';
     sceneId: string;
     number: number;
     title: string;
@@ -74,6 +75,7 @@ export function insertShotPlanRecord(
     .insert(shotPlans)
     .values({
       id: input.id,
+      type: input.type,
       sceneId: input.sceneId,
       number: input.number,
       title: input.title,

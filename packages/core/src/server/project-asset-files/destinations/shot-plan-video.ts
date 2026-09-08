@@ -1,3 +1,4 @@
+import { joinProjectRelativePath } from '../../files/project-relative-paths.js';
 import type { ProjectRelativePath } from '../../../client/index.js';
 import {
   allocateProjectAssetFileNames,
@@ -11,10 +12,8 @@ import type {
   DestinationRootInput,
 } from './types.js';
 
-type ShotPlanVideoDestinationKind = 'shotPlan.video';
-
 export async function resolveShotPlanVideoDestinationFile(
-  input: DestinationFileInput<ShotPlanVideoDestinationKind>
+  input: DestinationFileInput<'shotPlan.video'> | DestinationFileInput<'shotPlan.previs'>
 ): Promise<ProjectRelativePath> {
   return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
@@ -28,7 +27,7 @@ export async function resolveShotPlanVideoDestinationFile(
 }
 
 export function resolveShotPlanVideoDestinationFileSync(
-  input: DestinationFileInput<ShotPlanVideoDestinationKind>
+  input: DestinationFileInput<'shotPlan.video'> | DestinationFileInput<'shotPlan.previs'>
 ): ProjectRelativePath {
   return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
@@ -42,19 +41,22 @@ export function resolveShotPlanVideoDestinationFileSync(
 }
 
 export async function resolveShotPlanVideoDestinationRoot(
-  input: DestinationRootInput<ShotPlanVideoDestinationKind>
+  input: DestinationRootInput<'shotPlan.video'> | DestinationRootInput<'shotPlan.previs'>
 ): Promise<ProjectRelativePath> {
   return resolveShotPlanVideoDestinationRootSync(input);
 }
 
 export function resolveShotPlanVideoDestinationRootSync(
-  input: DestinationRootInput<ShotPlanVideoDestinationKind>
+  input: DestinationRootInput<'shotPlan.video'> | DestinationRootInput<'shotPlan.previs'>
 ): ProjectRelativePath {
-  return requireShotPlanStorageContext(input.session, input.destination.shotPlanId).root;
+  const root = requireShotPlanStorageContext(input.session, input.destination.shotPlanId).root;
+  return input.destination.kind === 'shotPlan.previs'
+    ? joinProjectRelativePath(root, 'previs', 'renders')
+    : root;
 }
 
 export async function resolveShotPlanVideoDestinationOutputNames(
-  input: DestinationOutputNamesInput<ShotPlanVideoDestinationKind>
+  input: DestinationOutputNamesInput<'shotPlan.video'> | DestinationOutputNamesInput<'shotPlan.previs'>
 ): Promise<string[]> {
   return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
@@ -70,9 +72,12 @@ export async function resolveShotPlanVideoDestinationOutputNames(
 
 function videoFileStem(
   input:
-    | DestinationFileInput<ShotPlanVideoDestinationKind>
-    | DestinationOutputNamesInput<ShotPlanVideoDestinationKind>
+    | DestinationFileInput<'shotPlan.video'> | DestinationFileInput<'shotPlan.previs'>
+    | DestinationOutputNamesInput<'shotPlan.video'> | DestinationOutputNamesInput<'shotPlan.previs'>
 ): string {
+  if (input.destination.kind === 'shotPlan.previs') {
+    return 'previs';
+  }
   const context = requireShotPlanStorageContext(input.session, input.destination.shotPlanId);
   return `s${context.scenePathSegment}-p${context.shotPlanDisplayNumber}-video`;
 }

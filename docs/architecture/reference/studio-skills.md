@@ -313,3 +313,21 @@ references to match the current contract.
 Provider/model activation belongs to each provider Skill's supported-model
 index. A guide documents request authorship but cannot register a runtime model;
 Engines remains the authoritative execution allowlist.
+
+
+## Blender Previs authoring
+
+`blender-shot-planner` in the sister skills repository authors a Scene Previs plan
+from actual sheet visuals, then iterates camera, blocking and performance through
+plan-specific Python and directing parameters. Shot List authoring remains with
+`shot-planner`; Movie Director routes between them. Source lives at Core-provided
+`previs/source/`, with registered source/render revisions. Temporary frames persist
+until explicit Project Settings cleanup. The future Blender player is deferred.
+
+Media Producer's `references/shot-plan-video/blender-previs.md` uses the reviewed
+revision as video input, character/location sheets as appearance, and relevant
+selected audio. H3 Max is this workflow's default, with explicit Seedance 2.5,
+Seedance 2.0 and Wan 3.0 choices. Lookbook text may inform the prompt; this workflow
+omits an additional Lookbook image. Existing native provider, Preview and attachment
+contracts remain in force. These are agent-owned creative choices, not runtime
+prompt or video validators.

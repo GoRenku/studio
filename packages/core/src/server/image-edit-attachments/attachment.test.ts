@@ -166,6 +166,7 @@ describe('image.edit source-derived attachment continuation', () => {
       homeDir,
     });
     const plan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId: screenplay.screenplay.scenes[0]!.id,
@@ -239,6 +240,7 @@ describe('image.edit source-derived attachment continuation', () => {
     expect(projection.groups.find((group) => group.role === 'reference')?.assets)
       .toHaveLength(3);
     const otherPlan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId: screenplay.screenplay.scenes[0]!.id,
@@ -407,6 +409,7 @@ describe('image.edit source-derived attachment continuation', () => {
     });
 
     const plan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId: scene.id,

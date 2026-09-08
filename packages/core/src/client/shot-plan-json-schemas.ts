@@ -94,8 +94,13 @@ export const shotPlanCreateDocumentSchema = {
   $id: 'https://schemas.gorenku.com/studio/shot-plan-create.schema.json',
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
-  required: ['kind', 'sceneId', 'title', 'coverage', 'shots'],
+  required: ['type', 'kind', 'sceneId', 'title', 'coverage', 'shots'],
+  allOf: [{
+    if: { properties: { type: { const: 'previs' } } },
+    then: { properties: { shots: { type: 'array', maxItems: 0 } } },
+  }],
   properties: {
+    type: { type: 'string', enum: ['shot-list', 'previs'] },
     kind: { const: 'shotPlanCreate' },
     sceneId: nonEmptyString,
     title: nonEmptyString,

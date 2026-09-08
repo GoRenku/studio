@@ -1,3 +1,4 @@
+import { createProjectTemporaryFilesRoute } from './project-temporary-files.js';
 import {
   createProjectDataService,
   type ProjectDataService,
@@ -37,6 +38,7 @@ export interface CreateProjectsRouteOptions {
 
 export type ProjectsRouteProjectData = Pick<
   ProjectDataService,
+  | 'cleanProjectTemporaryFiles'
   | 'createMovieProject'
   | 'deleteProject'
   | 'listLibrary'
@@ -213,6 +215,10 @@ export function createProjectsRoute(
     .route(
       '/:projectName',
       createProjectSettingsRoute({ projectData, requireToken })
+    )
+    .route(
+      '/:projectName',
+      createProjectTemporaryFilesRoute({ projectData, requireToken })
     )
     .route(
       '/:projectName',

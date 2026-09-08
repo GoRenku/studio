@@ -15,6 +15,7 @@ export const shotPlans = sqliteTable(
     id: text('id').primaryKey(),
     sceneId: text('scene_id').notNull(),
     number: integer('number').notNull(),
+    type: text('type', { enum: ['shot-list', 'previs'] }).notNull().default('shot-list'),
     title: text('title').notNull(),
     coverage: text('coverage'),
     createdAt: text('created_at').notNull(),

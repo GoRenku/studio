@@ -43,7 +43,10 @@ export interface Shot {
   selectedImageId: string | null;
 }
 
+export type ShotPlanType = 'shot-list' | 'previs';
+
 export interface ShotPlan {
+  type: ShotPlanType;
   id: string;
   number: number;
   sceneId: string;
@@ -66,6 +69,7 @@ export interface ShotPlanProjectInput {
 }
 
 export interface CreateShotPlanInput extends ShotPlanProjectInput {
+  type: ShotPlanType;
   sceneId: string;
   title: string;
   coverage: ShotPlanCoverage | null;
@@ -163,6 +167,7 @@ export interface ShotPlanListReport {
 
 export interface ShotPlanCreateDocument {
   kind: 'shotPlanCreate';
+  type: ShotPlanType;
   sceneId: string;
   title: string;
   coverage: ShotPlanCoverage | null;

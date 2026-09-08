@@ -37,6 +37,7 @@ describe('video.edit source-derived attachment', () => {
     });
     const sceneId = screenplay.screenplay.scenes[0]!.id;
     const plan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId,
@@ -125,6 +126,7 @@ describe('video.edit source-derived attachment', () => {
       homeDir,
     });
     const plan = await projectData.createShotPlan({
+      type: 'shot-list',
       homeDir,
       sceneId: screenplay.screenplay.scenes[0]!.id,
       title: 'Continuation plan',

@@ -95,7 +95,7 @@ function auxiliaryRoles(purpose: Parameters<MediaGenerationPurposeBuilder>[0]['p
     { assetType: 'shot_plan_video_reference', role: 'video-reference' as const },
   ];
   if (purpose === 'shot-plan.video-generation') {
-    return all;
+    return [...all, { assetType: 'shot_plan_previs', role: 'video-reference' as const }];
   }
   if (purpose === 'shot-plan.video-last-frame') {
     return all.slice(0, 1);

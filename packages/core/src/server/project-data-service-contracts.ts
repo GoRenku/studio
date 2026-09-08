@@ -1,3 +1,5 @@
+import type { ReadShotPlanPrevisInput, RegisterShotPlanPrevisInput, ShotPlanPrevisReport } from '../client/shot-plan-previs.js';
+import type { CleanProjectTemporaryFilesInput, ProjectTemporaryFilesCleanupReport } from '../client/project-temporary-files.js';
 import type { FdxUpdateStatus, FdxUpdateReview } from '../client/screenplay/fdx-updates.js';
 import type {
   Asset,
@@ -187,6 +189,7 @@ export interface ProjectDataService {
   readProjectInformationResource(
     input: ReadProjectInput
   ): Promise<ProjectInformationResource>;
+  cleanProjectTemporaryFiles(input: CleanProjectTemporaryFilesInput): Promise<ProjectTemporaryFilesCleanupReport>;
   readProjectSettings(input: ReadProjectInput): Promise<ProjectSettingsResource>;
   readMediaGenerationContext(
     input: ReadMediaGenerationContextInput
@@ -265,6 +268,8 @@ export interface ProjectDataService {
     input: PreviewGarbageCollectionInput
   ): Promise<GarbageCollectionPreview>;
   emptyTrash(input: EmptyTrashInput): Promise<GarbageCollectionReport>;
+  readShotPlanPrevis(input: ReadShotPlanPrevisInput): Promise<ShotPlanPrevisReport>;
+  registerShotPlanPrevis(input: RegisterShotPlanPrevisInput): Promise<ShotPlanPrevisReport>;
   createShotPlan(input: CreateShotPlanInput): Promise<ShotPlanReport>;
   validateShotPlanDocument(input: {
     document: unknown;

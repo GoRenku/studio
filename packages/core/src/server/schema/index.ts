@@ -14,3 +14,5 @@ export * from './screenplay/index.js';
 export * from './shot-plans.js';
 export * from './trash.js';
 export * from './visual-language.js';
+
+export * from './shot-plan-previs.js';

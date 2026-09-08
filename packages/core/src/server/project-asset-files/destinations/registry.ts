@@ -142,6 +142,13 @@ const destinationResolvers = {
     resolveRootSync: resolveShotPlanVideoDestinationRootSync,
     resolveOutputNames: resolveShotPlanVideoDestinationOutputNames,
   },
+  'shotPlan.previs': {
+    resolveFile: resolveShotPlanVideoDestinationFile,
+    resolveFileSync: resolveShotPlanVideoDestinationFileSync,
+    resolveRoot: resolveShotPlanVideoDestinationRoot,
+    resolveRootSync: resolveShotPlanVideoDestinationRootSync,
+    resolveOutputNames: resolveShotPlanVideoDestinationOutputNames,
+  },
   'shotPlan.videoReferenceImage': {
     resolveFile: resolveShotPlanVideoReferenceImageDestinationFile,
     resolveFileSync: resolveShotPlanVideoReferenceImageDestinationFileSync,

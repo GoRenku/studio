@@ -50,6 +50,7 @@ describe('readStudioSelectionContext', () => {
     const sceneId = screenplay.screenplay.scenes[0]?.id;
     expect(sceneId).toBeTruthy();
     const firstPlan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: PROJECT_NAME,
       homeDir,
       sceneId: sceneId!,
@@ -64,6 +65,7 @@ describe('readStudioSelectionContext', () => {
       ],
     });
     const secondPlan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: PROJECT_NAME,
       homeDir,
       sceneId: sceneId!,

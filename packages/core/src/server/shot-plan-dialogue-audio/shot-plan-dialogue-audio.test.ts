@@ -31,6 +31,7 @@ describe('Shot Plan Dialogue Audio', () => {
       throw new Error('Expected a Scene fixture.');
     }
     const plan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId,

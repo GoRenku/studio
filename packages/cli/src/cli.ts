@@ -84,7 +84,9 @@ Commands
   project select       Request Studio to select a project
   project migrate      Apply pending project database migrations
   screenplay           Inspect, import, create, and revise screenplay content
-  shot-plan            Author and inspect Scene Shot Plans
+  shot-plan            Author and inspect Shot List and Previs plans
+  shot-plan previs show     Read source paths and rendered revisions
+  shot-plan previs register Register a completed render and source snapshot
   studio current       Show current Studio focus and context
   studio start         Start the local Renku Studio web application
   studio server status Show canonical local Studio server status

@@ -10,6 +10,29 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-09-08 — Keep execution conventions without overconstraining creative implementation
+
+- **User objection:** A plan converted a successful specifically authored Blender
+  experiment into a shared Python starter and moved it outside its existing
+  Shot Plan domain. The intended reuse was the agent workflow, while each new
+  plan needed its own code and accurate setting-specific geometry. The correction
+  then overreached into prohibiting useful code reuse and repeating feedback as
+  instructions. Folder consistency, revision tracking and execution conventions
+  were still wanted.
+- **Planning rule:** Identify the unit of reuse before extracting tooling. A
+  reusable skill may teach fresh artifact-specific code authoring without
+  shipping a common executable engine or schema. Preserve successful creative
+  specificity and ordinary code reuse/adaptation. Distinguish a request to avoid
+  building a platform from a ban on reusing code. Keep agreed folder structures,
+  revision tracking and execution conventions; remove repeated prohibitions and
+  feedback history from the operational plan. Ask when that boundary is unclear.
+- **Apply when:** Turning a successful creative session into a skill, planning
+  parameterized scripts, or proposing a shared starter and new folder hierarchy.
+- **Evidence to inspect:** The user's new-artifact versus revision workflow,
+  the code and references responsible for accepted quality, existing domain
+  identity/storage, and tests that might accidentally require cross-artifact
+  executable reuse instead of independent high-quality authoring.
+
 ### 2026-08-31 — Separate provider capability from product model curation
 
 - **User objection:** A provider plan restricted Engines to two convenient

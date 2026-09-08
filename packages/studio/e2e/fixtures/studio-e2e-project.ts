@@ -140,6 +140,7 @@ export async function createSceneBeatsMovieProject(input: {
   const firstBeatId = sceneBeatsRevision.sceneBeats!.beats[0]!.id;
   const secondBeatId = sceneBeatsRevision.sceneBeats!.beats[1]!.id;
   const shotPlan = await projectData.createShotPlan({
+    type: 'shot-list',
     projectName: input.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
     sceneId: ids.sceneId,

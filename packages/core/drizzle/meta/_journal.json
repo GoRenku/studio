@@ -589,6 +589,20 @@
       "when": 1788209586749,
       "tag": "0083_shot_plan_dialogue_audio",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "6",
+      "when": 1788887340990,
+      "tag": "0084_shot_plan_previs",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "6",
+      "when": 1788889488567,
+      "tag": "0085_previs_schema_generation",
+      "breakpoints": true
     }
   ]
 }

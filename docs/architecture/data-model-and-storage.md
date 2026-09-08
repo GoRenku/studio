@@ -342,3 +342,22 @@ invalidation behavior, but Shot Plans do not own the generated Asset and do not
 store request, video, dependency, selection, or completion pointers. Durable
 provider or Codex generation facts live only in the Asset's optional
 `generationProvenance` document.
+
+
+### Shot Plan representations and Previs revisions
+
+`ShotPlan.type` is `shot-list` (Shot List) or `previs` (Previs), chosen at creation.
+Existing Shot Plans are migrated to Shot List while retaining their identities and
+numbers. Shot List authoring operates on ordered Shots; Previs authoring operates
+on plan-local Python and directing parameters. Previs plans do not contain fake
+Shot rows. The existing list-edit/copy operations remain Shot List operations.
+
+`shot_plan_previs_revision` stores id, Shot Plan id, revision number, source
+directory/hash, render hash, Asset id and creation time. The associated Asset is
+procedural video (`shot_plan_previs`, origin `rendered`) with exact plan authorship.
+The source/render hash pair makes registration retries idempotent. Creative files,
+including optional playback subjects/cues, stay opaque. There are no Cast, Beat,
+speaker or dialogue-turn relationships in this revision model. AI generation uses
+the existing independent Project video Asset path and safe provider provenance.
+
+See `project-asset-storage-conventions.md` for paths and registration commands.

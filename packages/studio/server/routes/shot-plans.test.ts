@@ -197,6 +197,7 @@ function shotPlanReport(): ShotPlanReport {
       projectFolder: '/tmp/renku/constantinople',
     },
     shotPlan: {
+      type: 'shot-list',
       id: 'plan_one',
       number: 1,
       sceneId: 'scene_opening',

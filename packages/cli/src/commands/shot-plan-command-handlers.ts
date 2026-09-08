@@ -1,3 +1,4 @@
+import { shotPlanPrevisCommandHandlers } from './shot-plan-previs-command-handlers.js';
 import type { CliCommandHandler, CliCommandRuntime } from './structured-command.js';
 import { shotPlanImageCommandHandlers } from './shot-plan-image-command-handlers.js';
 import { shotPlanPlanCommandHandlers } from './shot-plan-plan-command-handlers.js';
@@ -21,6 +22,7 @@ export const shotPlanCommandHandlers: readonly CliCommandHandler<
   ShotPlanCommandRuntime
 >[] = [
   ...shotPlanPlanCommandHandlers,
+  ...shotPlanPrevisCommandHandlers,
   ...shotPlanShotCommandHandlers,
   ...shotPlanImageCommandHandlers,
 ];

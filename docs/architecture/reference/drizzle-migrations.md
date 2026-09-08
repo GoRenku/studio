@@ -380,3 +380,10 @@ To recover manually:
 4. Copy the selected `.sqlite` backup to `.renku/project.sqlite`.
 5. Fix the migration code or project data issue that caused the failure.
 6. Re-run the migration only after the cause has been fixed.
+
+
+`0084_shot_plan_previs.sql` adds the Shot Plan type and procedural revision table.
+A Kit-generated custom migration, `0085_previs_schema_generation.sql`, advances
+`user_version` to 68 because current Shot Plan reads require the new type column.
+The generation guard must require migration before those reads; the custom SQL
+changes only the guard value and does not transform creative content or identities.

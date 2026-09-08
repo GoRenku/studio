@@ -189,6 +189,7 @@ describe('media generation context', () => {
     });
     const sceneId = screenplay.screenplay.scenes[0]!.id;
     const plan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId,
@@ -200,6 +201,7 @@ describe('media generation context', () => {
       ],
     });
     const otherPlan = await projectData.createShotPlan({
+      type: 'shot-list',
       projectName: 'constantinople',
       homeDir,
       sceneId,
@@ -341,6 +343,7 @@ describe('media generation context', () => {
       homeDir,
     });
     const imageCreateShotPlan = await projectData.createShotPlan({
+      type: 'shot-list',
       homeDir,
       sceneId: screenplay.screenplay.scenes[0]!.id,
       title: 'Image Create references',

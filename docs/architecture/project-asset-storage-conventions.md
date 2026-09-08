@@ -53,6 +53,10 @@ Projects create only the folders needed by their current content.
       <NN>-shot-plan/
         audio/
         shot-images/
+        previs/
+          source/
+          revisions/rNNN/
+          renders/
 
   research/
 
@@ -243,3 +247,51 @@ It must not use nested `character-sheets/`, `profiles/`, `voice-samples/`,
 No runtime compatibility reader translates those retired paths. The one-time
 Urban Basilica reconstruction is owned by Plan 0174 and its explicit rebuild
 tool; the archive remains the recovery source.
+
+
+## Previs Shot Plans
+
+Shot Plans have type `shot-list` (Shot List) or `previs` (Previs). Both use the
+same Scene-local numbered plan root. Editable Previs Python and directing
+parameters live in `previs/source/`. A completed source snapshot, built `.blend`
+and optional `playback.json` live in `previs/revisions/rNNN/`.
+
+`readShotPlanPrevis` / `renku shot-plan previs show` returns the canonical editable
+source directory and retained revisions. `registerShotPlanPrevis` / `renku
+shot-plan previs register --shot-plan <id> --file tmp/operations/previs/register.json`
+accepts project-relative `sourceDirectory`, `renderPath` and optional `title`.
+The source directory is a stable candidate snapshot prepared by the agent, not a
+frame cache. Registration copies exact bytes exclusively and records source/render
+hashes for retry identity. Changed source or video creates the next revision;
+identical retries reuse the existing revision only when its render Asset and
+primary video file are active and the retained file is available. Otherwise core
+returns `CORE_PREVIS_REVISION_RENDER_UNAVAILABLE` with recovery guidance; it does
+not create a replacement revision or report success. Failed registration rolls
+back its new files and database writes.
+
+Core allocates `previs/renders/previs-gxxx.mp4` and persists a Project video Asset
+of type `shot_plan_previs`, origin `rendered`, with exact Shot Plan authorship and
+revision association. AI takes remain `shot_plan_video` at the existing plan root,
+with normal generation provenance. Procedural renders do not appear as AI takes.
+`shot_plan_previs_revision` associates source directory and render Asset; it does
+not interpret animation, Cast, Beats, dialogue or playback cues.
+
+The agent may use scene-specific dialogue controls and derive lightweight legend
+and timed cues in `playback.json`. The future player owns display; MP4s contain no
+burned review overlays. No playback annotation is required by registration.
+
+PNG frames, logs, QA and encoding intermediates remain under top-level Project
+`tmp/`. Frames can support resume/re-encoding and verified unchanged intervals;
+they do not accelerate rerendering changed frames. Project Settings' explicit
+cleanup action clears only top-level `tmp/` contents after confirmation. It has
+no automatic retention heuristic or active-operation coordinator. Core protects
+registered AssetFile paths, including their resolved filesystem locations, before
+deleting anything. Cleanup unlinks symlinks inside `tmp/` without following them.
+Registration rejects retained render and source-revision destinations that resolve
+into `tmp/`. Retained source, revisions, `.blend` files and registered media remain
+outside that directory.
+
+For a retimed AI input, the agent records the Previs revision and exact time map
+in the take's existing Asset summary, alongside its normal safe provenance. This
+keeps the relationship readable after temporary derivative/request cleanup without
+a new file hierarchy or provider request field.

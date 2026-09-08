@@ -69,6 +69,7 @@ describe('Shot Plans feature', () => {
         warnings: [],
         shotPlans: [{
           shotPlan: {
+      type: 'shot-list',
             id: 'plan_one',
             sceneId: 'scene_one',
             number: 1,
@@ -328,6 +329,7 @@ describe('Shot Plans feature', () => {
         warnings: [],
         shotPlans: [{
           shotPlan: {
+      type: 'shot-list',
             id: 'plan_one',
             sceneId: 'scene_one',
             number: 1,
@@ -657,6 +659,7 @@ describe('Shot Plans feature', () => {
     const { container } = render(
       <ShotPlanShotRail
         shotPlan={{
+          type: 'shot-list',
           id: 'plan_one',
           sceneId: 'scene_one',
           number: 1,

@@ -16,6 +16,7 @@ export type ProjectAssetFileDestination =
       sourceAssetId: string;
       sourceAssetFileId: string;
     }
+  | { kind: 'shotPlan.previs'; shotPlanId: string }
   | { kind: 'shotPlan.video'; shotPlanId: string }
   | {
       kind: 'shotPlan.videoReferenceImage';

@@ -64,6 +64,7 @@ export const shotPlanPlanCommandHandlers: readonly Handler[] = [
         title: document.title,
         coverage: document.coverage,
         shots: document.shots,
+        type: document.type,
       });
     },
   },

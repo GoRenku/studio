@@ -1,3 +1,4 @@
+import { readShotPlanPrevis, registerShotPlanPrevis } from '../shot-plan-previs/registration.js';
 import {
   addShotToPlan,
   copyShotPlan,
@@ -22,6 +23,8 @@ import {
 
 export function createShotPlanServiceWiring(): Pick<
   ProjectDataService,
+  | 'readShotPlanPrevis'
+  | 'registerShotPlanPrevis'
   | 'createShotPlan'
   | 'validateShotPlanDocument'
   | 'updateShotPlanDetails'
@@ -38,6 +41,8 @@ export function createShotPlanServiceWiring(): Pick<
   | 'discardShotPlanImageAsset'
 > {
   return {
+    readShotPlanPrevis,
+    registerShotPlanPrevis,
     createShotPlan,
     async validateShotPlanDocument(input) {
       return validateShotPlanDocument(input.document);

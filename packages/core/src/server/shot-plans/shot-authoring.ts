@@ -27,7 +27,10 @@ export function addShotAuthoring(input: {
   idGenerator?: ProjectIdGenerator;
   now: string;
 }): string {
-  requireShotPlanRecord(input.session, input.command.shotPlanId);
+  const plan = requireShotPlanRecord(input.session, input.command.shotPlanId);
+  if (plan.type !== 'shot-list') {
+    throw new ProjectDataError('CORE_SHOT_PLAN_TYPE_INVALID', 'Individual Shots belong to Shot List plans.');
+  }
   const shot = validateShotInput(input.command.shot, ['shot']);
   const shotId = createUniqueIdAllocator(
     input.idGenerator ?? createRandomIdGenerator()
@@ -66,7 +69,10 @@ export function updateShotAuthoring(input: {
   session: DatabaseSession;
   now: string;
 }): void {
-  requireShotPlanRecord(input.session, input.command.shotPlanId);
+  const plan = requireShotPlanRecord(input.session, input.command.shotPlanId);
+  if (plan.type !== 'shot-list') {
+    throw new ProjectDataError('CORE_SHOT_PLAN_TYPE_INVALID', 'Individual Shots belong to Shot List plans.');
+  }
   requireShotInPlan(input.session, input.command);
   const shot = validateShotInput(input.command.shot, ['shot']);
   updateShotRecord(input.session, {
@@ -81,7 +87,10 @@ export function moveShotAuthoring(input: {
   session: DatabaseSession;
   now: string;
 }): void {
-  requireShotPlanRecord(input.session, input.command.shotPlanId);
+  const plan = requireShotPlanRecord(input.session, input.command.shotPlanId);
+  if (plan.type !== 'shot-list') {
+    throw new ProjectDataError('CORE_SHOT_PLAN_TYPE_INVALID', 'Individual Shots belong to Shot List plans.');
+  }
   requireShotInPlan(input.session, input.command);
   const records = listShotRecords(input.session, input.command.shotPlanId);
   if (

@@ -1,5 +1,6 @@
 import type {
   ProjectCreateReport,
+  ProjectTemporaryFilesCleanupReport,
   ProjectCreateRequest,
   ProjectDeleteReport,
   ProjectInformationPatch,
@@ -217,4 +218,13 @@ function readStudioApiToken(): string {
     throw new Error('Studio API token is not available.');
   }
   return token;
+}
+
+export async function cleanProjectTemporaryFiles(projectName: string): Promise<ProjectTemporaryFilesCleanupReport> {
+  const response = await fetch(`/studio-api/projects/${encodeURIComponent(projectName)}/temporary-files/cleanup`, {
+    method: 'POST',
+    headers: { 'X-Renku-Studio-Token': readStudioApiToken() },
+  });
+  if (!response.ok) throw await readStudioApiError(response);
+  return await response.json() as ProjectTemporaryFilesCleanupReport;
 }

@@ -249,3 +249,6 @@ export type {
   VisualLanguageCatalogIllustration,
 } from './visual-language-catalog.js';
 export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportingFileInformation } from './screenplay/supporting-files.js';
+
+export * from './project-temporary-files.js';
+export * from './shot-plan-previs.js';

@@ -1,3 +1,4 @@
+import { cleanProjectTemporaryFiles } from '../project-temporary-files/cleanup.js';
 import { createMovieProject } from '../commands/create-movie-project.js';
 import { deleteProject } from '../commands/delete-project.js';
 import { migrateProjectDatabaseForProject } from '../commands/migrate-database.js';
@@ -21,6 +22,7 @@ import type { ProjectDataService } from '../project-data-service-contracts.js';
 
 export function createProjectAdministrationServiceWiring(): Pick<
   ProjectDataService,
+  | 'cleanProjectTemporaryFiles'
   | 'createMovieProject'
   | 'deleteProject'
   | 'migrateProjectDatabase'
@@ -38,6 +40,7 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'resolveStudioProjectRef'
 > {
   return {
+    cleanProjectTemporaryFiles,
     createMovieProject,
     deleteProject,
     migrateProjectDatabase: migrateProjectDatabaseForProject,

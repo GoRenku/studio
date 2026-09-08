@@ -1,3 +1,4 @@
+import { ProjectDataError } from '../project-data-error.js';
 import type { CopyShotPlanInput } from '../../client/shot-plans.js';
 import {
   insertShotPlanRecord,
@@ -35,6 +36,9 @@ export function copyShotPlanAuthoring(input: {
     input.session,
     input.command.shotPlanId
   );
+  if (source.type !== 'shot-list') {
+    throw new ProjectDataError('CORE_SHOT_PLAN_TYPE_INVALID', 'Copy applies to Shot List plans. Create a new Previs plan and adapt its source when needed.');
+  }
   requireScene(input.session, source.sceneId);
   const sourceShots = listShotRecords(input.session, source.id);
   const ids = createUniqueIdAllocator(
@@ -50,6 +54,7 @@ export function copyShotPlanAuthoring(input: {
       const number = allocateShotPlanNumber(session, source.sceneId);
       insertShotPlanRecord(session, {
         id: shotPlanId,
+        type: source.type,
         sceneId: source.sceneId,
         number,
         title: source.title,

@@ -50,7 +50,7 @@ export async function runShotPlanCommand(options: {
 }
 
 function isMutationPath(path: readonly string[]): boolean {
-  return !['list', 'show', 'validate'].includes(path.join(' '));
+  return !['list', 'show', 'validate', 'previs show'].includes(path.join(' '));
 }
 
 function hasResourceReport(
