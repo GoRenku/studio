@@ -1,4 +1,5 @@
 import type { AssetOwner } from '../../client/assets.js';
+import { readAssetRecord } from '../database/access/assets.js';
 import { readShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -24,4 +25,13 @@ export function assetOwnerResourceKeys(
     );
   }
   return [studioSceneShotPlansResourceKey(plan.sceneId)];
+}
+
+export function previsRenderResourceKeys(session: DatabaseSession, assetId: string): string[] {
+  const asset = readAssetRecord(session, assetId);
+  if (asset?.type !== 'shot_plan_previs' || !asset.authoredFromShotPlanId) {
+    return [];
+  }
+  const plan = readShotPlanRecord(session, asset.authoredFromShotPlanId);
+  return plan ? [studioSceneShotPlansResourceKey(plan.sceneId)] : [];
 }

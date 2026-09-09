@@ -23,6 +23,7 @@ import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { attachShotPlanDialogueAudio } from '../shot-plan-dialogue-audio/attachment.js';
 import { attachImageEditMedia } from '../image-edit-attachments/index.js';
 import { attachVideoEditMedia } from '../video-edit-attachments/index.js';
+import { validatePrevisGenerationSource } from '../shot-plan-previs/generation-source.js';
 
 export interface AttachGenerationMediaInput {
   purpose: MediaPurpose;
@@ -33,6 +34,7 @@ export interface AttachGenerationMediaInput {
   generationProvenance?: MediaGenerationProvenance;
   select?: boolean;
   turnRange?: DialogueTurnRange;
+  previsRevisionId?: string;
 }
 
 export interface GenerationMediaAttachmentReport {
@@ -51,6 +53,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
   projectFolder: string;
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
+  const previsRevisionId = validatePrevisGenerationSource(input.session, input);
   const generationProvenance = input.generationProvenance === undefined
     ? null
     : validateMediaGenerationProvenance(input.generationProvenance);
@@ -146,6 +149,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     ? input.target.id
     : null;
   const persisted = persistGeneratedMediaAttachment({
+    previsRevisionId,
     session: input.session,
     projectFolder: input.projectFolder,
     idGenerator: input.idGenerator,

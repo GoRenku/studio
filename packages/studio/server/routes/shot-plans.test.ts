@@ -175,6 +175,7 @@ function shotPlanListReport(): ShotPlanListReport {
     valid: true,
     project: report.project,
     shotPlans: [{
+      previsRender: null,
       shotPlan: report.shotPlan,
       coveredBeats: report.coveredBeats,
     }],

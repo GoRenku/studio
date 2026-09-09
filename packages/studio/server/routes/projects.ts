@@ -78,6 +78,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'readStudioSelectionContext'
   | 'listSceneShotPlans'
   | 'readShotPlan'
+  | 'readShotPlanPrevis'
   | 'readShotPlanImageAssets'
   | 'discardShotPlanImageAsset'
   | 'readSceneStoryboardStatus'

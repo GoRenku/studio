@@ -39,6 +39,7 @@ export function fakeProjectDataService(): NonNullable<
 
   return {
     async readFdxUpdateStatus() { return { state: 'notApplicable' }; },
+    async readShotPlanPrevis() { throw new Error('No Previs fixture.'); },
     async prepareFdxExportFolder() { throw new Error('No FDX export fixture.'); },
     async reviewFdxUpdate() { throw new Error('No FDX review fixture.'); },
     async applyFdxUpdate() { throw new Error('No FDX apply fixture.'); },

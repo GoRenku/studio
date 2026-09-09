@@ -39,6 +39,7 @@ export interface StudioShotPlanCoveredBeat
 }
 
 export interface StudioShotPlanListItem {
+  previsRender: StudioShotAsset | null;
   shotPlan: StudioShotPlan;
   coveredBeats: StudioShotPlanCoveredBeat[];
 }

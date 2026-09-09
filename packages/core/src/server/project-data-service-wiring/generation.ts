@@ -109,6 +109,7 @@ export function createGenerationServiceWiring() {
       generationProvenance?: MediaGenerationProvenance;
       select?: boolean;
       turnRange?: import('../../client/shot-plan-dialogue-audio.js').DialogueTurnRange;
+      previsRevisionId?: string;
     }) {
       return withProject(input, ({ session, projectFolder }) =>
         attachGenerationMedia({

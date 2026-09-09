@@ -68,6 +68,7 @@ describe('Shot Plans feature', () => {
         sceneId: 'scene_one',
         warnings: [],
         shotPlans: [{
+          previsRender: null,
           shotPlan: {
       type: 'shot-list',
             id: 'plan_one',
@@ -328,6 +329,7 @@ describe('Shot Plans feature', () => {
         sceneId: 'scene_one',
         warnings: [],
         shotPlans: [{
+          previsRender: null,
           shotPlan: {
       type: 'shot-list',
             id: 'plan_one',

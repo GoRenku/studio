@@ -88,7 +88,7 @@ export function SceneShotPlansTab({
           return (
             <div key={item.shotPlan.id} data-shot-plan-card={item.shotPlan.id}>
               <MediaCard
-                media={shotPlanMosaic(item)}
+                media={shotPlanMedia(item)}
                 frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
                 presentation={{
                   kind: 'overlay',
@@ -112,7 +112,9 @@ export function SceneShotPlansTab({
                   label: `Delete Shot Plan ${item.shotPlan.title}`,
                   confirmationTitle: 'Delete Shot Plan?',
                   confirmationMessage:
-                    'This Shot Plan and its Shot images will move to Trash. You can restore them later.',
+                    item.shotPlan.type === 'previs'
+                      ? 'This Previs plan will move to Trash. You can restore it later.'
+                      : 'This Shot Plan and its Shot images will move to Trash. You can restore them later.',
                   onDelete: async () => {
                     await deleteStudioShotPlan({
                       projectName,
@@ -121,7 +123,7 @@ export function SceneShotPlansTab({
                     reload();
                   },
                 }}
-                emptyState={{ kind: 'image' }}
+                emptyState={{ kind: item.shotPlan.type === 'previs' ? 'film' : 'image' }}
               />
             </div>
           );
@@ -131,7 +133,11 @@ export function SceneShotPlansTab({
   );
 }
 
-function shotPlanMosaic(item: StudioShotPlanListItem) {
+function shotPlanMedia(item: StudioShotPlanListItem) {
+  if (item.shotPlan.type === 'previs') {
+    const file = item.previsRender?.files.find((candidate) => candidate.role === 'primary' && candidate.mediaKind === 'video');
+    return file ? { kind: 'video' as const, src: file.url, title: item.shotPlan.title, playback: 'hover-muted' as const } : null;
+  }
   const selected = item.shotPlan.shots.flatMap((shot) => {
     const asset = selectedShotAsset(shot);
     const file = asset?.files.find((candidate) => candidate.mediaKind === 'image');

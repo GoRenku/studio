@@ -27,10 +27,11 @@ export const assets = sqliteTable('asset', {
   generationProvenance: text('generation_provenance', { mode: 'json' })
     .$type<MediaGenerationProvenance>(),
   authoredFromShotPlanId: text('authored_from_shot_plan_id'),
+  previsRevisionId: text('previs_revision_id'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   ...discardLifecycleColumns(),
-});
+}, (table) => [index('asset_previs_revision_idx').on(table.previsRevisionId)]);
 
 export const assetFiles = sqliteTable(
   'asset_file',

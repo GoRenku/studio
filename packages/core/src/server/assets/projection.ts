@@ -46,6 +46,7 @@ interface AssetRow {
   availability: string;
   generationProvenance: import('../../client/media-generation-review.js').MediaGenerationProvenance | null;
   authoredFromShotPlanId: string | null;
+  previsRevisionId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,6 +106,7 @@ export function listAssetPageInSession(
       availability: assets.availability,
       generationProvenance: assets.generationProvenance,
       authoredFromShotPlanId: assets.authoredFromShotPlanId,
+      previsRevisionId: assets.previsRevisionId,
       createdAt: assets.createdAt,
       updatedAt: assets.updatedAt,
     })
@@ -238,7 +240,7 @@ function toAsset(
     origin: row.origin,
     generationProvenance: row.generationProvenance,
     authoredFrom: row.authoredFromShotPlanId
-      ? { kind: 'shotPlan', id: row.authoredFromShotPlanId }
+      ? { kind: 'shotPlan', id: row.authoredFromShotPlanId, ...(row.previsRevisionId ? { previsRevisionId: row.previsRevisionId } : {}) }
       : null,
     files: filesByAssetId.get(row.id) ?? [],
     createdAt: row.createdAt,

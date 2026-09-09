@@ -1,5 +1,11 @@
 # Drizzle Migrations
 
+Migration 0086 adds the nullable indexed weak Asset `previs_revision_id` column
+using Drizzle Kit's schema generation. Kit-generated custom migration 0087 sets
+`user_version` to 69 because Asset reads now require that column. It performs no
+backfill, ownership change or foreign-key operation. Apply through the existing
+Project migration command before opening the updated application.
+
 Date: 2026-05-12
 
 Status: current

@@ -17,6 +17,7 @@ export interface InsertAssetRecord {
   availability: string;
   generationProvenance?: import('../../../client/media-generation-review.js').MediaGenerationProvenance | null;
   authoredFromShotPlanId?: string | null;
+  previsRevisionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

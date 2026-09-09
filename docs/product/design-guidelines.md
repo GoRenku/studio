@@ -1,5 +1,18 @@
 # Viewer App Design Guidelines
 
+## Previs director's monitor
+
+Within the real Studio shell, Previs uses the standard `Previs / Assets / Audio`
+line tabs. Keep two equal 16:9 contained monitor panes at every revision, with a
+quiet placeholder for missing generation. One shared amber transport uses Previs
+elapsed seconds; generations are never retimed. Keep the fixed-height authored
+subject legend, colored point/range timeline and full scrollable cue list beside
+the highlighted Description panel. Both Description sizes reuse
+`ShotDescriptionViewer` with exact Markdown. Use existing theme and font tokens
+in dark and light modes; never import prototype chrome or fonts. The lower panels
+stay 61%/39% with bounded equal heights as revisions change. Cue audio auditions
+an exact recording while video audio is muted, restoring normal audio afterward.
+
 This document captures the visual design system, styling conventions, and UI patterns used throughout the Renku Viewer application.
 
 ## Color Philosophy

@@ -21,6 +21,7 @@ import {
   studioShotPlanDialogueAudioResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
+import { previsRenderResourceKeys } from '../assets/resource-keys.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
   TrashObjectDefinition,
@@ -378,6 +379,7 @@ const assetDefinition: TrashObjectDefinition = {
       return [
         ...studioAssetOwnerSurfaceResourceKeys(owner),
         ...videoGenerationKeys,
+        ...previsRenderResourceKeys(input.session, input.itemId),
       ];
     }
     const shot = readShotRecord(input.session, owner.id);

@@ -18,6 +18,7 @@ export interface MediaCommandFlags {
   anchor?: string;
   provenance?: string;
   turns?: string;
+  previsRevision?: string;
   sourceSheet?: string;
   revision?: string;
   beats?: string;

@@ -1,5 +1,15 @@
 # Project Asset Storage Conventions
 
+Previs revision candidates may include `description.md` and `playback.json`.
+Registration retains their exact bytes under `previs/revisions/rNNN/`; authoring
+copies live under `previs/source/`. Core reads only these fixed display filenames
+with project-relative and realpath guards. The optional playback envelope has
+ordered `{key,label,color}` subjects and `{startSeconds,endSeconds?,subject?,text,
+audio?}` cues. Audio names exact `{assetId,assetFileId,offsetSeconds?}` references;
+offset defaults to zero. Missing optional files are normal; invalid envelopes and
+unavailable audio produce localized warnings without hiding the revision.
+Description is exact Markdown. No source-directory browser route is exposed.
+
 Date: 2026-08-09
 
 Status: current

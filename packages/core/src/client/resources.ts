@@ -364,7 +364,7 @@ export type ScenePanelTab =
   | 'shotPlans'
   | 'generations';
 
-export type ShotPlanDetailTab = 'shots' | 'assets' | 'audio';
+export type ShotPlanDetailTab = 'shots' | 'previs' | 'assets' | 'audio';
 
 export type StudioSelection =
   | { type: 'projectInformation' }

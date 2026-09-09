@@ -159,6 +159,7 @@ export interface ShotPlanListReport {
   project: ShotPlanReport['project'];
   shotPlans: Array<{
     shotPlan: ShotPlan;
+    previsRender: Asset | null;
     coveredBeats: ShotPlanCoveredBeat[];
   }>;
   warnings: DiagnosticIssue[];

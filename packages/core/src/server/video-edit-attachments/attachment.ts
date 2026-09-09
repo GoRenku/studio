@@ -43,6 +43,7 @@ export function attachVideoEditMedia(input: {
       : input.assetMetadata.tags,
   });
   const persisted = persistGeneratedMediaAttachment({
+    previsRevisionId: source.asset.authoredFrom?.previsRevisionId,
     session: input.session,
     projectFolder: input.projectFolder,
     idGenerator: input.idGenerator,

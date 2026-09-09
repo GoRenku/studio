@@ -7,6 +7,12 @@ import { mediaImportCommandHandler } from './command.js';
 vi.mock('../studio-resource-event-command.js', () => ({ appendStudioResourceChangedEvent: vi.fn() }));
 
 describe('media import command handler', () => {
+  it('forwards the explicitly supplied Previs revision to Core', async () => {
+    const attachGenerationMedia = vi.fn().mockResolvedValue({ valid: true, resourceKeys: [] });
+    await mediaImportCommandHandler.run({ flags: { purpose: 'shot-plan.video-generation', target: 'shot-plan:plan_one', source: 'tmp/take.mp4', previsRevision: 'revision_one' },
+      runtime: { projectName: 'movie', projectDataService: { attachGenerationMedia } } } as never);
+    expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({ previsRevisionId: 'revision_one' }));
+  });
   it('uses the focused Core attachment boundary without generation provenance', async () => {
     const attachGenerationMedia = vi.fn().mockResolvedValue({ valid: true, purpose: 'cast.profile', provenance: null, project: { name: 'movie', id: 'project_1' }, resourceKeys: [] });
     const result = await mediaImportCommandHandler.run({

@@ -1691,6 +1691,13 @@ There is no Spec, Run, estimate, approval token, freeze, or simulation command.
 Attach an inspected Project-relative media file through its focused Core owner.
 Generation and attachment remain separate.
 
+For `shot-plan.video-generation`, optional `--previs-revision <revision-id>`
+associates the take with an exact registered revision of the target Previs plan.
+Copy the id from `renku shot-plan previs show`; Core never infers the latest
+revision. This is weak source context, not Asset ownership or canonical selection.
+Keep the id when the provider input is a derivative of that revision. `video.edit`
+inherits the source Asset's revision context without an override flag.
+
 General form:
 
 ```bash

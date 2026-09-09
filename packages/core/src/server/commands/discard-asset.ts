@@ -7,7 +7,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import { requireAssetOwner } from '../assets/ownership.js';
 import { assetOwnerKey } from '../assets/owner-keys.js';
-import { assetOwnerResourceKeys } from '../assets/resource-keys.js';
+import { assetOwnerResourceKeys, previsRenderResourceKeys } from '../assets/resource-keys.js';
 import type { DiscardAssetInput } from '../project-data-service-contracts.js';
 import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
 import { assertAssetIsNotScreenplayImportSource } from '../screenplay/fdx/persistence/import-record.js';
@@ -78,6 +78,7 @@ export async function discardAsset(
             ? projectCoverCandidateResourceKeys()
             : assetOwnerResourceKeys(session, owner)),
         ...shotPlanVideoAssetResourceKeys(session, input.assetId),
+        ...previsRenderResourceKeys(session, input.assetId),
         ...(isProjectCover ? [studioTrashResourceKey()] : []),
       ],
     });

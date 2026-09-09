@@ -24,6 +24,7 @@ export async function importGenerationMedia(input: MediaImportCommandInput & {
     title: flags.title,
     ...(assetMetadata ? { assetMetadata } : {}),
     select: flags.select,
+    ...(flags.previsRevision !== undefined ? { previsRevisionId: flags.previsRevision } : {}),
     ...(input.turnRange ? { turnRange: input.turnRange } : {}),
     ...(flags.provenance
       ? { generationProvenance: await readProvenance(flags.provenance) }

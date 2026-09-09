@@ -1,5 +1,10 @@
 # 0094 Use Previs Shot Plans and retained render revisions
 
+Current extension: [ADR 0095](0095-use-previs-playback-display-metadata.md)
+permits a narrow playback display envelope and retained Description, and adds
+an explicit weak generation-to-revision reference. The original decision below
+records the initial storage and registration scope.
+
 Date: 2026-09-08
 Status: accepted
 

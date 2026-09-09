@@ -1,0 +1,26 @@
+// @vitest-environment jsdom
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { usePrevis } from './use-previs';
+import { readStudioShotPlanPrevis } from '@/services/shot-plan-previs/api';
+import type { StudioPrevisRevision } from '@/services/shot-plan-previs/contracts';
+
+vi.mock('@/services/shot-plan-previs/api');
+vi.mock('@/hooks/use-studio-resource-refresh', () => ({ useStudioResourceRefresh: () => {} }));
+afterEach(() => { cleanup(); vi.resetAllMocks(); });
+
+it('follows newly registered latest revisions while preserving deliberate history browsing', async () => {
+  const revision = (number: number): StudioPrevisRevision => ({ id: String(number), number, createdAt: '', render: null, description: null, playback: null, generations: [], warnings: [] });
+  let revisions = [revision(1), revision(2)];
+  vi.mocked(readStudioShotPlanPrevis).mockImplementation(async () => ({ shotPlanId: 'plan', revisions, resourceKeys: [] }));
+  const { result } = renderHook(() => usePrevis('movie', 'scene', 'plan'));
+  await waitFor(() => expect(result.current.revision?.number).toBe(2));
+  revisions = [...revisions, revision(3)];
+  act(() => result.current.reload());
+  await waitFor(() => expect(result.current.revision?.number).toBe(3));
+  act(() => result.current.setRevisionId('1'));
+  revisions = [...revisions, revision(4)];
+  act(() => result.current.reload());
+  await waitFor(() => expect(result.current.resource?.revisions).toHaveLength(4));
+  expect(result.current.revision?.number).toBe(1);
+});

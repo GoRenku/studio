@@ -45,6 +45,7 @@ export interface PersistGeneratedMediaAttachmentInput {
   selectionTarget?: AssetSelectionTarget;
   generationProvenance?: MediaGenerationProvenance;
   authoredFromShotPlanId?: string;
+  previsRevisionId?: string;
 }
 
 export interface PersistedGeneratedMediaAttachment {
@@ -71,12 +72,14 @@ export interface PersistGeneratedMediaAssetInSessionInput {
   fileRole: string;
   generationProvenance?: MediaGenerationProvenance;
   authoredFromShotPlanId?: string;
+  previsRevisionId?: string;
 }
 
 export function persistOwnedGeneratedMediaAssetInSession(
   input: PersistGeneratedMediaAssetInSessionInput
 ): ReturnType<typeof persistProjectAssetFileSync> {
   insertAssetRecord(input.session, {
+    previsRevisionId: input.previsRevisionId,
     id: input.assetId,
     ...(input.asset.localeId !== undefined
       ? { localeId: input.asset.localeId }
@@ -159,6 +162,7 @@ export function persistGeneratedMediaAttachment(
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
       persistOwnedGeneratedMediaAssetInSession({
+        previsRevisionId: input.previsRevisionId,
         session,
         projectFolder: input.projectFolder,
         writeSet,

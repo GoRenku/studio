@@ -9,6 +9,7 @@ import {
 } from './asset-responses.js';
 
 export interface StudioShotPlanListItemResponse {
+  previsRender: StudioAssetResponse | null;
   shotPlan: Omit<
     ShotPlanListReport['shotPlans'][number]['shotPlan'],
     'shots'
@@ -90,6 +91,7 @@ function toStudioShotPlanListItemResponse(
   item: ShotPlanListReport['shotPlans'][number]
 ): StudioShotPlanListItemResponse {
   return {
+    previsRender: item.previsRender ? toStudioAssetResponse(projectName, item.previsRender) : null,
     shotPlan: {
       id: item.shotPlan.id,
       type: item.shotPlan.type,

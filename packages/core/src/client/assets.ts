@@ -88,7 +88,7 @@ export interface Asset {
   referenceName: string | null;
   tags: string[];
   generationProvenance: MediaGenerationProvenance | null;
-  authoredFrom: { kind: 'shotPlan'; id: string } | null;
+  authoredFrom: { kind: 'shotPlan'; id: string; previsRevisionId?: string } | null;
   files: AssetFile[];
   createdAt: string;
   updatedAt: string;

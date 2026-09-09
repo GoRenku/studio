@@ -7,6 +7,7 @@ import {
 } from '../http/shot-plan-responses.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 import { toStudioAssetResponse } from '../http/asset-responses.js';
+import { toStudioPrevisResponse } from '../http/previs-responses.js';
 
 export interface CreateShotPlansRouteOptions {
   projectData: ProjectsRouteProjectData;
@@ -18,6 +19,15 @@ export function createShotPlansRoute({
   requireToken,
 }: CreateShotPlansRouteOptions) {
   return new Hono()
+    .get('/screenplay/shot-plans/:shotPlanId/previs', async (c) => {
+      try {
+        const projectName = c.req.param('projectName') as string;
+        const report = await projectData.readShotPlanPrevis({ projectName, shotPlanId: c.req.param('shotPlanId') });
+        return c.json(toStudioPrevisResponse(projectName, report));
+      } catch (error) {
+        return projectErrorResponse(c, error);
+      }
+    })
     .get('/screenplay/scenes/:sceneId/shot-plans', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;

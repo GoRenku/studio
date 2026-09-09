@@ -3,6 +3,7 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import { eq } from 'drizzle-orm';
+import { readLatestPrevisRender } from '../shot-plan-previs/projection.js';
 import type {
   ShotPlan,
   ShotPlanListReport,
@@ -75,6 +76,7 @@ export function projectSceneShotPlanListReport(input: {
     project: projectReport(input),
     shotPlans: projected.map((item) => ({
       shotPlan: item.shotPlan,
+      previsRender: item.shotPlan.type === 'previs' ? readLatestPrevisRender(input.session, item.shotPlan.id) : null,
       coveredBeats: item.beatContext.coveredBeats,
     })),
     warnings: [

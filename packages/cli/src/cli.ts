@@ -106,6 +106,7 @@ Options
   --clear-tags          Clear all Asset intended-use tags
   --source             Project-relative source file for media import
   --turns              Dialogue turn number or inclusive range for Shot Plan Audio
+  --previs-revision    Exact registered Previs revision for a Shot Plan video
   --resource           Studio resource key for notify-refresh
   --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
@@ -239,6 +240,9 @@ function createCliFlags() {
       type: 'string',
     },
     turns: {
+      type: 'string',
+    },
+    previsRevision: {
       type: 'string',
     },
     resource: {
@@ -748,6 +752,7 @@ export async function runRenkuCli(
             file,
             source: cli.flags.source,
             turns: cli.flags.turns,
+            previsRevision: cli.flags.previsRevision,
             title: cli.flags.title,
             summary: cli.flags.summary,
             referenceName: cli.flags.referenceName,

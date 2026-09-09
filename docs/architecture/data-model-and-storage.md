@@ -1,5 +1,12 @@
 # Renku Studio Data Model And Storage
 
+Previs reads retain every registered revision, including unavailable renders.
+Each revision projects its exact retained Description, display cues, localized
+warnings and active matched generated Assets. Assets may carry the nullable weak
+`authoredFrom.previsRevisionId`; Core validates supplied ids against the target
+Previs plan. It does not infer or backfill them. Video edits preserve that context.
+See [ADR 0095](../decisions/0095-use-previs-playback-display-metadata.md).
+
 Date: 2026-08-06
 
 Status: current
