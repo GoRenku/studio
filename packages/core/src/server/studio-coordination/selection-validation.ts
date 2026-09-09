@@ -173,12 +173,13 @@ export function parseStudioSelection(
       if (
         shotPlanTab
         && shotPlanTab !== 'shots'
+        && shotPlanTab !== 'previs'
         && shotPlanTab !== 'assets'
         && shotPlanTab !== 'audio'
       ) {
         issues.push(selectionIssue(
           'STUDIO_COORDINATION005',
-          'Shot Plan detail tab must be shots, assets, or audio.',
+          'Shot Plan detail tab must be shots, previs, assets, or audio.',
           [...path, 'shotPlanTab'],
           context,
         ));
@@ -191,7 +192,7 @@ export function parseStudioSelection(
           context,
         ));
       }
-      if ((shotPlanTab === 'assets' || shotPlanTab === 'audio') && shotId) {
+      if ((shotPlanTab === 'previs' || shotPlanTab === 'assets' || shotPlanTab === 'audio') && shotId) {
         issues.push(selectionIssue(
           'STUDIO_COORDINATION040',
           'Shot focus is not valid on this Shot Plan detail tab.',
@@ -207,6 +208,7 @@ export function parseStudioSelection(
           ...(beatId ? { beatId } : {}),
           ...(shotPlanId ? { shotPlanId } : {}),
           ...(shotPlanTab === 'shots'
+            || shotPlanTab === 'previs'
             || shotPlanTab === 'assets'
             || shotPlanTab === 'audio'
             ? { shotPlanTab }

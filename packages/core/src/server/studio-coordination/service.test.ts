@@ -405,6 +405,73 @@ describe('StudioCoordinationService', () => {
     });
   });
 
+  it('round-trips Previs browser focus and explicit focus requests', async () => {
+    const storageRoot = path.join(homeDir, 'projects');
+    await writeConfig(homeDir, storageRoot);
+    const projectData = createProjectDataService();
+    await createSampleMovieProject({ homeDir, projectData });
+    const project = { projectName: 'constantinople', homeDir };
+    const screenplay = await projectData.readScreenplayStructure(project);
+    const scene = screenplay.screenplay.scenes[0]!;
+    const plan = await projectData.createShotPlan({
+      ...project,
+      sceneId: scene.id,
+      type: 'previs',
+      title: 'Gate approach',
+      coverage: null,
+      shots: [],
+    });
+    const coordination = createStudioCoordinationService({ homeDir });
+    const projectRef = { name: project.projectName, id: 'project_test0001', storageRoot };
+    const source = { kind: 'studio' as const, browserSessionId: 'studio_browser_previs' };
+    const selection = {
+      type: 'scene' as const,
+      id: scene.id,
+      sceneTab: 'shotPlans' as const,
+      shotPlanId: plan.shotPlan.id,
+    };
+    for (const shotPlanTab of ['audio', 'previs', 'assets', 'previs'] as const) {
+      await coordination.appendStudioEvent({
+        type: 'studio.browserSessionActive',
+        browserSessionId: source.browserSessionId,
+        activityKind: 'focused',
+        projectRef,
+        focus: { screen: 'movieStudio', selection: { ...selection, shotPlanTab } },
+        source,
+      });
+      const current = await coordination.readStudioCurrent();
+      expect(current.selection).toEqual({ ...selection, shotPlanTab });
+      expect(current.context).toMatchObject({ kind: 'scene', id: scene.id });
+      expect(current.warnings).toEqual([]);
+    }
+
+    const focus = {
+      screen: 'movieStudio' as const,
+      selection: { ...selection, shotPlanTab: 'previs' as const },
+    };
+    const request = await coordination.appendStudioEvent({
+      type: 'studio.focusRequested',
+      projectRef,
+      focus,
+      source: { kind: 'cli', command: 'renku project select' },
+    });
+    expect((await coordination.readStudioCurrent()).pendingRequest).toMatchObject({
+      eventId: request.id,
+      focus,
+    });
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged',
+      projectRef,
+      focus,
+      appliedRequestId: request.id,
+      source,
+    });
+    const current = await coordination.readStudioCurrent();
+    expect(current.selection).toEqual(focus.selection);
+    expect(current.pendingRequest).toBeNull();
+    expect(current.warnings).toEqual([]);
+  });
+
   it('projects the focused Prop into current Studio context', async () => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);

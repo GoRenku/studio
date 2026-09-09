@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref, type SyntheticEvent } from 'react';
 import { Maximize, Minimize, Pause, Play } from 'lucide-react';
 import { Button } from './button';
 import { Slider } from './slider';
@@ -120,6 +120,13 @@ function VideoPlayerSurface({
     }
   }, []);
 
+  const handlePlayingChange = useCallback((event: SyntheticEvent<HTMLVideoElement>) => {
+    // Queued events can describe a command superseded by a later play or pause.
+    const playing = !event.currentTarget.paused && !event.currentTarget.ended;
+    setPlaying(playing);
+    onPlayingChange?.(playing);
+  }, [onPlayingChange]);
+
   const handleTimelineChange = useCallback((value: number[]) => {
     const nextTime = value[0] ?? 0;
     const video = videoRef.current;
@@ -150,9 +157,9 @@ function VideoPlayerSurface({
             setCurrentTime(event.currentTarget.currentTime);
             onTimeChange?.(event.currentTarget.currentTime);
           }}
-          onPlay={() => { setPlaying(true); onPlayingChange?.(true); }}
-          onPause={() => { setPlaying(false); onPlayingChange?.(false); }}
-          onEnded={() => { setPlaying(false); onPlayingChange?.(false); }}
+          onPlay={handlePlayingChange}
+          onPause={handlePlayingChange}
+          onEnded={handlePlayingChange}
         />
         {mediaError ? <div role='status' className='absolute inset-0 flex items-center justify-center bg-muted text-xs text-muted-foreground'>Video unavailable</div> : null}
       </div>

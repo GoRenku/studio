@@ -2,6 +2,31 @@ import { describe, expect, it } from 'vitest';
 import { parseStudioSelection } from './selection-validation.js';
 
 describe('Studio selection validation', () => {
+  it('preserves the Previs detail tab in the parsed selection', () => {
+    const selection = {
+      type: 'scene',
+      id: 'scene_opening',
+      sceneTab: 'shotPlans',
+      shotPlanId: 'plan_previs',
+      shotPlanTab: 'previs',
+    };
+    expect(parseStudioSelection(selection)).toEqual({ valid: true, selection });
+  });
+
+  it('rejects individual Shot focus on the Previs detail tab', () => {
+    expect(parseStudioSelection({
+      type: 'scene',
+      id: 'scene_opening',
+      sceneTab: 'shotPlans',
+      shotPlanId: 'plan_previs',
+      shotPlanTab: 'previs',
+      shotId: 'shot_wide',
+    })).toMatchObject({
+      valid: false,
+      issues: [{ code: 'STUDIO_COORDINATION040', location: { path: ['shotId'] } }],
+    });
+  });
+
   it('reads complete nested Shot Plan selection state', () => {
     expect(
       parseStudioSelection({

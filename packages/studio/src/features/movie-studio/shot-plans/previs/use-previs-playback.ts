@@ -16,6 +16,7 @@ export function usePrevisPlayback(generationUrl?: string) {
   const [muted, setMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isPlaying = useRef(false);
+  const playAttempt = useRef(0);
   const attachPrevis = useCallback((player: VideoPlayerHandle | null) => { previs.current = player; }, []);
   const attachGeneration = useCallback((player: VideoPlayerHandle | null) => { generation.current = player; }, []);
 
@@ -34,6 +35,7 @@ export function usePrevisPlayback(generationUrl?: string) {
   }, []);
 
   const pause = useCallback(() => {
+    playAttempt.current++;
     isPlaying.current = false;
     previs.current?.pause();
     generation.current?.pause();
@@ -43,6 +45,7 @@ export function usePrevisPlayback(generationUrl?: string) {
 
   const play = useCallback(() => {
     if (duration <= 0) return;
+    const attempt = ++playAttempt.current;
     isPlaying.current = true;
     setPlaying(true);
     setError(null);
@@ -60,6 +63,7 @@ export function usePrevisPlayback(generationUrl?: string) {
       });
     }
     void Promise.all(players).catch(() => {
+      if (attempt !== playAttempt.current) return;
       pause();
       setError('Playback could not start. Try playing again.');
     });
