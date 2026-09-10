@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { validatePrevisPlayback } from './timeline.js';
 import type { ProjectRelativePath } from '../../client/index.js';
 import { and, eq, max } from 'drizzle-orm';
 import type { ReadShotPlanPrevisInput, RegisterShotPlanPrevisInput, ShotPlanPrevisReport } from '../../client/shot-plan-previs.js';
@@ -37,6 +39,19 @@ export async function registerShotPlanPrevis(input: RegisterShotPlanPrevisInput)
     });
     assertResolvedPathInsideProject(fs.realpathSync(projectFolder), fs.realpathSync(render.absolutePath));
     const source = inspectPrevisSource(projectFolder, input.sourceDirectory);
+    const playbackFile = source.files.find((file) => file.relativePath === 'playback.json');
+    if (playbackFile) {
+      let bytes: Buffer;
+      try { bytes = fs.readFileSync(playbackFile.absolutePath); }
+      catch { throw new ProjectDataError('CORE_PREVIS_SOURCE_CHANGED', 'Timeline became unavailable during validation.'); }
+      let value: unknown;
+      try { value = JSON.parse(bytes.toString('utf8')); }
+      catch { throw new ProjectDataError('CORE_PREVIS_PLAYBACK_INVALID', 'Previs timeline must be valid JSON.'); }
+      validatePrevisPlayback(value);
+      if (createHash('sha256').update(bytes).digest('hex') !== playbackFile.hash) {
+        throw new ProjectDataError('CORE_PREVIS_SOURCE_CHANGED', 'Timeline changed during validation.');
+      }
+    }
     const renderHash = hashFileSync(render.absolutePath);
     const identical = session.db.select().from(shotPlanPrevisRevisions).where(and(
       eq(shotPlanPrevisRevisions.shotPlanId, input.shotPlanId),

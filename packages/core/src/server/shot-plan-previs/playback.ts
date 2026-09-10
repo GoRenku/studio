@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { validatePrevisPlayback } from './timeline.js';
 import { createDiagnosticWarning, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { PrevisPlayback } from '../../client/shot-plan-previs.js';
 import { readOwnedAsset } from '../assets/projection.js';
@@ -14,14 +15,16 @@ export function readPrevisDisplay(session: DatabaseSession, projectFolder: strin
   let playback: PrevisPlayback | null = null;
   if (json !== null) {
     try {
-      playback = decodePlayback(JSON.parse(json), warnings);
+      const decoded = validatePrevisPlayback(JSON.parse(json));
+      playback = decoded.playback;
+      warnings.push(...decoded.warnings);
     } catch {
       warnings.push(createDiagnosticWarning('CORE_PREVIS_PLAYBACK_INVALID', 'Previs cues are unavailable: playback.json has an invalid display envelope.', { path: ['playback'] }));
     }
   }
-  if (playback?.cues.some((cue) => cue.audio)) {
+  if (playback?.cues.some((cue) => cue.kind === 'dialogue' && cue.audio)) {
     playback.cues.forEach((cue, index) => {
-      if (!cue.audio) { return; }
+      if (cue.kind !== 'dialogue' || !cue.audio) { return; }
       try {
         const asset = readOwnedAsset(session, { assetId: cue.audio.assetId, owner: requireAssetOwner(session, cue.audio.assetId) });
         const file = asset?.files.find((candidate) => candidate.id === cue.audio!.assetFileId);
@@ -55,61 +58,5 @@ function readDisplayFile(projectFolder: string, sourceDirectory: string, name: s
   } catch {
     warnings.push(createDiagnosticWarning('CORE_PREVIS_DISPLAY_UNAVAILABLE', `${name} is unavailable.`, { path: [name === 'description.md' ? 'description' : 'playback'] }));
     return null;
-  }
-}
-
-function object(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) { throw new TypeError(); }
-  return value as Record<string, unknown>;
-}
-
-function string(value: unknown): string {
-  if (typeof value !== 'string') { throw new TypeError(); }
-  return value;
-}
-
-function seconds(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) { throw new TypeError(); }
-  return value;
-}
-
-function decodePlayback(value: unknown, warnings: DiagnosticIssue[]): PrevisPlayback {
-  const envelope = object(value);
-  if (!Array.isArray(envelope.subjects) || !Array.isArray(envelope.cues)) { throw new TypeError(); }
-  const subjects = envelope.subjects.map((value) => {
-    const subject = object(value);
-    const color = string(subject.color);
-    if (!/^#[0-9a-f]{6}$/i.test(color)) { throw new TypeError(); }
-    return { key: string(subject.key), label: string(subject.label), color };
-  });
-  if (new Set(subjects.map((subject) => subject.key)).size !== subjects.length) { throw new TypeError(); }
-  const cues = envelope.cues.map((value, index) => {
-    const cue = object(value);
-    const startSeconds = seconds(cue.startSeconds);
-    const endSeconds = cue.endSeconds === undefined ? undefined : seconds(cue.endSeconds);
-    if (endSeconds !== undefined && endSeconds <= startSeconds) { throw new TypeError(); }
-    const audio = decodeAudio(cue.audio, index, warnings);
-    return {
-      startSeconds,
-      ...(endSeconds === undefined ? {} : { endSeconds }),
-      ...(cue.subject === undefined ? {} : { subject: string(cue.subject) }),
-      text: string(cue.text),
-      ...(audio ? { audio } : {}),
-    };
-  });
-  return { subjects, cues };
-}
-
-function decodeAudio(value: unknown, index: number, warnings: DiagnosticIssue[]): PrevisPlayback['cues'][number]['audio'] {
-  if (value === undefined) { return undefined; }
-  try {
-    const audio = object(value);
-    return {
-      assetId: string(audio.assetId), assetFileId: string(audio.assetFileId),
-      offsetSeconds: audio.offsetSeconds === undefined ? 0 : seconds(audio.offsetSeconds),
-    };
-  } catch {
-    warnings.push(createDiagnosticWarning('CORE_PREVIS_AUDIO_UNAVAILABLE', 'Recorded audio has an invalid file reference.', { path: ['playback', 'cues', String(index), 'audio'] }));
-    return undefined;
   }
 }

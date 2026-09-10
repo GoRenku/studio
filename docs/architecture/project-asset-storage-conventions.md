@@ -3,11 +3,13 @@
 Previs revision candidates may include `description.md` and `playback.json`.
 Registration retains their exact bytes under `previs/revisions/rNNN/`; authoring
 copies live under `previs/source/`. Core reads only these fixed display filenames
-with project-relative and realpath guards. The optional playback envelope has
-ordered `{key,label,color}` subjects and `{startSeconds,endSeconds?,subject?,text,
-audio?}` cues. Audio names exact `{assetId,assetFileId,offsetSeconds?}` references;
-offset defaults to zero. Missing optional files are normal; invalid envelopes and
-unavailable audio produce localized warnings without hiding the revision.
+with project-relative and realpath guards. The optional `PrevisPlayback` envelope
+contains rational `frameRate`, `frameCount`, ordered `segments`, explicit subjects
+and identified Dialogue/Action/Camera cues. See ADR 0096 for the contract.
+Supplied invalid timelines fail before registration writes; read failures remain
+localized warnings. Optional Dialogue audio names exact
+`{assetId,assetFileId,offsetSeconds?}` references. Missing/unavailable audio preserves
+visual rehearsal. Missing optional files are normal.
 Description is exact Markdown. No source-directory browser route is exposed.
 
 Date: 2026-08-09
@@ -284,11 +286,13 @@ of type `shot_plan_previs`, origin `rendered`, with exact Shot Plan authorship a
 revision association. AI takes remain `shot_plan_video` at the existing plan root,
 with normal generation provenance. Procedural renders do not appear as AI takes.
 `shot_plan_previs_revision` associates source directory and render Asset; it does
-not interpret animation, Cast, Beats, dialogue or playback cues.
+not interpret animation, Cast, Beats or creative text. Core validates the retained
+timeline envelope separately, without duplicating it in SQL.
 
-The agent may use scene-specific dialogue controls and derive lightweight legend
-and timed cues in `playback.json`. The future player owns display; MP4s contain no
-burned review overlays. No playback annotation is required by registration.
+The agent authors sparse direction points and shot segments in `playback.json`
+from explicit directing choices. Animation holds and review captions are not
+automatically cues. Studio owns display; MP4s contain no burned review overlays.
+Playback annotations are optional, but supplied documents must be structurally valid.
 
 PNG frames, logs, QA and encoding intermediates remain under top-level Project
 `tmp/`. Frames can support resume/re-encoding and verified unchanged intervals;

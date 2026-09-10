@@ -47,7 +47,7 @@ export function createAssetsRoute({
           projectName,
           assetId,
           assetFileId,
-        });
+        }, c.req.raw);
       } catch (error) {
         return projectErrorResponse(c, error);
       }

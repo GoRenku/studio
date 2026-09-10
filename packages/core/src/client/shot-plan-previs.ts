@@ -12,15 +12,21 @@ export interface RegisterShotPlanPrevisInput extends ReadShotPlanPrevisInput {
   title?: string;
 }
 
+export interface PrevisFrameRate { numerator: number; denominator: number }
+export interface PrevisShotSegment { id: string; startFrame: number; label: string }
+export interface PrevisSubject { key: string; label: string; color: string }
+export interface PrevisDialogueAudio { assetId: string; assetFileId: string; offsetSeconds?: number }
+export type PrevisCue =
+  | { id: string; kind: 'dialogue'; startFrame: number; endFrame?: number; speaker: string; text: string; audio?: PrevisDialogueAudio }
+  | { id: string; kind: 'action'; startFrame: number; subject?: string; text: string }
+  | { id: string; kind: 'camera'; startFrame: number; text: string };
+
 export interface PrevisPlayback {
-  subjects: Array<{ key: string; label: string; color: string }>;
-  cues: Array<{
-    startSeconds: number;
-    endSeconds?: number;
-    subject?: string;
-    text: string;
-    audio?: { assetId: string; assetFileId: string; offsetSeconds?: number };
-  }>;
+  frameRate: PrevisFrameRate;
+  frameCount: number;
+  segments: PrevisShotSegment[];
+  subjects: PrevisSubject[];
+  cues: PrevisCue[];
 }
 
 export interface PrevisRevision {

@@ -20,7 +20,7 @@ export function PrevisMonitor({ revision, revisions, generation, onRevision, onG
   const previsFile = revision?.render?.files.find((file) => file.role === 'primary' && file.mediaKind === 'video');
   const generationFile = generation?.files.find((file) => file.role === 'primary' && file.mediaKind === 'video');
   return (
-    <section className='rounded-xl border border-border/40 bg-sidebar-bg p-3'>
+    <section className='shrink-0 rounded-xl border border-border/40 bg-sidebar-bg p-3'>
       <div className='mb-3 flex h-9 items-center gap-5'>
         <Button variant='outline' size='sm' disabled={index <= 0} onClick={() => onRevision(revisions[index - 1]!.id)}><ArrowLeft className='size-4' />Prev</Button>
         <span className='text-xs'>{revision ? `Revision ${revision.number} of ${revisions.length}` : 'No revisions'}</span>
@@ -34,7 +34,7 @@ export function PrevisMonitor({ revision, revisions, generation, onRevision, onG
           </div>
           <div className='aspect-video overflow-hidden rounded-md'>
             {previsFile ? <VideoPlayer ref={(player) => playback.attachPrevis(player)} src={previsFile.url} title='Previs' controls='external' className='h-full w-full object-contain'
-              onDurationChange={playback.onPrevisDuration} onPlayingChange={playback.onPrevisPlaying} onSeek={playback.seek}
+              onDurationChange={playback.onPrevisDuration} onPlaybackRequest={playback.toggle} playing={playback.playing} onEnded={playback.onPrevisEnded} onSeek={playback.seek}
               onError={playback.onPrevisError} /> : <MonitorPlaceholder text={status ?? (revision ? 'Visualization unavailable' : 'No visualization yet')} />}
           </div>
         </div>
@@ -51,7 +51,7 @@ export function PrevisMonitor({ revision, revisions, generation, onRevision, onG
           </div>
           <div className='aspect-video overflow-hidden rounded-md'>
             {generationFile ? <VideoPlayer ref={(player) => playback.attachGeneration(player)} src={generationFile.url} title='Generation' controls='external' className='h-full w-full object-contain'
-              onDurationChange={playback.onGenerationDuration} onPlayingChange={playback.onGenerationPlaying} onSeek={playback.seek} />
+              onDurationChange={playback.onGenerationDuration} onPlaybackRequest={playback.toggle} playing={playback.playing} onError={playback.onGenerationError} onSeek={playback.seek} />
               : <MonitorPlaceholder text={status ?? (generation ? 'Generation unavailable' : 'No generation for this revision')} />}
           </div>
         </div>

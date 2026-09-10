@@ -32,6 +32,9 @@ async function fixture() {
   return { service, input, sourceDirectory, root: created.projectPath, plan };
 }
 
+const timelineEnvelope = { frameRate: { numerator: 24, denominator: 1 }, frameCount: 240,
+  segments: [{ id: 'wide', startFrame: 0, label: 'Wide' }], subjects: [{ key: 'speaker', label: 'Speaker', color: '#aAbB09' }] };
+
 describe('Previs registration', () => {
   it('resolves exact recorded audio and localizes malformed references and retained-file escapes', async () => {
     const f = await fixture();
@@ -39,14 +42,14 @@ describe('Previs registration', () => {
     const audio = await f.service.attachGenerationMedia({ ...f.input, purpose: 'shot-plan.dialogue-audio', target: { kind: 'shotPlan', id: f.input.shotPlanId }, turnRange: { start: 1, end: 1 },
       sourceProjectRelativePath: 'tmp/voice.wav', generationProvenance: { provider: 'fixture', model: 'audio', mediaKind: 'audio', prompt: null, request: {} } });
     const exactAudio = { assetId: audio.asset.id, assetFileId: audio.asset.files[0]!.id, offsetSeconds: 2 };
-    await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), JSON.stringify({ subjects: [], cues: [
-      { startSeconds: 0, endSeconds: 3, text: 'Voice', audio: exactAudio },
-      { startSeconds: 4, text: 'Still seekable', audio: { assetId: 5 } },
+    await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), JSON.stringify({ ...timelineEnvelope, cues: [
+      { id: 'voice', kind: 'dialogue', speaker: 'speaker', startFrame: 0, endFrame: 72, text: 'Voice', audio: exactAudio },
+      { id: 'next', kind: 'dialogue', speaker: 'speaker', startFrame: 96, text: 'Still seekable', audio: { assetId: 5 } },
     ] }));
     await fs.writeFile(path.join(f.root, f.sourceDirectory, 'description.md'), 'Retained description');
     const first = (await f.service.registerShotPlanPrevis({ ...f.input, sourceDirectory: f.sourceDirectory, renderPath: 'tmp/previs.mp4' })).revisions[0]!;
-    expect(first.playback?.cues[0]?.audio).toEqual(exactAudio);
-    expect(first.playback?.cues[1]).toEqual({ startSeconds: 4, text: 'Still seekable' });
+    expect((first.playback?.cues[0] as Extract<NonNullable<typeof first.playback>['cues'][number], { kind: 'dialogue' }>)?.audio).toEqual(exactAudio);
+    expect(first.playback?.cues[1]).toEqual({ id: 'next', kind: 'dialogue', speaker: 'speaker', startFrame: 96, text: 'Still seekable' });
     const description = path.join(f.root, first.sourceDirectory, 'description.md');
     await fs.rename(description, `${description}.saved`);
     await fs.symlink(path.join(f.root, f.sourceDirectory, 'description.md'), description);
@@ -54,19 +57,19 @@ describe('Previs registration', () => {
     expect(report.revisions[0]).toMatchObject({ description: null, render: expect.any(Object), warnings: expect.arrayContaining([expect.objectContaining({ code: 'CORE_PREVIS_DISPLAY_UNAVAILABLE' })]) });
     const audioPath = path.join(f.root, audio.asset.files[0]!.projectRelativePath);
     await fs.rename(audioPath, `${audioPath}.saved`);
-    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.playback?.cues[0]?.audio).toBeUndefined();
+    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.playback?.cues[0]).not.toHaveProperty('audio');
   });
 
-  it('reads exact revision display text, local subjects, points, overlaps and unavailable audio without changing registration', async () => {
+  it('reads typed revision display and rejects invalid supplied timelines before registration', async () => {
     const f = await fixture();
     const description = '# Camera\n\nHold **the exchange**.\n';
     await fs.writeFile(path.join(f.root, f.sourceDirectory, 'description.md'), description);
     const playback = {
-      subjects: [{ key: 'object', label: 'Door', color: '#aAbB09' }],
+      ...timelineEnvelope,
       cues: [
-        { startSeconds: 1, endSeconds: 4, subject: 'object', text: '' },
-        { startSeconds: 2, text: 'A point', subject: 'unknown' },
-        { startSeconds: 3, endSeconds: 5, text: 'Subjectless', audio: { assetId: 'missing', assetFileId: 'missing' } },
+        { id: 'a', kind: 'action', startFrame: 24, subject: 'speaker', text: '' },
+        { id: 'b', kind: 'camera', startFrame: 48, text: 'A point' },
+        { id: 'c', kind: 'dialogue', speaker: 'speaker', startFrame: 72, endFrame: 120, text: 'Line', audio: { assetId: 'missing', assetFileId: 'missing' } },
       ],
     };
     await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), JSON.stringify(playback));
@@ -74,13 +77,18 @@ describe('Previs registration', () => {
     const first = (await f.service.registerShotPlanPrevis(request)).revisions[0]!;
     expect(first.description).toBe(description);
     expect(first.playback?.subjects).toEqual(playback.subjects);
-    expect(first.playback?.cues).toEqual([playback.cues[0], playback.cues[1], { startSeconds: 3, endSeconds: 5, text: 'Subjectless' }]);
+    expect(first.playback?.cues).toEqual([playback.cues[0], playback.cues[1], { id: 'c', kind: 'dialogue', speaker: 'speaker', startFrame: 72, endFrame: 120, text: 'Line' }]);
     expect(first.warnings).toEqual([expect.objectContaining({ code: 'CORE_PREVIS_AUDIO_UNAVAILABLE', location: { path: ['playback', 'cues', '2', 'audio'] } })]);
     await fs.writeFile(path.join(f.root, f.sourceDirectory, 'description.md'), 'Later direction');
-    await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), '{"subjects":[],"cues":[{"startSeconds":-1,"text":"x"}]}');
+    await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), JSON.stringify({ ...timelineEnvelope, cues: [{ kind: 'camera', id: 'invalid', startFrame: -1, text: 'x' }] }));
+    await expect(f.service.registerShotPlanPrevis(request)).rejects.toMatchObject({ code: 'CORE_PREVIS_PLAYBACK_INVALID' });
+    expect((await f.service.readShotPlanPrevis(f.input)).revisions).toHaveLength(1);
+    await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), JSON.stringify({ ...timelineEnvelope, cues: [] }));
     const second = (await f.service.registerShotPlanPrevis(request)).revisions;
     expect(second[0]?.description).toBe(description);
-    expect(second[1]).toMatchObject({ description: 'Later direction', playback: null, render: expect.any(Object), warnings: [expect.objectContaining({ code: 'CORE_PREVIS_PLAYBACK_INVALID' })] });
+    expect(second[1]).toMatchObject({ description: 'Later direction', warnings: [] });
+    await fs.writeFile(path.join(f.root, second[1]!.sourceDirectory, 'playback.json'), '{');
+    expect((await f.service.readShotPlanPrevis(f.input)).revisions[1]).toMatchObject({ playback: null, render: expect.any(Object), warnings: [expect.objectContaining({ code: 'CORE_PREVIS_PLAYBACK_INVALID' })] });
     const cards = await f.service.listSceneShotPlans({ ...f.input, sceneId: f.plan.shotPlan.sceneId });
     expect(cards.shotPlans.find((entry) => entry.shotPlan.id === f.input.shotPlanId)?.previsRender?.id).toBe(second[1]?.render?.id);
   });
@@ -124,13 +132,13 @@ describe('Previs registration', () => {
     const generations = await f.service.listSceneShotPlanVideoGenerations({ ...f.input, sceneId: f.plan.shotPlan.sceneId });
     expect(JSON.stringify(generations)).not.toContain(revision.render!.id);
     await fs.writeFile(path.join(f.root, f.sourceDirectory, 'build_previs.py'), '# changed geometry and timing');
-    // Playback content is opaque, including locally chosen keys and incomplete annotations.
-    await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), '{"custom":"director note"}');
+    // Creative extensions are retained exactly without driving playback.
+    await fs.writeFile(path.join(f.root, f.sourceDirectory, 'playback.json'), JSON.stringify({ ...timelineEnvelope, cues: [], custom: 'director note' }));
     const second = await f.service.registerShotPlanPrevis(request);
     expect(second.revisions).toHaveLength(2);
     expect(await fs.readFile(path.join(f.root, revision.sourceDirectory, 'build_previs.py'), 'utf8')).toBe('# scene-specific source');
     await f.service.cleanProjectTemporaryFiles(f.input);
-    expect(await fs.readFile(path.join(f.root, second.revisions[1]!.sourceDirectory, 'playback.json'), 'utf8')).toBe('{"custom":"director note"}');
+    expect(await fs.readFile(path.join(f.root, second.revisions[1]!.sourceDirectory, 'playback.json'), 'utf8')).toBe(JSON.stringify({ ...timelineEnvelope, cues: [], custom: 'director note' }));
     for (const retained of second.revisions) {
       expect(await fs.readFile(path.join(f.root, retained.render!.files[0]!.projectRelativePath), 'utf8')).toBe('procedural video fixture');
     }

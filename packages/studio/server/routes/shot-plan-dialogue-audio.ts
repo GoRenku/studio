@@ -60,7 +60,7 @@ export function createShotPlanDialogueAudioRoute(input: {
           takeId: c.req.param('takeId'),
           assetFileId: c.req.param('assetFileId'),
         });
-        return await projectAssetFileResponse(resolved);
+        return await projectAssetFileResponse(resolved, c.req.raw);
       } catch (error) {
         return projectErrorResponse(c, error);
       }

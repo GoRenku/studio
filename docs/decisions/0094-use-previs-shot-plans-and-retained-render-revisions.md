@@ -1,5 +1,7 @@
 # 0094 Use Previs Shot Plans and retained render revisions
 
+Current playback types and validation are defined by [ADR 0096](0096-use-typed-previs-direction-timelines.md); retained source/render ownership below remains in effect.
+
 Current extension: [ADR 0095](0095-use-previs-playback-display-metadata.md)
 permits a narrow playback display envelope and retained Description, and adds
 an explicit weak generation-to-revision reference. The original decision below

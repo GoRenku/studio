@@ -1,5 +1,9 @@
 # 0095 Use Previs playback display metadata
 
+Current timeline types and registration policy are defined by
+[ADR 0096](0096-use-typed-previs-direction-timelines.md). The decision below records
+the preceding implementation.
+
 Date: 2026-09-09
 Status: accepted
 

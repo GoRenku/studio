@@ -12,26 +12,48 @@ export async function readProjectAssetFileByIdResponse(
     projectName: string;
     assetId: string;
     assetFileId: string;
-  }
+  },
+  request?: Request,
 ): Promise<Response> {
   const resolved = await projectData.resolveProjectAssetFileById(input);
-  return projectAssetFileResponse(resolved);
+  return projectAssetFileResponse(resolved, request);
 }
 
 export async function projectAssetFileResponse(
   resolved: ResolvedProjectAssetFileById,
+  request?: Request,
 ): Promise<Response> {
-  const contentLength = resolved.file.sizeBytes
-    ?? (await fs.promises.stat(resolved.absolutePath)).size;
-  const stream = fs.createReadStream(resolved.absolutePath);
+  const contentLength = (await fs.promises.stat(resolved.absolutePath)).size;
+  // Without a matching validator, If-Range requires the complete representation.
+  const range = request?.method === 'GET' && !request.headers.has('If-Range') ? request.headers.get('Range') : null;
+  const bounds = assetByteRange(range, contentLength);
+  if (bounds === 'unsatisfiable') {
+    return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${contentLength}`, 'Accept-Ranges': 'bytes' } });
+  }
+  const stream = fs.createReadStream(resolved.absolutePath, bounds ?? undefined);
   return new Response(Readable.toWeb(stream) as ReadableStream<Uint8Array>, {
-    status: 200,
+    status: bounds ? 206 : 200,
     headers: {
       'Content-Type': contentTypeForAssetFile(resolved.file),
       'Cache-Control': 'private, max-age=31536000, immutable',
-      'Content-Length': String(contentLength),
+      'Accept-Ranges': 'bytes',
+      'Content-Length': String(bounds ? bounds.end - bounds.start + 1 : contentLength),
+      ...(bounds ? { 'Content-Range': `bytes ${bounds.start}-${bounds.end}/${contentLength}` } : {}),
     },
   });
+}
+
+function assetByteRange(range: string | null | undefined, size: number): { start: number; end: number } | 'unsatisfiable' | null {
+  // RFC 9110 permits ignoring unsupported units and multipart range requests.
+  const match = range?.match(/^bytes=(\d*)-(\d*)$/);
+  if (!match || (!match[1] && !match[2])) return null;
+  const length = BigInt(size);
+  const suffix = !match[1];
+  const requestedEnd = match[2] ? BigInt(match[2]) : length - 1n;
+  const start = suffix ? (requestedEnd > length ? 0n : length - requestedEnd) : BigInt(match[1]!);
+  const end = suffix || requestedEnd >= length ? length - 1n : requestedEnd;
+  if (start >= length || start > end || length === 0n) return 'unsatisfiable';
+  return { start: Number(start), end: Number(end) };
 }
 
 function contentTypeForAssetFile(file: AssetFile): string {

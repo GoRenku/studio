@@ -280,3 +280,16 @@ Money storage rules:
 | Selection            | Name the scope: canonical owner-scoped selection for Profile, Hero, Lookbook, Shot, or Scene Beat imagery. Exact provider references are request inputs, not selections. Use Pin for cast favorites and Binding for other usage relationships. |
 | Lineage              | Avoid when the exact domain fact is generation provenance or weak `authoredFrom` context. |
 | Mandatory Act/Sequence hierarchy | Do not require organizational Sections for Scene identity or ownership.                                                                                                                                                           |
+
+## Previs direction timeline
+
+`PrevisPlayback` is a retained revision domain document, validated by Core.
+A Dialogue cue begins one authored speech turn; an Action cue begins a physical
+direction change; a Camera cue changes camera direction within a shot. All have
+stable local ids and integer start frames. Only Dialogue can have an explicit
+end and exact audio reference. Text remains opaque.
+
+A `PrevisShotSegment` is an uninterrupted camera view, identified by id, authored
+label and start frame. One segment at zero is continuous; subsequent starts are
+cuts. Segment ends are derived, and dialogue can cross cuts. Segments are not
+Shot List Shots. See ADR 0096 for validation and playback behavior.

@@ -3,7 +3,7 @@ import { Maximize, Minimize, Pause, Play } from 'lucide-react';
 import { Button } from './button';
 import { Slider } from './slider';
 
-interface VideoPlayerProps {
+type VideoPlayerProps = {
   src: string;
   title: string;
   className?: string;
@@ -14,7 +14,11 @@ interface VideoPlayerProps {
   onPlayingChange?: (playing: boolean) => void;
   onSeek?: (seconds: number) => void;
   onError?: () => void;
-}
+  onEnded?: () => void;
+} & (
+  | { onPlaybackRequest: () => void; playing: boolean }
+  | { onPlaybackRequest?: never; playing?: never }
+);
 
 export interface VideoPlayerHandle {
   play: () => Promise<void>;
@@ -52,6 +56,9 @@ function VideoPlayerSurface({
   onPlayingChange,
   onSeek,
   onError,
+  onPlaybackRequest,
+  playing: transportPlaying,
+  onEnded,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const playerRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +69,7 @@ function VideoPlayerSurface({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [mediaError, setMediaError] = useState(false);
+  const controlsPlaying = onPlaybackRequest ? transportPlaying : playing;
 
   useImperativeHandle(ref, () => ({
     play: async () => { await videoRef.current?.play(); },
@@ -109,16 +117,19 @@ function VideoPlayerSurface({
   };
 
   const togglePlayback = useCallback(() => {
+    if (onPlaybackRequest) { onPlaybackRequest(); return; }
     const video = videoRef.current;
     if (!video) {
       return;
     }
     if (video.paused) {
-      void video.play().catch(() => setMediaError(true));
+      void video.play().catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) setMediaError(true);
+      });
     } else {
       video.pause();
     }
-  }, []);
+  }, [onPlaybackRequest]);
 
   const handlePlayingChange = useCallback((event: SyntheticEvent<HTMLVideoElement>) => {
     // Queued events can describe a command superseded by a later play or pause.
@@ -159,7 +170,7 @@ function VideoPlayerSurface({
           }}
           onPlay={handlePlayingChange}
           onPause={handlePlayingChange}
-          onEnded={handlePlayingChange}
+          onEnded={(event) => { handlePlayingChange(event); if (event.currentTarget.ended) onEnded?.(); }}
         />
         {mediaError ? <div role='status' className='absolute inset-0 flex items-center justify-center bg-muted text-xs text-muted-foreground'>Video unavailable</div> : null}
       </div>
@@ -182,11 +193,11 @@ function VideoPlayerSurface({
           type='button'
           size='icon'
           variant='ghost'
-          aria-label={playing ? 'Pause shot' : 'Play shot'}
+          aria-label={controlsPlaying ? 'Pause shot' : 'Play shot'}
           className='h-8 w-8 shrink-0'
           onClick={togglePlayback}
         >
-          {playing ? (
+          {controlsPlaying ? (
             <Pause data-icon='inline-start' />
           ) : (
             <Play data-icon='inline-start' />

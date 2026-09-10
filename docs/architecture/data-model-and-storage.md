@@ -1,11 +1,11 @@
 # Renku Studio Data Model And Storage
 
 Previs reads retain every registered revision, including unavailable renders.
-Each revision projects its exact retained Description, display cues, localized
+Each revision projects its exact retained Description, typed direction cues, localized
 warnings and active matched generated Assets. Assets may carry the nullable weak
 `authoredFrom.previsRevisionId`; Core validates supplied ids against the target
 Previs plan. It does not infer or backfill them. Video edits preserve that context.
-See [ADR 0095](../decisions/0095-use-previs-playback-display-metadata.md).
+See [ADR 0096](../decisions/0096-use-typed-previs-direction-timelines.md).
 
 Date: 2026-08-06
 
@@ -362,9 +362,11 @@ Shot rows. The existing list-edit/copy operations remain Shot List operations.
 `shot_plan_previs_revision` stores id, Shot Plan id, revision number, source
 directory/hash, render hash, Asset id and creation time. The associated Asset is
 procedural video (`shot_plan_previs`, origin `rendered`) with exact plan authorship.
-The source/render hash pair makes registration retries idempotent. Creative files,
-including optional playback subjects/cues, stay opaque. There are no Cast, Beat,
-speaker or dialogue-turn relationships in this revision model. AI generation uses
+The source/render hash pair makes registration retries idempotent. Core validates
+the optional retained `PrevisPlayback` envelope: rational frame rate/count, typed
+Dialogue/Action/Camera cues and ordered shot segments whose starts define cuts.
+Creative text remains opaque. Local speakers reference explicit subjects, without
+Cast, Beat or screenplay-turn foreign keys or parallel SQL timeline entities. AI generation uses
 the existing independent Project video Asset path and safe provider provenance.
 
 See `project-asset-storage-conventions.md` for paths and registration commands.

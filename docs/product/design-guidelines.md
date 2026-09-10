@@ -6,12 +6,20 @@ Within the real Studio shell, Previs uses the standard `Previs / Assets / Audio`
 line tabs. Keep two equal 16:9 contained monitor panes at every revision, with a
 quiet placeholder for missing generation. One shared amber transport uses Previs
 elapsed seconds; generations are never retimed. Keep the fixed-height authored
-subject legend, colored point/range timeline and full scrollable cue list beside
+subject legend, segment strip, direction points and full scrollable cue list beside
 the highlighted Description panel. Both Description sizes reuse
 `ShotDescriptionViewer` with exact Markdown. Use existing theme and font tokens
 in dark and light modes; never import prototype chrome or fonts. The lower panels
-stay 61%/39% with bounded equal heights as revisions change. Cue audio auditions
-an exact recording while video audio is muted, restoring normal audio afterward.
+stay 61%/39% with equal heights, filling the remaining window height with a
+340px minimum. Taller windows expand the cue list and Description; shorter windows
+retain workspace scrolling without shrinking the monitors. Only Dialogue has
+bounded Play/Pause, with an explicit end required. Only the chosen playing turn
+is amber; ordinary playback never highlights action rows. Selection is neutral.
+Action/Camera markers and cuts pause and seek. Cut boundaries come from segment
+starts; dialogue can continue across them. Stack coincident markers accessibly.
+Dialogue audio auditions an exact recording while both video tracks are muted;
+without a recording, rehearse Previs with Generation muted. Main playback exits
+audition. Unknown dialogue ends remain seekable with disabled Play.
 
 This document captures the visual design system, styling conventions, and UI patterns used throughout the Renku Viewer application.
 

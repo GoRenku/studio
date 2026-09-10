@@ -1941,3 +1941,17 @@ For the interactive Studio workflow, export to the exact path shown by
 **External screenplay**: `<project>/screenplay/edit/script.fdx`. Studio detects,
 reviews, and confirms that version. Do not automatically invoke the CLI to
 bypass a pending Studio review, and never overwrite a retained source Asset.
+
+### Previs timeline documents
+
+`shot-plan previs register` validates a supplied candidate `playback.json` before
+writing a revision. `shot-plan previs show --json` projects the same typed timeline:
+`frameRate: {numerator, denominator}`, `frameCount`, `segments: [{id, startFrame,
+label}]`, `subjects: [{key, label, color}]`, and `cues`.
+Dialogue cues use `{id, kind: "dialogue", startFrame, endFrame?, speaker, text,
+audio?}`. Action cues use `{id, kind: "action", startFrame, subject?, text}`;
+Camera cues use `{id, kind: "camera", startFrame, text}`. Exact optional audio is
+`{assetId, assetFileId, offsetSeconds?}`. Positions are zero-based integer frames;
+ends are exclusive. First segment starts at zero; later starts are cuts.
+See ADR 0096. No additional commands or flags are required. Missing playback is
+valid; malformed supplied timelines report `CORE_PREVIS_PLAYBACK_INVALID`.

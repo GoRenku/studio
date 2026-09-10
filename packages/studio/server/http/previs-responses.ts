@@ -14,13 +14,13 @@ export function toStudioPrevisResponse(projectName: string, report: ShotPlanPrev
       render: revision.render ? toStudioAssetResponse(projectName, revision.render) : null,
       generations: revision.generations.map((asset) => toStudioAssetResponse(projectName, asset)),
       playback: revision.playback ? {
-        subjects: revision.playback.subjects,
+        ...revision.playback,
         cues: revision.playback.cues.map((cue) => ({
           ...cue,
-          audio: cue.audio ? {
+          ...(cue.kind === 'dialogue' && cue.audio ? { audio: {
             ...cue.audio,
             url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(cue.audio.assetId)}/files/${encodeURIComponent(cue.audio.assetFileId)}`,
-          } : undefined,
+          } } : {}),
         })),
       } : null,
     })),
