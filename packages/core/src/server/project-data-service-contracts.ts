@@ -124,9 +124,11 @@ import type {
   DeleteShotPlanInput,
   ListSceneShotPlanVideoGenerationsInput,
   SceneShotPlanVideoGenerations,
-  ReadShotPlanImageAssetsInput,
-  ShotPlanImageAssets,
-  DiscardShotPlanImageAssetInput,
+  ReadShotPlanAssetsInput,
+  ImportShotPlanReferenceInput,
+  ShotPlanReferenceImportReport,
+  ShotPlanAssets,
+  DiscardShotPlanAssetInput,
   SceneStoryboardImageCandidateInput,
   ShotPlanDialogueAudioMutationReport,
   ShotPlanDialogueAudioResource,
@@ -307,11 +309,12 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   listSceneShotPlans(
     input: ListSceneShotPlansInput
   ): Promise<ShotPlanListReport>;
-  readShotPlanImageAssets(
-    input: ReadShotPlanImageAssetsInput
-  ): Promise<ShotPlanImageAssets>;
-  discardShotPlanImageAsset(
-    input: DiscardShotPlanImageAssetInput
+  readShotPlanAssets(
+    input: ReadShotPlanAssetsInput
+  ): Promise<ShotPlanAssets>;
+  importShotPlanReference(input: ImportShotPlanReferenceInput): Promise<ShotPlanReferenceImportReport>;
+  discardShotPlanAsset(
+    input: DiscardShotPlanAssetInput
   ): Promise<RecoverableMutationReport>;
   selectSceneStoryboardImageCandidate(
     input: SceneStoryboardImageCandidateInput

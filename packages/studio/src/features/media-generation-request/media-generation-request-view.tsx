@@ -64,13 +64,6 @@ export function MediaGenerationRequestView({
               No local media references.
             </p>
           )}
-        </LineTabsContent>
-        <LineTabsContent value='configuration' className='mt-0 min-h-0 overflow-auto'>
-          <MediaGenerationConfiguration
-            provider={preview.provider}
-            model={preview.model}
-            value={preview.configuration}
-          />
           {preview.diagnostics.length > 0 ? (
             <div className='mx-auto grid w-full max-w-[790px] gap-3 pb-12'>
               {preview.diagnostics.map((diagnostic, index) => (
@@ -82,6 +75,13 @@ export function MediaGenerationRequestView({
               ))}
             </div>
           ) : null}
+        </LineTabsContent>
+        <LineTabsContent value='configuration' className='mt-0 min-h-0 overflow-auto'>
+          <MediaGenerationConfiguration
+            provider={preview.provider}
+            model={preview.model}
+            value={preview.configuration}
+          />
         </LineTabsContent>
       </div>
     </Tabs>

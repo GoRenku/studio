@@ -78,7 +78,7 @@ export type * from '../client/media-generation-review.js';
 export type * from '../client/media-attachments.js';
 export type * from '../client/media-generation-context.js';
 export type * from '../client/shot-plans.js';
-export type * from '../client/shot-plan-image-assets.js';
+export type * from '../client/shot-plan-assets.js';
 export type * from '../client/shot-plan-video-generations.js';
 export type * from '../client/location-worlds.js';
 export {

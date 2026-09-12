@@ -41,11 +41,11 @@ export function createShotPlansRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .get('/screenplay/shot-plans/:shotPlanId/image-assets', async (c) => {
+    .get('/screenplay/shot-plans/:shotPlanId/assets', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const shotPlanId = c.req.param('shotPlanId') as string;
-        const resource = await projectData.readShotPlanImageAssets({ projectName, shotPlanId });
+        const resource = await projectData.readShotPlanAssets({ projectName, shotPlanId });
         return c.json({
           resource: {
             ...resource,
@@ -60,11 +60,11 @@ export function createShotPlansRoute({
       }
     })
     .delete(
-      '/screenplay/shot-plans/:shotPlanId/image-assets/:assetId',
+      '/screenplay/shot-plans/:shotPlanId/assets/:assetId',
       requireToken,
       async (c) => {
         try {
-          return c.json(await projectData.discardShotPlanImageAsset({
+          return c.json(await projectData.discardShotPlanAsset({
             projectName: c.req.param('projectName') as string,
             shotPlanId: c.req.param('shotPlanId') as string,
             assetId: c.req.param('assetId') as string,

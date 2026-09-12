@@ -1,6 +1,6 @@
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { studioShotPlanImageAssetsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioShotPlanAssetsResourceKey } from '../studio-coordination/resource-keys.js';
 import type {
   ImageEditContinuation,
   ImageEditContinuationInput,
@@ -29,10 +29,10 @@ export function resolveShotPlanImageEditContinuation(
   return {
     owner: { kind: 'project' },
     assetType: source.type,
-    destination: { kind: 'shotPlan.videoReferenceImage', shotPlanId, role },
+    destination: { kind: 'shotPlan.videoReference', shotPlanId, role },
     fileRole: 'primary',
     authoredFromShotPlanId: shotPlanId,
-    resourceKeys: [studioShotPlanImageAssetsResourceKey(shotPlanId)],
+    resourceKeys: [studioShotPlanAssetsResourceKey(shotPlanId)],
   };
 }
 

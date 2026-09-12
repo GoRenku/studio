@@ -1,4 +1,5 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
+import { ProjectDataError } from '../../project-data-error.js';
 import {
   allocateProjectAssetFileNames,
   allocateProjectAssetFilePath,
@@ -11,14 +12,15 @@ import type {
   DestinationRootInput,
 } from './types.js';
 
-type ShotPlanVideoReferenceImageDestinationKind = 'shotPlan.videoReferenceImage';
+type ShotPlanVideoReferenceDestinationKind = 'shotPlan.videoReference';
 
-export async function resolveShotPlanVideoReferenceImageDestinationFile(
-  input: DestinationFileInput<ShotPlanVideoReferenceImageDestinationKind>
+export async function resolveShotPlanVideoReferenceDestinationFile(
+  input: DestinationFileInput<ShotPlanVideoReferenceDestinationKind>
 ): Promise<ProjectRelativePath> {
+  validateReferenceMedia(input);
   return allocateProjectAssetFilePath({
     projectFolder: input.projectFolder,
-    parent: await resolveShotPlanVideoReferenceImageDestinationRoot(input),
+    parent: await resolveShotPlanVideoReferenceDestinationRoot(input),
     namingMode: input.namingMode,
     generatedBaseName: input.destination.role,
     sourceProjectRelativePath: input.sourceProjectRelativePath,
@@ -27,12 +29,13 @@ export async function resolveShotPlanVideoReferenceImageDestinationFile(
   });
 }
 
-export function resolveShotPlanVideoReferenceImageDestinationFileSync(
-  input: DestinationFileInput<ShotPlanVideoReferenceImageDestinationKind>
+export function resolveShotPlanVideoReferenceDestinationFileSync(
+  input: DestinationFileInput<ShotPlanVideoReferenceDestinationKind>
 ): ProjectRelativePath {
+  validateReferenceMedia(input);
   return allocateProjectAssetFilePathSync({
     projectFolder: input.projectFolder,
-    parent: resolveShotPlanVideoReferenceImageDestinationRootSync(input),
+    parent: resolveShotPlanVideoReferenceDestinationRootSync(input),
     namingMode: input.namingMode,
     generatedBaseName: input.destination.role,
     sourceProjectRelativePath: input.sourceProjectRelativePath,
@@ -41,24 +44,25 @@ export function resolveShotPlanVideoReferenceImageDestinationFileSync(
   });
 }
 
-export async function resolveShotPlanVideoReferenceImageDestinationRoot(
-  input: DestinationRootInput<ShotPlanVideoReferenceImageDestinationKind>
+export async function resolveShotPlanVideoReferenceDestinationRoot(
+  input: DestinationRootInput<ShotPlanVideoReferenceDestinationKind>
 ): Promise<ProjectRelativePath> {
-  return resolveShotPlanVideoReferenceImageDestinationRootSync(input);
+  return resolveShotPlanVideoReferenceDestinationRootSync(input);
 }
 
-export function resolveShotPlanVideoReferenceImageDestinationRootSync(
-  input: DestinationRootInput<ShotPlanVideoReferenceImageDestinationKind>
+export function resolveShotPlanVideoReferenceDestinationRootSync(
+  input: DestinationRootInput<ShotPlanVideoReferenceDestinationKind>
 ): ProjectRelativePath {
   return requireShotPlanStorageContext(input.session, input.destination.shotPlanId).root;
 }
 
-export async function resolveShotPlanVideoReferenceImageDestinationOutputNames(
-  input: DestinationOutputNamesInput<ShotPlanVideoReferenceImageDestinationKind>
+export async function resolveShotPlanVideoReferenceDestinationOutputNames(
+  input: DestinationOutputNamesInput<ShotPlanVideoReferenceDestinationKind>
 ): Promise<string[]> {
+  validateReferenceMedia(input);
   return allocateProjectAssetFileNames({
     projectFolder: input.projectFolder,
-    parent: await resolveShotPlanVideoReferenceImageDestinationRoot(input),
+    parent: await resolveShotPlanVideoReferenceDestinationRoot(input),
     namingMode: input.namingMode,
     generatedBaseName: input.destination.role,
     sourceProjectRelativePath: input.sourceProjectRelativePath,
@@ -66,4 +70,14 @@ export async function resolveShotPlanVideoReferenceImageDestinationOutputNames(
     count: input.outputCount,
     reservedProjectRelativePaths: input.reservedProjectRelativePaths,
   });
+}
+
+function validateReferenceMedia(input: Pick<DestinationFileInput<ShotPlanVideoReferenceDestinationKind>, 'destination' | 'mediaKind'>): void {
+  if (input.mediaKind === 'image') {
+    return;
+  }
+  if (input.destination.role === 'reference' && (input.mediaKind === 'video' || input.mediaKind === 'audio')) {
+    return;
+  }
+  throw new ProjectDataError('CORE_SHOT_PLAN_REFERENCE_MEDIA_INVALID', 'Only reference media may contain video or audio; frame and storyboard Assets require images.');
 }

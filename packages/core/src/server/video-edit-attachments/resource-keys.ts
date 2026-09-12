@@ -4,6 +4,7 @@ import { readShotPlanRecordIncludingDiscarded } from '../database/access/shot-pl
 import {
   studioAssetOwnerSurfaceResourceKeys,
   studioSceneVideoGenerationsResourceKey,
+  studioShotPlanAssetsResourceKey,
 } from '../studio-coordination/resource-keys.js';
 
 export function videoEditResourceKeys(input: {
@@ -13,6 +14,9 @@ export function videoEditResourceKeys(input: {
   const ownerKeys = studioAssetOwnerSurfaceResourceKeys(input.source.owner);
   if (!input.source.authoredFrom) {
     return ownerKeys;
+  }
+  if (input.source.type === 'shot_plan_video_reference') {
+    return [...ownerKeys, studioShotPlanAssetsResourceKey(input.source.authoredFrom.id)];
   }
   const shotPlan = readShotPlanRecordIncludingDiscarded(
     input.session,

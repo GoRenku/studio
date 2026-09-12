@@ -22,6 +22,7 @@ export function MediaGenerationReferenceCard({
         frame={referenceFrame(reference)}
         presentation={{
           kind: 'overlay',
+          ...(!reference.available ? { copy: { title: accessibleName, description: 'Reference unavailable.' } } : {}),
         }}
         activation={referenceActivation({
           reference,

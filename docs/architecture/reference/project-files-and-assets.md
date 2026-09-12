@@ -21,6 +21,13 @@ Decision history:
 - `../../decisions/0064-use-exclusive-asset-membership-and-scoped-selection.md`
 - `../project-asset-storage-conventions.md`
 
+Prepared Shot Plan references may be image, video or audio Assets. The focused
+`shot-plan reference import` command retains exact weak Plan authorship and,
+for Previs, the supplied revision. Selected derivatives are copied from temporary
+preparation into canonical storage before Preview; existing registered inputs
+are reused. Local derivation facts belong in the authored summary. See
+[decision 0099](../../decisions/0099-register-prepared-shot-plan-references.md).
+
 ## Asset Vocabulary
 
 An **Asset** is a registered content item in Renku Studio metadata.

@@ -1,5 +1,9 @@
 # 0088 Use Exact Request References And Source-Derived Image Continuation
 
+> **Decision 0099 update:** [Prepared Shot Plan references](0099-register-prepared-shot-plan-references.md)
+> extend the References collection to image, video and audio imports with exact
+> Previs attribution, preserving this decision's weak authorship and request markers.
+
 > **Decision 0089 update:** `video.edit` extends the source-derived pattern to
 > every active registered video Asset. It is media-kind-wide rather than a type
 > allowlist and creates a separate unselected sibling Asset with

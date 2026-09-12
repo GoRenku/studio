@@ -74,12 +74,12 @@ import {
   resolveShotPlanVideoDestinationRootSync,
 } from './shot-plan-video.js';
 import {
-  resolveShotPlanVideoReferenceImageDestinationFile,
-  resolveShotPlanVideoReferenceImageDestinationFileSync,
-  resolveShotPlanVideoReferenceImageDestinationOutputNames,
-  resolveShotPlanVideoReferenceImageDestinationRoot,
-  resolveShotPlanVideoReferenceImageDestinationRootSync,
-} from './shot-plan-video-reference-image.js';
+  resolveShotPlanVideoReferenceDestinationFile,
+  resolveShotPlanVideoReferenceDestinationFileSync,
+  resolveShotPlanVideoReferenceDestinationOutputNames,
+  resolveShotPlanVideoReferenceDestinationRoot,
+  resolveShotPlanVideoReferenceDestinationRootSync,
+} from './shot-plan-video-reference.js';
 import {
   resolveScreenplayDestinationFile,
   resolveScreenplayDestinationFileSync,
@@ -149,12 +149,12 @@ const destinationResolvers = {
     resolveRootSync: resolveShotPlanVideoDestinationRootSync,
     resolveOutputNames: resolveShotPlanVideoDestinationOutputNames,
   },
-  'shotPlan.videoReferenceImage': {
-    resolveFile: resolveShotPlanVideoReferenceImageDestinationFile,
-    resolveFileSync: resolveShotPlanVideoReferenceImageDestinationFileSync,
-    resolveRoot: resolveShotPlanVideoReferenceImageDestinationRoot,
-    resolveRootSync: resolveShotPlanVideoReferenceImageDestinationRootSync,
-    resolveOutputNames: resolveShotPlanVideoReferenceImageDestinationOutputNames,
+  'shotPlan.videoReference': {
+    resolveFile: resolveShotPlanVideoReferenceDestinationFile,
+    resolveFileSync: resolveShotPlanVideoReferenceDestinationFileSync,
+    resolveRoot: resolveShotPlanVideoReferenceDestinationRoot,
+    resolveRootSync: resolveShotPlanVideoReferenceDestinationRootSync,
+    resolveOutputNames: resolveShotPlanVideoReferenceDestinationOutputNames,
   },
   'cast.characterSheet': castCharacterSheetResolver,
   'cast.profile': castProfileResolver,

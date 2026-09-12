@@ -137,6 +137,16 @@ describe('MediaGenerationRequestView', () => {
     expect(screen.getByText('2 / 2')).toBeTruthy();
     expect(screen.getByLabelText('Media generation prompt').textContent).toContain('Second request');
   });
+
+  it('explains unavailable inputs and shows their diagnostic in References', () => {
+    render(<MediaGenerationRequestView preview={{ ...preview(),
+      references: [{ requestPointer: '/input', kind: 'audio', available: false, reviewLabel: 'Urban delivery', projectRelativePath: 'tmp/voice.wav' as never }],
+      diagnostics: [{ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND', severity: 'warning', message: 'The selected audio is unavailable.', location: { path: ['request', 'input'] } }],
+    }} prompt='' tab='references' onPromptChange={() => undefined} onTabChange={() => undefined} />);
+    expect(screen.getByText('Urban delivery')).toBeTruthy();
+    expect(screen.getByText('Reference unavailable.')).toBeTruthy();
+    expect(screen.getByText('The selected audio is unavailable.')).toBeTruthy();
+  });
 });
 
 function preview(): MediaGenerationPreviewResource {

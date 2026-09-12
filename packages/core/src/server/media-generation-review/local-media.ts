@@ -78,7 +78,7 @@ export function projectLocalMediaReferences(input: {
         'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND',
         `Referenced media is unavailable: ${projectRelativePath}.`,
         { path: ['request', projectRelativePath] },
-        'Choose another reference if the original file was discarded.',
+        'Register a prepared reference, restore the original Asset or file, or choose another available reference.',
       ));
     }
     references.push({

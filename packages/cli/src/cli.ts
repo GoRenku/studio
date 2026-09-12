@@ -87,6 +87,7 @@ Commands
   shot-plan            Author and inspect Shot List and Previs plans
   shot-plan previs show     Read source paths and rendered revisions
   shot-plan previs register Register a completed render and source snapshot
+  shot-plan reference import Register --source image/video/audio with --media-kind, --title and exact --shot-plan; Previs requires --previs-revision
   shot-plan clip list      Read numbered raw clips for --shot-plan and --previs-revision
   shot-plan clip create    Add a raw clip slot to the specified Previs revision
   shot-plan clip take add  Assign --asset and --asset-file to --clip; optional --title/--source-take
@@ -842,6 +843,9 @@ export async function runRenkuCli(
         return await runShotPlanCommand({
           input,
           flags: {
+            source: cli.flags.source,
+            mediaKind: cli.flags.mediaKind,
+            summary: cli.flags.summary,
             project: cli.flags.project,
             previsRevision: cli.flags.previsRevision,
             clip: cli.flags.clip,

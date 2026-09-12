@@ -4,7 +4,7 @@ import type {
   StudioShotImageCandidateCollection,
   StudioShotImageCandidatePage,
   StudioShotPlansResponse,
-  StudioShotPlanImageAssets,
+  StudioShotPlanAssets,
   StudioShotSelectionMutationResponse,
 } from './studio-shot-plans-contracts';
 
@@ -29,25 +29,25 @@ export async function deleteStudioShotPlan(input: {
   );
 }
 
-export async function readStudioShotPlanImageAssets(input: {
+export async function readStudioShotPlanAssets(input: {
   projectName: string;
   shotPlanId: string;
   signal?: AbortSignal;
-}): Promise<StudioShotPlanImageAssets> {
-  const body = await readJson<{ resource: StudioShotPlanImageAssets }>(
-    `${shotPlanUrl(input.projectName, input.shotPlanId)}/image-assets`,
+}): Promise<StudioShotPlanAssets> {
+  const body = await readJson<{ resource: StudioShotPlanAssets }>(
+    `${shotPlanUrl(input.projectName, input.shotPlanId)}/assets`,
     { signal: input.signal },
   );
   return body.resource;
 }
 
-export async function deleteStudioShotPlanImageAsset(input: {
+export async function deleteStudioShotPlanAsset(input: {
   projectName: string;
   shotPlanId: string;
   assetId: string;
 }): Promise<StudioRecoverableMutationResponse> {
   return readJson<StudioRecoverableMutationResponse>(
-    `${shotPlanUrl(input.projectName, input.shotPlanId)}/image-assets/${encodeURIComponent(input.assetId)}`,
+    `${shotPlanUrl(input.projectName, input.shotPlanId)}/assets/${encodeURIComponent(input.assetId)}`,
     mutationRequest('DELETE'),
   );
 }

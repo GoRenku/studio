@@ -1,22 +1,22 @@
-import type { DiscardShotPlanImageAssetInput } from '../../client/shot-plan-image-assets.js';
+import type { DiscardShotPlanAssetInput } from '../../client/shot-plan-assets.js';
 import type { RecoverableMutationReport } from '../../client/trash.js';
 import { readOwnedAsset } from '../assets/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { withProject } from '../project-operation.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { studioShotPlanImageAssetsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioShotPlanAssetsResourceKey } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
-const shotPlanImageTypes = new Set([
+const shotPlanAssetTypes = new Set([
   'shot_plan_video_first_frame',
   'shot_plan_video_last_frame',
   'shot_plan_video_storyboard',
   'shot_plan_video_reference',
 ]);
 
-export async function discardShotPlanImageAsset(
-  input: DiscardShotPlanImageAssetInput,
+export async function discardShotPlanAsset(
+  input: DiscardShotPlanAssetInput,
 ): Promise<RecoverableMutationReport> {
   return withProject(input, ({ session, projectFolder }) => {
     requireShotPlanRecord(session, input.shotPlanId);
@@ -26,10 +26,10 @@ export async function discardShotPlanImageAsset(
     });
     if (!asset
       || asset.authoredFrom?.id !== input.shotPlanId
-      || !shotPlanImageTypes.has(asset.type)) {
+      || !shotPlanAssetTypes.has(asset.type)) {
       throw new ProjectDataError(
-        'CORE_SHOT_PLAN_IMAGE_ASSETS_NOT_FOUND',
-        'The image is not an active image Asset authored from the exact Shot Plan.',
+        'CORE_SHOT_PLAN_ASSETS_NOT_FOUND',
+        'The Asset is not an active supporting Asset authored from the exact Shot Plan.',
       );
     }
     const project = readProjectRecord(session);
@@ -42,9 +42,9 @@ export async function discardShotPlanImageAsset(
       projectFolder,
       itemKind: 'asset',
       itemId: input.assetId,
-      commandName: 'shotPlan.imageAsset.discard',
-      changes: [{ type: 'shotPlan.imageAssetDiscarded', shotPlanId: input.shotPlanId, assetId: input.assetId }],
-      resourceKeys: [studioShotPlanImageAssetsResourceKey(input.shotPlanId)],
+      commandName: 'shotPlan.asset.discard',
+      changes: [{ type: 'shotPlan.assetDiscarded', shotPlanId: input.shotPlanId, assetId: input.assetId }],
+      resourceKeys: [studioShotPlanAssetsResourceKey(input.shotPlanId)],
     });
   });
 }

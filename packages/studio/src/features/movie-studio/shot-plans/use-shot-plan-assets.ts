@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
-import { readStudioShotPlanImageAssets } from '@/services/studio-shot-plans-api';
-import type { StudioShotPlanImageAssets } from '@/services/studio-shot-plans-contracts';
+import { readStudioShotPlanAssets } from '@/services/studio-shot-plans-api';
+import type { StudioShotPlanAssets } from '@/services/studio-shot-plans-contracts';
 
-export function useShotPlanImageAssets(input: {
+export function useShotPlanAssets(input: {
   projectName: string;
   shotPlanId: string;
   enabled: boolean;
 }) {
   const [result, setResult] = useState<{
     requestKey: string;
-    resource: StudioShotPlanImageAssets | null;
+    resource: StudioShotPlanAssets | null;
     error: string | null;
   } | null>(null);
   const [revision, setRevision] = useState(0);
@@ -22,7 +22,7 @@ export function useShotPlanImageAssets(input: {
   useEffect(() => {
     if (!requestKey) return;
     const controller = new AbortController();
-    void readStudioShotPlanImageAssets({
+    void readStudioShotPlanAssets({
       projectName: input.projectName,
       shotPlanId: input.shotPlanId,
       signal: controller.signal,
@@ -45,7 +45,7 @@ export function useShotPlanImageAssets(input: {
   useStudioResourceRefresh({
     projectName: input.projectName,
     enabled: input.enabled,
-    matches: (keys) => keys.includes(`surface:shotPlan:${input.shotPlanId}:image-assets`),
+    matches: (keys) => keys.includes(`surface:shotPlan:${input.shotPlanId}:assets`),
     onRefresh: reload,
   });
   const current = result?.requestKey === requestKey ? result : null;

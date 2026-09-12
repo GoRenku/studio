@@ -127,28 +127,28 @@ describe('Shot Plans Hono route', () => {
 
   it('delegates exact Shot Plan image projection and focused discard once', async () => {
     const asset = { ...makeAsset('asset_plan'), owner: { kind: 'project' as const } };
-    const readShotPlanImageAssets = vi.fn(async () => ({
+    const readShotPlanAssets = vi.fn(async () => ({
       shotPlan: { id: 'plan one', sceneId: 'scene_opening', title: 'Plan' },
       groups: [{ role: 'reference' as const, assets: [asset] }],
-      resourceKeys: ['surface:shotPlan:plan one:image-assets'],
+      resourceKeys: ['surface:shotPlan:plan one:assets'],
     }));
-    const discardShotPlanImageAsset = vi.fn(async () => recoverableReport());
-    const app = mountedRoute({ readShotPlanImageAssets, discardShotPlanImageAsset });
+    const discardShotPlanAsset = vi.fn(async () => recoverableReport());
+    const app = mountedRoute({ readShotPlanAssets, discardShotPlanAsset });
 
     const read = await app.request(
-      '/constantinople/screenplay/shot-plans/plan%20one/image-assets',
+      '/constantinople/screenplay/shot-plans/plan%20one/assets',
     );
     const discarded = await app.request(
-      '/constantinople/screenplay/shot-plans/plan%20one/image-assets/asset_plan',
+      '/constantinople/screenplay/shot-plans/plan%20one/assets/asset_plan',
       { method: 'DELETE' },
     );
 
-    expect(readShotPlanImageAssets).toHaveBeenCalledWith({
+    expect(readShotPlanAssets).toHaveBeenCalledWith({
       projectName: 'constantinople', shotPlanId: 'plan one',
     });
     expect((await read.json()).resource.groups[0].assets[0].files[0].url)
       .toContain('/assets/asset_plan/files/');
-    expect(discardShotPlanImageAsset).toHaveBeenCalledWith({
+    expect(discardShotPlanAsset).toHaveBeenCalledWith({
       projectName: 'constantinople', shotPlanId: 'plan one', assetId: 'asset_plan',
     });
     expect(discarded.status).toBe(200);

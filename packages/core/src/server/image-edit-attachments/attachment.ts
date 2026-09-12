@@ -41,6 +41,7 @@ export function attachImageEditMedia(input: {
     tags: input.assetMetadata?.tags === undefined ? source.tags : input.assetMetadata.tags,
   });
   const persisted = persistGeneratedMediaAttachment({
+    previsRevisionId: source.authoredFrom?.previsRevisionId,
     session: input.session,
     projectFolder: input.projectFolder,
     idGenerator: input.idGenerator,

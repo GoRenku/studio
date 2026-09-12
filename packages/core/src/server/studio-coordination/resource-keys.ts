@@ -105,8 +105,8 @@ export function studioSceneShotPlansResourceKey(sceneId: string): string {
   return `surface:scene:${sceneId}:shot-plans`;
 }
 
-export function studioShotPlanImageAssetsResourceKey(shotPlanId: string): string {
-  return `surface:shotPlan:${shotPlanId}:image-assets`;
+export function studioShotPlanAssetsResourceKey(shotPlanId: string): string {
+  return `surface:shotPlan:${shotPlanId}:assets`;
 }
 
 export function studioSceneVideoGenerationsResourceKey(

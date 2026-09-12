@@ -229,7 +229,7 @@ describe('image.edit source-derived attachment continuation', () => {
       );
     }
 
-    const projection = await projectData.readShotPlanImageAssets({
+    const projection = await projectData.readShotPlanAssets({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: plan.shotPlan.id,
@@ -248,19 +248,19 @@ describe('image.edit source-derived attachment continuation', () => {
       coverage: null,
       shots: [],
     });
-    await expect(projectData.discardShotPlanImageAsset({
+    await expect(projectData.discardShotPlanAsset({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: otherPlan.shotPlan.id,
       assetId: created.asset.id,
-    })).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_IMAGE_ASSETS_NOT_FOUND' });
-    await projectData.discardShotPlanImageAsset({
+    })).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_ASSETS_NOT_FOUND' });
+    await projectData.discardShotPlanAsset({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: plan.shotPlan.id,
       assetId: created.asset.id,
     });
-    const afterDiscard = await projectData.readShotPlanImageAssets({
+    const afterDiscard = await projectData.readShotPlanAssets({
       projectName: 'constantinople', homeDir, shotPlanId: plan.shotPlan.id,
     });
     expect(afterDiscard.groups.find((group) => group.role === 'reference')?.assets)

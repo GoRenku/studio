@@ -141,6 +141,16 @@ destination for its exact Shot Plan and is shown in that Plan's Assets tab.
 Ordinary input dependencies remain references and are not copied into the Plan
 folder.
 
+Prepared image, video and audio references are registered with
+`renku shot-plan reference import --shot-plan <id> --source <path>
+--media-kind <image|video|audio> --title <title>`. Previs requires the exact
+`--previs-revision`. Core copies the bytes into this same Plan root using the
+external filename allocator, persists a Project-owned reference Asset, and
+returns its canonical AssetFile path. The request uses that returned path.
+The existing summary retains authored extraction facts; deterministic local
+extraction has no generation provenance. The Assets tab's References group
+supports all three media kinds. See decision 0099.
+
 An accepted `image.edit` never chooses a folder from its output path or a caller
 destination flag. Core resolves the source Asset's exact current type and owner,
 then reuses the matching row in this matrix. Beat edits allocate a new

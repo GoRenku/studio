@@ -198,16 +198,16 @@ export function fakeProjectDataService(): NonNullable<
     async readShotPlan() {
       throw new Error('Shot Plan fixture was not configured.');
     },
-    async readShotPlanImageAssets(input) {
+    async readShotPlanAssets(input) {
       return {
         shotPlan: { id: input.shotPlanId, sceneId: 'scene_opening', title: 'Opening' },
         groups: [],
-        resourceKeys: [`surface:shotPlan:${input.shotPlanId}:image-assets`],
+        resourceKeys: [`surface:shotPlan:${input.shotPlanId}:assets`],
       };
     },
-    async discardShotPlanImageAsset() {
+    async discardShotPlanAsset() {
       return makeRecoverableMutationReport({
-        changeType: 'shotPlan.imageAssetDiscarded',
+        changeType: 'shotPlan.assetDiscarded',
         itemId: 'asset_image',
         resourceKeys: [],
       });

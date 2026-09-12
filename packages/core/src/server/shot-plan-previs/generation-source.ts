@@ -10,13 +10,19 @@ export function validatePrevisGenerationSource(session: DatabaseSession, input: 
   if (input.previsRevisionId === undefined) {
     return undefined;
   }
-  if (input.purpose !== 'shot-plan.video-generation' || input.target?.kind !== 'shotPlan'
+  const purposes = ['shot-plan.video-generation', 'image.create', 'shot-plan.video-reference',
+    'shot-plan.video-first-frame', 'shot-plan.video-last-frame', 'shot-plan.video-storyboard'];
+  if (!purposes.includes(input.purpose) || input.target?.kind !== 'shotPlan'
     || typeof input.previsRevisionId !== 'string' || !input.previsRevisionId) {
-    throw new ProjectDataError('CORE_PREVIS_GENERATION_SOURCE_INVALID', 'A Previs revision can only be supplied for a Shot Plan video attachment.');
+    throw new ProjectDataError('CORE_PREVIS_GENERATION_SOURCE_INVALID', 'A Previs revision requires a Shot Plan video or reference attachment.');
   }
-  const plan = requireShotPlanRecord(session, input.target.id);
+  return requirePrevisRevisionForPlan(session, input.target.id, input.previsRevisionId);
+}
+
+export function requirePrevisRevisionForPlan(session: DatabaseSession, shotPlanId: string, revisionId: string): string {
+  const plan = requireShotPlanRecord(session, shotPlanId);
   const revision = session.db.select().from(shotPlanPrevisRevisions)
-    .where(eq(shotPlanPrevisRevisions.id, input.previsRevisionId)).get();
+    .where(eq(shotPlanPrevisRevisions.id, revisionId)).get();
   if (plan.type !== 'previs' || revision?.shotPlanId !== plan.id) {
     throw new ProjectDataError('CORE_PREVIS_GENERATION_SOURCE_INVALID', 'The supplied revision must belong to the target Previs plan.');
   }

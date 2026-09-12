@@ -61,7 +61,7 @@ export interface StudioShotImageCandidateCollection {
   selectedAssetId: string | null;
 }
 
-export interface StudioShotPlanImageAssets {
+export interface StudioShotPlanAssets {
   shotPlan: { id: string; sceneId: string; title: string };
   groups: Array<{
     role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference';

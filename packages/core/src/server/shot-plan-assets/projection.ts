@@ -1,14 +1,14 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import type {
-  ShotPlanImageAssetGroup,
-  ShotPlanImageAssets,
-} from '../../client/shot-plan-image-assets.js';
+  ShotPlanAssetGroup,
+  ShotPlanAssets,
+} from '../../client/shot-plan-assets.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
 import { readOwnedAsset } from '../assets/projection.js';
 import { assets } from '../schema/index.js';
 import { withProject } from '../project-operation.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
-import { studioShotPlanImageAssetsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioShotPlanAssetsResourceKey } from '../studio-coordination/resource-keys.js';
 
 const groupDefinitions = [
   { role: 'first-frame', type: 'shot_plan_video_first_frame' },
@@ -17,9 +17,9 @@ const groupDefinitions = [
   { role: 'reference', type: 'shot_plan_video_reference' },
 ] as const;
 
-export async function readShotPlanImageAssets(
+export async function readShotPlanAssets(
   input: RenkuConfigPathOptions & { projectName?: string; shotPlanId: string },
-): Promise<ShotPlanImageAssets> {
+): Promise<ShotPlanAssets> {
   return withProject(input, ({ session }) => {
     const shotPlan = requireShotPlanRecord(session, input.shotPlanId);
     const rows = session.db
@@ -28,7 +28,10 @@ export async function readShotPlanImageAssets(
       .where(and(
         eq(assets.authoredFromShotPlanId, shotPlan.id),
         inArray(assets.type, groupDefinitions.map(({ type }) => type)),
-        eq(assets.mediaKind, 'image'),
+        or(eq(assets.mediaKind, 'image'), and(
+          eq(assets.type, 'shot_plan_video_reference'),
+          inArray(assets.mediaKind, ['video', 'audio']),
+        )),
         isNull(assets.discardedAt),
       ))
       .orderBy(assets.createdAt, assets.id)
@@ -41,14 +44,13 @@ export async function readShotPlanImageAssets(
           return asset ? [asset] : [];
         });
       return groupedAssets.length > 0
-        ? [{ role, assets: groupedAssets } satisfies ShotPlanImageAssetGroup]
+        ? [{ role, assets: groupedAssets } satisfies ShotPlanAssetGroup]
         : [];
     });
     return {
       shotPlan: { id: shotPlan.id, sceneId: shotPlan.sceneId, title: shotPlan.title },
       groups,
-      resourceKeys: [studioShotPlanImageAssetsResourceKey(shotPlan.id)],
+      resourceKeys: [studioShotPlanAssetsResourceKey(shotPlan.id)],
     };
   });
 }
-

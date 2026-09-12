@@ -13,7 +13,7 @@ import {
   studioVisualLanguageLookbookResourceKey,
   studioSceneShotPlansResourceKey,
   studioSceneVideoGenerationsResourceKey,
-  studioShotPlanImageAssetsResourceKey,
+  studioShotPlanAssetsResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import type { AssetSelectionTarget } from '../../client/assets.js';
 import { requireShotRecord } from '../database/access/shot-plans/shot-records.js';
@@ -144,7 +144,7 @@ const attachmentBuilders: Partial<
   Record<MediaPurpose, AttachmentBuilder>
 > = {
   'image.create': (input) =>
-    shotPlanVideoReferenceImageDetails(
+    shotPlanVideoReferenceDetails(
       requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'reference',
@@ -175,7 +175,7 @@ const attachmentBuilders: Partial<
       'video',
     ),
   'shot-plan.video-first-frame': (input) =>
-    shotPlanVideoReferenceImageDetails(
+    shotPlanVideoReferenceDetails(
       requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'first-frame',
@@ -183,7 +183,7 @@ const attachmentBuilders: Partial<
       'shot_plan_video_first_frame',
     ),
   'shot-plan.video-last-frame': (input) =>
-    shotPlanVideoReferenceImageDetails(
+    shotPlanVideoReferenceDetails(
       requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'last-frame',
@@ -191,7 +191,7 @@ const attachmentBuilders: Partial<
       'shot_plan_video_last_frame',
     ),
   'shot-plan.video-storyboard': (input) =>
-    shotPlanVideoReferenceImageDetails(
+    shotPlanVideoReferenceDetails(
       requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'storyboard',
@@ -199,7 +199,7 @@ const attachmentBuilders: Partial<
       'shot_plan_video_storyboard',
     ),
   'shot-plan.video-reference': (input) =>
-    shotPlanVideoReferenceImageDetails(
+    shotPlanVideoReferenceDetails(
       requireTarget(input, 'shotPlan'),
       requireShotPlanId(input),
       'reference',
@@ -342,7 +342,7 @@ export function generatedMediaAttachmentResourceKeys(input: {
   return [studioSceneVideoGenerationsResourceKey(source.sceneId)];
 }
 
-function shotPlanVideoReferenceImageDetails(
+function shotPlanVideoReferenceDetails(
   _input: unknown,
   shotPlanId: string,
   role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference',
@@ -352,9 +352,9 @@ function shotPlanVideoReferenceImageDetails(
   return details(
     _input,
     {
-      file: { kind: 'shotPlan.videoReferenceImage', shotPlanId, role },
+      file: { kind: 'shotPlan.videoReference', shotPlanId, role },
       owner: { kind: 'project' },
-      resourceKeys: [studioShotPlanImageAssetsResourceKey(shotPlanId)],
+      resourceKeys: [studioShotPlanAssetsResourceKey(shotPlanId)],
     },
     label,
     assetType,

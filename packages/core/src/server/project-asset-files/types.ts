@@ -19,7 +19,7 @@ export type ProjectAssetFileDestination =
   | { kind: 'shotPlan.previs'; shotPlanId: string }
   | { kind: 'shotPlan.video'; shotPlanId: string }
   | {
-      kind: 'shotPlan.videoReferenceImage';
+      kind: 'shotPlan.videoReference';
       shotPlanId: string;
       role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference';
     }
