@@ -27,6 +27,7 @@ export function usePrevis(projectName: string, sceneId: string, shotPlanId: stri
   useStudioResourceRefresh({
     projectName,
     matches: (keys) => keys.includes(`surface:scene:${sceneId}:shot-plans`)
+      || keys.some((key) => selection.resource?.resourceKeys.includes(key))
       || keys.includes(`surface:scene:${sceneId}:video-generations`)
       || keys.includes(`surface:shotPlan:${shotPlanId}:dialogue-audio`),
     onRefresh: reload,

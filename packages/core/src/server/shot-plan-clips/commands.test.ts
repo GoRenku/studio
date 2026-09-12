@@ -33,7 +33,7 @@ async function fixture() {
     sourceProjectRelativePath: 'raw.mp4', clipId, sourceTakeId, previsRevisionId: clipId ? undefined : revision.id,
     generationProvenance: { provider: 'fixture', model: 'video', mediaKind: 'video', prompt: 'Opaque', request: {} },
   });
-  return { service, project, input, scope, register, attach };
+  return { service, project, input, scope, register, attach, projectPath: created.projectPath, sceneId: scene.id };
 }
 
 it('allocates stable identities, resolves exact scope, keeps browsing separate and clears discarded selections', async () => {
@@ -82,4 +82,40 @@ it('preserves unassigned files, rejects invalid attachments atomically and accep
   await f.service.updateShotPlanClipTake({ ...f.project, takeId: take.id, title: 'Initial' });
   expect((await f.service.resolveShotPlanClipTake({ ...f.scope, clipNumber: 1, takeNumber: 1 })).title).toBe('Initial');
   await expect(f.service.resolveShotPlanClipTake({ ...f.scope, clipNumber: 1.5, takeNumber: 1 })).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_CLIP_TAKE_INVALID' });
+});
+
+it('projects source-scene refresh keys and current attribution after selection and discard', async () => {
+  const f = await fixture();
+  const sourceClip = (await f.service.createShotPlanClip(f.scope)).clips[0]!;
+  await f.attach(sourceClip.id);
+  await f.attach(sourceClip.id);
+  const sourceTakes = (await f.service.readShotPlanClips(f.scope)).clips[0]!.takes;
+  await f.service.selectShotPlanClipTake({ ...f.project, clipId: sourceClip.id, takeId: sourceTakes[0]!.id });
+  const added = await f.service.applyScreenplayOperations({ ...f.project, operations: [{
+    operation: 'scene.add', scene: { key: 'consumer', heading: 'INT. ROOM - DAY', blocks: [] },
+    structureEntryKey: 'consumer-entry', placement: { at: 'end' },
+  }] });
+  const sceneId = added.generatedIdentities.find((identity) => identity.key === 'consumer')!.id;
+  const plan = await f.service.createShotPlan({ ...f.project, type: 'previs', sceneId, title: 'Consumer', coverage: null, shots: [] });
+  const input = { ...f.project, shotPlanId: plan.shotPlan.id };
+  const sourceDirectory = (await f.service.readShotPlanPrevis(input)).sourceDirectory;
+  await fs.mkdir(path.join(f.projectPath, sourceDirectory), { recursive: true });
+  await fs.writeFile(path.join(f.projectPath, sourceDirectory, 'scene.blend'), 'source envelope');
+  const revision = (await f.service.registerShotPlanPrevis({ ...input, sourceDirectory, renderPath: 'raw.mp4' })).revisions[0]!;
+  const scope = { ...input, previsRevisionId: revision.id };
+  const clip = (await f.service.createShotPlanClip(scope)).clips[0]!;
+  await f.attach(clip.id, sourceTakes[0]!.id);
+  const expectedKeys = [`surface:scene:${sceneId}:shot-plans`, `surface:scene:${f.sceneId}:shot-plans`];
+  let report = await f.service.readShotPlanPrevis(input);
+  expect(report.resourceKeys).toEqual(expectedKeys);
+  expect(report.revisions[0]!.clips.resourceKeys).toEqual(expectedKeys);
+  expect(report.revisions[0]!.clips.sources[0]).toMatchObject({ takeNumber: 1, selectedTakeNumber: 1 });
+
+  await f.service.selectShotPlanClipTake({ ...f.project, clipId: sourceClip.id, takeId: sourceTakes[1]!.id });
+  report = await f.service.readShotPlanPrevis(input);
+  expect(report.revisions[0]!.clips.sources[0]).toMatchObject({ takeNumber: 1, selectedTakeNumber: 2 });
+  await f.service.discardAsset({ ...f.project, assetId: sourceTakes[1]!.assetId, owner: { kind: 'project' } });
+  report = await f.service.readShotPlanPrevis(input);
+  expect(report.resourceKeys).toEqual(expectedKeys);
+  expect(report.revisions[0]!.clips.sources[0]).toMatchObject({ takeNumber: 1, selectedTakeNumber: null });
 });

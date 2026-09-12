@@ -32,23 +32,6 @@ export function VideoPlayer({
   src,
   title,
   className,
-  ...playbackProps
-}: VideoPlayerProps) {
-  return (
-    <VideoPlayerSurface
-      key={src}
-      src={src}
-      title={title}
-      className={className}
-      {...playbackProps}
-    />
-  );
-}
-
-function VideoPlayerSurface({
-  src,
-  title,
-  className,
   ref,
   controls = 'inline',
   onTimeChange,
@@ -69,6 +52,14 @@ function VideoPlayerSurface({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [mediaError, setMediaError] = useState(false);
+  const [mediaSource, setMediaSource] = useState(src);
+  if (mediaSource !== src) {
+    setMediaSource(src);
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setMediaError(false);
+  }
   const controlsPlaying = onPlaybackRequest ? transportPlaying : playing;
 
   useImperativeHandle(ref, () => ({
@@ -124,6 +115,7 @@ function VideoPlayerSurface({
     }
     if (video.paused) {
       void video.play().catch((error: unknown) => {
+        if (videoRef.current !== video) return;
         if (!(error instanceof DOMException && error.name === 'AbortError')) setMediaError(true);
       });
     } else {
@@ -152,6 +144,7 @@ function VideoPlayerSurface({
     <div ref={playerRef} data-controls={controls} className='relative flex h-full min-h-0 flex-col gap-3 fullscreen:bg-background fullscreen:p-5'>
       <div className='relative min-h-0 w-full flex-1 overflow-hidden rounded-lg border border-border/40 bg-black'>
         <video
+          key={src}
           ref={videoRef}
           src={src}
           title={title}

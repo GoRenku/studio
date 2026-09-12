@@ -72,6 +72,7 @@ export function useClipPlayback(report?: StudioShotPlanClips, suppressed = false
     pause(); setAuditionId(null); setReturnClip(clipId);
     const target = segments.find((entry) => entry.clip.id === clipId && !entry.blocked)?.start ?? 0;
     setTime(target); pending.current = 0; setEnded(false); player.current?.seek(0);
+    return target;
   };
   const play = (resumeTime = time) => {
     if (!url || !duration) return;

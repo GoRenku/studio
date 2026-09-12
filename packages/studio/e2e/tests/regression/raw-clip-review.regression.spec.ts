@@ -72,6 +72,11 @@ test('reviews raw clip boundaries, alternatives, source attribution and independ
   await page.screenshot({ path: testInfo.outputPath('raw-clips-light.png'), fullPage: true });
   await page.getByRole('button', { name: 'Enter fullscreen: Generation' }).click();
   await expect(page.getByRole('button', { name: 'Exit fullscreen', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Play shot', exact: true }).click();
+  await expect.poll(() => right.getAttribute('src')).toContain(clips[2]!.takes[0]!.assetFileId);
+  expect(await page.evaluate(() => document.fullscreenElement?.contains(document.querySelector('video[title="Generation"]')))).toBe(true);
+  await expect(page.getByRole('button', { name: 'Exit fullscreen', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Pause shot', exact: true }).click();
   await page.keyboard.press('Escape');
   await service.selectShotPlanClipTake({ ...project, clipId: clips[1]!.id, takeId: null });
   await page.reload();

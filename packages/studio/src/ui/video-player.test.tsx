@@ -34,6 +34,33 @@ it('reports a rejected fullscreen request', async () => {
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Fullscreen could not'));
 });
 
+it('keeps the fullscreen container mounted while resetting media state for the next source', () => {
+  const { container, rerender } = render(<VideoPlayer src='/first.mp4' title='Clip' controls='external' />);
+  const surface = container.firstChild;
+  Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: surface });
+  act(() => { document.dispatchEvent(new Event('fullscreenchange')); });
+  const firstVideo = screen.getByTitle('Clip');
+  Object.defineProperty(firstVideo, 'duration', { configurable: true, value: 3 });
+  Object.defineProperty(firstVideo, 'currentTime', { configurable: true, value: 2 });
+  Object.defineProperty(firstVideo, 'paused', { configurable: true, value: false });
+  fireEvent.loadedMetadata(firstVideo);
+  fireEvent.timeUpdate(firstVideo);
+  fireEvent.play(firstVideo);
+  fireEvent.error(firstVideo);
+  expect(screen.getByText('0:02 / 0:03')).toBeTruthy();
+  expect(screen.getByRole('status')).toBeTruthy();
+
+  rerender(<VideoPlayer src='/second.mp4' title='Clip' controls='external' />);
+  expect(container.firstChild).toBe(surface);
+  expect(surface?.isConnected).toBe(true);
+  expect(screen.getByTitle('Clip')).not.toBe(firstVideo);
+  expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Play shot' })).toBeTruthy();
+  expect(screen.getByText('0:00 / 0:00')).toBeTruthy();
+  expect(screen.queryByRole('status')).toBeNull();
+  Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
+});
+
 it('ignores an ended event queued before a newer playback request', () => {
   const onEnded = vi.fn();
   render(<VideoPlayer src='/clip.mp4' title='Clip' onEnded={onEnded} />);

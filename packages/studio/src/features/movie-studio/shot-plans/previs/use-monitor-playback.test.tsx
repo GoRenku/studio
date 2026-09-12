@@ -59,3 +59,36 @@ it('pauses Generation for a recorded cue and realigns on the next linked seek', 
   expect(result.current.generation.time).toBe(6);
   expect(result.current.previs.activeCue).toBeNull();
 });
+
+it.each([3, 9])('starts a %s-second candidate at zero after linked playback was paused at six seconds', async (duration) => {
+  const left = player(); const right = player();
+  const { result } = renderHook(() => useMonitorPlayback({ ...revision, clips: rawClipFixture([duration, 5]) }));
+  act(() => { result.current.previs.attachPrevis(left); result.current.previs.onPrevisDuration(12); result.current.generation.attach(right); result.current.generation.onDuration(); });
+  act(() => result.current.toggleLink());
+  act(() => result.current.seek('previs', 6));
+  act(() => result.current.audition('take-0'));
+  act(() => result.current.generation.onDuration());
+  await act(async () => result.current.toggle('generation'));
+  expect(result.current.previs.time).toBe(0);
+  expect(result.current.generation.time).toBe(0);
+  expect(left.seek).toHaveBeenLastCalledWith(0);
+  expect(right.seek).toHaveBeenLastCalledWith(0);
+  expect(left.play).toHaveBeenCalledOnce();
+  expect(right.play).toHaveBeenCalledOnce();
+});
+
+it('resumes the selected clip chain at the returned clip boundary while linked', async () => {
+  const left = player(); const right = player();
+  const { result } = renderHook(() => useMonitorPlayback(revision));
+  act(() => { result.current.previs.attachPrevis(left); result.current.previs.onPrevisDuration(12); result.current.generation.attach(right); result.current.generation.onDuration(); });
+  act(() => result.current.toggleLink());
+  act(() => result.current.audition('take-1'));
+  act(() => result.current.seek('previs', 6));
+  act(() => result.current.backToClips('clip-1'));
+  act(() => result.current.generation.onDuration());
+  await act(async () => result.current.toggle('generation'));
+  expect(result.current.previs.time).toBe(3);
+  expect(result.current.generation.time).toBe(3);
+  expect(right.seek).toHaveBeenLastCalledWith(0);
+  expect(right.play).toHaveBeenCalledOnce();
+});

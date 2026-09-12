@@ -22,19 +22,25 @@ export function projectShotPlanPrevis(session: DatabaseSession, projectFolder: s
   const rows = session.db.select().from(shotPlanPrevisRevisions)
     .where(eq(shotPlanPrevisRevisions.shotPlanId, shotPlanId))
     .orderBy(asc(shotPlanPrevisRevisions.number)).all();
+  const resourceKeys = new Set([studioSceneShotPlansResourceKey(plan.sceneId)]);
+  const revisions = rows.map((row) => {
+    const render = readOwnedAsset(session, { owner: { kind: 'project' }, assetId: row.assetId });
+    const clips = projectShotPlanClips(session, shotPlanId, row.id);
+    for (const key of clips.resourceKeys) {
+      resourceKeys.add(key);
+    }
+    return {
+      id: row.id, number: row.number, sourceDirectory: row.sourceDirectory, createdAt: row.createdAt, render,
+      ...readPrevisDisplay(session, projectFolder, row.sourceDirectory),
+      clips,
+    };
+  });
   return {
     project: { projectName: project.projectName, projectFolder },
     shotPlanId,
     sourceDirectory: joinProjectRelativePath(root, 'previs', 'source'),
-    revisions: rows.map((row) => {
-      const render = readOwnedAsset(session, { owner: { kind: 'project' }, assetId: row.assetId });
-      return {
-        id: row.id, number: row.number, sourceDirectory: row.sourceDirectory, createdAt: row.createdAt, render,
-        ...readPrevisDisplay(session, projectFolder, row.sourceDirectory),
-        clips: projectShotPlanClips(session, shotPlanId, row.id),
-      };
-    }),
-    resourceKeys: [studioSceneShotPlansResourceKey(plan.sceneId)],
+    revisions,
+    resourceKeys: [...resourceKeys],
   };
 }
 
