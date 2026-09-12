@@ -1,4 +1,7 @@
 :root {
+  --timeline-clip-1: #c4b299;
+  --timeline-clip-2: #c18e7a;
+  --timeline-clip-3: #a5ab88;
   color-scheme: light;
 
   /* Level 0: App Background */
@@ -114,6 +117,9 @@
 }
 
 .dark {
+  --timeline-clip-1: #786750;
+  --timeline-clip-2: #805646;
+  --timeline-clip-3: #626947;
   color-scheme: dark;
 
   /* Level 0: App Background */
@@ -267,6 +273,9 @@
 }
 
 @theme inline {
+  --color-timeline-clip-1: var(--timeline-clip-1);
+  --color-timeline-clip-2: var(--timeline-clip-2);
+  --color-timeline-clip-3: var(--timeline-clip-3);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

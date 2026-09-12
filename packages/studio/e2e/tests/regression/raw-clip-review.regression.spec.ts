@@ -37,7 +37,7 @@ test('reviews raw clip boundaries, alternatives, source attribution and independ
   await page.goto(`/projects/${movieProject.projectName}/scenes/${movieProject.sceneId}?sceneTab=shotPlans&shotPlan=${plan.shotPlan.id}`);
   const left = page.getByTitle('Previs', { exact: true });
   const right = page.getByTitle('Generation', { exact: true });
-  await expect(page.getByRole('slider', { name: 'Generation timeline', exact: true })).toHaveAttribute('aria-valuemax', '12');
+  await expect(page.getByRole('slider', { name: 'Generation timeline', exact: true })).toHaveAttribute('aria-valuemax', '9');
   await expect(page.getByRole('button', { name: 'Link playback', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await page.getByRole('button', { name: 'Play Generation', exact: true }).click();
   await expect.poll(() => right.getAttribute('src')).toContain(clips[1]!.takes[0]!.assetFileId);
@@ -48,12 +48,13 @@ test('reviews raw clip boundaries, alternatives, source attribution and independ
   await expect(page.getByRole('button', { name: 'Use this take', exact: true })).toBeVisible();
   expect((await service.readShotPlanClips(revisionScope)).clips[0]!.selectedTakeId).toBe(clips[0]!.selectedTakeId);
   await page.getByRole('button', { name: 'Use this take', exact: true }).click();
-  await expect(page.getByRole('slider', { name: 'Generation timeline', exact: true })).toHaveAttribute('aria-valuemax', '12');
+  await expect(page.getByRole('slider', { name: 'Generation timeline', exact: true })).toHaveAttribute('aria-valuemax', '10');
   await page.reload();
   await expect(page.getByRole('combobox', { name: 'Generation take', exact: true })).toContainText('Clip 1.2');
   await page.getByRole('combobox', { name: 'Generation take', exact: true }).click();
-  await page.getByRole('option', { name: 'Clip 2.1', exact: true }).click();
-  await page.getByRole('button', { name: 'Back to clips', exact: true }).click();
+  await page.getByRole('option', { name: /^Clip 2\.1/ }).click();
+  await expect(page.getByRole('slider', { name: 'Generation timeline', exact: true })).toHaveAttribute('aria-valuenow', '3');
+  await expect(page.getByRole('button', { name: 'Back to clips', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Source take', exact: true }).hover();
   await expect(page.getByText('Source: Clip 1.1; selected: Clip 1.2', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Link playback', exact: true }).click();
@@ -81,8 +82,8 @@ test('reviews raw clip boundaries, alternatives, source attribution and independ
   await service.selectShotPlanClipTake({ ...project, clipId: clips[1]!.id, takeId: null });
   await page.reload();
   await expect(page.getByText('No clips assigned', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('slider', { name: 'Generation timeline', exact: true })).toHaveAttribute('aria-valuemax', '12');
+  await expect(page.getByRole('slider', { name: 'Generation timeline', exact: true })).toHaveAttribute('aria-valuemax', '3');
   await page.getByRole('combobox', { name: 'Generation take', exact: true }).click();
-  await page.getByRole('option', { name: 'Clip 3.1', exact: true }).click();
+  await page.getByRole('option', { name: /^Clip 3\.1/ }).click();
   await expect(page.getByRole('button', { name: 'Back to clips', exact: true })).toBeVisible();
 });

@@ -6,10 +6,16 @@ Within the real Studio shell, Previs uses the standard `Previs / Assets / Audio`
 line tabs. Keep two equal 16:9 contained monitor panes at every revision, with a
 quiet placeholder for missing generation. Each pane has its own compact amber transport directly beneath it. Put the Link toggle
 at the right of the revision row, with a chain icon and short “Link” tooltip. It
-aligns equal elapsed seconds without retiming. Keep the compact take selector in
-the Generation header; omit additional assignment/status rows. The Generation
-scale covers the full Previs duration (or longer generated footage), with tinted
-clip sections behind the slider and blank remaining time.
+aligns equal elapsed seconds without retiming. Keep a single compact clip/take dropdown in the Generation header;
+do not duplicate it with clip buttons beneath the player. Unlinked Generation uses
+the selected clips' combined duration; linked playback covers the longer of Previs
+and Generation. Color consecutive slider sections sandstone, terracotta, then muted
+olive, repeating every three clips. Use the semantic timeline-clip-1/2/3 tokens with
+opaque theme-specific tones; dark sandstone is a subdued brown so the brighter amber
+progress line remains distinct. Keep the section band taller than the progress line
+so clip identity remains visible behind completed progress. Clip navigation retains cumulative
+sequence time and consecutive playback; selecting a selected take returns to that
+clip's sequence position, not a standalone audition.
 Start unlinked. Generation shows raw clip boundaries proportional to file duration,
 compact `Clip N.M: Title` identities and explicit selection. Alternative audition
 is separate from selected-clips playback, with Back to clips and Use this take.

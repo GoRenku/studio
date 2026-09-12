@@ -40,9 +40,9 @@ export function PrevisMonitor({ revision, revisions, projectName, onRevision, pl
             onPlaybackRequest={() => playback.toggle('generation')} playing={generation.playing} onError={generation.onError}
             onSeek={(time) => playback.seek('generation', time + (generation.auditionId ? 0 : generation.segment?.start ?? 0))} /> : <MonitorPlaceholder text={status ?? 'Choose a clip take to review'} />}
         </div>
-        <MonitorTransport label='Generation' {...generation} timelineDuration={Math.max(previs.duration, generation.duration)} muted={generation.muted || (playback.linked && !playback.auditioning && playback.audible !== 'generation')}
+        <MonitorTransport label='Generation' {...generation} timelineDuration={playback.linked ? Math.max(previs.duration, generation.duration) : generation.duration} muted={generation.muted || (playback.linked && !playback.auditioning && playback.audible !== 'generation')}
           toggle={() => playback.toggle('generation')} seek={(time) => playback.seek('generation', time)} toggleMute={() => playback.toggleMute('generation')}
-          previewDuration={generation.auditionId ? generation.duration : undefined} segments={generation.auditionId ? [] : generation.segments} />
+          previewDuration={generation.auditionId ? generation.duration : undefined} segments={generation.segments} />
       </div>
     </div>
     {previs.error || generation.error ? <p role='alert' className='mt-2 text-xs text-destructive'>{previs.error ?? generation.error}</p> : null}

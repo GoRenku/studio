@@ -34,7 +34,11 @@ export function ClipReview({ revision, projectName, playback, reload }: {
   const options = [...candidates, ...unassigned];
   if (!options.length) return null;
   return <div className='ml-auto flex min-w-0 flex-1 items-center justify-end gap-1'>
-    <Select value={generation.auditionId ?? take?.id ?? ''} onValueChange={playback.audition}>
+    <Select value={generation.auditionId ?? take?.id ?? ''} onValueChange={(id) => {
+      const segment = generation.segments.find((entry) => entry.take?.id === id && !entry.blocked && entry.duration);
+      if (segment) playback.backToClips(segment.clip.id);
+      else playback.audition(id);
+    }}>
       <SelectTrigger aria-label='Generation take' className='min-w-0 flex-1 px-2 py-0 text-xs data-[size=default]:h-6 [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:truncate'><SelectValue placeholder='Generation take' /></SelectTrigger>
       <SelectContent position='popper' align='end' className='max-w-[min(36rem,calc(100vw-2rem))]'>{options.map((candidate) => <SelectItem key={candidate.id} value={candidate.id} className='whitespace-normal break-words'>{candidate.label}</SelectItem>)}</SelectContent>
     </Select>
