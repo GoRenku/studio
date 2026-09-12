@@ -10,7 +10,7 @@ export function validatePrevisGenerationSource(session: DatabaseSession, input: 
   if (input.previsRevisionId === undefined) {
     return undefined;
   }
-  if (input.purpose !== 'shot-plan.video-generation' || input.target.kind !== 'shotPlan'
+  if (input.purpose !== 'shot-plan.video-generation' || input.target?.kind !== 'shotPlan'
     || typeof input.previsRevisionId !== 'string' || !input.previsRevisionId) {
     throw new ProjectDataError('CORE_PREVIS_GENERATION_SOURCE_INVALID', 'A Previs revision can only be supplied for a Shot Plan video attachment.');
   }

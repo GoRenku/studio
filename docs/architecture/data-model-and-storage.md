@@ -2,7 +2,7 @@
 
 Previs reads retain every registered revision, including unavailable renders.
 Each revision projects its exact retained Description, typed direction cues, localized
-warnings and active matched generated Assets. Assets may carry the nullable weak
+warnings and raw clip/take selections with assigned and unassigned video Assets. Assets may carry the nullable weak
 `authoredFrom.previsRevisionId`; Core validates supplied ids against the target
 Previs plan. It does not infer or backfill them. Video edits preserve that context.
 See [ADR 0096](../decisions/0096-use-typed-previs-direction-timelines.md).
@@ -370,3 +370,21 @@ Cast, Beat or screenplay-turn foreign keys or parallel SQL timeline entities. AI
 the existing independent Project video Asset path and safe provider provenance.
 
 See `project-asset-storage-conventions.md` for paths and registration commands.
+
+
+### Raw Clips and Takes
+
+`shot_plan_clip` stores a stable number within one Previs revision and a nullable
+selected Take pointer. `shot_plan_clip_take` stores a stable number within its Clip,
+optional opaque title, exact Asset/file identities and optional source-Take
+attribution. Assets remain Project-owned. Existing files are assigned explicitly;
+there is no title-based inference or media move. Core commands allocate numbers,
+validate membership and active video-file envelopes, register imports atomically,
+and mutate selection. Discard clears selection; restoration does not reselect.
+
+`ShotPlanClips` projects ordered clips, takes, assigned/unassigned Asset files and
+source-attribution display context. Source attribution may cross plans/revisions
+and refer to discarded Takes in the same Project. It is not a generation dependency,
+frame contract or readiness gate. Skills choose continuation inputs; Engines owns
+provider capabilities and execution. Core does not inspect words, appearance or
+continuity. See ADR 0098 for raw playback and selection behavior.

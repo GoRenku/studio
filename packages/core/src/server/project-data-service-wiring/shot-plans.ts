@@ -1,3 +1,4 @@
+import { readShotPlanClips, createShotPlanClip, registerShotPlanClipTake, selectShotPlanClipTake, resolveShotPlanClipTake, updateShotPlanClipTake } from '../shot-plan-clips/commands.js';
 import { readShotPlanPrevis, registerShotPlanPrevis } from '../shot-plan-previs/registration.js';
 import {
   addShotToPlan,
@@ -24,6 +25,12 @@ import {
 export function createShotPlanServiceWiring(): Pick<
   ProjectDataService,
   | 'readShotPlanPrevis'
+  | 'readShotPlanClips'
+  | 'createShotPlanClip'
+  | 'registerShotPlanClipTake'
+  | 'selectShotPlanClipTake'
+  | 'resolveShotPlanClipTake'
+  | 'updateShotPlanClipTake'
   | 'registerShotPlanPrevis'
   | 'createShotPlan'
   | 'validateShotPlanDocument'
@@ -42,6 +49,12 @@ export function createShotPlanServiceWiring(): Pick<
 > {
   return {
     readShotPlanPrevis,
+    readShotPlanClips,
+    createShotPlanClip,
+    registerShotPlanClipTake,
+    selectShotPlanClipTake,
+    resolveShotPlanClipTake,
+    updateShotPlanClipTake,
     registerShotPlanPrevis,
     createShotPlan,
     async validateShotPlanDocument(input) {

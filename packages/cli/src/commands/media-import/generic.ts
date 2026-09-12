@@ -16,7 +16,7 @@ export async function importGenerationMedia(input: MediaImportCommandInput & {
     projectName: runtime.projectName,
     homeDir: runtime.homeDir,
     purpose,
-    target: parseGenerationTarget({
+    target: flags.clip && flags.target === undefined ? undefined : parseGenerationTarget({
       purpose,
       target: requiredFlag(flags.target, '--target'),
     }),
@@ -24,6 +24,9 @@ export async function importGenerationMedia(input: MediaImportCommandInput & {
     title: flags.title,
     ...(assetMetadata ? { assetMetadata } : {}),
     select: flags.select,
+    clipId: flags.clip,
+    takeTitle: flags.takeTitle,
+    sourceTakeId: flags.sourceTake,
     ...(flags.previsRevision !== undefined ? { previsRevisionId: flags.previsRevision } : {}),
     ...(input.turnRange ? { turnRange: input.turnRange } : {}),
     ...(flags.provenance

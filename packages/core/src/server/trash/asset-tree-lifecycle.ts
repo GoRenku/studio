@@ -1,6 +1,6 @@
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
-import { and, eq, isNull, ne } from 'drizzle-orm';
-import { assetFiles, assets } from '../schema/index.js';
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { assetFiles, assets, shotPlanClips, shotPlanClipTakes } from '../schema/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
   TrashFileDraft,
@@ -18,6 +18,9 @@ export function markAssetTreeDiscarded(
 export function markAssetRecordAndFilesDiscarded(
   input: TrashObjectDiscardContext
 ): void {
+  input.session.db.update(shotPlanClips).set({ selectedTakeId: null })
+    .where(inArray(shotPlanClips.selectedTakeId, input.session.db.select({ id: shotPlanClipTakes.id })
+      .from(shotPlanClipTakes).where(eq(shotPlanClipTakes.assetId, input.itemId)))).run();
   input.session.db
     .update(assets)
     .set({

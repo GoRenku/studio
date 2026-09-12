@@ -87,6 +87,14 @@ Commands
   shot-plan            Author and inspect Shot List and Previs plans
   shot-plan previs show     Read source paths and rendered revisions
   shot-plan previs register Register a completed render and source snapshot
+  shot-plan clip list      Read numbered raw clips for --shot-plan and --previs-revision
+  shot-plan clip create    Add a raw clip slot to the specified Previs revision
+  shot-plan clip take add  Assign --asset and --asset-file to --clip; optional --title/--source-take
+  shot-plan clip take resolve Resolve --number 1.1 in the specified plan/revision
+  shot-plan clip take select Select --take for --clip
+  shot-plan clip take clear Clear the selected take for --clip
+  shot-plan clip take update Set the short --title of --take
+  media import --clip      Atomically attach and register a raw take; optional --take-title/--source-take
   studio current       Show current Studio focus and context
   studio start         Start the local Renku Studio web application
   studio server status Show canonical local Studio server status
@@ -242,6 +250,10 @@ function createCliFlags() {
     turns: {
       type: 'string',
     },
+    clip: { type: 'string' },
+    assetFile: { type: 'string' },
+    sourceTake: { type: 'string' },
+    takeTitle: { type: 'string' },
     previsRevision: {
       type: 'string',
     },
@@ -753,6 +765,9 @@ export async function runRenkuCli(
             source: cli.flags.source,
             turns: cli.flags.turns,
             previsRevision: cli.flags.previsRevision,
+            clip: cli.flags.clip,
+            sourceTake: cli.flags.sourceTake,
+            takeTitle: cli.flags.takeTitle,
             title: cli.flags.title,
             summary: cli.flags.summary,
             referenceName: cli.flags.referenceName,
@@ -828,6 +843,13 @@ export async function runRenkuCli(
           input,
           flags: {
             project: cli.flags.project,
+            previsRevision: cli.flags.previsRevision,
+            clip: cli.flags.clip,
+            take: cli.flags.take,
+            assetFile: cli.flags.assetFile,
+            sourceTake: cli.flags.sourceTake,
+            title: cli.flags.title,
+            number: cli.flags.number,
             file,
             scene: cli.flags.scene,
             shotPlan: cli.flags.shotPlan,

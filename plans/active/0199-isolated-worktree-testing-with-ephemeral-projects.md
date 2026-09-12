@@ -2,6 +2,7 @@
 
 Status: proposed
 Date: 2026-09-06
+Updated: 2026-09-11
 
 ## Summary
 
@@ -17,15 +18,31 @@ Renku configuration and runtime discovery process-scoped through an explicit
 Renku home override, and correct test cleanup that currently crosses process
 boundaries. No copy of Urban Basilica is required.
 
+Preserve the installed product's singleton independently of test isolation.
+Ordinary installed and manual-development launches use `localhost:5173` with
+strict binding. Only repository test launchers explicitly request an isolated
+runtime. Changing the Renku configuration home does not enable multiple app
+instances or select another port.
+
 ## Review Attention
 
 - **Accepted behavior change:** agents default to ephemeral test projects and
   their own browser instance. They no longer attach to the maintainer's Studio
   instance or inspect the personal sample project unless explicitly requested.
-- **Necessary runtime changes:** add `RENKU_HOME_DIR` and `RENKU_STUDIO_PORT`,
-  scope the existing singleton runtime to a Renku home, and make CLI server
-  status report its discovered URL rather than a mandatory canonical URL.
-  These are process/development contracts, not Project Settings or a new UI.
+- **Necessary runtime changes:** add `RENKU_HOME_DIR` for configuration paths
+  and an explicit programmatic `StudioServerLaunch` contract for singleton or
+  isolated startup. Only test launchers request isolated startup; installed
+  `renku studio start` always requests singleton startup. No environment-based
+  port selector or installed isolation flag is added. CLI status reports the
+  discovered URL without changing the ordinary product's fixed-port policy.
+- **Runtime ownership correction:** serialize descriptor claim, heartbeat, and
+  release through a Core-owned per-home file lock. Automatic ports otherwise
+  expose the existing read-then-write race. This adds `studio-runtime.lock`
+  operational state and structured launch/ownership failures, not domain state.
+- **Installed-product verification:** add explicit fixed-port, repeated-launch,
+  cross-installation, occupied-port, and restart checks alongside isolated
+  packaged-server verification. Isolated smoke success cannot stand in for
+  proof of the installed singleton.
 - **New repository commands:** `pnpm studio:test --scenario <name>` starts an
   interactive disposable environment; `pnpm renku:test --run <absolute-path>
   -- <renku-arguments>` executes the checkout's CLI against that environment.
@@ -34,10 +51,11 @@ boundaries. No copy of Urban Basilica is required.
   `renku-*` temporary folders. Cleanup may delete only directories owned by its
   test run. Interactive runs retain artifacts after stopping for inspection;
   no automatic stale-run sweeper is introduced.
-- **Unchanged:** the ordinary development server remains `localhost:5173` with
-  a strict port, the normal configured Project Library stays where it is, and
-  project-local SQLite, Core domain ownership, runtime tokens, and explicit
-  project migrations retain their roles.
+- **Unchanged:** the installed app and ordinary development server remain
+  `localhost:5173` with a strict port; repeated installed launches reuse the
+  existing ordinary instance. The normal configured Project Library stays where
+  it is. Project-local SQLite, Core domain ownership, runtime tokens, and
+  explicit project migrations retain their roles.
 - **Data effects:** no application schema migration, sample migration, project
   move, sample backup/copy, or personal-data cleanup. Source fixture modules
   move to shared test support; obsolete test-runtime entrypoints are removed
@@ -51,9 +69,11 @@ boundaries. No copy of Urban Basilica is required.
   existing installation authorization rule. Concurrent Computer Use uses
   independently addressed browser tabs/sessions. A shared foreground desktop
   input device is not made concurrent by this plan.
-- **Review decisions:** the two command names, process overrides, status-output
-  cutover, and retained interactive artifacts are proposed implementation
-  contracts for review. No additional product choice is left unresolved.
+- **Accepted review adjustments:** preserve the installed singleton, separate
+  configuration paths from isolated launch intent, prevent concurrent claims
+  within one home, and prove ordinary installed launches independently of test
+  startup. These reflect the user's requested review corrections. No additional
+  product choice is left unresolved.
 
 ## Requirement Ledger
 
@@ -66,6 +86,9 @@ boundaries. No copy of Urban Basilica is required.
 | R5 | Hard operational boundary | A run cannot remove another run's files or silently attach to its server | Owned Vitest cleanup and child-process lifecycle tests |
 | R6 | Accepted architecture | Domain writes stay in Core; test scaffolding stays outside product APIs | Import boundaries; fixture setup through Core/CLI |
 | R7 | User direction supersedes current agent guidance | Remove the default dependence on personal projects and attach-only testing | AGENTS, development documentation, planning skills, sister-skill guidance |
+| R8 | User: retain singleton deployment on end-user machines | Installed launches use 5173, reuse the existing ordinary instance across installation directories, and never search for another port | Core launch policy; CLI and installed-launch acceptance checks |
+| R9 | Accepted review: simultaneous launches into one home | Exactly one runtime claims a home; losing startup closes its listener and cannot overwrite or remove the winner | Core exclusive descriptor lifecycle; same-home subprocess race and recovery tests |
+| R10 | Accepted review: prove the installed path separately | Isolated packaged smoke and ordinary installed singleton checks produce distinct evidence | Release verifier and installed-launch acceptance group |
 
 ## Context And Investigation Evidence
 
@@ -74,11 +97,11 @@ boundaries. No copy of Urban Basilica is required.
 | Area | Evidence | Consequence for this plan |
 | --- | --- | --- |
 | Core config | `packages/core/src/server/config/paths.ts` exposes `homeDir` and `storageRoot`. Defaults use native platform paths; macOS does not use `XDG_CONFIG_HOME`. `document.ts` owns config reads and initialization. | Extend the existing home-resolution seam; setting XDG alone is insufficient on this machine. |
-| Runtime discovery | `core/src/server/studio-coordination/runtime-descriptor.ts` stores one descriptor under the resolved config directory, uses heartbeat/PID checks, and permits canonical-server replacement of another address. | Keep discovery per home; remove address-based replacement and global canonical assumptions. |
+| Runtime discovery | `core/src/server/studio-coordination/runtime-descriptor.ts` stores one descriptor under the resolved config directory, uses heartbeat/PID checks, and permits canonical-server replacement of another address. Claim currently reads then writes; atomic rename does not exclude another claimant. | Keep discovery per home, remove address-based replacement, and serialize lifecycle writes. Retain the ordinary fixed-port policy separately. |
 | Other global state | `studio-coordination/event-store.ts`, `database/lifecycle/current-project.ts`, and provider credential storage resolve through Core config. Project references include storage root. | Scope all these through the same home resolution; do not add a parallel test registry. |
 | Vite | `packages/studio/vite.config.ts` selects fixed dev/E2E addresses, partially passes an E2E home, claims the descriptor after listening, and writes a checkout-wide log. `server/studio-dev-server.ts` enforces 5173 and defines 5174. | Replace E2E mode branches with normal isolated-process configuration and actual-address discovery. |
 | Hono composition | `server/app.ts` forwards `homeDir` only to setup and credentials. Project routes construct an unscoped service. Event routes and some Visual Language/FDX paths resolve config implicitly. | A partial `app.homeDir` parameter is not application isolation. Use one home for the entire server process, resolved by Core. |
-| Packaged server | `server/runtime.ts` already accepts a port and can bind zero, but app creation and descriptor lifecycle use default config. | The same Core process override covers installed-server verification without separate test routes. |
+| Packaged server | `server/runtime.ts` already accepts a port and can bind zero, but app creation and descriptor lifecycle use default config. | Replace raw binding options with the Core launch contract; installed CLI selects singleton, repository release smoke selects isolated. Both use the same server implementation and routes. |
 | CLI | `packages/cli/src/cli.ts` accepts an internal `homeDir`; executable entry calls `runRenkuCli()` without it. `studio/start-command.ts` can reuse any fresh descriptor in the selected home. `server-status-command.ts` exposes `canonicalUrl`, `matchesCanonical`, and a fixed `agent.browserUrl`. | Local executable selection and environment targeting are both necessary. Cut status over directly. |
 | CLI refresh | `studio-notification-client.ts` already reads the selected home's descriptor and posts to its URL with the notification token. | Preserve delivery/no-op/warning behavior; isolation should follow Core config automatically. |
 | Browser state | `src/app/use-studio-coordination.ts` uses a tab session identity; theme and FDX dismissal use browser storage. API origin checks compare the request's actual host, including port. | Independent URLs and tab identities fit current behavior; do not add login or weaken token checks. |
@@ -112,7 +135,8 @@ plan 0198, are outside this plan's edit scope.
   data-model-and-storage, and layers-of-responsibility remain hard boundaries.
 - ADRs 0006 and 0031 retain SQLite/domain versus live coordination ownership.
   `docs/architecture/reference/studio-coordination-events.md` currently says
-  one local server; narrow that to one server per resolved Renku home.
+  one local server; preserve that rule for ordinary product launches and document
+  an explicit test-only exception with one server per isolated home.
 - ADR 0037 owns deterministic Playwright gates and Core-built fixtures.
   Computer Use remains a supported interactive verification workflow without
   making an LLM the committed CI pass/fail oracle.
@@ -155,6 +179,19 @@ assume `vite --port 0` behaves like Node's direct `listen(0)`.
 
 ## Intended Workflow And Files
 
+| Launch purpose | Binding and repeat-launch behavior |
+| --- | --- |
+| Installed `renku studio start` | Strict `localhost:5173`; reuse the existing ordinary instance without starting another server, including from another installation directory. An unrelated port occupant fails clearly. |
+| Manual `pnpm dev:studio` | Strict `localhost:5173`; retain the existing development command's refusal to run a second listener. |
+| Repository interactive/Playwright launcher | Explicit isolated launch, disposable home, automatically allocated port, and child-owned shutdown. |
+| Repository packaged-server smoke | Explicit isolated launch through a repository-owned entrypoint importing the assembled server; installed CLI behavior is checked separately. |
+
+`RENKU_HOME_DIR` changes configuration paths only. Setting it alone cannot
+enable isolated startup. Ordinary launch from a differently configured home
+still attempts only 5173 and fails if it cannot safely reuse the selected
+home's ordinary runtime. It must not attach to another home's server merely
+because that server answers on 5173.
+
 The maintainer continues using `pnpm dev:studio`, ordinary `renku`, and the
 existing configured library. No checkout detection or Git metadata changes
 those defaults. Repository agents are instructed to use the explicit test
@@ -178,6 +215,7 @@ until interrupted. It never opens a system browser automatically.
       config.yaml
       current-project.json       # existing Core-owned name/path
       studio-runtime.json
+      studio-runtime.lock         # transient exclusive descriptor-write lock
       studio-events.jsonl
     projects/
       test-movie/
@@ -230,7 +268,8 @@ packages/core/src/server/
     paths.ts                     # home resolution and native default paths
     paths.test.ts                # override and platform behavior
   studio-coordination/
-    server-binding.ts            # loopback binding policy and port validation
+    server-binding.ts            # explicit launch policy and loopback binding
+    runtime-ownership.ts         # internal per-home critical section and recovery
     runtime-descriptor.ts        # existing scoped descriptor lifecycle
     server-status.ts             # scoped status projection, no CLI formatting
     index.ts                     # thin public exports
@@ -239,7 +278,7 @@ packages/core/src/server/
   database/lifecycle/             # retained migration and backup owners
 ```
 
-Core public additions are `resolveRenkuHomeDirectory`,
+Core public additions are `StudioServerLaunch`, `resolveRenkuHomeDirectory`,
 `resolveStudioServerBinding`, and `readStudioServerStatus`. Existing config,
 event, credential, current-project, and storage resolvers consume the same home
 choice. No generic service proxy, command inventory, new Project field, or
@@ -247,6 +286,9 @@ adapter-side domain validation is introduced.
 
 `server-status-command.ts` shrinks to argument validation, the Core status call,
 and formatting. Core `index.ts` and coordination `index.ts` remain exports.
+`runtime-ownership.ts` stays private to coordination; retain the existing
+claim/heartbeat/release entrypoints and make each use the same critical section.
+Do not export a generic lock service or introduce a runtime database.
 
 ### Studio: process adapters and shared test support
 
@@ -260,7 +302,7 @@ packages/studio/
   testing/
     run.ts                       # allocate/read run paths, containment, retention
     server.ts                    # child spawn, readiness, shutdown
-    server-entry.ts              # Vite child entrypoint
+    server-entry.ts              # explicitly isolated Vite child entrypoint
     interactive.ts               # parse scenario, compose run and server
     cli.ts                       # checkout-local CLI process adapter
     scenarios.ts                 # bounded map: onboarding/minimal/scene-beats/preview
@@ -276,6 +318,28 @@ packages/studio/
     global-setup.ts              # shared run/server lifecycle adapter
     fixtures/studio-e2e-test.ts   # Playwright fixture bindings and baseURL
 ```
+
+`vite.config.ts` exports `createStudioViteConfig({ mode, launch, workspaceRoot })`;
+its default export supplies `{ kind: 'singleton' }` and the source checkout root.
+The test child calls that factory with its explicit checkout root and
+the isolated launch and starts Vite with `configFile: false`, so Vite cannot
+reload the default singleton configuration over the explicit test configuration.
+The factory remains shallow composition; binding and descriptor lifecycle stay
+in `server/studio-dev-server.ts`. Include this factory and its imports in the
+test-tool compilation rather than adding an environment-driven mode switch.
+Resolve Vite root, aliases, and served directories from `workspaceRoot`, not
+from the emitted config module's directory.
+
+`MovieStudioServerOptions` in `server/runtime.ts` replaces its raw `host`/`port`
+options with `launch?: StudioServerLaunch`, defaulting to singleton. Update all
+callers directly. The installed CLI passes singleton intent; it has no isolated
+flag or environment switch. `scripts/release/studio-server-entry.mjs` is a
+repository-only child entrypoint that imports the assembled package's server
+and explicitly passes isolated intent for release smoke. It is not shipped.
+`scripts/release/runtime/installed-studio.test.mjs` owns the installed-launch acceptance
+group, using assembled runtime paths supplied by the release verification flow.
+Keep it outside the existing `scripts/release/*.test.mjs` unit-test glob so
+`pnpm check` does not acquire an assembled-product or free-5173 prerequisite.
 
 Move `studio-e2e-runtime.ts`, `studio-e2e-project.ts`, and
 `studio-e2e-generation-preview.ts` implementations into the named shared test
@@ -353,20 +417,53 @@ test the full app in a process with `RENKU_HOME_DIR`. Focused setup/credential
 route injection seams may remain. All default route calls, including Visual
 Language and new FDX coordination calls, resolve through Core's process scope.
 
-`resolveStudioServerBinding(): { host: 'localhost'; port: number | null }`:
+### Explicit launch policy
 
-- Without a home override or port override: `port: 5173`.
-- With `RENKU_HOME_DIR` and no port override: `port: null` means automatic
-  loopback allocation.
-- With `RENKU_STUDIO_PORT`: decimal integer 1–65535, strict binding. Invalid
-  values produce `STUDIO_COORDINATION041` before starting the listener.
-- An explicit port does not select config or a different runtime descriptor.
+```ts
+type StudioServerLaunch =
+  | { kind: 'singleton' }
+  | { kind: 'isolated'; homeDir: string };
+
+resolveStudioServerBinding(
+  launch?: StudioServerLaunch
+): { host: 'localhost'; port: number | null };
+```
+
+- Omitted launch or `kind: 'singleton'` always returns `port: 5173`, even when
+  `RENKU_HOME_DIR` is set. Environment variables never select the port or launch
+  kind. Installed startup and the default Vite configuration use this branch.
+- `kind: 'isolated'` returns `port: null` for automatic loopback allocation.
+  Its explicit absolute `homeDir` must match the process's explicitly selected
+  `RENKU_HOME_DIR` after path resolution. Missing or mismatched process scope
+  fails with `STUDIO_COORDINATION041` before any listener starts. This prevents
+  an isolated listener from using ordinary configuration accidentally.
+- Home validation remains owned by the existing Core home resolver. The test
+  launcher selects the home before importing product services; the binding
+  resolver validates intent and never mutates process environment.
 
 Adapters implement automatic allocation with their actual server facility:
 Node uses `listen(0)`; Vite starts at 5174 with `strictPort: false` and reports
-the port it actually bound. Explicit/default fixed ports remain strict. No
+the port it actually bound. Singleton binding remains strict. No
 probe-close-reserve race, private Vite fields, or dependency upgrade is needed.
 `localhost:5174` is never treated as an identity or assumed readiness URL.
+
+Installed startup may reuse only a usable descriptor for the selected home's
+ordinary `http://localhost:5173` instance. A descriptor for an isolated address
+must not redirect an ordinary launch; report `STUDIO_COORDINATION030` with the
+existing URL instead. If binding 5173 fails, reread the selected descriptor once
+to recognize an ordinary instance that became ready during startup; otherwise
+report `CLI162` without trying another port or killing any process. Repeated
+launches preserve browser-opening and `--no-browser` behavior and return without
+owning or stopping the existing server. Installation directory and version are
+not singleton identity; no automatic version replacement is introduced.
+Core owns reuse eligibility: extend `isStudioRuntimeDescriptorUsable` with an
+optional third `launch?: StudioServerLaunch` argument after `now`. When launch
+is supplied, apply the corresponding binding policy as well as freshness/PID
+checks. Status and notification callers omit launch and retain their existing
+discovery semantics; CLI startup passes singleton intent. Do not duplicate the
+URL eligibility rule in CLI or Vite code.
+
+### Exclusive runtime ownership
 
 Keep one descriptor per resolved home. Remove
 `replaceNonCanonicalDevServer` and its replacement branches/tests directly;
@@ -375,6 +472,34 @@ processes never replace one another. Actual host/port/URL populate descriptors
 only after listening. Claim failure closes the listener. Heartbeat and release
 use the same scope, with ownership checks retained. A ready test requires the
 descriptor PID to equal its launched child PID and health to pass at its URL.
+
+The existing read-then-write claim is insufficient once two listeners can bind
+different ports. Core `runtime-ownership.ts` serializes the complete descriptor
+read/check/write operation using exclusive filesystem creation of
+`studio-runtime.lock` in the resolved configuration directory. Heartbeat and
+release use that same critical section; a separate ownership check followed by
+an unprotected write or unlink is not sufficient. Keep descriptor JSON and its
+atomic publication as the discovery contract; the lock is only short-lived
+operational exclusion with owner PID and a unique acquisition token.
+
+Contention waits for at most five seconds and then fails with
+`STUDIO_COORDINATION042`. Recovery may reclaim only a proven-dead lock owner;
+age alone must never justify stealing a lock. Serialize recovery contenders and
+verify acquisition identity so a recovering process cannot remove a replacement
+owner's lock. Incomplete or unprovable ownership fails clearly with the lock
+path instead of guessing. Release must be token-owned and run in `finally`.
+These are private implementation details within the existing coordination owner,
+not a general-purpose locking framework.
+
+Under exclusion, a descriptor whose PID is still alive blocks a new claim even
+if its heartbeat has become stale; stale discovery does not authorize a second
+live server. A dead runtime's descriptor may be replaced under the same lock.
+Freshness still controls status and notification behavior. If a runtime loses
+descriptor ownership, stop its listener and heartbeat with a structured
+`STUDIO_COORDINATION043` failure instead of remaining an undiscoverable server.
+Failure to claim or recover must close the newly bound listener. Prove the
+same-home startup and recovery races before accepting this implementation;
+stop the slice if lock recovery cannot be made exclusive on supported platforms.
 
 ### CLI server status
 
@@ -410,8 +535,9 @@ Remove `canonicalUrl`, `matchesCanonical`, and the redundant `agent` URL/policy
 block rather than maintaining aliases. Consumers use a fresh descriptor's
 `serverUrl`. Missing/stale discovery remains visible and never attaches to the
 maintainer's default server. Preserve CLI notification no-op/warning semantics
-from ADR 0031. `renku studio start` consumes the same binding and Core home
-resolution; no additional public CLI flags are necessary.
+from ADR 0031. `renku studio start` uses the singleton launch policy and Core
+home resolution; no additional public CLI flags are added. Status discovery
+does not itself grant permission to launch or reuse an isolated runtime.
 
 ### Test run and commands
 
@@ -427,12 +553,16 @@ and `home/projects`; onboarding skips that call. Shared fixture builders pass
 the run's home explicitly to Core, so setup itself cannot use personal defaults.
 
 For server and CLI children, replace any inherited `RENKU_HOME_DIR` with this
-run's home, clear inherited `RENKU_STUDIO_PORT` for automatic test binding, and
-set `RENKU_MOVIE_STUDIO_ROOT` to this run's allowed project root for Vite.
+run's home and set `RENKU_MOVIE_STUDIO_ROOT` to this run's allowed project root
+for Vite.
 Set `TMPDIR`, `TMP`, and `TEMP` to `scratch`. These values are child-process
 environment arguments, not edits to the user's shell configuration or `.env`.
 Derive server logs and browser artifact paths from this run, keeping the normal
 developer log path unchanged. Do not copy provider secrets or personal config.
+The server entrypoint explicitly passes `{ kind: 'isolated', homeDir: run.homeDir }`
+to the Core-backed Vite configuration factory. CLI children use the home to
+target commands and discovery; they do not gain isolated launch permission.
+Use `studio:test` to start the test server, not `renku:test ... studio start`.
 
 `startStudioTestServer(run)` launches the named Node child with the run's
 environment, captures logs, waits up to 120 seconds for matching descriptor and
@@ -468,8 +598,10 @@ No new diagnostics describe obsolete environment flags or old status fields.
 ### 1. Establish process-scoped Core configuration and runtime discovery
 
 Implement the Core contracts and status projection. Update configuration,
-recommended storage paths, descriptor lifecycle, and focused tests. Wire CLI
-start/status and existing notification consumers; retain thin handlers. Do not
+recommended storage paths, explicit launch policy, exclusive descriptor
+lifecycle, and focused tests. Wire CLI start/status and existing notification
+consumers; retain thin handlers. Preserve installed reuse and occupied-port
+behavior under singleton intent. Do not
 alter Project schemas or migrate any developer data.
 
 ### 2. Apply the same scope to Vite and the packaged server
@@ -481,6 +613,10 @@ environment controls with the shared process contract, updating callers in the
 same slice. Ensure the packaged server gets the same environment for API
 routes, claims, heartbeats, and release. Preserve HMR, same-origin checks, and
 separate API/notification tokens. No new HTTP route or browser badge.
+Use the explicit configuration factory for isolated Vite startup and singleton
+intent for its default export. Replace packaged raw binding options with the
+launch contract; do not make the installed CLI consult a test-mode environment
+variable. Close listeners on claim failure or loss of ownership in both adapters.
 
 ### 3. Expose existing synthetic fixtures for interactive testing
 
@@ -532,11 +668,21 @@ Onboarding cases remove only `config.yaml` and their test credential file when
 resetting setup, not the running server's descriptor/event directory. Resolve
 the recommended library with Core; its files remain test-owned.
 
-Change only runtime verification in `scripts/release/verify-product.mjs`: use
-the explicit home override, discover the packaged child through its status
-command, verify the PID, then probe that URL. Keep archive structure, publishing,
-versioning, and installation untouched. Add a regression with an unrelated
-healthy server so a failed launch cannot falsely pass verification.
+Change runtime verification in `scripts/release/verify-product.mjs` to launch
+`scripts/release/studio-server-entry.mjs` with the assembled runtime path and a
+synthetic home. That child imports the assembled server and explicitly requests
+isolated startup. Discover it using the assembled CLI's status command, verify
+the PID, then probe that URL. Add a regression with an unrelated healthy server
+so a failed launch cannot falsely pass verification. Wait for the owned child
+to exit before removing its temporary configuration.
+
+Add the separate `scripts/release/runtime/installed-studio.test.mjs` acceptance group
+specified below. Run it with the assembled installed CLI, singleton launch
+intent, and synthetic configuration. `verify-product.mjs` must report isolated
+server smoke and installed singleton results separately; a missing artifact or
+unavailable controlled port means the corresponding check is unverified, not
+passed. Keep archive structure, publishing, versioning, and installation
+untouched; no release entrypoint or test is included in the shipped product.
 
 ### 5. Make Vitest cleanup owned and concurrent
 
@@ -591,9 +737,17 @@ merely because they mention Urban Basilica.
 
 - Core config: explicit option/environment/default precedence, invalid explicit
   paths, native defaults, and isolated recommended onboarding storage.
-- Core binding/status: default fixed port, automatic isolated binding, valid
-  explicit port, invalid input, missing/stale/fresh descriptors, exact discovered
-  URL, independent config homes, and no token disclosure.
+- Core binding/status: singleton fixed port with and without a home override,
+  explicit isolated binding, missing/mismatched isolated home, ordinary reuse
+  eligibility, missing/stale/fresh descriptors, exact discovered URL,
+  independent config homes, and no token disclosure.
+- Core ownership: simultaneous same-home claims with different bound ports;
+  exactly one winner, loser listener closure, protected heartbeat/release,
+  live-but-stale owner rejection, dead-owner recovery, concurrent recovery,
+  lock timeout, incomplete lock ownership, and an old owner unable to overwrite
+  or delete a new claim. Use synchronized subprocesses to force the race; do
+  not rely on timing-sensitive repeated attempts. Check loss-of-ownership
+  shutdown at the server adapter, without repeating the Core race matrix there.
 - Test lifecycle: unique roots, realpath containment, missing prerequisites,
   fixture failure, early child exit, timeout, scoped stop, and run retention.
 - Cleanup: overlapping subprocess runs A and B; completing A leaves B's files
@@ -605,7 +759,9 @@ merely because they mention Urban Basilica.
 ### Adapters and representative journeys
 
 - CLI tests cover argument/JSON mapping, the local executable and child env,
-  and current notification delivery semantics; do not duplicate Core matrices.
+  singleton launch delegation, occupied-port error mapping, browser/no-browser
+  reuse behavior, and current notification delivery semantics; do not duplicate
+  Core matrices.
 - Server tests cover scope resolution for setup, project library, media,
   credentials, current selection, FDX events, and notification endpoints using
   representative requests. Do not repeat domain validation suites.
@@ -623,6 +779,36 @@ merely because they mention Urban Basilica.
   Retain URL, screenshot, and CLI readback evidence for each. File-picker flows
   use only fixture files; record a host limitation if native desktop input
   cannot be addressed independently. Do not replace this with only Playwright.
+
+### Installed-launch acceptance
+
+These checks exercise `renku studio start` from the assembled product, not the
+isolated server entrypoint. Use a synthetic `RENKU_HOME_DIR` while retaining
+singleton launch intent; native default-path selection remains covered in Core.
+Run fixed-port checks serially on a controlled host with 5173 available. Never
+stop the maintainer's server to make this gate run; report the host limitation
+and run the gate in the controlled release environment instead.
+
+- First launch binds `http://localhost:5173`; status PID matches its child and
+  health succeeds at that exact address.
+- A repeated installed launch exits successfully using the same PID and URL
+  without leaving a new server. A launch from a second installation directory
+  sharing that configuration also reuses the same ordinary instance. Two copies
+  of the assembled artifact suffice; no version-comparison system is needed.
+- Simultaneous ordinary launches leave only one listener. The other invocation
+  either reuses the newly ready instance or reports the structured occupied-port
+  failure; it never searches for another port.
+- A test-owned unrelated listener occupying 5173 produces `CLI162`, leaves
+  that listener intact, and creates no Renku runtime descriptor or other server.
+- Graceful stop followed by another installed launch succeeds on 5173 with a
+  new PID; crash recovery is covered at the Core ownership boundary.
+- An explicit isolated packaged server coexists with the ordinary instance.
+  Its CLI mutation and shutdown leave the ordinary PID, descriptor, events,
+  and synthetic project untouched. A home override alone still requests 5173.
+
+Assert process identity and owned shutdown, not just HTTP success. Keep the
+full race/recovery matrix at Core; this group proves the installed entrypoint
+and package wiring preserve the product contract.
 
 Protect package import boundaries: product code cannot import `testing/` or
 `e2e/`, shared fixture modules cannot import browser page controllers, and
@@ -653,12 +839,18 @@ distinct from current-schema fixture creation.
   `docs/architecture/reference/drizzle-migrations.md`,
   `docs/architecture/project-database-distribution.md`, and
   `docs/cli/commands.md` for exact scope, status, and upgrade-test contracts.
+  State the installed fixed-port/reuse contract separately from explicit test
+  isolation, including cross-installation behavior, scoped lock recovery, and
+  the fact that configuration overrides do not enable isolated launches.
 - Update `packages/studio/e2e/README.md`, test command references, and the
   structured diagnostics reference with the new contracts and removed flags.
 - Add ADR `0094-use-isolated-test-runtimes-and-ephemeral-projects.md`. Narrow
   ADR 0037's OS-home/startup assumptions and ADR 0085's default-only resolution
   description through short notices linking to the new decision; preserve
   their original history. Coordination ownership from ADRs 0006/0031 is retained.
+  The new ADR preserves the ordinary singleton and records only the explicit
+  development/test exception; it must not redefine every installed home as an
+  independently launchable product instance.
 - In the sister `studio-skills` repository, update
   `skills/movie-director/SKILL.md` and `docs/codex-renku-permissions.md` to obtain
   the selected runtime URL rather than require 5173. Explain that development
@@ -693,8 +885,13 @@ Verify onboarding with its own interactive scenario and no personal config.
 
 Run release verifier unit tests through the existing `pnpm check` gate and
 perform packaged runtime verification only if a host-matching assembled archive
-is available. Report an unavailable artifact explicitly; do not publish or
-install a release as a side effect. Paid provider calls are not required.
+is available. Run `node --test scripts/release/runtime/installed-studio.test.mjs` with
+`RENKU_TEST_PRODUCT_ROOT` set to that assembled product path on the controlled
+fixed-port host. The test fails with a clear prerequisite diagnostic if the
+artifact is missing; it does not silently skip. Report isolated packaged smoke
+and installed singleton acceptance separately, including unavailable artifact
+or occupied-host limitations. Neither limitation satisfies R10. Do not publish
+or install a release as a side effect. Paid provider calls are not required.
 
 Inspect the complete diff and `git diff --stat`; inspect large or heavily
 modified files, especially the Vite plugin, test lifecycle, extracted fixture
@@ -707,10 +904,12 @@ are authorized; no personal-project files should appear in the diff or tests.
 
 ### Review Area
 
-- [ ] Confirm R1–R7 have implementation, test evidence, and documentation.
+- [ ] Confirm R1–R10 have implementation, test evidence, and documentation.
 - [ ] Confirm no sample copying, baseline distribution, database promotion,
       container, daemon, or environment registry entered the implementation.
 - [ ] Confirm the primary manual workflow and personal files remain unchanged.
+- [ ] Confirm installed singleton behavior is explicit and independent of the
+      configuration-home override and repository test launchers.
 - [ ] Confirm the final layout matches the Architecture Shape Gate and no
       monolithic fixture, dispatcher, or owning-layer implementation was accepted.
 
@@ -719,6 +918,13 @@ are authorized; no personal-project files should appear in the diff or tests.
 - [ ] Implement and test the Core home resolver and explicit override validation.
 - [ ] Preserve native default config and recommended storage behavior.
 - [ ] Implement binding policy and actual-port runtime discovery.
+- [ ] Add the explicit Core launch contract; installed/default Vite startup
+      always selects singleton and no environment variable selects another port.
+- [ ] Validate the isolated launch home against the selected process home.
+- [ ] Serialize claim, heartbeat, release, and dead-owner recovery under the
+      private per-home lock, with token ownership and structured failures.
+- [ ] Reject takeover of a live stale runtime and stop a listener that loses
+      descriptor ownership; retain status/notification freshness semantics.
 - [ ] Remove canonical replacement behavior and old status fields directly.
 - [ ] Move status projection to Core and keep CLI formatting thin.
 - [ ] Scope events, current-project state, credential storage, and notifications
@@ -730,6 +936,10 @@ are authorized; no personal-project files should appear in the diff or tests.
 
 - [ ] Refactor Vite lifecycle into its focused server owner and keep config thin.
 - [ ] Apply isolated binding/discovery to the packaged server and release smoke.
+- [ ] Keep installed CLI reuse, browser/no-browser, occupied-port, and restart
+      behavior; use the explicit Vite factory only from repository test startup.
+- [ ] Add the repository-only packaged-server smoke entrypoint and installed
+      acceptance group; exclude both from shipped artifacts.
 - [ ] Extract minimal, screenplay, Beats, media, Lookbook, and Preview fixture
       modules; update imports and remove superseded entrypoints.
 - [ ] Add the four named interactive scenarios through existing Core commands.
@@ -746,6 +956,11 @@ are authorized; no personal-project files should appear in the diff or tests.
 ### Tests And Computer Use
 
 - [ ] Cover config, binding, status, readiness, containment, and shutdown at owners.
+- [ ] Prove one same-home claim wins under synchronized concurrent startup and
+      recovery, and losing/previous owners cannot remove or overwrite it.
+- [ ] Prove installed first/repeat/cross-installation launches, simultaneous
+      starts, occupied-port failure, restart, and coexistence with isolated tests
+      through the assembled CLI and exact PID/URL evidence.
 - [ ] Prove overlapping Vitest cleanup leaves another run and its templates intact.
 - [ ] Prove two same-named Projects stay independent through CLI, HTTP,
       coordination refresh, media access, reload, and stopping one server.
@@ -774,6 +989,8 @@ are authorized; no personal-project files should appear in the diff or tests.
 - [ ] Publish the isolated-worktree development guide and revise debugging steps.
 - [ ] Update AGENTS and planning/review skill defaults to disposable fixtures.
 - [ ] Update coordination, config, CLI status, migration, and test references.
+- [ ] Document singleton versus test launch intent, private lock lifecycle and
+      diagnostics, and separate installed/isolated release-verification results.
 - [ ] Add ADR 0094 and concise supersession notices without rewriting history.
 - [ ] Update sister movie-director/permissions guidance for runtime discovery and
       local development invocation without changing installation/permission policy.
@@ -784,7 +1001,9 @@ are authorized; no personal-project files should appear in the diff or tests.
 
 - [ ] Run focused owner and adapter tests, then the named root checks once.
 - [ ] Run full browser and concurrency verification with no sample-project access.
-- [ ] Validate release-smoke targeting; report unavailable packaged verification.
+- [ ] Validate release-smoke targeting and the separate installed singleton
+      acceptance group; report unavailable artifacts or controlled hosts without
+      marking the corresponding acceptance requirement complete.
 - [ ] Inspect `git diff --stat`, the full diff, large files, and thin entrypoints.
 - [ ] Confirm no unrelated formatting, dependency, schema, or personal-data changes.
 - [ ] Confirm every checklist item is satisfied by reviewable code structure.

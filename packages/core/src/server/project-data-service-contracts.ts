@@ -1,3 +1,4 @@
+import type { ShotPlanClipCommands } from '../client/shot-plan-clips.js';
 import type { ReadShotPlanPrevisInput, RegisterShotPlanPrevisInput, ShotPlanPrevisReport } from '../client/shot-plan-previs.js';
 import type { CleanProjectTemporaryFilesInput, ProjectTemporaryFilesCleanupReport } from '../client/project-temporary-files.js';
 import type { FdxUpdateStatus, FdxUpdateReview } from '../client/screenplay/fdx-updates.js';
@@ -171,7 +172,7 @@ import type {
 
 export type { ProjectDatabasePreMigrationBackupReport };
 
-export interface ProjectDataService {
+export interface ProjectDataService extends ShotPlanClipCommands {
   uploadScreenplaySupportingMaterial(input: import('./screenplay/supporting-material/uploads.js').UploadScreenplaySupportingMaterialInput): Promise<ImportScreenplaySupportingMaterialReport>;
   listProjectSupportingFiles(input: { projectName: string; homeDir?: string; cursor?: string | null; limit?: number }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFilePage>;
   readProjectSupportingFileInformation(input: { projectName: string; homeDir?: string; assetId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;

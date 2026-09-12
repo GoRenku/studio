@@ -1,3 +1,4 @@
+import { toStudioClipResponse } from './shot-plan-clip-responses.js';
 import type { ShotPlanPrevisReport } from '@gorenku/studio-core/client';
 import { toStudioAssetResponse } from './asset-responses.js';
 
@@ -12,7 +13,7 @@ export function toStudioPrevisResponse(projectName: string, report: ShotPlanPrev
       description: revision.description,
       warnings: revision.warnings,
       render: revision.render ? toStudioAssetResponse(projectName, revision.render) : null,
-      generations: revision.generations.map((asset) => toStudioAssetResponse(projectName, asset)),
+      clips: toStudioClipResponse(projectName, revision.clips),
       playback: revision.playback ? {
         ...revision.playback,
         cues: revision.playback.cues.map((cue) => ({

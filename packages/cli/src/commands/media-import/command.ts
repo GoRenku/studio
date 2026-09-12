@@ -19,6 +19,9 @@ export interface MediaCommandFlags {
   provenance?: string;
   turns?: string;
   previsRevision?: string;
+  clip?: string;
+  takeTitle?: string;
+  sourceTake?: string;
   sourceSheet?: string;
   revision?: string;
   beats?: string;

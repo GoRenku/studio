@@ -112,7 +112,10 @@ Related terms:
   plane, or distance when authored. `Shallow Focus` and `Deep Focus` are
   display labels; shared deep-focus legibility belongs in Optics intent, and
   `rack-focus` is a Motion transition.
-- **Clip** is not the current Shot authoring or final-video model.
+- **Clip** is a numbered raw-media slot within a Previs revision. Its numbered
+  **Clip Take** candidates reference exact Project Asset files; one may be selected.
+  `Clip N.M` identifies a candidate in that revision. A Clip is not a Shot or an
+  editing timeline region.
 
 ## Creative Direction
 

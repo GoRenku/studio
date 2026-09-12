@@ -1,5 +1,9 @@
 # 0090 Use Shot Plan Dialogue Audio And Provider-Neutral Cast Voices
 
+Current clarification: [ADR 0097](0097-use-agent-directed-scene-segmentation.md)
+permits recorded, unretimed excerpts of selected Takes for authorized multi-clip
+generation with complete scene coverage. Other whole-Take and selection rules remain.
+
 Date: 2026-09-01
 
 Status: accepted

@@ -3,6 +3,8 @@
 Date: 2026-09-09
 Status: accepted
 
+The shared-clock monitor behavior is superseded by [ADR 0098](0098-use-raw-clip-takes-and-independent-monitor-playback.md): independent transports with optional elapsed-time linking and raw clip/take selection.
+
 Previs revisions retain an optional `playback.json` domain document. Core owns
 its public `PrevisPlayback` contract and structural validation. Its rational
 `frameRate` and positive `frameCount` describe the authored constant-frame-rate

@@ -1,3 +1,4 @@
+import type { ShotPlanClipTake } from '../../client/shot-plan-clips.js';
 import type {
   Asset,
   AssetMetadataInput,
@@ -23,11 +24,12 @@ import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
 import { attachShotPlanDialogueAudio } from '../shot-plan-dialogue-audio/attachment.js';
 import { attachImageEditMedia } from '../image-edit-attachments/index.js';
 import { attachVideoEditMedia } from '../video-edit-attachments/index.js';
+import { resolveClipAttachmentRevision, resolveClipAttachmentTarget } from '../shot-plan-clips/attachment.js';
 import { validatePrevisGenerationSource } from '../shot-plan-previs/generation-source.js';
 
 export interface AttachGenerationMediaInput {
   purpose: MediaPurpose;
-  target: MediaTarget;
+  target?: MediaTarget;
   sourceProjectRelativePath: string;
   title?: string;
   assetMetadata?: AssetMetadataInput;
@@ -35,9 +37,13 @@ export interface AttachGenerationMediaInput {
   select?: boolean;
   turnRange?: DialogueTurnRange;
   previsRevisionId?: string;
+  clipId?: string;
+  takeTitle?: string;
+  sourceTakeId?: string;
 }
 
 export interface GenerationMediaAttachmentReport {
+  take?: ShotPlanClipTake;
   valid: true;
   purpose: MediaPurpose;
   target: MediaTarget;
@@ -48,12 +54,14 @@ export interface GenerationMediaAttachmentReport {
   ownerRecord?: { kind: 'lookbookImage' | 'lookbookSheet'; id: string };
 }
 
-export function attachGenerationMedia(input: AttachGenerationMediaInput & {
+export function attachGenerationMedia(request: AttachGenerationMediaInput & {
   session: DatabaseSession;
   projectFolder: string;
   idGenerator: ProjectIdGenerator;
 }): GenerationMediaAttachmentReport {
-  const previsRevisionId = validatePrevisGenerationSource(input.session, input);
+  const input = { ...request, target: resolveClipAttachmentTarget(request.session, request) };
+  const clipRevisionId = resolveClipAttachmentRevision(input.session, input);
+  const previsRevisionId = validatePrevisGenerationSource(input.session, { ...input, previsRevisionId: clipRevisionId ?? input.previsRevisionId });
   const generationProvenance = input.generationProvenance === undefined
     ? null
     : validateMediaGenerationProvenance(input.generationProvenance);
@@ -150,6 +158,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
     : null;
   const persisted = persistGeneratedMediaAttachment({
     previsRevisionId,
+    clipTake: input.clipId ? { clipId: input.clipId, title: input.takeTitle, sourceTakeId: input.sourceTakeId } : undefined,
     session: input.session,
     projectFolder: input.projectFolder,
     idGenerator: input.idGenerator,
@@ -196,6 +205,7 @@ export function attachGenerationMedia(input: AttachGenerationMediaInput & {
       id: project.id,
       projectFolder: input.projectFolder,
     },
+    ...(persisted.take ? { take: persisted.take } : {}),
     ...(persisted.ownerRecord ? { ownerRecord: persisted.ownerRecord } : {}),
   };
 }
@@ -209,7 +219,7 @@ function requiresGenerationProvenance(assetType: string): boolean {
 }
 
 function validateLookbookKind(
-  input: AttachGenerationMediaInput & { session: DatabaseSession },
+  input: AttachGenerationMediaInput & { session: DatabaseSession; target: MediaTarget },
 ): void {
   if (input.target.kind !== 'lookbook') {
     return;

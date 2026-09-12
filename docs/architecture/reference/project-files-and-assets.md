@@ -475,3 +475,10 @@ reads it and prepares `screenplay/edit/` when the user opens the folder.
 Accepted sources remain in the existing immutable retained source destinations.
 Never overwrite a retained `screenplay_source` file to deliver an update.
 Supporting Files uploads and other FDX paths do not participate in detection.
+
+
+Raw Clip Takes reference exact existing Project video Asset files. Registering a
+Take, changing its short title or selecting it does not move, copy, trim or retime
+media. Atomic `media import --clip` creates the ordinary Asset/file and registers
+its Take together. Optional source-Take attribution records identity only; actual
+reference files remain in the existing safe generation provenance document.

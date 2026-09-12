@@ -1,4 +1,4 @@
-import { Camera, Circle, MessageSquare, Scissors } from 'lucide-react';
+import { Camera, Circle, MessageSquare } from 'lucide-react';
 import { Button } from '@/ui/button';
 import type { StudioPrevisCue, StudioPrevisPlayback } from '@/services/shot-plan-previs/contracts';
 
@@ -16,19 +16,9 @@ export function PrevisTimeline({ timeline, time, disabled, selection, seek }: {
     { key: 'action', label: 'Action', color: undefined, cues: timeline.cues.filter((cue) => cue.kind === 'action' && !cue.subject) },
     { key: 'camera', label: 'Camera', color: undefined, cues: timeline.cues.filter((cue) => cue.kind === 'camera') },
   ].filter((lane) => lane.cues.length);
-  return <div className='min-h-0 overflow-y-auto' aria-label='Direction timeline'>
+  return <div className='min-w-0' aria-label='Direction timeline'>
     <div className='relative ml-20 mr-3 h-5 font-mono text-[9px] text-muted-foreground'>
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => <span key={ratio} className='absolute' style={{ left: `${ratio * 100}%`, transform: `translateX(-${ratio * 100}%)` }}>{seconds(timeline.frameCount * ratio).toFixed(1)}s</span>)}
-    </div>
-    <div className='relative ml-20 mr-3 flex h-7 border-b border-border/40'>
-      {timeline.segments.map((segment, index) => <Button key={segment.id} variant='ghost' size='sm'
-        aria-label={`${index ? 'Cut to' : 'Seek shot'} ${segment.label}, frame ${segment.startFrame}`}
-        title={`${segment.label} · frame ${segment.startFrame}`} disabled={disabled}
-        onClick={() => seek(seconds(segment.startFrame), `segment:${segment.id}`)}
-        className={`h-6 min-w-0 justify-start gap-1 rounded-none px-1 text-[10px] ${selection === `segment:${segment.id}` ? 'outline outline-1 outline-foreground/50' : ''}`}
-        style={{ width: `${((timeline.segments[index + 1]?.startFrame ?? timeline.frameCount) - segment.startFrame) / timeline.frameCount * 100}%` }}>
-        {index ? <Scissors className='size-3 shrink-0' /> : null}<span className='truncate'>{segment.label}</span>
-      </Button>)}
     </div>
     <div className='relative'>
       <div className='pointer-events-none absolute inset-y-0 left-20 right-3'>

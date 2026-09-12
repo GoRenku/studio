@@ -28,7 +28,7 @@ export function PrevisCues({ revision, time, duration, activeCue, selection, pla
   const annotationWarning = revision?.warnings.find((warning) => warning.location.path[0] === 'playback' && warning.location.path.length === 1);
   return <section className='flex h-full min-h-0 flex-col gap-3 rounded-xl border border-border/40 bg-sidebar-bg p-4'>
     <h2 className='h-5 text-[11px] font-semibold uppercase tracking-widest'>Direction cues</h2>
-    {timeline ? <div className='h-36 shrink-0 overflow-y-auto'><PrevisTimeline timeline={timeline} time={time} disabled={!duration} selection={selection} seek={seek} /></div> : null}
+    {timeline ? <div className='min-w-0 shrink-0'><PrevisTimeline timeline={timeline} time={time} disabled={!duration} selection={selection} seek={seek} /></div> : null}
     <div className='min-h-0 flex-1 space-y-1.5 overflow-y-auto'>
       {annotationWarning ? <p role='status' className='text-xs text-muted-foreground'>{annotationWarning.message}</p> : null}
       {!cues.length && !annotationWarning ? <p className='text-xs text-muted-foreground'>No direction cues</p> : null}

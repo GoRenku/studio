@@ -104,16 +104,16 @@ describe('Previs registration', () => {
     const paired = await f.service.attachGenerationMedia({ ...input, previsRevisionId: revision.id, title: 'Take one' });
     const second = await f.service.attachGenerationMedia({ ...input, previsRevisionId: revision.id, title: 'Take two' });
     expect(paired.asset.authoredFrom).toEqual({ kind: 'shotPlan', id: f.input.shotPlanId, previsRevisionId: revision.id });
-    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.generations.map((asset) => asset.id)).toEqual([second.asset.id, paired.asset.id]);
+    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.clips.unassignedAssets.map((asset) => asset.id)).toEqual([second.asset.id, paired.asset.id]);
     await f.service.discardAsset({ ...f.input, assetId: paired.asset.id, owner: { kind: 'project' } });
-    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.generations).toHaveLength(1);
+    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.clips.unassignedAssets).toHaveLength(1);
     await f.service.restoreAsset({ ...f.input, assetId: paired.asset.id });
-    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.generations).toHaveLength(2);
+    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.clips.unassignedAssets).toHaveLength(2);
     const edited = await f.service.attachGenerationMedia({ ...input, purpose: 'video.edit', target: { kind: 'asset', id: paired.asset.id }, generationProvenance: {
       ...input.generationProvenance, request: { references: [{ $file: paired.asset.files[0]!.projectRelativePath, mimeType: 'video/mp4', reviewLabel: 'Source' }] },
     } });
     expect(edited.asset.authoredFrom).toEqual(paired.asset.authoredFrom);
-    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.generations.map((asset) => asset.id)).not.toContain(unpaired.asset.id);
+    expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.clips.unassignedAssets.map((asset) => asset.id)).not.toContain(unpaired.asset.id);
   });
 
   it('retains exact source revisions, registers procedural media and deduplicates retries', async () => {

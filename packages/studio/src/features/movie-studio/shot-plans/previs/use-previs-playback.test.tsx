@@ -12,34 +12,26 @@ const dialogue = (id: string, start: number, end: number, text = 'Voice'): Studi
 vi.mock('@/ui/slider', () => ({ Slider: () => null }));
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-it('links elapsed seconds, holds a shorter take, auditions a bounded cue and applies mute', async () => {
+it('auditions a bounded cue and applies independent mute', async () => {
   let tick: FrameRequestCallback = () => {};
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => { tick = callback; return 1; });
   vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
   let clock = 0;
   const previs = { play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn((time: number) => { clock = time; }), setMuted: vi.fn(), getCurrentTime: () => clock };
-  const generation = { ...previs, play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn(), setMuted: vi.fn() };
-  const { result } = renderHook(() => usePrevisPlayback('/take.mp4', timeline));
+  const { result } = renderHook(() => usePrevisPlayback(timeline));
   act(() => {
     result.current.attachPrevis(previs);
-    result.current.attachGeneration(generation);
     result.current.onPrevisDuration(10);
-    result.current.onGenerationDuration(5);
   });
   expect(result.current.time).toBe(0);
   expect(result.current.playing).toBe(false);
   act(() => result.current.seek(3));
-  expect(generation.seek).toHaveBeenLastCalledWith(3);
   await act(async () => result.current.toggle());
   expect(previs.play).toHaveBeenCalled();
-  expect(generation.play).toHaveBeenCalled();
-  expect(previs.setMuted).toHaveBeenLastCalledWith(true);
-  expect(generation.setMuted).toHaveBeenLastCalledWith(false);
+  expect(previs.setMuted).toHaveBeenLastCalledWith(false);
   act(() => { clock = 6; tick(1); });
-  expect(generation.pause).toHaveBeenCalled();
   expect(result.current.playing).toBe(true);
   act(() => result.current.toggleMute());
-  expect(generation.setMuted).toHaveBeenLastCalledWith(true);
   await act(async () => result.current.playDialogue(dialogue('door', 2, 4)));
   act(() => { clock = 4.1; tick(2); });
   expect(result.current.playing).toBe(false);
@@ -56,7 +48,7 @@ it('plays the exact recording offset, seeks within it and restores ordinary audi
   const AudioMock = vi.fn(function () { return recording; });
   vi.stubGlobal('Audio', AudioMock);
   const player = { play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn(), setMuted: vi.fn(), getCurrentTime: () => 0 };
-  const { result } = renderHook(() => usePrevisPlayback(undefined, timeline));
+  const { result } = renderHook(() => usePrevisPlayback(timeline));
   act(() => { result.current.attachPrevis(player); result.current.onPrevisDuration(12); });
   await act(async () => result.current.playDialogue({ ...dialogue('voice', 3, 7), audio: { assetId: 'a', assetFileId: 'f', offsetSeconds: 2, url: '/exact/audio' } }));
   expect(AudioMock).toHaveBeenCalledWith('/exact/audio');
@@ -71,53 +63,7 @@ it('plays the exact recording offset, seeks within it and restores ordinary audi
   vi.unstubAllGlobals();
 });
 
-it.each([
-  { playing: true, time: 3, starts: true },
-  { playing: false, time: 3, starts: false },
-  { playing: true, time: 5, starts: false },
-  { playing: true, time: 6, starts: false },
-])('joins late-loading Generation at $time seconds while playing=$playing', async ({ playing, time, starts }) => {
-  const previs = { play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn(), setMuted: vi.fn(), getCurrentTime: () => time };
-  const generation = { ...previs, play: vi.fn(async () => {}), seek: vi.fn(), setMuted: vi.fn() };
-  const { result } = renderHook(() => usePrevisPlayback('/take.mp4', timeline));
-  act(() => {
-    result.current.attachPrevis(previs);
-    result.current.attachGeneration(generation);
-    result.current.onPrevisDuration(12);
-  });
-  if (playing) await act(async () => result.current.toggle());
-  expect(generation.play).not.toHaveBeenCalled();
-  expect(previs.setMuted).toHaveBeenLastCalledWith(false);
-  await act(async () => result.current.onGenerationDuration(5));
-  expect(generation.seek).toHaveBeenLastCalledWith(time);
-  expect(generation.play).toHaveBeenCalledTimes(starts ? 1 : 0);
-  expect(result.current.playing).toBe(playing);
-  expect(previs.setMuted).toHaveBeenLastCalledWith(true);
-  expect(generation.setMuted).toHaveBeenLastCalledWith(false);
-});
-
-it.each([false, true])('handles a late Generation play rejection after interruption=%s', async (interrupted) => {
-  let rejectPlay!: (reason: Error) => void;
-  const pendingPlay = new Promise<void>((_resolve, reject) => { rejectPlay = reject; });
-  const previs = { play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn(), setMuted: vi.fn(), getCurrentTime: () => 3 };
-  const generation = { ...previs, play: vi.fn(() => pendingPlay), setMuted: vi.fn() };
-  const { result } = renderHook(() => usePrevisPlayback('/take.mp4', timeline));
-  act(() => {
-    result.current.attachPrevis(previs);
-    result.current.attachGeneration(generation);
-    result.current.onPrevisDuration(12);
-  });
-  await act(async () => result.current.toggle());
-  act(() => result.current.onGenerationDuration(5));
-  expect(generation.play).toHaveBeenCalledOnce();
-  if (interrupted) act(() => result.current.pause());
-  await act(async () => rejectPlay(new DOMException('Playback denied', 'NotAllowedError')));
-  expect(result.current.playing).toBe(!interrupted);
-  expect(result.current.error).toBe(interrupted ? null : 'Generation playback is unavailable. Previs playback remains available.');
-  expect(previs.setMuted).toHaveBeenLastCalledWith(interrupted);
-});
-
-it.each(['Previs', 'Generation'])('keeps the new cue through queued media events and follows %s controls', async (title) => {
+it('keeps the new cue through queued media events and follows Previs controls', async () => {
   const mediaEvents: Array<() => void> = [];
   const playingMedia = new WeakSet<HTMLMediaElement>();
   vi.spyOn(HTMLMediaElement.prototype, 'paused', 'get').mockImplementation(function (this: HTMLMediaElement) { return !playingMedia.has(this); });
@@ -136,17 +82,15 @@ it.each(['Previs', 'Generation'])('keeps the new cue through queued media events
 
   let playback!: ReturnType<typeof usePrevisPlayback>;
   function Playback() {
-    playback = usePrevisPlayback('/take.mp4', timeline);
+    playback = usePrevisPlayback(timeline);
     return <>
       <VideoPlayer ref={playback.attachPrevis} src='/previs.mp4' title='Previs' onDurationChange={playback.onPrevisDuration} onPlaybackRequest={playback.toggle} playing={playback.playing} onEnded={playback.onPrevisEnded} />
-      <VideoPlayer ref={playback.attachGeneration} src='/take.mp4' title='Generation' onDurationChange={playback.onGenerationDuration} onPlaybackRequest={playback.toggle} playing={playback.playing} />
     </>;
   }
   render(<Playback />);
   const previs = screen.getByTitle('Previs') as HTMLVideoElement;
-  const generation = screen.getByTitle('Generation') as HTMLVideoElement;
-  for (const video of [previs, generation]) {
-    Object.defineProperty(video, 'duration', { configurable: true, value: video === generation ? 8 : 12 });
+  for (const video of [previs]) {
+    Object.defineProperty(video, 'duration', { configurable: true, value: 12 });
     fireEvent.loadedMetadata(video);
   }
   async function flushMediaEvents() {
@@ -168,31 +112,27 @@ it.each(['Previs', 'Generation'])('keeps the new cue through queued media events
   expect(playback.activeCue).toBe('second');
   expect(playback.playing).toBe(true);
   expect(previs.currentTime).toBe(5);
-  expect(generation.currentTime).toBe(5);
   const recordings = vi.mocked(HTMLMediaElement.prototype.play).mock.contexts.filter((media) => media instanceof HTMLAudioElement);
   expect(recordings).toHaveLength(2);
   expect(recordings[0]!.paused).toBe(true);
   expect(recordings[1]!.paused).toBe(false);
 
-  const controls = within(screen.getByTitle(title).closest('[data-controls]') as HTMLElement);
+  const controls = within(screen.getByTitle('Previs').closest('[data-controls]') as HTMLElement);
   fireEvent.click(controls.getByRole('button', { name: 'Pause shot' }));
   await flushMediaEvents();
   expect(playback.playing).toBe(false);
   expect(playback.activeCue).toBe('second');
   expect(previs.paused).toBe(true);
-  expect(generation.paused).toBe(true);
   expect(recordings[1]!.paused).toBe(true);
   fireEvent.click(controls.getByRole('button', { name: 'Play shot' }));
   await flushMediaEvents();
   expect(playback.playing).toBe(true);
   expect(previs.paused).toBe(false);
-  expect(generation.paused).toBe(false);
 
-  act(() => { previs.currentTime = 8; generation.currentTime = 8; tick(1); });
+  act(() => { previs.currentTime = 8; tick(1); });
   await flushMediaEvents();
   expect(playback.playing).toBe(true);
   expect(previs.paused).toBe(false);
-  expect(generation.paused).toBe(true);
 
   fireEvent.click(controls.getByRole('button', { name: 'Pause shot' }));
   await flushMediaEvents();
@@ -202,7 +142,6 @@ it.each(['Previs', 'Generation'])('keeps the new cue through queued media events
   await flushMediaEvents();
   expect(playback.playing).toBe(true);
   expect(previs.paused).toBe(false);
-  expect(generation.paused).toBe(true);
 
   // Stop before the newly queued play event arrives.
   act(() => playback.pause());
@@ -211,7 +150,6 @@ it.each(['Previs', 'Generation'])('keeps the new cue through queued media events
   await flushMediaEvents();
   expect(playback.playing).toBe(false);
   expect(previs.paused).toBe(true);
-  expect(generation.paused).toBe(true);
 });
 
 it.each(['pause', 'switch'])('ignores an interrupted play promise after a subsequent %s command', async (command) => {
@@ -221,7 +159,7 @@ it.each(['pause', 'switch'])('ignores an interrupted play promise after a subseq
     play: vi.fn(async () => {}).mockImplementationOnce(() => pendingPlay),
     pause: vi.fn(), seek: vi.fn(), setMuted: vi.fn(), getCurrentTime: () => 0,
   };
-  const { result } = renderHook(() => usePrevisPlayback(undefined, timeline));
+  const { result } = renderHook(() => usePrevisPlayback(timeline));
   act(() => { result.current.attachPrevis(player); result.current.onPrevisDuration(12); });
   await act(async () => result.current.playDialogue(dialogue('first', 1, 4)));
   await act(async () => {
@@ -239,7 +177,7 @@ it('reports a failed current play attempt and stops the audition', async () => {
     play: vi.fn().mockRejectedValue(new DOMException('Playback denied', 'NotAllowedError')),
     pause: vi.fn(), seek: vi.fn(), setMuted: vi.fn(), getCurrentTime: () => 0,
   };
-  const { result } = renderHook(() => usePrevisPlayback(undefined, timeline));
+  const { result } = renderHook(() => usePrevisPlayback(timeline));
   act(() => { result.current.attachPrevis(player); result.current.onPrevisDuration(12); });
   await act(async () => result.current.playDialogue(dialogue('voice', 1, 4)));
   expect(result.current.error).toBe('Previs playback could not start. Try playing again.');
@@ -258,7 +196,7 @@ it('resumes a paused turn, stays silent after its recording ends, and cancels ch
   const player = { play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn((value: number) => { clock = value; }), setMuted: vi.fn(), getCurrentTime: () => clock };
   const cue = { ...dialogue('voice', 1, 4), audio: { assetId: 'a', assetFileId: 'f', url: '/voice.wav' } };
   const authored = { ...timeline, cues: [cue] };
-  const { result, rerender } = renderHook(({ value }) => usePrevisPlayback(undefined, value), { initialProps: { value: authored } });
+  const { result, rerender } = renderHook(({ value }) => usePrevisPlayback(value), { initialProps: { value: authored } });
   act(() => { result.current.attachPrevis(player); result.current.onPrevisDuration(12); });
   await act(async () => result.current.playDialogue(cue));
   act(() => { clock = 2; tick(1); result.current.pause(); });

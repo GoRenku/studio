@@ -1,4 +1,4 @@
-import type { PrevisCue, PrevisPlayback, PrevisRevision } from '@gorenku/studio-core/client';
+import type { PrevisCue, PrevisPlayback, PrevisRevision, ShotPlanClips } from '@gorenku/studio-core/client';
 import type { StudioShotAsset } from '../studio-shot-plans-contracts';
 
 export type StudioPrevisDialogue = Omit<Extract<PrevisCue, { kind: 'dialogue' }>, 'audio'> & {
@@ -7,9 +7,9 @@ export type StudioPrevisDialogue = Omit<Extract<PrevisCue, { kind: 'dialogue' }>
 export type StudioPrevisCue = Exclude<PrevisCue, { kind: 'dialogue' }> | StudioPrevisDialogue;
 export type StudioPrevisPlayback = Omit<PrevisPlayback, 'cues'> & { cues: StudioPrevisCue[] };
 
-export interface StudioPrevisRevision extends Omit<PrevisRevision, 'sourceDirectory' | 'render' | 'generations' | 'playback'> {
+export interface StudioPrevisRevision extends Omit<PrevisRevision, 'sourceDirectory' | 'render' | 'clips' | 'playback'> {
   render: StudioShotAsset | null;
-  generations: StudioShotAsset[];
+  clips: StudioShotPlanClips;
   playback: StudioPrevisPlayback | null;
 }
 
@@ -18,3 +18,8 @@ export interface StudioShotPlanPrevis {
   revisions: StudioPrevisRevision[];
   resourceKeys: string[];
 }
+
+export type StudioShotPlanClips = Omit<ShotPlanClips, 'assets' | 'unassignedAssets'> & {
+  assets: StudioShotAsset[];
+  unassignedAssets: StudioShotAsset[];
+};

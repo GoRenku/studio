@@ -1,3 +1,4 @@
+import type { ShotPlanClips } from './shot-plan-clips.js';
 import type { Asset } from './assets.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { ShotPlanProjectInput } from './shot-plans.js';
@@ -37,7 +38,7 @@ export interface PrevisRevision {
   render: Asset | null;
   description: string | null;
   playback: PrevisPlayback | null;
-  generations: Asset[];
+  clips: ShotPlanClips;
   warnings: DiagnosticIssue[];
 }
 

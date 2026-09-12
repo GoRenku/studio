@@ -36,6 +36,8 @@ export type EntityIdPrefix =
   | 'beat'
   | 'previs_revision'
   | 'shot_plan'
+  | 'clip'
+  | 'clip_take'
   | 'shot'
   | 'shot_plan_dialogue_audio_take'
   | 'trash_operation'

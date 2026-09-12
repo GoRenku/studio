@@ -252,3 +252,4 @@ export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportin
 
 export * from './project-temporary-files.js';
 export * from './shot-plan-previs.js';
+export * from './shot-plan-clips.js';

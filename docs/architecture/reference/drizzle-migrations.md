@@ -1,5 +1,9 @@
 # Drizzle Migrations
 
+Migration 0088 adds revision-scoped raw clips and takes without assigning existing
+media. Its generation guard advances to 70 because Previs projections query these
+tables. Existing Assets and files are preserved unchanged.
+
 Migration 0086 adds the nullable indexed weak Asset `previs_revision_id` column
 using Drizzle Kit's schema generation. Kit-generated custom migration 0087 sets
 `user_version` to 69 because Asset reads now require that column. It performs no

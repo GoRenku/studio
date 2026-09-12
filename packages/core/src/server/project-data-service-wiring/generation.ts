@@ -102,7 +102,7 @@ export function createGenerationServiceWiring() {
     },
     async attachGenerationMedia(input: ProjectInput & {
       purpose: MediaPurpose;
-      target: MediaTarget;
+      target?: MediaTarget;
       sourceProjectRelativePath: string;
       title?: string;
       assetMetadata?: AssetMetadataInput;
@@ -110,6 +110,9 @@ export function createGenerationServiceWiring() {
       select?: boolean;
       turnRange?: import('../../client/shot-plan-dialogue-audio.js').DialogueTurnRange;
       previsRevisionId?: string;
+      clipId?: string;
+      takeTitle?: string;
+      sourceTakeId?: string;
     }) {
       return withProject(input, ({ session, projectFolder }) =>
         attachGenerationMedia({

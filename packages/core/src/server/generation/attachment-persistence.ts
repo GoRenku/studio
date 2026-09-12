@@ -1,3 +1,5 @@
+import type { ShotPlanClipTake } from '../../client/shot-plan-clips.js';
+import { registerClipTakeInSession } from '../shot-plan-clips/commands.js';
 import { createAssetMembership } from '../assets/ownership.js';
 import { selectAssetInSession } from '../assets/selection.js';
 import type { AssetOwner, AssetSelectionTarget } from '../../client/assets.js';
@@ -46,9 +48,11 @@ export interface PersistGeneratedMediaAttachmentInput {
   generationProvenance?: MediaGenerationProvenance;
   authoredFromShotPlanId?: string;
   previsRevisionId?: string;
+  clipTake?: { clipId: string; title?: string; sourceTakeId?: string };
 }
 
 export interface PersistedGeneratedMediaAttachment {
+  take?: ShotPlanClipTake;
   assetId: string;
   assetFileId: string;
   ownerRecord?: {
@@ -158,6 +162,7 @@ export function persistGeneratedMediaAttachment(
   const writeSet = createProjectAssetFileWriteSet({
     projectFolder: input.projectFolder,
   });
+  let take: ShotPlanClipTake | undefined;
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
@@ -182,6 +187,9 @@ export function persistGeneratedMediaAttachment(
           ? { authoredFromShotPlanId: input.authoredFromShotPlanId }
           : {}),
       });
+      if (input.clipTake) {
+        take = registerClipTakeInSession(session, { ...input.clipTake, assetId, assetFileId });
+      }
       if (input.destination.owner.kind === 'lookbook' && ownerRecord?.kind === 'lookbookImage') {
         insertLookbookImageRecord(session, {
           id: ownerRecord.id,
@@ -206,6 +214,7 @@ export function persistGeneratedMediaAttachment(
   }
 
   return {
+    ...(take ? { take } : {}),
     assetId,
     assetFileId,
     ...(ownerRecord ? { ownerRecord } : {}),

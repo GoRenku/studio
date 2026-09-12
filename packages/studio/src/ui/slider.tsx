@@ -57,6 +57,8 @@ const Slider = React.forwardRef<
             <SliderPrimitive.Range className='absolute h-full rounded-full bg-primary data-[orientation=vertical]:w-full' />
           </SliderPrimitive.Track>
           <SliderPrimitive.Thumb
+            aria-label={props['aria-label']}
+            aria-labelledby={props['aria-labelledby']}
             className={cn(
               'block rounded-full border-2 border-primary bg-background shadow-md ring-offset-background transition hover:scale-105 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
               thumbSizeClasses[sliderSize]

@@ -636,6 +636,7 @@ describe('assets Hono route', () => {
 });
 
 function mockAssetFileStream(contents: string): void {
+  vi.spyOn(fs.promises, 'stat').mockResolvedValue({ size: Buffer.byteLength(contents) } as Awaited<ReturnType<typeof fs.promises.stat>>);
   vi.spyOn(fs, 'createReadStream').mockReturnValue(
     Readable.from([Buffer.from(contents)]) as unknown as fs.ReadStream
   );

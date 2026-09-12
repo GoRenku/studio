@@ -228,4 +228,5 @@ pnpm lint:studio
 - [Media generation](docs/architecture/media-generation.md)
 - [CLI command reference](docs/cli/commands.md)
 - [Local development notes](docs/operations/local-development.md)
+- [Parallel worktrees and agent-assisted integration](docs/development/parallel-worktree-integration.md)
 - [Architecture decision records](docs/decisions)

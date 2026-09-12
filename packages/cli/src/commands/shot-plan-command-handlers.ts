@@ -1,3 +1,4 @@
+import { shotPlanClipCommandHandlers } from './shot-plan-clip-command-handlers.js';
 import { shotPlanPrevisCommandHandlers } from './shot-plan-previs-command-handlers.js';
 import type { CliCommandHandler, CliCommandRuntime } from './structured-command.js';
 import { shotPlanImageCommandHandlers } from './shot-plan-image-command-handlers.js';
@@ -13,6 +14,13 @@ export interface ShotPlanCommandFlags {
   asset?: string;
   position?: number;
   placement?: string;
+  previsRevision?: string;
+  clip?: string;
+  take?: string;
+  assetFile?: string;
+  sourceTake?: string;
+  title?: string;
+  number?: string;
 }
 
 export type ShotPlanCommandRuntime = CliCommandRuntime;
@@ -23,6 +31,7 @@ export const shotPlanCommandHandlers: readonly CliCommandHandler<
 >[] = [
   ...shotPlanPlanCommandHandlers,
   ...shotPlanPrevisCommandHandlers,
+  ...shotPlanClipCommandHandlers,
   ...shotPlanShotCommandHandlers,
   ...shotPlanImageCommandHandlers,
 ];

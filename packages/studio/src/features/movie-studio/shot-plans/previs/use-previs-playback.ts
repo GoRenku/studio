@@ -4,38 +4,31 @@ import type { StudioPrevisDialogue, StudioPrevisPlayback } from '@/services/shot
 
 type Transport = { dialogue: StudioPrevisDialogue | null; playing: boolean };
 
-export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevisPlayback | null) {
+export function usePrevisPlayback(timeline?: StudioPrevisPlayback | null, suppressed = false) {
   const previs = useRef<VideoPlayerHandle>(null);
-  const generation = useRef<VideoPlayerHandle>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
   const current = useRef<Transport>({ dialogue: null, playing: false });
   const [transport, setTransport] = useState<Transport>({ dialogue: null, playing: false });
   const [duration, setDuration] = useState(0);
-  const [generationDuration, setGenerationDuration] = useState(0);
   const [time, setTime] = useState(0);
   const [muted, setMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<string | null>(null);
   const playAttempt = useRef(0);
-  const generationReady = useRef(false);
   const previousTimeline = useRef(timeline);
-  const previousGeneration = useRef(generationUrl);
   const attachPrevis = useCallback((player: VideoPlayerHandle | null) => { previs.current = player; }, []);
-  const attachGeneration = useCallback((player: VideoPlayerHandle | null) => { generation.current = player; }, []);
   const seconds = useCallback((frame: number) => timeline ? frame * timeline.frameRate.denominator / timeline.frameRate.numerator : 0, [timeline]);
   const update = useCallback((next: Transport) => { current.current = next; setTransport(next); }, []);
 
   const applyMute = useCallback(() => {
-    previs.current?.setMuted(muted || Boolean(audio.current) || (!current.current.dialogue && Boolean(generationUrl) && generationReady.current));
-    generation.current?.setMuted(muted || Boolean(current.current.dialogue));
+    previs.current?.setMuted(muted || suppressed || Boolean(audio.current));
     if (audio.current) audio.current.muted = muted;
-  }, [muted, generationUrl]);
+  }, [muted, suppressed]);
 
   const pause = useCallback(() => {
     playAttempt.current++;
     update({ ...current.current, playing: false });
     previs.current?.pause();
-    generation.current?.pause();
     audio.current?.pause();
   }, [update]);
 
@@ -48,7 +41,6 @@ export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevi
 
   const position = useCallback((value: number) => {
     previs.current?.seek(value);
-    generation.current?.seek(value);
     setTime(value);
   }, []);
 
@@ -59,16 +51,6 @@ export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevi
     setSelection(selected);
     position(value);
   }, [duration, pause, stopAudition, position]);
-
-  const playGeneration = useCallback(() => {
-    const attempt = playAttempt.current;
-    void generation.current?.play().catch(() => {
-      if (attempt !== playAttempt.current) return;
-      generationReady.current = false;
-      applyMute();
-      setError('Generation playback is unavailable. Previs playback remains available.');
-    });
-  }, [applyMute]);
 
   const play = useCallback(() => {
     if (duration <= 0) return;
@@ -81,9 +63,6 @@ export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevi
       pause();
       setError('Previs playback could not start. Try playing again.');
     });
-    if (generationReady.current && (previs.current?.getCurrentTime() ?? 0) < generationDuration) {
-      playGeneration();
-    }
     const recording = audio.current;
     if (recording && !recording.ended) {
       void recording.play().catch(() => {
@@ -94,7 +73,7 @@ export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevi
         setError('Recorded audio is unavailable; visual rehearsal remains available.');
       });
     }
-  }, [duration, generationDuration, update, applyMute, pause, playGeneration]);
+  }, [duration, update, applyMute, pause]);
 
   const playDialogue = useCallback((cue: StudioPrevisDialogue) => {
     if (!timeline || cue.endFrame === undefined || duration <= 0 || seconds(cue.startFrame) >= duration) return;
@@ -150,13 +129,6 @@ export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevi
     }
   }, [timeline, pause, stopAudition]);
   useEffect(() => {
-    if (previousGeneration.current === generationUrl) return;
-    previousGeneration.current = generationUrl;
-    pause(); stopAudition();
-    generationReady.current = false;
-    setGenerationDuration(0);
-  }, [generationUrl, pause, stopAudition]);
-  useEffect(() => {
     let frame: number;
     const tick = () => {
       if (current.current.playing) {
@@ -165,20 +137,19 @@ export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevi
         const cue = current.current.dialogue;
         const end = cue?.endFrame === undefined ? duration : Math.min(seconds(cue.endFrame), duration);
         if (value >= end) finish();
-        else if (value >= generationDuration) generation.current?.pause();
-        else if (generationReady.current && Math.abs((generation.current?.getCurrentTime() ?? value) - value) > 0.2) generation.current?.seek(value);
       }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [duration, generationDuration, seconds, finish]);
+  }, [duration, seconds, finish]);
   useEffect(() => () => { playAttempt.current++; audio.current?.pause(); }, []);
 
   return {
-    attachPrevis, attachGeneration, time, duration, generationDuration, playing: transport.playing, muted, error,
+    attachPrevis, time, duration, playing: transport.playing, muted, error,
     activeCue: transport.dialogue?.id ?? null, selection, seconds, seek, playDialogue, pause,
-    cancel: () => { pause(); stopAudition(); generationReady.current = false; setGenerationDuration(0); },
+    cancel: () => { pause(); stopAudition(); },
+    play,
     toggle: () => {
       if (current.current.playing) { pause(); return; }
       stopAudition();
@@ -189,14 +160,5 @@ export function usePrevisPlayback(generationUrl?: string, timeline?: StudioPrevi
     onPrevisDuration: (value: number) => { setDuration(value); applyMute(); },
     onPrevisError: () => { pause(); setDuration(0); setError('Previs video is unavailable.'); },
     onPrevisEnded: finish,
-    onGenerationError: () => { generationReady.current = false; applyMute(); setError('Generation video is unavailable. Previs playback remains available.'); },
-    onGenerationDuration: (value: number) => {
-      generationReady.current = true;
-      setGenerationDuration(value);
-      const position = previs.current?.getCurrentTime() ?? 0;
-      generation.current?.seek(position);
-      applyMute();
-      if (current.current.playing && position < value) playGeneration();
-    },
   };
 }

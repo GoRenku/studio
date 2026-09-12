@@ -1,3 +1,4 @@
+import { createShotPlanClipsRoute } from './shot-plan-clips.js';
 import { createProjectTemporaryFilesRoute } from './project-temporary-files.js';
 import {
   createProjectDataService,
@@ -79,6 +80,10 @@ export type ProjectsRouteProjectData = Pick<
   | 'listSceneShotPlans'
   | 'readShotPlan'
   | 'readShotPlanPrevis'
+  | 'readShotPlanClips'
+  | 'createShotPlanClip'
+  | 'selectShotPlanClipTake'
+  | 'updateShotPlanClipTake'
   | 'readShotPlanImageAssets'
   | 'discardShotPlanImageAsset'
   | 'readSceneStoryboardStatus'
@@ -193,6 +198,7 @@ export function createProjectsRoute(
     .route('/:projectName', createContinuityRoute({ projectData, requireToken }))
     .route('/:projectName', createScreenplayRoute({ projectData, requireToken }))
     .route('/:projectName', createShotPlanDialogueAudioRoute({ projectData, requireToken }))
+    .route('/:projectName', createShotPlanClipsRoute({ projectData, requireToken }))
     .route('/:projectName', createShotPlansRoute({ projectData, requireToken }))
     .route('/:projectName', createSceneStoryboardImagesRoute({ projectData, requireToken }))
     .route(

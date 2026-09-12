@@ -40,6 +40,10 @@ export function fakeProjectDataService(): NonNullable<
   return {
     async readFdxUpdateStatus() { return { state: 'notApplicable' }; },
     async readShotPlanPrevis() { throw new Error('No Previs fixture.'); },
+    async readShotPlanClips() { throw new Error('No raw clip fixture.'); },
+    async createShotPlanClip() { throw new Error('No raw clip fixture.'); },
+    async selectShotPlanClipTake() { throw new Error('No raw clip fixture.'); },
+    async updateShotPlanClipTake() { throw new Error('No raw clip fixture.'); },
     async prepareFdxExportFolder() { throw new Error('No FDX export fixture.'); },
     async reviewFdxUpdate() { throw new Error('No FDX review fixture.'); },
     async applyFdxUpdate() { throw new Error('No FDX apply fixture.'); },
@@ -633,6 +637,7 @@ export function fakeProjectDataService(): NonNullable<
       };
     },
     async attachGenerationMedia(input) {
+      if (!input.target) { throw new Error('This fixture requires an explicit media target.'); }
       const asset = makeAsset('asset_generated');
       return {
         valid: true,

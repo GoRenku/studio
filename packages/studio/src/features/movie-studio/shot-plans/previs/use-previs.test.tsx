@@ -10,7 +10,7 @@ vi.mock('@/hooks/use-studio-resource-refresh', () => ({ useStudioResourceRefresh
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 
 it('follows newly registered latest revisions while preserving deliberate history browsing', async () => {
-  const revision = (number: number): StudioPrevisRevision => ({ id: String(number), number, createdAt: '', render: null, description: null, playback: null, generations: [], warnings: [] });
+  const revision = (number: number): StudioPrevisRevision => ({ id: String(number), number, createdAt: '', render: null, description: null, playback: null, clips: { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assets: [], unassignedAssets: [], sources: [], resourceKeys: [] }, warnings: [] });
   let revisions = [revision(1), revision(2)];
   vi.mocked(readStudioShotPlanPrevis).mockImplementation(async () => ({ shotPlanId: 'plan', revisions, resourceKeys: [] }));
   const { result } = renderHook(() => usePrevis('movie', 'scene', 'plan'));
