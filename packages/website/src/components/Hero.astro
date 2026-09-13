@@ -1,20 +1,19 @@
 ---
-import { Image } from 'astro:assets';
-
-import { heroImage, site } from '../data/site';
+import AgentWorkspace from './AgentWorkspace.astro';
+import { site } from '../data/site';
 ---
 
 <section class="hero" id="top">
   <div class="hero-glow" aria-hidden="true"></div>
   <div class="container hero-inner">
-    <p class="eyebrow" data-reveal>Previsualization studio for filmmakers</p>
+    <p class="eyebrow" data-reveal>For live-action, hybrid & fully AI films</p>
     <h1 data-reveal style="--reveal-delay: 0.08s">
-      See your film <em>before</em> you shoot a single frame.
+      Watch your film while you’re <em>still writing it.</em>
     </h1>
     <p class="hero-sub" data-reveal style="--reveal-delay: 0.16s">
-      {site.name} turns your screenplay into a living previs — cast, locations,
-      lookbooks, storyboards, Shot Plans, and video previews — inside one
-      cinematic workspace.
+      Bring your screenplay into a studio where you can develop its look,
+      stage the action, and direct AI-generated scenes—then carry what you
+      discover into your next draft.
     </p>
     <div class="hero-actions" data-reveal style="--reveal-delay: 0.24s">
       <a href={site.downloadUrl} class="btn btn-primary">Download Renku</a>
@@ -22,25 +21,8 @@ import { heroImage, site } from '../data/site';
     </div>
   </div>
 
-  <div class="container hero-visual" data-reveal style="--reveal-delay: 0.34s">
-    <figure class="hero-frame">
-      <div class="frame-bar" aria-hidden="true">
-        <span></span><span></span><span></span>
-        <p class="frame-title">Basilica — Story Arc</p>
-      </div>
-      <Image
-        src={heroImage.image}
-        alt={heroImage.alt}
-        widths={[720, 1200, 1800, 2400]}
-        sizes="(max-width: 76rem) 94vw, 72rem"
-        loading="eager"
-        fetchpriority="high"
-      />
-    </figure>
-    <p class="hero-caption">
-      A real screenplay, mapped: dramatic energy, plot points, and structure —
-      charted by {site.name}.
-    </p>
+  <div class="hero-visual" data-reveal style="--reveal-delay: 0.34s">
+    <AgentWorkspace />
   </div>
 </section>
 
@@ -93,7 +75,8 @@ import { heroImage, site } from '../data/site';
 
   .hero-sub {
     margin: 1.5rem auto 0;
-    max-width: 42rem;
+    max-width: 43rem;
+    text-wrap: pretty;
     font-size: clamp(1.05rem, 1.6vw, 1.2rem);
     color: var(--paper-300);
   }
@@ -108,77 +91,7 @@ import { heroImage, site } from '../data/site';
 
   .hero-visual {
     position: relative;
-    margin-top: clamp(3rem, 7vh, 5rem);
-  }
-
-  .hero-frame {
-    margin: 0;
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    border: 1px solid rgba(244, 239, 230, 0.1);
-    background: var(--ink-850);
-    box-shadow:
-      0 40px 90px -30px rgba(0, 0, 0, 0.8),
-      0 0 120px -40px rgba(253, 160, 45, 0.35);
-    animation: hero-drift 9s ease-in-out infinite alternate;
-  }
-
-  @keyframes hero-drift {
-    from {
-      transform: translateY(0);
-    }
-
-    to {
-      transform: translateY(-10px);
-    }
-  }
-
-  .frame-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.7rem 1rem;
-    background: var(--ink-800);
-    border-bottom: 1px solid rgba(244, 239, 230, 0.07);
-  }
-
-  .frame-bar span {
-    width: 0.7rem;
-    height: 0.7rem;
-    border-radius: 50%;
-    background: var(--ink-600);
-  }
-
-  .frame-bar span:first-child {
-    background: var(--rose-500);
-  }
-
-  .frame-bar span:nth-child(2) {
-    background: var(--amber-400);
-  }
-
-  .frame-bar span:nth-child(3) {
-    background: var(--teal-500);
-  }
-
-  .frame-title {
-    margin-inline: auto;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    color: var(--paper-700);
-    transform: translateX(-1.5rem);
-  }
-
-  .hero-caption {
-    margin-top: 1.1rem;
-    text-align: center;
-    font-size: 0.85rem;
-    color: var(--paper-700);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hero-frame {
-      animation: none;
-    }
+    width: min(80rem, calc(100% - 5rem));
+    margin: clamp(2.75rem, 6vh, 4rem) auto 0;
   }
 </style>

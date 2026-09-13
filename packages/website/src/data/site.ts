@@ -8,15 +8,14 @@ import locationDetail from '../assets/screens/location-detail.png';
 import sceneBeats from '../assets/screens/scene-beats.png';
 import sceneNarrative from '../assets/screens/scene-narrative.png';
 import screenplayAnalysis from '../assets/screens/screenplay-analysis.png';
-import shotPlan from '../assets/screens/shot-plan.png';
 import wesAndersonAnalysis from '../assets/screens/wes-anderson-analysis.png';
 import wesAndersonGrabs from '../assets/screens/wes-anderson-grabs.png';
 
 export const site = {
   name: 'Renku',
-  tagline: 'See your film before you shoot a single frame.',
+  tagline: 'Watch your film while you’re still writing it.',
   description:
-    'Renku is a previsualization studio for filmmakers. Import your screenplay and turn it into cast, locations, lookbooks, narrative Scene Beats, storyboards, Shot Plans, and video previews — one cinematic workspace.',
+    'Renku is a filmmaking studio for live-action, hybrid, and fully AI productions. Iterate on your screenplay through FDX, develop your visual language, direct Blender previs, and generate AI footage in one cinematic workspace.',
   githubUrl: 'https://github.com/GoRenku/studio',
   downloadUrl: '/download',
 };
@@ -42,13 +41,13 @@ export const features: Feature[] = [
   {
     id: 'script',
     eyebrow: 'Script & Structure',
-    title: 'Your screenplay becomes a living map',
+    title: 'Back to the page. With more to go on.',
     description:
-      'Import your script and Renku breaks it into acts, sequences, and scenes — then reads it like a story editor. Characters and locations are linked right inside the page, and the dramatic-energy arc shows you where the story surges and where it stalls.',
+      'Keep writing in the screenplay editor you know. Bring your script into Renku through FDX to explore its structure and develop scenes on screen, then return to your editor with a clearer sense of what to rewrite.',
     bullets: [
-      'Acts, sequences, and scenes organized automatically',
-      'Screenplay pages with characters and locations linked in place',
-      'Story-arc analysis: hook, plot points, midpoint, climax — charted',
+      'Work with screenplay editors that export Final Draft XML (.fdx)',
+      'Renku detects new exports; review affected scenes before applying an update',
+      'Story-arc analysis reveals structure, pacing, and character development',
     ],
     image: sceneNarrative,
     imageAlt:
@@ -58,11 +57,29 @@ export const features: Feature[] = [
       'Story arc chart plotting dramatic energy across three acts.',
   },
   {
+    id: 'visual-language',
+    eyebrow: 'Visual Language',
+    title: 'Turn inspiration into a visual grammar',
+    description:
+      'Collect stills from the films and cinematographers you love. Explore their use of color, light, and composition with your agent, then build lookbooks that give your cast, locations, and generated footage a shared visual direction.',
+    bullets: [
+      'Inspiration folders for films, DPs, and references',
+      'AI analysis: core idea, principles, and a named color palette',
+      'Production and storyboard lookbooks steer every generation',
+    ],
+    image: wesAndersonGrabs,
+    imageAlt:
+      'The Wes Anderson inspiration folder in Renku with film stills arranged in a grid.',
+    secondaryImage: wesAndersonAnalysis,
+    secondaryImageAlt:
+      'The Wes Anderson inspiration analysis showing its visual thesis, reference stills, and named color palette.',
+  },
+  {
     id: 'cast',
     eyebrow: 'Cast Development',
     title: 'Give every character a face',
     description:
-      'Every role in your script gets a profile — want, need, arc, voice — and a generated portrait to match. Character sheets with turnarounds and expression studies keep each face consistent across every storyboard frame.',
+      'Develop the people behind the dialogue: what they want, what they need, how they change, and how they sound. Build portraits, turnarounds, and expression studies to give each character a shared reference across storyboards and generated takes.',
     bullets: [
       'AI portraits grounded in each character’s role and age',
       'Character sheets: turnarounds, poses, and expression grids',
@@ -91,29 +108,11 @@ export const features: Feature[] = [
       'The Imperial Council Chamber 3D World open in Renku, showing an explorable Byzantine council room.',
   },
   {
-    id: 'visual-language',
-    eyebrow: 'Visual Language',
-    title: 'Turn inspiration into a visual grammar',
-    description:
-      'Collect stills from the films and cinematographers you love, and let Renku analyze them into a thesis: principles, palette, and rules of composition. Lookbooks turn that grammar into direction every generated frame obeys.',
-    bullets: [
-      'Inspiration folders for films, DPs, and references',
-      'AI analysis: core idea, principles, and a named color palette',
-      'Production and storyboard lookbooks steer every generation',
-    ],
-    image: wesAndersonGrabs,
-    imageAlt:
-      'The Wes Anderson inspiration folder in Renku with film stills arranged in a grid.',
-    secondaryImage: wesAndersonAnalysis,
-    secondaryImageAlt:
-      'The Wes Anderson inspiration analysis showing its visual thesis, reference stills, and named color palette.',
-  },
-  {
     id: 'storyboards',
     eyebrow: 'Beats & Storyboards',
     title: 'Turn narrative Beats into visible scenes',
     description:
-      'Renku breaks each scene into clear narrative Beats before camera decisions begin. Every Beat carries its people, place, story elements, emotional tone, and narrative function, with storyboard imagery attached as a separate visual layer.',
+      'Find the moments that move a scene forward: a revelation, a hesitation, a shift in power. Develop those beats with your agent and explore them in storyboards to see how the scene holds together.',
     bullets: [
       'Narrative Scene Beats stay separate from camera and coverage choices',
       'Each Beat carries narrative development, purpose, cast, and locations',
@@ -126,33 +125,18 @@ export const features: Feature[] = [
     secondaryImageAlt:
       'The First Patron Beats view with storyboard thumbnails and the selected Beat details.',
   },
-  {
-    id: 'shot-plans',
-    eyebrow: 'Shot Planning',
-    title: 'Turn story intent into camera decisions',
-    description:
-      'Build a Shot Plan only after the narrative is clear. Each Shot stays tied to the Beats it covers, while framing, camera angle, movement, optics, focus, and lighting intent live together in one practical brief.',
-    bullets: [
-      'Author the visual relationship from the opening frame to the closing frame',
-      'Plan camera angle, movement, optics, focus, and lighting intent together',
-      'Keep every Shot visibly connected to the narrative Beats it covers',
-    ],
-    image: shotPlan,
-    imageAlt:
-      'The First Patron Shot Plan in Renku, showing the selected shot’s framing, camera, motion, optics, and lighting brief.',
-  },
 ];
 
 export const shotPlanVideoFeature = {
   id: 'shot-plan-video',
-  eyebrow: 'Generated Previs',
-  title: 'See the Shot Plan move',
+  eyebrow: 'AI Production',
+  title: 'Your direction becomes footage',
   description:
-    'Generate a video preview from the plan and judge the result in motion. This 12-second take from The First Patron carries its intended slow push through the Imperial Council Chamber into a concrete piece of previs.',
+    'Bring your cast, visual references, and shot direction into AI generation. Review each take and refine the performance as you build a fully AI film, develop shots for a hybrid production, or explore a scene before a live-action shoot.',
   bullets: [
-    'Review composition, camera movement, and pacing before production',
-    'Keep each generated preview connected to its Scene and Shot Plan',
-    'Compare motion against the authored visual intent while it is still easy to change',
+    'Carry cast, location, and lookbook references into generation',
+    'Keep generated takes connected to their Scene and Shot Plan',
+    'Review the performance, compare takes, and refine your direction',
   ],
   video: firstPatronShotPlanVideo,
   videoLabel:
@@ -162,18 +146,18 @@ export const shotPlanVideoFeature = {
 export const workflow = [
   {
     step: '01',
-    title: 'Import your script',
-    text: 'Fountain to full structure — acts, sequences, scenes.',
+    title: 'Write & iterate',
+    text: 'Your editor, your screenplay. Bring each FDX revision into Renku.',
   },
   {
     step: '02',
-    title: 'Develop cast & locations',
-    text: 'Faces, turnarounds, and sets pulled from the page.',
+    title: 'Define the look',
+    text: 'Inspiration, analysis, and lookbooks establish your visual language.',
   },
   {
     step: '03',
-    title: 'Define the look',
-    text: 'Inspiration, analysis, palette — locked into lookbooks.',
+    title: 'Develop cast & locations',
+    text: 'Faces, turnarounds, and sets shaped by the script and its look.',
   },
   {
     step: '04',
@@ -182,8 +166,8 @@ export const workflow = [
   },
   {
     step: '05',
-    title: 'Plan shots & preview motion',
-    text: 'Camera decisions become generated video previews.',
+    title: 'Direct & generate',
+    text: 'Plan shots, rehearse in Blender, and direct AI-generated takes.',
   },
 ];
 
@@ -194,18 +178,18 @@ export const audiences = [
     accent: 'var(--amber-500)',
   },
   {
-    title: 'Aspiring directors',
-    text: 'Direct before anyone hands you a crew. Build the muscle of shot choice, coverage, and visual storytelling on real material — yours.',
+    title: 'AI & hybrid filmmakers',
+    text: 'Give each generation a directorial brief: cast, look, camera, blocking, and timing. Build fully AI scenes or develop footage alongside live action.',
     accent: 'var(--rose-500)',
   },
   {
     title: 'Screenwriters',
-    text: 'See your pages the way a director will read them. Watch structure, pacing, and character agency charted across every act.',
+    text: 'Keep writing in the editor you know. Bring FDX revisions into Renku and see how the structure, pacing, and characters play on screen.',
     accent: 'var(--teal-500)',
   },
   {
     title: 'Cinematographers',
-    text: 'Arrive with a visual grammar, not a mood board. Palette, principles, and boarded coverage — ready to argue lens by lens.',
+    text: 'Explore how a scene feels through its lens, light, and composition. Share lookbooks, boarded coverage, and moving previs with your director and crew.',
     accent: 'var(--coral-500)',
   },
 ];
@@ -213,14 +197,14 @@ export const audiences = [
 export const benefits = [
   {
     title: 'Pitch with proof',
-    text: 'A previs that looks like a film gets funded like one. Show the arc, the faces, and the frames — not just the logline.',
+    text: 'Make the film tangible before the pitch. Show the arc, the faces, the blocking, and generated footage alongside your logline.',
   },
   {
     title: 'Iterate before you spend',
-    text: 'Rewrite the Beat, not the shoot. Every story experiment happens in the studio, where a bad idea costs minutes instead of money.',
+    text: 'Test the blocking and camera in Blender before committing to a shooting day or another generation. Refine the scene while changes are easier to make.',
   },
   {
-    title: 'One source of truth',
-    text: 'Script, cast, locations, look, Beats, and boards stay linked. Change the scene and everything downstream knows.',
+    title: 'One creative workspace',
+    text: 'Keep your screenplay, cast, locations, look, Beats, Shot Plans, and takes together. Review script changes with the existing production work in view.',
   },
 ];

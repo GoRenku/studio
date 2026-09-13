@@ -3,6 +3,7 @@ import AudienceSection from '../components/AudienceSection.astro';
 import CtaSection from '../components/CtaSection.astro';
 import FeatureSection from '../components/FeatureSection.astro';
 import Hero from '../components/Hero.astro';
+import ShotPlanningSection from '../components/ShotPlanningSection.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import VideoFeatureSection from '../components/VideoFeatureSection.astro';
@@ -22,6 +23,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <FeatureSection feature={feature} flip={i % 2 === 1} />
         ))
       }
+      <ShotPlanningSection />
       <VideoFeatureSection feature={shotPlanVideoFeature} />
     </div>
     <AudienceSection />

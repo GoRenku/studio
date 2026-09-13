@@ -1,4 +1,11 @@
 ---
+import falWordmark from '../assets/providers/fal-wordmark.svg?url';
+import pikaWordmark from '../assets/providers/pika-wordmark.svg?url';
+import replicateWordmark from '../assets/providers/replicate-wordmark.svg?url';
+import waveSpeedWordmark from '../assets/providers/wavespeed-wordmark.svg?url';
+import elevenLabsWordmark from '../assets/providers/elevenlabs-wordmark.svg?url';
+import worldLabsWordmark from '../assets/providers/worldlabs-wordmark.svg?url';
+
 interface Props {
   feature: {
     id: string;
@@ -12,6 +19,14 @@ interface Props {
 }
 
 const { feature } = Astro.props;
+const providers = [
+  { name: 'fal.ai', image: falWordmark, width: '4.1rem' },
+  { name: 'Pika', image: pikaWordmark, width: '4.4rem' },
+  { name: 'Replicate', image: replicateWordmark, width: '7.1rem' },
+  { name: 'WaveSpeed', image: waveSpeedWordmark, width: '8.8rem' },
+  { name: 'ElevenLabs', image: elevenLabsWordmark, width: '8rem' },
+  { name: 'World Labs', image: worldLabsWordmark, width: '9rem' },
+];
 ---
 
 <section id={feature.id} class="feature video-feature">
@@ -60,6 +75,16 @@ const { feature } = Astro.props;
           The First Patron · Shot Plan Video · 12 seconds
         </figcaption>
       </figure>
+    </div>
+  </div>
+  <div class="container" data-reveal>
+    <div class="provider-network">
+      <p>Connected providers</p>
+      <ul aria-label="Connected generation providers">
+        {providers.map((provider) => (
+          <li><img src={provider.image} alt={provider.name} style={`width: ${provider.width};`} loading="lazy" /></li>
+        ))}
+      </ul>
     </div>
   </div>
 </section>
@@ -123,6 +148,44 @@ const { feature } = Astro.props;
     background: var(--ink-850);
   }
 
+  .provider-network {
+    margin-top: 3rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid rgba(244, 239, 230, 0.1);
+  }
+
+  .provider-network p {
+    color: var(--paper-500);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+
+  .provider-network ul {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: center;
+    gap: 1.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+  }
+
+  .provider-network li {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 2.5rem;
+  }
+
+  .provider-network img {
+    max-width: 100%;
+    max-height: 2.6rem;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: 0.78;
+  }
+
   video {
     display: block;
     width: 100%;
@@ -154,6 +217,10 @@ const { feature } = Astro.props;
   @media (max-width: 60rem) {
     .feature-inner {
       grid-template-columns: 1fr;
+    }
+    .provider-network ul {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      row-gap: 1.5rem;
     }
   }
 </style>

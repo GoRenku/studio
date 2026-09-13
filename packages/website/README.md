@@ -1,6 +1,6 @@
 # @gorenku/website
 
-Marketing website for **Renku** — the previsualization studio for filmmakers.
+Marketing website for **Renku** — the filmmaking studio for live action and AI.
 Built with [Astro](https://astro.build).
 
 ## Commands
@@ -43,6 +43,15 @@ Screenshots in `src/assets/screens/` were captured from a locally running
 Renku Studio (`http://localhost:5173`, project `urban-basilica`) at
 1440×900 @2x with Playwright. Recapture with any Playwright-driven script
 pointing at the same routes if the product UI changes.
+
+Shot Planning uses two tabs with full inline Studio screenshots: the Bombardment
+Shot List and the Harbor Blender Previs comparison. Blender Previs is selected
+initially. One disclosure reveals the Blender render and generated take together;
+both videos pause when it closes or the user switches to Shot List.
+The website videos are compressed to 960 pixels wide. The 17-second Blender
+render is silent; the generated take retains audio. Their Urban Basilica sources
+are `scenes/03/01-shot-plan/previs/renders/previs-gt2m.mp4` and
+`scenes/03/01-shot-plan/s03-p01-video-gn6p.mp4`. Project originals are unchanged.
 
 ## Publishing to gorenku.com
 

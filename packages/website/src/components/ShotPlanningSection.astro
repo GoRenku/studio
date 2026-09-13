@@ -1,0 +1,115 @@
+---
+import { Image } from 'astro:assets';
+
+import harborComparison from '../assets/screens/harbor-blender-previs.jpg';
+import shotListImage from '../assets/screens/shot-list-bombardment.jpg';
+import harborPrevis from '../assets/media/harbor-blender-previs.mp4';
+import harborGeneration from '../assets/media/harbor-generation.mp4';
+---
+
+<section class="shot-planning" id="shot-plans">
+  <div class="container">
+    <div class="planning-layout">
+      <header class="planning-heading" data-reveal>
+        <p class="eyebrow">Shot Planning</p>
+        <h2>Two ways to shape a scene.</h2>
+        <p class="planning-intro">Work out your coverage in a Shot List, or direct the scene in motion with Blender Previs.</p>
+        <p class="panel-description" id="shot-list-description" data-planning-copy="shot-list-panel" hidden>Build coverage shot by shot, with framing, lenses, and visual references together. Connect each camera decision to the story beat it serves.</p>
+        <p class="panel-description" id="previs-description" data-planning-copy="previs-panel">Work with your agent to stage characters and cameras in Blender. Refine positions, lenses, and action and dialogue timing down to the frame, then compare the render with an AI-generated take.</p>
+      </header>
+      <div class="planning-card" data-reveal>
+        <div class="tabs" role="tablist" aria-label="Shot planning views">
+          <button class="tab" id="shot-list-tab" type="button" role="tab" aria-selected="false" aria-controls="shot-list-panel" tabindex="-1">
+            <span class="tab-title">Shot List</span>
+            <span class="tab-subtitle">Compose the coverage</span>
+          </button>
+          <button class="tab is-active" id="previs-tab" type="button" role="tab" aria-selected="true" aria-controls="previs-panel" tabindex="0">
+            <span class="tab-title">Blender Previs</span>
+            <span class="tab-subtitle">Direct in space and time</span>
+          </button>
+        </div>
+        <div class="tab-panel" id="shot-list-panel" role="tabpanel" aria-labelledby="shot-list-tab" aria-describedby="shot-list-description" hidden>
+          <div class="screenshot-frame">
+            <Image src={shotListImage} alt="Renku shot list showing five numbered shot thumbnails and a camera brief." widths={[1440, 1800, 2400]} sizes="(max-width: 74rem) 100vw, 70rem" />
+          </div>
+        </div>
+        <div class="tab-panel" id="previs-panel" role="tabpanel" aria-labelledby="previs-tab" aria-describedby="previs-description">
+          <div class="screenshot-frame">
+            <Image src={harborComparison} alt="Renku Blender previs comparison showing a Blender render beside a generated cinematic take." widths={[1440, 1800, 2400]} sizes="(max-width: 74rem) 100vw, 70rem" />
+          </div>
+          <details class="previs-video">
+            <summary>Watch the previs and generation</summary>
+            <div class="playback-options">
+              <video controls muted playsinline preload="metadata" aria-label="Blender previs" src={harborPrevis}></video>
+              <video controls playsinline preload="metadata" aria-label="Generation" src={harborGeneration}></video>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#shot-plans .tab'));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>('#shot-plans .tab-panel'));
+  const descriptions = Array.from(document.querySelectorAll<HTMLElement>('#shot-plans [data-planning-copy]'));
+  const videoDetails = document.querySelector<HTMLDetailsElement>('#shot-plans .previs-video');
+  const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('#shot-plans .previs-video video'));
+  videoDetails?.addEventListener('toggle', () => {
+    if (!videoDetails.open) videos.forEach((video) => video.pause());
+  });
+  function activateTab(tab: HTMLButtonElement) {
+    tabs.forEach((item) => {
+      const active = item === tab;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-selected', String(active));
+      item.tabIndex = active ? 0 : -1;
+    });
+    panels.forEach((panel) => { panel.hidden = panel.id !== tab.getAttribute('aria-controls'); });
+    descriptions.forEach((description) => { description.hidden = description.dataset.planningCopy !== tab.getAttribute('aria-controls'); });
+    if (tab.id === 'shot-list-tab') videos.forEach((video) => video.pause());
+  }
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => activateTab(tab));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const destinations: Record<string, number> = {
+        ArrowRight: (index + 1) % tabs.length,
+        ArrowLeft: (index - 1 + tabs.length) % tabs.length,
+        Home: 0,
+        End: tabs.length - 1,
+      };
+      const nextIndex = destinations[event.key];
+      tabs[nextIndex].focus();
+      activateTab(tabs[nextIndex]);
+    });
+  });
+</script>
+
+<style>
+  .shot-planning { padding-block: clamp(3.5rem, 9vh, 6.5rem); scroll-margin-top: 7rem; }
+  .planning-layout { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(2.5rem, 5vw, 4.5rem); align-items: center; }
+  .planning-heading { order: 2; }
+  .planning-card { order: 1; }
+  h2 { font-size: clamp(1.8rem, 3.4vw, 2.6rem); margin-top: 0.9rem; }
+  .planning-intro { margin-top: 1.1rem; color: var(--paper-300); }
+  .planning-card { overflow: hidden; border: 1px solid var(--ink-700); border-radius: var(--radius-lg); background: var(--ink-850); }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--ink-700); }
+  .tab { border: 0; border-bottom: 3px solid transparent; padding: 1rem 1.25rem; cursor: pointer; color: var(--paper-500); background: transparent; font: inherit; text-align: left; }
+  .tab + .tab { border-left: 1px solid var(--ink-700); }
+  .tab-title { display: block; font-size: 1.1rem; font-weight: 600; }
+  .tab-subtitle { display: block; margin-top: 0.3rem; font-size: 0.85rem; }
+  .tab:hover, .tab.is-active { color: var(--paper-100); }
+  .tab.is-active { border-bottom-color: var(--amber-400); background: var(--ink-800); }
+  .screenshot-frame { background: var(--ink-900); }
+  .screenshot-frame img { display: block; width: 100%; height: auto; object-fit: contain; }
+  .panel-description { margin-top: 1.1rem; color: var(--paper-300); }
+  .playback-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--ink-700); }
+  .previs-video { border-top: 1px solid var(--ink-700); }
+  .previs-video summary { padding: 1rem 1.5rem; cursor: pointer; color: var(--paper-100); font-size: 0.85rem; }
+  .previs-video video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--ink-900); }
+  .tab:focus-visible, .previs-video summary:focus-visible { outline: 2px solid var(--amber-400); outline-offset: -4px; }
+  @media (max-width: 60rem) { .planning-layout { grid-template-columns: 1fr; gap: 2rem; } .planning-heading { order: 0; } }
+</style>
