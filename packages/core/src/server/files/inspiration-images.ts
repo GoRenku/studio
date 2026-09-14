@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { InspirationImage } from '../../client/index.js';
 import type { InspirationFolderRecord } from '../database/access/inspiration-folders.js';
+import { listActiveTrashItemOriginalProjectRelativePaths } from '../database/access/trash.js';
+import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   joinProjectRelativePath,
   normalizeProjectRelativePath,
@@ -17,6 +19,27 @@ const imageExtensions = new Set([
   '.png',
   '.webp',
 ]);
+
+export async function listActiveInspirationImagesFromFolder(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  folder: InspirationFolderRecord;
+}): Promise<InspirationImage[]> {
+  const discardedPaths = new Set(
+    listActiveTrashItemOriginalProjectRelativePaths(input.session, {
+      itemKind: 'inspirationImage',
+      ownerKind: 'inspirationFolder',
+      ownerId: input.folder.id,
+    })
+  );
+  const images = await listInspirationImagesFromFolder(
+    input.projectFolder,
+    input.folder
+  );
+  return images.filter(
+    (image) => !discardedPaths.has(image.projectRelativePath)
+  );
+}
 
 export async function listInspirationImagesFromFolder(
   projectFolder: string,

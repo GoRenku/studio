@@ -259,6 +259,22 @@ describe('visual language commands', () => {
         folderId: folder.id,
       })
     ).resolves.toMatchObject({ images: [] });
+    const inspiration = await projectData.readInspirationResource({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    expect(inspiration.folders.items.find((item) => item.folder.id === folder.id))
+      .toMatchObject({ imageCount: 0, cardImage: null });
+    await fs.copyFile(
+      path.join(created.projectPath, folder.projectRelativePath, 'frame-001.png'),
+      path.join(created.projectPath, folder.projectRelativePath, 'frame-002.png')
+    );
+    const withActiveImage = await projectData.readInspirationResource({
+      projectName: 'constantinople',
+      homeDir,
+    });
+    expect(withActiveImage.folders.items.find((item) => item.folder.id === folder.id))
+      .toMatchObject({ imageCount: 1, cardImage: { fileName: 'frame-002.png' } });
   });
 
   it('rejects invalid Lookbook JSON on write and malformed stored JSON on read', async () => {

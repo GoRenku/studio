@@ -14,7 +14,7 @@ import { Input } from '@/ui/input';
 
 interface InspirationFolderCreateDialogProps {
   onCreate: (name: string) => Promise<void>;
-  trigger?: 'full' | 'icon';
+  trigger?: 'full' | 'compact';
 }
 
 export function InspirationFolderCreateDialog({
@@ -39,20 +39,20 @@ export function InspirationFolderCreateDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger === 'icon' ? (
+        {trigger === 'compact' ? (
           <Button
             type='button'
-            variant='ghost'
-            size='icon'
-            className='h-6 w-6'
-            aria-label='Create Inspiration folder'
+            variant='outline'
+            size='sm'
+            className='gap-2'
           >
             <Plus className='h-3.5 w-3.5' />
+            New Folder
           </Button>
         ) : (
           <Button type='button' variant='outline' size='sm' className='w-full gap-2'>
             <Plus className='h-3.5 w-3.5' />
-            Add folder
+            New Folder
           </Button>
         )}
       </DialogTrigger>

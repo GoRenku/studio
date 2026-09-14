@@ -9,7 +9,7 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
-import { listInspirationImagesFromFolder } from '../files/inspiration-images.js';
+import { listActiveInspirationImagesFromFolder } from '../files/inspiration-images.js';
 import type { ListInspirationFoldersInput } from '../project-data-service-contracts.js';
 
 export async function readInspirationResource(
@@ -20,7 +20,7 @@ export async function readInspirationResource(
     return {
       folders: {
         items: await Promise.all(
-          folders.items.map((folder) => toInspirationFolderListItem(projectFolder, folder))
+          folders.items.map((folder) => toInspirationFolderListItem(session, projectFolder, folder))
         ),
         nextCursor: folders.nextCursor,
       },
@@ -29,10 +29,11 @@ export async function readInspirationResource(
 }
 
 async function toInspirationFolderListItem(
+  session: DatabaseSession,
   projectFolder: string,
   folder: InspirationFolderRecord
 ): Promise<InspirationFolderListItem> {
-  const images = await listInspirationImagesFromFolder(projectFolder, folder);
+  const images = await listActiveInspirationImagesFromFolder({ session, projectFolder, folder });
   return {
     folder: toInspirationFolder(folder),
     cardImage: images[0] ?? null,

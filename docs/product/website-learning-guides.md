@@ -37,10 +37,33 @@ Verify wording against the current owning implementation and documentation:
 - The sister `studio-skills` project for specialist workflow handoffs and current
   generation, Shot List, and Blender Previs capabilities.
 
-Do not imply that FDX import creates production department records, that saving
-a provider key verifies account access, or that generated scene takes are an
-assembled final film. Example prompts use user-replaceable targets and are
-creative guidance, never Studio runtime validation contracts.
+Distinguish deterministic FDX import from Movie Director’s follow-up stages:
+Project Settings can enable continuity subjects, media, analysis, Beats, and
+storyboards after import. Do not imply that saving a provider key verifies
+account access or that generated scene takes are an assembled final film.
+
+Read the owning `SKILL.md` and relevant workflow references before writing or
+revising tutorial copy. Name the skills in instructional prose. Explain their
+standard behavior separately from optional user direction; prompts should ask
+for outcomes rather than repeat context gathering, validation, saving, routing,
+or generation review already handled by the skills. Keep manual Studio actions
+such as creating Inspiration folders and uploading grabs in the UI instructions.
+Movie Director coordinates broad requests; skill descriptions also allow focused
+requests to route without a skill name in the example prompt. When references
+disagree, describe the verified common workflow without inventing a hard product
+requirement. Example prompts are creative guidance, never runtime contracts.
+
+Voice and generation guidance follows Media Producer’s `cast-voice-sample`,
+`shot-plan-dialogue-audio`, `inline-generation-configuration`, and
+`video-reference-continuity` references, plus Casting Director’s voice-casting
+workflow. Distinguish default Cast Voices from selected Shot Plan dialogue takes,
+and native generated audio from support for uploaded audio references. The Codex
+configuration screenshot and the actual Studio Audio screenshot use the shared
+tutorial figure treatment, including rounded corners, a border, and a caption.
+The inline configuration selector is described as Codex-only.
+Generation Preview copy follows the Media Generation Request dialog’s Prompt,
+References, and Configuration tabs. Configuring or updating a preview does not
+submit a generation.
 
 ## Verification
 

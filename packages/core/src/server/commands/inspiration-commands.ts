@@ -27,7 +27,6 @@ import {
   updateInspirationFolderPositions,
   updateInspirationFolderRecord,
 } from '../database/access/inspiration-folders.js';
-import { listActiveTrashItemOriginalProjectRelativePaths } from '../database/access/trash.js';
 import {
   readInspirationAnalysisRecord,
   toInspirationAnalysis,
@@ -45,7 +44,10 @@ import {
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
-import { listInspirationImagesFromFolder } from '../files/inspiration-images.js';
+import {
+  listActiveInspirationImagesFromFolder,
+  listInspirationImagesFromFolder,
+} from '../files/inspiration-images.js';
 import type {
   CreateInspirationFolderInput,
   DeleteInspirationFolderInput,
@@ -480,27 +482,6 @@ async function readFolderImageFileNames(
     (await listInspirationImagesFromFolder(projectFolder, folder)).map(
       (image) => image.fileName
     )
-  );
-}
-
-async function listActiveInspirationImagesFromFolder(input: {
-  session: DatabaseSession;
-  projectFolder: string;
-  folder: ReturnType<typeof requireInspirationFolderRecord>;
-}) {
-  const discardedPaths = new Set(
-    listActiveTrashItemOriginalProjectRelativePaths(input.session, {
-      itemKind: 'inspirationImage',
-      ownerKind: 'inspirationFolder',
-      ownerId: input.folder.id,
-    })
-  );
-  const images = await listInspirationImagesFromFolder(
-    input.projectFolder,
-    input.folder
-  );
-  return images.filter(
-    (image) => !discardedPaths.has(image.projectRelativePath)
   );
 }
 

@@ -293,7 +293,7 @@ export function MovieStudioScreen({
               action={
                 selection.type === 'inspiration' ? (
                   <InspirationFolderCreateDialog
-                    trigger='icon'
+                    trigger='compact'
                     onCreate={handleCreateInspirationFolder}
                   />
                 ) : selection.type === 'scene' ? (
