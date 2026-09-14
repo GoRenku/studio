@@ -1,0 +1,26 @@
+---
+interface Props { current: 'download' | 'quick-start' | 'tutorials'; }
+const { current } = Astro.props;
+const destinations = [
+  { id: 'download', title: 'Download & Install', href: '/download/' },
+  { id: 'quick-start', title: 'Quick Start', href: '/quick-start/' },
+  { id: 'tutorials', title: 'Tutorials', href: '/tutorials/' },
+];
+---
+
+<nav class="learn-nav" aria-label="Getting started">
+  {destinations.map((destination, index) => (
+    <a href={destination.href} aria-current={current === destination.id ? 'page' : undefined}>
+      <span class="nav-number">0{index + 1}</span>{destination.title}
+    </a>
+  ))}
+</nav>
+
+<style>
+  .learn-nav { display: flex; justify-content: center; gap: 2rem; border-bottom: 1px solid var(--ink-700); }
+  .learn-nav a { display: flex; align-items: center; gap: 0.65rem; padding: 1.2rem 0; color: var(--paper-500); font-size: 0.85rem; border-bottom: 2px solid transparent; }
+  .learn-nav a[aria-current], .learn-nav a:hover { color: var(--paper-100); border-bottom-color: var(--amber-500); }
+  .nav-number { color: var(--amber-500); font-size: 0.7rem; }
+  a:focus-visible { outline: 2px solid var(--amber-400); outline-offset: 5px; }
+  @media (max-width: 640px) { .learn-nav { gap: 1rem; flex-wrap: wrap; } .nav-number { display: none; } }
+</style>

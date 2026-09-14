@@ -1,0 +1,38 @@
+---
+interface Props { prompt: string; }
+const { prompt } = Astro.props;
+---
+
+<div class="codex-prompt">
+  <div class="prompt-header"><span class="eyebrow">Ask Codex</span><button type="button" data-prompt-copy>Copy prompt</button></div>
+  <p data-prompt-text>{prompt}</p>
+  <span class="prompt-status" role="status" aria-live="polite"></span>
+</div>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-prompt-copy]')) {
+    button.addEventListener('click', async () => {
+      const block = button.closest('.codex-prompt');
+      const prompt = block?.querySelector('[data-prompt-text]')?.textContent;
+      const status = block?.querySelector('.prompt-status');
+      if (!prompt || !status) return;
+      try {
+        await navigator.clipboard.writeText(prompt);
+        status.textContent = 'Prompt copied. Paste it into your Codex task.';
+      } catch {
+        status.textContent = 'Select the prompt text and copy it manually.';
+      }
+    });
+  }
+</script>
+
+<style>
+  .codex-prompt { margin-top: 1.75rem; padding: 1.5rem 1.75rem; background: var(--ink-850); border: 1px solid var(--ink-600); border-left: 2px solid var(--amber-500); border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+  .prompt-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  button { font: inherit; font-size: 0.75rem; color: var(--paper-300); background: transparent; border: 1px solid var(--ink-600); padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; }
+  button:hover { color: var(--amber-400); border-color: var(--amber-500); }
+  button:focus-visible { outline: 2px solid var(--amber-400); outline-offset: 4px; }
+  p { color: var(--paper-100); font-size: 1rem; line-height: 1.8; }
+  .prompt-status { display: block; font-size: 0.75rem; color: var(--amber-400); }
+  .prompt-status:not(:empty) { margin-top: 0.75rem; }
+</style>

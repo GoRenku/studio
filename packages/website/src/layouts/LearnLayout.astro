@@ -1,0 +1,19 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import LearnNav from '../components/LearnNav.astro';
+import '../styles/learn.css';
+
+interface Props { title: string; description: string; current: 'quick-start' | 'tutorials'; }
+const { title, description, current } = Astro.props;
+---
+
+<BaseLayout title={title} description={description}>
+  <SiteHeader />
+  <main class="learn-page" id="top">
+    <div class="container"><LearnNav current={current} /></div>
+    <slot />
+  </main>
+  <SiteFooter />
+</BaseLayout>

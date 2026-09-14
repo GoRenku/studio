@@ -2,6 +2,7 @@
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import LearnNav from '../components/LearnNav.astro';
 
 const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh';
 const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
@@ -17,6 +18,7 @@ const pluginCommand = 'codex plugin add renku@renku';
   <SiteHeader />
   <main class="install-page" id="top">
     <div class="install-glow" aria-hidden="true"></div>
+    <div class="container install-navigation"><LearnNav current="download" /></div>
 
     <section class="container install-hero">
       <a class="back-link" href="/">← Back to Renku</a>
@@ -147,6 +149,11 @@ const pluginCommand = 'codex plugin add renku@renku';
       </div>
     </section>
 
+    <section class="container install-next" aria-labelledby="next-heading">
+      <div><p class="eyebrow">Up and running?</p><h2 id="next-heading">Make room for your first film.</h2><p>Connect your providers, create a project, and bring your screenplay into Studio.</p></div>
+      <a class="btn btn-primary" href="/quick-start/">Continue to Quick Start</a>
+    </section>
+
     <section class="container install-details" aria-label="Installation details">
       <div data-reveal>
         <p class="detail-label">Private by default</p>
@@ -231,6 +238,12 @@ const pluginCommand = 'codex plugin add renku@renku';
 </BaseLayout>
 
 <style>
+  .install-navigation { position: relative; padding-top: 5rem; }
+  .install-next { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin-block: 3rem; }
+  .install-next h2 { font-size: 2rem; margin-block: 0.6rem; }
+  .install-next p:not(.eyebrow) { color: var(--paper-500); font-size: 0.95rem; }
+  .install-next .btn { flex-shrink: 0; }
+  @media (max-width: 800px) { .install-next { flex-direction: column; align-items: start; } }
   .install-page {
     position: relative;
     overflow: hidden;
@@ -250,7 +263,7 @@ const pluginCommand = 'codex plugin add renku@renku';
   .install-hero {
     position: relative;
     max-width: 54rem;
-    padding-top: clamp(8rem, 17vh, 11rem);
+    padding-top: clamp(3rem, 7vh, 5rem);
     padding-bottom: clamp(3.5rem, 8vh, 5rem);
     text-align: center;
   }

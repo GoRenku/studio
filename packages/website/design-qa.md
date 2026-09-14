@@ -1,53 +1,85 @@
-# Installation Page Design QA
+# Learning pages design QA
 
-## Evidence
+Date: 2026-09-13
 
-- Source visual truth: `/Users/keremk/.codex/visualizations/2026/08/11/019ff130-1375-7133-bbee-9c743cf86371/reference-downloads.png`
-- Browser-rendered implementation: `/Users/keremk/.codex/visualizations/2026/08/11/019ff130-1375-7133-bbee-9c743cf86371/implementation-download.png`
-- Focused implementation region: `/Users/keremk/.codex/visualizations/2026/08/11/019ff130-1375-7133-bbee-9c743cf86371/implementation-install-panel.png`
-- Side-by-side comparison: `/Users/keremk/.codex/visualizations/2026/08/11/019ff130-1375-7133-bbee-9c743cf86371/renku-install-comparison.png`
-- Source pixels: 1388 × 1427 at the reference site's 1708 × 1307 desktop viewport, `deviceScaleFactor: 1`.
-- Implementation pixels: 1708 × 2247 full page and 1024 × 1133 focused installation panel at a 1708 × 1251 desktop viewport, `deviceScaleFactor: 1`.
-- Normalization: the focused source and implementation regions were normalized to the same 1133-pixel height and placed together in one comparison image. The source is an inspiration target rather than a strict clone; the comparison checks hierarchy and layout strategy while preserving Renku's accepted design system.
-- State: Windows selected, all three installation steps visible, launch command focused after copy verification.
+## Visual evidence
 
-## Findings
+- Source visual truth: https://gorenku.com/download/.
+- Implementation: http://127.0.0.1:4330/download/,
+  http://127.0.0.1:4330/quick-start/, and
+  http://127.0.0.1:4330/tutorials/.
+- Screenshot evidence is embedded in the implementation conversation's browser
+  outputs. The browser tool did not supply persistent screenshot file paths.
+- Matched Download comparison: 1280 × 720 CSS pixels and image pixels, density 1,
+  macOS selected, page top. Source and implementation screenshots were emitted
+  together for comparison. An earlier 1440 × 1000 source capture was superseded
+  because its viewport did not match the implementation.
+- Additional desktop evidence: course hero and chapter grid, Inspiration chapter
+  prompt-copy state, Quick Start hero, provider section, and Chrome video playback.
+- Focused comparisons: original versus extended Download typography and header;
+  chapter body and copy control; provider wordmark contrast before and after its
+  correction. The final course screenshot uses the production build without the
+  Astro development toolbar.
 
-No actionable P0, P1, or P2 differences remain.
+## Findings and corrections
 
-- Fonts and typography: the implementation deliberately retains Renku's Fraunces display face and Inter body face. The serif headline and restrained monospace commands preserve the site's cinematic hierarchy while matching the reference's readable command treatment.
-- Spacing and layout rhythm: the hero, platform choice, three-step installation sequence, and supporting details form a clear top-to-bottom path. Dividers and whitespace separate related actions without introducing nested cards.
-- Colors and visual tokens: the page uses the existing ink, paper, amber, and teal tokens. Amber identifies installation and selection; teal distinguishes the final launch action without adding a new color system.
-- Image quality and asset fidelity: the page introduces no new illustration requirement. Existing Renku logo and GitHub assets remain crisp through Astro's asset pipeline. The focused browser capture contains a temporary browser-control overlay; it is not rendered by the website and was excluded from product findings.
-- Copy and content: commands match the accepted macOS, native Windows, independent runtime, and Codex marketplace contracts. Supporting copy explains the self-contained runtime, checksum verification, local Studio model, and separate plugin installation without suggesting unsupported Electron, WSL, or bundled-plugin behavior.
-- Interaction and accessibility: platform click switching, Mac and Windows panel visibility, command copy feedback, the landing-page download navigation, focus styles, and semantic tab/panel relationships were checked. The browser console had no errors or warnings.
+- Resolved: the portrait Codex screenshot made the Quick Start hero too tall.
+  Limit that figure to 370px wide while preserving the whole image and its ratio.
+  The final screenshot includes the setup action and installation link.
+- Resolved: black source provider wordmarks were unreadable on the dark surface.
+  Invert the monochrome marks, matching the site's dark presentation. The final
+  production-build provider screenshot shows all six marks clearly.
+- Resolved: a long sticky chapter navigation could extend below a short desktop
+  viewport. Bound its height and allow independent scrolling.
+- Resolved: video containers initially had no reserved frame height. Reserve a
+  16:9 area so loading video metadata does not move the following content.
+- Intentional: Download adds the three-destination learning navigation and a
+  Quick Start handoff. Hero spacing accommodates that navigation. Installation
+  commands, platform switching, and the existing visual vocabulary remain intact.
 
-## Full-view Comparison
+## Required fidelity surfaces
 
-The implementation translates the reference's most useful pattern—a prominent install command followed by clearly separated next steps—into a product-specific page. Renku adds an explicit platform decision before the first command and keeps the runtime, plugin, and launch steps in one continuous surface. The resulting density, contrast, and hierarchy are consistent with the existing marketing site.
+- Typography: existing Fraunces Variable display face and IBM Plex Sans body
+  face; readable body leading, restrained labels, and clear chapter hierarchy.
+- Spacing: existing container width and radii, generous section divisions, bounded
+  reading column, aligned chapter grid, and reviewed desktop sidebar behavior.
+- Colors: existing ink, paper, and amber tokens; visible focus and selected
+  navigation states; corrected provider contrast.
+- Images: existing product screenshots and media, with optimized image sizes.
+  Tutorial article images retain their aspect ratios. Card crops are intentional
+  previews, with full images available in each chapter.
+- Content: all requested workflow stages covered. Distinguishes Production and
+  Storyboard Lookbooks, alternative Shot List/Previs approaches, imported FDX
+  source authority, separately authored production records, and take generation
+  versus final film assembly.
 
-## Focused-region Comparison
+## Functional verification
 
-The normalized side-by-side comparison confirms that command blocks are readable, copy actions are consistently placed, muted explanatory text stays subordinate, and the three-step path remains visible without relying on decorative content. Renku's selected platform treatment provides stronger orientation than the reference requires because the product has genuinely different platform commands.
+- Astro check: 22 files, zero errors, warnings, or hints.
+- Production build: 12 static pages generated successfully.
+- Static audit: 259 internal links and fragments resolve across 12 pages.
+- Browser: hub cards, section anchors, learning navigation, chapter navigation,
+  prompt copy with success feedback, Windows installer tab, keyboard return to
+  macOS, install-command copy, and Download-to-Quick-Start handoff verified.
+- Media: both examples played to completion in Chrome: 17-second previs and
+  15.104-second generated take, with no media errors or console errors observed.
+- Environment limitation: Codex's in-app browser crashed on starting previs
+  playback. Chrome verified the same page and media successfully. No browser-
+  specific workaround was added to the website.
+- Desktop only. No paid generation, credential submission, or public deployment
+  was performed as part of website verification.
 
-## Comparison History
+## Implementation checklist
 
-- Initial comparison: no P0/P1/P2 visual mismatch was found. No visual correction loop was required.
-- Interaction hardening completed before the final comparison: platform controls received visible focus treatment, copy actions received success and failure feedback, and the tab contract received keyboard navigation handling.
+- [x] Preserve the source site's typography, palette, and existing assets.
+- [x] Implement all three destinations and eight chapter routes.
+- [x] Verify workflow wording against Studio controls and owning documentation.
+- [x] Inspect rendered pages and resolve identified visual issues.
+- [x] Verify navigation, copy controls, and video playback.
+- [x] Build, type-check, inspect changes, and check internal links.
+- [x] Keep a production-build preview open for review.
 
-## Implementation Checklist
-
-- [x] Dedicated `/download` route renders at the desktop breakpoint.
-- [x] Header, hero, and closing calls-to-action navigate to `/download`.
-- [x] macOS and Windows install commands match the accepted release contract.
-- [x] Codex marketplace and plugin installation remain a distinct second step.
-- [x] Studio launch command is a distinct final action.
-- [x] Platform switching and command copying work in the browser.
-- [x] Astro check and production build pass.
-- [x] Browser console has no errors or warnings.
-
-## Follow-up Polish
-
-No blocking follow-up polish remains.
+No remaining actionable P0/P1/P2 website findings. The in-app media playback
+limitation is recorded above; playback was verified in Chrome.
 
 final result: passed
