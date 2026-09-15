@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   AssetSelectionReport,
   RecoverableMutationReport,
@@ -36,7 +37,7 @@ export async function readProjectCoverAssets(
       limit: '200',
     });
     if (cursor) search.set('cursor', cursor);
-    const response = await fetch(
+    const response = await studioApiFetch(
       `${projectAssetsUrl(projectName)}?${search.toString()}`
     );
     if (!response.ok) {
@@ -73,7 +74,7 @@ export async function readCastAssets(
   do {
     const search = new URLSearchParams({ limit: '200' });
     if (cursor) search.set('cursor', cursor);
-    const response = await fetch(
+    const response = await studioApiFetch(
       `${castAssetsUrl(projectName, castMemberId)}?${search.toString()}`
     );
     if (!response.ok) {
@@ -98,7 +99,7 @@ export async function readLocationAssets(
   do {
     const search = new URLSearchParams({ limit: '200' });
     if (cursor) search.set('cursor', cursor);
-    const response = await fetch(
+    const response = await studioApiFetch(
       `${locationAssetsUrl(projectName, locationId)}?${search.toString()}`
     );
     if (!response.ok) {
@@ -123,7 +124,7 @@ export async function readPropAssets(
   do {
     const search = new URLSearchParams({ limit: '200' });
     if (cursor) search.set('cursor', cursor);
-    const response = await fetch(
+    const response = await studioApiFetch(
       `${propAssetsUrl(projectName, propId)}?${search.toString()}`
     );
     if (!response.ok) {
@@ -144,7 +145,7 @@ export async function readSceneDesignResource(
   role?: string
 ): Promise<SceneDesignResourceResponse> {
   const query = role ? `?role=${encodeURIComponent(role)}` : '';
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/scenes/${encodeURIComponent(sceneId)}/design${query}`
   );
   if (!response.ok) {
@@ -162,7 +163,7 @@ export async function selectCastProfileAsset(
   castMemberId: string,
   assetId: string
 ): Promise<AssetSelectionReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     castProfileSelectionUrl(projectName, castMemberId, assetId),
     {
       method: 'POST',
@@ -184,7 +185,7 @@ export async function clearSelectedCastProfile(
   projectName: string,
   castMemberId: string
 ): Promise<AssetSelectionReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     castProfileSelectionUrl(projectName, castMemberId),
     {
       method: 'DELETE',
@@ -205,7 +206,7 @@ export async function deleteCastAsset(
   castMemberId: string,
   assetId: string
 ): Promise<RecoverableMutationReport> {
-  const response = await fetch(castAssetUrl(projectName, castMemberId, assetId), {
+  const response = await studioApiFetch(castAssetUrl(projectName, castMemberId, assetId), {
     method: 'DELETE',
     headers: {
       'X-Renku-Studio-Token': readStudioApiToken(),
@@ -223,7 +224,7 @@ export async function deleteCastVoice(
   castMemberId: string,
   voiceId: string
 ): Promise<StudioCastVoiceDeleteResponse['removed']> {
-  const response = await fetch(castVoiceUrl(projectName, castMemberId, voiceId), {
+  const response = await studioApiFetch(castVoiceUrl(projectName, castMemberId, voiceId), {
     method: 'DELETE',
     headers: {
       'X-Renku-Studio-Token': readStudioApiToken(),
@@ -242,7 +243,7 @@ export async function selectDefaultCastVoice(
   castMemberId: string,
   castVoiceId: string
 ): Promise<void> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `${castVoiceUrl(projectName, castMemberId, castVoiceId)}/default`,
     {
       method: 'PUT',
@@ -257,7 +258,7 @@ export async function selectLocationHeroAsset(
   locationId: string,
   assetId: string
 ): Promise<AssetSelectionReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     locationHeroSelectionUrl(projectName, locationId, assetId),
     {
       method: 'POST',
@@ -279,7 +280,7 @@ export async function clearSelectedLocationHero(
   projectName: string,
   locationId: string
 ): Promise<AssetSelectionReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     locationHeroSelectionUrl(projectName, locationId),
     {
       method: 'DELETE',
@@ -300,7 +301,7 @@ export async function deleteLocationAsset(
   locationId: string,
   assetId: string
 ): Promise<RecoverableMutationReport> {
-  const response = await fetch(locationAssetUrl(projectName, locationId, assetId), {
+  const response = await studioApiFetch(locationAssetUrl(projectName, locationId, assetId), {
     method: 'DELETE',
     headers: {
       'X-Renku-Studio-Token': readStudioApiToken(),
@@ -318,7 +319,7 @@ export async function selectPropHeroAsset(
   propId: string,
   assetId: string
 ): Promise<AssetSelectionReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     propHeroSelectionUrl(projectName, propId, assetId),
     {
       method: 'POST',
@@ -339,7 +340,7 @@ export async function clearSelectedPropHero(
   projectName: string,
   propId: string
 ): Promise<AssetSelectionReport> {
-  const response = await fetch(propHeroSelectionUrl(projectName, propId), {
+  const response = await studioApiFetch(propHeroSelectionUrl(projectName, propId), {
     method: 'DELETE',
     headers: {
       'X-Renku-Studio-Token': readStudioApiToken(),
@@ -356,7 +357,7 @@ export async function deletePropAsset(
   propId: string,
   assetId: string
 ): Promise<RecoverableMutationReport> {
-  const response = await fetch(propAssetUrl(projectName, propId, assetId), {
+  const response = await studioApiFetch(propAssetUrl(projectName, propId, assetId), {
     method: 'DELETE',
     headers: {
       'X-Renku-Studio-Token': readStudioApiToken(),
@@ -385,7 +386,7 @@ export async function deleteProjectCoverAsset(
   projectName: string,
   assetId: string
 ): Promise<RecoverableMutationReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `${projectCoversUrl(projectName)}/${encodeURIComponent(assetId)}`,
     {
       method: 'DELETE',
@@ -421,7 +422,7 @@ async function mutateProjectCoverSelection(
   assetId?: string
 ): Promise<AssetSelectionReport> {
   const root = `/studio-api/projects/${encodeURIComponent(projectName)}/selected-cover`;
-  const response = await fetch(
+  const response = await studioApiFetch(
     assetId ? `${root}/${encodeURIComponent(assetId)}` : root,
     {
       method: assetId ? 'POST' : 'DELETE',
@@ -507,12 +508,4 @@ function propHeroSelectionUrl(
 ): string {
   const root = propAssetsUrl(projectName, propId).replace(/\/assets$/, '/selected-hero');
   return assetId ? `${root}/${encodeURIComponent(assetId)}` : root;
-}
-
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
 }

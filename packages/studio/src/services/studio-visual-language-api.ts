@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   InspirationFolderResourceResponse,
   InspirationFolderResponse,
@@ -140,7 +141,7 @@ export async function deleteLookbookSheet(
 }
 
 async function readJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+  const response = await studioApiFetch(url);
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
@@ -152,7 +153,7 @@ async function writeJson<T>(
   method: string,
   body: unknown
 ): Promise<T> {
-  const response = await fetch(url, {
+  const response = await studioApiFetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -164,12 +165,4 @@ async function writeJson<T>(
     throw await readStudioApiError(response);
   }
   return (await response.json()) as T;
-}
-
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
 }

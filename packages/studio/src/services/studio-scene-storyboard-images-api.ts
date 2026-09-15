@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import { readStudioApiError } from './studio-api-errors';
 import type {
   StudioSceneStoryboardRecoverableMutationResponse,
@@ -11,7 +12,7 @@ export async function readStudioSceneStoryboardStatus(input: {
   sceneBeatsRevisionId: string;
   signal?: AbortSignal;
 }): Promise<StudioSceneStoryboardStatus> {
-  const response = await fetch(baseUrl(input), { signal: input.signal });
+  const response = await studioApiFetch(baseUrl(input), { signal: input.signal });
   if (!response.ok) throw await readStudioApiError(response);
   return ((await response.json()) as { status: StudioSceneStoryboardStatus }).status;
 }
@@ -51,9 +52,9 @@ function beatUrl(input: CandidateInput): string {
 }
 
 async function mutate<T>(url: string, method: 'POST' | 'DELETE'): Promise<T> {
-  const response = await fetch(url, {
+  const response = await studioApiFetch(url, {
     method,
-    headers: { 'X-Renku-Studio-Token': window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken ?? '' },
+    headers: { 'X-Renku-Studio-Token': readStudioApiToken() },
   });
   if (!response.ok) throw await readStudioApiError(response);
   return (await response.json()) as T;

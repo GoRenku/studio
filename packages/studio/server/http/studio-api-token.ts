@@ -59,7 +59,7 @@ export function createStudioNotificationTokenMiddleware(token: string | undefine
   };
 }
 
-function isTrustedOrigin(origin: string, requestUrl: string): boolean {
+export function isTrustedOrigin(origin: string, requestUrl: string): boolean {
   const request = new URL(requestUrl);
   const trusted = new URL(origin);
   return trusted.protocol === request.protocol && trusted.host === request.host;

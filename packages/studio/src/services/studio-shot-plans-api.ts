@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import { readStudioApiError } from './studio-api-errors';
 import type {
   StudioRecoverableMutationResponse,
@@ -105,7 +106,7 @@ export async function deleteStudioShotImageCandidate(input: {
 }
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await studioApiFetch(url, init);
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
@@ -127,8 +128,4 @@ function mutationRequest(method: 'POST' | 'DELETE'): RequestInit {
       'X-Renku-Studio-Token': readStudioApiToken(),
     },
   };
-}
-
-function readStudioApiToken(): string {
-  return window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken ?? '';
 }

@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   ShotPlanDialogueAudioResource,
   ShotPlanDialogueAudioTake,
@@ -93,7 +94,7 @@ async function mutate(
 }
 
 async function readJson<T = unknown>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await studioApiFetch(url, init);
   if (!response.ok) throw await readStudioApiError(response);
   return response.json() as Promise<T>;
 }
@@ -104,8 +105,4 @@ function baseUrl(input: { projectName: string; shotPlanId: string }) {
 
 function genericAssetFileUrl(projectName: string, assetId: string, assetFileId: string) {
   return `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
-}
-
-function readStudioApiToken(): string {
-  return window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken ?? '';
 }

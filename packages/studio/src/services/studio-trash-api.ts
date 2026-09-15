@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   GarbageCollectionPreview,
   GarbageCollectionReport,
@@ -50,7 +51,7 @@ interface TrashApiResponse<T> {
 }
 
 async function readJson<T>(path: string): Promise<T> {
-  const response = await fetch(path);
+  const response = await studioApiFetch(path);
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
@@ -58,7 +59,7 @@ async function readJson<T>(path: string): Promise<T> {
 }
 
 async function writeJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
+  const response = await studioApiFetch(path, {
     method: 'POST',
     headers: jsonHeaders(),
     body: JSON.stringify(body),
@@ -74,14 +75,6 @@ function jsonHeaders(): Record<string, string> {
     'Content-Type': 'application/json',
     'X-Renku-Studio-Token': readStudioApiToken(),
   };
-}
-
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
 }
 
 function trashPath(projectName: string): string {

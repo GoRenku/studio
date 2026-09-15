@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   ProjectCreateReport,
   ProjectTemporaryFilesCleanupReport,
@@ -45,7 +46,7 @@ interface ProjectDeleteResponse {
 export async function createProject(
   request: ProjectCreateRequest
 ): Promise<ProjectCreateReport> {
-  const response = await fetch('/studio-api/projects', {
+  const response = await studioApiFetch('/studio-api/projects', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ export async function deleteProject(
   projectName: string,
   confirmationProjectName: string
 ): Promise<ProjectDeleteReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}`,
     {
       method: 'DELETE',
@@ -89,7 +90,7 @@ export async function deleteProject(
 }
 
 export async function readProject(projectName: string): Promise<ProjectShellWithHttp> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}`
   );
   if (!response.ok) {
@@ -103,7 +104,7 @@ export async function readProject(projectName: string): Promise<ProjectShellWith
 }
 
 export async function readProjectLibrary(): Promise<ProjectLibraryWithHttp> {
-  const response = await fetch('/studio-api/projects');
+  const response = await studioApiFetch('/studio-api/projects');
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
@@ -115,7 +116,7 @@ export async function readStudioSelectionContext(
   projectName: string,
   request: StudioSelectionContextRequest
 ): Promise<StudioSelectionContextResponse> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/movie-studio-selection/context`,
     {
       method: 'POST',
@@ -134,7 +135,7 @@ export async function readStudioSelectionContext(
 export async function readProjectInformationResource(
   projectName: string
 ): Promise<ProjectInformationResourceResponse> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/information`
   );
   if (!response.ok) {
@@ -151,7 +152,7 @@ export async function patchProjectInformation(
   projectName: string,
   patch: ProjectInformationPatch
 ): Promise<ProjectInformationResourceResponse> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/information`,
     {
       method: 'PATCH',
@@ -177,7 +178,7 @@ export async function patchProjectInformation(
 export async function readProjectSettings(
   projectName: string
 ): Promise<ProjectSettingsResourceResponse> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/settings`,
     { headers: { 'X-Renku-Studio-Token': readStudioApiToken() } }
   );
@@ -195,7 +196,7 @@ export async function replaceProjectSettings(
   projectName: string,
   settings: ProjectSettingsDocument
 ): Promise<ProjectSettingsMutationReport> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     `/studio-api/projects/${encodeURIComponent(projectName)}/settings`,
     {
       method: 'PUT',
@@ -212,16 +213,8 @@ export async function replaceProjectSettings(
   return (await response.json()) as ProjectSettingsMutationReport;
 }
 
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
-}
-
 export async function cleanProjectTemporaryFiles(projectName: string): Promise<ProjectTemporaryFilesCleanupReport> {
-  const response = await fetch(`/studio-api/projects/${encodeURIComponent(projectName)}/temporary-files/cleanup`, {
+  const response = await studioApiFetch(`/studio-api/projects/${encodeURIComponent(projectName)}/temporary-files/cleanup`, {
     method: 'POST',
     headers: { 'X-Renku-Studio-Token': readStudioApiToken() },
   });

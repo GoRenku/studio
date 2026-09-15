@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   CastMemberResourceResponse,
   CastOverviewResourceResponse,
@@ -38,7 +39,7 @@ export async function updateCastMemberVoiceOverStatus(
   castMemberId: string,
   isVoiceOver: boolean
 ): Promise<CastMemberResourceResponse> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     continuityPath(
       projectName,
       `/cast/${encodeURIComponent(castMemberId)}/voice-over`
@@ -95,7 +96,7 @@ export async function readPropResource(
 }
 
 async function readResource<T>(path: string, query: PageQuery = {}): Promise<T> {
-  const response = await fetch(`${path}${queryString(query)}`);
+  const response = await studioApiFetch(`${path}${queryString(query)}`);
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
@@ -104,14 +105,6 @@ async function readResource<T>(path: string, query: PageQuery = {}): Promise<T> 
     throw new Error('Renku Studio API returned no continuity resource.');
   }
   return body.resource;
-}
-
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
 }
 
 function continuityPath(projectName: string, path: string): string {

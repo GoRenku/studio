@@ -1285,6 +1285,15 @@ The local trust mechanism is:
 - reject unexpected `Origin` headers on mutating routes;
 - keep `GET` routes non-mutating.
 
+Browser API tokens have no time-based or inactivity expiration. They remain
+valid for the server lifetime. An open tab recovers from a server restart through
+`GET /studio-api/bootstrap`, which returns uncached bootstrap JSON and requires
+the `X-Renku-Studio-Bootstrap: 1` header, rejects unexpected origins, and grants
+no CORS access. The shared browser API transport refreshes missing tokens and
+retries once after `STUDIO_SERVER021`, which is emitted before the route handler
+runs. Concurrent requests share bootstrap retrieval. Other failures are not
+retried, and recovery does not reload the page or discard unsaved edits.
+
 CLI notification uses a separate `cliNotificationToken` in the runtime
 descriptor. That token authorizes only local notification endpoints such as
 `POST /studio-api/studio/events/project-resources-changed`. It does not

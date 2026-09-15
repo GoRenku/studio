@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import { readStudioApiError } from './studio-api-errors';
 import type {
   StudioBrowserSessionActivityKind,
@@ -10,7 +11,7 @@ import type {
 
 export async function readStudioEvents(after?: string): Promise<StudioEventsResponse> {
   const params = after ? `?after=${encodeURIComponent(after)}` : '';
-  const response = await fetch(`/studio-api/studio/events${params}`);
+  const response = await studioApiFetch(`/studio-api/studio/events${params}`);
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
@@ -18,7 +19,7 @@ export async function readStudioEvents(after?: string): Promise<StudioEventsResp
 }
 
 export async function readStudioCurrent(): Promise<StudioCurrentResponse> {
-  const response = await fetch('/studio-api/studio/events/current');
+  const response = await studioApiFetch('/studio-api/studio/events/current');
   if (!response.ok) {
     throw await readStudioApiError(response);
   }
@@ -62,7 +63,7 @@ export async function validateStudioFocusRequest(input: {
   projectName: string;
   focus: StudioFocus;
 }): Promise<StudioFocusRequestValidationResponse> {
-  const response = await fetch(
+  const response = await studioApiFetch(
     '/studio-api/studio/events/focus-requests/validate',
     {
       method: 'POST',
@@ -79,16 +80,8 @@ export async function validateStudioFocusRequest(input: {
   return (await response.json()) as StudioFocusRequestValidationResponse;
 }
 
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
-}
-
 async function postStudioEvent(path: string, body: unknown): Promise<void> {
-  const response = await fetch(path, {
+  const response = await studioApiFetch(path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

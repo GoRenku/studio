@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getRequestListener } from '@hono/node-server';
 import type { Connect } from 'vite';
 import health from './routes/health.js';
+import { createStudioBootstrapRoute } from './routes/bootstrap.js';
 import { createProjectsRoute } from './routes/projects.js';
 import { createProviderCredentialsRoute } from './routes/provider-credentials.js';
 import { createSetupRoute } from './routes/setup.js';
@@ -19,6 +20,7 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
   const token = options.token ?? createStudioRuntimeToken();
   return new Hono()
     .route('/studio-api/health', health)
+    .route('/studio-api/bootstrap', createStudioBootstrapRoute(token))
     .route(
       '/studio-api/setup',
       createSetupRoute({ token, homeDir: options.homeDir })

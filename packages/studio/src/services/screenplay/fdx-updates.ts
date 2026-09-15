@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from '../studio-api-fetch';
 import type { FdxUpdateStatus, FdxUpdateReview } from '@gorenku/studio-core/client';
 import { readStudioApiError } from '../studio-api-errors';
 
@@ -20,13 +21,12 @@ export async function openFdxExportFolder(projectName: string): Promise<void> {
 }
 
 function mutation(body: object): RequestInit {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) throw new Error('Studio API token is not available.');
+  const token = readStudioApiToken();
   return { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Renku-Studio-Token': token }, body: JSON.stringify(body) };
 }
 
 async function request<T>(projectName: string, suffix: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/fdx-update${suffix}`, init);
+  const response = await studioApiFetch(`/studio-api/projects/${encodeURIComponent(projectName)}/screenplay/fdx-update${suffix}`, init);
   if (!response.ok) throw await readStudioApiError(response);
   return response.json() as Promise<T>;
 }

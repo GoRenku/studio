@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from '@/services/studio-api-fetch';
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { MediaGenerationPreviewResource } from '@gorenku/studio-core/client';
 import { readStudioApiError } from '@/services/studio-api-errors';
@@ -34,15 +35,9 @@ export function useMediaGenerationRequestInspector(input: MediaGenerationRequest
 }
 
 async function readAssetMediaGenerationRequest(input: MediaGenerationRequestInspectorInput): Promise<MediaGenerationPreviewResource> {
-  const response = await fetch(`/studio-api/projects/${encodeURIComponent(input.projectName)}/assets/${encodeURIComponent(input.assetId)}/generation-request`, {
+  const response = await studioApiFetch(`/studio-api/projects/${encodeURIComponent(input.projectName)}/assets/${encodeURIComponent(input.assetId)}/generation-request`, {
     headers: { 'X-Renku-Studio-Token': readStudioApiToken() },
   });
   if (!response.ok) throw await readStudioApiError(response);
   return ((await response.json()) as { preview: MediaGenerationPreviewResource }).preview;
-}
-
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) throw new Error('Studio API token is not available.');
-  return token;
 }

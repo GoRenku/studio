@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   ProviderCredentialsResource,
   ProviderCredentialsUpdate,
@@ -9,7 +10,7 @@ interface ProviderCredentialsApiResponse {
 }
 
 export async function readProviderCredentials(): Promise<ProviderCredentialsResource> {
-  const response = await fetch('/studio-api/provider-credentials', {
+  const response = await studioApiFetch('/studio-api/provider-credentials', {
     cache: 'no-store',
     headers: {
       'X-Renku-Studio-Token': readStudioApiToken(),
@@ -21,7 +22,7 @@ export async function readProviderCredentials(): Promise<ProviderCredentialsReso
 export async function updateProviderCredentials(
   update: ProviderCredentialsUpdate
 ): Promise<ProviderCredentialsResource> {
-  const response = await fetch('/studio-api/provider-credentials', {
+  const response = await studioApiFetch('/studio-api/provider-credentials', {
     method: 'PATCH',
     cache: 'no-store',
     headers: {
@@ -44,12 +45,4 @@ async function readResource(
     throw new Error('Renku Studio API returned no provider credential resource.');
   }
   return body.resource;
-}
-
-function readStudioApiToken(): string {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
-  return token;
 }

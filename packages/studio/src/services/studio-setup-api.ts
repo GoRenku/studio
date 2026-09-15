@@ -1,3 +1,4 @@
+import { readStudioApiToken, studioApiFetch } from './studio-api-fetch';
 import type {
   RenkuSetup,
   RenkuSetupInitializationReport,
@@ -13,7 +14,7 @@ interface SetupInitializationApiResponse {
 }
 
 export async function readRenkuSetup(): Promise<RenkuSetup> {
-  const response = await fetch('/studio-api/setup', {
+  const response = await studioApiFetch('/studio-api/setup', {
     cache: 'no-store',
     headers: studioSetupHeaders(),
   });
@@ -28,7 +29,7 @@ export async function readRenkuSetup(): Promise<RenkuSetup> {
 }
 
 export async function initializeRenkuSetup(): Promise<RenkuSetupInitializationReport> {
-  const response = await fetch('/studio-api/setup', {
+  const response = await studioApiFetch('/studio-api/setup', {
     method: 'POST',
     cache: 'no-store',
     headers: studioSetupHeaders(),
@@ -44,9 +45,6 @@ export async function initializeRenkuSetup(): Promise<RenkuSetupInitializationRe
 }
 
 function studioSetupHeaders(): Record<string, string> {
-  const token = window.__RENKU_STUDIO_BOOTSTRAP__?.studioApiToken;
-  if (!token) {
-    throw new Error('Studio API token is not available.');
-  }
+  const token = readStudioApiToken();
   return { 'X-Renku-Studio-Token': token };
 }
