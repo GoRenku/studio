@@ -1,0 +1,209 @@
+---
+const questions = [
+  {
+    question: 'Do I need filmmaking experience or technical skills?',
+    paragraphs: [
+      'Getting started means talking to an AI agent and becoming familiar with Renku Studio. You don’t need to write code or assemble a full film crew. Renku’s agent skills help with model-specific prompting and gathering the references and context needed for continuity.',
+      'Directing a good film still takes creative judgment. Storytelling, photography, composition, and an eye for what works will help you get better results. You can start without that experience and learn as you go—Renku is also a place to practice directing and develop your taste.',
+    ],
+  },
+  {
+    question: 'Can I bring my own screenplay or write one with the AI?',
+    paragraphs: [
+      'You can import a screenplay in Final Draft (.fdx) format, which is preferred, or as a PDF. If you use a PDF, review the imported result for accuracy.',
+      'You can also work with the AI to develop your screenplay scene by scene. Renku isn’t a full-fledged screenplay editor and isn’t trying to be. For dedicated screenplay work, use your preferred screenplay authoring tool.',
+    ],
+  },
+  {
+    question: 'What does the filmmaking process look like?',
+    paragraphs: [
+      'Start with your screenplay and find the film’s visual language. Develop lookbooks, cast, locations, and scene beats, then plan your coverage with a Shot List or stage the action in Blender Previs. Generate dialogue and video, review each take, and refine it with your agent.',
+    ],
+    link: { href: '/tutorials/', label: 'Follow the first-scene tutorial' },
+  },
+  {
+    question: 'How much creative control do I have?',
+    paragraphs: [
+      'You direct the film: its characters, locations, visual style, performances, composition, and camera movement. Use Shot Lists to plan your coverage shot by shot, or Blender Previs to stage characters and cameras and refine movement and timing before generation. These tools give the AI a concrete plan and visual references to follow.',
+      'AI generation won’t always match what you have in mind. Depending on the model and the scene, you’ll often need multiple takes. Review the results, adjust your direction, and generate again until you have a take you want to use.',
+      'You can choose from the supported generation models and providers, using different ones for different parts of your production.',
+    ],
+  },
+  {
+    question: 'How do I keep characters, locations, and voices consistent?',
+    paragraphs: [
+      'Use character sheets, location sheets, voice samples, and other references to guide generation across shots. Renku and its agent skills keep that context connected to your production.',
+      'Create as many references as your story needs: different wardrobes, weather or lighting conditions, or a character’s changing physical state within a scene. Review the results as you go; continuity also depends on the model and the references you supply.',
+    ],
+  },
+  {
+    question: 'Can I use my own images, videos, and audio?',
+    paragraphs: [
+      'Yes, including real photographs and recorded media. Make sure you have the necessary rights to use the material you bring into your project.',
+      'Providers and models set their own rules for reference material, and some restrict real-person images or videos. Check the requirements of the model you plan to use.',
+    ],
+  },
+  {
+    question: 'Is Renku free? What do I pay for generation?',
+    paragraphs: [
+      'Renku Studio and its agent skills are free and open source. For media generation, you connect directly to providers using your own API keys and pay their rates. Renku doesn’t sit in the middle or add a generation markup.',
+      'Your generation costs depend on the providers and models you choose and how much you generate. Any fees for your AI agent application are separate.',
+    ],
+  },
+  {
+    question: 'Who owns my work? Can I use it commercially?',
+    paragraphs: [
+      'Renku doesn’t claim ownership of your work. It sends generation requests to the providers you choose; your rights to their outputs depend on the provider and model terms, and on your rights to the source material.',
+      'Check those terms before commercial use. Commercial permissions can differ between providers and models.',
+    ],
+  },
+  {
+    question: 'Can I finish my film in DaVinci Resolve or Final Cut Pro?',
+    paragraphs: [
+      'Yes. Ask the agent to export your generated video, audio, and other assets to a folder, then import them into your preferred editing tool for assembly, sound work, and finishing.',
+      'Renku doesn’t currently provide a built-in editing handoff workflow. An agent with computer-use capabilities may also be able to help you with the import process.',
+    ],
+  },
+];
+---
+
+<section class="faq" id="faq" aria-labelledby="faq-title">
+  <div class="container faq-layout">
+    <header class="faq-intro">
+      <p class="eyebrow">Frequently asked questions</p>
+      <h2 id="faq-title">Before your<br /><em>first scene.</em></h2>
+      <p class="faq-lead">A few practical answers before you step into the director’s chair.</p>
+    </header>
+    <div class="faq-questions">
+      {
+        questions.map(({ question, paragraphs, link }) => (
+          <details class="faq-question" name="renku-faq">
+            <summary>{question}</summary>
+            <div class="faq-answer">
+              {paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+              {link && <a href={link.href}>{link.label}</a>}
+            </div>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq {
+    padding-block: clamp(4rem, 10vh, 7rem);
+    border-block: 1px solid var(--ink-700);
+    background: linear-gradient(135deg, var(--ink-900), var(--ink-950) 65%);
+    scroll-margin-top: 6rem;
+  }
+
+  .faq-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr);
+    gap: clamp(2.5rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .faq-intro {
+    position: sticky;
+    top: 7rem;
+  }
+
+  h2 {
+    margin-top: 1.1rem;
+    font-size: clamp(2.2rem, 4vw, 3.3rem);
+    line-height: 1.12;
+  }
+
+  h2 em {
+    color: var(--amber-400);
+    font-weight: inherit;
+  }
+
+  .faq-lead {
+    margin-top: 1.4rem;
+    max-width: 26rem;
+    color: var(--paper-500);
+    font-size: 1rem;
+  }
+
+  .faq-question {
+    border-bottom: 1px solid var(--ink-700);
+    border-left: 2px solid transparent;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .faq-question:first-child {
+    border-top: 1px solid var(--ink-700);
+  }
+
+  summary {
+    padding: 1.35rem 1.25rem;
+    cursor: pointer;
+    font-size: 1.05rem;
+    font-weight: 550;
+    line-height: 1.5;
+  }
+
+  summary::marker {
+    color: var(--amber-500);
+    font-size: 0.75em;
+  }
+
+  summary:hover {
+    color: var(--amber-400);
+    background: rgba(253, 160, 45, 0.04);
+  }
+
+  summary:focus-visible {
+    outline: 2px solid var(--amber-400);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .faq-question[open] {
+    background: var(--ink-850);
+    border-left-color: var(--amber-500);
+  }
+
+  .faq-question[open] summary {
+    color: var(--amber-400);
+  }
+
+  .faq-answer {
+    display: grid;
+    gap: 1rem;
+    padding: 0 1.5rem 1.6rem 2.25rem;
+    color: var(--paper-300);
+    font-size: 0.975rem;
+    line-height: 1.75;
+  }
+
+  .faq-answer a {
+    justify-self: start;
+    color: var(--amber-400);
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  .faq-answer a:hover {
+    color: var(--paper-100);
+  }
+
+  @media (max-width: 900px) {
+    .faq-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .faq-intro {
+      position: static;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq-question {
+      transition: none;
+    }
+  }
+</style>
