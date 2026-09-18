@@ -65,6 +65,34 @@ prepared tag.
 
 ## User Installation
 
+### Install with your agent (recommended)
+
+With Codex installed, add the released skills marketplace and install the plugin:
+
+```bash
+codex plugin marketplace add GoRenku/studio-skills --ref beta
+codex plugin add renku@renku
+```
+
+The plugin can also be installed through Codex's Plugins interface after adding
+the marketplace. Start a new local task or CLI session to load the skills, then
+ask: **“Install Renku and help me complete setup.”** No movie project or runtime
+installation is required before invoking `install-renku`.
+
+The skill detects the desktop platform, reuses or installs the official runtime,
+and starts Studio in a dedicated visible terminal window. It prefers native
+terminal launch, uses Computer Use when appropriate and available, or guides the
+user through opening the window. It verifies Studio readiness and guides the
+existing Project Library and optional provider-key screens. Enter keys directly
+in Studio, never in the agent conversation.
+
+The terminal runs the foreground server independently of the agent task. Keep
+that session open; minimizing it is fine. Ctrl+C or closing the session stops
+Studio, while closing a browser tab does not. Later, ask **“Start Renku”** or run
+`renku studio start` in a terminal. A running Studio server is reused.
+
+### Manual installation
+
 Install and verify the runtime first.
 
 macOS:
@@ -81,11 +109,19 @@ irm https://downloads.gorenku.com/install.ps1 | iex
 renku about
 ```
 
+If the installer reports a PATH update, restart terminals and agent desktop
+apps for command discovery. To continue immediately, use the full launcher path
+printed by the installer: normally `$HOME/.local/bin/renku` on macOS or
+`%LOCALAPPDATA%\Renku\bin\renku.cmd` on Windows. Quote paths for the active shell.
+
 The installer does not create user configuration, choose a Project Library, or
 save provider credentials. Run `renku studio start` after installation and
 complete the browser setup. Studio recommends a whitespace-free `Renku`
 directory for the platform. To use a custom Project Library, run
 `renku init <storage-root>` before completing that setup.
+
+Keep the terminal session running Studio open; it can be minimized. Stop with
+Ctrl+C when finished, and run `renku studio start` again for later sessions.
 
 Add the released Studio Skills channel once:
 
@@ -114,6 +150,10 @@ Inspect the installed Renku version after refreshing. If the installed copy did
 not advance, reinstall it from the plugin browser, then start a new task or CLI
 session. Record the observed automatic-update behavior at each publication;
 do not assume it across Codex releases.
+
+Publish the skills release containing `install-renku` and verify discovery in a
+fresh task before publishing website instructions advertising assisted install.
+Website publishing remains separate from runtime and skills releases.
 
 ## Studio Release
 

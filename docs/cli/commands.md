@@ -1910,12 +1910,13 @@ Behavior:
   the CLI notification token or the browser Studio API token.
 - Summarizes the Studio coordination event store with line counts and invalid
   historical event counts instead of dumping every warning.
-- The intended agent policy is attach-only: agents should use the existing
-  server when the descriptor is fresh and canonical, and should not start a new
-  Studio dev server unless the user explicitly changes that policy.
-- JSON output includes `agent.browserAccess` so agents know that Browser access
-  goes through the in-app Browser client bootstrap, not through a standalone
-  browser tool discovered by tool search.
+- JSON output includes `agent.serverPolicy: "foreground"` and
+  `agent.browserUrl`. Reuse a fresh canonical server. When the user asks to start
+  Studio and none is running, run `renku studio start` in a dedicated visible
+  terminal window that remains open independently of the agent task.
+- Verify the server status and browser page after launching. The terminal can
+  be minimized; stopping its command or closing its session stops Studio.
+  Browser interaction depends on the tools available in the active agent host.
 
 ## Maintenance Checklist
 
