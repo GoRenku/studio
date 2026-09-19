@@ -1956,3 +1956,29 @@ Camera cues use `{id, kind: "camera", startFrame, text}`. Exact optional audio i
 ends are exclusive. First segment starts at zero; later starts are cuts.
 See ADR 0096. No additional commands or flags are required. Missing playback is
 valid; malformed supplied timelines report `CORE_PREVIS_PLAYBACK_INVALID`.
+
+## Personal media models
+
+These commands are global and work without a Project, credentials, or running Studio:
+
+```bash
+renku generation models list [--route-index <bundled-index> ...] [--provider <id>] --json
+renku generation models show --provider <id> --model <exact-api-id> [--route-index <bundled-index> ...] --json
+renku generation models import --file <route.json> --if-revision <sha256-or-absent> --json
+renku generation models remove --provider <id> --model <exact-api-id> --if-revision <sha256-or-absent> --json
+```
+
+Import JSON contains exactly `provider`, `apiId`, and `name`. Read the library
+first and pass its revision, or `absent` for null. The installed media engine
+supplies accepted provider identities. No guide or authenticated request is needed.
+
+`list` returns `{ revision, libraryPath, routeCatalogSha256, routes }`; each route
+has the three fields plus `source` and `hasBundledEntry`. Repeated route indexes
+supply bundled choices; omission lists personal entries only. The digest covers
+the complete effective list before filtering by provider.
+
+`show` returns `{ revision, libraryPath, route, personalGuidePath }`; `route` is
+null for an unlisted identity. The Markdown path does not imply a file exists.
+Mutations return `{ revision, libraryPath, provider, apiId }`. Removal affects
+only personal discovery and preserves notes. Stale revisions and busy locks fail
+with structured errors; see [library recovery](../architecture/media-model-library.md).

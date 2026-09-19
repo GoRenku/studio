@@ -127,3 +127,14 @@ on package-specific error classes.
 Source I/O, size, XML, unsupported-content, source-changed, and retained-source
 conflicts reuse existing FDX diagnostics. Missing exports are expected status,
 not deletion instructions. No durable pending state or migration is required.
+
+## Personal media model library
+
+Core reports `CORE_MEDIA_MODEL_LIBRARY_INVALID` for malformed/oversized envelopes,
+`CORE_MEDIA_MODEL_LIBRARY_PATH_INVALID` for unsafe paths,
+`CORE_MEDIA_MODEL_PROVIDER_UNSUPPORTED` for an unregistered provider,
+`CORE_MEDIA_MODEL_LIBRARY_CONFLICT` for a stale revision,
+`CORE_MEDIA_MODEL_LIBRARY_BUSY` for a held lock,
+`CORE_MEDIA_MODEL_NOT_FOUND` for a missing personal removal target, and
+`CORE_MEDIA_MODEL_LIBRARY_IO_FAILED` for storage IO failures.
+Missing optional guidance has no diagnostic. Provider execution retains Engines codes.

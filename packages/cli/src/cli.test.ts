@@ -18,6 +18,24 @@ describe('Renku CLI command surfaces', () => {
     vi.mocked(runAssetCommand).mockResolvedValue(0);
   });
 
+  it('passes repeated bundled indexes and revision preconditions without a Project', async () => {
+    const { io } = createIo();
+    await expect(runRenkuCli([
+      'generation', 'models', 'list', '--route-index', 'fal.json',
+      '--route-index', 'pika.json', '--json',
+    ], { io })).resolves.toBe(0);
+    expect(runGenerationCommand).toHaveBeenLastCalledWith(expect.objectContaining({
+      input: ['models', 'list'],
+      flags: expect.objectContaining({ routeIndex: ['fal.json', 'pika.json'] }),
+    }));
+    await runRenkuCli(['generation', 'models', 'import', '--file', 'route.json',
+      '--if-revision', 'absent', '--json'], { io });
+    expect(runGenerationCommand).toHaveBeenLastCalledWith(expect.objectContaining({
+      input: ['models', 'import'],
+      flags: expect.objectContaining({ file: 'route.json', ifRevision: 'absent' }),
+    }));
+  });
+
   it('passes repeated Preview files in command-line order', async () => {
     const { io } = createIo();
     await expect(runRenkuCli([
@@ -75,13 +93,13 @@ describe('Renku CLI command surfaces', () => {
     }));
   });
 
-  it('does not expose removed lifecycle flags or commands in help', async () => {
+  it('documents generation discovery and revision flags in help', async () => {
     const { io, stdout } = createIo();
     await expect(runRenkuCli(['--help'], { io })).resolves.toBe(0);
     const help = stdout.mock.calls.flat().join('\n');
-    expect(help).toContain('generation           Read context/schema, cache configuration visuals, validate, preview, execute, or recover');
-    expect(help).not.toMatch(/--simulate|--approval-token|--receipt|--source-spec/);
-    expect(help).not.toMatch(/generation (model|spec|estimate|run)/);
+    expect(help).toContain('generation           Discover models, read context/schema, cache visuals, validate, preview, execute, or recover');
+    expect(help).toContain('--route-index');
+    expect(help).toContain('--if-revision');
   });
 
   it('rejects the removed simulation flag as unknown', async () => {

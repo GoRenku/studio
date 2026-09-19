@@ -452,3 +452,6 @@ export type {
 export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportingFileInformation } from '../client/screenplay/supporting-files.js';
 
 export { readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate } from './screenplay/index.js';
+export { listMediaModels, readMediaModel, importPersonalMediaModel, removePersonalMediaModel } from './media-model-library/index.js';
+export type { MediaModelRoute, PersonalMediaModelLibrary, MediaModelDiscoveryRoute,
+  MediaModelLibraryQuery, MediaModelIdentity, PersonalMediaModelMutation } from './media-model-library/index.js';

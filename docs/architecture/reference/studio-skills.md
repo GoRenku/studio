@@ -139,18 +139,17 @@ operational companions that teach agents how to use those contracts.
   values, then uses one shared transient Visualize configuration for every
   image, video, and audio purpose before authoring the review document.
 - The inline configuration uses explicit direction or the matching Project
-  provider only as its initial selection. It lists every compatible provider
-  and all compatible indexed models, including advanced providers as explicit
-  one-request choices. Alternative choices come only from their small route
-  indexes; only the currently prepared provider/model's Skill, guide, adapter,
-  and live schema are read.
+  provider only as its initial selection. It lists effective bundled and personal
+  choices, including advanced providers as explicit one-request choices.
+  Personal routes need no capability metadata. Only the selected provider/model's
+  Skill, available advice, and live/cached schema are read for preparation.
 - It renders one tab-free Configuration surface. Exact references are not shown
   inline; they remain available in the existing Generation Preview. Bounded
   purpose-owned reference choices, such as a Cast Voice selection, may appear
   as configuration controls. It returns the editable prompt followed by
   pretty-printed exact settings to the ordinary conversation.
 - A canonical model change makes the agent re-author the prompt from the newly
-  selected model and operation guides before Preview. A provider-only change
+  selected schema and available model/operation advice before Preview. A provider-only change
   for the same canonical model retains the prompt and applies the destination
   adapter's native notation.
 - A provider/model selector change first shows that reconfiguration is required,
@@ -284,35 +283,27 @@ Each skill should keep `SKILL.md` short and operational. Detailed CLI workflows,
 JSON contracts, craft guidance, and samples belong in the skill's
 `references/` and `samples/` folders.
 
-The retained Media Producer prompt guides use this organization:
+Media Producer retains optional advice in `references/model-guides/`, with
+`model-catalog.json`, `shared/`, `image/`, `video/`, and `audio/` references.
+Provider Skills keep their `references/supported-routes.json` discovery indexes.
+`model-researcher` adds global personal three-field route records through
+`generation models` and may save optional plain Markdown at the returned path.
 
-```text
-skills/media-producer/references/prompt-guides/
-├── shared/
-├── image/
-│   ├── guide-registry.json
-│   ├── shared/
-│   └── models/<existing-guided-model>/
-└── video/
-    ├── guide-registry.json
-    ├── shared/
-    └── models/<existing-guided-model>/
-```
+Media Producer lists bundled and personal choices through Core. Personal labels
+win exact collisions, while guidance lookup remains independent: current bundled
+curation supplies defaults and explicit user preferences take priority. Missing
+routes, catalog keys, guides, or operation advice never block preparation. Release
+checks validate structural envelopes and actual workflow behavior, not guide
+coverage or prescribed creative sections.
 
-The registries route only models that already have curated guidance. Missing
-models do not receive invented generic or provider-derived guidance. The
-release contract validates the two registries, purpose coverage, structural
-generation examples, and forward-evaluation scenarios. These validators are
-agent-workflow checks; they do not move prompt interpretation into Studio
-runtime code.
+Engines registers providers and enforces their live protocol contracts. It is not
+an execution allowlist of models. Explicit unlisted routes can execute; optional
+advice cannot authorize an unsupported protocol. See
+[the personal library contract](../media-model-library.md).
 
 When a Renku architecture contract changes, update the architecture/reference
 docs and CLI docs in this repository first, then update the external skill
 references to match the current contract.
-
-Provider/model activation belongs to each provider Skill's supported-model
-index. A guide documents request authorship but cannot register a runtime model;
-Engines remains the authoritative execution allowlist.
 
 
 ## Blender Previs authoring

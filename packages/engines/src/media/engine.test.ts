@@ -19,6 +19,8 @@ describe('standalone MediaEngine provider seam', () => {
     const recover = vi.fn(async (request) => ({ provider: 'atlas', model: request.model, requestId: request.requestId, artifacts: [] }));
     const provider: MediaProvider = { id: 'atlas', validate, execute, recover };
     const engine = createMediaEngine([provider]);
+    expect(engine.providerIds).toEqual([provider.id]);
+    expect(Object.isFrozen(engine.providerIds)).toBe(true);
     const request = { model: 'atlas/image-v1', input: { prompt: 'stone arch' } };
     const context = providerContext();
     await engine.validate('atlas', request, context);

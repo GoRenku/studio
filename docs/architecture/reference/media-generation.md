@@ -136,3 +136,14 @@ diagnostics at its boundary.
 - Studio renders recursive JSON without a provider presentation registry.
 - Runtime code never interprets creative prompt or artifact contents.
 - No Spec/Run/approval/estimate/freeze/simulation compatibility surface exists.
+
+## Personal model discovery
+
+The [personal model library](../media-model-library.md) adds global three-field route bookmarks
+through `generation models`. Effective choices merge bundled indexes with personal
+names by exact provider/API identity. Engines remains a provider protocol registry;
+execution is independent of discovery membership. Skills use selected live/cached
+schemas and optional bundled/personal guidance, without a separate capability audit.
+Missing guides are ordinary absence. Current bundled defaults and explicit personal
+preferences apply independently of label precedence. Effective route hashes feed
+existing configuration caches; guide changes do not invalidate schemas or templates.

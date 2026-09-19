@@ -99,3 +99,7 @@ surface consumer, a test-only Atlas-like provider injected through the public
 Engine and CLI seams, provider mechanism tests, Core review/provenance and
 migration tests, shared Studio view/route tests, and Media Producer/provider Skill
 evals. Paid provider smoke tests remain explicit opt-in checks.
+
+Update (2026-09-19): [ADR 0100](0100-use-personal-media-model-libraries.md) adds
+global personal discovery and optional guidance; execution ownership stays in
+Engines and effective name/route choices feed the existing cache fingerprint.

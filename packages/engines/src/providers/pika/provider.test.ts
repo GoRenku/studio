@@ -92,7 +92,7 @@ describe('Pika media provider metadata', () => {
 });
 
 describe('Pika media provider execution', () => {
-  it('validates annotated local media, uploads it safely, submits, polls, and downloads output', async () => {
+  it.each([MODEL, 'fixture/unindexed/image-to-video'])('uploads, submits, polls, and downloads exact route %s', async (model) => {
     const directory = await makeTemporaryDirectory();
     const referencePath = path.join(directory, 'first-frame.png');
     await fs.writeFile(referencePath, 'reference-bytes');
@@ -102,7 +102,7 @@ describe('Pika media provider execution', () => {
       const requestUrl = String(url);
       calls.push({ url: requestUrl, init });
       if (requestUrl.includes('/catalog/apis/')) {
-        return Response.json(catalog(inputSchema()), {
+        return Response.json(catalog(inputSchema(), { api_id: model, call: { method: 'POST', path: `/v1/media/${model}` } }), {
           headers: { 'cache-control': 'no-store' },
         });
       }
@@ -116,7 +116,7 @@ describe('Pika media provider execution', () => {
       if (requestUrl.startsWith('https://storage.example/signed')) {
         return new Response(null, { status: 200 });
       }
-      if (requestUrl === 'https://api.dev.pika.art/v1/media/minimax/h3/image-to-video') {
+      if (requestUrl === `https://api.dev.pika.art/v1/media/${model}`) {
         return Response.json({ id: 'media_job_1', status: 'queued' });
       }
       if (requestUrl === 'https://api.dev.pika.art/v1/media/jobs/media_job_1') {
@@ -138,7 +138,7 @@ describe('Pika media provider execution', () => {
     });
     const context = await providerContext(fetchMock);
     const request = {
-      model: MODEL,
+      model,
       input: {
         prompt: 'A short opaque motion prompt.',
         first_frame_image: {
@@ -174,7 +174,7 @@ describe('Pika media provider execution', () => {
     expect(new Headers(signedPut.init?.headers).has('X-API-Key')).toBe(false);
     expect(signedPut.init?.redirect).toBe('error');
 
-    const submit = calls.find((call) => call.url.endsWith('/minimax/h3/image-to-video'))!;
+    const submit = calls.find((call) => call.url.endsWith(`/v1/media/${model}`))!;
     const submittedBody = JSON.parse(String(submit.init?.body));
     expect(submittedBody).toEqual({
       prompt: 'A short opaque motion prompt.',
@@ -186,7 +186,7 @@ describe('Pika media provider execution', () => {
     expect(submit.init?.redirect).toBe('error');
     expect(result).toMatchObject({
       provider: 'pika',
-      model: MODEL,
+      model,
       requestId: 'media_job_1',
       artifacts: [{ mimeType: 'video/mp4', byteLength: 11 }],
       receipt: { requestId: 'media_job_1', status: 'completed', mediaType: 'video' },

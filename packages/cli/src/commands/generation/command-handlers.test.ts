@@ -33,7 +33,7 @@ describe('generation CLI provider delegation', () => {
       };
     });
     const result = await executeGenerationRequest(commandInput(fixture, {
-      mediaEngine: { readInputSchema: vi.fn(), validate: vi.fn(), execute, recover: vi.fn() },
+      mediaEngine: { providerIds: [], readInputSchema: vi.fn(), validate: vi.fn(), execute, recover: vi.fn() },
     }));
     expect(execute).toHaveBeenCalledOnce();
     expect(result).toMatchObject({
@@ -53,7 +53,7 @@ describe('generation CLI provider delegation', () => {
     const fixture = await requestFixture();
     const validate = vi.fn(async () => undefined);
     const recover = vi.fn(async (_provider, request) => ({ provider: 'atlas', model: request.model, requestId: request.requestId, artifacts: [] }));
-    const mediaEngine = { readInputSchema: vi.fn(), validate, execute: vi.fn(), recover };
+    const mediaEngine = { providerIds: [], readInputSchema: vi.fn(), validate, execute: vi.fn(), recover };
     await expect(validateGenerationRequest(commandInput(fixture, { mediaEngine }))).resolves.toMatchObject({ valid: true, provider: 'atlas' });
     await expect(recoverGenerationRequest(commandInput(fixture, { mediaEngine }, { requestId: 'job_2' }))).resolves.toMatchObject({ requestId: 'job_2' });
     expect(validate).toHaveBeenCalledOnce();
@@ -63,7 +63,7 @@ describe('generation CLI provider delegation', () => {
   it('maps a closed EngineError without exposing provider protocol details', async () => {
     const fixture = await requestFixture();
     await expect(validateGenerationRequest(commandInput(fixture, {
-      mediaEngine: {
+      mediaEngine: { providerIds: [],
         readInputSchema: vi.fn(),
         validate: async () => { throw new EngineError('ENGINE_REQUEST_INVALID', 'Invalid request.', { provider: 'atlas', model: 'atlas/image-v1' }); },
         execute: vi.fn(),
@@ -77,7 +77,7 @@ describe('generation CLI provider delegation', () => {
     const schema = { type: 'object', properties: { image_url: { type: 'string', format: 'uri' } } };
     const readInputSchema = vi.fn(async () => schema);
     await expect(showGenerationSchema(commandInput(fixture, {
-      mediaEngine: { readInputSchema, validate: vi.fn(), execute: vi.fn(), recover: vi.fn() },
+      mediaEngine: { providerIds: [], readInputSchema, validate: vi.fn(), execute: vi.fn(), recover: vi.fn() },
     }, { provider: 'atlas', model: 'atlas/image-v1', output: undefined }))).resolves.toBe(schema);
     expect(readInputSchema).toHaveBeenCalledWith('atlas', 'atlas/image-v1', expect.any(Object));
   });
@@ -88,7 +88,7 @@ describe('generation CLI provider delegation', () => {
     const output = path.join(fixture.storageRoot, 'schema.json');
     const readInputSchema = vi.fn(async () => schema);
     await expect(showGenerationSchema(commandInput(fixture, {
-      mediaEngine: { readInputSchema, validate: vi.fn(), execute: vi.fn(), recover: vi.fn() },
+      mediaEngine: { providerIds: [], readInputSchema, validate: vi.fn(), execute: vi.fn(), recover: vi.fn() },
     }, { provider: 'atlas', model: 'atlas/image-v1', output }))).resolves.toEqual({
       schema,
       outputPath: output,

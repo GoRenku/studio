@@ -18,6 +18,8 @@ import { showGenerationPreview } from './preview.js';
 import { validateGenerationRequest } from './validate.js';
 import { showGenerationContext } from './context.js';
 import { showGenerationSchema } from './schema.js';
+import { listGenerationModels, showGenerationModel } from './models/queries.js';
+import { importGenerationModel, removeGenerationModel } from './models/mutations.js';
 import {
   inspectGenerationConfigurationVisualization,
   invalidateGenerationConfigurationVisualization,
@@ -38,6 +40,8 @@ export interface GenerationCommandFlags {
   model?: string;
   schema?: string;
   template?: string;
+  routeIndex?: string[];
+  ifRevision?: string;
 }
 
 export type GenerationCommandRuntime = CliCommandRuntime & {
@@ -59,6 +63,10 @@ export type GenerationCommandInput = Parameters<
 >[0];
 
 const handlers = [
+  { path: ['models', 'list'], run: listGenerationModels },
+  { path: ['models', 'show'], run: showGenerationModel },
+  { path: ['models', 'import'], run: importGenerationModel },
+  { path: ['models', 'remove'], run: removeGenerationModel },
   { path: ['context'], run: showGenerationContext },
   { path: ['schema', 'show'], run: showGenerationSchema },
   { path: ['configuration-visualization', 'inspect'], run: inspectGenerationConfigurationVisualization },
@@ -93,7 +101,7 @@ export async function runGenerationCommand(options: {
     unknownCommand: (commandPath) => new StructuredError({
       code: 'CLI019',
       message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,
-      suggestion: 'Use generation context, schema show, configuration-visualization, validate, preview show, execute, or recover.',
+      suggestion: 'Use generation context, models, schema show, configuration-visualization, validate, preview show, execute, or recover.',
     }),
   });
   writeJson(options.io, result);

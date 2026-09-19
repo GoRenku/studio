@@ -83,3 +83,7 @@ Skill tests cover stable descriptor fingerprints and safe task-local payload
 materialization. Media Producer evals cover fresh hits, expiry, schema changes,
 dependency changes, cross-Project isolation, refresh failure, and
 validation-triggered invalidation.
+
+Update (2026-09-19): [ADR 0100](0100-use-personal-media-model-libraries.md) adds
+global personal discovery and optional guidance; execution ownership stays in
+Engines and effective name/route choices feed the existing cache fingerprint.

@@ -207,3 +207,17 @@ Finally import only `@gorenku/studio-engines` from a temporary consumer outside
 the workspace source graph. Register the test provider and execute through the
 built `dist/index.js`. The consumer must not install or resolve any
 `@gorenku/studio-*` package other than Engines.
+
+## Adding a model within an existing protocol
+
+A model route is not a provider registration. `MediaEngine.providerIds` exposes
+its existing registry; Core's global personal library uses this inventory when
+importing `provider`, exact `apiId`, and `name`. Engines never reads Skills or
+personal route records. Direct requests remain independent of library membership.
+
+Use the existing live metadata/schema and execution path for compatible new
+routes. Optional prompting advice belongs in Skills or personal Markdown, never
+a local model schema. Investigate actual protocol failures as provider work rather
+than requiring a transport/output audit for every route addition. ElevenLabs'
+fixed music path and unavailable generic speech/music schema inspection remain
+explicit integration limits.

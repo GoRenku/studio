@@ -27,10 +27,9 @@ import { createFalMediaProvider } from './index.js';
 describe('Fal.ai media provider', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('preserves an exact partner endpoint through metadata, execution, and recovery', async () => {
+  it.each(['xai/grok-imagine-image', 'fixture/unindexed-image'])('preserves exact endpoint %s through metadata and execution', async (model) => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-fal-provider-'));
     const reference = path.join(directory, 'reference.png');
-    const model = 'xai/grok-imagine-image';
     await fs.writeFile(reference, 'reference');
     fal.upload.mockResolvedValue('https://fal.media/uploaded.png');
     fal.submit.mockResolvedValue({ request_id: 'fal_job_1' });

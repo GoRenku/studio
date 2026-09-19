@@ -75,7 +75,7 @@ Commands
   settings show        Show the complete Project Settings document
   settings set         Replace Project Settings from a complete JSON document
   inspiration          Manage Inspiration folders and analysis
-  generation           Read context/schema, cache configuration visuals, validate, preview, execute, or recover
+  generation           Discover models, read context/schema, cache visuals, validate, preview, execute, or recover
   lookbook             Manage Lookbooks and Lookbook images
   media                Import media files for a purpose
   project current      Show the current authoring project
@@ -122,8 +122,10 @@ Options
   --media-kind         Asset media kind
   --output             Provider output directory or generation schema snapshot path
   --request-id         Provider request id for generation recovery
-  --provider           Provider id for generation schema inspection
-  --model              Provider-native model id for generation schema inspection
+  --provider           Provider id for generation schema or model discovery
+  --model              Exact provider-native model id
+  --route-index        Bundled route index for generation models (repeatable)
+  --if-revision        Personal library SHA-256 revision, or absent
   --schema             Provider schema JSON for generation visualization cache updates
   --template           HTML fragment for generation visualization cache updates
   --provenance         Media Generation Provenance JSON file
@@ -284,6 +286,13 @@ function createCliFlags() {
       type: 'string',
     },
     template: {
+      type: 'string',
+    },
+    routeIndex: {
+      type: 'string',
+      isMultiple: true,
+    },
+    ifRevision: {
       type: 'string',
     },
     provenance: {
@@ -733,6 +742,8 @@ export async function runRenkuCli(
             model: cli.flags.model,
             schema: cli.flags.schema,
             template: cli.flags.template,
+            routeIndex: cli.flags.routeIndex,
+            ifRevision: cli.flags.ifRevision,
           },
           json: cli.flags.json,
           io,

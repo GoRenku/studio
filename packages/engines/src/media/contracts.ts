@@ -72,6 +72,7 @@ export interface ProviderExecutionResult {
 }
 
 export interface MediaEngine {
+  readonly providerIds: readonly string[];
   readInputSchema(
     provider: string,
     model: string,

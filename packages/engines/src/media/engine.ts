@@ -18,6 +18,7 @@ export function createMediaEngine(providers: Iterable<MediaProvider>): MediaEngi
   }
 
   return {
+    providerIds: Object.freeze([...registry.keys()]),
     readInputSchema(providerId, model, context) {
       const provider = requireProvider(registry, providerId, model);
       if (!provider.readInputSchema) {

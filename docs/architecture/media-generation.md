@@ -65,12 +65,12 @@ When the Media Producer Skill runs in Codex with the Visualize capability, it
 shows one transient inline configuration before authoring each image, video, or
 audio review document. The component starts from explicit user direction or the
 matching Project Setting, but that value only preselects the control. The
-component lists every Renku provider with an indexed route compatible with the
-request, including advanced providers, and all compatible models for the
-selected provider. Choosing one is an explicit one-request override and never
-changes Project Settings. Selector choices come from the small provider route
-indexes; the agent does not read alternative provider guides or schemas merely
-to populate them.
+component lists effective bundled and personal choices, including advanced
+providers. Personal routes need no capability metadata to appear. Choosing one
+is an explicit one-request override and never changes Project Settings.
+Selector choices come from `generation models list`; the agent does not read
+alternative provider guides or schemas merely to populate them. Actual input
+compatibility is established while preparing the selected request.
 
 The component is one tab-free Configuration surface. It does not render exact
 references, thumbnails, paths, labels, or marker objects; those remain available
@@ -269,8 +269,9 @@ maximum. Effective concurrency is one while concurrent scheduling is off.
 Replicate, WaveSpeed, and World Labs credentials remain available for explicit
 Skill workflows but are not Project provider preferences.
 
-Provider Skill indexes contain the exact provider API id, human name, supported
-input modes, and a canonical editorial model-guide key. The API id is copied
+Provider Skill indexes contain the exact provider API id and human name, with
+optional operation hints and editorial model-guide keys. Personal records contain
+only provider, exact API id, and name. The API id is copied
 verbatim into the temporary review document and Engines calls; the guide key is
 never executable provider identity. The indexes do not duplicate request fields,
 defaults, enums, ranges, durations, pricing, or capability summaries. Current
@@ -291,3 +292,14 @@ metadata. It does not change Core, Studio, the database, Preview, or a shared
 request schema. Credentials and Project Settings choices require separate
 product decisions. See
 [`packages/engines/docs/adding-a-provider.md`](../../packages/engines/docs/adding-a-provider.md).
+
+## Personal model discovery
+
+The [personal model library](media-model-library.md) adds global three-field route bookmarks
+through `generation models`. Effective choices merge bundled indexes with personal
+names by exact provider/API identity. Engines remains a provider protocol registry;
+execution is independent of discovery membership. Skills use selected live/cached
+schemas and optional bundled/personal guidance, without a separate capability audit.
+Missing guides are ordinary absence. Current bundled defaults and explicit personal
+preferences apply independently of label precedence. Effective route hashes feed
+existing configuration caches; guide changes do not invalidate schemas or templates.
