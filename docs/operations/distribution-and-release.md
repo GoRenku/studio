@@ -67,15 +67,41 @@ prepared tag.
 
 ### Install with your agent (recommended)
 
-With Codex installed, add the released skills marketplace and install the plugin:
+#### Codex Desktop
+
+1. Add the released marketplace once. In a local Codex Desktop task, ask:
+   **“Add the Renku beta plugin marketplace by running:
+   `codex plugin marketplace add GoRenku/studio-skills --ref beta`.
+   Tell me whether it succeeded. If the Codex CLI is unavailable, explain
+   what I need to install.”**
+2. After setup succeeds, restart Codex Desktop and open **Plugins**.
+3. Open **Personal**, choose the **renku** marketplace, and open **Renku**.
+4. Select the **+** button to install the plugin.
+5. Start a new local Codex task and ask:
+   **“Install Renku and help me complete setup.”**
+
+Marketplace registration requires the Codex CLI on the computer; asking a local
+Desktop task to run it avoids requiring the user to type it in a terminal.
+This agent-assisted setup is our workflow guidance. OpenAI documents the
+marketplace command and the Desktop plugin installation separately, and does
+not document a Desktop button for adding a custom GitHub marketplace.
+
+Verified against OpenAI documentation on September 19, 2026:
+[plugin installation](https://learn.chatgpt.com/docs/plugins) and
+[marketplace setup](https://developers.openai.com/plugins/build/plugins#add-a-marketplace-from-the-cli).
+The current documentation calls the Desktop surface “Codex in the ChatGPT
+desktop app.”
+
+#### Terminal alternative
+
+With the Codex CLI installed, run these commands in Terminal or PowerShell:
 
 ```bash
 codex plugin marketplace add GoRenku/studio-skills --ref beta
 codex plugin add renku@renku
 ```
 
-The plugin can also be installed through Codex's Plugins interface after adding
-the marketplace. Start a new local task or CLI session to load the skills, then
+Start a new local task or CLI session to load the skills, then
 ask: **“Install Renku and help me complete setup.”** No movie project or runtime
 installation is required before invoking `install-renku`.
 
@@ -133,8 +159,9 @@ Install Renku in either supported Codex host:
 
 - Codex CLI: enter `/plugins`, select the `renku` marketplace, inspect Renku,
   and install it; or run `codex plugin add renku@renku`.
-- Codex in the ChatGPT desktop app: open the Plugins tab, select the personal
-  `renku` marketplace, inspect Renku, and install it.
+- Codex Desktop: restart the app after marketplace setup, open **Plugins →
+  Personal**, choose the `renku` marketplace, open Renku, and select **+** to
+  install it.
 
 Start a new task or CLI session after installation. The plugin invokes the
 separately installed `renku` executable through the host's normal local shell

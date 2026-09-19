@@ -42,13 +42,29 @@ const pluginCommand = 'codex plugin add renku@renku';
         <p>Apple silicon and Intel Macs · Windows x64</p>
       </div>
 
-      <div class="install-step" data-reveal>
+      <div class="install-step" id="codex-plugin" data-reveal>
         <div class="step-intro">
           <span class="step-number">01</span>
           <div>
             <h3>Add the Renku skills to Codex</h3>
-            <p>With Codex installed, add the beta marketplace once and install the Renku plugin. You do not need Renku or a movie project yet.</p>
+            <p>Open Codex Desktop and follow the steps below. You do not need Renku or a movie project yet.</p>
           </div>
+        </div>
+        <div class="plugin-instructions">
+          <h4>In Codex Desktop</h4>
+          <ol>
+            <li>Add the Renku beta marketplace once. In a local Codex task, paste the request below so Codex can run the setup command for you.</li>
+          </ol>
+          <CodexPrompt prompt="Add the Renku beta plugin marketplace by running: codex plugin marketplace add GoRenku/studio-skills --ref beta. Tell me whether it succeeded. If the Codex CLI is unavailable, explain what I need to install." />
+          <p class="plugin-setup-note">Marketplace setup uses the Codex CLI on your computer. OpenAI documents this command for adding custom marketplaces; installing the plugin itself happens in the Desktop interface.</p>
+          <ol start="2">
+            <li>After setup succeeds, restart Codex Desktop and open <strong>Plugins</strong>.</li>
+            <li>Open <strong>Personal</strong>, choose the <strong>renku</strong> marketplace, and open <strong>Renku</strong>.</li>
+            <li>Select the <strong>+</strong> button to install it. Then start a new local Codex task and continue with step 02 below.</li>
+          </ol>
+          <p class="plugin-setup-note">OpenAI’s current documentation calls this Codex in the ChatGPT desktop app. See <a href="https://learn.chatgpt.com/docs/plugins" target="_blank" rel="noreferrer">plugin installation</a> and <a href="https://developers.openai.com/plugins/build/plugins#add-a-marketplace-from-the-cli" target="_blank" rel="noreferrer">marketplace setup</a>.</p>
+          <h4>Or use the terminal</h4>
+          <p>With the Codex CLI installed, run both commands in Terminal or PowerShell:</p>
         </div>
         <div class="command-stack">
           <div class="command-block command-block-quiet">
@@ -62,7 +78,7 @@ const pluginCommand = 'codex plugin add renku@renku';
             <button class="copy-button" type="button" data-copy={pluginCommand} aria-label="Copy recommended plugin install command">Copy</button>
           </div>
         </div>
-        <p class="command-note">You can also install Renku from the <strong>renku</strong> marketplace in Codex’s <strong>Plugins</strong> interface once the marketplace has been added.</p>
+        <p class="command-note">After installation, start a new Codex task or CLI session to load the Renku skills.</p>
       </div>
 
       <div class="install-step" data-reveal>
@@ -169,7 +185,7 @@ const pluginCommand = 'codex plugin add renku@renku';
           <span class="step-number">02</span>
           <div>
             <h3>Add Renku to Codex</h3>
-            <p>The Studio runtime and the Renku plugin are released separately. Add the beta marketplace once, then install the plugin.</p>
+            <p>The Studio runtime and the Renku plugin are released separately. Follow the <a href="#codex-plugin">Codex Desktop instructions above</a>, or run these commands with the Codex CLI installed.</p>
           </div>
         </div>
         <div class="command-stack">
@@ -185,8 +201,8 @@ const pluginCommand = 'codex plugin add renku@renku';
           </div>
         </div>
         <p class="command-note">
-          Prefer the interface? Open <strong>Plugins</strong> in Codex or the ChatGPT desktop app,
-          choose the <strong>renku</strong> marketplace, and install Renku there.
+          After adding the marketplace, you can also restart Codex Desktop, open <strong>Plugins → Personal</strong>,
+          choose the <strong>renku</strong> marketplace, open Renku, and select <strong>+</strong> to install it.
         </p>
       </div>
 
@@ -546,6 +562,18 @@ const pluginCommand = 'codex plugin add renku@renku';
   .command-stack {
     margin-left: 3.5rem;
   }
+
+  .plugin-instructions {
+    margin: 1.25rem 0 0 3.5rem;
+    color: var(--paper-300);
+    font-size: 0.9rem;
+  }
+
+  .plugin-instructions h4 { margin-top: 1.5rem; }
+  .plugin-instructions ol { padding-left: 1.3rem; margin-block: 0.8rem; }
+  .plugin-instructions li + li { margin-top: 0.65rem; }
+  .plugin-instructions a, .step-intro a { color: var(--amber-400); }
+  .plugin-setup-note { margin-block: 0.8rem; color: var(--paper-500); font-size: 0.8rem; }
 
   .command-stack .command-block + .command-block {
     margin-top: 0.55rem;
