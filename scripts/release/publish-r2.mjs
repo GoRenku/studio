@@ -441,7 +441,7 @@ function hmac(key, value, encoding) {
   return createHmac('sha256', key).update(value).digest(encoding);
 }
 
-function requestR2({ method, key, query = {}, headers, body, file }, credentials) {
+export function requestR2({ method, key, query = {}, headers, body, file }, credentials) {
   const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
   const host = `${credentials.accountId}.r2.cloudflarestorage.com`;
   const requestHeaders = {
@@ -489,7 +489,12 @@ function requestR2({ method, key, query = {}, headers, body, file }, credentials
         });
       }
     );
-    request.on('error', reject);
+    request.on('error', (error) => {
+      reject(new Error(
+        `RELEASE044 R2 transport failed for ${method} ${key || BUCKET}: ${describeTransportError(error)}`,
+        { cause: error }
+      ));
+    });
     request.on('timeout', () => request.destroy(new Error(`R2 request timed out for ${key}.`)));
     if (file) {
       createReadStream(file.path, { start: file.start, end: file.end - 1 }).pipe(request);
@@ -497,6 +502,14 @@ function requestR2({ method, key, query = {}, headers, body, file }, credentials
       request.end(body);
     }
   });
+}
+
+function describeTransportError(error) {
+  const description = [error.code, error.message].filter(Boolean).join(': ') || error.name;
+  if (error instanceof AggregateError) {
+    return `${description} (${error.errors.map(describeTransportError).join('; ')})`;
+  }
+  return description;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
