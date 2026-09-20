@@ -451,6 +451,7 @@ export type {
 } from './studio-coordination/index.js';
 export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportingFileInformation } from '../client/screenplay/supporting-files.js';
 
+export { updateRenku } from './installation/renku-update.js';
 export { readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate } from './screenplay/index.js';
 export { listMediaModels, readMediaModel, importPersonalMediaModel, removePersonalMediaModel } from './media-model-library/index.js';
 export type { MediaModelRoute, PersonalMediaModelLibrary, MediaModelDiscoveryRoute,

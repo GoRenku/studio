@@ -27,9 +27,9 @@ export interface Tutorial {
   title: string;
   description: string;
   phase: string;
-  image: ImageMetadata;
-  alt: string;
-  caption: string;
+  image?: ImageMetadata;
+  alt?: string;
+  caption?: string;
   prerequisite: string;
   outcome: string;
   sections: TutorialSection[];
@@ -162,5 +162,18 @@ export const tutorials: Tutorial[] = [
       { id: 'maintain', title: 'Keep your library useful', introduction: 'You can ask the agent to list your personal models, update an entry, or remove a choice you no longer use. These changes affect your shared personal library.', steps: ['Identify the provider and exact model when asking for an update or removal.', 'Removing a personal entry keeps its optional prompting notes. If Renku also bundles that model, the bundled choice remains available.', 'If you want the personal notes deleted too, request that separately.'], prompt: 'List the models in my personal library, grouped by provider.' },
     ],
     checkpoint: 'Your chosen provider and model are saved in your personal library. Any prompting notes are optional, and a saved entry is distinct from a successfully tested generation. Return to your film whenever you are ready.',
+  },
+  {
+    slug: 'uninstall-renku', optional: true, title: 'Uninstall Renku', phase: 'Installation',
+    description: 'Remove Renku from macOS or Windows while keeping your films and, if you choose, your settings.',
+    prerequisite: 'These steps apply to the terminal installer from the Download page. If you chose custom installation folders, use those locations instead.',
+    outcome: 'Remove the runtime and agent skills, with separate choices for keeping your Project Library and saved settings.',
+    sections: [
+      { id: 'before-you-start', title: 'Stop Studio and keep your films', introduction: 'Your films are separate from the application. Uninstalling Renku does not require deleting them.', steps: ['In the terminal running Studio, press Ctrl+C. Close the Studio browser tab and quit your agent app.', 'Keep your Project Library. The default location is Movies/Renku in your Mac home folder or Videos\\Renku in your Windows user folder. Keep any custom project folders too.', 'If you want to delete films as well, back them up first and treat that as a separate decision. The steps below preserve them.'] },
+      { id: 'macos', title: 'Uninstall on macOS', introduction: 'Use Finder’s Go to Folder command (Shift+Command+G) to open the hidden folders below. Move only the named Renku files and folders to Trash.', steps: ['Open ~/.local/share and move the renku folder to Trash. This removes installed versions and the private Node/npm runtime.', 'Open ~/.local/bin and move the renku launcher to Trash. Leave other files in this folder alone.', 'Settings and saved credentials are in ~/.config/renku. Keep this folder for a future reinstall, or move it to Trash if you want those settings removed too.', 'Optional: the installer may have added a block between “# >>> Renku PATH >>>” and “# <<< Renku PATH <<<” in ~/.zprofile, ~/.bash_profile, or ~/.profile. Remove that block only if no other tools need ~/.local/bin on your PATH. Leaving it is harmless.', 'Continue with the agent-skills section below. Leave any separately installed Node, Git, or Apple Command Line Tools in place; other applications may use them.'] },
+      { id: 'windows', title: 'Uninstall on Windows', introduction: 'Open File Explorer and enter %LOCALAPPDATA%\\Renku in the address bar. Renku’s settings share this parent folder with the application, so keep the Studio folder if you want to retain them.', steps: ['Delete the versions, bin, and tools folders, plus current.txt. These contain the runtime, launchers, and Renku’s private Git installation. Preserve the Studio folder to keep settings and credentials.', 'If you also want to erase saved settings and credentials, you can delete the entire %LOCALAPPDATA%\\Renku folder instead. Your separate Project Library should still be kept.', 'Open Start and search for “Edit environment variables for your account”. Under User variables, select Path and choose Edit. Remove only the entry for %LOCALAPPDATA%\\Renku\\bin (it may appear as the expanded C:\\Users\\…\\AppData\\Local\\Renku\\bin path). Do not remove other entries or the whole Path variable.', 'Close and reopen terminals after changing PATH. Continue with the agent-skills section below. Leave separately installed Node and Git in place.'] },
+      { id: 'agent-skills', title: 'Remove Renku’s agent skills', introduction: 'Skills are copied into the agents you selected during setup. Removing the runtime does not remove those copies.', steps: ['If you have a separate Node/npm installation, run npx skills remove --global in Terminal or PowerShell. Select only Renku skills and the agents you want to remove them from.', 'Without a separate Node/npm installation, open the skill folders used by your agents. Common locations under your home folder are .agents/skills, .claude/skills, and .codex/skills. Use Finder’s Go to Folder on Mac or File Explorer’s address bar on Windows; check each agent you selected during setup.', 'Match Renku skill folder names against the Studio Skills repository linked below. Remove only those individual folders. Skill names such as movie-director do not necessarily start with “renku”; do not delete an entire shared skills folder.', 'If you installed the Renku plugin through an agent’s plugin marketplace separately, uninstall that plugin through the agent’s plugin interface too. Restart the agent afterward.'], link: { href: 'https://github.com/GoRenku/studio-skills/tree/main/skills', label: 'See the Renku skill folders' } },
+    ],
+    checkpoint: 'The runtime and the Renku skills you selected are removed. Your film folders remain intact. Settings are retained or removed according to your choice; you can reinstall from the Download page later.',
   },
 ];

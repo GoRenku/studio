@@ -45,6 +45,13 @@ esac
 
 temporary="$(mktemp -d "${TMPDIR:-/tmp}/renku-install.XXXXXX")"
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
+if [ "${RENKU_UPDATE_SCOPE:-}" = 'skills' ]; then
+  destination="${RENKU_INSTALLED_PRODUCT:?Installed Renku runtime is required}"
+  node_command="$destination/runtime/node/bin/node"
+  install_agent_skills
+  printf '%s\n' 'Renku skills updated. Restart your agent and start a new conversation.'
+  exit 0
+fi
 archive_url="$BASE_URL/studio/channels/beta/$target/renku.tar.gz"
 
 curl -fsSL "$archive_url" -o "$temporary/renku.tar.gz" || fail "INSTALL002 Could not download $archive_url"
@@ -71,17 +78,22 @@ smoke_node_command="$temporary/extracted/renku/runtime/node/bin/node"
 mkdir -p "$INSTALL_ROOT/versions" "$BIN_ROOT"
 destination="$INSTALL_ROOT/versions/$version"
 backup="$INSTALL_ROOT/versions/.previous-$version-$$"
-if [ -e "$destination" ]; then
-  mv "$destination" "$backup"
+if [ "${RENKU_UPDATE_SCOPE:-}" = 'all' ] && [ "$destination" = "${RENKU_INSTALLED_PRODUCT:-}" ]; then
+  printf 'Renku %s is already installed. Updating skills.\n' "$version"
+else
+  if [ -e "$destination" ]; then
+    mv "$destination" "$backup"
+  fi
+  if ! mv "$temporary/extracted/renku" "$destination"; then
+    [ ! -e "$backup" ] || mv "$backup" "$destination"
+    fail 'INSTALL004 Could not activate the Renku version.'
+  fi
+  rm -rf "$backup"
 fi
-if ! mv "$temporary/extracted/renku" "$destination"; then
-  [ ! -e "$backup" ] || mv "$backup" "$destination"
-  fail 'INSTALL004 Could not activate the Renku version.'
-fi
-rm -rf "$backup"
 ln -sfn "$destination" "$INSTALL_ROOT/current"
 
 node_command="$destination/runtime/node/bin/node"
+"$node_command" --input-type=commonjs -e 'require("node:fs").writeFileSync(process.argv[1], JSON.stringify({installRoot:process.argv[2],binRoot:process.argv[3]}))' "$destination/INSTALLATION.json" "$INSTALL_ROOT" "$BIN_ROOT"
 
 write_launcher() {
   launcher="$1"

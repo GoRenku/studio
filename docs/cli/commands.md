@@ -1918,6 +1918,33 @@ Behavior:
   be minimized; stopping its command or closing its session stops Studio.
   Browser interaction depends on the tools available in the active agent host.
 
+## `renku update [skills]`
+
+Run from an interactive Terminal or PowerShell window:
+
+```bash
+renku update
+renku update skills
+```
+
+`renku update` downloads and checksum-verifies the latest beta runtime, activates
+it, and installs the latest Renku skills into the agents selected in setup.
+Stop Studio with Ctrl+C first; `UPDATE004` reports a running Studio instance.
+When that runtime version is already active, it is retained and skills setup
+still runs. Previous version folders, configuration, and Projects are preserved.
+
+`renku update skills` only runs Renku skills setup using the installed private
+Node/npm and Git tools. It does not download or replace the runtime, and Studio
+may remain open. Restart the agent and start a new conversation afterward.
+Neither command updates unrelated skill repositories or requires a system npm.
+
+These commands operate on the installed application, not a Project or Studio
+selection. They do not support `--json` because skills setup is interactive.
+`UPDATE001` reports missing installation metadata or updater files; `UPDATE002`
+reports an unsupported OS; `UPDATE003` reports an installer failure. A skills
+failure may occur after a successful runtime update and can be retried with
+`renku update skills`.
+
 ## Maintenance Checklist
 
 When adding or changing a CLI command:

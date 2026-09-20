@@ -25,6 +25,7 @@ import { runPropCommand } from './commands/prop-command.js';
 import { runScreenplayCommand } from './commands/screenplay/index.js';
 import { runShotPlanCommand } from './commands/shot-plan-command.js';
 import { runStudioCommand } from './commands/studio/index.js';
+import { runUpdateCommand } from './commands/update.js';
 import { runTrashCommand } from './commands/trash-command.js';
 import {
   isRenkuCliEntrypoint,
@@ -98,6 +99,8 @@ Commands
   media import --clip      Atomically attach and register a raw take; optional --take-title/--source-take
   studio current       Show current Studio focus and context
   studio start         Start the local Renku Studio web application
+  update               Update Renku and its agent skills
+  update skills        Update only Renku's agent skills
   studio server status Show canonical local Studio server status
   trash                List, restore, preview, and empty Trash
 
@@ -887,6 +890,8 @@ export async function runRenkuCli(
           io,
           homeDir: options.homeDir,
         });
+      case 'update':
+        return await runUpdateCommand(input, cli.flags.json, io);
       case 'trash':
         return await runTrashCommand({
           input,

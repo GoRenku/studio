@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +9,7 @@ import test from 'node:test';
 
 const installer = fileURLToPath(new URL('../../distribution/install.sh', import.meta.url));
 
-function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, badChecksum = false } = {}) {
+function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, badChecksum = false, updateScope, installedVersion = '0.0.1' } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-installer-'));
   const product = path.join(root, 'archive', 'renku');
   const bin = path.join(root, 'commands');
@@ -23,6 +23,7 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, ba
   const executable = (file, body) => writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
   executable(path.join(product, 'runtime', 'node', 'bin', 'node'), `
 case "$1" in
+  --input-type=commonjs) exec "$TEST_NODE" "$@" ;;
   */cli.js) exit 0 ;;
   */npx-cli.js)
     [ -t 0 ] || exit 71
@@ -41,6 +42,7 @@ exit 72`);
   const checksum = createHash('sha256').update(readFileSync(archive)).digest('hex');
   writeFileSync(`${archive}.sha256`, `${badChecksum ? '0'.repeat(64) : checksum}  renku.tar.gz\n`);
   executable(path.join(bin, 'curl'), `
+touch "$TEST_ROOT/downloaded"
 case "$2" in
   *.sha256) cp "$TEST_ROOT/renku.tar.gz.sha256" "$4" ;;
   *) cp "$TEST_ROOT/renku.tar.gz" "$4" ;;
@@ -51,9 +53,17 @@ esac`);
     SHELL: '/bin/sh',
     PATH: `${bin}:/usr/bin:/bin`,
     TEST_ROOT: root,
+    TEST_NODE: process.execPath,
     RENKU_INSTALL_ROOT: path.join(root, 'Renku with spaces'),
     RENKU_BIN_ROOT: path.join(root, 'launchers'),
   };
+  if (updateScope) {
+    const installed = path.join(env.RENKU_INSTALL_ROOT, 'versions', installedVersion);
+    cpSync(product, installed, { recursive: true });
+    writeFileSync(path.join(installed, 'retained-marker'), 'keep');
+    env.RENKU_UPDATE_SCOPE = updateScope;
+    env.RENKU_INSTALLED_PRODUCT = installed;
+  }
   return { root, env };
 }
 
@@ -90,6 +100,31 @@ test('macOS piped installer uses private Node and passes interactive agent selec
     '--yes', 'skills', 'add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy',
   ]);
   assert.equal(readFileSync(path.join(root, 'selected-node'), 'utf8').trim(), path.join(root, 'Renku with spaces', 'versions', '0.0.1', 'runtime', 'node', 'bin', 'node'));
+});
+
+test('skills-only update uses the installed runtime without downloading an archive', { skip: process.platform !== 'darwin' }, () => {
+  const { root, env, result, output } = runInstaller({ updateScope: 'skills', badChecksum: true });
+  assert.equal(result.status, 0, output);
+  assert.equal(existsSync(path.join(root, 'downloaded')), false);
+  assert.equal(readFileSync(path.join(env.RENKU_INSTALLED_PRODUCT, 'retained-marker'), 'utf8'), 'keep');
+  assert.match(readFileSync(path.join(root, 'skills-args'), 'utf8'), /GoRenku\/studio-skills/);
+});
+
+test('updating the current version preserves the running runtime and custom locations', { skip: process.platform !== 'darwin' }, () => {
+  const { env, result, output } = runInstaller({ updateScope: 'all' });
+  assert.equal(result.status, 0, output);
+  assert.equal(readFileSync(path.join(env.RENKU_INSTALLED_PRODUCT, 'retained-marker'), 'utf8'), 'keep');
+  assert.deepEqual(JSON.parse(readFileSync(path.join(env.RENKU_INSTALLED_PRODUCT, 'INSTALLATION.json'), 'utf8')), {
+    installRoot: env.RENKU_INSTALL_ROOT, binRoot: env.RENKU_BIN_ROOT,
+  });
+});
+
+test('full update activates the new runtime, retains the previous version, and installs skills', { skip: process.platform !== 'darwin' }, () => {
+  const { root, env, result, output } = runInstaller({ updateScope: 'all', installedVersion: '0.0.0' });
+  assert.equal(result.status, 0, output);
+  assert.equal(readFileSync(path.join(env.RENKU_INSTALLED_PRODUCT, 'retained-marker'), 'utf8'), 'keep');
+  assert.match(readFileSync(path.join(env.RENKU_BIN_ROOT, 'renku'), 'utf8'), /versions\/0\.0\.1/);
+  assert.ok(existsSync(path.join(root, 'skills-args')));
 });
 
 test('macOS installer initiates missing Git setup before installing skills', { skip: process.platform !== 'darwin' }, () => {

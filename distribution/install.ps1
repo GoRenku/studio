@@ -55,6 +55,14 @@ $Target = 'win32-x64'
 $Temporary = Join-Path ([IO.Path]::GetTempPath()) ("renku-install-" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $Temporary | Out-Null
 try {
+  if ($env:RENKU_UPDATE_SCOPE -eq 'skills') {
+    $Destination = $env:RENKU_INSTALLED_PRODUCT
+    if (-not $Destination) { throw 'INSTALL004 Installed Renku runtime is required.' }
+    $NodeCommand = Join-Path $Destination 'runtime\node\node.exe'
+    Install-AgentSkills
+    Write-Host 'Renku skills updated. Restart your agent and start a new conversation.'
+    return
+  }
   $ArchiveUrl = "$BaseUrl/studio/channels/beta/$Target/renku.zip"
   $Archive = Join-Path $Temporary 'renku.zip'
   $Checksum = Join-Path $Temporary 'renku.zip.sha256'
@@ -80,14 +88,20 @@ try {
   New-Item -ItemType Directory -Force -Path $VersionsRoot, $BinRoot | Out-Null
   $Destination = Join-Path $VersionsRoot $Release.version
   $Backup = Join-Path $VersionsRoot ('.previous-' + $Release.version + '-' + $PID)
-  if (Test-Path $Destination) { Move-Item $Destination $Backup }
-  try {
-    Move-Item $Product $Destination
-  } catch {
-    if (Test-Path $Backup) { Move-Item $Backup $Destination }
-    throw 'INSTALL004 Could not activate the Renku version.'
+  if ($env:RENKU_UPDATE_SCOPE -eq 'all' -and $Destination -eq $env:RENKU_INSTALLED_PRODUCT) {
+    Write-Host "Renku $($Release.version) is already installed. Updating skills."
+  } else {
+    if (Test-Path $Destination) { Move-Item $Destination $Backup }
+    try {
+      Move-Item $Product $Destination
+    } catch {
+      if (Test-Path $Backup) { Move-Item $Backup $Destination }
+      throw 'INSTALL004 Could not activate the Renku version.'
+    }
+    if (Test-Path $Backup) { Remove-Item -Recurse -Force $Backup }
   }
-  if (Test-Path $Backup) { Remove-Item -Recurse -Force $Backup }
+  $InstallationJson = @{ installRoot = $InstallRoot; binRoot = $BinRoot } | ConvertTo-Json
+  [IO.File]::WriteAllText((Join-Path $Destination 'INSTALLATION.json'), $InstallationJson, [Text.UTF8Encoding]::new($false))
   Set-Content -Path (Join-Path $InstallRoot 'current.txt') -Value $Destination -Encoding utf8
 
   $NodeCommand = Join-Path $Destination 'runtime\node\node.exe'

@@ -83,6 +83,10 @@ if (!existsSync(targetNodeExecutable(runtimeRoot, target))) {
 }
 
 cpSync(path.join(repositoryRoot, 'LICENSE'), path.join(productRoot, 'LICENSE'));
+mkdirSync(path.join(productRoot, 'distribution'));
+for (const name of ['install.sh', 'install.ps1']) {
+  cpSync(path.join(repositoryRoot, 'distribution', name), path.join(productRoot, 'distribution', name));
+}
 writeFileSync(
   path.join(productRoot, 'RELEASE.json'),
   `${JSON.stringify(

@@ -52,6 +52,10 @@ export function verifyProductStructure(productRoot) {
     throw new Error(`RELEASE025 Invalid bundled Node contract for ${target.id}.`);
   }
   const runtimeRoot = path.join(productRoot, 'runtime', 'node');
+  const installerName = target.platform === 'win32' ? 'install.ps1' : 'install.sh';
+  if (!existsSync(path.join(productRoot, 'distribution', installerName))) {
+    throw new Error(`RELEASE025 Missing bundled updater for ${target.id}.`);
+  }
   const nodeExecutable = targetNodeExecutable(runtimeRoot, target);
   if (!existsSync(nodeExecutable)) {
     throw new Error(`RELEASE025 Missing ${target.id} Node executable: ${nodeExecutable}`);

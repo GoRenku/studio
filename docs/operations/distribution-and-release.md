@@ -386,9 +386,16 @@ Project media, and source illustration sheets are not release inputs.
 
 ## Updating and uninstalling the current beta
 
-To update, stop Studio with Ctrl+C in its terminal, then rerun the installation
-command from the download page. It downloads the complete current beta, activates
-that version, and runs skills setup again. Restart terminals and agent apps.
+To update, stop Studio with Ctrl+C in its terminal, then run `renku update`.
+It downloads the complete current beta, activates that version, and runs skills
+setup again. `renku update skills` uses the installed runtime to update only
+Renku skills, without downloading the application. Restart agent apps afterward.
+The installer records absolute installation and launcher directories in
+`INSTALLATION.json` inside the installed version; updates preserve those paths.
+Release archives include both platform installer scripts in `distribution`.
+The CLI calls the core installation service, which checks Studio state and
+invokes the bundled installer. An update of the already active version skips
+runtime replacement, including the running Windows `node.exe`.
 There is no automatic update check, incremental download, or automatic cleanup
 of earlier version folders.
 
