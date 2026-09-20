@@ -3,18 +3,14 @@ import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LearnNav from '../components/LearnNav.astro';
-import CodexPrompt from '../components/CodexPrompt.astro';
 
 const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh';
 const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
-const marketplaceCommand =
-  'codex plugin marketplace add GoRenku/studio-skills --ref beta';
-const pluginCommand = 'codex plugin add renku@renku';
 ---
 
 <BaseLayout
   title="Download Renku — Install for macOS or Windows"
-  description="Install the Renku desktop beta for macOS or Windows, add the Renku plugin to Codex, and start your local filmmaking studio for live action and AI."
+  description="Install the Renku desktop beta for macOS or Windows, add skills to your AI agent, and start your local filmmaking studio for live action and AI."
 >
   <SiteHeader />
   <main class="install-page" id="top">
@@ -29,89 +25,17 @@ const pluginCommand = 'codex plugin add renku@renku';
       </h1>
       <p class="install-intro" data-reveal style="--reveal-delay: 0.12s">
         Renku runs locally on your computer, close to your screenplay and media.
-        Add the Renku skills to Codex, then ask your agent to install Studio and help you get started.
+        Install Renku, add the skills to your AI agent, and start your studio.
       </p>
     </section>
 
     <section class="container install-workflow" aria-labelledby="install-heading">
       <div class="install-heading-row" data-reveal>
         <div>
-          <p class="eyebrow">Recommended</p>
-          <h2 id="install-heading">Install with your agent</h2>
+          <p class="eyebrow">Installation</p>
+          <h2 id="install-heading">Three steps to get started</h2>
         </div>
         <p>Apple silicon and Intel Macs · Windows x64</p>
-      </div>
-
-      <div class="install-step" id="codex-plugin" data-reveal>
-        <div class="step-intro">
-          <span class="step-number">01</span>
-          <div>
-            <h3>Add the Renku skills to Codex</h3>
-            <p>Open Codex Desktop and follow the steps below. You do not need Renku or a movie project yet.</p>
-          </div>
-        </div>
-        <div class="plugin-instructions">
-          <h4>In Codex Desktop</h4>
-          <ol>
-            <li>Add the Renku beta marketplace once. In a local Codex task, paste the request below so Codex can run the setup command for you.</li>
-          </ol>
-          <CodexPrompt prompt="Add the Renku beta plugin marketplace by running: codex plugin marketplace add GoRenku/studio-skills --ref beta. Tell me whether it succeeded. If the Codex CLI is unavailable, explain what I need to install." />
-          <p class="plugin-setup-note">Marketplace setup uses the Codex CLI on your computer. OpenAI documents this command for adding custom marketplaces; installing the plugin itself happens in the Desktop interface.</p>
-          <ol start="2">
-            <li>After setup succeeds, restart Codex Desktop and open <strong>Plugins</strong>.</li>
-            <li>Open <strong>Personal</strong>, choose the <strong>renku</strong> marketplace, and open <strong>Renku</strong>.</li>
-            <li>Select the <strong>+</strong> button to install it. Then start a new local Codex task and continue with step 02 below.</li>
-          </ol>
-          <p class="plugin-setup-note">OpenAI’s current documentation calls this Codex in the ChatGPT desktop app. See <a href="https://learn.chatgpt.com/docs/plugins" target="_blank" rel="noreferrer">plugin installation</a> and <a href="https://developers.openai.com/plugins/build/plugins#add-a-marketplace-from-the-cli" target="_blank" rel="noreferrer">marketplace setup</a>.</p>
-          <h4>Or use the terminal</h4>
-          <p>With the Codex CLI installed, run both commands in Terminal or PowerShell:</p>
-        </div>
-        <div class="command-stack">
-          <div class="command-block command-block-quiet">
-            <span class="command-prompt" aria-hidden="true">$</span>
-            <code>{marketplaceCommand}</code>
-            <button class="copy-button" type="button" data-copy={marketplaceCommand} aria-label="Copy recommended marketplace command">Copy</button>
-          </div>
-          <div class="command-block command-block-quiet">
-            <span class="command-prompt" aria-hidden="true">$</span>
-            <code>{pluginCommand}</code>
-            <button class="copy-button" type="button" data-copy={pluginCommand} aria-label="Copy recommended plugin install command">Copy</button>
-          </div>
-        </div>
-        <p class="command-note">After installation, start a new Codex task or CLI session to load the Renku skills.</p>
-      </div>
-
-      <div class="install-step" data-reveal>
-        <div class="step-intro">
-          <span class="step-number">02</span>
-          <div>
-            <h3>Ask Codex to install Renku</h3>
-            <p>Start a new local Codex task so the installed skills are available, then ask:</p>
-          </div>
-        </div>
-        <CodexPrompt prompt="Install Renku and help me complete setup." />
-        <p class="command-note">Your agent detects your platform, installs Renku, and opens a dedicated visible terminal window to run Studio. It then guides your Project Library and optional provider API-key setup. Enter keys directly in Studio, not in the conversation.</p>
-      </div>
-
-      <div class="install-step launch-step" data-reveal>
-        <div class="step-intro">
-          <span class="step-number">03</span>
-          <div>
-            <h3>Keep Renku running</h3>
-            <p>The terminal window runs Renku. You can minimize it; keep it open while using Studio. Closing that session stops Studio; closing a browser tab does not. Next time, ask your agent to “Start Renku.”</p>
-          </div>
-        </div>
-        <p class="command-note">If your agent cannot open desktop apps, it will guide you through opening the terminal yourself. Studio needs no separate Node.js installation.</p>
-      </div>
-    </section>
-
-    <section class="container install-workflow manual-install" aria-labelledby="manual-install-heading">
-      <div class="install-heading-row" data-reveal>
-        <div>
-          <p class="eyebrow">Prefer to run the commands yourself?</p>
-          <h2 id="manual-install-heading">Manual installation</h2>
-        </div>
-        <p>Choose your platform</p>
       </div>
 
       <div class="platform-tabs" role="tablist" aria-label="Operating system" data-reveal>
@@ -157,7 +81,7 @@ const pluginCommand = 'codex plugin add renku@renku';
         </div>
         <p class="command-note">
           The installer detects your Mac, verifies the download with SHA-256, and adds
-          <code>renku</code> to your path. No separate Node.js install is required.
+          <code>renku</code> to your path. Node.js is included. If Git is missing, setup opens Apple’s Command Line Tools installer; finish that dialog, then press Return in Terminal to continue.
         </p>
       </div>
 
@@ -176,7 +100,7 @@ const pluginCommand = 'codex plugin add renku@renku';
         </div>
         <p class="command-note">
           The installer verifies the download with SHA-256, installs the native Windows
-          build, and adds <code>renku</code> to your user path. No separate Node.js install is required.
+          build, and adds <code>renku</code> to your user path. Node.js is included. Setup reuses Git if available or downloads a verified private copy automatically.
         </p>
       </div>
 
@@ -184,26 +108,11 @@ const pluginCommand = 'codex plugin add renku@renku';
         <div class="step-intro">
           <span class="step-number">02</span>
           <div>
-            <h3>Add Renku to Codex</h3>
-            <p>The Studio runtime and the Renku plugin are released separately. Follow the <a href="#codex-plugin">Codex Desktop instructions above</a>, or run these commands with the Codex CLI installed.</p>
+            <h3>Choose your agents</h3>
+            <p>The installer opens the <a href="https://github.com/vercel-labs/skills" target="_blank" rel="noreferrer">skills</a> setup automatically. Select Codex, Claude Code, or the other agents you use, then confirm installation. Renku’s skills will be available across your projects.</p>
           </div>
         </div>
-        <div class="command-stack">
-          <div class="command-block command-block-quiet">
-            <span class="command-prompt" aria-hidden="true">$</span>
-            <code>{marketplaceCommand}</code>
-            <button class="copy-button" type="button" data-copy={marketplaceCommand} aria-label="Copy marketplace command">Copy</button>
-          </div>
-          <div class="command-block command-block-quiet">
-            <span class="command-prompt" aria-hidden="true">$</span>
-            <code>{pluginCommand}</code>
-            <button class="copy-button" type="button" data-copy={pluginCommand} aria-label="Copy plugin install command">Copy</button>
-          </div>
-        </div>
-        <p class="command-note">
-          After adding the marketplace, you can also restart Codex Desktop, open <strong>Plugins → Personal</strong>,
-          choose the <strong>renku</strong> marketplace, open Renku, and select <strong>+</strong> to install it.
-        </p>
+        <p class="command-note">No separate Node.js, npm, or Codex CLI installation is needed. If setup is interrupted, run the installer again to continue.</p>
       </div>
 
       <div class="install-step launch-step" data-reveal>
@@ -211,7 +120,7 @@ const pluginCommand = 'codex plugin add renku@renku';
           <span class="step-number">03</span>
           <div>
             <h3>Start the studio</h3>
-            <p>If the installer updated PATH, restart your terminal and Codex so they can find <code>renku</code>. You can also use the full launcher path printed by the installer immediately. Start a new Codex task to load the plugin, then run this command in a terminal. On first launch, Studio guides Project Library setup.</p>
+            <p>Reopen your terminal and restart your agent after installation. Run this command to open Studio in your browser, then follow the first-run setup. Start a new conversation in your agent to use the Renku skills.</p>
           </div>
         </div>
         <div class="command-block command-block-launch">
@@ -312,7 +221,6 @@ const pluginCommand = 'codex plugin add renku@renku';
 </BaseLayout>
 
 <style>
-  .manual-install { margin-top: 3rem; }
   .install-navigation { position: relative; padding-top: 5rem; }
   .install-next { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin-block: 3rem; }
   .install-next h2 { font-size: 2rem; margin-block: 0.6rem; }
@@ -559,25 +467,7 @@ const pluginCommand = 'codex plugin add renku@renku';
     color: var(--paper-300);
   }
 
-  .command-stack {
-    margin-left: 3.5rem;
-  }
-
-  .plugin-instructions {
-    margin: 1.25rem 0 0 3.5rem;
-    color: var(--paper-300);
-    font-size: 0.9rem;
-  }
-
-  .plugin-instructions h4 { margin-top: 1.5rem; }
-  .plugin-instructions ol { padding-left: 1.3rem; margin-block: 0.8rem; }
-  .plugin-instructions li + li { margin-top: 0.65rem; }
-  .plugin-instructions a, .step-intro a { color: var(--amber-400); }
-  .plugin-setup-note { margin-block: 0.8rem; color: var(--paper-500); font-size: 0.8rem; }
-
-  .command-stack .command-block + .command-block {
-    margin-top: 0.55rem;
-  }
+  .step-intro a { color: var(--amber-400); }
 
   .launch-step {
     padding-bottom: 0.2rem;
@@ -653,7 +543,6 @@ const pluginCommand = 'codex plugin add renku@renku';
       width: 100%;
     }
 
-    .command-stack,
     .launch-step .command-block,
     .command-note {
       margin-left: 0;

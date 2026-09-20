@@ -65,121 +65,82 @@ prepared tag.
 
 ## User Installation
 
-### Install with your agent (recommended)
+### 1. Install Renku
 
-#### Codex Desktop
-
-1. Add the released marketplace once. In a local Codex Desktop task, ask:
-   **“Add the Renku beta plugin marketplace by running:
-   `codex plugin marketplace add GoRenku/studio-skills --ref beta`.
-   Tell me whether it succeeded. If the Codex CLI is unavailable, explain
-   what I need to install.”**
-2. After setup succeeds, restart Codex Desktop and open **Plugins**.
-3. Open **Personal**, choose the **renku** marketplace, and open **Renku**.
-4. Select the **+** button to install the plugin.
-5. Start a new local Codex task and ask:
-   **“Install Renku and help me complete setup.”**
-
-Marketplace registration requires the Codex CLI on the computer; asking a local
-Desktop task to run it avoids requiring the user to type it in a terminal.
-This agent-assisted setup is our workflow guidance. OpenAI documents the
-marketplace command and the Desktop plugin installation separately, and does
-not document a Desktop button for adding a custom GitHub marketplace.
-
-Verified against OpenAI documentation on September 19, 2026:
-[plugin installation](https://learn.chatgpt.com/docs/plugins) and
-[marketplace setup](https://developers.openai.com/plugins/build/plugins#add-a-marketplace-from-the-cli).
-The current documentation calls the Desktop surface “Codex in the ChatGPT
-desktop app.”
-
-#### Terminal alternative
-
-With the Codex CLI installed, run these commands in Terminal or PowerShell:
-
-```bash
-codex plugin marketplace add GoRenku/studio-skills --ref beta
-codex plugin add renku@renku
-```
-
-Start a new local task or CLI session to load the skills, then
-ask: **“Install Renku and help me complete setup.”** No movie project or runtime
-installation is required before invoking `install-renku`.
-
-The skill detects the desktop platform, reuses or installs the official runtime,
-and starts Studio in a dedicated visible terminal window. It prefers native
-terminal launch, uses Computer Use when appropriate and available, or guides the
-user through opening the window. It verifies Studio readiness and guides the
-existing Project Library and optional provider-key screens. Enter keys directly
-in Studio, never in the agent conversation.
-
-The terminal runs the foreground server independently of the agent task. Keep
-that session open; minimizing it is fine. Ctrl+C or closing the session stops
-Studio, while closing a browser tab does not. Later, ask **“Start Renku”** or run
-`renku studio start` in a terminal. A running Studio server is reused.
-
-### Manual installation
-
-Install and verify the runtime first.
+Run the platform installer yourself in Terminal or native Windows PowerShell.
+Renku includes its own runtime; it does not require a separate Node.js install.
 
 macOS:
 
 ```bash
 curl -fsSL https://downloads.gorenku.com/install.sh | sh
-renku about
 ```
 
 Windows PowerShell, without WSL:
 
 ```powershell
 irm https://downloads.gorenku.com/install.ps1 | iex
-renku about
 ```
 
-If the installer reports a PATH update, restart terminals and agent desktop
-apps for command discovery. To continue immediately, use the full launcher path
-printed by the installer: normally `$HOME/.local/bin/renku` on macOS or
-`%LOCALAPPDATA%\Renku\bin\renku.cmd` on Windows. Quote paths for the active shell.
+### 2. Choose agents in the installer
+
+The platform installer uses Renku's bundled Node/npm to run skills setup. No
+system Node, npm, npx, or Codex CLI installation is required. Release verification
+checks that the bundled npm entrypoint exists.
+
+Setup checks that Git runs. Windows reuses working Git from PATH or downloads
+official MinGit 2.55.0.5 into the install root's `tools/` directory, verifying its
+pinned SHA-256 before extraction. Subsequent runs reuse that private copy.
+Update the Git version and checksum together from the official release.
+Bundled Node and private Git are added only to the setup process PATH.
+
+On macOS, missing Git opens Apple's Command Line Tools installer. Complete the
+dialog and press Return in Terminal; setup verifies Git again before continuing.
+The installer does not install Homebrew or replace system Node.
+
+The installer runs the equivalent of
+`npx --yes skills add GoRenku/studio-skills --global --skill '*' --copy`.
+The npm download is automatic; agent selection and skills confirmation remain
+interactive. Select Codex, Claude Code, or other supported agents. Copy mode
+avoids symlink privileges on Windows. Windows invokes the npm JavaScript
+entrypoint directly, avoiding PowerShell's `npx.ps1` execution policy.
+
+Run setup in a visible local terminal. macOS connects prompts to `/dev/tty`
+because the bootstrap script arrives through a pipe. Setup reports `INSTALL006`
+for missing bundled npm, `INSTALL007` for a missing interactive terminal,
+`INSTALL008` for incomplete Git setup, and `INSTALL009` for a failed skills
+command. Renku remains installed when skills setup fails; resolve the reported
+problem and rerun the installer. Checksum mismatches use `INSTALL003`.
+
+The command reads the skills repository's default branch. Re-run the installer
+to refresh the runtime and skills. This installs standalone skills, not a
+marketplace plugin; runtime
+and skills releases remain separate. Existing plugin distribution is not changed
+by this onboarding workflow.
+
+Reference: [skills installer documentation](https://github.com/vercel-labs/skills).
+
+### 3. Start Studio
+
+Reopen terminals and restart agent apps after installation so they discover
+`renku` and the skills. Verify the runtime with `renku about`, then run:
+
+```bash
+renku studio start
+```
 
 The installer does not create user configuration, choose a Project Library, or
-save provider credentials. Run `renku studio start` after installation and
-complete the browser setup. Studio recommends a whitespace-free `Renku`
-directory for the platform. To use a custom Project Library, run
-`renku init <storage-root>` before completing that setup.
+save provider credentials. Complete setup in the browser. Studio recommends a
+whitespace-free `Renku` directory for the platform. To use a custom Project
+Library, run `renku init <storage-root>` before completing that setup. Enter
+provider keys directly in Studio, never in an agent conversation.
 
 Keep the terminal session running Studio open; it can be minimized. Stop with
 Ctrl+C when finished, and run `renku studio start` again for later sessions.
+Closing a browser tab does not stop Studio. Start a new agent conversation to
+load the installed skills; they invoke the separately installed `renku` command
+through the agent's local shell capability.
 
-Add the released Studio Skills channel once:
-
-```bash
-codex plugin marketplace add GoRenku/studio-skills --ref beta
-```
-
-Install Renku in either supported Codex host:
-
-- Codex CLI: enter `/plugins`, select the `renku` marketplace, inspect Renku,
-  and install it; or run `codex plugin add renku@renku`.
-- Codex Desktop: restart the app after marketplace setup, open **Plugins →
-  Personal**, choose the `renku` marketplace, open Renku, and select **+** to
-  install it.
-
-Start a new task or CLI session after installation. The plugin invokes the
-separately installed `renku` executable through the host's normal local shell
-capability.
-
-Refresh the released marketplace snapshot with:
-
-```bash
-codex plugin marketplace upgrade renku
-```
-
-Inspect the installed Renku version after refreshing. If the installed copy did
-not advance, reinstall it from the plugin browser, then start a new task or CLI
-session. Record the observed automatic-update behavior at each publication;
-do not assume it across Codex releases.
-
-Publish the skills release containing `install-renku` and verify discovery in a
-fresh task before publishing website instructions advertising assisted install.
 Website publishing remains separate from runtime and skills releases.
 
 ## Studio Release

@@ -56,6 +56,12 @@ export function verifyProductStructure(productRoot) {
   if (!existsSync(nodeExecutable)) {
     throw new Error(`RELEASE025 Missing ${target.id} Node executable: ${nodeExecutable}`);
   }
+  const npmRoot = target.platform === 'win32'
+    ? path.join(runtimeRoot, 'node_modules', 'npm')
+    : path.join(runtimeRoot, 'lib', 'node_modules', 'npm');
+  if (!existsSync(path.join(npmRoot, 'bin', 'npx-cli.js'))) {
+    throw new Error(`RELEASE025 Missing bundled npm for ${target.id} skills installation.`);
+  }
 
   assertStudioOnlyProduct(productRoot);
   assertNoForbiddenFiles(productRoot);

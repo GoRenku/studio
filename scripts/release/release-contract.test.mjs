@@ -294,7 +294,6 @@ test('installers smoke the extracted CLI before activating a version', () => {
   assert.ok(windowsInstaller.indexOf('Renku CLI smoke validation failed') < windowsInstaller.indexOf('$Destination = Join-Path $VersionsRoot'));
   for (const installer of [shellInstaller, windowsInstaller]) {
     assert.doesNotMatch(installer, /Bundled plugin|Claude Code|IDE extension/);
-    assert.match(installer, /GoRenku\/studio-skills --ref beta/);
   }
 });
 

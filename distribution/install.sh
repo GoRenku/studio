@@ -10,6 +10,33 @@ fail() {
   exit 1
 }
 
+git_is_ready() {
+  # Avoid invoking Apple's Git stub before its developer tools are installed.
+  if [ "$(command -v git || true)" = '/usr/bin/git' ]; then
+    xcode-select -p >/dev/null 2>&1 || return 1
+  fi
+  git --version >/dev/null 2>&1
+}
+
+install_agent_skills() {
+  npx_entry="$destination/runtime/node/lib/node_modules/npm/bin/npx-cli.js"
+  [ -f "$npx_entry" ] || fail 'INSTALL006 Bundled npm is missing. Renku is installed, but skills setup cannot continue.'
+  # curl | sh supplies the script on stdin; interactive prompts need the terminal.
+  if ! (exec </dev/tty) 2>/dev/null; then
+    fail 'INSTALL007 Run the installer in Terminal to choose your agents. Renku is installed; rerun this installer there to finish skills setup.'
+  fi
+  if ! git_is_ready; then
+    printf '%s\n' 'Git is needed to download the skills. Opening Apple Command Line Tools installation.'
+    xcode-select --install || fail 'INSTALL008 Could not start Apple Command Line Tools installation. Complete it, then rerun this installer.'
+    printf '%s\n' 'Finish the Apple installation dialog, then press Return here to continue.'
+    IFS= read -r completed </dev/tty || fail 'INSTALL008 Git setup was interrupted. Rerun this installer to continue.'
+    git_is_ready || fail 'INSTALL008 Git is not ready. Complete Apple Command Line Tools installation, then rerun this installer.'
+  fi
+  printf '\n%s\n' 'Choose the agents that should receive the Renku skills.'
+  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$npx_entry" --yes skills add GoRenku/studio-skills --global --skill '*' --copy </dev/tty ||
+    fail 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.'
+}
+
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) target='darwin-arm64' ;;
   Darwin-x86_64) target='darwin-x64' ;;
@@ -88,11 +115,8 @@ case ":$PATH:" in
 esac
 
 printf '\nRenku %s installed.\n' "$version"
+install_agent_skills
 printf 'Start Studio: %s/renku studio start\n' "$BIN_ROOT"
 printf '%s\n' 'Studio will guide you through choosing its recommended Project Library on first launch.'
 printf '%s\n' 'For a custom location, run renku init <storage-root> before completing setup.'
-printf '%s\n' 'Install the separately released Renku plugin for Codex:'
-printf '%s\n' '  codex plugin marketplace add GoRenku/studio-skills --ref beta'
-printf '%s\n' '  codex plugin add renku@renku'
-printf '%s\n' 'Or open the Plugins tab in Codex CLI or the ChatGPT desktop app, select the renku marketplace, and install Renku.'
-printf '%s\n' 'Start a new Codex task or CLI session after installation.'
+printf '%s\n' 'Restart your agent and start a new conversation to load the Renku skills.'

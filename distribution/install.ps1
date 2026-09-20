@@ -5,6 +5,48 @@ $BaseUrl = if ($env:RENKU_DOWNLOAD_BASE_URL) { $env:RENKU_DOWNLOAD_BASE_URL } el
 $InstallRoot = if ($env:RENKU_INSTALL_ROOT) { $env:RENKU_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA 'Renku' }
 $BinRoot = if ($env:RENKU_BIN_ROOT) { $env:RENKU_BIN_ROOT } else { Join-Path $InstallRoot 'bin' }
 
+function Test-GitCommand([string]$Command) {
+  try {
+    & $Command --version 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+  } catch {
+    return $false
+  }
+}
+
+function Install-AgentSkills {
+  $NpxEntry = Join-Path $Destination 'runtime\node\node_modules\npm\bin\npx-cli.js'
+  if (-not (Test-Path $NpxEntry)) { throw 'INSTALL006 Bundled npm is missing. Renku is installed, but skills setup cannot continue.' }
+  if ([Console]::IsInputRedirected) { throw 'INSTALL007 Run this installer in an interactive PowerShell window to choose your agents.' }
+
+  $PreviousPath = $env:PATH
+  try {
+    $env:PATH = "$(Split-Path $NodeCommand);$env:PATH"
+    if (-not (Test-GitCommand 'git.exe')) {
+      # MinGit is the official Git for Windows distribution for applications.
+      $GitRoot = Join-Path $InstallRoot 'tools\mingit-2.55.0.5'
+      $GitCommand = Join-Path $GitRoot 'cmd\git.exe'
+      if (-not (Test-GitCommand $GitCommand)) {
+        Write-Host 'Downloading Git for Renku skills setup.'
+        $GitArchive = Join-Path $Temporary 'mingit.zip'
+        Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/MinGit-2.55.0.5-64-bit.zip' -OutFile $GitArchive
+        $GitChecksum = (Get-FileHash -Algorithm SHA256 $GitArchive).Hash.ToLowerInvariant()
+        if ($GitChecksum -ne '56d7b226b7693196cfc71fef26568f536c4a021ab6c37ff2db4287bed908e96e') {
+          throw 'INSTALL003 Git archive SHA-256 mismatch.'
+        }
+        Expand-Archive -Path $GitArchive -DestinationPath $GitRoot -Force
+        if (-not (Test-GitCommand $GitCommand)) { throw 'INSTALL008 Downloaded Git failed verification. Rerun the installer to retry.' }
+      }
+      $env:PATH = "$(Split-Path $GitCommand);$env:PATH"
+    }
+    Write-Host 'Choose the agents that should receive the Renku skills.'
+    & $NodeCommand $NpxEntry --yes skills add GoRenku/studio-skills --global --skill '*' --copy
+    if ($LASTEXITCODE -ne 0) { throw 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.' }
+  } finally {
+    $env:PATH = $PreviousPath
+  }
+}
+
 if (-not [Environment]::Is64BitOperatingSystem) {
   throw 'INSTALL001 Renku beta requires 64-bit Windows.'
 }
@@ -64,14 +106,11 @@ try {
   }
 
   Write-Host "`nRenku $($Release.version) installed."
+  Install-AgentSkills
   Write-Host "Start Studio: $BinRoot\renku.cmd studio start"
   Write-Host 'Studio will guide you through choosing its recommended Project Library on first launch.'
   Write-Host 'For a custom location, run renku init <storage-root> before completing setup.'
-  Write-Host 'Install the separately released Renku plugin for Codex:'
-  Write-Host '  codex plugin marketplace add GoRenku/studio-skills --ref beta'
-  Write-Host '  codex plugin add renku@renku'
-  Write-Host 'Or open the Plugins tab in Codex CLI or the ChatGPT desktop app, select the renku marketplace, and install Renku.'
-  Write-Host 'Start a new Codex task or CLI session after installation.'
+  Write-Host 'Restart your agent and start a new conversation to load the Renku skills.'
 } finally {
   Remove-Item -Recurse -Force $Temporary -ErrorAction SilentlyContinue
 }

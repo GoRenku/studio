@@ -4,6 +4,10 @@ Date: 2026-08-10
 
 Status: accepted
 
+> The user-installation sequence is superseded by
+> [ADR 0101](0101-install-agent-skills-from-platform-installers.md). Independent
+> release ownership and artifact verification remain unchanged.
+
 Amended: 2026-08-11 — initial Studio releases run on the maintainer's machine;
 the exact-tag GitHub Actions matrix is retained as an explicit future path.
 
