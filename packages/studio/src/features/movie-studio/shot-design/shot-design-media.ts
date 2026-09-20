@@ -19,7 +19,7 @@ import type {
 import type { OptionTileItem } from '@/ui/option-tile-group';
 
 const imageModules = import.meta.glob(
-  './generated/images/*.{png,webp}',
+  './generated/images/*.webp',
   { eager: true, query: '?url', import: 'default' }
 ) as Record<string, string>;
 
@@ -127,7 +127,7 @@ function fromLabels<Id extends string>(
   return (Object.keys(labels) as Id[]).map((id) => ({
     id,
     label: labels[id],
-    imageUrl: imagesByName[`${category}-${id}.png`],
+    imageUrl: imagesByName[`${category}-${id}.webp`],
     videoUrl: options.motion
       ? motionByName[`${category}-${id}.mp4`]
       : undefined,

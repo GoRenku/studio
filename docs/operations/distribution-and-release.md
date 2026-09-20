@@ -190,8 +190,10 @@ policy: package versions must be at least 10,080 minutes (7 days) old,
 versions that do not satisfy that age fail resolution, missing registry publish
 times fail resolution, and lockfiles are rechecked rather than trusted
 blindly. The product assembler applies this policy while creating the bundled
-dependency tree. End-user installers do not run a package manager; they
-download the exact checksum-verified archive produced by that step.
+dependency tree. End-user installers download that checksum-verified runtime,
+then invoke the bundled npm to run the third-party `skills` installer. That
+separate npm resolution currently does not inherit the repository pnpm policy.
+The `GoRenku/studio-skills` repository supplies skill files, not npm dependencies.
 
 Explicitly exported environment variables and CI-provided secrets remain
 available when `.env` is absent.
@@ -227,8 +229,15 @@ tag. Publish then:
 10. promotes those exact downloaded bytes to immutable and beta R2 keys; and
 11. publishes the GitHub prerelease only after R2 verification succeeds.
 
-Product assembly uses pnpm's modern isolated deploy mode with the workspace
-injection setting enabled only for that command. It installs dependencies into
+Product assembly uses pnpm's modern deploy mode with the workspace injection
+setting enabled only for that command. Windows additionally uses
+`node-linker=hoisted` to create real dependency directories: PowerShell's ZIP
+extractor does not restore pnpm's Unix directory symlinks. ZIP packaging rejects
+directory symlinks and broken file links with `RELEASE011`, and materializes
+valid file links (such as `.bin` entries) into ordinary files. Merely
+dereferencing an isolated pnpm tree is insufficient because transitive package
+resolution depends on that tree's real paths. macOS retains the isolated layout
+in its tar archive. Assembly installs dependencies into
 the release staging directory and does not remove or reinstall the development
 workspace's `node_modules` directories.
 
@@ -351,3 +360,62 @@ DNS, Workers, Pages, custom domains, or dashboard settings.
 
 Rollback is a channel operation using a previously verified release. Immutable
 version objects, tags, and GitHub Release assets are never replaced.
+
+
+## Package size and interface assets
+
+Studio's browser dependencies belong in `packages/studio` devDependencies:
+Vite bundles them into `dist`. Only the server's runtime imports belong in
+production dependencies. Release deployment selects the target OS and CPU,
+disables lifecycle scripts and the side-effects cache, and uses locked native
+prebuilds. This avoids host binaries and script-triggered downloads during cross
+packaging. SQLite's additional platform prebuilds are removed from the staged
+product. Target verification must still find the required SQLite and esbuild
+binaries; native smoke verification exercises database creation and Studio.
+
+Shot Design illustrations are built-in camera/framing/rig examples, not movie
+Project media. The interface imports `generated/images/*.webp`; retain the PNGs
+as source artwork. After changing a source PNG, regenerate its lossless WebP:
+
+```sh
+cwebp -lossless -m 6 source.png -o source.webp
+```
+
+The product packages built application files and dependencies. Project databases,
+Project media, and source illustration sheets are not release inputs.
+
+## Updating and uninstalling the current beta
+
+To update, stop Studio with Ctrl+C in its terminal, then rerun the installation
+command from the download page. It downloads the complete current beta, activates
+that version, and runs skills setup again. Restart terminals and agent apps.
+There is no automatic update check, incremental download, or automatic cleanup
+of earlier version folders.
+
+Node/npm and Windows MinGit are private installation tools. Only `renku` is added
+to the public PATH; installing Renku does not make `npx` available in a fresh
+terminal. People with their own Node/npm and Git can also use `npx skills update`
+or rerun `npx skills add GoRenku/studio-skills --global --skill '*' --copy`.
+The update command can include other installed skills; select the intended scope.
+
+There is no built-in uninstaller yet. For default installation locations:
+
+- macOS: stop Studio; remove `~/.local/share/renku` and the
+  `~/.local/bin/renku` launcher. Remove the marked Renku PATH block from the shell
+  profile only if that PATH entry is no longer needed by other programs.
+  `~/.config/renku` holds settings and credentials; retain it unless intentionally
+  resetting those too.
+- Windows: stop Studio; remove `versions`, `bin`, `tools`, and `current.txt` from
+  `%LOCALAPPDATA%\Renku`. Remove `%LOCALAPPDATA%\Renku\bin` from the user's PATH.
+  Preserve `%LOCALAPPDATA%\Renku\Studio` to retain settings and credentials.
+  Deleting the entire Renku folder also deletes those settings.
+- Agent skills are separate copies. Remove only Renku skills through the skills
+  tool (`npx skills remove --global` with system Node/npm and Git available), or
+  remove their individual folders from the selected agents' skill directories.
+  Do not delete the agents' entire shared skills folders.
+- Preserve the Project Library, including the default `~/Movies/Renku` on macOS
+  or `%USERPROFILE%\Videos\Renku` on Windows, and any custom Project locations.
+  Renku's private tools can be removed with the runtime; system Node, Git, and
+  Apple developer tools are shared installations and should be left alone.
+
+Apply custom `RENKU_INSTALL_ROOT` and `RENKU_BIN_ROOT` locations when used.

@@ -4,10 +4,12 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { commandOutput, readStudioVersion } from './release-contract.mjs';
@@ -33,15 +35,34 @@ execFileSync(
   'pnpm',
   [
     '--config.inject-workspace-packages=true',
+    `--config.os=${target.platform}`,
+    `--config.cpu=${target.arch}`,
+    '--config.side-effects-cache=false',
+    ...(target.platform === 'win32' ? ['--config.node-linker=hoisted'] : []),
     '--filter',
     '@gorenku/studio-cli',
     'deploy',
     '--prod',
+    '--ignore-scripts',
     path.join(productRoot, 'app'),
   ],
   { cwd: repositoryRoot, stdio: 'inherit' }
 );
 const appRoot = path.join(productRoot, 'app');
+const requireFromCore = createRequire(path.join(
+  realpathSync(path.join(appRoot, 'node_modules', '@gorenku', 'studio-core')),
+  'package.json'
+));
+const sqlitePrebuilds = path.join(
+  path.dirname(requireFromCore.resolve('better-sqlite3/package.json')),
+  'prebuilds'
+);
+// SQLite ships all platforms inside one package rather than optional packages.
+for (const name of readdirSync(sqlitePrebuilds)) {
+  if (name.endsWith('.node') && name !== `${target.id}.node`) {
+    rmSync(path.join(sqlitePrebuilds, name));
+  }
+}
 rmSync(path.join(appRoot, 'node_modules', '.modules.yaml'), { force: true });
 rmSync(path.join(appRoot, 'node_modules', '.pnpm', 'lock.yaml'), { force: true });
 rmSync(path.join(appRoot, 'pnpm-lock.yaml'), { force: true });

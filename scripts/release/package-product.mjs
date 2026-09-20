@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { requireReleaseTarget } from './release-targets.mjs';
 
@@ -21,7 +21,9 @@ const archiveName = target.archive === 'zip' ? 'renku.zip' : 'renku.tar.gz';
 const archivePath = path.join(outputDirectory, archiveName);
 
 if (target.archive === 'zip') {
-  execFileSync('tar', ['-a', '-c', '-f', archivePath, 'renku'], {
+  assertWindowsArchiveLayout(productRoot);
+  // Materialize file links such as .bin entries for PowerShell Expand-Archive.
+  execFileSync('tar', ['-a', '-c', '-L', '-f', archivePath, 'renku'], {
     cwd: productParent,
     stdio: 'inherit',
   });
@@ -34,3 +36,17 @@ if (target.archive === 'zip') {
 const hash = createHash('sha256').update(readFileSync(archivePath)).digest('hex');
 writeFileSync(`${archivePath}.sha256`, `${hash}  ${archiveName}\n`);
 console.log(archivePath);
+
+function assertWindowsArchiveLayout(folder) {
+  for (const name of readdirSync(folder)) {
+    const entry = path.join(folder, name);
+    const metadata = lstatSync(entry);
+    if (metadata.isSymbolicLink()) {
+      if (!existsSync(entry) || statSync(entry).isDirectory()) {
+        throw new Error(`RELEASE011 Windows ZIP requires real dependency directories and valid file links. Assemble with node-linker=hoisted: ${entry}`);
+      }
+    } else if (metadata.isDirectory()) {
+      assertWindowsArchiveLayout(entry);
+    }
+  }
+}
