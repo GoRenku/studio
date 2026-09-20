@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +10,7 @@ const skillDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoRoot = path.resolve(skillDir, '../../..');
 const outputRoot = path.join(
   repoRoot,
-  'packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated',
+  'packages/studio/src/features/movie-studio/shot-design/generated',
 );
 const consistencyPath = path.join(outputRoot, 'reference/consistency-sheet.png');
 const manifestPath = path.join(outputRoot, 'manifest.json');
@@ -209,7 +210,7 @@ async function generateSheet(options) {
     throw new Error(`${relativeOutputPath(sheetPath)} already exists. Pass --force to replace it.`);
   }
   const fal = await loadFal();
-  const refUrl = await uploadPng(fal, consistencyPath);
+  const refUrl = await uploadImage(fal, consistencyPath);
   const prompt = buildSheetPrompt(sheetCells[selectedSheet.number - 1], selectedSheet);
   const result = await fal.subscribe(sheetModel, {
     input: {
@@ -243,16 +244,16 @@ async function generateMotionFrame(options) {
   if (!await fileExists(consistencyPath)) {
     throw new Error('reference/consistency-sheet.png is required before motion start-frame generation.');
   }
-  const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+  const imagePath = path.join(outputRoot, 'images', `${source.id}.webp`);
   if (!options.force && await fileExists(imagePath)) {
     throw new Error(`${relativeOutputPath(imagePath)} already exists. Pass --force to replace it.`);
   }
   const locationAnchorPath = await resolveMovementLocationAnchorPath(source);
   const fal = await loadFal();
-  const referenceUrl = await uploadPng(fal, consistencyPath);
+  const referenceUrl = await uploadImage(fal, consistencyPath);
   const imageUrls = [referenceUrl];
   if (locationAnchorPath) {
-    imageUrls.push(await uploadPng(fal, locationAnchorPath));
+    imageUrls.push(await uploadImage(fal, locationAnchorPath));
   }
   const prompt = buildMotionFramePrompt(source, { hasLocationAnchor: Boolean(locationAnchorPath) });
   const result = await fal.subscribe(sheetModel, {
@@ -286,16 +287,16 @@ async function generateStill(options) {
   if (!await fileExists(consistencyPath)) {
     throw new Error('reference/consistency-sheet.png is required before still image generation.');
   }
-  const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+  const imagePath = path.join(outputRoot, 'images', `${source.id}.webp`);
   if (!options.force && await fileExists(imagePath)) {
     throw new Error(`${relativeOutputPath(imagePath)} already exists. Pass --force to replace it.`);
   }
   const locationAnchorPath = await resolveStillLocationAnchorPath(source);
   const fal = await loadFal();
-  const referenceUrl = await uploadPng(fal, consistencyPath);
+  const referenceUrl = await uploadImage(fal, consistencyPath);
   const imageUrls = [referenceUrl];
   if (locationAnchorPath) {
-    imageUrls.push(await uploadPng(fal, locationAnchorPath));
+    imageUrls.push(await uploadImage(fal, locationAnchorPath));
   }
   const prompt = buildStillPrompt(source, { hasLocationAnchor: Boolean(locationAnchorPath) });
   const result = await fal.subscribe(sheetModel, {
@@ -326,7 +327,7 @@ async function generateMotion(options) {
     throw new Error(`Unknown motion asset. Use one of: ${motionIds().join(', ')}`);
   }
   await prepareFolders();
-  const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+  const imagePath = path.join(outputRoot, 'images', `${source.id}.webp`);
   if (!await fileExists(imagePath)) {
     throw new Error(`${relativeOutputPath(imagePath)} is required before motion generation. Generate and inspect a dedicated first frame first with: motion-frame --asset ${source.id} --yes`);
   }
@@ -341,7 +342,7 @@ async function generateMotion(options) {
   const duration = resolveMotionDuration(options);
   const resolution = resolveMotionResolution(options);
   const fal = await loadFal();
-  const imageUrl = await uploadPng(fal, imagePath);
+  const imageUrl = await uploadImage(fal, imagePath);
   const prompt = buildMotionPrompt(source);
   const result = await fal.subscribe(motionModel, {
     input: {
@@ -369,13 +370,13 @@ async function generateMotion(options) {
 }
 
 async function generateZoomFirstLastMotion(source, imagePath, motionPath) {
-  const lastFramePath = path.join(outputRoot, 'images', 'movement-zoom-last.png');
+  const lastFramePath = path.join(outputRoot, 'images', 'movement-zoom-last.webp');
   if (!await fileExists(lastFramePath)) {
     throw new Error(`${relativeOutputPath(lastFramePath)} is required before zoom motion generation. Create a close 16:9 last frame of the carved 1825 detail first.`);
   }
   const fal = await loadFal();
-  const firstFrameUrl = await uploadPng(fal, imagePath);
-  const lastFrameUrl = await uploadPng(fal, lastFramePath);
+  const firstFrameUrl = await uploadImage(fal, imagePath);
+  const lastFrameUrl = await uploadImage(fal, lastFramePath);
   const prompt = buildZoomFirstLastPrompt(source);
   const result = await fal.subscribe(firstLastFrameMotionModel, {
     input: {
@@ -448,12 +449,12 @@ async function printStatus() {
     console.log(`sheet ${selectedSheet.number} ${selectedSheet.name}: ${await fileExists(sheetPath) ? 'exists' : 'missing'} (${await countExistingSlices(cells)}/${expectedSlices} slices)`);
   }
   for (const source of ASSETS.filter((entry) => entry.kind === 'motion')) {
-    const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+    const imagePath = path.join(outputRoot, 'images', `${source.id}.webp`);
     const motionPath = path.join(outputRoot, 'motion', `${source.id}.mp4`);
     console.log(`motion ${source.id}: still ${await fileExists(imagePath) ? 'exists' : 'missing'}, video ${await fileExists(motionPath) ? 'exists' : 'missing'}`);
   }
   for (const source of EXTRA_STILL_ASSETS) {
-    const imagePath = path.join(outputRoot, 'images', `${source.id}.png`);
+    const imagePath = path.join(outputRoot, 'images', `${source.id}.webp`);
     console.log(`still ${source.id}: ${await fileExists(imagePath) ? 'exists' : 'missing'} (${relativeOutputPath(imagePath)})`);
   }
 }
@@ -625,7 +626,7 @@ async function resolveMovementLocationAnchorPath(source) {
   if (!source.id.startsWith('movement-') || source.id === 'movement-pan') {
     return null;
   }
-  const anchorPath = path.join(outputRoot, 'images', 'movement-pan.png');
+  const anchorPath = path.join(outputRoot, 'images', 'movement-pan.webp');
   if (!await fileExists(anchorPath)) {
     throw new Error(`${relativeOutputPath(anchorPath)} is required as the movement location anchor before generating ${source.id}. Generate and approve movement-pan first.`);
   }
@@ -636,7 +637,7 @@ async function resolveStillLocationAnchorPath(source) {
   if (source.id !== 'shot-size-establishing-shot') {
     return null;
   }
-  const anchorPath = path.join(outputRoot, 'images', 'movement-pan.png');
+  const anchorPath = path.join(outputRoot, 'images', 'movement-pan.webp');
   if (!await fileExists(anchorPath)) {
     throw new Error(`${relativeOutputPath(anchorPath)} is required as the hotel garden location anchor before generating ${source.id}. Generate and approve movement-pan first.`);
   }
@@ -728,7 +729,7 @@ async function countExistingSlices(cells) {
   let count = 0;
   for (const cell of cells) {
     if (cell.kind === 'filler') continue;
-    if (await fileExists(path.join(outputRoot, 'images', `${cell.id}.png`))) {
+    if (await fileExists(path.join(outputRoot, 'images', `${cell.id}.webp`))) {
       count += 1;
     }
   }
@@ -743,9 +744,10 @@ async function loadFal() {
   return fal;
 }
 
-async function uploadPng(fal, filePath) {
+async function uploadImage(fal, filePath) {
   const buffer = await readFile(filePath);
-  return fal.storage.upload(new Blob([buffer], { type: 'image/png' }));
+  const type = path.extname(filePath) === '.webp' ? 'image/webp' : 'image/png';
+  return fal.storage.upload(new Blob([buffer], { type }));
 }
 
 async function downloadToFile(url, destination) {
@@ -754,7 +756,12 @@ async function downloadToFile(url, destination) {
     throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
   }
   await mkdir(path.dirname(destination), { recursive: true });
-  await writeFile(destination, Buffer.from(await response.arrayBuffer()));
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (path.extname(destination) === '.webp') {
+    execFileSync('magick', ['-', '-define', 'webp:lossless=true', destination], { input: bytes });
+  } else {
+    await writeFile(destination, bytes);
+  }
 }
 
 function firstImageUrl(output) {

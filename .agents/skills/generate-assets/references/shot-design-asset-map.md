@@ -5,7 +5,7 @@ Use this reference for `$generate-assets` Shot Design asset work.
 ## Output Root
 
 ```text
-packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated/
+packages/studio/src/features/movie-studio/shot-design/generated/
 ```
 
 Expected files:
@@ -26,7 +26,7 @@ sheets/sheet-011.png
 sheets/sheet-012.png
 sheets/sheet-013.png
 sheets/sheet-014.png
-images/<asset-id>.png
+images/<asset-id>.webp
 motion/<asset-id>.mp4
 manifest.json
 ```
@@ -106,7 +106,7 @@ The output geometry is part of the asset contract:
 - the consistency reference is generated as `4:3`;
 - each sheet is generated as `4:3`;
 - each sheet contains exactly four separate `16:9` stills in a 2x2 arrangement;
-- final sliced stills in `images/<asset-id>.png` are `16:9`;
+- final sliced stills in `images/<asset-id>.webp` are `16:9`;
 - motion previews are generated from accepted dedicated `16:9` start frames
   and use the input image's `16:9` framing.
 
@@ -299,12 +299,12 @@ do not fit the original four-cell sheet grouping:
 
 | Asset | Command | Output | Reference |
 |-------|---------|--------|-----------|
-| `shot-size-establishing-shot` | `still --asset shot-size-establishing-shot --yes` | `images/shot-size-establishing-shot.png` | Uses `images/movement-pan.png` as the exterior hotel/garden location anchor. |
+| `shot-size-establishing-shot` | `still --asset shot-size-establishing-shot --yes` | `images/shot-size-establishing-shot.webp` | Uses `images/movement-pan.webp` as the exterior hotel/garden location anchor. |
 
 ## Motion Calls
 
 Run after a dedicated `16:9` motion start frame exists and has been visually
-accepted at `images/<motion-asset-id>.png`. Do not treat ordinary movement sheet
+accepted at `images/<motion-asset-id>.webp`. Do not treat ordinary movement sheet
 cells as motion sources unless the user explicitly approves that exact frame as
 a start frame.
 
@@ -318,7 +318,7 @@ lobby interiors, reception desks, check-in counters, luggage, guests, tourism
 signage, street storefronts, film sets, soundstages, visible crew, cameras,
 lights, set flats, floor tape, or behind-the-scenes production language.
 
-After `movement-pan` is accepted, use `images/movement-pan.png` as the binding
+After `movement-pan` is accepted, use `images/movement-pan.webp` as the binding
 location reference for the remaining movement start frames. Preserve the same
 hotel facade, garden, fountain, terrace, paths, hedges, color, and time of day.
 Change only the camera height, subject placement, and framing required for each
@@ -351,14 +351,14 @@ node .agents/skills/generate-assets/scripts/generate-shot-design-asset.mjs motio
 
 | Motion asset | Start frame command | Motion command | Input | Output |
 |--------------|---------------------|----------------|-------|--------|
-| `movement-pan` | `motion-frame --asset movement-pan --yes` | `motion --asset movement-pan --yes` | `images/movement-pan.png` | `motion/movement-pan.mp4` |
-| `movement-tilt` | `motion-frame --asset movement-tilt --yes` | `motion --asset movement-tilt --yes` | `images/movement-tilt.png` | `motion/movement-tilt.mp4` |
-| `movement-swish-pan` | `motion-frame --asset movement-swish-pan --yes` | `motion --asset movement-swish-pan --yes` | `images/movement-swish-pan.png` | `motion/movement-swish-pan.mp4` |
-| `movement-swish-tilt` | `motion-frame --asset movement-swish-tilt --yes` | `motion --asset movement-swish-tilt --yes` | `images/movement-swish-tilt.png` | `motion/movement-swish-tilt.mp4` |
-| `movement-tracking` | `motion-frame --asset movement-tracking --yes` | `motion --asset movement-tracking --yes` | `images/movement-tracking.png` | `motion/movement-tracking.mp4` |
-| `movement-push-in` | `motion-frame --asset movement-push-in --yes` | `motion --asset movement-push-in --yes` | `images/movement-push-in.png` | `motion/movement-push-in.mp4` |
-| `movement-pull-out` | `motion-frame --asset movement-pull-out --yes` | `motion --asset movement-pull-out --yes` | `images/movement-pull-out.png` | `motion/movement-pull-out.mp4` |
-| `movement-zoom` | `motion-frame --asset movement-zoom --yes` | `motion --asset movement-zoom --yes` | `images/movement-zoom.png` | `motion/movement-zoom.mp4` |
+| `movement-pan` | `motion-frame --asset movement-pan --yes` | `motion --asset movement-pan --yes` | `images/movement-pan.webp` | `motion/movement-pan.mp4` |
+| `movement-tilt` | `motion-frame --asset movement-tilt --yes` | `motion --asset movement-tilt --yes` | `images/movement-tilt.webp` | `motion/movement-tilt.mp4` |
+| `movement-swish-pan` | `motion-frame --asset movement-swish-pan --yes` | `motion --asset movement-swish-pan --yes` | `images/movement-swish-pan.webp` | `motion/movement-swish-pan.mp4` |
+| `movement-swish-tilt` | `motion-frame --asset movement-swish-tilt --yes` | `motion --asset movement-swish-tilt --yes` | `images/movement-swish-tilt.webp` | `motion/movement-swish-tilt.mp4` |
+| `movement-tracking` | `motion-frame --asset movement-tracking --yes` | `motion --asset movement-tracking --yes` | `images/movement-tracking.webp` | `motion/movement-tracking.mp4` |
+| `movement-push-in` | `motion-frame --asset movement-push-in --yes` | `motion --asset movement-push-in --yes` | `images/movement-push-in.webp` | `motion/movement-push-in.mp4` |
+| `movement-pull-out` | `motion-frame --asset movement-pull-out --yes` | `motion --asset movement-pull-out --yes` | `images/movement-pull-out.webp` | `motion/movement-pull-out.mp4` |
+| `movement-zoom` | `motion-frame --asset movement-zoom --yes` | `motion --asset movement-zoom --yes` | `images/movement-zoom.webp` | `motion/movement-zoom.mp4` |
 
 `focus-rack-focus` is not part of the movement preview set. Generate it later
 with focus/depth assets.

@@ -1934,7 +1934,7 @@ When that runtime version is already active, it is retained and skills setup
 still runs. Previous version folders, configuration, and Projects are preserved.
 
 `renku update skills` only runs Renku skills setup using the installed private
-Node/npm and Git tools. It does not download or replace the runtime, and Studio
+Node, skills installer, and Git tools. It does not download or replace the runtime, and Studio
 may remain open. Restart the agent and start a new conversation afterward.
 Neither command updates unrelated skill repositories or requires a system npm.
 

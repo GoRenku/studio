@@ -84,9 +84,9 @@ irm https://downloads.gorenku.com/install.ps1 | iex
 
 ### 2. Choose agents in the installer
 
-The platform installer uses Renku's bundled Node/npm to run skills setup. No
+The platform installer uses Renku's bundled Node and skills installer to run setup. No
 system Node, npm, npx, or Codex CLI installation is required. Release verification
-checks that the bundled npm entrypoint exists.
+checks that the bundled skills entrypoint exists.
 
 Setup checks that Git runs. Windows reuses working Git from PATH or downloads
 official MinGit 2.55.0.5 into the install root's `tools/` directory, verifying its
@@ -98,16 +98,16 @@ On macOS, missing Git opens Apple's Command Line Tools installer. Complete the
 dialog and press Return in Terminal; setup verifies Git again before continuing.
 The installer does not install Homebrew or replace system Node.
 
-The installer runs the equivalent of
-`npx --yes skills add GoRenku/studio-skills --global --skill '*' --copy`.
-The npm download is automatic; agent selection and skills confirmation remain
-interactive. Select Codex, Claude Code, or other supported agents. Copy mode
-avoids symlink privileges on Windows. Windows invokes the npm JavaScript
-entrypoint directly, avoiding PowerShell's `npx.ps1` execution policy.
+The installer runs the bundled `skills` executable with
+`add GoRenku/studio-skills --global --skill '*' --copy`.
+No npm package is downloaded on the user's machine. Agent selection and skills
+confirmation remain interactive. Select Codex, Claude Code, or other supported
+agents. Copy mode avoids symlink privileges on Windows. Both platforms invoke
+the bundled JavaScript entrypoint directly with the private Node runtime.
 
 Run setup in a visible local terminal. macOS connects prompts to `/dev/tty`
 because the bootstrap script arrives through a pipe. Setup reports `INSTALL006`
-for missing bundled npm, `INSTALL007` for a missing interactive terminal,
+for a missing bundled skills installer, `INSTALL007` for a missing interactive terminal,
 `INSTALL008` for incomplete Git setup, and `INSTALL009` for a failed skills
 command. Renku remains installed when skills setup fails; resolve the reported
 problem and rerun the installer. Checksum mismatches use `INSTALL003`.
@@ -190,10 +190,14 @@ policy: package versions must be at least 10,080 minutes (7 days) old,
 versions that do not satisfy that age fail resolution, missing registry publish
 times fail resolution, and lockfiles are rechecked rather than trusted
 blindly. The product assembler applies this policy while creating the bundled
-dependency tree. End-user installers download that checksum-verified runtime,
-then invoke the bundled npm to run the third-party `skills` installer. That
-separate npm resolution currently does not inherit the repository pnpm policy.
+dependency tree on all three release targets. The third-party `skills` tool is
+pinned to `1.5.26` in the CLI production dependencies; its transitive dependencies
+are locked and pass the same policy during release assembly. End-user install
+and update commands invoke that packaged copy directly, without npm resolution.
 The `GoRenku/studio-skills` repository supplies skill files, not npm dependencies.
+Skills updates still fetch those files from the repository's default branch.
+This closes the unguarded npm-download path; the dependency policy is not a
+guarantee that every accepted package or skill is free of malicious content.
 
 Explicitly exported environment variables and CI-provided secrets remain
 available when `.env` is absent.
@@ -374,8 +378,11 @@ product. Target verification must still find the required SQLite and esbuild
 binaries; native smoke verification exercises database creation and Studio.
 
 Shot Design illustrations are built-in camera/framing/rig examples, not movie
-Project media. The interface imports `generated/images/*.webp`; retain the PNGs
-as source artwork. After changing a source PNG, regenerate its lossless WebP:
+Project media. The interface imports `generated/images/*.webp`. Final tile
+artwork is stored as lossless WebP; redundant PNG copies are removed after
+pixel-equality verification. Original reference sheets remain separate source
+assets. The generation helper writes WebP tiles and uploads them with the correct
+MIME type. For a manually prepared tile, convert it losslessly:
 
 ```sh
 cwebp -lossless -m 6 source.png -o source.webp

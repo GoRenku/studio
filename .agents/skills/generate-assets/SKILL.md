@@ -64,7 +64,7 @@ mustard blazer character. Keep wardrobe, hairstyle, and accessories locked:
 - The consistency reference is a `4:3` image.
 - Each generated sheet is a `4:3` image.
 - Each sheet contains exactly four separate `16:9` stills in a 2x2 arrangement.
-- Final sliced stills in `generated/images/*.png` should be `16:9`.
+- Final sliced stills in `generated/images/*.webp` should be `16:9`.
 - Motion previews should be generated from accepted dedicated `16:9` start
   frames and should preserve that framing.
 
@@ -201,10 +201,10 @@ node .agents/skills/generate-assets/scripts/generate-shot-design-asset.mjs sheet
 7. Use vision to identify each usable tile image block. Crop manually with ImageMagick. Example:
 
 ```bash
-magick packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated/sheets/sheet-001.png -crop 800x450+40+60 +repage packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated/images/shot-size-extreme-close-up.png
+magick packages/studio/src/features/movie-studio/shot-design/generated/sheets/sheet-001.png -crop 800x450+40+60 +repage -define webp:lossless=true packages/studio/src/features/movie-studio/shot-design/generated/images/shot-size-extreme-close-up.webp
 ```
 
-8. Inspect every cropped PNG with vision. Adjust the crop and rerun `magick` until the tile is clean. Crop around image content; exclude gutters, labels, borders, and sheet background.
+8. Inspect every cropped WebP with vision. Adjust the crop and rerun `magick` until the tile is clean. Crop around image content; exclude gutters, labels, borders, and sheet background.
 9. Show the user the generated sheet and slices after slicing. Do not wait for
    approval between a usable sheet and its slices.
 10. Repeat sheet generation, vision slicing, and review one sheet at a time.
@@ -228,14 +228,14 @@ desks, check-in counters, luggage, guests, tourism signage, street storefronts,
 film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or
 behind-the-scenes production language.
 
-Inspect the returned `16:9` PNG with vision. Accept it only if it is a useful
+Inspect the returned `16:9` WebP with vision. Accept it only if it is a useful
 first frame for the requested camera move: consistent character identity,
 wardrobe when a subject is required, palette, and exterior location; enough
 architecture, garden depth, and off-screen space for the motion to read; no
 explanatory blur unless the asset is a swish/whip movement.
 
 After `movement-pan` has been accepted, use
-`generated/images/movement-pan.png` as the binding exterior location reference
+`generated/images/movement-pan.webp` as the binding exterior location reference
 for the other movement start frames. Keep the same hotel facade, garden,
 fountain, terrace, paths, hedges, color, and time of day while changing only the
 camera height/framing needed to demonstrate each movement.
@@ -243,7 +243,7 @@ camera height/framing needed to demonstrate each movement.
 Motion starts from the accepted start frame:
 
 ```text
-packages/studio/src/features/movie-studio/scenes/shot-design-assets/generated/images/<motion-asset-id>.png
+packages/studio/src/features/movie-studio/shot-design/generated/images/<motion-asset-id>.webp
 ```
 
 Then generate exactly one motion preview:
@@ -304,9 +304,9 @@ Use `scripts/generate-shot-design-asset.mjs` for provider calls only:
 - `sheet --name <sheet-name> --yes`: same as `--number`, using the stable sheet
   names from `references/shot-design-asset-map.md`.
 - `motion-frame --asset <motion-id> --yes`: generate one dedicated `16:9`
-  first-frame PNG in `generated/images/<motion-id>.png` for a motion asset.
+  first-frame WebP in `generated/images/<motion-id>.webp` for a motion asset.
 - `motion --asset <motion-id> --yes`: generate one MP4 from an accepted motion
-  start frame in `generated/images/<motion-id>.png`. The default is a
+  start frame in `generated/images/<motion-id>.webp`. The default is a
   small-UI-friendly `4s` clip at `480p`; use `--duration <1-15>` or
   `--resolution 720p` only when the user explicitly asks.
 

@@ -31,6 +31,7 @@ export async function verifyProduct(productRoot) {
 
   const aboutOutput = run(nodeExecutable, [cliEntry, 'about']);
   assertAboutOutput(aboutOutput, release.version);
+  run(nodeExecutable, [path.join(productRoot, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'), '--version']);
   run(nodeExecutable, [cliEntry, 'init', path.join(testHome, 'movies'), '--json'], testHome);
   run(nodeExecutable, [cliEntry, 'create', 'release-smoke', '--title', 'Release Smoke', '--json'], testHome);
   await verifyStudio(nodeExecutable, cliEntry, testHome);
@@ -60,11 +61,8 @@ export function verifyProductStructure(productRoot) {
   if (!existsSync(nodeExecutable)) {
     throw new Error(`RELEASE025 Missing ${target.id} Node executable: ${nodeExecutable}`);
   }
-  const npmRoot = target.platform === 'win32'
-    ? path.join(runtimeRoot, 'node_modules', 'npm')
-    : path.join(runtimeRoot, 'lib', 'node_modules', 'npm');
-  if (!existsSync(path.join(npmRoot, 'bin', 'npx-cli.js'))) {
-    throw new Error(`RELEASE025 Missing bundled npm for ${target.id} skills installation.`);
+  if (!existsSync(path.join(productRoot, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'))) {
+    throw new Error(`RELEASE025 Missing bundled skills installer for ${target.id}.`);
   }
 
   assertStudioOnlyProduct(productRoot);

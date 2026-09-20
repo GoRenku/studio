@@ -19,8 +19,8 @@ git_is_ready() {
 }
 
 install_agent_skills() {
-  npx_entry="$destination/runtime/node/lib/node_modules/npm/bin/npx-cli.js"
-  [ -f "$npx_entry" ] || fail 'INSTALL006 Bundled npm is missing. Renku is installed, but skills setup cannot continue.'
+  skills_entry="$destination/app/node_modules/skills/bin/cli.mjs"
+  [ -f "$skills_entry" ] || fail 'INSTALL006 Bundled skills installer is missing. Reinstall Renku to restore it.'
   # curl | sh supplies the script on stdin; interactive prompts need the terminal.
   if ! (exec </dev/tty) 2>/dev/null; then
     fail 'INSTALL007 Run the installer in Terminal to choose your agents. Renku is installed; rerun this installer there to finish skills setup.'
@@ -33,7 +33,7 @@ install_agent_skills() {
     git_is_ready || fail 'INSTALL008 Git is not ready. Complete Apple Command Line Tools installation, then rerun this installer.'
   fi
   printf '\n%s\n' 'Choose the agents that should receive the Renku skills.'
-  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$npx_entry" --yes skills add GoRenku/studio-skills --global --skill '*' --copy </dev/tty ||
+  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy </dev/tty ||
     fail 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.'
 }
 

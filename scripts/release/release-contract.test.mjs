@@ -350,12 +350,15 @@ test('release dependency policy is strict and installers do not resolve dependen
   assert.match(workspace, /minimumReleaseAgeStrict:\s*true/);
   assert.match(workspace, /minimumReleaseAgeIgnoreMissingTime:\s*false/);
   assert.match(workspace, /trustLockfile:\s*false/);
+  const cli = JSON.parse(readFileSync(path.join(repositoryRoot, 'packages/cli/package.json'), 'utf8'));
+  assert.match(cli.dependencies.skills, /^\d+\.\d+\.\d+$/);
   const installers = [
     readFileSync(path.join(repositoryRoot, 'distribution/install.sh'), 'utf8'),
     readFileSync(path.join(repositoryRoot, 'distribution/install.ps1'), 'utf8'),
   ];
   for (const installer of installers) {
     assert.doesNotMatch(installer, /\b(?:pnpm|npm|yarn)\s+(?:install|i)\b/);
+    assert.doesNotMatch(installer, /\bnpx\b|npx-cli/);
   }
 });
 

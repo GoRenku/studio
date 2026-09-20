@@ -124,6 +124,7 @@ function assertRequiredRuntime(root) {
   );
   const required = [
     'app/dist/cli.js',
+    'app/node_modules/skills/bin/cli.mjs',
     path.relative(root, path.join(coreRoot, 'drizzle', 'meta', '_journal.json')),
     path.relative(root, path.join(studioRoot, 'server-dist', 'index.js')),
     path.relative(root, path.join(studioRoot, 'dist', 'index.html')),

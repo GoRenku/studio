@@ -15,17 +15,17 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, ba
   const bin = path.join(root, 'commands');
   mkdirSync(bin);
   mkdirSync(path.join(product, 'app', 'dist'), { recursive: true });
-  mkdirSync(path.join(product, 'runtime', 'node', 'lib', 'node_modules', 'npm', 'bin'), { recursive: true });
+  mkdirSync(path.join(product, 'app', 'node_modules', 'skills', 'bin'), { recursive: true });
   mkdirSync(path.join(product, 'runtime', 'node', 'bin'), { recursive: true });
   writeFileSync(path.join(product, 'RELEASE.json'), '{"version": "0.0.1"}\n');
   writeFileSync(path.join(product, 'app', 'dist', 'cli.js'), '');
-  writeFileSync(path.join(product, 'runtime', 'node', 'lib', 'node_modules', 'npm', 'bin', 'npx-cli.js'), '');
+  writeFileSync(path.join(product, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'), '');
   const executable = (file, body) => writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
   executable(path.join(product, 'runtime', 'node', 'bin', 'node'), `
 case "$1" in
   --input-type=commonjs) exec "$TEST_NODE" "$@" ;;
   */cli.js) exit 0 ;;
-  */npx-cli.js)
+  */skills/bin/cli.mjs)
     [ -t 0 ] || exit 71
     printf '%s\\n' "$@" > "$TEST_ROOT/skills-args"
     command -v node > "$TEST_ROOT/selected-node"
@@ -97,7 +97,7 @@ test('macOS piped installer uses private Node and passes interactive agent selec
   const { root, output } = runInstaller();
   assert.match(output, /Restart your agent/);
   assert.deepEqual(readFileSync(path.join(root, 'skills-args'), 'utf8').trim().split('\n').slice(1), [
-    '--yes', 'skills', 'add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy',
+    'add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy',
   ]);
   assert.equal(readFileSync(path.join(root, 'selected-node'), 'utf8').trim(), path.join(root, 'Renku with spaces', 'versions', '0.0.1', 'runtime', 'node', 'bin', 'node'));
 });

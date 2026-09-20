@@ -15,8 +15,8 @@ function Test-GitCommand([string]$Command) {
 }
 
 function Install-AgentSkills {
-  $NpxEntry = Join-Path $Destination 'runtime\node\node_modules\npm\bin\npx-cli.js'
-  if (-not (Test-Path $NpxEntry)) { throw 'INSTALL006 Bundled npm is missing. Renku is installed, but skills setup cannot continue.' }
+  $SkillsEntry = Join-Path $Destination 'app\node_modules\skills\bin\cli.mjs'
+  if (-not (Test-Path $SkillsEntry)) { throw 'INSTALL006 Bundled skills installer is missing. Reinstall Renku to restore it.' }
   if ([Console]::IsInputRedirected) { throw 'INSTALL007 Run this installer in an interactive PowerShell window to choose your agents.' }
 
   $PreviousPath = $env:PATH
@@ -40,7 +40,7 @@ function Install-AgentSkills {
       $env:PATH = "$(Split-Path $GitCommand);$env:PATH"
     }
     Write-Host 'Choose the agents that should receive the Renku skills.'
-    & $NodeCommand $NpxEntry --yes skills add GoRenku/studio-skills --global --skill '*' --copy
+    & $NodeCommand $SkillsEntry add GoRenku/studio-skills --global --skill '*' --copy
     if ($LASTEXITCODE -ne 0) { throw 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.' }
   } finally {
     $env:PATH = $PreviousPath

@@ -95,7 +95,7 @@
     {
       "id": "movement-pan",
       "path": "motion/movement-pan.mp4",
-      "inputPath": "images/movement-pan.png",
+      "inputPath": "images/movement-pan.webp",
       "model": "xai/grok-imagine-video/v1.5/image-to-video",
       "requestId": "019e7f27-0da8-7f93-9a1a-50f3f467a025",
       "prompt": "Smooth horizontal pan from a fixed position across the empty hotel exterior and garden, revealing facade, terrace, hedges, fountain or garden path. No people. No dolly, no tracking, no zoom. Create a short elegant camera-design preview from this still image. Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
@@ -106,7 +106,7 @@
     {
       "id": "movement-tilt",
       "path": "motion/movement-tilt.mp4",
-      "inputPath": "images/movement-tilt.png",
+      "inputPath": "images/movement-tilt.webp",
       "model": "xai/grok-imagine-video/v1.5/image-to-video",
       "requestId": "019e7fa7-4041-7792-8042-7bcb9ece2978",
       "prompt": "Smooth vertical tilt upward from the woman's shoes and exterior path to her torso, face, and upper hotel facade, fixed camera position. Create a short elegant camera-design preview from this still image. Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
@@ -117,7 +117,7 @@
     {
       "id": "movement-swish-pan",
       "path": "motion/movement-swish-pan.mp4",
-      "inputPath": "images/movement-swish-pan.png",
+      "inputPath": "images/movement-swish-pan.webp",
       "model": "xai/grok-imagine-video/v1.5/image-to-video",
       "requestId": "019e7fae-0a54-7e51-9bab-1044286da1db",
       "prompt": "Fast horizontal swish pan from a fixed position across the empty garden exterior with tasteful directional motion blur, landing on another readable exterior area. No people. Create a short elegant camera-design preview from this still image. Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
@@ -128,7 +128,7 @@
     {
       "id": "movement-tracking",
       "path": "motion/movement-tracking.mp4",
-      "inputPath": "images/movement-tracking.png",
+      "inputPath": "images/movement-tracking.webp",
       "model": "xai/grok-imagine-video/v1.5/image-to-video",
       "requestId": "019e7fba-610b-7c72-b47d-eb9c6b665f91",
       "prompt": "True lateral tracking shot: the woman walks from left to right and the camera moves sideways with her on a dolly or slider, keeping her nearly the same size and screen position while foreground hedges and background hotel facade slide with clear parallax. Do not use a locked-off static camera, do not pan from a fixed point, and do not merely animate the woman walking through a stationary frame. Create a short elegant camera-design preview from this still image. Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
@@ -139,7 +139,7 @@
     {
       "id": "movement-push-in",
       "path": "motion/movement-push-in.mp4",
-      "inputPath": "images/movement-push-in.png",
+      "inputPath": "images/movement-push-in.webp",
       "model": "xai/grok-imagine-video/v1.5/image-to-video",
       "requestId": "019e7fcf-240f-7b51-908a-2c53de758b08",
       "prompt": "True dolly push-in over 4 seconds: the camera physically moves forward through the garden toward the woman, changing the camera-to-subject distance. The subject should grow clearly but gracefully, and foreground flowers, path stones, and railings should grow faster than the background facade, creating visible parallax and perspective change. Do not use an optical zoom, digital crop, locked-off camera, or focal-length-only magnification. Create a short elegant camera-design preview from this still image. Preserve the original subject identity, exterior garden location, color palette, wardrobe, and composition. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
@@ -150,7 +150,7 @@
     {
       "id": "movement-swish-tilt",
       "path": "motion/movement-swish-tilt.mp4",
-      "inputPath": "images/movement-swish-tilt.png",
+      "inputPath": "images/movement-swish-tilt.webp",
       "model": "xai/grok-imagine-video/v1.5/image-to-video",
       "requestId": "019e8201-7343-7912-8c2f-ba2c0e846536",
       "prompt": "Fast vertical swish tilt through empty exterior lines, from garden path and stone details up to balcony, upper facade, arched window, or tree canopy. No people. Create a short elegant camera-design preview from this still image. Preserve the empty exterior garden location, color palette, lighting, and composition. Do not add any person. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
@@ -161,7 +161,7 @@
     {
       "id": "movement-pull-out",
       "path": "motion/movement-pull-out.mp4",
-      "inputPath": "images/movement-pull-out.png",
+      "inputPath": "images/movement-pull-out.webp",
       "model": "xai/grok-imagine-video/v1.5/image-to-video",
       "requestId": "019e8211-0ec1-7313-b621-4895fb2ae875",
       "prompt": "True dolly pull-out over 4 seconds: the three-person group stands still while the camera physically retreats backward from them, changing camera-to-subject distance and revealing the hotel grounds and facade. The group should become smaller in frame as foreground flowers, path stones, and railings separate from the background with visible parallax. Do not use a zoom-out, digital crop, locked-off camera, or focal-length-only change. Create a short elegant camera-design preview from this still image. Preserve the three-person group, their standing poses, wardrobe, exterior garden location, color palette, lighting, and composition. The group remains standing still; only the camera physically retreats backward. Keep motion smooth, restrained, and useful as a UI preview. Do not add text, captions, graphics, logos, watermarks, or new characters.",
@@ -172,8 +172,8 @@
     {
       "id": "movement-zoom",
       "path": "motion/movement-zoom.mp4",
-      "inputPath": "images/movement-zoom.png",
-      "lastFramePath": "images/movement-zoom-last.png",
+      "inputPath": "images/movement-zoom.webp",
+      "lastFramePath": "images/movement-zoom-last.webp",
       "model": "fal-ai/veo3.1/fast/first-last-frame-to-video",
       "requestId": "019e8245-4fcc-7e91-8402-ba6eeaa3ed7e",
       "prompt": "Fast optical zoom-in over 4 seconds from a first-person point of view near the hotel entrance: change lens focal length so the carved year 1825 above the door rapidly becomes the focus and nearly fills the frame. Add only a slight upward tilt during the zoom, like someone entering the hotel and looking up. Keep the camera physically fixed in place: no dolly, no push-in, no forward travel, no parallax. Do not show any person. Use the first image as the exact first frame and the second image as the exact final frame. Create a fast optical zoom toward the carved founding year 1825 above the hotel entrance door. The viewpoint is first-person, as if someone entering the hotel notices the date and looks slightly upward while zooming in. Keep the camera physically fixed in place: no dolly, no push-in, no forward travel, no parallax, and no walking movement. Preserve the architectural carving and keep the numerals 1825 stable, legible, and physically carved into the stone/plaster. Do not add people, captions, subtitles, graphic overlays, logos, watermarks, extra text, or additional numbers.",
@@ -195,7 +195,7 @@
   "images": [
     {
       "id": "movement-pan",
-      "path": "images/movement-pan.png",
+      "path": "images/movement-pan.webp",
       "sourceSheet": null,
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e7f26-1543-72a0-9b9b-91fe9ae3c138",
@@ -204,9 +204,9 @@
     },
     {
       "id": "movement-tilt",
-      "path": "images/movement-tilt.png",
+      "path": "images/movement-tilt.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e7fa6-39fe-7501-8ac7-31ad448aee5f",
       "prompt": "Create one 16:9 first-frame image for the \"Tilt\" Shot Design motion preview.\nUse the provided reference image as binding source for the same woman, center-parted low bun, cream dress with pale mint-sage paneling, lack of accessories, lighting, palette, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nKeep the woman visually consistent with the reference whenever she is visible.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nTilt: Person included. Low frame on the woman's shoes, lower dress, gravel or stone path, steps, and facade base; fixed camera tilts upward to her torso, face, and upper hotel facade, balcony, or arched window.",
@@ -214,9 +214,9 @@
     },
     {
       "id": "movement-swish-pan",
-      "path": "images/movement-swish-pan.png",
+      "path": "images/movement-swish-pan.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e7fac-eb86-7bf2-afe5-de8b8d482ab0",
       "prompt": "Create one 16:9 first-frame image for the \"Swish Pan\" Shot Design motion preview.\nThis motion preview must not include any person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.\nUse the reference only for palette, lighting, architectural language, materials, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nSwish Pan: No person. Empty garden path or terrace with hedge, fountain, column, or doorway at one edge and a second exterior area across frame; fast horizontal whip pan with controlled blur.",
@@ -224,9 +224,9 @@
     },
     {
       "id": "movement-tracking",
-      "path": "images/movement-tracking.png",
+      "path": "images/movement-tracking.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e7fb2-b223-75e1-9721-e269abfc217c",
       "prompt": "Create one 16:9 first-frame image for the \"Tracking\" Shot Design motion preview.\nUse the provided reference image as binding source for the same woman, center-parted low bun, cream dress with pale mint-sage paneling, lack of accessories, lighting, palette, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nKeep the woman visually consistent with the reference whenever she is visible.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nTracking: Person included. Side-profile woman walking along a garden path or terrace, with foreground hedges or columns and background facade; camera travels sideways with her at constant distance.",
@@ -234,9 +234,9 @@
     },
     {
       "id": "movement-push-in",
-      "path": "images/movement-push-in.png",
+      "path": "images/movement-push-in.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e7fcd-55c2-7c71-ad60-9baad6c6577a",
       "prompt": "Create one 16:9 first-frame image for the \"Push-In\" Shot Design motion preview.\nUse the provided reference image as binding source for the same woman, center-parted low bun, cream dress with pale mint-sage paneling, lack of accessories, lighting, palette, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nKeep the woman visually consistent with the reference whenever she is visible.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nPush-In: Person included. Medium-wide centered frame of the woman near garden steps, terrace, or arched doorway; she should be noticeably closer than an establishing wide shot, roughly full-body to knees-up and large enough that a 4-second dolly forward can visibly approach her without rushing. Keep strong foreground flowers, path stones, railings, and background facade depth around her.",
@@ -244,9 +244,9 @@
     },
     {
       "id": "movement-swish-tilt",
-      "path": "images/movement-swish-tilt.png",
+      "path": "images/movement-swish-tilt.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e81ff-774d-7e83-ba7c-4edbc298a01b",
       "prompt": "Create one 16:9 first-frame image for the \"Swish Tilt\" Shot Design motion preview.\nThis motion preview must not include any person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.\nUse the reference only for palette, lighting, architectural language, materials, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nSwish Tilt: No person. Low empty exterior frame with gravel path, flowers, stone steps, planter, and facade base; fast vertical whip tilt upward.",
@@ -254,9 +254,9 @@
     },
     {
       "id": "movement-pull-out",
-      "path": "images/movement-pull-out.png",
+      "path": "images/movement-pull-out.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e820e-c23e-7133-bbd1-aa5deb9330fc",
       "prompt": "Create one 16:9 first-frame image for the \"Pull-Out\" Shot Design motion preview.\nCreate three people standing together as a small group. The central woman must match the reference: center-parted low bun, cream dress with pale mint-sage paneling, no accessories. Add two companion adults with compatible understated wardrobe and the same refined cinematic palette.\nThe group should be standing still in front of the hotel exterior. Do not stage them walking, stepping, or moving toward/away from camera.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition. Do not add arrows, labels, text, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nPull-Out: Group included. Tight starting frame on three people standing together in front of the hotel, cropped as a close group portrait with only small hints of the exterior behind them; camera physically retreats backward to reveal the garden grounds, fountain or path, and hotel facade around them.",
@@ -264,9 +264,9 @@
     },
     {
       "id": "movement-zoom",
-      "path": "images/movement-zoom.png",
+      "path": "images/movement-zoom.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e8227-c8cc-7d40-b3b3-0ebd62f3195e",
       "prompt": "Create one 16:9 first-frame image for the \"Zoom\" Shot Design motion preview.\nThis motion preview must not include any person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.\nUse the reference only for palette, lighting, architectural language, materials, and production design; move the actual location to the Pastel Garden Hotel Exterior direction.\nUse the second reference image as the binding source for the exterior hotel location: same facade, garden, fountain, terrace, paths, hedges, color, and time of day.\nAdapt the camera height and framing for this specific motion, but do not invent a different hotel, garden, season, or architectural style.\nMotion start frames use the Pastel Garden Hotel Exterior direction only: elegant European hotel, manor, or villa facade, garden path, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, and planted foreground layers.\nDo not show lobby interiors, reception desks, check-in counters, luggage, guests, tourism signage, street storefronts, film sets, soundstages, visible crew, cameras, lights, set flats, floor tape, or behind-the-scenes production language.\nThis is not a contact sheet, not a diagram, and not a visual explanation of motion. It is the clean starting image that an image-to-video model will animate.\nMake the frame cinematic, spacious, and physically plausible for the requested camera move. Preserve clear exterior architecture, garden paths, facade lines, planted foreground layers, and enough off-screen implied space for the motion to read.\nUse a crisp still frame unless the motion itself explicitly needs to begin in a whip or swish transition.\nThe only visible writing may be the architectural carved founding year \"1825\" above the entrance door. It must be physically carved into stone or plaster, not a sign, label, caption, UI element, watermark, or graphic overlay. Do not add any other text, arrows, numbers, UI controls, crop marks, logos, or watermarks.\nMovement intent:\nZoom: No person. First-person point of view near the hotel entrance door, looking slightly upward. The carved founding year 1825 sits above the door but starts small and not yet dominant; frame begins close enough that a fast 4-second optical zoom can make the year nearly fill the frame without an impossible rush.",
@@ -274,9 +274,9 @@
     },
     {
       "id": "shot-size-establishing-shot",
-      "path": "images/shot-size-establishing-shot.png",
+      "path": "images/shot-size-establishing-shot.webp",
       "sourceSheet": null,
-      "locationReferencePath": "images/movement-pan.png",
+      "locationReferencePath": "images/movement-pan.webp",
       "model": "fal-ai/nano-banana-pro/edit",
       "requestId": "019e9dae-4f79-7931-b2b9-2fa79e00fad0",
       "prompt": "Create one 16:9 still image for the \"Establishing Shot\" Shot Design tile.\nThis tile demonstrates the cinematography concept, not a production scene. It must be a polished, standalone UI tile image.\nAn establishing shot appears at the head of a scene and clearly shows the location of the action. It builds tone and context. It does not have to be a generic wide shot, but this asset should use the requested drone-top hotel-and-garden example.\nUse the second reference image as the binding source for the exterior hotel location: same facade family, garden, fountain or terrace, paths, hedges, color, and time of day.\nChange only the viewpoint to a high drone-top establishing view; do not invent a different hotel, season, street, or architectural style.\nUse the Pastel Garden Hotel Exterior direction: elegant European hotel, manor, or villa facade, garden paths, terrace, hedges, fountain, stone steps, veranda, balcony, arched windows, shutters, roofline, and planted foreground or courtyard layers.\nNo person: no woman, no face, no body, no hands, no human silhouette, and no reflections of people.\nUse the provided reference image only for palette, lighting, architectural language, materials, and refined production design.\nMake the frame feel like a clear scene-opening context shot from above: hotel, garden layout, paths, and surrounding grounds are readable at a glance.\nKeep the palette consistent with the generated motion tiles: parchment cream, pastel ochre, antique gold, pale mint-sage planting, muted terracotta stone, warm ink shadows, soft daylight, and gentle contrast.\nDo not show lobby interiors, reception desks, luggage, guests, tourism signage, streets, vehicles, film sets, visible crew, cameras, lights, or behind-the-scenes production language.\nDo not add arrows, labels, captions, text, numbers, UI controls, crop marks, logos, or watermarks.\nConcept intent:\nEstablishing Shot: No person. A drone-top establishing view over the same pastel garden hotel exterior: hotel facade, garden paths, hedges, fountain or terrace, roofline, and surrounding grounds clearly show where the scene takes place. It builds tone and context without becoming only an extreme-wide scale demonstration.",
