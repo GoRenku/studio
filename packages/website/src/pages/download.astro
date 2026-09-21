@@ -4,7 +4,7 @@ import SiteHeader from '../components/SiteHeader.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LearnNav from '../components/LearnNav.astro';
 
-const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh && export PATH="$HOME/.local/bin:$PATH"';
+const macCommand = '(set -o pipefail; curl -fsSL https://downloads.gorenku.com/install.sh | sh) && export PATH="$HOME/.local/bin:$PATH"';
 const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
 const macLaunchCommand = '"$HOME/.local/bin/renku" studio start';
 const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studio start';
@@ -37,7 +37,7 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
           <p class="eyebrow">Installation</p>
           <h2 id="install-heading">Three steps to get started</h2>
         </div>
-        <p>Apple silicon and Intel Macs · Windows x64</p>
+        <p>macOS 13.5+ on Apple silicon or Intel · Windows 10 (1803+) or 11, x64</p>
       </div>
 
       <div class="platform-tabs" role="tablist" aria-label="Operating system" data-reveal>

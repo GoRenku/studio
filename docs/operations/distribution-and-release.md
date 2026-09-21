@@ -68,12 +68,15 @@ prepared tag.
 ### 1. Install Renku
 
 Run the platform installer yourself in Terminal or native Windows PowerShell.
+The bundled Node runtime requires macOS 13.5 or newer. Windows requires x64
+Windows 10 version 1803 or newer (including Windows 11), with its built-in
+`tar.exe`. Unsupported systems are rejected before the runtime download.
 Renku includes its own runtime; it does not require a separate Node.js install.
 
 macOS:
 
 ```bash
-curl -fsSL https://downloads.gorenku.com/install.sh | sh && export PATH="$HOME/.local/bin:$PATH"
+(set -o pipefail; curl -fsSL https://downloads.gorenku.com/install.sh | sh) && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Windows PowerShell, without WSL:
@@ -111,6 +114,11 @@ for a missing bundled skills installer, `INSTALL007` for a missing interactive t
 `INSTALL008` for incomplete Git setup, and `INSTALL009` for a failed skills
 command. Renku remains installed when skills setup fails; resolve the reported
 problem and rerun the installer. Checksum mismatches use `INSTALL003`.
+The bundled skills tool can exit successfully when the user declines its final
+confirmation. Installer completion therefore does not claim that skills were
+installed: it explains cancellation and only asks users who confirmed to restart
+their agents. The runtime launch command is printed before skills setup so a
+skills or Git failure does not hide how to start the installed application.
 
 The command reads the skills repository's default branch. Re-run the installer
 to refresh the runtime and skills. This installs standalone skills, not a
@@ -238,8 +246,10 @@ tag. Publish then:
 
 Product assembly uses pnpm's modern deploy mode with the workspace injection
 setting enabled only for that command. Windows additionally uses
-`node-linker=hoisted` to create real dependency directories: PowerShell's ZIP
-extractor does not restore pnpm's Unix directory symlinks. ZIP packaging rejects
+`node-linker=hoisted` to create real dependency directories without requiring
+Windows symlink permissions. The installer uses the system `tar.exe` for ZIP
+extraction, avoiding PowerShell Archive's long-path limitations and progress
+overlay. ZIP packaging rejects
 directory symlinks and broken file links with `RELEASE011`, and materializes
 valid file links (such as `.bin` entries) into ordinary files. Merely
 dereferencing an isolated pnpm tree is insufficient because transitive package
@@ -247,6 +257,9 @@ resolution depends on that tree's real paths. macOS retains the isolated layout
 in its tar archive. Assembly installs dependencies into
 the release staging directory and does not remove or reinstall the development
 workspace's `node_modules` directories.
+
+Installer regression coverage and remaining native validation are recorded in
+[the installer review](installer-review.md).
 
 This is an explicit alpha policy. A cross-packaged Intel Mac or Windows
 artifact is structurally verified but is not described as runtime verified.

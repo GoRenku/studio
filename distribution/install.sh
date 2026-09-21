@@ -10,6 +10,15 @@ fail() {
   exit 1
 }
 
+shell_quote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+download() {
+  curl -fsSL --retry 2 --connect-timeout 20 --max-time 1800 "$1" -o "$2" ||
+    fail "INSTALL002 Could not download $1. Check your connection and rerun the installer."
+}
+
 git_is_ready() {
   # Avoid invoking Apple's Git stub before its developer tools are installed.
   if [ "$(command -v git || true)" = '/usr/bin/git' ]; then
@@ -41,27 +50,46 @@ install_agent_skills() {
     git_is_ready || fail 'INSTALL008 Git is not ready. Complete Apple Command Line Tools installation, then rerun this installer.'
   fi
   printf '\n%s\n' 'Choose the agents that should receive the Renku skills.'
+  printf '%s\n' 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
   PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy </dev/tty ||
     fail 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.'
 }
 
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) target='darwin-arm64' ;;
-  Darwin-x86_64) target='darwin-x64' ;;
+  Darwin-x86_64)
+    if [ "$(sysctl -in sysctl.proc_translated 2>/dev/null || true)" = '1' ]; then
+      target='darwin-arm64'
+    else
+      target='darwin-x64'
+    fi
+    ;;
   *) fail "INSTALL001 Unsupported operating system or architecture. Beta supports macOS arm64 and x64." ;;
 esac
 
-temporary="$(mktemp -d "${TMPDIR:-/tmp}/renku-install.XXXXXX")"
-trap 'rm -rf "$temporary"' EXIT HUP INT TERM
+macos_version="$(sw_vers -productVersion)"
+printf '%s\n' "$macos_version" | awk -F. '{ exit !($1 > 13 || ($1 == 13 && $2 >= 5)) }' ||
+  fail 'INSTALL001 Renku requires macOS 13.5 or newer.'
+
+case "$INSTALL_ROOT:$BIN_ROOT" in
+  /*:/*) ;;
+  *) fail 'INSTALL004 Installation and launcher folders must be absolute paths.' ;;
+esac
+mkdir -p "$INSTALL_ROOT" "$BIN_ROOT" || fail 'INSTALL004 Cannot create the installation folders. Choose folders you can write to.'
+temporary="$(mktemp -d "$INSTALL_ROOT/.install.XXXXXX")" || fail 'INSTALL004 Cannot write to the installation folder.'
+trap 'rm -rf "$temporary"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' HUP TERM
 if [ "${RENKU_UPDATE_SCOPE:-}" = 'skills' ]; then
   destination="${RENKU_INSTALLED_PRODUCT:?Installed Renku runtime is required}"
   node_command="$destination/runtime/node/bin/node"
   install_agent_skills
-  printf '%s\n' 'Renku skills updated. Restart your agent and start a new conversation.'
+  printf '%s\n' 'Skills setup finished. If you confirmed installation, restart your agent and start a new conversation.'
   exit 0
 fi
 manifest="$temporary/release.json"
-curl -fsSL "$BASE_URL/studio/channels/beta/release.json" -o "$manifest" || fail 'INSTALL002 Could not download the Renku release manifest.'
+printf '%s\n' 'Checking the latest Renku release.'
+download "$BASE_URL/studio/channels/beta/release.json" "$manifest"
 release_version="$(plutil -extract version raw -o - "$manifest")" || fail 'INSTALL002 Release manifest has no version.'
 printf '%s\n' "$release_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || fail 'INSTALL002 Release manifest has an invalid version.'
 artifact_index=0
@@ -84,7 +112,8 @@ else
   if [ "$destination" = "${RENKU_INSTALLED_PRODUCT:-}" ]; then
     fail 'INSTALL004 The running Renku installation is incomplete. Stop Studio and rerun the installer in a new terminal to repair it.'
   fi
-  curl -fsSL "$archive_url" -o "$temporary/renku.tar.gz" || fail "INSTALL002 Could not download $archive_url"
+  printf 'Downloading Renku %s for %s. This can take a few minutes.\n' "$version" "$target"
+  download "$archive_url" "$temporary/renku.tar.gz"
   if command -v shasum >/dev/null 2>&1; then
     actual="$(shasum -a 256 "$temporary/renku.tar.gz" | cut -d' ' -f1)"
   elif command -v sha256sum >/dev/null 2>&1; then
@@ -95,12 +124,15 @@ else
   [ "$expected" = "$actual" ] || fail 'INSTALL003 Renku archive SHA-256 mismatch.'
 
   mkdir -p "$temporary/extracted"
+  printf '%s\n' 'Download verified. Extracting Renku.'
   tar -xzf "$temporary/renku.tar.gz" -C "$temporary/extracted" || fail 'INSTALL004 Could not extract the Renku archive.'
   [ -f "$temporary/extracted/renku/RELEASE.json" ] || fail 'INSTALL004 Extracted archive is not a Renku product.'
   [ "$(plutil -extract version raw -o - "$temporary/extracted/renku/RELEASE.json")" = "$version" ] || fail 'INSTALL004 Extracted release does not match the requested version.'
+  [ "$(plutil -extract target raw -o - "$temporary/extracted/renku/RELEASE.json")" = "$target" ] || fail 'INSTALL004 Extracted release does not match this platform.'
 
   smoke_node_command="$temporary/extracted/renku/runtime/node/bin/node"
   "$smoke_node_command" "$temporary/extracted/renku/app/dist/cli.js" about >/dev/null || fail 'INSTALL004 Renku CLI smoke validation failed.'
+  "$smoke_node_command" "$temporary/extracted/renku/app/node_modules/skills/bin/cli.mjs" --version >/dev/null || fail 'INSTALL006 Bundled skills installer failed verification.'
 
   mkdir -p "$INSTALL_ROOT/versions" "$BIN_ROOT"
   backup="$INSTALL_ROOT/versions/.previous-$version-$$"
@@ -124,35 +156,36 @@ write_launcher() {
   entry="$2"
   {
     printf '%s\n' '#!/bin/sh'
-    printf 'exec "%s" "%s" "$@"\n' "$node_command" "$entry"
+    printf 'exec %s %s "$@"\n' "$(shell_quote "$node_command")" "$(shell_quote "$entry")"
   } > "$launcher"
   chmod 755 "$launcher"
 }
 write_launcher "$BIN_ROOT/renku" "$destination/app/dist/cli.js"
 
-case ":$PATH:" in
-  *":$BIN_ROOT:"*) ;;
-  *)
-    case "${SHELL:-}" in
-      */zsh) profile="${ZDOTDIR:-$HOME}/.zprofile" ;;
-      */bash) profile="$HOME/.bash_profile" ;;
-      *) profile="$HOME/.profile" ;;
-    esac
-    marker='# >>> Renku PATH >>>'
-    if [ ! -f "$profile" ] || ! grep -F "$marker" "$profile" >/dev/null 2>&1; then
-      {
-        printf '\n%s\n' "$marker"
-        printf 'export PATH="%s:$PATH"\n' "$BIN_ROOT"
-        printf '%s\n' '# <<< Renku PATH <<<'
-      } >> "$profile"
-    fi
-    printf '%s\n' "INSTALL005 PATH was saved in $profile. The launch command below works in this terminal now."
-    ;;
+case "${SHELL:-}" in
+  */zsh) profile="${ZDOTDIR:-$HOME}/.zprofile" ;;
+  */bash) profile="$HOME/.bash_profile" ;;
+  *) profile="$HOME/.profile" ;;
 esac
+mkdir -p "$(dirname "$profile")"
+"$node_command" --input-type=commonjs -e '
+const fs = require("node:fs");
+const [profile, entry] = process.argv.slice(1);
+const start = "# >>> Renku PATH >>>";
+const end = "# <<< Renku PATH <<<";
+const text = fs.existsSync(profile) ? fs.readFileSync(profile, "utf8") : "";
+const block = start + "\nexport PATH=" + entry + ":\"$PATH\"\n" + end;
+const first = text.indexOf(start);
+const last = text.indexOf(end, first);
+if (first >= 0 && last < 0) process.exit(1);
+const updated = first < 0 ? text + "\n" + block + "\n" : text.slice(0, first) + block + text.slice(last + end.length);
+if (updated !== text) fs.writeFileSync(profile, updated);
+' "$profile" "$(shell_quote "$BIN_ROOT")" || fail "INSTALL005 Could not save PATH in $profile. Renku is installed; use the full-path launcher in $BIN_ROOT."
+printf '%s\n' "INSTALL005 PATH was saved in $profile. The launch command below works in this terminal now."
 
 printf '\nRenku %s installed.\n' "$version"
+printf 'Start Studio: %s studio start\n' "$(shell_quote "$BIN_ROOT/renku")"
 install_agent_skills
-printf 'Start Studio: "%s/renku" studio start\n' "$BIN_ROOT"
 printf '%s\n' 'Studio will guide you through choosing its recommended Project Library on first launch.'
 printf '%s\n' 'For a custom location, run renku init <storage-root> before completing setup.'
-printf '%s\n' 'Restart your agent and start a new conversation to load the Renku skills.'
+printf '%s\n' 'If you confirmed skills installation, restart your agent and start a new conversation to load the Renku skills.'

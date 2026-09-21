@@ -75,7 +75,7 @@ export function verifyProductStructure(productRoot) {
 function run(executable, args, homeDir) {
   const result = spawnSync(executable, args, {
     encoding: 'utf8',
-    env: { ...process.env, ...(homeDir ? { HOME: homeDir, USERPROFILE: homeDir } : {}) },
+    env: homeDir ? verificationEnvironment(homeDir) : process.env,
   });
   if (result.status !== 0) {
     throw new Error(`RELEASE020 Smoke command failed:\n${result.stdout}\n${result.stderr}`);
@@ -97,23 +97,44 @@ export function assertAboutOutput(output, version) {
   }
 }
 
-async function verifyStudio(executable, cliEntry, homeDir) {
+function verificationEnvironment(homeDir) {
+  return {
+    ...process.env,
+    HOME: homeDir,
+    USERPROFILE: homeDir,
+    LOCALAPPDATA: path.join(homeDir, 'AppData', 'Local'),
+    XDG_CONFIG_HOME: path.join(homeDir, '.config'),
+  };
+}
+
+export async function verifyStudio(executable, cliEntry, homeDir) {
   const child = spawn(executable, [cliEntry, 'studio', 'start', '--no-browser'], {
-    env: { ...process.env, HOME: homeDir, USERPROFILE: homeDir },
+    env: verificationEnvironment(homeDir),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  let output = '';
+  let spawnError;
+  child.stdout.on('data', (chunk) => { output = (output + chunk).slice(-8000); });
+  child.stderr.on('data', (chunk) => { output = (output + chunk).slice(-8000); });
+  child.on('error', (error) => { spawnError = error; });
   try {
     const deadline = Date.now() + 15_000;
     while (Date.now() < deadline) {
+      if (spawnError || child.exitCode !== null || child.signalCode !== null) {
+        throw new Error(`RELEASE022 Studio exited before verification: ${spawnError?.message ?? output}`);
+      }
       try {
-        const response = await fetch('http://localhost:5173/studio-api/health');
-        if (response.ok) {
+        const status = JSON.parse(run(executable, [cliEntry, 'studio', 'server', 'status', '--json'], homeDir));
+        const response = status.server?.running && status.server.descriptor.pid === child.pid
+          ? await fetch('http://127.0.0.1:5173/studio-api/health', { signal: AbortSignal.timeout(2000) })
+          : null;
+        if (response?.ok && child.exitCode === null) {
           return;
         }
       } catch {}
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
-    throw new Error('RELEASE022 Studio did not become healthy at http://localhost:5173.');
+    throw new Error(`RELEASE022 Studio did not become healthy at http://127.0.0.1:5173. ${output}`);
   } finally {
     child.kill('SIGTERM');
   }
