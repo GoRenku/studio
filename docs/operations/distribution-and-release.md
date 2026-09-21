@@ -297,6 +297,13 @@ fresh GitHub Release download. It publishes immutable version keys before beta
 aliases, the beta manifest, and the two root installers. An immutable R2 key is
 reused only when its public bytes have the same SHA-256 as the released asset.
 
+Both installers read the beta `release.json` once, select their target artifact,
+and download its immutable `versionKey`. The archive is verified against the
+SHA-256 in that same manifest. Installers must not pair a mutable beta archive
+alias with a separately downloaded checksum: CDN caches or an in-progress
+promotion can serve those two objects from different releases. A cached manifest
+may select an older release, but its versioned archive and checksum stay paired.
+
 ## Studio Skills Release
 
 Studio Skills uses the version in `.codex-plugin/plugin.json`; the version in

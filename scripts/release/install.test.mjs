@@ -9,7 +9,7 @@ import test from 'node:test';
 
 const installer = fileURLToPath(new URL('../../distribution/install.sh', import.meta.url));
 
-function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, badChecksum = false, updateScope, installedVersion = '0.0.1' } = {}) {
+function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, badChecksum = false, manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-installer-'));
   const product = path.join(root, 'archive', 'renku');
   const bin = path.join(root, 'commands');
@@ -40,12 +40,25 @@ exit 72`);
   const archive = path.join(root, 'renku.tar.gz');
   assert.equal(spawnSync('tar', ['-czf', archive, '-C', path.join(root, 'archive'), 'renku']).status, 0);
   const checksum = createHash('sha256').update(readFileSync(archive)).digest('hex');
-  writeFileSync(`${archive}.sha256`, `${badChecksum ? '0'.repeat(64) : checksum}  renku.tar.gz\n`);
+  writeFileSync(path.join(root, 'release.json'), JSON.stringify({
+    version: '0.0.1',
+    artifacts: [
+      { target: 'win32-x64' },
+      {
+        target: 'darwin-arm64',
+        versionKey: 'studio/releases/0.0.1/darwin-arm64/renku.tar.gz',
+        sha256: badChecksum ? '0'.repeat(64) : checksum,
+        ...manifestArtifact,
+      },
+    ],
+  }));
   executable(path.join(bin, 'curl'), `
 touch "$TEST_ROOT/downloaded"
+printf '%s\\n' "$2" >> "$TEST_ROOT/download-urls"
 case "$2" in
-  *.sha256) cp "$TEST_ROOT/renku.tar.gz.sha256" "$4" ;;
-  *) cp "$TEST_ROOT/renku.tar.gz" "$4" ;;
+  */studio/channels/beta/release.json) cp "$TEST_ROOT/release.json" "$4" ;;
+  */studio/releases/0.0.1/darwin-arm64/renku.tar.gz) cp "$TEST_ROOT/renku.tar.gz" "$4" ;;
+  *) exit 74 ;;
 esac`);
   const env = {
     ...process.env,
@@ -146,6 +159,29 @@ test('archive checksum failure stops before installing skills', { skip: process.
   assert.match(output, /INSTALL003/);
   assert.doesNotMatch(output, /Choose the agents/);
 });
+
+test('installer selects its manifest artifact and downloads only the immutable archive', { skip: process.platform !== 'darwin' }, () => {
+  const { root, result, output } = runInstaller();
+  assert.equal(result.status, 0, output);
+  assert.deepEqual(readFileSync(path.join(root, 'download-urls'), 'utf8').trim().split('\n'), [
+    'https://downloads.gorenku.com/studio/channels/beta/release.json',
+    'https://downloads.gorenku.com/studio/releases/0.0.1/darwin-arm64/renku.tar.gz',
+  ]);
+});
+
+for (const manifestArtifact of [
+  { target: 'darwin-x64' },
+  { versionKey: 'studio/channels/beta/darwin-arm64/renku.tar.gz' },
+  { sha256: 'invalid' },
+]) {
+  test(`installer rejects invalid manifest artifact ${JSON.stringify(manifestArtifact)}`, { skip: process.platform !== 'darwin' }, () => {
+    const { root, result, output } = runInstaller({ manifestArtifact });
+    assert.notEqual(result.status, 0);
+    assert.match(output, /INSTALL002/);
+    assert.equal(readFileSync(path.join(root, 'download-urls'), 'utf8').trim().split('\n').length, 1);
+    assert.equal(existsSync(path.join(root, 'skills-args')), false);
+  });
+}
 
 test('failed Apple tools setup stops before agent selection', { skip: process.platform !== 'darwin' }, () => {
   const { output } = runInstaller({ missingGit: true, gitSetupFails: true });

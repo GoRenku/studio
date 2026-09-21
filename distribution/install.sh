@@ -52,11 +52,23 @@ if [ "${RENKU_UPDATE_SCOPE:-}" = 'skills' ]; then
   printf '%s\n' 'Renku skills updated. Restart your agent and start a new conversation.'
   exit 0
 fi
-archive_url="$BASE_URL/studio/channels/beta/$target/renku.tar.gz"
+manifest="$temporary/release.json"
+curl -fsSL "$BASE_URL/studio/channels/beta/release.json" -o "$manifest" || fail 'INSTALL002 Could not download the Renku release manifest.'
+release_version="$(plutil -extract version raw -o - "$manifest")" || fail 'INSTALL002 Release manifest has no version.'
+printf '%s\n' "$release_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || fail 'INSTALL002 Release manifest has an invalid version.'
+artifact_index=0
+while :; do
+  artifact_target="$(plutil -extract "artifacts.$artifact_index.target" raw -o - "$manifest" 2>/dev/null)" || fail "INSTALL002 Release manifest has no artifact for $target."
+  [ "$artifact_target" = "$target" ] && break
+  artifact_index=$((artifact_index + 1))
+done
+version_key="$(plutil -extract "artifacts.$artifact_index.versionKey" raw -o - "$manifest")" || fail 'INSTALL002 Release manifest has no archive path.'
+[ "$version_key" = "studio/releases/$release_version/$target/renku.tar.gz" ] || fail 'INSTALL002 Release manifest has an invalid archive path.'
+expected="$(plutil -extract "artifacts.$artifact_index.sha256" raw -o - "$manifest")" || fail 'INSTALL002 Release manifest has no checksum.'
+printf '%s\n' "$expected" | grep -Eq '^[0-9a-f]{64}$' || fail 'INSTALL002 Release manifest has an invalid checksum.'
+archive_url="$BASE_URL/$version_key"
 
 curl -fsSL "$archive_url" -o "$temporary/renku.tar.gz" || fail "INSTALL002 Could not download $archive_url"
-curl -fsSL "$archive_url.sha256" -o "$temporary/renku.tar.gz.sha256" || fail 'INSTALL002 Could not download the Renku checksum.'
-expected="$(cut -d' ' -f1 "$temporary/renku.tar.gz.sha256")"
 if command -v shasum >/dev/null 2>&1; then
   actual="$(shasum -a 256 "$temporary/renku.tar.gz" | cut -d' ' -f1)"
 elif command -v sha256sum >/dev/null 2>&1; then

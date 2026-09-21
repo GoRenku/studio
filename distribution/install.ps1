@@ -63,12 +63,20 @@ try {
     Write-Host 'Renku skills updated. Restart your agent and start a new conversation.'
     return
   }
-  $ArchiveUrl = "$BaseUrl/studio/channels/beta/$Target/renku.zip"
+  $Manifest = Invoke-RestMethod -Uri "$BaseUrl/studio/channels/beta/release.json"
+  $Artifacts = @($Manifest.artifacts | Where-Object { $_.target -eq $Target })
+  if ($Artifacts.Count -ne 1 -or $Manifest.version -notmatch '^\d+\.\d+\.\d+$') {
+    throw 'INSTALL002 Release manifest has no valid Windows artifact.'
+  }
+  $Artifact = $Artifacts[0]
+  $VersionKey = "studio/releases/$($Manifest.version)/$Target/renku.zip"
+  if ($Artifact.versionKey -cne $VersionKey -or $Artifact.sha256 -cnotmatch '^[0-9a-f]{64}$') {
+    throw 'INSTALL002 Release manifest has an invalid archive path or checksum.'
+  }
+  $ArchiveUrl = "$BaseUrl/$VersionKey"
   $Archive = Join-Path $Temporary 'renku.zip'
-  $Checksum = Join-Path $Temporary 'renku.zip.sha256'
   Invoke-WebRequest -UseBasicParsing -Uri $ArchiveUrl -OutFile $Archive
-  Invoke-WebRequest -UseBasicParsing -Uri "$ArchiveUrl.sha256" -OutFile $Checksum
-  $Expected = ((Get-Content $Checksum -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+  $Expected = $Artifact.sha256
   $Actual = (Get-FileHash -Algorithm SHA256 $Archive).Hash.ToLowerInvariant()
   if ($Expected -ne $Actual) { throw 'INSTALL003 Renku archive SHA-256 mismatch.' }
 
