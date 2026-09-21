@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAssetCommand } from './commands/asset-command.js';
 import { runGenerationCommand } from './commands/generation/command.js';
+import { runStudioCommand } from './commands/studio/index.js';
 import { runRenkuCli, type RenkuCliIo } from './cli.js';
 
 vi.mock('./commands/generation/command.js', () => ({
@@ -9,6 +10,9 @@ vi.mock('./commands/generation/command.js', () => ({
 vi.mock('./commands/asset-command.js', () => ({
   runAssetCommand: vi.fn(),
 }));
+vi.mock('./commands/studio/index.js', () => ({
+  runStudioCommand: vi.fn(),
+}));
 
 describe('Renku CLI command surfaces', () => {
   beforeEach(() => {
@@ -16,6 +20,21 @@ describe('Renku CLI command surfaces', () => {
     vi.mocked(runGenerationCommand).mockResolvedValue(0);
     vi.mocked(runAssetCommand).mockReset();
     vi.mocked(runAssetCommand).mockResolvedValue(0);
+    vi.mocked(runStudioCommand).mockReset();
+    vi.mocked(runStudioCommand).mockResolvedValue(0);
+  });
+
+  it.each([
+    { flags: [], noBrowser: false },
+    { flags: ['--no-browser'], noBrowser: true },
+  ])('passes Studio browser intent for $flags', async ({ flags, noBrowser }) => {
+    const { io, stderr } = createIo();
+    await expect(runRenkuCli(['studio', 'start', ...flags], { io })).resolves.toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(runStudioCommand).toHaveBeenCalledWith(expect.objectContaining({
+      input: ['start'],
+      noBrowser,
+    }));
   });
 
   it('passes repeated bundled indexes and revision preconditions without a Project', async () => {

@@ -433,9 +433,9 @@ function createCliFlags() {
       type: 'boolean',
       default: false,
     },
-    noBrowser: {
+    browser: {
       type: 'boolean',
-      default: false,
+      default: true,
     },
     aspectRatio: {
       type: 'string',
@@ -885,7 +885,7 @@ export async function runRenkuCli(
           input,
           project: cli.flags.project,
           resource: cli.flags.resource,
-          noBrowser: cli.flags.noBrowser,
+          noBrowser: !cli.flags.browser,
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,
