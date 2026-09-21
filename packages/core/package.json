@@ -1,6 +1,6 @@
 {
   "name": "@gorenku/studio-core",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "Renku Studio domain model, validation, workflows, queue and projection primitives",
   "private": true,
   "type": "module",
