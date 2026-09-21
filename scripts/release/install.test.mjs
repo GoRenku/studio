@@ -86,13 +86,13 @@ function runInstaller(options) {
   return executeInstaller(fixture(options));
 }
 
-function executeInstaller(setup) {
+function executeInstaller(setup, shellCommand = 'cat "$INSTALLER" | /bin/sh') {
   // Give prompts a controlling terminal while sh reads its program from a pipe.
   const result = spawnSync('python3', ['-c', `
 import errno, os, pty, sys
 pid, fd = pty.fork()
 if pid == 0:
-    os.execv('/bin/sh', ['sh', '-c', 'cat "$INSTALLER" | /bin/sh'])
+    os.execv('/bin/sh', ['sh', '-c', os.environ['INSTALL_COMMAND']])
 os.write(fd, b'\\n')
 while True:
     try:
@@ -105,7 +105,7 @@ while True:
 _, status = os.waitpid(pid, 0)
 sys.exit(os.waitstatus_to_exitcode(status))
 `], {
-    env: { ...setup.env, INSTALLER: installer }, encoding: 'utf8', timeout: 15000,
+    env: { ...setup.env, INSTALLER: installer, INSTALL_COMMAND: shellCommand }, encoding: 'utf8', timeout: 15000,
   });
   assert.ifError(result.error);
   return { ...setup, result, output: result.stdout + result.stderr };
@@ -118,6 +118,23 @@ test('macOS piped installer uses private Node and passes interactive agent selec
     'add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy',
   ]);
   assert.equal(readFileSync(path.join(root, 'selected-node'), 'utf8').trim(), path.join(root, 'Renku with spaces', 'versions', '0.0.1', 'runtime', 'node', 'bin', 'node'));
+});
+
+test('macOS bootstrap makes renku available in the same parent shell', { skip: process.platform !== 'darwin' }, () => {
+  const setup = fixture();
+  setup.env.RENKU_BIN_ROOT = path.join(setup.root, '.local', 'bin');
+  const { result, output } = executeInstaller(setup, 'cat "$INSTALLER" | /bin/sh && export PATH="$HOME/.local/bin:$PATH" && renku about');
+  assert.equal(result.status, 0, output);
+});
+
+test('printed macOS launch command runs with a custom path containing spaces', { skip: process.platform !== 'darwin' }, () => {
+  const setup = fixture();
+  setup.env.RENKU_BIN_ROOT = path.join(setup.root, 'Renku launchers');
+  const { result, output } = executeInstaller(setup);
+  assert.equal(result.status, 0, output);
+  const command = output.match(/^Start Studio: (.+)$/m)?.[1].trim();
+  assert.ok(command, output);
+  assert.equal(spawnSync('/bin/sh', ['-c', command], { env: setup.env }).status, 0);
 });
 
 test('skills-only update uses the installed runtime without downloading an archive', { skip: process.platform !== 'darwin' }, () => {

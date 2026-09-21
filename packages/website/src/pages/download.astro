@@ -4,8 +4,10 @@ import SiteHeader from '../components/SiteHeader.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LearnNav from '../components/LearnNav.astro';
 
-const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh';
+const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh && export PATH="$HOME/.local/bin:$PATH"';
 const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
+const macLaunchCommand = '"$HOME/.local/bin/renku" studio start';
+const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studio start';
 ---
 
 <BaseLayout
@@ -120,13 +122,18 @@ const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
           <span class="step-number">03</span>
           <div>
             <h3>Start the studio</h3>
-            <p>Reopen your terminal and restart your agent after installation. Run this command to open Studio in your browser, then follow the first-run setup. Start a new conversation in your agent to use the Renku skills.</p>
+            <p>Run this command in the same terminal to open Studio in your browser, then follow the first-run setup. Restart your agent and start a new conversation to load the Renku skills.</p>
           </div>
         </div>
-        <div class="command-block command-block-launch">
+        <div class="command-block command-block-launch" data-platform-panel="mac">
           <span class="command-prompt" aria-hidden="true">$</span>
-          <code>renku studio start</code>
-          <button class="copy-button" type="button" data-copy="renku studio start" aria-label="Copy launch command">Copy</button>
+          <code>{macLaunchCommand}</code>
+          <button class="copy-button" type="button" data-copy={macLaunchCommand} aria-label="Copy macOS launch command">Copy</button>
+        </div>
+        <div class="command-block command-block-launch" data-platform-panel="windows" hidden>
+          <span class="command-prompt" aria-hidden="true">PS</span>
+          <code>{windowsLaunchCommand}</code>
+          <button class="copy-button" type="button" data-copy={windowsLaunchCommand} aria-label="Copy Windows launch command">Copy</button>
         </div>
         <p class="command-note">Keep this terminal session open while using Studio; you can minimize the window. Ctrl+C or closing the session stops Studio. Closing the browser tab does not. Run the same command to start Renku again.</p>
       </div>
@@ -361,7 +368,7 @@ const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
     padding-top: 2.5rem;
   }
 
-  .platform-panel[hidden] {
+  [data-platform-panel][hidden] {
     display: none;
   }
 

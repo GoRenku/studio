@@ -145,12 +145,16 @@ try {
   $PathEntries = @($UserPath -split ';' | Where-Object { $_ })
   if ($PathEntries -notcontains $BinRoot) {
     [Environment]::SetEnvironmentVariable('Path', (($PathEntries + $BinRoot) -join ';'), 'User')
-    Write-Host "INSTALL005 PATH was updated for future processes. Restart terminals and agent desktop apps."
+    Write-Host "INSTALL005 PATH was saved for future terminals. Renku is also available in this PowerShell window."
+  }
+  if (@($env:PATH -split ';') -notcontains $BinRoot) {
+    $env:PATH = "$BinRoot;$env:PATH"
   }
 
   Write-Host "`nRenku $($Manifest.version) installed."
   Install-AgentSkills
-  Write-Host "Start Studio: $BinRoot\renku.cmd studio start"
+  $LauncherLiteral = (Join-Path $BinRoot 'renku.cmd').Replace("'", "''")
+  Write-Host "Start Studio: & '$LauncherLiteral' studio start"
   Write-Host 'Studio will guide you through choosing its recommended Project Library on first launch.'
   Write-Host 'For a custom location, run renku init <storage-root> before completing setup.'
   Write-Host 'Restart your agent and start a new conversation to load the Renku skills.'

@@ -146,13 +146,13 @@ case ":$PATH:" in
         printf '%s\n' '# <<< Renku PATH <<<'
       } >> "$profile"
     fi
-    printf '%s\n' "INSTALL005 PATH was updated in $profile. Restart terminals and agent desktop apps."
+    printf '%s\n' "INSTALL005 PATH was saved in $profile. The launch command below works in this terminal now."
     ;;
 esac
 
 printf '\nRenku %s installed.\n' "$version"
 install_agent_skills
-printf 'Start Studio: %s/renku studio start\n' "$BIN_ROOT"
+printf 'Start Studio: "%s/renku" studio start\n' "$BIN_ROOT"
 printf '%s\n' 'Studio will guide you through choosing its recommended Project Library on first launch.'
 printf '%s\n' 'For a custom location, run renku init <storage-root> before completing setup.'
 printf '%s\n' 'Restart your agent and start a new conversation to load the Renku skills.'

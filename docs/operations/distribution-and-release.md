@@ -73,7 +73,7 @@ Renku includes its own runtime; it does not require a separate Node.js install.
 macOS:
 
 ```bash
-curl -fsSL https://downloads.gorenku.com/install.sh | sh
+curl -fsSL https://downloads.gorenku.com/install.sh | sh && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Windows PowerShell, without WSL:
@@ -122,8 +122,11 @@ Reference: [skills installer documentation](https://github.com/vercel-labs/skill
 
 ### 3. Start Studio
 
-Reopen terminals and restart agent apps after installation so they discover
-`renku` and the skills. Verify the runtime with `renku about`, then run:
+The macOS install command refreshes PATH in the invoking terminal after setup;
+the Windows installer updates the current PowerShell PATH directly. Both
+installers print a quoted full-path launch command that also works immediately,
+including for custom installation folders. Restart agent apps to load the skills.
+Verify the runtime with `renku about`, then run:
 
 ```bash
 renku studio start
