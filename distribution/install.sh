@@ -18,6 +18,14 @@ git_is_ready() {
   git --version >/dev/null 2>&1
 }
 
+installed_runtime_is_ready() {
+  [ "$(plutil -extract version raw -o - "$destination/RELEASE.json" 2>/dev/null)" = "$release_version" ] || return 1
+  [ "$(plutil -extract target raw -o - "$destination/RELEASE.json" 2>/dev/null)" = "$target" ] || return 1
+  [ -f "$destination/app/node_modules/skills/bin/cli.mjs" ] || return 1
+  "$destination/runtime/node/bin/node" "$destination/app/dist/cli.js" about >/dev/null 2>&1 || return 1
+  "$destination/runtime/node/bin/node" "$destination/app/node_modules/skills/bin/cli.mjs" --version >/dev/null 2>&1
+}
+
 install_agent_skills() {
   skills_entry="$destination/app/node_modules/skills/bin/cli.mjs"
   [ -f "$skills_entry" ] || fail 'INSTALL006 Bundled skills installer is missing. Reinstall Renku to restore it.'
@@ -67,32 +75,35 @@ version_key="$(plutil -extract "artifacts.$artifact_index.versionKey" raw -o - "
 expected="$(plutil -extract "artifacts.$artifact_index.sha256" raw -o - "$manifest")" || fail 'INSTALL002 Release manifest has no checksum.'
 printf '%s\n' "$expected" | grep -Eq '^[0-9a-f]{64}$' || fail 'INSTALL002 Release manifest has an invalid checksum.'
 archive_url="$BASE_URL/$version_key"
-
-curl -fsSL "$archive_url" -o "$temporary/renku.tar.gz" || fail "INSTALL002 Could not download $archive_url"
-if command -v shasum >/dev/null 2>&1; then
-  actual="$(shasum -a 256 "$temporary/renku.tar.gz" | cut -d' ' -f1)"
-elif command -v sha256sum >/dev/null 2>&1; then
-  actual="$(sha256sum "$temporary/renku.tar.gz" | cut -d' ' -f1)"
-else
-  fail 'INSTALL003 No SHA-256 verification tool is available.'
-fi
-[ "$expected" = "$actual" ] || fail 'INSTALL003 Renku archive SHA-256 mismatch.'
-
-mkdir -p "$temporary/extracted"
-tar -xzf "$temporary/renku.tar.gz" -C "$temporary/extracted" || fail 'INSTALL004 Could not extract the Renku archive.'
-[ -f "$temporary/extracted/renku/RELEASE.json" ] || fail 'INSTALL004 Extracted archive is not a Renku product.'
-version="$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "$temporary/extracted/renku/RELEASE.json" | head -n 1)"
-[ -n "$version" ] || fail 'INSTALL004 RELEASE.json has no version.'
-
-smoke_node_command="$temporary/extracted/renku/runtime/node/bin/node"
-"$smoke_node_command" "$temporary/extracted/renku/app/dist/cli.js" about >/dev/null || fail 'INSTALL004 Renku CLI smoke validation failed.'
-
-mkdir -p "$INSTALL_ROOT/versions" "$BIN_ROOT"
+version="$release_version"
 destination="$INSTALL_ROOT/versions/$version"
-backup="$INSTALL_ROOT/versions/.previous-$version-$$"
-if [ "${RENKU_UPDATE_SCOPE:-}" = 'all' ] && [ "$destination" = "${RENKU_INSTALLED_PRODUCT:-}" ]; then
-  printf 'Renku %s is already installed. Updating skills.\n' "$version"
+
+if installed_runtime_is_ready; then
+  printf 'Renku %s is already installed. Skipping download and continuing to skills setup.\n' "$version"
 else
+  if [ "$destination" = "${RENKU_INSTALLED_PRODUCT:-}" ]; then
+    fail 'INSTALL004 The running Renku installation is incomplete. Stop Studio and rerun the installer in a new terminal to repair it.'
+  fi
+  curl -fsSL "$archive_url" -o "$temporary/renku.tar.gz" || fail "INSTALL002 Could not download $archive_url"
+  if command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$temporary/renku.tar.gz" | cut -d' ' -f1)"
+  elif command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$temporary/renku.tar.gz" | cut -d' ' -f1)"
+  else
+    fail 'INSTALL003 No SHA-256 verification tool is available.'
+  fi
+  [ "$expected" = "$actual" ] || fail 'INSTALL003 Renku archive SHA-256 mismatch.'
+
+  mkdir -p "$temporary/extracted"
+  tar -xzf "$temporary/renku.tar.gz" -C "$temporary/extracted" || fail 'INSTALL004 Could not extract the Renku archive.'
+  [ -f "$temporary/extracted/renku/RELEASE.json" ] || fail 'INSTALL004 Extracted archive is not a Renku product.'
+  [ "$(plutil -extract version raw -o - "$temporary/extracted/renku/RELEASE.json")" = "$version" ] || fail 'INSTALL004 Extracted release does not match the requested version.'
+
+  smoke_node_command="$temporary/extracted/renku/runtime/node/bin/node"
+  "$smoke_node_command" "$temporary/extracted/renku/app/dist/cli.js" about >/dev/null || fail 'INSTALL004 Renku CLI smoke validation failed.'
+
+  mkdir -p "$INSTALL_ROOT/versions" "$BIN_ROOT"
+  backup="$INSTALL_ROOT/versions/.previous-$version-$$"
   if [ -e "$destination" ]; then
     mv "$destination" "$backup"
   fi
@@ -102,6 +113,7 @@ else
   fi
   rm -rf "$backup"
 fi
+mkdir -p "$BIN_ROOT"
 ln -sfn "$destination" "$INSTALL_ROOT/current"
 
 node_command="$destination/runtime/node/bin/node"

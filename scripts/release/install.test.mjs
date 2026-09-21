@@ -9,7 +9,7 @@ import test from 'node:test';
 
 const installer = fileURLToPath(new URL('../../distribution/install.sh', import.meta.url));
 
-function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, badChecksum = false, manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
+function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, cliExit = 0, badChecksum = false, manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-installer-'));
   const product = path.join(root, 'archive', 'renku');
   const bin = path.join(root, 'commands');
@@ -17,18 +17,20 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, ba
   mkdirSync(path.join(product, 'app', 'dist'), { recursive: true });
   mkdirSync(path.join(product, 'app', 'node_modules', 'skills', 'bin'), { recursive: true });
   mkdirSync(path.join(product, 'runtime', 'node', 'bin'), { recursive: true });
-  writeFileSync(path.join(product, 'RELEASE.json'), '{"version": "0.0.1"}\n');
+  writeFileSync(path.join(product, 'RELEASE.json'), '{"version": "0.0.1", "target": "darwin-arm64"}\n');
   writeFileSync(path.join(product, 'app', 'dist', 'cli.js'), '');
   writeFileSync(path.join(product, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'), '');
   const executable = (file, body) => writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
   executable(path.join(product, 'runtime', 'node', 'bin', 'node'), `
 case "$1" in
   --input-type=commonjs) exec "$TEST_NODE" "$@" ;;
-  */cli.js) exit 0 ;;
+  */cli.js) exit ${cliExit} ;;
   */skills/bin/cli.mjs)
+    [ "$2" != --version ] || exit 0
     [ -t 0 ] || exit 71
     printf '%s\\n' "$@" > "$TEST_ROOT/skills-args"
     command -v node > "$TEST_ROOT/selected-node"
+    [ ! -f "$TEST_ROOT/skills-retry" ] || exit 0
     exit ${skillsExit} ;;
 esac
 exit 72`);
@@ -81,7 +83,10 @@ esac`);
 }
 
 function runInstaller(options) {
-  const setup = fixture(options);
+  return executeInstaller(fixture(options));
+}
+
+function executeInstaller(setup) {
   // Give prompts a controlling terminal while sh reads its program from a pipe.
   const result = spawnSync('python3', ['-c', `
 import errno, os, pty, sys
@@ -158,6 +163,42 @@ test('archive checksum failure stops before installing skills', { skip: process.
   const { output } = runInstaller({ badChecksum: true });
   assert.match(output, /INSTALL003/);
   assert.doesNotMatch(output, /Choose the agents/);
+});
+
+for (const skillsExit of [0, 1]) {
+  test(`rerunning after skills exit ${skillsExit} reuses the runtime and repeats agent selection`, { skip: process.platform !== 'darwin' }, () => {
+    const first = runInstaller({ skillsExit });
+    const installed = path.join(first.env.RENKU_INSTALL_ROOT, 'versions', '0.0.1');
+    writeFileSync(path.join(installed, 'retained-marker'), 'keep');
+    writeFileSync(path.join(first.root, 'download-urls'), '');
+    writeFileSync(path.join(first.root, 'skills-args'), '');
+    writeFileSync(path.join(first.root, 'skills-retry'), '');
+    const retry = executeInstaller(first);
+    assert.equal(retry.result.status, 0, retry.output);
+    assert.match(retry.output, /Skipping download/);
+    assert.equal(readFileSync(path.join(installed, 'retained-marker'), 'utf8'), 'keep');
+    assert.equal(readFileSync(path.join(first.root, 'download-urls'), 'utf8').trim(), 'https://downloads.gorenku.com/studio/channels/beta/release.json');
+    assert.match(readFileSync(path.join(first.root, 'skills-args'), 'utf8'), /GoRenku\/studio-skills/);
+  });
+}
+
+test('an installed runtime that cannot run is downloaded and repaired', { skip: process.platform !== 'darwin' }, () => {
+  const first = runInstaller();
+  const installed = path.join(first.env.RENKU_INSTALL_ROOT, 'versions', '0.0.1');
+  writeFileSync(path.join(installed, 'runtime', 'node', 'bin', 'node'), '#!/bin/sh\nexit 1\n');
+  writeFileSync(path.join(first.root, 'download-urls'), '');
+  const retry = executeInstaller(first);
+  assert.equal(retry.result.status, 0, retry.output);
+  assert.match(readFileSync(path.join(first.root, 'download-urls'), 'utf8'), /studio\/releases\/0.0.1/);
+  assert.equal(spawnSync(path.join(first.env.RENKU_BIN_ROOT, 'renku'), ['about']).status, 0);
+});
+
+test('a downloaded runtime that cannot run is never activated', { skip: process.platform !== 'darwin' }, () => {
+  const { env, result, output } = runInstaller({ cliExit: 1 });
+  assert.notEqual(result.status, 0);
+  assert.match(output, /INSTALL004/);
+  assert.equal(existsSync(path.join(env.RENKU_INSTALL_ROOT, 'versions', '0.0.1')), false);
+  assert.equal(existsSync(path.join(env.RENKU_BIN_ROOT, 'renku')), false);
 });
 
 test('installer selects its manifest artifact and downloads only the immutable archive', { skip: process.platform !== 'darwin' }, () => {

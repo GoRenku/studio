@@ -304,6 +304,16 @@ alias with a separately downloaded checksum: CDN caches or an in-progress
 promotion can serve those two objects from different releases. A cached manifest
 may select an older release, but its versioned archive and checksum stay paired.
 
+Before downloading an archive, both installers check the selected version's
+installation folder, its release version and target, and whether the bundled
+CLI and skills installer run successfully. A healthy matching runtime is reused;
+the installer proceeds to interactive skills setup without downloading or
+extracting the runtime again. This also applies after declining or cancelling
+skills setup, and to full updates when the runtime is already current. Missing
+or damaged installations are downloaded and validated before activation. An
+incomplete runtime executing its own update must instead be repaired by rerunning
+the installer from a terminal, so Windows does not replace its running Node binary.
+
 ## Studio Skills Release
 
 Studio Skills uses the version in `.codex-plugin/plugin.json`; the version in

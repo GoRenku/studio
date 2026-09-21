@@ -14,6 +14,22 @@ function Test-GitCommand([string]$Command) {
   }
 }
 
+function Test-InstalledRuntime([string]$Product, [string]$Version) {
+  try {
+    $InstalledRelease = Get-Content (Join-Path $Product 'RELEASE.json') -Raw | ConvertFrom-Json
+    if ($InstalledRelease.version -cne $Version -or $InstalledRelease.target -cne $Target) { return $false }
+    $InstalledNode = Join-Path $Product 'runtime\node\node.exe'
+    $InstalledSkills = Join-Path $Product 'app\node_modules\skills\bin\cli.mjs'
+    if (-not (Test-Path $InstalledSkills)) { return $false }
+    & $InstalledNode (Join-Path $Product 'app\dist\cli.js') about 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & $InstalledNode $InstalledSkills --version 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+  } catch {
+    return $false
+  }
+}
+
 function Install-AgentSkills {
   $SkillsEntry = Join-Path $Destination 'app\node_modules\skills\bin\cli.mjs'
   if (-not (Test-Path $SkillsEntry)) { throw 'INSTALL006 Bundled skills installer is missing. Reinstall Renku to restore it.' }
@@ -74,31 +90,35 @@ try {
     throw 'INSTALL002 Release manifest has an invalid archive path or checksum.'
   }
   $ArchiveUrl = "$BaseUrl/$VersionKey"
-  $Archive = Join-Path $Temporary 'renku.zip'
-  Invoke-WebRequest -UseBasicParsing -Uri $ArchiveUrl -OutFile $Archive
-  $Expected = $Artifact.sha256
-  $Actual = (Get-FileHash -Algorithm SHA256 $Archive).Hash.ToLowerInvariant()
-  if ($Expected -ne $Actual) { throw 'INSTALL003 Renku archive SHA-256 mismatch.' }
-
-  $Extracted = Join-Path $Temporary 'extracted'
-  Expand-Archive -Path $Archive -DestinationPath $Extracted
-  $Product = Join-Path $Extracted 'renku'
-  $ReleasePath = Join-Path $Product 'RELEASE.json'
-  if (-not (Test-Path $ReleasePath)) { throw 'INSTALL004 Extracted archive is not a Renku product.' }
-  $Release = Get-Content $ReleasePath -Raw | ConvertFrom-Json
-
-  $SmokeNodeCommand = Join-Path $Product 'runtime\node\node.exe'
-  $SmokeCliEntry = Join-Path $Product 'app\dist\cli.js'
-  & $SmokeNodeCommand $SmokeCliEntry about | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw 'INSTALL004 Renku CLI smoke validation failed.' }
-
   $VersionsRoot = Join-Path $InstallRoot 'versions'
-  New-Item -ItemType Directory -Force -Path $VersionsRoot, $BinRoot | Out-Null
-  $Destination = Join-Path $VersionsRoot $Release.version
-  $Backup = Join-Path $VersionsRoot ('.previous-' + $Release.version + '-' + $PID)
-  if ($env:RENKU_UPDATE_SCOPE -eq 'all' -and $Destination -eq $env:RENKU_INSTALLED_PRODUCT) {
-    Write-Host "Renku $($Release.version) is already installed. Updating skills."
+  $Destination = Join-Path $VersionsRoot $Manifest.version
+  if (Test-InstalledRuntime $Destination $Manifest.version) {
+    Write-Host "Renku $($Manifest.version) is already installed. Skipping download and continuing to skills setup."
   } else {
+    if ($Destination -eq $env:RENKU_INSTALLED_PRODUCT) {
+      throw 'INSTALL004 The running Renku installation is incomplete. Stop Studio and rerun the installer in a new terminal to repair it.'
+    }
+    $Archive = Join-Path $Temporary 'renku.zip'
+    Invoke-WebRequest -UseBasicParsing -Uri $ArchiveUrl -OutFile $Archive
+    $Expected = $Artifact.sha256
+    $Actual = (Get-FileHash -Algorithm SHA256 $Archive).Hash.ToLowerInvariant()
+    if ($Expected -ne $Actual) { throw 'INSTALL003 Renku archive SHA-256 mismatch.' }
+
+    $Extracted = Join-Path $Temporary 'extracted'
+    Expand-Archive -Path $Archive -DestinationPath $Extracted
+    $Product = Join-Path $Extracted 'renku'
+    $ReleasePath = Join-Path $Product 'RELEASE.json'
+    if (-not (Test-Path $ReleasePath)) { throw 'INSTALL004 Extracted archive is not a Renku product.' }
+    $Release = Get-Content $ReleasePath -Raw | ConvertFrom-Json
+    if ($Release.version -cne $Manifest.version) { throw 'INSTALL004 Extracted release does not match the requested version.' }
+
+    $SmokeNodeCommand = Join-Path $Product 'runtime\node\node.exe'
+    $SmokeCliEntry = Join-Path $Product 'app\dist\cli.js'
+    & $SmokeNodeCommand $SmokeCliEntry about | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'INSTALL004 Renku CLI smoke validation failed.' }
+
+    New-Item -ItemType Directory -Force -Path $VersionsRoot, $BinRoot | Out-Null
+    $Backup = Join-Path $VersionsRoot ('.previous-' + $Release.version + '-' + $PID)
     if (Test-Path $Destination) { Move-Item $Destination $Backup }
     try {
       Move-Item $Product $Destination
@@ -108,6 +128,7 @@ try {
     }
     if (Test-Path $Backup) { Remove-Item -Recurse -Force $Backup }
   }
+  New-Item -ItemType Directory -Force -Path $BinRoot | Out-Null
   $InstallationJson = @{ installRoot = $InstallRoot; binRoot = $BinRoot } | ConvertTo-Json
   [IO.File]::WriteAllText((Join-Path $Destination 'INSTALLATION.json'), $InstallationJson, [Text.UTF8Encoding]::new($false))
   Set-Content -Path (Join-Path $InstallRoot 'current.txt') -Value $Destination -Encoding utf8
@@ -127,7 +148,7 @@ try {
     Write-Host "INSTALL005 PATH was updated for future processes. Restart terminals and agent desktop apps."
   }
 
-  Write-Host "`nRenku $($Release.version) installed."
+  Write-Host "`nRenku $($Manifest.version) installed."
   Install-AgentSkills
   Write-Host "Start Studio: $BinRoot\renku.cmd studio start"
   Write-Host 'Studio will guide you through choosing its recommended Project Library on first launch.'

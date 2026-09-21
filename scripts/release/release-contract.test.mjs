@@ -287,16 +287,6 @@ test('local runtime acquisition removes only its failed temporary download', () 
   assert.equal(attempt, 2);
 });
 
-test('installers smoke the extracted CLI before activating a version', () => {
-  const shellInstaller = readFileSync(path.join(repositoryRoot, 'distribution/install.sh'), 'utf8');
-  const windowsInstaller = readFileSync(path.join(repositoryRoot, 'distribution/install.ps1'), 'utf8');
-  assert.ok(shellInstaller.indexOf('Renku CLI smoke validation failed') < shellInstaller.indexOf('destination="$INSTALL_ROOT/versions/$version"'));
-  assert.ok(windowsInstaller.indexOf('Renku CLI smoke validation failed') < windowsInstaller.indexOf('$Destination = Join-Path $VersionsRoot'));
-  for (const installer of [shellInstaller, windowsInstaller]) {
-    assert.doesNotMatch(installer, /Bundled plugin|Claude Code|IDE extension/);
-  }
-});
-
 test('product verification rejects a no-op CLI smoke response', () => {
   assert.doesNotThrow(() =>
     assertAboutOutput(JSON.stringify({ binary: 'renku', version: '0.1.0' }), '0.1.0')

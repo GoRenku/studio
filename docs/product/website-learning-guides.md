@@ -3,7 +3,7 @@
 The public website separates installation, first-session setup, and filmmaking
 instruction so that downloading Renku remains a focused task.
 
-- `/download/` retains the platform installer, Codex plugin installation, and
+- `/download/` covers the platform installer, cross-agent skills setup, and
   Studio launch instructions. It links onward to Quick Start.
 - `/quick-start/` covers device-wide provider credentials, Project creation,
   agent-assisted FDX import, and the Codex/Studio review loop.
