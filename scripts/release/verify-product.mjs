@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdtempSync,
@@ -34,8 +34,8 @@ export async function verifyProduct(productRoot) {
   run(nodeExecutable, [path.join(productRoot, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'), '--version']);
   run(nodeExecutable, [cliEntry, 'init', path.join(testHome, 'movies'), '--json'], testHome);
   run(nodeExecutable, [cliEntry, 'create', 'release-smoke', '--title', 'Release Smoke', '--json'], testHome);
-  await verifyStudio(nodeExecutable, cliEntry, testHome);
-  console.log(`Runtime verified Renku ${release.version} ${release.target}.`);
+  verifyStudioModule(nodeExecutable, path.join(productRoot, 'app'), testHome);
+  console.log(`Runtime verified Renku ${release.version} ${release.target}: CLI and Studio module load passed; Studio HTTP startup was not tested.`);
   return verificationReport(release, 'runtime');
 }
 
@@ -68,6 +68,7 @@ export function verifyProductStructure(productRoot) {
   assertStudioOnlyProduct(productRoot);
   assertNoForbiddenFiles(productRoot);
   assertTargetNativeDependencies(productRoot, target);
+  assertStudioWebAssets(path.join(productRoot, 'app'));
   console.log(`Structurally verified Renku ${release.version} ${release.target}.`);
   return { release, target, nodeExecutable };
 }
@@ -107,36 +108,31 @@ function verificationEnvironment(homeDir) {
   };
 }
 
-export async function verifyStudio(executable, cliEntry, homeDir) {
-  const child = spawn(executable, [cliEntry, 'studio', 'start', '--no-browser'], {
-    env: verificationEnvironment(homeDir),
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  let output = '';
-  let spawnError;
-  child.stdout.on('data', (chunk) => { output = (output + chunk).slice(-8000); });
-  child.stderr.on('data', (chunk) => { output = (output + chunk).slice(-8000); });
-  child.on('error', (error) => { spawnError = error; });
-  try {
-    const deadline = Date.now() + 15_000;
-    while (Date.now() < deadline) {
-      if (spawnError || child.exitCode !== null || child.signalCode !== null) {
-        throw new Error(`RELEASE022 Studio exited before verification: ${spawnError?.message ?? output}`);
-      }
-      try {
-        const status = JSON.parse(run(executable, [cliEntry, 'studio', 'server', 'status', '--json'], homeDir));
-        const response = status.server?.running && status.server.descriptor.pid === child.pid
-          ? await fetch('http://127.0.0.1:5173/studio-api/health', { signal: AbortSignal.timeout(2000) })
-          : null;
-        if (response?.ok && child.exitCode === null) {
-          return;
-        }
-      } catch {}
-      await new Promise((resolve) => setTimeout(resolve, 200));
+export function assertStudioWebAssets(appRoot) {
+  const dist = path.join(appRoot, 'node_modules', '@gorenku', 'studio', 'dist');
+  const index = path.join(dist, 'index.html');
+  const assets = path.join(dist, 'assets');
+  if (!existsSync(index) || !statSync(index).isFile() ||
+      !existsSync(assets) || !statSync(assets).isDirectory() ||
+      readdirSync(assets).length === 0) {
+    throw new Error(`RELEASE022 Missing built Studio web assets: ${dist}`);
+  }
+}
+
+export function verifyStudioModule(executable, appRoot, homeDir) {
+  const result = spawnSync(executable, ['--input-type=module', '--eval', `
+    const studio = await import('@gorenku/studio/server');
+    if (typeof studio.startMovieStudioServer !== 'function') {
+      throw new Error('Studio server entrypoint is missing.');
     }
-    throw new Error(`RELEASE022 Studio did not become healthy at http://127.0.0.1:5173. ${output}`);
-  } finally {
-    child.kill('SIGTERM');
+  `], {
+    cwd: appRoot,
+    env: verificationEnvironment(homeDir),
+    encoding: 'utf8',
+    timeout: 15_000,
+  });
+  if (result.status !== 0) {
+    throw new Error(`RELEASE022 Studio module verification failed: ${result.error?.message ?? result.stderr}`);
   }
 }
 
@@ -203,6 +199,7 @@ function verificationReport(release, level) {
     version: release.version,
     target: release.target,
     level,
+    studioHttpStartup: 'not-tested',
     verifier: `${process.platform}-${process.arch}`,
     verifiedAt: new Date().toISOString(),
   };

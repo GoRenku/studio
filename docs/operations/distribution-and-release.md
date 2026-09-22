@@ -230,8 +230,9 @@ tag. Publish then:
    `darwin-arm64`, `darwin-x64`, and `win32-x64`;
 3. assembles one self-contained product per target under
    `release/local/vX.Y.Z`;
-4. fully executes the CLI, database migration, and Studio health checks for the
-   native host target, while structurally verifying the bundled Node runtime,
+4. executes the packaged CLI and database migration checks, and imports the
+   packaged Studio server module for the native host target, while structurally
+   verifying the bundled Node runtime,
    better-sqlite3 prebuild, esbuild package, release metadata, and content
    boundary for cross-packaged targets;
 5. records `runtime` or `structural` verification evidence for every artifact;
@@ -267,6 +268,14 @@ The Windows archive should be exercised manually on the maintainer's Windows
 machine before or immediately after alpha distribution. The release manifest
 preserves the verification level so the distinction is visible rather than
 implied.
+
+Local verification checks that Studio's built `dist/index.html` and nonempty
+`dist/assets` directory exist for every target. Native `runtime` verification
+checks module loading but does not start Studio, bind a port, or query the
+development server. The existing singleton on port 5173 can remain running.
+Verification reports explicitly record `studioHttpStartup: "not-tested"`;
+`runtime` does not claim HTTP startup or serving was tested. Full packaged
+Studio startup verification on an isolated CI runner is deferred.
 
 If prepare succeeded but publication needs to be resumed:
 
