@@ -13,6 +13,7 @@ const year = new Date().getFullYear();
       <span>renku</span>
     </div>
     <p class="footer-tag">The filmmaking studio for live action and AI.</p>
+    <button class="cookie-settings" type="button" data-cookie-settings>Analytics choice</button>
     <p class="footer-legal">© {year} Renku. All rights reserved.</p>
   </div>
 </footer>
@@ -49,6 +50,19 @@ const year = new Date().getFullYear();
     color: var(--paper-700);
     font-size: 0.8rem;
   }
+
+  .cookie-settings {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--paper-500);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .cookie-settings:hover,
+  .cookie-settings:focus-visible { color: var(--paper-100); }
 
   @media (max-width: 640px) {
     .footer-legal {

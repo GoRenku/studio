@@ -2,7 +2,7 @@
   "name": "@gorenku/studio",
   "private": true,
   "version": "0.1.19",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
     "./server": {

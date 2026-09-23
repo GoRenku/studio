@@ -3,6 +3,8 @@ import '@fontsource-variable/fraunces/index.css';
 import '../styles/global.css';
 
 import { site } from '../data/site';
+import CookieConsent from '../components/CookieConsent.astro';
+import WebsiteAnalytics from '../components/WebsiteAnalytics.astro';
 
 interface Props {
   title?: string;
@@ -28,6 +30,8 @@ const { title = `${site.name} — ${site.tagline}`, description = site.descripti
   </head>
   <body>
     <slot />
+    <CookieConsent />
+    <WebsiteAnalytics />
 
     <script>
       const revealables = document.querySelectorAll('[data-reveal]');

@@ -82,7 +82,9 @@ if (!existsSync(targetNodeExecutable(runtimeRoot, target))) {
   throw new Error(`RELEASE003 Bundled Node runtime does not match ${target.id}.`);
 }
 
-cpSync(path.join(repositoryRoot, 'LICENSE'), path.join(productRoot, 'LICENSE'));
+for (const name of ['LICENSE', 'NOTICE', 'TRADEMARKS.md']) {
+  cpSync(path.join(repositoryRoot, name), path.join(productRoot, name));
+}
 mkdirSync(path.join(productRoot, 'distribution'));
 for (const name of ['install.sh', 'install.ps1']) {
   cpSync(path.join(repositoryRoot, 'distribution', name), path.join(productRoot, 'distribution', name));
@@ -123,6 +125,9 @@ function assertRequiredRuntime(root) {
     path.join(cliDependencyRoot, '@gorenku', 'studio')
   );
   const required = [
+    'LICENSE',
+    'NOTICE',
+    'TRADEMARKS.md',
     'app/dist/cli.js',
     'app/node_modules/skills/bin/cli.mjs',
     path.relative(root, path.join(coreRoot, 'drizzle', 'meta', '_journal.json')),

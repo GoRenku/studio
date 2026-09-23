@@ -1,0 +1,82 @@
+<aside class="cookie-banner" id="cookie-banner" aria-label="Analytics consent" hidden>
+  <p>May we use analytics to learn which Renku guides and downloads are useful?</p>
+  <div class="cookie-actions">
+    <button type="button" data-cookie-choice="no">No</button>
+    <button type="button" data-cookie-choice="yes">Yes</button>
+  </div>
+</aside>
+
+<script>
+  const consentKey = 'renku_website_analytics_consent';
+  const banner = document.getElementById('cookie-banner');
+  const settings = document.querySelector<HTMLButtonElement>('[data-cookie-settings]');
+
+  function getConsent() {
+    try {
+      return localStorage.getItem(consentKey);
+    } catch {
+      return null;
+    }
+  }
+
+  if (banner && getConsent() !== 'yes' && getConsent() !== 'no') banner.hidden = false;
+
+  banner?.addEventListener('click', (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-cookie-choice]');
+    const choice = button?.dataset.cookieChoice;
+    if (choice !== 'yes' && choice !== 'no') return;
+
+    try {
+      localStorage.setItem(consentKey, choice);
+    } catch {
+      return;
+    }
+
+    banner.hidden = true;
+    window.dispatchEvent(new CustomEvent('renku:analytics-consent', { detail: choice }));
+  });
+
+  settings?.addEventListener('click', () => {
+    if (banner) banner.hidden = false;
+  });
+</script>
+
+<style>
+  .cookie-banner {
+    position: fixed;
+    inset: auto 1.25rem 1.25rem;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    max-width: 48rem;
+    margin-inline: auto;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--ink-600);
+    border-radius: var(--radius-md);
+    background: var(--ink-850);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+  }
+
+  .cookie-banner[hidden] { display: none; }
+  .cookie-banner p { color: var(--paper-300); font-size: 0.88rem; }
+  .cookie-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+  .cookie-actions button {
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--ink-600);
+    border-radius: 999px;
+    background: var(--ink-800);
+    color: var(--paper-100);
+    font: inherit;
+    font-size: 0.83rem;
+    cursor: pointer;
+  }
+  .cookie-actions button:last-child { border-color: var(--amber-500); background: var(--amber-500); color: var(--ink-950); }
+  .cookie-actions button:focus-visible { outline: 2px solid var(--paper-100); outline-offset: 2px; }
+
+  @media (max-width: 640px) {
+    .cookie-banner { flex-direction: column; align-items: flex-start; }
+    .cookie-actions { align-self: flex-end; }
+  }
+</style>

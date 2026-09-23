@@ -1,0 +1,86 @@
+---
+// PostHog project tokens are public browser identifiers, not secret API keys.
+const token = 'phc_rTTOTmP5c7ZzNTKVMbVwEzmyofCP3dio7ZSI1Zavub6';
+const host = 'https://eu.i.posthog.com';
+---
+
+<script is:inline define:vars={{ token, host }}>
+  (function () {
+    var consentKey = 'renku_website_analytics_consent';
+    var started = false;
+
+    function trackPage() {
+      var path = window.location.pathname;
+      window.posthog.capture('$pageview');
+
+      if (path === '/download' || path === '/download/') {
+        try {
+          if (sessionStorage.getItem('renku_download_click') === 'yes') {
+            sessionStorage.removeItem('renku_download_click');
+            window.posthog.capture('download_clicked');
+          }
+        } catch {
+          // Browser storage may be unavailable; the click handler sends the event directly then.
+        }
+      } else if (path === '/quick-start/' || path === '/quick-start') {
+        window.posthog.capture('quick_start_viewed');
+      } else if (path === '/tutorials/' || path === '/tutorials') {
+        window.posthog.capture('tutorials_viewed');
+      } else {
+        var tutorial = path.match(/^\/tutorials\/([^/]+)\/?$/);
+        if (tutorial) window.posthog.capture('tutorial_viewed', { tutorial: tutorial[1] });
+      }
+    }
+
+    function start() {
+      if (started) return;
+      started = true;
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+
+      window.posthog.init(token, {
+        api_host: host,
+        capture_pageview: false,
+        autocapture: false,
+        disable_session_recording: true,
+        persistence: 'localStorage',
+        person_profiles: 'identified_only',
+      });
+      window.posthog.opt_in_capturing();
+      trackPage();
+    }
+
+    try {
+      if (localStorage.getItem(consentKey) === 'yes') start();
+    } catch {
+      // Analytics stays off when browser storage is unavailable.
+    }
+
+    window.addEventListener('renku:analytics-consent', function (event) {
+      if (event.detail === 'yes') {
+        if (started) {
+          window.posthog.opt_in_capturing();
+          trackPage();
+        } else {
+          start();
+        }
+      } else if (started) {
+        window.posthog.opt_out_capturing();
+      }
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!started || !(event.target instanceof Element)) return;
+      var link = event.target.closest('a[href]');
+      if (!link) return;
+      var destination = new URL(link.href, window.location.href);
+      if (destination.origin === window.location.origin && (destination.pathname === '/download' || destination.pathname === '/download/')) {
+        try {
+          if (localStorage.getItem(consentKey) !== 'yes') return;
+          sessionStorage.setItem('renku_download_click', 'yes');
+        } catch {
+          window.posthog.capture('download_clicked', {}, { send_instantly: true });
+        }
+      }
+    });
+  })();
+</script>

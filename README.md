@@ -9,6 +9,12 @@ in a durable project that the agent can read and update through the CLI.
 This repository is the technical entrypoint for the Studio runtime, CLI, and
 shared domain implementation. To work on the code, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
+Copyright © 2026 Kerem Karatal. Renku Studio is licensed under
+[GNU AGPLv3](LICENSE). The license covers the software, not the films and other
+creative work people make with it. Third-party materials retain their own
+licenses. The Renku names and brand assets are covered by the separate
+[trademark policy](TRADEMARKS.md).
+
 ![Codex directing a scene alongside Renku Studio, with Blender previs and generated footage](docs/screenshots/codex-and-renku.png)
 
 ## How the repositories fit together

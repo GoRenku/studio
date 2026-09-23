@@ -3,6 +3,24 @@
 Marketing website for **Renku** — the filmmaking studio for live action and AI.
 Built with [Astro](https://astro.build).
 
+## Website analytics
+
+The website uses the existing **Renku Website** PostHog project in the EU region.
+Its public project token is set in `src/components/WebsiteAnalytics.astro`.
+The consent banner stores a `yes` or `no` choice in browser `localStorage`.
+PostHog is loaded only after `yes`; the local Studio app has no website tracking.
+
+After consent, the site sends pageviews plus these focused events:
+
+| Event | When it is sent |
+| --- | --- |
+| `download_clicked` | A link to `/download` is clicked. |
+| `quick_start_viewed` | Quick Start is opened. |
+| `tutorials_viewed` | The tutorial index is opened. |
+| `tutorial_viewed` | A tutorial is opened, with its slug in `tutorial`. |
+
+Visitors can change their choice with **Analytics choice** in the footer.
+
 ## Commands
 
 Run from this directory (or with `pnpm --filter @gorenku/website <cmd>` from the repo root):
