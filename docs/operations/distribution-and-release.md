@@ -68,6 +68,16 @@ prepared tag.
 ### 1. Install Renku
 
 Run the platform installer yourself in Terminal or native Windows PowerShell.
+Before downloading the runtime, the installer asks a yes/no question for the
+dated Terms of Use at `https://gorenku.com/terms/2026-09-23/`. It saves the
+accepted Terms version in `TERMS_ACCEPTANCE.txt` under the installation root.
+Later installer runs, including updates, skip the question while that version
+matches. Keep the dated page unchanged after publication; future terms need a
+new dated page and an updated installer prompt and version. Publish the dated
+page before releasing an installer that points to it. Declining or running
+without an interactive terminal before acceptance stops before installation
+changes are made. The Terms do not change the AGPLv3 license for Studio or the
+MIT license for Skills.
 The bundled Node runtime requires macOS 13.5 or newer. Windows requires x64
 Windows 10 version 1803 or newer (including Windows 11), with its built-in
 `tar.exe`. Unsupported systems are rejected before the runtime download.

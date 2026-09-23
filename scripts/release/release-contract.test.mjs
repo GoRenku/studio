@@ -352,6 +352,20 @@ test('release dependency policy is strict and installers do not resolve dependen
   }
 });
 
+test('installers identify the current website Terms of Use', () => {
+  const termsPage = readFileSync(path.join(repositoryRoot, 'packages/website/src/pages/terms.astro'), 'utf8');
+  const datedTermsPage = readFileSync(path.join(repositoryRoot, 'packages/website/src/pages/terms/2026-09-23.astro'), 'utf8');
+  const date = termsPage.match(/Last updated: ([^<]+)/)?.[1];
+  assert.ok(date);
+  assert.ok(datedTermsPage.includes(`Last updated: ${date}`));
+  for (const name of ['install.sh', 'install.ps1']) {
+    const installer = readFileSync(path.join(repositoryRoot, 'distribution', name), 'utf8');
+    assert.ok(installer.includes(`Renku Terms of Use (${date}): https://gorenku.com/terms/2026-09-23/`));
+    assert.match(installer, /\$TermsVersion|TERMS_VERSION/);
+    assert.ok(installer.includes("'2026-09-23'"));
+  }
+});
+
 test('Studio-only product verification rejects plugin-owned roots', () => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-product-boundary-'));
   assert.doesNotThrow(() => assertStudioOnlyProduct(root));

@@ -93,14 +93,14 @@ function runInstaller(options) {
   return executeInstaller(fixture(options));
 }
 
-function executeInstaller(setup, shellCommand = 'cat "$INSTALLER" | /bin/sh') {
+function executeInstaller(setup, shellCommand = 'cat "$INSTALLER" | /bin/sh', input = 'yes\n\n') {
   // Give prompts a controlling terminal while sh reads its program from a pipe.
   const result = spawnSync('python3', ['-c', `
 import errno, os, pty, sys
 pid, fd = pty.fork()
 if pid == 0:
     os.execv('/bin/sh', ['sh', '-c', os.environ['INSTALL_COMMAND']])
-os.write(fd, b'\\n')
+os.write(fd, os.environ['INSTALL_INPUT'].encode())
 while True:
     try:
         data = os.read(fd, 65536)
@@ -112,7 +112,7 @@ while True:
 _, status = os.waitpid(pid, 0)
 sys.exit(os.waitstatus_to_exitcode(status))
 `], {
-    env: { ...setup.env, INSTALLER: installer, INSTALL_COMMAND: shellCommand }, encoding: 'utf8', timeout: 15000,
+    env: { ...setup.env, INSTALLER: installer, INSTALL_COMMAND: shellCommand, INSTALL_INPUT: input }, encoding: 'utf8', timeout: 15000,
   });
   assert.ifError(result.error);
   return { ...setup, result, output: result.stdout + result.stderr };
@@ -120,11 +120,53 @@ sys.exit(os.waitstatus_to_exitcode(status))
 
 test('macOS piped installer uses private Node and passes interactive agent selection', { skip: process.platform !== 'darwin' }, () => {
   const { root, output } = runInstaller();
+  assert.match(output, /Do you accept these Terms of Use\? \[y\/N\]/);
+  assert.equal(readFileSync(path.join(root, 'Renku with spaces', 'TERMS_ACCEPTANCE.txt'), 'utf8'), '2026-09-23\n');
   assert.match(output, /restart your agent/);
   assert.deepEqual(readFileSync(path.join(root, 'skills-args'), 'utf8').trim().split('\n').slice(1), [
     'add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy',
   ]);
   assert.equal(readFileSync(path.join(root, 'selected-node'), 'utf8').trim(), path.join(root, 'Renku with spaces', 'versions', '0.0.1', 'runtime', 'node', 'bin', 'node'));
+});
+
+test('declining terms stops before any download or installation', { skip: process.platform !== 'darwin' }, () => {
+  const setup = fixture();
+  const { result, output } = executeInstaller(setup, 'cat "$INSTALLER" | /bin/sh', 'no\n');
+  assert.notEqual(result.status, 0);
+  assert.match(output, /INSTALL010 Terms were not accepted/);
+  assert.equal(existsSync(path.join(setup.root, 'downloaded')), false);
+  assert.equal(existsSync(setup.env.RENKU_INSTALL_ROOT), false);
+});
+
+test('a saved acceptance skips the Terms question on later installs and updates', { skip: process.platform !== 'darwin' }, () => {
+  const first = runInstaller();
+  assert.equal(first.result.status, 0, first.output);
+  const retry = executeInstaller(first, 'cat "$INSTALLER" | /bin/sh', '\n');
+  assert.equal(retry.result.status, 0, retry.output);
+  assert.doesNotMatch(retry.output, /Do you accept these Terms of Use/);
+  first.env.RENKU_INSTALLED_PRODUCT = path.join(first.env.RENKU_INSTALL_ROOT, 'versions', '0.0.1');
+  first.env.RENKU_UPDATE_SCOPE = 'all';
+  const fullUpdate = executeInstaller(first, 'cat "$INSTALLER" | /bin/sh', '\n');
+  assert.equal(fullUpdate.result.status, 0, fullUpdate.output);
+  assert.doesNotMatch(fullUpdate.output, /Do you accept these Terms of Use/);
+  first.env.RENKU_UPDATE_SCOPE = 'skills';
+  const skillsUpdate = executeInstaller(first, 'cat "$INSTALLER" | /bin/sh', '\n');
+  assert.equal(skillsUpdate.result.status, 0, skillsUpdate.output);
+  assert.doesNotMatch(skillsUpdate.output, /Do you accept these Terms of Use/);
+});
+
+test('a different accepted Terms version requires a new yes/no answer', { skip: process.platform !== 'darwin' }, () => {
+  const first = runInstaller();
+  assert.equal(first.result.status, 0, first.output);
+  const receipt = path.join(first.env.RENKU_INSTALL_ROOT, 'TERMS_ACCEPTANCE.txt');
+  writeFileSync(receipt, '2026-01-01\n');
+  const declined = executeInstaller(first, 'cat "$INSTALLER" | /bin/sh', 'no\n');
+  assert.notEqual(declined.result.status, 0);
+  assert.match(declined.output, /Do you accept these Terms of Use/);
+  assert.equal(readFileSync(receipt, 'utf8'), '2026-01-01\n');
+  const accepted = executeInstaller(first, 'cat "$INSTALLER" | /bin/sh', 'Y\n\n');
+  assert.equal(accepted.result.status, 0, accepted.output);
+  assert.equal(readFileSync(receipt, 'utf8'), '2026-09-23\n');
 });
 
 test('macOS bootstrap makes renku available in the same parent shell', { skip: process.platform !== 'darwin' }, () => {
@@ -335,5 +377,5 @@ result = subprocess.run(['/bin/sh', os.environ['INSTALLER']], start_new_session=
 sys.exit(result.returncode)
 `], { env: { ...env, INSTALLER: installer }, encoding: 'utf8', timeout: 15000 });
   assert.equal(result.status, 1);
-  assert.match(result.stdout + result.stderr, /INSTALL007/);
+  assert.match(result.stdout + result.stderr, /INSTALL010/);
 });

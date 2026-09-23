@@ -1,0 +1,50 @@
+.legal-page {
+  padding-block: clamp(7rem, 12vw, 10rem) 6rem;
+}
+
+.legal-content {
+  max-width: 52rem;
+}
+
+.legal-content h1 {
+  margin-block: 0.5rem 0.75rem;
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+}
+
+.legal-content .legal-date {
+  margin-bottom: 2.5rem;
+  color: var(--paper-500);
+  font-size: 0.9rem;
+}
+
+.legal-content section {
+  margin-top: 2.5rem;
+}
+
+.legal-content h2 {
+  margin-bottom: 0.9rem;
+  font-size: clamp(1.5rem, 3vw, 1.9rem);
+}
+
+.legal-content p + p {
+  margin-top: 1rem;
+}
+
+.legal-content p {
+  color: var(--paper-300);
+}
+
+.legal-content .eyebrow {
+  color: var(--amber-500);
+}
+
+.legal-content a {
+  color: var(--amber-400);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.legal-content a:hover,
+.legal-content a:focus-visible {
+  color: var(--paper-100);
+}

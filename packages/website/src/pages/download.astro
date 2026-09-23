@@ -39,6 +39,7 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
         </div>
         <p>macOS 13.5+ on Apple silicon or Intel · Windows 10 (1803+) or 11, x64</p>
       </div>
+      <p class="install-terms">Before installing Renku, the installer asks you to read and accept the <a href="/terms/">Terms of Use</a>. It remembers your answer for updates and asks again only if the terms change. You can also review the <a href="/privacy/">Privacy Notice</a>. Renku Studio’s AGPLv3 license and the Skills’ MIT license govern your open-source rights independently.</p>
 
       <div class="platform-tabs" role="tablist" aria-label="Operating system" data-reveal>
         <button
@@ -314,6 +315,21 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
     font-size: 0.82rem;
     color: var(--paper-700);
   }
+
+  .install-terms {
+    margin-top: 1.5rem;
+    color: var(--paper-300);
+    font-size: 0.9rem;
+  }
+
+  .install-terms a {
+    color: var(--amber-400);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .install-terms a:hover,
+  .install-terms a:focus-visible { color: var(--paper-100); }
 
   .platform-tabs {
     display: grid;

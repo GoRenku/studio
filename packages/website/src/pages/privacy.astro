@@ -1,0 +1,66 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import '../styles/legal.css';
+---
+
+<BaseLayout
+  title="Privacy Notice — Renku"
+  description="How Renku handles local project data, provider requests, website hosting, and optional website analytics."
+>
+  <SiteHeader />
+  <main class="legal-page" id="top">
+    <div class="container legal-content">
+      <p class="eyebrow">Legal</p>
+      <h1>Privacy Notice</h1>
+      <p class="legal-date">Last updated: 23 September 2026</p>
+
+      <p>This notice explains how Renku Studio and <a href="https://gorenku.com">gorenku.com</a> handle information. Kerem Karatal is responsible for the website and its optional analytics. You can contact him at <a href="mailto:support@codingventures.com">support@codingventures.com</a>.</p>
+
+      <section aria-labelledby="privacy-studio">
+        <h2 id="privacy-studio">Renku Studio runs locally</h2>
+        <p>Renku Studio stores your projects, screenplays, media, settings, and provider API keys on your computer. It does not require a Renku account, and we do not collect app usage analytics, project files, prompts, or API keys through the app. We cannot access your local project data unless you choose to share it with us, such as in a support request.</p>
+      </section>
+
+      <section aria-labelledby="privacy-providers">
+        <h2 id="privacy-providers">Providers you connect</h2>
+        <p>If you add an API key for an external model provider and request a generation, Renku sends that provider the key needed to authenticate the request, along with the relevant prompt, settings, and any media or reference files selected for that request. The provider processes that information and returns results under its own terms and privacy policy. Renku saves returned media in your local project.</p>
+        <p>You choose which providers to connect. Review their privacy policies before sending sensitive material. If you use a separate AI agent with Renku, that agent’s own privacy terms also apply to information you share with it.</p>
+      </section>
+
+      <section aria-labelledby="privacy-website">
+        <h2 id="privacy-website">Website hosting</h2>
+        <p>The website is hosted on Cloudflare Pages. When you visit, Cloudflare processes technical request information such as your IP address, browser details, and requested pages to deliver and protect the site. This happens whether or not you accept optional analytics. Our legal basis is our legitimate interest in operating and securing the website. See <a href="https://www.cloudflare.com/policies/privacy/">Cloudflare’s privacy policy</a> for its handling of this information.</p>
+      </section>
+
+      <section aria-labelledby="privacy-analytics">
+        <h2 id="privacy-analytics">Optional website analytics</h2>
+        <p>We use PostHog’s EU service to understand which website pages, guides, and download links are useful. PostHog loads only if you choose <strong>Yes</strong> in the analytics banner. With your consent, it receives page views and events for visits to the Quick Start and tutorial pages and clicks to the download page. Analytics can include the page address, event time, a browser identifier, browser and device information, and approximate location derived from your network address.</p>
+        <p>We do not use website analytics to record sessions, automatically capture clicks, identify you by name, or collect your Renku project data. We do not use it for advertising or automated decisions. See <a href="https://posthog.com/privacy">PostHog’s privacy policy</a> for information about its service.</p>
+      </section>
+
+      <section aria-labelledby="privacy-choice">
+        <h2 id="privacy-choice">Your analytics choice</h2>
+        <p>We save your <strong>Yes</strong> or <strong>No</strong> choice in your browser’s local storage so you are not asked on every visit. After you agree, PostHog may also store a browser identifier there. You can change your choice at any time with <strong>Analytics choice</strong> in the website footer. Choosing <strong>No</strong> stops future PostHog analytics; it does not affect the technical information Cloudflare needs to serve the website. You can also clear your browser’s site data to remove stored choices and identifiers.</p>
+      </section>
+
+      <section aria-labelledby="privacy-sharing">
+        <h2 id="privacy-sharing">Sharing and retention</h2>
+        <p>We do not sell your personal information. Website request data is handled by Cloudflare, which operates a global network; consented website analytics is handled through PostHog’s EU endpoint. Their linked policies describe their service providers and any international transfers. Model providers and AI agents that you choose to use receive information through your requests and apply their own retention rules.</p>
+        <p>Renku’s local copies of your project files and API keys remain on your device until you remove them. Your website analytics choice remains in your browser until you change it or clear site data. We keep analytics information only while needed to understand website use and improve the site, then delete or aggregate it. If you email us, we use your address and message to reply, based on our legitimate interest in handling your request, and keep them only as long as needed for that request or a legal obligation.</p>
+      </section>
+
+      <section aria-labelledby="privacy-rights">
+        <h2 id="privacy-rights">Your rights</h2>
+        <p>Depending on where you live, you may ask to access, correct, delete, or limit the use of personal information we hold about you, and you may have rights to object or receive a copy of it. You can withdraw website analytics consent at any time without affecting earlier lawful processing. Email <a href="mailto:support@codingventures.com">support@codingventures.com</a> with a request. If applicable, you may also complain to your local data protection authority.</p>
+      </section>
+
+      <section aria-labelledby="privacy-changes">
+        <h2 id="privacy-changes">Changes to this notice</h2>
+        <p>We may update this notice when the website or Renku’s data practices change. The date above shows when it was last revised.</p>
+      </section>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>

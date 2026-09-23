@@ -4,10 +4,32 @@ set -eu
 BASE_URL="${RENKU_DOWNLOAD_BASE_URL:-https://downloads.gorenku.com}"
 INSTALL_ROOT="${RENKU_INSTALL_ROOT:-$HOME/.local/share/renku}"
 BIN_ROOT="${RENKU_BIN_ROOT:-$HOME/.local/bin}"
+TERMS_VERSION='2026-09-23'
+TERMS_ACCEPTANCE="$INSTALL_ROOT/TERMS_ACCEPTANCE.txt"
 
 fail() {
   printf '%s\n' "$1" >&2
   exit 1
+}
+
+accept_terms() {
+  if [ -f "$TERMS_ACCEPTANCE" ]; then
+    IFS= read -r accepted_version < "$TERMS_ACCEPTANCE" || accepted_version=''
+    [ "$accepted_version" = "$TERMS_VERSION" ] && return
+  fi
+  if ! (exec </dev/tty) 2>/dev/null; then
+    fail 'INSTALL010 Open the installer in an interactive Terminal to review and accept the Renku Terms of Use.'
+  fi
+  printf '\n%s\n' 'Renku Terms of Use (23 September 2026): https://gorenku.com/terms/2026-09-23/'
+  printf '%s\n' 'These terms cover the official installer, Studio, CLI, and agent Skills.'
+  printf 'Do you accept these Terms of Use? [y/N]: '
+  IFS= read -r terms_response </dev/tty || fail 'INSTALL010 Terms acceptance was interrupted. Nothing was installed.'
+  case "$terms_response" in
+    y|Y|yes|YES|Yes) ;;
+    *) fail 'INSTALL010 Terms were not accepted. Nothing was installed.' ;;
+  esac
+  mkdir -p "$INSTALL_ROOT" || fail 'INSTALL004 Cannot create the installation folder. Choose a folder you can write to.'
+  printf '%s\n' "$TERMS_VERSION" > "$TERMS_ACCEPTANCE" || fail 'INSTALL010 Could not save Terms acceptance in the installation folder.'
 }
 
 shell_quote() {
@@ -75,6 +97,7 @@ case "$INSTALL_ROOT:$BIN_ROOT" in
   /*:/*) ;;
   *) fail 'INSTALL004 Installation and launcher folders must be absolute paths.' ;;
 esac
+accept_terms
 mkdir -p "$INSTALL_ROOT" "$BIN_ROOT" || fail 'INSTALL004 Cannot create the installation folders. Choose folders you can write to.'
 temporary="$(mktemp -d "$INSTALL_ROOT/.install.XXXXXX")" || fail 'INSTALL004 Cannot write to the installation folder.'
 trap 'rm -rf "$temporary"' EXIT

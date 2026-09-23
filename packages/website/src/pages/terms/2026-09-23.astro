@@ -1,0 +1,67 @@
+---
+// Keep this dated copy unchanged after publication; new terms need a new route.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import '../../styles/legal.css';
+---
+
+<BaseLayout
+  title="Terms of Use — Renku"
+  description="Terms for the official Renku website, installer, Studio app, CLI, and agent Skills."
+>
+  <SiteHeader />
+  <main class="legal-page" id="top">
+    <div class="container legal-content">
+      <p class="eyebrow">Legal</p>
+      <h1>Terms of Use</h1>
+      <p class="legal-date">Last updated: 23 September 2026</p>
+
+      <p>These terms cover the official Renku website at <a href="https://gorenku.com">gorenku.com</a> and the Renku downloads provided by Kerem Karatal: the installer, local Studio app, Renku CLI, documentation, and official Renku Skills used through AI agents. They describe these tools and the limits of what we provide. They do not govern independently distributed versions of Renku.</p>
+
+      <section aria-labelledby="terms-licenses">
+        <h2 id="terms-licenses">Open-source licenses and your work</h2>
+        <p>Renku Studio and its CLI are licensed under the <a href="https://github.com/GoRenku/studio/blob/main/LICENSE">GNU Affero General Public License, version 3</a> (AGPLv3). The separately distributed <a href="https://github.com/GoRenku/studio-skills/blob/main/LICENSE">Renku Skills</a> are licensed under the MIT License. These terms do not change or limit your rights under those licenses or applicable third-party licenses, including rights to use, modify, and redistribute the licensed materials. Accepting these terms for the official installer is not a condition of those open-source rights. If these terms conflict with a license about licensed materials, that license controls.</p>
+        <p>You may use Renku to make films and other creative work, including paid or professional work. These terms do not give Renku ownership of that work. Your rights in third-party material and AI-generated output depend on the applicable rights and provider terms.</p>
+      </section>
+
+      <section aria-labelledby="terms-tools">
+        <h2 id="terms-tools">Studio, CLI, and agent Skills</h2>
+        <p>Studio and the CLI run on your computer and can create, change, or delete local project files when you direct them to do so. The Skills provide instructions and tools for compatible AI agents. An agent can act on your behalf and may process information under its own terms. Review commands, agent actions, generated content, and important project changes before relying on them, and keep backups of work you cannot replace.</p>
+        <p>We may change or stop offering official downloads, updates, documentation, or support. Copies you already received remain governed by their respective open-source licenses.</p>
+      </section>
+
+      <section aria-labelledby="terms-third-parties">
+        <h2 id="terms-third-parties">Model providers and other services</h2>
+        <p>You choose which model providers and AI agents to connect. They may require separate accounts, API keys, payment, and acceptance of their terms. Generation requests can send prompts and selected media to those providers. Their prices, availability, data practices, and output rules are set by them, not by Renku. Check their terms and your rights in any material you submit or publish.</p>
+      </section>
+
+      <section aria-labelledby="terms-site-use">
+        <h2 id="terms-site-use">Website and Renku name</h2>
+        <p>Use the website lawfully and do not interfere with its operation, security, or other visitors’ access. We may update or remove website content as the project develops. External links are provided for convenience; we do not control the linked sites.</p>
+        <p>The Renku and GoRenku names and brand assets are covered by our <a href="https://github.com/GoRenku/studio/blob/main/TRADEMARKS.md">trademark policy</a>. You may identify the original project accurately, but these terms do not grant permission to brand a redistributed version or service as Renku.</p>
+      </section>
+
+      <section aria-labelledby="terms-warranty">
+        <h2 id="terms-warranty">No warranty</h2>
+        <p>To the fullest extent permitted by applicable law, the official website, installer, Studio app, CLI, Skills, documentation, and support materials are provided “as is” and “as available,” without warranties of any kind. We do not promise uninterrupted operation, accurate or suitable AI output, compatibility with every device or agent, preservation of data, or the availability of any provider. The AGPLv3 and MIT licenses contain their own warranty disclaimers for the materials they cover.</p>
+      </section>
+
+      <section aria-labelledby="terms-liability">
+        <h2 id="terms-liability">Limits on liability</h2>
+        <p>To the fullest extent permitted by applicable law, Kerem Karatal is not liable for loss or damage arising from use of, or inability to use, the official website, installer, Studio app, CLI, Skills, or associated materials. This includes direct and indirect losses, lost profits, lost data, business interruption, provider charges, and losses related to agent actions or generated output. Nothing in these terms excludes or limits liability that cannot legally be excluded or limited, or affects any rights you cannot waive under applicable law. The applicable open-source licenses govern liability for their licensed materials if they differ from these terms.</p>
+      </section>
+
+      <section aria-labelledby="terms-changes">
+        <h2 id="terms-changes">Changes to these terms</h2>
+        <p>We may update these terms as the official website and distribution change. The date above shows when the posted version was last revised. Updated terms apply to future use of the website and to future official installations where you accept them. They do not change the licenses or rights for copies of Studio or Skills you already received.</p>
+      </section>
+
+      <section aria-labelledby="terms-contact">
+        <h2 id="terms-contact">Contact</h2>
+        <p>For questions about these terms, email Kerem Karatal at <a href="mailto:support@codingventures.com">support@codingventures.com</a>.</p>
+      </section>
+    </div>
+  </main>
+  <SiteFooter />
+</BaseLayout>

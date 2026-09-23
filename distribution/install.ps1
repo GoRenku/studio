@@ -7,6 +7,23 @@ Set-StrictMode -Version Latest
 $BaseUrl = if ($env:RENKU_DOWNLOAD_BASE_URL) { $env:RENKU_DOWNLOAD_BASE_URL } else { 'https://downloads.gorenku.com' }
 $InstallRoot = if ($env:RENKU_INSTALL_ROOT) { $env:RENKU_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA 'Renku' }
 $BinRoot = if ($env:RENKU_BIN_ROOT) { $env:RENKU_BIN_ROOT } else { Join-Path $InstallRoot 'bin' }
+$TermsVersion = '2026-09-23'
+$TermsAcceptance = Join-Path $InstallRoot 'TERMS_ACCEPTANCE.txt'
+
+function Confirm-RenkuTerms {
+  if ((Test-Path -LiteralPath $TermsAcceptance) -and ((Get-Content -LiteralPath $TermsAcceptance -Raw -Encoding UTF8).Trim() -ceq $TermsVersion)) {
+    return
+  }
+  if ([Console]::IsInputRedirected) {
+    throw 'INSTALL010 Open the installer in an interactive PowerShell window to review and accept the Renku Terms of Use.'
+  }
+  Write-Host "`nRenku Terms of Use (23 September 2026): https://gorenku.com/terms/2026-09-23/"
+  Write-Host 'These terms cover the official installer, Studio, CLI, and agent Skills.'
+  $Response = Read-Host 'Do you accept these Terms of Use? [y/N]'
+  if ($Response -notmatch '^(?i:y|yes)$') { throw 'INSTALL010 Terms were not accepted. Nothing was installed.' }
+  New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
+  [IO.File]::WriteAllText($TermsAcceptance, "$TermsVersion`n", [Text.UTF8Encoding]::new($false))
+}
 
 function Save-RenkuDownload([string]$Url, [string]$DestinationFile) {
   for ($Attempt = 1; $Attempt -le 3; $Attempt++) {
@@ -101,6 +118,7 @@ if (-not (Test-Path -LiteralPath $TarCommand)) {
 if (-not [IO.Path]::IsPathRooted($InstallRoot) -or -not [IO.Path]::IsPathRooted($BinRoot)) {
   throw 'INSTALL004 Installation and launcher folders must be absolute paths.'
 }
+Confirm-RenkuTerms
 New-Item -ItemType Directory -Force -Path $InstallRoot, $BinRoot | Out-Null
 $Temporary = Join-Path $InstallRoot ('.install-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $Temporary | Out-Null

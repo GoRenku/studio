@@ -20,6 +20,8 @@ After consent, the site sends pageviews plus these focused events:
 | `tutorial_viewed` | A tutorial is opened, with its slug in `tutorial`. |
 
 Visitors can change their choice with **Analytics choice** in the footer.
+The banner and footer link to the public `/privacy/` notice; update that notice
+if website analytics or Studio data handling changes.
 
 ## Commands
 
