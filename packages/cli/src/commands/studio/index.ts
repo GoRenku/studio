@@ -3,6 +3,7 @@ import { runStudioCurrentCommand } from './current-command.js';
 import { runStudioNotifyRefreshCommand } from './notify-refresh-command.js';
 import { runStudioServerStatusCommand } from './server-status-command.js';
 import { runStudioStartCommand } from './start-command.js';
+import { runStudioStopCommand } from './stop-command.js';
 
 export async function runStudioCommand(
   options: StudioCommandOptions
@@ -15,6 +16,9 @@ export async function runStudioCommand(
       homeDir: options.homeDir,
     });
   }
+  if (options.input[0] === 'stop') {
+    return await runStudioStopCommand(options);
+  }
   if (options.input[0] === 'current') {
     return await runStudioCurrentCommand(options);
   }
@@ -25,7 +29,7 @@ export async function runStudioCommand(
     return await runStudioNotifyRefreshCommand(options);
   }
   options.io.stderr.error(
-    'Usage: renku studio start [--no-browser] OR renku studio current --json OR renku studio server status --json OR renku studio notify-refresh --project <project-name> --resource <resource-key> --json'
+    'Usage: renku studio start [--no-browser] OR renku studio stop OR renku studio current --json OR renku studio server status --json OR renku studio notify-refresh --project <project-name> --resource <resource-key> --json'
   );
   return 1;
 }

@@ -1876,6 +1876,18 @@ The default command binds the canonical local Studio URL at
 the user stops it. `--no-browser` starts the same server without opening a
 browser. Renku does not install or launch an Electron/native desktop app.
 
+## `renku studio stop`
+
+Stop the local Studio server started by `renku studio start` or the canonical
+Studio development server. The command waits for the server to release its
+runtime descriptor before reporting success. It reports when no server is
+running. Closing the browser tab does not stop the server.
+
+```bash
+renku studio stop
+renku studio stop --json
+```
+
 ## `renku studio current`
 
 Show current Studio focus and context.
@@ -1929,7 +1941,8 @@ renku update skills
 
 `renku update` downloads and checksum-verifies the latest beta runtime, activates
 it, and installs the latest Renku skills into the agents selected in setup.
-Stop Studio with Ctrl+C first; `UPDATE004` reports a running Studio instance.
+Stop Studio with `renku studio stop` or Ctrl+C first; `UPDATE004` reports a
+running Studio instance.
 When that runtime version is already active, it is retained and skills setup
 still runs. Previous version folders, configuration, and Projects are preserved.
 

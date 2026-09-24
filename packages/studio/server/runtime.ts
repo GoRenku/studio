@@ -26,6 +26,7 @@ export interface MovieStudioServerOptions {
   host?: string;
   port?: number;
   log?: (message: string) => void;
+  requestShutdown?: () => void;
 }
 
 export interface MovieStudioServerInstance {
@@ -52,7 +53,11 @@ export async function startMovieStudioServer(
   let runtimeDescriptor: StudioRuntimeDescriptor | null = null;
   let heartbeat: NodeJS.Timeout | null = null;
   const apiHandler = getRequestListener(
-    createStudioServerApp({ token, cliNotificationToken }).fetch
+    createStudioServerApp({
+      token,
+      cliNotificationToken,
+      requestShutdown: options.requestShutdown,
+    }).fetch
   );
 
   const server = createServer(async (req, res) => {

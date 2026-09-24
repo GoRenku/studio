@@ -96,6 +96,7 @@ paths, or provider identifiers.
 | `renku project close` | Clear the current authoring project. |
 | `renku project migrate <project-name>` | Apply pending project database migrations. |
 | `renku studio start` | Start the local Studio web application. |
+| `renku studio stop` | Stop the local Studio server. |
 | `renku studio server status --json` | Inspect the local Studio server status. |
 | `renku studio current --json` | Read the current browser focus and context. |
 | `renku project select <project-name>` | Request that Studio display a project. |

@@ -38,6 +38,10 @@ function parseArguments(argv: string[]): CliOptions {
 async function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
+    let requestShutdown: () => void = () => undefined;
+    const shutdownRequested = new Promise<void>((resolve) => {
+      requestShutdown = resolve;
+    });
     const server = await startMovieStudioServer({
       distPath: options.dist,
       host: options.host,
@@ -45,7 +49,10 @@ async function main() {
       log: (message) => {
         console.log(message);
       },
+      requestShutdown,
     });
+
+    void shutdownRequested.then(() => server.stop().finally(() => process.exit(0)));
 
     process.on('SIGTERM', () => {
       void server.stop().finally(() => process.exit(0));

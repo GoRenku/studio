@@ -99,6 +99,7 @@ Commands
   media import --clip      Atomically attach and register a raw take; optional --take-title/--source-take
   studio current       Show current Studio focus and context
   studio start         Start the local Renku Studio web application
+  studio stop          Stop the local Renku Studio server
   update               Update Renku and its agent skills
   update skills        Update only Renku's agent skills
   studio server status Show canonical local Studio server status

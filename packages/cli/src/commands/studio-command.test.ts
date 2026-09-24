@@ -29,6 +29,20 @@ describe('studio command', () => {
     });
   });
 
+  it('dispatches studio stop when no server is running', async () => {
+    await expect(
+      runStudioCommand({
+        input: ['stop'],
+        json: false,
+        io: ioFixture({ stdout, stderr }),
+        homeDir,
+      })
+    ).resolves.toBe(0);
+
+    expect(stdout).toEqual(['Renku Studio is not running.']);
+    expect(stderr).toEqual([]);
+  });
+
   it('runs notify-refresh with the resolved durable project identity id', async () => {
     const projectData = createProjectDataService();
     await projectData.createMovieProject({

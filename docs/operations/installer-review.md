@@ -69,7 +69,8 @@ Run on a clean ordinary-user Windows account without Node or Git:
 2. Decline skills confirmation. Run the same installer again and confirm no
    runtime download/extraction occurs. Complete agent selection this time.
 3. Run `renku about` and `renku studio start` in the same terminal and a fresh
-   terminal. Confirm Studio opens and Ctrl+C stops it. Check exit-code forwarding.
+   terminal. Confirm Studio opens and `renku studio stop` stops it from the
+   other terminal. Check exit-code forwarding.
 4. Repeat under an account/custom location containing spaces, accented letters,
    apostrophes, brackets, and an exclamation mark. Check quoted CLI arguments.
 5. Verify the launcher under the normal restricted execution policy, and verify

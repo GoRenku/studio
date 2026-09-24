@@ -157,7 +157,8 @@ Library, run `renku init <storage-root>` before completing that setup. Enter
 provider keys directly in Studio, never in an agent conversation.
 
 Keep the terminal session running Studio open; it can be minimized. Stop with
-Ctrl+C when finished, and run `renku studio start` again for later sessions.
+`renku studio stop` or Ctrl+C when finished, and run `renku studio start` again
+for later sessions.
 Closing a browser tab does not stop Studio. Start a new agent conversation to
 load the installed skills; they invoke the separately installed `renku` command
 through the agent's local shell capability.
@@ -445,7 +446,8 @@ Project media, and source illustration sheets are not release inputs.
 
 ## Updating and uninstalling the current beta
 
-To update, stop Studio with Ctrl+C in its terminal, then run `renku update`.
+To update, stop Studio with `renku studio stop` or Ctrl+C in its terminal, then
+run `renku update`.
 It downloads the complete current beta, activates that version, and runs skills
 setup again. `renku update skills` uses the installed runtime to update only
 Renku skills, without downloading the application. Restart agent apps afterward.

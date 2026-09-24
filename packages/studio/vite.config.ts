@@ -186,6 +186,9 @@ export default defineConfig(({ mode }) => {
             createStudioApiMiddleware({
               token: studioRuntimeToken,
               cliNotificationToken,
+              requestShutdown: () => {
+                void server.close();
+              },
               homeDir: studioE2eIsolatedHomeDirectory,
             })
           );

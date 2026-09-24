@@ -43,12 +43,17 @@ export async function runStudioStartCommand(
 
   const layout = resolveStudioProductLayout();
   let server: Awaited<ReturnType<typeof startMovieStudioServer>>;
+  let requestShutdown: () => void = () => undefined;
+  const shutdownRequested = new Promise<void>((resolve) => {
+    requestShutdown = resolve;
+  });
   try {
     server = await startMovieStudioServer({
       distPath: layout.webAssets,
       host: STUDIO_DEV_SERVER_HOST,
       port: STUDIO_DEV_SERVER_PORT,
       log: (message) => options.io.stdout.log(message),
+      requestShutdown,
     });
   } catch (error) {
     if (isAddressInUseError(error)) {
@@ -59,7 +64,7 @@ export async function runStudioStartCommand(
   if (!options.noBrowser) {
     await openBrowserWithWarning(server.url, options.io);
   }
-  await waitForShutdownSignal();
+  await waitForShutdownSignal(shutdownRequested);
   await server.stop();
   return 0;
 }
@@ -111,7 +116,7 @@ async function openBrowserWithWarning(url: string, io: RenkuCliIo): Promise<void
   io.stderr.error(`[${warning.code}] WARNING: ${warning.message}`);
 }
 
-function waitForShutdownSignal(): Promise<void> {
+function waitForShutdownSignal(shutdownRequested: Promise<void>): Promise<void> {
   return new Promise((resolve) => {
     const finish = () => {
       process.off('SIGINT', finish);
@@ -120,6 +125,7 @@ function waitForShutdownSignal(): Promise<void> {
     };
     process.on('SIGINT', finish);
     process.on('SIGTERM', finish);
+    void shutdownRequested.then(finish);
   });
 }
 
