@@ -59,6 +59,14 @@ generates responsive derivatives at build time.
 
 ## Refreshing screenshots
 
+The hero launch film lives in `src/assets/media/renku-launch.mp4`, with its
+opening still in `src/assets/screens/renku-launch-poster.jpg`. It plays only on
+request and uses `preload="none"`; the centered play button disappears when
+playback starts. Native player controls handle playback, seeking, volume, and
+fullscreen. The web copy retains audio and is compressed to 1280×720 (H.264 CRF 26,
+AAC 128 kb/s, fast-start MP4). The source render at
+`launch-video-gen/renders/renku-launch.mp4` is unchanged.
+
 Screenshots in `src/assets/screens/` were captured from a locally running
 Renku Studio (`http://localhost:5173`, project `urban-basilica`) at
 1440×900 @2x with Playwright. Recapture with any Playwright-driven script

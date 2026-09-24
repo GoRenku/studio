@@ -1,5 +1,6 @@
 ---
 import AgentWorkspace from './AgentWorkspace.astro';
+import LaunchFilm from './LaunchFilm.astro';
 import { site } from '../data/site';
 ---
 
@@ -21,7 +22,11 @@ import { site } from '../data/site';
     </div>
   </div>
 
-  <div class="hero-visual" data-reveal style="--reveal-delay: 0.34s">
+  <div class="hero-film" data-reveal style="--reveal-delay: 0.34s">
+    <LaunchFilm />
+  </div>
+
+  <div class="hero-visual" data-reveal>
     <AgentWorkspace />
   </div>
 </section>
@@ -29,7 +34,7 @@ import { site } from '../data/site';
 <style>
   .hero {
     position: relative;
-    padding-top: clamp(8rem, 16vh, 11rem);
+    padding-top: clamp(6.5rem, 12vh, 8rem);
     overflow: hidden;
   }
 
@@ -93,5 +98,11 @@ import { site } from '../data/site';
     position: relative;
     width: min(80rem, calc(100% - 5rem));
     margin: clamp(2.75rem, 6vh, 4rem) auto 0;
+  }
+
+  .hero-film {
+    position: relative;
+    width: min(64rem, calc(100% - 5rem));
+    margin: clamp(2rem, 4vh, 3rem) auto 0;
   }
 </style>

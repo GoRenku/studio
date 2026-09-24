@@ -1,0 +1,140 @@
+---
+import { getImage } from 'astro:assets';
+import playIcon from '../assets/icons/play.svg';
+import launchFilm from '../assets/media/renku-launch.mp4';
+import launchPoster from '../assets/screens/renku-launch-poster.jpg';
+
+const poster = await getImage({ src: launchPoster, width: 1600, format: 'webp' });
+---
+
+<div class="launch-film" data-launch-film>
+  <div class="film-frame">
+    <video
+      id="launch-film"
+      controls
+      playsinline
+      preload="none"
+      poster={poster.src}
+      width="1280"
+      height="720"
+      aria-label="Renku launch film"
+      src={launchFilm}
+    ></video>
+    <button class="film-play" type="button" aria-label="Play launch film" aria-controls="launch-film" hidden>
+      <span class="play-icon" aria-hidden="true">
+        <img src={playIcon.src} width="22" height="22" alt="" />
+      </span>
+    </button>
+  </div>
+  <p class="film-error" role="status" hidden>Playback couldn’t start. Try the video’s play control or <a href={launchFilm}>open the film directly</a>.</p>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-launch-film]').forEach((film) => {
+    const video = film.querySelector<HTMLVideoElement>('video')!;
+    const play = film.querySelector<HTMLButtonElement>('.film-play')!;
+    const error = film.querySelector<HTMLElement>('.film-error')!;
+
+    video.controls = false;
+    play.hidden = false;
+
+    const showPlaybackError = () => {
+      video.controls = true;
+      if (document.activeElement === play) video.focus();
+      play.hidden = true;
+      error.hidden = false;
+    };
+
+    video.addEventListener('play', () => {
+      video.controls = true;
+      if (document.activeElement === play) video.focus();
+      play.hidden = true;
+      error.hidden = true;
+    });
+    video.addEventListener('error', showPlaybackError);
+
+    play.addEventListener('click', async () => {
+      try {
+        await video.play();
+      } catch (cause) {
+        if (!(cause instanceof DOMException && cause.name === 'AbortError')) {
+          showPlaybackError();
+        }
+      }
+    });
+  });
+</script>
+
+<style>
+  .film-frame {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background: var(--ink-900);
+    border: 1px solid rgba(244, 239, 230, 0.16);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8);
+  }
+
+  video {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    accent-color: var(--amber-400);
+  }
+
+  .film-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    padding: 0.65rem;
+    border: 1px solid rgba(244, 239, 230, 0.25);
+    border-radius: 999px;
+    background: rgba(18, 16, 13, 0.88);
+    color: var(--paper-100);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(12px);
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .film-play:hover {
+    background: var(--ink-900);
+    border-color: var(--amber-400);
+  }
+
+  .film-play:focus-visible {
+    outline: 2px solid var(--amber-400);
+    outline-offset: 4px;
+  }
+
+  .play-icon {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--amber-400);
+  }
+
+  [hidden] {
+    display: none;
+  }
+
+  .film-error {
+    margin-top: 0.75rem;
+    color: var(--paper-300);
+    font-size: 0.9rem;
+  }
+
+  .film-error a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>
