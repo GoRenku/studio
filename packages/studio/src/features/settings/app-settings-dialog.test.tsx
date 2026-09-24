@@ -83,6 +83,26 @@ describe('AppSettingsDialog', () => {
     }
   );
 
+  it('loads a Settings deep link once in StrictMode and keeps the key draft', async () => {
+    window.history.replaceState(null, '', '/?settings=provider-credentials');
+    const pending = deferred<ReturnType<typeof resource>>();
+    readProviderCredentialsMock.mockReturnValue(pending.promise);
+    render(
+      <React.StrictMode>
+        <AppSettingsDialog />
+      </React.StrictMode>
+    );
+
+    expect(readProviderCredentialsMock).toHaveBeenCalledTimes(1);
+    pending.resolve(resource());
+    const input = await screen.findByLabelText('ElevenLabs') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'keep-this-test-secret' } });
+
+    expect(input.value).toBe('keep-this-test-secret');
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled)
+      .toBe(false);
+  });
+
   it('discards an unsaved draft on Cancel and reloads on reopen', async () => {
     readProviderCredentialsMock.mockResolvedValue(resource());
     render(<AppSettingsDialog />);

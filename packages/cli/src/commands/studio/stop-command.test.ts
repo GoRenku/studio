@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runStudioStopCommand } from './stop-command.js';
 
 describe('studio stop command', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   it('reports when no server is running', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-stop-'));
@@ -53,6 +56,20 @@ describe('studio stop command', () => {
       code: 'CLI165',
     });
     expect(stdout).toEqual([]);
+  });
+
+  it.each([
+    { json: false, expected: 'Renku Studio is shutting down; waiting for active requests to finish.' },
+    { json: true, expected: JSON.stringify({ stopped: false, stopping: true }) },
+  ])('reports an accepted shutdown as pending when the server is still draining (json: $json)', async ({ json, expected }) => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-stop-'));
+    await writeDescriptor(homeDir, 'http://localhost:5173');
+    const stdout: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ stopping: true }), { status: 200 })));
+    vi.spyOn(Date, 'now').mockReturnValueOnce(0).mockReturnValue(5_000);
+
+    await expect(runStudioStopCommand({ ...options(homeDir, stdout), json })).resolves.toBe(0);
+    expect(stdout).toEqual([expected]);
   });
 
   it('does not contact a non-local URL in a descriptor', async () => {

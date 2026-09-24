@@ -69,11 +69,8 @@ export async function runStudioStopCommand(options: StudioCommandOptions): Promi
     }
     await delay(100);
   }
-  throw stopError(
-    'CLI166',
-    'Studio accepted the shutdown request but did not stop in time.',
-    'Check renku studio server status and the terminal running Studio.'
-  );
+  writeStopPending(options);
+  return 0;
 }
 
 function shutdownEndpoint(descriptor: StudioRuntimeDescriptor): URL | null {
@@ -103,6 +100,14 @@ function writeStopResult(options: StudioCommandOptions, stopped: boolean): void 
     options.io.stdout.log(JSON.stringify({ stopped }));
   } else {
     options.io.stdout.log(stopped ? 'Renku Studio stopped.' : 'Renku Studio is not running.');
+  }
+}
+
+function writeStopPending(options: StudioCommandOptions): void {
+  if (options.json) {
+    options.io.stdout.log(JSON.stringify({ stopped: false, stopping: true }));
+  } else {
+    options.io.stdout.log('Renku Studio is shutting down; waiting for active requests to finish.');
   }
 }
 

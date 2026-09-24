@@ -1899,9 +1899,12 @@ browser. Renku does not install or launch an Electron/native desktop app.
 ## `renku studio stop`
 
 Stop the local Studio server started by `renku studio start` or the canonical
-Studio development server. The command waits for the server to release its
-runtime descriptor before reporting success. It reports when no server is
-running. Closing the browser tab does not stop the server.
+Studio development server. The command waits up to five seconds for the server
+to release its runtime descriptor. If Studio accepted the shutdown but is still
+finishing active requests, the command reports that shutdown is pending and
+exits successfully; `--json` returns `{ "stopped": false, "stopping": true }`.
+It reports when no server is running. Closing the browser tab does not stop
+the server.
 
 ```bash
 renku studio stop

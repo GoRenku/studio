@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type {
   ProviderCredentialStatus,
   ProviderCredentialsResource,
@@ -32,6 +32,7 @@ export function useProviderCredentialsDraft(): ProviderCredentialsDraftControlle
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingLoad = useRef<Promise<void> | null>(null);
 
   const changes = buildChanges(resource.providers, draftValues);
   const valid = Object.values(draftValues).every(isValidDraftValue);
@@ -41,17 +42,26 @@ export function useProviderCredentialsDraft(): ProviderCredentialsDraftControlle
     setError(null);
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setResource(await readProviderCredentials());
-      setDraftValues({});
-    } catch (caught) {
-      setError(errorMessage(caught, 'Provider API keys could not be loaded.'));
-    } finally {
-      setLoading(false);
+  const load = useCallback((): Promise<void> => {
+    if (pendingLoad.current) {
+      return pendingLoad.current;
     }
+
+    const request = (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        setResource(await readProviderCredentials());
+        setDraftValues({});
+      } catch (caught) {
+        setError(errorMessage(caught, 'Provider API keys could not be loaded.'));
+      } finally {
+        pendingLoad.current = null;
+        setLoading(false);
+      }
+    })();
+    pendingLoad.current = request;
+    return request;
   }, []);
 
   const setValue = (provider: string, value: string) => {
