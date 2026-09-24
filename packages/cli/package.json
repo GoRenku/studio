@@ -1,6 +1,6 @@
 {
   "name": "@gorenku/studio-cli",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "Agent and human command surface for Renku Studio projects",
   "private": true,
   "license": "AGPL-3.0-only",
