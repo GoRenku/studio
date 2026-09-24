@@ -53,6 +53,11 @@ preparation uses the selected live/cached schema plus available advice. Exact
 unlisted models can execute without installation. Investigate an actual input or
 protocol mismatch when encountered; do not require a separate compatibility audit.
 
+The selected provider's live schema remains authoritative. An agent checks
+that provider's saved-key presence with `renku credentials status --json`
+before request preparation and directs a user with no key to the existing
+Studio Settings editor.
+
 ## Commands and ownership
 
 `renku generation models list`, `show`, `import`, and `remove` need no active

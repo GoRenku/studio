@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { readProviderCredentials } from '@gorenku/studio-core/server';
 import { expect, test } from '../../fixtures/studio-e2e-test';
 
 test('saves global provider credentials explicitly from both Studio shells', async ({
@@ -16,11 +17,16 @@ test('saves global provider credentials explicitly from both Studio shells', asy
   );
 
   await projectLibraryPage.goto();
+  await page.goto('/?settings=provider-credentials');
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page).toHaveURL(/\/$/);
+
   const openSettings = page.getByRole('button', { name: 'Open Settings' });
   await expect(openSettings).toBeVisible();
   await openSettings.click();
 
-  const dialog = page.getByRole('dialog', { name: 'Settings' });
   await expect(dialog.getByText('Fal.ai', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Replicate', { exact: true })).toBeVisible();
   await expect(dialog.getByText('WaveSpeed', { exact: true })).toBeVisible();
@@ -43,8 +49,20 @@ test('saves global provider credentials explicitly from both Studio shells', asy
     'FAL_KEY="fake-fal-key-for-e2e-only"\n'
   );
   expect((await fs.stat(credentialFilePath)).mode & 0o777).toBe(0o600);
+  expect((await readProviderCredentials({
+    homeDir: studioE2eRuntime.isolatedHomeDirectory,
+  })).providers.find((provider) => provider.provider === 'fal-ai')?.configured).toBe(true);
 
   await projectLibraryPage.openProject(minimalMovieProject);
+  const projectUrl = new URL(page.url());
+  projectUrl.searchParams.set('test-context', 'keep');
+  const expectedProjectUrl = projectUrl.toString();
+  projectUrl.searchParams.set('settings', 'provider-credentials');
+  await page.goto(projectUrl.toString());
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page).toHaveURL(expectedProjectUrl);
+
   const projectSettings = page.getByRole('button', { name: 'Open Settings' });
   await expect(projectSettings).toBeVisible();
   await projectSettings.click();

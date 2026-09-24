@@ -60,6 +60,26 @@ Common options:
 - `--help`, `-h`, or `renku help`: show top-level help.
 - `--version`: show the CLI package version.
 
+## `renku credentials status`
+
+Show saved provider API key presence without an active Project or running Studio.
+
+```bash
+renku credentials status
+renku credentials status --json
+```
+
+The JSON response is Core's `{ "providers": [{ "provider", "label",
+"configured" }] }` resource for all six managed providers. Plain output gives
+one `<label>: configured` or `<label>: not configured` line per provider. It
+contains no key values and succeeds when every key is absent. A credential-file
+read failure reports `PROVIDER_CREDENTIALS002`.
+
+Agents can use `renku studio server status --json` for the local browser URL and
+open `/?settings=provider-credentials` to guide the user to the existing global
+Settings key editor. Closing or saving preserves the current route and other
+query parameters.
+
 ## `renku init`
 
 Create or inspect the global Renku config.

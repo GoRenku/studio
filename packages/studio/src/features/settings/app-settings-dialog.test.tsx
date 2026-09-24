@@ -20,12 +20,14 @@ vi.mock('sonner', () => ({
 describe('AppSettingsDialog', () => {
   afterEach(() => {
     cleanup();
+    window.history.replaceState(null, '', '/');
     readProviderCredentialsMock.mockReset();
     updateProviderCredentialsMock.mockReset();
     toastSuccessMock.mockReset();
   });
 
   it('loads the exact provider list and saves one explicit draft', async () => {
+    window.history.replaceState(null, '', '/?settings=provider-credentials');
     readProviderCredentialsMock.mockResolvedValue(resource());
     updateProviderCredentialsMock.mockResolvedValue({
       providers: resource().providers.map((provider) =>
@@ -36,7 +38,6 @@ describe('AppSettingsDialog', () => {
     });
     render(<AppSettingsDialog />);
 
-    openDialog();
     expect(await screen.findByText('fal.ai')).toBeTruthy();
     expect(
       screen.queryByRole('heading', { name: 'API Keys' })
@@ -64,8 +65,23 @@ describe('AppSettingsDialog', () => {
       })
     );
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(window.location.pathname + window.location.search).toBe('/');
     expect(toastSuccessMock).toHaveBeenCalledWith('Settings saved.');
   });
+
+  it.each(['/', '/projects/urban-basilica?scene=scene-1'])(
+    'opens the Settings link at %s and preserves other route state on Cancel',
+    async (route) => {
+      window.history.replaceState(null, '', `${route}${route.includes('?') ? '&' : '?'}settings=provider-credentials`);
+      readProviderCredentialsMock.mockResolvedValue(resource());
+      render(<AppSettingsDialog />);
+
+      expect(await screen.findByLabelText('ElevenLabs')).toBeTruthy();
+      expect(readProviderCredentialsMock).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(window.location.pathname + window.location.search).toBe(route);
+    }
+  );
 
   it('discards an unsaved draft on Cancel and reloads on reopen', async () => {
     readProviderCredentialsMock.mockResolvedValue(resource());

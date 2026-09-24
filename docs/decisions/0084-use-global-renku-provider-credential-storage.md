@@ -1,5 +1,9 @@
 # 0084 Use Global Renku Provider Credential Storage
 
+> **Decision 0102 update:** The read-only `renku credentials status` command now
+> projects Core's sanitized saved-key status, and a Settings query link opens
+> the existing editor for agent preflight. Secret writes remain Studio-owned.
+
 > **Decision 0086 update:** Global write-only credential storage and Core secret-file ownership remain. Core now owns the five-provider descriptor catalog; standalone Engines E2E tests receive explicit opt-in test credentials and never import Core.
 >
 > **Pika application:** Pika is the sixth Core-owned write-only descriptor as

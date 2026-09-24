@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAssetCommand } from './commands/asset-command.js';
 import { runGenerationCommand } from './commands/generation/command.js';
@@ -53,6 +56,19 @@ describe('Renku CLI command surfaces', () => {
       input: ['models', 'import'],
       flags: expect.objectContaining({ file: 'route.json', ifRevision: 'absent' }),
     }));
+  });
+
+  it('reads empty credential status through the top-level CLI without a Project', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-credentials-cli-'));
+    try {
+      const { io, stdout } = createIo();
+      await expect(runRenkuCli(['credentials', 'status', '--json'], { io, homeDir })).resolves.toBe(0);
+      const status = JSON.parse(stdout.mock.calls[0]![0]);
+      expect(status.providers).toHaveLength(6);
+      expect(status.providers.every((provider: { configured: boolean }) => !provider.configured)).toBe(true);
+    } finally {
+      await fs.rm(homeDir, { recursive: true, force: true });
+    }
   });
 
   it('passes repeated Preview files in command-line order', async () => {

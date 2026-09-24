@@ -10,6 +10,7 @@ import { runAboutCommand } from './commands/about-command.js';
 import { runAssetCommand } from './commands/asset-command.js';
 import { runCastCommand } from './commands/cast-command.js';
 import { runCreateCommand } from './commands/create-project-command.js';
+import { runCredentialsCommand } from './commands/credentials-command.js';
 import { runDirectorCommand } from './commands/director-command.js';
 import { runGenerationCommand } from './commands/generation/command.js';
 import { runInitCommand } from './commands/initialize-config-command.js';
@@ -75,6 +76,7 @@ Commands
   info language        Add, update, remove, or set base languages
   settings show        Show the complete Project Settings document
   settings set         Replace Project Settings from a complete JSON document
+  credentials status   Show which provider API keys are saved
   inspiration          Manage Inspiration folders and analysis
   generation           Discover models, read context/schema, cache visuals, validate, preview, execute, or recover
   lookbook             Manage Lookbooks and Lookbook images
@@ -699,6 +701,13 @@ export async function runRenkuCli(
             project: cli.flags.project,
             file,
           },
+          json: cli.flags.json,
+          io,
+          homeDir: options.homeDir,
+        });
+      case 'credentials':
+        return await runCredentialsCommand({
+          input,
           json: cli.flags.json,
           io,
           homeDir: options.homeDir,

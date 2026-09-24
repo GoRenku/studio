@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { AlertCircle, Loader2, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/ui/alert';
@@ -16,9 +16,27 @@ import { ProviderCredentialsFields } from './provider-credentials-fields';
 import { useProviderCredentialsDraft } from './use-provider-credentials-draft';
 
 export function AppSettingsDialog() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(
+    () => new URL(window.location.href).searchParams.get('settings') === 'provider-credentials'
+  );
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const controller = useProviderCredentialsDraft();
+  const loadCredentials = controller.load;
+
+  useEffect(() => {
+    if (new URL(window.location.href).searchParams.get('settings') === 'provider-credentials') {
+      void loadCredentials();
+    }
+  }, [loadCredentials]);
+
+  const clearSettingsLink = () => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('settings') !== 'provider-credentials') {
+      return;
+    }
+    url.searchParams.delete('settings');
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  };
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (controller.saving) {
@@ -31,12 +49,14 @@ export function AppSettingsDialog() {
     }
     controller.resetDraft();
     setOpen(false);
+    clearSettingsLink();
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (await controller.save()) {
       setOpen(false);
+      clearSettingsLink();
       toast.success('Settings saved.');
     }
   };
