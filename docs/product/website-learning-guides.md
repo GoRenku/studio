@@ -12,6 +12,8 @@ instruction so that downloading Renku remains a focused task.
   Storyboards, Shot List planning, Blender Previs, and video generation.
 - Shot List and Blender Previs are alternative planning approaches. Both have
   a path into video generation; completing both is not required.
+- The optional sample project guide explains how to clone the Basilica project
+  directly into the configured Project Library and open it from Projects.
 
 ## Content ownership
 

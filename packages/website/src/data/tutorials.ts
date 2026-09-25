@@ -16,6 +16,7 @@ interface TutorialSection {
   title: string;
   introduction: string;
   steps: string[];
+  command?: string;
   prompt?: string;
   link?: { href: string; label: string };
   figure?: { image: ImageMetadata; alt: string; caption: string };
@@ -146,6 +147,18 @@ export const tutorials: Tutorial[] = [
       { id: 'continue', title: 'Continue with the next scene', introduction: 'The Movie Director skill coordinates work across departments and reads the project’s current readiness when you ask what to do next. You can keep directing in ordinary language while it routes to the relevant specialist skills.', steps: ['Review which take you want to use and carry forward the character, world, and visual choices that worked.', 'Open another scene and ask to develop it, or ask Movie Director for the next useful step. Existing context and your project settings guide the handoffs.', 'Use your preferred editing application for final assembly, sound work, and delivery. This tutorial takes you through generated scene footage.'], prompt: 'Help me develop the next scene using the visual direction we have established.' },
     ],
     checkpoint: 'The take is saved and reviewed, and you know whether to accept it or request a specific revision. You have completed the full path from inspiration to a generated scene.',
+  },
+  {
+    slug: 'sample-project', title: 'Explore the sample project', phase: 'Getting started', optional: true,
+    description: 'Clone a ready-made Renku film into your Project Library and open it in Studio.',
+    prerequisite: 'Renku Studio is installed and its Project Library has been set up. You need Git and a terminal (Terminal on Mac or PowerShell on Windows).',
+    outcome: 'The Basilica sample appears on Studio’s Projects page, ready to explore.',
+    sections: [
+      { id: 'find-library', title: 'Find your Project Library', introduction: 'Studio shows the folder it scans for projects at the top of the Projects page, beneath “Project Library.” Use that exact path. The usual location is ~/Movies/Renku on Mac or your Videos\\Renku folder on Windows, but your setup may use a different folder.', steps: ['Open Studio’s Projects page and copy or note the Project Library path shown at the top.', 'Open Terminal or PowerShell. Change to that folder, replacing the example path below with the path Studio shows. Keep the quotes if the path contains spaces.'], command: 'cd "<Project Library path shown in Studio>"' },
+      { id: 'clone', title: 'Clone the sample', introduction: 'Clone the repository directly inside the Project Library. Git creates a sample-project folder; keep that folder name because the project database uses it.', steps: ['Run the command below while your terminal is in the Project Library folder. The download includes media, so it may take a little time.'], command: 'git clone https://github.com/GoRenku/sample-project.git', link: { href: 'https://github.com/GoRenku/sample-project', label: 'View the sample project on GitHub' } },
+      { id: 'open', title: 'Open it in Studio', introduction: 'The Projects page discovers folders in your Project Library that contain a Renku project database. The sample repository already includes that database in sample-project/.renku/project.sqlite. The .renku folder may be hidden in your file browser; you do not need to edit it or create a new project in Studio.', steps: ['Return to the Projects page and choose Refresh. Look for the card titled Basilica, with sample-project as its folder name.', 'Open Basilica and explore the screenplay, cast, locations, storyboards, and shot planning at your own pace.', 'If the card does not appear, check that sample-project is directly inside the path shown at the top of the Projects page, and that its .renku/project.sqlite file is present.'] },
+    ],
+    checkpoint: 'Basilica opens from the Projects page. You can browse it without importing a screenplay or running a setup command for this project.',
   },
   {
     slug: 'personal-models', title: 'Add a model of your own', phase: 'Optional', optional: true,

@@ -17,7 +17,7 @@ import hero from '../../assets/screens/harbor-blender-previs.jpg';
     <div class="next-lesson"><div><p class="eyebrow">Two ways to plan</p><h2>Compose the coverage. Or stage the motion.</h2><p>Follow chapters 1–5, then choose Shot List or Blender Previs. Both lead to video generation.</p></div><a class="btn btn-ghost" href="/tutorials/shot-list/">Explore shot planning</a></div>
   </section>
   <section class="container" id="optional">
-    <div class="course-heading"><div><p class="eyebrow">Optional · When you need it</p><h2>Practical guides.</h2></div><p>Add a model when you need one, or find help removing Renku. These guides are separate from the filmmaking course.</p></div>
+    <div class="course-heading"><div><p class="eyebrow">Optional · When you need it</p><h2>Practical guides.</h2></div><p>Explore the sample film, add a model when you need one, or find help removing Renku. These guides are separate from the filmmaking course.</p></div>
     <div class="chapter-grid">{tutorials.filter((tutorial) => tutorial.optional).map((tutorial) => <a class="chapter-card" href={`/tutorials/${tutorial.slug}/`}>{tutorial.image && <Image src={tutorial.image} alt={tutorial.alt ?? ''} widths={[480, 720, 1000]} sizes="(min-width: 1000px) 33vw, 50vw" />}<div class="chapter-card-copy"><span class="eyebrow">Optional guide</span><h3>{tutorial.title}</h3><p>{tutorial.description}</p><span class="chapter-link">Read optional guide</span></div></a>)}</div>
   </section>
 </LearnLayout>

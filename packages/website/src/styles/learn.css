@@ -27,6 +27,7 @@
 .lesson-section strong { color: var(--paper-100); font-weight: 600; }
 .lesson-section a:not(.btn), .text-link { color: var(--amber-400); text-decoration: underline; text-underline-offset: 4px; }
 .lesson-section .learn-image { margin-block: 1.75rem; }
+.tutorial-command { overflow-x: auto; padding: 1rem 1.2rem; border: 1px solid var(--ink-600); border-radius: var(--radius-md); background: var(--ink-900); color: var(--paper-100); }
 .checkpoint { padding: 1.4rem 1.6rem; background: var(--accent-soft); border-radius: var(--radius-md); margin-top: 1.5rem; }
 .checkpoint .eyebrow { margin-bottom: 0.55rem; }
 .checkpoint p { font-size: 0.95rem; }
