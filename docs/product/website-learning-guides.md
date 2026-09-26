@@ -5,8 +5,10 @@ instruction so that downloading Renku remains a focused task.
 
 - `/download/` covers the platform installer, cross-agent skills setup, and
   Studio launch instructions. It links onward to Quick Start.
-- `/quick-start/` covers device-wide provider credentials, Project creation,
-  agent-assisted FDX import, and the Codex/Studio review loop.
+- `/quick-start/` first explains the agent-first working model: ask the agent to
+  act or explain, review the result in Studio, then give feedback. It also covers
+  device-wide provider credentials, Project creation, screenplay import or
+  authoring, and the Codex/Studio review loop.
 - `/tutorials/` is a visual course overview. Eight individual chapter routes
   cover Inspiration, Lookbooks, Cast and world design, Scene Beats, Beat
   Storyboards, Shot List planning, Blender Previs, and video generation.
@@ -48,8 +50,10 @@ Read the owning `SKILL.md` and relevant workflow references before writing or
 revising tutorial copy. Name the skills in instructional prose. Explain their
 standard behavior separately from optional user direction; prompts should ask
 for outcomes rather than repeat context gathering, validation, saving, routing,
-or generation review already handled by the skills. Keep manual Studio actions
-such as creating Inspiration folders and uploading grabs in the UI instructions.
+or generation review already handled by the skills. Show agent-directed
+Inspiration collection as the primary path, with Studio folder creation and
+image upload as a manual option. Make clear that those manual controls do not
+imply every filmmaking workflow has a Studio button.
 Movie Director coordinates broad requests; skill descriptions also allow focused
 requests to route without a skill name in the example prompt. When references
 disagree, describe the verified common workflow without inventing a hard product
