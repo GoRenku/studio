@@ -1,4 +1,4 @@
-import path from 'node:path';
+import fs from 'node:fs/promises';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
   createMediaEngine,
@@ -17,21 +17,16 @@ describeIf('Pika paid provider smoke test', () => {
   let cleanup: (() => Promise<void>) | undefined;
   afterAll(async () => cleanup?.());
 
-  it('uses live metadata and one local first frame to generate one four-second video', async () => {
+  it('uses live metadata to generate and download one inexpensive image', async () => {
     const test = await createProviderTestContext(credential!);
     cleanup = test.cleanup;
     const engine = createMediaEngine([createPikaMediaProvider()]);
     const request = {
-      model: 'minimax/h3/image-to-video',
+      model: 'meta/muse-image-1.0/text-to-image',
       input: {
-        prompt: 'A slow forward camera glide while soft light moves across the scene.',
-        first_frame_image: {
-          $file: path.resolve('tests/e2e/fixtures/pika-first-frame.png'),
-          mimeType: 'image/png',
-          reviewLabel: 'Pika paid-test first frame',
-        },
-        duration: 4,
-        resolution: '768P',
+        prompt: 'A single small blue circle on a plain white background.',
+        num_images: 1,
+        reasoning_strength: 'low',
       },
     } as const;
     const reviewedRequest = structuredClone(request);
@@ -39,7 +34,7 @@ describeIf('Pika paid provider smoke test', () => {
     const schema = await engine.readInputSchema('pika', request.model, test.context);
     expect(schema).toMatchObject({
       type: 'object',
-      required: expect.arrayContaining(['prompt', 'first_frame_image']),
+      required: expect.arrayContaining(['prompt']),
     });
     await engine.validate('pika', request, test.context);
     const result = await engine.execute('pika', request, test.context);
@@ -50,16 +45,18 @@ describeIf('Pika paid provider smoke test', () => {
       model: request.model,
       requestId: expect.any(String),
       artifacts: [{
-        mimeType: 'video/mp4',
+        mimeType: expect.stringMatching(/^image\//),
         byteLength: expect.any(Number),
       }],
       receipt: {
         requestId: expect.any(String),
         status: 'completed',
-        mediaType: 'video',
+        mediaType: 'image',
       },
     });
+    expect(result.artifacts).toHaveLength(1);
     expect(result.artifacts[0]!.byteLength).toBeGreaterThan(0);
+    expect((await fs.stat(result.artifacts[0]!.path)).size).toBe(result.artifacts[0]!.byteLength);
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain(credential!);
     expect(serialized).not.toContain('X-Amz-Signature');

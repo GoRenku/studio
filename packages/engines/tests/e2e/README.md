@@ -15,7 +15,7 @@ ordinary environment credential name. It returns `null` until the opt-in is
 exactly `1`, and it fails clearly when opt-in is present without a credential.
 Do not add a Core import or a credential-file reader to this package.
 
-Run no paid test without separate user approval. Keep fixtures small, cap output,
+Run no paid test without separate user approval. Keep requests small, cap output,
 and clean provider jobs/artifacts when the provider supports it.
 
 Each suite is independently enabled:
@@ -31,15 +31,19 @@ Each suite is independently enabled:
 Run the selected suite with `pnpm --dir packages/engines test:e2e -- <name>`
 only after the operator approves the external request and its possible cost.
 
-The Pika suite uses `PIKA_API_KEY` and the committed
-`tests/e2e/fixtures/pika-first-frame.png` fixture. It reads the current live
-schema, validates the annotated local file, uploads it, and creates one normal
-`minimax/h3/image-to-video` job at four seconds and 768P. It saves the MP4 only
-in the shared temporary test directory and removes that directory afterward.
+The image-provider suites make one low-cost request each and verify that the
+generated image was downloaded to a nonempty temporary file:
 
-Before running it, recheck the current operation specification, price, and
-account balance. On 2026-08-26, the documented 768P price is $0.08 per second,
-so the single successful four-second fixture costs $0.32. Run only with an
+- Fal.ai: `openai/gpt-image-2`, one square image at low quality.
+- Replicate: `black-forest-labs/flux-schnell`, one image.
+- WaveSpeed: `wavespeed-ai/z-image/turbo`, one image.
+- Pika: `meta/muse-image-1.0/text-to-image`, one image at low reasoning strength.
+
+The Pika suite checks live metadata, validation, submission, polling, and image
+download. It does not verify video generation or local-media upload. As of
+2026-09-27, Pika lists the selected image route at $0.0105 per successful image.
+Recheck the live operation specification, price, and account balance before a
+paid run. The test removes its temporary output afterward. Run only with an
 explicit paid-test decision:
 
 ```bash

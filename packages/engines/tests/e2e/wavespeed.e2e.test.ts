@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createWaveSpeedMediaProvider } from '../../src/providers/wavespeed/index.js';
 import { readOptInProviderTestCredential } from './provider-test-credentials.js';
@@ -25,5 +26,9 @@ describeIf('WaveSpeed paid provider smoke test', () => {
       model: 'wavespeed-ai/z-image/turbo',
       artifacts: [{ mimeType: expect.stringMatching(/^image\//), byteLength: expect.any(Number) }],
     });
+    expect(result.artifacts).toHaveLength(1);
+    const artifact = result.artifacts[0]!;
+    expect(artifact.byteLength).toBeGreaterThan(0);
+    expect((await fs.stat(artifact.path)).size).toBe(artifact.byteLength);
   });
 });

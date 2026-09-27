@@ -31,12 +31,13 @@ isolated test home when testing a custom location, or use the first-run browser
 flow when testing missing configuration.
 
 Engine e2e tests call real providers and can cost money. They stay behind
-explicit run flags, while API keys are read only from the Core-owned Renku
-provider credential file, for example:
+explicit run flags and use test-specific environment credentials, for example:
 
 ```bash
-RUN_FAL_TEST=1 pnpm --filter @gorenku/studio-engines test:e2e
+RUN_FAL_TEST=1 FAL_KEY=your-test-key pnpm --filter @gorenku/studio-engines test:e2e -- fal
 ```
 
-Exported API-key variables are ignored. If a requested test has no saved key,
-the test fails with the missing credential name rather than silently skipping.
+The engine e2e tests do not read saved Renku credentials. If an opted-in test
+has no environment credential, it fails with the missing credential name rather
+than silently skipping. See `packages/engines/tests/e2e/README.md` for the
+provider flags, selected models, and paid-test guidance.

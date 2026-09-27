@@ -201,6 +201,62 @@ describe('Pika media provider execution', () => {
     expect(new Headers(output.init?.headers).has('X-API-Key')).toBe(false);
   });
 
+  it('submits a text-to-image request and downloads the generated image', async () => {
+    const model = 'meta/muse-image-1.0/text-to-image';
+    const calls: string[] = [];
+    const fetchMock = vi.fn<typeof fetch>(async (url, init) => {
+      const requestUrl = String(url);
+      calls.push(requestUrl);
+      if (requestUrl.includes('/catalog/apis/')) {
+        return Response.json(catalog({
+          type: 'object',
+          additionalProperties: false,
+          required: ['prompt'],
+          properties: {
+            prompt: { type: 'string' },
+            num_images: { type: 'integer', minimum: 1, maximum: 10 },
+            reasoning_strength: { type: 'string', enum: ['low', 'high'] },
+          },
+        }, {
+          api_id: model,
+          category: 'image',
+          call: { method: 'POST', path: `/v1/media/${model}` },
+        }));
+      }
+      if (requestUrl === `https://api.dev.pika.art/v1/media/${model}`) {
+        expect(JSON.parse(String(init?.body))).toEqual({
+          prompt: 'A blue circle.', num_images: 1, reasoning_strength: 'low',
+        });
+        return Response.json({ id: 'image_job_1', status: 'queued' });
+      }
+      if (requestUrl === 'https://api.dev.pika.art/v1/media/jobs/image_job_1') {
+        return Response.json({ id: 'image_job_1', status: 'completed' });
+      }
+      if (requestUrl === 'https://api.dev.pika.art/v1/media/jobs/image_job_1/content') {
+        return Response.json({ url: 'https://outputs.example/image.png' });
+      }
+      if (requestUrl === 'https://outputs.example/image.png') {
+        return new Response(new TextEncoder().encode('image-bytes'), {
+          headers: { 'content-type': 'image/png' },
+        });
+      }
+      throw new Error(`Unexpected request: ${requestUrl}`);
+    });
+    const context = await providerContext(fetchMock);
+    const result = await createMediaEngine([createPikaMediaProvider()]).execute('pika', {
+      model,
+      input: { prompt: 'A blue circle.', num_images: 1, reasoning_strength: 'low' },
+    }, context);
+
+    expect(calls).not.toContain('https://api.dev.pika.art/v1/media/uploads');
+    expect(result).toMatchObject({
+      provider: 'pika', model, requestId: 'image_job_1',
+      artifacts: [{ mimeType: 'image/png', byteLength: 11 }],
+      receipt: { requestId: 'image_job_1', status: 'completed', mediaType: 'image' },
+    });
+    await expect(fs.readFile(result.artifacts[0]!.path, 'utf8')).resolves.toBe('image-bytes');
+  });
+
   it.each([
     [401, 'ENGINE_AUTHENTICATION_FAILED', 1],
     [403, 'ENGINE_AUTHENTICATION_FAILED', 1],

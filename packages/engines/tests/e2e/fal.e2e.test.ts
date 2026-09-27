@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createFalMediaProvider } from '../../src/providers/fal-ai/index.js';
 import { createMediaEngine } from '../../src/media/engine.js';
@@ -20,7 +21,12 @@ describeIf('Fal.ai paid provider smoke test', () => {
     const engine = createMediaEngine([createFalMediaProvider()]);
     const request = {
       model: 'openai/gpt-image-2',
-      input: { prompt: 'A single small blue circle on a plain white background.', num_images: 1 },
+      input: {
+        prompt: 'A single small blue circle on a plain white background.',
+        image_size: 'square',
+        quality: 'low',
+        num_images: 1,
+      },
     };
     await engine.validate('fal-ai', request, test.context);
     const result = await engine.execute('fal-ai', request, test.context);
@@ -29,5 +35,9 @@ describeIf('Fal.ai paid provider smoke test', () => {
       model: 'openai/gpt-image-2',
       artifacts: [{ mimeType: expect.stringMatching(/^image\//), byteLength: expect.any(Number) }],
     });
+    expect(result.artifacts).toHaveLength(1);
+    const artifact = result.artifacts[0]!;
+    expect(artifact.byteLength).toBeGreaterThan(0);
+    expect((await fs.stat(artifact.path)).size).toBe(artifact.byteLength);
   });
 });
