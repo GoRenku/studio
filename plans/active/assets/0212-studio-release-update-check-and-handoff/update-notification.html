@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Studio update notification — design study</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { color-scheme: dark; font: 14px Montserrat, sans-serif; color: #f4f4dd; background: #333; }
+  body { margin: 0; padding: 42px 48px; }
+  main { max-width: 960px; margin: auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 10px; }
+  p { color: #aaa; line-height: 1.6; margin: 0; }
+  section { margin-top: 38px; }
+  h2 { font-size: 13px; font-weight: 500; color: #aaa; margin: 0 0 14px; }
+  button { font: inherit; border: 0; cursor: pointer; color: inherit; background: transparent; }
+  button:focus-visible { outline: 2px solid #d5a321; outline-offset: 3px; }
+  .header { height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; background: #292929; border: 1px solid #474747; border-radius: 14px; }
+  .project { width: 300px; }
+  .brand { min-width: 0; padding: 4px 6px; display: flex; align-items: center; gap: 8px; border-radius: 6px; }
+  .brand img { width: 36px; height: 36px; flex-shrink: 0; object-fit: contain; }
+  .brand span { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand:hover { background: #393939; }
+  .utilities { display: flex; flex-shrink: 0; align-items: center; gap: 4px; }
+  .control { width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #aaa; padding: 0; }
+  .control:hover { background: #434343; color: #f4f4dd; }
+  svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .update-wrap { position: relative; }
+  .update { position: relative; color: #c1c1b6; }
+  .update svg { width: 17px; height: 17px; }
+  .dot { position: absolute; width: 5px; height: 5px; top: 2px; right: 2px; border-radius: 50%; background: #d5a321; box-shadow: 0 0 0 2px #292929; }
+  .tooltip { position: absolute; top: 37px; left: 50%; transform: translateX(-50%); padding: 8px 10px; white-space: nowrap; font-size: 12px; border-radius: 6px; background: #494949; color: #f4f4dd; box-shadow: 0 4px 12px #0003; opacity: 0; visibility: hidden; pointer-events: none; z-index: 5; }
+  .update-wrap:hover .tooltip, .update-wrap:focus-within .tooltip { opacity: 1; visibility: visible; }
+  .theme { width: 44px; height: 28px; margin-left: 4px; border-radius: 20px; background: #525252; padding: 3px; display: flex; justify-content: flex-end; }
+  .theme span { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: #494949; border-radius: 50%; color: #d5a321; }
+  .theme svg { width: 14px; height: 14px; }
+  .library { padding: 0 20px; }
+  .library .brand img { width: 40px; height: 40px; }
+  .library .brand { gap: 12px; }
+  .library .utilities { gap: 8px; }
+  .library .theme { margin-left: 0; }
+  .state-line { display: flex; align-items: center; gap: 18px; margin-top: 34px; padding-top: 24px; border-top: 1px solid #444; font-size: 12px; color: #aaa; }
+  .state-line button { border: 1px solid #555; border-radius: 6px; padding: 7px 10px; font-size: 12px; }
+  .state-line button:hover { background: #414141; }
+  .absent .update-wrap { display: none; }
+  .notes { margin-top: 30px; max-width: 66ch; font-size: 12px; }
+  dialog { width: 440px; padding: 0; color: #f4f4dd; background: #333; border: 1px solid #494949; border-radius: 14px; box-shadow: 0 18px 48px #0006; }
+  dialog::backdrop { background: #0008; }
+  .dialog-header { padding: 22px 24px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #5556; }
+  .dialog-header h2 { margin: 0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #f4f4dd; font-weight: 600; }
+  .dialog-body { padding: 24px; }
+  .dialog-body .lead { color: #f4f4dd; font-size: 16px; font-weight: 500; margin-bottom: 10px; }
+  .dialog-body p { font-size: 14px; line-height: 1.6; }
+  .dialog-footer { padding: 16px 24px; background: #2e2e2e; border-top: 1px solid #5556; display: flex; justify-content: flex-end; gap: 8px; }
+  .action { border-radius: 6px; padding: 9px 12px; font-size: 12px; border: 1px solid #555; }
+  .primary { color: #080808; background: #d5a321; border-color: #d5a321; font-weight: 500; }
+  .primary:hover { background: #dfae32; }
+  .preview-note { padding: 0 24px 20px; font-size: 12px; color: #dec47f; }
+  [hidden] { display: none !important; }
+</style>
+<main>
+  <h1>Update notification</h1>
+  <p>A conditional signal in the existing header. Click the update icon to try the dialog.</p>
+  <section><h2>Project sidebar · actual size</h2><div id="project-header" class="header project"></div></section>
+  <section><h2>Project Library · existing header layout</h2><div id="library-header" class="header library"></div></section>
+  <div class="state-line"><button id="toggle-state">Show no-update state</button><span id="state-label">Update available</span></div>
+  <p class="notes">Interactive design study. The logo and header controls use Studio’s existing assets and proportions. No update command runs in this preview.</p>
+</main>
+<dialog id="update-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
+  <div class="dialog-header"><h2 id="dialog-title">Update Renku Studio</h2><button class="control close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div>
+  <div class="dialog-body"><p class="lead">A new version is available.</p><p id="dialog-description">Studio will close while the update runs in Terminal, then reopen. Finish your edits before continuing.</p></div>
+  <p class="preview-note" id="preview-note" hidden>Preview only. No update was started.</p>
+  <div class="dialog-footer"><button class="action close">Not now</button><button class="action primary" id="confirm">Download and update</button></div>
+</dialog>
+<script>
+  const icon = paths => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+  // Lucide paths from the workspace's installed lucide-react package (ISC).
+  const settings = icon('<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>');
+  const update = icon('<circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/>');
+  const moon = icon('<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>');
+  const header = `<button class="brand" aria-label="Go to Renku Studio home"><img src="renku-logo.svg" alt=""><span>Renku Studio</span></button><div class="utilities"><div class="update-wrap"><button class="control update" aria-label="Update available. Open update details" aria-haspopup="dialog">${update}<span class="dot"></span></button><span class="tooltip" role="tooltip">Update available</span></div><button class="control" aria-label="Open Settings">${settings}</button><button class="theme" role="switch" aria-checked="true" aria-label="Switch to light mode"><span>${moon}</span></button></div>`;
+  document.getElementById('project-header').innerHTML = header;
+  document.getElementById('library-header').innerHTML = header;
+  const dialog = document.getElementById('update-dialog');
+  document.querySelectorAll('.update').forEach(button => button.addEventListener('click', () => { document.getElementById('preview-note').hidden = true; dialog.showModal(); }));
+  document.querySelectorAll('.close').forEach(button => button.addEventListener('click', () => dialog.close()));
+  document.getElementById('confirm').addEventListener('click', () => { document.getElementById('preview-note').hidden = false; });
+  document.getElementById('toggle-state').addEventListener('click', event => { const absent = document.body.classList.toggle('absent'); event.target.textContent = absent ? 'Show update-available state' : 'Show no-update state'; document.getElementById('state-label').textContent = absent ? 'No update available' : 'Update available'; });
+</script>
+</html>
