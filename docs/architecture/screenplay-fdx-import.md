@@ -61,6 +61,13 @@ Character cues, Scene Headings, and supported tag evidence are non-authoritative
 candidates for later agent or user work. The FDX read-only gate prevents those
 candidates from being written back as Screenplay references.
 
+After an explicit import, the `screenplay-drafter` skill separately reads the
+accepted Screenplay and fills missing or clearly temporary Project logline,
+synopsis, premise, or title through the existing Project Information commands.
+The agent preserves substantive authored values. This creative Project
+Information pass is not part of the deterministic FDX importer or Studio's
+detected-export update path.
+
 ## Source Authority And Refresh
 
 The same command handles initial import and later refresh:
