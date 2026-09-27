@@ -8,6 +8,7 @@ import { createProviderCredentialsRoute } from './routes/provider-credentials.js
 import { createSetupRoute } from './routes/setup.js';
 import { createStudioEventsRoute } from './routes/studio-events.js';
 import { createStudioShutdownRoute } from './routes/studio-shutdown.js';
+import { createStudioUpdateRoute } from './routes/studio-update.js';
 import { createStudioRuntimeToken, type StudioRuntimeToken } from './studio-runtime-token.js';
 
 export interface CreateStudioServerAppOptions {
@@ -30,6 +31,7 @@ export function createStudioServerApp(options: CreateStudioServerAppOptions = {}
       })
     )
     .route('/studio-api/bootstrap', createStudioBootstrapRoute(token))
+    .route('/studio-api/studio/update', createStudioUpdateRoute({ token }))
     .route(
       '/studio-api/setup',
       createSetupRoute({ token, homeDir: options.homeDir })

@@ -29,12 +29,14 @@ import { Button } from '@/ui/button';
 import { DeleteConfirmDialog } from '@/ui/delete-confirm-dialog';
 import type { MovieStudioNavigationState } from '../use-movie-studio-navigation';
 import { StudioSidebarActions } from './studio-sidebar-actions';
+import type { StudioUpdateController } from '@/app/use-studio-update';
 import { StudioSidebarButton } from './studio-sidebar-button';
 import { StudioSidebarHoverActionRow } from './studio-sidebar-hover-action-row';
 import { StudioSidebarSection } from './studio-sidebar-section';
 import { ScreenplayTree } from './screenplay/tree';
 
 interface StudioSidebarProps {
+  update: StudioUpdateController;
   project: ProjectShellWithHttp;
   screenplayNavigation: MovieStudioNavigationState;
   selection: StudioSelection;
@@ -45,6 +47,7 @@ interface StudioSidebarProps {
 }
 
 export function StudioSidebar({
+  update,
   project,
   screenplayNavigation,
   selection,
@@ -153,18 +156,18 @@ export function StudioSidebar({
 
   return (
     <aside className='h-full min-h-0 rounded-(--radius-panel) border border-sidebar-border bg-sidebar-bg overflow-hidden flex flex-col'>
-      <div className='h-14 px-3 border-b border-border/40 bg-sidebar-header-bg flex items-center justify-between gap-3 shrink-0'>
+      <div className='h-14 px-2.5 border-b border-border/40 bg-sidebar-header-bg flex items-center justify-between gap-2 shrink-0'>
         <Button
           type='button'
           variant='ghost'
           onClick={onHome}
-          className='h-auto min-w-0 justify-start gap-2 rounded-md px-1.5 py-1 hover:bg-item-hover-bg/70'
+          className='h-auto min-w-0 justify-start gap-1.5 rounded-md px-1.5 py-1 hover:bg-item-hover-bg/70'
           aria-label='Go to Renku Studio home'
         >
           <img
             src={renkuLogo}
             alt='Renku'
-            className='h-9 w-9 shrink-0 rounded-md object-contain'
+            className='h-8 w-8 shrink-0 rounded-md object-contain'
           />
           <span className='min-w-0 text-left'>
             <span className='block truncate text-sm font-semibold leading-4'>
@@ -172,7 +175,7 @@ export function StudioSidebar({
             </span>
           </span>
         </Button>
-        <StudioSidebarActions />
+        <StudioSidebarActions update={update} />
       </div>
 
       <div className='border-b border-border/40 p-3'>

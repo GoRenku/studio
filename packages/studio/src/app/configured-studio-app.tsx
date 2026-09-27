@@ -4,12 +4,13 @@ import { ProjectLibraryScreen } from '@/features/project-library/project-library
 import { MovieStudioScreen } from '@/features/movie-studio/movie-studio-screen';
 import { useProjectSession } from '@/app/use-project-session';
 import { useStudioCoordination } from '@/app/use-studio-coordination';
+import type { StudioUpdateController } from './use-studio-update';
 
 const defaultStudioSelection: StudioSelection = {
   type: 'projectInformation',
 };
 
-export function ConfiguredStudioApp() {
+export function ConfiguredStudioApp({ update }: { update: StudioUpdateController }) {
   const projectSession = useProjectSession();
 
   useStudioCoordination({
@@ -40,12 +41,14 @@ export function ConfiguredStudioApp() {
         onProjectChange={projectSession.updateCurrentProject}
         onNavigateSelection={projectSession.navigateToStudioSelectionRoute}
         selection={projectSession.studioRouteSelection}
+        update={update}
       />
     );
   }
 
   return (
     <ProjectLibraryScreen
+      update={update}
       error={projectSession.projectSessionError}
       library={projectSession.library}
       isLoadingLibrary={projectSession.isLoadingProjectLibrary}

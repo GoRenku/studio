@@ -446,8 +446,20 @@ Project media, and source illustration sheets are not release inputs.
 
 ## Updating and uninstalling the current beta
 
-To update, stop Studio with `renku studio stop` or Ctrl+C in its terminal, then
-run `renku update`.
+An installed Studio checks the beta release when its browser application opens
+and every six hours while it stays open. When a newer version is available,
+an update icon appears before Settings in the Project Library and Movie Studio
+headers. Open it, finish any edits, and choose **Download and update**. Studio
+closes, then the interactive `renku update` runs in a visible Terminal or
+PowerShell window. Complete any skills prompts there. A successful update
+reopens Studio through the installed launcher. If the update or restart fails,
+the terminal displays the failure and the full manual `renku studio start`
+command. A failed skills step can happen after the new runtime is active.
+The terminal handoff preserves Studio's agent-profile directory overrides and
+clears overrides that were absent, so skills setup uses the originating profiles.
+
+To update from the CLI, stop Studio with `renku studio stop` or Ctrl+C in its
+terminal, then run `renku update`.
 It downloads the complete current beta, activates that version, and runs skills
 setup again. `renku update skills` uses the installed runtime to update only
 Renku skills, without downloading the application. Restart agent apps afterward.
@@ -457,8 +469,13 @@ Release archives include both platform installer scripts in `distribution`.
 The CLI calls the core installation service, which checks Studio state and
 invokes the bundled installer. An update of the already active version skips
 runtime replacement, including the running Windows `node.exe`.
-There is no automatic update check, incremental download, or automatic cleanup
-of earlier version folders.
+The browser check downloads only the release manifest. There is no background
+check while Studio is closed, incremental download, or automatic cleanup of
+earlier version folders. For a local macOS update rehearsal, build an assembled
+product with the current Studio implementation, then run
+`node scripts/release/verify-studio-update.mjs <assembled-product-directory>`.
+It uses an isolated install, fixture-local agent-profile directories, and a
+loopback release source and guides the native Terminal/browser interaction.
 
 Node/npm and Windows MinGit are private installation tools. Only `renku` is added
 to the public PATH; installing Renku does not make `npx` available in a fresh

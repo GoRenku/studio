@@ -4,6 +4,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StudioApiError } from '@/services/studio-api-errors';
 import { StudioSetupGate } from './studio-setup-gate';
+import type { StudioUpdateController } from './use-studio-update';
+
+const update: StudioUpdateController = {
+  status: null,
+  handoff: 'idle',
+  error: null,
+  confirm: async () => {},
+  clearError: () => {},
+};
 
 const readRenkuSetupMock = vi.hoisted(() => vi.fn());
 
@@ -31,7 +40,7 @@ describe('StudioSetupGate', () => {
       storageRoot: '/tmp/projects',
     });
 
-    render(<StudioSetupGate />);
+    render(<StudioSetupGate update={update} />);
 
     expect(await screen.findByText('Configured Studio')).toBeTruthy();
     expect(screen.queryByText('First-run onboarding')).toBeNull();
@@ -53,7 +62,7 @@ describe('StudioSetupGate', () => {
         storageRoot: '/tmp/projects',
       });
 
-    render(<StudioSetupGate />);
+    render(<StudioSetupGate update={update} />);
 
     expect((await screen.findByRole('alert')).textContent).toContain(
       'Renku config version is unsupported.'

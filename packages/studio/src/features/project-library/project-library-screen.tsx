@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FolderOpen, Loader2, Search } from 'lucide-react';
 import { StudioAppHeader } from '@/app/studio-app-header';
+import type { StudioUpdateController } from '@/app/use-studio-update';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import type { ProjectLibraryWithHttp } from '@/services/studio-project-contracts';
@@ -11,6 +12,7 @@ import { ProjectLibraryCard } from './project-library-card';
 import { useProjectLibrarySearch } from './use-project-library-search';
 
 interface ProjectLibraryScreenProps {
+  update: StudioUpdateController;
   error: string | null;
   library: ProjectLibraryWithHttp | null;
   isLoadingLibrary: boolean;
@@ -20,6 +22,7 @@ interface ProjectLibraryScreenProps {
 }
 
 export function ProjectLibraryScreen({
+  update,
   error,
   library,
   isLoadingLibrary,
@@ -39,7 +42,7 @@ export function ProjectLibraryScreen({
 
   return (
     <div className='h-screen w-screen bg-background text-foreground p-4 flex flex-col gap-4'>
-      <StudioAppHeader subtitle='Studio' />
+      <StudioAppHeader update={update} />
 
       <main className='flex-1 min-h-0 rounded-(--radius-panel) border border-sidebar-border bg-sidebar-bg overflow-hidden flex flex-col'>
         <div className='h-[52px] px-4 border-b border-border/40 bg-sidebar-header-bg flex items-center justify-between gap-4 shrink-0'>

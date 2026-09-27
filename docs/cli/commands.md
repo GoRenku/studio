@@ -1966,6 +1966,11 @@ renku update skills
 it, and installs the latest Renku skills into the agents selected in setup.
 Stop Studio with `renku studio stop` or Ctrl+C first; `UPDATE004` reports a
 running Studio instance.
+Installed Studio also shows a conditional update icon before Settings when a
+newer beta version is available. Confirming its dialog opens the existing
+interactive command in a visible terminal after Studio stops, then restarts
+Studio on success. Finish edits before confirming. If the terminal reports a
+failure, use the displayed full `renku studio start` command to reopen Studio.
 When that runtime version is already active, it is retained and skills setup
 still runs. Previous version folders, configuration, and Projects are preserved.
 

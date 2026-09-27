@@ -3,15 +3,17 @@ import { Button } from '@/ui/button';
 import { ThemeToggle } from '@/ui/theme-toggle';
 import { AppSettingsDialog } from '@/features/settings/app-settings-dialog';
 import renkuLogo from '@/assets/renku-logo.svg';
+import { StudioUpdateNotice } from './studio-update-notice';
+import type { StudioUpdateController } from './use-studio-update';
 
 interface StudioAppHeaderProps {
-  subtitle: string;
+  update?: StudioUpdateController;
   projectTitle?: string;
   onHome?: () => void;
 }
 
 export function StudioAppHeader({
-  subtitle,
+  update,
   projectTitle,
   onHome,
 }: StudioAppHeaderProps) {
@@ -30,15 +32,10 @@ export function StudioAppHeader({
             alt='Renku'
             className='h-10 w-10 rounded-md object-contain'
           />
-          <div className='min-w-0 text-left'>
-            <p className='text-sm font-semibold tracking-[0.02em]'>Renku</p>
-            <p className='text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-semibold'>
-              {subtitle}
-            </p>
-          </div>
+          <span className='min-w-0 truncate text-sm font-semibold tracking-[0.02em]'>Renku Studio</span>
         </Button>
 
-        <div className='flex min-w-0 items-center gap-3'>
+        <div className='flex min-w-0 items-center gap-2'>
           {projectTitle ? (
             <div className='hidden sm:flex min-w-0 items-center gap-2 rounded-md border border-border/40 bg-background/35 px-3 py-1.5'>
               <Film className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
@@ -47,7 +44,10 @@ export function StudioAppHeader({
               </span>
             </div>
           ) : null}
-          <AppSettingsDialog />
+          <div className='flex items-center gap-1'>
+            {update ? <StudioUpdateNotice update={update} /> : null}
+            <AppSettingsDialog />
+          </div>
           <ThemeToggle />
         </div>
       </div>

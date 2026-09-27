@@ -39,6 +39,9 @@ function statusForStructuredError(code: string): 400 | 404 | 500 {
   ) {
     return 404;
   }
+  if (code === 'UPDATE002' || code === 'UPDATE008' || code === 'UPDATE009' || code === 'UPDATE010') {
+    return 400;
+  }
   if (
     code.startsWith('CONFIG') ||
     code.startsWith('CORE') ||

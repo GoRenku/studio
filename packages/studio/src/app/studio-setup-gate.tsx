@@ -7,13 +7,14 @@ import { StudioApiError } from '@/services/studio-api-errors';
 import { readRenkuSetup } from '@/services/studio-setup-api';
 import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { Button } from '@/ui/button';
+import type { StudioUpdateController } from './use-studio-update';
 
 type SetupGateState =
   | { status: 'loading' }
   | { status: 'error'; error: Error }
   | { status: 'ready'; setup: RenkuSetup };
 
-export function StudioSetupGate() {
+export function StudioSetupGate({ update }: { update: StudioUpdateController }) {
   const [state, setState] = useState<SetupGateState>({ status: 'loading' });
 
   const load = async () => {
@@ -97,7 +98,7 @@ export function StudioSetupGate() {
   }
 
   if (state.setup.status === 'configured') {
-    return <ConfiguredStudioApp />;
+    return <ConfiguredStudioApp update={update} />;
   }
 
   return (

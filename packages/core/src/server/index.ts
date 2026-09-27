@@ -452,6 +452,9 @@ export type {
 export type { ProjectSupportingFile, ProjectSupportingFilePage, ProjectSupportingFileInformation } from '../client/screenplay/supporting-files.js';
 
 export { updateRenku } from './installation/renku-update.js';
+export { checkRenkuUpdate } from './installation/renku-release-check.js';
+export type { RenkuUpdateStatus } from '../client/renku-update.js';
+export { startRenkuUpdateFromStudio } from './installation/renku-update-handoff.js';
 export { readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxUpdate } from './screenplay/index.js';
 export { listMediaModels, readMediaModel, importPersonalMediaModel, removePersonalMediaModel } from './media-model-library/index.js';
 export type { MediaModelRoute, PersonalMediaModelLibrary, MediaModelDiscoveryRoute,

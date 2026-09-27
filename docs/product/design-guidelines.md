@@ -501,7 +501,12 @@ Sizes: `default` (h-9), `sm` (h-8), `lg` (h-10), `icon` (h-9 w-9)
 
 Icon-only actions in headers use: `size="icon" variant="ghost" className="h-6 w-6"`
 
-Status/plan dialogs use raw `<button>` elements with custom styling including `active:scale-[0.98]` press feedback.
+The Project Library and Movie Studio top headers stay 56 px high and use a
+one-line **Renku Studio** Home control. When a newer beta exists, a separate
+28 px ghost update button with `CircleArrowUp` and a small amber dot appears
+immediately before Settings. It opens details; **Not now** leaves the notice
+available. The button has a versioned accessible name and a short tooltip.
+Dialogs and other feature controls use the local `src/ui` primitives.
 
 ### Tabs
 

@@ -29,6 +29,7 @@ import { FdxUpdateDialog } from './screenplay/external-file/fdx-update-dialog';
 import { ScenePanel } from './scenes/scene-panel';
 import { StoryArcPanel } from './story-arc/story-arc-panel';
 import { StudioSidebar } from './studio-sidebar/studio-sidebar';
+import type { StudioUpdateController } from '@/app/use-studio-update';
 import { TrashPanel } from './trash/trash-panel';
 import {
   useMovieStudioNavigation,
@@ -43,6 +44,7 @@ import {
 } from './detail-save-notification';
 
 interface MovieStudioScreenProps {
+  update: StudioUpdateController;
   project: ProjectShellWithHttp;
   onHome: () => void;
   onProjectChange: (project: ProjectShellWithHttp) => void;
@@ -53,6 +55,7 @@ interface MovieStudioScreenProps {
 }
 
 export function MovieStudioScreen({
+  update,
   project,
   onHome,
   onProjectChange,
@@ -269,6 +272,7 @@ export function MovieStudioScreen({
             className='min-w-0'
           >
             <StudioSidebar
+              update={update}
               project={project}
               screenplayNavigation={screenplayNavigation}
               selection={selection}

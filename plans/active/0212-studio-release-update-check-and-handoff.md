@@ -1,24 +1,25 @@
 # 0212 Studio Release Update Check and Handoff
 
-Status: proposed
+Status: complete; native Windows verification deferred
 Date: 2026-09-27
 
 ## Summary
 
 Studio should check the published Renku beta release when its browser application opens and every six hours while it remains open. Only when a newer version exists, a quiet, persistent notice in Studio's top header should tell the user. Clicking the notice opens a dialog asking whether to update. Confirming should start the existing interactive `renku update` command in a visible system terminal. Installation remains the job of the current installer and CLI.
 
-The user accepted the header direction on 2026-09-27. The update execution flow remains proposed; production implementation has not been requested.
+The user accepted the header direction and requested production implementation on 2026-09-27. The code and automated checks are in place. The isolated macOS installed-product rehearsal passed on 2026-09-27: Studio updated from fixture version `0.0.1` to `0.0.2`, restarted as a new process, cleared the update notice, and retained the disposable Project's saved values and media.
 
 ## Review Attention
 
 - **Necessary behavior beyond the literal request:** `renku update` currently refuses to run while Studio is open (`UPDATE004`) and its skills step requires an interactive terminal. The notice's confirmation therefore needs a visible Terminal/PowerShell handoff that stops Studio before running the unchanged command. The confirmation must explain that Studio will close and that the user should finish edits first. A successful handoff should start Studio again after the command completes; failure remains visible in the terminal, with a clear manual restart command.
 - **Contracts:** Add a read-only update-status core service and Studio GET route, plus a focused core handoff service and token-protected Studio POST route. Add structured update-check/handoff diagnostics. Do not add a CLI command, flag, Settings field, project schema, release channel, or Cloudflare resource.
 - **Repeatable test setup:** Reuse the installers' existing `RENKU_DOWNLOAD_BASE_URL` process configuration in the new release checker and preserve it through the terminal handoff. It defaults to the public Cloudflare origin; an explicit localhost origin lets a test offer real archives without publishing a release. Add the developer-only `scripts/release/verify-studio-update.mjs` harness described below. This adds no customer-facing source selector or new environment variable.
+- **Verification scope:** Per the user's direction, run the installed-product rehearsal on macOS only. Native Windows verification is deferred because no Windows test environment is available and is not a completion gate for this work. Windows implementation remains in scope, with its end-to-end behavior explicitly unverified.
 - **Data effects:** The existing `renku update` installer changes the active application version and may install or refresh selected agent skills. It keeps Projects, configuration, and earlier version folders under the current installer contract. This plan has no migration or cleanup.
 - **Existing behavior kept:** The CLI command, checksum verification, immutable archive keys, beta channel, installer prompts, and `UPDATE004` guard remain in force. No archive is downloaded during a check. The Renku logo/name still navigates home; Settings and Theme retain their positions.
 - **Visible UI change beyond the update notice:** The Project Library currently stacks “Renku” and “STUDIO.” Change its compact left brand cluster to the same one-line **Renku Studio** title used in the in-project sidebar, as the user requested. Keep both existing headers at 56 px. The update notice is a conditional icon in the utility group immediately before Settings, with its own click target. It adds no second row and never becomes part of the Home control. At very narrow sidebar widths the existing brand ellipsis remains; this plan does not change the sidebar's minimum width.
 - **Assumptions:** “At launch” means when the Studio browser application opens, including its first open after `renku studio start`; the six-hour timer runs only while that application is open. “New version” means a higher numeric `major.minor.patch` than the installed runtime, so a deliberate beta rollback does not show an update notice. The notice appears in the Project Library header and in the Movie Studio sidebar's top header, which is the in-project equivalent. It stays visible while the release is newer, including after the user cancels the dialog; it disappears when a later check finds no newer release. There is no always-present Update control and no transient toast or popup announcement.
-- **Approval/design selection:** The user accepted the utility notification direction demonstrated by the browser-rendered interactive study. Earlier treatments, including the expanded header with a second notice row, remain rejected. The terminal handoff and automatic Studio restart remain consequential behavior choices to review before implementation. Shutdown completion, independent execution after server exit, and verification of the restarted version are required for this handoff to work reliably.
+- **Approval/design selection:** The user accepted the utility notification direction demonstrated by the browser-rendered interactive study and requested implementation of this plan. Earlier treatments, including the expanded header with a second notice row, remain rejected. Shutdown completion, independent execution after server exit, and verification of the restarted version are required for this handoff to work reliably.
 
 ## Product Behavior
 
@@ -77,7 +78,7 @@ The tradeoff is discoverability: an icon is less explicit than a standing text l
 - `renku studio stop` already requests an authorized local shutdown and waits for the runtime descriptor to clear. The Studio server has a shutdown callback. Reuse this command in the handoff rather than bypassing server shutdown.
 - `StudioAppHeader` is used by the Project Library and currently splits “Renku” from “STUDIO”; its `subtitle` prop has one production caller. The in-project top band lives in `studio-sidebar.tsx`, already shows “Renku Studio” on one line, and has Settings/Theme actions. `docs/product/design-guidelines.md` defines the current compact visual language.
 - Studio's server uses Hono resource routes and token-protected mutations. React uses service functions for API calls. Follow `docs/architecture/reference/studio-server-hono.md` and `docs/architecture/reference/front-end-guidelines.md`.
-- Existing installer review in `docs/operations/installer-review.md` records that native Windows verification and a GUI installer remain separate work. This plan needs a native Windows handoff test before claiming the Windows UI flow is complete.
+- Existing installer review in `docs/operations/installer-review.md` records that native Windows verification and a GUI installer remain separate work. Native Windows update-handoff verification is also deferred in this plan at the user's direction; report that limitation without blocking completion of the current scope.
 
 ## Architecture Shape Gate
 
@@ -114,65 +115,68 @@ The tradeoff is discoverability: an icon is less explicit than a standing text l
 
 ### Repeatable Local Update Rehearsal
 
-Add a developer-only harness at `scripts/release/verify-studio-update.mjs`, invoked as `node scripts/release/verify-studio-update.mjs <assembled-product-directory>`. It accepts an already built native product containing the new UI update implementation. It does not build dependencies, change repository version files, publish releases, or stop an existing Studio. If Studio's fixed port 5173 is occupied, it reports that prerequisite and exits.
+Add a macOS-only developer harness at `scripts/release/verify-studio-update.mjs`, invoked as `node scripts/release/verify-studio-update.mjs <assembled-product-directory>`. It accepts an already built macOS product containing the new UI update implementation. It does not build dependencies, change repository version files, publish releases, or stop an existing Studio. If Studio's fixed port 5173 is occupied, it reports that prerequisite and exits.
 
 1. Copy the assembled product into two isolated fixture trees labeled `0.0.1` and `0.0.2`. Both contain the same real implementation, with consistent `RELEASE.json` and CLI package-version metadata in the copies. Use the existing packager to create native archives and calculate their real SHA-256 values. This tests an actual installation change without needing two independently developed releases.
 2. Start a loopback HTTP server with the normal channel-manifest and versioned-archive paths. Initially offer `0.0.1`; install it using the real native installer into a temporary installation, launcher, profile/configuration, and Project Library. Use a disposable Project created through current core commands. The complete path/environment setup must remain isolated through the terminal handoff, including agent-skills selection and shell-profile writes.
 3. Change only the local server's manifest to offer `0.0.2`, then launch the installed `0.0.1`. Its normal launch check must show the update indicator. In this guided native check, the tester clicks the indicator and confirms, then handles the normal terminal prompts in the isolated profile. The harness performs setup and verification; the tester does not manually construct releases or install paths.
 4. Observe a real archive request, successful checksum validation and activation, termination of the original Studio process, and a new Studio process serving `installedVersion: '0.0.2'`. Verify the rewritten launcher resolves to the second fixture, the update status is current, the notice is absent, and the disposable Project's saved domain values and media are intact. Compare Project contents through core rather than requiring byte-identical SQLite files.
-5. Keep terminal output and the local server's request log as evidence. Failure remains visible with its stage; a restarted old version cannot pass. Repeat the same guided rehearsal in a native Windows desktop session to validate PowerShell launch and process behavior. State explicitly when only one platform has been verified.
+5. Keep terminal output and the local server's request log as evidence. Failure remains visible with its stage; a restarted old version cannot pass. Report the result as macOS verification. Native Windows terminal launch and update/restart verification are deferred and are not part of this rehearsal.
 
 The real-terminal rehearsal is a bounded integration check. Fast automated UI tests still use controlled status/POST responses, and fake timers advance six hours immediately. Core handoff tests inject process-launch outcomes; installer tests own their existing failure matrix. This combination keeps routine tests fast while retaining one repeatable proof of the complete native path. The loopback rehearsal proves the update client and installer flow, not public Cloudflare availability; the existing release-publication checks own the latter.
 
+The completed macOS rehearsal recorded old Studio PID `83174`, restarted PID `84964`, a real `0.0.2` archive request, and a `current` status from the restarted application. Its request log and result are retained in `/var/folders/q5/wn2mpw2j7r3dp46mrt6vn_2r0000gn/T/renku-studio-update-rehearsal-LHvnay/`. The original Studio was restarted afterward. Native Windows verification remains deferred.
+
 ## Final Verification
 
-Run focused core, server, and UI tests, `pnpm build`, `pnpm lint`, `pnpm check`, and the relevant release installer contract tests. Inspect `git diff --stat` and the complete diff; inspect any newly large or heavily modified file. Confirm `index.ts` files stay thin, no route/React release policy or generic shell API was added, existing update/stop tests still pass, and changes contain no formatting churn. Complete the native Windows handoff check before declaring the Windows flow verified.
+Run focused core, server, and UI tests, `pnpm build`, `pnpm lint`, `pnpm check`, and the relevant release installer contract tests. Inspect `git diff --stat` and the complete diff; inspect any newly large or heavily modified file. Confirm `index.ts` files stay thin, no route/React release policy or generic shell API was added, existing update/stop tests still pass, and changes contain no formatting churn. Complete the macOS handoff rehearsal and report native Windows verification as deferred; it is not a completion gate.
 
 ## Completion Checklist
 
 ### Review Area
 
 - [x] User accepts the utility notification design direction.
-- [ ] Review the explicit terminal/restart behavior.
-- [ ] Recheck that no adjacent Settings, channel, installer, or Project workflow was added.
-- [ ] Confirm the module shape matches the Architecture Shape Gate and no god file, catch-all helper, or broad dispatcher appears.
+- [x] Review the explicit terminal/restart behavior.
+- [x] Recheck that no adjacent Settings, channel, installer, or Project workflow was added.
+- [x] Confirm the module shape matches the Architecture Shape Gate and no god file, catch-all helper, or broad dispatcher appears.
 
 ### Architecture And Contracts
 
-- [ ] Core alone validates the installed and beta release envelope and compares numeric versions.
-- [ ] Reuse `RENKU_DOWNLOAD_BASE_URL` consistently in checks and installation, preserve it through handoff, and keep it inaccessible to browser request input.
-- [ ] Core alone owns the fixed terminal stop → `renku update` → restart handoff and duplicate guard.
-- [ ] Preserve the existing CLI command, interactive skills installer, checksum path, and `UPDATE004` running-Studio guard.
-- [ ] Add the named GET/POST Studio routes with existing token/error handling and no request-controlled command input.
-- [ ] Keep `packages/core/src/server/index.ts` and `packages/studio/server/app.ts` as thin entrypoints.
+- [x] Core alone validates the installed and beta release envelope and compares numeric versions.
+- [x] Reuse `RENKU_DOWNLOAD_BASE_URL` consistently in checks and installation, preserve it through handoff, and keep it inaccessible to browser request input.
+- [x] Core alone owns the fixed terminal stop → `renku update` → restart handoff and duplicate guard.
+- [x] Preserve the existing CLI command, interactive skills installer, checksum path, and `UPDATE004` running-Studio guard.
+- [x] Add the named GET/POST Studio routes with existing token/error handling and no request-controlled command input.
+- [x] Keep `packages/core/src/server/index.ts` and `packages/studio/server/app.ts` as thin entrypoints.
 
 ### Implementation Slices
 
-- [ ] Check on Studio browser launch and every six hours while open, with no archive download or closed-app background task.
-- [ ] Present only a higher valid beta version; handle current, rollback, offline, invalid manifest, and non-installed development runtime correctly.
-- [ ] Render **Renku Studio** on one line in both top headers and the conditional update icon before Settings, with a tooltip, accessible name, and shared confirmation dialog; preserve the 56 px header height and show no standing update control or ephemeral announcement.
-- [ ] Keep logo/name navigation separate from the notice/dialog action, including keyboard activation and focus order.
-- [ ] Keep the notice after **Not now** and across navigation; ensure **Not now** performs no mutation and **Download and update** performs one protected handoff with a clear failure path.
-- [ ] Leave Studio running when terminal launch fails; show installer outcome in the terminal and reopen Studio on success.
-- [ ] Confirm terminal-side readiness before shutdown, survive server/browser closure, wait for actual shutdown completion, and restart through the rewritten installed launcher.
+- [x] Check on Studio browser launch and every six hours while open, with no archive download or closed-app background task.
+- [x] Present only a higher valid beta version; handle current, rollback, offline, invalid manifest, and non-installed development runtime correctly.
+- [x] Render **Renku Studio** on one line in both top headers and the conditional update icon before Settings, with a tooltip, accessible name, and shared confirmation dialog; preserve the 56 px header height and show no standing update control or ephemeral announcement.
+- [x] Keep logo/name navigation separate from the notice/dialog action, including keyboard activation and focus order.
+- [x] Keep the notice after **Not now** and across navigation; ensure **Not now** performs no mutation and **Download and update** performs one protected handoff with a clear failure path.
+- [x] Leave Studio running when terminal launch fails; show installer outcome in the terminal and reopen Studio on success.
+- [x] Confirm terminal-side readiness before shutdown, survive server/browser closure, wait for actual shutdown completion, and restart through the rewritten installed launcher.
 
 ### Tests And Guardrails
 
-- [ ] Add focused core release-check and handoff tests at their owning layers.
-- [ ] Add focused route authorization/delegation/error tests without duplicating core's validation matrix.
-- [ ] Add UI timer, navigation, available-state, and dialog-interaction tests.
-- [ ] Add and run the isolated two-version rehearsal harness on macOS and native Windows separately; require no public release publication and preserve evidence of the new running version.
-- [ ] Prove the restarted application runs the updated version, the notice clears, and saved Project data remains intact; cover slow shutdown, timeout, and skills failure after runtime activation.
+- [x] Add focused core release-check and handoff tests at their owning layers.
+- [x] Add focused route authorization/delegation/error tests without duplicating core's validation matrix.
+- [x] Add UI timer, navigation, available-state, and dialog-interaction tests.
+- [x] Add and run the isolated two-version rehearsal harness on macOS; require no public release publication and preserve evidence of the new running version.
+- [x] Record native Windows end-to-end verification as deferred, without treating it as a completion blocker.
+- [x] Prove the restarted application runs the updated version, the notice clears, and saved Project data remains intact; cover slow shutdown, timeout, and skills failure after runtime activation.
 
 ### Documentation
 
-- [ ] Update current distribution/CLI instructions to describe the Studio-initiated update path and recovery.
-- [ ] Update current UI guidance for the selected treatment and record accepted direction in `docs/`.
-- [ ] Leave historical plans and decisions untouched unless a new ADR genuinely supersedes one.
+- [x] Update current distribution/CLI instructions to describe the Studio-initiated update path and recovery.
+- [x] Update current UI guidance for the selected treatment and record accepted direction in `docs/`.
+- [x] Leave historical plans and decisions untouched unless a new ADR genuinely supersedes one.
 
 ### Final Verification
 
-- [ ] Run focused tests, root build/lint/check, and relevant installer contract tests.
-- [ ] Inspect the Project Library and Movie Studio desktop headers in both themes, including default and minimum sidebar widths, focus, and dialog state.
-- [ ] Inspect `git diff --stat`, the complete diff, and large changed files; remove formatting churn.
-- [ ] Confirm no checklist item was satisfied by accepting unreviewable structure; only then mark the plan complete.
+- [x] Run focused tests, root build/lint/check, and relevant installer contract tests.
+- [x] Inspect the Project Library and Movie Studio desktop headers in both themes, including default and minimum sidebar widths, focus, and dialog state.
+- [x] Inspect `git diff --stat`, the complete diff, and large changed files; remove formatting churn.
+- [x] Confirm no checklist item was satisfied by accepting unreviewable structure; only then mark the plan complete.
