@@ -1,5 +1,10 @@
 # 0102 Preflight Provider Credentials And Curate Cross-Provider Routes
 
+> **Decision 0103 update:** Replicate and WaveSpeed may now be saved Project
+> provider preferences when keyed. ElevenLabs is offered only for Audio and
+> World Labs only for Location World generation. Key status determines visibility
+> within those provider roles; route suitability remains agent-owned.
+
 Date: 2026-09-24
 
 Status: accepted

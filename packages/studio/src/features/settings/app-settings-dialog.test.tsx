@@ -3,6 +3,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppSettingsDialog } from './app-settings-dialog';
+import { Button } from '@/ui/button';
 
 const readProviderCredentialsMock = vi.hoisted(() => vi.fn());
 const updateProviderCredentialsMock = vi.hoisted(() => vi.fn());
@@ -101,6 +102,18 @@ describe('AppSettingsDialog', () => {
     expect(input.value).toBe('keep-this-test-secret');
     expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled)
       .toBe(false);
+  });
+
+  it('opens only the header dialog for a deep link when a setup trigger is also mounted', async () => {
+    window.history.replaceState(null, '', '/?settings=provider-credentials');
+    readProviderCredentialsMock.mockResolvedValue(resource());
+    render(<>
+      <AppSettingsDialog />
+      <AppSettingsDialog trigger={<Button>Add API keys</Button>} />
+    </>);
+    await screen.findByLabelText('ElevenLabs');
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(readProviderCredentialsMock).toHaveBeenCalledOnce();
   });
 
   it('discards an unsaved draft on Cancel and reloads on reopen', async () => {

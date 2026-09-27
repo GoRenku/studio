@@ -1,5 +1,10 @@
 # 0090 Use Shot Plan Dialogue Audio And Provider-Neutral Cast Voices
 
+> **Decision 0103 update:** Audio Settings offers keyed general media providers
+> and ElevenLabs, but never World Labs. The preference remains an opaque agent
+> default; the agent resolves support for the requested Audio operation through
+> Skills.
+
 Current clarification: [ADR 0097](0097-use-agent-directed-scene-segmentation.md)
 permits recorded, unretimed excerpts of selected Takes for authorized multi-clip
 generation with complete scene coverage. Other whole-Take and selection rules remain.

@@ -258,16 +258,24 @@ Media Producer's Pika Skill curates the initial operation set. World Labs is
 exposed by its focused location-world Engines API.
 
 Project Settings version 6 has global Preview and provider prompt-expansion
-preferences plus independent Image, Video, and Audio sections. Image chooses
-Codex, Fal.ai, or Pika; Video chooses Fal.ai or Pika; Audio chooses ElevenLabs
-or Fal.ai.
+preferences plus independent Image, Video, and Audio sections. The sanitized
+credential status resource supplies keyed Fal.ai, Pika, Replicate, and
+WaveSpeed choices to all three menus. Keyed ElevenLabs appears only in Audio;
+World Labs appears in none of these menus because it serves Location World
+generation. Image also always lists keyless ChatGPT Images 2.5 (Codex) first;
+new Projects default to Codex for Image. These provider roles are the only
+menu exceptions: Studio does not check media routes or models. A saved provider
+value remains an opaque agent default even when its key is removed or its
+provider is not offered in that menu; Studio explains the state without
+rewriting the Project. The agent checks the selected request through Skills
+and asks the user when the preferred provider cannot fulfill it.
 Media Producer applies the expansion preference only when the selected live
 schema unambiguously exposes such a control; runtime code has no native-field
 map.
 Each media kind owns Ask Before Generating, concurrent scheduling, and a retained
 maximum. Effective concurrency is one while concurrent scheduling is off.
-Replicate, WaveSpeed, and World Labs credentials remain available for explicit
-Skill workflows but are not Project provider preferences.
+Replicate and WaveSpeed may be Project preferences when keyed; their presence
+in a menu does not claim they support that media kind.
 
 Provider Skill indexes contain the exact provider API id and human name, with
 optional operation hints and editorial model-guide keys. Personal records contain

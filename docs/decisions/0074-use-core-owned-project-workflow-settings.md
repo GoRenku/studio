@@ -1,5 +1,10 @@
 # 0074 Use Core-Owned Project Workflow Settings
 
+> **Decision 0103 update:** Image, Video, and Audio offer keyed general media
+> providers; ElevenLabs appears only in Audio, World Labs in none of these
+> menus, and keyless Codex in Image. The preference remains opaque and does not
+> assert model or route support.
+
 > **Decision 0090 update:** Project Settings version 6 allows Fal.ai or
 > ElevenLabs as the Audio provider preference. The value remains an opaque
 > Project default; provider/model semantics and request controls stay in Engines

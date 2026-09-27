@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ProjectSettingsDocument } from '@gorenku/studio-core/client';
+import type { ProjectSettingsDocument, ProviderCredentialStatus } from '@gorenku/studio-core/client';
 import type { DebouncedSaveStatus } from '@/hooks/use-debounced-autosave';
 import { useDebouncedAutosave } from '@/hooks/use-debounced-autosave';
+import { Button } from '@/ui/button';
 import {
   matchesProjectSettingsResource,
   useStudioResourceRefresh,
@@ -10,6 +11,7 @@ import {
   readProjectSettings,
   replaceProjectSettings,
 } from '@/services/studio-projects-api';
+import { readProviderCredentials } from '@/services/studio-provider-credentials-api';
 import { ProjectTemporaryFilesSection } from './project-temporary-files-section';
 import { ProjectSettingsFields } from './project-settings-fields';
 
@@ -25,8 +27,55 @@ export function ProjectSettingsPanel({
   const [draft, setDraft] = useState<ProjectSettingsDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
+  const [providers, setProviders] = useState<ProviderCredentialStatus[] | null>(null);
+  const [providerError, setProviderError] = useState<string | null>(null);
+  const [providersLoading, setProvidersLoading] = useState(true);
   const draftRef = useRef<ProjectSettingsDocument | null>(null);
   const committedRef = useRef<ProjectSettingsDocument | null>(null);
+  const providerReadRevision = useRef(0);
+
+  const refreshProviders = useCallback(async () => {
+    const revision = ++providerReadRevision.current;
+    setProvidersLoading(true);
+    setProviderError(null);
+    try {
+      const resource = await readProviderCredentials();
+      if (revision === providerReadRevision.current) {
+        setProviders(resource.providers);
+      }
+    } catch (loadError) {
+      if (revision === providerReadRevision.current) {
+        setProviders(null);
+        setProviderError(loadError instanceof Error ? loadError.message : 'Unable to load provider API keys.');
+      }
+    } finally {
+      if (revision === providerReadRevision.current) {
+        setProvidersLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const revision = ++providerReadRevision.current;
+    void readProviderCredentials()
+      .then((resource) => {
+        if (!cancelled && revision === providerReadRevision.current) {
+          setProviders(resource.providers);
+          setProvidersLoading(false);
+        }
+      })
+      .catch((loadError) => {
+        if (!cancelled && revision === providerReadRevision.current) {
+          setProviderError(loadError instanceof Error ? loadError.message : 'Unable to load provider API keys.');
+          setProvidersLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+      providerReadRevision.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -115,8 +164,20 @@ export function ProjectSettingsPanel({
     return <p className='text-sm text-muted-foreground'>Loading Project Settings...</p>;
   }
   return (
-    <div className='mx-auto w-full max-w-4xl pb-6'>
-      <ProjectSettingsFields settings={draft} onChange={setDraft} />
+    <div className='mx-auto w-full max-w-[800px] pb-6'>
+      {providerError ? (
+        <div role='alert' className='flex items-center justify-between gap-4 py-4 text-sm text-destructive'>
+          <span>{providerError}</span>
+          <Button type='button' variant='outline' size='sm' onClick={() => void refreshProviders()}>Retry</Button>
+        </div>
+      ) : null}
+      <ProjectSettingsFields
+        settings={draft}
+        onChange={setDraft}
+        providers={providers}
+        providersLoading={providersLoading}
+        onRefreshProviders={() => void refreshProviders()}
+      />
       <ProjectTemporaryFilesSection key={projectName} projectName={projectName} />
     </div>
   );

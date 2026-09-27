@@ -90,7 +90,7 @@ export function ProjectDetailsPanel({
       <LineTabsContent
         value='settings'
         forceMount
-        className='p-6 data-[state=inactive]:hidden'
+        className='px-6 pb-2 data-[state=inactive]:hidden'
       >
         <ProjectSettingsPanel
           projectName={project.project.projectName}

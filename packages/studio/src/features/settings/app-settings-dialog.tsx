@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactElement, type RefObject } from 'react';
 import { AlertCircle, Loader2, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/ui/alert';
@@ -15,19 +15,24 @@ import {
 import { ProviderCredentialsFields } from './provider-credentials-fields';
 import { useProviderCredentialsDraft } from './use-provider-credentials-draft';
 
-export function AppSettingsDialog() {
+export function AppSettingsDialog({ trigger, onClose, returnFocusRef }: {
+  trigger?: ReactElement;
+  onClose?: () => void;
+  returnFocusRef?: RefObject<HTMLButtonElement | null>;
+}) {
+  const handlesSettingsLink = trigger === undefined;
   const [open, setOpen] = useState(
-    () => new URL(window.location.href).searchParams.get('settings') === 'provider-credentials'
+    () => handlesSettingsLink && new URL(window.location.href).searchParams.get('settings') === 'provider-credentials'
   );
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const controller = useProviderCredentialsDraft();
   const loadCredentials = controller.load;
 
   useEffect(() => {
-    if (new URL(window.location.href).searchParams.get('settings') === 'provider-credentials') {
+    if (handlesSettingsLink && new URL(window.location.href).searchParams.get('settings') === 'provider-credentials') {
       void loadCredentials();
     }
-  }, [loadCredentials]);
+  }, [handlesSettingsLink, loadCredentials]);
 
   const clearSettingsLink = () => {
     const url = new URL(window.location.href);
@@ -50,6 +55,7 @@ export function AppSettingsDialog() {
     controller.resetDraft();
     setOpen(false);
     clearSettingsLink();
+    onClose?.();
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -57,6 +63,7 @@ export function AppSettingsDialog() {
     if (await controller.save()) {
       setOpen(false);
       clearSettingsLink();
+      onClose?.();
       toast.success('Settings saved.');
     }
   };
@@ -64,7 +71,7 @@ export function AppSettingsDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button
+        {trigger ?? <Button
           type='button'
           variant='ghost'
           size='icon'
@@ -72,7 +79,7 @@ export function AppSettingsDialog() {
           aria-label='Open Settings'
         >
           <Settings className='h-4 w-4' />
-        </Button>
+        </Button>}
       </DialogTrigger>
 
       <DialogContent
@@ -83,6 +90,10 @@ export function AppSettingsDialog() {
           event.preventDefault();
           dialogContentRef.current?.focus();
         }}
+        onCloseAutoFocus={returnFocusRef ? (event) => {
+          event.preventDefault();
+          returnFocusRef.current?.focus();
+        } : undefined}
         onEscapeKeyDown={(event) =>
           controller.saving && event.preventDefault()
         }
