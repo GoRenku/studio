@@ -4,10 +4,9 @@ import SiteHeader from '../components/SiteHeader.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LearnNav from '../components/LearnNav.astro';
 
-const macCommand = '(set -o pipefail; curl -fsSL https://downloads.gorenku.com/install.sh | sh) && export PATH="$HOME/.local/bin:$PATH"';
+const macCommand = 'curl -fsSL https://downloads.gorenku.com/install.sh | sh';
 const windowsCommand = 'irm https://downloads.gorenku.com/install.ps1 | iex';
-const macLaunchCommand = '"$HOME/.local/bin/renku" studio start';
-const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studio start';
+const launchCommand = 'renku studio start';
 ---
 
 <BaseLayout
@@ -27,7 +26,7 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
       </h1>
       <p class="install-intro" data-reveal style="--reveal-delay: 0.12s">
         Renku runs locally on your computer, close to your screenplay and media.
-        Install Renku, add the skills to your AI agent, and start your studio.
+        Use it alongside your AI agent: give direction in the agent app and review your film in Studio.
       </p>
     </section>
 
@@ -40,6 +39,17 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
         <p>macOS 13.5+ on Apple silicon or Intel · Windows 10 (1803+) or 11, x64</p>
       </div>
       <p class="install-terms">Before installing Renku, the installer asks you to read and accept the <a href="/terms/">Terms of Use</a>. It remembers your answer for updates and asks again only if the terms change. You can also review the <a href="/privacy/">Privacy Notice</a>. Renku Studio’s AGPLv3 license and the Skills’ MIT license govern your open-source rights independently.</p>
+
+      <div class="install-step" data-reveal>
+        <div class="step-intro">
+          <span class="step-number" aria-hidden="true">→</span>
+          <div>
+            <h3>First, install an AI agent</h3>
+            <p>Renku requires a separate agent app; it has no built-in agent. If you do not have one yet, install <a href="https://developers.openai.com/codex/app/" target="_blank" rel="noreferrer">Codex Desktop</a> or <a href="https://claude.com/download" target="_blank" rel="noreferrer">Claude Desktop</a> (use its Code tab).</p>
+            <p>We recommend desktop apps for viewing images alongside your conversation and using computer-use tools where supported. You can also use a terminal agent or another app that supports local commands and Renku’s skills.</p>
+          </div>
+        </div>
+      </div>
 
       <div class="platform-tabs" role="tablist" aria-label="Operating system" data-reveal>
         <button
@@ -83,8 +93,7 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
           <button class="copy-button" type="button" data-copy={macCommand} aria-label="Copy macOS install command">Copy</button>
         </div>
         <p class="command-note">
-          The installer detects your Mac, verifies the download with SHA-256, and adds
-          <code>renku</code> to your path. Node.js is included. If Git is missing, setup opens Apple’s Command Line Tools installer; finish that dialog, then press Return in Terminal to continue.
+          If Git is missing, setup opens Apple’s Command Line Tools installer. Finish that dialog, then press Return in Terminal to continue.
         </p>
       </div>
 
@@ -93,7 +102,7 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
           <span class="step-number">01</span>
           <div>
             <h3>Install Renku</h3>
-            <p>Open PowerShell, paste this command, and press Enter. WSL is not required.</p>
+            <p>Open PowerShell, paste this command, and press Enter.</p>
           </div>
         </div>
         <div class="command-block">
@@ -101,21 +110,16 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
           <code>{windowsCommand}</code>
           <button class="copy-button" type="button" data-copy={windowsCommand} aria-label="Copy Windows install command">Copy</button>
         </div>
-        <p class="command-note">
-          The installer verifies the download with SHA-256, installs the native Windows
-          build, and adds <code>renku</code> to your user path. Node.js is included. Setup reuses Git if available or downloads a verified private copy automatically.
-        </p>
       </div>
 
       <div class="install-step" data-reveal>
         <div class="step-intro">
           <span class="step-number">02</span>
           <div>
-            <h3>Choose your agents</h3>
-            <p>The installer opens the <a href="https://github.com/vercel-labs/skills" target="_blank" rel="noreferrer">skills</a> setup automatically. Select Codex, Claude Code, or the other agents you use, then confirm installation. Renku’s skills will be available across your projects.</p>
+            <h3>Add Renku’s skills to your agent</h3>
+            <p>When the installer asks, select Codex, Claude Code, or the agent you use and confirm. These skills teach your agent how to work with Renku.</p>
           </div>
         </div>
-        <p class="command-note">No separate Node.js, npm, or Codex CLI installation is needed. If setup is interrupted, run the installer again to continue.</p>
       </div>
 
       <div class="install-step launch-step" data-reveal>
@@ -123,20 +127,22 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
           <span class="step-number">03</span>
           <div>
             <h3>Start the studio</h3>
-            <p>Run this command in the same terminal to open Studio in your browser, then follow the first-run setup. Restart your agent and start a new conversation to load the Renku skills.</p>
+            <p data-platform-panel="mac">Open a new Terminal window and run this command to open Studio in your browser.</p>
+            <p data-platform-panel="windows" hidden>Run this command in the same PowerShell window to open Studio in your browser.</p>
+            <p>Follow the first-run setup. Restart your agent and start a new conversation to load the Renku skills.</p>
           </div>
         </div>
         <div class="command-block command-block-launch" data-platform-panel="mac">
           <span class="command-prompt" aria-hidden="true">$</span>
-          <code>{macLaunchCommand}</code>
-          <button class="copy-button" type="button" data-copy={macLaunchCommand} aria-label="Copy macOS launch command">Copy</button>
+          <code>{launchCommand}</code>
+          <button class="copy-button" type="button" data-copy={launchCommand} aria-label="Copy macOS launch command">Copy</button>
         </div>
         <div class="command-block command-block-launch" data-platform-panel="windows" hidden>
           <span class="command-prompt" aria-hidden="true">PS</span>
-          <code>{windowsLaunchCommand}</code>
-          <button class="copy-button" type="button" data-copy={windowsLaunchCommand} aria-label="Copy Windows launch command">Copy</button>
+          <code>{launchCommand}</code>
+          <button class="copy-button" type="button" data-copy={launchCommand} aria-label="Copy Windows launch command">Copy</button>
         </div>
-        <p class="command-note">Keep this terminal session open while using Studio; you can minimize the window. Ctrl+C or closing the session stops Studio. Closing the browser tab does not. Run the same command to start Renku again.</p>
+        <p class="command-note">Keep this terminal open while using Studio. Run the same command whenever you want to start Renku again.</p>
       </div>
     </section>
 
@@ -154,7 +160,7 @@ const windowsLaunchCommand = '& "$env:LOCALAPPDATA\\Renku\\bin\\renku.cmd" studi
       <div data-reveal style="--reveal-delay: 0.06s">
         <p class="detail-label">Safe updates</p>
         <h3>Versioned and verified.</h3>
-        <p>Stop Studio, then run <code>renku update</code> to update Renku and its skills. Use <code>renku update skills</code> for skills only. Runtime downloads are checksum-verified before activation.</p>
+        <p>Stop Studio, then run <code>renku update</code> to update Renku and its skills. Use <code>renku update skills</code> for skills only.</p>
       </div>
       <div data-reveal style="--reveal-delay: 0.12s">
         <p class="detail-label">Open development</p>
