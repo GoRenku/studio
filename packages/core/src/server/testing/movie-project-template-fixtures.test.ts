@@ -1,3 +1,4 @@
+import { readCurrentProject, openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -52,7 +53,7 @@ describe('movie project template fixtures', () => {
       return;
     }
 
-    await projectData.openCurrentProject({
+    await openCurrentProject({
       homeDir: first.homeDir,
       projectName: 'blank-movie',
     });
@@ -101,7 +102,7 @@ describe('movie project template fixtures', () => {
     }
 
     await expect(
-      projectData.readCurrentProject({ homeDir: fixture.homeDir })
+      readCurrentProject({ homeDir: fixture.homeDir })
     ).resolves.toBeNull();
   });
 
@@ -190,7 +191,7 @@ describe('movie project template fixtures', () => {
     }
 
     await expect(
-      projectData.readCurrentProject({ homeDir: fixture.homeDir })
+      readCurrentProject({ homeDir: fixture.homeDir })
     ).resolves.toMatchObject({
       projectName: 'constantinople',
       projectFolder: created.projectPath,

@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import Database from 'better-sqlite3';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { existsSync } from 'node:fs';
@@ -25,58 +26,71 @@ const DRIZZLE_MIGRATIONS_TABLE = '__drizzle_migrations';
 
 const projectSessions = new Map<string, SqliteDatabaseSession>();
 
+const performanceChannel = channel('renku.performance');
+
 export function openProjectStore(input: {
   projectFolder: string;
   create: boolean;
   lifetime?: DatabaseSessionLifetime;
   autoMigrate?: boolean;
 }): DatabaseSession {
-  const databasePath = resolveProjectDatabasePath(input.projectFolder);
-  if (!input.create && !existsSync(databasePath)) {
-    throw new ProjectDataError(
-      'PROJECT_DATA020',
-      `Project database not found at ${databasePath}.`
-    );
-  }
+  const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
+  let outcome = 'success';
+  try {
+    const databasePath = resolveProjectDatabasePath(input.projectFolder);
+    if (!input.create && !existsSync(databasePath)) {
+      throw new ProjectDataError(
+        'PROJECT_DATA020',
+        `Project database not found at ${databasePath}.`
+      );
+    }
 
-  if (input.lifetime === 'project') {
-    const existing = projectSessions.get(databasePath);
-    if (existing) {
-      try {
-        assertProjectStoreSchema(existing.sqlite, databasePath);
-        return existing;
-      } catch {
-        projectSessions.delete(databasePath);
-        existing.sqlite.close();
+    if (input.lifetime === 'project') {
+      const existing = projectSessions.get(databasePath);
+      if (existing) {
+        try {
+          assertProjectStoreSchema(existing.sqlite, databasePath);
+          return existing;
+        } catch {
+          projectSessions.delete(databasePath);
+          existing.sqlite.close();
+        }
       }
     }
+
+    const sqlite = openSqliteWithCurrentSchema({
+      databasePath,
+      autoMigrate: input.autoMigrate ?? !input.create,
+    });
+    const db = drizzle(sqlite);
+
+    const session: SqliteDatabaseSession = {
+      databasePath,
+      sqlite,
+      db,
+      close:
+        input.lifetime === 'project'
+          ? () => {
+              // Project-lifetime stores are owned by the Studio process.
+            }
+          : () => {
+              sqlite.close();
+            },
+    };
+
+    if (input.lifetime === 'project') {
+      projectSessions.set(databasePath, session);
+    }
+
+    return session;
+  } catch (error) {
+    outcome = 'failure';
+    throw error;
+  } finally {
+    if (started !== undefined) {
+      performanceChannel.publish({ package: 'core', phase: 'database-open', durationMs: performance.now() - started, outcome });
+    }
   }
-
-  const sqlite = openSqliteWithCurrentSchema({
-    databasePath,
-    autoMigrate: input.autoMigrate ?? !input.create,
-  });
-  const db = drizzle(sqlite);
-
-  const session: SqliteDatabaseSession = {
-    databasePath,
-    sqlite,
-    db,
-    close:
-      input.lifetime === 'project'
-        ? () => {
-            // Project-lifetime stores are owned by the Studio process.
-          }
-        : () => {
-            sqlite.close();
-          },
-  };
-
-  if (input.lifetime === 'project') {
-    projectSessions.set(databasePath, session);
-  }
-
-  return session;
 }
 
 function openSqliteWithCurrentSchema(input: {

@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -108,7 +109,7 @@ export async function createCommandBuiltSampleMovieProject(input: {
   }
 
   seedProjectInformationTables(created.projectPath);
-  await projectData.openCurrentProject({
+  await openCurrentProject({
     projectName: 'constantinople',
     homeDir: input.homeDir,
   });

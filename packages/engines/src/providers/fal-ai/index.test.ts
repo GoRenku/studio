@@ -27,7 +27,8 @@ import { createFalMediaProvider } from './index.js';
 describe('Fal.ai media provider', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it.each(['xai/grok-imagine-image', 'fixture/unindexed-image'])('preserves exact endpoint %s through metadata and execution', async (model) => {
+  it.each(['max-age=0, must-revalidate', 'no-store'])('reuses one schema with %s during execution, but refreshes the next operation', async (cacheControl) => {
+    const model = 'fixture/unindexed-image';
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-fal-provider-'));
     const reference = path.join(directory, 'reference.png');
     await fs.writeFile(reference, 'reference');
@@ -43,7 +44,7 @@ describe('Fal.ai media provider', () => {
         expect(new URL(value).searchParams.get('endpoint_id')).toBe(model);
         expect(new Headers(init?.headers).get('Authorization')).toBe('Key fal-secret');
         return Response.json(modelSearchResponse(model), {
-          headers: { 'cache-control': 'max-age=60' },
+          headers: { 'cache-control': cacheControl },
         });
       }
       if (value === 'https://fal.media/output.png') {
@@ -65,6 +66,9 @@ describe('Fal.ai media provider', () => {
 
     const result = await provider.execute(request, context);
 
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).startsWith('https://api.fal.ai/'))).toHaveLength(1);
+    await provider.validate(request, context);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).startsWith('https://api.fal.ai/'))).toHaveLength(2);
     expect(fal.upload).toHaveBeenCalledOnce();
     expect(fal.submit).toHaveBeenCalledWith(model, {
       input: { prompt: 'A stone arch', image_url: 'https://fal.media/uploaded.png' },
@@ -85,6 +89,35 @@ describe('Fal.ai media provider', () => {
       artifacts: [{ mimeType: 'image/png', byteLength: 6 }],
       receipt: { requestId: 'fal_job_1' },
     });
+  });
+
+  it.each(['before-upload', 'after-upload', 'upload-failure', 'cancelled'])('does not submit when %s fails', async (stage) => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-fal-validation-'));
+    const reference = path.join(directory, 'reference.png');
+    await fs.writeFile(reference, 'reference');
+    const model = 'fixture/image';
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json(modelSearchResponse(model), {
+      headers: { 'cache-control': 'no-store' },
+    }));
+    const context = await providerContext(directory, fetchMock);
+    if (stage === 'cancelled') {
+      context.signal = AbortSignal.abort();
+    }
+    fal.upload.mockResolvedValue(stage === 'after-upload' ? 'invalid-uri' : 'https://fal.media/upload.png');
+    if (stage === 'upload-failure') {
+      fal.upload.mockRejectedValue(new Error('upload failed'));
+    }
+    await expect(createFalMediaProvider().execute({ model, input: {
+      ...(stage === 'before-upload' ? {} : { prompt: 'Test' }),
+      image_url: { $file: reference, mimeType: 'image/png' },
+    } }, context)).rejects.toBeDefined();
+    expect(fal.submit).not.toHaveBeenCalled();
+    if (stage === 'before-upload' || stage === 'cancelled') {
+      expect(fal.upload).not.toHaveBeenCalled();
+    } else {
+      expect(fal.upload).toHaveBeenCalledOnce();
+    }
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(1);
   });
 
   it('preserves an exact Fal-owned endpoint during schema inspection', async () => {

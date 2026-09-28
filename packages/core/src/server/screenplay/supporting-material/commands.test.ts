@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -276,7 +277,7 @@ describe('Screenplay supporting material import', () => {
   });
 
   it('keeps raw supporting material out of downstream media generation context', async () => {
-    await service.openCurrentProject({
+    await openCurrentProject({
       projectName: 'source-context', homeDir,
     });
     await service.applyCastOperations({

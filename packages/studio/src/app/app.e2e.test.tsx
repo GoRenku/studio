@@ -48,7 +48,7 @@ describe('App', () => {
     renderApp();
 
     await screen.findByText('Project Library');
-    expect(screen.getByText('Renku')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Go to Renku Studio home' })).toBeTruthy();
     expect(screen.getAllByPlaceholderText('Search projects').length).toBeGreaterThan(
       0
     );

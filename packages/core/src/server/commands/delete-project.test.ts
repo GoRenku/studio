@@ -1,3 +1,4 @@
+import { readCurrentProject, openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,7 +30,7 @@ describe('deleteProject', () => {
       path.join(created.projectPath, 'production', 'nested', 'keep-until-delete.txt'),
       'project content'
     );
-    await projectData.openCurrentProject({
+    await openCurrentProject({
       homeDir,
       projectName: created.projectName,
     });
@@ -48,7 +49,7 @@ describe('deleteProject', () => {
     await expect(fs.stat(created.projectPath)).rejects.toMatchObject({
       code: 'ENOENT',
     });
-    await expect(projectData.readCurrentProject({ homeDir })).resolves.toBeNull();
+    await expect(readCurrentProject({ homeDir })).resolves.toBeNull();
   });
 
   it('rejects a mismatched confirmation before deleting Project contents', async () => {
@@ -83,7 +84,7 @@ describe('deleteProject', () => {
       projectName: 'the-glass-harbor',
       title: 'The Glass Harbor',
     });
-    await projectData.openCurrentProject({
+    await openCurrentProject({
       homeDir,
       projectName: created.projectName,
     });
@@ -107,7 +108,7 @@ describe('deleteProject', () => {
       rm.mockRestore();
     }
 
-    await expect(projectData.readCurrentProject({ homeDir })).resolves.toMatchObject({
+    await expect(readCurrentProject({ homeDir })).resolves.toMatchObject({
       projectName: created.projectName,
       projectFolder: created.projectPath,
     });
@@ -121,7 +122,7 @@ describe('deleteProject', () => {
       projectName: 'the-glass-harbor',
       title: 'The Glass Harbor',
     });
-    await projectData.openCurrentProject({
+    await openCurrentProject({
       homeDir,
       projectName: currentProject.projectName,
     });
@@ -140,7 +141,7 @@ describe('deleteProject', () => {
       confirmationProjectName: deletedProject.projectName,
     });
 
-    await expect(projectData.readCurrentProject({ homeDir })).resolves.toMatchObject({
+    await expect(readCurrentProject({ homeDir })).resolves.toMatchObject({
       projectName: currentProject.projectName,
       projectFolder: currentProject.projectPath,
     });

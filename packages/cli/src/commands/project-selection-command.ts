@@ -1,10 +1,5 @@
-import {
-  createProjectDataService,
-  createStudioCoordinationService,
-  createStudioOperationId,
-  resolveRenkuStorageRoot,
-  type StudioProjectRef,
-} from '@gorenku/studio-core/server';
+import { readCurrentProject, openCurrentProject, closeCurrentProject } from '@gorenku/studio-core/server/project-selection';
+import type { StudioProjectRef } from '@gorenku/studio-core/server';
 import type { RenkuCliIo } from '../cli.js';
 
 export async function runProjectSelectionCommand(options: {
@@ -16,7 +11,7 @@ export async function runProjectSelectionCommand(options: {
 }): Promise<number> {
   const [subcommand, projectName] = options.input;
   if (subcommand === 'current') {
-    const current = await createProjectDataService().readCurrentProject({
+    const current = await readCurrentProject({
       homeDir: options.homeDir,
       storageRoot: options.storageRoot,
     });
@@ -33,7 +28,7 @@ export async function runProjectSelectionCommand(options: {
   }
 
   if (subcommand === 'open' && projectName) {
-    const report = await createProjectDataService().openCurrentProject({
+    const report = await openCurrentProject({
       projectName,
       homeDir: options.homeDir,
       storageRoot: options.storageRoot,
@@ -48,7 +43,7 @@ export async function runProjectSelectionCommand(options: {
   }
 
   if (subcommand === 'close') {
-    const report = await createProjectDataService().closeCurrentProject({
+    const report = await closeCurrentProject({
       homeDir: options.homeDir,
       storageRoot: options.storageRoot,
     });
@@ -65,6 +60,7 @@ export async function runProjectSelectionCommand(options: {
   }
 
   if (subcommand === 'migrate' && projectName) {
+    const { createProjectDataService } = await import('@gorenku/studio-core/server');
     const report = await createProjectDataService().migrateProjectDatabase({
       projectName,
       homeDir: options.homeDir,
@@ -85,6 +81,7 @@ export async function runProjectSelectionCommand(options: {
   }
 
   if (subcommand === 'select' && projectName) {
+    const { createProjectDataService, createStudioCoordinationService, createStudioOperationId, resolveRenkuStorageRoot } = await import('@gorenku/studio-core/server');
     const project = await createProjectDataService().readProject({
       projectName,
       homeDir: options.homeDir,

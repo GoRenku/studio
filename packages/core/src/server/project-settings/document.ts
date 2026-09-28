@@ -99,14 +99,26 @@ const projectSettingsSchema = {
   },
 } as const;
 
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: true,
-  removeAdditional: false,
-  useDefaults: false,
-  coerceTypes: false,
-});
-const validateProjectSettings = ajv.compile(projectSettingsSchema);
+let cachedAjv: Ajv2020 | undefined;
+
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    removeAdditional: false,
+    useDefaults: false,
+    coerceTypes: false,
+  });
+  cachedAjv = ajv;
+  return ajv;
+}
+
+function getValidateProjectSettings() {
+  return getAjv().compile(projectSettingsSchema);
+}
 
 export function parseStoredProjectSettings(contents: string): ProjectSettingsDocument {
   let value: unknown;
@@ -129,9 +141,9 @@ export function validateProjectSettingsDocument(
   value: unknown,
   basePath: string[] = []
 ): ProjectSettingsDocument {
-  if (!validateProjectSettings(value)) {
+  if (!getValidateProjectSettings()(value)) {
     throw invalidProjectSettings(
-      mapAjvErrors(validateProjectSettings.errors ?? [], basePath)
+      mapAjvErrors(getValidateProjectSettings().errors ?? [], basePath)
     );
   }
   return value as ProjectSettingsDocument;

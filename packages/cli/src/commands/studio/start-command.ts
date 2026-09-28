@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startMovieStudioServer } from '@gorenku/studio/server';
 import {
   StructuredError,
   createDiagnosticError,
@@ -42,6 +41,7 @@ export async function runStudioStartCommand(
   }
 
   const layout = resolveStudioProductLayout();
+  const { startMovieStudioServer } = await import('@gorenku/studio/server');
   let server: Awaited<ReturnType<typeof startMovieStudioServer>>;
   let requestShutdown: () => void = () => undefined;
   const shutdownRequested = new Promise<void>((resolve) => {

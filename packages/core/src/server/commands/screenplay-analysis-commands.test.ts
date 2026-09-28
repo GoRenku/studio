@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -154,7 +155,7 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       screenplay: flatScreenplayInput(),
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.openCurrentProject({
+    await openCurrentProject({
       projectName: created.projectName,
       homeDir,
     });
@@ -281,7 +282,7 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       screenplay,
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.openCurrentProject({ projectName: created.projectName, homeDir });
+    await openCurrentProject({ projectName: created.projectName, homeDir });
     const current = (await projectData.readScreenplayStructure({ projectName: created.projectName, homeDir })).screenplay;
     await expect(projectData.readScreenplayAnalysisContext({ homeDir })).resolves.toMatchObject({
       analysisMethod: {
@@ -311,7 +312,7 @@ describe('hierarchy-independent Screenplay Analysis', () => {
       screenplay,
       idGenerator: createDeterministicIdGenerator(),
     });
-    await projectData.openCurrentProject({ projectName: created.projectName, homeDir });
+    await openCurrentProject({ projectName: created.projectName, homeDir });
     await expect(projectData.readScreenplayAnalysisContext({ homeDir })).resolves.toMatchObject({
       analysisMethod: {
         supported: false,

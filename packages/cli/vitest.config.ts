@@ -14,7 +14,11 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: '@gorenku/studio-core/server',
+        find: '@gorenku/studio-core/server/project-selection',
+        replacement: new URL('../core/src/server/project-selection/index.ts', import.meta.url).pathname,
+      },
+      {
+        find: /^@gorenku\/studio-core\/server$/,
         replacement: new URL('../core/src/server/index.ts', import.meta.url).pathname,
       },
       {

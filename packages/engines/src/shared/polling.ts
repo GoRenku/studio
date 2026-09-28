@@ -1,6 +1,9 @@
+import { channel } from 'node:diagnostics_channel';
 import type { ProviderContext } from '../media/contracts.js';
 import { EngineError } from './errors.js';
 import { withProviderRetries, type RetryDecision } from './retry.js';
+
+const performanceChannel = channel('renku.performance');
 
 export async function pollProviderJob<T>(input: {
   provider: string;
@@ -16,51 +19,62 @@ export async function pollProviderJob<T>(input: {
   classify: (value: T) => 'pending' | 'completed' | 'failed';
   failureMessage: (value: T) => string;
 }): Promise<T> {
-  const startedAt = (input.context.clock ?? (() => new Date()))().getTime();
-  for (;;) {
-    if (input.context.signal.aborted) {
-      throw new EngineError('ENGINE_CANCELLED', 'Media generation was cancelled.', {
-        provider: input.provider,
-        model: input.model,
-        requestId: input.requestId,
-        cause: input.context.signal.reason,
-      });
-    }
-    const result = input.pollRetry
-      ? await withProviderRetries({
-          provider: input.provider,
-          model: input.model,
-          context: input.context,
-          maxAttempts: input.pollRetry.maxAttempts,
-          operation: input.poll,
-          classify: input.pollRetry.classify,
-        })
-      : await input.poll();
-    const status = input.classify(result);
-    if (status === 'completed') {
-      return result;
-    }
-    if (status === 'failed') {
-      throw new EngineError('ENGINE_JOB_FAILED', input.failureMessage(result), {
-        provider: input.provider,
-        model: input.model,
-        requestId: input.requestId,
-      });
-    }
-    const elapsed = (input.context.clock ?? (() => new Date()))().getTime() - startedAt;
-    if (elapsed >= input.context.operationTimeoutMs) {
-      throw new EngineError(
-        'ENGINE_OPERATION_TIMEOUT',
-        `Provider job ${input.requestId} exceeded its polling deadline.`,
-        {
+  const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
+  let outcome = 'success';
+  try {
+    const startedAt = (input.context.clock ?? (() => new Date()))().getTime();
+    for (;;) {
+      if (input.context.signal.aborted) {
+        throw new EngineError('ENGINE_CANCELLED', 'Media generation was cancelled.', {
           provider: input.provider,
           model: input.model,
           requestId: input.requestId,
-          retryable: true,
-        },
-      );
+          cause: input.context.signal.reason,
+        });
+      }
+      const result = input.pollRetry
+        ? await withProviderRetries({
+            provider: input.provider,
+            model: input.model,
+            context: input.context,
+            maxAttempts: input.pollRetry.maxAttempts,
+            operation: input.poll,
+            classify: input.pollRetry.classify,
+          })
+        : await input.poll();
+      const status = input.classify(result);
+      if (status === 'completed') {
+        return result;
+      }
+      if (status === 'failed') {
+        throw new EngineError('ENGINE_JOB_FAILED', input.failureMessage(result), {
+          provider: input.provider,
+          model: input.model,
+          requestId: input.requestId,
+        });
+      }
+      const elapsed = (input.context.clock ?? (() => new Date()))().getTime() - startedAt;
+      if (elapsed >= input.context.operationTimeoutMs) {
+        throw new EngineError(
+          'ENGINE_OPERATION_TIMEOUT',
+          `Provider job ${input.requestId} exceeded its polling deadline.`,
+          {
+            provider: input.provider,
+            model: input.model,
+            requestId: input.requestId,
+            retryable: true,
+          },
+        );
+      }
+      await (input.context.sleep ?? sleep)(input.intervalMs, input.context.signal);
     }
-    await (input.context.sleep ?? sleep)(input.intervalMs, input.context.signal);
+  } catch (error) {
+    outcome = 'failure';
+    throw error;
+  } finally {
+    if (started !== undefined) {
+      performanceChannel.publish({ package: 'engines', phase: 'provider-wait', durationMs: performance.now() - started, outcome });
+    }
   }
 }
 

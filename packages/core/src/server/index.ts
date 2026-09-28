@@ -103,7 +103,6 @@ export type {
   ListNavigationInput,
   ListSceneNavigationInput,
   MigrateProjectDatabaseInput,
-  OpenCurrentProjectInput,
   ApplyCastOperationsInput,
   ApplyLocationOperationsInput,
   ApplyPropOperationsInput,
@@ -219,9 +218,6 @@ export type {
   LookbookSourceInspirationsDocument,
   VisualLanguageStoredSectionKind,
 } from './visual-language-json/validator.js';
-export type {
-  CurrentProjectReport,
-} from './database/lifecycle/current-project.js';
 export type {
   ImportFdxScreenplayInput,
   ImportFdxScreenplayReport,

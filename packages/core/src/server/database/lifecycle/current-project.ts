@@ -1,7 +1,7 @@
+import { channel } from 'node:diagnostics_channel';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
-import { readProjectRecord } from '../access/project.js';
 import { resolveProjectFolder } from '../../files/project-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import {
@@ -9,7 +9,7 @@ import {
   resolveRenkuStorageRoot,
   type RenkuConfigPathOptions,
 } from '../../config/index.js';
-import { openProjectStore, type DatabaseSession } from './store.js';
+import type { DatabaseSession } from './store.js';
 
 const CURRENT_PROJECT_FILE = 'current-project.json';
 const CURRENT_PROJECT_SCHEMA_GENERATION = 5;
@@ -40,6 +40,7 @@ export async function openCurrentProject(
   const existing = await readCurrentProjectDescriptor(input);
   const { projectFolder, session } = await openProjectForName(input);
   try {
+    const { readProjectRecord } = await import('../access/project.js');
     const project = readProjectRecord(session);
     if (!project) {
       throw new ProjectDataError(
@@ -111,6 +112,7 @@ export async function openCurrentProjectHandle(
   }
 
   try {
+    const { openProjectStore } = await import('./store.js');
     const session = openProjectStore({
       projectFolder: currentProject.projectFolder,
       create: false,
@@ -138,21 +140,35 @@ export async function openCurrentProjectHandle(
   }
 }
 
+const performanceChannel = channel('renku.performance');
+
 export async function withCurrentProjectSession<T>(
   input: RenkuConfigPathOptions,
   fn: (handle: CurrentProjectHandle) => T | Promise<T>
 ): Promise<T> {
-  const handle = await openCurrentProjectHandle(input);
+  const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
+  let outcome = 'success';
   try {
-    return await fn(handle);
+    const handle = await openCurrentProjectHandle(input);
+    try {
+      return await fn(handle);
+    } finally {
+      handle.session.close();
+    }
+  } catch (error) {
+    outcome = 'failure';
+    throw error;
   } finally {
-    handle.session.close();
+    if (started !== undefined) {
+      performanceChannel.publish({ package: 'core', phase: 'project-operation', durationMs: performance.now() - started, outcome });
+    }
   }
 }
 
 async function openProjectForName(
   input: RenkuConfigPathOptions & { projectName: string }
 ): Promise<{ projectFolder: string; session: DatabaseSession }> {
+  const { openProjectStore } = await import('./store.js');
   const storageRoot = await resolveRenkuStorageRoot(input);
   const projectFolder = resolveProjectFolder(storageRoot, input.projectName);
   return {

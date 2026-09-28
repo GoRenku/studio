@@ -311,3 +311,14 @@ schemas and optional bundled/personal guidance, without a separate capability au
 Missing guides are ordinary absence. Current bundled defaults and explicit personal
 preferences apply independently of label precedence. Effective route hashes feed
 existing configuration caches; guide changes do not invalidate schemas or templates.
+
+## Execution-local Fal schema reuse
+
+A Fal execution obtains one schema and uses it to validate both the native
+request with validation URL placeholders and the request after local-media
+upload substitution. Invalid input cannot upload; invalid substituted input
+cannot submit. A subsequent schema, validate, or execute operation follows the
+existing freshness rules, including immediately expired and no-store metadata.
+No stale-schema fallback or longer-lived cache is introduced. Vendor SDKs load
+only for operations that require them; ElevenLabs voice sample retrieval is
+SDK-independent.

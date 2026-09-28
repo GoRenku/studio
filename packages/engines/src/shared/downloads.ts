@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { basename, extname, join } from 'node:path';
@@ -10,6 +11,8 @@ import { EngineError } from './errors.js';
 import { withProviderRetries } from './retry.js';
 import { createRequestTimeoutFetch } from './request-timeout.js';
 
+const performanceChannel = channel('renku.performance');
+
 export async function downloadProviderOutputs(input: {
   provider: string;
   model: string;
@@ -18,12 +21,23 @@ export async function downloadProviderOutputs(input: {
   context: ProviderExecutionContext;
   providerOutput?: JsonValue;
 }): Promise<GeneratedMediaArtifact[]> {
-  await mkdir(input.context.outputDirectory, { recursive: true });
-  const artifacts: GeneratedMediaArtifact[] = [];
-  for (const [index, url] of input.urls.entries()) {
-    artifacts.push(await downloadProviderOutput({ ...input, url, index }));
+  const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
+  let outcome = 'success';
+  try {
+    await mkdir(input.context.outputDirectory, { recursive: true });
+    const artifacts: GeneratedMediaArtifact[] = [];
+    for (const [index, url] of input.urls.entries()) {
+      artifacts.push(await downloadProviderOutput({ ...input, url, index }));
+    }
+    return artifacts;
+  } catch (error) {
+    outcome = 'failure';
+    throw error;
+  } finally {
+    if (started !== undefined) {
+      performanceChannel.publish({ package: 'engines', phase: 'download', durationMs: performance.now() - started, outcome });
+    }
   }
-  return artifacts;
 }
 
 async function downloadProviderOutput(input: {

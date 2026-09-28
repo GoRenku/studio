@@ -322,3 +322,25 @@ Seedance 2.0 and Wan 3.0 choices. Lookbook text may inform the prompt; this work
 omits an additional Lookbook image. Existing native provider, Preview and attachment
 contracts remain in force. These are agent-owned creative choices, not runtime
 prompt or video validators.
+
+## Task-local command efficiency
+
+Resolve Project identity once per task, use the handler-verified targeting table
+in `docs/cli/commands.md`, and pass exact context to specialists. Authoring
+selection and Studio browser selection are distinct. Refresh relevant context
+after intervening edits, revision conflicts, or user review.
+
+Use a sufficient mutation report to confirm completion. Separate validate is
+for validation-only requests or meaningful review; a write still validates in
+Core. Missing detail or uncertain outcomes require a read. Keep screenplay
+source/enrichment reads, generation configuration, Preview, confirmation,
+concurrency limits, artifact review, and focused attachment. Batch related
+operations with existing document formats and use repeated-file Preview when
+appropriate; there is no new generic batch command.
+
+A known-folder Inspiration Analysis update uses show, image inspection, and
+write, consuming the returned analysis (two CLI calls). Known permission denials
+require the host permission flow, not repeated attempts or disabled persistence.
+CLI026 reports successful mutation with failed notification: never replay the
+mutation just to refresh Studio. Installed skill caches are not changed by edits
+to the sister source repository; releases remain independent.

@@ -25,15 +25,42 @@ Renku currently has two different "current project" concepts:
   running Studio browser session. It is inspected with `renku studio current`
   and can be requested with `renku project select`.
 
-Screenplay authoring commands require a current authoring project. If none is
-open, they fail with structured error `PROJECT_DATA202` and suggest:
+Prefer explicit targeting when supported. The global parser accepting a flag
+does not mean every command uses it. This table reflects the current handlers.
 
-```text
-Open an existing project with `renku project open <project-name>`, or create a new project with `renku create <project-name> --title <title>`.
-```
+| Command family | Project targeting |
+| --- | --- |
+| `info`, `settings`, `inspiration`, `lookbook`, `screenplay` (including analysis, Beats, imports, and supporting material), `shot-plan`, `media`, `trash` | Use `--project <project-name>`; omitted targeting uses the existing current-project resolution. `shot-plan validate` validates a document without selecting a project. |
+| `asset` | Requires explicit `--project`. |
+| `cast voice` | Supports `--project`. |
+| Cast facts and `cast design` | Current authoring project only; `--project` does not retarget these handlers. |
+| `location` (including World), `prop`, `production-design`, `director context` | Current authoring project only. |
+| `generation context`, `validate`, `execute`, `recover`, `preview show` | Supports `--project` for Project context/files. |
+| `generation schema show`, `generation models`, `generation configuration-visualization` | Global provider/model/configuration operations; `--project` is not a target. |
+| `project open`, `select`, `migrate` | Positional project name. `open` changes authoring selection; `select` requests Studio selection. |
+| `project current`, `close` | Reads or clears authoring selection. |
+| `create` | Positional new project name; successful creation establishes authoring selection. |
+| `studio notify-refresh` | Requires `--project` and `--resource`. Other Studio lifecycle/current commands use runtime or browser state. |
+| `init`, `credentials`, `about`, `update`, help/version | Global operations; no project target. |
 
-There is no top-level `renku show` command. The current show commands are
-`renku screenplay show` and `renku info show`.
+For a current-authoring-only command, establish selection once with
+`renku project open <project-name> --json` if the requested project is not
+already verified as current. Do not reopen after successful creation. Explicit
+targeting avoids unnecessary selection writes; it does not bypass required
+cache, output, configuration, or network permissions.
+
+There is no `project list` or top-level `show` command. Reuse known task identity
+or consult the relevant command reference/help once. Do not attempt speculative
+mutations to discover arguments. `cast show`, `location show`, and `prop show`
+take positional ids; Shot Plan show takes `--shot-plan`.
+
+Authorized Inspiration Analysis authoring for a known folder needs two CLI
+calls: `inspiration show --project ... --folder ... --json`, then
+`inspiration analysis write --project ... --folder ... --file ... --json`.
+Inspect the folder images between them. Write validates before persistence and
+returns the persisted analysis. Separate validation remains appropriate for
+validation-only intent or a review pause. Read back when the report lacks needed
+information, the outcome is uncertain, or relevant state changed.
 
 ## Studio Live Refresh Notifications
 

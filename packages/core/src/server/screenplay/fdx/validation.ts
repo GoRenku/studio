@@ -8,27 +8,41 @@ import {
   screenplayImportLogEntrySchema,
 } from './schemas.js';
 
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-ajv.addSchema(screenplayImportLogEntrySchema);
-ajv.addSchema(screenplayImportCandidatesSchema);
-const reportValidator = ajv.compile(importFdxScreenplayReportSchema);
+let cachedAjv: Ajv2020 | undefined;
+
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  ajv.addSchema(screenplayImportLogEntrySchema);
+  ajv.addSchema(screenplayImportCandidatesSchema);
+  cachedAjv = ajv;
+  return ajv;
+}
+
+function getReportValidator() {
+  return getAjv().compile(importFdxScreenplayReportSchema);
+}
 
 export function assertValidFdxImportReport(
   value: unknown,
 ): asserts value is ImportFdxScreenplayReport {
-  if (!reportValidator(value)) {
+  if (!getReportValidator()(value)) {
     throw new ProjectDataError(
       'SCREENPLAY_FDX_IMPORT_INVALID',
-      `FDX import report failed validation: ${ajv.errorsText(reportValidator.errors)}.`,
+      `FDX import report failed validation: ${getAjv().errorsText(getReportValidator().errors)}.`,
     );
   }
 }
 
-const updateReviewValidator = ajv.compile(fdxUpdateReviewSchema);
+function getUpdateReviewValidator() {
+  return getAjv().compile(fdxUpdateReviewSchema);
+}
 
 export function assertValidFdxUpdateReview(value: unknown): void {
-  if (!updateReviewValidator(value)) {
+  if (!getUpdateReviewValidator()(value)) {
     throw new ProjectDataError('SCREENPLAY_FDX_IMPORT_INVALID',
-      `FDX update review failed validation: ${ajv.errorsText(updateReviewValidator.errors)}.`);
+      `FDX update review failed validation: ${getAjv().errorsText(getUpdateReviewValidator().errors)}.`);
   }
 }

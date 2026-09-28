@@ -95,6 +95,7 @@ const eslintConfig = [
     // surface. Older command families still need focused refactor plans before
     // this can become a package-wide command rule without noise.
     files: [
+      'src/commands/registry.ts',
       'src/commands/generation-command.ts',
       'src/commands/generation-command-handlers.ts',
       'src/commands/generation-purpose-command-registry.ts',

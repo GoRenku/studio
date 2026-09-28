@@ -25,43 +25,67 @@ import type { ScreenplaySubjectIds } from './references.js';
 import { validateScreenplayReferences } from './references.js';
 import { validateScreenplayStructure } from './structure.js';
 
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: true,
-  strictRequired: false,
-  removeAdditional: false,
-  useDefaults: false,
-  coerceTypes: false,
-});
+let cachedAjv: Ajv2020 | undefined;
 
-for (const schema of [
-  screenplayTextRangeSchema,
-  screenplayBlockSchema,
-  openingElementSchema,
-  sceneSchema,
-  screenplaySectionSchema,
-  screenplayStructureEntrySchema,
-  screenplayReferenceSchema,
-  screenplaySchema,
-  screenplayInputSchema,
-  screenplayOperationSchema,
-  screenplayOperationsInputSchema,
-  screenplayMutationReportSchema,
-]) {
-  ajv.addSchema(schema);
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    strictRequired: false,
+    removeAdditional: false,
+    useDefaults: false,
+    coerceTypes: false,
+  });
+
+  for (const schema of [
+    screenplayTextRangeSchema,
+    screenplayBlockSchema,
+    openingElementSchema,
+    sceneSchema,
+    screenplaySectionSchema,
+    screenplayStructureEntrySchema,
+    screenplayReferenceSchema,
+    screenplaySchema,
+    screenplayInputSchema,
+    screenplayOperationSchema,
+    screenplayOperationsInputSchema,
+    screenplayMutationReportSchema,
+  ]) {
+    ajv.addSchema(schema);
+  }
+  cachedAjv = ajv;
+  return ajv;
 }
 
-const screenplayValidator = requiredValidator(screenplaySchema.$id);
-const screenplayInputValidator = requiredValidator(screenplayInputSchema.$id);
-const operationsValidator = requiredValidator(screenplayOperationsInputSchema.$id);
-const openingValidator = ajv.compile({
+
+function getScreenplayValidator() {
+  return requiredValidator(screenplaySchema.$id);
+}
+function getScreenplayInputValidator() {
+  return requiredValidator(screenplayInputSchema.$id);
+}
+function getOperationsValidator() {
+  return requiredValidator(screenplayOperationsInputSchema.$id);
+}
+const openingValidatorSchema = {
   type: 'array',
   items: { $ref: openingElementSchema.$id },
-});
-const blocksValidator = ajv.compile({
+};
+
+function getOpeningValidator() {
+  return getAjv().compile(openingValidatorSchema);
+}
+const blocksValidatorSchema = {
   type: 'array',
   items: { $ref: screenplayBlockSchema.$id },
-});
+};
+
+function getBlocksValidator() {
+  return getAjv().compile(blocksValidatorSchema);
+}
 
 export function parseScreenplayJson(input: {
   contents: string;
@@ -85,7 +109,7 @@ export function assertValidScreenplay(
   screenplay: unknown,
   input: { subjects: ScreenplaySubjectIds; context?: string },
 ): asserts screenplay is Screenplay {
-  const issues = schemaIssues(screenplayValidator, screenplay, input.context);
+  const issues = schemaIssues(getScreenplayValidator(), screenplay, input.context);
   if (issues.length === 0) {
     const value = screenplay as Screenplay;
     issues.push(...validateScreenplayIdentityScopes(value));
@@ -106,7 +130,7 @@ export function assertValidScreenplaySchema(
   context = 'screenplay',
 ): asserts screenplay is Screenplay {
   throwIssues(
-    schemaIssues(screenplayValidator, screenplay, context),
+    schemaIssues(getScreenplayValidator(), screenplay, context),
     'Screenplay failed schema validation.',
   );
 }
@@ -116,7 +140,7 @@ export function assertValidScreenplayInput(
   context = 'screenplay input',
 ): asserts input is ScreenplayInput {
   throwIssues(
-    schemaIssues(screenplayInputValidator, input, context),
+    schemaIssues(getScreenplayInputValidator(), input, context),
     'Screenplay input failed validation.',
   );
 }
@@ -126,7 +150,7 @@ export function assertValidScreenplayOperations(
   context = 'screenplay operations',
 ): asserts input is ScreenplayOperationsInput {
   throwIssues(
-    schemaIssues(operationsValidator, input, context),
+    schemaIssues(getOperationsValidator(), input, context),
     'Screenplay operations failed validation.',
   );
 }
@@ -134,7 +158,7 @@ export function assertValidScreenplayOperations(
 export function parseStoredOpeningJson(contents: string): Screenplay['opening'] {
   const value = parseStoredJson(contents, ['screenplay', 'opening']);
   throwIssues(
-    schemaIssues(openingValidator, value, 'stored screenplay opening'),
+    schemaIssues(getOpeningValidator(), value, 'stored screenplay opening'),
     'Stored Screenplay opening failed validation.',
   );
   return value as Screenplay['opening'];
@@ -146,7 +170,7 @@ export function parseStoredSceneBlocksJson(
 ): Screenplay['scenes'][number]['blocks'] {
   const value = parseStoredJson(contents, ['scenes', sceneId, 'blocks']);
   throwIssues(
-    schemaIssues(blocksValidator, value, `stored Scene ${sceneId} blocks`),
+    schemaIssues(getBlocksValidator(), value, `stored Scene ${sceneId} blocks`),
     'Stored Scene blocks failed validation.',
   );
   return value as Screenplay['scenes'][number]['blocks'];
@@ -264,7 +288,7 @@ function throwIssues(issues: DiagnosticIssue[], message: string): void {
 }
 
 function requiredValidator(schemaId: string): ValidateFunction {
-  const validator = ajv.getSchema(schemaId);
+  const validator = getAjv().getSchema(schemaId);
   if (!validator) {
     throw new Error(`Screenplay schema ${schemaId} was not registered.`);
   }

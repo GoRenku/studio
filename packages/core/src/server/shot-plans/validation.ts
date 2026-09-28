@@ -19,20 +19,40 @@ import {
 } from '../../client/shot-plan-json-schemas.js';
 import { ProjectDataError } from '../project-data-error.js';
 
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: true,
-  strictRequired: false,
-  removeAdditional: false,
-  useDefaults: false,
-  coerceTypes: false,
-});
+let cachedAjv: Ajv2020 | undefined;
 
-const validateCoverage = ajv.compile(shotPlanCoverageSchema);
-const validateBrief = ajv.compile(shotBriefSchema);
-const validateCreateDocument = ajv.compile(shotPlanCreateDocumentSchema);
-const validateUpdateDocument = ajv.compile(shotPlanUpdateDocumentSchema);
-const validateShotDocument = ajv.compile(shotDocumentSchema);
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    strictRequired: false,
+    removeAdditional: false,
+    useDefaults: false,
+    coerceTypes: false,
+  });
+  cachedAjv = ajv;
+  return ajv;
+}
+
+
+function getValidateCoverage() {
+  return getAjv().getSchema(shotPlanCoverageSchema.$id) ?? getAjv().compile(shotPlanCoverageSchema);
+}
+function getValidateBrief() {
+  return getAjv().getSchema(shotBriefSchema.$id) ?? getAjv().compile(shotBriefSchema);
+}
+function getValidateCreateDocument() {
+  return getAjv().getSchema(shotPlanCreateDocumentSchema.$id) ?? getAjv().compile(shotPlanCreateDocumentSchema);
+}
+function getValidateUpdateDocument() {
+  return getAjv().getSchema(shotPlanUpdateDocumentSchema.$id) ?? getAjv().compile(shotPlanUpdateDocumentSchema);
+}
+function getValidateShotDocument() {
+  return getAjv().getSchema(shotDocumentSchema.$id) ?? getAjv().compile(shotDocumentSchema);
+}
 
 export function validateShotPlanDocument(
   document: unknown
@@ -46,11 +66,11 @@ export function validateShotPlanDocument(
       : null;
   const validator =
     kind === 'shotPlanCreate'
-      ? validateCreateDocument
+      ? getValidateCreateDocument()
       : kind === 'shotPlanUpdate'
-        ? validateUpdateDocument
+        ? getValidateUpdateDocument()
         : kind === 'shot'
-          ? validateShotDocument
+          ? getValidateShotDocument()
           : null;
   if (!validator) {
     throw new ProjectDataError(
@@ -93,8 +113,8 @@ export function validateShotPlanDetails(input: {
 } {
   const issues: DiagnosticIssue[] = [];
   const title = requireTrimmedText(input.title, ['title'], issues);
-  if (input.coverage !== null && !validateCoverage(input.coverage)) {
-    issues.push(...ajvIssues(validateCoverage.errors ?? [], ['coverage']));
+  if (input.coverage !== null && !getValidateCoverage()(input.coverage)) {
+    issues.push(...ajvIssues(getValidateCoverage().errors ?? [], ['coverage']));
   }
   throwIfIssues(issues);
   return {
@@ -114,8 +134,8 @@ export function validateShotInput(
       error('Shot description must be text.', [...path, 'description'])
     );
   }
-  if (!validateBrief(shot.brief)) {
-    issues.push(...ajvIssues(validateBrief.errors ?? [], [...path, 'brief']));
+  if (!getValidateBrief()(shot.brief)) {
+    issues.push(...ajvIssues(getValidateBrief().errors ?? [], [...path, 'brief']));
   }
   throwIfIssues(issues);
   return {
@@ -134,7 +154,7 @@ export function parseStoredShotPlanCoverage(
   }
   return parseStoredJson({
     value,
-    validate: validateCoverage,
+    validate: getValidateCoverage(),
     label: 'Shot Plan coverage',
     path: ['shotPlan', shotPlanId, 'coverage'],
   }) as ShotPlanCoverage;
@@ -143,7 +163,7 @@ export function parseStoredShotPlanCoverage(
 export function parseStoredShotBrief(value: string, shotId: string): ShotBrief {
   return parseStoredJson({
     value,
-    validate: validateBrief,
+    validate: getValidateBrief(),
     label: 'Shot brief',
     path: ['shot', shotId, 'brief'],
   }) as ShotBrief;
@@ -155,22 +175,22 @@ export function serializeShotPlanCoverage(
   if (coverage === null) {
     return null;
   }
-  if (!validateCoverage(coverage)) {
-    throwInvalidStoredShape('Shot Plan coverage', validateCoverage.errors ?? []);
+  if (!getValidateCoverage()(coverage)) {
+    throwInvalidStoredShape('Shot Plan coverage', getValidateCoverage().errors ?? []);
   }
   return JSON.stringify(coverage);
 }
 
 export function serializeShotBrief(brief: ShotBrief): string {
-  if (!validateBrief(brief)) {
-    throwInvalidStoredShape('Shot brief', validateBrief.errors ?? []);
+  if (!getValidateBrief()(brief)) {
+    throwInvalidStoredShape('Shot brief', getValidateBrief().errors ?? []);
   }
   return JSON.stringify(brief);
 }
 
 function parseStoredJson(input: {
   value: string;
-  validate: typeof validateBrief;
+  validate: ReturnType<typeof getValidateBrief>;
   label: string;
   path: string[];
 }): unknown {

@@ -20,18 +20,28 @@ import {
 import type { Screenplay } from '../../client/screenplay/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: true,
-  strictRequired: false,
-  removeAdditional: false,
-  useDefaults: false,
-  coerceTypes: false,
-});
+let cachedAjv: Ajv2020 | undefined;
 
-ajv.addSchema(sceneBeatsInputSchema);
-ajv.addSchema(sceneBeatsOperationsInputSchema);
-ajv.addSchema(sceneStoryboardImagesImportDocumentSchema);
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    strictRequired: false,
+    removeAdditional: false,
+    useDefaults: false,
+    coerceTypes: false,
+  });
+
+  ajv.addSchema(sceneBeatsInputSchema);
+  ajv.addSchema(sceneBeatsOperationsInputSchema);
+  ajv.addSchema(sceneStoryboardImagesImportDocumentSchema);
+  cachedAjv = ajv;
+  return ajv;
+}
+
 
 export function parseSceneBeatsInput(input: {
   contents: string;
@@ -132,7 +142,7 @@ function assertShape(
   filePath: string | undefined,
   message: string
 ): DiagnosticIssue[] {
-  const validator = ajv.getSchema(schemaId);
+  const validator = getAjv().getSchema(schemaId);
   if (!validator) {
     throw new Error(`JSON schema was not registered: ${schemaId}.`);
   }

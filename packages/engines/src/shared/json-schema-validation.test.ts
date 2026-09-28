@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import { describe, expect, it } from 'vitest';
 import {
   assertValidJsonSchema,
@@ -5,6 +6,27 @@ import {
 } from './json-schema-validation.js';
 
 describe('JSON Schema dialect validation', () => {
+  it('measures success and failure without publishing request contents', () => {
+    const records: unknown[] = [];
+    const subscriber = (record: unknown) => records.push(record);
+    const performanceChannel = channel('renku.performance');
+    performanceChannel.subscribe(subscriber);
+    try {
+      const input = { provider: 'private-provider', model: 'private-model', schema: { type: 'number' } };
+      validateJsonSchema({ ...input, value: 1 });
+      expect(() => validateJsonSchema({ ...input, value: 'private-prompt' }))
+        .toThrow(expect.objectContaining({ code: 'ENGINE_REQUEST_INVALID' }));
+    } finally {
+      performanceChannel.unsubscribe(subscriber);
+    }
+    expect(records).toEqual(['success', 'failure'].map((outcome) => ({
+      package: 'engines', phase: 'validation', durationMs: expect.any(Number), outcome,
+    })));
+    for (const record of records as Array<{ durationMs: number }>) {
+      expect(record.durationMs).toBeGreaterThanOrEqual(0);
+    }
+  });
+
   it.each([
     'https://json-schema.org/draft/2020-12/schema',
     undefined,

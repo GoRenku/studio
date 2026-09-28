@@ -3,11 +3,6 @@ import { createMovieProject } from '../commands/create-movie-project.js';
 import { deleteProject } from '../commands/delete-project.js';
 import { migrateProjectDatabaseForProject } from '../commands/migrate-database.js';
 import { patchProjectInformation } from '../project-information/index.js';
-import {
-  closeCurrentProject,
-  openCurrentProject,
-  readCurrentProject,
-} from '../database/lifecycle/current-project.js';
 import { readDirectorContext } from '../resources/director-context.js';
 import { readProject } from '../resources/full-project.js';
 import { readProjectInformationResourceForProject } from '../resources/project-information.js';
@@ -34,9 +29,6 @@ export function createProjectAdministrationServiceWiring(): Pick<
   | 'readProjectSettings'
   | 'replaceProjectSettings'
   | 'patchProjectInformation'
-  | 'openCurrentProject'
-  | 'readCurrentProject'
-  | 'closeCurrentProject'
   | 'resolveStudioProjectRef'
 > {
   return {
@@ -52,9 +44,6 @@ export function createProjectAdministrationServiceWiring(): Pick<
     readProjectSettings,
     replaceProjectSettings,
     patchProjectInformation,
-    openCurrentProject,
-    readCurrentProject,
-    closeCurrentProject,
     resolveStudioProjectRef,
   };
 }

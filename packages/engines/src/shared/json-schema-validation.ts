@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import Ajv, { type AnySchema, type ErrorObject } from 'ajv';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
@@ -21,25 +22,38 @@ const draft2020Keywords = new Set([
 addFormats(draft7Ajv);
 addFormats(draft2020Ajv);
 
+const performanceChannel = channel('renku.performance');
+
 export function validateJsonSchema(input: {
   provider: string;
   model: string;
   schema: JsonValue;
   value: JsonValue;
 }): void {
-  const validate = compileJsonSchema(input);
-  if (validate(input.value)) {
-    return;
+  const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
+  let outcome = 'success';
+  try {
+    const validate = compileJsonSchema(input);
+    if (validate(input.value)) {
+      return;
+    }
+    throw new EngineError(
+      'ENGINE_REQUEST_INVALID',
+      `Request for ${input.provider}/${input.model} does not satisfy the provider schema.`,
+      {
+        provider: input.provider,
+        model: input.model,
+        details: sanitizeAjvErrors(validate.errors),
+      },
+    );
+  } catch (error) {
+    outcome = 'failure';
+    throw error;
+  } finally {
+    if (started !== undefined) {
+      performanceChannel.publish({ package: 'engines', phase: 'validation', durationMs: performance.now() - started, outcome });
+    }
   }
-  throw new EngineError(
-    'ENGINE_REQUEST_INVALID',
-    `Request for ${input.provider}/${input.model} does not satisfy the provider schema.`,
-    {
-      provider: input.provider,
-      model: input.model,
-      details: sanitizeAjvErrors(validate.errors),
-    },
-  );
 }
 
 export function assertValidJsonSchema(input: {

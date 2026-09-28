@@ -1,3 +1,4 @@
+import { openCurrentProject } from '@gorenku/studio-core/server/project-selection';
 import {
   StructuredError,
   createDiagnosticError,
@@ -97,7 +98,7 @@ export async function runCreateCommand(
     homeDir: options.homeDir,
     storageRoot: options.storageRoot,
   });
-  const currentProject = await projectData.openCurrentProject({
+  const currentProject = await openCurrentProject({
     projectName: result.projectName,
     homeDir: options.homeDir,
     storageRoot: options.storageRoot,

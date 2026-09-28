@@ -155,7 +155,6 @@ import type {
   ProductionLookbookDocument,
   StoryboardLookbookDocument,
 } from './visual-language-json/validator.js';
-import type { CurrentProjectReport } from './database/lifecycle/current-project.js';
 import type { ProjectDatabasePreMigrationBackupReport } from './database/lifecycle/project-database-backups.js';
 import type {
   StudioCurrent,
@@ -331,9 +330,6 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   discardShotImageCandidate(
     input: DiscardShotImageCandidateInput
   ): Promise<RecoverableMutationReport>;
-  openCurrentProject(input: OpenCurrentProjectInput): Promise<CurrentProjectReport>;
-  readCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
-  closeCurrentProject(input?: RenkuConfigPathOptions): Promise<CurrentProjectReport | null>;
   resolveStudioProjectRef(
     input: RenkuConfigPathOptions & { projectName?: string }
   ): Promise<StudioProjectRef>;
@@ -473,9 +469,6 @@ export interface EmptyTrashInput extends PreviewGarbageCollectionInput {
   dryRun?: boolean;
 }
 
-export interface OpenCurrentProjectInput extends RenkuConfigPathOptions {
-  projectName: string;
-}
 
 export interface ProjectDatabaseMigrationReport {
   projectName: string;

@@ -1,3 +1,4 @@
+import { openCurrentProject } from '@gorenku/studio-core/server/project-selection';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createProjectDataService } from '@gorenku/studio-core/server';
@@ -14,7 +15,7 @@ test('detects a dialogue export on a production tab, defers, reviews, applies an
   const sourcePath = path.join(studioE2eRuntime.isolatedHomeDirectory, 'external-update.fdx');
   await fs.writeFile(sourcePath, fdx(scene('ROOM') + scene('GARDEN')));
   await service.importFdxScreenplay({ ...input, sourcePath });
-  await service.openCurrentProject(input);
+  await openCurrentProject(input);
   const before = await service.readScreenplayStructure(input);
   const first = before.screenplay.scenes[0]!;
   const beats = await service.createSceneBeatsRevision({ homeDir: input.homeDir, document: { sceneId: first.id, beats: [{

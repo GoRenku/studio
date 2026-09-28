@@ -9,6 +9,10 @@
       "types": "./dist/client/index.d.ts",
       "import": "./dist/client/index.js"
     },
+    "./server/project-selection": {
+      "types": "./dist/server/project-selection/index.d.ts",
+      "import": "./dist/server/project-selection/index.js"
+    },
     "./server": {
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"

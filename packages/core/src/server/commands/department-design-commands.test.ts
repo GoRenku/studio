@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,7 +31,7 @@ describe('department design commands', () => {
 
   it('applies cast, location, and prop fact operations through canonical command surfaces', async () => {
     await createBlankMovieProject({ homeDir, projectData });
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await openCurrentProject({ projectName: 'blank-movie', homeDir });
 
     const castDryRun = await projectData.applyCastOperations({
       homeDir,
@@ -251,7 +252,7 @@ describe('department design commands', () => {
     if (!created) {
       return;
     }
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await openCurrentProject({ projectName: 'blank-movie', homeDir });
 
     const castReport = await projectData.applyCastOperations({
       homeDir,
@@ -320,7 +321,7 @@ describe('department design commands', () => {
     if (!created) {
       return;
     }
-    await projectData.openCurrentProject({ projectName: 'blank-movie', homeDir });
+    await openCurrentProject({ projectName: 'blank-movie', homeDir });
 
     const locationReport = await projectData.applyLocationOperations({
       homeDir,

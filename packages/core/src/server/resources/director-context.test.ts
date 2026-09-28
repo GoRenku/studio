@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,7 +31,7 @@ describe('readDirectorContext', () => {
     if (!created) {
       return;
     }
-    await projectData.openCurrentProject({
+    await openCurrentProject({
       projectName: 'blank-director-movie',
       homeDir,
     });

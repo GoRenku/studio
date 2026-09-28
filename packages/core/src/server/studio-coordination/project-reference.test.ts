@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,7 +30,7 @@ describe('Studio project reference resolution', () => {
       projectName: 'other-movie',
       title: 'Other Movie',
     });
-    await projectData.openCurrentProject({ homeDir, projectName: 'current-movie' });
+    await openCurrentProject({ homeDir, projectName: 'current-movie' });
     const currentProject = await projectData.readProject({
       homeDir,
       projectName: 'current-movie',

@@ -54,28 +54,38 @@ const schemaIds = {
   guardrails: 'https://schemas.gorenku.com/studio/storyboard-lookbook-sections.schema.json',
 } as const;
 
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: true,
-  strictRequired: false,
-  removeAdditional: false,
-  useDefaults: false,
-  coerceTypes: false,
-});
+let cachedAjv: Ajv2020 | undefined;
 
-ajv.addSchema(thesisSectionSchema);
-ajv.addSchema(paletteSectionSchema);
-ajv.addSchema(toneMoodSectionSchema);
-ajv.addSchema(patternSectionSchema);
-ajv.addSchema(textureSectionSchema);
-ajv.addSchema(inspiredBySectionSchema);
-ajv.addSchema(cameraSectionSchema);
-ajv.addSchema(inspirationAnalysisSectionsSchema);
-ajv.addSchema(inspirationAnalysisDocumentSchema);
-ajv.addSchema(productionLookbookSectionsSchema);
-ajv.addSchema(storyboardLookbookSectionsSchema);
-ajv.addSchema(lookbookDocumentSchema);
-ajv.addSchema(lookbookSourceInspirationsDocumentSchema);
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    strictRequired: false,
+    removeAdditional: false,
+    useDefaults: false,
+    coerceTypes: false,
+  });
+
+  ajv.addSchema(thesisSectionSchema);
+  ajv.addSchema(paletteSectionSchema);
+  ajv.addSchema(toneMoodSectionSchema);
+  ajv.addSchema(patternSectionSchema);
+  ajv.addSchema(textureSectionSchema);
+  ajv.addSchema(inspiredBySectionSchema);
+  ajv.addSchema(cameraSectionSchema);
+  ajv.addSchema(inspirationAnalysisSectionsSchema);
+  ajv.addSchema(inspirationAnalysisDocumentSchema);
+  ajv.addSchema(productionLookbookSectionsSchema);
+  ajv.addSchema(storyboardLookbookSectionsSchema);
+  ajv.addSchema(lookbookDocumentSchema);
+  ajv.addSchema(lookbookSourceInspirationsDocumentSchema);
+  cachedAjv = ajv;
+  return ajv;
+}
+
 
 export type InspirationAnalysisSections = Omit<InspirationAnalysis, 'folderId'>;
 export type ProductionLookbookSections = ProductionLookbookDefinition;
@@ -302,7 +312,7 @@ export function validateLookbookSourceInspirationsDocument(
   filePath: string | undefined,
   document: unknown
 ): void {
-  const validator = ajv.getSchema(lookbookSourceInspirationsDocumentSchema.$id);
+  const validator = getAjv().getSchema(lookbookSourceInspirationsDocumentSchema.$id);
   if (!validator) {
     throw new Error('Lookbook source Inspirations JSON schema was not registered.');
   }
@@ -400,7 +410,7 @@ function validateStoryboardDefinitionSchema(
   definition: unknown,
   filePath?: string
 ): DiagnosticIssue[] {
-  const validator = ajv.getSchema(storyboardLookbookSectionsSchema.$id);
+  const validator = getAjv().getSchema(storyboardLookbookSectionsSchema.$id);
   if (!validator) {
     throw new Error('Storyboard Lookbook JSON schema was not registered.');
   }
@@ -414,7 +424,7 @@ function validateSection(
   path: string[],
   filePath?: string
 ): DiagnosticIssue[] {
-  const validator = ajv.getSchema(schemaIds[section]);
+  const validator = getAjv().getSchema(schemaIds[section]);
   if (!validator) {
     throw new Error(`Visual Language JSON schema was not registered for ${section}.`);
   }
@@ -426,7 +436,7 @@ function validateInspirationAnalysisDocumentShape(input: {
   document: unknown;
   filePath?: string;
 }): DiagnosticIssue[] {
-  const validator = ajv.getSchema(inspirationAnalysisDocumentSchema.$id);
+  const validator = getAjv().getSchema(inspirationAnalysisDocumentSchema.$id);
   if (!validator) {
     throw new Error('Inspiration Analysis JSON schema was not registered.');
   }
@@ -443,7 +453,7 @@ function validateLookbookDocumentShape(input: {
   document: unknown;
   filePath?: string;
 }): DiagnosticIssue[] {
-  const validator = ajv.getSchema(lookbookDocumentSchema.$id);
+  const validator = getAjv().getSchema(lookbookDocumentSchema.$id);
   if (!validator) {
     throw new Error('Lookbook JSON schema was not registered.');
   }

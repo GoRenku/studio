@@ -1,9 +1,12 @@
+import { channel } from 'node:diagnostics_channel';
 import {
   isStudioRuntimeDescriptorUsable,
   readStudioRuntimeDescriptor,
   type MediaGenerationPreviewResource,
   type StudioProjectRef,
 } from '@gorenku/studio-core/server';
+
+const performanceChannel = channel('renku.performance');
 
 const DEFAULT_STUDIO_NOTIFICATION_REQUEST_TIMEOUT_MS = 2_000;
 
@@ -90,41 +93,50 @@ async function postStudioNotification(input: {
   body: unknown;
   requestTimeoutMs: number;
 }): Promise<StudioNotificationDeliveryResult> {
-  let endpoint: URL;
+  const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
+  let outcome = 'failure';
   try {
-    endpoint = new URL(input.path, input.serverUrl);
-  } catch {
-    return {
-      status: 'deliveryFailed',
-      serverUrl: input.serverUrl,
-      detail: 'Studio runtime descriptor has an invalid server URL.',
-    };
-  }
-
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      signal: AbortSignal.timeout(input.requestTimeoutMs),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Renku-Studio-Notification-Token': input.token,
-      },
-      body: JSON.stringify(input.body),
-    });
-    if (response.ok) {
-      return { status: 'delivered' };
+    let endpoint: URL;
+    try {
+      endpoint = new URL(input.path, input.serverUrl);
+    } catch {
+      return {
+        status: 'deliveryFailed',
+        serverUrl: input.serverUrl,
+        detail: 'Studio runtime descriptor has an invalid server URL.',
+      };
     }
-    return {
-      status: 'deliveryFailed',
-      serverUrl: input.serverUrl,
-      detail: await responseFailureDetail(response),
-    };
-  } catch (error) {
-    return {
-      status: 'deliveryFailed',
-      serverUrl: input.serverUrl,
-      detail: notificationRequestFailureDetail(error, input.requestTimeoutMs),
-    };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        signal: AbortSignal.timeout(input.requestTimeoutMs),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Renku-Studio-Notification-Token': input.token,
+        },
+        body: JSON.stringify(input.body),
+      });
+      if (response.ok) {
+        outcome = 'success';
+        return { status: 'delivered' };
+      }
+      return {
+        status: 'deliveryFailed',
+        serverUrl: input.serverUrl,
+        detail: await responseFailureDetail(response),
+      };
+    } catch (error) {
+      return {
+        status: 'deliveryFailed',
+        serverUrl: input.serverUrl,
+        detail: notificationRequestFailureDetail(error, input.requestTimeoutMs),
+      };
+    }
+  } finally {
+    if (started !== undefined) {
+      performanceChannel.publish({ package: 'cli', phase: 'studio-notification', durationMs: performance.now() - started, outcome });
+    }
   }
 }
 

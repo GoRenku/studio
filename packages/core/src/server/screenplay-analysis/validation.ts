@@ -16,8 +16,18 @@ import type { Screenplay } from '../../client/screenplay/index.js';
 
 const CODE = 'PROJECT_DATA330';
 const BEAT_ROLES = ['hook', 'incitingIncident', 'firstPlotPoint', 'firstPinchPoint', 'midpoint', 'secondPinchPoint', 'secondPlotPoint', 'climax', 'resolution'] as const;
-const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false });
-ajv.addSchema(screenplayAnalysisSchema);
+let cachedAjv: Ajv2020 | undefined;
+
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false });
+  ajv.addSchema(screenplayAnalysisSchema);
+  cachedAjv = ajv;
+  return ajv;
+}
+
 
 export function parseScreenplayAnalysis(input: { contents: string; filePath?: string }): ScreenplayAnalysis {
   let value: unknown;
@@ -86,7 +96,7 @@ export function serializeScreenplayAnalysis(input: {
 }
 
 function validateShape(value: unknown, filePath?: string): DiagnosticIssue[] {
-  const validator = ajv.getSchema(screenplayAnalysisSchema.$id);
+  const validator = getAjv().getSchema(screenplayAnalysisSchema.$id);
   if (!validator) {
     return [issue('Screenplay Analysis schema is unavailable.', [], filePath)];
   }

@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -68,7 +69,7 @@ export async function createIsolatedSampleMovieProjectFromTemplate(input: {
     homeDir: input.homeDir,
     template,
   });
-  await input.projectData.openCurrentProject({
+  await openCurrentProject({
     homeDir: input.homeDir,
     projectName: isolated.projectName,
   });

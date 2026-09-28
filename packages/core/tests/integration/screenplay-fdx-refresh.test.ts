@@ -1,3 +1,4 @@
+import { openCurrentProject } from '../../src/server/project-selection/index.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -63,7 +64,7 @@ describe('source-authoritative FDX refresh', () => {
       content: { type: 'scene', sceneId: scene.id },
       position,
     })));
-    await projectData.openCurrentProject({ projectName, homeDir });
+    await openCurrentProject({ projectName, homeDir });
     const analysis = await projectData.writeScreenplayAnalysis({
       homeDir,
       analysis: analysisForScenes(initial.screenplay.scenes.map((scene) => scene.id)),
@@ -160,7 +161,7 @@ describe('source-authoritative FDX refresh', () => {
     const before = (await projectData.readScreenplayStructure({ projectName, homeDir })).screenplay;
     const beforeRevisions = await projectData.listScreenplayRevisions({ projectName, homeDir });
     const beforeByHeading = new Map(before.scenes.map((scene) => [scene.heading, scene]));
-    await projectData.openCurrentProject({ projectName, homeDir });
+    await openCurrentProject({ projectName, homeDir });
     const historicalAnalysis = await projectData.writeScreenplayAnalysis({
       homeDir,
       analysis: analysisForScenes(before.scenes.map((scene) => scene.id)),

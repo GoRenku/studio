@@ -1,3 +1,4 @@
+import { readCurrentProject, closeCurrentProject } from '@gorenku/studio-core/server/project-selection';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -133,7 +134,7 @@ describe('renku CLI', () => {
       fs.stat(path.join(storageRoot, 'constantinople', '.renku', 'project.sqlite'))
     ).resolves.toHaveProperty('isFile');
     await expect(
-      createProjectDataService().readCurrentProject({ homeDir })
+      readCurrentProject({ homeDir })
     ).resolves.toMatchObject({
       projectName: 'constantinople',
       status: 'unchanged',
@@ -536,7 +537,7 @@ describe('renku CLI', () => {
 
   });
 
-  it('validates and writes Inspiration analysis through the top-level command', async () => {
+  it.each(['author', 'validate-only'])('supports explicit-target two-call Inspiration %s without selection writes', async (intent) => {
     const storageRoot = await initializeStorageRoot();
     const createExitCode = await createProject();
     if (isMissingSqliteBindings(createExitCode, stderr)) {
@@ -574,6 +575,9 @@ describe('renku CLI', () => {
     );
     await fs.writeFile(path.join(inspirationFolderPath, 'frame-001.png'), 'image bytes');
 
+    await closeCurrentProject({ homeDir });
+    expect(await readCurrentProject({ homeDir })).toBeNull();
+
     const analysisPath = path.join(homeDir, 'inspiration-analysis.json');
     await fs.writeFile(
       analysisPath,
@@ -584,7 +588,7 @@ describe('renku CLI', () => {
     stdout = [];
     stderr = [];
     const showExitCode = await runRenkuCli(
-      ['inspiration', 'show', '--folder', folder.id, '--json'],
+      ['inspiration', 'show', '--project', 'constantinople', '--folder', folder.id, '--json'],
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(showExitCode).toBe(0);
@@ -601,32 +605,13 @@ describe('renku CLI', () => {
 
     stdout = [];
     stderr = [];
-    const validateExitCode = await runRenkuCli(
-      [
-        'inspiration',
-        'analysis',
-        'validate',
-        '--folder',
-        folder.id,
-        '--file',
-        analysisPath,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(validateExitCode).toBe(0);
-    expect(JSON.parse(stdout.join('\n'))).toMatchObject({
-      valid: true,
-      folder: { id: folder.id },
-    });
-
-    stdout = [];
-    stderr = [];
     const writeExitCode = await runRenkuCli(
       [
         'inspiration',
         'analysis',
-        'write',
+        intent === 'author' ? 'write' : 'validate',
+        '--project',
+        'constantinople',
         '--folder',
         folder.id,
         '--file',
@@ -636,6 +621,15 @@ describe('renku CLI', () => {
       { homeDir, io: captureIo(stdout, stderr) }
     );
     expect(writeExitCode).toBe(0);
+    expect(await readCurrentProject({ homeDir })).toBeNull();
+    if (intent === 'validate-only') {
+      expect(JSON.parse(stdout.join('\n'))).toMatchObject({ valid: true });
+      const persisted = await createProjectDataService().readInspirationFolder({
+        homeDir, projectName: 'constantinople', folderId: folder.id,
+      });
+      expect(persisted.analysis).toBeNull();
+      return;
+    }
     expect(JSON.parse(stdout.join('\n'))).toMatchObject({
       valid: true,
       changes: [{ type: 'inspirationAnalysis.upserted', folderId: folder.id }],
@@ -649,23 +643,7 @@ describe('renku CLI', () => {
       ]),
     });
 
-    stdout = [];
-    stderr = [];
-    const oldCommandExitCode = await runRenkuCli(
-      [
-        'visual-language',
-        'inspiration',
-        'read',
-        '--folder',
-        folder.id,
-        '--json',
-      ],
-      { homeDir, io: captureIo(stdout, stderr) }
-    );
-    expect(oldCommandExitCode).toBe(1);
-    expect(JSON.parse(stderr.join('\n'))).toMatchObject({
-      error: { code: 'CLI091' },
-    });
+
   });
 
   it('validates and applies project Lookbooks through the top-level command', async () => {

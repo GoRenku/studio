@@ -23,22 +23,32 @@ import {
   propOperationsSchema,
 } from '../../client/department-design-json-schemas.js';
 
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: true,
-  strictRequired: false,
-  removeAdditional: false,
-  useDefaults: false,
-  coerceTypes: false,
-});
+let cachedAjv: Ajv2020 | undefined;
 
-ajv.addSchema(departmentPlacementSchema);
-ajv.addSchema(castOperationsSchema);
-ajv.addSchema(locationOperationsSchema);
-ajv.addSchema(propOperationsSchema);
-ajv.addSchema(castDesignSchema);
-ajv.addSchema(locationDesignSchema);
-ajv.addSchema(propDesignSchema);
+function getAjv(): Ajv2020 {
+  if (cachedAjv) {
+    return cachedAjv;
+  }
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    strictRequired: false,
+    removeAdditional: false,
+    useDefaults: false,
+    coerceTypes: false,
+  });
+
+  ajv.addSchema(departmentPlacementSchema);
+  ajv.addSchema(castOperationsSchema);
+  ajv.addSchema(locationOperationsSchema);
+  ajv.addSchema(propOperationsSchema);
+  ajv.addSchema(castDesignSchema);
+  ajv.addSchema(locationDesignSchema);
+  ajv.addSchema(propDesignSchema);
+  cachedAjv = ajv;
+  return ajv;
+}
+
 
 type DepartmentDocumentKind =
   | 'castOperations'
@@ -152,7 +162,7 @@ function assertDepartmentDocument(input: {
   kind: DepartmentDocumentKind;
   filePath?: string;
 }): void {
-  const validator = ajv.getSchema(schemaIds[input.kind]);
+  const validator = getAjv().getSchema(schemaIds[input.kind]);
   if (!validator) {
     throw new Error(`Department JSON schema was not registered for ${input.kind}.`);
   }

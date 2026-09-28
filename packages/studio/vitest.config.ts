@@ -28,6 +28,10 @@ export default defineConfig({
         __dirname,
         '../core/src/client/index.ts'
       ),
+      '@gorenku/studio-core/server/project-selection': path.resolve(
+        __dirname,
+        '../core/src/server/project-selection/index.ts'
+      ),
       '@gorenku/studio-core/server': path.resolve(
         __dirname,
         '../core/src/server/index.ts'

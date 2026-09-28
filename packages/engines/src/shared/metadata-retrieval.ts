@@ -1,3 +1,4 @@
+import { channel } from 'node:diagnostics_channel';
 import type {
   CachedProviderMetadata,
   JsonValue,
@@ -10,19 +11,32 @@ import { createRequestTimeoutFetch } from './request-timeout.js';
 
 const inFlight = new Map<string, Promise<CachedProviderMetadata>>();
 
+const performanceChannel = channel('renku.performance');
+
 export async function retrieveProviderMetadata(input: {
   key: ProviderMetadataCacheKey;
   context: ProviderContext;
   headers?: ConstructorParameters<typeof Headers>[0];
 }): Promise<CachedProviderMetadata> {
-  const cacheKey = JSON.stringify(input.key);
-  const active = inFlight.get(cacheKey);
-  if (active) {
-    return active;
+  const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
+  let outcome = 'success';
+  try {
+    const cacheKey = JSON.stringify(input.key);
+    const active = inFlight.get(cacheKey);
+    if (active) {
+      return await active;
+    }
+    const retrieval = retrieve(input).finally(() => inFlight.delete(cacheKey));
+    inFlight.set(cacheKey, retrieval);
+    return await retrieval;
+  } catch (error) {
+    outcome = 'failure';
+    throw error;
+  } finally {
+    if (started !== undefined) {
+      performanceChannel.publish({ package: 'engines', phase: 'metadata', durationMs: performance.now() - started, outcome });
+    }
   }
-  const retrieval = retrieve(input).finally(() => inFlight.delete(cacheKey));
-  inFlight.set(cacheKey, retrieval);
-  return retrieval;
 }
 
 async function retrieve(input: {

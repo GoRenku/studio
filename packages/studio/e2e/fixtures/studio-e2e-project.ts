@@ -1,3 +1,4 @@
+import { readCurrentProject, openCurrentProject } from '@gorenku/studio-core/server/project-selection';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
@@ -59,7 +60,7 @@ export async function createMinimalMovieProject(input: {
     homeDir: input.runtime.isolatedHomeDirectory,
     idGenerator: createDeterministicIdGenerator(),
   });
-  await projectData.openCurrentProject({
+  await openCurrentProject({
     projectName: input.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
   });
@@ -685,7 +686,7 @@ async function writeProjectFile(input: {
   projectRelativePath: string;
   contents: string | Uint8Array;
 }): Promise<void> {
-  const project = await input.projectData.readCurrentProject({
+  const project = await readCurrentProject({
     homeDir: input.homeDir,
   });
   if (!project) {
