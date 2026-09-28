@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
+import childProcess from 'node:child_process';
 import { createHash, createHmac } from 'node:crypto';
 import {
   createReadStream,
@@ -63,9 +63,16 @@ async function verifyExistingInfrastructure(credentials) {
   if (response.statusCode !== 200) {
     throw new Error(`RELEASE042 Existing R2 bucket ${BUCKET} is not accessible.`);
   }
-  const publicProbe = spawnSync(
+  const publicProbe = childProcess.spawnSync(
     'curl',
-    ['-fsSI', `${PUBLIC_BASE_URL}/desktop/stable/darwin/arm64/latest-mac.yml`],
+    [
+      '-fsSI',
+      '--connect-timeout',
+      '20',
+      '--max-time',
+      '60',
+      `${PUBLIC_BASE_URL}/desktop/stable/darwin/arm64/latest-mac.yml`,
+    ],
     { encoding: 'utf8' }
   );
   if (publicProbe.status !== 0) {
@@ -76,10 +83,16 @@ async function verifyExistingInfrastructure(credentials) {
 function findReusableImmutableKeys(artifacts) {
   const reusable = new Set();
   for (const artifact of artifacts) {
-    const response = spawnSync(
+    console.log(`[probe] ${BUCKET}/${artifact.key}`);
+    const response = childProcess.spawnSync(
       'curl',
       [
         '-sS',
+        '--head',
+        '--connect-timeout',
+        '20',
+        '--max-time',
+        '60',
         '--output',
         '/dev/null',
         '--write-out',
@@ -110,6 +123,7 @@ async function upload(file, key, contentType, cacheControl, options) {
     return;
   }
   const fileSize = statSync(file).size;
+  console.log(`[upload] ${BUCKET}/${key}`);
   if (usesMultipartUpload(fileSize)) {
     await uploadMultipart(file, key, contentType, cacheControl, fileSize, options.credentials);
   } else {
@@ -188,6 +202,7 @@ async function uploadMultipart(file, key, contentType, cacheControl, fileSize, c
         throw new Error(`RELEASE044 R2 did not return an ETag for ${key} part ${partNumber}.`);
       }
       completedParts.push({ etag, partNumber });
+      console.log(`[multipart] ${BUCKET}/${key} part ${partNumber}/${partCount} uploaded`);
     }
 
     const completeBody = Buffer.from(
@@ -243,18 +258,29 @@ async function abortMultipartUpload(key, uploadId, credentials) {
   }
 }
 
-function verifyPublicObject(localFile, key) {
+export function verifyPublicObject(localFile, key) {
   const temporary = mkdtempSync(path.join(os.tmpdir(), 'renku-r2-verify-'));
   const downloaded = path.join(temporary, 'object');
   try {
-    const result = spawnSync(
+    console.log(`[verify] Downloading ${BUCKET}/${key}`);
+    const result = childProcess.spawnSync(
       'curl',
       [
         '-fsSL',
+        '--connect-timeout',
+        '20',
+        '--max-time',
+        '600',
+        '--speed-limit',
+        '1024',
+        '--speed-time',
+        '30',
         '--retry',
-        '5',
+        '3',
         '--retry-delay',
         '2',
+        '--retry-max-time',
+        '600',
         '-H',
         'Cache-Control: no-cache',
         `${PUBLIC_BASE_URL}/${key}?renku-release=${Date.now()}`,
@@ -269,6 +295,7 @@ function verifyPublicObject(localFile, key) {
     if (!filesHaveIdenticalBytes(localFile, downloaded)) {
       throw new Error(`RELEASE046 Public verification hash mismatch for ${key}.`);
     }
+    console.log(`[verified] ${BUCKET}/${key}`);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

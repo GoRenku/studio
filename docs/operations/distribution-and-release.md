@@ -313,6 +313,14 @@ pnpm release:publish -- --dry-run
 Generated local products and archives stay under the ignored
 `release/local/vX.Y.Z` directory for inspection.
 
+R2 publication logs object probes, uploads, completed multipart parts, and
+verification downloads separately. Public probes have a 60-second deadline.
+Verification downloads time out after 10 minutes per attempt or after 30 seconds
+below 1 KiB/s, with up to three retries started within a 10-minute retry window.
+A stalled verification fails with `RELEASE045` and leaves GitHub as a draft;
+resume publication after resolving the connection problem. Existing immutable
+objects are reused only after their downloaded bytes pass checksum verification.
+
 ## Future GitHub Actions Release
 
 The retained `.github/workflows/release.yml` builds one self-contained Node 24
