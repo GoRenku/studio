@@ -2,7 +2,7 @@ import { createRenkuMediaEngine } from './provider-registry.js';
 import { createExecutionContext } from './engine-context.js';
 import { loadGenerationRequest, resolveOutputDirectory } from './request-file.js';
 import { throwEngineError } from './engine-errors.js';
-import { executionReport } from './execute.js';
+import { saveGenerationExecutionResult } from './execution-result.js';
 import type { GenerationCommandInput } from './command.js';
 import { requiredFlag } from '../structured-command.js';
 
@@ -30,7 +30,7 @@ export async function recoverGenerationRequest(input: GenerationCommandInput) {
         outputDirectory,
       }),
     );
-    return executionReport(loaded.document, result);
+    return await saveGenerationExecutionResult(loaded.document, result, outputDirectory);
   } catch (error) {
     throwEngineError(error);
   }

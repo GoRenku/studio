@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryProviderMetadataCache, EngineError } from '@gorenku/studio-engines';
 import { executeGenerationRequest } from './execute.js';
@@ -47,6 +48,7 @@ describe('generation CLI provider delegation', () => {
       },
     });
     expect(JSON.stringify(result)).not.toContain('test-credential');
+    expect(JSON.parse(await fs.readFile(result.provenancePath, 'utf8'))).toEqual(result.provenance);
   });
 
   it('delegates validate and recover without provider protocol branches', async () => {
@@ -70,6 +72,52 @@ describe('generation CLI provider delegation', () => {
         recover: vi.fn(),
       },
     }))).rejects.toMatchObject({ code: 'ENGINE_REQUEST_INVALID' });
+  });
+
+  it('executes the exact validated bytes and retains that document even if the file changes during execution', async () => {
+    const fixture = await requestFixture();
+    const requestPath = path.join(fixture.projectFolder, fixture.documentPath);
+    const original = await fs.readFile(requestPath);
+    const execute = vi.fn(async () => {
+      await fs.writeFile(requestPath, '{}');
+      return { provider: 'atlas', model: 'atlas/image-v1', artifacts: [] };
+    });
+    const mediaEngine = { providerIds: [], readInputSchema: vi.fn(), validate: vi.fn(), execute, recover: vi.fn() };
+    const validated = await validateGenerationRequest(commandInput(fixture, { mediaEngine }));
+    expect(validated.requestSha256).toBe(createHash('sha256').update(original).digest('hex'));
+    const report = await executeGenerationRequest(commandInput(fixture, { mediaEngine }, {
+      expectedRequestSha256: validated.requestSha256,
+    }));
+    expect(execute).toHaveBeenCalledOnce();
+    expect(report.provenance.prompt).toBe('A stone arch');
+    expect(JSON.parse(await fs.readFile(report.provenancePath, 'utf8'))).toEqual(report.provenance);
+  });
+
+  it.each(['prompt', 'request', 'whitespace'])('stops before provider work after a %s edit', async (edit) => {
+    const fixture = await requestFixture();
+    const requestPath = path.join(fixture.projectFolder, fixture.documentPath);
+    const original = await fs.readFile(requestPath, 'utf8');
+    const expectedRequestSha256 = createHash('sha256').update(original).digest('hex');
+    const document = JSON.parse(original);
+    const changed = { ...document, [edit]: 'Changed value' };
+    await fs.writeFile(requestPath, edit === 'whitespace' ? `${original}\n` : JSON.stringify(changed));
+    const execute = vi.fn();
+    const createProviderExecutionContext = vi.fn();
+    await expect(executeGenerationRequest(commandInput(fixture, {
+      createProviderExecutionContext,
+      mediaEngine: { execute },
+    }, { expectedRequestSha256 }))).rejects.toMatchObject({ code: 'CLI_GENERATION_REQUEST_CHANGED' });
+    expect(execute).not.toHaveBeenCalled();
+    expect(createProviderExecutionContext).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed digest before provider work', async () => {
+    const fixture = await requestFixture();
+    const execute = vi.fn();
+    await expect(executeGenerationRequest(commandInput(fixture, {
+      mediaEngine: { execute },
+    }, { expectedRequestSha256: 'invalid' }))).rejects.toMatchObject({ code: 'CLI_GENERATION_REQUEST_HASH_INVALID' });
+    expect(execute).not.toHaveBeenCalled();
   });
 
   it('returns the raw live provider schema without normalizing it', async () => {
@@ -118,7 +166,7 @@ async function requestFixture() {
 function commandInput(
   fixture: Awaited<ReturnType<typeof requestFixture>>,
   overrides: Record<string, unknown>,
-  flags: { requestId?: string; provider?: string; model?: string; output?: string } = {},
+  flags: { requestId?: string; provider?: string; model?: string; output?: string; expectedRequestSha256?: string } = {},
 ) {
   return {
     flags: { file: fixture.documentPath, output: 'generated', ...flags },

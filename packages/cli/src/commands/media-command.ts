@@ -1,5 +1,6 @@
 import { createProjectDataService } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
+import { renderMediaImport } from './media-import/output.js';
 import type { RenkuCliIo } from '../cli.js';
 import {
   mediaImportCommandHandler,
@@ -32,7 +33,11 @@ export async function runMediaCommand(options: {
     handlers: [mediaImportCommandHandler],
     unknownCommand: unknownMediaCommand,
   });
-  writeJson(options.io, result);
+  if (options.json) {
+    writeJson(options.io, result);
+  } else {
+    options.io.stdout.log(renderMediaImport(result as Parameters<typeof renderMediaImport>[0]));
+  }
   return 0;
 }
 

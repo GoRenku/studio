@@ -73,6 +73,7 @@ Options
   --media-kind         Asset media kind
   --output             Provider output directory or generation schema snapshot path
   --request-id         Provider request id for generation recovery
+  --expected-request-sha256  Prepared request digest returned by generation validate
   --provider           Provider id for generation schema or model discovery
   --model              Exact provider-native model id
   --route-index        Bundled route index for generation models (repeatable)
@@ -225,6 +226,9 @@ function createCliFlags() {
       type: 'string',
     },
     requestId: {
+      type: 'string',
+    },
+    expectedRequestSha256: {
       type: 'string',
     },
     provider: {

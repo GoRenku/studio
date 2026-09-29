@@ -138,3 +138,21 @@ Core reports `CORE_MEDIA_MODEL_LIBRARY_INVALID` for malformed/oversized envelope
 `CORE_MEDIA_MODEL_NOT_FOUND` for a missing personal removal target, and
 `CORE_MEDIA_MODEL_LIBRARY_IO_FAILED` for storage IO failures.
 Missing optional guidance has no diagnostic. Provider execution retains Engines codes.
+
+## Generation CLI handoff
+
+`CLI_GENERATION_REQUEST_HASH_INVALID` rejects a malformed expected SHA-256 digest.
+`CLI_GENERATION_REQUEST_CHANGED` rejects changed prepared-request bytes before
+provider context creation or execution. The caller must inspect and reprepare
+the changed request; neither error implies a provider submission.
+
+`CLI_GENERATION_PROVENANCE_WRITE_FAILED` means provider execution completed but
+the CLI could not publish its provenance file. The diagnostic identifies the
+output path, downloaded media, optional provider request id, and any complete
+temporary provenance file. It does not echo the receipt or retry generation.
+
+Provenance assembly and Core validation failures after provider completion also
+identify the downloaded media and optional provider request id, with an explicit
+instruction not to submit another generation. Core validation errors retain
+their original codes, issues, and validation reasons. Invalid provenance is not
+published as an import-ready file.

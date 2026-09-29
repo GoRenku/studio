@@ -222,6 +222,7 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
         file: isGenerationPreview ? flags.file : file,
         output: flags.output,
         requestId: flags.requestId,
+        expectedRequestSha256: flags.expectedRequestSha256,
         purpose: flags.purpose,
         target: flags.target,
         revision: flags.revision,

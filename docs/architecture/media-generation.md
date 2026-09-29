@@ -20,7 +20,10 @@ define the current media-generation architecture.
   validation, uploads, retry/poll/recovery, output normalization, and downloads.
 - `packages/cli` composes providers, resolves one Core-owned credential, replaces
   local-file paths, delegates once to Engines, and serializes artifacts plus safe
-  provenance.
+  provenance. Execute/recover save import-ready provenance beside downloaded
+  media and return its path. Validate returns the loaded request's byte hash;
+  Execute can check that hash before provider work. These are file/serialization
+  operations, not provider rules or creative interpretation.
 - `packages/core` owns Project paths, credentials, deterministic generation
   context, the small review/provenance envelope, safety, per-media Settings,
   focused attachment, Asset provenance, copies, Inspection, and database

@@ -4,6 +4,7 @@ import { loadGenerationRequest, resolveOutputDirectory } from './request-file.js
 import { throwEngineError } from './engine-errors.js';
 import type { GenerationCommandInput } from './command.js';
 import { requiredFlag } from '../structured-command.js';
+import { saveGenerationExecutionResult } from './execution-result.js';
 
 export async function executeGenerationRequest(input: GenerationCommandInput) {
   const loaded = await loadGenerationRequest({
@@ -11,6 +12,7 @@ export async function executeGenerationRequest(input: GenerationCommandInput) {
     projectName: input.runtime.projectName,
     homeDir: input.runtime.homeDir,
     projectDataService: input.runtime.projectDataService,
+    expectedRequestSha256: input.flags.expectedRequestSha256,
   });
   const outputDirectory = resolveOutputDirectory(
     loaded.projectFolder,
@@ -28,24 +30,10 @@ export async function executeGenerationRequest(input: GenerationCommandInput) {
         outputDirectory,
       }),
     );
-    return executionReport(loaded.document, result);
+    return await saveGenerationExecutionResult(loaded.document, result, outputDirectory);
   } catch (error) {
     throwEngineError(error);
   }
-}
-
-export function executionReport(
-  document: import('@gorenku/studio-core/client').MediaGenerationReviewDocument,
-  result: import('@gorenku/studio-engines').ProviderExecutionResult,
-) {
-  return {
-    ...(result.requestId ? { requestId: result.requestId } : {}),
-    artifacts: result.artifacts,
-    provenance: {
-      ...document,
-      ...(result.receipt === undefined ? {} : { receipt: result.receipt }),
-    },
-  };
 }
 
 function singleFlag(value: string | string[] | undefined): string | undefined {

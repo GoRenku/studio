@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import {
   assertSafeMediaGenerationRequest,
   normalizeReviewDocumentPath,
@@ -17,10 +18,12 @@ export async function loadGenerationRequest(input: {
   projectName?: string;
   homeDir?: string;
   projectDataService: ProjectDataService;
+  expectedRequestSha256?: string;
 }): Promise<{
   document: MediaGenerationReviewDocument;
   providerRequest: ProviderRequest;
   projectFolder: string;
+  requestSha256: string;
 }> {
   const projectRef = await input.projectDataService.resolveStudioProjectRef({
     projectName: input.projectName,
@@ -29,11 +32,14 @@ export async function loadGenerationRequest(input: {
   const projectFolder = path.join(projectRef.storageRoot, projectRef.name);
   const documentPath = normalizeReviewDocumentPath(input.file);
   let value: unknown;
+  let requestSha256: string;
   try {
-    value = JSON.parse(await fs.readFile(
+    const bytes = await fs.readFile(
       resolveReviewDocumentPath(projectFolder, documentPath),
-      'utf8',
-    ));
+    );
+    requestSha256 = createHash('sha256').update(bytes).digest('hex');
+    assertRequestHash(input.expectedRequestSha256, requestSha256, input.file);
+    value = JSON.parse(bytes.toString('utf8'));
   } catch (error) {
     if (error instanceof StructuredError) {
       throw error;
@@ -62,7 +68,27 @@ export async function loadGenerationRequest(input: {
       ),
     },
     projectFolder,
+    requestSha256,
   };
+}
+
+function assertRequestHash(expected: string | undefined, actual: string, file: string): void {
+  if (expected === undefined) {
+    return;
+  }
+  if (!/^[a-f0-9]{64}$/.test(expected)) {
+    throw new StructuredError({
+      code: 'CLI_GENERATION_REQUEST_HASH_INVALID',
+      message: '--expected-request-sha256 must be a lowercase SHA-256 hex digest.',
+    });
+  }
+  if (expected !== actual) {
+    throw new StructuredError({
+      code: 'CLI_GENERATION_REQUEST_CHANGED',
+      message: `Generation request changed after preparation: ${file}.`,
+      suggestion: 'Read the changed request, update its native request as needed, and validate it before executing. No provider work has started.',
+    });
+  }
 }
 
 export function resolveOutputDirectory(projectFolder: string, value: string): string {

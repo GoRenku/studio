@@ -1,5 +1,29 @@
 # CLI Performance
 
+## Execution handoff (0216)
+
+Execute/Recover now save import-ready provenance beside generated media and
+return `provenancePath`. Default output shows artifacts and that path without
+echoing the receipt; `--json` keeps the complete result. Validate returns
+`requestSha256`, and Execute can compare it before provider work using
+`--expected-request-sha256`. Provider validation and schema caching are unchanged.
+
+Local CLI/Core integration proves saved-file import, Inspector provenance, stale
+Preview-edit rejection and revised-request execution without Recover. A warmed
+ten-run hash/serialization/publication measurement was 0.430 ms median; it
+excludes startup, provider work and agent/host delays. Independent continuation
+evaluation selected the intended paths and exposed contradictory Skill wording
+that was corrected. Full installed-plugin generation and end-to-end timings are
+still unverified. See sister Skills
+`skills/media-producer/evals/generation-context/runs/2026-09-29-cli-provenance-handoff.md`.
+
+`media import` defaults to a compact completion display of the Core report,
+including canonical file paths, attachment identities, grouped changes, and
+warnings. It omits echoed generation provenance from the report and Assets.
+`--json` retains the complete report; persistence and Inspector provenance are
+unchanged. Agents consuming JSON should capture it completely before displaying
+selected completion fields, so long receipts do not trigger attachment rediscovery.
+
 Status: implemented; remaining acceptance gates listed below.
 Date: 2026-09-28
 

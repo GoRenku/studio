@@ -18,6 +18,8 @@ import { showGenerationPreview } from './preview.js';
 import { validateGenerationRequest } from './validate.js';
 import { showGenerationContext } from './context.js';
 import { renderMediaGenerationContext } from './context-output/index.js';
+import { renderGenerationExecution } from './execution-output.js';
+import type { GenerationExecutionReport } from './execution-result.js';
 import { showGenerationSchema } from './schema.js';
 import { listGenerationModels, showGenerationModel } from './models/queries.js';
 import { importGenerationModel, removeGenerationModel } from './models/mutations.js';
@@ -33,6 +35,7 @@ export interface GenerationCommandFlags {
   file?: string | string[];
   output?: string;
   requestId?: string;
+  expectedRequestSha256?: string;
   purpose?: string;
   target?: string;
   revision?: string;
@@ -80,6 +83,12 @@ const handlers = [
   { path: ['recover'], run: recoverGenerationRequest },
 ] satisfies CliCommandHandler<GenerationCommandFlags, GenerationCommandRuntime>[];
 
+const textRenderers: Record<string, (report: unknown) => string> = {
+  context: (report) => renderMediaGenerationContext(report as Awaited<ReturnType<typeof showGenerationContext>>),
+  execute: (report) => renderGenerationExecution(report as GenerationExecutionReport),
+  recover: (report) => renderGenerationExecution(report as GenerationExecutionReport),
+};
+
 export async function runGenerationCommand(options: {
   input: string[];
   flags: GenerationCommandFlags;
@@ -94,11 +103,6 @@ export async function runGenerationCommand(options: {
     io: options.io,
     projectDataService: createProjectDataService(),
   };
-  if (options.input.length === 1 && options.input[0] === 'context' && !options.json) {
-    const report = await showGenerationContext({ flags: options.flags, runtime });
-    options.io.stdout.log(renderMediaGenerationContext(report));
-    return 0;
-  }
   const result = await dispatchCliCommand({
     commandPath: options.input,
     flags: options.flags,
@@ -110,6 +114,11 @@ export async function runGenerationCommand(options: {
       suggestion: 'Use generation context, models, schema show, configuration-visualization, validate, preview show, execute, or recover.',
     }),
   });
-  writeJson(options.io, result);
+  const render = textRenderers[options.input.join(' ')];
+  if (!options.json && render) {
+    options.io.stdout.log(render(result));
+  } else {
+    writeJson(options.io, result);
+  }
   return 0;
 }

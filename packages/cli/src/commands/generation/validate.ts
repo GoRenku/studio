@@ -31,6 +31,7 @@ export async function validateGenerationRequest(input: GenerationCommandInput) {
     provider: loaded.document.provider,
     model: loaded.document.model,
     mediaKind: loaded.document.mediaKind,
+    requestSha256: loaded.requestSha256,
   };
 }
 

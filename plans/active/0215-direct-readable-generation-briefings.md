@@ -688,3 +688,28 @@ gates below. No controlled general agent speedup or release is claimed.
 - [x] Confirm no checklist item relies on unreviewable structure or context pruning.
 - [x] Report release/installation status accurately; do not edit plugin caches.
 - [ ] Mark implemented only after all required work and evidence are complete.
+
+## Attachment completion follow-up — 2026-09-29
+
+Review Attention: default `media import` output becomes a compact completion
+display that excludes echoed generation provenance. `--json`, stored provenance,
+attachment ownership, diagnostics, and creative context remain unchanged. This
+addresses the observed clipped import response and repeated Asset discovery.
+No flags, migrations, cache changes, or new domain rules are introduced.
+
+Architecture Shape Gate: `packages/cli/src/commands/media-import/output.ts` owns
+presentation of the existing Core generic and grouped Storyboard reports.
+`runMediaCommand` remains a thin dispatcher selecting full JSON or compact
+display. Core continues to own attachment and report facts; no CLI business
+validation, creative parsing, or purpose registry is added. Stop if the renderer
+requires inferred state or destination rules. Existing index files stay unchanged.
+
+- [x] Add focused renderer and command output checks, preserving full JSON.
+- [x] Update media skill consumption, permission reuse, and observed range-gap eval.
+- [x] Verify CLI checks/tests, skill tests, docs, and complete diffs.
+
+Verification: nine focused CLI tests, CLI lint/typecheck/test-typecheck, and
+53 media-workflow tests passed. Replaying the recorded import report's display
+projection reduces it from 30,516 to 1,341 characters (95.6%). Context reading
+still requires live behavioral verification; the new trace test detects the
+observed 2251–3269 gap and does not claim to enforce model attention.

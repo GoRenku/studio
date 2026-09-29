@@ -1722,6 +1722,9 @@ renku generation validate \\
   --json
 ```
 
+The result includes `requestSha256`, the SHA-256 digest of the exact file bytes
+validated. Retain it for the prepared-request execution below.
+
 Show one or more review files in Studio in command-line order:
 
 ```bash
@@ -1742,7 +1745,7 @@ under a Project-relative output directory:
 renku generation execute \\
   --file tmp/operations/media-generation/request.json \\
   --output tmp/operations/media-generation/output \\
-  --json
+  --expected-request-sha256 <requestSha256-from-validation>
 ```
 
 Recover a provider job when that provider supports stateless recovery:
@@ -1751,16 +1754,27 @@ Recover a provider job when that provider supports stateless recovery:
 renku generation recover \\
   --file tmp/operations/media-generation/request.json \\
   --request-id <provider-job-id> \\
-  --output tmp/operations/media-generation/output \\
-  --json
+  --output tmp/operations/media-generation/output
 ```
 
 Validate, execute, and recover reject `codex`; Codex built-in image generation is
 harness-gated and invoked directly by Media Producer. World Labs Location World
 generation remains under `renku location world generate`.
 
-Successful execute/recover JSON contains downloaded `artifacts`, optional
-`requestId`, and exact safe `provenance` ready to save and pass to attachment.
+Execute's optional `--expected-request-sha256` compares the file it loads before
+provider work. A changed file stops with `CLI_GENERATION_REQUEST_CHANGED`; inspect
+the edits and reprepare the native request before executing. The comparison is
+not consent and does not replace Engines validation.
+
+Execute/recover save exact provenance to `provenance-<uuid>.json` inside the output
+directory before reporting success. Default output shows downloaded `artifacts`,
+optional `requestId`, and the absolute `provenancePath`. Pass that file directly
+to `media import --provenance`. `--json` includes those fields plus the complete
+`provenance` object. A successful result requires no receipt extraction or
+provider recovery. Provenance assembly, validation, or write failures identify
+completed media, the provider request id when available, and any complete
+temporary provenance file; they must not trigger another generation. Validation
+failures retain Core diagnostics and do not publish invalid provenance.
 There is no Spec, Run, estimate, approval token, freeze, or simulation command.
 
 ## `renku media import`
