@@ -16,9 +16,10 @@ export const buildLocationPurposeContext: MediaGenerationPurposeBuilder = (input
       `Media generation target Location was not found: ${input.target.id}.`,
     );
   }
-  const context = projectLocationContext(input.session, record);
+  const context = projectLocationContext(input.session, record, input.assets);
   const visualLanguage = readMediaGenerationLookbooks({
     session: input.session,
+    assets: input.assets,
     projectFolder: input.projectFolder,
     kinds: input.purpose === 'location.sheet' ? ['production', 'storyboard'] : ['production'],
   });
@@ -34,14 +35,16 @@ export const buildLocationPurposeContext: MediaGenerationPurposeBuilder = (input
         lookbooks: visualLanguage,
         role: 'appearance',
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
       createReferenceSuggestion({
         id: 'location-continuity',
         role: 'continuity',
         subject: { kind: 'location', id: record.id },
-        assets: context.assets.filter((asset) => asset.type === 'location_sheet'),
+        assets: context.assetIds.map((id) => input.assets.get(id)).filter((asset) => asset.type === 'location_sheet'),
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
     ],

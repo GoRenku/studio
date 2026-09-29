@@ -3,6 +3,87 @@
 Status: implemented; remaining acceptance gates listed below.
 Date: 2026-09-28
 
+## Live character-sheet workflow follow-up (2026-09-29)
+
+An explicitly authorized operator-led Codex run exercised the built CLI and
+current source skills against Mara in Urban Basilica. It used one complete
+76,560-byte text briefing, read from a first-call capture in five bounded parts;
+three informational Previews; three deliberate generation attempts; and one
+successful final attachment. No Cast Design/Settings refetch, JSON context
+recovery, historical recipe retrieval or Python briefing extraction was needed.
+The earlier audited Mara session made five context reads and fourteen Renku
+calls; this run made one and five respectively. These are observations from
+different sessions, not a controlled latency benchmark.
+
+Image calls took 44.096, 41.004 and 39.568 seconds. Two generated rulers had
+unequal numeric spacing; an endpoint-only height bar resolved that defect in
+the third candidate. Fine costume geometry remains interpretive. The final
+candidate was attached as `asset_6drsbdvw`; no Cast facts or Settings changed.
+Full evidence, source hashes, exact files and limitations are in sister
+`studio-skills/skills/media-producer/evals/generation-context/runs/2026-09-29-mara.md`.
+
+Shared skill guidance now covers aggregate tool limits, direct text output,
+capture recovery and inventory use. Cast department context is conditional on
+design authoring. The CLI process boundary reports `CLI_OUTPUT_CLOSED` with
+exit 1 when stdout's consumer closes early; other stream errors remain errors.
+Unit/integration, type/lint and skill checks passed. Independent blind trials
+across the remaining generation types and packaged-plugin verification remain
+open. The earlier verification sections below describe their original scopes.
+
+## Consolidated readable briefings (0215)
+
+Implemented in the 2026-09-29 working tree based on Studio
+`ef2f31f9bb4b1e64c44cdb152aa3b8ad68712029` and Studio Skills
+`bc3ef3ba33e7c458c44634a795c79936c6ffa05c`. Core now emits one complete
+Asset inventory; the CLI renders that report as text by default or JSON with
+`--json`. Creative context breadth is unchanged.
+
+The following same-state Urban Basilica measurements are UTF-8 bytes, excluding
+the final CLI newline. Before/after JSON both use two-space indentation. A
+one-off comparison resolved inventory identities back to their source facts
+and confirmed equal documents, Asset/File metadata, ordered candidate roles,
+selection/ranges, voice identities, policy, warnings and resource keys. Derived
+design summaries were checked through retained design identities/documents.
+
+| Purpose | Previous JSON | Consolidated JSON | Readable text | Text reduction from previous JSON |
+| --- | ---: | ---: | ---: | ---: |
+| Cast character sheet | 92,644 | 78,549 | 64,474 | 30.4% |
+| Cast voice sample | 41,263 | 35,385 | 28,652 | 30.6% |
+| Location sheet | 61,284 | 52,859 | 43,439 | 29.1% |
+| Scene storyboard sheet | 106,936 | 90,435 | 73,378 | 31.4% |
+| Shot Plan dialogue audio | 104,470 | 79,343 | 64,564 | 38.2% |
+| Shot Plan video generation | 153,421 | 131,447 | 105,950 | 30.9% |
+
+A fresh-process character briefing smoke measurement on Node 24.16.0/macOS
+arm64 used one warmup plus five runs per format, with piped stdout and no
+concurrent test suite. Text median was 693 ms (range 640–732 ms), JSON median
+758 ms (range 722–913 ms). Formats ran in separate batches; this is a small
+sanity check, not evidence of a latency advantage. There is no comparable
+pre-change timing or tokenizer measurement for this slice. Raw local captures
+are under `/tmp/renku-briefing-investigation`; process measurements are in
+`/tmp/renku-0215-latency.json`.
+
+Verification: full build and `pnpm check`; 492 Core and 107 CLI unit tests;
+36 Core and 33 CLI integration tests, including real text/JSON delegation;
+19 focused Core projection/Scene Beat tests after final assertions; sister
+`test:media-generation` passes, including 12 new fixture integrity cases.
+Fixtures use a synthetic populated Core Project, not private movie contents.
+They cover full designs, alternative/default voices, overlapping selected and
+unselected dialogue Takes, exact multi-file edits, unavailable references and
+changed selection. Current CLI rendering preserves every fixture string.
+
+The shared Scene Beat visual-reference projection now exposes an inventory
+alongside its references. Domain resources and generation execution are unchanged.
+Normal and captured text were inspected; renderer tests cover opaque identity,
+multiline/Unicode, whitespace, empty values, false and zero. Studio/Skills source
+changes require coordinated delivery; no release or plugin installation was run.
+
+Independent agent preparation trials remain open. The eleven behavioral cases
+and controlled fixtures are checked in under Studio Skills
+`skills/media-producer/evals/generation-context/`. Automated fixture validation
+does not measure an agent's first format choice, roundtrip count, preparation
+time or end-to-end generation speed. Do not infer those gains from byte savings.
+
 ## Generation briefing follow-up (0214)
 
 On 2026-09-28, a same-state Urban Basilica Workroom `location.sheet` capture

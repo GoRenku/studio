@@ -16,9 +16,10 @@ export const buildPropPurposeContext: MediaGenerationPurposeBuilder = (input) =>
       `Media generation target Prop was not found: ${input.target.id}.`,
     );
   }
-  const context = projectPropContext(input.session, record);
+  const context = projectPropContext(input.session, record, input.assets);
   const visualLanguage = readMediaGenerationLookbooks({
     session: input.session,
+    assets: input.assets,
     projectFolder: input.projectFolder,
     kinds: input.purpose === 'prop.sheet' ? ['production', 'storyboard'] : ['production'],
   });
@@ -34,14 +35,16 @@ export const buildPropPurposeContext: MediaGenerationPurposeBuilder = (input) =>
         lookbooks: visualLanguage,
         role: 'appearance',
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
       createReferenceSuggestion({
         id: 'prop-continuity',
         role: 'continuity',
         subject: { kind: 'prop', id: record.id },
-        assets: context.assets.filter((asset) => asset.type === 'prop_sheet'),
+        assets: context.assetIds.map((id) => input.assets.get(id)).filter((asset) => asset.type === 'prop_sheet'),
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
     ],

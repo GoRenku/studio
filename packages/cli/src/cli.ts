@@ -164,9 +164,20 @@ function formatDiagnosticLocation(path: string[]): string {
 const isEntrypoint = isRenkuCliEntrypoint(process.argv[1]);
 
 if (isEntrypoint) {
+  process.stdout.on('error', (error: Error & { code?: string }) => {
+    if (error.code !== 'EPIPE') {
+      throw error;
+    }
+    writeStructuredError(new StructuredError({
+      code: 'CLI_OUTPUT_CLOSED',
+      message: 'Output consumer closed the pipe before the response finished.',
+      issues: [],
+    }), parseCliArguments(process.argv.slice(2)).cli.flags.json, defaultIo);
+    process.exitCode = 1;
+  });
   runRenkuCli()
     .then((exitCode) => {
-      process.exitCode = exitCode;
+      process.exitCode ||= exitCode;
     })
     .catch((error) => {
       console.error(error instanceof Error ? error.message : error);

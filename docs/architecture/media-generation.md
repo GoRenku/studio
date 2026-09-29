@@ -185,8 +185,16 @@ provider-native fields, receipts, or media contents.
 Every purpose-specific Media Producer workflow begins with:
 
 ```bash
-renku generation context --purpose <purpose> --target <target> --json
+renku generation context --purpose <purpose> --target <target>
 ```
+
+Default output is a readable briefing. Choose `--json` before calling when the
+next step parses fields or constructs requests programmatically. Both formats
+contain the same Core-owned facts, with one complete Asset inventory and exact
+identity links from reference roles, subjects, Shots, Lookbooks and voices.
+The CLI formats those facts without pruning creative context. Refresh when
+relevant state or scope changes, including after attaching a sheet needed by a
+Hero request. See the [contract reference](reference/media-generation.md).
 
 The generation briefing omits `generationProvenance` from candidates and typed
 Assets throughout Lookbook, subject, Shot, voice-sample, and exact edit-source
@@ -236,7 +244,7 @@ permission. It has no Studio route or model-selection dialog.
 The current provider execution commands are:
 
 ```bash
-renku generation context --purpose <purpose> --target <target> --json
+renku generation context --purpose <purpose> --target <target>
 renku generation validate --file tmp/operations/media-generation/request.json --json
 renku generation preview show --file tmp/operations/media-generation/request.json --json
 renku generation execute --file tmp/operations/media-generation/request.json --output tmp/operations/media-generation/output --json

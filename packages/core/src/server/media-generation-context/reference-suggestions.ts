@@ -7,6 +7,8 @@ import type {
   MediaGenerationReferenceSuggestion,
   MediaGenerationSceneContext,
 } from '../../client/media-generation-context.js';
+import type { GenerationAssets } from './reference-assets.js';
+import type { ProjectRelativePath } from '../../client/project/index.js';
 import type { DialogueTurnRange } from '../../client/shot-plan-dialogue-audio.js';
 import { listAssetsInSession } from '../assets/projection.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -18,17 +20,19 @@ export function suggestLookbookMedia(input: {
   role: MediaGenerationReferenceRole;
   projectFolder: string;
   warnings: DiagnosticIssue[];
+  collection: GenerationAssets;
 }): MediaGenerationReferenceSuggestion[] {
   return input.lookbooks.map((lookbook) => createReferenceSuggestion({
     id: `${lookbook.kind}-lookbook`,
     role: input.role,
     assets: [
-      ...lookbook.images.map((image) => image.asset),
-      ...lookbook.sheets.map((sheet) => sheet.asset),
+      ...lookbook.images.map((image) => input.collection.get(image.assetId)),
+      ...lookbook.sheets.map((sheet) => input.collection.get(sheet.assetId)),
     ],
     selectedAssetIds: lookbook.selectedImageId ? [lookbook.selectedImageId] : [],
     projectFolder: input.projectFolder,
     warnings: input.warnings,
+    collection: input.collection,
   }));
 }
 
@@ -36,31 +40,35 @@ export function suggestSceneSubjectMedia(input: {
   sceneContext: MediaGenerationSceneContext;
   projectFolder: string;
   warnings: DiagnosticIssue[];
+  collection: GenerationAssets;
 }): MediaGenerationReferenceSuggestion[] {
   return [
     ...input.sceneContext.castMembers.map((context) => createReferenceSuggestion({
       id: 'cast-continuity',
       role: 'continuity',
       subject: { kind: 'castMember', id: context.castMember.id },
-      assets: context.assets.filter((asset) => asset.type === 'character_sheet'),
+      assets: context.assetIds.map((id) => input.collection.get(id)).filter((asset) => asset.type === 'character_sheet'),
       projectFolder: input.projectFolder,
       warnings: input.warnings,
+      collection: input.collection,
     })),
     ...input.sceneContext.locations.map((context) => createReferenceSuggestion({
       id: 'location-continuity',
       role: 'continuity',
       subject: { kind: 'location', id: context.location.id },
-      assets: context.assets.filter((asset) => asset.type === 'location_sheet'),
+      assets: context.assetIds.map((id) => input.collection.get(id)).filter((asset) => asset.type === 'location_sheet'),
       projectFolder: input.projectFolder,
       warnings: input.warnings,
+      collection: input.collection,
     })),
     ...input.sceneContext.props.map((context) => createReferenceSuggestion({
       id: 'prop-continuity',
       role: 'continuity',
       subject: { kind: 'prop', id: context.prop.id },
-      assets: context.assets.filter((asset) => asset.type === 'prop_sheet'),
+      assets: context.assetIds.map((id) => input.collection.get(id)).filter((asset) => asset.type === 'prop_sheet'),
       projectFolder: input.projectFolder,
       warnings: input.warnings,
+      collection: input.collection,
     })),
   ];
 }
@@ -71,6 +79,7 @@ export function suggestBeatStoryboards(input: {
   beatIds: string[];
   projectFolder: string;
   warnings: DiagnosticIssue[];
+  collection: GenerationAssets;
 }): MediaGenerationReferenceSuggestion[] {
   return input.beatIds.map((beatId) => {
     const assets = listAssetsInSession(input.session, {
@@ -84,6 +93,7 @@ export function suggestBeatStoryboards(input: {
       assets,
       projectFolder: input.projectFolder,
       warnings: input.warnings,
+      collection: input.collection,
     });
   });
 }
@@ -92,6 +102,7 @@ export function suggestSelectedShotImages(input: {
   shots: Array<{ id: string; images: MediaGenerationAsset[]; selectedImageId: string | null }>;
   projectFolder: string;
   warnings: DiagnosticIssue[];
+  collection: GenerationAssets;
 }): MediaGenerationReferenceSuggestion[] {
   return input.shots.map((shot) => createReferenceSuggestion({
     id: 'shot-image',
@@ -101,6 +112,7 @@ export function suggestSelectedShotImages(input: {
     selectedAssetIds: shot.selectedImageId ? [shot.selectedImageId] : [],
     projectFolder: input.projectFolder,
     warnings: input.warnings,
+    collection: input.collection,
   }));
 }
 
@@ -110,6 +122,7 @@ export function suggestShotPlanMedia(input: {
   roles: Array<{ assetType: string; role: MediaGenerationReferenceRole }>;
   projectFolder: string;
   warnings: DiagnosticIssue[];
+  collection: GenerationAssets;
 }): MediaGenerationReferenceSuggestion[] {
   const assets = listAssetsInSession(input.session, { owner: { kind: 'project' } })
     .filter((asset) => asset.authoredFrom?.id === input.shotPlanId);
@@ -119,6 +132,7 @@ export function suggestShotPlanMedia(input: {
     assets: assets.filter((asset) => asset.type === assetType),
     projectFolder: input.projectFolder,
     warnings: input.warnings,
+    collection: input.collection,
   }));
 }
 
@@ -127,12 +141,15 @@ export function createReferenceSuggestion(input: {
   role: MediaGenerationReferenceRole;
   subject?: { kind: string; id: string };
   assets: MediaGenerationAsset[];
+  fileIds?: string[];
   selectedAssetIds?: string[];
   workflowSelectedAssetIds?: string[];
   dialogueTurnRangesByAssetId?: Map<string, DialogueTurnRange>;
   projectFolder: string;
   warnings: DiagnosticIssue[];
+  collection: GenerationAssets;
 }): MediaGenerationReferenceSuggestion {
+  input.assets.forEach((asset) => input.collection.add(asset));
   const selectedAssetIds = new Set(input.selectedAssetIds ?? []);
   const workflowSelectedAssetIds = new Set(
     input.workflowSelectedAssetIds ?? [],
@@ -142,6 +159,7 @@ export function createReferenceSuggestion(input: {
       right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id)
     )
     .flatMap((asset) => [...asset.files]
+      .filter((file) => !input.fileIds || input.fileIds.includes(file.id))
       .sort((left, right) => left.role.localeCompare(right.role) || left.id.localeCompare(right.id))
       .flatMap((file) => {
         if (!isMediaKind(file.mediaKind)) {
@@ -155,17 +173,6 @@ export function createReferenceSuggestion(input: {
         return [{
           assetId: asset.id,
           assetFileId: file.id,
-          projectRelativePath: file.projectRelativePath,
-          owner: asset.owner,
-          assetType: asset.type,
-          fileRole: file.role,
-          mediaKind: file.mediaKind,
-          mimeType: file.mimeType,
-          title: asset.title,
-          oneLineSummary: asset.oneLineSummary,
-          referenceName: asset.referenceName,
-          tags: asset.tags,
-          authoredFrom: asset.authoredFrom,
           ...(input.dialogueTurnRangesByAssetId?.get(asset.id)
             ? { dialogueTurnRange: input.dialogueTurnRangesByAssetId.get(asset.id)! }
             : {}),
@@ -197,7 +204,7 @@ function isMediaKind(value: string): value is 'image' | 'video' | 'audio' {
 
 function isAvailableProjectFile(
   projectFolder: string,
-  projectRelativePath: MediaGenerationReferenceCandidate['projectRelativePath'],
+  projectRelativePath: ProjectRelativePath,
 ): boolean {
   try {
     statProjectFileSync(resolveProjectRelativePath(projectFolder, projectRelativePath), {

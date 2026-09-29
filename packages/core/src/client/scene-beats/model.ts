@@ -4,6 +4,7 @@ import type { Project } from '../project/index.js';
 import type { Scene, ScreenplayBlock, ScreenplaySection } from '../screenplay/index.js';
 import type { MediaGenerationProvenance } from '../media-generation-review.js';
 import type {
+  MediaGenerationAsset,
   MediaGenerationLookbookContext,
   MediaGenerationReferenceSuggestion,
 } from '../media-generation-context.js';
@@ -100,6 +101,7 @@ export interface SceneBeatsContextReport extends SceneBeatsCommandReport {
   } | null;
   activeRevision: SceneBeatsRevisionSummary | null;
   visualReferences?: {
+    assets: MediaGenerationAsset[];
     visualLanguage: MediaGenerationLookbookContext[];
     suggestedReferences: MediaGenerationReferenceSuggestion[];
   };

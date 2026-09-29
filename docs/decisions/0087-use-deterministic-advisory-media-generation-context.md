@@ -9,6 +9,11 @@
 > only a persisted selected Take as `isWorkflowSelected`; every active candidate
 > remains visible and suggestions remain advisory.
 
+> **[Decision 0104](0104-use-consolidated-readable-generation-context.md) update:**
+> generation context now has one complete Asset inventory with identity links,
+> and the CLI presents readable text by default with explicit `--json`.
+> Advisory meaning and complete current creative context remain unchanged.
+
 Date: 2026-08-25
 
 Status: accepted

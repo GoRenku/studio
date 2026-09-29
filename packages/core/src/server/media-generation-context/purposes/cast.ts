@@ -15,20 +15,21 @@ export const buildCastPurposeContext: MediaGenerationPurposeBuilder = (input) =>
   if (!record) {
     throw new ProjectDataError('CORE_MEDIA_GENERATION_CONTEXT_TARGET_NOT_FOUND', `Media generation target Cast Member was not found: ${input.target.id}.`);
   }
-  const context = projectCastMemberContext(input.session, record);
+  const context = projectCastMemberContext(input.session, record, input.assets);
   const voices = readCastMemberResourceFromSession(input.session, record.id).voices;
   const kinds = input.purpose === 'cast.character-sheet'
     ? ['production', 'storyboard'] as const
     : input.purpose === 'cast.profile'
       ? ['production'] as const
       : [];
-  const visualLanguage = readMediaGenerationLookbooks({ session: input.session, projectFolder: input.projectFolder, kinds: [...kinds] });
+  const visualLanguage = readMediaGenerationLookbooks({ assets: input.assets, session: input.session, projectFolder: input.projectFolder, kinds: [...kinds] });
   const continuity = createReferenceSuggestion({
     id: 'cast-continuity',
     role: 'continuity',
     subject: { kind: 'castMember', id: record.id },
-    assets: context.assets.filter((asset) => asset.type === 'character_sheet'),
+    assets: context.assetIds.map((id) => input.assets.get(id)).filter((asset) => asset.type === 'character_sheet'),
     projectFolder: input.projectFolder,
+    collection: input.assets,
     warnings: input.warnings,
   });
   return {
@@ -36,12 +37,12 @@ export const buildCastPurposeContext: MediaGenerationPurposeBuilder = (input) =>
       kind: 'castMember',
       ...context,
       scenes: scenesForSubject(input.screenplay, { type: 'castMember', id: record.id }),
-      voices: voices.map(projectGenerationVoice),
+      voices: voices.map((voice) => projectGenerationVoice(voice, input.assets)),
     },
     visualLanguage,
     suggestedReferences: input.purpose === 'cast.voice-sample'
       ? []
-      : [...suggestLookbookMedia({ lookbooks: visualLanguage, role: 'appearance', projectFolder: input.projectFolder, warnings: input.warnings }), continuity],
+      : [...suggestLookbookMedia({ lookbooks: visualLanguage, role: 'appearance', projectFolder: input.projectFolder, collection: input.assets, warnings: input.warnings }), continuity],
     resourceKeys: [],
   };
 };

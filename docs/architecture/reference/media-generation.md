@@ -42,19 +42,36 @@ interface MediaGenerationContextReport {
   outputGuidance: MediaGenerationOutputGuidance;
   targetContext: MediaGenerationTargetContext;
   visualLanguage: MediaGenerationLookbookContext[];
+  assets: MediaGenerationAsset[];
   suggestedReferences: MediaGenerationReferenceSuggestion[];
   warnings: DiagnosticIssue[];
   resourceKeys: string[];
 }
 ```
 
-Generation context uses `MediaGenerationAsset = Omit<Asset,
-'generationProvenance'>`. Its Lookbook image/sheet, Cast Voice sample, Shot image,
-subject, and exact edit-source projections use that shape. Reference candidates
-also omit provenance. All other facts, authored documents, and opaque
-`voiceIdentity` values survive unchanged. These are typed Core projections, not
-recursive JSON filtering. Full domain resources and Inspector inputs retain
-history; generation attachment continues to persist the exact new request.
+Generation context uses one `assets: MediaGenerationAsset[]` inventory, where
+`MediaGenerationAsset = Omit<Asset, 'generationProvenance'>`. Every File and every
+other Asset field is retained. Subject `assetIds`, Shot `imageAssetIds`, Lookbook
+placement `assetId`, Voice `sampleAssetId`, and exact edit-source `assetId` resolve
+into that inventory. Candidates contain `assetId`, `assetFileId`, availability,
+display/workflow selection and optional dialogue range; their groups retain role,
+subject and order. Different Assets sharing a path or hash stay distinct.
+
+Full designs remain alongside `activeDesignId`. A Lookbook target identifies its
+single entry in `visualLanguage` through `lookbookId` and retains source folders.
+A Shot target identifies its entry in the full Shot Plan through `shotId`.
+Authored documents and opaque `voiceIdentity` values survive unchanged. Full
+domain resources and Inspector inputs retain history; generation attachment
+continues to persist the exact new request. Core rejects conflicting facts for
+one Asset id with `CORE_MEDIA_GENERATION_CONTEXT_INCONSISTENT_MEDIA`.
+
+Scene Beat authoring uses the same reference projections and exposes their
+inventory at `visualReferences.assets`. Its creative department context remains
+unchanged.
+
+The CLI renders labeled sections by default. `--json` serializes this same report
+for scripts; readable text is not a parsing contract. Both formats use one Core
+read. See [Decision 0104](../../decisions/0104-use-consolidated-readable-generation-context.md).
 
 `Asset.generationProvenance` is nullable. `Asset.authoredFrom` is nullable weak
 Shot Plan context used only by current video grouping/invalidation behavior.
@@ -73,8 +90,8 @@ path and is never editable.
 `MediaGenerationContextReport` is a current, non-durable Core projection.
 Suggested references are relationship-derived evidence, not an allowlist,
 selection, priority, readiness result, or provider-field assignment. Candidates
-identify exact AssetFiles and preserve factual ownership, provenance,
-availability, and canonical display-selection state.
+identify exact AssetFiles in the inventory and preserve availability and distinct
+display/workflow-selection state. Ownership is retained on the inventory Asset.
 
 ## Public Engines contract
 

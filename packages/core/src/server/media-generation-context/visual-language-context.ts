@@ -5,20 +5,21 @@ import { readLookbookRecordByKind } from '../database/access/lookbook.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { readLookbookResourceFromSession } from '../resources/project-lookbooks.js';
-import { projectGenerationLookbookImage, projectGenerationLookbookSheet } from './reference-assets.js';
+import { type GenerationAssets, projectGenerationLookbookImage, projectGenerationLookbookSheet } from './reference-assets.js';
 
 export function readMediaGenerationLookbookContext(input: {
   session: DatabaseSession;
   projectFolder: string;
   kind: LookbookKind;
+  assets: GenerationAssets;
 }): MediaGenerationLookbookContext | null {
   const resource = readLookbookContextResource(input);
   return resource ? {
     kind: input.kind,
     lookbook: resource.lookbook,
     selectedImageId: resource.selectedImageId,
-    images: resource.images.map(projectGenerationLookbookImage),
-    sheets: resource.sheets.map(projectGenerationLookbookSheet),
+    images: resource.images.map((image) => projectGenerationLookbookImage(image, input.assets)),
+    sheets: resource.sheets.map((sheet) => projectGenerationLookbookSheet(sheet, input.assets)),
   } : null;
 }
 
@@ -44,6 +45,7 @@ export function readMediaGenerationLookbooks(input: {
   session: DatabaseSession;
   projectFolder: string;
   kinds: LookbookKind[];
+  assets: GenerationAssets;
 }): MediaGenerationLookbookContext[] {
   return input.kinds.flatMap((kind) => {
     const context = readMediaGenerationLookbookContext({ ...input, kind });

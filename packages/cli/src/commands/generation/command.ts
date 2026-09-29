@@ -17,6 +17,7 @@ import { recoverGenerationRequest } from './recover.js';
 import { showGenerationPreview } from './preview.js';
 import { validateGenerationRequest } from './validate.js';
 import { showGenerationContext } from './context.js';
+import { renderMediaGenerationContext } from './context-output/index.js';
 import { showGenerationSchema } from './schema.js';
 import { listGenerationModels, showGenerationModel } from './models/queries.js';
 import { importGenerationModel, removeGenerationModel } from './models/mutations.js';
@@ -93,6 +94,11 @@ export async function runGenerationCommand(options: {
     io: options.io,
     projectDataService: createProjectDataService(),
   };
+  if (options.input.length === 1 && options.input[0] === 'context' && !options.json) {
+    const report = await showGenerationContext({ flags: options.flags, runtime });
+    options.io.stdout.log(renderMediaGenerationContext(report));
+    return 0;
+  }
   const result = await dispatchCliCommand({
     commandPath: options.input,
     flags: options.flags,

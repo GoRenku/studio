@@ -9,6 +9,7 @@ import type { MediaGenerationLookbookContext } from '../../client/media-generati
 import type { Screenplay } from '../../client/screenplay/index.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
+import type { GenerationAssets } from './reference-assets.js';
 import { buildAssetPurposeContext } from './purposes/asset.js';
 import { buildCastPurposeContext } from './purposes/cast.js';
 import { buildLocationPurposeContext } from './purposes/location.js';
@@ -20,6 +21,7 @@ import { buildShotPlanPurposeContext } from './purposes/shot-plan.js';
 import { buildShotPurposeContext } from './purposes/shot.js';
 
 export interface MediaGenerationPurposeBuildInput {
+  assets: GenerationAssets;
   session: DatabaseSession;
   projectFolder: string;
   screenplay: Screenplay;

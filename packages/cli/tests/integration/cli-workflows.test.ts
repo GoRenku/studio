@@ -12,6 +12,7 @@ import {
 } from '@gorenku/studio-core/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { runRenkuCli } from '../../src/cli.js';
+import { renderMediaGenerationContext } from '../../src/commands/generation/context-output/index.js';
 
 describe('renku CLI', () => {
   let homeDir: string;
@@ -22,6 +23,23 @@ describe('renku CLI', () => {
     homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-cli-test-'));
     stdout = [];
     stderr = [];
+  });
+
+  it('presents the same Core generation briefing as readable text and explicit JSON', async () => {
+    const io = captureIo(stdout, stderr);
+    expect(await runRenkuCli(['init', path.join(homeDir, 'movies')], { homeDir, io })).toBe(0);
+    const service = createProjectDataService();
+    await service.createMovieProject({ homeDir, projectName: 'briefing', title: 'Exact “Film”' });
+    const report = await service.readMediaGenerationContext({ homeDir, projectName: 'briefing',
+      purpose: 'project.cover', target: { kind: 'project', id: 'project' } });
+    const args = ['generation', 'context', '--project', 'briefing', '--purpose', 'project.cover', '--target', 'project'];
+    stdout.length = 0;
+    expect(await runRenkuCli(args, { homeDir, io })).toBe(0);
+    expect(stdout).toEqual([renderMediaGenerationContext(report)]);
+    stdout.length = 0;
+    expect(await runRenkuCli([...args, '--json'], { homeDir, io })).toBe(0);
+    expect(JSON.parse(stdout.join('\n'))).toEqual(report);
+    expect(stderr).toEqual([]);
   });
 
   it('shows top-level help with the renku binary and init command', async () => {

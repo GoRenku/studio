@@ -1,20 +1,16 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset, AssetOwner } from './assets.js';
+import type { Asset } from './assets.js';
 import type { CastMember } from './cast-members.js';
 import type { CastVoice } from './cast-voices.js';
 import type {
   CastDesignDocument,
-  CastDesignSummary,
   LocationDesignDocument,
-  LocationDesignSummary,
   PropDesignDocument,
-  PropDesignSummary,
 } from './department-design.js';
 import type { Location } from './locations.js';
 import type { MediaPurpose, MediaTarget } from './media-attachments.js';
 import type { MediaGenerationKind } from './media-generation-review.js';
 import type { ProjectLanguage } from './project-languages.js';
-import type { ProjectRelativePath } from './project/index.js';
 import type { GenerationWorkflowPolicy } from './project-settings.js';
 import type { Prop } from './props.js';
 import type { SceneBeatsRevision } from './scene-beats/index.js';
@@ -51,10 +47,10 @@ export interface MediaGenerationProjectContext {
 }
 
 export type MediaGenerationAsset = Omit<Asset, 'generationProvenance'>;
-export type MediaGenerationLookbookImage = Omit<LookbookImage, 'asset'> & { asset: MediaGenerationAsset };
-export type MediaGenerationLookbookSheet = Omit<LookbookSheet, 'asset'> & { asset: MediaGenerationAsset };
-export type MediaGenerationCastVoice = Omit<CastVoice, 'sample'> & { sample: MediaGenerationAsset };
-export type MediaGenerationShot = Omit<Shot, 'images'> & { images: MediaGenerationAsset[] };
+export type MediaGenerationLookbookImage = Omit<LookbookImage, 'asset'> & { assetId: string };
+export type MediaGenerationLookbookSheet = Omit<LookbookSheet, 'asset'> & { assetId: string };
+export type MediaGenerationCastVoice = Omit<CastVoice, 'sample'> & { sampleAssetId: string };
+export type MediaGenerationShot = Omit<Shot, 'images'> & { imageAssetIds: string[] };
 export type MediaGenerationShotPlan = Omit<ShotPlan, 'shots'> & { shots: MediaGenerationShot[] };
 
 export interface MediaGenerationLookbookContext {
@@ -70,21 +66,21 @@ export interface MediaGenerationOutputGuidance {
   quality: { value: 'medium' | 'high'; rationale: string } | null;
 }
 
-export interface MediaGenerationSubjectDetails<TDesign, TSummary> {
+export interface MediaGenerationSubjectDetails<TDesign> {
   activeDesign: TDesign | null;
-  activeDesignSummary: TSummary | null;
-  assets: MediaGenerationAsset[];
+  activeDesignId: string | null;
+  assetIds: string[];
 }
 
 export type MediaGenerationCastContext = {
   castMember: CastMember;
-} & MediaGenerationSubjectDetails<CastDesignDocument, CastDesignSummary>;
+} & MediaGenerationSubjectDetails<CastDesignDocument>;
 export type MediaGenerationLocationContext = {
   location: Location;
-} & MediaGenerationSubjectDetails<LocationDesignDocument, LocationDesignSummary>;
+} & MediaGenerationSubjectDetails<LocationDesignDocument>;
 export type MediaGenerationPropContext = {
   prop: Prop;
-} & MediaGenerationSubjectDetails<PropDesignDocument, PropDesignSummary>;
+} & MediaGenerationSubjectDetails<PropDesignDocument>;
 
 export interface MediaGenerationDialogueTurnContext {
   number: number;
@@ -109,20 +105,17 @@ export interface MediaGenerationSceneContext {
 
 export type MediaGenerationTargetContext =
   | { kind: 'project' }
-  | { kind: 'asset'; asset: MediaGenerationAsset }
+  | { kind: 'asset'; assetId: string }
   | {
       kind: 'lookbook';
-      lookbook: Lookbook;
-      selectedImageId: string | null;
-      images: MediaGenerationLookbookImage[];
-      sheets: MediaGenerationLookbookSheet[];
+      lookbookId: string;
       sourceInspirationFolders: InspirationFolderWithResolvedPath[];
     }
   | ({ kind: 'castMember'; scenes: Scene[]; voices: MediaGenerationCastVoice[] } & MediaGenerationCastContext)
   | ({ kind: 'location'; scenes: Scene[] } & MediaGenerationLocationContext)
   | ({ kind: 'prop'; scenes: Scene[] } & MediaGenerationPropContext)
   | MediaGenerationSceneContext
-  | { kind: 'shot'; shot: MediaGenerationShot; shotPlan: MediaGenerationShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext }
+  | { kind: 'shot'; shotId: string; shotPlan: MediaGenerationShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext }
   | { kind: 'shotPlan'; shotPlan: MediaGenerationShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext };
 
 export type MediaGenerationReferenceRole =
@@ -149,17 +142,6 @@ export interface MediaGenerationReferenceSuggestion {
 export interface MediaGenerationReferenceCandidate {
   assetId: string;
   assetFileId: string;
-  projectRelativePath: ProjectRelativePath;
-  owner: AssetOwner;
-  assetType: string;
-  fileRole: string;
-  mediaKind: MediaGenerationKind;
-  mimeType: string | null;
-  title: string;
-  oneLineSummary: string | null;
-  referenceName: string | null;
-  tags: string[];
-  authoredFrom: { kind: 'shotPlan'; id: string } | null;
   dialogueTurnRange?: DialogueTurnRange;
   isDisplaySelected: boolean;
   isWorkflowSelected: boolean;
@@ -176,6 +158,7 @@ export interface MediaGenerationContextReport {
   outputGuidance: MediaGenerationOutputGuidance;
   targetContext: MediaGenerationTargetContext;
   visualLanguage: MediaGenerationLookbookContext[];
+  assets: MediaGenerationAsset[];
   suggestedReferences: MediaGenerationReferenceSuggestion[];
   warnings: DiagnosticIssue[];
   resourceKeys: string[];

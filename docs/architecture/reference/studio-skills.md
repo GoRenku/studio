@@ -129,9 +129,11 @@ operational companions that teach agents how to use those contracts.
 `media-producer`
 
 - Begins every purpose-specific request with `renku generation context
-  --purpose <purpose> --target <target> --json`.
-- Captures that context once to a request-specific scratch file, inspects bounded
-  sections, and refreshes only when relevant state changes. Dependent hero
+  --purpose <purpose> --target <target>`. Choose `--json` first for programmatic
+  consumption or an explicit user format request; use readable text for direct
+  preparation. Do not routinely read both formats.
+- Reads the complete briefing once, optionally capturing it in a request-specific
+  scratch file, and refreshes when relevant state or scope changes. Dependent hero
   context is read after sheet attachment. Reuses guides and final request reads
   within unchanged preparation.
 - Uses references for their intended contribution under current direction.

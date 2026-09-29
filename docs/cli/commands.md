@@ -1555,17 +1555,39 @@ target before authoring a provider request:
 ```bash
 renku generation context \
   --purpose <purpose> \
-  --target <target> \
-  --json
+  --target <target>
 
 renku generation context \
   --purpose scene.storyboard-sheet \
   --target scene:<scene-id> \
   --revision <scene-beats-revision-id> \
   --beat <beat-id> \
-  --beat <beat-id> \
-  --json
+  --beat <beat-id>
 ```
+
+Default context output uses labeled readable sections and a single complete Media
+inventory. Add `--json` when parsing fields or constructing a request in code;
+it returns the same Core facts. Choose the format for the next operation, without
+routinely requesting both. Text is presentation, not a machine parsing contract.
+
+Examples of direct reading across workflows:
+
+```bash
+renku generation context --purpose cast.character-sheet --target cast:<id>
+renku generation context --purpose location.sheet --target location:<id>
+renku generation context --purpose shot-plan.video-generation --target shot-plan:<id>
+renku generation context --purpose shot-plan.dialogue-audio --target shot-plan:<id>
+renku generation context --purpose image.edit --target asset:<id>
+```
+
+For JSON consumers, resolve candidate `assetId` in `assets`, then `assetFileId`
+in that Asset's `files`. Subjects use `assetIds`, Shots `imageAssetIds`, Lookbook
+placements `assetId`, and voices `sampleAssetId`. Full documents remain present;
+`activeDesignId` identifies the design, `lookbookId` identifies the target in
+`visualLanguage`, and `shotId` identifies the target in the full Shot Plan.
+Candidate roles, availability, display/workflow selection and dialogue ranges
+remain separate relationship facts. Readable output also shows candidate title
+and path for direct use. Other generation subcommand outputs are unchanged.
 
 The report contains current Project and target facts, workflow policy,
 purpose-level output guidance, relevant Lookbooks and domain relationships, and

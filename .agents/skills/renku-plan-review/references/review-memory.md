@@ -923,6 +923,11 @@ or architecture decision.
   accepted behavior. Remove rejected alternatives, decision-question labels,
   reviewer back-and-forth, and the chronology of how the plan evolved unless
   that history is itself required implementation context.
+  In particular, do not carry a discussed-and-discarded mechanism that never
+  existed into non-goals, prohibitions, removal tasks, tests, or checklists.
+  That can make an implementer believe it exists or requires work. Describe
+  the accepted change against the actual system; retain explicit user
+  constraints and existing behavior that must be preserved.
 - **Apply when:** A small user-visible change produces many new response types,
   modes, services, dispatchers, diagnostics, routes, documentation edits, or
   repeated plan sections, or when simplification replaces exact requirements
@@ -951,7 +956,8 @@ or architecture decision.
   names the exact sections it depends on.
   Search the final plan for superseded option labels, unresolved-decision
   language, and explanations of rejected models that implementers no longer
-  need.
+  need. Check whether each excluded or removed mechanism actually exists or
+  reflects an explicit user constraint, rather than an abandoned discussion idea.
 
 ### 2026-07-22 — Follow the repository's established implementation-plan structure
 

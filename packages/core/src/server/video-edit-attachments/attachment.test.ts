@@ -84,10 +84,10 @@ describe('video.edit source-derived attachment', () => {
           candidates: [expect.objectContaining({
             assetId: source.id,
             assetFileId: source.files[0]!.id,
-            mediaKind: 'video',
           })],
         }),
       ]);
+      expect(context.assets.find((asset) => asset.id === source.id)?.files).toEqual(source.files);
 
       const report = await projectData.attachGenerationMedia({
         projectName: 'constantinople',

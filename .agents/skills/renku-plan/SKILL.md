@@ -86,6 +86,11 @@ storage field, route, hook, or wrapper, identify:
 Before writing the plan, run a simplification pass:
 
 - remove every mechanism that cannot be traced to the requirement ledger;
+- write the accepted implementation against the actual current system, not the
+  history of the discussion. Omit ideas that were discussed and discarded when
+  they do not exist in the product. Do not turn them into non-goals, prohibitions,
+  removal tasks, tests, or checklist items. Keep explicit user constraints and
+  existing behavior that must be preserved; describe actual changes directly;
 - simplify mechanisms, not product requirements. Preserve exact UX surfaces,
   visible behavior, workflow steps, approval gates, supported variants, data
   effects, and explicitly accepted edge cases; do not replace them with umbrella
@@ -200,6 +205,8 @@ Before reporting completion:
 - confirm explanatory prose is not repeated unnecessarily while product
   acceptance criteria remain explicit where an implementer and reviewer need
   them;
+- check that discarded, nonexistent mechanisms have not survived as exclusions
+  or cleanup work, and that existing behavior is not presented as new work;
 - confirm no adapter-local business rule or generic mutation escape hatch is
   proposed;
 - confirm the plan follows `plans/PLAN_TEMPLATE.md` and contains the complete

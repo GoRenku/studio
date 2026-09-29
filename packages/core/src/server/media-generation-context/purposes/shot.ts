@@ -5,7 +5,7 @@ import type { MediaGenerationPurposeBuilder } from '../purpose-registry.js';
 import { suggestBeatStoryboards, suggestLookbookMedia, suggestSceneSubjectMedia, suggestSelectedShotImages } from '../reference-suggestions.js';
 import { projectMediaGenerationSceneContext } from '../scene-context.js';
 import { readMediaGenerationLookbooks } from '../visual-language-context.js';
-import { projectGenerationShot, projectGenerationShotPlan } from '../shot-context.js';
+import { projectGenerationShotPlan } from '../shot-context.js';
 
 export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) => {
   if (input.target.kind !== 'shot') {
@@ -33,6 +33,7 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
   }
   const sceneContext = projectMediaGenerationSceneContext({
     session: input.session,
+    assets: input.assets,
     screenplay: input.screenplay,
     sceneId: plan.shotPlan.sceneId,
     scope: plan.shotPlan.coverage
@@ -45,22 +46,25 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
   });
   const visualLanguage = readMediaGenerationLookbooks({
     session: input.session,
+    assets: input.assets,
     projectFolder: input.projectFolder,
     kinds: ['production'],
   });
   return {
-    targetContext: { kind: 'shot', shot: projectGenerationShot(shot), shotPlan: projectGenerationShotPlan(plan.shotPlan), coveredBeats: plan.coveredBeats, sceneContext },
+    targetContext: { kind: 'shot', shotId: shot.id, shotPlan: projectGenerationShotPlan(plan.shotPlan, input.assets), coveredBeats: plan.coveredBeats, sceneContext },
     visualLanguage,
     suggestedReferences: [
       ...suggestLookbookMedia({
         lookbooks: visualLanguage,
         role: 'appearance',
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
       ...suggestSceneSubjectMedia({
         sceneContext,
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
       ...suggestBeatStoryboards({
@@ -68,11 +72,13 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
         sceneId: plan.shotPlan.sceneId,
         beatIds: plan.coveredBeats.map(({ beat }) => beat.id),
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
       ...suggestSelectedShotImages({
         shots: plan.shotPlan.shots.filter((candidate) => candidate.id !== shot.id),
         projectFolder: input.projectFolder,
+        collection: input.assets,
         warnings: input.warnings,
       }),
     ],

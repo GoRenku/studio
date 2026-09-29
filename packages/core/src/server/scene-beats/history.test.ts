@@ -45,6 +45,7 @@ describe('Scene Beats revision commands', () => {
       includeVisualReferences: true,
     });
     expect(visualContext.visualReferences).toMatchObject({
+      assets: expect.any(Array),
       visualLanguage: [],
       suggestedReferences: expect.arrayContaining([
         expect.objectContaining({

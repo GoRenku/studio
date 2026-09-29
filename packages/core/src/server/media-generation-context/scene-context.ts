@@ -11,11 +11,11 @@ import type { Location } from '../../client/locations.js';
 import type { Prop } from '../../client/props.js';
 import type { Scene, Screenplay } from '../../client/screenplay/index.js';
 import { listAssetsInSession } from '../assets/projection.js';
-import { readActiveCastDesignDocument, toCastDesignSummary } from '../database/access/cast-designs.js';
+import { readActiveCastDesignDocument } from '../database/access/cast-designs.js';
 import { listCastMemberRecords, type CastMemberRecord } from '../database/access/cast-members.js';
-import { readActiveLocationDesignDocument, toLocationDesignSummary } from '../database/access/location-designs.js';
+import { readActiveLocationDesignDocument } from '../database/access/location-designs.js';
 import { listLocationRecords, type LocationRecord } from '../database/access/locations.js';
-import { readActivePropDesignDocument, toPropDesignSummary } from '../database/access/prop-designs.js';
+import { readActivePropDesignDocument } from '../database/access/prop-designs.js';
 import { listPropRecords, type PropRecord } from '../database/access/props.js';
 import {
   readActiveSceneBeatsRevisionRecord,
@@ -28,7 +28,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import { listCastVoicesInSession } from '../cast-voices/projection.js';
 import { listNumberedDialogueTurns } from '../screenplay/dialogue-turns.js';
 import { renderScreenplaySceneContextText } from '../screenplay/context/scene-text.js';
-import { projectGenerationAsset, projectGenerationVoice } from './reference-assets.js';
+import { type GenerationAssets, projectGenerationVoice } from './reference-assets.js';
 
 export function projectMediaGenerationSceneContext(input: {
   session: DatabaseSession;
@@ -36,6 +36,7 @@ export function projectMediaGenerationSceneContext(input: {
   sceneId: string;
   scope?: ReadMediaGenerationContextInput['sceneStoryboardScope'];
   warnings: DiagnosticIssue[];
+  assets: GenerationAssets;
 }): MediaGenerationSceneContext {
   const scene = requireScene(input.screenplay, input.sceneId);
   const sceneBeatsRevision = readScopedRevision(input);
@@ -50,22 +51,22 @@ export function projectMediaGenerationSceneContext(input: {
   const castMembers = subjectIds.castMemberIds
     .flatMap((id) => {
       const record = castRecords.get(id);
-      return record && !record.isVoiceOver ? [projectCastMemberContext(input.session, record)] : [];
+      return record && !record.isVoiceOver ? [projectCastMemberContext(input.session, record, input.assets)] : [];
     });
   const locations = subjectIds.locationIds
     .flatMap((id) => {
       const record = locationRecords.get(id);
-      return record ? [projectLocationContext(input.session, record)] : [];
+      return record ? [projectLocationContext(input.session, record, input.assets)] : [];
     });
   const props = subjectIds.propIds
     .flatMap((id) => {
       const record = propRecords.get(id);
-      return record ? [projectPropContext(input.session, record)] : [];
+      return record ? [projectPropContext(input.session, record, input.assets)] : [];
     });
   const dialogueTurns = listNumberedDialogueTurns(input.screenplay, scene.id);
   const castVoicesByCastMemberId = Object.fromEntries(
     [...new Set(dialogueTurns.flatMap((turn) => turn.castMemberId ? [turn.castMemberId] : []))]
-      .map((castMemberId) => [castMemberId, listCastVoicesInSession(input.session, castMemberId).map(projectGenerationVoice)])
+      .map((castMemberId) => [castMemberId, listCastVoicesInSession(input.session, castMemberId).map((voice) => projectGenerationVoice(voice, input.assets))])
   );
   return {
     kind: 'scene',
@@ -90,45 +91,42 @@ export function projectMediaGenerationSceneContext(input: {
 export function projectCastMemberContext(
   session: DatabaseSession,
   record: CastMemberRecord,
+  assets: GenerationAssets,
 ): MediaGenerationCastContext {
   const activeDesign = readActiveCastDesignDocument(session, record.id);
   return {
     castMember: toCastMember(record),
     activeDesign: activeDesign?.document ?? null,
-    activeDesignSummary: activeDesign
-      ? toCastDesignSummary({ id: activeDesign.id, document: activeDesign.document })
-      : null,
-    assets: listAssetsInSession(session, { owner: { kind: 'castMember', id: record.id } }).map(projectGenerationAsset),
+    activeDesignId: activeDesign?.id ?? null,
+    assetIds: listAssetsInSession(session, { owner: { kind: 'castMember', id: record.id } }).map((asset) => assets.add(asset)),
   };
 }
 
 export function projectLocationContext(
   session: DatabaseSession,
   record: LocationRecord,
+  assets: GenerationAssets,
 ): MediaGenerationLocationContext {
   const activeDesign = readActiveLocationDesignDocument(session, record.id);
   return {
     location: toLocation(record),
     activeDesign: activeDesign?.document ?? null,
-    activeDesignSummary: activeDesign
-      ? toLocationDesignSummary({ id: activeDesign.id, document: activeDesign.document })
-      : null,
-    assets: listAssetsInSession(session, { owner: { kind: 'location', id: record.id } }).map(projectGenerationAsset),
+    activeDesignId: activeDesign?.id ?? null,
+    assetIds: listAssetsInSession(session, { owner: { kind: 'location', id: record.id } }).map((asset) => assets.add(asset)),
   };
 }
 
 export function projectPropContext(
   session: DatabaseSession,
   record: PropRecord,
+  assets: GenerationAssets,
 ): MediaGenerationPropContext {
   const activeDesign = readActivePropDesignDocument(session, record.id);
   return {
     prop: toProp(record),
     activeDesign: activeDesign?.document ?? null,
-    activeDesignSummary: activeDesign
-      ? toPropDesignSummary({ id: activeDesign.id, document: activeDesign.document })
-      : null,
-    assets: listAssetsInSession(session, { owner: { kind: 'prop', id: record.id } }).map(projectGenerationAsset),
+    activeDesignId: activeDesign?.id ?? null,
+    assetIds: listAssetsInSession(session, { owner: { kind: 'prop', id: record.id } }).map((asset) => assets.add(asset)),
   };
 }
 
