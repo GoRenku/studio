@@ -5,6 +5,7 @@ import type { MediaGenerationPurposeBuilder } from '../purpose-registry.js';
 import { suggestBeatStoryboards, suggestLookbookMedia, suggestSceneSubjectMedia, suggestSelectedShotImages } from '../reference-suggestions.js';
 import { projectMediaGenerationSceneContext } from '../scene-context.js';
 import { readMediaGenerationLookbooks } from '../visual-language-context.js';
+import { projectGenerationShot, projectGenerationShotPlan } from '../shot-context.js';
 
 export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) => {
   if (input.target.kind !== 'shot') {
@@ -48,7 +49,7 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
     kinds: ['production'],
   });
   return {
-    targetContext: { kind: 'shot', shot, shotPlan: plan.shotPlan, coveredBeats: plan.coveredBeats, sceneContext },
+    targetContext: { kind: 'shot', shot: projectGenerationShot(shot), shotPlan: projectGenerationShotPlan(plan.shotPlan), coveredBeats: plan.coveredBeats, sceneContext },
     visualLanguage,
     suggestedReferences: [
       ...suggestLookbookMedia({

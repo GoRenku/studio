@@ -12,7 +12,7 @@ import type {
 } from './department-design.js';
 import type { Location } from './locations.js';
 import type { MediaPurpose, MediaTarget } from './media-attachments.js';
-import type { MediaGenerationKind, MediaGenerationProvenance } from './media-generation-review.js';
+import type { MediaGenerationKind } from './media-generation-review.js';
 import type { ProjectLanguage } from './project-languages.js';
 import type { ProjectRelativePath } from './project/index.js';
 import type { GenerationWorkflowPolicy } from './project-settings.js';
@@ -50,12 +50,19 @@ export interface MediaGenerationProjectContext {
   languages: ProjectLanguage[];
 }
 
+export type MediaGenerationAsset = Omit<Asset, 'generationProvenance'>;
+export type MediaGenerationLookbookImage = Omit<LookbookImage, 'asset'> & { asset: MediaGenerationAsset };
+export type MediaGenerationLookbookSheet = Omit<LookbookSheet, 'asset'> & { asset: MediaGenerationAsset };
+export type MediaGenerationCastVoice = Omit<CastVoice, 'sample'> & { sample: MediaGenerationAsset };
+export type MediaGenerationShot = Omit<Shot, 'images'> & { images: MediaGenerationAsset[] };
+export type MediaGenerationShotPlan = Omit<ShotPlan, 'shots'> & { shots: MediaGenerationShot[] };
+
 export interface MediaGenerationLookbookContext {
   kind: 'production' | 'storyboard';
   lookbook: Lookbook;
   selectedImageId: string | null;
-  images: LookbookImage[];
-  sheets: LookbookSheet[];
+  images: MediaGenerationLookbookImage[];
+  sheets: MediaGenerationLookbookSheet[];
 }
 
 export interface MediaGenerationOutputGuidance {
@@ -66,7 +73,7 @@ export interface MediaGenerationOutputGuidance {
 export interface MediaGenerationSubjectDetails<TDesign, TSummary> {
   activeDesign: TDesign | null;
   activeDesignSummary: TSummary | null;
-  assets: Asset[];
+  assets: MediaGenerationAsset[];
 }
 
 export type MediaGenerationCastContext = {
@@ -97,26 +104,26 @@ export interface MediaGenerationSceneContext {
   locations: MediaGenerationLocationContext[];
   props: MediaGenerationPropContext[];
   dialogueTurns: MediaGenerationDialogueTurnContext[];
-  castVoicesByCastMemberId: Record<string, CastVoice[]>;
+  castVoicesByCastMemberId: Record<string, MediaGenerationCastVoice[]>;
 }
 
 export type MediaGenerationTargetContext =
   | { kind: 'project' }
-  | { kind: 'asset'; asset: Asset }
+  | { kind: 'asset'; asset: MediaGenerationAsset }
   | {
       kind: 'lookbook';
       lookbook: Lookbook;
       selectedImageId: string | null;
-      images: LookbookImage[];
-      sheets: LookbookSheet[];
+      images: MediaGenerationLookbookImage[];
+      sheets: MediaGenerationLookbookSheet[];
       sourceInspirationFolders: InspirationFolderWithResolvedPath[];
     }
-  | ({ kind: 'castMember'; scenes: Scene[]; voices: CastVoice[] } & MediaGenerationCastContext)
+  | ({ kind: 'castMember'; scenes: Scene[]; voices: MediaGenerationCastVoice[] } & MediaGenerationCastContext)
   | ({ kind: 'location'; scenes: Scene[] } & MediaGenerationLocationContext)
   | ({ kind: 'prop'; scenes: Scene[] } & MediaGenerationPropContext)
   | MediaGenerationSceneContext
-  | { kind: 'shot'; shot: Shot; shotPlan: ShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext }
-  | { kind: 'shotPlan'; shotPlan: ShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext };
+  | { kind: 'shot'; shot: MediaGenerationShot; shotPlan: MediaGenerationShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext }
+  | { kind: 'shotPlan'; shotPlan: MediaGenerationShotPlan; coveredBeats: ShotPlanCoveredBeat[]; sceneContext: MediaGenerationSceneContext };
 
 export type MediaGenerationReferenceRole =
   | 'source-image'
@@ -152,7 +159,6 @@ export interface MediaGenerationReferenceCandidate {
   oneLineSummary: string | null;
   referenceName: string | null;
   tags: string[];
-  generationProvenance: MediaGenerationProvenance | null;
   authoredFrom: { kind: 'shotPlan'; id: string } | null;
   dialogueTurnRange?: DialogueTurnRange;
   isDisplaySelected: boolean;

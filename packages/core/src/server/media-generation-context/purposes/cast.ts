@@ -5,6 +5,7 @@ import type { MediaGenerationPurposeBuilder } from '../purpose-registry.js';
 import { createReferenceSuggestion, suggestLookbookMedia } from '../reference-suggestions.js';
 import { projectCastMemberContext, scenesForSubject } from '../scene-context.js';
 import { readMediaGenerationLookbooks } from '../visual-language-context.js';
+import { projectGenerationVoice } from '../reference-assets.js';
 
 export const buildCastPurposeContext: MediaGenerationPurposeBuilder = (input) => {
   if (input.target.kind !== 'castMember') {
@@ -35,7 +36,7 @@ export const buildCastPurposeContext: MediaGenerationPurposeBuilder = (input) =>
       kind: 'castMember',
       ...context,
       scenes: scenesForSubject(input.screenplay, { type: 'castMember', id: record.id }),
-      voices,
+      voices: voices.map(projectGenerationVoice),
     },
     visualLanguage,
     suggestedReferences: input.purpose === 'cast.voice-sample'

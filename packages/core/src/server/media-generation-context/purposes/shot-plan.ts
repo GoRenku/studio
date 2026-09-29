@@ -5,6 +5,7 @@ import type { MediaGenerationPurposeBuilder } from '../purpose-registry.js';
 import { createReferenceSuggestion, suggestBeatStoryboards, suggestLookbookMedia, suggestSceneSubjectMedia, suggestSelectedShotImages, suggestShotPlanMedia } from '../reference-suggestions.js';
 import { projectMediaGenerationSceneContext } from '../scene-context.js';
 import { readMediaGenerationLookbooks } from '../visual-language-context.js';
+import { projectGenerationShotPlan } from '../shot-context.js';
 
 export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input) => {
   if (input.target.kind !== 'shotPlan') {
@@ -44,7 +45,7 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
     kinds: input.purpose === 'shot-plan.dialogue-audio' ? [] : ['production'],
   });
   return {
-    targetContext: { kind: 'shotPlan', shotPlan: plan.shotPlan, coveredBeats: plan.coveredBeats, sceneContext },
+    targetContext: { kind: 'shotPlan', shotPlan: projectGenerationShotPlan(plan.shotPlan), coveredBeats: plan.coveredBeats, sceneContext },
     visualLanguage,
     suggestedReferences: input.purpose === 'shot-plan.dialogue-audio'
       ? dialogueVoiceSampleSuggestions({ input, sceneContext })

@@ -48,6 +48,14 @@ interface MediaGenerationContextReport {
 }
 ```
 
+Generation context uses `MediaGenerationAsset = Omit<Asset,
+'generationProvenance'>`. Its Lookbook image/sheet, Cast Voice sample, Shot image,
+subject, and exact edit-source projections use that shape. Reference candidates
+also omit provenance. All other facts, authored documents, and opaque
+`voiceIdentity` values survive unchanged. These are typed Core projections, not
+recursive JSON filtering. Full domain resources and Inspector inputs retain
+history; generation attachment continues to persist the exact new request.
+
 `Asset.generationProvenance` is nullable. `Asset.authoredFrom` is nullable weak
 Shot Plan context used only by current video grouping/invalidation behavior.
 An unsigned provider output URL may be retained as an opaque receipt fact. The

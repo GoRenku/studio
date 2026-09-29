@@ -4,6 +4,7 @@ import { readOwnedAsset } from '../../assets/projection.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { MediaGenerationPurposeBuilder } from '../purpose-registry.js';
 import { createReferenceSuggestion } from '../reference-suggestions.js';
+import { projectGenerationAsset } from '../reference-assets.js';
 
 export const buildAssetPurposeContext: MediaGenerationPurposeBuilder = (input) => {
   if (input.target.kind !== 'asset') {
@@ -27,7 +28,7 @@ export const buildAssetPurposeContext: MediaGenerationPurposeBuilder = (input) =
     );
   }
   return {
-    targetContext: { kind: 'asset', asset },
+    targetContext: { kind: 'asset', asset: projectGenerationAsset(asset) },
     visualLanguage: [],
     suggestedReferences: [createReferenceSuggestion({
       id: input.purpose === 'video.edit' ? 'source-video' : 'source-image',

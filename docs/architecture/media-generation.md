@@ -188,7 +188,19 @@ Every purpose-specific Media Producer workflow begins with:
 renku generation context --purpose <purpose> --target <target> --json
 ```
 
-After route selection, a Codex workflow inspects the Core-owned generation
+The generation briefing omits `generationProvenance` from candidates and typed
+Assets throughout Lookbook, subject, Shot, voice-sample, and exact edit-source
+context. Current creative documents, file identities, selection facts, and
+opaque voice identities remain intact. Earlier recipes describe attempted
+requests, not verified artifact contents or instructions for the next output.
+Agents inspect references and apply current direction; Core does not parse
+creative content or resolve contradictions. Full Asset resources and the
+Inspector retain stored provenance for deliberate inspection, reuse, revision,
+or debugging. No storage or attachment contract changes follow from this read
+projection.
+
+For requested Codex configuration or external-provider configuration, the
+workflow inspects the Core-owned generation
 configuration visualization cache. A fresh entry supplies its schema snapshot
 and route template. A missing or expired entry performs one `renku generation
 schema show --provider <provider> --model <model> --output <path> --json` and

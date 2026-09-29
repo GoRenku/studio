@@ -1,6 +1,6 @@
 import { createDiagnosticWarning, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from '../../client/assets.js';
 import type {
+  MediaGenerationAsset,
   MediaGenerationLookbookContext,
   MediaGenerationReferenceCandidate,
   MediaGenerationReferenceRole,
@@ -89,7 +89,7 @@ export function suggestBeatStoryboards(input: {
 }
 
 export function suggestSelectedShotImages(input: {
-  shots: Array<{ id: string; images: Asset[]; selectedImageId: string | null }>;
+  shots: Array<{ id: string; images: MediaGenerationAsset[]; selectedImageId: string | null }>;
   projectFolder: string;
   warnings: DiagnosticIssue[];
 }): MediaGenerationReferenceSuggestion[] {
@@ -126,7 +126,7 @@ export function createReferenceSuggestion(input: {
   id: string;
   role: MediaGenerationReferenceRole;
   subject?: { kind: string; id: string };
-  assets: Asset[];
+  assets: MediaGenerationAsset[];
   selectedAssetIds?: string[];
   workflowSelectedAssetIds?: string[];
   dialogueTurnRangesByAssetId?: Map<string, DialogueTurnRange>;
@@ -165,7 +165,6 @@ export function createReferenceSuggestion(input: {
           oneLineSummary: asset.oneLineSummary,
           referenceName: asset.referenceName,
           tags: asset.tags,
-          generationProvenance: asset.generationProvenance,
           authoredFrom: asset.authoredFrom,
           ...(input.dialogueTurnRangesByAssetId?.get(asset.id)
             ? { dialogueTurnRange: input.dialogueTurnRangesByAssetId.get(asset.id)! }

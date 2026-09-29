@@ -130,14 +130,23 @@ operational companions that teach agents how to use those contracts.
 
 - Begins every purpose-specific request with `renku generation context
   --purpose <purpose> --target <target> --json`.
+- Captures that context once to a request-specific scratch file, inspects bounded
+  sections, and refreshes only when relevant state changes. Dependent hero
+  context is read after sheet attachment. Reuses guides and final request reads
+  within unchanged preparation.
+- Uses references for their intended contribution under current direction.
+  Prior recipes are absent from the briefing, including edit sources; history
+  is retrieved deliberately for inspection, reuse, revision, or debugging.
 - Treats the returned current facts and relationship-derived references as
   advisory evidence. It may ignore, supplement, or replace suggestions and
   never interprets their order or display selection as a creative choice.
 - Reads the per-media Project generation policy from that report, including
   Preview, conversational confirmation, concurrency, and maximum concurrency.
-- In Codex, prepares the initial authored prompt, exact references, and native
-  values, then uses one shared transient Visualize configuration for every
-  image, video, and audio purpose before authoring the review document.
+- In Codex, uses current direction/defaults without generation consent;
+  configuration is optional unless requested and automatic Preview is
+  informational. Explicit review requests still pause execution. Generation
+  authorizes focused attachment across providers unless the user requests
+  review-only or leave-unattached behavior. External spending approval remains.
 - The inline configuration uses explicit direction or the matching Project
   provider only as its initial selection. It lists effective bundled and personal
   choices, including advanced providers as explicit one-request choices.

@@ -243,6 +243,7 @@ describe('media generation context', () => {
       target: { kind: 'shot', id: plan.shotPlan.shots[0]!.id },
       sourceProjectRelativePath: 'tmp/shot.png',
       select: true,
+      generationProvenance: provenance,
     });
 
     const lastFrameContext = await projectData.readMediaGenerationContext({
@@ -256,6 +257,10 @@ describe('media generation context', () => {
       .toEqual([firstFrame.asset.id]);
     expect(firstFrameGroup?.candidates.map((candidate) => candidate.assetId))
       .not.toContain(otherFrame.asset.id);
+    expect(firstFrameGroup?.candidates[0]).not.toHaveProperty('generationProvenance');
+    if (lastFrameContext.targetContext.kind === 'shotPlan') {
+      expect(lastFrameContext.targetContext.shotPlan.shots[0]?.images[0]).not.toHaveProperty('generationProvenance');
+    }
 
     const shotContext = await projectData.readMediaGenerationContext({
       homeDir,
@@ -267,6 +272,9 @@ describe('media generation context', () => {
       shotPlan: { id: plan.shotPlan.id },
       sceneContext: { scene: { id: sceneId } },
     });
+    if (shotContext.targetContext.kind === 'shot') {
+      expect(shotContext.targetContext.shotPlan.shots[0]?.images[0]).not.toHaveProperty('generationProvenance');
+    }
     expect(shotContext.suggestedReferences
       .find((group) => group.role === 'shot-image')?.candidates)
       .toEqual([expect.objectContaining({
@@ -380,7 +388,115 @@ describe('media generation context', () => {
         workflowPolicy: { enableProviderPromptExpansion: true },
         targetContext: { kind: contextKind },
       });
+      const context = report.targetContext;
+      if (context.kind === 'asset') {
+        expect(context.asset).not.toHaveProperty('generationProvenance');
+      } else if (context.kind === 'castMember' || context.kind === 'location' || context.kind === 'prop') {
+        context.assets.forEach((asset) => expect(asset).not.toHaveProperty('generationProvenance'));
+      }
     }
+  });
+
+  it('omits prior recipes throughout the briefing while preserving resource history and voice identity', async () => {
+    const created = await createSampleMovieProject({ projectData, homeDir });
+    if (!created) {
+      return;
+    }
+    await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
+    await fs.writeFile(path.join(created.projectPath, 'tmp/source.png'), 'image');
+    await fs.writeFile(path.join(created.projectPath, 'tmp/sample.mp3'), 'audio');
+    const provenance = {
+      provider: 'external-provider', model: 'image-model', mediaKind: 'image' as const,
+      prompt: 'Earlier request.', request: { prompt: 'Earlier request.' },
+    };
+    const production = await projectData.writeProductionLookbook({ homeDir, document: productionLookbookDocument() });
+    const targets = [
+      ['cast.character-sheet', { kind: 'castMember', id: 'cast_test0002' }],
+      ['location.sheet', { kind: 'location', id: 'location_test0001' }],
+      ['lookbook.image', { kind: 'lookbook', id: production.lookbook.id }],
+      ['lookbook.video-sheet', { kind: 'lookbook', id: production.lookbook.id }],
+    ] as const;
+    const assets = [];
+    for (const [purpose, target] of targets) {
+      assets.push(await projectData.attachGenerationMedia({
+        homeDir, purpose, target, sourceProjectRelativePath: 'tmp/source.png', title: 'Reference image',
+        generationProvenance: provenance,
+        ...(purpose === 'lookbook.image' ? { select: true } : {}),
+      }));
+    }
+    const voiceIdentity = { provider: 'external-provider', voiceId: 'voice-1', generationProvenance: 'opaque identity field' };
+    const voice = await projectData.attachCastVoice({
+      homeDir,
+      document: {
+        kind: 'castVoiceFileAttachment', castMemberId: 'cast_test0002', name: 'dialogue', purpose: 'Dialogue',
+        voiceIdentity,
+        sample: { sourceProjectRelativePath: 'tmp/sample.mp3' as ProjectRelativePath, title: 'Sample', generationProvenance: { ...provenance, mediaKind: 'audio' } },
+      },
+    });
+    for (const [purpose, target] of targets) {
+      const report = await projectData.readMediaGenerationContext({ homeDir, purpose, target });
+      for (const lookbook of report.visualLanguage) {
+        for (const media of [...lookbook.images, ...lookbook.sheets]) {
+          expect(media.asset).not.toHaveProperty('generationProvenance');
+        }
+      }
+      for (const group of report.suggestedReferences) {
+        for (const candidate of group.candidates) {
+          expect(candidate).not.toHaveProperty('generationProvenance');
+        }
+      }
+      if (report.targetContext.kind === 'castMember') {
+        expect(report.targetContext.voices[0]?.voiceIdentity).toEqual(voiceIdentity);
+        expect(report.targetContext.voices[0]?.sample).not.toHaveProperty('generationProvenance');
+        expect(report.targetContext.assets[0]).not.toHaveProperty('generationProvenance');
+      } else if (report.targetContext.kind === 'location') {
+        expect(report.targetContext.assets[0]).not.toHaveProperty('generationProvenance');
+      } else if (report.targetContext.kind === 'lookbook') {
+        expect(report.targetContext.images[0]?.asset).not.toHaveProperty('generationProvenance');
+        expect(report.targetContext.sheets[0]?.asset).not.toHaveProperty('generationProvenance');
+        expect(report.targetContext.lookbook).toEqual(production.lookbook);
+      }
+    }
+    const source = assets[0]!.asset;
+    const screenplay = await projectData.readScreenplayStructure({ homeDir, projectName: 'constantinople' });
+    const scene = screenplay.screenplay.scenes[0]!;
+    await projectData.applyScreenplayOperations({
+      homeDir, projectName: 'constantinople',
+      operations: [
+        { operation: 'scene.update', scene: { id: scene.id, heading: scene.heading, title: scene.title, blocks: [...scene.blocks,
+          { key: 'spoken-line', type: 'dialogue', characterName: 'MEHMED', extensions: [],
+            parts: [{ key: 'speech', type: 'speech', text: 'Current dialogue.' }] },
+        ] } },
+        { operation: 'reference.add', reference: { key: 'speaker',
+          subject: { type: 'castMember', id: 'cast_test0002' },
+          target: { type: 'dialogueCue', scene: { id: scene.id }, turn: { key: 'spoken-line' } }, role: 'speaker' } },
+      ],
+    });
+    const sceneReport = await projectData.readMediaGenerationContext({
+      homeDir, purpose: 'scene.storyboard-sheet', target: { kind: 'scene', id: screenplay.screenplay.scenes[0]!.id },
+    });
+    if (sceneReport.targetContext.kind === 'scene') {
+      const context = sceneReport.targetContext;
+      expect(context.castMembers.flatMap((member) => member.assets).length).toBeGreaterThan(0);
+      for (const subject of [...context.castMembers, ...context.locations, ...context.props]) {
+        subject.assets.forEach((asset) => expect(asset).not.toHaveProperty('generationProvenance'));
+      }
+      const sceneVoices = Object.values(context.castVoicesByCastMemberId).flat();
+      expect(sceneVoices.find((sample) => sample.id === voice.voice.id)?.voiceIdentity).toEqual(voiceIdentity);
+      sceneVoices.forEach((sample) => expect(sample.sample).not.toHaveProperty('generationProvenance'));
+    }
+    const edit = await projectData.readMediaGenerationContext({ homeDir, purpose: 'image.edit', target: { kind: 'asset', id: source.id } });
+    const { generationProvenance: saved, ...expected } = source;
+    expect(edit.targetContext).toEqual({ kind: 'asset', asset: expected });
+    expect(saved).toEqual(provenance);
+    const page = await projectData.listAssetPage({ homeDir, projectName: 'constantinople', owner: source.owner });
+    expect(page.items.find((asset) => asset.id === source.id)?.generationProvenance).toEqual(provenance);
+    const fullLookbook = await projectData.readProductionLookbook({ homeDir });
+    expect(fullLookbook.images[0]?.asset.generationProvenance).toEqual(provenance);
+    expect(fullLookbook.sheets[0]?.asset.generationProvenance).toEqual(provenance);
+    const department = await projectData.readLocationContext({ homeDir, locationId: 'location_test0001' });
+    expect(department.activeLookbook?.selectedImage?.asset.generationProvenance).toEqual(provenance);
+    expect(voice.voice.sample.generationProvenance).toEqual({ ...provenance, mediaKind: 'audio' });
   });
 
   it('defines the complete purpose-level output guidance without provider fields', () => {

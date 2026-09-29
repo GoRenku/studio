@@ -4,6 +4,7 @@ import { ProjectDataError } from '../../project-data-error.js';
 import { readLookbookResourceFromSession } from '../../resources/project-lookbooks.js';
 import type { MediaGenerationPurposeBuilder } from '../purpose-registry.js';
 import { createReferenceSuggestion } from '../reference-suggestions.js';
+import { projectGenerationLookbookImage, projectGenerationLookbookSheet } from '../reference-assets.js';
 
 export const buildLookbookPurposeContext: MediaGenerationPurposeBuilder = (input) => {
   if (input.target.kind !== 'lookbook') {
@@ -23,20 +24,22 @@ export const buildLookbookPurposeContext: MediaGenerationPurposeBuilder = (input
     throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `${input.purpose} requires the ${requiredKind} Lookbook.`);
   }
   const resource = readLookbookResourceFromSession(input.session, input.projectFolder, project, row);
+  const images = resource.images.map(projectGenerationLookbookImage);
+  const sheets = resource.sheets.map(projectGenerationLookbookSheet);
   const visualLanguage = [{
     kind: row.kind,
     lookbook: resource.lookbook,
     selectedImageId: resource.selectedImageId,
-    images: resource.images,
-    sheets: resource.sheets,
+    images,
+    sheets,
   }];
   return {
     targetContext: {
       kind: 'lookbook',
       lookbook: resource.lookbook,
       selectedImageId: resource.selectedImageId,
-      images: resource.images,
-      sheets: resource.sheets,
+      images,
+      sheets,
       sourceInspirationFolders: resource.sourceInspirationFolders,
     },
     visualLanguage,

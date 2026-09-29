@@ -1576,6 +1576,14 @@ than preventing a later generation. Invalid purpose/target identity, a revision
 from another Scene, or Beats outside the requested revision fail with structured
 diagnostics. `context` is read-only and emits no Studio mutation event.
 
+The briefing omits prior `generationProvenance` envelopes from candidates and
+all typed Asset positions, including exact edit sources and voice samples.
+Current design text, media facts, and opaque voice identities remain intact.
+For deliberate history inspection/reuse/debugging, capture `renku asset list
+--project <name> --owner <owner> --json`, follow pagination if needed, and inspect
+the exact Asset id locally. `renku cast voice show` retains specific voice
+sample history. Do not fetch those recipes automatically for ordinary references.
+
 Provider Skills write one temporary review document under
 `tmp/operations/media-generation/`. The document contains only provider, model,
 media kind, prompt, and opaque provider-native request JSON. Local project media

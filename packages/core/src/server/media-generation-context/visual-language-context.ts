@@ -5,30 +5,39 @@ import { readLookbookRecordByKind } from '../database/access/lookbook.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { readLookbookResourceFromSession } from '../resources/project-lookbooks.js';
+import { projectGenerationLookbookImage, projectGenerationLookbookSheet } from './reference-assets.js';
 
 export function readMediaGenerationLookbookContext(input: {
   session: DatabaseSession;
   projectFolder: string;
   kind: LookbookKind;
 }): MediaGenerationLookbookContext | null {
+  const resource = readLookbookContextResource(input);
+  return resource ? {
+    kind: input.kind,
+    lookbook: resource.lookbook,
+    selectedImageId: resource.selectedImageId,
+    images: resource.images.map(projectGenerationLookbookImage),
+    sheets: resource.sheets.map(projectGenerationLookbookSheet),
+  } : null;
+}
+
+function readLookbookContextResource(input: {
+  session: DatabaseSession;
+  projectFolder: string;
+  kind: LookbookKind;
+}) {
   const row = readLookbookRecordByKind(input.session, input.kind);
   const project = readProjectRecord(input.session);
   if (!row || !project) {
     return null;
   }
-  const resource = readLookbookResourceFromSession(
+  return readLookbookResourceFromSession(
     input.session,
     input.projectFolder,
     project,
     row,
   );
-  return {
-    kind: input.kind,
-    lookbook: resource.lookbook,
-    selectedImageId: resource.selectedImageId,
-    images: resource.images,
-    sheets: resource.sheets,
-  };
 }
 
 export function readMediaGenerationLookbooks(input: {
@@ -46,13 +55,13 @@ export function readDepartmentProductionLookbookContext(input: {
   session: DatabaseSession;
   projectFolder: string;
 }): DepartmentLookbookContext | null {
-  const context = readMediaGenerationLookbookContext({ ...input, kind: 'production' });
+  const context = readLookbookContextResource({ ...input, kind: 'production' });
   if (!context) {
     return null;
   }
   return {
     lookbook: context.lookbook,
-    selectedImage: context.images.find((image) => image.id === context.selectedImageId) ?? null,
+    selectedImage: context.images.find((image) => image.asset.id === context.selectedImageId) ?? null,
     isActive: true,
   };
 }

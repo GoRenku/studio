@@ -28,6 +28,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import { listCastVoicesInSession } from '../cast-voices/projection.js';
 import { listNumberedDialogueTurns } from '../screenplay/dialogue-turns.js';
 import { renderScreenplaySceneContextText } from '../screenplay/context/scene-text.js';
+import { projectGenerationAsset, projectGenerationVoice } from './reference-assets.js';
 
 export function projectMediaGenerationSceneContext(input: {
   session: DatabaseSession;
@@ -64,7 +65,7 @@ export function projectMediaGenerationSceneContext(input: {
   const dialogueTurns = listNumberedDialogueTurns(input.screenplay, scene.id);
   const castVoicesByCastMemberId = Object.fromEntries(
     [...new Set(dialogueTurns.flatMap((turn) => turn.castMemberId ? [turn.castMemberId] : []))]
-      .map((castMemberId) => [castMemberId, listCastVoicesInSession(input.session, castMemberId)])
+      .map((castMemberId) => [castMemberId, listCastVoicesInSession(input.session, castMemberId).map(projectGenerationVoice)])
   );
   return {
     kind: 'scene',
@@ -97,7 +98,7 @@ export function projectCastMemberContext(
     activeDesignSummary: activeDesign
       ? toCastDesignSummary({ id: activeDesign.id, document: activeDesign.document })
       : null,
-    assets: listAssetsInSession(session, { owner: { kind: 'castMember', id: record.id } }),
+    assets: listAssetsInSession(session, { owner: { kind: 'castMember', id: record.id } }).map(projectGenerationAsset),
   };
 }
 
@@ -112,7 +113,7 @@ export function projectLocationContext(
     activeDesignSummary: activeDesign
       ? toLocationDesignSummary({ id: activeDesign.id, document: activeDesign.document })
       : null,
-    assets: listAssetsInSession(session, { owner: { kind: 'location', id: record.id } }),
+    assets: listAssetsInSession(session, { owner: { kind: 'location', id: record.id } }).map(projectGenerationAsset),
   };
 }
 
@@ -127,7 +128,7 @@ export function projectPropContext(
     activeDesignSummary: activeDesign
       ? toPropDesignSummary({ id: activeDesign.id, document: activeDesign.document })
       : null,
-    assets: listAssetsInSession(session, { owner: { kind: 'prop', id: record.id } }),
+    assets: listAssetsInSession(session, { owner: { kind: 'prop', id: record.id } }).map(projectGenerationAsset),
   };
 }
 

@@ -3,6 +3,23 @@
 Status: implemented; remaining acceptance gates listed below.
 Date: 2026-09-28
 
+## Generation briefing follow-up (0214)
+
+On 2026-09-28, a same-state Urban Basilica Workroom `location.sheet` capture
+decreased from 136,343 to 43,506 serialized UTF-8 bytes (68.1%). The baseline
+Studio revision was `927466413bc63889714ebdfd666870c6acb8bbad`; the sister Skills
+baseline was `2079d6fcf19f6f24784a407ab8147e6ec7295551`. Both working trees were
+clean apart from the proposed plan. Comparison of parsed reports confirmed
+equality of every retained field. The built CLI output matched Core's report.
+The measurement excludes previous Asset recipes throughout generation context;
+it does not truncate current creative documents or change stored provenance.
+
+This is payload evidence, not a live agent-latency benchmark. Source Skill
+guidance and forward cases were updated; installed plugin caches were not
+modified. A new session with verified loaded Skill contents is still required
+to measure context-call counts, agent-turn time, and provider intervals. Existing
+0213 acceptance gates below remain separate.
+
 ## Loading and ownership
 
 The installed CLI remains a one-shot Node process. `cli.ts` owns runtime checks,
