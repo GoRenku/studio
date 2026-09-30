@@ -35,8 +35,9 @@ describe('Fal.ai media provider', () => {
     fal.upload.mockResolvedValue('https://fal.media/uploaded.png');
     fal.submit.mockResolvedValue({ request_id: 'fal_job_1' });
     fal.status.mockResolvedValue({ status: 'COMPLETED' });
+    const signedOutputUrl = 'https://fal.media/output.png?x-amz-signature=signed';
     fal.result.mockResolvedValue({
-      data: { images: [{ url: 'https://fal.media/output.png' }] },
+      data: { images: [{ url: signedOutputUrl }] },
     });
     const fetchMock = vi.fn<typeof fetch>(async (url, init) => {
       const value = String(url);
@@ -47,7 +48,7 @@ describe('Fal.ai media provider', () => {
           headers: { 'cache-control': cacheControl },
         });
       }
-      if (value === 'https://fal.media/output.png') {
+      if (value === signedOutputUrl) {
         return new Response(new TextEncoder().encode('pixels'), {
           headers: { 'content-type': 'image/png' },
         });
@@ -89,6 +90,7 @@ describe('Fal.ai media provider', () => {
       artifacts: [{ mimeType: 'image/png', byteLength: 6 }],
       receipt: { requestId: 'fal_job_1' },
     });
+    expect(result.receipt).toEqual({ requestId: 'fal_job_1' });
   });
 
   it.each(['before-upload', 'after-upload', 'upload-failure', 'cancelled'])('does not submit when %s fails', async (stage) => {

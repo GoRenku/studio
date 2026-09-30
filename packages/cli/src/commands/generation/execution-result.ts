@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
-  parseMediaGenerationProvenance,
+  validateMediaGenerationProvenance,
   type MediaGenerationReviewDocument,
 } from '@gorenku/studio-core/server';
 import type { ProviderExecutionResult } from '@gorenku/studio-engines';
@@ -19,7 +19,7 @@ export async function saveGenerationExecutionResult(
   const temporaryPath = `${provenancePath}.tmp`;
   let written = false;
   try {
-    const provenance = parseMediaGenerationProvenance({
+    const provenance = validateMediaGenerationProvenance({
       ...document,
       ...(result.receipt === undefined ? {} : { receipt: result.receipt }),
     });

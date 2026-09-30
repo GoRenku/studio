@@ -139,7 +139,7 @@ async function recoverFal(
     artifacts: await downloadProviderOutputs({
       provider: 'fal-ai', model: request.model, requestId, urls, context,
     }),
-    receipt: { requestId, output },
+    receipt: { requestId },
   };
 }
 

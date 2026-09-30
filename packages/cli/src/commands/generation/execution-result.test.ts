@@ -96,6 +96,26 @@ describe('generation execution handoff', () => {
     expect(await fs.readdir(outputDirectory)).toEqual(['video.mp4']);
   });
 
+  it('does not publish provenance with a signed receipt URL', async () => {
+    const outputDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-result-'));
+    const mediaPath = path.join(outputDirectory, 'video.mp4');
+    await fs.writeFile(mediaPath, 'completed media');
+    const signedUrl = 'https://fal.media/output.mp4?x-amz-signature=signed';
+    const error = await saveGenerationExecutionResult(document, {
+      provider: document.provider, model: document.model, requestId: 'job_completed',
+      artifacts: [{ path: mediaPath, mimeType: 'video/mp4', byteLength: 15 }],
+      receipt: { output: { url: signedUrl } },
+    }, outputDirectory).catch((error) => error);
+    expect(error).toMatchObject({
+      code: 'CORE_MEDIA_GENERATION_PROVENANCE_UNSAFE',
+      message: expect.stringContaining('Provider generation completed'),
+      suggestion: expect.stringContaining('Do not submit another generation.'),
+    });
+    expect(error.suggestion).toContain(mediaPath);
+    expect(JSON.stringify(error)).not.toContain(signedUrl);
+    expect(await fs.readdir(outputDirectory)).toEqual(['video.mp4']);
+  });
+
   it('retains complete temporary provenance when publication fails', async () => {
     const outputDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-result-'));
     vi.spyOn(fs, 'rename').mockRejectedValueOnce(new Error('Publication failed'));
