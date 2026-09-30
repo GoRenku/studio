@@ -71,15 +71,17 @@ Options
   --source-sheet       Source Location Sheet asset id for Location Hero import
   --type               Asset type
   --media-kind         Asset media kind
-  --output             Provider output directory or generation schema snapshot path
+  --output             Provider output directory, schema snapshot, or visualization HTML path
   --request-id         Provider request id for generation recovery
-  --expected-request-sha256  Prepared request digest returned by generation validate
+  --expected-request-sha256  Request digest returned by generation prepare or validate
   --provider           Provider id for generation schema or model discovery
   --model              Exact provider-native model id
   --route-index        Bundled route index for generation models (repeatable)
+  --query              Match generation model identities and display names
   --if-revision        Personal library SHA-256 revision, or absent
   --schema             Provider schema JSON for generation visualization cache updates
   --template           HTML fragment for generation visualization cache updates
+  --payload            Fresh request payload JSON for generation visualization preparation
   --provenance         Media Generation Provenance JSON file
   --locale             Project locale id
   --cast               Cast member id for cast commands
@@ -243,9 +245,15 @@ function createCliFlags() {
     template: {
       type: 'string',
     },
+    payload: {
+      type: 'string',
+    },
     routeIndex: {
       type: 'string',
       isMultiple: true,
+    },
+    query: {
+      type: 'string',
     },
     ifRevision: {
       type: 'string',
@@ -555,4 +563,3 @@ function toCamelCase(flagName: string): string {
     letter.toUpperCase()
   );
 }
-

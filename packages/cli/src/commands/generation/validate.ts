@@ -12,6 +12,13 @@ export async function validateGenerationRequest(input: GenerationCommandInput) {
     homeDir: input.runtime.homeDir,
     projectDataService: input.runtime.projectDataService,
   });
+  return validateLoadedGenerationRequest(input, loaded);
+}
+
+export async function validateLoadedGenerationRequest(
+  input: GenerationCommandInput,
+  loaded: Awaited<ReturnType<typeof loadGenerationRequest>>,
+) {
   const controller = new AbortController();
   try {
     await (input.runtime.mediaEngine ?? createRenkuMediaEngine()).validate(

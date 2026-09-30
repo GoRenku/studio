@@ -46,6 +46,11 @@ describe('personal media model library', () => {
     const query = { homeDir, bundledRouteIndexPaths: [index] };
     const first = await listMediaModels(query);
     expect(first.routes).toHaveLength(3);
+    const matched = await listMediaModels({ ...query, query: 'personal MODEL', provider: 'pika' });
+    expect(matched.routes).toHaveLength(1);
+    expect(matched.routes[0]?.provider).toBe('pika');
+    expect(matched.routeCatalogSha256).toBe(first.routeCatalogSha256);
+    expect((await listMediaModels({ ...query, query: 'no matching route' })).routes).toEqual([]);
     expect(first.routes[0]).toEqual({ ...route, source: 'personal', hasBundledEntry: true });
     expect((await listMediaModels({ ...query, provider: 'pika' })).routeCatalogSha256).toBe(first.routeCatalogSha256);
     await writePlugin([{ ...route, name: 'Bundled B' }, { apiId: 'new/route', name: 'New route' }]);

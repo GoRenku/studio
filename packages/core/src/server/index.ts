@@ -59,7 +59,7 @@ export {
   parseMediaGenerationProvenance,
   parseMediaGenerationReviewDocument,
 } from './media-generation-review/document.js';
-export { readMediaGenerationPreview } from './media-generation-review/preview.js';
+export { readMediaGenerationPreview, projectMediaGenerationPreview } from './media-generation-review/preview.js';
 export { updateMediaGenerationPreviewPrompt } from './media-generation-review/prompt.js';
 export { readAssetMediaGenerationRequest } from './media-generation-review/inspection.js';
 export { readMediaGenerationContext } from './media-generation-context/index.js';

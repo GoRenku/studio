@@ -11,6 +11,7 @@ export {
 } from './contracts.js';
 export { parseGenerationConfigurationVisualizationCacheDescriptor } from './descriptor.js';
 export { GenerationConfigurationVisualizationCacheError } from './errors.js';
+export { prepareGenerationConfigurationVisualization } from './preparation.js';
 export {
   resolveGenerationConfigurationVisualizationCachePaths,
   resolveGenerationConfigurationVisualizationCacheRoot,

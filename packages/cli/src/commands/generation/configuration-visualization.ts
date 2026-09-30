@@ -4,11 +4,29 @@ import {
   inspectGenerationConfigurationVisualizationCache,
   invalidateGenerationConfigurationVisualizationCache,
   parseGenerationConfigurationVisualizationCacheDescriptor,
+  prepareGenerationConfigurationVisualization,
   refreshGenerationConfigurationVisualizationCache,
   storeGenerationConfigurationVisualizationCache,
 } from '@gorenku/studio-core/server';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { GenerationCommandInput } from './command.js';
+
+export async function prepareGenerationConfigurationVisualizationCommand(input: GenerationCommandInput) {
+  const descriptor = await readDescriptorDocument(input);
+  const payloadPath = requiredScalarFlag(input.flags.payload, '--payload');
+  const outputPath = requiredScalarFlag(input.flags.output, '--output');
+  const contents = await readInputFile(payloadPath, '--payload');
+  let payload: unknown;
+  try {
+    payload = JSON.parse(contents);
+  } catch {
+    throw new StructuredError({ code: 'CLI_GENERATION_VISUALIZATION_PAYLOAD_INVALID', message: `Visualization payload is not valid JSON: ${payloadPath}.` });
+  }
+  return prepareGenerationConfigurationVisualization({
+    descriptor, bundledRouteIndexPaths: input.flags.routeIndex ?? [],
+    payload, outputPath, options: { homeDir: input.runtime.homeDir },
+  });
+}
 
 export async function inspectGenerationConfigurationVisualization(
   input: GenerationCommandInput
@@ -59,6 +77,10 @@ export async function invalidateGenerationConfigurationVisualization(
 }
 
 async function readDescriptor(input: GenerationCommandInput) {
+  return parseGenerationConfigurationVisualizationCacheDescriptor(await readDescriptorDocument(input));
+}
+
+async function readDescriptorDocument(input: GenerationCommandInput) {
   const file = requiredScalarFlag(input.flags.file, '--file');
   let value: unknown;
   try {
@@ -73,7 +95,7 @@ async function readDescriptor(input: GenerationCommandInput) {
       suggestion: error instanceof Error ? error.message : undefined,
     });
   }
-  return parseGenerationConfigurationVisualizationCacheDescriptor(value);
+  return value as Parameters<typeof prepareGenerationConfigurationVisualization>[0]['descriptor'];
 }
 
 async function readInputFile(file: string, flag: string): Promise<string> {

@@ -28,7 +28,7 @@ import {
 const BROWSER_SESSION_KEY = 'renku.studio.browserSessionId';
 const POLLING_INTERVAL_MS = 2_000;
 const ACTIVITY_DEBOUNCE_MS = 30_000;
-const VISIBLE_HEARTBEAT_MS = 60_000;
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 export interface StudioCoordinationSelection {
   selection: StudioSelection;
@@ -73,6 +73,9 @@ export function useStudioCoordination(input: {
     activityKind: StudioBrowserSessionActivityKind,
     options: { force?: boolean } = {}
   ) => {
+    if (projectSessionRef.current.isLoadingProjectRoute) {
+      return;
+    }
     const now = Date.now();
     if (!options.force && now - lastActivityRef.current < ACTIVITY_DEBOUNCE_MS) {
       return;
@@ -157,10 +160,8 @@ export function useStudioCoordination(input: {
     window.addEventListener('focus', reportVisibleActivity);
     document.addEventListener('visibilitychange', reportVisibleActivity);
     const heartbeat = window.setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void reportActivity(readDocumentActivityKind());
-      }
-    }, VISIBLE_HEARTBEAT_MS);
+      void reportActivity(readDocumentActivityKind());
+    }, HEARTBEAT_INTERVAL_MS);
     return () => {
       window.removeEventListener('focus', reportVisibleActivity);
       document.removeEventListener('visibilitychange', reportVisibleActivity);

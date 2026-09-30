@@ -7,6 +7,7 @@ import { openProjectStore } from '../database/lifecycle/store.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { createBlankMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
+import { projectMediaGenerationPreview } from './preview.js';
 
 const temporaryRoots: string[] = [];
 
@@ -15,6 +16,18 @@ afterEach(async () => {
 });
 
 describe('media generation Preview and Inspection', () => {
+  it('projects the supplied document even when its file has changed', async () => {
+    const fixture = await createFixture();
+    const file = path.join(fixture.projectFolder, fixture.documentPath);
+    const document = JSON.parse(await fs.readFile(file, 'utf8'));
+    const original = await fixture.service.readMediaGenerationPreview({
+      homeDir: fixture.homeDir, projectName: fixture.projectName, documentPath: fixture.documentPath,
+    });
+    await fs.writeFile(file, '{}');
+    expect(await projectMediaGenerationPreview({
+      homeDir: fixture.homeDir, projectName: fixture.projectName, documentPath: fixture.documentPath, document,
+    })).toEqual(original);
+  });
   it('projects recursive local references without Asset ids and updates only top-level prompt', async () => {
     const fixture = await createFixture();
     const preview = await fixture.service.readMediaGenerationPreview({

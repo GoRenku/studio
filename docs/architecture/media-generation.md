@@ -248,8 +248,7 @@ The current provider execution commands are:
 
 ```bash
 renku generation context --purpose <purpose> --target <target>
-renku generation validate --file tmp/operations/media-generation/request.json --json
-renku generation preview show --file tmp/operations/media-generation/request.json --json
+renku generation prepare --file tmp/operations/media-generation/request.json --json
 renku generation execute --file tmp/operations/media-generation/request.json --output tmp/operations/media-generation/output --json
 renku generation recover --file tmp/operations/media-generation/request.json --request-id <provider-job-id> --output tmp/operations/media-generation/output --json
 renku media import --purpose <purpose> --target <target> --source <path> --provenance <provenance-json> --json
@@ -345,3 +344,9 @@ existing freshness rules, including immediately expired and no-store metadata.
 No stale-schema fallback or longer-lived cache is introduced. Vendor SDKs load
 only for operations that require them; ElevenLabs voice sample retrieval is
 SDK-independent.
+
+For a single Engines request with Preview enabled, `generation prepare` validates
+and delivers the Core-owned Preview projection from the same loaded document.
+Its digest is the Execute precondition. Standalone validation remains available
+when Preview is disabled; Codex and ordered multi-request Preview use
+`generation preview show`. Provider schemas and validation remain in Engines.

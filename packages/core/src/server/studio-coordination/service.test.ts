@@ -12,6 +12,7 @@ import {
   readStudioEventStoreSummary,
   resolveStudioEventStorePath,
 } from './event-store.js';
+import { projectStudioCurrent } from './current-projection.js';
 import { claimStudioRuntimeDescriptor } from './runtime-descriptor.js';
 
 describe('StudioCoordinationService', () => {
@@ -231,7 +232,7 @@ describe('StudioCoordinationService', () => {
         kind: 'studio',
         browserSessionId: 'studio_browser_one',
       },
-      createdAt: new Date(Date.now() - 60_000).toISOString(),
+      createdAt: new Date(Date.now() - 180_000).toISOString(),
     });
 
     const current = await coordination.readStudioCurrent();
@@ -534,7 +535,7 @@ describe('StudioCoordinationService', () => {
     });
   });
 
-  it('keeps the most recently engaged focus when passive activity reports arrive later', async () => {
+  it.each(['visible', 'heartbeat'] as const)('keeps engagement when the selected tab reports %s and another tab remains visible', async (activityKind) => {
     const storageRoot = path.join(homeDir, 'projects');
     await writeConfig(homeDir, storageRoot);
     const projectData = createProjectDataService();
@@ -630,7 +631,7 @@ describe('StudioCoordinationService', () => {
     await coordination.appendStudioEvent({
       type: 'studio.browserSessionActive',
       browserSessionId: 'studio_browser_scene',
-      activityKind: 'visible',
+      activityKind,
       projectRef: {
         name: 'constantinople',
         id: 'project_test0001',
@@ -670,6 +671,13 @@ describe('StudioCoordinationService', () => {
       createdAt: new Date(now - 1_000).toISOString(),
     });
 
+    await coordination.appendStudioEvent({
+      type: 'studio.browserSessionActive', browserSessionId: 'studio_browser_library',
+      activityKind: 'visible', focus: { screen: 'projectLibrary' },
+      source: { kind: 'studio', browserSessionId: 'studio_browser_library' },
+      createdAt: new Date(now - 500).toISOString(),
+    });
+
     const current = await coordination.readStudioCurrent();
 
     expect(current.selection).toEqual({
@@ -685,6 +693,14 @@ describe('StudioCoordinationService', () => {
         label: 'Shot Plans',
       },
     });
+    const report = await coordination.readStudioEvents();
+    expect((await projectStudioCurrent({ homeDir, events: report.events, warnings: [],
+      now: new Date(now + 121_000) })).selection).toBeNull();
+    await coordination.appendStudioEvent({
+      type: 'studio.focusChanged', focus: { screen: 'projectLibrary' },
+      source: { kind: 'studio', browserSessionId: 'studio_browser_library' },
+    });
+    expect((await coordination.readStudioCurrent()).selection).toBeNull();
   });
 
   it('reports unresolved selected project data through current-context diagnostics', async () => {

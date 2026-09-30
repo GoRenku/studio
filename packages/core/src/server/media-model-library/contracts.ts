@@ -19,6 +19,7 @@ export interface MediaModelDiscoveryRoute extends MediaModelRoute {
 export interface MediaModelLibraryQuery extends RenkuConfigPathOptions {
   bundledRouteIndexPaths?: readonly string[];
   provider?: string;
+  query?: string;
 }
 
 export interface MediaModelIdentity {

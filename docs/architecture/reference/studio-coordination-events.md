@@ -374,6 +374,11 @@ multiple Studio windows remain visible after the user switches to another app,
 the window whose heartbeat timer happens to fire last would incorrectly become
 the current Studio target.
 
+Hidden tabs continue sending heartbeat activity while their page is running,
+so switching to Codex does not expire the selected Studio view. Explicit focus
+changes also renew liveness immediately; route loading does not report a
+project-library focus before the route resolves.
+
 This is not a hard guarantee that the OS user is visually looking at that exact
 pixel at the moment the command runs. It is a local product rule: the best
 available current Studio target is the live browser session with the newest

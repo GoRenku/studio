@@ -16,6 +16,7 @@ import { executeGenerationRequest } from './execute.js';
 import { recoverGenerationRequest } from './recover.js';
 import { showGenerationPreview } from './preview.js';
 import { validateGenerationRequest } from './validate.js';
+import { prepareGenerationRequest } from './prepare.js';
 import { showGenerationContext } from './context.js';
 import { renderMediaGenerationContext } from './context-output/index.js';
 import { renderGenerationExecution } from './execution-output.js';
@@ -25,6 +26,7 @@ import { listGenerationModels, showGenerationModel } from './models/queries.js';
 import { importGenerationModel, removeGenerationModel } from './models/mutations.js';
 import {
   inspectGenerationConfigurationVisualization,
+  prepareGenerationConfigurationVisualizationCommand,
   invalidateGenerationConfigurationVisualization,
   refreshGenerationConfigurationVisualization,
   storeGenerationConfigurationVisualization,
@@ -44,7 +46,9 @@ export interface GenerationCommandFlags {
   model?: string;
   schema?: string;
   template?: string;
+  payload?: string;
   routeIndex?: string[];
+  query?: string;
   ifRevision?: string;
 }
 
@@ -74,10 +78,12 @@ const handlers = [
   { path: ['context'], run: showGenerationContext },
   { path: ['schema', 'show'], run: showGenerationSchema },
   { path: ['configuration-visualization', 'inspect'], run: inspectGenerationConfigurationVisualization },
+  { path: ['configuration-visualization', 'prepare'], run: prepareGenerationConfigurationVisualizationCommand },
   { path: ['configuration-visualization', 'store'], run: storeGenerationConfigurationVisualization },
   { path: ['configuration-visualization', 'refresh'], run: refreshGenerationConfigurationVisualization },
   { path: ['configuration-visualization', 'invalidate'], run: invalidateGenerationConfigurationVisualization },
   { path: ['validate'], run: validateGenerationRequest },
+  { path: ['prepare'], run: prepareGenerationRequest },
   { path: ['preview', 'show'], run: showGenerationPreview },
   { path: ['execute'], run: executeGenerationRequest },
   { path: ['recover'], run: recoverGenerationRequest },
@@ -111,7 +117,7 @@ export async function runGenerationCommand(options: {
     unknownCommand: (commandPath) => new StructuredError({
       code: 'CLI019',
       message: `Unknown generation command: ${commandPath.join(' ') || '(none)'}.`,
-      suggestion: 'Use generation context, models, schema show, configuration-visualization, validate, preview show, execute, or recover.',
+      suggestion: 'Use generation context, models, schema show, configuration-visualization, prepare, validate, preview show, execute, or recover.',
     }),
   });
   const render = textRenderers[options.input.join(' ')];

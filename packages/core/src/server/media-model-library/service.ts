@@ -9,9 +9,12 @@ export async function listMediaModels(input: MediaModelLibraryQuery = {}) {
     const personal = await readPersonalLibrary(input);
     const bundled = await readBundledRoutes(input.bundledRouteIndexPaths ?? []);
     const effective = resolveMediaModels(bundled, personal.entries);
+    const terms = input.query?.toLowerCase().split(/[\s/_-]+/).filter(Boolean) ?? [];
     return { revision: personal.revision, libraryPath: personal.libraryPath,
       routeCatalogSha256: effective.routeCatalogSha256,
-      routes: effective.routes.filter((route) => input.provider === undefined || route.provider === input.provider) };
+      routes: effective.routes.filter((route) =>
+        (input.provider === undefined || route.provider === input.provider)
+        && terms.every((term) => `${route.provider} ${route.apiId} ${route.name}`.toLowerCase().includes(term))) };
   });
 }
 

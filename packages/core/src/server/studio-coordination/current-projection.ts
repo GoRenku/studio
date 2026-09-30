@@ -64,6 +64,12 @@ export async function projectStudioCurrent(
         ? event.source.browserSessionId
         : undefined;
       if (browserSessionId) {
+        sessionActivity.set(browserSessionId, {
+          ...event,
+          type: 'studio.browserSessionActive',
+          browserSessionId,
+          activityKind: 'focused',
+        });
         sessionFocus.set(browserSessionId, {
           browserSessionId,
           createdAt: event.createdAt,
@@ -232,8 +238,8 @@ function compareSessionFocusCandidates(input: {
   const leftActivity = input.activity.get(input.left.browserSessionId);
   const rightActivity = input.activity.get(input.right.browserSessionId);
   const activityRankDiff =
-    activityKindRank(leftActivity?.activityKind ?? input.left.activityKind) -
-    activityKindRank(rightActivity?.activityKind ?? input.right.activityKind);
+    activityKindRank(input.left.activityKind) -
+    activityKindRank(input.right.activityKind);
   if (activityRankDiff !== 0) {
     return activityRankDiff;
   }

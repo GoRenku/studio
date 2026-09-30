@@ -1631,6 +1631,29 @@ prompt guides remain the editorial authority for writing an effective prompt.
 The provider Skill's canonical model-guide key is not accepted as a substitute
 for the exact provider API id.
 
+For a fresh task-local HTML instance, use the saved descriptor and current payload:
+
+```bash
+renku generation configuration-visualization prepare \
+  --file tmp/scratch/generation-configuration-visualization-descriptor.json \
+  --payload tmp/scratch/generation-configuration-payload.json \
+  --route-index <installed-provider-route-index> \
+  --output <absolute-task-visualization-html> --json
+```
+
+Pass all installed provider indexes with repeated `--route-index` flags. Core
+resolves their effective list with the personal library and computes the catalog
+digest; the preparation input descriptor does not require a supplied digest.
+Every result includes the resolved `descriptor` for subsequent cache operations;
+non-fresh results also include the complete `routes` for selector authoring.
+No catalog file is written. Core checks cache compatibility and freshness, embeds the opaque JSON payload
+with HTML-safe escaping, and atomically writes the instance outside the shared
+cache. A fresh result includes `outputPath`; other cache statuses return without
+writing an instance. No provider request occurs. The Skill's
+`prepare-generation-configuration-visualization.mjs` combines descriptor creation
+and this CLI operation in one invocation. Its contract fingerprint comes from
+`generation-configuration-template.md`, independently of workflow instructions.
+
 In the Codex inline-configuration flow, inspect the Core-owned system cache
 before calling `schema show`:
 
@@ -1713,6 +1736,21 @@ marker intact for Preview and provenance:
 
 The Pika Skill uses the current schema for all remaining native fields and values;
 the CLI adds no Pika-specific command or request interpretation.
+
+Prepare a single Engines request and deliver its Preview in one command:
+
+```bash
+renku generation prepare --file tmp/operations/media-generation/request.json --json
+```
+
+The command loads the request once, delegates provider validation to Engines,
+projects that same document through Core, and delivers Preview to Studio.
+It returns provider, model, media kind, `requestSha256`, reference diagnostics,
+and `studio.delivery`. Invalid requests never open Preview; unavailable Studio
+returns `CLI144` rather than readiness. It does not execute generation or wait
+for confirmation. Skills retain the hash for Execute after normal confirmation.
+Use standalone Validate when Preview is disabled, and standalone Preview for
+Codex or an ordered multi-request review.
 
 Validate an Engines-owned provider request:
 
@@ -2101,7 +2139,7 @@ valid; malformed supplied timelines report `CORE_PREVIS_PLAYBACK_INVALID`.
 These commands are global and work without a Project, credentials, or running Studio:
 
 ```bash
-renku generation models list [--route-index <bundled-index> ...] [--provider <id>] --json
+renku generation models list [--route-index <bundled-index> ...] [--provider <id>] [--query <text>] --json
 renku generation models show --provider <id> --model <exact-api-id> [--route-index <bundled-index> ...] --json
 renku generation models import --file <route.json> --if-revision <sha256-or-absent> --json
 renku generation models remove --provider <id> --model <exact-api-id> --if-revision <sha256-or-absent> --json
@@ -2114,7 +2152,9 @@ supplies accepted provider identities. No guide or authenticated request is need
 `list` returns `{ revision, libraryPath, routeCatalogSha256, routes }`; each route
 has the three fields plus `source` and `hasBundledEntry`. Repeated route indexes
 supply bundled choices; omission lists personal entries only. The digest covers
-the complete effective list before filtering by provider.
+the complete effective list before filtering by provider or query. Core matches
+all query terms against provider, executable id, and display name without case
+sensitivity. This is identity discovery, not capability or model selection.
 
 `show` returns `{ revision, libraryPath, route, personalGuidePath }`; `route` is
 null for an unlisted identity. The Markdown path does not imply a file exists.

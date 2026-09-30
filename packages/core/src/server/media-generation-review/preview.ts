@@ -8,6 +8,8 @@ import { parseMediaGenerationReviewDocument } from './document.js';
 import { assertSafeMediaGenerationRequest } from './safety.js';
 import { projectLocalMediaReferences } from './local-media.js';
 import { ProjectDataError } from '../project-data-error.js';
+import type { MediaGenerationReviewDocument } from '../../client/media-generation-review.js';
+import type { DatabaseSession } from '../database/lifecycle/store.js';
 
 export async function readMediaGenerationPreview(
   input: RenkuConfigPathOptions & { projectName?: string; documentPath: string },
@@ -33,31 +35,54 @@ export async function readMediaGenerationPreview(
         `Media generation review document is not valid JSON: ${documentPath}.`,
       );
     }
-    const document = parseMediaGenerationReviewDocument(value);
-    assertSafeMediaGenerationRequest(document.request, 'review');
-    const project = readProjectRecord(session);
-    if (!project) {
-      throw new ProjectDataError('PROJECT_DATA021', 'Project database has no Project row.');
-    }
-    const projected = projectLocalMediaReferences({
-      request: document.request,
-      session,
-      projectFolder,
-      projectName: project.projectName,
-    });
-    return {
-      kind: 'mediaGenerationPreview',
-      documentPath,
-      provider: document.provider,
-      model: document.model,
-      mediaKind: document.mediaKind,
-      prompt: document.prompt,
-      references: projected.references,
-      configuration: projectConfiguration(document.request),
-      editable: document.prompt !== null,
-      diagnostics: projected.diagnostics,
-    };
+    return projectPreview({ document: parseMediaGenerationReviewDocument(value), documentPath, session, projectFolder });
   });
+}
+
+export async function projectMediaGenerationPreview(
+  input: RenkuConfigPathOptions & {
+    projectName?: string;
+    documentPath: string;
+    document: MediaGenerationReviewDocument;
+  },
+): Promise<MediaGenerationPreviewResource> {
+  return withProject(input, ({ session, projectFolder }) => projectPreview({
+    document: parseMediaGenerationReviewDocument(input.document),
+    documentPath: normalizeReviewDocumentPath(input.documentPath),
+    session,
+    projectFolder,
+  }));
+}
+
+function projectPreview({ document, documentPath, session, projectFolder }: {
+  document: MediaGenerationReviewDocument;
+  documentPath: ReturnType<typeof normalizeReviewDocumentPath>;
+  session: DatabaseSession;
+  projectFolder: string;
+}): MediaGenerationPreviewResource {
+  assertSafeMediaGenerationRequest(document.request, 'review');
+  const project = readProjectRecord(session);
+  if (!project) {
+    throw new ProjectDataError('PROJECT_DATA021', 'Project database has no Project row.');
+  }
+  const projected = projectLocalMediaReferences({
+    request: document.request,
+    session,
+    projectFolder,
+    projectName: project.projectName,
+  });
+  return {
+    kind: 'mediaGenerationPreview',
+    documentPath,
+    provider: document.provider,
+    model: document.model,
+    mediaKind: document.mediaKind,
+    prompt: document.prompt,
+    references: projected.references,
+    configuration: projectConfiguration(document.request),
+    editable: document.prompt !== null,
+    diagnostics: projected.diagnostics,
+  };
 }
 
 export function projectConfiguration(

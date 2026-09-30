@@ -9,6 +9,7 @@ import {
   resolveReviewDocumentPath,
   type MediaGenerationReviewDocument,
   type ProjectDataService,
+  type StudioProjectRef,
 } from '@gorenku/studio-core/server';
 import type { ProviderRequest } from '@gorenku/studio-engines';
 import { StructuredError } from '@gorenku/studio-diagnostics';
@@ -24,6 +25,7 @@ export async function loadGenerationRequest(input: {
   providerRequest: ProviderRequest;
   projectFolder: string;
   requestSha256: string;
+  projectRef: StudioProjectRef;
 }> {
   const projectRef = await input.projectDataService.resolveStudioProjectRef({
     projectName: input.projectName,
@@ -68,6 +70,7 @@ export async function loadGenerationRequest(input: {
       ),
     },
     projectFolder,
+    projectRef,
     requestSha256,
   };
 }

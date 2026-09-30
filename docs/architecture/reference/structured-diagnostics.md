@@ -156,3 +156,12 @@ identify the downloaded media and optional provider request id, with an explicit
 instruction not to submit another generation. Core validation errors retain
 their original codes, issues, and validation reasons. Invalid provenance is not
 published as an import-ready file.
+
+Generation visualization preparation reports
+`CLI_GENERATION_VISUALIZATION_PAYLOAD_INVALID` for malformed payload JSON and
+`GENERATION_CONFIGURATION_VISUALIZATION_CACHE006` for a non-object payload or
+an instance exceeding the fragment size limit. Shared-cache output protection
+uses `GENERATION_CONFIGURATION_VISUALIZATION_CACHE004`; atomic output failures
+use `GENERATION_CONFIGURATION_VISUALIZATION_CACHE005`. Combined request
+preparation retains existing Engines validation errors and `CLI144` for failed
+Preview delivery.

@@ -1,6 +1,7 @@
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import { notifyStudioGenerationPreviews } from '../studio-notification-client.js';
 import type { GenerationCommandInput } from './command.js';
+import type { StudioGenerationPreviewsNotification } from '../studio-notification-client.js';
 
 export async function showGenerationPreview(input: GenerationCommandInput) {
   const files = flagValues(input.flags.file);
@@ -18,13 +19,26 @@ export async function showGenerationPreview(input: GenerationCommandInput) {
       documentPath,
     })
   ));
+  await deliverGenerationPreviews(input.runtime.homeDir, {
+    projectRef,
+    previews,
+    source: { kind: 'cli', command: 'generation preview show' },
+  });
+  return {
+    valid: true,
+    requestCount: previews.length,
+    previews,
+    studio: { delivery: 'delivered' },
+  };
+}
+
+export async function deliverGenerationPreviews(
+  homeDir: string | undefined,
+  notification: StudioGenerationPreviewsNotification,
+): Promise<void> {
   const delivery = await notifyStudioGenerationPreviews({
-    homeDir: input.runtime.homeDir,
-    notification: {
-      projectRef,
-      previews,
-      source: { kind: 'cli', command: 'generation preview show' },
-    },
+    homeDir,
+    notification,
   });
   if (delivery.status !== 'delivered') {
     throw new StructuredError({
@@ -35,12 +49,6 @@ export async function showGenerationPreview(input: GenerationCommandInput) {
       suggestion: 'Start Studio for the Project and retry.',
     });
   }
-  return {
-    valid: true,
-    requestCount: previews.length,
-    previews,
-    studio: { delivery: delivery.status },
-  };
 }
 
 function flagValues(value: string | string[] | undefined): string[] {

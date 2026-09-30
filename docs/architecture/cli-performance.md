@@ -279,3 +279,34 @@ Only read commands were benchmarked against Urban Basilica. All mutations and
 notification fixtures used isolated directories. No database migration, Settings,
 cache policy, permission model, notification timeout, approval requirement,
 installed plugin cache, or release was changed.
+
+## Generation preparation
+
+`generation prepare` removes an agent round trip between Engines validation
+and Preview delivery. The CLI loads request bytes once and retains their hash;
+Core projects references and configuration from that document, so a concurrent
+file edit cannot change what was validated and previewed. Execute still checks
+the prepared hash before provider work. Standalone Validate and multi-document
+Preview retain their independent uses.
+
+The inline visualization workflow uses one Skill script invocation to create a
+dependency descriptor and call `generation configuration-visualization prepare`.
+Core owns cache inspection, payload escaping, and atomic task-local output.
+A fresh hit requires no schema fetch or HTML authoring. Only the separate
+`generation-configuration-template.md` requirements are fingerprinted alongside
+the existing catalog and Visualize dependencies; general workflow edits no
+longer invalidate unchanged HTML.
+
+## Selection liveness and model discovery
+
+Hidden Studio tabs report heartbeat activity while running. Core ranks the last
+explicit engagement among live sessions, independently of later passive visible
+or hidden activity. Inactive sessions still expire after two minutes.
+
+The Media Producer discovery script presents Core query matches with optional
+bundled guide/adapter paths without writing a catalog. Core visualization
+preparation resolves the complete bundled/personal list and its digest directly;
+non-fresh results return selector choices for template authoring. CLI adapters
+only forward query text, route-index paths, and opaque request documents.
+Guide routing and schema-derived native defaults remain in Skills. Enabling
+prompt expansion alone does not select a slower mode.

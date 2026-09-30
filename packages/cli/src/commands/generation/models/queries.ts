@@ -4,7 +4,7 @@ import type { GenerationCommandInput } from '../command.js';
 
 export async function listGenerationModels(input: GenerationCommandInput) {
   return listMediaModels({ homeDir: input.runtime.homeDir,
-    bundledRouteIndexPaths: input.flags.routeIndex, provider: input.flags.provider });
+    bundledRouteIndexPaths: input.flags.routeIndex, provider: input.flags.provider, query: input.flags.query });
 }
 
 export async function showGenerationModel(input: GenerationCommandInput) {
