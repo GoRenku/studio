@@ -295,15 +295,19 @@ JSON contracts, craft guidance, and samples belong in the skill's
 `references/` and `samples/` folders.
 
 Media Producer retains optional advice in `references/model-guides/`, with
-`model-catalog.json`, `shared/`, `image/`, `video/`, and `audio/` references.
-Provider Skills keep their `references/supported-routes.json` discovery indexes.
+`shared/`, `image/`, `video/`, and `audio/` Markdown references. Agents find
+relevant advice by filename or model name and follow useful Markdown links.
+Provider Skills keep their `references/supported-routes.json` discovery indexes:
+provider at the document root, and only `apiId` and `name` per route.
+Skills invoke `generation models list` directly. Core owns discovery and matching;
+the CLI does not interpret entries or model guidance.
 `model-researcher` adds global personal three-field route records through
 `generation models` and may save optional plain Markdown at the returned path.
 
 Media Producer lists bundled and personal choices through Core. Personal labels
 win exact collisions, while guidance lookup remains independent: current bundled
 curation supplies defaults and explicit user preferences take priority. Missing
-routes, catalog keys, guides, or operation advice never block preparation. Release
+guides or operation advice never block preparation. Release
 checks validate structural envelopes and actual workflow behavior, not guide
 coverage or prescribed creative sections.
 

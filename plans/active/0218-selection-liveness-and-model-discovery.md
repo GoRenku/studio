@@ -14,7 +14,10 @@ provider schema copies, or new CLI command is needed. The existing model list
 adds `--query`; visualization Prepare accepts route-index paths and returns a
 Core-resolved descriptor plus selector routes when a rebuild is needed. Remove
 the per-thread catalog write/reuse workflow. CLI code must not interpret model
-entries, capabilities, or skill guide structure.
+entries, capabilities, or skill guide structure. Provider route indexes retain
+only `apiId` and `name`; agents discover optional Markdown advice by name. Remove
+the secondary guidance catalog, discovery wrapper, and their validators while
+preserving all route identities and model guidance files.
 
 ## Evidence And Accepted Rules
 
@@ -44,9 +47,10 @@ Core can read its authoritative bundled and personal sources directly.
   calculates the digest, and performs existing cache preparation. It returns
   a resolved `descriptor`; non-fresh outcomes also return `routes` for selectors.
   The CLI reads opaque documents, forwards paths, and serializes the result.
-- Skill discovery prints Core query results enriched with optional skill-owned
-  guide paths. The preparation script supplies installed index paths and saves
-  the returned cache descriptor. Neither script writes a model catalog.
+- Skills call CLI discovery directly and find optional model Markdown by name.
+  Provider indexes contain only route identities and display names. Provider
+  Skills link their Markdown advice. The preparation script supplies installed
+  index paths and saves the returned cache descriptor.
   Existing cache Store/Refresh consume the resolved descriptor; no new registry,
   model cache, aliases, provider switchboard, or entrypoint facade is introduced.
 - Model/schema-specific expansion choices stay agent-owned. Generic guidance
@@ -76,7 +80,10 @@ docs and the shared skill workflow.
 
 ### Agent workflow and evals
 
-- [x] Discovery prints Core query matches and skill-owned guide paths without files.
+- [x] Skills call CLI discovery directly; model guidance is ordinary Markdown.
+- [x] Remove the discovery wrapper, secondary guidance catalog, and their validators.
+- [x] Preserve model advice and link provider advice from its Skill.
+- [x] Add cross-model behavioral evals for input roles and optional guidance.
 - [x] Preparation resolves current sources internally, returning selectors on rebuild.
 - [x] Personal routes and absent guidance work without invented requirements.
 - [x] Full catalog and digest remain available for selectors and existing cache.
@@ -95,6 +102,10 @@ docs and the shared skill workflow.
 - [x] Inspected changed functions, new scripts, diffs and diff statistics;
   no new public barrels or oversized dispatchers; unrelated work preserved.
 - [x] Record local command timings without claiming an autonomous generation gain.
+- [x] Guidance simplification: all 184 route identities/names and referenced guide
+  files preserved; 63 skill tests, seven release tests, and ten Core model-library
+  tests pass. Twelve cross-model behavioral scenarios authored; cross-model agent
+  runs remain unmeasured.
 
 The standalone skill-creator Python validator could not run because PyYAML is
 unavailable. Repository-owned skill validation passed. Installed plugin copies

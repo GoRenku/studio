@@ -35,7 +35,7 @@ describe('personal media model library', () => {
   it('merges plugin replacements exactly and hashes the full effective list before filtering', async () => {
     const index = path.join(homeDir, 'plugin.json');
     const writePlugin = (routes: unknown[]) => fs.writeFile(index, JSON.stringify({ provider: 'fal-ai', routes }));
-    await writePlugin([{ ...route, name: 'Bundled A', modelKey: 'missing-guide' }]);
+    await writePlugin([{ ...route, name: 'Bundled A' }]);
     const added = await add();
     const { personalGuidePath } = await readMediaModel({ homeDir, ...route });
     await fs.mkdir(path.dirname(personalGuidePath), { recursive: true });
@@ -59,7 +59,7 @@ describe('personal media model library', () => {
     expect(updated.routeCatalogSha256).not.toBe(first.routeCatalogSha256);
     expect(updated.revision).toBe(first.revision);
     expect(await fs.readFile(personalGuidePath, 'utf8')).toBe(notes);
-    await writePlugin([{ ...route, name: 'Bundled C', modelKey: 'improved-guide' }, { apiId: 'new/route', name: 'New route' }]);
+    await writePlugin([{ ...route, name: 'Bundled C' }, { apiId: 'new/route', name: 'New route' }]);
     expect((await listMediaModels(query)).routeCatalogSha256).toBe(updated.routeCatalogSha256);
     expect(await fs.readFile(personalGuidePath, 'utf8')).toBe(notes);
     await removePersonalMediaModel({ homeDir, ...route, expectedRevision: updated.revision });
@@ -124,7 +124,7 @@ describe('personal media model library', () => {
     await fs.writeFile(personalGuidePath, 'Explicit preference: keep my prompts concise.');
     const bytes = await fs.readFile(added.libraryPath);
     await fs.writeFile(index, JSON.stringify({ provider: route.provider,
-      routes: [{ apiId: route.apiId, name: 'Curated name', modelKey: 'new-curation' }] }));
+      routes: [{ apiId: route.apiId, name: 'Curated name' }] }));
     const after = await listMediaModels(query);
     expect(after.routes).toEqual([{ ...route, source: 'personal', hasBundledEntry: true }]);
     expect(after.routeCatalogSha256).toBe(before.routeCatalogSha256);
