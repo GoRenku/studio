@@ -33,11 +33,15 @@ export function projectMediaGenerationConfiguration(input: {
   provider: string;
   model: string;
   configuration: JsonValue;
+  includeRoute?: boolean;
+  excludedPointers?: readonly string[];
 }): MediaGenerationConfigurationNode[] {
   return [
-    valueNode('provider', 'Provider', input.provider),
-    valueNode('model', 'Model', input.model),
-    ...projectRootConfiguration(input.configuration),
+    ...(input.includeRoute === false ? [] : [
+      valueNode('provider', 'Provider', input.provider),
+      valueNode('model', 'Model', input.model),
+    ]),
+    ...projectRootConfiguration(input.configuration, input.excludedPointers ?? []),
   ];
 }
 
@@ -52,25 +56,31 @@ export function humanizeConfigurationKey(key: string): string {
   return words.map(humanizeWord).join(' ');
 }
 
-function projectRootConfiguration(value: JsonValue): MediaGenerationConfigurationNode[] {
+function projectRootConfiguration(value: JsonValue, excludedPointers: readonly string[]): MediaGenerationConfigurationNode[] {
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-    return Object.entries(value).map(([key, entry]) =>
-      projectNode(key, humanizeConfigurationKey(key), entry, 0)
-    );
+    return Object.entries(value).flatMap(([key, entry]) => {
+      const node = projectNode(key, humanizeConfigurationKey(key), entry, 0, configurationPointer('', key), excludedPointers);
+      return node ? [node] : [];
+    });
   }
-  return [projectNode('configuration', 'Configuration', value, 0)];
+  const node = projectNode('configuration', 'Configuration', value, 0, '', excludedPointers);
+  return node ? [node] : [];
 }
 
 function projectNode(
   key: string,
   label: string,
   value: JsonValue,
-  depth: number
-): MediaGenerationConfigurationNode {
+  depth: number,
+  pointer: string,
+  excludedPointers: readonly string[]
+): MediaGenerationConfigurationNode | undefined {
+  if (excludedPointers.includes(pointer)) return undefined;
+  const hasExcludedChildren = excludedPointers.some((excluded) => excluded.startsWith(`${pointer}/`));
   if (value === null || typeof value !== 'object') {
     return valueNode(key, label, value);
   }
-  if (shouldUseJsonFallback(value, depth)) {
+  if (shouldUseJsonFallback(value, depth) && !hasExcludedChildren) {
     return {
       kind: 'json',
       key,
@@ -79,31 +89,36 @@ function projectNode(
     };
   }
   if (Array.isArray(value)) {
-    if (value.length === 0) return { kind: 'empty', key, label };
+    if (value.length === 0) return hasExcludedChildren ? undefined : { kind: 'empty', key, label };
+    const children = value.flatMap((entry, index) => {
+      const node = projectNode(`${key}.${index}`, String(index + 1), entry, depth + 1, configurationPointer(pointer, String(index)), excludedPointers);
+      return node ? [node] : [];
+    });
+    if (children.length === 0) return undefined;
     return {
       kind: 'group',
       key,
       label,
-      children: value.map((entry, index) =>
-        projectNode(`${key}.${index}`, String(index + 1), entry, depth + 1)
-      ),
+      children,
     };
   }
   const entries = Object.entries(value);
-  if (entries.length === 0) return { kind: 'empty', key, label };
+  if (entries.length === 0) return hasExcludedChildren ? undefined : { kind: 'empty', key, label };
+  const children = entries.flatMap(([entryKey, entry]) => {
+    const node = projectNode(`${key}.${entryKey}`, humanizeConfigurationKey(entryKey), entry, depth + 1, configurationPointer(pointer, entryKey), excludedPointers);
+    return node ? [node] : [];
+  });
+  if (children.length === 0) return undefined;
   return {
     kind: 'group',
     key,
     label,
-    children: entries.map(([entryKey, entry]) =>
-      projectNode(
-        `${key}.${entryKey}`,
-        humanizeConfigurationKey(entryKey),
-        entry,
-        depth + 1
-      )
-    ),
+    children,
   };
+}
+
+function configurationPointer(parent: string, key: string): string {
+  return `${parent}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`;
 }
 
 function shouldUseJsonFallback(

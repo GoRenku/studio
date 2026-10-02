@@ -16,6 +16,7 @@ import {
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { withProject } from '../project-operation.js';
+import { readProjectRecord } from '../database/access/project.js';
 
 interface Marker {
   $file: string;
@@ -144,9 +145,12 @@ export function replaceLocalMediaPaths(
 }
 
 export async function readMediaGenerationReferenceProjectFile(
-  input: RenkuConfigPathOptions & { projectName?: string; projectRelativePath: string },
+  input: RenkuConfigPathOptions & { projectName?: string; projectRelativePath: string; expectedProjectId?: string },
 ): Promise<{ absolutePath: string; mimeType: string }> {
   return withProject(input, ({ session, projectFolder }) => {
+    if (input.expectedProjectId !== undefined && readProjectRecord(session)?.id !== input.expectedProjectId) {
+      throw new ProjectDataError('CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND', 'The referenced Project is no longer available.');
+    }
     const projectRelativePath = normalizeReferencePath(input.projectRelativePath);
     const record = session.db
       .select({ mimeType: assetFiles.mimeType })
@@ -163,6 +167,18 @@ export async function readMediaGenerationReferenceProjectFile(
         `Referenced media is unavailable: ${projectRelativePath}.`,
       );
     }
+    let resolvedPath: string;
+    let projectRoot: string;
+    try {
+      resolvedPath = fs.realpathSync(absolutePath);
+      projectRoot = fs.realpathSync(projectFolder);
+    } catch {
+      throw new ProjectDataError('CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND', `Referenced media is unavailable: ${projectRelativePath}.`);
+    }
+    const relative = path.relative(projectRoot, resolvedPath);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+      throw new ProjectDataError('CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT', 'Referenced media must remain inside its Project folder.');
+    }
     const kind = mediaKind(undefined, record.mimeType ?? undefined, projectRelativePath);
     if (!kind) {
       throw new ProjectDataError(
@@ -171,7 +187,7 @@ export async function readMediaGenerationReferenceProjectFile(
       );
     }
     return {
-      absolutePath,
+      absolutePath: resolvedPath,
       mimeType: record.mimeType ?? `${kind}/octet-stream`,
     };
   });

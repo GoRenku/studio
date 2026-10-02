@@ -1,13 +1,15 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createProjectDataService } from '../project-data-service.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
 import { insertAssetRecord } from '../database/access/assets.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { createBlankMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 import { projectMediaGenerationPreview } from './preview.js';
+import { readMediaGenerationReferenceProjectFile } from './local-media.js';
 
 const temporaryRoots: string[] = [];
 
@@ -16,6 +18,76 @@ afterEach(async () => {
 });
 
 describe('media generation Preview and Inspection', () => {
+  it('hashes and parses the same exact bytes even when the file changes after the read', async () => {
+    const fixture = await createFixture();
+    const file = await fs.realpath(path.join(fixture.projectFolder, fixture.documentPath));
+    const original = await fs.readFile(file);
+    const readFile = fs.readFile.bind(fs);
+    const read = vi.spyOn(fs, 'readFile').mockImplementation(async (...args: Parameters<typeof fs.readFile>) => {
+      const bytes = await readFile(...args);
+      if (String(args[0]) === file) {
+        await fs.writeFile(file, '{}');
+      }
+      return bytes;
+    });
+    try {
+      const review = await fixture.service.readMediaGenerationReview({
+        homeDir: fixture.homeDir, projectName: fixture.projectName, documentPath: fixture.documentPath,
+      });
+      expect(review.requestSha256).toBe(createHash('sha256').update(original).digest('hex'));
+      expect(review.document.prompt).toBe('Original prompt');
+      expect(review.projectRef.name).toBe(fixture.projectName);
+      expect(review.projectFolder).toBe(fixture.projectFolder);
+      expect(read.mock.calls.filter(([readPath]) => String(readPath) === file)).toHaveLength(1);
+    } finally {
+      read.mockRestore();
+    }
+  });
+
+  it('rejects a review symlink to bytes outside the Project operation folder', async () => {
+    const fixture = await createFixture();
+    const outside = path.join(fixture.homeDir, 'private.json');
+    await fs.writeFile(outside, '{}');
+    const documentPath = 'tmp/operations/media-generation/outside.json';
+    await fs.symlink(outside, path.join(fixture.projectFolder, documentPath));
+    await expect(fixture.service.readMediaGenerationReview({
+      homeDir: fixture.homeDir, projectName: fixture.projectName, documentPath,
+    })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_REVIEW_PATH_INVALID' });
+  });
+
+  it('checks the bound hash before parsing changed request bytes', async () => {
+    const fixture = await createFixture();
+    const review = await fixture.service.readMediaGenerationReview({
+      homeDir: fixture.homeDir, projectName: fixture.projectName, documentPath: fixture.documentPath,
+    });
+    await fs.writeFile(path.join(fixture.projectFolder, fixture.documentPath), 'invalid JSON');
+    await expect(fixture.service.readMediaGenerationReview({
+      homeDir: fixture.homeDir, projectName: fixture.projectName, documentPath: fixture.documentPath,
+      expectedRequestSha256: review.requestSha256,
+    })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_REVIEW_CHANGED' });
+  });
+
+  it('rechecks reference registration and Project identity when reading reference media', async () => {
+    const fixture = await createFixture();
+    const project = await fixture.service.resolveStudioProjectRef({ homeDir: fixture.homeDir, projectName: fixture.projectName });
+    const input = { homeDir: fixture.homeDir, projectName: fixture.projectName, projectRelativePath: 'media/reference.png', expectedProjectId: project.id };
+    await expect(readMediaGenerationReferenceProjectFile(input)).resolves.toMatchObject({ mimeType: 'image/png' });
+    await expect(readMediaGenerationReferenceProjectFile({ ...input, expectedProjectId: 'other-project' })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND' });
+    await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath: 'media/undeclared.png' })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND' });
+  });
+
+  it('rejects registered reference media that resolves outside its Project', async () => {
+    const fixture = await createFixture();
+    const outside = path.join(fixture.homeDir, 'outside.png');
+    await fs.writeFile(outside, 'private bytes');
+    const registeredPath = path.join(fixture.projectFolder, 'media/reference.png');
+    await fs.rename(registeredPath, `${registeredPath}.saved`);
+    await fs.symlink(outside, registeredPath);
+    await expect(readMediaGenerationReferenceProjectFile({
+      homeDir: fixture.homeDir, projectName: fixture.projectName, projectRelativePath: 'media/reference.png',
+    })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT' });
+  });
+
   it('projects the supplied document even when its file has changed', async () => {
     const fixture = await createFixture();
     const file = path.join(fixture.projectFolder, fixture.documentPath);

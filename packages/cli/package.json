@@ -35,6 +35,7 @@
   "packageManager": "pnpm@11.7.0",
   "dependencies": {
     "@gorenku/studio-diagnostics": "workspace:*",
+    "@gorenku/studio-codex": "workspace:*",
     "@gorenku/studio-core": "workspace:*",
     "@gorenku/studio": "workspace:*",
     "@gorenku/studio-engines": "workspace:*",

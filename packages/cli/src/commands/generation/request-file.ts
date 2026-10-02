@@ -1,12 +1,6 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import {
-  assertSafeMediaGenerationRequest,
-  normalizeReviewDocumentPath,
-  parseMediaGenerationReviewDocument,
   replaceLocalMediaPaths,
-  resolveReviewDocumentPath,
   type MediaGenerationReviewDocument,
   type ProjectDataService,
   type StudioProjectRef,
@@ -27,33 +21,12 @@ export async function loadGenerationRequest(input: {
   requestSha256: string;
   projectRef: StudioProjectRef;
 }> {
-  const projectRef = await input.projectDataService.resolveStudioProjectRef({
+  const { document, projectRef, projectFolder, requestSha256 } = await input.projectDataService.readMediaGenerationReview({
     projectName: input.projectName,
     homeDir: input.homeDir,
-  });
-  const projectFolder = path.join(projectRef.storageRoot, projectRef.name);
-  const documentPath = normalizeReviewDocumentPath(input.file);
-  let value: unknown;
-  let requestSha256: string;
-  try {
-    const bytes = await fs.readFile(
-      resolveReviewDocumentPath(projectFolder, documentPath),
-    );
-    requestSha256 = createHash('sha256').update(bytes).digest('hex');
-    assertRequestHash(input.expectedRequestSha256, requestSha256, input.file);
-    value = JSON.parse(bytes.toString('utf8'));
-  } catch (error) {
-    if (error instanceof StructuredError) {
-      throw error;
-    }
-    throw new StructuredError({
-      code: 'CLI082',
-      message: `Generation review file could not be read: ${input.file}.`,
-      suggestion: error instanceof Error ? error.message : undefined,
-    });
-  }
-  const document = parseMediaGenerationReviewDocument(value);
-  assertSafeMediaGenerationRequest(document.request, 'review');
+    documentPath: input.file,
+    expectedRequestSha256: input.expectedRequestSha256,
+  }).catch((error: unknown) => { throw generationRequestError(error, input.file); });
   if (document.provider === 'codex') {
     throw new StructuredError({
       code: 'ENGINE_PROVIDER_UNSUPPORTED',
@@ -75,23 +48,24 @@ export async function loadGenerationRequest(input: {
   };
 }
 
-function assertRequestHash(expected: string | undefined, actual: string, file: string): void {
-  if (expected === undefined) {
-    return;
+function generationRequestError(error: unknown, file: string): unknown {
+  if (!(error instanceof StructuredError)) {
+    return error;
   }
-  if (!/^[a-f0-9]{64}$/.test(expected)) {
-    throw new StructuredError({
+  if (error.code === 'CORE_MEDIA_GENERATION_REVIEW_HASH_INVALID') {
+    return new StructuredError({
       code: 'CLI_GENERATION_REQUEST_HASH_INVALID',
       message: '--expected-request-sha256 must be a lowercase SHA-256 hex digest.',
     });
   }
-  if (expected !== actual) {
-    throw new StructuredError({
+  if (error.code === 'CORE_MEDIA_GENERATION_REVIEW_CHANGED') {
+    return new StructuredError({
       code: 'CLI_GENERATION_REQUEST_CHANGED',
       message: `Generation request changed after preparation: ${file}.`,
       suggestion: 'Read the changed request, update its native request as needed, and validate it before executing. No provider work has started.',
     });
   }
+  return error;
 }
 
 export function resolveOutputDirectory(projectFolder: string, value: string): string {

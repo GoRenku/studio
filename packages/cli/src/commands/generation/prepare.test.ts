@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { EngineError } from '@gorenku/studio-engines';
-import { projectMediaGenerationPreview } from '@gorenku/studio-core/server';
+import { createProjectDataService, initRenkuConfig, projectMediaGenerationPreview } from '@gorenku/studio-core/server';
 import { notifyStudioGenerationPreviews } from '../studio-notification-client.js';
 import { prepareGenerationRequest } from './prepare.js';
 
@@ -27,13 +27,17 @@ async function fixture(mediaKind = 'video') {
   const storageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-prepare-cli-'));
   const documentPath = 'tmp/operations/media-generation/request.json';
   const file = path.join(storageRoot, 'movie', documentPath);
+  const homeDir = path.join(storageRoot, 'test-home');
+  const projectDataService = createProjectDataService();
+  await initRenkuConfig(storageRoot, { homeDir });
+  await projectDataService.createMovieProject({ homeDir, projectName: 'movie', title: 'Generation prepare fixture' });
   const document = { provider: 'atlas', model: 'opaque-model', mediaKind, prompt: 'Authored', request: { prompt: 'Native authored' } };
   const bytes = JSON.stringify(document);
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, bytes);
   const validate = vi.fn(async () => undefined);
   const input = { flags: { file: documentPath }, runtime: {
-    projectDataService: { resolveStudioProjectRef: async () => ({ name: 'movie', id: 'project_1', storageRoot }) },
+    projectDataService, homeDir, projectName: 'movie',
     mediaEngine: { validate }, createProviderContext: async () => ({}),
   } };
   return { input, validate, file, document, bytes };

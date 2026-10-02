@@ -19,7 +19,7 @@ export function MediaGenerationPromptEditor({
   value: string;
   onValueChange: (value: string) => void;
   readOnly: boolean;
-  references: MediaGenerationReferenceView[];
+  references: Array<Pick<MediaGenerationReferenceView, 'kind' | 'reviewLabel' | 'promptMention' | 'browserUrl'>>;
 }) {
   const mentions = useMemo(() => referenceMentions(references), [references]);
   const extensions = useMemo<readonly Extension[]>(() => [
@@ -60,7 +60,7 @@ export function MediaGenerationPromptEditor({
 }
 
 function referenceMentions(
-  references: MediaGenerationReferenceView[],
+  references: Array<Pick<MediaGenerationReferenceView, 'kind' | 'reviewLabel' | 'promptMention' | 'browserUrl'>>,
 ): MediaGenerationPromptMention[] {
   return references.flatMap((reference) => {
     if (!reference.promptMention) return [];

@@ -9,16 +9,23 @@ export function MediaGenerationConfiguration({
   provider,
   model,
   value,
+  includeRoute = true,
+  excludedPointers,
 }: {
   provider: string;
   model: string;
   value: JsonValue;
+  includeRoute?: boolean;
+  excludedPointers?: readonly string[];
 }) {
   const nodes = projectMediaGenerationConfiguration({
     provider,
     model,
     configuration: value,
+    includeRoute,
+    excludedPointers,
   });
+  if (nodes.length === 0) return null;
   return (
     <section
       aria-label='Saved media generation configuration'

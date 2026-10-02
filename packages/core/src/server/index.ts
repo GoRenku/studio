@@ -60,6 +60,7 @@ export {
   parseMediaGenerationReviewDocument,
 } from './media-generation-review/document.js';
 export { readMediaGenerationPreview, projectMediaGenerationPreview } from './media-generation-review/preview.js';
+export { readMediaGenerationReview } from './media-generation-review/review-file.js';
 export { updateMediaGenerationPreviewPrompt } from './media-generation-review/prompt.js';
 export { readAssetMediaGenerationRequest } from './media-generation-review/inspection.js';
 export { readMediaGenerationContext } from './media-generation-context/index.js';

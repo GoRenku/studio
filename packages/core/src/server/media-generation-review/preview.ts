@@ -1,9 +1,9 @@
-import fs from 'node:fs/promises';
 import type { MediaGenerationPreviewResource } from '../../client/media-generation-review.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
 import { withProject } from '../project-operation.js';
 import { readProjectRecord } from '../database/access/project.js';
-import { normalizeReviewDocumentPath, resolveReviewDocumentPath } from './review-path.js';
+import { normalizeReviewDocumentPath } from './review-path.js';
+import { readMediaGenerationReview } from './review-file.js';
 import { parseMediaGenerationReviewDocument } from './document.js';
 import { assertSafeMediaGenerationRequest } from './safety.js';
 import { projectLocalMediaReferences } from './local-media.js';
@@ -14,29 +14,8 @@ import type { DatabaseSession } from '../database/lifecycle/store.js';
 export async function readMediaGenerationPreview(
   input: RenkuConfigPathOptions & { projectName?: string; documentPath: string },
 ): Promise<MediaGenerationPreviewResource> {
-  return withProject(input, async ({ session, projectFolder }) => {
-    const documentPath = normalizeReviewDocumentPath(input.documentPath);
-    let raw: string;
-    try {
-      raw = await fs.readFile(resolveReviewDocumentPath(projectFolder, documentPath), 'utf8');
-    } catch (error) {
-      throw new ProjectDataError(
-        'CORE_MEDIA_GENERATION_REVIEW_PATH_INVALID',
-        `Media generation review document could not be read: ${documentPath}.`,
-        { suggestion: error instanceof Error ? error.message : undefined },
-      );
-    }
-    let value: unknown;
-    try {
-      value = JSON.parse(raw);
-    } catch {
-      throw new ProjectDataError(
-        'CORE_MEDIA_GENERATION_REVIEW_INVALID',
-        `Media generation review document is not valid JSON: ${documentPath}.`,
-      );
-    }
-    return projectPreview({ document: parseMediaGenerationReviewDocument(value), documentPath, session, projectFolder });
-  });
+  const review = await readMediaGenerationReview(input);
+  return projectMediaGenerationPreview({ ...input, projectName: review.projectRef.name, document: review.document });
 }
 
 export async function projectMediaGenerationPreview(

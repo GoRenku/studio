@@ -14,6 +14,7 @@ export const STUDIO_VERSION_MANIFESTS = Object.freeze([
   'packages/diagnostics/package.json',
   'packages/engines/package.json',
   'packages/core/package.json',
+  'packages/codex/package.json',
   'packages/studio/package.json',
   'packages/cli/package.json',
 ]);

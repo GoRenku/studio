@@ -10,6 +10,7 @@ import { attachSceneStoryboardImages } from '../generation/scene-storyboard-atta
 import { withProject } from '../project-operation.js';
 import { readAssetMediaGenerationRequest } from '../media-generation-review/inspection.js';
 import { readMediaGenerationPreview } from '../media-generation-review/preview.js';
+import { readMediaGenerationReview } from '../media-generation-review/review-file.js';
 import { updateMediaGenerationPreviewPrompt } from '../media-generation-review/prompt.js';
 import {
   attachShotPlanDialogueAudio,
@@ -27,6 +28,7 @@ type ProjectInput = RenkuConfigPathOptions & { projectName?: string };
 export function createGenerationServiceWiring() {
   return {
     readMediaGenerationPreview,
+    readMediaGenerationReview,
     updateMediaGenerationPreviewPrompt,
     readAssetMediaGenerationRequest,
     readMediaGenerationContext,

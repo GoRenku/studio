@@ -7,35 +7,70 @@ import type {
   MediaCardMedia,
 } from '@/ui/media-card/media-card-contract';
 import { VideoPreviewDialog } from '@/ui/video-preview-dialog';
+import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
+
+export type MediaGenerationReferencePresentation = Pick<MediaGenerationReferenceView, 'requestPointer' | 'kind' | 'reviewLabel' | 'promptMention' | 'browserUrl' | 'available'>;
+
+export interface MediaGenerationReferenceSource {
+  thumbnailUrl?: string;
+  loadPreview: () => Promise<string>;
+}
 
 export function MediaGenerationReferenceCard({
   reference,
+  source,
 }: {
-  reference: MediaGenerationReferenceView;
+  reference: MediaGenerationReferencePresentation;
+  source?: MediaGenerationReferenceSource;
 }) {
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
   const accessibleName = reference.reviewLabel;
+  const presented = { ...reference, browserUrl: reference.browserUrl ?? source?.thumbnailUrl ?? previewUrl };
+  const openPreview = async () => {
+    if (!source || loading) return;
+    setLoading(true);
+    setError(undefined);
+    try {
+      setPreviewUrl(await source.loadPreview());
+      if (reference.kind === 'image') setImagePreviewOpen(true);
+      if (reference.kind === 'video') setVideoPreviewOpen(true);
+    } catch {
+      setError('Reference preview could not be loaded. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <>
       <MediaCard
-        media={referenceMedia(reference, accessibleName)}
+        media={referenceMedia(presented, accessibleName)}
         frame={referenceFrame(reference)}
         presentation={{
           kind: 'overlay',
           ...(!reference.available ? { copy: { title: accessibleName, description: 'Reference unavailable.' } } : {}),
         }}
-        activation={referenceActivation({
+        activation={source && reference.available ? {
+          kind: 'callback', label: `Open ${accessibleName} preview`, disabled: loading,
+          onActivate: () => { void openPreview(); },
+        } : referenceActivation({
           reference,
           accessibleName,
           onOpenVideo: () => setVideoPreviewOpen(true),
         })}
         emptyState={{ kind: referenceEmptyState(reference) }}
       />
-      {reference.available && reference.browserUrl && reference.kind === 'video' ? (
+      {loading ? <p role='status' className='mt-2 text-xs text-muted-foreground'>Loading preview…</p> : null}
+      {error ? <p role='alert' className='mt-2 text-xs text-destructive'>{error}</p> : null}
+      {source && imagePreviewOpen && previewUrl ? <ImagePreviewDialog images={[{ src: previewUrl, alt: accessibleName, title: accessibleName }]} currentIndex={0} onOpenChange={setImagePreviewOpen} /> : null}
+      {reference.available && (previewUrl ?? reference.browserUrl) && reference.kind === 'video' ? (
         <VideoPreviewDialog
           open={videoPreviewOpen}
           onOpenChange={setVideoPreviewOpen}
-          src={reference.browserUrl}
+          src={(previewUrl ?? reference.browserUrl)!}
           title={accessibleName}
         />
       ) : null}
@@ -44,7 +79,7 @@ export function MediaGenerationReferenceCard({
 }
 
 function referenceMedia(
-  reference: MediaGenerationReferenceView,
+  reference: MediaGenerationReferencePresentation,
   accessibleName: string,
 ): MediaCardMedia | null {
   if (!reference.available || !reference.browserUrl) return null;
@@ -72,14 +107,14 @@ function referenceMedia(
   };
 }
 
-function referenceFrame(reference: MediaGenerationReferenceView): MediaCardFrame {
+function referenceFrame(reference: MediaGenerationReferencePresentation): MediaCardFrame {
   return reference.kind === 'audio'
     ? { kind: 'minimum-height', minimumHeightPx: 112 }
     : { kind: 'ratio', aspectRatio: 16 / 10 };
 }
 
 function referenceActivation(input: {
-  reference: MediaGenerationReferenceView;
+  reference: MediaGenerationReferencePresentation;
   accessibleName: string;
   onOpenVideo: () => void;
 }): MediaCardActivation | undefined {
@@ -106,7 +141,7 @@ function referenceActivation(input: {
 }
 
 function referenceEmptyState(
-  reference: MediaGenerationReferenceView,
+  reference: MediaGenerationReferencePresentation,
 ): 'image' | 'film' | 'waveform' {
   if (reference.kind === 'audio') return 'waveform';
   return reference.kind === 'video' ? 'film' : 'image';

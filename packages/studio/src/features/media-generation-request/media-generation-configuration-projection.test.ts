@@ -65,6 +65,33 @@ describe('media generation configuration projection', () => {
     expect(nodes[3]).toEqual({ kind: 'empty', key: 'emptyObject', label: 'Empty Object' });
     expect(findJsonValue(nodes)).toBe('{\n  "exact": true\n}');
   });
+
+  it('omits represented fields by exact pointers while retaining other values and their order', () => {
+    const configuration = { resolution: '768P', references: [], output: { 'image/size': '2K', seed: 42 }, weights: [0.2, 0.8] };
+    const nodes = projectMediaGenerationConfiguration({
+      provider: 'provider', model: 'model', configuration, includeRoute: false,
+      excludedPointers: ['/resolution', '/references/0', '/output/image~1size', '/weights/0'],
+    });
+    expect(nodes).toEqual([
+      { kind: 'group', key: 'output', label: 'Output', children: [{ kind: 'value', key: 'output.seed', label: 'Seed', valueKind: 'number', value: 42 }] },
+      { kind: 'group', key: 'weights', label: 'Weights', children: [{ kind: 'value', key: 'weights.1', label: '2', valueKind: 'number', value: 0.8 }] },
+    ]);
+    expect(configuration).toEqual({ resolution: '768P', references: [], output: { 'image/size': '2K', seed: 42 }, weights: [0.2, 0.8] });
+  });
+
+  it('keeps unrepresented siblings when a large configuration contains an editable field', () => {
+    const description = 'x'.repeat(4_001);
+    expect(projectMediaGenerationConfiguration({
+      provider: 'provider', model: 'model', includeRoute: false,
+      configuration: { output: { width: 1920, description, settings: { height: 1080 } } },
+      excludedPointers: ['/output/width'],
+    })).toEqual([{
+      kind: 'group', key: 'output', label: 'Output', children: [
+        { kind: 'value', key: 'output.description', label: 'Description', valueKind: 'string', value: description },
+        { kind: 'group', key: 'output.settings', label: 'Settings', children: [{ kind: 'value', key: 'output.settings.height', label: 'Height', valueKind: 'number', value: 1080 }] },
+      ],
+    }]);
+  });
 });
 
 function findJsonValue(nodes: MediaGenerationConfigurationNode[]): string | undefined {

@@ -1,6 +1,7 @@
 packages:
   - 'packages/diagnostics'
   - 'packages/core'
+  - 'packages/codex'
   - 'packages/cli'
   - 'packages/engines'
   - 'packages/studio'
@@ -8,6 +9,8 @@ packages:
 
 blockExoticSubdeps: true
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - '@openai/mcp-extensions@0.1.0'
 minimumReleaseAgeStrict: true
 minimumReleaseAgeIgnoreMissingTime: false
 trustLockfile: false

@@ -5,6 +5,7 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
+    "./codex-apps/generation-review.html": "./codex-apps-dist/codex-generation-review.html",
     "./server": {
       "types": "./server-dist/index.d.ts",
       "import": "./server-dist/index.js"
@@ -12,11 +13,13 @@
   },
   "files": [
     "dist",
+    "codex-apps-dist",
     "server-dist"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && pnpm run build:server && vite build",
+    "build": "tsc -b && pnpm run build:server && vite build && pnpm run build:codex",
+    "build:codex": "vite build --config vite.codex.config.ts",
     "clean:server": "node -e \"require('node:fs').rmSync('server-dist', { recursive: true, force: true })\"",
     "build:server": "pnpm run clean:server && tsc --project tsconfig.server.json",
     "lint": "eslint .",
@@ -48,6 +51,11 @@
     "hono": "^4.12.17"
   },
   "devDependencies": {
+    "@gorenku/studio-codex": "workspace:*",
+    "@modelcontextprotocol/ext-apps": "1.7.5",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@openai/mcp-extensions": "0.1.0",
+    "vite-plugin-singlefile": "2.3.0",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-markdown": "^6.5.0",

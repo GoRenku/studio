@@ -88,7 +88,6 @@ describe('MediaGenerationRequestView', () => {
           {
             requestPointer: '/image_urls/0',
             kind: 'image',
-            projectRelativePath: 'scenes/02/first-frame.png' as never,
             reviewLabel: 'Opening frame',
             promptMention: '@Image1',
             browserUrl: '/studio-api/projects/movie/generation-reference-file?path=scenes%2F02%2Ffirst-frame.png',
@@ -97,7 +96,6 @@ describe('MediaGenerationRequestView', () => {
           {
             requestPointer: '/implicit_reference',
             kind: 'image',
-            projectRelativePath: 'scenes/02/implicit.png' as never,
             reviewLabel: 'Implicit endpoint reference',
             browserUrl: '/studio-api/projects/movie/generation-reference-file?path=scenes%2F02%2Fimplicit.png',
             available: true,
@@ -140,7 +138,7 @@ describe('MediaGenerationRequestView', () => {
 
   it('explains unavailable inputs and shows their diagnostic in References', () => {
     render(<MediaGenerationRequestView preview={{ ...preview(),
-      references: [{ requestPointer: '/input', kind: 'audio', available: false, reviewLabel: 'Urban delivery', projectRelativePath: 'tmp/voice.wav' as never }],
+      references: [{ requestPointer: '/input', kind: 'audio', available: false, reviewLabel: 'Urban delivery' }],
       diagnostics: [{ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND', severity: 'warning', message: 'The selected audio is unavailable.', location: { path: ['request', 'input'] } }],
     }} prompt='' tab='references' onPromptChange={() => undefined} onTabChange={() => undefined} />);
     expect(screen.getByText('Urban delivery')).toBeTruthy();

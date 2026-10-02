@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryProviderMetadataCache, EngineError } from '@gorenku/studio-engines';
+import { createProjectDataService, initRenkuConfig } from '@gorenku/studio-core/server';
 import { executeGenerationRequest } from './execute.js';
 import { recoverGenerationRequest } from './recover.js';
 import { validateGenerationRequest } from './validate.js';
@@ -149,6 +150,10 @@ async function requestFixture() {
   const storageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-cli-provider-'));
   const projectName = 'atlas-movie';
   const projectFolder = path.join(storageRoot, projectName);
+  const homeDir = path.join(storageRoot, 'test-home');
+  const projectDataService = createProjectDataService();
+  await initRenkuConfig(storageRoot, { homeDir });
+  await projectDataService.createMovieProject({ homeDir, projectName, title: 'CLI generation fixture' });
   const documentPath = 'tmp/operations/media-generation/request.json';
   await fs.mkdir(path.join(projectFolder, path.dirname(documentPath)), { recursive: true });
   await fs.mkdir(path.join(projectFolder, 'media'), { recursive: true });
@@ -160,7 +165,7 @@ async function requestFixture() {
     prompt: 'A stone arch',
     request: { prompt: 'A stone arch', image: { $file: 'media/reference.png', mimeType: 'image/png', reviewLabel: 'Stone arch reference', promptMention: '@Image1' } },
   }));
-  return { storageRoot, projectName, projectFolder, documentPath };
+  return { storageRoot, projectName, projectFolder, documentPath, homeDir, projectDataService };
 }
 
 function commandInput(
@@ -172,9 +177,8 @@ function commandInput(
     flags: { file: fixture.documentPath, output: 'generated', ...flags },
     runtime: {
       projectName: fixture.projectName,
-      projectDataService: {
-        resolveStudioProjectRef: async () => ({ id: 'project_1', name: fixture.projectName, storageRoot: fixture.storageRoot }),
-      },
+      homeDir: fixture.homeDir,
+      projectDataService: fixture.projectDataService,
       createProviderContext: async ({ signal }: { signal: AbortSignal }) => providerContext(signal),
       createProviderExecutionContext: async ({ signal, outputDirectory }: { signal: AbortSignal; outputDirectory: string }) => ({ ...providerContext(signal), outputDirectory }),
       ...overrides,

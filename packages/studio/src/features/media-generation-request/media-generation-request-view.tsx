@@ -6,7 +6,7 @@ import { LineTabsContent } from '@/ui/line-tabs';
 import { Tabs } from '@/ui/tabs';
 import { MediaGenerationConfiguration } from './media-generation-configuration';
 import { MediaGenerationPromptEditor } from './media-generation-prompt-editor';
-import { MediaGenerationReferenceCard } from './media-generation-reference-card';
+import { MediaGenerationReferenceCard, type MediaGenerationReferencePresentation } from './media-generation-reference-card';
 
 export type MediaGenerationRequestTab = 'prompt' | 'references' | 'configuration';
 
@@ -17,13 +17,17 @@ export function MediaGenerationRequestView({
   onPromptChange,
   onTabChange,
   tabTrailing,
+  configurationContent,
+  renderReference,
 }: {
-  preview: MediaGenerationPreviewResource;
+  preview: Omit<MediaGenerationPreviewResource, 'documentPath' | 'references'> & { references: MediaGenerationReferencePresentation[] };
   prompt: string | null;
   tab: MediaGenerationRequestTab;
   onPromptChange: (prompt: string) => void;
   onTabChange: (tab: MediaGenerationRequestTab) => void;
   tabTrailing?: React.ReactNode;
+  configurationContent?: React.ReactNode;
+  renderReference?: (reference: MediaGenerationReferencePresentation) => React.ReactNode;
 }) {
   return (
     <Tabs
@@ -53,6 +57,7 @@ export function MediaGenerationRequestView({
           {preview.references.length > 0 ? (
             <div className='mx-auto grid w-full max-w-[900px] grid-cols-[repeat(2,minmax(0,420px))] gap-5 pt-[38px] pb-12'>
               {preview.references.map((reference) => (
+                renderReference ? <div key={reference.requestPointer}>{renderReference(reference)}</div> :
                 <MediaGenerationReferenceCard
                   key={reference.requestPointer}
                   reference={reference}
@@ -77,11 +82,11 @@ export function MediaGenerationRequestView({
           ) : null}
         </LineTabsContent>
         <LineTabsContent value='configuration' className='mt-0 min-h-0 overflow-auto'>
-          <MediaGenerationConfiguration
+          {configurationContent ?? <MediaGenerationConfiguration
             provider={preview.provider}
             model={preview.model}
             value={preview.configuration}
-          />
+          />}
         </LineTabsContent>
       </div>
     </Tabs>
