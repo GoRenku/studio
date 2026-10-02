@@ -2,9 +2,10 @@ import { App, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextp
 import { OpenAIExtensions } from '@openai/mcp-extensions/app';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { GenerationReviewReceipt } from '@gorenku/studio-codex/client';
+import type { CodexGenerationReviewDisplayMode } from '@gorenku/studio-core/client';
 
 export function createCodexApp(name: string) {
-  const app = new App({ name, version: import.meta.env.RENKU_RUNTIME_VERSION }, { availableDisplayModes: ['fullscreen'] }, { autoResize: false });
+  const app = new App({ name, version: import.meta.env.RENKU_RUNTIME_VERSION }, { availableDisplayModes: ['inline', 'fullscreen'] }, { autoResize: true });
   const extensions = new OpenAIExtensions(app);
   app.addEventListener('hostcontextchanged', (context) => {
     if (context.theme) {
@@ -18,7 +19,7 @@ export function createCodexApp(name: string) {
 
 export type CodexApp = ReturnType<typeof createCodexApp>;
 
-export async function connectCodexApp(bridge: CodexApp, requireMessaging: boolean): Promise<void> {
+export async function connectCodexApp(bridge: CodexApp, requireMessaging: boolean): Promise<CodexGenerationReviewDisplayMode> {
   await bridge.app.connect();
   const context = bridge.app.getHostContext();
   if (context?.theme) {
@@ -26,12 +27,9 @@ export async function connectCodexApp(bridge: CodexApp, requireMessaging: boolea
     document.documentElement.classList.toggle('dark', context.theme === 'dark');
   }
   if (context?.styles?.variables) applyHostStyleVariables(context.styles.variables);
-  if (context?.displayMode !== 'fullscreen') {
-    if (!context?.availableDisplayModes?.includes('fullscreen')) throw unsupported('This host cannot open the review beside the conversation.');
-    const result = await bridge.app.requestDisplayMode({ mode: 'fullscreen' });
-    if (result.mode !== 'fullscreen') throw unsupported('The host did not open the requested conversation panel.');
-  }
+  if (context?.displayMode !== 'inline' && context?.displayMode !== 'fullscreen') throw unsupported('This host did not open the review in a supported display mode.');
   if (requireMessaging && !bridge.extensions.message) throw unsupported('This host cannot send the review response to its conversation.');
+  return context.displayMode;
 }
 
 export async function notifyGenerationReviewAction(bridge: CodexApp, action: GenerationReviewReceipt): Promise<void> {

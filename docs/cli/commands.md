@@ -130,6 +130,21 @@ Behavior:
 - Leaves an existing config in place and reports its current storage root.
 - Fails when the storage root argument is missing.
 
+The same global YAML config accepts `codexGenerationReview: panel` or
+`codexGenerationReview: visualize`. Omission defaults to `panel`; new configs
+write that default. There is no UI toggle. Edit this key to compare the
+Codex desktop review surfaces, retaining the existing version and storageRoot.
+Invalid values fail with `CONFIG015`. Skills read the effective preference from
+`generation context` rather than reading this file themselves.
+
+`codexGenerationReviewDisplayMode: inline` or
+`codexGenerationReviewDisplayMode: fullscreen` independently selects the initial
+packaged review display preference. Omission defaults to `inline`; new configs
+write that default. Invalid values fail with `CONFIG016`. The MCP resource
+advertises both modes and supplies the configured initial preference. The host
+controls its actual display mode; the app follows host switches without losing
+edits. This setting does not affect Visualize or Studio Preview.
+
 Studio can create its recommended Project Library during first-run setup. Run
 this command before completing onboarding when a custom Project Library is
 required; Studio does not offer a folder picker or relocate an existing library.
@@ -1589,6 +1604,14 @@ Candidate roles, availability, display/workflow selection and dialogue ranges
 remain separate relationship facts. Readable output also shows candidate title
 and path for direct use. Other generation subcommand outputs are unchanged.
 
+`workflowPolicy.codexGenerationReview` returns the effective global `panel` or
+`visualize` preference. The setting is separate from Project `displayPreview`.
+`workflowPolicy.codexGenerationReviewDisplayMode` returns the effective global
+`inline` or `fullscreen` preference, defaulting to `inline`.
+Skills use the current host's capability probe to select presentation: panel
+review never automatically delivers Studio Preview; CLI/non-Codex sessions always
+require it. The CLI context command makes no hosting-interface guesses.
+
 The report contains current Project and target facts, workflow policy,
 purpose-level output guidance, relevant Lookbooks and domain relationships, and
 exact relationship-derived AssetFile suggestions. Suggestions are advisory and
@@ -1990,6 +2013,27 @@ Behavior:
   empty Trash after reviewing the preview.
 - Restore can return structured warnings when content is restored but an active
   selected or picked replacement remains in place.
+
+## `renku studio mcp`
+
+Start the packaged local generation review MCP server for the Codex plugin:
+
+```bash
+renku studio mcp
+```
+
+This is a stdio protocol process, not the Studio web server. Only MCP messages
+appear on stdout. It exposes the combined review HTML, scoped review/reference
+resources, and four tools: `generation.review.capabilities`, `generation.review`,
+app-only `generation.review.respond`, and `generation.review.consume`.
+It has no generation execution tool or Studio sidebar entrypoint.
+
+The capability probe reports the initialized client and its advertised panel
+support. Opening requires Codex's MCP App UI capability; the app also verifies
+inline/fullscreen display and conversation messaging. Unsupported opening reports
+`CODEX_REVIEW_UNSUPPORTED`. Skills use this connection evidence alongside the
+global review preference, then keep generation on the existing CLI/provider path.
+No localhost TLS certificate or OS trust setup is required.
 
 ## `renku studio start`
 

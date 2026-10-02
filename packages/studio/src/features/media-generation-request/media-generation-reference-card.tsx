@@ -12,7 +12,7 @@ import { ImagePreviewDialog } from '@/ui/image-preview-dialog';
 export type MediaGenerationReferencePresentation = Pick<MediaGenerationReferenceView, 'requestPointer' | 'kind' | 'reviewLabel' | 'promptMention' | 'browserUrl' | 'available'>;
 
 export interface MediaGenerationReferenceSource {
-  thumbnailUrl?: string;
+  browserUrl?: string;
   loadPreview: () => Promise<string>;
 }
 
@@ -29,7 +29,7 @@ export function MediaGenerationReferenceCard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const accessibleName = reference.reviewLabel;
-  const presented = { ...reference, browserUrl: reference.browserUrl ?? source?.thumbnailUrl ?? previewUrl };
+  const presented = { ...reference, browserUrl: reference.browserUrl ?? source?.browserUrl ?? previewUrl };
   const openPreview = async () => {
     if (!source || loading) return;
     setLoading(true);
@@ -53,7 +53,7 @@ export function MediaGenerationReferenceCard({
           kind: 'overlay',
           ...(!reference.available ? { copy: { title: accessibleName, description: 'Reference unavailable.' } } : {}),
         }}
-        activation={source && reference.available ? {
+        activation={source && reference.available && !(reference.kind === 'audio' && presented.browserUrl) ? {
           kind: 'callback', label: `Open ${accessibleName} preview`, disabled: loading,
           onActivate: () => { void openPreview(); },
         } : referenceActivation({

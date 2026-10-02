@@ -2,7 +2,8 @@
 
 Decisions [0086](../decisions/0086-use-skill-directed-provider-engines-and-asset-generation-provenance.md),
 [0087](../decisions/0087-use-deterministic-advisory-media-generation-context.md),
-and [0088](../decisions/0088-use-exact-request-references-and-source-derived-image-continuation.md)
+and [0088](../decisions/0088-use-exact-request-references-and-source-derived-image-continuation.md),
+with review routing in [0105](../decisions/0105-select-generation-review-by-preference-and-host-capability.md),
 define the current media-generation architecture.
 
 ## Ownership
@@ -12,7 +13,7 @@ define the current media-generation architecture.
   suggestions for one purpose and target.
 - Media Producer considers that evidence, makes creative reference choices,
   presents request-scoped provider/model/native controls through the shared
-  inline Codex configuration step, and coordinates conversational review.
+  generation review surface selected for the current host, and coordinates review.
 - Provider Skills expose curated model identity/name/input modes, read current
   native operation facts from the provider, and author exact provider-native
   JSON.
@@ -40,7 +41,7 @@ Media Producer / provider Skill
         |
         | transient authored prompt + route schemas + exact references
         v
-Codex inline configuration
+Codex panel / Visualize / conversational configuration
         |
         | editable prompt + exact request-scoped settings
         v
@@ -48,7 +49,7 @@ Media Producer / provider Skill
         |
         | temporary review JSON
         v
-Core Preview projection ---> Studio shared review dialog
+Core review projection ---> Codex panel or Studio Preview
         |
         | exact provider-native request
         v
@@ -62,9 +63,63 @@ focused Core attachment ---> Asset.generationProvenance
                            Studio read-only Inspection
 ```
 
-## Transient Codex configuration
+## Review preference and host capabilities
 
-When the Media Producer Skill runs in Codex with the Visualize capability, it
+Global Renku config owns `codexGenerationReview: panel | visualize`, defaulting
+to `panel` when omitted. Core validates it and includes it in the existing
+generation context's `workflowPolicy`; it is not stored in Project Settings.
+Skills read that CLI projection instead of reading the global YAML directly.
+
+The independent global `codexGenerationReviewDisplayMode: inline | fullscreen`
+setting defaults to `inline` and is also projected through `workflowPolicy`.
+It applies to the packaged review, not Visualize or Studio Preview. The HTML
+resource reads current validated Core config and advertises both modes through
+`openai/ui`, with the configured `preferredDisplayMode`. This is an initial host
+hint, not a forced transition; the host controls the actual mode as specified in
+the [OpenAI display-mode contract](https://github.com/openai/mcp-extensions/blob/main/docs/spec.md#display-modes).
+The app advertises the same modes, follows host mode changes without replacing
+drafts, bounds inline review height with scrolling, and fills the fullscreen
+viewport. SDK size notifications avoid tying inline height to its own iframe
+viewport. No display-mode tool argument, UI toggle or Project mutation is added.
+
+Reference presentation reads only visible image thumbnails and audio through the
+existing scoped MCP resources, sharing a three-read concurrency bound. Audio
+shows a loading state and exposes native playback controls directly once bytes
+are available; a card activation layer must not cover those controls. Full images
+and video remain explicit preview reads. Object URLs are cached within the card
+and revoked on teardown. This presentation never autoplays or changes references.
+
+The local `renku studio mcp` runtime exposes `generation.review.capabilities`.
+It reports initialized client identity and `panel.status: advertised | unavailable`.
+The current eligible client is `codex-mcp-client` with MCP App UI MIME support.
+The opening tool rejects unsupported connections before request reads. The
+HTML app then verifies inline/fullscreen display and active-conversation messaging. Neither
+tool registration nor a capability advertisement proves that a panel rendered.
+
+In eligible Codex desktop, the default panel combines prompt, exact reference
+media and schema-described native controls. Skills Validate, open, yield,
+consume Submit once, write accepted edits, Validate again and Execute with the
+revised file hash. Prepare is excluded because it also delivers Studio Preview.
+Model changes are agent-prepared updates to the same revision-bound review;
+the panel never writes files, fetches provider schemas or executes generation.
+Failures stop that review rather than silently swapping presentation surfaces.
+
+The explicit Visualize desktop choice retains the workflow below and Project
+`displayPreview`. Codex CLI, Claude and unidentified interfaces use conversational
+configuration and always deliver Studio Preview, even when that Project preference
+is false. An unavailable Studio stops the mandatory Preview path. Presentation
+selection belongs to Skills using trusted host context and the connection probe;
+the CLI does not guess its caller's interface from process environment.
+Built-in image capability, provider permissions, validation, recovery, concurrency
+and attachment retain their existing owners. Panel Submit supplies the single
+review confirmation, including built-in images, with no duplicate question.
+
+The plugin has no Studio sidebar launcher. Only the review UI is packaged as an
+MCP resource; no certificate/trust installation or embedded Studio is required.
+
+## Transient Visualize configuration
+
+When the Media Producer Skill selects `visualize` in Codex desktop, it
 shows one transient inline configuration before authoring each image, video, or
 audio review document. The component starts from explicit user direction or the
 matching Project Setting, but that value only preselects the control. The
@@ -345,8 +400,9 @@ No stale-schema fallback or longer-lived cache is introduced. Vendor SDKs load
 only for operations that require them; ElevenLabs voice sample retrieval is
 SDK-independent.
 
-For a single Engines request with Preview enabled, `generation prepare` validates
+For a single Engines request in a Studio Preview path, `generation prepare` validates
 and delivers the Core-owned Preview projection from the same loaded document.
 Its digest is the Execute precondition. Standalone validation remains available
-when Preview is disabled; Codex and ordered multi-request Preview use
+in the panel path or when Preview is disabled in the Visualize desktop path;
+Codex built-in and ordered multi-request Studio Preview use
 `generation preview show`. Provider schemas and validation remain in Engines.

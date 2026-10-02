@@ -3,13 +3,17 @@ import type {
   ProjectSettingsDocument,
 } from '../../client/project-settings.js';
 import type { MediaGenerationKind } from '../../client/media-generation-review.js';
+import type { RenkuConfig } from '../config/document.js';
 
 export function resolveGenerationWorkflowPolicy(input: {
   settings: ProjectSettingsDocument;
   outputMediaKind: MediaGenerationKind;
+  config: Pick<RenkuConfig, 'codexGenerationReview' | 'codexGenerationReviewDisplayMode'>;
 }): GenerationWorkflowPolicy {
   const settings = input.settings.generation[input.outputMediaKind];
   return {
+    codexGenerationReview: input.config.codexGenerationReview,
+    codexGenerationReviewDisplayMode: input.config.codexGenerationReviewDisplayMode,
     displayPreview: input.settings.generation.displayPreview,
     enableProviderPromptExpansion:
       input.settings.generation.enableProviderPromptExpansion,

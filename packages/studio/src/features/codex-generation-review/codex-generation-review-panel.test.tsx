@@ -3,11 +3,13 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GenerationReview, GenerationReviewDraft } from '@gorenku/studio-codex/client';
+import type { CodexGenerationReviewDisplayMode } from '@gorenku/studio-core/client';
 import { CodexGenerationReviewPanel } from './codex-generation-review-panel';
 
 const interaction = vi.hoisted(() => ({
   review: undefined as GenerationReview | undefined,
   drafts: [] as GenerationReviewDraft[], connected: true, busy: false,
+  displayMode: 'inline' as CodexGenerationReviewDisplayMode,
   respond: vi.fn(), editPrompt: vi.fn(), editValue: vi.fn(),
 }));
 
@@ -16,6 +18,7 @@ afterEach(cleanup);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  interaction.displayMode = 'inline';
   interaction.review = {
     reviewId: 'review', revision: 1, phase: 'ready', diagnostics: [],
     requests: [{
@@ -44,6 +47,18 @@ function showConfiguration() {
 }
 
 describe('combined generation review configuration', () => {
+  it('bounds the inline review and fills the host viewport after switching to fullscreen', () => {
+    const { rerender } = render(<CodexGenerationReviewPanel />);
+    const review = screen.getByRole('region', { name: 'Generation review' });
+    expect(review.className).toContain('h-[42rem]');
+    expect(review.className).not.toContain('h-screen');
+    interaction.displayMode = 'fullscreen';
+    rerender(<CodexGenerationReviewPanel />);
+    expect(review.className).toContain('h-screen');
+    expect(review.className).not.toContain('h-[42rem]');
+    expect(screen.getByRole('button', { name: 'Submit and generate' })).toBeTruthy();
+  });
+
   it('shows edited settings once without stale saved values or repeated route/reference fields', () => {
     showConfiguration();
     expect(screen.getByRole('combobox', { name: 'Resolution' }).textContent).toBe('1080P');

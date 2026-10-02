@@ -24,7 +24,7 @@ export function CodexGenerationReviewPanel() {
   const pendingRoute = review?.pendingRoute?.requestId === request?.requestId ? review?.pendingRoute?.route : undefined;
 
   return (
-    <section aria-label='Generation review' className='generation-request-dialog flex h-screen min-h-0 flex-col bg-background'>
+    <section aria-label='Generation review' className={`generation-request-dialog flex min-h-0 flex-col bg-background ${interaction.displayMode === 'fullscreen' ? 'h-screen' : 'h-[42rem]'}`}>
       <div className='grid gap-3 border-b p-5'>
         <h1 className='text-lg font-semibold'>Generation review</h1>
         {interaction.error ? <Alert variant='destructive'><AlertDescription>{interaction.error}</AlertDescription></Alert> : null}
@@ -74,6 +74,6 @@ export function CodexGenerationReviewPanel() {
 
 function CodexGenerationReference({ bridge, reference }: { bridge: CodexApp; reference: GenerationReviewReference }) {
   const container = useRef<HTMLDivElement>(null);
-  const { source, error } = useGenerationReferenceMedia(bridge, reference, container);
-  return <div ref={container}><MediaGenerationReferenceCard reference={reference} source={source} />{error ? <p role='alert' className='mt-2 text-xs text-destructive'>{error}</p> : null}</div>;
+  const { source, error, loading } = useGenerationReferenceMedia(bridge, reference, container);
+  return <div ref={container}><MediaGenerationReferenceCard reference={reference} source={source} />{loading && reference.kind === 'audio' ? <p role='status' className='mt-2 text-xs text-muted-foreground'>Loading audio…</p> : null}{error ? <p role='alert' className='mt-2 text-xs text-destructive'>{error}</p> : null}</div>;
 }

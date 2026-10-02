@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { MediaPurpose, ProjectRelativePath } from '../../client/index.js';
 import { createDeterministicIdGenerator } from '../entity-ids.js';
 import { createProjectDataService } from '../project-data-service.js';
+import { resolveRenkuConfigPath } from '../config/paths.js';
 import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 import { mediaGenerationOutputGuidance } from './purpose-registry.js';
@@ -17,6 +18,20 @@ describe('media generation context', () => {
     homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'renku-media-context-'));
     await writeConfig(homeDir, path.join(homeDir, 'projects'));
     projectData = createProjectDataService();
+  });
+
+  it('reads the current global review preference on each context request', async () => {
+    await projectData.createMovieProject({ homeDir, projectName: 'review-policy', title: 'Review policy' });
+    const input = { homeDir, projectName: 'review-policy', purpose: 'project.cover', target: { kind: 'project', id: 'project' } } as const;
+    const first = await projectData.readMediaGenerationContext(input);
+    expect(first.workflowPolicy.codexGenerationReview).toBe('panel');
+    expect(first.workflowPolicy.codexGenerationReviewDisplayMode).toBe('inline');
+    const configPath = resolveRenkuConfigPath({ homeDir });
+    await fs.appendFile(configPath, 'codexGenerationReview: visualize\ncodexGenerationReviewDisplayMode: fullscreen\n');
+    const second = await projectData.readMediaGenerationContext(input);
+    expect(second.workflowPolicy.codexGenerationReview).toBe('visualize');
+    expect(second.workflowPolicy.codexGenerationReviewDisplayMode).toBe('fullscreen');
+    expect(second.workflowPolicy.displayPreview).toBe(first.workflowPolicy.displayPreview);
   });
 
   it('projects current same-owner evidence without selecting or excluding creative alternatives', async () => {

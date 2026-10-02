@@ -8,7 +8,7 @@ const integration = vi.hoisted(() => ({
   bridge: { app: {
     ontoolresult: undefined as ((result: { isError?: boolean; content: Array<{ type: string; text?: string }>; structuredContent?: { review: GenerationReview } }) => void) | undefined,
     onteardown: undefined as (() => Promise<object>) | undefined,
-    callServerTool: vi.fn(), readServerResource: vi.fn(), close: vi.fn(),
+    callServerTool: vi.fn(), readServerResource: vi.fn(), close: vi.fn(), addEventListener: vi.fn(),
   } },
   connect: vi.fn(), notify: vi.fn(),
 }));
@@ -26,6 +26,7 @@ beforeEach(() => {
     expect(integration.bridge.app.ontoolresult).toBeTypeOf('function');
     expect(integration.bridge.app.onteardown).toBeTypeOf('function');
     integration.bridge.app.ontoolresult!({ content: [], structuredContent: { review: reviewFixture() } });
+    return 'inline';
   });
   integration.bridge.app.callServerTool.mockImplementation(async ({ arguments: response }: { arguments: GenerationReviewResponse }) => {
     const action: GenerationReviewReceipt = { reviewId: response.reviewId, responseId: response.responseId, revision: 2, action: response.action };
@@ -49,6 +50,25 @@ function reviewFixture(): GenerationReview {
 }
 
 describe('generation review conversation handoff', () => {
+  it('projects the initial host mode and subsequent host switches without replacing edited drafts', async () => {
+    const { result, unmount } = renderHook(() => useCodexGenerationReview());
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    expect(result.current.displayMode).toBe('inline');
+    act(() => result.current.editPrompt('request', 'Exact edited prompt'));
+    const onContextChanged = integration.bridge.app.addEventListener.mock.calls[0]![1];
+    act(() => onContextChanged({ displayMode: 'fullscreen' }));
+    expect(result.current.displayMode).toBe('fullscreen');
+    act(() => onContextChanged({ theme: 'dark' }));
+    expect(result.current.displayMode).toBe('fullscreen');
+    act(() => onContextChanged({ displayMode: 'inline' }));
+    expect(result.current.displayMode).toBe('inline');
+    expect(result.current.drafts[0]?.prompt).toBe('Exact edited prompt');
+    expect(integration.bridge.app.callServerTool).not.toHaveBeenCalled();
+    unmount();
+    act(() => onContextChanged({ displayMode: 'fullscreen' }));
+    expect(result.current.displayMode).toBe('inline');
+  });
+
   it('registers handlers before connection and stores exact edited values before notification', async () => {
     const { result } = renderHook(() => useCodexGenerationReview());
     await waitFor(() => expect(result.current.connected).toBe(true));

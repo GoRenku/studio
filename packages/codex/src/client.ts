@@ -1,6 +1,14 @@
 import type { JsonValue, MediaGenerationPreviewResource, MediaGenerationReferenceView } from '@gorenku/studio-core/client';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 
+export interface GenerationReviewCapabilities {
+  client: { name: string; version: string; title?: string } | null;
+  panel: {
+    status: 'advertised' | 'unavailable';
+    reason: 'codex-ui-advertised' | 'non-codex-client' | 'mcp-app-ui-unavailable';
+  };
+}
+
 export type GenerationReviewControlKind = 'text' | 'multiline' | 'number' | 'integer' | 'boolean' | 'enum' | 'multi-enum' | 'object' | 'array';
 
 export interface GenerationReviewField {

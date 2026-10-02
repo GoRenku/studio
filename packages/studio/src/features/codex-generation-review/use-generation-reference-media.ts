@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { StructuredError } from '@gorenku/studio-diagnostics';
 import type { GenerationReviewReference } from '@gorenku/studio-codex/client';
 import type { CodexApp } from '@/services/codex-app';
@@ -7,8 +7,8 @@ export function useGenerationReferenceMedia(bridge: CodexApp, reference: Generat
   const resources = useRef(new Map<string, string>());
   const pending = useRef(new Map<string, Promise<string>>());
   const disposed = useRef(false);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string>();
-  const [error, setError] = useState<string>();
+  const scope = useMemo(() => ({ bridge, container, available: reference.available, kind: reference.kind, resourceUri: reference.resourceUri, thumbnailUri: reference.thumbnailUri }), [bridge, container, reference.available, reference.kind, reference.resourceUri, reference.thumbnailUri]);
+  const [media, setMedia] = useState<{ scope: object; browserUrl?: string; loading: boolean; error?: string }>({ scope, loading: false });
 
   const load = useCallback((uri: string) => {
     if (disposed.current) return Promise.reject(new Error('The reference is no longer visible.'));
@@ -28,22 +28,28 @@ export function useGenerationReferenceMedia(bridge: CodexApp, reference: Generat
 
   useEffect(() => {
     disposed.current = false;
+    let active = true;
+    const displayResourceUri = reference.kind === 'audio' ? reference.resourceUri : reference.thumbnailUri;
+    const failureMessage = reference.kind === 'audio' ? 'Reference audio could not be loaded.' : 'Reference thumbnail could not be loaded.';
     const urls = resources.current;
     const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting) || !reference.thumbnailUri || !reference.available) return;
+      if (!entries.some((entry) => entry.isIntersecting) || !displayResourceUri || !reference.available) return;
       observer.disconnect();
-      void thumbnailQueue.run(() => load(reference.thumbnailUri!)).then((url) => { if (!disposed.current) setThumbnailUrl(url); }).catch((failure) => { if (!disposed.current) setError(failure instanceof StructuredError ? failure.message : 'Reference thumbnail could not be loaded.'); });
+      setMedia({ scope, loading: true });
+      void referenceMediaQueue.run(() => load(displayResourceUri)).then((browserUrl) => { if (active) setMedia({ scope, browserUrl, loading: false }); }).catch((failure) => { if (active) setMedia({ scope, loading: false, error: failure instanceof StructuredError ? failure.message : failureMessage }); });
     });
     if (container.current) observer.observe(container.current);
     return () => {
       disposed.current = true;
+      active = false;
       observer.disconnect();
       urls.forEach((url) => URL.revokeObjectURL(url));
       urls.clear();
     };
-  }, [container, load, reference.available, reference.thumbnailUri]);
+  }, [container, load, reference.available, reference.kind, reference.resourceUri, reference.thumbnailUri, scope]);
 
-  return { error, source: { thumbnailUrl, loadPreview: () => load(reference.resourceUri) } };
+  const visibleMedia = media.scope === scope ? media : { loading: false, browserUrl: undefined, error: undefined };
+  return { error: visibleMedia.error, loading: visibleMedia.loading, source: { browserUrl: visibleMedia.browserUrl, loadPreview: () => { setMedia((current) => current.scope === scope ? { ...current, error: undefined } : { scope, loading: false }); return load(reference.resourceUri); } } };
 }
 
 async function readMediaResource(bridge: CodexApp, uri: string): Promise<Blob> {
@@ -65,7 +71,7 @@ async function readMediaResource(bridge: CodexApp, uri: string): Promise<Blob> {
   return new Blob([bytes], { type: content.mimeType });
 }
 
-class ThumbnailQueue {
+class ReferenceMediaQueue {
   private active = 0;
   private readonly waiting: Array<() => void> = [];
 
@@ -81,4 +87,4 @@ class ThumbnailQueue {
   }
 }
 
-const thumbnailQueue = new ThumbnailQueue();
+const referenceMediaQueue = new ReferenceMediaQueue();

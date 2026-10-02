@@ -40,7 +40,12 @@ export interface ProjectSettingsMutationReport {
   resourceKeys: string[];
 }
 
+export type CodexGenerationReview = 'panel' | 'visualize';
+export type CodexGenerationReviewDisplayMode = 'inline' | 'fullscreen';
+
 export interface GenerationWorkflowPolicy {
+  codexGenerationReview: CodexGenerationReview;
+  codexGenerationReviewDisplayMode: CodexGenerationReviewDisplayMode;
   displayPreview: boolean;
   enableProviderPromptExpansion: boolean;
   provider: string;

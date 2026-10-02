@@ -4,12 +4,14 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ErrorCode, McpError, type ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import { RESOURCE_MIME_TYPE, registerAppResource, registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 import { OpenAIExtensions, type OpenAIUiResourceMetadata } from '@openai/mcp-extensions/server';
+import { readRenkuConfig } from '@gorenku/studio-core/server';
 import { generationReviewConsumeSchema, generationReviewInputSchema, generationReviewResponseSchema } from './generation-review-schemas.js';
 import { generationReviewResult, openGenerationReview } from './generation-review.js';
 import { GenerationReviewState } from './generation-review-state.js';
 import { consumeGenerationReview, respondToGenerationReview } from './generation-review-responses.js';
 import { readGenerationReference } from './generation-reference-resources.js';
 import { integrationErrorResult } from './diagnostics.js';
+import { assertGenerationReviewCapability, readGenerationReviewCapabilities } from './generation-review-capabilities.js';
 
 export interface CodexServerOptions {
   version: string;
@@ -18,13 +20,12 @@ export interface CodexServerOptions {
 }
 
 const REVIEW_URI = 'ui://renku/generation-review';
-const displayMetadata = { preferredDisplayMode: 'fullscreen', availableDisplayModes: ['fullscreen'] } satisfies OpenAIUiResourceMetadata;
 
 export function createCodexServer(options: CodexServerOptions): McpServer {
   const server = new McpServer({ name: 'renku', version: options.version });
   new OpenAIExtensions(server);
   const state = new GenerationReviewState();
-  registerHtmlResource(server, REVIEW_URI, 'Generation review', options.generationReviewHtml, { connectDomains: ['blob:'], resourceDomains: ['blob:'] });
+  registerHtmlResource(server, REVIEW_URI, 'Generation review', options.generationReviewHtml, { connectDomains: ['blob:'], resourceDomains: ['blob:'] }, options.homeDir);
   registerReviewTools(server, state, options.homeDir);
   registerReviewResources(server, state, options.homeDir);
   server.server.onclose = () => state.expire();
@@ -36,12 +37,23 @@ export async function startCodexServer(options: CodexServerOptions): Promise<voi
 }
 
 function registerReviewTools(server: McpServer, state: GenerationReviewState, homeDir?: string): void {
+  server.registerTool('generation.review.capabilities', {
+    title: 'Generation review capabilities', inputSchema: {},
+    description: 'Read this connection\'s initialized MCP client identity and advertised Codex review support. Advertisement is not confirmation that a review rendered; the app must still verify inline/fullscreen display and conversation messaging. Use Studio Preview for unsupported or non-Codex hosts.',
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, () => {
+    const capabilities = readGenerationReviewCapabilities(server);
+    return { content: [{ type: 'text', text: JSON.stringify(capabilities) }], structuredContent: { ...capabilities } };
+  });
   registerAppTool(server, 'generation.review', {
     title: 'Generation review', inputSchema: generationReviewInputSchema,
     description: 'Open or refresh the combined generation review panel. Return immediately, end the turn, and wait for its submitted action. This tool never executes generation.',
     annotations: { readOnlyHint: true, openWorldHint: false },
     _meta: { ui: { resourceUri: REVIEW_URI, visibility: ['model'] } },
-  }, (input) => guardedResult(async () => generationReviewResult(await openGenerationReview(state, input, homeDir))));
+  }, (input) => guardedResult(async () => {
+    assertGenerationReviewCapability(server);
+    return generationReviewResult(await openGenerationReview(state, input, homeDir));
+  }));
   registerAppTool(server, 'generation.review.respond', {
     title: 'Respond to generation review', inputSchema: generationReviewResponseSchema,
     _meta: { ui: { resourceUri: REVIEW_URI, visibility: ['app'] } },
@@ -63,10 +75,14 @@ function registerReviewResources(server: McpServer, state: GenerationReviewState
   server.registerResource('Review thumbnail', new ResourceTemplate('renku-reference://{reviewId}/{referenceId}/thumbnail', { list: undefined }), { mimeType: 'image/webp' }, (uri) => guardedResource(() => readGenerationReference(state, uri.href, homeDir)));
 }
 
-function registerHtmlResource(server: McpServer, uri: string, title: string, file: string, csp: { connectDomains: string[]; resourceDomains: string[] }): void {
-  registerAppResource(server, title, uri, {}, () => guardedResource(async () => ({
-    contents: [{ uri, mimeType: RESOURCE_MIME_TYPE, text: await fs.readFile(file, 'utf8'), _meta: { 'openai/ui': displayMetadata, ui: { csp } } }],
-  })));
+function registerHtmlResource(server: McpServer, uri: string, title: string, file: string, csp: { connectDomains: string[]; resourceDomains: string[] }, homeDir?: string): void {
+  registerAppResource(server, title, uri, {}, () => guardedResource(async () => {
+    const config = await readRenkuConfig({ homeDir });
+    const displayMetadata = { preferredDisplayMode: config.codexGenerationReviewDisplayMode, availableDisplayModes: ['inline', 'fullscreen'] } satisfies OpenAIUiResourceMetadata;
+    return {
+      contents: [{ uri, mimeType: RESOURCE_MIME_TYPE, text: await fs.readFile(file, 'utf8'), _meta: { 'openai/ui': displayMetadata, ui: { csp } } }],
+    };
+  }));
 }
 
 async function guardedResource(operation: () => Promise<ReadResourceResult>): Promise<ReadResourceResult> {

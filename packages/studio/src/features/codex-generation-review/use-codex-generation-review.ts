@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { JsonValue } from '@gorenku/studio-core/client';
+import type { CodexGenerationReviewDisplayMode, JsonValue } from '@gorenku/studio-core/client';
 import type { GenerationReview, GenerationReviewReceipt, GenerationReviewDraft, GenerationReviewResponse } from '@gorenku/studio-codex/client';
 import { connectCodexApp, createCodexApp, notifyGenerationReviewAction, type CodexApp } from '@/services/codex-app';
 
@@ -8,6 +8,7 @@ export function useCodexGenerationReview() {
   const [review, setReview] = useState<GenerationReview>();
   const [drafts, setDrafts] = useState<GenerationReviewDraft[]>([]);
   const [connected, setConnected] = useState(false);
+  const [displayMode, setDisplayMode] = useState<CodexGenerationReviewDisplayMode>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [notification, setNotification] = useState<GenerationReviewReceipt>();
@@ -24,6 +25,9 @@ export function useCodexGenerationReview() {
   useEffect(() => {
     let disposed = false;
     const app = createCodexApp('Renku generation review');
+    app.app.addEventListener('hostcontextchanged', (context) => {
+      if (!disposed && (context.displayMode === 'inline' || context.displayMode === 'fullscreen')) setDisplayMode(context.displayMode);
+    });
     app.app.ontoolresult = (result) => {
       if (disposed) return;
       if (result.isError) { setError(resultError(result)); return; }
@@ -31,7 +35,7 @@ export function useCodexGenerationReview() {
       if (next) applyReview(next);
     };
     app.app.onteardown = async () => { disposed = true; setConnected(false); return {}; };
-    void connectCodexApp(app, true).then(() => { if (!disposed) { setBridge(app); setConnected(true); } }).catch((failure) => { if (!disposed) setError(errorMessage(failure)); });
+    void connectCodexApp(app, true).then((mode) => { if (!disposed) { setDisplayMode(mode); setBridge(app); setConnected(true); } }).catch((failure) => { if (!disposed) setError(errorMessage(failure)); });
     return () => { disposed = true; void app.app.close(); };
   }, [applyReview]);
 
@@ -92,7 +96,7 @@ export function useCodexGenerationReview() {
   };
 
   return {
-    bridge, review, drafts, connected, busy, error, notification, pendingResponse, respond, retryResponse, retryNotification,
+    bridge, review, drafts, connected, displayMode, busy, error, notification, pendingResponse, respond, retryResponse, retryNotification,
     editPrompt: (requestId: string, prompt: string) => editDraft(requestId, { prompt }),
     editValue: (requestId: string, key: string, value: JsonValue | undefined) => {
       const draft = drafts.find((draft) => draft.requestId === requestId);

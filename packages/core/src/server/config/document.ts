@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import type { CodexGenerationReview, CodexGenerationReviewDisplayMode } from '../../client/project-settings.js';
 import { RenkuConfigError } from './errors.js';
 import {
   resolveRenkuConfigPath,
@@ -13,6 +14,8 @@ export const RENKU_CONFIG_VERSION = '0.1.0' as const;
 export interface RenkuConfig {
   version: typeof RENKU_CONFIG_VERSION;
   storageRoot: string;
+  codexGenerationReview: CodexGenerationReview;
+  codexGenerationReviewDisplayMode: CodexGenerationReviewDisplayMode;
 }
 
 export interface ReadRenkuConfigOptions extends RenkuConfigPathOptions {
@@ -83,6 +86,8 @@ export async function initRenkuConfig(
   const config: RenkuConfig = {
     version: RENKU_CONFIG_VERSION,
     storageRoot,
+    codexGenerationReview: 'panel',
+    codexGenerationReviewDisplayMode: 'inline',
   };
 
   await fs.writeFile(configPath, stringifyYaml(config), 'utf8');
@@ -171,7 +176,7 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
     }
   }
 
-  assertAllowedKeys(value, ['version', 'storageRoot'], configPath);
+  assertAllowedKeys(value, ['version', 'storageRoot', 'codexGenerationReview', 'codexGenerationReviewDisplayMode'], configPath);
 
   if (value.version !== RENKU_CONFIG_VERSION) {
     throw new RenkuConfigError(
@@ -187,9 +192,47 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
     );
   }
 
+  const codexGenerationReview = value.codexGenerationReview === undefined
+    ? 'panel'
+    : value.codexGenerationReview;
+  if (codexGenerationReview !== 'panel' && codexGenerationReview !== 'visualize') {
+    throw new RenkuConfigError(
+      'CONFIG015',
+      'Renku config codexGenerationReview must be "panel" or "visualize".',
+      {
+        issues: [createDiagnosticError(
+          'CONFIG015',
+          'Choose "panel" or "visualize".',
+          { path: ['codexGenerationReview'], context: 'Renku config' }
+        )],
+        suggestion: 'Set codexGenerationReview to "panel" or "visualize" in the global Renku config.',
+      }
+    );
+  }
+
+  const codexGenerationReviewDisplayMode = value.codexGenerationReviewDisplayMode === undefined
+    ? 'inline'
+    : value.codexGenerationReviewDisplayMode;
+  if (codexGenerationReviewDisplayMode !== 'inline' && codexGenerationReviewDisplayMode !== 'fullscreen') {
+    throw new RenkuConfigError(
+      'CONFIG016',
+      'Renku config codexGenerationReviewDisplayMode must be "inline" or "fullscreen".',
+      {
+        issues: [createDiagnosticError(
+          'CONFIG016',
+          'Choose "inline" or "fullscreen".',
+          { path: ['codexGenerationReviewDisplayMode'], context: 'Renku config' }
+        )],
+        suggestion: 'Set codexGenerationReviewDisplayMode to "inline" or "fullscreen" in the global Renku config.',
+      }
+    );
+  }
+
   return {
     version: RENKU_CONFIG_VERSION,
     storageRoot: path.resolve(value.storageRoot),
+    codexGenerationReview,
+    codexGenerationReviewDisplayMode,
   };
 }
 
