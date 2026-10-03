@@ -4,6 +4,10 @@ Date: 2026-09-20
 
 Status: accepted
 
+Updated by [ADR 0106](0106-install-codex-plugin-and-route-generation-review.md):
+the installer also installs the Codex plugin, and Desktop review routing uses
+the core-owned installation flag with an `auto` default.
+
 ## Decision
 
 The macOS and Windows bootstrap installers install Renku, prepare the tools

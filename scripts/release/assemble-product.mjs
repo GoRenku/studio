@@ -86,7 +86,7 @@ for (const name of ['LICENSE', 'NOTICE', 'TRADEMARKS.md']) {
   cpSync(path.join(repositoryRoot, name), path.join(productRoot, name));
 }
 mkdirSync(path.join(productRoot, 'distribution'));
-for (const name of ['install.sh', 'install.ps1']) {
+for (const name of ['install.sh', 'install.ps1', 'install-codex-plugin.mjs']) {
   cpSync(path.join(repositoryRoot, 'distribution', name), path.join(productRoot, 'distribution', name));
 }
 writeFileSync(

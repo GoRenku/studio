@@ -65,8 +65,8 @@ focused Core attachment ---> Asset.generationProvenance
 
 ## Review preference and host capabilities
 
-Global Renku config owns `codexGenerationReview: panel | visualize`, defaulting
-to `panel` when omitted. Core validates it and includes it in the existing
+Global Renku config owns `codexGenerationReview: auto | panel | visualize`, defaulting
+to `auto` when omitted. Core validates it and includes it in the existing
 generation context's `workflowPolicy`; it is not stored in Project Settings.
 Skills read that CLI projection instead of reading the global YAML directly.
 
@@ -96,7 +96,10 @@ The opening tool rejects unsupported connections before request reads. The
 HTML app then verifies inline/fullscreen display and active-conversation messaging. Neither
 tool registration nor a capability advertisement proves that a panel rendered.
 
-In eligible Codex desktop, the default panel combines prompt, exact reference
+In trusted Codex Desktop, `auto` and `panel` probe the current Renku connection
+when available. Advertised support selects the panel even when
+`workflowPolicy.codexPluginInstalled` is false, as on a development machine
+without an installer record. The panel combines prompt, exact reference
 media and schema-described native controls. Skills Validate, open, yield,
 consume Submit once, write accepted edits, Validate again and Execute with the
 revised file hash. Prepare is excluded because it also delivers Studio Preview.
@@ -104,11 +107,15 @@ Model changes are agent-prepared updates to the same revision-bound review;
 the panel never writes files, fetches provider schemas or executes generation.
 Failures stop that review rather than silently swapping presentation surfaces.
 
-The explicit Visualize desktop choice retains the workflow below and Project
+Without a probe or installation record, Desktop uses Visualize even for a saved panel
+preference. The explicit Visualize desktop choice retains the workflow below and Project
 `displayPreview`. Codex CLI, Claude and unidentified interfaces use conversational
 configuration and always deliver Studio Preview, even when that Project preference
 is false. An unavailable Studio stops the mandatory Preview path. Presentation
-selection belongs to Skills using trusted host context and the connection probe;
+selection belongs to Skills using trusted host context and the current connection
+probe. The installation flag records installer verification; it does not veto a
+working connection. A missing probe with installation recorded or an unavailable
+or failed probe stops the workflow, as does a failed panel handshake;
 the CLI does not guess its caller's interface from process environment.
 Built-in image capability, provider permissions, validation, recovery, concurrency
 and attachment retain their existing owners. Panel Submit supplies the single

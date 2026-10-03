@@ -1,3 +1,4 @@
+export { readCodexPluginInstallation, recordCodexPluginInstallation } from './installation/codex-plugin.js';
 export {
   RENKU_CONFIG_DIR_NAME,
   RENKU_CONFIG_FILE_NAME,

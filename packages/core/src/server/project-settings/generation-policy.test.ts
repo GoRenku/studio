@@ -10,7 +10,8 @@ describe('Project generation workflow policy', () => {
     ['video', 'fal-ai', true, 1],
     ['audio', 'elevenlabs', true, 1],
   ] as const)('projects %s policy', (outputMediaKind, provider, askBeforeGenerating, concurrencyLimit) => {
-    expect(resolveGenerationWorkflowPolicy({ config, settings: DEFAULT_PROJECT_SETTINGS, outputMediaKind })).toEqual({
+    expect(resolveGenerationWorkflowPolicy({ codexPluginInstalled: false, config, settings: DEFAULT_PROJECT_SETTINGS, outputMediaKind })).toEqual({
+      codexPluginInstalled: false,
       codexGenerationReview: 'panel',
       codexGenerationReviewDisplayMode: 'inline',
       displayPreview: true,
@@ -24,17 +25,17 @@ describe('Project generation workflow policy', () => {
   it('uses an effective limit of one while concurrency is off', () => {
     const settings = structuredClone(DEFAULT_PROJECT_SETTINGS);
     settings.generation.video.maxConcurrentGenerations = 4;
-    expect(resolveGenerationWorkflowPolicy({ config, settings, outputMediaKind: 'video' }).concurrencyLimit).toBe(1);
+    expect(resolveGenerationWorkflowPolicy({ codexPluginInstalled: false, config, settings, outputMediaKind: 'video' }).concurrencyLimit).toBe(1);
     settings.generation.video.runGenerationsConcurrently = true;
-    expect(resolveGenerationWorkflowPolicy({ config, settings, outputMediaKind: 'video' }).concurrencyLimit).toBe(4);
+    expect(resolveGenerationWorkflowPolicy({ codexPluginInstalled: false, config, settings, outputMediaKind: 'video' }).concurrencyLimit).toBe(4);
   });
 
   it('projects Pika through the existing image and video policy lanes', () => {
     const settings = structuredClone(DEFAULT_PROJECT_SETTINGS);
     settings.generation.image.provider = 'pika';
     settings.generation.video.provider = 'pika';
-    expect(resolveGenerationWorkflowPolicy({ config, settings, outputMediaKind: 'image' }).provider).toBe('pika');
-    expect(resolveGenerationWorkflowPolicy({ config, settings, outputMediaKind: 'video' }).provider).toBe('pika');
+    expect(resolveGenerationWorkflowPolicy({ codexPluginInstalled: false, config, settings, outputMediaKind: 'image' }).provider).toBe('pika');
+    expect(resolveGenerationWorkflowPolicy({ codexPluginInstalled: false, config, settings, outputMediaKind: 'video' }).provider).toBe('pika');
   });
 
   it('projects a disabled provider prompt-expansion preference through every media lane', () => {
@@ -42,6 +43,7 @@ describe('Project generation workflow policy', () => {
     settings.generation.enableProviderPromptExpansion = false;
     for (const outputMediaKind of ['image', 'video', 'audio'] as const) {
       expect(resolveGenerationWorkflowPolicy({
+        codexPluginInstalled: false,
         config,
         settings,
         outputMediaKind,
@@ -52,6 +54,7 @@ describe('Project generation workflow policy', () => {
   it('projects the global Visualize preference without changing Project settings', () => {
     const settings = structuredClone(DEFAULT_PROJECT_SETTINGS);
     expect(resolveGenerationWorkflowPolicy({
+      codexPluginInstalled: true,
       config: { codexGenerationReview: 'visualize', codexGenerationReviewDisplayMode: 'fullscreen' }, settings, outputMediaKind: 'image',
     })).toMatchObject({ codexGenerationReview: 'visualize', codexGenerationReviewDisplayMode: 'fullscreen', displayPreview: true });
     expect(settings).toEqual(DEFAULT_PROJECT_SETTINGS);

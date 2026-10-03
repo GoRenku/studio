@@ -25,7 +25,7 @@ describe('Renku config document', () => {
     await expect(readRenkuConfig({ homeDir })).resolves.toEqual({
       version: '0.1.0',
       storageRoot,
-      codexGenerationReview: 'panel',
+      codexGenerationReview: 'auto',
       codexGenerationReviewDisplayMode: 'inline',
     });
     const configYaml = await fs.readFile(resolveRenkuConfigPath({ homeDir }), 'utf8');
@@ -45,7 +45,7 @@ describe('Renku config document', () => {
     ).resolves.toBe(path.join(homeDir, 'other'));
   });
 
-  it.each(['panel', 'visualize'] as const)('reads an explicit %s review preference', async (preference) => {
+  it.each(['auto', 'panel', 'visualize'] as const)('reads an explicit %s review preference', async (preference) => {
     await initRenkuConfig(path.join(homeDir, 'projects'), { homeDir });
     const configPath = resolveRenkuConfigPath({ homeDir });
     await fs.writeFile(configPath, `version: 0.1.0\nstorageRoot: /tmp/movies\ncodexGenerationReview: ${preference}\n`);
@@ -57,7 +57,7 @@ describe('Renku config document', () => {
     const configPath = resolveRenkuConfigPath({ homeDir });
     const contents = 'version: 0.1.0\nstorageRoot: /tmp/movies\n';
     await fs.writeFile(configPath, contents);
-    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({ codexGenerationReview: 'panel', codexGenerationReviewDisplayMode: 'inline' });
+    await expect(readRenkuConfig({ homeDir })).resolves.toMatchObject({ codexGenerationReview: 'auto', codexGenerationReviewDisplayMode: 'inline' });
     await expect(fs.readFile(configPath, 'utf8')).resolves.toBe(contents);
   });
 

@@ -93,6 +93,8 @@ function Install-AgentSkills {
       }
       $env:PATH = "$(Split-Path $GitCommand);$env:PATH"
     }
+    & $NodeCommand (Join-Path $Destination 'distribution\install-codex-plugin.mjs')
+    if ($LASTEXITCODE -ne 0) { Write-Warning 'INSTALL011 Codex plugin setup failed. Continuing general skills setup.' }
     Write-Host 'Choose the agents that should receive the Renku skills.'
     Write-Host 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
     & $NodeCommand $SkillsEntry add GoRenku/studio-skills --global --skill '*' --copy

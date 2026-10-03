@@ -130,11 +130,31 @@ installed: it explains cancellation and only asks users who confirmed to restart
 their agents. The runtime launch command is printed before skills setup so a
 skills or Git failure does not hide how to start the installed application.
 
+The focused bundled `distribution/install-codex-plugin.mjs` also installs the
+Codex plugin using the user's existing CLI profile and the public commands:
+
+```text
+codex plugin marketplace add GoRenku/studio-skills --ref beta --json
+codex plugin marketplace upgrade renku --json
+codex plugin add renku@renku --json
+codex plugin list --json
+```
+
+It checks installed/enabled state before Core records `codex-plugin.json` beside
+the platform config. CLI absence or unsupported plugin commands records false
+and skips this step. Conflicting sources, disabled plugins, network errors and
+failed verification are reported with `INSTALL011`; general skills setup still
+runs. Core state failures use `CONFIG017`. Codex CLI is never installed by Renku.
+Both `renku update` and `renku update skills` repeat the plugin step.
+
+Before shipping the runtime, publish the sister plugin with matching strict
+SemVer manifest versions, its `codex.mcp.json` declaration and the beta branch.
+Run native Mac/Windows Desktop acceptance with and without Codex CLI, reopen
+Desktop, exercise panel/Visualize reviews and update an installed plugin.
+
 The command reads the skills repository's default branch. Re-run the installer
-to refresh the runtime and skills. This installs standalone skills, not a
-marketplace plugin; runtime
-and skills releases remain separate. Existing plugin distribution is not changed
-by this onboarding workflow.
+to refresh the runtime and skills. General skills installation remains independent
+of the Codex plugin step; runtime and skills releases remain separate.
 
 Reference: [skills installer documentation](https://github.com/vercel-labs/skills).
 

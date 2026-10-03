@@ -130,9 +130,9 @@ Behavior:
 - Leaves an existing config in place and reports its current storage root.
 - Fails when the storage root argument is missing.
 
-The same global YAML config accepts `codexGenerationReview: panel` or
-`codexGenerationReview: visualize`. Omission defaults to `panel`; new configs
-write that default. There is no UI toggle. Edit this key to compare the
+The same global YAML config accepts `codexGenerationReview: auto`,
+`codexGenerationReview: panel` or `codexGenerationReview: visualize`. Omission
+defaults to `auto`; new configs write that default. There is no UI toggle. Edit this key to compare the
 Codex desktop review surfaces, retaining the existing version and storageRoot.
 Invalid values fail with `CONFIG015`. Skills read the effective preference from
 `generation context` rather than reading this file themselves.
@@ -1604,11 +1604,19 @@ Candidate roles, availability, display/workflow selection and dialogue ranges
 remain separate relationship facts. Readable output also shows candidate title
 and path for direct use. Other generation subcommand outputs are unchanged.
 
-`workflowPolicy.codexGenerationReview` returns the effective global `panel` or
-`visualize` preference. The setting is separate from Project `displayPreview`.
+`workflowPolicy.codexGenerationReview` returns the effective global `auto`,
+`panel` or `visualize` preference. `workflowPolicy.codexPluginInstalled` returns
+the verified installation flag from `codex-plugin.json` beside the global config.
+Missing installation state means false; invalid state uses `CONFIG017`. The
+setting is separate from Project `displayPreview`.
 `workflowPolicy.codexGenerationReviewDisplayMode` returns the effective global
 `inline` or `fullscreen` preference, defaulting to `inline`.
-Skills use the current host's capability probe to select presentation: panel
+Skills use trusted host context and the current Renku connection to select presentation.
+Codex Desktop probes available panel capabilities for `auto` and `panel`; advertised
+support selects the panel even without an installer record. Explicit Visualize
+still wins. Without a probe or installation record it uses Visualize. An unavailable
+or failed probe, a missing probe with installation recorded, or a failed handshake
+stops without opening another review. Panel
 review never automatically delivers Studio Preview; CLI/non-Codex sessions always
 require it. The CLI context command makes no hosting-interface guesses.
 
@@ -2124,11 +2132,15 @@ newer beta version is available. Confirming its dialog opens the existing
 interactive command in a visible terminal after Studio stops, then restarts
 Studio on success. Finish edits before confirming. If the terminal reports a
 failure, use the displayed full `renku studio start` command to reopen Studio.
+Both commands run the Codex plugin step through the existing CLI profile and
+verify installation before recording its flag. Missing/unsupported CLI skips
+the step. Plugin failures are reported without stopping general skills setup.
+
 When that runtime version is already active, it is retained and skills setup
 still runs. Previous version folders, configuration, and Projects are preserved.
 
-`renku update skills` only runs Renku skills setup using the installed private
-Node, skills installer, and Git tools. It does not download or replace the runtime, and Studio
+`renku update skills` runs Renku skills and Codex plugin setup using the installed
+private Node, skills installer, and Git tools. It does not download or replace the runtime, and Studio
 may remain open. Restart the agent and start a new conversation afterward.
 Neither command updates unrelated skill repositories or requires a system npm.
 

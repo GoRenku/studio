@@ -4,6 +4,10 @@ Date: 2026-10-02
 
 Status: accepted
 
+Updated by [ADR 0106](0106-install-codex-plugin-and-route-generation-review.md):
+the installer also installs the Codex plugin, and Desktop review routing uses
+the core-owned installation flag with an `auto` default.
+
 ## Context
 
 The packaged Codex generation review combines prompt, exact references and native

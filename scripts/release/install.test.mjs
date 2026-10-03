@@ -9,12 +9,14 @@ import test from 'node:test';
 
 const installer = fileURLToPath(new URL('../../distribution/install.sh', import.meta.url));
 
-function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, cliExit = 0, skillsVersionExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
+function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pluginExit = 0, cliExit = 0, skillsVersionExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-installer-'));
   const product = path.join(root, 'archive', 'renku');
   const bin = path.join(root, 'commands');
   mkdirSync(bin);
   mkdirSync(path.join(product, 'app', 'dist'), { recursive: true });
+  mkdirSync(path.join(product, 'distribution'), { recursive: true });
+  cpSync(new URL('../../distribution/install-codex-plugin.mjs', import.meta.url), path.join(product, 'distribution', 'install-codex-plugin.mjs'));
   mkdirSync(path.join(product, 'app', 'node_modules', 'skills', 'bin'), { recursive: true });
   mkdirSync(path.join(product, 'runtime', 'node', 'bin'), { recursive: true });
   writeFileSync(path.join(product, 'RELEASE.json'), JSON.stringify({ version: '0.0.1', target: releaseTarget }));
@@ -25,6 +27,9 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, cl
 case "$1" in
   --input-type=commonjs) exec "$TEST_NODE" "$@" ;;
   */cli.js) exit ${cliExit} ;;
+  */install-codex-plugin.mjs)
+    printf '%s\\n' "$@" >> "$TEST_ROOT/plugin-args"
+    exit ${pluginExit} ;;
   */skills/bin/cli.mjs)
     [ "$2" != --version ] || exit ${skillsVersionExit}
     [ -t 0 ] || exit 71
@@ -128,6 +133,16 @@ test('macOS piped installer uses private Node and passes interactive agent selec
   ]);
   assert.equal(readFileSync(path.join(root, 'selected-node'), 'utf8').trim(), path.join(root, 'Renku with spaces', 'versions', '0.0.1', 'runtime', 'node', 'bin', 'node'));
 });
+
+for (const updateScope of [undefined, 'all', 'skills']) {
+  test(`plugin failure still runs general skills setup (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
+    const { root, result, output } = runInstaller({ updateScope, pluginExit: 1 });
+    assert.equal(result.status, 0, output);
+    assert.match(output, /INSTALL011 Codex plugin setup failed/);
+    assert.ok(existsSync(path.join(root, 'plugin-args')));
+    assert.ok(existsSync(path.join(root, 'skills-args')));
+  });
+}
 
 test('declining terms stops before any download or installation', { skip: process.platform !== 'darwin' }, () => {
   const setup = fixture();

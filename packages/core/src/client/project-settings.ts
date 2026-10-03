@@ -40,10 +40,11 @@ export interface ProjectSettingsMutationReport {
   resourceKeys: string[];
 }
 
-export type CodexGenerationReview = 'panel' | 'visualize';
+export type CodexGenerationReview = 'auto' | 'panel' | 'visualize';
 export type CodexGenerationReviewDisplayMode = 'inline' | 'fullscreen';
 
 export interface GenerationWorkflowPolicy {
+  codexPluginInstalled: boolean;
   codexGenerationReview: CodexGenerationReview;
   codexGenerationReviewDisplayMode: CodexGenerationReviewDisplayMode;
   displayPreview: boolean;

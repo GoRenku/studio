@@ -57,6 +57,11 @@ installed_runtime_is_ready() {
   "$destination/runtime/node/bin/node" "$destination/app/node_modules/skills/bin/cli.mjs" --version >/dev/null 2>&1
 }
 
+install_codex_plugin() {
+  "$node_command" "$destination/distribution/install-codex-plugin.mjs" ||
+    printf '%s\n' 'INSTALL011 Codex plugin setup failed. Continuing general skills setup.' >&2
+}
+
 install_agent_skills() {
   skills_entry="$destination/app/node_modules/skills/bin/cli.mjs"
   [ -f "$skills_entry" ] || fail 'INSTALL006 Bundled skills installer is missing. Reinstall Renku to restore it.'
@@ -71,6 +76,7 @@ install_agent_skills() {
     IFS= read -r completed </dev/tty || fail 'INSTALL008 Git setup was interrupted. Rerun this installer to continue.'
     git_is_ready || fail 'INSTALL008 Git is not ready. Complete Apple Command Line Tools installation, then rerun this installer.'
   fi
+  install_codex_plugin
   printf '\n%s\n' 'Choose the agents that should receive the Renku skills.'
   printf '%s\n' 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
   PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy </dev/tty ||

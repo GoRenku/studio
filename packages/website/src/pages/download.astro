@@ -118,6 +118,7 @@ const launchCommand = 'renku studio start';
           <div>
             <h3>Add Renku’s skills to your agent</h3>
             <p>When the installer asks, select Codex, Claude Code, or the agent you use and confirm. These skills teach your agent how to work with Renku.</p>
+            <p>If Codex CLI is available, setup also installs the Renku plugin for inline and panel generation reviews in Codex Desktop. Without the CLI, Desktop uses Visualize for review. Setup does not install Codex CLI.</p>
           </div>
         </div>
       </div>
@@ -160,7 +161,7 @@ const launchCommand = 'renku studio start';
       <div data-reveal style="--reveal-delay: 0.06s">
         <p class="detail-label">Safe updates</p>
         <h3>Versioned and verified.</h3>
-        <p>Stop Studio, then run <code>renku update</code> to update Renku and its skills. Use <code>renku update skills</code> for skills only.</p>
+        <p>Stop Studio, then run <code>renku update</code> to update Renku and its skills. Use <code>renku update skills</code> to refresh skills and the Codex plugin without updating the runtime.</p>
       </div>
       <div data-reveal style="--reveal-delay: 0.12s">
         <p class="detail-label">Open development</p>

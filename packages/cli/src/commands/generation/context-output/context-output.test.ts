@@ -15,7 +15,7 @@ const report: MediaGenerationContextReport = {
   project: { projectName: 'test', id: 'project_1', projectFolder: '/project',
     title: 'Film', aspectRatio: '16:9', languages: [], synopsis: '  Exact “dialogue”\n# Markdown\n雪  ' },
   purpose: 'image.edit', target: { kind: 'asset', id: 'asset_1' }, outputMediaKind: 'image',
-  workflowPolicy: { codexGenerationReview: 'panel', codexGenerationReviewDisplayMode: 'inline', displayPreview: false, enableProviderPromptExpansion: true, provider: 'codex', askBeforeGenerating: false, concurrencyLimit: 1 },
+  workflowPolicy: { codexPluginInstalled: false, codexGenerationReview: 'panel', codexGenerationReviewDisplayMode: 'inline', displayPreview: false, enableProviderPromptExpansion: true, provider: 'codex', askBeforeGenerating: false, concurrencyLimit: 1 },
   outputGuidance: { aspectRatio: null, quality: null },
   targetContext: { kind: 'asset', assetId: 'asset_1' }, visualLanguage: [],
   assets: [{ id: 'asset_1', owner: { kind: 'project' }, localeId: null, type: 'image',

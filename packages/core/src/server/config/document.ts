@@ -86,7 +86,7 @@ export async function initRenkuConfig(
   const config: RenkuConfig = {
     version: RENKU_CONFIG_VERSION,
     storageRoot,
-    codexGenerationReview: 'panel',
+    codexGenerationReview: 'auto',
     codexGenerationReviewDisplayMode: 'inline',
   };
 
@@ -193,19 +193,19 @@ function validateRenkuConfig(value: unknown, configPath: string): RenkuConfig {
   }
 
   const codexGenerationReview = value.codexGenerationReview === undefined
-    ? 'panel'
+    ? 'auto'
     : value.codexGenerationReview;
-  if (codexGenerationReview !== 'panel' && codexGenerationReview !== 'visualize') {
+  if (codexGenerationReview !== 'auto' && codexGenerationReview !== 'panel' && codexGenerationReview !== 'visualize') {
     throw new RenkuConfigError(
       'CONFIG015',
-      'Renku config codexGenerationReview must be "panel" or "visualize".',
+      'Renku config codexGenerationReview must be "auto", "panel" or "visualize".',
       {
         issues: [createDiagnosticError(
           'CONFIG015',
-          'Choose "panel" or "visualize".',
+          'Choose "auto", "panel" or "visualize".',
           { path: ['codexGenerationReview'], context: 'Renku config' }
         )],
-        suggestion: 'Set codexGenerationReview to "panel" or "visualize" in the global Renku config.',
+        suggestion: 'Set codexGenerationReview to "auto", "panel" or "visualize" in the global Renku config.',
       }
     );
   }

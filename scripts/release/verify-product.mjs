@@ -57,6 +57,9 @@ export function verifyProductStructure(productRoot) {
   if (!existsSync(path.join(productRoot, 'distribution', installerName))) {
     throw new Error(`RELEASE025 Missing bundled updater for ${target.id}.`);
   }
+  if (!existsSync(path.join(productRoot, 'distribution', 'install-codex-plugin.mjs'))) {
+    throw new Error(`RELEASE025 Missing bundled Codex plugin installer for ${target.id}.`);
+  }
   const nodeExecutable = targetNodeExecutable(runtimeRoot, target);
   if (!existsSync(nodeExecutable)) {
     throw new Error(`RELEASE025 Missing ${target.id} Node executable: ${nodeExecutable}`);

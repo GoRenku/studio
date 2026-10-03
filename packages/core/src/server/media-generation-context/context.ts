@@ -9,6 +9,7 @@ import type {
 } from '../../client/media-generation-context.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { readRenkuConfig } from '../config/document.js';
+import { readCodexPluginInstallation } from '../installation/codex-plugin.js';
 import { readProjectSettingsFromSession } from '../project-settings/service.js';
 import { resolveGenerationWorkflowPolicy } from '../project-settings/generation-policy.js';
 import { ProjectDataError } from '../project-data-error.js';
@@ -27,6 +28,7 @@ export async function readMediaGenerationContext(
 ): Promise<MediaGenerationContextReport> {
   validateInput(input);
   const config = await readRenkuConfig({ homeDir: input.homeDir });
+  const codexPluginInstalled = await readCodexPluginInstallation({ homeDir: input.homeDir });
   return withProject(input, ({ session, projectFolder }) => {
     const projectRecord = readProjectRecord(session);
     if (!projectRecord) {
@@ -66,6 +68,7 @@ export async function readMediaGenerationContext(
       target: input.target,
       outputMediaKind,
       workflowPolicy: resolveGenerationWorkflowPolicy({
+        codexPluginInstalled,
         config,
         settings: readProjectSettingsFromSession(session).settings,
         outputMediaKind,

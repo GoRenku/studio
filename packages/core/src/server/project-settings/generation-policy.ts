@@ -8,10 +8,12 @@ import type { RenkuConfig } from '../config/document.js';
 export function resolveGenerationWorkflowPolicy(input: {
   settings: ProjectSettingsDocument;
   outputMediaKind: MediaGenerationKind;
+  codexPluginInstalled: boolean;
   config: Pick<RenkuConfig, 'codexGenerationReview' | 'codexGenerationReviewDisplayMode'>;
 }): GenerationWorkflowPolicy {
   const settings = input.settings.generation[input.outputMediaKind];
   return {
+    codexPluginInstalled: input.codexPluginInstalled,
     codexGenerationReview: input.config.codexGenerationReview,
     codexGenerationReviewDisplayMode: input.config.codexGenerationReviewDisplayMode,
     displayPreview: input.settings.generation.displayPreview,
