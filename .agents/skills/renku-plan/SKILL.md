@@ -74,6 +74,22 @@ correct ownership boundary. A smaller diff is not simpler when it moves a
 durable rule into React, a route, the CLI, or an agent instruction. A new
 abstraction is not justified merely because future variants are imaginable.
 
+Before adding machinery to address uncertainty, name the concrete user-visible
+failure if it is omitted. Check whether the existing owner already handles that
+failure and whether one focused experiment or acceptance test can resolve it.
+A missing preflight API or an untested integration detail is not, by itself,
+evidence that a new detector, state model, workflow, or configuration refactor is
+needed. Treat a user-selected supported-environment baseline as a product
+decision; distinguish it from a verified external fact and surface contrary
+evidence rather than silently accepting or rejecting it.
+
+When feedback asks for simplification, compare behavior before and after the
+change. Explain what machinery was unnecessary, what actual guarantee or
+convenience is being traded away, and which existing safeguards remain. Check
+the revised recommendation against evidence before calling it sound. If the
+tradeoff is unresolved, state the specific limit or verification needed; do not
+replace judgment with reflexive agreement or another speculative redesign.
+
 For every proposed public type, state family, service, registry, dispatcher,
 storage field, route, hook, or wrapper, identify:
 
@@ -126,7 +142,16 @@ the requested work changes that status. Do not create a second plan merely to
 avoid correcting the first one.
 
 Create or revise the plan from `plans/PLAN_TEMPLATE.md` and retain the
-established active-plan depth.
+required concerns, scaling detail to the requested change. A long prior plan is
+not a length target. Keep investigation depth separate from proposal complexity.
+
+Lead with the ordinary user journey and the few decisions the user must assess.
+Explain Review Attention items as concrete changes and consequences in plain
+language; a list of technical names is not an understandable review summary.
+Keep implementation names in the supporting contract/ownership sections. Record
+release prerequisites as release tasks instead of turning them into installer
+or runtime infrastructure. Include research details only when they change a
+decision, prove a constraint, or define necessary verification.
 
 Adapt headings to the work, but include these concerns whenever production code
 changes:
@@ -212,4 +237,7 @@ Before reporting completion:
 - confirm the plan follows `plans/PLAN_TEMPLATE.md` and contains the complete
   checklist;
 - inspect `git diff --stat` and the plan diff without touching unrelated files;
+- distinguish observed evidence, accepted product assumptions, and remaining
+  verification in the handoff; do not imply that a shorter plan or a format
+  validator proves the proposed behavior;
 - state in the handoff that no automatic plan review was run.

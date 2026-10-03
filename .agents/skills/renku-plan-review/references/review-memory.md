@@ -10,6 +10,27 @@ or architecture decision.
 
 ## Learned Constraints
 
+### 2026-10-03 — Resolve uncertainty before turning it into product machinery
+
+- **User objection:** A small installer change expanded into capability
+  detection, a replacement setup picker and a configuration move. The plan and
+  its attention summary became too hard to understand or review.
+- **Planning rule:** For each proposed mechanism, identify the concrete
+  user-visible failure without it, the existing owner that can handle it, and
+  the smallest check needed to establish whether it is necessary. Absence of a
+  dedicated preflight API does not prove a supported workflow is unavailable.
+  Keep accepted environment baselines explicit without turning them into new
+  detectors. Separate deep research from the proposed change: retain necessary
+  boundaries and tests, but do not turn ordinary release preparation or a
+  testable integration question into a new product workflow. Lead the plan and
+  attention summary with understandable changes and consequences.
+- **Apply when:** One setting triggers moving existing configuration, a
+  possible duplicate triggers replacing a working installer, or an unknown
+  host behavior produces new state, discovery gates or repeated failure matrices.
+- **Evidence to inspect:** The normal user journey, existing configuration and
+  installer owners, supported host contract, relevant failure checks, and the
+  focused experiment that could justify or eliminate each added mechanism.
+
 ### 2026-09-08 — Keep execution conventions without overconstraining creative implementation
 
 - **User objection:** A plan converted a successful specifically authored Blender
@@ -808,7 +829,9 @@ or architecture decision.
   agent reflexively agreed with the criticism and immediately began another
   from-scratch redesign without first understanding the desired ownership
   model or clarifying the choices exposed by that criticism. Agreement became
-  a substitute for senior engineering judgment.
+  a substitute for senior engineering judgment. Later, the agent endorsed a much
+  shorter installer plan without explaining its changed guarantees or showing
+  why the revision was supported, again weakening trust.
 - **Planning rule:** Never say the user is right merely to absorb criticism or
   reduce friction. Separate verified defects from unresolved product choices,
   explain the evidence for each current assumption, challenge claims when the
@@ -816,6 +839,11 @@ or architecture decision.
   determine the replacement. Do not rewrite a rejected plan until the intended
   outcome, ownership boundaries, and important tradeoffs are understood well
   enough that another blind attempt is unnecessary.
+  When the user has clearly chosen the desired behavior, do not ask them to
+  repeat it. Explain why the revised design satisfies that choice, distinguish
+  removed machinery from lost guarantees, preserve required protections, and
+  identify what is verified versus still awaiting an acceptance test. A request
+  for simplicity does not prove the simpler replacement is correct.
 - **Apply when:** A user rejects a plan broadly, asks for a redesign from
   scratch, questions the meaning or ownership of several foundational fields,
   or introduces requirements that admit materially different domain models.
