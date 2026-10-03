@@ -53,7 +53,9 @@ Use the focused documents below for current direction.
   schema.
 - Inspiration folder images are filesystem-owned content and are not registered
   as per-image assets. The persisted Inspiration Analysis JSON is SQLite-owned
-  project data.
+  project data. Generation review can reference active folder images directly
+  by project-relative path without registering Assets; core checks folder
+  ownership, image availability, trash state, and path containment.
 - Project owns story and development metadata directly: title, logline,
   synopsis, premise, audience, format/runtime, genres, tones, boundaries,
   conflict, dramatic question, themes, historical/dramatized notes, draft

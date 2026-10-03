@@ -1,22 +1,19 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { and, eq, isNull } from 'drizzle-orm';
 import { createDiagnosticWarning, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type {
   MediaGenerationReferenceView,
 } from '../../client/media-generation-review.js';
 import type { JsonValue } from '../../client/json.js';
 import type { ProjectRelativePath } from '../../client/project/index.js';
-import { assetFiles } from '../schema/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
 import {
   normalizeProjectRelativePath,
-  resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { withProject } from '../project-operation.js';
 import { readProjectRecord } from '../database/access/project.js';
+import { resolveMediaGenerationReferenceFile } from './reference-files.js';
 
 interface Marker {
   $file: string;
@@ -33,15 +30,15 @@ interface MarkerOccurrence {
 const MAX_REVIEW_LABEL_LENGTH = 256;
 const MAX_PROMPT_MENTION_LENGTH = 128;
 
-export function projectLocalMediaReferences(input: {
+export async function projectLocalMediaReferences(input: {
   request: JsonValue;
   session: DatabaseSession;
   projectFolder: string;
   projectName: string;
-}): {
+}): Promise<{
   references: MediaGenerationReferenceView[];
   diagnostics: DiagnosticIssue[];
-} {
+}> {
   const diagnostics: DiagnosticIssue[] = [];
   const references: MediaGenerationReferenceView[] = [];
   const mentions = new Set<string>();
@@ -57,17 +54,9 @@ export function projectLocalMediaReferences(input: {
       mentions.add(marker.promptMention);
     }
     const projectRelativePath = normalizeReferencePath(marker.$file);
-    const record = input.session.db
-      .select({ mimeType: assetFiles.mimeType, mediaKind: assetFiles.mediaKind })
-      .from(assetFiles)
-      .where(and(
-        eq(assetFiles.projectRelativePath, projectRelativePath),
-        isNull(assetFiles.discardedAt),
-      ))
-      .get();
-    const absolutePath = resolveProjectRelativePath(input.projectFolder, projectRelativePath);
-    const available = Boolean(record && fs.existsSync(absolutePath));
-    const kind = mediaKind(record?.mediaKind, record?.mimeType ?? marker.mimeType, projectRelativePath);
+    const file = await resolveMediaGenerationReferenceFile({ ...input, projectRelativePath });
+    const available = file !== null;
+    const kind = mediaKind(file?.mediaKind, file?.mimeType ?? marker.mimeType, projectRelativePath);
     if (!kind) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_LOCAL_MEDIA_UNSUPPORTED',
@@ -79,7 +68,7 @@ export function projectLocalMediaReferences(input: {
         'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND',
         `Referenced media is unavailable: ${projectRelativePath}.`,
         { path: ['request', projectRelativePath] },
-        'Register a prepared reference, restore the original Asset or file, or choose another available reference.',
+        'Choose an available AssetFile or an active Inspiration folder image, or restore the referenced file.',
       ));
     }
     references.push({
@@ -147,39 +136,19 @@ export function replaceLocalMediaPaths(
 export async function readMediaGenerationReferenceProjectFile(
   input: RenkuConfigPathOptions & { projectName?: string; projectRelativePath: string; expectedProjectId?: string },
 ): Promise<{ absolutePath: string; mimeType: string }> {
-  return withProject(input, ({ session, projectFolder }) => {
+  return withProject(input, async ({ session, projectFolder }) => {
     if (input.expectedProjectId !== undefined && readProjectRecord(session)?.id !== input.expectedProjectId) {
       throw new ProjectDataError('CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND', 'The referenced Project is no longer available.');
     }
     const projectRelativePath = normalizeReferencePath(input.projectRelativePath);
-    const record = session.db
-      .select({ mimeType: assetFiles.mimeType })
-      .from(assetFiles)
-      .where(and(
-        eq(assetFiles.projectRelativePath, projectRelativePath),
-        isNull(assetFiles.discardedAt),
-      ))
-      .get();
-    const absolutePath = resolveProjectRelativePath(projectFolder, projectRelativePath);
-    if (!record || !fs.existsSync(absolutePath)) {
+    const file = await resolveMediaGenerationReferenceFile({ session, projectFolder, projectRelativePath });
+    if (!file) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND',
         `Referenced media is unavailable: ${projectRelativePath}.`,
       );
     }
-    let resolvedPath: string;
-    let projectRoot: string;
-    try {
-      resolvedPath = fs.realpathSync(absolutePath);
-      projectRoot = fs.realpathSync(projectFolder);
-    } catch {
-      throw new ProjectDataError('CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND', `Referenced media is unavailable: ${projectRelativePath}.`);
-    }
-    const relative = path.relative(projectRoot, resolvedPath);
-    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-      throw new ProjectDataError('CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT', 'Referenced media must remain inside its Project folder.');
-    }
-    const kind = mediaKind(undefined, record.mimeType ?? undefined, projectRelativePath);
+    const kind = mediaKind(file.mediaKind, file.mimeType, projectRelativePath);
     if (!kind) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_LOCAL_MEDIA_UNSUPPORTED',
@@ -187,8 +156,8 @@ export async function readMediaGenerationReferenceProjectFile(
       );
     }
     return {
-      absolutePath: resolvedPath,
-      mimeType: record.mimeType ?? `${kind}/octet-stream`,
+      absolutePath: file.absolutePath,
+      mimeType: file.mimeType ?? `${kind}/octet-stream`,
     };
   });
 }

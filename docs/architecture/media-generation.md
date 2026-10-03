@@ -207,6 +207,17 @@ spaces or omit `@`. Repeated use of one file remains separate by request JSON
 Pointer. Studio completion uses only markers in this request and never all
 context suggestions or all Project Assets.
 
+Local references resolve through core to either an active registered AssetFile
+or a direct image file in an active registered Inspiration folder. Inspiration
+images remain filesystem-owned; using one as a reference does not create an
+Asset or AssetFile. Preview and reference-byte loading use the same ownership
+and file-safety checks, including the Inspiration trash ledger. Missing files,
+discarded Inspiration folders/images, non-image or nested Inspiration files, and files
+outside registered reference ownership are unavailable. Resolved paths must
+remain inside the Project and, for Inspiration images, the declared folder;
+symlinks cannot expose unrelated files. Image MIME types for Inspiration
+references come from their supported file extensions.
+
 Preview displays prompt, references, read-only configuration, and diagnostics.
 It may atomically update only the top-level prompt. Update does not rebuild
 provider-native request JSON; the provider Skill rereads the file and does that

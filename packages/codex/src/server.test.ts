@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
@@ -105,6 +106,36 @@ describe('official MCP registration and transport', () => {
     expect((await client.callTool({ name: 'generation.review.consume', arguments: { reviewId: review.reviewId, responseId: receipt.responseId } })).structuredContent).toEqual({ alreadyConsumed: true });
     const refreshed = await client.readResource({ uri: `renku-review://${review.reviewId}` });
     expect(JSON.parse((refreshed.contents[0] as { text: string }).text)).toMatchObject({ phase: 'submitted' });
+  });
+
+  it('serves filesystem-owned Inspiration images and thumbnails through scoped review resources', async () => {
+    const homeDir = path.join(root, 'home');
+    const service = createProjectDataService();
+    const { folder } = await service.createInspirationFolder({ homeDir, projectName: 'movie', name: 'Coco' });
+    const pixels = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#808080' } }).png().toBuffer();
+    await service.writeInspirationImage({ homeDir, projectName: 'movie', folderId: folder.id, fileName: 'frame.png', contents: pixels });
+    const reviewFile = 'tmp/operations/media-generation/inspiration.json';
+    await fs.writeFile(path.join(root, 'movies/movie', reviewFile), JSON.stringify({
+      provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Reference appearance',
+      request: { image: { $file: `${folder.projectRelativePath}/frame.png`, reviewLabel: 'Coco appearance' }, resolution: '2K' },
+    }));
+    const opened = await client.callTool({ name: 'generation.review', arguments: {
+      ...opening, requests: [{ ...opening.requests[0]!, reviewFile }],
+    } });
+    expect(opened.isError).not.toBe(true);
+    const review = (opened.structuredContent as { review: GenerationReview }).review;
+    const reference = review.requests[0]!.preview.references[0]!;
+    expect(reference).toMatchObject({ kind: 'image', available: true, reviewLabel: 'Coco appearance' });
+    expect(review.requests[0]!.preview.diagnostics).toEqual([]);
+    const original = (await client.readResource({ uri: reference.resourceUri })).contents[0] as { mimeType: string; blob: string };
+    expect(original.mimeType).toBe('image/png');
+    expect(Buffer.from(original.blob, 'base64')).toEqual(pixels);
+    const thumbnail = (await client.readResource({ uri: reference.thumbnailUri! })).contents[0] as { mimeType: string; blob: string };
+    expect(thumbnail.mimeType).toBe('image/webp');
+    expect(Buffer.from(thumbnail.blob, 'base64').length).toBeGreaterThan(0);
+    await service.deleteInspirationImage({ homeDir, projectName: 'movie', folderId: folder.id, fileName: 'frame.png' });
+    await expect(client.readResource({ uri: reference.resourceUri }))
+      .rejects.toMatchObject({ data: { error: { code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND' } } });
   });
 
   it('serializes tool and scoped-resource failures as structured diagnostics', async () => {

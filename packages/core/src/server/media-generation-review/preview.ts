@@ -33,18 +33,18 @@ export async function projectMediaGenerationPreview(
   }));
 }
 
-function projectPreview({ document, documentPath, session, projectFolder }: {
+async function projectPreview({ document, documentPath, session, projectFolder }: {
   document: MediaGenerationReviewDocument;
   documentPath: ReturnType<typeof normalizeReviewDocumentPath>;
   session: DatabaseSession;
   projectFolder: string;
-}): MediaGenerationPreviewResource {
+}): Promise<MediaGenerationPreviewResource> {
   assertSafeMediaGenerationRequest(document.request, 'review');
   const project = readProjectRecord(session);
   if (!project) {
     throw new ProjectDataError('PROJECT_DATA021', 'Project database has no Project row.');
   }
-  const projected = projectLocalMediaReferences({
+  const projected = await projectLocalMediaReferences({
     request: document.request,
     session,
     projectFolder,

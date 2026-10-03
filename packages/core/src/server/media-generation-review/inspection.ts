@@ -10,7 +10,7 @@ import { projectConfiguration } from './preview.js';
 export async function readAssetMediaGenerationRequest(
   input: RenkuConfigPathOptions & { projectName?: string; assetId: string },
 ): Promise<MediaGenerationPreviewResource> {
-  return withProject(input, ({ session, projectFolder }) => {
+  return withProject(input, async ({ session, projectFolder }) => {
     const asset = readAssetRecord(session, input.assetId);
     if (!asset || asset.discardedAt || !asset.generationProvenance) {
       throw new ProjectDataError(
@@ -23,7 +23,7 @@ export async function readAssetMediaGenerationRequest(
       throw new ProjectDataError('PROJECT_DATA021', 'Project database has no Project row.');
     }
     const provenance = asset.generationProvenance;
-    const projected = projectLocalMediaReferences({
+    const projected = await projectLocalMediaReferences({
       request: provenance.request,
       session,
       projectFolder,
