@@ -17,7 +17,7 @@ export function InspirationAnalysisTab({
   return (
     <VisualLanguageReport
       projectName={projectName}
-      source={{ kind: 'inspiration', folderId: resource.folder.id }}
+      source={{ kind: 'inspiration', folder: resource.folder, images: resource.images }}
       sections={{
         thesis: resource.analysis.thesis,
         palette: resource.analysis.palette,

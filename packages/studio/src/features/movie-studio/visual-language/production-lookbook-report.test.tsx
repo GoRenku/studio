@@ -7,13 +7,14 @@ import type {
   ProjectRelativePath,
 } from '@gorenku/studio-core/client';
 import { VisualLanguageReport } from './visual-language-report';
+import type { LookbookReportSource } from './lookbook-report-images';
 
 describe('Production Lookbook report', () => {
   it('renders shared Inspiration Analysis sections including Lineage', () => {
     render(
       <VisualLanguageReport
         projectName='constantinople'
-        source={{ kind: 'inspiration', folderId: 'inspiration_folder_test0001' }}
+        source={inspirationSource()}
         sections={{
           ...sharedMovieSections(),
           inspiredBy: {
@@ -47,7 +48,7 @@ describe('Production Lookbook report', () => {
     render(
       <VisualLanguageReport
         projectName='constantinople'
-        source={{ kind: 'inspiration', folderId: 'inspiration_folder_test0001' }}
+        source={inspirationSource(['palette-frame.png', 'composition-frame.png', 'lineage-frame.png'])}
         sections={{
           ...sections,
           palette: {
@@ -85,9 +86,10 @@ describe('Production Lookbook report', () => {
       />
     );
 
-    expect(screen.getByAltText('palette-frame.png inspiration grab')).not.toBeNull();
-    expect(screen.getByAltText('composition-frame.png inspiration grab')).not.toBeNull();
-    expect(screen.getByAltText('lineage-frame.png inspiration grab')).not.toBeNull();
+    for (const [index, fileName] of ['palette-frame.png', 'composition-frame.png', 'lineage-frame.png'].entries()) {
+      expect(screen.getByAltText(`${fileName} inspiration grab`).getAttribute('src'))
+        .toBe(`/studio-api/projects/constantinople/asset-files/asset_file_${index}`);
+    }
     expect(screen.queryByText('Palette frame')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Palette frame' }));
@@ -251,6 +253,23 @@ describe('Production Lookbook report', () => {
     ).toBe('dense');
   });
 });
+
+function inspirationSource(fileNames: string[] = []): LookbookReportSource {
+  const folder = {
+    id: 'inspiration_folder_test0001',
+    name: 'References',
+    projectRelativePath: 'visual-language/inspiration/references' as ProjectRelativePath,
+  };
+  return {
+    kind: 'inspiration',
+    folder,
+    images: fileNames.map((fileName, index) => ({
+      ...lookbookImage(fileName, String(index)).assetFile!,
+      owner: { kind: 'inspirationFolder', id: folder.id },
+      projectRelativePath: `${folder.projectRelativePath}/${fileName}` as ProjectRelativePath,
+    })),
+  };
+}
 
 function sharedMovieSections() {
   return {

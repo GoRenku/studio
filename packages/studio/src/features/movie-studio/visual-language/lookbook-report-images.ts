@@ -1,4 +1,5 @@
 import type {
+  InspirationFolderResource,
   LookbookImage,
   LookbookSection,
 } from '@gorenku/studio-core/client';
@@ -15,7 +16,8 @@ export interface ReportImage {
 export type LookbookReportSource =
   | {
       kind: 'inspiration';
-      folderId: string;
+      folder: InspirationFolderResource['folder'];
+      images: InspirationFolderResource['images'];
     }
   | {
       kind: 'lookbook';
@@ -29,12 +31,7 @@ export function imagesForNestedReferences(
   point: { id?: string; imageFiles?: string[] }
 ): ReportImage[] {
   if (source.kind === 'inspiration') {
-    return (point.imageFiles ?? []).map((fileName) => ({
-      id: fileName,
-      src: projectAssetFileUrl(projectName, fileName),
-      alt: `${fileName} inspiration grab`,
-      title: fileName,
-    }));
+    return inspirationImagesToReportImages(projectName, source, point.imageFiles ?? []);
   }
   if (!point.id) return [];
   return lookbookImagesToReportImages(
@@ -50,17 +47,31 @@ export function imagesForSection(
   imageFiles: string[] = []
 ): ReportImage[] {
   if (source.kind === 'inspiration') {
-    return imageFiles.map((fileName) => ({
-      id: fileName,
-      src: projectAssetFileUrl(projectName, fileName),
-      alt: `${fileName} inspiration grab`,
-      title: fileName,
-    }));
+    return inspirationImagesToReportImages(projectName, source, imageFiles);
   }
   return lookbookImagesToReportImages(
     projectName,
     source.imagesBySection[section] ?? []
   );
+}
+
+function inspirationImagesToReportImages(
+  projectName: string,
+  source: Extract<LookbookReportSource, { kind: 'inspiration' }>,
+  imageFiles: string[]
+): ReportImage[] {
+  return imageFiles.flatMap((fileName) => {
+    const file = source.images.find((image) =>
+      image.projectRelativePath === `${source.folder.projectRelativePath}/${fileName}`
+    );
+    if (!file) return [];
+    return [{
+      id: file.id,
+      src: projectAssetFileUrl(projectName, file.id),
+      alt: `${fileName} inspiration grab`,
+      title: fileName,
+    }];
+  });
 }
 
 function lookbookImagesToReportImages(

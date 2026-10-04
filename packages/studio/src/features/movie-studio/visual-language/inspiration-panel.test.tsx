@@ -76,6 +76,12 @@ describe('InspirationPanel', () => {
     });
     expect(await screen.findByText('The thesis')).not.toBeNull();
     expect(screen.getByText('Reference images use quiet contrast.')).not.toBeNull();
+    const analysisImages = screen.getAllByAltText('frame-001.png inspiration grab');
+    expect(analysisImages).toHaveLength(7);
+    for (const image of analysisImages) {
+      expect(image.getAttribute('src'))
+        .toBe('/studio-api/projects/constantinople/asset-files/inspiration_file_1');
+    }
   });
 
   it('refreshes overview card metadata after uploading images to the selected folder', async () => {
