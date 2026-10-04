@@ -50,13 +50,39 @@ describe('connection-scoped generation review', () => {
     const { state, response, request, source } = fixture();
     state.respond({ ...response, action: 'reconfigure', selectedRoute: { requestId: request.requestId, route: alternative } });
     const replacement = { ...request, requestSha256: 'b'.repeat(64), preview: { ...request.preview, ...alternative }, controls: { groups: [] } };
-    const replacedSource = { ...source, requestSha256: replacement.requestSha256 };
+    const replacedSource = { ...source, reviewFile: 'tmp/operations/media-generation/replacement.json', requestSha256: replacement.requestSha256 };
     expect(() => state.update('review', 2, 'movie', 'movie-id', [replacement], [replacedSource])).toThrow();
     expect(state.consume('review', 'response', 2)?.action).toBe('reconfigure');
     const prepared = state.update('review', 2, 'movie', 'movie-id', [replacement], [replacedSource]);
     expect(prepared).toMatchObject({ phase: 'ready', revision: 3, requests: [{ requestSha256: 'b'.repeat(64) }] });
     expect(prepared.drafts[0]!.values).toEqual({});
     expect(prepared.pendingRoute).toBeUndefined();
+    expect(state.binding('review').sources[0]!.reviewFile).toBe(replacedSource.reviewFile);
+  });
+
+  it('rejects overwriting the bound request during preparation', () => {
+    const { state, response, request, source } = fixture();
+    state.respond({ ...response, action: 'reconfigure', selectedRoute: { requestId: request.requestId, route: alternative } });
+    state.consume('review', 'response', 2);
+    const replacement = { ...request, requestSha256: 'b'.repeat(64), preview: { ...request.preview, ...alternative } };
+    expect(() => state.update('review', 2, 'movie', 'movie-id', [replacement], [{ ...source, requestSha256: replacement.requestSha256 }])).toThrow(expect.objectContaining({ code: 'CODEX_REVIEW_STALE' }));
+    expect(state.binding('review').sources).toEqual([source]);
+    expect(state.read('review').phase).toBe('preparing');
+  });
+
+  it('keeps unrelated request bindings unchanged when adopting a staged replacement', () => {
+    const { state, request, source } = fixture();
+    const other = { ...request, requestId: 'other-request' };
+    const otherSource = { ...source, requestId: other.requestId, reviewFile: 'tmp/operations/media-generation/other.json' };
+    const review = state.create('batch', 'movie', 'movie-id', [request, other], [source, otherSource]);
+    state.respond({ reviewId: 'batch', expectedRevision: 1, responseId: 'switch', action: 'reconfigure', drafts: review.drafts, selectedRoute: { requestId: request.requestId, route: alternative } });
+    state.consume('batch', 'switch', 2);
+    const replacement = { ...request, requestSha256: 'b'.repeat(64), preview: { ...request.preview, ...alternative } };
+    const stagedSource = { ...source, reviewFile: 'tmp/operations/media-generation/replacement.json', requestSha256: replacement.requestSha256 };
+    expect(() => state.update('batch', 2, 'movie', 'movie-id', [replacement, other], [stagedSource, { ...otherSource, reviewFile: 'tmp/operations/media-generation/unrelated.json' }])).toThrow(expect.objectContaining({ code: 'CODEX_REVIEW_STALE' }));
+    const prepared = state.update('batch', 2, 'movie', 'movie-id', [replacement, other], [stagedSource, otherSource]);
+    expect(prepared.drafts[1]).toEqual(review.drafts[1]);
+    expect(state.binding('batch').sources[1]).toEqual(otherSource);
   });
 
   it('rejects another model selection while preparation is pending', () => {
@@ -114,6 +140,6 @@ describe('connection-scoped generation review', () => {
     state.respond({ ...response, action: 'reconfigure', selectedRoute: { requestId: request.requestId, route: alternative } });
     state.consume('review', 'response', 2);
     expect(() => state.update('review', 2, 'other', 'other-id', [request], [source])).toThrow();
-    expect(() => state.update('review', 2, 'movie', 'movie-id', [request], [{ ...source, reviewFile: 'tmp/operations/media-generation/another.json' }])).toThrow();
+    expect(() => state.update('review', 2, 'movie', 'movie-id', [request], [{ ...source, requestId: 'another-request' }])).toThrow();
   });
 });

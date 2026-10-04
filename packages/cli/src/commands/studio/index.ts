@@ -38,6 +38,10 @@ const studioCommands: Record<string, (options: StudioCommandOptions) => Promise<
     return await runStudioCurrentCommand(options);
   },
   server: async (options) => {
+    if (options.input[1] !== 'status') {
+      options.io.stderr.error('Usage: renku studio server status --json');
+      return 1;
+    }
     const { runStudioServerStatusCommand } = await loadCommand('studio', () => import('./server-status-command.js'));
     return await runStudioServerStatusCommand(options);
   },

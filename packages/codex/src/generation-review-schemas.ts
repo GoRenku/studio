@@ -31,7 +31,7 @@ export const generationReviewInputSchema = z.object({
   project: identity,
   reviewId: identity.optional(), expectedRevision: z.number().int().positive().optional(),
   requests: z.array(z.object({
-    reviewFile: identity, expectedRequestSha256: sha256.optional(),
+    reviewFile: identity.describe('Project-relative review file. Prepare replacements in a separate file; only the selected request may adopt a new file after validation. Keep all currently bound files unchanged.'), expectedRequestSha256: sha256.optional(),
     routes: z.array(route).min(1), controls,
   }).strict()).min(1).optional(),
   preparationFailure: z.array(issue).min(1).optional(),

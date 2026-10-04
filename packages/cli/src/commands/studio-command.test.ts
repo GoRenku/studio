@@ -43,6 +43,37 @@ describe('studio command', () => {
     expect(stderr).toEqual([]);
   });
 
+  it.each([
+    ['server'],
+    ['server', 'stop'],
+    ['server', 'unknown'],
+    ['server', 'status', 'extra'],
+  ])('rejects unsupported Studio server syntax: %j', async (...input) => {
+    const code = await runStudioCommand({
+      input,
+      json: true,
+      io: ioFixture({ stdout, stderr }),
+      homeDir,
+    });
+
+    expect(code).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(stderr).toEqual(['Usage: renku studio server status --json']);
+  });
+
+  it('dispatches the exact server status subcommand', async () => {
+    const code = await runStudioCommand({
+      input: ['server', 'status'],
+      json: true,
+      io: ioFixture({ stdout, stderr }),
+      homeDir,
+    });
+
+    expect(code).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(JSON.parse(stdout.join('\n'))).toMatchObject({ server: { running: false } });
+  });
+
   it('runs notify-refresh with the resolved durable project identity id', async () => {
     const projectData = createProjectDataService();
     await projectData.createMovieProject({

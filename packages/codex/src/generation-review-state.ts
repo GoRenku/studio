@@ -52,8 +52,8 @@ export class GenerationReviewState {
     this.assertUpdate(session, project, projectId, requests, sources);
     const pending = session.review.pendingRoute;
     session.review.requests = requests;
-    session.review.drafts = requests.map((request) => (
-      pending?.requestId === request.requestId
+    session.review.drafts = requests.map((request, index) => (
+      pending?.requestId === request.requestId && sources[index]!.requestSha256 !== session.sources[index]!.requestSha256
         ? initialReviewDraft(request)
         : session.review.drafts.find((draft) => draft.requestId === request.requestId)!
     ));
@@ -144,8 +144,9 @@ export class GenerationReviewState {
     if (sources.length !== session.sources.length) throw reviewError('CODEX_REVIEW_INVALID', 'A review cannot change its ordered request set.');
     sources.forEach((source, index) => {
       const bound = session.sources[index]!;
-      if (source.requestId !== bound.requestId || source.reviewFile !== bound.reviewFile) throw reviewError('CODEX_REVIEW_INVALID', 'A review cannot become another request.');
-      if (source.requestId !== session.review.pendingRoute!.requestId && source.requestSha256 !== bound.requestSha256) throw reviewError('CODEX_REVIEW_STALE', 'An unrelated request changed during model preparation.');
+      if (source.requestId !== bound.requestId) throw reviewError('CODEX_REVIEW_INVALID', 'A review cannot become another request.');
+      if (source.requestId !== session.review.pendingRoute!.requestId && (source.reviewFile !== bound.reviewFile || source.requestSha256 !== bound.requestSha256)) throw reviewError('CODEX_REVIEW_STALE', 'An unrelated request changed during model preparation.');
+      if (source.reviewFile === bound.reviewFile && source.requestSha256 !== bound.requestSha256) throw reviewError('CODEX_REVIEW_STALE', 'Prepare the replacement in a separate file without changing the bound request.');
     });
     const selected = session.review.pendingRoute!;
     const replacement = requests.find((request) => request.requestId === selected.requestId);

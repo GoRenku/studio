@@ -105,6 +105,15 @@ consume Submit once, write accepted edits, Validate again and Execute with the
 revised file hash. Prepare is excluded because it also delivers Studio Preview.
 Model changes are agent-prepared updates to the same revision-bound review;
 the panel never writes files, fetches provider schemas or executes generation.
+The agent prepares and validates a replacement in a separate operation file,
+leaving every currently bound file unchanged. Codex rechecks the current sources
+and candidate bytes, then adopts the candidate file for only the selected request
+after the complete update passes validation. Request identity and order remain
+stable. Preparation failure preserves the prepared source and user drafts; model
+selection allows retry or another choice while editing and Submit remain locked.
+Returning to the unchanged prepared request preserves its draft edits. File reads,
+path safety and envelope validation remain Core-owned; Codex owns the transient
+review binding and revision checks.
 Failures stop that review rather than silently swapping presentation surfaces.
 
 Without a probe or installation record, Desktop uses Visualize even for a saved panel

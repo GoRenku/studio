@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { createProjectDataService, projectMediaGenerationPreview, readMediaGenerationReview } from '@gorenku/studio-core/server';
+import { createProjectDataService, normalizeReviewDocumentPath, projectMediaGenerationPreview, readMediaGenerationReview } from '@gorenku/studio-core/server';
 import type { GenerationReview, GenerationReviewRequest } from './client.js';
 import { validateReviewControls } from './generation-review-contracts.js';
 import type { GenerationReviewInput } from './generation-review-schemas.js';
 import { GenerationReviewState, preparedRoute, type GenerationReviewSource } from './generation-review-state.js';
+import { assertReviewSources } from './generation-review-sources.js';
 import { reviewError } from './diagnostics.js';
 
 export async function openGenerationReview(state: GenerationReviewState, input: GenerationReviewInput, homeDir?: string): Promise<GenerationReview> {
@@ -13,6 +14,7 @@ export async function openGenerationReview(state: GenerationReviewState, input: 
     state.assertRevision(input.reviewId, input.expectedRevision!);
     const binding = state.binding(input.reviewId);
     if (binding.project !== projectRef.name || binding.projectId !== projectRef.id) throw reviewError('CODEX_REVIEW_INVALID', 'This review belongs to another Project.');
+    await assertReviewSources(binding, homeDir);
   }
   if (input.preparationFailure) return state.preparationFailure(input.reviewId!, input.expectedRevision!, input.preparationFailure);
   const reviewId = input.reviewId ?? randomUUID();
@@ -21,7 +23,11 @@ export async function openGenerationReview(state: GenerationReviewState, input: 
   const requests = prepared.map((prepared) => prepared.request);
   const sources = prepared.map((prepared) => prepared.source);
   if (new Set(sources.map((source) => source.reviewFile)).size !== sources.length) throw reviewError('CODEX_REVIEW_INVALID', 'Review files must be distinct in an ordered review set.');
-  if (input.reviewId) return state.update(reviewId, input.expectedRevision!, projectRef.name, projectRef.id, requests, sources);
+  await assertReviewSources({ project: projectRef.name, projectId: projectRef.id, sources }, homeDir);
+  if (input.reviewId) {
+    await assertReviewSources(state.binding(reviewId), homeDir);
+    return state.update(reviewId, input.expectedRevision!, projectRef.name, projectRef.id, requests, sources);
+  }
   return state.create(reviewId, projectRef.name, projectRef.id, requests, sources);
 }
 
@@ -63,7 +69,7 @@ async function prepareRequest(input: {
     },
   };
   preparedRoute(request);
-  return { request, source: { requestId: request.requestId, reviewFile: input.request.reviewFile, requestSha256: read.requestSha256, references } };
+  return { request, source: { requestId: request.requestId, reviewFile: normalizeReviewDocumentPath(input.request.reviewFile), requestSha256: read.requestSha256, references } };
 }
 
 export function generationReviewResult(review: GenerationReview) {

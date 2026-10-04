@@ -19,7 +19,9 @@ export function CodexGenerationReviewPanel() {
   const activeIndex = review ? Math.min(requestIndex, review.requests.length - 1) : 0;
   const request = review?.requests[activeIndex];
   const draft = interaction.drafts[activeIndex];
-  const locked = !interaction.connected || interaction.busy || Boolean(interaction.pendingResponse) || review?.phase !== 'ready';
+  const interactionLocked = !interaction.connected || interaction.busy || Boolean(interaction.pendingResponse);
+  const locked = interactionLocked || review?.phase !== 'ready';
+  const selectionLocked = interactionLocked || !review || !['ready', 'preparationFailed'].includes(review.phase);
   const selectedRoute = request?.routes.findIndex((route) => route.provider === request.preview.provider && route.model === request.preview.model && route.mediaKind === request.preview.mediaKind) ?? -1;
   const pendingRoute = review?.pendingRoute?.requestId === request?.requestId ? review?.pendingRoute?.route : undefined;
 
@@ -29,13 +31,13 @@ export function CodexGenerationReviewPanel() {
         <h1 className='text-lg font-semibold'>Generation review</h1>
         {interaction.error ? <Alert variant='destructive'><AlertDescription>{interaction.error}</AlertDescription></Alert> : null}
         {!request || !draft ? <p role='status' className='text-sm text-muted-foreground'>Loading the prepared request…</p> : <>
-          <Select value={String(selectedRoute)} disabled={locked} onValueChange={(index) => { void interaction.respond('reconfigure', { requestId: request.requestId, route: request.routes[Number(index)]! }); }}>
+          <Select value={String(selectedRoute)} disabled={selectionLocked} onValueChange={(index) => { void interaction.respond('reconfigure', { requestId: request.requestId, route: request.routes[Number(index)]! }); }}>
             <SelectTrigger aria-label='Provider and model' className='w-full'><SelectValue /></SelectTrigger>
             <SelectContent>{request.routes.map((route, index) => <SelectItem key={index} value={String(index)}>{route.providerLabel} · {route.label}</SelectItem>)}</SelectContent>
           </Select>
           {pendingRoute ? <p role='status' className='text-sm text-muted-foreground'>{review?.phase === 'preparationFailed' ? 'Preparation failed for' : 'Preparing'} {pendingRoute.providerLabel} · {pendingRoute.label}</p> : null}
           {review?.diagnostics.map((issue, index) => <Alert key={index} variant={issue.severity === 'error' ? 'destructive' : 'default'}><AlertDescription>{issue.message}</AlertDescription></Alert>)}
-          {review?.phase === 'preparationFailed' && pendingRoute ? <Button variant='outline' onClick={() => { void interaction.respond('reconfigure', { requestId: request.requestId, route: request.routes[selectedRoute]! }); }}>Return to the prepared model</Button> : null}
+          {review?.phase === 'preparationFailed' && pendingRoute ? <Button variant='outline' disabled={selectionLocked} onClick={() => { void interaction.respond('reconfigure', { requestId: request.requestId, route: request.routes[selectedRoute]! }); }}>Return to the prepared model</Button> : null}
           {review && review.requests.length > 1 ? <div className='flex items-center justify-between'>
             <Button variant='ghost' size='sm' aria-label='Previous generation request' disabled={activeIndex === 0} onClick={() => setRequestIndex(activeIndex - 1)}>Previous</Button>
             <span className='text-sm'>{activeIndex + 1} / {review.requests.length}</span>
