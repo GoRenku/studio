@@ -1,4 +1,4 @@
-export * from './assets.js';
+export * from './asset-files.js';
 export * from './cast-members.js';
 export * from './cast-voices.js';
 export * from './department-design.js';

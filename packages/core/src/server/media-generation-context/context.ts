@@ -21,7 +21,7 @@ import {
 } from '../studio-coordination/resource-keys.js';
 import { MEDIA_GENERATION_PURPOSE_BUILDERS, mediaGenerationOutputGuidance } from './purpose-registry.js';
 import { projectMediaGenerationContext } from './project-context.js';
-import { GenerationAssets } from './reference-assets.js';
+import { GenerationAssetFiles } from './reference-assets.js';
 
 export async function readMediaGenerationContext(
   input: ReadMediaGenerationContextInput,
@@ -35,7 +35,7 @@ export async function readMediaGenerationContext(
       throw new ProjectDataError('PROJECT_DATA021', `Project database has no project row: ${session.databasePath}.`);
     }
     const warnings: DiagnosticIssue[] = [];
-    const assets = new GenerationAssets();
+    const assetFiles = new GenerationAssetFiles();
     const project = projectMediaGenerationContext({
       session,
       projectName: projectRecord.projectName,
@@ -44,7 +44,7 @@ export async function readMediaGenerationContext(
     });
     const outputMediaKind = MEDIA_PURPOSE_OUTPUT_MEDIA_KINDS[input.purpose];
     const purposeContext = MEDIA_GENERATION_PURPOSE_BUILDERS[input.purpose]({
-      assets,
+      assetFiles,
       session,
       projectFolder,
       screenplay: readCanonicalScreenplay(session),
@@ -75,7 +75,7 @@ export async function readMediaGenerationContext(
       }),
       outputGuidance: mediaGenerationOutputGuidance(input.purpose, project.aspectRatio),
       ...purposeContext,
-      assets: assets.values(),
+      assetFiles: assetFiles.values(),
       warnings,
       resourceKeys: [...new Set([
         studioProjectInformationResourceKey(),

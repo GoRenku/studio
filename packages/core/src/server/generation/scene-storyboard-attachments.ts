@@ -1,12 +1,12 @@
 import path from 'node:path';
 import type {
-  Asset,
+  AssetFile,
   ProjectRelativePath,
   SceneStoryboardImagesImportDocument,
   SceneStoryboardImagesImportReport,
 } from '../../client/index.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { assetSelectionTargetForOwnerType } from '../assets/selection.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { assetFileSelectionTargetForOwnerType } from '../asset-files/selection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   readSceneBeats,
@@ -23,8 +23,8 @@ import {
 } from '../project-asset-files/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { studioSceneBeatsResourceKey } from '../studio-coordination/resource-keys.js';
-import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
-import { persistOwnedGeneratedMediaAssetInSession } from './attachment-persistence.js';
+import { validateMediaGenerationProvenance } from '../asset-files/generation-provenance.js';
+import { persistOwnedGeneratedMediaAssetFileInSession } from './attachment-persistence.js';
 
 export function attachSceneStoryboardImages(input: {
   session: DatabaseSession;
@@ -80,13 +80,12 @@ export function attachSceneStoryboardImages(input: {
     projectFolder: input.projectFolder,
     sceneId: input.sceneId,
   });
-  const importedIds: Array<{ beatId: string; assetId: string }> = [];
+  const importedIds: Array<{ beatId: string; assetFileId: string }> = [];
   const files: SceneStoryboardImagesImportReport['files'] = [];
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
       const pending = normalized.map((file) => {
-        const assetId = ids('asset');
         const assetFileId = ids('asset_file');
         const title = file.title?.trim() || file.beat.title || 'Storyboard image';
         const owner = {
@@ -98,19 +97,17 @@ export function attachSceneStoryboardImages(input: {
           ...file,
           title,
           owner,
-          assetId,
           assetFileId,
           selectionTarget: input.document.select
-            ? assetSelectionTargetForOwnerType(owner, 'scene_storyboard_image')
+            ? assetFileSelectionTargetForOwnerType(owner, 'scene_storyboard_image')
             : null,
         };
       });
       for (const file of pending) {
-        const assetFile = persistOwnedGeneratedMediaAssetInSession({
+        const assetFile = persistOwnedGeneratedMediaAssetFileInSession({
           session,
           projectFolder: input.projectFolder,
           writeSet,
-          assetId: file.assetId,
           assetFileId: file.assetFileId,
           now,
           sourceProjectRelativePath: file.source,
@@ -122,18 +119,17 @@ export function attachSceneStoryboardImages(input: {
           },
           owner: file.owner,
           ...(file.selectionTarget ? { selectionTarget: file.selectionTarget } : {}),
-          asset: {
+          assetFileMetadata: {
             type: 'scene_storyboard_image',
             mediaKind: 'image',
             title: file.title,
             origin: file.generationProvenance ? 'generated' : 'external',
           },
-          fileRole: 'storyboard_image',
           ...(file.generationProvenance
             ? { generationProvenance: file.generationProvenance }
             : {}),
         });
-        importedIds.push({ beatId: file.beatId, assetId: file.assetId });
+        importedIds.push({ beatId: file.beatId, assetFileId: file.assetFileId });
         files.push({
           role: 'storyboard_image',
           beatId: file.beatId,
@@ -146,18 +142,18 @@ export function attachSceneStoryboardImages(input: {
     rollbackProjectAssetFileWriteSetSync(writeSet);
     throw error;
   }
-  const imported: Asset[] = importedIds.map(({ beatId, assetId }) => {
-    const asset = readOwnedAsset(input.session, {
+  const imported: AssetFile[] = importedIds.map(({ beatId, assetFileId }) => {
+    const assetFile = readOwnedAssetFile(input.session, {
       owner: { kind: 'sceneBeat', sceneId: input.sceneId, beatId },
-      assetId,
+      assetFileId,
     });
-    if (!asset) {
+    if (!assetFile) {
       throw new ProjectDataError(
         'CORE_GENERATION_STORYBOARD_ATTACHMENT_FAILED',
-        `Storyboard Asset could not be projected: ${assetId}.`
+        `Storyboard Asset could not be projected: ${assetFileId}.`
       );
     }
-    return asset;
+    return assetFile;
   });
   const project = readProjectRecord(input.session);
   if (!project) {

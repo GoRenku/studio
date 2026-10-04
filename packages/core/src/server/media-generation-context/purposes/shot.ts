@@ -33,7 +33,7 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
   }
   const sceneContext = projectMediaGenerationSceneContext({
     session: input.session,
-    assets: input.assets,
+    assetFiles: input.assetFiles,
     screenplay: input.screenplay,
     sceneId: plan.shotPlan.sceneId,
     scope: plan.shotPlan.coverage
@@ -46,25 +46,25 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
   });
   const visualLanguage = readMediaGenerationLookbooks({
     session: input.session,
-    assets: input.assets,
+    assetFiles: input.assetFiles,
     projectFolder: input.projectFolder,
     kinds: ['production'],
   });
   return {
-    targetContext: { kind: 'shot', shotId: shot.id, shotPlan: projectGenerationShotPlan(plan.shotPlan, input.assets), coveredBeats: plan.coveredBeats, sceneContext },
+    targetContext: { kind: 'shot', shotId: shot.id, shotPlan: projectGenerationShotPlan(plan.shotPlan, input.assetFiles), coveredBeats: plan.coveredBeats, sceneContext },
     visualLanguage,
     suggestedReferences: [
       ...suggestLookbookMedia({
         lookbooks: visualLanguage,
         role: 'appearance',
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...suggestSceneSubjectMedia({
         sceneContext,
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...suggestBeatStoryboards({
@@ -72,13 +72,13 @@ export const buildShotPurposeContext: MediaGenerationPurposeBuilder = (input) =>
         sceneId: plan.shotPlan.sceneId,
         beatIds: plan.coveredBeats.map(({ beat }) => beat.id),
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...suggestSelectedShotImages({
         shots: plan.shotPlan.shots.filter((candidate) => candidate.id !== shot.id),
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
     ],

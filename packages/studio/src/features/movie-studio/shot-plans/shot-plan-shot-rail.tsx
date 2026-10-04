@@ -24,14 +24,14 @@ export function ShotPlanShotRail({
       <div className='space-y-3'>
         {shotPlan.shots.map((shot) => {
           const number = shot.number;
-          const selectedAsset =
-            shot.images.find((asset) => asset.id === shot.selectedImageId) ??
+          const selectedAssetFile =
+            shot.images.find((assetFile) => assetFile.id === shot.selectedImageId) ??
             null;
           const imageFile =
-            selectedAsset?.files.find((file) => file.mediaKind === 'image') ??
+            selectedAssetFile ??
             null;
-          const hasImageCandidates = shot.images.some((asset) =>
-            asset.files.some((file) => file.mediaKind === 'image')
+          const hasImageCandidates = shot.images.some((assetFile) =>
+            assetFile.mediaKind === 'image'
           );
           const selected = shot.id === selectedShotId;
           return (

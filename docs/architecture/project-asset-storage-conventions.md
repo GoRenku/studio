@@ -8,7 +8,7 @@ contains rational `frameRate`, `frameCount`, ordered `segments`, explicit subjec
 and identified Dialogue/Action/Camera cues. See ADR 0096 for the contract.
 Supplied invalid timelines fail before registration writes; read failures remain
 localized warnings. Optional Dialogue audio names exact
-`{assetId,assetFileId,offsetSeconds?}` references. Missing/unavailable audio preserves
+`{assetFileId,offsetSeconds?}` references. Missing/unavailable audio preserves
 visual rehearsal. Missing optional files are normal.
 Description is exact Markdown. No source-directory browser route is exposed.
 
@@ -227,10 +227,12 @@ facts live only on an attached Asset's provenance.
 `.renku/tmp/` is reserved for hidden operational state. Runtime media staging
 must not use it as normal project-visible storage.
 
-`research/` and `visual-language/inspiration/` are user-owned filesystem
-content. They may be generation inputs without Asset rows. When a focused
-import turns one of those files into a durable Asset, Core copies it to the
-appropriate canonical owner folder and registers the destination.
+`research/` retains Project-owned reference files; registered Inspiration folders
+retain folder-owned image files. Uploads register immediately. Downloads use
+`asset-file import`: unchanged in-place adoption preserves identity,
+while staged copies allocate collision-safe names. Common resolution checks the
+registered file, owner lifecycle, readable bytes and path containment. Preview
+and provider reads never register or repair files.
 
 ## Ownership Boundary
 

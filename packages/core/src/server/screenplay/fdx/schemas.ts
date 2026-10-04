@@ -71,7 +71,6 @@ export const screenplayImportSchema = {
   ...closedObject(
     [
       'id',
-      'sourceAssetId',
       'sourceAssetFileId',
       'importerVersion',
       'importedAt',
@@ -79,7 +78,6 @@ export const screenplayImportSchema = {
     ],
     {
       id: nonEmptyString,
-      sourceAssetId: nonEmptyString,
       sourceAssetFileId: nonEmptyString,
       importerVersion: { const: 1 },
       importedAt: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$' },
@@ -136,7 +134,6 @@ export const importFdxScreenplayReportSchema = {
       screenplayImport: closedObject(
         [
           'id',
-          'sourceAssetId',
           'sourceAssetFileId',
           'importerVersion',
           'importedAt',
@@ -145,7 +142,6 @@ export const importFdxScreenplayReportSchema = {
         ],
         {
           id: nonEmptyString,
-          sourceAssetId: nonEmptyString,
           sourceAssetFileId: nonEmptyString,
           importerVersion: { const: 1 },
           importedAt: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$' },

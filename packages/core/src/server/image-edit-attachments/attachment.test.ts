@@ -2,10 +2,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { AssetOwner, ProjectRelativePath } from '../../client/index.js';
+import type { AssetFileOwner, ProjectRelativePath } from '../../client/index.js';
 import { createDeterministicIdGenerator } from '../entity-ids.js';
 import { createProjectDataService } from '../project-data-service.js';
-import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
+import { createTestAssetFileFixture } from '../testing/asset-fixture-helpers.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 
 describe('image.edit source-derived attachment continuation', () => {
@@ -49,16 +49,15 @@ describe('image.edit source-derived attachment continuation', () => {
       const outputPath = `tmp/output-${type}.png` as ProjectRelativePath;
       await writeImage(sourcePath);
       await writeImage(outputPath);
-      const source = await createTestAssetFixture({
+      const source = await createTestAssetFileFixture({
         projectName: 'constantinople',
         homeDir,
-        owner: owner as AssetOwner,
+        owner: owner as AssetFileOwner,
         type,
         mediaKind: 'image',
         title: 'Source title',
         oneLineSummary: 'Source summary',
         projectRelativePath: sourcePath,
-        fileRole: 'primary',
         referenceName: 'continuity',
         tags: ['source-tag'],
       });
@@ -67,13 +66,13 @@ describe('image.edit source-derived attachment continuation', () => {
         projectName: 'constantinople',
         homeDir,
         purpose: 'image.edit',
-        target: { kind: 'asset', id: source.id },
+        target: { kind: 'assetFile', assetFileId: source.id },
         sourceProjectRelativePath: outputPath,
         generationProvenance: provenance(sourcePath),
       });
 
-      expect(report.asset.id).not.toBe(source.id);
-      expect(report.asset).toMatchObject({
+      expect(report.assetFile.id).not.toBe(source.id);
+      expect(report.assetFile).toMatchObject({
         owner,
         type,
         title: 'Source title',
@@ -81,7 +80,7 @@ describe('image.edit source-derived attachment continuation', () => {
         referenceName: 'continuity',
         tags: ['source-tag'],
       });
-      expect(report.asset.files[0]?.projectRelativePath).toMatch(
+      expect(report.assetFile?.projectRelativePath).toMatch(
         new RegExp(`^${destinationPrefix}[a-z0-9]+\\.png$`),
       );
       expect(report.resourceKeys).toContain(resourceKey);
@@ -93,7 +92,7 @@ describe('image.edit source-derived attachment continuation', () => {
     const outputPath = 'tmp/output-invalid.png' as ProjectRelativePath;
     await writeImage(sourcePath);
     await writeImage(outputPath);
-    const source = await createTestAssetFixture({
+    const source = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'location', id: 'location_test0001' },
@@ -101,19 +100,90 @@ describe('image.edit source-derived attachment continuation', () => {
       mediaKind: 'image',
       title: 'Source',
       projectRelativePath: sourcePath,
-      fileRole: 'primary',
     });
 
     await expect(projectData.attachGenerationMedia({
       projectName: 'constantinople',
       homeDir,
       purpose: 'image.edit',
-      target: { kind: 'asset', id: source.id },
+      target: { kind: 'assetFile', assetFileId: source.id },
       sourceProjectRelativePath: outputPath,
       generationProvenance: provenance('tmp/another.png' as ProjectRelativePath),
     })).rejects.toMatchObject({ code: 'CORE_IMAGE_EDIT_SOURCE_REFERENCE_MISSING' });
     await expect(fs.readdir(path.join(projectFolder, 'locations/council-chamber')))
       .rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it.each(['inspiration', 'research'] as const)(
+    'keeps edited %s images beside their source and allows deleting the original independently',
+    async (kind) => {
+      const input = { projectName: 'constantinople', homeDir };
+      const folder = (await projectData.createInspirationFolder({ ...input, name: 'Reference room' })).folder;
+      const sourcePath = kind === 'research'
+        ? 'research/architecture/source.png' as ProjectRelativePath
+        : `${folder.projectRelativePath}/source.png` as ProjectRelativePath;
+      await writeImage(sourcePath);
+      const imported = await projectData.importReferenceFiles({
+        ...input,
+        destination: kind === 'research' ? { kind } : { kind, folderId: folder.id },
+        files: [{ sourceProjectRelativePath: sourcePath }],
+      });
+      const source = imported.assetFiles[0]!;
+      const target = { kind: 'assetFile' as const, assetFileId: source.id };
+      const context = await projectData.readMediaGenerationContext({ ...input, purpose: 'image.edit', target });
+      expect(context.suggestedReferences[0]?.candidates[0]?.assetFileId).toBe(source.id);
+      const outputPath = 'tmp/edited.png' as ProjectRelativePath;
+      await writeImage(outputPath);
+      await fs.writeFile(path.join(projectFolder, outputPath), 'edited image');
+      const edited = await projectData.attachGenerationMedia({
+        ...input, purpose: 'image.edit', target, sourceProjectRelativePath: outputPath,
+        generationProvenance: provenance(sourcePath),
+      });
+      expect(edited.assetFile.id).not.toBe(source.id);
+      expect(edited.assetFile).toMatchObject({ owner: source.owner, type: source.type, title: null });
+      expect(path.posix.dirname(edited.assetFile.projectRelativePath)).toBe(path.posix.dirname(sourcePath));
+      expect(await fs.readFile(path.join(projectFolder, sourcePath), 'utf8')).toBe('image');
+      const page = await projectData.listAssetFilePage({ ...input, owner: source.owner, type: source.type });
+      expect(page.items.map((file) => file.id)).toEqual(expect.arrayContaining([source.id, edited.assetFile.id]));
+      expect(page.selectedAssetFileId).toBeNull();
+      if (kind === 'inspiration') {
+        const resource = await projectData.readInspirationFolder({ ...input, folderId: folder.id });
+        expect(resource.images.map((file) => file.id)).toEqual(expect.arrayContaining([source.id, edited.assetFile.id]));
+        expect(edited.resourceKeys).toContain(`surface:visual-language:inspiration:${folder.id}`);
+      }
+      await projectData.discardAssetFile({ ...input, owner: source.owner, assetFileId: source.id });
+      const preview = await projectData.previewGarbageCollection(input);
+      await projectData.emptyTrash({ ...input, confirmationToken: preview.confirmationToken });
+      const retained = await projectData.resolveProjectAssetFileById({ ...input, assetFileId: edited.assetFile.id });
+      expect(await fs.readFile(retained.absolutePath, 'utf8')).toBe('edited image');
+    },
+  );
+
+  it.each([
+    { kind: 'project' },
+    { kind: 'castMember', id: 'cast_test0002' },
+  ] as const)('edits arbitrary image types for $kind without changing the source metadata', async (owner) => {
+    const input = { projectName: 'constantinople', homeDir };
+    const sourcePath = 'media/unclassified/source.png' as ProjectRelativePath;
+    const outputPath = 'tmp/unclassified-output.png' as ProjectRelativePath;
+    await writeImage(sourcePath);
+    await writeImage(outputPath);
+    const source = await createTestAssetFileFixture({
+      ...input, owner, type: 'unclassified_image', mediaKind: 'image', title: 'Source',
+      projectRelativePath: sourcePath, locale: { localeId: 'locale_test0001' },
+      oneLineSummary: 'Source summary', referenceName: 'reference', tags: ['continuity'],
+    });
+    const edited = await projectData.attachGenerationMedia({
+      ...input, purpose: 'image.edit', target: { kind: 'assetFile', assetFileId: source.id },
+      sourceProjectRelativePath: outputPath, generationProvenance: provenance(sourcePath),
+    });
+    expect(edited.assetFile).toMatchObject({
+      owner, type: source.type, localeId: source.localeId, title: source.title,
+      oneLineSummary: source.oneLineSummary, referenceName: source.referenceName, tags: source.tags,
+    });
+    expect(edited.assetFile.projectRelativePath).toMatch(/^media\/unclassified\/edited-image-g[a-z0-9]+\.png$/);
+    const files = await projectData.listAssetFiles({ ...input, owner });
+    expect(files.find((file) => file.id === source.id)).toEqual(source);
   });
 
   it.each([
@@ -122,7 +192,6 @@ describe('image.edit source-derived attachment continuation', () => {
     ['shot_image', { kind: 'project' }, 'CORE_IMAGE_EDIT_OWNER_INVALID'],
     ['scene_storyboard_image', { kind: 'project' }, 'CORE_IMAGE_EDIT_SURFACE_UNAVAILABLE'],
     ['shot_plan_video_first_frame', { kind: 'castMember', id: 'cast_test0002' }, 'CORE_IMAGE_EDIT_OWNER_INVALID'],
-    ['unclassified_image', { kind: 'project' }, 'CORE_IMAGE_EDIT_CONTINUATION_UNSUPPORTED'],
   ] as const)(
     'rejects invalid %s continuation before adding another Asset',
     async (type, owner, code) => {
@@ -130,33 +199,32 @@ describe('image.edit source-derived attachment continuation', () => {
       const outputPath = `tmp/output-${type}.png` as ProjectRelativePath;
       await writeImage(sourcePath);
       await writeImage(outputPath);
-      const source = await createTestAssetFixture({
+      const source = await createTestAssetFileFixture({
         projectName: 'constantinople',
         homeDir,
-        owner: owner as AssetOwner,
+        owner: owner as AssetFileOwner,
         type,
         mediaKind: 'image',
         title: 'Invalid continuation source',
         projectRelativePath: sourcePath,
-        fileRole: 'primary',
       });
-      const before = await projectData.listAssets({
-        projectName: 'constantinople', homeDir, owner: owner as AssetOwner,
+      const before = await projectData.listAssetFiles({
+        projectName: 'constantinople', homeDir, owner: owner as AssetFileOwner,
       });
 
       await expect(projectData.attachGenerationMedia({
         projectName: 'constantinople',
         homeDir,
         purpose: 'image.edit',
-        target: { kind: 'asset', id: source.id },
+        target: { kind: 'assetFile', assetFileId: source.id },
         sourceProjectRelativePath: outputPath,
         generationProvenance: provenance(sourcePath),
       })).rejects.toMatchObject({ code });
 
-      const after = await projectData.listAssets({
-        projectName: 'constantinople', homeDir, owner: owner as AssetOwner,
+      const after = await projectData.listAssetFiles({
+        projectName: 'constantinople', homeDir, owner: owner as AssetFileOwner,
       });
-      expect(after.map((asset) => asset.id)).toEqual(before.map((asset) => asset.id));
+      expect(after.map((assetFile) => assetFile.id)).toEqual(before.map((assetFile) => assetFile.id));
     },
   );
 
@@ -184,12 +252,12 @@ describe('image.edit source-derived attachment continuation', () => {
       sourceProjectRelativePath: createdPath,
       generationProvenance: generatedProvenance(),
     });
-    expect(created.asset).toMatchObject({
+    expect(created.assetFile).toMatchObject({
       owner: { kind: 'project' },
       type: 'shot_plan_video_reference',
       authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
     });
-    expect(created.asset.files[0]?.projectRelativePath).toMatch(
+    expect(created.assetFile?.projectRelativePath).toMatch(
       /\/01-shot-plan\/reference-g[a-z0-9]+\.png$/,
     );
 
@@ -215,21 +283,21 @@ describe('image.edit source-derived attachment continuation', () => {
         projectName: 'constantinople',
         homeDir,
         purpose: 'image.edit',
-        target: { kind: 'asset', id: source.asset.id },
+        target: { kind: 'assetFile', assetFileId: source.assetFile.id },
         sourceProjectRelativePath: editedPath,
-        generationProvenance: provenance(source.asset.files[0]!.projectRelativePath),
+        generationProvenance: provenance(source.assetFile!.projectRelativePath),
       });
-      expect(edited.asset).toMatchObject({
+      expect(edited.assetFile).toMatchObject({
         owner: { kind: 'project' },
         type,
         authoredFrom: { kind: 'shotPlan', id: plan.shotPlan.id },
       });
-      expect(edited.asset.files[0]?.projectRelativePath).toMatch(
+      expect(edited.assetFile?.projectRelativePath).toMatch(
         new RegExp(`/01-shot-plan/${stem}-g[a-z0-9]+\\.png$`),
       );
     }
 
-    const projection = await projectData.readShotPlanAssets({
+    const projection = await projectData.readShotPlanAssetFiles({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: plan.shotPlan.id,
@@ -237,7 +305,7 @@ describe('image.edit source-derived attachment continuation', () => {
     expect(projection.groups.map((group) => group.role)).toEqual([
       'first-frame', 'last-frame', 'storyboard', 'reference',
     ]);
-    expect(projection.groups.find((group) => group.role === 'reference')?.assets)
+    expect(projection.groups.find((group) => group.role === 'reference')?.assetFiles)
       .toHaveLength(3);
     const otherPlan = await projectData.createShotPlan({
       type: 'shot-list',
@@ -248,22 +316,22 @@ describe('image.edit source-derived attachment continuation', () => {
       coverage: null,
       shots: [],
     });
-    await expect(projectData.discardShotPlanAsset({
+    await expect(projectData.discardShotPlanAssetFile({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: otherPlan.shotPlan.id,
-      assetId: created.asset.id,
+      assetFileId: created.assetFile.id,
     })).rejects.toMatchObject({ code: 'CORE_SHOT_PLAN_ASSETS_NOT_FOUND' });
-    await projectData.discardShotPlanAsset({
+    await projectData.discardShotPlanAssetFile({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: plan.shotPlan.id,
-      assetId: created.asset.id,
+      assetFileId: created.assetFile.id,
     });
-    const afterDiscard = await projectData.readShotPlanAssets({
+    const afterDiscard = await projectData.readShotPlanAssetFiles({
       projectName: 'constantinople', homeDir, shotPlanId: plan.shotPlan.id,
     });
-    expect(afterDiscard.groups.find((group) => group.role === 'reference')?.assets)
+    expect(afterDiscard.groups.find((group) => group.role === 'reference')?.assetFiles)
       .toHaveLength(2);
   });
 
@@ -288,24 +356,24 @@ describe('image.edit source-derived attachment continuation', () => {
         target: { kind: 'lookbook', id: lookbook.lookbook.id },
         sourceProjectRelativePath: sourcePath,
         title: 'Continuity',
-        assetMetadata: { referenceName: 'continuity' },
+        assetFileMetadata: { referenceName: 'continuity' },
       });
       const edited = await projectData.attachGenerationMedia({
         projectName: 'constantinople',
         homeDir,
         purpose: 'image.edit',
-        target: { kind: 'asset', id: source.asset.id },
+        target: { kind: 'assetFile', assetFileId: source.assetFile.id },
         sourceProjectRelativePath: editedPath,
-        generationProvenance: provenance(source.asset.files[0]!.projectRelativePath),
+        generationProvenance: provenance(source.assetFile!.projectRelativePath),
       });
       expect(edited.ownerRecord).toMatchObject({
         kind: type === 'lookbook_image' ? 'lookbookImage' : 'lookbookSheet',
       });
-      expect(edited.asset).toMatchObject({
+      expect(edited.assetFile).toMatchObject({
         owner: { kind: 'lookbook', id: lookbook.lookbook.id },
         type,
       });
-      expect(edited.asset.files[0]?.projectRelativePath).toMatch(
+      expect(edited.assetFile?.projectRelativePath).toMatch(
         new RegExp(`/production/${stem}[a-z0-9]+\\.png$`),
       );
     }
@@ -354,9 +422,9 @@ describe('image.edit source-derived attachment continuation', () => {
       projectName: 'constantinople',
       homeDir,
       purpose: 'image.edit',
-      target: { kind: 'asset', id: beatSource.id },
+      target: { kind: 'assetFile', assetFileId: beatSource.id },
       sourceProjectRelativePath: beatEditedPath,
-      generationProvenance: provenance(beatSource.files[0]!.projectRelativePath),
+      generationProvenance: provenance(beatSource!.projectRelativePath),
     });
     const storyboardStatus = await projectData.readSceneStoryboardStatus({
       projectName: 'constantinople',
@@ -365,15 +433,15 @@ describe('image.edit source-derived attachment continuation', () => {
       sceneBeatsRevisionId: revision.activeRevisionId,
     });
     expect(storyboardStatus.beats[0]).toMatchObject({ selectedImageId: beatSource.id });
-    expect(storyboardStatus.beats[0]?.images.map((asset) => asset.id))
-      .toContain(beatEdited.asset.id);
+    expect(storyboardStatus.beats[0]?.images.map((assetFile) => assetFile.id))
+      .toContain(beatEdited.assetFile.id);
     await expect(projectData.selectSceneStoryboardImageCandidate({
       projectName: 'constantinople',
       homeDir,
       sceneId: scene.id,
       sceneBeatsRevisionId: 'scene_beats_revision_missing',
       beatId: 'beat_test0001',
-      assetId: beatEdited.asset.id,
+      assetFileId: beatEdited.assetFile.id,
     })).rejects.toMatchObject({ code: 'CORE_SCENE_STORYBOARD_CANDIDATE_CONTEXT_INVALID' });
     const selectionReport = await projectData.selectSceneStoryboardImageCandidate({
       projectName: 'constantinople',
@@ -381,7 +449,7 @@ describe('image.edit source-derived attachment continuation', () => {
       sceneId: scene.id,
       sceneBeatsRevisionId: revision.activeRevisionId,
       beatId: 'beat_test0001',
-      assetId: beatEdited.asset.id,
+      assetFileId: beatEdited.assetFile.id,
     });
     expect(selectionReport.resourceKeys).toContain(
       `scene-beats:${revision.activeRevisionId}:beat:beat_test0001`,
@@ -392,7 +460,7 @@ describe('image.edit source-derived attachment continuation', () => {
       sceneId: scene.id,
       sceneBeatsRevisionId: revision.activeRevisionId,
       beatId: 'beat_test0001',
-      assetId: beatSource.id,
+      assetFileId: beatSource.id,
     });
     expect(discardReport.resourceKeys).toContain(
       `scene-beats:${revision.activeRevisionId}:beat:beat_test0001`,
@@ -404,8 +472,8 @@ describe('image.edit source-derived attachment continuation', () => {
       sceneBeatsRevisionId: revision.activeRevisionId,
     });
     expect(afterStoryboardMutation.beats[0]).toMatchObject({
-      selectedImageId: beatEdited.asset.id,
-      images: [expect.objectContaining({ id: beatEdited.asset.id })],
+      selectedImageId: beatEdited.assetFile.id,
+      images: [expect.objectContaining({ id: beatEdited.assetFile.id })],
     });
 
     const plan = await projectData.createShotPlan({
@@ -434,16 +502,16 @@ describe('image.edit source-derived attachment continuation', () => {
       projectName: 'constantinople',
       homeDir,
       purpose: 'image.edit',
-      target: { kind: 'asset', id: shotSource.asset.id },
+      target: { kind: 'assetFile', assetFileId: shotSource.assetFile.id },
       sourceProjectRelativePath: shotEditedPath,
-      generationProvenance: provenance(shotSource.asset.files[0]!.projectRelativePath),
+      generationProvenance: provenance(shotSource.assetFile!.projectRelativePath),
     });
     const currentPlan = await projectData.readShotPlan({
       projectName: 'constantinople', homeDir, shotPlanId: plan.shotPlan.id,
     });
-    expect(currentPlan.shotPlan.shots[0]?.selectedImageId).toBe(shotSource.asset.id);
-    expect(currentPlan.shotPlan.shots[0]?.images.map((asset) => asset.id))
-      .toContain(shotEdited.asset.id);
+    expect(currentPlan.shotPlan.shots[0]?.selectedImageId).toBe(shotSource.assetFile.id);
+    expect(currentPlan.shotPlan.shots[0]?.images.map((assetFile) => assetFile.id))
+      .toContain(shotEdited.assetFile.id);
   });
 
   function writeImage(relativePath: ProjectRelativePath): Promise<void> {

@@ -1,3 +1,6 @@
+import { assertAssetFileOwnerExists } from '../asset-files/ownership.js';
+import { assetFileOwnerKey } from '../asset-files/owner-keys.js';
+import type { AssetFileOwner } from '../../client/asset-files.js';
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -27,6 +30,7 @@ import type {
   PersistProjectAssetFileInput,
   ProjectAssetFileWriteSet,
   ProjectMediaKind,
+  RetainedAssetFileMetadata,
 
 } from './types.js';
 
@@ -37,7 +41,6 @@ export async function persistProjectAssetFile(
     projectFolder: input.projectFolder,
     projectRelativePath: input.sourceProjectRelativePath,
     mediaKind: input.mediaKind,
-    role: input.fileRole,
   });
   for (let attempt = 0; attempt < collisionAttemptLimit(input); attempt += 1) {
     const destination = await resolveDurableDestinationFile({
@@ -94,9 +97,9 @@ export function persistProjectAssetFileSync(
       return persistProjectAssetFileAtDestinationSync({
         session: input.session,
         projectFolder: input.projectFolder,
-        assetId: input.assetId,
         assetFileId: input.assetFileId,
-        fileRole: input.fileRole,
+        owner: input.owner,
+        assetFileMetadata: input.assetFileMetadata,
         mediaKind: input.mediaKind,
         sourcePath,
         sourceProjectRelativePath,
@@ -125,6 +128,7 @@ async function persistProjectAssetFileAtDestination(
     destinationProjectRelativePath: ProjectRelativePath;
   }
 ): Promise<AssetFileRecord> {
+  assertAssetFileOwnerExists(input.session, input.owner);
   assertDurableProjectAssetFilePath(input.destinationProjectRelativePath);
   const destinationPath = resolveProjectRelativePath(
     input.projectFolder,
@@ -164,10 +168,11 @@ async function persistProjectAssetFileAtDestination(
       throw destinationWriteFailure(input.destinationProjectRelativePath);
     }
     insertAssetFileRecord(input.session, {
+      ...input.assetFileMetadata,
+      ownerKey: assetFileOwnerKey(input.owner),
+      availability: 'ready',
       id: input.assetFileId,
-      assetId: input.assetId,
-      role: input.fileRole,
-      projectRelativePath: input.destinationProjectRelativePath,
+        projectRelativePath: input.destinationProjectRelativePath,
       mimeType: input.mimeType ?? mimeTypeForProjectPath(input.destinationProjectRelativePath, input.mediaKind),
       mediaKind: input.mediaKind,
       sizeBytes: stats.size,
@@ -178,10 +183,7 @@ async function persistProjectAssetFileAtDestination(
       createdAt: input.now,
       updatedAt: input.now,
     });
-    return requireInsertedAssetFile(input.session, {
-      assetId: input.assetId,
-      assetFileId: input.assetFileId,
-    });
+    return requireInsertedAssetFile(input.session, { assetFileId: input.assetFileId });
   } catch (error) {
     if (copied) {
       await removeCopiedProjectAssetFile(
@@ -216,9 +218,9 @@ export function removeCopiedProjectAssetFileSync(
 export function persistProjectAssetFileAtDestinationSync(input: {
   session: DatabaseSession;
   projectFolder: string;
-  assetId: string;
   assetFileId: string;
-  fileRole: string;
+  owner: AssetFileOwner;
+  assetFileMetadata: RetainedAssetFileMetadata;
   mediaKind: ProjectMediaKind;
   sourceProjectRelativePath: ProjectRelativePath;
   sourcePath: string;
@@ -230,6 +232,7 @@ export function persistProjectAssetFileAtDestinationSync(input: {
   now: string;
   writeSet?: ProjectAssetFileWriteSet;
 }): AssetFileRecord {
+  assertAssetFileOwnerExists(input.session, input.owner);
   assertDurableProjectAssetFilePath(input.destinationProjectRelativePath);
   const destinationPath = resolveProjectRelativePath(
     input.projectFolder,
@@ -269,10 +272,11 @@ export function persistProjectAssetFileAtDestinationSync(input: {
       throw destinationWriteFailure(input.destinationProjectRelativePath);
     }
     insertAssetFileRecord(input.session, {
+      ...input.assetFileMetadata,
+      ownerKey: assetFileOwnerKey(input.owner),
+      availability: 'ready',
       id: input.assetFileId,
-      assetId: input.assetId,
-      role: input.fileRole,
-      projectRelativePath: input.destinationProjectRelativePath,
+        projectRelativePath: input.destinationProjectRelativePath,
       mimeType: input.mimeType ?? mimeTypeForProjectPath(input.destinationProjectRelativePath, input.mediaKind),
       mediaKind: input.mediaKind,
       sizeBytes: stats.size,
@@ -283,10 +287,7 @@ export function persistProjectAssetFileAtDestinationSync(input: {
       createdAt: input.now,
       updatedAt: input.now,
     });
-    return requireInsertedAssetFile(input.session, {
-      assetId: input.assetId,
-      assetFileId: input.assetFileId,
-    });
+    return requireInsertedAssetFile(input.session, { assetFileId: input.assetFileId });
   } catch (error) {
     if (copied && !input.writeSet) {
       removeCopiedProjectAssetFileSync(
@@ -371,9 +372,9 @@ function destinationCollisionFailure(
 
 function requireInsertedAssetFile(
   session: DatabaseSession,
-  input: { assetId: string; assetFileId: string }
+  input: { assetFileId: string }
 ): AssetFileRecord {
-  const row = readAssetFileRecord(session, input);
+  const row = readAssetFileRecord(session, input.assetFileId);
   if (!row) {
     throw new ProjectDataError(
       'PROJECT_ASSET_FILE_INSERT_FAILED',

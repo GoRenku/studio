@@ -4,7 +4,7 @@ import type {
   ShotPlanDialogueAudioSpeaker,
   ShotPlanDialogueAudioTake,
 } from '../../client/shot-plan-dialogue-audio.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import {
   listShotPlanDialogueAudioTakeRecords,
@@ -26,11 +26,11 @@ export function readShotPlanDialogueAudio(input: {
   const screenplay = readCanonicalScreenplay(input.session);
   const dialogueTurns = listNumberedDialogueTurns(screenplay, shotPlan.sceneId);
   const takes = listShotPlanDialogueAudioTakeRecords(input.session, shotPlan.id).map((record) => {
-    const asset = readOwnedAsset(input.session, {
+    const assetFile = readOwnedAssetFile(input.session, {
       owner: { kind: 'project' },
-      assetId: record.assetId,
+      assetFileId: record.assetFileId,
     });
-    if (!asset || !asset.files.some((file) => file.id === record.assetFileId && file.mediaKind === 'audio')) {
+    if (!assetFile || assetFile.mediaKind !== 'audio') {
       throw new ProjectDataError(
         'CORE_SHOT_PLAN_DIALOGUE_AUDIO_FILE_INVALID',
         `Dialogue Audio Take ${record.id} has no active audio file.`
@@ -43,7 +43,7 @@ export function readShotPlanDialogueAudio(input: {
     return {
       id: record.id,
       shotPlanId: record.shotPlanId,
-      asset,
+      assetFile,
       turnRange,
       selected: record.selectedAt !== null,
       speakers: speakersForRange(input.session, dialogueTurns, turnRange),
@@ -77,7 +77,7 @@ export function requireShotPlanDialogueAudioTakeFile(input: {
   shotPlanId: string;
   takeId: string;
   assetFileId: string;
-}): { assetId: string; assetFileId: string } {
+}): { assetFileId: string } {
   const take = readShotPlanDialogueAudioTakeRecord(input.session, input);
   if (!take || take.assetFileId !== input.assetFileId) {
     throw new ProjectDataError(
@@ -85,19 +85,17 @@ export function requireShotPlanDialogueAudioTakeFile(input: {
       `Dialogue Audio file does not belong to Take ${input.takeId}.`,
     );
   }
-  const asset = readOwnedAsset(input.session, {
+  const assetFile = readOwnedAssetFile(input.session, {
     owner: { kind: 'project' },
-    assetId: take.assetId,
+    assetFileId: take.assetFileId,
   });
-  if (!asset?.files.some(
-    (file) => file.id === input.assetFileId && file.mediaKind === 'audio'
-  )) {
+  if (!assetFile || assetFile.id !== input.assetFileId || assetFile.mediaKind !== 'audio') {
     throw new ProjectDataError(
       'CORE_SHOT_PLAN_DIALOGUE_AUDIO_FILE_INVALID',
       `Dialogue Audio Take ${input.takeId} has no active audio file ${input.assetFileId}.`,
     );
   }
-  return { assetId: take.assetId, assetFileId: input.assetFileId };
+  return { assetFileId: input.assetFileId };
 }
 
 function speakersForRange(

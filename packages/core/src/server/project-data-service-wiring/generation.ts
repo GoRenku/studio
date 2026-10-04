@@ -1,14 +1,14 @@
-import type { AssetMetadataInput } from '../../client/assets.js';
+import type { AssetFileMetadataInput } from '../../client/asset-files.js';
 import type { MediaPurpose, MediaTarget } from '../../client/media-attachments.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 import type { SceneStoryboardImagesImportDocument } from '../../client/scene-beats/index.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
-import { resolveProjectAssetFileById } from '../assets/resources.js';
+import { resolveProjectAssetFileById } from '../asset-files/resources.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { attachGenerationMedia } from '../generation/attachments.js';
 import { attachSceneStoryboardImages } from '../generation/scene-storyboard-attachments.js';
 import { withProject } from '../project-operation.js';
-import { readAssetMediaGenerationRequest } from '../media-generation-review/inspection.js';
+import { readAssetFileMediaGenerationRequest } from '../media-generation-review/inspection.js';
 import { readMediaGenerationPreview } from '../media-generation-review/preview.js';
 import { readMediaGenerationReview } from '../media-generation-review/review-file.js';
 import { updateMediaGenerationPreviewPrompt } from '../media-generation-review/prompt.js';
@@ -30,7 +30,7 @@ export function createGenerationServiceWiring() {
     readMediaGenerationPreview,
     readMediaGenerationReview,
     updateMediaGenerationPreviewPrompt,
-    readAssetMediaGenerationRequest,
+    readAssetFileMediaGenerationRequest,
     readMediaGenerationContext,
     async readShotPlanDialogueAudio(input: ProjectInput & { shotPlanId: string }) {
       return withProject(input, ({ session }) =>
@@ -43,7 +43,7 @@ export function createGenerationServiceWiring() {
       turnRange: import('../../client/shot-plan-dialogue-audio.js').DialogueTurnRange;
       generationProvenance: MediaGenerationProvenance;
       title?: string;
-      assetMetadata?: AssetMetadataInput;
+      assetFileMetadata?: AssetFileMetadataInput;
     }) {
       return withProject(input, ({ session, projectFolder }) =>
         attachShotPlanDialogueAudio({
@@ -107,7 +107,7 @@ export function createGenerationServiceWiring() {
       target?: MediaTarget;
       sourceProjectRelativePath: string;
       title?: string;
-      assetMetadata?: AssetMetadataInput;
+      assetFileMetadata?: AssetFileMetadataInput;
       generationProvenance?: MediaGenerationProvenance;
       select?: boolean;
       turnRange?: import('../../client/shot-plan-dialogue-audio.js').DialogueTurnRange;

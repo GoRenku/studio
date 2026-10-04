@@ -15,25 +15,25 @@ export function SupportingFileInfoDialog({ projectName, file, onClose }: {
   const [opening, setOpening] = useState(false);
   useEffect(() => {
     let current = true;
-    void readSupportingFileInformation(projectName, file.asset.id).then(
+    void readSupportingFileInformation(projectName, file.assetFile.id).then(
       (result) => { if (current) setInformation(result); },
       (failure: Error) => { if (current) setError(failure.message); },
     );
     return () => { current = false; };
-  }, [projectName, file.asset.id]);
+  }, [projectName, file.assetFile.id]);
 
   const openFolder = async () => {
     setOpening(true);
     setError(null);
     try {
-      await openSupportingFileFolder(projectName, file.asset.id);
+      await openSupportingFileFolder(projectName, file.assetFile.id);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not open the containing folder.');
     } finally {
       setOpening(false);
     }
   };
-  const asset = information?.supportingFile.asset ?? file.asset;
+  const assetFile = information?.supportingFile.assetFile ?? file.assetFile;
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className='gap-0 overflow-hidden p-8 font-sans font-normal sm:max-w-[560px]'>
@@ -43,18 +43,18 @@ export function SupportingFileInfoDialog({ projectName, file, onClose }: {
           </div>
           <div className='min-w-0 space-y-2'>
             <DialogTitle>File information</DialogTitle>
-            <DialogDescription className='break-words text-sm font-normal leading-5'>{asset.title}</DialogDescription>
+            <DialogDescription className='break-words text-sm font-normal leading-5'>{(assetFile.title ?? '')}</DialogDescription>
           </div>
         </div>
         <div className='mt-7 flex items-end justify-between gap-6'>
           <dl className='min-w-0 space-y-5 text-[13px] font-normal leading-5'>
             <div className='grid grid-cols-[88px_1fr] items-baseline gap-3'>
               <dt className='text-muted-foreground'>Imported</dt>
-              <dd className='font-normal tabular-nums text-foreground/85'>{formatFileDate(asset.createdAt)}</dd>
+              <dd className='font-normal tabular-nums text-foreground/85'>{formatFileDate(assetFile.createdAt)}</dd>
             </div>
             <div className='grid grid-cols-[88px_1fr] items-baseline gap-3'>
               <dt className='text-muted-foreground'>Last updated</dt>
-              <dd className='font-normal tabular-nums text-foreground/85'>{formatFileDate(asset.updatedAt)}</dd>
+              <dd className='font-normal tabular-nums text-foreground/85'>{formatFileDate(assetFile.updatedAt)}</dd>
             </div>
           </dl>
           <Button variant='outline' className='shrink-0 gap-2 border-primary/40 text-[13px] font-medium text-primary hover:bg-primary/10 hover:text-primary' disabled={!information || opening} onClick={() => void openFolder()}>

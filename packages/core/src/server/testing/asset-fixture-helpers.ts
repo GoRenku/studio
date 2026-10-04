@@ -1,10 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Asset, AssetOwner, ProjectRelativePath } from '../../client/index.js';
-import { createAssetMembership } from '../assets/ownership.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import type { AssetFile, AssetFileOwner, ProjectRelativePath } from '../../client/index.js';
+import { assetFileOwnerKey } from '../asset-files/owner-keys.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
-import { insertAssetRecord } from '../database/access/assets.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { createRandomIdGenerator, createUniqueIdAllocator } from '../entity-ids.js';
 import {
@@ -14,24 +13,23 @@ import {
 import { ProjectDataError } from '../project-data-error.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
 
-export interface TestAssetFixtureInput extends RenkuConfigPathOptions {
+export interface TestAssetFileFixtureInput extends RenkuConfigPathOptions {
   projectName: string;
-  owner: AssetOwner;
+  owner: AssetFileOwner;
   locale?: { localeId?: string | null };
   type: string;
   mediaKind: string;
   title: string;
   oneLineSummary?: string | null;
   projectRelativePath: ProjectRelativePath;
-  fileRole: string;
   referenceName?: string | null;
   tags?: string[];
 }
 
-export async function createTestAssetFixture(
-  input: TestAssetFixtureInput
-): Promise<Asset> {
-  const normalizedInput = normalizeTestAssetFixtureInput(input);
+export async function createTestAssetFileFixture(
+  input: TestAssetFileFixtureInput
+): Promise<AssetFile> {
+  const normalizedInput = normalizeTestAssetFileFixtureInput(input);
   const { projectFolder, session } = await openProjectSession(normalizedInput);
   try {
     const absolutePath = resolveProjectRelativePath(
@@ -43,14 +41,16 @@ export async function createTestAssetFixture(
 
     const now = new Date().toISOString();
     const ids = createUniqueIdAllocator(createRandomIdGenerator());
-    const assetId = ids('asset');
-    const fileId = ids('asset_file');
+    const assetFileId = ids('asset_file');
     const localeId = normalizedInput.locale?.localeId ?? null;
 
     session.db.transaction((tx) => {
       const transactionSession = { ...session, db: tx };
-      insertAssetRecord(transactionSession, {
-        id: assetId,
+      insertAssetFileRecord(transactionSession, {
+        id: assetFileId,
+        ownerKey: assetFileOwnerKey(normalizedInput.owner),
+        projectRelativePath: normalizedInput.projectRelativePath,
+        sizeBytes: fileStats.size,
         localeId,
         type: normalizedInput.type,
         mediaKind: normalizedInput.mediaKind,
@@ -63,42 +63,28 @@ export async function createTestAssetFixture(
         referenceName: normalizedInput.referenceName,
         tags: normalizedInput.tags,
       });
-      insertAssetFileRecord(transactionSession, {
-        id: fileId,
-        assetId,
-        role: normalizedInput.fileRole,
-        projectRelativePath: normalizedInput.projectRelativePath,
-        mediaKind: normalizedInput.mediaKind,
-        sizeBytes: fileStats.size,
-        createdAt: now,
-        updatedAt: now,
-      });
-      createAssetMembership(transactionSession, {
-        assetId,
-        owner: normalizedInput.owner,
-        now,
-      });
+
     });
 
-    const asset = readOwnedAsset(session, {
+    const assetFile = readOwnedAssetFile(session, {
       owner: normalizedInput.owner,
-      assetId,
+      assetFileId,
     });
-    if (!asset) {
+    if (!assetFile) {
       throw new ProjectDataError(
         'PROJECT_DATA078',
-        `Asset ${assetId} is not attached to the requested target.`
+        `Asset ${assetFileId} is not attached to the requested target.`
       );
     }
-    return asset;
+    return assetFile;
   } finally {
     session.close();
   }
 }
 
-function normalizeTestAssetFixtureInput(
-  input: TestAssetFixtureInput
-): TestAssetFixtureInput {
+function normalizeTestAssetFileFixtureInput(
+  input: TestAssetFileFixtureInput
+): TestAssetFileFixtureInput {
   return {
     ...input,
     type: requiredTrimmed(input.type, 'type'),
@@ -106,7 +92,6 @@ function normalizeTestAssetFixtureInput(
     title: requiredTrimmed(input.title, 'title'),
     oneLineSummary: optionalTrimmed(input.oneLineSummary),
     projectRelativePath: normalizeProjectRelativePath(input.projectRelativePath),
-    fileRole: requiredTrimmed(input.fileRole, 'fileRole'),
     referenceName: optionalTrimmed(input.referenceName),
     tags: input.tags?.map((tag) => requiredTrimmed(tag, 'tag')),
   };

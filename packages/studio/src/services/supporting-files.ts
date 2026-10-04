@@ -19,24 +19,24 @@ export async function uploadSupportingMaterial(projectName: string, files: File[
   await uploadFileBatch(supportingFilesUrl(projectName), files);
 }
 
-export async function readSupportingFileInformation(projectName: string, assetId: string): Promise<SupportingFileInformationResponse> {
-  return readResponse(await studioApiFetch(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetId)}/information`));
+export async function readSupportingFileInformation(projectName: string, assetFileId: string): Promise<SupportingFileInformationResponse> {
+  return readResponse(await studioApiFetch(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetFileId)}/information`));
 }
 
-export async function discardSupportingFile(projectName: string, assetId: string): Promise<RecoverableMutationReport> {
-  return readResponse(await studioApiFetch(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetId)}`, {
+export async function discardSupportingFile(projectName: string, assetFileId: string): Promise<RecoverableMutationReport> {
+  return readResponse(await studioApiFetch(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetFileId)}`, {
     method: 'DELETE', headers: mutationHeaders(),
   }));
 }
 
-export async function openSupportingFileFolder(projectName: string, assetId: string): Promise<void> {
-  await readResponse(await studioApiFetch(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetId)}/open-folder`, {
+export async function openSupportingFileFolder(projectName: string, assetFileId: string): Promise<void> {
+  await readResponse(await studioApiFetch(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetFileId)}/open-folder`, {
     method: 'POST', headers: mutationHeaders(),
   }));
 }
 
-export function openSupportingFileTab(projectName: string, assetId: string): void {
-  window.open(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetId)}/content`, '_blank', 'noopener,noreferrer');
+export function openSupportingFileTab(projectName: string, assetFileId: string): void {
+  window.open(`${supportingFilesUrl(projectName)}/${encodeURIComponent(assetFileId)}/content`, '_blank', 'noopener,noreferrer');
 }
 
 function supportingFilesUrl(projectName: string): string {

@@ -1,10 +1,10 @@
 import type {
-  AssetSelectionReport,
+  AssetFileSelectionReport,
   SceneStoryboardImageCandidateInput,
 } from '../../client/index.js';
 import type { RecoverableMutationReport } from '../../client/trash.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { selectAssetInSession } from '../assets/selection.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { selectAssetFileInSession } from '../asset-files/selection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import {
   readActiveSceneBeatsRevisionId,
@@ -18,18 +18,18 @@ import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
 export async function selectSceneStoryboardImageCandidate(
   input: SceneStoryboardImageCandidateInput,
-): Promise<AssetSelectionReport> {
+): Promise<AssetFileSelectionReport> {
   return withProject(input, ({ session, projectFolder }) => {
     validateCandidate(session, input);
     const target = { kind: 'sceneBeat' as const, sceneId: input.sceneId, beatId: input.beatId };
-    selectAssetInSession(session, { target, assetId: input.assetId, now: new Date().toISOString() });
+    selectAssetFileInSession(session, { target, assetFileId: input.assetFileId, now: new Date().toISOString() });
     const project = requireProject(session);
     return {
       valid: true,
       warnings: [],
       project: { id: project.id, projectName: project.projectName, projectFolder },
       target,
-      selectedAssetId: input.assetId,
+      selectedAssetFileId: input.assetFileId,
       resourceKeys: sceneBeatsResourceKeys({ ...input, beatIds: [input.beatId] }),
     };
   });
@@ -45,10 +45,10 @@ export async function discardSceneStoryboardImageCandidate(
       session,
       project,
       projectFolder,
-      itemKind: 'asset',
-      itemId: input.assetId,
+      itemKind: 'assetFile',
+      itemId: input.assetFileId,
       commandName: 'sceneBeat.storyboardImage.discard',
-      changes: [{ type: 'sceneBeat.storyboardImageDiscarded', beatId: input.beatId, assetId: input.assetId }],
+      changes: [{ type: 'sceneBeat.storyboardImageDiscarded', beatId: input.beatId, assetFileId: input.assetFileId }],
       resourceKeys: sceneBeatsResourceKeys({ ...input, beatIds: [input.beatId] }),
     });
   });
@@ -69,11 +69,11 @@ function validateCandidate(
   if (!revision.beats.some((beat) => beat.id === input.beatId)) {
     throw invalidContext();
   }
-  const asset = readOwnedAsset(session, {
+  const assetFile = readOwnedAssetFile(session, {
     owner: { kind: 'sceneBeat', sceneId: input.sceneId, beatId: input.beatId },
-    assetId: input.assetId,
+    assetFileId: input.assetFileId,
   });
-  if (!asset || asset.type !== 'scene_storyboard_image') {
+  if (!assetFile || assetFile.type !== 'scene_storyboard_image') {
     throw invalidContext();
   }
 }

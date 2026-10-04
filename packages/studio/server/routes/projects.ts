@@ -14,7 +14,7 @@ import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import { readProjectCreateRequest } from '../http/project-create-request.js';
 import { readProjectDeleteRequest } from '../http/project-delete-request.js';
 import type { StudioRuntimeToken } from '../studio-runtime-token.js';
-import { createAssetsRoute } from './assets.js';
+import { createAssetFilesRoute } from './asset-files.js';
 import { createSupportingFilesRoute } from './supporting-files.js';
 import { createContinuityRoute } from './continuity.js';
 import { createGenerationPreviewRoute } from './generation-preview.js';
@@ -50,7 +50,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'replaceProjectSettings'
   | 'listCastNavigation'
   | 'listLocationNavigation'
-  | 'listAssetPage'
+  | 'listAssetFilePage'
   | 'listProjectSupportingFiles'
   | 'uploadScreenplaySupportingMaterial'
   | 'readProjectSupportingFileInformation'
@@ -84,18 +84,18 @@ export type ProjectsRouteProjectData = Pick<
   | 'createShotPlanClip'
   | 'selectShotPlanClipTake'
   | 'updateShotPlanClipTake'
-  | 'readShotPlanAssets'
-  | 'discardShotPlanAsset'
+  | 'readShotPlanAssetFiles'
+  | 'discardShotPlanAssetFile'
   | 'readSceneStoryboardStatus'
   | 'selectSceneStoryboardImageCandidate'
   | 'discardSceneStoryboardImageCandidate'
   | 'deleteShotPlan'
   | 'patchProjectInformation'
-  | 'listAssets'
+  | 'listAssetFiles'
   | 'resolveProjectAssetFileById'
-  | 'selectAsset'
-  | 'clearAssetSelection'
-  | 'discardAsset'
+  | 'selectAssetFile'
+  | 'clearAssetFileSelection'
+  | 'discardAssetFile'
   | 'listTrash'
   | 'restoreTrashItem'
   | 'previewGarbageCollection'
@@ -131,7 +131,7 @@ export type ProjectsRouteProjectData = Pick<
   | 'setLookbookImagePlacement'
   | 'readMediaGenerationPreview'
   | 'updateMediaGenerationPreviewPrompt'
-  | 'readAssetMediaGenerationRequest'
+  | 'readAssetFileMediaGenerationRequest'
 >;
 
 export function createProjectsRoute(
@@ -206,7 +206,7 @@ export function createProjectsRoute(
       createShotPlanVideoGenerationsRoute({ projectData, requireToken }),
     )
     .route('/:projectName', createVisualLanguageRoute({ projectData }))
-    .route('/:projectName', createAssetsRoute({ projectData, requireToken }))
+    .route('/:projectName', createAssetFilesRoute({ projectData, requireToken }))
     .route('/:projectName', createSupportingFilesRoute({ projectData, requireToken }))
     .route('/:projectName', createCastVoicesRoute({ projectData, requireToken }))
     .route(

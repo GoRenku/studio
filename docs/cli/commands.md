@@ -804,7 +804,7 @@ Behavior:
 List active imports with the existing Asset command:
 
 ```bash
-renku asset list \
+renku asset-file list \
   --project <project-name> \
   --owner project \
   --type screenplay_supporting_material \
@@ -1462,9 +1462,9 @@ Behavior:
 - Use `renku media import --purpose lookbook.image` to attach a new generated,
   uploaded, or downloaded file to a Lookbook. Add `--select` when that same
   accepted intent should also make it the Lookbook's canonical image.
-- To choose an existing candidate, use `renku asset list --owner
-  lookbook:<lookbook-id>` followed by `renku asset select --target
-  lookbook:<lookbook-id> --asset <asset-id>`. Use `asset clear-selection` to
+- To choose an existing candidate, use `renku asset-file list --owner
+  lookbook:<lookbook-id>` followed by `renku asset-file select --target
+  lookbook:<lookbook-id> --asset-file <asset-file-id>`. Use `asset-file clear-selection` to
   clear the canonical image.
 
 ## `renku lookbook inspiration`
@@ -1536,14 +1536,14 @@ and never come from JSON authoring documents.
 Shot image selection remains explicit:
 
 ```bash
-renku asset list --project <project> --owner shot:<shot-id> --json
-renku asset select --project <project> --target shot:<shot-id> --asset <asset-id> --json
-renku asset clear-selection --project <project> --target shot:<shot-id> --json
-renku shot-plan shot image discard --shot-plan <plan-id> --shot <shot-id> --asset <asset-id> --json
+renku asset-file list --project <project> --owner shot:<shot-id> --json
+renku asset-file select --project <project> --target shot:<shot-id> --asset-file <asset-file-id> --json
+renku asset-file clear-selection --project <project> --target shot:<shot-id> --json
+renku shot-plan shot image discard --shot-plan <plan-id> --shot <shot-id> --asset-file <asset-file-id> --json
 ```
 
 Importing a `shot.image` candidate with `--select` persists import and selection
-as one accepted intent. Use `asset select` only when choosing an existing
+as one accepted intent. Use `asset-file select` only when choosing an existing
 candidate. Discarding the selected candidate clears that Shot's selection.
 
 Current document tags are `shotPlanCreate`, `shotPlanUpdate`, and `shot`. Shot
@@ -1592,12 +1592,11 @@ renku generation context --purpose cast.character-sheet --target cast:<id>
 renku generation context --purpose location.sheet --target location:<id>
 renku generation context --purpose shot-plan.video-generation --target shot-plan:<id>
 renku generation context --purpose shot-plan.dialogue-audio --target shot-plan:<id>
-renku generation context --purpose image.edit --target asset:<id>
+renku generation context --purpose image.edit --target assetFile:<id>
 ```
 
-For JSON consumers, resolve candidate `assetId` in `assets`, then `assetFileId`
-in that Asset's `files`. Subjects use `assetIds`, Shots `imageAssetIds`, Lookbook
-placements `assetId`, and voices `sampleAssetId`. Full documents remain present;
+For JSON consumers, resolve candidate `assetFileId` directly in top-level `assetFiles`. Subjects use `assetFileIds`, Shots `imageAssetFileIds`, Lookbook
+placements `assetFileId`, and voices `sampleAssetFileId`. Full documents remain present;
 `activeDesignId` identifies the design, `lookbookId` identifies the target in
 `visualLanguage`, and `shotId` identifies the target in the full Shot Plan.
 Candidate roles, availability, display/workflow selection and dialogue ranges
@@ -1632,7 +1631,7 @@ diagnostics. `context` is read-only and emits no Studio mutation event.
 The briefing omits prior `generationProvenance` envelopes from candidates and
 all typed Asset positions, including exact edit sources and voice samples.
 Current design text, media facts, and opaque voice identities remain intact.
-For deliberate history inspection/reuse/debugging, capture `renku asset list
+For deliberate history inspection/reuse/debugging, capture `renku asset-file list
 --project <name> --owner <owner> --json`, follow pagination if needed, and inspect
 the exact Asset id locally. `renku cast voice show` retains specific voice
 sample history. Do not fetch those recipes automatically for ordinary references.
@@ -1902,11 +1901,11 @@ renku media import --purpose image.create --target shot-plan:<shot-plan-id> \\
   --source tmp/operations/media-generation/output/reference.png \\
   --provenance tmp/operations/media-generation/provenance.json --json
 
-renku media import --purpose image.edit --target asset:<source-asset-id> \\
+renku media import --purpose image.edit --target assetFile:<source-asset-id> \\
   --source tmp/operations/media-generation/output/edited.png \\
   --provenance tmp/operations/media-generation/provenance.json --json
 
-renku media import --purpose video.edit --target asset:<source-asset-id> \\
+renku media import --purpose video.edit --target assetFile:<source-asset-id> \\
   --source tmp/operations/media-generation/output/edited.mp4 \\
   --provenance tmp/operations/media-generation/provenance.json --json
 
@@ -1951,11 +1950,11 @@ current Scene Beats revision and writes all accepted images atomically.
 List or update Assets, and select or clear canonical owner-scoped imagery.
 
 ```bash
-renku asset list --project <project-name> --owner <owner> --json
-renku asset update <asset-id> --project <project-name> --title <title> --summary <summary> --reference-name <name> --tag <tag> --tag <tag> --locale <locale-id> --json
-renku asset update <asset-id> --project <project-name> --clear-tags --json
-renku asset select --project <project-name> --target <selection-target> --asset <asset-id> --json
-renku asset clear-selection --project <project-name> --target <selection-target> --json
+renku asset-file list --project <project-name> --owner <owner> --json
+renku asset-file update <asset-file-id> --project <project-name> --title <title> --summary <summary> --reference-name <name> --tag <tag> --tag <tag> --locale <locale-id> --json
+renku asset-file update <asset-file-id> --project <project-name> --clear-tags --json
+renku asset-file select --project <project-name> --target <selection-target> --asset-file <asset-file-id> --json
+renku asset-file clear-selection --project <project-name> --target <selection-target> --json
 ```
 
 Options:
@@ -1966,7 +1965,7 @@ Options:
   `shot:<id>`, and `beat:<scene-id>:<beat-id>`.
 - `--target`: selection target for `select` and `clear-selection`. Supported
   forms are Cast, Location, Lookbook, Shot, and Scene Beat only.
-- `--asset`: required by `select`.
+- `--asset-file`: required by `select`.
 - `--type`, `--media-kind`, and `--locale`: optional listing filters.
 - `--limit`: optional listing page size. Core accepts at most 200 Assets per
   page and defaults to 60.
@@ -1984,7 +1983,7 @@ have no global selection command. Their exact choices belong to the consuming
 provider request inputs.
 
 JSON listing returns an `AssetPage` with `items`, `nextCursor`, and
-`selectedAssetId`, so callers receive the owner’s current canonical choice with
+`selectedAssetFileId`, so callers receive the owner’s current canonical choice with
 the candidate collection. Callers that require the complete collection must
 request pages until `nextCursor` is `null`.
 
@@ -2185,7 +2184,7 @@ label}]`, `subjects: [{key, label, color}]`, and `cues`.
 Dialogue cues use `{id, kind: "dialogue", startFrame, endFrame?, speaker, text,
 audio?}`. Action cues use `{id, kind: "action", startFrame, subject?, text}`;
 Camera cues use `{id, kind: "camera", startFrame, text}`. Exact optional audio is
-`{assetId, assetFileId, offsetSeconds?}`. Positions are zero-based integer frames;
+`{assetFileId, offsetSeconds?}`. Positions are zero-based integer frames;
 ends are exclusive. First segment starts at zero; later starts are cuts.
 See ADR 0096. No additional commands or flags are required. Missing playback is
 valid; malformed supplied timelines report `CORE_PREVIS_PLAYBACK_INVALID`.
@@ -2217,3 +2216,23 @@ null for an unlisted identity. The Markdown path does not imply a file exists.
 Mutations return `{ revision, libraryPath, provider, apiId }`. Removal affects
 only personal discovery and preserves notes. Stale revisions and busy locks fail
 with structured errors; see [library recovery](../architecture/media-model-library.md).
+
+## Reference file imports
+
+`renku asset-file import` registers an atomic set of retained files.
+A single source uses `--source <project-relative-path> --owner project` for
+research or `--owner inspirationFolder:<id>` for an Inspiration image, with
+optional `--title`. A batch uses `--file <json-path>` alone:
+
+```json
+{
+  "destination": { "kind": "inspiration", "folderId": "<folder-id>" },
+  "files": [{ "sourceProjectRelativePath": "tmp/reference.png" }]
+}
+```
+
+The result contains `assetFiles`, warnings and resource keys. Unchanged in-place
+adoption retains its ID; changed, foreign-owned or discarded path conflicts fail
+without replacement. A copy allocates a collision-safe destination. Titles are
+nullable and are never derived from filenames. Common media serving uses
+`/studio-api/projects/:projectName/asset-files/:assetFileId`.

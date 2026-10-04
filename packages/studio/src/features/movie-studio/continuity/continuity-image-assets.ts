@@ -1,43 +1,37 @@
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
 import { projectAssetFileUrl } from '@/services/studio-project-assets-api';
 import { imageAspectRatioFromDimensions } from '@/ui/image-aspect-ratio';
 import type { PreviewImage } from '@/ui/image-preview-dialog';
 
-export function continuityImageAssets(
-  assets: StudioAssetResponse[],
+export function continuityImageAssetFiles(
+  assetFiles: StudioAssetFileResponse[],
   acceptedTypes: readonly string[]
-): StudioAssetResponse[] {
+): StudioAssetFileResponse[] {
   const types = new Set<string>(acceptedTypes);
-  return sortContinuityImageAssets(
-    assets.filter(
-      (asset) => types.has(asset.type) && Boolean(continuityPrimaryImageFile(asset))
+  return sortContinuityImageAssetFiles(
+    assetFiles.filter(
+      (assetFile) => types.has(assetFile.type) && Boolean(continuityPrimaryImageFile(assetFile))
     )
   );
 }
 
-export function continuityPrimaryImageFile(asset: StudioAssetResponse) {
-  return (
-    asset.files.find(
-      (file) => file.role === 'primary' && file.mediaKind === 'image'
-    ) ??
-    asset.files.find((file) => file.mediaKind === 'image') ??
-    null
-  );
+export function continuityPrimaryImageFile(assetFile: StudioAssetFileResponse) {
+  return assetFile.mediaKind === 'image' ? assetFile : null;
 }
 
 export function continuityImageUrl(
   projectName: string,
-  asset: StudioAssetResponse
+  assetFile: StudioAssetFileResponse
 ): string | null {
-  const file = continuityPrimaryImageFile(asset);
-  return file ? projectAssetFileUrl(projectName, asset.id, file.id) : null;
+  const file = continuityPrimaryImageFile(assetFile);
+  return file ? projectAssetFileUrl(projectName, file.id) : null;
 }
 
 export function continuityImageAspectRatio(
-  asset: StudioAssetResponse,
+  assetFile: StudioAssetFileResponse,
   fallbackAspectRatio: number
 ): number {
-  const file = continuityPrimaryImageFile(asset);
+  const file = continuityPrimaryImageFile(assetFile);
   return imageAspectRatioFromDimensions(
     file?.width,
     file?.height,
@@ -47,24 +41,24 @@ export function continuityImageAspectRatio(
 
 export function continuityPreviewImage(
   projectName: string,
-  asset: StudioAssetResponse,
+  assetFile: StudioAssetFileResponse,
   fallbackTitle: string
 ): PreviewImage | null {
-  const file = continuityPrimaryImageFile(asset);
+  const file = continuityPrimaryImageFile(assetFile);
   if (!file) return null;
-  const title = readableContinuityImageTitle(asset, fallbackTitle);
+  const title = readableContinuityImageTitle(assetFile, fallbackTitle);
   return {
-    src: projectAssetFileUrl(projectName, asset.id, file.id),
+    src: projectAssetFileUrl(projectName, file.id),
     alt: title,
     title,
   };
 }
 
 export function readableContinuityImageTitle(
-  asset: StudioAssetResponse,
+  assetFile: StudioAssetFileResponse,
   fallbackTitle: string
 ): string {
-  const title = asset.title.trim();
+  const title = (assetFile.title ?? '').trim();
   if (!title) return fallbackTitle;
   const withoutExtension = title.replace(/\.[^.]+$/, '');
   const titleWithSpaces = withoutExtension
@@ -75,13 +69,13 @@ export function readableContinuityImageTitle(
   return titleWithSpaces.charAt(0).toUpperCase() + titleWithSpaces.slice(1);
 }
 
-function sortContinuityImageAssets(
-  assets: StudioAssetResponse[]
-): StudioAssetResponse[] {
-  return [...assets].sort((left, right) => {
+function sortContinuityImageAssetFiles(
+  assetFiles: StudioAssetFileResponse[]
+): StudioAssetFileResponse[] {
+  return [...assetFiles].sort((left, right) => {
     const createdDifference = right.createdAt.localeCompare(left.createdAt);
     if (createdDifference !== 0) return createdDifference;
-    const titleDifference = left.title.localeCompare(right.title);
+    const titleDifference = (left.title ?? '').localeCompare(right.title ?? '');
     return titleDifference !== 0 ? titleDifference : left.id.localeCompare(right.id);
   });
 }

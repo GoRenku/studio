@@ -4,12 +4,12 @@ import type {
   LookbookSection,
 } from '../../../client/index.js';
 import {
-  assetMemberships,
+  assetFiles,
   lookbookImages,
   lookbookImageSections,
 } from '../../schema/index.js';
-import { readOwnedAsset } from '../../assets/projection.js';
-import { assetOwnerKey, parseAssetOwnerKey } from '../../assets/owner-keys.js';
+import { readOwnedAssetFile } from '../../asset-files/projection.js';
+import { assetFileOwnerKey, parseAssetFileOwnerKey } from '../../asset-files/owner-keys.js';
 import { requireLookbookRecordById } from './lookbook.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
@@ -24,9 +24,9 @@ export function nextLookbookImageSortOrder(
   const row = session.db
     .select({ maxSortOrder: sql<number | null>`max(${lookbookImages.sortOrder})` })
     .from(lookbookImages)
-    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, lookbookImages.assetFileId))
     .where(and(
-      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: lookbookId })),
+      eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'lookbook', id: lookbookId })),
       isNull(lookbookImages.discardedAt)
     ))
     .get();
@@ -37,14 +37,14 @@ export function insertLookbookImageRecord(
   session: DatabaseSession,
   input: {
     id: string;
-    assetId: string;
+    assetFileId: string;
     sortOrder: number;
     now: string;
   }
 ): void {
   session.db.insert(lookbookImages).values({
     id: input.id,
-    assetId: input.assetId,
+    assetFileId: input.assetFileId,
     sortOrder: input.sortOrder,
     createdAt: input.now,
     updatedAt: input.now,
@@ -62,14 +62,14 @@ export function readLookbookImageRecord(
     .get() ?? null;
 }
 
-export function readLookbookImageRecordByAsset(
+export function readLookbookImageRecordByAssetFile(
   session: DatabaseSession,
-  input: { lookbookId: string; assetId: string }
+  input: { lookbookId: string; assetFileId: string }
 ): LookbookImageRecord | null {
   return session.db
     .select({
       id: lookbookImages.id,
-      assetId: lookbookImages.assetId,
+      assetFileId: lookbookImages.assetFileId,
       sortOrder: lookbookImages.sortOrder,
       createdAt: lookbookImages.createdAt,
       updatedAt: lookbookImages.updatedAt,
@@ -78,10 +78,10 @@ export function readLookbookImageRecordByAsset(
       restoredAt: lookbookImages.restoredAt,
     })
     .from(lookbookImages)
-    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, lookbookImages.assetFileId))
     .where(and(
-      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
-      eq(lookbookImages.assetId, input.assetId),
+      eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
+      eq(lookbookImages.assetFileId, input.assetFileId),
       isNull(lookbookImages.discardedAt)
     ))
     .get() ?? null;
@@ -195,7 +195,7 @@ export function listLookbookImages(
   const records = session.db
     .select({
       id: lookbookImages.id,
-      assetId: lookbookImages.assetId,
+      assetFileId: lookbookImages.assetFileId,
       sortOrder: lookbookImages.sortOrder,
       createdAt: lookbookImages.createdAt,
       updatedAt: lookbookImages.updatedAt,
@@ -204,9 +204,9 @@ export function listLookbookImages(
       restoredAt: lookbookImages.restoredAt,
     })
     .from(lookbookImages)
-    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, lookbookImages.assetFileId))
     .where(and(
-      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: lookbookId })),
+      eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'lookbook', id: lookbookId })),
       isNull(lookbookImages.discardedAt)
     ))
     .orderBy(asc(lookbookImages.sortOrder), asc(lookbookImages.id))
@@ -223,11 +223,11 @@ export function readLookbookImage(
     return null;
   }
   const membership = session.db
-    .select({ ownerKey: assetMemberships.ownerKey })
-    .from(assetMemberships)
-    .where(eq(assetMemberships.assetId, record.assetId))
+    .select({ ownerKey: assetFiles.ownerKey })
+    .from(assetFiles)
+    .where(eq(assetFiles.id, record.assetFileId))
     .get();
-  const owner = membership ? parseAssetOwnerKey(membership.ownerKey) : null;
+  const owner = membership ? parseAssetFileOwnerKey(membership.ownerKey) : null;
   if (owner?.kind !== 'lookbook') {
     throw new ProjectDataError(
       'CORE_ASSET_STORAGE_INVALID',
@@ -245,11 +245,11 @@ function projectLookbookImages(
   const lookbook = requireLookbookRecordById(session, lookbookId);
   const placements = readPlacementsForRecords(session, records);
   return records.map((record) => {
-    const asset = readOwnedAsset(session, {
+    const assetFile = readOwnedAssetFile(session, {
       owner: { kind: 'lookbook', id: lookbookId },
-      assetId: record.assetId,
+      assetFileId: record.assetFileId,
     });
-    if (!asset) {
+    if (!assetFile) {
       throw new ProjectDataError(
         'CORE_ASSET_STORAGE_INVALID',
         `Lookbook image ${record.id} has no active owned Asset.`
@@ -260,7 +260,7 @@ function projectLookbookImages(
       id: record.id,
       lookbookId,
       lookbookKind: lookbook.kind,
-      asset,
+      assetFile,
       sections: sectionLevelSections(imagePlacements),
       points: anchoredPointIds(imagePlacements),
     };
@@ -281,9 +281,9 @@ function readPlacementSlotImageIds(
     })
     .from(lookbookImageSections)
     .innerJoin(lookbookImages, eq(lookbookImages.id, lookbookImageSections.imageId))
-    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookImages.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, lookbookImages.assetFileId))
     .where(and(
-      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
+      eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
       isNull(lookbookImages.discardedAt),
       isNull(lookbookImageSections.discardedAt),
       eq(lookbookImageSections.section, input.placement.section),

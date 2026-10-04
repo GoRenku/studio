@@ -1,32 +1,32 @@
-import type { DiscardShotPlanAssetInput } from '../../client/shot-plan-assets.js';
+import type { DiscardShotPlanAssetFileInput } from '../../client/shot-plan-assets.js';
 import type { RecoverableMutationReport } from '../../client/trash.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { withProject } from '../project-operation.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { studioShotPlanAssetsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioShotPlanAssetFilesResourceKey } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 
-const shotPlanAssetTypes = new Set([
+const shotPlanAssetFileTypes = new Set([
   'shot_plan_video_first_frame',
   'shot_plan_video_last_frame',
   'shot_plan_video_storyboard',
   'shot_plan_video_reference',
 ]);
 
-export async function discardShotPlanAsset(
-  input: DiscardShotPlanAssetInput,
+export async function discardShotPlanAssetFile(
+  input: DiscardShotPlanAssetFileInput,
 ): Promise<RecoverableMutationReport> {
   return withProject(input, ({ session, projectFolder }) => {
     requireShotPlanRecord(session, input.shotPlanId);
-    const asset = readOwnedAsset(session, {
+    const assetFile = readOwnedAssetFile(session, {
       owner: { kind: 'project' },
-      assetId: input.assetId,
+      assetFileId: input.assetFileId,
     });
-    if (!asset
-      || asset.authoredFrom?.id !== input.shotPlanId
-      || !shotPlanAssetTypes.has(asset.type)) {
+    if (!assetFile
+      || assetFile.authoredFrom?.id !== input.shotPlanId
+      || !shotPlanAssetFileTypes.has(assetFile.type)) {
       throw new ProjectDataError(
         'CORE_SHOT_PLAN_ASSETS_NOT_FOUND',
         'The Asset is not an active supporting Asset authored from the exact Shot Plan.',
@@ -40,11 +40,11 @@ export async function discardShotPlanAsset(
       session,
       project,
       projectFolder,
-      itemKind: 'asset',
-      itemId: input.assetId,
+      itemKind: 'assetFile',
+      itemId: input.assetFileId,
       commandName: 'shotPlan.asset.discard',
-      changes: [{ type: 'shotPlan.assetDiscarded', shotPlanId: input.shotPlanId, assetId: input.assetId }],
-      resourceKeys: [studioShotPlanAssetsResourceKey(input.shotPlanId)],
+      changes: [{ type: 'shotPlan.assetDiscarded', shotPlanId: input.shotPlanId, assetFileId: input.assetFileId }],
+      resourceKeys: [studioShotPlanAssetFilesResourceKey(input.shotPlanId)],
     });
   });
 }

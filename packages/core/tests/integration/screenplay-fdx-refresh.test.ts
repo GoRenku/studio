@@ -18,7 +18,7 @@ import {
   createProjectAssetFileWriteSet,
   rollbackProjectAssetFileWriteSetSync,
 } from '../../src/server/project-asset-files/index.js';
-import { persistFdxSourceAsset } from '../../src/server/screenplay/fdx/persistence/source-asset.js';
+import { persistFdxSourceAssetFile } from '../../src/server/screenplay/fdx/persistence/source-asset.js';
 import { readFdxSource } from '../../src/server/screenplay/fdx/source.js';
 import {
   createBlankMovieProject,
@@ -43,7 +43,7 @@ describe('source-authoritative FDX refresh', () => {
     const imported = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
     const initial = await projectData.readScreenplayStructure({ projectName, homeDir });
     const initialRevisions = await projectData.listScreenplayRevisions({ projectName, homeDir });
-    const initialAssets = await projectData.listAssets({
+    const initialAssetFiles = await projectData.listAssetFiles({
       projectName,
       homeDir,
       owner: { kind: 'project' },
@@ -74,23 +74,22 @@ describe('source-authoritative FDX refresh', () => {
     expect(unchanged).toMatchObject({
       status: 'unchanged',
       screenplayImport: {
-        sourceAssetId: imported.screenplayImport.sourceAssetId,
         sourceAssetFileId: imported.screenplayImport.sourceAssetFileId,
       },
       resourceKeys: [],
     });
     await expect(projectData.readScreenplayStructure({ projectName, homeDir })).resolves.toEqual(initial);
     await expect(projectData.listScreenplayRevisions({ projectName, homeDir })).resolves.toEqual(initialRevisions);
-    await expect(projectData.listAssets({
+    await expect(projectData.listAssetFiles({
       projectName,
       homeDir,
       owner: { kind: 'project' },
-    })).resolves.toEqual(initialAssets);
+    })).resolves.toEqual(initialAssetFiles);
 
     await fs.writeFile(sourcePath, markerFdx('ACT TWO', 'RENAMED OUTLINE'), 'utf8');
     const refreshed = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
     expect(refreshed).toMatchObject({ status: 'refreshed', resourceKeys: ['surface:project:assets'] });
-    expect(refreshed.screenplayImport.sourceAssetId).not.toBe(imported.screenplayImport.sourceAssetId);
+    expect(refreshed.screenplayImport.sourceAssetFileId).not.toBe(imported.screenplayImport.sourceAssetFileId);
     await expect(projectData.readScreenplayStructure({ projectName, homeDir })).resolves.toEqual(initial);
     await expect(projectData.listScreenplayRevisions({ projectName, homeDir })).resolves.toEqual(initialRevisions);
     await expect(projectData.readScreenplayAnalysis({
@@ -122,14 +121,14 @@ describe('source-authoritative FDX refresh', () => {
         ['1', 'INT. ROOM - DAY', 'MARA', 'Original line.'],
       ]), 'utf8');
       const imported = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
-      const assets = await projectData.listAssets({
+      const assetFiles = await projectData.listAssetFiles({
         projectName,
         homeDir,
         owner: { kind: 'project' },
       });
-      const retainedSourceFile = assets
-        .find((asset) => asset.id === imported.screenplayImport.sourceAssetId)
-        ?.files.find((file) => file.id === imported.screenplayImport.sourceAssetFileId);
+      const retainedSourceFile = assetFiles
+        .find((assetFile) => assetFile.id === imported.screenplayImport.sourceAssetFileId)
+        ;
       if (!retainedSourceFile) {
         throw new Error('Expected the current retained FDX source file.');
       }
@@ -219,7 +218,7 @@ describe('source-authoritative FDX refresh', () => {
     const imported = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
     const before = await projectData.readScreenplayStructure({ projectName, homeDir });
     const beforeRevisions = await projectData.listScreenplayRevisions({ projectName, homeDir });
-    const beforeAssets = await projectData.listAssets({
+    const beforeAssetFiles = await projectData.listAssetFiles({
       projectName,
       homeDir,
       owner: { kind: 'project' },
@@ -238,18 +237,18 @@ describe('source-authoritative FDX refresh', () => {
     });
     await expect(projectData.readScreenplayStructure({ projectName, homeDir })).resolves.toEqual(before);
     await expect(projectData.listScreenplayRevisions({ projectName, homeDir })).resolves.toEqual(beforeRevisions);
-    await expect(projectData.listAssets({
+    await expect(projectData.listAssetFiles({
       projectName,
       homeDir,
       owner: { kind: 'project' },
-    })).resolves.toEqual(beforeAssets);
+    })).resolves.toEqual(beforeAssetFiles);
 
     await fs.writeFile(sourcePath, screenplayFdx([
       ['1', 'INT. ROOM - DAY', 'MARA', 'Original line.'],
     ]), 'utf8');
     await expect(projectData.importFdxScreenplay({ projectName, homeDir, sourcePath })).resolves.toMatchObject({
       status: 'unchanged',
-      screenplayImport: { sourceAssetId: imported.screenplayImport.sourceAssetId },
+      screenplayImport: { sourceAssetFileId: imported.screenplayImport.sourceAssetFileId },
     });
   });
 
@@ -266,8 +265,8 @@ describe('source-authoritative FDX refresh', () => {
 
     await fs.writeFile(sourcePath, sourceB, 'utf8');
     const changed = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
-    expect(changed.screenplayImport.sourceAssetId).not.toBe(
-      imported.screenplayImport.sourceAssetId,
+    expect(changed.screenplayImport.sourceAssetFileId).not.toBe(
+      imported.screenplayImport.sourceAssetFileId,
     );
 
     await fs.writeFile(sourcePath, sourceA, 'utf8');
@@ -275,7 +274,6 @@ describe('source-authoritative FDX refresh', () => {
     expect(reverted).toMatchObject({
       status: 'refreshed',
       screenplayImport: {
-        sourceAssetId: imported.screenplayImport.sourceAssetId,
         sourceAssetFileId: imported.screenplayImport.sourceAssetFileId,
       },
     });
@@ -299,14 +297,14 @@ describe('source-authoritative FDX refresh', () => {
     ]);
     await fs.writeFile(sourcePath, sourceA, 'utf8');
     const imported = await projectData.importFdxScreenplay({ projectName, homeDir, sourcePath });
-    const assets = await projectData.listAssets({
+    const assetFiles = await projectData.listAssetFiles({
       projectName,
       homeDir,
       owner: { kind: 'project' },
     });
-    const sourceFile = assets
-      .find((asset) => asset.id === imported.screenplayImport.sourceAssetId)
-      ?.files.find((file) => file.id === imported.screenplayImport.sourceAssetFileId);
+    const sourceFile = assetFiles
+      .find((assetFile) => assetFile.id === imported.screenplayImport.sourceAssetFileId)
+      ;
     if (!sourceFile) {
       throw new Error('Expected the first retained FDX source file.');
     }
@@ -325,7 +323,7 @@ describe('source-authoritative FDX refresh', () => {
     await expect(projectData.importFdxScreenplay({ projectName, homeDir, sourcePath }))
       .resolves.toMatchObject({
         status: 'unchanged',
-        screenplayImport: { sourceAssetId: acceptedB.screenplayImport.sourceAssetId },
+        screenplayImport: { sourceAssetFileId: acceptedB.screenplayImport.sourceAssetFileId },
       });
   });
 
@@ -345,11 +343,10 @@ describe('source-authoritative FDX refresh', () => {
     const writeSet = createProjectAssetFileWriteSet({ projectFolder });
 
     try {
-      expect(() => session.db.transaction((tx) => persistFdxSourceAsset({
+      expect(() => session.db.transaction((tx) => persistFdxSourceAssetFile({
         session: { ...session, db: tx },
         projectFolder,
         source,
-        assetId: 'asset_source_race',
         assetFileId: 'asset_file_source_race',
         now: '2026-08-15T00:00:00.000Z',
         writeSet,
@@ -359,7 +356,7 @@ describe('source-authoritative FDX refresh', () => {
       session.close();
     }
 
-    await expect(projectData.listAssets({
+    await expect(projectData.listAssetFiles({
       projectName,
       homeDir,
       owner: { kind: 'project' },

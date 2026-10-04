@@ -141,11 +141,11 @@ describe('InspirationPanel', () => {
 
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'frame-001.png inspiration grab',
+        name: 'Preview inspiration image',
       })
     );
     expect(
-      await screen.findByRole('dialog', { name: 'frame-001.png' })
+      await screen.findByRole('dialog', { name: 'Image Preview' })
     ).not.toBeNull();
     expect(screen.getByLabelText('Close image preview')).not.toBeNull();
   });
@@ -159,12 +159,7 @@ const folder: InspirationFolder = {
 
 function inspirationResource({
   imageCount = 1,
-  cardImage = {
-    fileName: 'frame-001.png',
-    mediaKind: 'image',
-    projectRelativePath:
-      'visual-language/inspiration/blade-runner-2049/frame-001.png' as never,
-  },
+  cardImage = inspirationImage(),
 }: {
   imageCount?: number;
   cardImage?: InspirationResource['folders']['items'][number]['cardImage'];
@@ -187,21 +182,11 @@ function inspirationFolderResource(
   analysis: InspirationAnalysis | null,
   {
     images = [
-      {
-        fileName: 'frame-001.png',
-        mediaKind: 'image',
-        projectRelativePath:
-          'visual-language/inspiration/blade-runner-2049/frame-001.png' as never,
-      },
+      inspirationImage(),
     ],
   }: Pick<InspirationFolderResource, 'images'> = {
     images: [
-      {
-        fileName: 'frame-001.png',
-        mediaKind: 'image',
-        projectRelativePath:
-          'visual-language/inspiration/blade-runner-2049/frame-001.png' as never,
-      },
+      inspirationImage(),
     ],
   }
 ): InspirationFolderResource {
@@ -272,5 +257,17 @@ function inspirationAnalysis(): InspirationAnalysis {
         },
       ],
     },
+  };
+}
+
+function inspirationImage(): InspirationFolderResource['images'][number] {
+  return {
+    id: 'inspiration_file_1', owner: { kind: 'inspirationFolder', id: folder.id },
+    localeId: null, type: 'reference', availability: 'ready', mediaKind: 'image',
+    title: null, oneLineSummary: null, origin: 'imported', generationProvenance: null,
+    authoredFrom: null, referenceName: null, tags: [],
+    projectRelativePath: 'visual-language/inspiration/blade-runner-2049/frame-001.png' as never,
+    mimeType: 'image/png', sizeBytes: 10, contentHash: null, width: null, height: null,
+    durationSeconds: null, createdAt: '2026-05-12', updatedAt: '2026-05-12',
   };
 }

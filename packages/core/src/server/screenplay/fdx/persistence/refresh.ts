@@ -6,7 +6,7 @@ import type { ScreenplayImport } from '../contracts.js';
 import type { MappedFdxScreenplay } from '../mapping/screenplay.js';
 import type { FdxSource } from '../source.js';
 import { updateScreenplayImport } from './import-record.js';
-import { persistFdxSourceAsset } from './source-asset.js';
+import { persistFdxSourceAssetFile } from './source-asset.js';
 
 export function persistSourceOnlyRefresh(input: {
   session: DatabaseSession;
@@ -15,11 +15,10 @@ export function persistSourceOnlyRefresh(input: {
   source: FdxSource;
   screenplayImport: ScreenplayImport;
 }): void {
-  persistFdxSourceAsset({
+  persistFdxSourceAssetFile({
     session: input.session,
     projectFolder: input.projectFolder,
     source: input.source,
-    assetId: input.screenplayImport.sourceAssetId,
     assetFileId: input.screenplayImport.sourceAssetFileId,
     now: input.screenplayImport.importedAt,
     writeSet: input.writeSet,
@@ -37,11 +36,10 @@ export function persistSemanticRefresh(input: {
   revisionId: string;
   now: string;
 }): void {
-  persistFdxSourceAsset({
+  persistFdxSourceAssetFile({
     session: input.session,
     projectFolder: input.projectFolder,
     source: input.source,
-    assetId: input.screenplayImport.sourceAssetId,
     assetFileId: input.screenplayImport.sourceAssetFileId,
     now: input.now,
     writeSet: input.writeSet,

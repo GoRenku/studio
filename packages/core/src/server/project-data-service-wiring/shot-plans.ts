@@ -18,8 +18,8 @@ import { discardShotImageCandidate } from '../commands/shot-image-commands.js';
 import type { ProjectDataService } from '../project-data-service-contracts.js';
 import { validateShotPlanDocument } from '../shot-plans/validation.js';
 import {
-  discardShotPlanAsset,
-  readShotPlanAssets,
+  discardShotPlanAssetFile,
+  readShotPlanAssetFiles,
   importShotPlanReference,
 } from '../shot-plan-assets/index.js';
 
@@ -45,9 +45,9 @@ export function createShotPlanServiceWiring(): Pick<
   | 'listSceneShotPlans'
   | 'deleteShotPlan'
   | 'discardShotImageCandidate'
-  | 'readShotPlanAssets'
+  | 'readShotPlanAssetFiles'
   | 'importShotPlanReference'
-  | 'discardShotPlanAsset'
+  | 'discardShotPlanAssetFile'
 > {
   return {
     readShotPlanPrevis,
@@ -72,8 +72,8 @@ export function createShotPlanServiceWiring(): Pick<
     listSceneShotPlans,
     deleteShotPlan,
     discardShotImageCandidate,
-    readShotPlanAssets,
+    readShotPlanAssetFiles,
     importShotPlanReference,
-    discardShotPlanAsset,
+    discardShotPlanAssetFile,
   };
 }

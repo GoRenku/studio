@@ -35,7 +35,7 @@ export function registerClipTakeInSession(session: DatabaseSession, input: Regis
   } else {
     const number = (session.db.select({ value: max(shotPlanClipTakes.number) }).from(shotPlanClipTakes).where(eq(shotPlanClipTakes.clipId, clip.id)).get()?.value ?? 0) + 1;
     return session.db.insert(shotPlanClipTakes).values({ id: createRandomIdGenerator().next('clip_take'), clipId: clip.id, number,
-      assetId: input.assetId, assetFileId: input.assetFileId, title: input.title ?? null, sourceTakeId: input.sourceTakeId ?? null, createdAt: new Date().toISOString() }).returning().get();
+      assetFileId: input.assetFileId, title: input.title ?? null, sourceTakeId: input.sourceTakeId ?? null, createdAt: new Date().toISOString() }).returning().get();
   }
 }
 
@@ -57,7 +57,7 @@ export async function selectShotPlanClipTake(input: SelectShotPlanClipTakeInput)
       if (take.clipId !== clip.id) {
         throw new ProjectDataError('CORE_SHOT_PLAN_CLIP_SELECTION_INVALID', 'Choose a take of this clip.');
       }
-      requireActiveTakeFile(session, take.assetId, take.assetFileId);
+      requireActiveTakeFile(session, take.assetFileId);
     }
     session.db.update(shotPlanClips).set({ selectedTakeId: input.takeId }).where(eq(shotPlanClips.id, clip.id)).run();
     return projectShotPlanClips(session, revision.shotPlanId, revision.id);

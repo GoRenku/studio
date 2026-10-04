@@ -42,7 +42,7 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
     { scope: 'worker' },
   ],
 
-  emptyProjectCreation: async ({ studioE2eRuntime }, use, testInfo) => {
+  emptyProjectCreation: async ({ studioE2eRuntime, page }, use, testInfo) => {
     const suffix = createStudioE2eProjectName({
       prefix: 'browser',
       workerIndex: testInfo.workerIndex,
@@ -63,11 +63,12 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
       !studioE2eRuntime.keepArtifacts &&
       testInfo.status === testInfo.expectedStatus
     ) {
+      await page.goto('about:blank');
       await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
     }
   },
 
-  minimalMovieProject: async ({ studioE2eRuntime }, use, testInfo) => {
+  minimalMovieProject: async ({ studioE2eRuntime, page }, use, testInfo) => {
     const projectName = createStudioE2eProjectName({
       prefix: 'e2e-minimal-movie',
       workerIndex: testInfo.workerIndex,
@@ -86,11 +87,12 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
       !studioE2eRuntime.keepArtifacts &&
       testInfo.status === testInfo.expectedStatus
     ) {
+      await page.goto('about:blank');
       await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
     }
   },
 
-  movieProject: async ({ studioE2eRuntime }, use, testInfo) => {
+  movieProject: async ({ studioE2eRuntime, page }, use, testInfo) => {
     const projectName = createStudioE2eProjectName({
       prefix: 'e2e-scene-beats',
       workerIndex: testInfo.workerIndex,
@@ -109,6 +111,7 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
       !studioE2eRuntime.keepArtifacts &&
       testInfo.status === testInfo.expectedStatus
     ) {
+      await page.goto('about:blank');
       await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
     }
   },
@@ -123,7 +126,7 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
     }));
   },
 
-  brickAndSteelProject: async ({ studioE2eRuntime }, use, testInfo) => {
+  brickAndSteelProject: async ({ studioE2eRuntime, page }, use, testInfo) => {
     const projectName = createStudioE2eProjectName({
       prefix: 'e2e-brick-and-steel',
       workerIndex: testInfo.workerIndex,
@@ -142,6 +145,7 @@ export const test = base.extend<StudioE2eFixtures, StudioE2eWorkerFixtures>({
       !studioE2eRuntime.keepArtifacts &&
       testInfo.status === testInfo.expectedStatus
     ) {
+      await page.goto('about:blank');
       await cleanStudioE2eProject({ runtime: studioE2eRuntime, project });
     }
   },
@@ -171,11 +175,14 @@ function installUnexpectedBrowserFailureChecks(page: Page): {
 
   page.on('console', (message) => {
     if (message.type() === 'error') {
-      consoleErrors.push(message.text());
+      consoleErrors.push(`${message.text()} ${message.location().url}`.trim());
     }
   });
 
   page.on('requestfailed', (request) => {
+    if (request.failure()?.errorText === 'net::ERR_ABORTED') {
+      return;
+    }
     failedRequests.push(
       `${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`.trim()
     );

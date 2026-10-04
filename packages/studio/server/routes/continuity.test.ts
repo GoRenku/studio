@@ -18,10 +18,9 @@ function mount(projectData = fakeProjectDataService()) {
 describe('continuity Hono route', () => {
   it('decorates Cast, Location, and Prop detail images with safe HTTP URLs', async () => {
     const firstImage = {
-      assetId: 'asset_reference',
       assetFileId: 'asset_file_reference',
       title: 'Reference image',
-      fileRole: 'primary',
+
       mediaKind: 'image',
       mimeType: 'image/png',
       width: 1200,
@@ -75,7 +74,7 @@ describe('continuity Hono route', () => {
       const body = await response.json();
       expect(body.resource[subject]).toBeDefined();
       expect(body.resource.firstImage.url).toBe(
-        '/studio-api/projects/constantinople/assets/asset_reference/files/asset_file_reference'
+        '/studio-api/projects/constantinople/asset-files/asset_file_reference'
       );
     }
   });

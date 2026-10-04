@@ -4,6 +4,10 @@ Date: 2026-05-12
 
 Status: partially superseded by Decision 0052
 
+[Decision 0107](0107-unify-retained-project-media-as-asset-files.md) supersedes
+the logical Asset grouping and separate file identity. Its implementation is
+tracked in plan 0222; Core-owned retained storage remains accepted.
+
 Core-owned asset storage remains accepted. The take-driven production export
 contract is removed until a future Shot/select model defines a new export
 source.

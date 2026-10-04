@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 import { runMediaCommand } from './media-command.js';
 
 const report = vi.hoisted(() => ({ valid: true, purpose: 'shot.image',
-  asset: { id: 'asset_one', files: [{ projectRelativePath: 'media/shot.png' }],
+  assetFile: { id: 'asset_one', projectRelativePath: 'media/shot.png',
     generationProvenance: { prompt: 'Exact recipe' } },
   generationProvenance: { prompt: 'Exact recipe' } }));
 vi.mock('@gorenku/studio-core/server', () => ({ createProjectDataService: () => ({}) }));

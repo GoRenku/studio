@@ -25,7 +25,7 @@ describe('Shot Plan Dialogue Audio Hono route', () => {
       takes: [{
         turnRange: { start: 2, end: 4 },
         selected: true,
-        asset: { generationProvenance: { provider: 'opaque-provider', model: 'opaque-model' } },
+        assetFile: { generationProvenance: { provider: 'opaque-provider', model: 'opaque-model' } },
       }],
     });
   });
@@ -90,7 +90,7 @@ function resource(): ShotPlanDialogueAudioResource {
       speakers: [],
       createdAt: '2026-08-31T10:00:00.000Z',
       updatedAt: '2026-08-31T10:00:00.000Z',
-      asset: {
+      assetFile: {
         id: 'asset_1',
         localeId: null,
         type: 'shot_plan_dialogue_audio',
@@ -102,7 +102,8 @@ function resource(): ShotPlanDialogueAudioResource {
         origin: 'generated',
         availability: 'ready',
         owner: { kind: 'project' },
-        files: [],
+        projectRelativePath: 'audio/dialogue.wav' as never,
+        mimeType: 'audio/wav', sizeBytes: 10, contentHash: null, width: null, height: null, durationSeconds: 1,
         generationProvenance: {
           provider: 'opaque-provider',
           model: 'opaque-model',

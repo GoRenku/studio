@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
-import { deleteProjectVideoAsset } from '@/services/studio-shot-plan-video-generations-api';
-import type { StudioShotPlanVideoAsset } from '@/services/studio-shot-plan-video-generations-contracts';
+import { deleteProjectVideoAssetFile } from '@/services/studio-shot-plan-video-generations-api';
+import type { StudioShotPlanVideoAssetFile } from '@/services/studio-shot-plan-video-generations-contracts';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 import { VideoPreviewDialog } from '@/ui/video-preview-dialog';
 
 export function ShotPlanVideoGenerationGroup({
   projectName,
-  assets,
+  assetFiles,
   onDeleted,
 }: {
   projectName: string;
-  assets: StudioShotPlanVideoAsset[];
+  assetFiles: StudioShotPlanVideoAssetFile[];
   onDeleted: () => void;
 }) {
   const [preview, setPreview] = useState<{
@@ -21,32 +21,26 @@ export function ShotPlanVideoGenerationGroup({
   } | null>(null);
   const { openGenerationRequestInspector } =
     useGenerationRequestInspectorDialog();
-  const takes = [...assets]
+  const takes = [...assetFiles]
     .sort((left, right) =>
       right.createdAt.localeCompare(left.createdAt)
       || right.id.localeCompare(left.id)
     )
-    .map((asset, index) => ({
-      asset,
-      title: `Take ${assets.length - index}`,
+    .map((assetFile, index) => ({
+      assetFile,
+      title: `Take ${assetFiles.length - index}`,
     }));
 
   return (
     <>
       <MediaCardGrid minimumCardWidthPx={280} gap='roomy'>
-        {takes.map(({ asset, title }) => {
-          const file = asset.files.find((candidate) =>
-            candidate.mediaKind === 'video'
-          );
-          if (!file) {
-            return null;
-          }
+        {takes.map(({ assetFile, title }) => {
           return (
             <MediaCard
-              key={asset.id}
+              key={assetFile.id}
               media={{
                 kind: 'video',
-                src: file.browserUrl,
+                src: assetFile.browserUrl,
                 title,
                 playback: 'hover-muted',
               }}
@@ -55,14 +49,14 @@ export function ShotPlanVideoGenerationGroup({
                 kind: 'overlay',
                 copy: {
                   title,
-                  description: formatCreatedAt(asset.createdAt),
+                  description: formatCreatedAt(assetFile.createdAt),
                 },
               }}
               activation={{
                 kind: 'callback',
                 label: `Preview ${title}`,
                 onActivate: () =>
-                  setPreview({ src: file.browserUrl, title }),
+                  setPreview({ src: assetFile.browserUrl, title }),
               }}
               cornerAction={{
                 kind: 'inspect',
@@ -71,7 +65,7 @@ export function ShotPlanVideoGenerationGroup({
                 onAction: () =>
                   openGenerationRequestInspector({
                     projectName,
-                    assetId: asset.id,
+                    assetFileId: assetFile.id,
                   }),
               }}
               deleteAction={{
@@ -80,7 +74,7 @@ export function ShotPlanVideoGenerationGroup({
                 confirmationMessage:
                   'The video will move to Trash and can be restored later.',
                 onDelete: async () => {
-                  await deleteProjectVideoAsset(projectName, asset.id);
+                  await deleteProjectVideoAssetFile(projectName, assetFile.id);
                   onDeleted();
                 },
               }}

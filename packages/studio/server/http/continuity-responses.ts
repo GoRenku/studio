@@ -9,8 +9,8 @@ import type {
   ScreenplayImageReferenceWithHttp,
 } from '@gorenku/studio-core/client';
 import {
-  toStudioAssetResponse,
-  type StudioAssetResponse,
+  toStudioAssetFileResponse,
+  type StudioAssetFileResponse,
 } from './asset-responses.js';
 
 export type CastOverviewResourceResponse = Omit<CastOverviewResource, 'cast'> & {
@@ -28,7 +28,7 @@ export type CastMemberResourceResponse = Omit<
 > & {
   firstImage?: ScreenplayImageReferenceWithHttp;
   voices: Array<Omit<CastMemberResource['voices'][number], 'sample'> & {
-    sample: StudioAssetResponse;
+    sample: StudioAssetFileResponse;
   }>;
 };
 
@@ -49,7 +49,7 @@ export type LocationResourceResponse = Omit<
   'firstImage' | 'selectedWorld'
 > & {
   firstImage?: ScreenplayImageReferenceWithHttp;
-  selectedWorld: StudioAssetResponse | null;
+  selectedWorld: StudioAssetFileResponse | null;
 };
 
 export type PropOverviewResourceResponse = Omit<PropOverviewResource, 'props'> & {
@@ -89,7 +89,7 @@ export function toCastMemberResourceResponse(
     firstImage: withOptionalImageUrl(projectName, resource.firstImage),
     voices: resource.voices.map((voice) => ({
       ...voice,
-      sample: toStudioAssetResponse(projectName, voice.sample),
+      sample: toStudioAssetFileResponse(projectName, voice.sample),
     })),
   };
 }
@@ -117,7 +117,7 @@ export function toLocationResourceResponse(
     ...resource,
     firstImage: withOptionalImageUrl(projectName, resource.firstImage),
     selectedWorld: resource.selectedWorld
-      ? toStudioAssetResponse(projectName, resource.selectedWorld)
+      ? toStudioAssetFileResponse(projectName, resource.selectedWorld)
       : null,
   };
 }
@@ -154,15 +154,14 @@ function withOptionalImageUrl(
   return image
     ? {
         ...image,
-        url: assetFileUrl(projectName, image.assetId, image.assetFileId),
+        url: assetFileUrl(projectName, image.assetFileId),
       }
     : undefined;
 }
 
 function assetFileUrl(
   projectName: string,
-  assetId: string,
   assetFileId: string
 ): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/asset-files/${encodeURIComponent(assetFileId)}`;
 }

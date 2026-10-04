@@ -1,6 +1,6 @@
 import type {
-  Asset,
-  AssetOwner,
+  AssetFile,
+  AssetFileOwner,
   CastMemberResource,
   CastOverviewResource,
   LocationOverviewResource,
@@ -9,7 +9,7 @@ import type {
   PropResource,
   ScreenplayImageReference,
 } from '../../client/index.js';
-import { listAssetPageInSession } from '../assets/projection.js';
+import { listAssetFilePageInSession } from '../asset-files/projection.js';
 import { listCastVoicesInSession } from '../cast-voices/projection.js';
 import {
   listCastNavigationPage,
@@ -28,7 +28,7 @@ import type {
   ReadLocationResourceInput,
   ReadPropResourceInput,
 } from '../project-data-service-contracts.js';
-import { readSelectedLocationWorldInSession } from '../location-worlds/assets.js';
+import { readSelectedLocationWorldInSession } from '../location-worlds/asset-files.js';
 
 export async function readCastOverviewResource(
   input: ListNavigationInput
@@ -174,24 +174,19 @@ export async function readPropResource(
 
 export function firstImageForContinuitySubject(
   session: DatabaseSession,
-  owner: Extract<AssetOwner, { kind: 'castMember' | 'location' | 'prop' }>
+  owner: Extract<AssetFileOwner, { kind: 'castMember' | 'location' | 'prop' }>
 ): ScreenplayImageReference | undefined {
-  const page = listAssetPageInSession(session, { owner, mediaKind: 'image' });
-  const asset = page.items.find((candidate) => candidate.id === page.selectedAssetId);
-  return asset ? toScreenplayImageReference(asset) : undefined;
+  const page = listAssetFilePageInSession(session, { owner, mediaKind: 'image' });
+  const assetFile = page.items.find((candidate) => candidate.id === page.selectedAssetFileId);
+  return assetFile ? toScreenplayImageReference(assetFile) : undefined;
 }
 
-function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | undefined {
-  const file =
-    asset.files.find(
-      (candidate) => candidate.role === 'primary' && candidate.mediaKind === 'image'
-    ) ?? asset.files.find((candidate) => candidate.mediaKind === 'image');
+function toScreenplayImageReference(assetFile: AssetFile): ScreenplayImageReference | undefined {
+  const file = assetFile.mediaKind === 'image' ? assetFile : null;
   return file
     ? {
-        assetId: asset.id,
         assetFileId: file.id,
-        title: asset.title,
-        fileRole: file.role,
+        title: assetFile.title,
         mediaKind: file.mediaKind,
         mimeType: file.mimeType,
         width: file.width,

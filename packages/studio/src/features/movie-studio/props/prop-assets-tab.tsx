@@ -1,24 +1,24 @@
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { ContinuityImageAssetsTab } from '../continuity/continuity-image-assets-tab';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
+import { ContinuityImageAssetFilesTab } from '../continuity/continuity-image-assets-tab';
 
-export function PropAssetsTab({
+export function PropAssetFilesTab({
   projectName,
-  assets,
-  selectedHeroAssetId,
+  assetFiles,
+  selectedHeroAssetFileId,
   onToggleHero,
-  onDeleteAsset,
+  onDeleteAssetFile,
 }: {
   projectName: string;
-  assets: StudioAssetResponse[];
-  selectedHeroAssetId: string | null;
-  onToggleHero: (asset: StudioAssetResponse) => Promise<void>;
-  onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
+  assetFiles: StudioAssetFileResponse[];
+  selectedHeroAssetFileId: string | null;
+  onToggleHero: (assetFile: StudioAssetFileResponse) => Promise<void>;
+  onDeleteAssetFile: (assetFile: StudioAssetFileResponse) => Promise<void>;
 }) {
   return (
-    <ContinuityImageAssetsTab
+    <ContinuityImageAssetFilesTab
       projectName={projectName}
-      assets={assets}
-      selectedCanonicalAssetId={selectedHeroAssetId}
+      assetFiles={assetFiles}
+      selectedCanonicalAssetFileId={selectedHeroAssetFileId}
       canonicalType='prop_hero'
       sheetTypes={['prop_sheet']}
       canonicalTitle='Prop Hero'
@@ -26,7 +26,7 @@ export function PropAssetsTab({
       sheetTitle='Prop Sheet'
       sheetPluralTitle='Prop Sheets'
       onToggleCanonical={onToggleHero}
-      onDeleteAsset={onDeleteAsset}
+      onDeleteAssetFile={onDeleteAssetFile}
     />
   );
 }

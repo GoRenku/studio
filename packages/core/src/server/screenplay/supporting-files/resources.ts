@@ -1,11 +1,11 @@
 import fs from 'node:fs/promises';
-import type { Asset } from '../../../client/assets.js';
+import type { AssetFile } from '../../../client/asset-files.js';
 import type {
   ProjectSupportingFile,
   ProjectSupportingFileInformation,
   ProjectSupportingFilePage,
 } from '../../../client/screenplay/supporting-files.js';
-import { listAssetPageInSession, readOwnedAsset } from '../../assets/projection.js';
+import { listAssetFilePageInSession, readOwnedAssetFile } from '../../asset-files/projection.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import { isPathInside } from '../../files/project-paths.js';
 import { resolveProjectRelativePath } from '../../files/project-relative-paths.js';
@@ -22,7 +22,7 @@ export async function listProjectSupportingFiles(
 ): Promise<ProjectSupportingFilePage> {
   const { session } = await openProjectSession(input);
   try {
-    const page = listAssetPageInSession(session, {
+    const page = listAssetFilePageInSession(session, {
       owner: { kind: 'project' },
       types: ['screenplay_source', 'screenplay_supporting_material'],
       cursor: input.cursor,
@@ -35,20 +35,20 @@ export async function listProjectSupportingFiles(
 }
 
 export async function readProjectSupportingFileInformation(
-  input: SupportingFileInput & { assetId: string },
+  input: SupportingFileInput & { assetFileId: string },
 ): Promise<ProjectSupportingFileInformation> {
   const { projectFolder, session } = await openProjectSession(input);
   try {
-    const asset = readOwnedAsset(session, {
-      owner: { kind: 'project' }, assetId: input.assetId,
+    const assetFile = readOwnedAssetFile(session, {
+      owner: { kind: 'project' }, assetFileId: input.assetFileId,
     });
-    if (!asset) {
+    if (!assetFile) {
       throw invalidSupportingFile();
     }
-    const supportingFile = toSupportingFile(asset);
+    const supportingFile = toSupportingFile(assetFile);
     return {
       supportingFile,
-      absolutePath: resolveProjectRelativePath(projectFolder, asset.files[0]!.projectRelativePath),
+      absolutePath: resolveProjectRelativePath(projectFolder, assetFile.projectRelativePath),
     };
   } finally {
     session.close();
@@ -56,7 +56,7 @@ export async function readProjectSupportingFileInformation(
 }
 
 export async function resolveProjectSupportingFile(
-  input: SupportingFileInput & { assetId: string },
+  input: SupportingFileInput & { assetFileId: string },
 ): Promise<ProjectSupportingFileInformation> {
   const information = await readProjectSupportingFileInformation(input);
   const { projectFolder, session } = await openProjectSession(input);
@@ -79,19 +79,17 @@ export async function resolveProjectSupportingFile(
   return { ...information, absolutePath: realPath };
 }
 
-function toSupportingFile(asset: Asset): ProjectSupportingFile {
+function toSupportingFile(assetFile: AssetFile): ProjectSupportingFile {
   if (
-    asset.owner.kind !== 'project'
-    || !['screenplay_source', 'screenplay_supporting_material'].includes(asset.type)
-    || asset.files.length !== 1
-    || asset.files[0]?.role !== 'source'
+    assetFile.owner.kind !== 'project'
+    || !['screenplay_source', 'screenplay_supporting_material'].includes(assetFile.type)
   ) {
     throw invalidSupportingFile();
   }
   return {
-    asset,
-    sourceAssetFileId: asset.files[0].id,
-    deleteBlock: screenplaySourceDeleteBlock(asset.type),
+    assetFile,
+    sourceAssetFileId: assetFile.id,
+    deleteBlock: screenplaySourceDeleteBlock(assetFile.type),
   };
 }
 

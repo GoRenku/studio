@@ -63,9 +63,9 @@ export {
 export { readMediaGenerationPreview, projectMediaGenerationPreview } from './media-generation-review/preview.js';
 export { readMediaGenerationReview } from './media-generation-review/review-file.js';
 export { updateMediaGenerationPreviewPrompt } from './media-generation-review/prompt.js';
-export { readAssetMediaGenerationRequest } from './media-generation-review/inspection.js';
+export { readAssetFileMediaGenerationRequest } from './media-generation-review/inspection.js';
 export { readMediaGenerationContext } from './media-generation-context/index.js';
-export { validateMediaGenerationProvenance } from './assets/generation-provenance.js';
+export { validateMediaGenerationProvenance } from './asset-files/generation-provenance.js';
 export { assertSafeMediaGenerationRequest } from './media-generation-review/safety.js';
 export * from './generation-configuration-visualizations/index.js';
 export {
@@ -93,15 +93,15 @@ export type {
   CreateMovieProjectInput,
   DeleteProjectInput,
   CreateInspirationFolderInput,
-  DiscardAssetInput,
-  RestoreAssetInput,
+  DiscardAssetFileInput,
+  RestoreAssetFileInput,
   DeleteInspirationFolderInput,
   DeleteInspirationImageInput,
   DeleteLookbookImageInput,
   ListLookbookSourceInspirationsInput,
   ListInspirationFoldersInput,
-  ListAssetsInput,
-  ListAssetPageInput,
+  ListAssetFilesInput,
+  ListAssetFilePageInput,
   ListNavigationInput,
   ListSceneNavigationInput,
   MigrateProjectDatabaseInput,
@@ -147,7 +147,6 @@ export type {
   ReorderInspirationFoldersInput,
   ResolveProjectAssetFileByIdInput,
   ResolveProjectAssetFileInput,
-  ResolvedProjectAssetFileById,
   ResolvedProjectAssetFile,
   ScreenplayAnalysisProjectInput,
   SceneBeatsProjectInput,
@@ -265,15 +264,14 @@ export type {
   TextBlock,
 } from '../client/screenplay/index.js';
 export type {
-  Asset,
-  AssetAvailability,
+  AssetFileAvailability,
   AssetFile,
-  AssetLocaleContext,
-  AssetOwner,
-  AssetPage,
-  AssetSelectionReport,
-  AssetSelectionTarget,
-  AssetUpdateReport,
+  AssetFileLocaleContext,
+  AssetFileOwner,
+  AssetFilePage,
+  AssetFileSelectionReport,
+  AssetFileSelectionTarget,
+  AssetFileUpdateReport,
   CameraSection,
   CastMember,
   CastNavigationRow,
@@ -294,7 +292,6 @@ export type {
   InspirationFolderReport,
   InspirationFolderResource,
   InspirationFolderWithResolvedPath,
-  InspirationImage,
   InspirationResource,
   InspiredByItem,
   InspiredBySection,
@@ -345,9 +342,9 @@ export type {
   ProjectRelativePath,
   ProjectShell,
   ProjectShellNavigation,
-  ClearAssetSelectionInput,
-  SelectAssetInput,
-  UpdateAssetInput,
+  ClearAssetFileSelectionInput,
+  SelectAssetFileInput,
+  UpdateAssetFileInput,
   Scene,
   SceneDesignResource,
   ScenePanelTab,
@@ -411,12 +408,12 @@ export {
 } from './studio-coordination/index.js';
 export { sceneBeatsResourceKeys } from './scene-beats/storyboard-status.js';
 export {
-  clearAssetSelection,
-  listAssetPage,
-  listAssets,
-  selectAsset,
-  updateAsset,
-} from './assets/index.js';
+  clearAssetFileSelection,
+  listAssetFilePage,
+  listAssetFiles,
+  selectAssetFile,
+  updateAssetFile,
+} from './asset-files/index.js';
 export type {
   AppendStudioEventInput,
   ClaimStudioRuntimeDescriptorInput,
@@ -457,3 +454,5 @@ export { readFdxUpdateStatus, prepareFdxExportFolder, reviewFdxUpdate, applyFdxU
 export { listMediaModels, readMediaModel, importPersonalMediaModel, removePersonalMediaModel } from './media-model-library/index.js';
 export type { MediaModelRoute, PersonalMediaModelLibrary, MediaModelDiscoveryRoute,
   MediaModelLibraryQuery, MediaModelIdentity, PersonalMediaModelMutation } from './media-model-library/index.js';
+
+export { importReferenceFiles } from './reference-files/index.js';

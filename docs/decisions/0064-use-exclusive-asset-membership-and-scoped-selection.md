@@ -4,6 +4,11 @@ Date: 2026-07-26
 
 Status: accepted
 
+[Decision 0107](0107-unify-retained-project-media-as-asset-files.md) moves exclusive
+ownership onto each retained file and selections onto canonical file IDs,
+removing the separate membership row. Plan 0222 tracks implementation; the
+selection-target rules remain accepted.
+
 Decision 0075 replaces Beat Sheet terminology with Scene Beats. This decision's
 exclusive membership and scoped selection rules remain unchanged.
 

@@ -1,4 +1,4 @@
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { JsonValue } from './json.js';
 import type { MediaGenerationProvenance } from './media-generation-review.js';
 import type { ProjectRelativePath } from './project/index.js';
@@ -10,7 +10,7 @@ export interface CastVoice {
   purpose: string;
   isDefault: boolean;
   voiceIdentity: JsonValue | null;
-  sample: Asset;
+  sample: AssetFile;
   createdAt: string;
   updatedAt: string;
 }
@@ -79,7 +79,7 @@ export interface CastVoiceRemoveReport {
   removed: {
     castMemberId: string;
     voiceId: string;
-    sampleAssetId: string;
+    sampleAssetFileId: string;
   };
   changes: Array<{ type: 'castVoice.removed'; castMemberId: string; voiceId: string }>;
   recovery?: import('./trash.js').RecoverableMutationReport['recovery'];

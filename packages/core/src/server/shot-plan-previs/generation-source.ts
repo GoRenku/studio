@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { AttachGenerationMediaInput } from '../generation/attachments.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
-import { listAssetsInSession } from '../assets/projection.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
 import { shotPlanPrevisRevisions } from '../schema/shot-plan-previs.js';
 import { ProjectDataError } from '../project-data-error.js';
 
@@ -30,7 +30,7 @@ export function requirePrevisRevisionForPlan(session: DatabaseSession, shotPlanI
 }
 
 export function listPrevisGenerations(session: DatabaseSession, shotPlanId: string) {
-  return listAssetsInSession(session, { owner: { kind: 'project' }, type: 'shot_plan_video', mediaKind: 'video' })
-    .filter((asset) => asset.authoredFrom?.id === shotPlanId && asset.authoredFrom.previsRevisionId)
+  return listAssetFilesInSession(session, { owner: { kind: 'project' }, type: 'shot_plan_video', mediaKind: 'video' })
+    .filter((assetFile) => assetFile.authoredFrom?.id === shotPlanId && assetFile.authoredFrom.previsRevisionId)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
 }

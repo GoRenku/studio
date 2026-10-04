@@ -44,7 +44,7 @@ const targetParsers: Record<
   project: (value, purpose) => value === 'project'
     ? { kind: 'project', id: 'project' }
     : invalidTarget({ purpose, target: value }, 'project'),
-  asset: (value, purpose) => ({ kind: 'asset', id: parsePrefixedTarget(value, 'asset', purpose) }),
+  assetFile: (value, purpose) => ({ kind: 'assetFile', assetFileId: parsePrefixedTarget(value, 'assetFile', purpose) }),
   lookbook: (value) => ({ kind: 'lookbook', id: parseLookbookTarget(value, 'Media attachment') }),
   castMember: (value) => ({ kind: 'castMember', id: parseCastTarget(value, 'Media attachment') }),
   location: (value) => ({ kind: 'location', id: parseLocationTarget(value, 'Media attachment') }),

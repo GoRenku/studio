@@ -28,7 +28,7 @@ describe('Project supporting files', () => {
     const report = await service.uploadScreenplaySupportingMaterial(input);
     expect(report.status).toBe('imported');
     expect(report.material.title).toBe('research.md');
-    const information = await service.resolveProjectSupportingFile({ projectName, homeDir, assetId: report.material.id });
+    const information = await service.resolveProjectSupportingFile({ projectName, homeDir, assetFileId: report.material.id });
     expect(await fs.readFile(information.absolutePath, 'utf8')).toBe('Opaque source notes');
     expect((await service.uploadScreenplaySupportingMaterial(input)).status).toBe('unchanged');
     for (const fileName of ['../notes.txt', 'C:\\notes.txt', '', '..']) {
@@ -52,7 +52,7 @@ describe('Project supporting files', () => {
         severity: 'warning',
         location: { filePath: expect.stringContaining('renku-supporting-upload-') },
       }]);
-      const information = await service.resolveProjectSupportingFile({ projectName, homeDir, assetId: report.material.id });
+      const information = await service.resolveProjectSupportingFile({ projectName, homeDir, assetFileId: report.material.id });
       expect(await fs.readFile(information.absolutePath, 'utf8')).toBe('Imported before cleanup');
       expect(rm).toHaveBeenCalledWith(expect.any(String), {
         recursive: true,
@@ -86,24 +86,24 @@ describe('Project supporting files', () => {
     do {
       const page = await service.listProjectSupportingFiles({ projectName, homeDir, limit: 1, cursor });
       expect(page.items).toHaveLength(1);
-      ids.push(page.items[0]!.asset.id);
+      ids.push(page.items[0]!.assetFile.id);
       cursor = page.nextCursor;
     } while (cursor);
     expect(new Set(ids).size).toBe(3);
-    for (const assetId of [original.screenplayImport.sourceAssetId, refreshed.screenplayImport.sourceAssetId]) {
-      expect((await service.readProjectSupportingFileInformation({ projectName, homeDir, assetId })).supportingFile.deleteBlock?.code)
+    for (const assetFileId of [original.screenplayImport.sourceAssetFileId, refreshed.screenplayImport.sourceAssetFileId]) {
+      expect((await service.readProjectSupportingFileInformation({ projectName, homeDir, assetFileId })).supportingFile.deleteBlock?.code)
         .toBe('SCREENPLAY_FDX_SOURCE_PROTECTED');
-      await expect(service.discardProjectSupportingFile({ projectName, homeDir, assetId }))
+      await expect(service.discardProjectSupportingFile({ projectName, homeDir, assetFileId }))
         .rejects.toMatchObject({ code: 'SCREENPLAY_FDX_SOURCE_PROTECTED' });
-      await expect(service.discardAsset({ projectName, homeDir, assetId, owner: { kind: 'project' } }))
+      await expect(service.discardAssetFile({ projectName, homeDir, assetFileId, owner: { kind: 'project' } }))
         .rejects.toMatchObject({ code: 'SCREENPLAY_FDX_SOURCE_PROTECTED' });
     }
   });
 
   it('discards and restores supporting material without altering the external file', async () => {
     const imported = await importNotes('notes.txt', 'Exact retained bytes');
-    const assetId = imported.material.id;
-    const input = { projectName, homeDir, assetId };
+    const assetFileId = imported.material.id;
+    const input = { projectName, homeDir, assetFileId };
     const information = await service.resolveProjectSupportingFile(input);
     expect(await fs.readFile(information.absolutePath, 'utf8')).toBe('Exact retained bytes');
     expect(information.supportingFile.deleteBlock).toBeNull();
@@ -111,7 +111,7 @@ describe('Project supporting files', () => {
     expect(discarded.resourceKeys).toContain('surface:project:assets');
     expect((await service.listProjectSupportingFiles({ projectName, homeDir })).items).toEqual([]);
     await expect(service.resolveProjectSupportingFile(input)).rejects.toMatchObject({ code: 'SCREENPLAY_SUPPORTING_FILE_INVALID_ASSET' });
-    const restored = await service.restoreAsset(input);
+    const restored = await service.restoreAssetFile(input);
     expect(restored.resourceKeys).toContain('surface:project:assets');
     expect((await service.listProjectSupportingFiles({ projectName, homeDir })).items).toHaveLength(1);
     expect(await fs.readFile(path.join(homeDir, 'notes.txt'), 'utf8')).toBe('Exact retained bytes');
@@ -119,7 +119,7 @@ describe('Project supporting files', () => {
 
   it('keeps metadata readable for missing bytes and rejects files escaping the Project', async () => {
     const imported = await importNotes('notes.txt');
-    const input = { projectName, homeDir, assetId: imported.material.id };
+    const input = { projectName, homeDir, assetFileId: imported.material.id };
     const information = await service.readProjectSupportingFileInformation(input);
     await fs.rename(information.absolutePath, `${information.absolutePath}.removed`);
     expect((await service.readProjectSupportingFileInformation(input)).absolutePath).toBe(information.absolutePath);
@@ -131,7 +131,7 @@ describe('Project supporting files', () => {
   it('does not resolve an Asset through a different Project', async () => {
     const imported = await importNotes('notes.txt');
     await createBlankMovieProject({ homeDir, projectData: service, projectName: 'other', title: 'Other' });
-    await expect(service.readProjectSupportingFileInformation({ projectName: 'other', homeDir, assetId: imported.material.id }))
+    await expect(service.readProjectSupportingFileInformation({ projectName: 'other', homeDir, assetFileId: imported.material.id }))
       .rejects.toMatchObject({ code: 'SCREENPLAY_SUPPORTING_FILE_INVALID_ASSET' });
   });
 });

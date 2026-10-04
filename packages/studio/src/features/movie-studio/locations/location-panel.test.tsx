@@ -4,11 +4,11 @@ import { fireEvent, render as renderTestingLibrary, screen, waitFor } from '@tes
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   LocationResourceResponse,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 import {
-  deleteLocationAsset,
-  readLocationAssets,
+  deleteLocationAssetFile,
+  readLocationAssetFiles,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-continuity-api';
 import { LocationPanel } from './location-panel';
@@ -27,16 +27,15 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('@/services/studio-project-assets-api', () => ({
-  deleteLocationAsset: vi.fn(),
+  deleteLocationAssetFile: vi.fn(),
   projectAssetFileUrl: vi.fn(
     (
       projectName: string,
-      assetId: string,
-      fileId: string
+      assetFileId: string
     ) =>
-      `/studio-api/projects/${projectName}/assets/${assetId}/files/${fileId}`
+      `/studio-api/projects/${projectName}/asset-files/${assetFileId}`
   ),
-  readLocationAssets: vi.fn(),
+  readLocationAssetFiles: vi.fn(),
 }));
 
 vi.mock('@/services/studio-continuity-api', () => ({
@@ -51,8 +50,8 @@ vi.mock('./spark-location-world-viewer', () => ({
 
 describe('LocationPanel', () => {
   beforeEach(() => {
-    vi.mocked(deleteLocationAsset).mockReset();
-    vi.mocked(readLocationAssets).mockReset();
+    vi.mocked(deleteLocationAssetFile).mockReset();
+    vi.mocked(readLocationAssetFiles).mockReset();
     vi.mocked(readLocationResource).mockReset();
   });
 
@@ -60,10 +59,9 @@ describe('LocationPanel', () => {
     vi.mocked(readLocationResource).mockResolvedValue({
       ...locationResource(),
       firstImage: {
-        assetId: 'asset_location_hero',
         assetFileId: 'asset_location_hero_primary',
         title: 'Gate hero image',
-        fileRole: 'primary',
+
         mediaKind: 'image',
         mimeType: 'image/png',
         width: 1536,
@@ -71,9 +69,9 @@ describe('LocationPanel', () => {
         url: '/gate-hero.png',
       },
     });
-    vi.mocked(readLocationAssets).mockResolvedValue(
-      assetCollection(
-        [locationSheetAsset(), locationHeroAsset()],
+    vi.mocked(readLocationAssetFiles).mockResolvedValue(
+      assetFileCollection(
+        [locationSheetAssetFile(), locationHeroAssetFile()],
         'asset_location_hero'
       )
     );
@@ -97,8 +95,8 @@ describe('LocationPanel', () => {
 
   it('does not fall back to a Location Sheet when no hero image exists', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
-    vi.mocked(readLocationAssets).mockResolvedValue(
-      assetCollection([locationSheetAsset()])
+    vi.mocked(readLocationAssetFiles).mockResolvedValue(
+      assetFileCollection([locationSheetAssetFile()])
     );
 
     render(
@@ -115,8 +113,8 @@ describe('LocationPanel', () => {
 
   it('opens visual content preview for the full Location Sheet only', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
-    vi.mocked(readLocationAssets).mockResolvedValue(
-      assetCollection([locationSheetAsset()])
+    vi.mocked(readLocationAssetFiles).mockResolvedValue(
+      assetFileCollection([locationSheetAssetFile()])
     );
 
     render(
@@ -138,10 +136,10 @@ describe('LocationPanel', () => {
 
   it('does not show a Location-level pick control for Location Sheets', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
-    vi.mocked(readLocationAssets).mockResolvedValue(
-      assetCollection([
-        locationSheetAsset({ assetId: 'asset_a' }),
-        locationSheetAsset({ assetId: 'asset_b' }),
+    vi.mocked(readLocationAssetFiles).mockResolvedValue(
+      assetFileCollection([
+        locationSheetAssetFile({ assetFileId: 'asset_a' }),
+        locationSheetAssetFile({ assetFileId: 'asset_b' }),
       ])
     );
 
@@ -167,9 +165,9 @@ describe('LocationPanel', () => {
   it('adds a display-only 3D World tab backed by the selected local Asset file', async () => {
     vi.mocked(readLocationResource).mockResolvedValue({
       ...locationResource(),
-      selectedWorld: locationWorldAsset(),
+      selectedWorld: locationWorldAssetFile(),
     });
-    vi.mocked(readLocationAssets).mockResolvedValue(assetCollection([]));
+    vi.mocked(readLocationAssetFiles).mockResolvedValue(assetFileCollection([]));
 
     render(
       <LocationPanel projectName='constantinople' locationId='location_gate' />
@@ -187,17 +185,17 @@ describe('LocationPanel', () => {
     fireEvent.mouseUp(worldTab);
     fireEvent.click(worldTab);
     expect((await screen.findByTestId('spark-viewer')).getAttribute('data-url')).toBe(
-      '/studio-api/projects/constantinople/assets/asset_location_world/files/asset_location_world_primary'
+      '/studio-api/projects/constantinople/asset-files/asset_location_world_primary'
     );
     expect(screen.queryByRole('button', { name: /generate/i })).toBeNull();
   });
 
   it('deletes a location sheet only after confirmation', async () => {
     vi.mocked(readLocationResource).mockResolvedValue(locationResource());
-    vi.mocked(readLocationAssets)
-      .mockResolvedValueOnce(assetCollection([locationSheetAsset()]))
-      .mockResolvedValueOnce(assetCollection([]));
-    vi.mocked(deleteLocationAsset).mockResolvedValue({
+    vi.mocked(readLocationAssetFiles)
+      .mockResolvedValueOnce(assetFileCollection([locationSheetAssetFile()]))
+      .mockResolvedValueOnce(assetFileCollection([]));
+    vi.mocked(deleteLocationAssetFile).mockResolvedValue({
       valid: true,
       warnings: [],
       project: {
@@ -206,7 +204,7 @@ describe('LocationPanel', () => {
         projectFolder: '/projects/constantinople',
       },
       changes: [
-        { type: 'asset.discarded', assetId: 'asset_location_sheet' },
+        { type: 'asset.discarded', assetFileId: 'asset_location_sheet' },
       ],
       recovery: {
         operationId: 'trash_operation_1',
@@ -228,12 +226,12 @@ describe('LocationPanel', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: 'Delete location sheet' })
     );
-    expect(deleteLocationAsset).not.toHaveBeenCalled();
+    expect(deleteLocationAssetFile).not.toHaveBeenCalled();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
 
     await waitFor(() => {
-      expect(deleteLocationAsset).toHaveBeenCalledWith(
+      expect(deleteLocationAssetFile).toHaveBeenCalledWith(
         'constantinople',
         'location_gate',
         'asset_location_sheet'
@@ -253,11 +251,11 @@ async function openVisualContentTab() {
   fireEvent.click(visualContentTab);
 }
 
-function assetCollection(
-  items: StudioAssetResponse[],
-  selectedAssetId: string | null = null
+function assetFileCollection(
+  items: StudioAssetFileResponse[],
+  selectedAssetFileId: string | null = null
 ) {
-  return { items, selectedAssetId };
+  return { items, selectedAssetFileId };
 }
 
 function locationResource(): LocationResourceResponse {
@@ -274,41 +272,41 @@ function locationResource(): LocationResourceResponse {
   };
 }
 
-function locationSheetAsset({
-  assetId = 'asset_location_sheet',
+function locationSheetAssetFile({
+  assetFileId = 'asset_location_sheet',
 }: {
-  assetId?: string;
-} = {}): StudioAssetResponse {
-  return locationAsset({
-    assetId,
+  assetFileId?: string;
+} = {}): StudioAssetFileResponse {
+  return locationAssetFile({
+    assetFileId,
     type: 'location_sheet',
     title: 'Gate Location Sheet',
     oneLineSummary: 'Council chamber layout',
-    fileRole: 'primary',
+
     width: 1536,
     height: 1152,
   });
 }
 
-function locationHeroAsset({
-  assetId = 'asset_location_hero',
+function locationHeroAssetFile({
+  assetFileId = 'asset_location_hero',
 }: {
-  assetId?: string;
-} = {}): StudioAssetResponse {
-  return locationAsset({
-    assetId,
+  assetFileId?: string;
+} = {}): StudioAssetFileResponse {
+  return locationAssetFile({
+    assetFileId,
     type: 'location_hero',
     title: 'Gate hero image',
     oneLineSummary: 'Gate hero image',
-    fileRole: 'primary',
+
     width: 1600,
     height: 900,
   });
 }
 
-function locationWorldAsset(): StudioAssetResponse {
+function locationWorldAssetFile(): StudioAssetFileResponse {
   return {
-    id: 'asset_location_world',
+    id: 'asset_location_world_primary',
     owner: { kind: 'location', id: 'location_gate' },
     localeId: null,
     type: 'location_world',
@@ -321,42 +319,30 @@ function locationWorldAsset(): StudioAssetResponse {
     authoredFrom: null,
     referenceName: null,
     tags: [],
-    files: [{
-      id: 'asset_location_world_primary',
-      role: 'primary',
-      url: '/studio-api/projects/constantinople/assets/asset_location_world/files/asset_location_world_primary',
-      mediaKind: 'model',
-      mimeType: 'application/octet-stream',
-      sizeBytes: 123,
-      contentHash: 'hash',
-      width: null,
-      height: null,
-      durationSeconds: null,
-    }],
+    url: '/studio-api/projects/constantinople/asset-files/asset_location_world_primary', mimeType: 'application/octet-stream', sizeBytes: 123, contentHash: 'hash', width: null, height: null, durationSeconds: null,
     createdAt: '2026-08-18T00:00:00.000Z',
     updatedAt: '2026-08-18T00:00:00.000Z',
   };
 }
 
-function locationAsset({
-  assetId,
+function locationAssetFile({
+  assetFileId,
   type,
   title,
   oneLineSummary,
-  fileRole,
   width,
   height,
 }: {
-  assetId: string;
+  assetFileId: string;
   type: string;
   title: string;
   oneLineSummary: string | null;
-  fileRole: string;
+
   width: number;
   height: number;
-}): StudioAssetResponse {
+}): StudioAssetFileResponse {
   return {
-    id: assetId,
+    id: assetFileId,
     owner: { kind: 'location', id: 'location_gate' },
     localeId: null,
     type,
@@ -369,30 +355,9 @@ function locationAsset({
     authoredFrom: null,
     referenceName: null,
     tags: [],
-    files: [
-      imageFile(fileRole, `${assetId}_primary`, width, height),
-    ],
+    url: `/studio-api/projects/constantinople/asset-files/${assetFileId}`,
+    mimeType: 'image/png', sizeBytes: 123, contentHash: null, width, height, durationSeconds: null,
     createdAt: '2026-05-28T00:00:00.000Z',
     updatedAt: '2026-05-28T00:00:00.000Z',
-  };
-}
-
-function imageFile(
-  role: string,
-  id: string,
-  width: number,
-  height: number
-): StudioAssetResponse['files'][number] {
-  return {
-    id,
-    role,
-    url: `/studio-api/projects/constantinople/assets/${id}/files/${id}`,
-    mediaKind: 'image',
-    mimeType: 'image/png',
-    sizeBytes: 123,
-    contentHash: null,
-    width,
-    height,
-    durationSeconds: null,
   };
 }

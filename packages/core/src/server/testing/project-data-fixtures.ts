@@ -210,7 +210,7 @@ export function tableColumns(database: Database.Database, tableName: string): st
 
 export function readAssetFileMetadata(
   databasePath: string,
-  assetId: string
+  assetFileId: string
 ): { contentHash: string | null; sizeBytes: number | null; updatedAt: string } {
   const database = new Database(databasePath, { readonly: true });
   try {
@@ -219,13 +219,13 @@ export function readAssetFileMetadata(
         `select content_hash as contentHash, size_bytes as sizeBytes,
           updated_at as updatedAt
          from asset_file
-         where asset_id = ?`
+         where id = ?`
       )
-      .get(assetId) as
+      .get(assetFileId) as
       | { contentHash: string | null; sizeBytes: number | null; updatedAt: string }
       | undefined;
     if (!row) {
-      throw new Error(`Asset file was not found for asset ${assetId}.`);
+      throw new Error(`AssetFile was not found: ${assetFileId}.`);
     }
     return row;
   } finally {

@@ -27,9 +27,9 @@ export function createSupportingFilesRoute({ projectData, requireToken }: {
       projectName: c.req.param('projectName')!, ...readPageRequest(c.req.query()),
     }),
   ));
-  route.get('/supporting-files/:assetId/information', async (c) => {
+  route.get('/supporting-files/:assetFileId/information', async (c) => {
     const information = await projectData.readProjectSupportingFileInformation({
-      projectName: c.req.param('projectName')!, assetId: c.req.param('assetId'),
+      projectName: c.req.param('projectName')!, assetFileId: c.req.param('assetFileId'),
     });
     c.header('Cache-Control', 'no-store');
     return c.json({
@@ -37,22 +37,22 @@ export function createSupportingFilesRoute({ projectData, requireToken }: {
       folderActionLabel: containingFolderActionLabel(),
     });
   });
-  route.delete('/supporting-files/:assetId', requireToken, async (c) => c.json(
+  route.delete('/supporting-files/:assetFileId', requireToken, async (c) => c.json(
     await projectData.discardProjectSupportingFile({
-      projectName: c.req.param('projectName')!, assetId: c.req.param('assetId'),
+      projectName: c.req.param('projectName')!, assetFileId: c.req.param('assetFileId'),
     }),
   ));
   for (const action of ['content', 'download'] as const) {
-    route.get(`/supporting-files/:assetId/${action}`, async (c) => {
+    route.get(`/supporting-files/:assetFileId/${action}`, async (c) => {
       const information = await projectData.resolveProjectSupportingFile({
-        projectName: c.req.param('projectName')!, assetId: c.req.param('assetId'),
+        projectName: c.req.param('projectName')!, assetFileId: c.req.param('assetFileId'),
       });
       return supportingFileResponse(information, action === 'download');
     });
   }
-  route.post('/supporting-files/:assetId/open-folder', requireToken, async (c) => {
+  route.post('/supporting-files/:assetFileId/open-folder', requireToken, async (c) => {
     const information = await projectData.resolveProjectSupportingFile({
-      projectName: c.req.param('projectName')!, assetId: c.req.param('assetId'),
+      projectName: c.req.param('projectName')!, assetFileId: c.req.param('assetFileId'),
     });
     await openContainingFolder(information.absolutePath);
     return c.json({ dispatched: true });

@@ -38,7 +38,7 @@ export function insertProjectRecord(
   session: DatabaseSession,
   record: InsertProjectRecord
 ): void {
-  session.db.insert(projects).values(record).run();
+  session.db.insert(projects).values({ ...record, assetFileBackfillVersion: 1 }).run();
 }
 
 export function readProjectRecord(session: DatabaseSession): ProjectRecord | null {

@@ -7,7 +7,7 @@ import { PrevisDescription } from './description';
 
 export function PrevisTab({ projectName, sceneId, shotPlanId }: { projectName: string; sceneId: string; shotPlanId: string }) {
   const previs = usePrevis(projectName, sceneId, shotPlanId);
-  const renderFile = previs.revision?.render?.files.find((file) => file.role === 'primary' && file.mediaKind === 'video');
+  const renderFile = previs.revision?.render;
   return <PrevisWorkspace key={`${previs.revision?.id ?? 'empty'}:${renderFile?.url ?? 'unavailable'}`} previs={previs} />;
 }
 

@@ -6,7 +6,7 @@ import {
   createProjectDataService,
   type ProjectRelativePath,
 } from '../index.js';
-import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
+import { createTestAssetFileFixture } from '../testing/asset-fixture-helpers.js';
 import {
   createSampleMovieProject,
   writeConfig,
@@ -57,7 +57,7 @@ describe('screenplay UI resources', () => {
       path.join(created.projectPath, locationPath),
       'location image'
     );
-    const castProfile = await createTestAssetFixture({
+    const castProfile = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'castMember', id: castMemberId },
@@ -65,9 +65,8 @@ describe('screenplay UI resources', () => {
       mediaKind: 'image',
       title: 'Urban profile',
       projectRelativePath: castPath,
-      fileRole: 'primary',
     });
-    const locationHero = await createTestAssetFixture({
+    const locationHero = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'location', id: locationId },
@@ -75,19 +74,18 @@ describe('screenplay UI resources', () => {
       mediaKind: 'image',
       title: 'City walls hero',
       projectRelativePath: locationPath,
-      fileRole: 'primary',
     });
-    await projectData.selectAsset({
+    await projectData.selectAssetFile({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'castMember', id: castMemberId },
-      assetId: castProfile.id,
+      assetFileId: castProfile.id,
     });
-    await projectData.selectAsset({
+    await projectData.selectAssetFile({
       projectName: 'constantinople',
       homeDir,
       target: { kind: 'location', id: locationId },
-      assetId: locationHero.id,
+      assetFileId: locationHero.id,
     });
 
     const resource = await projectData.readSceneNarrativeResource({
@@ -97,11 +95,11 @@ describe('screenplay UI resources', () => {
     });
 
     expect(resource.castMemberImages[castMemberId]).toMatchObject({
-      assetId: castProfile.id,
+      assetFileId: castProfile.id,
       title: 'Urban profile',
     });
     expect(resource.locationImages[locationId]).toMatchObject({
-      assetId: locationHero.id,
+      assetFileId: locationHero.id,
       title: 'City walls hero',
     });
   });

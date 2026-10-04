@@ -1,5 +1,5 @@
 import type {
-  Asset,
+  AssetFile,
   RecoverableMutationReport,
   ShotPlanListReport,
   ShotPlanReport,
@@ -7,7 +7,7 @@ import type {
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
-import { makeAsset } from '../testing/route-fixtures.js';
+import { makeAssetFile } from '../testing/route-fixtures.js';
 import { createShotPlansRoute } from './shot-plans.js';
 
 describe('Shot Plans Hono route', () => {
@@ -31,18 +31,15 @@ describe('Shot Plans Hono route', () => {
       (coveredBeat: { position: number }) => coveredBeat.position
     )).toEqual([6, 4]);
     expect(body.shotPlans[0].shotPlan.shots[0].images).toMatchObject([
-      { id: 'asset_unselected', files: [] },
+      { id: 'asset_unselected' },
       {
         id: 'asset_selected',
-        files: [{
-          url: '/studio-api/projects/constantinople/assets/asset_selected/files/file_asset_selected',
-        }],
+        url: '/studio-api/projects/constantinople/asset-files/asset_selected',
       },
     ]);
     expect(body.shotPlans[0].coveredBeats[0].storyboardImage).toEqual({
-      assetId: 'asset_storyboard',
       assetFileId: 'asset_file_storyboard',
-      url: '/studio-api/projects/constantinople/assets/asset_storyboard/files/asset_file_storyboard',
+      url: '/studio-api/projects/constantinople/asset-files/asset_file_storyboard',
     });
     expect(JSON.stringify(body)).not.toContain('/tmp/renku');
     expect(body.warnings).toEqual([
@@ -74,7 +71,7 @@ describe('Shot Plans Hono route', () => {
   });
 
   it('selects and discards candidates through common Core commands', async () => {
-    const selectAsset = vi.fn(async () => ({
+    const selectAssetFile = vi.fn(async () => ({
       valid: true as const,
       project: {
         id: 'project_test0001',
@@ -82,12 +79,12 @@ describe('Shot Plans Hono route', () => {
         projectFolder: '/tmp/renku/constantinople',
       },
       target: { kind: 'shot' as const, id: 'shot_second' },
-      selectedAssetId: 'asset_selected',
+      selectedAssetFileId: 'asset_selected',
       warnings: [],
       resourceKeys: ['surface:scene:scene_opening:shot-plans'],
     }));
-    const discardAsset = vi.fn(async () => recoverableReport());
-    const app = mountedRoute({ selectAsset, discardAsset });
+    const discardAssetFile = vi.fn(async () => recoverableReport());
+    const app = mountedRoute({ selectAssetFile, discardAssetFile });
 
     const selected = await app.request(
       '/constantinople/screenplay/shots/shot_second/selected-image/asset_selected',
@@ -98,19 +95,19 @@ describe('Shot Plans Hono route', () => {
       { method: 'DELETE' }
     );
 
-    expect(selectAsset).toHaveBeenCalledWith({
+    expect(selectAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       target: { kind: 'shot', id: 'shot_second' },
-      assetId: 'asset_selected',
+      assetFileId: 'asset_selected',
     });
-    expect(discardAsset).toHaveBeenCalledWith({
+    expect(discardAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       owner: { kind: 'shot', id: 'shot_second' },
-      assetId: 'asset_unselected',
+      assetFileId: 'asset_unselected',
     });
     await expect(selected.json()).resolves.toEqual({
       valid: true,
-      selectedAssetId: 'asset_selected',
+      selectedAssetFileId: 'asset_selected',
       warnings: [],
       resourceKeys: ['surface:scene:scene_opening:shot-plans'],
     });
@@ -126,30 +123,30 @@ describe('Shot Plans Hono route', () => {
   });
 
   it('delegates exact Shot Plan image projection and focused discard once', async () => {
-    const asset = { ...makeAsset('asset_plan'), owner: { kind: 'project' as const } };
-    const readShotPlanAssets = vi.fn(async () => ({
+    const assetFile = { ...makeAssetFile('asset_plan'), owner: { kind: 'project' as const } };
+    const readShotPlanAssetFiles = vi.fn(async () => ({
       shotPlan: { id: 'plan one', sceneId: 'scene_opening', title: 'Plan' },
-      groups: [{ role: 'reference' as const, assets: [asset] }],
+      groups: [{ role: 'reference' as const, assetFiles: [assetFile] }],
       resourceKeys: ['surface:shotPlan:plan one:assets'],
     }));
-    const discardShotPlanAsset = vi.fn(async () => recoverableReport());
-    const app = mountedRoute({ readShotPlanAssets, discardShotPlanAsset });
+    const discardShotPlanAssetFile = vi.fn(async () => recoverableReport());
+    const app = mountedRoute({ readShotPlanAssetFiles, discardShotPlanAssetFile });
 
     const read = await app.request(
-      '/constantinople/screenplay/shot-plans/plan%20one/assets',
+      '/constantinople/screenplay/shot-plans/plan%20one/asset-files',
     );
     const discarded = await app.request(
-      '/constantinople/screenplay/shot-plans/plan%20one/assets/asset_plan',
+      '/constantinople/screenplay/shot-plans/plan%20one/asset-files/asset_plan',
       { method: 'DELETE' },
     );
 
-    expect(readShotPlanAssets).toHaveBeenCalledWith({
+    expect(readShotPlanAssetFiles).toHaveBeenCalledWith({
       projectName: 'constantinople', shotPlanId: 'plan one',
     });
-    expect((await read.json()).resource.groups[0].assets[0].files[0].url)
-      .toContain('/assets/asset_plan/files/');
-    expect(discardShotPlanAsset).toHaveBeenCalledWith({
-      projectName: 'constantinople', shotPlanId: 'plan one', assetId: 'asset_plan',
+    expect((await read.json()).resource.groups[0].assetFiles[0].url)
+      .toContain('/asset-files/asset_plan');
+    expect(discardShotPlanAssetFile).toHaveBeenCalledWith({
+      projectName: 'constantinople', shotPlanId: 'plan one', assetFileId: 'asset_plan',
     });
     expect(discarded.status).toBe(200);
   });
@@ -213,8 +210,8 @@ function shotPlanReport(): ShotPlanReport {
           description: 'The second authored Shot.',
           brief: {},
           images: [
-            shotAsset('asset_unselected', 'shot_second'),
-            shotAsset('asset_selected', 'shot_second'),
+            shotAssetFile('asset_unselected', 'shot_second'),
+            shotAssetFile('asset_selected', 'shot_second'),
           ],
           selectedImageId: 'asset_selected',
         },
@@ -248,7 +245,6 @@ function shotPlanReport(): ShotPlanReport {
         },
         position: 6,
         storyboardImage: {
-          assetId: 'asset_storyboard',
           assetFileId: 'asset_file_storyboard',
         },
       },
@@ -274,19 +270,14 @@ function shotPlanReport(): ShotPlanReport {
   };
 }
 
-function shotAsset(assetId: string, shotId: string): Asset {
-  const asset = makeAsset(assetId);
+function shotAssetFile(assetFileId: string, shotId: string): AssetFile {
+  const assetFile = makeAssetFile(assetFileId);
   return {
-    ...asset,
+    ...assetFile,
     owner: { kind: 'shot', id: shotId },
     type: 'shot_image',
     title: 'Shot image',
-    files: asset.files.map((file) => ({
-      ...file,
-      id: `file_${assetId}`,
-      projectRelativePath:
-        `generated/${assetId}.png` as Asset['files'][number]['projectRelativePath'],
-    })),
+    projectRelativePath: `generated/${assetFileId}.png` as AssetFile['projectRelativePath'],
   };
 }
 
@@ -298,7 +289,7 @@ function recoverableReport(): RecoverableMutationReport {
       projectName: 'constantinople',
       projectFolder: '/tmp/renku/constantinople',
     },
-    changes: [{ type: 'asset.discarded', assetId: 'asset_unselected' }],
+    changes: [{ type: 'asset.discarded', assetFileId: 'asset_unselected' }],
     recovery: {
       operationId: 'trash_operation_test0001',
       trashItemIds: ['trash_item_test0001'],

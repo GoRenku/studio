@@ -1,7 +1,7 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import type { JsonValue } from '../../client/json.js';
-import { assets } from './assets.js';
+import { assetFiles } from './asset-files.js';
 import { castMembers } from './cast-members.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
 
@@ -14,9 +14,9 @@ export const castVoices = sqliteTable(
       .references(() => castMembers.id),
     name: text('name').notNull(),
     purpose: text('purpose').notNull(),
-    sampleAssetId: text('sample_asset_id')
+    sampleAssetFileId: text('sample_asset_file_id')
       .notNull()
-      .references(() => assets.id),
+      .references(() => assetFiles.id),
     voiceIdentity: text('voice_identity', { mode: 'json' }).$type<JsonValue>(),
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
@@ -30,7 +30,7 @@ export const castVoices = sqliteTable(
       table.id
     ),
     uniqueIndex('cast_voice_sample_asset_idx')
-      .on(table.sampleAssetId)
+      .on(table.sampleAssetFileId)
       .where(sql`${table.discardedAt} is null`),
     uniqueIndex('cast_voice_cast_name_idx')
       .on(table.castMemberId, table.name)

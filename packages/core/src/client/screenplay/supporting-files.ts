@@ -1,7 +1,7 @@
-import type { Asset } from '../assets.js';
+import type { AssetFile } from '../asset-files.js';
 
 export interface ProjectSupportingFile {
-  asset: Asset;
+  assetFile: AssetFile;
   sourceAssetFileId: string;
   deleteBlock: { code: string; message: string } | null;
 }

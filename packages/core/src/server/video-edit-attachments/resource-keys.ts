@@ -1,22 +1,22 @@
-import type { Asset } from '../../client/assets.js';
+import type { AssetFile } from '../../client/asset-files.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readShotPlanRecordIncludingDiscarded } from '../database/access/shot-plans/plan-records.js';
 import {
-  studioAssetOwnerSurfaceResourceKeys,
+  studioAssetFileOwnerSurfaceResourceKeys,
   studioSceneVideoGenerationsResourceKey,
-  studioShotPlanAssetsResourceKey,
+  studioShotPlanAssetFilesResourceKey,
 } from '../studio-coordination/resource-keys.js';
 
 export function videoEditResourceKeys(input: {
-  source: Asset;
+  source: AssetFile;
   session: DatabaseSession;
 }): string[] {
-  const ownerKeys = studioAssetOwnerSurfaceResourceKeys(input.source.owner);
+  const ownerKeys = studioAssetFileOwnerSurfaceResourceKeys(input.source.owner);
   if (!input.source.authoredFrom) {
     return ownerKeys;
   }
   if (input.source.type === 'shot_plan_video_reference') {
-    return [...ownerKeys, studioShotPlanAssetsResourceKey(input.source.authoredFrom.id)];
+    return [...ownerKeys, studioShotPlanAssetFilesResourceKey(input.source.authoredFrom.id)];
   }
   const shotPlan = readShotPlanRecordIncludingDiscarded(
     input.session,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FileUploadArea } from '@/ui/file-upload-area';
 import type { ProjectSupportingFile, ProjectSupportingFilePage } from '@gorenku/studio-core/client';
 import { Button } from '@/ui/button';
-import { matchesProjectAssetsResource, useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
+import { matchesProjectAssetFilesResource, useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
 import { discardSupportingFile, readProjectSupportingFiles, uploadSupportingMaterial } from '@/services/supporting-files';
 import { SupportingFileCards } from './supporting-file-cards';
 import { SupportingFileInfoDialog } from './supporting-file-info-dialog';
@@ -40,13 +40,13 @@ export function SupportingFilesTab({ projectName }: { projectName: string }) {
     void load();
     return () => { request.current += 1; };
   }, [load]);
-  useStudioResourceRefresh({ projectName, matches: matchesProjectAssetsResource, onRefresh: () => reload() });
+  useStudioResourceRefresh({ projectName, matches: matchesProjectAssetFilesResource, onRefresh: () => reload() });
 
   const remove = async (file: ProjectSupportingFile) => {
-    await discardSupportingFile(projectName, file.asset.id);
+    await discardSupportingFile(projectName, file.assetFile.id);
     setPage((previous) => ({
       ...previous,
-      items: previous.items.filter((item) => item.asset.id !== file.asset.id),
+      items: previous.items.filter((item) => item.assetFile.id !== file.assetFile.id),
     }));
     void load();
   };
@@ -75,7 +75,7 @@ export function SupportingFilesTab({ projectName }: { projectName: string }) {
       </FileUploadArea>
       {error ? <div className='space-y-3'><p role='alert' className='text-sm text-destructive'>{error}</p><Button variant='outline' onClick={() => void reload(failedCursor.current)}>Retry</Button></div> : null}
       {page.nextCursor && !error ? <Button variant='outline' disabled={loading} onClick={() => void reload(page.nextCursor)}>{loading ? 'Loading…' : 'Load more'}</Button> : null}
-      {inspected ? <SupportingFileInfoDialog key={inspected.asset.id} projectName={projectName} file={inspected} onClose={() => setInspected(null)} /> : null}
+      {inspected ? <SupportingFileInfoDialog key={inspected.assetFile.id} projectName={projectName} file={inspected} onClose={() => setInspected(null)} /> : null}
     </div>
   );
 }

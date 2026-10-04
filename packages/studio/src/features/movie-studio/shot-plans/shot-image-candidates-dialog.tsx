@@ -40,12 +40,7 @@ export function ShotImageCandidatesDialog({
     }
     onOpenChange(nextOpen);
   };
-  const readyCandidates = resource?.items.flatMap((asset, index) => {
-    const file = asset.files.find(
-      (candidate) => candidate.mediaKind === 'image'
-    );
-    return file ? [{ asset, file, index }] : [];
-  }) ?? [];
+  const readyCandidates = resource?.items.map((assetFile, index) => ({ assetFile, index })) ?? [];
   const title = shot?.title ?? 'Shot Images';
   const description =
     'Select the image used by the Shot rail and Shot Plan mosaic.';
@@ -57,7 +52,7 @@ export function ShotImageCandidatesDialog({
         images={
           open
             ? [{
-                src: candidate.file.url,
+                src: candidate.assetFile.url,
                 alt: `Image candidate ${candidate.index + 1} for ${title}`,
                 title,
               }]
@@ -97,14 +92,14 @@ export function ShotImageCandidatesDialog({
           }
         : {
             kind: 'ready',
-            items: readyCandidates.map(({ asset, file, index }) =>
+            items: readyCandidates.map(({ assetFile, index }) =>
               candidateItem({
                 projectName,
                 shot,
-                asset,
-                imageUrl: file.url,
+                assetFile,
+                imageUrl: assetFile.url,
                 index,
-                selected: asset.id === resource.selectedAssetId,
+                selected: assetFile.id === resource.selectedAssetFileId,
                 onMutationError: setMutationError,
                 reload,
                 onShotPlansChange,
@@ -128,7 +123,7 @@ export function ShotImageCandidatesDialog({
 function candidateItem({
   projectName,
   shot,
-  asset,
+  assetFile,
   imageUrl,
   index,
   selected,
@@ -138,7 +133,7 @@ function candidateItem({
 }: {
   projectName: string;
   shot: StudioShot | null;
-  asset: StudioShot['images'][number];
+  assetFile: StudioShot['images'][number];
   imageUrl: string;
   index: number;
   selected: boolean;
@@ -149,7 +144,7 @@ function candidateItem({
   const imageLabel = `Image candidate ${index + 1} for ${shot?.title ?? 'Shot'}`;
 
   return {
-    id: asset.id,
+    id: assetFile.id,
     card: {
       media: {
         kind: 'image',
@@ -182,7 +177,7 @@ function candidateItem({
             await setStudioShotSelectedImage({
               projectName,
               shotId: shot.id,
-              assetId: asset.id,
+              assetFileId: assetFile.id,
             });
             onMutationError(null);
             reload();
@@ -210,7 +205,7 @@ function candidateItem({
               await deleteStudioShotImageCandidate({
                 projectName,
                 shotId: shot.id,
-                assetId: asset.id,
+                assetFileId: assetFile.id,
               });
               reload();
               onShotPlansChange();

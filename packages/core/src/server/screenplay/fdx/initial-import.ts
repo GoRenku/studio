@@ -9,7 +9,7 @@ import { FDX_IMPORTER_VERSION, type ImportFdxScreenplayReport, type ScreenplayIm
 import { FdxIdentityFactory } from './identifiers.js';
 import type { MappedFdxScreenplay } from './mapping/screenplay.js';
 import { insertScreenplayImport } from './persistence/import-record.js';
-import { persistFdxSourceAsset } from './persistence/source-asset.js';
+import { persistFdxSourceAssetFile } from './persistence/source-asset.js';
 import { createFdxImportReport, screenplayFdxResourceKeys } from './report.js';
 import type { FdxSource } from './source.js';
 
@@ -29,18 +29,16 @@ export function applyInitialFdxImport(input: {
   const now = new Date().toISOString();
   const screenplayImport: ScreenplayImport = {
     id: identities.id('screenplay_import', 'import'),
-    sourceAssetId: identities.id('asset', 'sourceAsset'),
     sourceAssetFileId: identities.id('asset_file', 'sourceAsset/file'),
     importerVersion: FDX_IMPORTER_VERSION,
     importedAt: now,
     technicalLog: input.mapped.technicalLog,
   };
   const revisionId = createUniqueIdAllocator(createRandomIdGenerator())('screenplay_revision');
-  persistFdxSourceAsset({
+  persistFdxSourceAssetFile({
     session: input.session,
     projectFolder: input.projectFolder,
     source: input.source,
-    assetId: screenplayImport.sourceAssetId,
     assetFileId: screenplayImport.sourceAssetFileId,
     now,
     writeSet: input.writeSet,

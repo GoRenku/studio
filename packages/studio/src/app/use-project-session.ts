@@ -413,7 +413,7 @@ function readStudioRoute(): StudioRoute {
       shotPlanTabParam
       && shotPlanTabParam !== 'shots'
       && shotPlanTabParam !== 'previs'
-      && shotPlanTabParam !== 'assets'
+      && shotPlanTabParam !== 'assetFiles'
       && shotPlanTabParam !== 'audio'
     ) {
       return {
@@ -431,7 +431,7 @@ function readStudioRoute(): StudioRoute {
         routeError: 'Shot Plan detail tab requires a Shot Plan.',
       };
     }
-    if ((shotPlanTabParam === 'assets' || shotPlanTabParam === 'audio' || shotPlanTabParam === 'previs') && shotParam) {
+    if ((shotPlanTabParam === 'assetFiles' || shotPlanTabParam === 'audio' || shotPlanTabParam === 'previs') && shotParam) {
       return {
         screen: 'movieStudio',
         projectName: decodeURIComponent(sceneRoute[1]),
@@ -447,7 +447,7 @@ function readStudioRoute(): StudioRoute {
       ...(shotPlanParam ? { shotPlanId: shotPlanParam } : {}),
       ...(shotPlanTabParam === 'shots'
         || shotPlanTabParam === 'previs'
-        || shotPlanTabParam === 'assets'
+        || shotPlanTabParam === 'assetFiles'
         || shotPlanTabParam === 'audio'
         ? { shotPlanTab: shotPlanTabParam }
         : {}),

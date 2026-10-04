@@ -10,7 +10,7 @@ export function useClipPlayback(report?: StudioShotPlanClips, suppressed = false
   const [returnClip, setReturnClip] = useState<string | undefined>(undefined);
   const player = useRef<VideoPlayerHandle | null>(null);
   const [inspectedTakeId, setAuditionId] = useState<string | null>(null);
-  const auditionId = inspectedTakeId ?? (!report?.clips.length ? report?.unassignedAssets.flatMap((asset) => asset.files).find((file) => file.mediaKind === 'video')?.id ?? null : null);
+  const auditionId = inspectedTakeId ?? (!report?.clips.length ? report?.unassignedAssetFiles.find((file) => file.mediaKind === 'video')?.id ?? null : null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -22,8 +22,8 @@ export function useClipPlayback(report?: StudioShotPlanClips, suppressed = false
   const available = segments.filter((segment) => !segment.blocked && segment.duration !== null && segment.file);
   const chainDuration = available.reduce((sum, segment) => sum + segment.duration!, 0);
   const take = report?.clips.flatMap((clip) => clip.takes).find((entry) => entry.id === auditionId);
-  const auditionFile = [...(report?.assets ?? []), ...(report?.unassignedAssets ?? [])]
-    .flatMap((asset) => asset.files).find((file) => file.id === (take?.assetFileId ?? auditionId));
+  const auditionFile = [...(report?.assetFiles ?? []), ...(report?.unassignedAssetFiles ?? [])]
+    .find((file) => file.id === (take?.assetFileId ?? auditionId));
   const segment = locateClip(segments, time);
   const file = auditionId ? auditionFile ?? null : segment?.file ?? null;
   const auditionDuration = auditionFile ? measured[auditionFile.url] ?? auditionFile.durationSeconds : null;

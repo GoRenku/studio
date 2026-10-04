@@ -17,7 +17,7 @@ import { readCanonicalScreenplay } from '../projections/screenplay.js';
 import { persistSourceOnlyRefresh, persistSemanticRefresh } from './persistence/refresh.js';
 import { buildFdxUpdateReview } from './update-review.js';
 import {
-  assertRetainedFdxSourceAsset,
+  assertRetainedFdxSourceAssetFile,
 } from './persistence/source-asset.js';
 import { createFdxImportReport, screenplayFdxResourceKeys } from './report.js';
 import type { FdxSource } from './source.js';
@@ -47,11 +47,10 @@ export function refreshFdxScreenplay(input: {
     candidates: input.mapped.candidates,
   });
   if (input.source.sha256 === currentSourceSha256) {
-    assertRetainedFdxSourceAsset({
+    assertRetainedFdxSourceAssetFile({
       session: input.session,
       projectFolder: input.projectFolder,
       source: input.source,
-      assetId: currentImport.sourceAssetId,
       assetFileId: currentImport.sourceAssetFileId,
     });
     return createFdxImportReport({
@@ -128,7 +127,6 @@ function createNextImport(
   const identities = new FdxIdentityFactory(source.sha256);
   return {
     ...current,
-    sourceAssetId: identities.id('asset', 'sourceAsset'),
     sourceAssetFileId: identities.id('asset_file', 'sourceAsset/file'),
     importedAt: new Date().toISOString(),
     technicalLog,

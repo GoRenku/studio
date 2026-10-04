@@ -210,14 +210,13 @@ function TrashItemRow({
 
 function trashItemKindLabel(kind: TrashItem['itemKind']): string {
   switch (kind) {
-    case 'asset':
+    case 'assetFile':
       return 'Asset';
     case 'castVoice':
       return 'Cast Voice';
     case 'inspirationFolder':
       return 'Inspiration Folder';
-    case 'inspirationImage':
-      return 'Inspiration Image';
+          return 'Inspiration Image';
     case 'lookbookImage':
       return 'Lookbook Image';
     case 'lookbookSheet':

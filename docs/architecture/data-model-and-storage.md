@@ -27,11 +27,11 @@ Use the focused documents below for current direction.
 
 ## Current Decisions
 
-- SQLite is the source of truth for durable metadata, exclusive Asset
-  membership, domain ordering, canonical selection, status, task records, cost
+- SQLite is the source of truth for durable metadata, exclusive AssetFile
+  ownership, domain ordering, canonical selection, status, task records, cost
   records, and Asset registration.
 - The filesystem owns content: Markdown, subtitles, transcripts, images, audio,
-  video, generated media, and compound asset folders.
+  video and generated media.
 - Markdown files are assets when they are part of the project graph.
 - SQLite stores project-owned file references as normalized
   `project_relative_path` values, never absolute local paths.
@@ -51,11 +51,12 @@ Use the focused documents below for current direction.
   per-setting columns. Version 5 includes the default-on provider prompt
   expansion preference; Skills apply it only against the selected route's live
   schema.
-- Inspiration folder images are filesystem-owned content and are not registered
-  as per-image assets. The persisted Inspiration Analysis JSON is SQLite-owned
-  project data. Generation review can reference active folder images directly
-  by project-relative path without registering Assets; core checks folder
-  ownership, image availability, trash state, and path containment.
+- Every retained physical file is one `AssetFile` record: identity, owner,
+  authored metadata, physical facts, and lifecycle belong to that record.
+  Inspiration images belong to their Inspiration folder; research files belong
+  to the Project. Uploads register files immediately. Downloads use the explicit
+  reference import command. Preview reads never register content.
+  Inspiration Analysis remains opaque SQLite-owned creative data.
 - Project owns story and development metadata directly: title, logline,
   synopsis, premise, audience, format/runtime, genres, tones, boundaries,
   conflict, dramatic question, themes, historical/dramatized notes, draft
@@ -159,11 +160,10 @@ Use the focused documents below for current direction.
 - Durable generated and imported asset files live under the folder for the
   domain object that owns them. Current asset paths must not start with
   `generated/`; temporary agent/debug files belong under top-level `tmp/`;
-  user scratch references under `research/` must not be registered as asset
-  files. Temporary provider review requests may still name a `research/` file as a one-off
-  reference input when the file is not reusable project state.
+  retained research references belong under `research/` and must be registered.
+  A temporary file becomes reusable Project state only after an explicit import.
 - Location Sheets are durable image Assets owned by Locations with canonical
-  type `location_sheet`. Each sheet has one `primary` image file and a concise
+  type `location_sheet`. Each sheet is one retained image file and a concise
   persisted description. A Location can have many Location Sheets. Video
   requests may use exact Location Sheet files without adding Shot Plan
   relationships.
@@ -194,13 +194,13 @@ Use the focused documents below for current direction.
 - `shot.image` outputs are exclusively Shot-owned planning image candidates
   with canonical type `shot_image`. Common selection chooses zero or one
   candidate. Import may atomically select when that is the accepted intent.
-  Plan copy creates independent Asset and AssetFile identities for only the
+  Plan copy creates independent AssetFile identities for only the
   selected images.
 - Scene Storyboard Images are ordinary Assets exclusively owned by logical
   Scene Beats. The
   `scene.storyboard-sheet` generation purpose may create a temporary composite
   sheet for batch prompting, but import stores only the cropped images as
-  `scene_storyboard_image` Assets with direct Beat membership. Common selection
+  `scene_storyboard_image` Assets with direct Beat ownership. Common selection
   chooses each Beat's current image. Core does not store crop boxes, grid
   cells, or extraction metadata for storyboard slicing.
 - Cast Voices are durable Cast Member-owned records in `cast_voice`. A Cast
@@ -213,18 +213,17 @@ Use the focused documents below for current direction.
   The playable sample is still a normal Cast Member-owned audio Asset with type
   `cast_voice_sample`; generic Asset deletion must reject that sample while the
   Cast Voice points at it.
-- Every Asset has exactly one row in `asset_membership`. The Asset row owns
+- Every retained `AssetFile` has exactly one owner key on `asset_file`. That row owns
   title, one-line summary, reference name, ordered intended-use `tags`, locale,
   origin, type, and media kind. Tags are non-null JSON text, structurally
   normalized without semantic interpretation, and default to `[]`. Focused
   attachment may persist summary, reference name, and tags atomically with the
-  Asset, membership, file, and provenance. Internal owner keys are shared with
-  `selected_asset` but never enter public contracts.
+  AssetFile and provenance. Internal owner keys are shared with
+  `selected_asset_file` but never enter public contracts.
 - Canonical selection exists only for Project Cover, Cast Profile, Location
   Hero, Prop Hero, Lookbook card, Shot image, and Scene Beat Storyboard targets.
-  A selected Project Cover is a Project-owned `project_cover` image Asset with
-  exactly one active primary image file; Project and Project Library project
-  that file's Asset identity rather than a root filename. Character Sheets,
+  A selected Project Cover is a Project-owned `project_cover` image AssetFile; Project and Project Library project
+  that file's canonical identity rather than a root filename. Character Sheets,
   Location Sheets, Prop Sheets, Lookbook Sheets, and Dialogue Audio Takes have
   no canonical common-Asset selection. Dialogue Audio uses its focused
   multi-selection described above; provider requests receive only those exact
@@ -345,7 +344,7 @@ Current related exploration:
 
 ## Weak Shot Plan generation source
 
-Generated Shot Plan media uses ordinary Project Asset membership. The Asset may
+Generated Shot Plan media uses ordinary Project-owned AssetFiles. An AssetFile may
 retain weak `authoredFrom` Shot Plan context for grouping, reference, and
 invalidation behavior, but Shot Plans do not own the generated Asset and do not
 store request, video, dependency, selection, or completion pointers. Durable
@@ -362,7 +361,7 @@ on plan-local Python and directing parameters. Previs plans do not contain fake
 Shot rows. The existing list-edit/copy operations remain Shot List operations.
 
 `shot_plan_previs_revision` stores id, Shot Plan id, revision number, source
-directory/hash, render hash, Asset id and creation time. The associated Asset is
+directory/hash, render hash, AssetFile id and creation time. The associated AssetFile is
 procedural video (`shot_plan_previs`, origin `rendered`) with exact plan authorship.
 The source/render hash pair makes registration retries idempotent. Core validates
 the optional retained `PrevisPlayback` envelope: rational frame rate/count, typed
@@ -378,10 +377,10 @@ See `project-asset-storage-conventions.md` for paths and registration commands.
 
 `shot_plan_clip` stores a stable number within one Previs revision and a nullable
 selected Take pointer. `shot_plan_clip_take` stores a stable number within its Clip,
-optional opaque title, exact Asset/file identities and optional source-Take
+optional opaque title, exact AssetFile identity and optional source-Take
 attribution. Assets remain Project-owned. Existing files are assigned explicitly;
 there is no title-based inference or media move. Core commands allocate numbers,
-validate membership and active video-file envelopes, register imports atomically,
+validate ownership and active video-file envelopes, register imports atomically,
 and mutate selection. Discard clears selection; restoration does not reselect.
 
 `ShotPlanClips` projects ordered clips, takes, assigned/unassigned Asset files and

@@ -12,7 +12,7 @@ export const shotPlanClipCommandHandlers: readonly CliCommandHandler<ShotPlanCom
   { path: ['clip', 'list'], run: ({ flags, runtime }) => runtime.projectDataService.readShotPlanClips(scope(flags, runtime)) },
   { path: ['clip', 'create'], run: ({ flags, runtime }) => runtime.projectDataService.createShotPlanClip(scope(flags, runtime)) },
   { path: ['clip', 'take', 'add'], run: ({ flags, runtime }) => runtime.projectDataService.registerShotPlanClipTake({
-    ...project(runtime), clipId: requiredFlag(flags.clip, '--clip'), assetId: requiredFlag(flags.asset, '--asset'),
+    ...project(runtime), clipId: requiredFlag(flags.clip, '--clip'),
     assetFileId: requiredFlag(flags.assetFile, '--asset-file'), title: flags.title, sourceTakeId: flags.sourceTake,
   }) },
   { path: ['clip', 'take', 'resolve'], run: ({ flags, runtime }) => {

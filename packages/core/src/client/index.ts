@@ -7,20 +7,21 @@ export type {
   StudioCorePackageInfo,
 } from './package-info.js';
 export type {
-  Asset,
-  AssetAvailability,
+  ImportReferenceFilesInput,
+  ReferenceFilesImportReport,
+  AssetFileAvailability,
   AssetFile,
-  AssetLocaleContext,
-  AssetMetadataInput,
-  AssetOwner,
-  AssetPage,
-  AssetSelectionReport,
-  AssetSelectionTarget,
-  AssetUpdateReport,
-  ClearAssetSelectionInput,
-  SelectAssetInput,
-  UpdateAssetInput,
-} from './assets.js';
+  AssetFileLocaleContext,
+  AssetFileMetadataInput,
+  AssetFileOwner,
+  AssetFilePage,
+  AssetFileSelectionReport,
+  AssetFileSelectionTarget,
+  AssetFileUpdateReport,
+  ClearAssetFileSelectionInput,
+  SelectAssetFileInput,
+  UpdateAssetFileInput,
+} from './asset-files.js';
 export type * from './media-generation-review.js';
 export type * from './json.js';
 export * from './media-attachments.js';
@@ -175,7 +176,6 @@ export type {
   InspirationFolderReport,
   InspirationFolderResourceMutationReport,
   InspirationFolderWithResolvedPath,
-  InspirationImage,
   InspiredByItem,
   InspiredBySection,
   Lookbook,

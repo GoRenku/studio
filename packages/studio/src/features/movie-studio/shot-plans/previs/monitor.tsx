@@ -12,7 +12,7 @@ export function PrevisMonitor({ revision, revisions, projectName, onRevision, pl
   onRevision: (id: string) => void; playback: ReturnType<typeof useMonitorPlayback>; reload: () => void; status?: string;
 }) {
   const index = revisions.findIndex((entry) => entry.id === revision?.id);
-  const previsFile = revision?.render?.files.find((file) => file.role === 'primary' && file.mediaKind === 'video');
+  const previsFile = revision?.render;
   const { previs, generation } = playback;
   return <section className='shrink-0 rounded-xl border border-border/40 bg-sidebar-bg p-3'>
     <div className='mb-3 flex h-9 items-center gap-5'>

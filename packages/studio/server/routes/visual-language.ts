@@ -1,10 +1,8 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import { resolveRenkuStorageRoot, type LookbookKind } from '@gorenku/studio-core/server';
+import { type LookbookKind } from '@gorenku/studio-core/server';
 import { Hono } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 import { readPageRequest } from '../http/pagination-request.js';
@@ -114,53 +112,17 @@ export function createVisualLanguageRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .get(
-      '/visual-language/inspiration/folders/:folderId/images/:fileName',
-      async (c) => {
-        try {
-          const projectName = c.req.param('projectName') as string;
-          const folderId = c.req.param('folderId') as string;
-          const fileName = c.req.param('fileName') as string;
-          const resource = await projectData.readInspirationFolder({
-            projectName,
-            folderId,
-          });
-          const image = resource.images.find((candidate) => candidate.fileName === fileName);
-          if (!image) {
-            throw createStructuredError({
-              code: 'STUDIO_SERVER036',
-              message: `Inspiration image was not found: ${fileName}.`,
-              issues: [
-                createDiagnosticError(
-                  'STUDIO_SERVER036',
-                  `Inspiration image was not found: ${fileName}.`,
-                  { path: ['fileName'], context: 'Inspiration image request' },
-                  'Request an existing Inspiration image.'
-                ),
-              ],
-              suggestion: 'Request an existing Inspiration image.',
-            });
-          }
-          return await readProjectRelativeImageResponse(
-            path.join(await resolveRenkuStorageRoot(), projectName),
-            image.projectRelativePath
-          );
-        } catch (error) {
-          return projectErrorResponse(c, error);
-        }
-      }
-    )
     .delete(
-      '/visual-language/inspiration/folders/:folderId/images/:fileName',
+      '/visual-language/inspiration/folders/:folderId/images/:assetFileId',
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const folderId = c.req.param('folderId') as string;
-          const fileName = c.req.param('fileName') as string;
+          const assetFileId = c.req.param('assetFileId') as string;
           const report = await projectData.deleteInspirationImage({
             projectName,
             folderId,
-            fileName,
+            assetFileId,
           });
           return c.json({
             resource: report.resource,
@@ -232,22 +194,22 @@ export function createVisualLanguageRoute({
           title: body.title,
         });
         return c.json(
-          { image: report.asset, resourceKeys: report.resourceKeys },
+          { image: report.assetFile, resourceKeys: report.resourceKeys },
           201
         );
       } catch (error) {
         return projectErrorResponse(c, error);
       }
     })
-    .post('/visual-language/lookbooks/:lookbookId/selected-image/:assetId', async (c) => {
+    .post('/visual-language/lookbooks/:lookbookId/selected-image/:assetFileId', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
-        const assetId = c.req.param('assetId') as string;
-        const report = await projectData.selectAsset({
+        const assetFileId = c.req.param('assetFileId') as string;
+        const report = await projectData.selectAssetFile({
           projectName,
           target: { kind: 'lookbook', id: lookbookId },
-          assetId,
+          assetFileId,
         });
         return c.json(report);
       } catch (error) {
@@ -258,7 +220,7 @@ export function createVisualLanguageRoute({
       try {
         const projectName = c.req.param('projectName') as string;
         const lookbookId = c.req.param('lookbookId') as string;
-        const report = await projectData.clearAssetSelection({
+        const report = await projectData.clearAssetFileSelection({
           projectName,
           target: { kind: 'lookbook', id: lookbookId },
         });
@@ -310,47 +272,7 @@ export function createVisualLanguageRoute({
     });
 }
 
-async function readProjectRelativeImageResponse(
-  projectFolder: string,
-  projectRelativePath: string
-): Promise<Response> {
-  const absolutePath = path.resolve(projectFolder, projectRelativePath);
-  const normalizedProjectFolder = path.resolve(projectFolder);
-  if (
-    absolutePath !== normalizedProjectFolder &&
-    !absolutePath.startsWith(`${normalizedProjectFolder}${path.sep}`)
-  ) {
-    throw createStructuredError({
-      code: 'STUDIO_SERVER038',
-      message: 'Project-relative image path resolves outside the project.',
-      issues: [
-        createDiagnosticError(
-          'STUDIO_SERVER038',
-          'Project-relative image path resolves outside the project.',
-          { path: ['projectRelativePath'], context: 'Visual Language image file' },
-          'Use a project-relative image path inside the project folder.'
-        ),
-      ],
-      suggestion: 'Use a project-relative image path inside the project folder.',
-    });
-  }
-  const bytes = await fs.readFile(absolutePath);
-  return new Response(bytes, {
-    status: 200,
-    headers: {
-      'Content-Type': contentTypeForPath(projectRelativePath),
-      'Cache-Control': 'private, max-age=31536000, immutable',
-    },
-  });
-}
 
-function contentTypeForPath(projectRelativePath: string): string {
-  const lower = projectRelativePath.toLowerCase();
-  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-  if (lower.endsWith('.webp')) return 'image/webp';
-  if (lower.endsWith('.gif')) return 'image/gif';
-  return 'image/png';
-}
 
 function readLookbookKind(value: string | undefined): LookbookKind {
   if (value === 'production' || value === 'storyboard') {

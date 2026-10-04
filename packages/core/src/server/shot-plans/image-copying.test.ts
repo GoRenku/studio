@@ -67,10 +67,10 @@ describe('Shot image copying', () => {
     });
     const copiedImage = copied.shotPlan.shots[0]?.images[0];
 
-    expect(attached.asset.generationProvenance).toEqual(provenance);
-    expect(copiedImage?.id).not.toBe(attached.asset.id);
+    expect(attached.assetFile.generationProvenance).toEqual(provenance);
+    expect(copiedImage?.id).not.toBe(attached.assetFile.id);
     expect(copiedImage?.generationProvenance).toEqual(provenance);
-    expect(copiedImage?.files[0]?.projectRelativePath)
-      .not.toBe(attached.asset.files[0]?.projectRelativePath);
+    expect(copiedImage?.projectRelativePath)
+      .not.toBe(attached.assetFile?.projectRelativePath);
   });
 });

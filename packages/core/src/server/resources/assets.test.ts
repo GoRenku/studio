@@ -10,10 +10,9 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
-import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
+import { createTestAssetFileFixture } from '../testing/asset-fixture-helpers.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
-import { insertAssetRecord } from '../database/access/assets.js';
-import { insertAssetMembershipRecord } from '../database/access/asset-memberships.js';
+import { insertAssetFileRecord } from '../database/access/asset-files.js';
 
 describe('asset resources', () => {
   let homeDir: string;
@@ -30,26 +29,25 @@ describe('asset resources', () => {
       return;
     }
 
-    const assetPath =
+    const assetFilePath =
       'shotlist/sequences/01-logistics/scenes/01-foundry/narration.wav';
-    await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
+    await fs.mkdir(path.dirname(path.join(created.projectPath, assetFilePath)), {
       recursive: true,
     });
-    await fs.writeFile(path.join(created.projectPath, assetPath), 'audio bytes');
+    await fs.writeFile(path.join(created.projectPath, assetFilePath), 'audio bytes');
 
-    const registered = await createTestAssetFixture({
+    const registered = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'scene', id: 'scene_test0001' },
       type: 'narration',
       mediaKind: 'audio',
       title: 'Narration take 1',
-      projectRelativePath: assetPath as ProjectRelativePath,
-      fileRole: 'primary',
+      projectRelativePath: assetFilePath as ProjectRelativePath,
     });
 
     await expect(
-      projectData.listAssets({
+      projectData.listAssetFiles({
         projectName: 'constantinople',
         homeDir,
         owner: { kind: 'scene', id: 'scene_test0001' },
@@ -57,7 +55,7 @@ describe('asset resources', () => {
     ).resolves.toEqual([
         expect.objectContaining({
           id: registered.id,
-          files: [expect.objectContaining({ projectRelativePath: assetPath })],
+          projectRelativePath: assetFilePath,
         }),
     ]);
   });
@@ -78,9 +76,11 @@ describe('asset resources', () => {
       session.db.transaction((tx) => {
         const transactionSession = { ...session, db: tx };
         for (let index = 0; index < 205; index += 1) {
-          const assetId = `asset_page_${String(index).padStart(3, '0')}`;
-          insertAssetRecord(transactionSession, {
-            id: assetId,
+          const assetFileId = `asset_page_${String(index).padStart(3, '0')}`;
+          insertAssetFileRecord(transactionSession, {
+            id: assetFileId,
+            ownerKey: 'scene:scene_test0001',
+            projectRelativePath: `media/page-${index}.wav`,
             type: 'narration',
             mediaKind: 'audio',
             title: `Narration ${index}`,
@@ -89,24 +89,20 @@ describe('asset resources', () => {
             createdAt: now,
             updatedAt: now,
           });
-          insertAssetMembershipRecord(transactionSession, {
-            assetId,
-            ownerKey: 'scene:scene_test0001',
-            now,
-          });
+
         }
       });
     } finally {
       session.close();
     }
 
-    const assets = await projectData.listAssets({
+    const assetFiles = await projectData.listAssetFiles({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'scene', id: 'scene_test0001' },
     });
 
-    expect(assets).toHaveLength(205);
-    expect(new Set(assets.map((asset) => asset.id)).size).toBe(205);
+    expect(assetFiles).toHaveLength(205);
+    expect(new Set(assetFiles.map((assetFile) => assetFile.id)).size).toBe(205);
   });
 });

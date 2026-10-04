@@ -1,7 +1,5 @@
-import type { Asset, ProjectRelativePath } from '../../../client/index.js';
-import { createAssetMembership } from '../../assets/ownership.js';
-import { listAssetsInSession, readOwnedAsset } from '../../assets/projection.js';
-import { insertAssetRecord } from '../../database/access/assets.js';
+import type { AssetFile, ProjectRelativePath } from '../../../client/index.js';
+import { listAssetFilesInSession, readOwnedAssetFile } from '../../asset-files/projection.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { normalizeProjectRelativePath, resolveProjectRelativePath } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
@@ -17,21 +15,18 @@ export function findExistingScreenplaySupportingMaterial(input: {
   session: DatabaseSession;
   projectFolder: string;
   sha256: string;
-}): Asset | null {
-  const matching = listAssetsInSession(input.session, {
+}): AssetFile | null {
+  const matching = listAssetFilesInSession(input.session, {
     owner: { kind: 'project' },
     type: MATERIAL_TYPE,
-  }).find((asset) => asset.files.some((file) => file.contentHash === input.sha256));
+  }).find((assetFile) => assetFile.contentHash === input.sha256);
   if (!matching) {
     return null;
   }
-  const sourceFile = matching.files[0];
+  const sourceFile = matching;
   if (
     matching.mediaKind !== 'file'
     || matching.origin !== 'imported'
-    || matching.files.length !== 1
-    || !sourceFile
-    || sourceFile.role !== 'source'
     || sourceFile.mediaKind !== 'file'
     || sourceFile.mimeType !== 'application/octet-stream'
     || sourceFile.contentHash !== input.sha256
@@ -62,11 +57,10 @@ export function persistScreenplaySupportingMaterial(input: {
   session: DatabaseSession;
   projectFolder: string;
   source: ScreenplaySupportingMaterialSource;
-  assetId: string;
   assetFileId: string;
   now: string;
   writeSet: ProjectAssetFileWriteSet;
-}): Asset {
+}): AssetFile {
   const sourceProjectRelativePath = input.source.filename as ProjectRelativePath;
   const destinationProjectRelativePath = resolveDurableDestinationFileSync({
     session: input.session,
@@ -77,28 +71,16 @@ export function persistScreenplaySupportingMaterial(input: {
     mediaKind: 'file',
     now: input.now,
   });
-
-  insertAssetRecord(input.session, {
-    id: input.assetId,
-    type: MATERIAL_TYPE,
-    mediaKind: 'file',
-    title: input.source.filename,
-    origin: 'imported',
-    availability: 'ready',
-    createdAt: input.now,
-    updatedAt: input.now,
-  });
-  createAssetMembership(input.session, {
-    assetId: input.assetId,
-    owner: { kind: 'project' },
-    now: input.now,
-  });
   const file = persistProjectAssetFileAtDestinationSync({
+    owner: { kind: 'project' },
+    assetFileMetadata: {
+      type: MATERIAL_TYPE,
+      title: input.source.filename,
+      origin: 'imported'
+    },
     session: input.session,
     projectFolder: input.projectFolder,
-    assetId: input.assetId,
     assetFileId: input.assetFileId,
-    fileRole: 'source',
     mediaKind: 'file',
     sourcePath: input.source.absolutePath,
     sourceProjectRelativePath,
@@ -114,17 +96,17 @@ export function persistScreenplaySupportingMaterial(input: {
       { suggestion: 'Wait for the source file to finish changing, then import it again.' },
     );
   }
-  const material = readOwnedAsset(input.session, {
+  const material = readOwnedAssetFile(input.session, {
     owner: { kind: 'project' },
-    assetId: input.assetId,
+    assetFileId: input.assetFileId,
   });
   if (!material) {
-    throw destinationConflict(`Imported supporting material was not found: ${input.assetId}.`);
+    throw destinationConflict(`Imported supporting material was not found: ${input.assetFileId}.`);
   }
   return material;
 }
 
-export function isProjectAssetDestinationConflict(error: unknown): boolean {
+export function isProjectAssetFileDestinationConflict(error: unknown): boolean {
   return error instanceof ProjectDataError
     && (
       error.code === 'PROJECT_ASSET_FILE_DESTINATION_CONFLICT'
@@ -132,7 +114,7 @@ export function isProjectAssetDestinationConflict(error: unknown): boolean {
     );
 }
 
-export function isProjectAssetSourceReadFailure(error: unknown): boolean {
+export function isProjectAssetFileSourceReadFailure(error: unknown): boolean {
   return error instanceof ProjectDataError
     && (
       error.code === 'PROJECT_ASSET_FILE_SOURCE_NOT_FOUND'
@@ -140,7 +122,7 @@ export function isProjectAssetSourceReadFailure(error: unknown): boolean {
     );
 }
 
-export function isProjectAssetDestinationWriteFailure(error: unknown): boolean {
+export function isProjectAssetFileDestinationWriteFailure(error: unknown): boolean {
   return error instanceof ProjectDataError
     && (
       error.code === 'PROJECT_ASSET_FILE_DESTINATION_NOT_FOUND'

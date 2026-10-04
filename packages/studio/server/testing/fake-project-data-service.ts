@@ -14,7 +14,7 @@ import type { CreateProjectsRouteOptions } from '../routes/projects.js';
 import {
   fixtureCastMember,
   fixtureScreenplay,
-  makeAsset,
+  makeAssetFile,
   makeProject,
   makeProjectShell,
 } from './route-fixtures.js';
@@ -125,19 +125,14 @@ export function fakeProjectDataService(): NonNullable<
       };
     },
     async resolveProjectAssetFileById(input) {
-      const asset = makeAsset(input.assetId);
+      const assetFile = makeAssetFile(input.assetFileId);
       return {
-        assetId: asset.id,
-        assetMediaKind: asset.mediaKind,
-        file: {
-          ...asset.files[0],
-          id: input.assetFileId,
-        },
+        assetFile,
         absolutePath: '/tmp/renku/constantinople/cast/reference.png',
       };
     },
-    async listAssets() {
-      return [makeAsset('asset_cast_reference')];
+    async listAssetFiles() {
+      return [makeAssetFile('asset_cast_reference')];
     },
     async listCastVoices() {
       return { voices: [] };
@@ -154,7 +149,7 @@ export function fakeProjectDataService(): NonNullable<
         removed: {
           castMemberId: input.castMemberId,
           voiceId: input.voiceIdOrName,
-          sampleAssetId: 'asset_voice_sample',
+          sampleAssetFileId: 'asset_voice_sample',
         },
         changes: [
           {
@@ -166,11 +161,11 @@ export function fakeProjectDataService(): NonNullable<
         resourceKeys: [`surface:castMember:${input.castMemberId}`],
       };
     },
-    async listAssetPage() {
+    async listAssetFilePage() {
       return {
-        items: [makeAsset('asset_cast_reference')],
+        items: [makeAssetFile('asset_cast_reference')],
         nextCursor: null,
-        selectedAssetId: null,
+        selectedAssetFileId: null,
       };
     },
     async listSceneShotPlans(input) {
@@ -198,14 +193,14 @@ export function fakeProjectDataService(): NonNullable<
     async readShotPlan() {
       throw new Error('Shot Plan fixture was not configured.');
     },
-    async readShotPlanAssets(input) {
+    async readShotPlanAssetFiles(input) {
       return {
         shotPlan: { id: input.shotPlanId, sceneId: 'scene_opening', title: 'Opening' },
         groups: [],
         resourceKeys: [`surface:shotPlan:${input.shotPlanId}:assets`],
       };
     },
-    async discardShotPlanAsset() {
+    async discardShotPlanAssetFile() {
       return makeRecoverableMutationReport({
         changeType: 'shotPlan.assetDiscarded',
         itemId: 'asset_image',
@@ -227,7 +222,7 @@ export function fakeProjectDataService(): NonNullable<
           scene: fixtureScreenplay.scenes[0]!,
           references: [],
         },
-        assetPage: { items: [], nextCursor: null, selectedAssetId: null },
+        assetFilePage: { items: [], nextCursor: null, selectedAssetFileId: null },
       };
     },
     async readStudioSelectionContext(input) {
@@ -311,7 +306,7 @@ export function fakeProjectDataService(): NonNullable<
     },
     async readMediaGenerationPreview() { return generationPreviewResource(); },
     async updateMediaGenerationPreviewPrompt() { return generationPreviewResource(); },
-    async readAssetMediaGenerationRequest() { return { ...generationPreviewResource(), documentPath: undefined, editable: false }; },
+    async readAssetFileMediaGenerationRequest() { return { ...generationPreviewResource(), documentPath: undefined, editable: false }; },
     async discardShotPlanDialogueAudioTake() {
       return { valid: true, warnings: [], resource: { shotPlan: { id: 'shot_plan_1', sceneId: 'scene_opening', title: 'Plan' }, takes: [], resourceKeys: [] }, resourceKeys: [] };
     },
@@ -363,7 +358,7 @@ export function fakeProjectDataService(): NonNullable<
         warnings: [],
         project: { projectName: project.projectName, id: project.id, projectFolder: '/tmp/renku/constantinople' },
         target: { kind: 'sceneBeat' as const, sceneId: input.sceneId, beatId: input.beatId },
-        selectedAssetId: input.assetId,
+        selectedAssetFileId: input.assetFileId,
         resourceKeys: [],
       };
     },
@@ -380,7 +375,7 @@ export function fakeProjectDataService(): NonNullable<
         scenes: [],
       };
     },
-    async selectAsset(input) {
+    async selectAssetFile(input) {
       return {
         valid: true,
         warnings: [],
@@ -390,11 +385,11 @@ export function fakeProjectDataService(): NonNullable<
           projectFolder: '/tmp/renku/constantinople',
         },
         target: input.target,
-        selectedAssetId: input.assetId,
+        selectedAssetFileId: input.assetFileId,
         resourceKeys: [],
       };
     },
-    async clearAssetSelection(input) {
+    async clearAssetFileSelection(input) {
       return {
         valid: true,
         warnings: [],
@@ -404,14 +399,14 @@ export function fakeProjectDataService(): NonNullable<
           projectFolder: '/tmp/renku/constantinople',
         },
         target: input.target,
-        selectedAssetId: null,
+        selectedAssetFileId: null,
         resourceKeys: [],
       };
     },
-    async discardAsset(input) {
+    async discardAssetFile(input) {
       return makeRecoverableMutationReport({
         changeType: 'asset.discarded',
-        itemId: input.assetId,
+        itemId: input.assetFileId,
         resourceKeys: [],
       });
     },
@@ -638,12 +633,12 @@ export function fakeProjectDataService(): NonNullable<
     },
     async attachGenerationMedia(input) {
       if (!input.target) { throw new Error('This fixture requires an explicit media target.'); }
-      const asset = makeAsset('asset_generated');
+      const assetFile = makeAssetFile('asset_generated');
       return {
         valid: true,
         purpose: input.purpose,
         target: input.target,
-        asset,
+        assetFile,
         generationProvenance: null,
         resourceKeys: [],
         project: {
@@ -769,8 +764,8 @@ function makeLookbookImage(id: string) {
     id,
     lookbookId: 'lookbook_test0001',
     lookbookKind: 'production' as const,
-    asset: {
-      ...makeAsset('asset_lookbook_image'),
+    assetFile: {
+      ...makeAssetFile('asset_lookbook_image'),
       owner: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
       type: 'lookbook_image',
       title: 'Lookbook image',
@@ -785,26 +780,13 @@ function makeLookbookSheet(id: string) {
     id,
     lookbookId: 'lookbook_test0001',
     lookbookKind: 'production' as const,
-    asset: {
-      ...makeAsset('asset_lookbook_sheet'),
+    assetFile: {
+      ...makeAssetFile('asset_lookbook_sheet'),
       owner: { kind: 'lookbook' as const, id: 'lookbook_test0001' },
       type: 'lookbook_sheet',
       title: 'Lookbook sheet',
-      files: [
-        {
-          id: 'asset_file_lookbook_sheet',
-          role: 'source',
-          projectRelativePath:
-            'generated/media/lookbook-sheet.png' as ProjectRelativePath,
-          mediaKind: 'image',
-          mimeType: 'image/png',
-          sizeBytes: 1024,
-          contentHash: 'sha256:lookbook-sheet',
-          width: 1024,
-          height: 768,
-          durationSeconds: null,
-        },
-      ],
+      id: 'asset_file_lookbook_sheet', projectRelativePath:
+            'generated/media/lookbook-sheet.png' as ProjectRelativePath, mediaKind: 'image', mimeType: 'image/png', sizeBytes: 1024, contentHash: 'sha256:lookbook-sheet', width: 1024, height: 768, durationSeconds: null,
     },
   };
 }

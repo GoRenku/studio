@@ -1,22 +1,22 @@
 import type {
-  AssetSelectionReport,
+  AssetFileSelectionReport,
   RecoverableMutationReport,
   ShotPlanListReport,
 } from '@gorenku/studio-core/client';
 import {
-  toStudioAssetResponse,
-  type StudioAssetResponse,
+  toStudioAssetFileResponse,
+  type StudioAssetFileResponse,
 } from './asset-responses.js';
 
 export interface StudioShotPlanListItemResponse {
-  previsRender: StudioAssetResponse | null;
+  previsRender: StudioAssetFileResponse | null;
   shotPlan: Omit<
     ShotPlanListReport['shotPlans'][number]['shotPlan'],
     'shots'
   > & {
     shots: Array<
       Omit<ShotPlanListReport['shotPlans'][number]['shotPlan']['shots'][number], 'images'> & {
-        images: StudioAssetResponse[];
+        images: StudioAssetFileResponse[];
       }
     >;
   };
@@ -24,7 +24,6 @@ export interface StudioShotPlanListItemResponse {
     Omit<ShotPlanListReport['shotPlans'][number]['coveredBeats'][number], 'storyboardImage'> & {
       storyboardImage:
         | {
-            assetId: string;
             assetFileId: string;
             url: string;
           }
@@ -40,8 +39,8 @@ export interface StudioShotPlansResponse {
 }
 
 export type StudioShotSelectionMutationResponse = Pick<
-  AssetSelectionReport,
-  'valid' | 'warnings' | 'selectedAssetId' | 'resourceKeys'
+  AssetFileSelectionReport,
+  'valid' | 'warnings' | 'selectedAssetFileId' | 'resourceKeys'
 >;
 
 export type StudioRecoverableMutationResponse = Pick<
@@ -64,12 +63,12 @@ export function toStudioShotPlansResponse(
 }
 
 export function toStudioShotSelectionMutationResponse(
-  report: AssetSelectionReport
+  report: AssetFileSelectionReport
 ): StudioShotSelectionMutationResponse {
   return {
     valid: report.valid,
     warnings: report.warnings,
-    selectedAssetId: report.selectedAssetId,
+    selectedAssetFileId: report.selectedAssetFileId,
     resourceKeys: report.resourceKeys,
   };
 }
@@ -91,7 +90,7 @@ function toStudioShotPlanListItemResponse(
   item: ShotPlanListReport['shotPlans'][number]
 ): StudioShotPlanListItemResponse {
   return {
-    previsRender: item.previsRender ? toStudioAssetResponse(projectName, item.previsRender) : null,
+    previsRender: item.previsRender ? toStudioAssetFileResponse(projectName, item.previsRender) : null,
     shotPlan: {
       id: item.shotPlan.id,
       type: item.shotPlan.type,
@@ -106,13 +105,7 @@ function toStudioShotPlanListItemResponse(
         title: shot.title,
         description: shot.description,
         brief: shot.brief,
-        images: shot.images.map((asset) => ({
-          ...asset,
-          files:
-            asset.id === shot.selectedImageId
-              ? toStudioAssetResponse(projectName, asset).files
-              : [],
-        })),
+        images: shot.images.map((assetFile) => toStudioAssetFileResponse(projectName, assetFile)),
         selectedImageId: shot.selectedImageId,
       })),
       createdAt: item.shotPlan.createdAt,
@@ -125,7 +118,6 @@ function toStudioShotPlanListItemResponse(
             ...coveredBeat.storyboardImage,
             url: assetFileUrl(
               projectName,
-              coveredBeat.storyboardImage.assetId,
               coveredBeat.storyboardImage.assetFileId
             ),
           }
@@ -136,8 +128,7 @@ function toStudioShotPlanListItemResponse(
 
 function assetFileUrl(
   projectName: string,
-  assetId: string,
   assetFileId: string
 ): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/asset-files/${encodeURIComponent(assetFileId)}`;
 }

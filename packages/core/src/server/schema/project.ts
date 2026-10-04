@@ -4,7 +4,8 @@ import { check, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqli
 export const projects = sqliteTable(
   'project',
   {
-    id: text('id').primaryKey(),
+    assetFileBackfillVersion: integer('asset_file_backfill_version').notNull().default(0),
+  id: text('id').primaryKey(),
     projectName: text('project_name').notNull(),
     title: text('title').notNull(),
     aspectRatio: text('aspect_ratio').notNull(),

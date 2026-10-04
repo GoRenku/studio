@@ -1,6 +1,6 @@
 import type { ProjectRelativePath } from '../../../client/index.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
-import { listAssetFileRecords } from '../../database/access/asset-files.js';
+import { listAssetFileRecordsIncludingDiscarded } from '../../database/access/asset-files.js';
 import { normalizeProjectRelativePath } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import type { ProjectAssetFileDestination, ProjectMediaKind } from '../types.js';
@@ -88,12 +88,22 @@ import {
   resolveScreenplayDestinationRootSync,
 } from './screenplay.js';
 import {
-  resolveAssetVideoEditDestinationFile,
-  resolveAssetVideoEditDestinationFileSync,
-  resolveAssetVideoEditDestinationOutputNames,
-  resolveAssetVideoEditDestinationRoot,
-  resolveAssetVideoEditDestinationRootSync,
-} from './asset-video-edit.js';
+  resolveAssetFileVideoEditDestinationFile,
+  resolveAssetFileVideoEditDestinationFileSync,
+  resolveAssetFileVideoEditDestinationOutputNames,
+  resolveAssetFileVideoEditDestinationRoot,
+  resolveAssetFileVideoEditDestinationRootSync,
+} from './asset-file-video-edit.js';
+
+import { resolveInspirationDestinationFile, resolveInspirationDestinationFileSync, resolveInspirationDestinationRoot, resolveInspirationDestinationRootSync, resolveInspirationDestinationOutputNames } from './inspiration.js';
+import { resolveResearchDestinationFile, resolveResearchDestinationFileSync, resolveResearchDestinationRoot, resolveResearchDestinationRootSync, resolveResearchDestinationOutputNames } from './research.js';
+import {
+  resolveAssetFileImageEditDestinationFile,
+  resolveAssetFileImageEditDestinationFileSync,
+  resolveAssetFileImageEditDestinationOutputNames,
+  resolveAssetFileImageEditDestinationRoot,
+  resolveAssetFileImageEditDestinationRootSync,
+} from './asset-file-image-edit.js';
 
 const castCharacterSheetResolver = castResolver<'cast.characterSheet'>();
 const castProfileResolver = castResolver<'cast.profile'>();
@@ -107,6 +117,27 @@ const lookbookImageResolver = lookbookResolver<'visualLanguage.lookbookImage'>()
 const lookbookSheetResolver = lookbookResolver<'visualLanguage.lookbookSheet'>();
 
 const destinationResolvers = {
+  'assetFile.imageEdit': {
+    resolveFile: resolveAssetFileImageEditDestinationFile,
+    resolveFileSync: resolveAssetFileImageEditDestinationFileSync,
+    resolveRoot: resolveAssetFileImageEditDestinationRoot,
+    resolveRootSync: resolveAssetFileImageEditDestinationRootSync,
+    resolveOutputNames: resolveAssetFileImageEditDestinationOutputNames,
+  },
+  'inspiration': {
+    resolveFile: resolveInspirationDestinationFile,
+    resolveFileSync: resolveInspirationDestinationFileSync,
+    resolveRoot: resolveInspirationDestinationRoot,
+    resolveRootSync: resolveInspirationDestinationRootSync,
+    resolveOutputNames: resolveInspirationDestinationOutputNames,
+  },
+  'research': {
+    resolveFile: resolveResearchDestinationFile,
+    resolveFileSync: resolveResearchDestinationFileSync,
+    resolveRoot: resolveResearchDestinationRoot,
+    resolveRootSync: resolveResearchDestinationRootSync,
+    resolveOutputNames: resolveResearchDestinationOutputNames,
+  },
   'project.cover': {
     resolveFile: resolveProjectCoverDestinationFile,
     resolveFileSync: resolveProjectCoverDestinationFileSync,
@@ -128,12 +159,12 @@ const destinationResolvers = {
     resolveRootSync: resolveScreenplayDestinationRootSync,
     resolveOutputNames: resolveScreenplayDestinationOutputNames,
   },
-  'asset.videoEdit': {
-    resolveFile: resolveAssetVideoEditDestinationFile,
-    resolveFileSync: resolveAssetVideoEditDestinationFileSync,
-    resolveRoot: resolveAssetVideoEditDestinationRoot,
-    resolveRootSync: resolveAssetVideoEditDestinationRootSync,
-    resolveOutputNames: resolveAssetVideoEditDestinationOutputNames,
+  'assetFile.videoEdit': {
+    resolveFile: resolveAssetFileVideoEditDestinationFile,
+    resolveFileSync: resolveAssetFileVideoEditDestinationFileSync,
+    resolveRoot: resolveAssetFileVideoEditDestinationRoot,
+    resolveRootSync: resolveAssetFileVideoEditDestinationRootSync,
+    resolveOutputNames: resolveAssetFileVideoEditDestinationOutputNames,
   },
   'shotPlan.video': {
     resolveFile: resolveShotPlanVideoDestinationFile,
@@ -200,7 +231,7 @@ export async function resolveDurableDestinationFile(input: {
 }): Promise<ProjectRelativePath> {
   return resolverFor(input.destination).resolveFile({
     ...input,
-    reservedProjectRelativePaths: activeAssetFilePathReservations(input.session),
+    reservedProjectRelativePaths: retainedAssetFilePathReservations(input.session),
   } as never);
 }
 
@@ -215,7 +246,7 @@ export function resolveDurableDestinationFileSync(input: {
 }): ProjectRelativePath {
   return resolverFor(input.destination).resolveFileSync({
     ...input,
-    reservedProjectRelativePaths: activeAssetFilePathReservations(input.session),
+    reservedProjectRelativePaths: retainedAssetFilePathReservations(input.session),
   } as never);
 }
 
@@ -254,15 +285,15 @@ export async function resolveDurableDestinationOutputNames(input: {
 }): Promise<string[]> {
   return resolverFor(input.destination).resolveOutputNames({
     ...input,
-    reservedProjectRelativePaths: activeAssetFilePathReservations(input.session),
+    reservedProjectRelativePaths: retainedAssetFilePathReservations(input.session),
   } as never);
 }
 
-function activeAssetFilePathReservations(
+function retainedAssetFilePathReservations(
   session: DatabaseSession,
 ): ReadonlySet<ProjectRelativePath> {
   return new Set(
-    listAssetFileRecords(session).map((file) =>
+    listAssetFileRecordsIncludingDiscarded(session).map((file) =>
       normalizeProjectRelativePath(file.projectRelativePath)
     ),
   );

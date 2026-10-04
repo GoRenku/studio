@@ -1,6 +1,6 @@
 export { attachShotPlanDialogueAudio } from './attachment.js';
 export {
-  assertAssetIsNotShotPlanDialogueAudioTake,
+  assertAssetFileIsNotShotPlanDialogueAudioTake,
   discardShotPlanDialogueAudioTake,
 } from './lifecycle.js';
 export {

@@ -4,6 +4,11 @@ Date: 2026-09-12
 
 Status: accepted
 
+[Decision 0107](0107-unify-retained-project-media-as-asset-files.md) replaces the
+logical Asset wrapper with a retained file identity under plan 0222. The retained
+reference workflow, exact Previs attribution, and creative-content boundary
+remain accepted.
+
 ## Decision
 
 Chosen image, video and audio derivatives prepared for a Shot Plan request are

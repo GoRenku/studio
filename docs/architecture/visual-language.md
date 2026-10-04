@@ -21,8 +21,9 @@ Precise contracts live in `reference/visual-language.md`.
 
 ## Current Shape
 
-Inspiration folders are project objects, but the image files inside them are
-plain filesystem content. Renku stores folder metadata and analysis JSON.
+Inspiration folders are project objects. Their retained images are registered
+folder-owned AssetFiles with stable identities, physical facts, and lifecycle.
+Renku also stores folder metadata and analysis JSON.
 Agents inspect images with shell commands inside the folder path returned by
 `renku inspiration show`.
 

@@ -9,6 +9,8 @@ import {
   type ProjectDatabaseMigrationRunReport,
 } from './migrator.js';
 import { currentProjectStoreSchemaGeneration } from './project-store-schema-generation.js';
+import { completeAssetFileBackfill } from './asset-file-backfill/index.js';
+import type { ProjectDatabasePreMigrationBackupReport } from './project-database-backups.js';
 
 export interface DatabaseSession {
   databasePath: string;
@@ -33,6 +35,7 @@ export function openProjectStore(input: {
   create: boolean;
   lifetime?: DatabaseSessionLifetime;
   autoMigrate?: boolean;
+  preMigrationBackup?: ProjectDatabasePreMigrationBackupReport | null;
 }): DatabaseSession {
   const started = performanceChannel.hasSubscribers ? performance.now() : undefined;
   let outcome = 'success';
@@ -50,18 +53,23 @@ export function openProjectStore(input: {
       if (existing) {
         try {
           assertProjectStoreSchema(existing.sqlite, databasePath);
-          return existing;
+
         } catch {
           projectSessions.delete(databasePath);
           existing.sqlite.close();
         }
+        if (projectSessions.has(databasePath)) {
+          completeAssetFileBackfill({ session: existing, projectFolder: input.projectFolder });
+          return existing;
+        }
       }
     }
 
-    const sqlite = openSqliteWithCurrentSchema({
+    const opened = openSqliteWithCurrentSchema({
       databasePath,
       autoMigrate: input.autoMigrate ?? !input.create,
     });
+    const sqlite = opened.sqlite;
     const db = drizzle(sqlite);
 
     const session: SqliteDatabaseSession = {
@@ -77,6 +85,14 @@ export function openProjectStore(input: {
               sqlite.close();
             },
     };
+
+    try {
+      completeAssetFileBackfill({ session, projectFolder: input.projectFolder,
+        preMigrationBackup: opened.preMigrationBackup ?? input.preMigrationBackup });
+    } catch (error) {
+      sqlite.close();
+      throw error;
+    }
 
     if (input.lifetime === 'project') {
       projectSessions.set(databasePath, session);
@@ -96,12 +112,12 @@ export function openProjectStore(input: {
 function openSqliteWithCurrentSchema(input: {
   databasePath: string;
   autoMigrate: boolean;
-}): Database.Database {
+}): { sqlite: Database.Database; preMigrationBackup?: ProjectDatabasePreMigrationBackupReport | null } {
   const sqlite = new Database(input.databasePath);
   try {
     sqlite.pragma('foreign_keys = ON');
     assertProjectStoreSchema(sqlite, input.databasePath);
-    return sqlite;
+    return { sqlite };
   } catch (error) {
     if (input.autoMigrate && canAutoMigrateProjectStore(sqlite)) {
       sqlite.close();
@@ -110,7 +126,7 @@ function openSqliteWithCurrentSchema(input: {
       try {
         migrated.pragma('foreign_keys = ON');
         assertProjectStoreSchema(migrated, input.databasePath);
-        return migrated;
+        return { sqlite: migrated, preMigrationBackup: migration.preMigrationBackup };
       } catch (migrationError) {
         migrated.close();
         throw addAutoMigrationBackupContext(migrationError, migration);

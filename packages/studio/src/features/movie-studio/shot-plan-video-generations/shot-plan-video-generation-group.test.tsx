@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { StudioShotPlanVideoAsset } from '@/services/studio-shot-plan-video-generations-contracts';
+import type { StudioShotPlanVideoAssetFile } from '@/services/studio-shot-plan-video-generations-contracts';
 import { ShotPlanVideoGenerationGroup } from './shot-plan-video-generation-group';
 
 vi.mock('@/features/media-generation-request/use-media-generation-request-inspector', () => ({
@@ -37,9 +37,9 @@ describe('ShotPlanVideoGenerationGroup', () => {
     render(
       <ShotPlanVideoGenerationGroup
         projectName='urban-basilica'
-        assets={[
-          videoAsset('asset_older', olderCreatedAt),
-          videoAsset('asset_newer', newerCreatedAt),
+        assetFiles={[
+          videoAssetFile('asset_older', olderCreatedAt),
+          videoAssetFile('asset_newer', newerCreatedAt),
         ]}
         onDeleted={vi.fn()}
       />,
@@ -54,16 +54,12 @@ describe('ShotPlanVideoGenerationGroup', () => {
   });
 });
 
-function videoAsset(id: string, createdAt: string): StudioShotPlanVideoAsset {
+function videoAssetFile(id: string, createdAt: string): StudioShotPlanVideoAssetFile {
   return {
     id,
     createdAt,
-    files: [{
-      id: `file_${id}`,
-      mediaKind: 'video',
-      browserUrl: `/media/${id}.mp4`,
-    }],
-  } as StudioShotPlanVideoAsset;
+    mediaKind: 'video', browserUrl: `/media/${id}.mp4`,
+  } as StudioShotPlanVideoAssetFile;
 }
 
 function formatDateTime(createdAt: string): string {

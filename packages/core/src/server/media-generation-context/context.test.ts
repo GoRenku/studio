@@ -7,7 +7,7 @@ import { createDeterministicIdGenerator } from '../entity-ids.js';
 import { createProjectDataService } from '../project-data-service.js';
 import { recordCodexPluginInstallation } from '../installation/codex-plugin.js';
 import { resolveRenkuConfigPath } from '../config/paths.js';
-import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
+import { createTestAssetFileFixture } from '../testing/asset-fixture-helpers.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 import { mediaGenerationOutputGuidance } from './purpose-registry.js';
 
@@ -48,7 +48,7 @@ describe('media generation context', () => {
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     await fs.writeFile(path.join(created.projectPath, castPath), 'cast');
     await fs.writeFile(path.join(created.projectPath, locationPath), 'location');
-    const castAsset = await createTestAssetFixture({
+    const castAssetFile = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'castMember', id: 'cast_test0002' },
@@ -56,9 +56,8 @@ describe('media generation context', () => {
       mediaKind: 'image',
       title: 'Mehmed continuity',
       projectRelativePath: castPath,
-      fileRole: 'primary',
     });
-    const unrelatedAsset = await createTestAssetFixture({
+    const unrelatedAssetFile = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'location', id: 'location_test0001' },
@@ -66,7 +65,6 @@ describe('media generation context', () => {
       mediaKind: 'image',
       title: 'Council chamber continuity',
       projectRelativePath: locationPath,
-      fileRole: 'primary',
     });
 
     const report = await projectData.readMediaGenerationContext({
@@ -82,12 +80,12 @@ describe('media generation context', () => {
     });
     expect(continuity?.candidates).toEqual([
       expect.objectContaining({
-        assetId: castAsset.id,
+        assetFileId: castAssetFile.id,
         available: true,
         isDisplaySelected: false,
       }),
     ]);
-    expect(continuity?.candidates.map((candidate) => candidate.assetId)).not.toContain(unrelatedAsset.id);
+    expect(continuity?.candidates.map((candidate) => candidate.assetFileId)).not.toContain(unrelatedAssetFile.id);
     expect(report).not.toHaveProperty('provider');
     expect(report).not.toHaveProperty('model');
     expect(report).not.toHaveProperty('request');
@@ -271,14 +269,14 @@ describe('media generation context', () => {
     });
     const firstFrameGroup = lastFrameContext.suggestedReferences
       .find((group) => group.role === 'first-frame');
-    expect(firstFrameGroup?.candidates.map((candidate) => candidate.assetId))
-      .toEqual([firstFrame.asset.id]);
-    expect(firstFrameGroup?.candidates.map((candidate) => candidate.assetId))
-      .not.toContain(otherFrame.asset.id);
+    expect(firstFrameGroup?.candidates.map((candidate) => candidate.assetFileId))
+      .toEqual([firstFrame.assetFile.id]);
+    expect(firstFrameGroup?.candidates.map((candidate) => candidate.assetFileId))
+      .not.toContain(otherFrame.assetFile.id);
     expect(firstFrameGroup?.candidates[0]).not.toHaveProperty('generationProvenance');
     if (lastFrameContext.targetContext.kind === 'shotPlan') {
-      expect(lastFrameContext.targetContext.shotPlan.shots[0]?.imageAssetIds).toContain(selectedShotImage.asset.id);
-      expect(lastFrameContext.assets.find((asset) => asset.id === selectedShotImage.asset.id)).not.toHaveProperty('generationProvenance');
+      expect(lastFrameContext.targetContext.shotPlan.shots[0]?.imageAssetFileIds).toContain(selectedShotImage.assetFile.id);
+      expect(lastFrameContext.assetFiles.find((assetFile) => assetFile.id === selectedShotImage.assetFile.id)).not.toHaveProperty('generationProvenance');
     }
 
     const shotContext = await projectData.readMediaGenerationContext({
@@ -293,12 +291,12 @@ describe('media generation context', () => {
     });
     if (shotContext.targetContext.kind === 'shot') {
       expect(shotContext.targetContext.shotId).toBe(plan.shotPlan.shots[1]!.id);
-      expect(shotContext.assets.find((asset) => asset.id === selectedShotImage.asset.id)).not.toHaveProperty('generationProvenance');
+      expect(shotContext.assetFiles.find((assetFile) => assetFile.id === selectedShotImage.assetFile.id)).not.toHaveProperty('generationProvenance');
     }
     expect(shotContext.suggestedReferences
       .find((group) => group.role === 'shot-image')?.candidates)
       .toEqual([expect.objectContaining({
-        assetId: selectedShotImage.asset.id,
+        assetFileId: selectedShotImage.assetFile.id,
         isDisplaySelected: true,
       })]);
 
@@ -344,7 +342,7 @@ describe('media generation context', () => {
     await fs.mkdir(path.join(created.projectPath, 'tmp'), { recursive: true });
     const sourcePath = 'tmp/source.png' as ProjectRelativePath;
     await fs.writeFile(path.join(created.projectPath, sourcePath), 'source');
-    const sourceAsset = await createTestAssetFixture({
+    const sourceAssetFile = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'castMember', id: 'cast_test0002' },
@@ -352,11 +350,10 @@ describe('media generation context', () => {
       mediaKind: 'image',
       title: 'Source portrait',
       projectRelativePath: sourcePath,
-      fileRole: 'primary',
     });
     const videoSourcePath = 'tmp/source.mp4' as ProjectRelativePath;
     await fs.writeFile(path.join(created.projectPath, videoSourcePath), 'video source');
-    const videoSourceAsset = await createTestAssetFixture({
+    const videoSourceAssetFile = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'castMember', id: 'cast_test0002' },
@@ -364,7 +361,6 @@ describe('media generation context', () => {
       mediaKind: 'video',
       title: 'Source video',
       projectRelativePath: videoSourcePath,
-      fileRole: 'primary',
     });
     const screenplay = await projectData.readScreenplayStructure({
       projectName: 'constantinople',
@@ -380,8 +376,8 @@ describe('media generation context', () => {
     });
     const cases = [
       ['image.create', { kind: 'shotPlan', id: imageCreateShotPlan.shotPlan.id }, 'shotPlan'],
-      ['image.edit', { kind: 'asset', id: sourceAsset.id }, 'asset'],
-      ['video.edit', { kind: 'asset', id: videoSourceAsset.id }, 'asset'],
+      ['image.edit', { kind: 'assetFile', assetFileId: sourceAssetFile.id }, 'assetFile'],
+      ['video.edit', { kind: 'assetFile', assetFileId: videoSourceAssetFile.id }, 'assetFile'],
       ['project.cover', { kind: 'project', id: 'project' }, 'project'],
       ['lookbook.image', { kind: 'lookbook', id: production.lookbook.id }, 'lookbook'],
       ['lookbook.video-sheet', { kind: 'lookbook', id: production.lookbook.id }, 'lookbook'],
@@ -409,17 +405,17 @@ describe('media generation context', () => {
         targetContext: { kind: contextKind },
       });
       const context = report.targetContext;
-      expect(new Set(report.assets.map((asset) => asset.id)).size).toBe(report.assets.length);
+      expect(new Set(report.assetFiles.map((assetFile) => assetFile.id)).size).toBe(report.assetFiles.length);
       for (const group of report.suggestedReferences) {
         for (const candidate of group.candidates) {
-          const asset = report.assets.find((entry) => entry.id === candidate.assetId);
-          expect(asset?.files.some((file) => file.id === candidate.assetFileId)).toBe(true);
+          const assetFile = report.assetFiles.find((entry) => entry.id === candidate.assetFileId);
+          expect(assetFile?.id === candidate.assetFileId).toBe(true);
         }
       }
-      if (context.kind === 'asset') {
-        expect(report.assets.find((asset) => asset.id === context.assetId)).not.toHaveProperty('generationProvenance');
+      if (context.kind === 'assetFile') {
+        expect(report.assetFiles.find((assetFile) => assetFile.id === context.assetFileId)).not.toHaveProperty('generationProvenance');
       } else if (context.kind === 'castMember' || context.kind === 'location' || context.kind === 'prop') {
-        context.assetIds.forEach((id) => expect(report.assets.find((asset) => asset.id === id)).not.toHaveProperty('generationProvenance'));
+        context.assetFileIds.forEach((id) => expect(report.assetFiles.find((assetFile) => assetFile.id === id)).not.toHaveProperty('generationProvenance'));
       }
     }
   });
@@ -443,9 +439,9 @@ describe('media generation context', () => {
       ['lookbook.image', { kind: 'lookbook', id: production.lookbook.id }],
       ['lookbook.video-sheet', { kind: 'lookbook', id: production.lookbook.id }],
     ] as const;
-    const assets = [];
+    const assetFiles = [];
     for (const [purpose, target] of targets) {
-      assets.push(await projectData.attachGenerationMedia({
+      assetFiles.push(await projectData.attachGenerationMedia({
         homeDir, purpose, target, sourceProjectRelativePath: 'tmp/source.png', title: 'Reference image',
         generationProvenance: provenance,
         ...(purpose === 'lookbook.image' ? { select: true } : {}),
@@ -464,7 +460,7 @@ describe('media generation context', () => {
       const report = await projectData.readMediaGenerationContext({ homeDir, purpose, target });
       for (const lookbook of report.visualLanguage) {
         for (const media of [...lookbook.images, ...lookbook.sheets]) {
-          expect(report.assets.find((asset) => asset.id === media.assetId)).not.toHaveProperty('generationProvenance');
+          expect(report.assetFiles.find((assetFile) => assetFile.id === media.assetFileId)).not.toHaveProperty('generationProvenance');
         }
       }
       for (const group of report.suggestedReferences) {
@@ -474,17 +470,17 @@ describe('media generation context', () => {
       }
       if (report.targetContext.kind === 'castMember') {
         expect(report.targetContext.voices[0]?.voiceIdentity).toEqual(voiceIdentity);
-        expect(report.assets.find((asset) => asset.id === voice.voice.sample.id)).not.toHaveProperty('generationProvenance');
-        expect(report.assets[0]).not.toHaveProperty('generationProvenance');
+        expect(report.assetFiles.find((assetFile) => assetFile.id === voice.voice.sample.id)).not.toHaveProperty('generationProvenance');
+        expect(report.assetFiles[0]).not.toHaveProperty('generationProvenance');
       } else if (report.targetContext.kind === 'location') {
-        expect(report.assets[0]).not.toHaveProperty('generationProvenance');
+        expect(report.assetFiles[0]).not.toHaveProperty('generationProvenance');
       } else if (report.targetContext.kind === 'lookbook') {
-        expect(report.visualLanguage[0]?.images[0]?.assetId).toBeDefined();
-        expect(report.visualLanguage[0]?.sheets[0]?.assetId).toBeDefined();
+        expect(report.visualLanguage[0]?.images[0]?.assetFileId).toBeDefined();
+        expect(report.visualLanguage[0]?.sheets[0]?.assetFileId).toBeDefined();
         expect(report.visualLanguage[0]?.lookbook).toEqual(production.lookbook);
       }
     }
-    const source = assets[0]!.asset;
+    const source = assetFiles[0]!.assetFile;
     const screenplay = await projectData.readScreenplayStructure({ homeDir, projectName: 'constantinople' });
     const scene = screenplay.screenplay.scenes[0]!;
     await projectData.applyScreenplayOperations({
@@ -504,26 +500,26 @@ describe('media generation context', () => {
     });
     if (sceneReport.targetContext.kind === 'scene') {
       const context = sceneReport.targetContext;
-      expect(context.castMembers.flatMap((member) => member.assetIds).length).toBeGreaterThan(0);
+      expect(context.castMembers.flatMap((member) => member.assetFileIds).length).toBeGreaterThan(0);
       for (const subject of [...context.castMembers, ...context.locations, ...context.props]) {
-        subject.assetIds.forEach((id) => expect(sceneReport.assets.find((asset) => asset.id === id)).not.toHaveProperty('generationProvenance'));
+        subject.assetFileIds.forEach((id) => expect(sceneReport.assetFiles.find((assetFile) => assetFile.id === id)).not.toHaveProperty('generationProvenance'));
       }
       const sceneVoices = Object.values(context.castVoicesByCastMemberId).flat();
       expect(sceneVoices.find((sample) => sample.id === voice.voice.id)?.voiceIdentity).toEqual(voiceIdentity);
-      sceneVoices.forEach((sample) => expect(sceneReport.assets.find((asset) => asset.id === sample.sampleAssetId)).not.toHaveProperty('generationProvenance'));
+      sceneVoices.forEach((sample) => expect(sceneReport.assetFiles.find((assetFile) => assetFile.id === sample.sampleAssetFileId)).not.toHaveProperty('generationProvenance'));
     }
-    const edit = await projectData.readMediaGenerationContext({ homeDir, purpose: 'image.edit', target: { kind: 'asset', id: source.id } });
+    const edit = await projectData.readMediaGenerationContext({ homeDir, purpose: 'image.edit', target: { kind: 'assetFile', assetFileId: source.id } });
     const { generationProvenance: saved, ...expected } = source;
-    expect(edit.targetContext).toEqual({ kind: 'asset', assetId: expected.id });
-    expect(edit.assets).toEqual([expected]);
+    expect(edit.targetContext).toEqual({ kind: 'assetFile', assetFileId: expected.id });
+    expect(edit.assetFiles).toEqual([expected]);
     expect(saved).toEqual(provenance);
-    const page = await projectData.listAssetPage({ homeDir, projectName: 'constantinople', owner: source.owner });
-    expect(page.items.find((asset) => asset.id === source.id)?.generationProvenance).toEqual(provenance);
+    const page = await projectData.listAssetFilePage({ homeDir, projectName: 'constantinople', owner: source.owner });
+    expect(page.items.find((assetFile) => assetFile.id === source.id)?.generationProvenance).toEqual(provenance);
     const fullLookbook = await projectData.readProductionLookbook({ homeDir });
-    expect(fullLookbook.images[0]?.asset.generationProvenance).toEqual(provenance);
-    expect(fullLookbook.sheets[0]?.asset.generationProvenance).toEqual(provenance);
+    expect(fullLookbook.images[0]?.assetFile.generationProvenance).toEqual(provenance);
+    expect(fullLookbook.sheets[0]?.assetFile.generationProvenance).toEqual(provenance);
     const department = await projectData.readLocationContext({ homeDir, locationId: 'location_test0001' });
-    expect(department.activeLookbook?.selectedImage?.asset.generationProvenance).toEqual(provenance);
+    expect(department.activeLookbook?.selectedImage?.assetFile.generationProvenance).toEqual(provenance);
     expect(voice.voice.sample.generationProvenance).toEqual({ ...provenance, mediaKind: 'audio' });
   });
 

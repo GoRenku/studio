@@ -1,6 +1,6 @@
 import type { ShotPlanDialogueAudioMutationReport } from '../../client/shot-plan-dialogue-audio.js';
 import {
-  readShotPlanDialogueAudioTakeByAssetId,
+  readShotPlanDialogueAudioTakeByAssetFileId,
   readShotPlanDialogueAudioTakeRecord,
 } from '../database/access/shot-plan-dialogue-audio.js';
 import { readProjectRecord } from '../database/access/project.js';
@@ -42,17 +42,17 @@ export function discardShotPlanDialogueAudioTake(input: {
   };
 }
 
-export function assertAssetIsNotShotPlanDialogueAudioTake(
+export function assertAssetFileIsNotShotPlanDialogueAudioTake(
   session: DatabaseSession,
-  assetId: string,
+  assetFileId: string,
 ): void {
-  const take = readShotPlanDialogueAudioTakeByAssetId(session, assetId);
+  const take = readShotPlanDialogueAudioTakeByAssetFileId(session, assetFileId);
   if (!take) {
     return;
   }
   throw new ProjectDataError(
     'CORE_SHOT_PLAN_DIALOGUE_AUDIO_TAKE_INVALID',
-    `Asset ${assetId} belongs to active Shot Plan Dialogue Audio Take ${take.id} and cannot be discarded directly.`,
+    `Asset ${assetFileId} belongs to active Shot Plan Dialogue Audio Take ${take.id} and cannot be discarded directly.`,
     { suggestion: 'Discard the Shot Plan Dialogue Audio Take instead.' },
   );
 }

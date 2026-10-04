@@ -1,11 +1,11 @@
 import type {
-  Asset,
+  AssetFile,
   SceneBeatsResource,
   ScreenplayBeatGalleryResource,
   ScreenplayImageReference,
 } from '../../client/index.js';
 import type { Screenplay, ScreenplaySection } from '../../client/screenplay/index.js';
-import { listAssetPageInSession } from '../assets/projection.js';
+import { listAssetFilePageInSession } from '../asset-files/projection.js';
 import { listCastMemberRecords } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
 import { listPropRecords } from '../database/access/props.js';
@@ -133,22 +133,20 @@ function firstCastMemberImage(
   session: DatabaseSession,
   castMemberId: string
 ): ScreenplayImageReference | undefined {
-  const page = listAssetPageInSession(session, {
+  const page = listAssetFilePageInSession(session, {
     owner: { kind: 'castMember', id: castMemberId },
     type: 'cast_profile',
     mediaKind: 'image',
   });
-  const asset = page.items.find((candidate) => candidate.id === page.selectedAssetId);
-  return asset ? toScreenplayImageReference(asset) : undefined;
+  const assetFile = page.items.find((candidate) => candidate.id === page.selectedAssetFileId);
+  return assetFile ? toScreenplayImageReference(assetFile) : undefined;
 }
 
-function toScreenplayImageReference(asset: Asset): ScreenplayImageReference | undefined {
-  const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
+function toScreenplayImageReference(assetFile: AssetFile): ScreenplayImageReference | undefined {
+  const file = (assetFile.mediaKind === 'image' ? assetFile : null);
   return file ? {
-    assetId: asset.id,
     assetFileId: file.id,
-    title: asset.title,
-    fileRole: file.role,
+    title: assetFile.title,
     mediaKind: file.mediaKind,
     mimeType: file.mimeType,
     width: file.width,

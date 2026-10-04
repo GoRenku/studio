@@ -1,9 +1,7 @@
-import { createAssetMembership } from '../assets/ownership.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { selectAssetInSession } from '../assets/selection.js';
-import { assetSelectionTargetKey } from '../assets/selection-targets.js';
-import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
-import { insertAssetRecord } from '../database/access/assets.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { selectAssetFileInSession } from '../asset-files/selection.js';
+import { assetFileSelectionTargetKey } from '../asset-files/selection-targets.js';
+import { readSelectedAssetFileRecord } from '../database/access/selected-asset-files.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
 import {
@@ -23,16 +21,16 @@ export function copySelectedShotImage(input: {
   now: string;
 }): void {
   const sourceOwner = { kind: 'shot' as const, id: input.sourceShotId };
-  const selectedAssetId = readSelectedAssetRecord(
+  const selectedAssetFileId = readSelectedAssetFileRecord(
     input.session,
-    assetSelectionTargetKey(sourceOwner)
-  )?.assetId;
-  if (!selectedAssetId) {
+    assetFileSelectionTargetKey(sourceOwner)
+  )?.assetFileId;
+  if (!selectedAssetFileId) {
     return;
   }
-  const source = readOwnedAsset(input.session, {
+  const source = readOwnedAssetFile(input.session, {
     owner: sourceOwner,
-    assetId: selectedAssetId,
+    assetFileId: selectedAssetFileId,
   });
   if (!source || source.type !== 'shot_image' || source.mediaKind !== 'image') {
     throw new ProjectDataError(
@@ -40,36 +38,25 @@ export function copySelectedShotImage(input: {
       `Shot ${input.sourceShotId} has an invalid selected image.`
     );
   }
-  const assetId = input.ids('asset');
-  insertAssetRecord(input.session, {
-    id: assetId,
-    localeId: source.localeId,
-    type: source.type,
-    mediaKind: source.mediaKind,
-    title: source.title,
-    oneLineSummary: source.oneLineSummary ?? undefined,
-    referenceName: source.referenceName,
-    tags: source.tags,
-    origin: source.origin,
-    availability: source.availability,
-    generationProvenance: source.generationProvenance,
-    authoredFromShotPlanId: source.authoredFrom?.id ?? null,
-    createdAt: input.now,
-    updatedAt: input.now,
-  });
-  createAssetMembership(input.session, {
-    assetId,
-    owner: { kind: 'shot', id: input.destinationShotId },
-    now: input.now,
-  });
-  for (const sourceFile of source.files) {
+  const assetFileId = input.ids('asset_file');
     persistProjectAssetFileSync({
+      owner: { kind: 'shot', id: input.destinationShotId },
+      assetFileMetadata: {
+        localeId: source.localeId,
+        type: source.type,
+        title: source.title,
+        oneLineSummary: source.oneLineSummary ?? undefined,
+        referenceName: source.referenceName,
+        tags: source.tags,
+        origin: source.origin,
+        generationProvenance: source.generationProvenance,
+        authoredFromShotPlanId: source.authoredFrom?.id ?? null
+      },
       session: input.session,
       projectFolder: input.projectFolder,
       writeSet: input.writeSet,
-      assetId,
-      assetFileId: input.ids('asset_file'),
-      sourceProjectRelativePath: sourceFile.projectRelativePath,
+      assetFileId,
+      sourceProjectRelativePath: source.projectRelativePath,
       destination: {
         kind: 'shot.image',
         shotPlanId: input.destinationShotPlanId,
@@ -78,18 +65,16 @@ export function copySelectedShotImage(input: {
       namingMode: source.origin === 'generated'
         ? { kind: 'generated' }
         : { kind: 'external' },
-      fileRole: sourceFile.role,
       mediaKind: 'image',
-      mimeType: sourceFile.mimeType ?? undefined,
-      width: sourceFile.width ?? undefined,
-      height: sourceFile.height ?? undefined,
-      durationSeconds: sourceFile.durationSeconds ?? undefined,
+      mimeType: source.mimeType ?? undefined,
+      width: source.width ?? undefined,
+      height: source.height ?? undefined,
+      durationSeconds: source.durationSeconds ?? undefined,
       now: input.now,
     });
-  }
-  selectAssetInSession(input.session, {
+  selectAssetFileInSession(input.session, {
     target: { kind: 'shot', id: input.destinationShotId },
-    assetId,
+    assetFileId,
     now: input.now,
   });
 }

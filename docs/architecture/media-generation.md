@@ -334,9 +334,13 @@ Take and exact provenance; it does not interpret the provider/model request.
 Schema inspection returns the selected provider's live raw input schema. It is
 technical field authority, not editorial prompting guidance. `image.create`
 uses `--target shot-plan:<id>` and appears as a generic Reference Image in that
-Plan's Assets tab. `image.edit` uses `--target asset:<id>`; Core derives the
-same-place destination from the exact source Asset and accepts no separate
-destination choice.
+Plan's Assets tab. `image.edit` uses `--target assetFile:<id>`; Core derives the
+same-place destination from the exact source AssetFile and accepts no separate
+destination choice. Every active image AssetFile supports editing, including
+Inspiration and research images. The edited output is a new unselected file in
+the same owning collection; the original file and selection remain unchanged.
+Inspiration edits stay in the same folder, and research edits stay beside their
+source, including nested research directories.
 
 Preview accepts `codex` because built-in image generation can share the review
 envelope. Validate, execute, and recover reject `codex`; it is a harness-gated

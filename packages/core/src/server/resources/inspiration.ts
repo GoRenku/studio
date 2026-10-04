@@ -9,31 +9,29 @@ import { openProjectSession } from '../database/lifecycle/active-session.js';
 import { withCurrentProjectSession } from '../database/lifecycle/current-project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { normalizeProjectRelativePath } from '../files/project-relative-paths.js';
-import { listActiveInspirationImagesFromFolder } from '../files/inspiration-images.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
 import type { ListInspirationFoldersInput } from '../project-data-service-contracts.js';
 
 export async function readInspirationResource(
   input: ListInspirationFoldersInput
 ): Promise<InspirationResource> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+  return withVisualLanguageSession(input, ({ session }) => {
     const folders = listInspirationFolderRecords(session, input);
     return {
       folders: {
-        items: await Promise.all(
-          folders.items.map((folder) => toInspirationFolderListItem(session, projectFolder, folder))
-        ),
+        items: folders.items.map((folder) => toInspirationFolderListItem(session, folder)),
         nextCursor: folders.nextCursor,
       },
     };
   });
 }
 
-async function toInspirationFolderListItem(
+function toInspirationFolderListItem(
   session: DatabaseSession,
-  projectFolder: string,
   folder: InspirationFolderRecord
-): Promise<InspirationFolderListItem> {
-  const images = await listActiveInspirationImagesFromFolder({ session, projectFolder, folder });
+): InspirationFolderListItem {
+  const images = listAssetFilesInSession(session, { owner: { kind: 'inspirationFolder', id: folder.id },
+    type: 'inspiration_image', mediaKind: 'image' });
   return {
     folder: toInspirationFolder(folder),
     cardImage: images[0] ?? null,

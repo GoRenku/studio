@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useStudioResourceRefresh } from '@/hooks/use-studio-resource-refresh';
-import { readStudioShotPlanAssets } from '@/services/studio-shot-plans-api';
-import type { StudioShotPlanAssets } from '@/services/studio-shot-plans-contracts';
+import { readStudioShotPlanAssetFiles } from '@/services/studio-shot-plans-api';
+import type { StudioShotPlanAssetFiles } from '@/services/studio-shot-plans-contracts';
 
-export function useShotPlanAssets(input: {
+export function useShotPlanAssetFiles(input: {
   projectName: string;
   shotPlanId: string;
   enabled: boolean;
 }) {
   const [result, setResult] = useState<{
     requestKey: string;
-    resource: StudioShotPlanAssets | null;
+    resource: StudioShotPlanAssetFiles | null;
     error: string | null;
   } | null>(null);
   const [revision, setRevision] = useState(0);
@@ -22,7 +22,7 @@ export function useShotPlanAssets(input: {
   useEffect(() => {
     if (!requestKey) return;
     const controller = new AbortController();
-    void readStudioShotPlanAssets({
+    void readStudioShotPlanAssetFiles({
       projectName: input.projectName,
       shotPlanId: input.shotPlanId,
       signal: controller.signal,

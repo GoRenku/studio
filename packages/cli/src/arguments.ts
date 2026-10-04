@@ -9,7 +9,7 @@ Commands
   create <project-name>           Create a clean movie project
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
-  asset                Register and list assets
+  asset-file           Import, list, update, and select retained files
   cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
   location             Author location facts and generate 3D Worlds
@@ -38,7 +38,7 @@ Commands
   shot-plan reference import Register --source image/video/audio with --media-kind, --title and exact --shot-plan; Previs requires --previs-revision
   shot-plan clip list      Read numbered raw clips for --shot-plan and --previs-revision
   shot-plan clip create    Add a raw clip slot to the specified Previs revision
-  shot-plan clip take add  Assign --asset and --asset-file to --clip; optional --title/--source-take
+  shot-plan clip take add  Assign --asset-file to --clip; optional --title/--source-take
   shot-plan clip take resolve Resolve --number 1.1 in the specified plan/revision
   shot-plan clip take select Select --take for --clip
   shot-plan clip take clear Clear the selected take for --clip
@@ -97,7 +97,7 @@ Options
   --revision           Scene Beats revision id
   --shot-plan          Shot Plan id
   --shot               Shot id
-  --asset              Asset id
+  --asset-file         Retained file id
   --position           One-based Shot position
   --placement          Shot add placement: start, end, before, or after
   --beats              Comma-separated Beat ids for storyboard imports
@@ -208,7 +208,6 @@ function createCliFlags() {
       type: 'string',
     },
     clip: { type: 'string' },
-    assetFile: { type: 'string' },
     sourceTake: { type: 'string' },
     takeTitle: { type: 'string' },
     previsRevision: {
@@ -321,7 +320,7 @@ function createCliFlags() {
     shot: {
       type: 'string',
     },
-    asset: {
+    assetFile: {
       type: 'string',
     },
     position: {

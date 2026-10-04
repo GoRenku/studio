@@ -228,8 +228,8 @@ function lookbookImage(): LookbookImage {
     lookbookId: 'lookbook_test0001',
     lookbookKind: 'production',
     sections: ['palette'],
-    asset: {
-      id: 'asset_test0001',
+    assetFile: {
+      id: 'asset_file_test0001',
       owner: { kind: 'lookbook', id: 'lookbook_test0001' },
       localeId: null,
       type: 'lookbook_image',
@@ -244,20 +244,7 @@ function lookbookImage(): LookbookImage {
       tags: [],
       createdAt: '2026-05-25T00:00:00.000Z',
       updatedAt: '2026-05-25T00:00:00.000Z',
-      files: [
-        {
-          id: 'asset_file_test0001',
-          role: 'primary',
-          mediaKind: 'image',
-          projectRelativePath: 'visual-language/lookbook/palette-frame.png' as never,
-          mimeType: 'image/png',
-          sizeBytes: 123,
-          contentHash: null,
-          width: 1280,
-          height: 720,
-          durationSeconds: null,
-        },
-      ],
+      projectRelativePath: 'visual-language/lookbook/palette-frame.png' as never, mimeType: 'image/png', sizeBytes: 123, contentHash: null, width: 1280, height: 720, durationSeconds: null,
     },
   };
 }
@@ -267,8 +254,8 @@ function lookbookSheet(id: string): LookbookSheet {
     id,
     lookbookId: 'lookbook_test0001',
     lookbookKind: 'production',
-    asset: {
-      id: `asset_${id}`,
+    assetFile: {
+      id: `asset_file_${id}`,
       owner: { kind: 'lookbook', id: 'lookbook_test0001' },
       localeId: null,
       type: 'lookbook_sheet',
@@ -283,20 +270,7 @@ function lookbookSheet(id: string): LookbookSheet {
       tags: [],
       createdAt: '2026-05-25T00:00:00.000Z',
       updatedAt: '2026-05-25T00:00:00.000Z',
-      files: [
-        {
-          id: `asset_file_${id}`,
-          role: 'primary',
-          mediaKind: 'image',
-          projectRelativePath: 'visual-language/lookbook/lookbook-sheet.png' as never,
-          mimeType: 'image/png',
-          sizeBytes: 123,
-          contentHash: null,
-          width: 1024,
-          height: 768,
-          durationSeconds: null,
-        },
-      ],
+      projectRelativePath: 'visual-language/lookbook/lookbook-sheet.png' as never, mimeType: 'image/png', sizeBytes: 123, contentHash: null, width: 1024, height: 768, durationSeconds: null,
     },
   };
 }

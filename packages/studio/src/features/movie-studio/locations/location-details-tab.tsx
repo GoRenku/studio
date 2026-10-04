@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type {
   LocationResourceResponse,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 import {
   ImagePreviewDialog,
@@ -16,26 +16,26 @@ import { ContinuityFeatureImage } from '../continuity/continuity-feature-image';
 interface LocationDetailsTabProps {
   projectName: string;
   resource: LocationResourceResponse;
-  assets: StudioAssetResponse[];
-  selectedHeroAssetId: string | null;
+  assetFiles: StudioAssetFileResponse[];
+  selectedHeroAssetFileId: string | null;
 }
 
 export function LocationDetailsTab({
   projectName,
   resource,
-  assets,
-  selectedHeroAssetId,
+  assetFiles,
+  selectedHeroAssetFileId,
 }: LocationDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const location = resource.location;
-  const heroAsset = assets.find(
-    (asset) => asset.id === selectedHeroAssetId
+  const heroAssetFile = assetFiles.find(
+    (assetFile) => assetFile.id === selectedHeroAssetFileId
   ) ?? null;
-  const heroPreview = heroAsset
-    ? continuityPreviewImage(projectName, heroAsset, 'Location Hero')
+  const heroPreview = heroAssetFile
+    ? continuityPreviewImage(projectName, heroAssetFile, 'Location Hero')
     : null;
-  const heroAspectRatio = heroAsset
-    ? continuityImageAspectRatio(heroAsset, 16 / 9)
+  const heroAspectRatio = heroAssetFile
+    ? continuityImageAspectRatio(heroAssetFile, 16 / 9)
     : 16 / 9;
 
   return (

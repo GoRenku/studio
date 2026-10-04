@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pause, Volume2 } from 'lucide-react';
 import type {
   CastMemberResourceResponse,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 import { Button } from '@/ui/button';
 import {
@@ -25,32 +25,32 @@ import { ContinuityFeatureImage } from '../continuity/continuity-feature-image';
 interface CastMemberDetailsTabProps {
   projectName: string;
   resource: CastMemberResourceResponse;
-  assets: StudioAssetResponse[];
-  selectedProfileAssetId: string | null;
+  assetFiles: StudioAssetFileResponse[];
+  selectedProfileAssetFileId: string | null;
   onVoiceOverChange: (isVoiceOver: boolean) => Promise<void>;
 }
 
 export function CastMemberDetailsTab({
   projectName,
   resource,
-  assets,
-  selectedProfileAssetId,
+  assetFiles,
+  selectedProfileAssetFileId,
   onVoiceOverChange,
 }: CastMemberDetailsTabProps) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const castMember = resource.castMember;
-  const profileAsset = assets.find(
-    (asset) => asset.id === selectedProfileAssetId
+  const profileAssetFile = assetFiles.find(
+    (assetFile) => assetFile.id === selectedProfileAssetFileId
   ) ?? null;
   const firstVoice = resource.voices[0] ?? null;
-  const firstVoiceFile = firstVoice?.sample.files[0] ?? null;
+  const firstVoiceFile = firstVoice?.sample ?? null;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [voicePlaying, setVoicePlaying] = useState(false);
-  const profilePreview = profileAsset
-    ? continuityPreviewImage(projectName, profileAsset, 'Profile')
+  const profilePreview = profileAssetFile
+    ? continuityPreviewImage(projectName, profileAssetFile, 'Profile')
     : null;
-  const profileAspectRatio = profileAsset
-    ? continuityImageAspectRatio(profileAsset, 1)
+  const profileAspectRatio = profileAssetFile
+    ? continuityImageAspectRatio(profileAssetFile, 1)
     : 1;
   const facts = [
     ['Role', castMember.role],

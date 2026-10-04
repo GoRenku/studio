@@ -1,8 +1,8 @@
 import type { CastVoiceRemoveReport } from '../../client/cast-voices.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { readCastVoiceRecordBySampleAssetId } from '../database/access/cast-voices.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { readCastVoiceRecordBySampleAssetFileId } from '../database/access/cast-voices.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { studioAssetFileOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
 import { requireCastMember, requireCastVoiceRecord, type CastVoiceLookupInput } from './projection.js';
 import { withCastVoiceProjectSession } from './project-session.js';
@@ -14,11 +14,11 @@ export async function removeCastVoice(
     requireCastMember(session, input.castMemberId);
     const record = requireCastVoiceRecord(session, input);
     const target = { kind: 'castMember' as const, id: input.castMemberId };
-    const sample = readOwnedAsset(session, { owner: target, assetId: record.sampleAssetId });
+    const sample = readOwnedAssetFile(session, { owner: target, assetFileId: record.sampleAssetFileId });
     if (!sample) {
       throw new ProjectDataError(
         'PROJECT_DATA352',
-        `Cast Voice sample asset is missing: ${record.sampleAssetId}.`
+        `Cast Voice sample asset is missing: ${record.sampleAssetFileId}.`
       );
     }
     const report = discardTrashObject({
@@ -35,26 +35,26 @@ export async function removeCastVoice(
       removed: {
         castMemberId: input.castMemberId,
         voiceId: record.id,
-        sampleAssetId: record.sampleAssetId,
+        sampleAssetFileId: record.sampleAssetFileId,
       },
       changes: [{ type: 'castVoice.removed', castMemberId: input.castMemberId, voiceId: record.id }],
       recovery: report.recovery,
-      resourceKeys: studioAssetOwnerSurfaceResourceKeys(target),
+      resourceKeys: studioAssetFileOwnerSurfaceResourceKeys(target),
     };
   });
 }
 
-export function assertAssetIsNotCastVoiceSample(
-  session: Parameters<typeof readCastVoiceRecordBySampleAssetId>[0],
-  assetId: string
+export function assertAssetFileIsNotCastVoiceSample(
+  session: Parameters<typeof readCastVoiceRecordBySampleAssetFileId>[0],
+  assetFileId: string
 ): void {
-  const voice = readCastVoiceRecordBySampleAssetId(session, assetId);
+  const voice = readCastVoiceRecordBySampleAssetFileId(session, assetFileId);
   if (!voice) {
     return;
   }
   throw new ProjectDataError(
     'PROJECT_DATA353',
-    `Asset ${assetId} is linked to Cast Voice ${voice.id} and cannot be deleted directly.`,
+    `Asset ${assetFileId} is linked to Cast Voice ${voice.id} and cannot be deleted directly.`,
     { suggestion: 'Remove the Cast Voice first.' }
   );
 }

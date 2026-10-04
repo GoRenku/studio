@@ -18,12 +18,12 @@ export async function readSceneShotPlanVideoGenerations(
   return body.resource;
 }
 
-export async function deleteProjectVideoAsset(
+export async function deleteProjectVideoAssetFile(
   projectName: string,
-  assetId: string,
+  assetFileId: string,
 ): Promise<void> {
   const response = await studioApiFetch(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/project-assets/${encodeURIComponent(assetId)}`,
+    `/studio-api/projects/${encodeURIComponent(projectName)}/project-assets/${encodeURIComponent(assetFileId)}`,
     {
       method: 'DELETE',
       headers: {

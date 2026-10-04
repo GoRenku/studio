@@ -1,6 +1,6 @@
 import type { InspirationFolderListItem } from '@gorenku/studio-core/client';
 import { MediaCard } from '@/ui/media-card/media-card';
-import { inspirationImageUrl } from './visual-language-image-urls';
+import { projectAssetFileUrl } from '@/services/studio-project-assets-api';
 
 interface InspirationFolderCardProps {
   projectName: string;
@@ -16,7 +16,7 @@ export function InspirationFolderCard({
   onDelete,
 }: InspirationFolderCardProps) {
   const imageUrl = item.cardImage
-    ? inspirationImageUrl(projectName, item.folder.id, item.cardImage.fileName)
+    ? projectAssetFileUrl(projectName, item.cardImage.id)
     : null;
   const imageCountLabel =
     item.imageCount === 1 ? '1 image' : `${item.imageCount} images`;

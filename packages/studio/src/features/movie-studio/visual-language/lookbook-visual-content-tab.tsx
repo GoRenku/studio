@@ -6,10 +6,7 @@ import type {
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 import type { PreviewImage } from '@/ui/image-preview-dialog';
 import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
-import {
-  lookbookImageFileUrl,
-  lookbookSheetFileUrl,
-} from './visual-language-image-urls';
+import { projectAssetFileUrl } from '@/services/studio-project-assets-api';
 
 interface LookbookVisualContentTabProps {
   projectName: string;
@@ -45,7 +42,7 @@ export function LookbookVisualContentTab({
                   ? {
                       kind: 'image' as const,
                       src: imageUrl,
-                      alt: image.asset.title,
+                      alt: (image.assetFile.title ?? ''),
                       fit: 'cover' as const,
                       effect: 'zoom-on-hover' as const,
                     }
@@ -59,7 +56,7 @@ export function LookbookVisualContentTab({
                 activation: previewImagesForImage[0]
                   ? {
                       kind: 'image-preview' as const,
-                      label: image.asset.title,
+                      label: (image.assetFile.title ?? ''),
                       image: previewImagesForImage[0],
                     }
                   : undefined,
@@ -68,13 +65,11 @@ export function LookbookVisualContentTab({
                   label: 'View generation request',
                   visibility: 'always' as const,
                   onAction: () => {
-                    const file = image.asset.files.find(
-                      (candidate) => candidate.mediaKind === 'image'
-                    );
+                    const file = image.assetFile;
                     if (!file) return;
                     openGenerationRequestInspector({
                       projectName,
-                      assetId: image.asset.id,
+                      assetFileId: image.assetFile.id,
                     });
                   },
                 },
@@ -130,13 +125,11 @@ export function LookbookVisualContentTab({
                   label: 'View generation request',
                   visibility: 'always' as const,
                   onAction: () => {
-                    const file = sheet.asset.files.find(
-                      (candidate) => candidate.mediaKind === 'image'
-                    );
+                    const file = sheet.assetFile;
                     if (!file) return;
                     openGenerationRequestInspector({
                       projectName,
-                      assetId: sheet.asset.id,
+                      assetFileId: sheet.assetFile.id,
                     });
                   },
                 },
@@ -162,33 +155,23 @@ function lookbookImagePreviewImages(
   projectName: string,
   image: LookbookImage
 ): PreviewImage[] {
-  return image.asset.files
-    .filter((file) => file.mediaKind === 'image')
-    .map((file) => ({
-      src: lookbookImageFileUrl(projectName, image.asset.id, file.id),
-      alt: image.asset.title,
-      title: image.asset.title,
-    }));
+  const file = image.assetFile;
+  return file.mediaKind === 'image' ? [{ src: projectAssetFileUrl(projectName, file.id), alt: file.title ?? '', title: file.title ?? '' }] : [];
 }
 
 function lookbookSheetPreviewImages(
   projectName: string,
   sheet: LookbookSheet
 ): PreviewImage[] {
-  return sheet.asset.files
-    .filter((file) => file.mediaKind === 'image')
-    .map((file) => ({
-      src: lookbookSheetFileUrl(projectName, sheet.asset.id, file.id),
-      alt: sheet.asset.title,
-      title: sheet.asset.title,
-    }));
+  const file = sheet.assetFile;
+  return file.mediaKind === 'image' ? [{ src: projectAssetFileUrl(projectName, file.id), alt: file.title ?? '', title: file.title ?? '' }] : [];
 }
 
 function lookbookImageAspectRatio(
   image: LookbookImage,
   fallback: number
 ): number {
-  const file = image.asset.files.find((candidate) => candidate.mediaKind === 'image');
+  const file = image.assetFile;
   return file?.width && file.height ? file.width / file.height : fallback;
 }
 
@@ -196,6 +179,6 @@ function lookbookSheetAspectRatio(
   sheet: LookbookSheet,
   fallback: number
 ): number {
-  const file = sheet.asset.files.find((candidate) => candidate.mediaKind === 'image');
+  const file = sheet.assetFile;
   return file?.width && file.height ? file.width / file.height : fallback;
 }

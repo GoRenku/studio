@@ -128,26 +128,24 @@ function sceneBeatsResource() {
     },
     storyboardImagesByBeatId: {
       'beat-1': {
-        assetId: 'asset-beat-1',
         assetFileId: 'asset-file-beat-1',
         title: 'The campfire audience gathers',
-        fileRole: 'primary',
+
         mediaKind: 'image',
         mimeType: 'image/png',
         width: 695,
         height: 755,
-        url: '/studio-api/projects/big-fish/assets/asset-beat-1/files/asset-file-beat-1',
+        url: '/studio-api/projects/big-fish/asset-files/asset-file-beat-1',
       },
       'beat-2': {
-        assetId: 'asset-beat-2',
         assetFileId: 'asset-file-beat-2',
         title: 'Gold becomes the true bait',
-        fileRole: 'primary',
+
         mediaKind: 'image',
         mimeType: 'image/png',
         width: 800,
         height: 450,
-        url: '/studio-api/projects/big-fish/assets/asset-beat-2/files/asset-file-beat-2',
+        url: '/studio-api/projects/big-fish/asset-files/asset-file-beat-2',
       },
     },
     castMemberLabels: {},

@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from '../../../client/index.js';
+import type { AssetFile } from '../../../client/index.js';
 import type { RenkuConfigPathOptions } from '../../config/index.js';
 
 export interface ImportScreenplaySupportingMaterialInput
@@ -17,6 +17,6 @@ export interface ImportScreenplaySupportingMaterialReport {
     projectName: string;
     projectFolder: string;
   };
-  material: Asset;
+  material: AssetFile;
   resourceKeys: string[];
 }

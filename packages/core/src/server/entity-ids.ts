@@ -30,7 +30,7 @@ export type EntityIdPrefix =
   | 'sequence'
   | 'scene'
   | 'scene_dialogue'
-  | 'asset'
+  | 'assetFile'
   | 'asset_file'
   | 'scene_beats_revision'
   | 'beat'

@@ -65,6 +65,6 @@ export function toScreenplayBeatGalleryResourceResponse(
 function withImageUrl(projectName: string, image: ScreenplayImageReference): ScreenplayImageReferenceWithHttp {
   return {
     ...image,
-    url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(image.assetId)}/files/${encodeURIComponent(image.assetFileId)}`,
+    url: `/studio-api/projects/${encodeURIComponent(projectName)}/asset-files/${encodeURIComponent(image.assetFileId)}`,
   };
 }

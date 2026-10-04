@@ -42,7 +42,7 @@ it('collects independent errors and localizes malformed optional audio', () => {
   try { validatePrevisPlayback({ ...timeline(), frameCount: 0, segments: [] }); }
   catch (error) { expect(error).toMatchObject({ issues: expect.arrayContaining([expect.objectContaining({ location: { path: ['playback', 'frameCount'] } }), expect.objectContaining({ location: { path: ['playback', 'segments'] } })]) }); }
   const input = timeline();
-  const result = validatePrevisPlayback({ ...input, cues: [{ ...input.cues[0], audio: { assetId: 'a', assetFileId: 'f', offsetSeconds: -1 } }] });
+  const result = validatePrevisPlayback({ ...input, cues: [{ ...input.cues[0], audio: { assetFileId: 'f', offsetSeconds: -1 } }] });
   expect(result.playback.cues[0]).not.toHaveProperty('audio');
   expect(result.warnings).toMatchObject([{ code: 'CORE_PREVIS_AUDIO_UNAVAILABLE', location: { path: ['playback', 'cues', '0', 'audio'] } }]);
 });

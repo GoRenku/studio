@@ -21,26 +21,26 @@ export function SupportingFileCards({ projectName, files, onInspect, onDelete, u
           const media = supportingFileMedia(projectName, file);
           return (
             <MediaCard
-              key={file.asset.id}
+              key={file.assetFile.id}
               media={media}
               frame={{ kind: 'ratio', aspectRatio: 13 / 8 }}
-              presentation={{ kind: 'overlay', copy: { title: file.asset.title, titleTreatment: 'filename' } }}
+              presentation={{ kind: 'overlay', copy: { title: (file.assetFile.title ?? ''), titleTreatment: 'filename' } }}
               activation={media.kind === 'image' ? {
-                kind: 'image-preview', label: `Open ${file.asset.title}`,
-                image: { src: media.src, alt: file.asset.title, title: file.asset.title },
+                kind: 'image-preview', label: `Open ${(file.assetFile.title ?? '')}`,
+                image: { src: media.src, alt: (file.assetFile.title ?? ''), title: (file.assetFile.title ?? '') },
               } : {
-                kind: 'callback', label: `Open ${file.asset.title}`,
+                kind: 'callback', label: `Open ${(file.assetFile.title ?? '')}`,
                 onActivate: () => {
                   if (media.kind === 'video') {
-                    setVideo({ src: media.src, title: file.asset.title });
+                    setVideo({ src: media.src, title: (file.assetFile.title ?? '') });
                   } else {
-                    openSupportingFileTab(projectName, file.asset.id);
+                    openSupportingFileTab(projectName, file.assetFile.id);
                   }
                 },
               }}
-              cornerAction={{ kind: 'info', label: `File information: ${file.asset.title}`, visibility: 'always', onAction: () => onInspect(file) }}
+              cornerAction={{ kind: 'info', label: `File information: ${(file.assetFile.title ?? '')}`, visibility: 'always', onAction: () => onInspect(file) }}
               deleteAction={file.deleteBlock ? undefined : {
-                label: `Move ${file.asset.title} to Trash`,
+                label: `Move ${(file.assetFile.title ?? '')} to Trash`,
                 confirmationTitle: 'Move supporting file to Trash?',
                 confirmationMessage: 'This file can be restored from Trash. Its external original and screenplay content will remain unchanged.',
                 deleteLabel: 'Move to Trash',
@@ -57,15 +57,15 @@ export function SupportingFileCards({ projectName, files, onInspect, onDelete, u
 }
 
 function supportingFileMedia(projectName: string, file: ProjectSupportingFile): MediaCardMedia {
-  const source = file.asset.files.find((candidate) => candidate.id === file.sourceAssetFileId)!;
+  const source = file.assetFile!;
   const filename = source.projectRelativePath;
   const extension = filename.includes('.') ? filename.split('.').at(-1)!.toUpperCase() : '';
-  const src = `/studio-api/projects/${encodeURIComponent(projectName)}/supporting-files/${encodeURIComponent(file.asset.id)}/content`;
+  const src = `/studio-api/projects/${encodeURIComponent(projectName)}/supporting-files/${encodeURIComponent(file.assetFile.id)}/content`;
   if (['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(extension)) {
-    return { kind: 'image', src, alt: file.asset.title, fit: 'cover', loading: 'lazy', effect: 'zoom-on-hover' };
+    return { kind: 'image', src, alt: (file.assetFile.title ?? ''), fit: 'cover', loading: 'lazy', effect: 'zoom-on-hover' };
   }
   if (['MP4', 'WEBM'].includes(extension)) {
-    return { kind: 'video', src, title: file.asset.title, playback: 'hover-muted' };
+    return { kind: 'video', src, title: (file.assetFile.title ?? ''), playback: 'hover-muted' };
   }
   return { kind: 'document', extension };
 }

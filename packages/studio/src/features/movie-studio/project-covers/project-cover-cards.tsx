@@ -1,23 +1,23 @@
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 
 export function ProjectCoverCards({
-  assets,
-  selectedAssetId,
+  assetFiles,
+  selectedAssetFileId,
   onToggleSelected,
   onDelete,
 }: {
-  assets: StudioAssetResponse[];
-  selectedAssetId: string | null;
-  onToggleSelected: (asset: StudioAssetResponse) => Promise<void>;
-  onDelete: (asset: StudioAssetResponse) => Promise<void>;
+  assetFiles: StudioAssetFileResponse[];
+  selectedAssetFileId: string | null;
+  onToggleSelected: (assetFile: StudioAssetFileResponse) => Promise<void>;
+  onDelete: (assetFile: StudioAssetFileResponse) => Promise<void>;
 }) {
-  const items = assets.map((asset) => {
-    const file = projectCoverPrimaryImage(asset);
-    const selected = asset.id === selectedAssetId;
-    const label = asset.oneLineSummary?.trim() || asset.title.trim() || 'Project cover';
+  const items = assetFiles.map((assetFile) => {
+    const file = projectCoverPrimaryImage(assetFile);
+    const selected = assetFile.id === selectedAssetFileId;
+    const label = assetFile.oneLineSummary?.trim() || (assetFile.title ?? '').trim() || 'Project cover';
     return {
-      id: asset.id,
+      id: assetFile.id,
       card: {
         media: file
           ? {
@@ -32,8 +32,8 @@ export function ProjectCoverCards({
         frame: { kind: 'ratio' as const, aspectRatio: 16 / 9 },
         presentation: {
           kind: 'overlay' as const,
-          copy: asset.oneLineSummary
-            ? { description: asset.oneLineSummary }
+          copy: assetFile.oneLineSummary
+            ? { description: assetFile.oneLineSummary }
             : undefined,
         },
         activation: file
@@ -48,7 +48,7 @@ export function ProjectCoverCards({
           selected,
           selectedLabel: 'Clear active Project cover',
           unselectedLabel: 'Use as active Project cover',
-          onToggle: () => onToggleSelected(asset),
+          onToggle: () => onToggleSelected(assetFile),
         },
         deleteAction: {
           label: 'Move Project cover to Trash',
@@ -56,7 +56,7 @@ export function ProjectCoverCards({
           confirmationMessage:
             'Move this Project cover to Trash. It can be restored later.',
           deleteLabel: 'Move to Trash',
-          onDelete: () => onDelete(asset),
+          onDelete: () => onDelete(assetFile),
         },
         emptyState: { kind: 'image' as const },
       },
@@ -74,8 +74,6 @@ export function ProjectCoverCards({
   );
 }
 
-function projectCoverPrimaryImage(asset: StudioAssetResponse) {
-  return asset.files.find(
-    (file) => file.role === 'primary' && file.mediaKind === 'image'
-  ) ?? null;
+function projectCoverPrimaryImage(assetFile: StudioAssetFileResponse) {
+  return assetFile ?? null;
 }

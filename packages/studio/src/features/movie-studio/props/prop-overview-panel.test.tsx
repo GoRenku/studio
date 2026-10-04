@@ -23,15 +23,14 @@ describe('PropOverviewPanel', () => {
             handle: 'field-cannon',
             name: 'Field Cannon',
             firstImage: {
-              assetId: 'asset_cannon_hero',
               assetFileId: 'asset_file_cannon_hero',
               title: 'Cannon hero',
-              fileRole: 'primary',
+
               mediaKind: 'image',
               mimeType: 'image/png',
               width: 1200,
               height: 900,
-              url: '/studio-api/projects/constantinople/assets/asset_cannon_hero/files/asset_file_cannon_hero',
+              url: '/studio-api/projects/constantinople/asset-files/asset_file_cannon_hero',
             },
           },
         ],

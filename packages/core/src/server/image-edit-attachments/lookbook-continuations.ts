@@ -1,8 +1,8 @@
-import type { Asset } from '../../client/assets.js';
-import { readLookbookImageRecordByAsset } from '../database/access/lookbook-images.js';
-import { readLookbookSheetRecordByAsset } from '../database/access/lookbook-sheets.js';
+import type { AssetFile } from '../../client/asset-files.js';
+import { readLookbookImageRecordByAssetFile } from '../database/access/lookbook-images.js';
+import { readLookbookSheetRecordByAssetFile } from '../database/access/lookbook-sheets.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { studioAssetFileOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 import type {
   ImageEditContinuation,
   ImageEditContinuationInput,
@@ -19,18 +19,18 @@ export function resolveLookbookImageEditContinuation(
     throw ownerInvalid(source);
   }
   const record = source.type === 'lookbook_image'
-    ? readLookbookImageRecordByAsset(session, {
-        lookbookId: source.owner.id, assetId: source.id,
+    ? readLookbookImageRecordByAssetFile(session, {
+        lookbookId: source.owner.id, assetFileId: source.id,
       })
-    : readLookbookSheetRecordByAsset(session, {
-        lookbookId: source.owner.id, assetId: source.id,
+    : readLookbookSheetRecordByAssetFile(session, {
+        lookbookId: source.owner.id, assetFileId: source.id,
       });
   if (!record) {
     throw ownerInvalid(source);
   }
   return {
     owner: source.owner,
-    assetType: source.type,
+    assetFileType: source.type,
     destination: source.type === 'lookbook_image'
       ? {
           kind: 'visualLanguage.lookbookImage',
@@ -42,16 +42,15 @@ export function resolveLookbookImageEditContinuation(
           lookbookId: source.owner.id,
           semanticName: semanticName(source),
         },
-    fileRole: 'primary',
-    resourceKeys: studioAssetOwnerSurfaceResourceKeys(source.owner),
+    resourceKeys: studioAssetFileOwnerSurfaceResourceKeys(source.owner),
   };
 }
 
-function semanticName(source: Asset): string {
-  return source.referenceName?.trim() || source.title;
+function semanticName(source: AssetFile): string {
+  return source.referenceName?.trim() || source.title || source.id;
 }
 
-function ownerInvalid(source: Asset): ProjectDataError {
+function ownerInvalid(source: AssetFile): ProjectDataError {
   return new ProjectDataError(
     'CORE_IMAGE_EDIT_OWNER_INVALID',
     `Asset ${source.id} has ownership that is invalid for ${source.type}.`,

@@ -89,6 +89,16 @@ export function listAllInspirationFolderRecords(
     .all();
 }
 
+export function listInspirationFolderRecordsIncludingDiscarded(
+  session: DatabaseSession
+): InspirationFolderRecord[] {
+  return session.db
+    .select()
+    .from(inspirationFolders)
+    .orderBy(asc(inspirationFolders.position), asc(inspirationFolders.id))
+    .all();
+}
+
 export function nextInspirationFolderPosition(session: DatabaseSession): number {
   const row = session.db
     .select({ maxPosition: sql<number | null>`max(${inspirationFolders.position})` })

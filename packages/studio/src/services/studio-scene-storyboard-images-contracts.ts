@@ -1,20 +1,20 @@
 import type {
-  AssetSelectionReport,
+  AssetFileSelectionReport,
   RecoverableMutationReport,
   SceneStoryboardStatus,
 } from '@gorenku/studio-core/client';
-import type { StudioShotAsset } from './studio-shot-plans-contracts';
+import type { StudioShotAssetFile } from './studio-shot-plans-contracts';
 
 export interface StudioSceneStoryboardStatus
   extends Omit<SceneStoryboardStatus, 'beats'> {
   beats: Array<Omit<SceneStoryboardStatus['beats'][number], 'images'> & {
-    images: StudioShotAsset[];
+    images: StudioShotAssetFile[];
   }>;
 }
 
 export type StudioSceneStoryboardSelectionMutationResponse = Pick<
-  AssetSelectionReport,
-  'valid' | 'warnings' | 'selectedAssetId' | 'resourceKeys'
+  AssetFileSelectionReport,
+  'valid' | 'warnings' | 'selectedAssetFileId' | 'resourceKeys'
 >;
 
 export type StudioSceneStoryboardRecoverableMutationResponse = Pick<

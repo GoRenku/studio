@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { CastMember } from './cast-members.js';
 import type { Location } from './locations.js';
 import type { Prop } from './props.js';
@@ -370,8 +370,8 @@ export interface CastDesignContextReport extends DepartmentCommandReport {
     blocks: ScreenplayBlock[];
   }>;
   activeLookbook: DepartmentLookbookContext | null;
-  assets: Asset[];
-  assetTypeCounts: Array<{ type: string; count: number }>;
+  assetFiles: AssetFile[];
+  assetFileTypeCounts: Array<{ type: string; count: number }>;
   generationReadiness: {
     characterSheet: boolean;
     profile: boolean;
@@ -391,8 +391,8 @@ export interface ProductionDesignLocationContextReport extends DepartmentCommand
     excerpts: string[];
   }>;
   activeLookbook: DepartmentLookbookContext | null;
-  assets: Asset[];
-  assetTypeCounts: Array<{ type: string; count: number }>;
+  assetFiles: AssetFile[];
+  assetFileTypeCounts: Array<{ type: string; count: number }>;
   generationReadiness: {
     locationSheet: boolean;
     notes: string[];
@@ -404,8 +404,8 @@ export interface ProductionDesignPropContextReport extends DepartmentCommandRepo
   activeDesign: PropDesignDocument | null;
   activeDesignSummary: PropDesignSummary | null;
   activeLookbook: DepartmentLookbookContext | null;
-  assets: Asset[];
-  assetTypeCounts: Array<{ type: string; count: number }>;
+  assetFiles: AssetFile[];
+  assetFileTypeCounts: Array<{ type: string; count: number }>;
   generationReadiness: {
     propSheet: boolean;
     propHero: boolean;

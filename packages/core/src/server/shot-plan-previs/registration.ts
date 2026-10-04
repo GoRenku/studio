@@ -5,8 +5,6 @@ import { validatePrevisPlayback } from './timeline.js';
 import type { ProjectRelativePath } from '../../client/index.js';
 import { and, eq, max } from 'drizzle-orm';
 import type { ReadShotPlanPrevisInput, RegisterShotPlanPrevisInput, ShotPlanPrevisReport } from '../../client/shot-plan-previs.js';
-import { createAssetMembership } from '../assets/ownership.js';
-import { insertAssetRecord } from '../database/access/assets.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
 import { joinProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import { createProjectAssetFileWriteSet, persistProjectAssetFileSync, rollbackProjectAssetFileWriteSetSync } from '../project-asset-files/index.js';
@@ -35,7 +33,7 @@ export async function registerShotPlanPrevis(input: RegisterShotPlanPrevisInput)
       throw new ProjectDataError('CORE_PREVIS_RENDER_INVALID', 'A completed Previs render must be an MP4 file.');
     }
     const render = await validateProjectReferenceFileInput({
-      projectFolder, projectRelativePath: input.renderPath, mediaKind: 'video', role: 'primary',
+      projectFolder, projectRelativePath: input.renderPath, mediaKind: 'video',
     });
     assertResolvedPathInsideProject(fs.realpathSync(projectFolder), fs.realpathSync(render.absolutePath));
     const source = inspectPrevisSource(projectFolder, input.sourceDirectory);
@@ -78,23 +76,24 @@ export async function registerShotPlanPrevis(input: RegisterShotPlanPrevisInput)
         sourceDestination = destination;
         const now = new Date().toISOString();
         const ids = createRandomIdGenerator();
-        const assetId = ids.next('asset');
-        insertAssetRecord(current, {
-          id: assetId, type: 'shot_plan_previs', mediaKind: 'video', title: input.title?.trim() || `Previs revision ${number}`,
-          origin: 'rendered', availability: 'ready', authoredFromShotPlanId: input.shotPlanId, createdAt: now, updatedAt: now,
-        });
-        createAssetMembership(current, { assetId, owner: { kind: 'project' }, now });
         const file = persistProjectAssetFileSync({
-          session: current, projectFolder, writeSet, assetId, assetFileId: ids.next('asset_file'),
+          owner: { kind: 'project' },
+          assetFileMetadata: {
+            type: 'shot_plan_previs',
+            title: input.title?.trim() || `Previs revision ${number}`,
+            origin: 'rendered',
+            authoredFromShotPlanId: input.shotPlanId
+          },
+          session: current, projectFolder, writeSet, assetFileId: ids.next('asset_file'),
           sourceProjectRelativePath: input.renderPath, destination: { kind: 'shotPlan.previs', shotPlanId: input.shotPlanId },
-          namingMode: { kind: 'generated' }, fileRole: 'primary', mediaKind: 'video', now,
+          namingMode: { kind: 'generated' }, mediaKind: 'video', now,
         });
         if (file.contentHash !== renderHash) {
           throw new ProjectDataError('CORE_PREVIS_SOURCE_CHANGED', 'Render changed during registration.');
         }
         tx.insert(shotPlanPrevisRevisions).values({
           id: ids.next('previs_revision'), shotPlanId: input.shotPlanId, number,
-          sourceDirectory: destination, sourceHash: source.hash, renderHash, assetId, createdAt: now,
+          sourceDirectory: destination, sourceHash: source.hash, renderHash, assetFileId: file.id, createdAt: now,
         }).run();
       });
       writeSet.markCommitted();
@@ -118,17 +117,17 @@ async function validatePrevisRetryRender(
   report: ShotPlanPrevisReport
 ): Promise<void> {
   const render = report.revisions.find((entry) => entry.id === revision.id)?.render;
-  const file = render?.files.find((entry) => entry.role === 'primary' && entry.mediaKind === 'video');
+  const file = (render?.mediaKind === 'video' ? render : null);
   if (!file) {
     throw new ProjectDataError(
       'CORE_PREVIS_REVISION_RENDER_UNAVAILABLE',
-      `Previs revision ${revision.number} already matches this request, but its render Asset ${revision.assetId} has no active, available primary video.`,
+      `Previs revision ${revision.number} already matches this request, but its render Asset ${revision.assetFileId} has no active, available primary video.`,
       { suggestion: 'Restore the render Asset from Trash before retrying. If it cannot be restored, register the render in a new Previs plan.' }
     );
   }
   try {
     const retained = await validateProjectReferenceFileInput({
-      projectFolder, projectRelativePath: file.projectRelativePath, mediaKind: 'video', role: 'primary',
+      projectFolder, projectRelativePath: file.projectRelativePath, mediaKind: 'video',
     });
     assertResolvedPathInsideProject(fs.realpathSync(projectFolder), fs.realpathSync(retained.absolutePath));
     fs.accessSync(retained.absolutePath, fs.constants.R_OK);

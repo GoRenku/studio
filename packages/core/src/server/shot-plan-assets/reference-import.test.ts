@@ -40,11 +40,11 @@ describe('prepared Shot Plan references', () => {
       await fs.writeFile(path.join(f.root, sourceProjectRelativePath), 'exact opaque reference');
       const input = { ...f.input, sourceProjectRelativePath, mediaKind, title: 'Continuation reference', summary: 'Exact source frame or interval.' };
       const report = await f.service.importShotPlanReference(input);
-      const file = report.asset.files[0]!;
-      expect(report.asset).toMatchObject({ owner: { kind: 'project' }, type: 'shot_plan_video_reference', mediaKind,
+      const file = report.assetFile!;
+      expect(report.assetFile).toMatchObject({ owner: { kind: 'project' }, type: 'shot_plan_video_reference', mediaKind,
         generationProvenance: null, origin: 'external', oneLineSummary: input.summary,
         authoredFrom: { kind: 'shotPlan', id: input.shotPlanId, previsRevisionId: input.previsRevisionId } });
-      expect(file).toMatchObject({ role: 'primary', mimeType });
+      expect(file).toMatchObject({ mimeType });
       expect(file.projectRelativePath).toMatch(/^scenes\/[^/]+\/\d+-shot-plan\//);
       expect(await fs.readFile(path.join(f.root, sourceProjectRelativePath), 'utf8')).toBe('exact opaque reference');
       const served = await readMediaGenerationReferenceProjectFile({ ...f.input, projectRelativePath: file.projectRelativePath });
@@ -57,12 +57,12 @@ describe('prepared Shot Plan references', () => {
       expect(preview.references[0]).toMatchObject({ available: true, kind: mediaKind });
       expect(preview.diagnostics).toEqual([]);
       const second = await f.service.importShotPlanReference(input);
-      expect(second.asset.files[0]!.projectRelativePath).not.toBe(file.projectRelativePath);
-      expect((await f.service.readShotPlanAssets(f.input)).groups[0]?.assets).toHaveLength(2);
-      expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.clips.unassignedAssets).toEqual([]);
-      await f.service.discardShotPlanAsset({ ...f.input, assetId: report.asset.id });
+      expect(second.assetFile!.projectRelativePath).not.toBe(file.projectRelativePath);
+      expect((await f.service.readShotPlanAssetFiles(f.input)).groups[0]?.assetFiles).toHaveLength(2);
+      expect((await f.service.readShotPlanPrevis(f.input)).revisions[0]?.clips.unassignedAssetFiles).toEqual([]);
+      await f.service.discardShotPlanAssetFile({ ...f.input, assetFileId: report.assetFile.id });
       expect((await f.service.readMediaGenerationPreview({ ...f.input, documentPath })).references[0]?.available).toBe(false);
-      const restored = await f.service.restoreAsset({ ...f.input, assetId: report.asset.id });
+      const restored = await f.service.restoreAssetFile({ ...f.input, assetFileId: report.assetFile.id });
       expect(restored.resourceKeys).toContain(`surface:shotPlan:${f.input.shotPlanId}:assets`);
       expect((await f.service.readMediaGenerationPreview({ ...f.input, documentPath })).references[0]?.available).toBe(true);
     },
@@ -85,7 +85,7 @@ describe('prepared Shot Plan references', () => {
     await fs.writeFile(outside, 'outside');
     await fs.symlink(outside, path.join(f.root, 'tmp/escape.png'));
     await expect(f.service.importShotPlanReference({ ...input, sourceProjectRelativePath: 'tmp/escape.png' })).rejects.toHaveProperty('code');
-    expect((await f.service.readShotPlanAssets(f.input)).groups).toEqual([]);
+    expect((await f.service.readShotPlanAssetFiles(f.input)).groups).toEqual([]);
   });
 
   it('rolls back a failed copy without deleting the prepared source', async () => {
@@ -93,7 +93,7 @@ describe('prepared Shot Plan references', () => {
     await fs.writeFile(path.join(f.root, 'tmp/frame.png'), 'frame');
     vi.spyOn(fsSync, 'copyFileSync').mockImplementation(() => { throw new Error('disk write failed'); });
     await expect(f.service.importShotPlanReference({ ...f.input, sourceProjectRelativePath: 'tmp/frame.png', mediaKind: 'image', title: 'Frame' })).rejects.toHaveProperty('code');
-    expect((await f.service.readShotPlanAssets(f.input)).groups).toEqual([]);
+    expect((await f.service.readShotPlanAssetFiles(f.input)).groups).toEqual([]);
     expect(await fs.readFile(path.join(f.root, 'tmp/frame.png'), 'utf8')).toBe('frame');
   });
 
@@ -104,8 +104,8 @@ describe('prepared Shot Plan references', () => {
     await expect(f.service.attachGenerationMedia(input)).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED' });
     const generationProvenance = { provider: 'fixture', model: 'image', mediaKind: 'image' as const, prompt: null, request: {} };
     const generated = await f.service.attachGenerationMedia({ ...input, generationProvenance });
-    const edit = await f.service.attachGenerationMedia({ ...f.input, previsRevisionId: undefined, purpose: 'image.edit', target: { kind: 'asset', id: generated.asset.id }, sourceProjectRelativePath: 'tmp/frame.png',
-      generationProvenance: { ...generationProvenance, request: { input: { $file: generated.asset.files[0]!.projectRelativePath, reviewLabel: 'Exact source' } } } });
-    expect(edit.asset.authoredFrom).toEqual(generated.asset.authoredFrom);
+    const edit = await f.service.attachGenerationMedia({ ...f.input, previsRevisionId: undefined, purpose: 'image.edit', target: { kind: 'assetFile', assetFileId: generated.assetFile.id }, sourceProjectRelativePath: 'tmp/frame.png',
+      generationProvenance: { ...generationProvenance, request: { input: { $file: generated.assetFile!.projectRelativePath, reviewLabel: 'Exact source' } } } });
+    expect(edit.assetFile.authoredFrom).toEqual(generated.assetFile.authoredFrom);
   });
 });

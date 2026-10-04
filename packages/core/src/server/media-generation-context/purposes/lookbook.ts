@@ -24,8 +24,8 @@ export const buildLookbookPurposeContext: MediaGenerationPurposeBuilder = (input
     throw new ProjectDataError('CORE_GENERATION_TARGET_INVALID', `${input.purpose} requires the ${requiredKind} Lookbook.`);
   }
   const resource = readLookbookResourceFromSession(input.session, input.projectFolder, project, row);
-  const images = resource.images.map((image) => projectGenerationLookbookImage(image, input.assets));
-  const sheets = resource.sheets.map((sheet) => projectGenerationLookbookSheet(sheet, input.assets));
+  const images = resource.images.map((image) => projectGenerationLookbookImage(image, input.assetFiles));
+  const sheets = resource.sheets.map((sheet) => projectGenerationLookbookSheet(sheet, input.assetFiles));
   const visualLanguage = [{
     kind: row.kind,
     lookbook: resource.lookbook,
@@ -44,18 +44,18 @@ export const buildLookbookPurposeContext: MediaGenerationPurposeBuilder = (input
       createReferenceSuggestion({
         id: 'lookbook-images',
         role: 'appearance',
-        assets: resource.images.map((image) => image.asset),
-        selectedAssetIds: resource.selectedImageId ? [resource.selectedImageId] : [],
+        assetFiles: resource.images.map((image) => image.assetFile),
+        selectedAssetFileIds: resource.selectedImageId ? [resource.selectedImageId] : [],
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       createReferenceSuggestion({
         id: 'lookbook-sheets',
         role: 'continuity',
-        assets: resource.sheets.map((sheet) => sheet.asset),
+        assetFiles: resource.sheets.map((sheet) => sheet.assetFile),
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
     ],

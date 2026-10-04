@@ -8,17 +8,17 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
 
 export function createGenerationRequestsRoute(options: {
-  projectData?: Pick<ProjectDataService, 'readAssetMediaGenerationRequest'>;
+  projectData?: Pick<ProjectDataService, 'readAssetFileMediaGenerationRequest'>;
   requireToken: MiddlewareHandler;
 }) {
   const projectData = options.projectData ?? createProjectDataService();
   return new Hono()
-    .get('/assets/:assetId/generation-request', options.requireToken, async (c) => {
+    .get('/asset-files/:assetFileId/generation-request', options.requireToken, async (c) => {
       try {
         return c.json({
-          preview: await projectData.readAssetMediaGenerationRequest({
+          preview: await projectData.readAssetFileMediaGenerationRequest({
             projectName: c.req.param('projectName') as string,
-            assetId: c.req.param('assetId') as string,
+            assetFileId: c.req.param('assetFileId') as string,
           }),
         });
       } catch (error) {

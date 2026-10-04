@@ -1,7 +1,6 @@
 import type {
-  Asset,
   AssetFile,
-  AssetSelectionReport,
+  AssetFileSelectionReport,
   RecoverableMutationReport,
   Shot,
   ShotPlan,
@@ -14,12 +13,10 @@ export interface StudioShotAssetFile
   url: string;
 }
 
-export interface StudioShotAsset extends Omit<Asset, 'files'> {
-  files: StudioShotAssetFile[];
-}
+
 
 export interface StudioShot extends Omit<Shot, 'images'> {
-  images: StudioShotAsset[];
+  images: StudioShotAssetFile[];
 }
 
 export interface StudioShotPlan
@@ -31,7 +28,6 @@ export interface StudioShotPlanCoveredBeat
   extends Omit<ShotPlanCoveredBeat, 'storyboardImage'> {
   storyboardImage:
     | {
-        assetId: string;
         assetFileId: string;
         url: string;
       }
@@ -39,7 +35,7 @@ export interface StudioShotPlanCoveredBeat
 }
 
 export interface StudioShotPlanListItem {
-  previsRender: StudioShotAsset | null;
+  previsRender: StudioShotAssetFile | null;
   shotPlan: StudioShotPlan;
   coveredBeats: StudioShotPlanCoveredBeat[];
 }
@@ -51,28 +47,28 @@ export interface StudioShotPlansResponse {
 }
 
 export interface StudioShotImageCandidatePage {
-  items: StudioShotAsset[];
+  items: StudioShotAssetFile[];
   nextCursor: string | null;
-  selectedAssetId: string | null;
+  selectedAssetFileId: string | null;
 }
 
 export interface StudioShotImageCandidateCollection {
-  items: StudioShotAsset[];
-  selectedAssetId: string | null;
+  items: StudioShotAssetFile[];
+  selectedAssetFileId: string | null;
 }
 
-export interface StudioShotPlanAssets {
+export interface StudioShotPlanAssetFiles {
   shotPlan: { id: string; sceneId: string; title: string };
   groups: Array<{
     role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference';
-    assets: StudioShotAsset[];
+    assetFiles: StudioShotAssetFile[];
   }>;
   resourceKeys: string[];
 }
 
 export type StudioShotSelectionMutationResponse = Pick<
-  AssetSelectionReport,
-  'valid' | 'warnings' | 'selectedAssetId' | 'resourceKeys'
+  AssetFileSelectionReport,
+  'valid' | 'warnings' | 'selectedAssetFileId' | 'resourceKeys'
 >;
 
 export type StudioRecoverableMutationResponse = Pick<

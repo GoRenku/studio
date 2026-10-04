@@ -147,7 +147,6 @@ describe('visual language commands', () => {
     ).resolves.toMatchObject({
       images: [
         {
-          fileName: 'frame-001.png',
           projectRelativePath:
             'visual-language/inspiration/roger-deakins/frame-001.png',
         },
@@ -241,7 +240,7 @@ describe('visual language commands', () => {
       projectName: 'constantinople',
       homeDir,
       folderId: folder.id,
-      fileName: 'frame-001.png',
+      assetFileId: (await projectData.readInspirationFolder({ projectName: 'constantinople', homeDir, folderId: folder.id })).images[0]!.id,
     });
     expect(deleted.recovery?.trashItemIds).toHaveLength(1);
     await expect(
@@ -269,12 +268,13 @@ describe('visual language commands', () => {
       path.join(created.projectPath, folder.projectRelativePath, 'frame-001.png'),
       path.join(created.projectPath, folder.projectRelativePath, 'frame-002.png')
     );
+    await projectData.importReferenceFiles({ projectName: 'constantinople', homeDir, destination: { kind: 'inspiration', folderId: folder.id }, files: [{ sourceProjectRelativePath: `${folder.projectRelativePath}/frame-002.png` }] });
     const withActiveImage = await projectData.readInspirationResource({
       projectName: 'constantinople',
       homeDir,
     });
     expect(withActiveImage.folders.items.find((item) => item.folder.id === folder.id))
-      .toMatchObject({ imageCount: 1, cardImage: { fileName: 'frame-002.png' } });
+      .toMatchObject({ imageCount: 1, cardImage: { projectRelativePath: `${folder.projectRelativePath}/frame-002.png` } });
   });
 
   it('rejects invalid Lookbook JSON on write and malformed stored JSON on read', async () => {

@@ -11,7 +11,7 @@ export async function importGenerationMedia(input: MediaImportCommandInput & {
   turnRange?: DialogueTurnRange;
 }) {
   const { flags, runtime, purpose } = input;
-  const assetMetadata = assetMetadataFromFlags(flags);
+  const assetFileMetadata = assetFileMetadataFromFlags(flags);
   const report = await runtime.projectDataService.attachGenerationMedia({
     projectName: runtime.projectName,
     homeDir: runtime.homeDir,
@@ -22,7 +22,7 @@ export async function importGenerationMedia(input: MediaImportCommandInput & {
     }),
     sourceProjectRelativePath: requiredFlag(flags.source, '--source'),
     title: flags.title,
-    ...(assetMetadata ? { assetMetadata } : {}),
+    ...(assetFileMetadata ? { assetFileMetadata } : {}),
     select: flags.select,
     clipId: flags.clip,
     takeTitle: flags.takeTitle,
@@ -41,7 +41,7 @@ export async function importGenerationMedia(input: MediaImportCommandInput & {
   return report;
 }
 
-function assetMetadataFromFlags(flags: MediaImportCommandInput['flags']) {
+function assetFileMetadataFromFlags(flags: MediaImportCommandInput['flags']) {
   if (
     flags.summary === undefined
     && flags.referenceName === undefined

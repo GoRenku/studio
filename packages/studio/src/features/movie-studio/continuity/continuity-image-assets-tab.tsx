@@ -1,31 +1,31 @@
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
 import {
   continuityImageAspectRatio,
-  continuityImageAssets,
+  continuityImageAssetFiles,
   continuityImageUrl,
   continuityPreviewImage,
 } from './continuity-image-assets';
 
-interface ContinuityImageAssetsTabProps {
+interface ContinuityImageAssetFilesTabProps {
   projectName: string;
-  assets: StudioAssetResponse[];
-  selectedCanonicalAssetId: string | null;
+  assetFiles: StudioAssetFileResponse[];
+  selectedCanonicalAssetFileId: string | null;
   canonicalType: string;
   sheetTypes: readonly string[];
   canonicalTitle: string;
   canonicalPluralTitle: string;
   sheetTitle: string;
   sheetPluralTitle: string;
-  onToggleCanonical: (asset: StudioAssetResponse) => Promise<void>;
-  onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
+  onToggleCanonical: (assetFile: StudioAssetFileResponse) => Promise<void>;
+  onDeleteAssetFile: (assetFile: StudioAssetFileResponse) => Promise<void>;
 }
 
-export function ContinuityImageAssetsTab({
+export function ContinuityImageAssetFilesTab({
   projectName,
-  assets,
-  selectedCanonicalAssetId,
+  assetFiles,
+  selectedCanonicalAssetFileId,
   canonicalType,
   sheetTypes,
   canonicalTitle,
@@ -33,28 +33,28 @@ export function ContinuityImageAssetsTab({
   sheetTitle,
   sheetPluralTitle,
   onToggleCanonical,
-  onDeleteAsset,
-}: ContinuityImageAssetsTabProps) {
+  onDeleteAssetFile,
+}: ContinuityImageAssetFilesTabProps) {
   const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
-  const canonicalAssets = continuityImageAssets(assets, [canonicalType]);
-  const sheetAssets = continuityImageAssets(assets, sheetTypes);
+  const canonicalAssetFiles = continuityImageAssetFiles(assetFiles, [canonicalType]);
+  const sheetAssetFiles = continuityImageAssetFiles(assetFiles, sheetTypes);
   const cards = (
-    entries: StudioAssetResponse[],
+    entries: StudioAssetFileResponse[],
     kind: 'canonical' | 'sheet'
   ) =>
-    entries.map((asset) => {
+    entries.map((assetFile) => {
       const selected =
-        kind === 'canonical' && asset.id === selectedCanonicalAssetId;
+        kind === 'canonical' && assetFile.id === selectedCanonicalAssetFileId;
       const fallbackTitle = kind === 'canonical' ? canonicalTitle : sheetTitle;
-      const imageUrl = continuityImageUrl(projectName, asset);
+      const imageUrl = continuityImageUrl(projectName, assetFile);
       const previewImage = continuityPreviewImage(
         projectName,
-        asset,
+        assetFile,
         fallbackTitle
       );
-      const activationLabel = asset.oneLineSummary ?? fallbackTitle;
+      const activationLabel = assetFile.oneLineSummary ?? fallbackTitle;
       return {
-        id: asset.id,
+        id: assetFile.id,
         card: {
           media: imageUrl
             ? {
@@ -68,15 +68,15 @@ export function ContinuityImageAssetsTab({
           frame: {
             kind: 'ratio' as const,
             aspectRatio: continuityImageAspectRatio(
-              asset,
+              assetFile,
               kind === 'canonical' ? 16 / 9 : 4 / 3
             ),
             detectFromImage: true,
           },
           presentation: {
             kind: 'overlay' as const,
-            copy: asset.oneLineSummary
-              ? { description: asset.oneLineSummary }
+            copy: assetFile.oneLineSummary
+              ? { description: assetFile.oneLineSummary }
               : undefined,
           },
           activation: previewImage
@@ -91,13 +91,11 @@ export function ContinuityImageAssetsTab({
             label: 'View generation request',
             visibility: 'always' as const,
             onAction: () => {
-              const file = continuityImageAssets([asset], [asset.type])[0]?.files.find(
-                (candidate) => candidate.mediaKind === 'image'
-              );
+              const file = continuityImageAssetFiles([assetFile], [assetFile.type])[0];
               if (!file) return;
               openGenerationRequestInspector({
                 projectName,
-                assetId: asset.id,
+                assetFileId: assetFile.id,
               });
             },
           },
@@ -108,7 +106,7 @@ export function ContinuityImageAssetsTab({
                   selected,
                   selectedLabel: `Clear selected ${canonicalTitle.toLowerCase()}`,
                   unselectedLabel: `Use as ${canonicalTitle.toLowerCase()}`,
-                  onToggle: () => onToggleCanonical(asset),
+                  onToggle: () => onToggleCanonical(assetFile),
                 },
               }
             : {}),
@@ -116,7 +114,7 @@ export function ContinuityImageAssetsTab({
             label: `Delete ${fallbackTitle.toLowerCase()}`,
             confirmationTitle: `Delete ${fallbackTitle}?`,
             confirmationMessage: `Remove this ${fallbackTitle.toLowerCase()}. This cannot be undone.`,
-            onDelete: () => onDeleteAsset(asset),
+            onDelete: () => onDeleteAssetFile(assetFile),
           },
           emptyState: { kind: 'image' as const },
         },
@@ -129,13 +127,13 @@ export function ContinuityImageAssetsTab({
         <MediaCollectionSection
           title={canonicalPluralTitle}
           emptyTitle={`No ${canonicalPluralTitle.toLowerCase()} yet.`}
-          items={cards(canonicalAssets, 'canonical')}
+          items={cards(canonicalAssetFiles, 'canonical')}
           minimumCardWidthPx={320}
         />
         <MediaCollectionSection
           title={sheetPluralTitle}
           emptyTitle={`No ${sheetPluralTitle.toLowerCase()} yet.`}
-          items={cards(sheetAssets, 'sheet')}
+          items={cards(sheetAssetFiles, 'sheet')}
           minimumCardWidthPx={480}
         />
       </div>

@@ -21,7 +21,7 @@ export async function selectStudioSceneStoryboardImage(
   input: CandidateInput,
 ): Promise<StudioSceneStoryboardSelectionMutationResponse> {
   return mutate<StudioSceneStoryboardSelectionMutationResponse>(
-    `${beatUrl(input)}/selected-image/${encodeURIComponent(input.assetId)}`,
+    `${beatUrl(input)}/selected-image/${encodeURIComponent(input.assetFileId)}`,
     'POST',
   );
 }
@@ -30,7 +30,7 @@ export async function deleteStudioSceneStoryboardImage(
   input: CandidateInput,
 ): Promise<StudioSceneStoryboardRecoverableMutationResponse> {
   return mutate<StudioSceneStoryboardRecoverableMutationResponse>(
-    `${beatUrl(input)}/images/${encodeURIComponent(input.assetId)}`,
+    `${beatUrl(input)}/images/${encodeURIComponent(input.assetFileId)}`,
     'DELETE',
   );
 }
@@ -40,10 +40,10 @@ interface CandidateInput {
   sceneId: string;
   sceneBeatsRevisionId: string;
   beatId: string;
-  assetId: string;
+  assetFileId: string;
 }
 
-function baseUrl(input: Omit<CandidateInput, 'beatId' | 'assetId'>): string {
+function baseUrl(input: Omit<CandidateInput, 'beatId' | 'assetFileId'>): string {
   return `/studio-api/projects/${encodeURIComponent(input.projectName)}/screenplay/scenes/${encodeURIComponent(input.sceneId)}/scene-beats/${encodeURIComponent(input.sceneBeatsRevisionId)}/storyboard-images`;
 }
 

@@ -10,7 +10,6 @@ import type { StudioE2eRuntime } from './studio-e2e-runtime';
 
 export interface StudioE2eGenerationPromptProject {
   preview: MediaGenerationPreviewResource;
-  inspectorAssetId: string;
   inspectorAssetFileId: string;
   inspectorCardTitle: string;
 }
@@ -47,7 +46,7 @@ export async function createStudioE2eGenerationPromptProject(input: {
   const projectFolder = input.project.projectPath;
   const [chamberImage, lookbookImage, savedSheetImage] = await Promise.all([
     fs.readFile(new URL(
-      '../../src/features/movie-studio/shot-design/generated/images/shot-size-establishing-shot.png',
+      '../../src/features/movie-studio/shot-design/generated/images/shot-size-establishing-shot.webp',
       import.meta.url,
     )),
     fs.readFile(new URL(
@@ -96,8 +95,8 @@ export async function createStudioE2eGenerationPromptProject(input: {
     sourceProjectRelativePath: 'generated/media/prompt-reference-lookbook.png',
     title: 'Imperial Wound lookbook reference',
   });
-  const chamberFile = firstAssetFile(chamberReference.asset);
-  const lookbookFile = firstAssetFile(lookbookReference.asset);
+  const chamberFile = chamberReference.assetFile;
+  const lookbookFile = lookbookReference.assetFile;
   const request = {
     prompt: generationPromptDocument,
     image_size: 'landscape_16_9',
@@ -159,11 +158,11 @@ export async function createStudioE2eGenerationPromptProject(input: {
       receipt: { requestId: 'e2e_prompt_editor_request' },
     },
   });
-  const savedFile = firstAssetFile(savedSheet.asset);
-  await projectData.updateAsset({
+  const savedFile = savedSheet.assetFile;
+  await projectData.updateAssetFile({
     projectName: input.project.projectName,
     homeDir: input.runtime.isolatedHomeDirectory,
-    assetId: savedSheet.asset.id,
+    assetFileId: savedSheet.assetFile.id,
     title: 'Prompt Editor Saved Character Sheet',
     oneLineSummary: 'Read-only media generation request browser fixture.',
     referenceName: 'prompt-editor-saved-character-sheet',
@@ -172,18 +171,7 @@ export async function createStudioE2eGenerationPromptProject(input: {
 
   return {
     preview,
-    inspectorAssetId: savedSheet.asset.id,
     inspectorAssetFileId: savedFile.id,
     inspectorCardTitle: 'Prompt Editor Saved Character Sheet',
   };
-}
-
-function firstAssetFile(
-  asset: { files: Array<{ id: string; projectRelativePath: string }> },
-): { id: string; projectRelativePath: string } {
-  const file = asset.files[0];
-  if (!file) {
-    throw new Error('Expected the E2E attachment to expose an AssetFile.');
-  }
-  return file;
 }

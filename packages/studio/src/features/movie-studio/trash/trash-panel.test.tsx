@@ -110,7 +110,7 @@ function trashItem(): TrashItem {
   return {
     id: 'trash_item_asset',
     operationId: 'trash_operation_asset',
-    itemKind: 'asset',
+    itemKind: 'assetFile',
     itemId: 'asset_001',
     ownerKind: 'project',
     ownerId: 'project_001',
@@ -159,13 +159,7 @@ function garbageCollectionPreview(item: TrashItem): GarbageCollectionPreview {
     project: trashProject(),
     confirmationToken: 'trash_confirmation_token',
     items: [item],
-    files: [
-      {
-        trashItemId: item.id,
-        originalProjectRelativePath: 'generated/media/take.mp4',
-        trashProjectRelativePath: '.renku/trash/generated/media/take.mp4',
-      },
-    ],
+    files: [{ trashItemId: item.id, originalProjectRelativePath: 'generated/media/take.mp4', trashProjectRelativePath: '.renku/trash/generated/media/take.mp4' }],
     resourceKeys: ['project:constantinople:trash'],
   };
 }

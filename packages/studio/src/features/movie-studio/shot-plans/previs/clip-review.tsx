@@ -30,7 +30,7 @@ export function ClipReview({ revision, projectName, playback, reload }: {
     finally { setSaving(false); }
   };
   const candidates = report.clips.flatMap((entry) => entry.takes.map((candidate) => ({ id: candidate.id, label: clipTakeLabel(entry, candidate) })));
-  const unassigned = report.unassignedAssets.flatMap((asset) => asset.files.filter((file) => file.mediaKind === 'video').map((file) => ({ id: file.id, label: asset.title || 'Untitled video' })));
+  const unassigned = report.unassignedAssetFiles.map((assetFile) => ({ id: assetFile.id, label: assetFile.title ?? '' }));
   const options = [...candidates, ...unassigned];
   if (!options.length) return null;
   return <div className='ml-auto flex min-w-0 flex-1 items-center justify-end gap-1'>

@@ -9,7 +9,6 @@ export function storyboardImageUrl(
 ): string {
   return projectAssetFileUrl(
     projectName,
-    image.assetId,
     image.assetFileId
   );
 }

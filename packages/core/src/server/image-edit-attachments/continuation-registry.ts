@@ -1,23 +1,22 @@
-import type { Asset, AssetOwner } from '../../client/assets.js';
+import type { AssetFile, AssetFileOwner } from '../../client/asset-files.js';
 import type { ProjectAssetFileDestination } from '../project-asset-files/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { ProjectDataError } from '../project-data-error.js';
+import { assetFileOwnerResourceKeys, shotPlanAssetFileResourceKeys } from '../asset-files/resource-keys.js';
 import { resolveLookbookImageEditContinuation } from './lookbook-continuations.js';
 import { resolveSceneImageEditContinuation } from './scene-continuations.js';
 import { resolveShotPlanImageEditContinuation } from './shot-plan-continuations.js';
 import { resolveSubjectImageEditContinuation } from './subject-continuations.js';
 
 export interface ImageEditContinuation {
-  owner: AssetOwner;
-  assetType: string;
+  owner: AssetFileOwner;
+  assetFileType: string;
   destination: ProjectAssetFileDestination;
-  fileRole: string;
   authoredFromShotPlanId?: string;
   resourceKeys: string[];
 }
 
 export interface ImageEditContinuationInput {
-  source: Asset;
+  source: AssetFile;
   session: DatabaseSession;
   projectFolder: string;
 }
@@ -42,8 +41,14 @@ export function resolveImageEditContinuation(
       return continuation;
     }
   }
-  throw new ProjectDataError(
-    'CORE_IMAGE_EDIT_CONTINUATION_UNSUPPORTED',
-    `Image editing is not attached for Asset type ${input.source.type}.`,
-  );
+  return {
+    owner: input.source.owner,
+    assetFileType: input.source.type,
+    destination: { kind: 'assetFile.imageEdit', sourceAssetFileId: input.source.id },
+    authoredFromShotPlanId: input.source.authoredFrom?.id,
+    resourceKeys: [
+      ...assetFileOwnerResourceKeys(input.session, input.source.owner),
+      ...shotPlanAssetFileResourceKeys(input.session, input.source.id),
+    ],
+  };
 }

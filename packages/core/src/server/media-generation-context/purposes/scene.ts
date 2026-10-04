@@ -11,20 +11,20 @@ export const buildScenePurposeContext: MediaGenerationPurposeBuilder = (input) =
   }
   const sceneContext = projectMediaGenerationSceneContext({
     session: input.session,
-    assets: input.assets,
+    assetFiles: input.assetFiles,
     screenplay: input.screenplay,
     sceneId: input.target.id,
     scope: input.sceneStoryboardScope,
     warnings: input.warnings,
   });
-  const visualLanguage = readMediaGenerationLookbooks({ assets: input.assets, session: input.session, projectFolder: input.projectFolder, kinds: ['storyboard'] });
+  const visualLanguage = readMediaGenerationLookbooks({ assetFiles: input.assetFiles, session: input.session, projectFolder: input.projectFolder, kinds: ['storyboard'] });
   return {
     targetContext: sceneContext,
     visualLanguage,
     suggestedReferences: [
-      ...suggestLookbookMedia({ lookbooks: visualLanguage, role: 'appearance', projectFolder: input.projectFolder, collection: input.assets, warnings: input.warnings }),
-      ...suggestSceneSubjectMedia({ sceneContext, projectFolder: input.projectFolder, collection: input.assets, warnings: input.warnings }),
-      ...suggestBeatStoryboards({ session: input.session, sceneId: sceneContext.scene.id, beatIds: sceneContext.selectedBeatIds, projectFolder: input.projectFolder, collection: input.assets, warnings: input.warnings }),
+      ...suggestLookbookMedia({ lookbooks: visualLanguage, role: 'appearance', projectFolder: input.projectFolder, collection: input.assetFiles, warnings: input.warnings }),
+      ...suggestSceneSubjectMedia({ sceneContext, projectFolder: input.projectFolder, collection: input.assetFiles, warnings: input.warnings }),
+      ...suggestBeatStoryboards({ session: input.session, sceneId: sceneContext.scene.id, beatIds: sceneContext.selectedBeatIds, projectFolder: input.projectFolder, collection: input.assetFiles, warnings: input.warnings }),
     ],
     resourceKeys: sceneBeatsResourceKeys({
       sceneId: sceneContext.scene.id,

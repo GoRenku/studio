@@ -21,7 +21,7 @@ export const shotPlanImageCommandHandlers: readonly Handler[] = [
         homeDir: runtime.homeDir,
         shotPlanId: requiredFlag(flags.shotPlan, '--shot-plan'),
         shotId: requiredFlag(flags.shot, '--shot'),
-        assetId: requiredFlag(flags.asset, '--asset'),
+        assetFileId: requiredFlag(flags.assetFile, '--asset'),
       }),
   },
 ];

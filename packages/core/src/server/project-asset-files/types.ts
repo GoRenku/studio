@@ -1,3 +1,5 @@
+import type { AssetFileOwner } from '../../client/asset-files.js';
+import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 import type { ProjectRelativePath } from '../../client/index.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 
@@ -8,12 +10,17 @@ export type ProjectAssetFileNamingMode =
   | { kind: 'external' };
 
 export type ProjectAssetFileDestination =
+  | { kind: 'inspiration'; folderId: string }
+  | { kind: 'research' }
   | { kind: 'project.cover' }
   | { kind: 'screenplay.source' }
   | { kind: 'screenplay.supportingMaterial' }
   | {
-      kind: 'asset.videoEdit';
-      sourceAssetId: string;
+      kind: 'assetFile.imageEdit';
+      sourceAssetFileId: string;
+    }
+  | {
+      kind: 'assetFile.videoEdit';
       sourceAssetFileId: string;
     }
   | { kind: 'shotPlan.previs'; shotPlanId: string }
@@ -72,12 +79,12 @@ export interface ProjectReferenceFileValidation {
 export interface PersistProjectAssetFileInput {
   session: DatabaseSession;
   projectFolder: string;
-  assetId: string;
   assetFileId: string;
   sourceProjectRelativePath: string;
   destination: ProjectAssetFileDestination;
   namingMode: ProjectAssetFileNamingMode;
-  fileRole: string;
+  owner: AssetFileOwner;
+  assetFileMetadata: RetainedAssetFileMetadata;
   mediaKind: ProjectMediaKind;
   mimeType?: string;
   width?: number;
@@ -92,4 +99,17 @@ export interface ProjectAssetFileWriteSet {
   readonly committed: boolean;
   recordCreatedFile(projectRelativePath: ProjectRelativePath): void;
   markCommitted(): void;
+}
+
+export interface RetainedAssetFileMetadata {
+  type: string;
+  title: string | null;
+  origin: string;
+  localeId?: string | null;
+  oneLineSummary?: string | null;
+  referenceName?: string | null;
+  tags?: string[];
+  generationProvenance?: MediaGenerationProvenance | null;
+  authoredFromShotPlanId?: string | null;
+  previsRevisionId?: string | null;
 }

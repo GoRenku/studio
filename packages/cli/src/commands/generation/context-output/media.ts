@@ -2,15 +2,15 @@ import type { MediaGenerationContextReport } from '@gorenku/studio-core/client';
 import { renderContextFields, renderContextValue } from './values.js';
 
 export function renderReferenceSuggestions(report: MediaGenerationContextReport): string {
-  const assets = new Map(report.assets.map((asset) => [asset.id, asset]));
+  const assetFiles = new Map(report.assetFiles.map((assetFile) => [assetFile.id, assetFile]));
   return report.suggestedReferences.map((group) => {
     const { candidates, ...relationship } = group;
     const entries = candidates.map((candidate) => {
-      const asset = assets.get(candidate.assetId);
-      const file = asset?.files.find((entry) => entry.id === candidate.assetFileId);
+      const assetFile = assetFiles.get(candidate.assetFileId);
+      const file = assetFile;
       return renderContextFields({
         ...candidate,
-        title: asset?.title,
+        title: assetFile?.title,
         path: file?.projectRelativePath,
       });
     });
@@ -19,5 +19,5 @@ export function renderReferenceSuggestions(report: MediaGenerationContextReport)
 }
 
 export function renderMedia(report: MediaGenerationContextReport): string {
-  return report.assets.map((asset) => renderContextValue(asset)).join('\n\n') || '[]';
+  return report.assetFiles.map((assetFile) => renderContextValue(assetFile)).join('\n\n') || '[]';
 }

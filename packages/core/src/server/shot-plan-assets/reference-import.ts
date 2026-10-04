@@ -1,10 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ImportShotPlanReferenceInput, ShotPlanReferenceImportReport } from '../../client/shot-plan-assets.js';
-import { normalizeAssetMetadata } from '../assets/metadata.js';
-import { createAssetMembership } from '../assets/ownership.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { insertAssetRecord } from '../database/access/assets.js';
+import { normalizeAssetFileMetadata } from '../asset-files/metadata.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { createRandomIdGenerator } from '../entity-ids.js';
@@ -14,7 +12,7 @@ import { validateProjectReferenceFileInput } from '../project-asset-files/refere
 import { ProjectDataError } from '../project-data-error.js';
 import { withProject } from '../project-operation.js';
 import { requirePrevisRevisionForPlan } from '../shot-plan-previs/generation-source.js';
-import { studioShotPlanAssetsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioShotPlanAssetFilesResourceKey } from '../studio-coordination/resource-keys.js';
 
 const referenceFormats: Record<string, { kind: ImportShotPlanReferenceInput['mediaKind']; mimeType: string }> = {
   '.png': { kind: 'image', mimeType: 'image/png' },
@@ -50,7 +48,7 @@ export async function importShotPlanReference(input: ImportShotPlanReferenceInpu
     if (!format || format.kind !== input.mediaKind) {
       throw new ProjectDataError('CORE_SHOT_PLAN_REFERENCE_MEDIA_INVALID', 'Reference file extension must match the supplied image, video, or audio kind.');
     }
-    const metadata = normalizeAssetMetadata({ oneLineSummary: input.summary });
+    const metadata = normalizeAssetFileMetadata({ oneLineSummary: input.summary });
     const source = await validateProjectReferenceFileInput({ projectFolder, projectRelativePath: input.sourceProjectRelativePath });
     assertResolvedPathInsideProject(fs.realpathSync(projectFolder), fs.realpathSync(source.absolutePath));
     const project = readProjectRecord(session);
@@ -58,23 +56,26 @@ export async function importShotPlanReference(input: ImportShotPlanReferenceInpu
       throw new ProjectDataError('PROJECT_DATA021', 'Project database has no Project row.');
     }
     const ids = createRandomIdGenerator();
-    const assetId = ids.next('asset');
     const now = new Date().toISOString();
+    const assetFileId = ids.next('asset_file');
     const writeSet = createProjectAssetFileWriteSet({ projectFolder });
     try {
       session.db.transaction((tx) => {
         const current = { ...session, db: tx };
-        insertAssetRecord(current, {
-          id: assetId, type: 'shot_plan_video_reference', mediaKind: input.mediaKind,
-          title: input.title.trim(), oneLineSummary: metadata.oneLineSummary ?? undefined, origin: 'external', availability: 'ready',
-          authoredFromShotPlanId: plan.id, previsRevisionId: revisionId, createdAt: now, updatedAt: now,
-        });
-        createAssetMembership(current, { assetId, owner: { kind: 'project' }, now });
         persistProjectAssetFileSync({
-          session: current, projectFolder, writeSet, assetId, assetFileId: ids.next('asset_file'),
+          owner: { kind: 'project' },
+          assetFileMetadata: {
+            type: 'shot_plan_video_reference',
+            title: input.title.trim(),
+            oneLineSummary: metadata.oneLineSummary ?? undefined,
+            origin: 'external',
+            authoredFromShotPlanId: plan.id,
+            previsRevisionId: revisionId
+          },
+          session: current, projectFolder, writeSet, assetFileId,
           sourceProjectRelativePath: source.projectRelativePath,
           destination: { kind: 'shotPlan.videoReference', shotPlanId: plan.id, role: 'reference' },
-          namingMode: { kind: 'external' }, fileRole: 'primary', mediaKind: input.mediaKind,
+          namingMode: { kind: 'external' }, mediaKind: input.mediaKind,
           mimeType: format.mimeType, now,
         });
       });
@@ -86,11 +87,11 @@ export async function importShotPlanReference(input: ImportShotPlanReferenceInpu
       }
       throw new ProjectDataError('CORE_SHOT_PLAN_REFERENCE_IMPORT_FAILED', `Reference import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    const asset = readOwnedAsset(session, { owner: { kind: 'project' }, assetId });
-    if (!asset) {
+    const assetFile = readOwnedAssetFile(session, { owner: { kind: 'project' }, assetFileId });
+    if (!assetFile) {
       throw new ProjectDataError('CORE_SHOT_PLAN_REFERENCE_IMPORT_FAILED', 'Imported reference could not be read.');
     }
-    return { valid: true, asset, resourceKeys: [studioShotPlanAssetsResourceKey(plan.id)],
+    return { valid: true, assetFile, resourceKeys: [studioShotPlanAssetFilesResourceKey(plan.id)],
       project: { projectName: project.projectName, id: project.id, projectFolder } };
   });
 }

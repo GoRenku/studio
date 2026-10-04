@@ -4,6 +4,10 @@ Date: 2026-05-26
 
 Status: accepted
 
+[Decision 0107](0107-unify-retained-project-media-as-asset-files.md) supersedes
+filesystem-only Inspiration image storage with folder-owned retained file
+records. Plan 0222 tracks implementation; the analysis workflow remains accepted.
+
 ## Context
 
 Visual Language Inspiration folders let users collect image references inside a

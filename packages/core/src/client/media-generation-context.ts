@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { CastMember } from './cast-members.js';
 import type { CastVoice } from './cast-voices.js';
 import type {
@@ -46,11 +46,11 @@ export interface MediaGenerationProjectContext {
   languages: ProjectLanguage[];
 }
 
-export type MediaGenerationAsset = Omit<Asset, 'generationProvenance'>;
-export type MediaGenerationLookbookImage = Omit<LookbookImage, 'asset'> & { assetId: string };
-export type MediaGenerationLookbookSheet = Omit<LookbookSheet, 'asset'> & { assetId: string };
-export type MediaGenerationCastVoice = Omit<CastVoice, 'sample'> & { sampleAssetId: string };
-export type MediaGenerationShot = Omit<Shot, 'images'> & { imageAssetIds: string[] };
+export type MediaGenerationAssetFile = Omit<AssetFile, 'generationProvenance'>;
+export type MediaGenerationLookbookImage = Omit<LookbookImage, 'assetFile'> & { assetFileId: string };
+export type MediaGenerationLookbookSheet = Omit<LookbookSheet, 'assetFile'> & { assetFileId: string };
+export type MediaGenerationCastVoice = Omit<CastVoice, 'sample'> & { sampleAssetFileId: string };
+export type MediaGenerationShot = Omit<Shot, 'images'> & { imageAssetFileIds: string[] };
 export type MediaGenerationShotPlan = Omit<ShotPlan, 'shots'> & { shots: MediaGenerationShot[] };
 
 export interface MediaGenerationLookbookContext {
@@ -69,7 +69,7 @@ export interface MediaGenerationOutputGuidance {
 export interface MediaGenerationSubjectDetails<TDesign> {
   activeDesign: TDesign | null;
   activeDesignId: string | null;
-  assetIds: string[];
+  assetFileIds: string[];
 }
 
 export type MediaGenerationCastContext = {
@@ -105,7 +105,7 @@ export interface MediaGenerationSceneContext {
 
 export type MediaGenerationTargetContext =
   | { kind: 'project' }
-  | { kind: 'asset'; assetId: string }
+  | { kind: 'assetFile'; assetFileId: string }
   | {
       kind: 'lookbook';
       lookbookId: string;
@@ -140,7 +140,6 @@ export interface MediaGenerationReferenceSuggestion {
 }
 
 export interface MediaGenerationReferenceCandidate {
-  assetId: string;
   assetFileId: string;
   dialogueTurnRange?: DialogueTurnRange;
   isDisplaySelected: boolean;
@@ -158,7 +157,7 @@ export interface MediaGenerationContextReport {
   outputGuidance: MediaGenerationOutputGuidance;
   targetContext: MediaGenerationTargetContext;
   visualLanguage: MediaGenerationLookbookContext[];
-  assets: MediaGenerationAsset[];
+  assetFiles: MediaGenerationAssetFile[];
   suggestedReferences: MediaGenerationReferenceSuggestion[];
   warnings: DiagnosticIssue[];
   resourceKeys: string[];

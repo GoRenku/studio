@@ -1,39 +1,24 @@
-import type { Asset, AssetFile } from '@gorenku/studio-core/client';
+import type { AssetFile } from '@gorenku/studio-core/client';
 
 export interface StudioAssetFileResponse
   extends Omit<AssetFile, 'projectRelativePath'> {
   url: string;
 }
 
-export interface StudioAssetResponse extends Omit<Asset, 'files'> {
-  files: StudioAssetFileResponse[];
-}
-
-export function toStudioAssetResponse(
+export function toStudioAssetFileResponse(
   projectName: string,
-  asset: Asset
-): StudioAssetResponse {
+  assetFile: AssetFile
+): StudioAssetFileResponse {
+  const { projectRelativePath: _projectRelativePath, ...metadata } = assetFile;
   return {
-    ...asset,
-    files: asset.files.map((file) => ({
-      id: file.id,
-      role: file.role,
-      mediaKind: file.mediaKind,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes,
-      contentHash: file.contentHash,
-      width: file.width,
-      height: file.height,
-      durationSeconds: file.durationSeconds,
-      url: assetFileUrl(projectName, asset.id, file.id),
-    })),
+    ...metadata,
+    url: assetFileUrl(projectName, assetFile.id),
   };
 }
 
 function assetFileUrl(
   projectName: string,
-  assetId: string,
   assetFileId: string
 ): string {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/asset-files/${encodeURIComponent(assetFileId)}`;
 }

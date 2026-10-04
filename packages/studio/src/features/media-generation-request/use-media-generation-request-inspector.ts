@@ -5,7 +5,7 @@ import { readStudioApiError } from '@/services/studio-api-errors';
 
 export interface MediaGenerationRequestInspectorInput {
   projectName: string;
-  assetId: string;
+  assetFileId: string;
 }
 
 export const MediaGenerationRequestInspectorContext = createContext<{
@@ -19,23 +19,23 @@ export function useGenerationRequestInspectorDialog() {
 }
 
 export function useMediaGenerationRequestInspector(input: MediaGenerationRequestInspectorInput) {
-  const { projectName, assetId } = input;
-  const requestKey = `${projectName}:${assetId}`;
+  const { projectName, assetFileId } = input;
+  const requestKey = `${projectName}:${assetFileId}`;
   const [result, setResult] = useState<{ requestKey: string | null; preview: MediaGenerationPreviewResource | null; error: string | null }>({ requestKey: null, preview: null, error: null });
   useEffect(() => {
     let current = true;
-    void readAssetMediaGenerationRequest({ projectName, assetId }).then(
+    void readAssetFileMediaGenerationRequest({ projectName, assetFileId }).then(
       (preview) => current && setResult({ requestKey, preview, error: null }),
       (reason) => current && setResult({ requestKey, preview: null, error: reason instanceof Error ? reason.message : String(reason) }),
     );
     return () => { current = false; };
-  }, [assetId, projectName, requestKey]);
+  }, [assetFileId, projectName, requestKey]);
   const current = result.requestKey === requestKey;
   return { preview: current ? result.preview : null, error: current ? result.error : null, loading: !current };
 }
 
-async function readAssetMediaGenerationRequest(input: MediaGenerationRequestInspectorInput): Promise<MediaGenerationPreviewResource> {
-  const response = await studioApiFetch(`/studio-api/projects/${encodeURIComponent(input.projectName)}/assets/${encodeURIComponent(input.assetId)}/generation-request`, {
+async function readAssetFileMediaGenerationRequest(input: MediaGenerationRequestInspectorInput): Promise<MediaGenerationPreviewResource> {
+  const response = await studioApiFetch(`/studio-api/projects/${encodeURIComponent(input.projectName)}/asset-files/${encodeURIComponent(input.assetFileId)}/generation-request`, {
     headers: { 'X-Renku-Studio-Token': readStudioApiToken() },
   });
   if (!response.ok) throw await readStudioApiError(response);

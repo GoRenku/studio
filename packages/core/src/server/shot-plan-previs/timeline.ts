@@ -100,10 +100,10 @@ export function validatePrevisPlayback(value: unknown): { playback: PrevisPlayba
 function decodeAudio(value: unknown, path: string[], warnings: DiagnosticIssue[]): PrevisDialogueAudio | undefined {
   if (value === undefined) { return undefined; }
   const audio = object(value);
-  if (!audio || !identity(audio.assetId) || !identity(audio.assetFileId)
+  if (!audio || !identity(audio.assetFileId)
     || (audio.offsetSeconds !== undefined && (typeof audio.offsetSeconds !== 'number' || !Number.isFinite(audio.offsetSeconds) || audio.offsetSeconds < 0))) {
     warnings.push(createDiagnosticWarning('CORE_PREVIS_AUDIO_UNAVAILABLE', 'Recorded audio has an invalid file reference.', { path: ['playback', ...path, 'audio'] }));
     return undefined;
   }
-  return { assetId: audio.assetId, assetFileId: audio.assetFileId, offsetSeconds: audio.offsetSeconds as number | undefined };
+  return { assetFileId: audio.assetFileId, offsetSeconds: audio.offsetSeconds as number | undefined };
 }

@@ -1,4 +1,4 @@
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { ShotPlanProjectInput } from './shot-plans.js';
 
 export interface ListSceneShotPlanVideoGenerationsInput
@@ -16,9 +16,9 @@ export type ShotPlanVideoGenerationGroup =
   | {
       kind: 'shotPlan';
       shotPlan: { id: string; title: string };
-      assets: Asset[];
+      assetFiles: AssetFile[];
     }
   | {
       kind: 'miscellaneous';
-      assets: Asset[];
+      assetFiles: AssetFile[];
     };

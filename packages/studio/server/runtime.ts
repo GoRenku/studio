@@ -72,7 +72,7 @@ export async function startMovieStudioServer(
       return;
     }
 
-    await serveStaticAsset(req, res, distDir, token);
+    await serveStaticAssetFile(req, res, distDir, token);
   });
 
   return await new Promise<MovieStudioServerInstance>((resolve, reject) => {
@@ -135,7 +135,7 @@ export async function startMovieStudioServer(
   });
 }
 
-async function serveStaticAsset(
+async function serveStaticAssetFile(
   req: IncomingMessage,
   res: ServerResponse,
   distDir: string,

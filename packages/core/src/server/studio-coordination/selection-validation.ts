@@ -174,7 +174,7 @@ export function parseStudioSelection(
         shotPlanTab
         && shotPlanTab !== 'shots'
         && shotPlanTab !== 'previs'
-        && shotPlanTab !== 'assets'
+        && shotPlanTab !== 'assetFiles'
         && shotPlanTab !== 'audio'
       ) {
         issues.push(selectionIssue(
@@ -192,7 +192,7 @@ export function parseStudioSelection(
           context,
         ));
       }
-      if ((shotPlanTab === 'previs' || shotPlanTab === 'assets' || shotPlanTab === 'audio') && shotId) {
+      if ((shotPlanTab === 'previs' || shotPlanTab === 'assetFiles' || shotPlanTab === 'audio') && shotId) {
         issues.push(selectionIssue(
           'STUDIO_COORDINATION040',
           'Shot focus is not valid on this Shot Plan detail tab.',
@@ -209,7 +209,7 @@ export function parseStudioSelection(
           ...(shotPlanId ? { shotPlanId } : {}),
           ...(shotPlanTab === 'shots'
             || shotPlanTab === 'previs'
-            || shotPlanTab === 'assets'
+            || shotPlanTab === 'assetFiles'
             || shotPlanTab === 'audio'
             ? { shotPlanTab }
             : {}),

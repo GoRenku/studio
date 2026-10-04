@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { CastVoiceFileAttachmentDocument } from '../../client/cast-voices.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
-import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
+import { validateMediaGenerationProvenance } from '../asset-files/generation-provenance.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
   normalizeProjectRelativePath,

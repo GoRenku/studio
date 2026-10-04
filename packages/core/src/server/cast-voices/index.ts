@@ -1,6 +1,6 @@
 export { attachCastVoice, validateCastVoiceAttachment } from './attachment.js';
 export { selectDefaultCastVoice } from './default-selection.js';
-export { assertAssetIsNotCastVoiceSample, removeCastVoice } from './lifecycle.js';
+export { assertAssetFileIsNotCastVoiceSample, removeCastVoice } from './lifecycle.js';
 export { listCastVoices, readCastVoice } from './projection.js';
 export type {
   CastVoiceAttachmentInput,

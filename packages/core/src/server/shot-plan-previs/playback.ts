@@ -2,8 +2,7 @@ import fs from 'node:fs';
 import { validatePrevisPlayback } from './timeline.js';
 import { createDiagnosticWarning, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { PrevisPlayback } from '../../client/shot-plan-previs.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { requireAssetOwner } from '../assets/ownership.js';
+import { resolveAssetFileInSession } from '../asset-files/resources.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { joinProjectRelativePath, normalizeProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import { assertResolvedPathInsideProject } from '../project-asset-files/path-guards.js';
@@ -26,13 +25,8 @@ export function readPrevisDisplay(session: DatabaseSession, projectFolder: strin
     playback.cues.forEach((cue, index) => {
       if (cue.kind !== 'dialogue' || !cue.audio) { return; }
       try {
-        const asset = readOwnedAsset(session, { assetId: cue.audio.assetId, owner: requireAssetOwner(session, cue.audio.assetId) });
-        const file = asset?.files.find((candidate) => candidate.id === cue.audio!.assetFileId);
+        const { assetFile: file } = resolveAssetFileInSession({ session, projectFolder, assetFileId: cue.audio.assetFileId });
         if (!file || file.mediaKind !== 'audio' || !file.mimeType?.startsWith('audio/')) { throw new TypeError(); }
-        const absolute = resolveProjectRelativePath(projectFolder, file.projectRelativePath);
-        assertResolvedPathInsideProject(fs.realpathSync(projectFolder), fs.realpathSync(absolute));
-        if (!fs.statSync(absolute).isFile()) { throw new TypeError(); }
-        fs.accessSync(absolute, fs.constants.R_OK);
       } catch {
         delete cue.audio;
         warnings.push(createDiagnosticWarning('CORE_PREVIS_AUDIO_UNAVAILABLE', 'Recorded audio is unavailable.', { path: ['playback', 'cues', String(index), 'audio'] }));

@@ -27,9 +27,8 @@ export function resolveSceneImageEditContinuation(
     const shotPlan = requireShotPlanRecord(session, shot.shotPlanId);
     return {
       owner: source.owner,
-      assetType: source.type,
+      assetFileType: source.type,
       destination: { kind: 'shot.image', shotPlanId: shotPlan.id, shotId: shot.id },
-      fileRole: 'primary',
       resourceKeys: [studioSceneShotPlansResourceKey(shotPlan.sceneId)],
     };
   }
@@ -49,7 +48,7 @@ export function resolveSceneImageEditContinuation(
   }
   return {
     owner,
-    assetType: source.type,
+    assetFileType: source.type,
     destination: {
       kind: 'scene.storyboardImage',
       sceneId: owner.sceneId,
@@ -60,7 +59,6 @@ export function resolveSceneImageEditContinuation(
       }),
       beatNumber: beat.number,
     },
-    fileRole: 'storyboard_image',
     resourceKeys: [studioSceneBeatsResourceKey(owner.sceneId)],
   };
 }

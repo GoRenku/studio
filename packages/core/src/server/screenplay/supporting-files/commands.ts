@@ -1,15 +1,15 @@
-import { discardAsset } from '../../commands/discard-asset.js';
+import { discardAssetFile } from '../../commands/discard-asset-file.js';
 import { readProjectSupportingFileInformation } from './resources.js';
 
 export async function discardProjectSupportingFile(input: {
   projectName: string;
-  assetId: string;
+  assetFileId: string;
   homeDir?: string;
 }) {
   const { supportingFile } = await readProjectSupportingFileInformation(input);
-  return discardAsset({
+  return discardAssetFile({
     ...input,
     owner: { kind: 'project' },
-    expectedType: supportingFile.asset.type,
+    expectedType: supportingFile.assetFile.type,
   });
 }

@@ -3,8 +3,6 @@ import type {
   CastVoiceFileAttachmentDocument,
   CastVoiceValidationReport,
 } from '../../client/cast-voices.js';
-import { createAssetMembership } from '../assets/ownership.js';
-import { insertAssetRecord } from '../database/access/assets.js';
 import {
   insertCastVoiceRecord,
   nextCastVoiceSortOrder,
@@ -24,7 +22,7 @@ import {
   rollbackProjectAssetFileWriteSetSync,
 } from '../project-asset-files/index.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { studioAssetFileOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 import { toCastVoice } from './projection.js';
 import { withCastVoiceProjectSession, type CastVoiceProjectInput } from './project-session.js';
 import { validateCastVoiceFileAttachment } from './validation.js';
@@ -56,7 +54,6 @@ export async function attachCastVoice(
       });
       const now = new Date().toISOString();
       const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
-      const assetId = ids('asset');
       const assetFileId = ids('asset_file');
       const voiceId = ids('cast_voice');
       const target = { kind: 'castMember' as const, id: validated.castMember.id };
@@ -64,26 +61,21 @@ export async function attachCastVoice(
       try {
         session.db.transaction((tx) => {
           const txSession = { ...session, db: tx };
-          insertAssetRecord(txSession, {
-            id: assetId,
-            type: 'cast_voice_sample',
-            mediaKind: 'audio',
-            title: validated.sampleTitle,
-            referenceName: validated.name,
-            tags: [validated.purpose],
-            origin: validated.generationProvenance ? 'generated' : 'imported',
-            availability: 'ready',
-            ...(validated.generationProvenance
-              ? { generationProvenance: validated.generationProvenance }
-              : {}),
-            createdAt: now,
-            updatedAt: now,
-          });
           persistProjectAssetFileSync({
+            owner: target,
+            assetFileMetadata: {
+              type: 'cast_voice_sample',
+              title: validated.sampleTitle,
+              referenceName: validated.name,
+              tags: [validated.purpose],
+              origin: validated.generationProvenance ? 'generated' : 'imported',
+              ...(validated.generationProvenance
+              ? { generationProvenance: validated.generationProvenance }
+              : {})
+            },
             session: txSession,
             projectFolder,
             writeSet,
-            assetId,
             assetFileId,
             sourceProjectRelativePath: validated.sourceProjectRelativePath,
             destination: {
@@ -95,18 +87,16 @@ export async function attachCastVoice(
             namingMode: validated.generationProvenance
               ? { kind: 'generated' }
               : { kind: 'external' },
-            fileRole: 'primary',
             mediaKind: 'audio',
             mimeType: validated.mimeType,
             now,
           });
-          createAssetMembership(txSession, { assetId, owner: target, now });
           insertCastVoiceRecord(txSession, {
             id: voiceId,
             castMemberId: validated.castMember.id,
             name: validated.name,
             purpose: validated.purpose,
-            sampleAssetId: assetId,
+            sampleAssetFileId: assetFileId,
             voiceIdentity: validated.voiceIdentity,
             sortOrder: nextCastVoiceSortOrder(txSession, validated.castMember.id),
             createdAt: now,
@@ -144,7 +134,7 @@ export async function attachCastVoice(
         },
         voice,
         changes: [{ type: 'castVoice.attached', castMemberId: validated.castMember.id, voiceId }],
-        resourceKeys: studioAssetOwnerSurfaceResourceKeys(target),
+        resourceKeys: studioAssetFileOwnerSurfaceResourceKeys(target),
       };
     }
   );

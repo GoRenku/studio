@@ -4,7 +4,7 @@ import {
   type DiagnosticIssue,
 } from '@gorenku/studio-diagnostics';
 import type { ProjectInformationResource } from '../../client/index.js';
-import { listAssetRecords } from '../database/access/assets.js';
+import { listAssetFileRecords } from '../database/access/asset-files.js';
 import {
   readProjectInformationResourceFromDatabase,
   readResolvedProjectInformationFromDatabase,
@@ -101,14 +101,14 @@ function assertRemovedLocalesAreUnused(
 ): void {
   const issues: DiagnosticIssue[] = [];
   for (const locale of removedLocales) {
-    for (const asset of listAssetRecords(session)) {
-      if (asset.localeId !== locale.id) {
+    for (const assetFile of listAssetFileRecords(session)) {
+      if (assetFile.localeId !== locale.id) {
         continue;
       }
       issues.push(
         createDiagnosticError(
           'PROJECT_DATA057',
-          `Project locale ${locale.localeTag} cannot be removed because Asset ${asset.id} still uses it as ${asset.type}.`,
+          `Project locale ${locale.localeTag} cannot be removed because Asset ${assetFile.id} still uses it as ${assetFile.type}.`,
           {
             path: ['languages', locale.localeTag],
             context: 'project information update',

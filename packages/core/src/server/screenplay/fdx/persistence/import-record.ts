@@ -1,10 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { readAssetFileRecordIncludingDiscarded } from '../../../database/access/asset-files.js';
-import { readAssetRecord } from '../../../database/access/assets.js';
 import type { DatabaseSession } from '../../../database/lifecycle/store.js';
 import { ProjectDataError } from '../../../project-data-error.js';
 import { screenplayImports } from '../../../schema/index.js';
-import { readAssetOwner } from '../../../assets/ownership.js';
+import { readAssetFileOwner } from '../../../asset-files/ownership.js';
 import {
   FDX_IMPORTER_VERSION,
   type ScreenplayImport,
@@ -33,13 +32,11 @@ export function readScreenplayImport(
   if (row.importerVersion !== FDX_IMPORTER_VERSION || !isTechnicalLog(technicalLog)) {
     throw invalidImportRecord('stored importer version or technical log is invalid');
   }
-  assertValidSourceAsset(session, {
-    assetId: row.sourceAssetId,
+  assertValidSourceAssetFile(session, {
     assetFileId: row.sourceAssetFileId,
   });
   return {
     id: row.id,
-    sourceAssetId: row.sourceAssetId,
     sourceAssetFileId: row.sourceAssetFileId,
     importerVersion: FDX_IMPORTER_VERSION,
     importedAt: row.importedAt,
@@ -67,27 +64,21 @@ export function assertScreenplayIsRenkuEditable(
   }
 }
 
-function assertValidSourceAsset(
+function assertValidSourceAssetFile(
   session: DatabaseSession,
-  input: { assetId: string; assetFileId: string },
+  input: { assetFileId: string },
 ): void {
-  const asset = readAssetRecord(session, input.assetId);
-  const file = readAssetFileRecordIncludingDiscarded(session, input);
-  const owner = readAssetOwner(session, input.assetId);
-  if (!asset
-    || asset.discardedAt
-    || asset.type !== 'screenplay_source'
-    || asset.mediaKind !== 'document'
-    || asset.origin !== 'imported'
+  const assetFile = readAssetFileRecordIncludingDiscarded(session, input.assetFileId);
+  const owner = readAssetFileOwner(session, input.assetFileId);
+  if (!assetFile
+    || assetFile.discardedAt
+    || assetFile.type !== 'screenplay_source'
+    || assetFile.mediaKind !== 'document'
+    || assetFile.origin !== 'imported'
     || owner?.kind !== 'project'
-    || !file
-    || file.discardedAt
-    || file.assetId !== input.assetId
-    || file.role !== 'source'
-    || file.mediaKind !== 'document'
-    || file.mimeType !== 'application/xml'
-    || !file.contentHash?.match(/^[0-9a-f]{64}$/u)) {
-    throw invalidImportRecord('retained source Asset/File contract is invalid');
+    || assetFile.mimeType !== 'application/xml'
+    || !assetFile.contentHash?.match(/^[0-9a-f]{64}$/u)) {
+    throw invalidImportRecord('retained source AssetFile contract is invalid');
   }
 }
 
@@ -101,7 +92,6 @@ export function insertScreenplayImport(
   session.db.insert(screenplayImports).values({
     id: value.id,
     singletonKey: SCREENPLAY_IMPORT_SINGLETON_KEY,
-    sourceAssetId: value.sourceAssetId,
     sourceAssetFileId: value.sourceAssetFileId,
     importerVersion: value.importerVersion,
     importedAt: value.importedAt,
@@ -117,7 +107,6 @@ export function updateScreenplayImport(
     throw invalidImportRecord('refresh write does not match the current contract');
   }
   const result = session.db.update(screenplayImports).set({
-    sourceAssetId: value.sourceAssetId,
     sourceAssetFileId: value.sourceAssetFileId,
     importerVersion: value.importerVersion,
     importedAt: value.importedAt,
@@ -128,12 +117,12 @@ export function updateScreenplayImport(
   }
 }
 
-export function assertAssetIsNotScreenplayImportSource(
+export function assertAssetFileIsNotScreenplayImportSource(
   session: DatabaseSession,
-  assetId: string,
+  assetFileId: string,
 ): void {
-  const asset = readAssetRecord(session, assetId);
-  const block = screenplaySourceDeleteBlock(asset?.type);
+  const assetFile = readAssetFileRecordIncludingDiscarded(session, assetFileId);
+  const block = screenplaySourceDeleteBlock(assetFile?.type);
   if (block) {
     throw new ProjectDataError(block.code, block.message);
   }
@@ -174,10 +163,7 @@ function invalidImportRecord(reason: string): ProjectDataError {
 }
 
 export function requireImportSourceSha256(session: DatabaseSession, screenplayImport: ScreenplayImport): string {
-  const file = readAssetFileRecordIncludingDiscarded(session, {
-    assetId: screenplayImport.sourceAssetId,
-    assetFileId: screenplayImport.sourceAssetFileId,
-  });
+  const file = readAssetFileRecordIncludingDiscarded(session, screenplayImport.sourceAssetFileId);
   if (!file?.contentHash?.match(/^[0-9a-f]{64}$/u)) {
     throw new ProjectDataError(
       'SCREENPLAY_FDX_IMPORT_INVALID',

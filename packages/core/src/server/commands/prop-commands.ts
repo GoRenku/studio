@@ -15,7 +15,7 @@ import type {
 import { listCastMemberRecords } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
 import {
-  listPropAssetRoleRecords,
+  listPropAssetFileRoleRecords,
   listPropRecords,
   readPropDeleteDependencySummary,
   replacePropAuthoringRecords,
@@ -36,7 +36,7 @@ import {
   studioPropNavigationResourceKey,
   studioPropSurfaceResourceKey,
 } from '../studio-coordination/resource-keys.js';
-import { listAssetsInSession } from '../assets/projection.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
 import {
   allocateDepartmentId,
   applyPlacement,
@@ -70,11 +70,11 @@ export async function readPropContext(
   return await withCurrentProjectSession(input, ({ currentProject, session }) => {
     const prop = requireProp(session, input.propId);
     const activeDesign = readActivePropDesignDocument(session, input.propId);
-    const assetRoles = listPropAssetRoleRecords(session, input.propId);
-    const assets = listAssetsInSession(session, {
+    const assetFileRoles = listPropAssetFileRoleRecords(session, input.propId);
+    const assetFiles = listAssetFilesInSession(session, {
       owner: { kind: 'prop', id: input.propId },
     });
-    const assetTypeCounts = typeCounts(assetRoles);
+    const assetFileTypeCounts = typeCounts(assetFileRoles);
     return {
       valid: true,
       warnings: [],
@@ -93,11 +93,11 @@ export async function readPropContext(
         session,
         projectFolder: currentProject.projectFolder,
       }),
-      assets,
-      assetTypeCounts,
+      assetFiles,
+      assetFileTypeCounts,
       generationReadiness: {
         propSheet: true,
-        propHero: assetTypeCounts.some((entry) => entry.type === 'prop_sheet'),
+        propHero: assetFileTypeCounts.some((entry) => entry.type === 'prop_sheet'),
         notes: ['Use media-producer for prop.sheet and prop.hero generation.'],
       },
     };
@@ -335,7 +335,7 @@ function typeCounts(records: Array<{ type: string }>): Array<{ type: string; cou
 
 function propDeleteDependencyLabels(dependencies: PropDeleteDependencySummary): string[] {
   return [
-    dependencies.assetCount > 0 ? pluralizeDependency('Prop Asset', dependencies.assetCount) : null,
+    dependencies.assetFileCount > 0 ? pluralizeDependency('Prop Asset', dependencies.assetFileCount) : null,
     dependencies.designCount > 0 ? pluralizeDependency('Prop Design', dependencies.designCount) : null,
     dependencies.activeDesignStateCount > 0 ? 'active Prop Design state' : null,
     dependencies.propSheetCount > 0 ? pluralizeDependency('Prop Sheet', dependencies.propSheetCount) : null,

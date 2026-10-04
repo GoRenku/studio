@@ -7,6 +7,12 @@ and [Decision 0088](../../decisions/0088-use-exact-request-references-and-source
 
 ## Public Core contracts
 
+Inspiration images and research image, audio, and video references resolve through
+their active registered AssetFile records. Generic research documents remain
+retained files, but media review rejects unsupported kinds with
+`CORE_MEDIA_GENERATION_LOCAL_MEDIA_UNSUPPORTED`; registration does not imply that
+every consumer can preview every file kind.
+
 ```ts
 type JsonValue = null | boolean | number | string | JsonValue[] |
   { [key: string]: JsonValue };
@@ -51,9 +57,9 @@ interface MediaGenerationContextReport {
 
 Generation context uses one `assets: MediaGenerationAsset[]` inventory, where
 `MediaGenerationAsset = Omit<Asset, 'generationProvenance'>`. Every File and every
-other Asset field is retained. Subject `assetIds`, Shot `imageAssetIds`, Lookbook
-placement `assetId`, Voice `sampleAssetId`, and exact edit-source `assetId` resolve
-into that inventory. Candidates contain `assetId`, `assetFileId`, availability,
+other Asset field is retained. Subject `assetFileIds`, Shot `imageAssetFileIds`, Lookbook
+placement `assetFileId`, Voice `sampleAssetFileId`, and exact edit-source `assetFileId` resolve
+into that inventory. Candidates contain `assetFileId`, availability,
 display/workflow selection and optional dialogue range; their groups retain role,
 subject and order. Different Assets sharing a path or hash stay distinct.
 

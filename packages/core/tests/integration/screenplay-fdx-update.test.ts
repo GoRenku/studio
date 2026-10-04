@@ -138,10 +138,9 @@ describe('reviewed external FDX updates', () => {
     insertShot.run('shot_live', 'plan_one', 0, '1', 'Shot', 'opaque', 'opaque', now, now, null);
     insertShot.run('shot_discarded', 'plan_one', 1, '2', 'Shot', 'opaque', 'opaque', now, now, now);
     insertShot.run('shot_old_plan', 'plan_discarded', 0, '1', 'Shot', 'opaque', 'opaque', now, now, null);
-    database.prepare('INSERT INTO asset (id, type, media_kind, title, origin, availability, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('asset_audio', 'shot_plan_dialogue_audio', 'audio', 'Dialogue', 'generated', 'ready', now, now);
-    database.prepare('INSERT INTO asset_file (id, asset_id, role, project_relative_path, mime_type, media_kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('file_audio', 'asset_audio', 'primary', 'audio/dialogue.mp3', 'audio/mpeg', 'audio', now, now);
+    database.prepare('INSERT INTO asset_file (id, owner_key, type, media_kind, title, origin, availability, project_relative_path, mime_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run('file_audio', 'project', 'shot_plan_dialogue_audio', 'audio', 'Dialogue', 'generated', 'ready', 'audio/dialogue.mp3', 'audio/mpeg', now, now);
     // Real audio ownership rows: media bytes/turn labels are deliberately irrelevant to impact.
-    database.prepare('INSERT INTO shot_plan_dialogue_audio_take (id, shot_plan_id, asset_id, asset_file_id, turn_start_number, turn_end_number, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?)').run('take_one', 'plan_one', 'asset_audio', 'file_audio', now, now);
+    database.prepare('INSERT INTO shot_plan_dialogue_audio_take (id, shot_plan_id, asset_file_id, turn_start_number, turn_end_number, created_at, updated_at) VALUES (?, ?, ?, 1, 1, ?, ?)').run('take_one', 'plan_one', 'file_audio', now, now);
     const candidate = await review(fdx(scene('A', 'Wait!') + scene('B')));
     expect(candidate.removedOrReplacedScenes[0]).toMatchObject({ activeSceneBeats: true, sceneBeatsRevisionCount: 1, shotPlanCount: 1, shotCount: 1, dialogueAudioTakeCount: 1 });
     database.prepare('UPDATE shot_plan_dialogue_audio_take SET discarded_at = ? WHERE id = ?').run(now, 'take_one');
@@ -186,8 +185,8 @@ describe('reviewed external FDX updates', () => {
     if (kind === 'symlink') await fs.symlink(sourcePath, exportPath);
     if (kind === 'directory') await fs.mkdir(exportPath);
     if (kind === 'hardlink') {
-      const assets = await service.listAssets({ ...input, owner: { kind: 'project' } });
-      const retained = assets.find((asset) => asset.type === 'screenplay_source')!.files[0]!;
+      const assetFiles = await service.listAssetFiles({ ...input, owner: { kind: 'project' } });
+      const retained = assetFiles.find((assetFile) => assetFile.type === 'screenplay_source')!;
       await fs.link(path.join(projectFolder, retained.projectRelativePath), exportPath);
     }
     await expect(service.applyFdxUpdate({ ...input, reviewFingerprint: candidate.reviewFingerprint })).rejects.toBeDefined();

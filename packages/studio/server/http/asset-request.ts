@@ -2,16 +2,16 @@ import {
   createDiagnosticError,
   createStructuredError,
 } from '@gorenku/studio-diagnostics';
-import type { AssetOwner } from '@gorenku/studio-core/server';
+import type { AssetFileOwner } from '@gorenku/studio-core/server';
 import {
   readOptionalQueryString,
   readPageRequest,
 } from './pagination-request.js';
 
-export function readAssetPageRequest(
+export function readAssetFilePageRequest(
   query: Record<string, string | undefined>
 ): {
-  owner: AssetOwner;
+  owner: AssetFileOwner;
   type?: string;
   mediaKind?: string;
   locale?: { localeId: string | null };
@@ -19,7 +19,7 @@ export function readAssetPageRequest(
   cursor?: string;
 } {
   return {
-    owner: readAssetOwnerQuery(query),
+    owner: readAssetFileOwnerQuery(query),
     type: readOptionalQueryString(query.type),
     mediaKind: readOptionalQueryString(query.mediaKind),
     locale:
@@ -30,9 +30,9 @@ export function readAssetPageRequest(
   };
 }
 
-function readAssetOwnerQuery(
+function readAssetFileOwnerQuery(
   query: Record<string, string | undefined>
-): AssetOwner {
+): AssetFileOwner {
   switch (query.ownerKind) {
     case 'project':
       return { kind: 'project' };

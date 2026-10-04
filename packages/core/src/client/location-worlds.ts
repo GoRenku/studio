@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { Location } from './locations.js';
 import type { ProjectRelativePath } from './project/index.js';
 
@@ -30,8 +30,8 @@ export interface LocationWorldGenerationReport {
     projectFolder: string;
   };
   location: Location;
-  asset: Asset;
-  selectedAssetId: string;
+  assetFile: AssetFile;
+  selectedAssetFileId: string;
   provider: {
     name: 'world-labs';
     model: 'marble-1.1';
@@ -43,5 +43,5 @@ export interface LocationWorldGenerationReport {
 
 export interface LocationWorldResource {
   location: Location;
-  selectedWorld: Asset | null;
+  selectedWorld: AssetFile | null;
 }

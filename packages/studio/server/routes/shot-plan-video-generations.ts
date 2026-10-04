@@ -5,7 +5,7 @@ import { projectErrorResponse } from '../errors.js';
 export function createShotPlanVideoGenerationsRoute(options: {
   projectData: Pick<
     ProjectDataService,
-    'listSceneShotPlanVideoGenerations' | 'discardAsset'
+    'listSceneShotPlanVideoGenerations' | 'discardAssetFile'
   >;
   requireToken: MiddlewareHandler;
 }) {
@@ -26,16 +26,9 @@ export function createShotPlanVideoGenerationsRoute(options: {
               ...resource,
               groups: resource.groups.map((group) => ({
                 ...group,
-                assets: group.assets.map((asset) => ({
-                  ...asset,
-                  files: asset.files.map((file) => ({
-                    ...file,
-                    browserUrl: assetFileUrl({
-                      projectName,
-                      assetId: asset.id,
-                      assetFileId: file.id,
-                    }),
-                  })),
+                assetFiles: group.assetFiles.map((assetFile) => ({
+                  ...assetFile,
+                  browserUrl: assetFileUrl({ projectName, assetFileId: assetFile.id }),
                 })),
               })),
             },
@@ -45,14 +38,14 @@ export function createShotPlanVideoGenerationsRoute(options: {
         }
       },
     )
-    .delete('/project-assets/:assetId', options.requireToken, async (c) => {
+    .delete('/project-assets/:assetFileId', options.requireToken, async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
-        const assetId = c.req.param('assetId') as string;
-        return c.json(await options.projectData.discardAsset({
+        const assetFileId = c.req.param('assetFileId') as string;
+        return c.json(await options.projectData.discardAssetFile({
           projectName,
           owner: { kind: 'project' },
-          assetId,
+          assetFileId,
         }));
       } catch (error) {
         return projectErrorResponse(c, error);
@@ -62,8 +55,7 @@ export function createShotPlanVideoGenerationsRoute(options: {
 
 function assetFileUrl(input: {
   projectName: string;
-  assetId: string;
   assetFileId: string;
 }): string {
-  return `/studio-api/projects/${encodeURIComponent(input.projectName)}/assets/${encodeURIComponent(input.assetId)}/files/${encodeURIComponent(input.assetFileId)}`;
+  return `/studio-api/projects/${encodeURIComponent(input.projectName)}/asset-files/${encodeURIComponent(input.assetFileId)}`;
 }

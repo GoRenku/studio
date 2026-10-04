@@ -1,7 +1,7 @@
 import type { SceneDesignResource } from '../../client/index.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import { listAssetPageInSession } from '../assets/projection.js';
+import { listAssetFilePageInSession } from '../asset-files/projection.js';
 import type { ReadSceneDesignResourceInput } from '../project-data-service-contracts.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
 import { projectScreenplayScene } from '../screenplay/projections/scene.js';
@@ -30,7 +30,7 @@ export function readSceneDesignResourceProjection(
   const owner = { kind: 'scene' as const, id: input.sceneId };
   return {
     scene,
-    assetPage: listAssetPageInSession(session, {
+    assetFilePage: listAssetFilePageInSession(session, {
       owner,
       type: input.activeRole,
       limit: input.limit,

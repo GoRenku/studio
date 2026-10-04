@@ -1,5 +1,9 @@
+import { prepareInspirationFolderPaths, commitInspirationFolderPaths } from '../database/access/inspiration-folder-paths.js';
+import { assertProjectFilePathWithoutSymlinks } from '../project-asset-files/path-guards.js';
 import fs from 'node:fs/promises';
+import { existsSync, renameSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import type {
   InspirationFolder,
   InspirationFolderDeleteReport,
@@ -25,7 +29,7 @@ import {
   nextInspirationFolderPosition,
   requireInspirationFolderRecord,
   updateInspirationFolderPositions,
-  updateInspirationFolderRecord,
+
 } from '../database/access/inspiration-folders.js';
 import {
   readInspirationAnalysisRecord,
@@ -40,14 +44,11 @@ import {
   createUniqueIdAllocator,
 } from '../entity-ids.js';
 import {
-  joinProjectRelativePath,
+
   normalizeProjectRelativePath,
   resolveProjectRelativePath,
 } from '../files/project-relative-paths.js';
-import {
-  listActiveInspirationImagesFromFolder,
-  listInspirationImagesFromFolder,
-} from '../files/inspiration-images.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
 import type {
   CreateInspirationFolderInput,
   DeleteInspirationFolderInput,
@@ -65,7 +66,7 @@ import { ProjectDataError } from '../project-data-error.js';
 import {
   allocateProjectRelativeFolderPath,
   assertProjectRelativeChildPath,
-  assertResolvedPathInsideProject,
+
   INSPIRATION_ROOT,
   normalizeFolderFileName,
   pathExists,
@@ -80,7 +81,8 @@ import {
   studioVisualLanguageInspirationResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
-import { inspirationImageTrashItemId } from '../trash/trash-object-registry.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { importReferenceFiles } from '../reference-files/index.js';
 
 const inspirationResourceKeys = (folderId: string): string[] => [
   studioVisualLanguageInspirationResourceKey(),
@@ -102,15 +104,14 @@ export async function listInspirationFolders(
 export async function readInspirationFolder(
   input: ReadInspirationFolderInput
 ): Promise<InspirationFolderResource> {
-  return withVisualLanguageSession(input, async ({ session, projectFolder }) => {
+  return withVisualLanguageSession(input, ({ session }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const analysis = readInspirationAnalysisRecord(session, input.folderId);
     return {
       folder: toInspirationFolder(folder),
-      images: await listActiveInspirationImagesFromFolder({
-        session,
-        projectFolder,
-        folder,
+      images: listAssetFilesInSession(session, {
+        owner: { kind: 'inspirationFolder', id: folder.id },
+        type: 'inspiration_image', mediaKind: 'image',
       }),
       analysis: analysis ? toInspirationAnalysis(analysis) : null,
     };
@@ -166,7 +167,9 @@ export async function renameInspirationFolder(
     if (!(await pathExists(currentPath))) {
       throw new ProjectDataError(
         'PROJECT_DATA241',
-        `Inspiration folder is missing on disk: ${folder.projectRelativePath}.`
+        `Inspiration folder is missing on disk: ${folder.projectRelativePath}.`,
+        { issues: [createDiagnosticError('PROJECT_DATA241', 'Required Inspiration directory is missing.',
+          { path: ['folderId'], context: folder.projectRelativePath })] }
       );
     }
     const nextProjectRelativePath = await allocateProjectRelativeFolderPath({
@@ -178,18 +181,48 @@ export async function renameInspirationFolder(
       ),
     });
     const nextPath = resolveProjectRelativePath(projectFolder, nextProjectRelativePath);
-    if (nextProjectRelativePath !== normalizeProjectRelativePath(folder.projectRelativePath)) {
-      await fs.mkdir(path.dirname(nextPath), { recursive: true });
-      await fs.rename(currentPath, nextPath);
-    }
-
+    let moved = false;
     const now = new Date().toISOString();
-    updateInspirationFolderRecord(session, {
-      folderId: folder.id,
-      name,
-      projectRelativePath: nextProjectRelativePath,
-      updatedAt: now,
-    });
+    try {
+      session.db.transaction((tx) => {
+        const transactionSession = { ...session, db: tx };
+        const currentFolder = requireInspirationFolderRecord(transactionSession, folder.id);
+        if (currentFolder.projectRelativePath !== folder.projectRelativePath) {
+          throw new ProjectDataError('CORE_INSPIRATION_FOLDER_RENAME_CONFLICT', 'The Inspiration folder changed during rename.');
+        }
+        const prepared = prepareInspirationFolderPaths(transactionSession, { folderId: folder.id,
+          currentPath: folder.projectRelativePath, nextPath: nextProjectRelativePath });
+        assertProjectFilePathWithoutSymlinks(projectFolder, normalizeProjectRelativePath(folder.projectRelativePath));
+        assertProjectFilePathWithoutSymlinks(projectFolder, nextProjectRelativePath);
+        if (!statSync(currentPath).isDirectory()) {
+          throw new ProjectDataError('CORE_INSPIRATION_FOLDER_PATH_INVALID', 'The Inspiration folder path must be a directory.');
+        }
+        if (nextProjectRelativePath !== normalizeProjectRelativePath(folder.projectRelativePath)) {
+          if (existsSync(nextPath)) {
+            throw new ProjectDataError('CORE_INSPIRATION_FOLDER_RENAME_CONFLICT', 'The destination directory already exists.');
+          }
+          renameSync(currentPath, nextPath);
+          moved = true;
+        }
+        commitInspirationFolderPaths(transactionSession, { folderId: folder.id, name, nextPath: nextProjectRelativePath, now, prepared });
+      }, { behavior: 'immediate' });
+    } catch (error) {
+      if (moved) {
+        try { renameSync(nextPath, currentPath); }
+        catch {
+          throw new ProjectDataError('CORE_INSPIRATION_FOLDER_RENAME_ROLLBACK_FAILED',
+            `Folder metadata was rolled back, but the directory could not return from ${nextProjectRelativePath} to ${folder.projectRelativePath}.`,
+            { issues: [createDiagnosticError('CORE_INSPIRATION_FOLDER_RENAME_ROLLBACK_FAILED', 'The directory move could not be reversed.',
+              { path: ['folderId'], context: nextProjectRelativePath })],
+              suggestion: `Restore the directory to ${folder.projectRelativePath} before retrying.` });
+        }
+      }
+      if (error instanceof ProjectDataError) { throw error; }
+      throw new ProjectDataError('CORE_INSPIRATION_FOLDER_RENAME_FAILED', 'Inspiration folder rename could not be committed.',
+        { issues: [createDiagnosticError('CORE_INSPIRATION_FOLDER_RENAME_FAILED', 'The directory and metadata change could not be committed.',
+          { path: ['folderId'], context: folder.projectRelativePath })],
+          suggestion: error instanceof Error ? error.message : String(error) });
+    }
     const folderResource = {
       id: folder.id,
       name,
@@ -289,16 +322,17 @@ export async function writeInspirationImage(
   return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const fileName = normalizeFolderFileName(input.fileName);
-    const folderPath = normalizeProjectRelativePath(folder.projectRelativePath);
-    const imagePath = joinProjectRelativePath(folderPath, fileName);
-    const absolutePath = resolveProjectRelativePath(projectFolder, imagePath);
-    assertResolvedPathInsideProject(projectFolder, absolutePath);
-    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-    const bytes =
-      input.contents instanceof Uint8Array
-        ? input.contents
-        : new Uint8Array(input.contents);
-    await fs.writeFile(absolutePath, bytes);
+    await fs.mkdir(path.join(projectFolder, 'tmp'), { recursive: true });
+    const temporaryFolder = await fs.mkdtemp(path.join(projectFolder, 'tmp', 'inspiration-upload-'));
+    const temporaryPath = path.join(temporaryFolder, fileName);
+    try {
+      await fs.writeFile(temporaryPath, new Uint8Array(input.contents), { flag: 'wx' });
+      await importReferenceFiles({ projectName: project.projectName, homeDir: input.homeDir,
+        destination: { kind: 'inspiration', folderId: folder.id },
+        files: [{ sourceProjectRelativePath: path.relative(projectFolder, temporaryPath).split(path.sep).join('/') }] });
+    } finally {
+      await fs.rm(temporaryFolder, { recursive: true, force: true });
+    }
     return {
       valid: true,
       warnings: [],
@@ -325,25 +359,10 @@ export async function deleteInspirationImage(
 ): Promise<InspirationFolderResourceMutationReport> {
   return withVisualLanguageSession(input, async ({ session, projectFolder, project }) => {
     const folder = requireInspirationFolderRecord(session, input.folderId);
-    const fileName = normalizeFolderFileName(input.fileName);
-    const folderPath = normalizeProjectRelativePath(folder.projectRelativePath);
-    const imagePath = joinProjectRelativePath(folderPath, fileName);
-    assertProjectRelativeChildPath({ parent: folderPath, child: imagePath });
-    const report = discardTrashObject({
-      session,
-      project,
-      projectFolder,
-      itemKind: 'inspirationImage',
-      itemId: inspirationImageTrashItemId({ folderId: input.folderId, fileName }),
-      commandName: 'inspiration.image.discard',
-      changes: [
-        {
-          type: 'inspirationImage.discarded',
-          folderId: input.folderId,
-          fileName,
-        },
-      ],
-    });
+    const image = readOwnedAssetFile(session, { owner: { kind: 'inspirationFolder', id: folder.id }, assetFileId: input.assetFileId });
+    if (!image || image.type !== 'inspiration_image') { throw new ProjectDataError('CORE_REFERENCE_FILE_OWNER_INVALID', 'The image must belong to this Inspiration folder.'); }
+    const report = discardTrashObject({ session, project, projectFolder, itemKind: 'assetFile', itemId: image.id,
+      commandName: 'inspiration.image.discard', changes: [{ type: 'inspirationImage.discarded', folderId: folder.id, assetFileId: image.id }] });
     return {
       ...report,
       resource: await readInspirationFolder({
@@ -380,7 +399,7 @@ export async function validateInspirationAnalysis(
     const folder = requireInspirationFolderRecord(session, input.folderId);
     validateInspirationAnalysisDocument({
       document: input.document,
-      folderImageFiles: await readFolderImageFileNames(projectFolder, folder),
+      folderImageFiles: await readFolderImageFileNames(session, folder),
       filePath: input.filePath,
     });
     return {
@@ -400,7 +419,7 @@ export async function writeInspirationAnalysis(
     const folder = requireInspirationFolderRecord(session, input.folderId);
     const sections = serializeInspirationAnalysisDocument({
       document: input.document,
-      folderImageFiles: await readFolderImageFileNames(projectFolder, folder),
+      folderImageFiles: await readFolderImageFileNames(session, folder),
       filePath: input.filePath,
     });
     upsertInspirationAnalysisRecord(session, {
@@ -475,12 +494,13 @@ function requireProjectRecord(session: DatabaseSession): ProjectRecord {
 }
 
 async function readFolderImageFileNames(
-  projectFolder: string,
+  session: DatabaseSession,
   folder: ReturnType<typeof requireInspirationFolderRecord>
 ): Promise<Set<string>> {
   return new Set(
-    (await listInspirationImagesFromFolder(projectFolder, folder)).map(
-      (image) => image.fileName
+    listAssetFilesInSession(session, { owner: { kind: 'inspirationFolder', id: folder.id },
+      type: 'inspiration_image', mediaKind: 'image' }).map(
+      (image) => path.posix.basename(image.projectRelativePath)
     )
   );
 }

@@ -58,13 +58,13 @@ export function SceneShotPlanVideoGenerationsTab({
               <AccordionTrigger>
                 <span>{group.kind === 'shotPlan' ? group.shotPlan.title : 'Miscellaneous'}</span>
                 <span className='ml-auto mr-3 text-xs font-normal tabular-nums text-muted-foreground'>
-                  {group.assets.length}
+                  {group.assetFiles.length}
                 </span>
               </AccordionTrigger>
               <AccordionContent>
                 <ShotPlanVideoGenerationGroup
                   projectName={projectName}
-                  assets={group.assets}
+                  assetFiles={group.assetFiles}
                   onDeleted={retry}
                 />
               </AccordionContent>

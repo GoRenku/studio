@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type {
   PropResourceResponse,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 import {
   continuityImageAspectRatio,
-  continuityImageAssets,
+  continuityImageAssetFiles,
   continuityPreviewImage,
 } from '../continuity/continuity-image-assets';
 import { ContinuityFeatureImage } from '../continuity/continuity-feature-image';
@@ -17,18 +17,18 @@ import {
 export function PropDetailsTab({
   projectName,
   resource,
-  assets,
-  selectedHeroAssetId,
+  assetFiles,
+  selectedHeroAssetFileId,
 }: {
   projectName: string;
   resource: PropResourceResponse;
-  assets: StudioAssetResponse[];
-  selectedHeroAssetId: string | null;
+  assetFiles: StudioAssetFileResponse[];
+  selectedHeroAssetFileId: string | null;
 }) {
   const [previewImage, setPreviewImage] = useState<PreviewImage | null>(null);
   const prop = resource.prop;
-  const hero = continuityImageAssets(assets, ['prop_hero']).find(
-    (asset) => asset.id === selectedHeroAssetId
+  const hero = continuityImageAssetFiles(assetFiles, ['prop_hero']).find(
+    (assetFile) => assetFile.id === selectedHeroAssetFileId
   );
   const heroPreview = hero
     ? continuityPreviewImage(projectName, hero, 'Prop Hero')

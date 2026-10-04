@@ -1,35 +1,31 @@
-import type { Asset } from '../../client/assets.js';
+import type { AssetFile } from '../../client/asset-files.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { parseAssetOwnerKey } from '../assets/owner-keys.js';
-import { readAssetMembershipRecord } from '../database/access/asset-memberships.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { parseAssetFileOwnerKey } from '../asset-files/owner-keys.js';
+import { readAssetFileRecordIncludingDiscarded } from '../database/access/asset-files.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { mediaGenerationReferenceProjectPaths } from '../media-generation-review/local-media.js';
 import { ProjectDataError } from '../project-data-error.js';
 
 export function readImageEditSource(input: {
   session: DatabaseSession;
-  assetId: string;
+  assetFileId: string;
   generationProvenance: MediaGenerationProvenance;
-}): Asset {
-  const membership = readAssetMembershipRecord(input.session, input.assetId);
-  const source = membership
-    ? readOwnedAsset(input.session, {
-        owner: parseAssetOwnerKey(membership.ownerKey),
-        assetId: input.assetId,
+}): AssetFile {
+  const record = readAssetFileRecordIncludingDiscarded(input.session, input.assetFileId);
+  const source = record
+    ? readOwnedAssetFile(input.session, {
+        owner: parseAssetFileOwnerKey(record.ownerKey),
+        assetFileId: input.assetFileId,
       })
     : null;
   if (!source || source.mediaKind !== 'image') {
     throw sourceInvalid();
   }
-  const imageFiles = source.files.filter((file) => file.mediaKind === 'image');
-  if (imageFiles.length === 0) {
-    throw sourceInvalid();
-  }
   const provenancePaths = new Set(
     mediaGenerationReferenceProjectPaths(input.generationProvenance.request),
   );
-  if (!imageFiles.some((file) => provenancePaths.has(file.projectRelativePath))) {
+  if (!provenancePaths.has(source.projectRelativePath)) {
     throw new ProjectDataError(
       'CORE_IMAGE_EDIT_SOURCE_REFERENCE_MISSING',
       'image.edit provenance must reference a current file from the source Asset.',

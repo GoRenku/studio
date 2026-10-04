@@ -19,7 +19,7 @@ Decision history:
 ## Inspiration Folders
 
 Inspiration folders are durable project objects. The files inside each folder
-are filesystem content, not registered per-image assets.
+are registered folder-owned AssetFiles, with exact bytes on the filesystem.
 
 Current CLI surface:
 
@@ -232,9 +232,9 @@ Lookbook image. To choose an existing candidate, list the Lookbook's Assets and
 use the common selection commands:
 
 ```bash
-renku asset list --project <project-name> --owner lookbook:<lookbook-id> --type lookbook_image --json
-renku asset select --project <project-name> --target lookbook:<lookbook-id> --asset <asset-id> --json
-renku asset clear-selection --project <project-name> --target lookbook:<lookbook-id> --json
+renku asset-file list --project <project-name> --owner lookbook:<lookbook-id> --type lookbook_image --json
+renku asset-file select --project <project-name> --target lookbook:<lookbook-id> --asset-file <asset-file-id> --json
+renku asset-file clear-selection --project <project-name> --target lookbook:<lookbook-id> --json
 ```
 
 Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.
@@ -262,3 +262,10 @@ Do not restore these obsolete shapes:
 - bare-section Lookbook JSON;
 - `imageFiles` in Lookbook JSON;
 - per-image Inspiration asset rows or image manifests.
+
+Inspiration images are registered folder-owned AssetFiles. Cards, galleries and
+counts read registered active rows. Folder rename moves the directory and
+updates retained file paths and live image Trash paths together, with rollback
+if the metadata transaction fails. File IDs, bytes, provenance, authored Analysis
+and collected history remain unchanged. Image removal uses the common file
+Trash lifecycle and canonical file ID.

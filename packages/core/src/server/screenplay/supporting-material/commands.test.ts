@@ -55,15 +55,15 @@ describe('Screenplay supporting material import', () => {
         mediaKind: 'file',
         origin: 'imported',
         title: filename,
-        files: [{ role: 'source', mediaKind: 'file', mimeType: 'application/octet-stream' }],
+        mimeType: 'application/octet-stream',
       });
       const retained = path.join(
         imported.project.projectFolder,
-        imported.material.files[0]!.projectRelativePath,
+        imported.material!.projectRelativePath,
       );
       const retainedBytes = await fs.readFile(retained);
       expect(retainedBytes.equals(bytes)).toBe(true);
-      expect(imported.material.files[0]!.projectRelativePath).toBe(
+      expect(imported.material!.projectRelativePath).toBe(
         filename === 'extensionless' ? 'screenplay/extensionless.bin' : `screenplay/${filename}`,
       );
     }
@@ -85,7 +85,7 @@ describe('Screenplay supporting material import', () => {
 
     expect(second.status).toBe('unchanged');
     expect(second.material.id).toBe(first.material.id);
-    await expect(service.listAssets({
+    await expect(service.listAssetFiles({
       projectName: 'source-context',
       owner: { kind: 'project' },
       type: 'screenplay_supporting_material',
@@ -110,8 +110,8 @@ describe('Screenplay supporting material import', () => {
       projectName: 'source-context', sourcePath: secondPath, homeDir,
     });
 
-    expect(first.material.files[0]!.projectRelativePath).toBe('screenplay/notes.md');
-    expect(second.material.files[0]!.projectRelativePath).toBe('screenplay/notes-2.md');
+    expect(first.material!.projectRelativePath).toBe('screenplay/notes.md');
+    expect(second.material!.projectRelativePath).toBe('screenplay/notes-2.md');
     expect(second.material.id).not.toBe(first.material.id);
   });
 
@@ -129,19 +129,19 @@ describe('Screenplay supporting material import', () => {
     });
     await fs.rm(path.join(
       first.project.projectFolder,
-      first.material.files[0]!.projectRelativePath,
+      first.material!.projectRelativePath,
     ));
 
     const second = await service.importScreenplaySupportingMaterial({
       projectName: 'source-context', sourcePath: secondPath, homeDir,
     });
 
-    expect(first.material.files[0]!.projectRelativePath).toBe('screenplay/notes.md');
-    expect(second.material.files[0]!.projectRelativePath).toBe('screenplay/notes-2.md');
+    expect(first.material!.projectRelativePath).toBe('screenplay/notes.md');
+    expect(second.material!.projectRelativePath).toBe('screenplay/notes-2.md');
     expect(second.material.id).not.toBe(first.material.id);
     await expect(fs.readFile(path.join(
       second.project.projectFolder,
-      second.material.files[0]!.projectRelativePath,
+      second.material!.projectRelativePath,
     ), 'utf8')).resolves.toBe('second edition');
   });
 
@@ -156,12 +156,12 @@ describe('Screenplay supporting material import', () => {
       });
 
       expect(imported.material.title).toBe('notes.foo\\bar');
-      expect(imported.material.files[0]!.projectRelativePath).toBe(
+      expect(imported.material!.projectRelativePath).toBe(
         'screenplay/notes.foo%5cbar',
       );
       await expect(fs.readFile(path.join(
         imported.project.projectFolder,
-        imported.material.files[0]!.projectRelativePath,
+        imported.material!.projectRelativePath,
       ), 'utf8')).resolves.toBe('opaque source');
     },
   );
@@ -225,7 +225,7 @@ describe('Screenplay supporting material import', () => {
     });
 
     expect(imported.status).toBe('imported');
-    expect(imported.material.files[0]!.projectRelativePath).toBe('screenplay/field-notes.pdf');
+    expect(imported.material!.projectRelativePath).toBe('screenplay/field-notes.pdf');
     await expect(service.readScreenplayStructure({
       projectName: 'source-context', homeDir,
     })).resolves.toMatchObject({ orderedSceneIds: [expect.any(String)] });
@@ -243,7 +243,7 @@ describe('Screenplay supporting material import', () => {
     await service.importFdxScreenplay({
       projectName: 'source-context', sourcePath: fdxPath, homeDir,
     });
-    const [firstSource] = await service.listAssets({
+    const [firstSource] = await service.listAssetFiles({
       projectName: 'source-context',
       owner: { kind: 'project' },
       type: 'screenplay_source',
@@ -251,7 +251,7 @@ describe('Screenplay supporting material import', () => {
     });
     await fs.rm(path.join(
       projectFolder,
-      firstSource!.files[0]!.projectRelativePath,
+      firstSource!!.projectRelativePath,
     ));
     await fs.writeFile(
       fdxPath,
@@ -265,13 +265,13 @@ describe('Screenplay supporting material import', () => {
       projectName: 'source-context', sourcePath: fdxPath, homeDir,
     });
 
-    const sources = await service.listAssets({
+    const sources = await service.listAssetFiles({
       projectName: 'source-context',
       owner: { kind: 'project' },
       type: 'screenplay_source',
       homeDir,
     });
-    expect(sources.map((asset) => asset.files[0]!.projectRelativePath)).toEqual(
+    expect(sources.map((assetFile) => assetFile!.projectRelativePath)).toEqual(
       expect.arrayContaining(['screenplay/script.fdx', 'screenplay/script-2.fdx']),
     );
   });
@@ -327,7 +327,7 @@ describe('Screenplay supporting material import', () => {
       sourcePath: homeDir,
       homeDir,
     })).rejects.toMatchObject({ code: 'SCREENPLAY_SUPPORTING_MATERIAL_INVALID_SOURCE' });
-    await expect(service.listAssets({
+    await expect(service.listAssetFiles({
       projectName: 'source-context',
       owner: { kind: 'project' },
       type: 'screenplay_supporting_material',
@@ -347,7 +347,7 @@ describe('Screenplay supporting material import', () => {
       suggestion:
         'Check that the Project folder is writable and has sufficient free space, then retry.',
     });
-    await expect(service.listAssets({
+    await expect(service.listAssetFiles({
       projectName: 'source-context',
       owner: { kind: 'project' },
       type: 'screenplay_supporting_material',
@@ -362,7 +362,7 @@ describe('Screenplay supporting material import', () => {
       projectName: 'source-context', sourcePath, homeDir,
     });
     await fs.writeFile(
-      path.join(imported.project.projectFolder, imported.material.files[0]!.projectRelativePath),
+      path.join(imported.project.projectFolder, imported.material!.projectRelativePath),
       'tampered',
     );
 

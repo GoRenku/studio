@@ -1,63 +1,63 @@
-import type { Asset } from '../../client/assets.js';
+import type { AssetFile } from '../../client/asset-files.js';
 import type { CastVoice } from '../../client/cast-voices.js';
-import type { MediaGenerationAsset, MediaGenerationCastVoice, MediaGenerationLookbookImage, MediaGenerationLookbookSheet } from '../../client/media-generation-context.js';
+import type { MediaGenerationAssetFile, MediaGenerationCastVoice, MediaGenerationLookbookImage, MediaGenerationLookbookSheet } from '../../client/media-generation-context.js';
 import type { LookbookImage, LookbookSheet } from '../../client/visual-language.js';
 import { isDeepStrictEqual } from 'node:util';
 import { ProjectDataError } from '../project-data-error.js';
 
-export class GenerationAssets {
-  private readonly assets = new Map<string, MediaGenerationAsset>();
+export class GenerationAssetFiles {
+  private readonly assetFiles = new Map<string, MediaGenerationAssetFile>();
 
-  add(asset: Asset | MediaGenerationAsset): string {
-    const projected = projectGenerationAsset(asset);
-    const previous = this.assets.get(asset.id);
+  add(assetFile: AssetFile | MediaGenerationAssetFile): string {
+    const projected = projectGenerationAssetFile(assetFile);
+    const previous = this.assetFiles.get(assetFile.id);
     if (previous && !isDeepStrictEqual(previous, projected)) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_CONTEXT_INCONSISTENT_MEDIA',
-        `Generation context contains conflicting facts for Asset ${asset.id}.`,
+        `Generation context contains conflicting facts for Asset ${assetFile.id}.`,
       );
     }
     if (!previous) {
-      this.assets.set(asset.id, projected);
+      this.assetFiles.set(assetFile.id, projected);
     }
-    return asset.id;
+    return assetFile.id;
   }
 
-  get(id: string): MediaGenerationAsset {
-    const asset = this.assets.get(id);
-    if (!asset) {
+  get(id: string): MediaGenerationAssetFile {
+    const assetFile = this.assetFiles.get(id);
+    if (!assetFile) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_CONTEXT_INCONSISTENT_MEDIA',
         `Generation context cannot resolve Asset ${id}.`,
       );
     }
-    return asset;
+    return assetFile;
   }
 
-  values(): MediaGenerationAsset[] {
-    return [...this.assets.values()];
+  values(): MediaGenerationAssetFile[] {
+    return [...this.assetFiles.values()];
   }
 }
 
-export function projectGenerationAsset(asset: Asset | MediaGenerationAsset): MediaGenerationAsset {
-  if (!('generationProvenance' in asset)) {
-    return asset;
+export function projectGenerationAssetFile(assetFile: AssetFile | MediaGenerationAssetFile): MediaGenerationAssetFile {
+  if (!('generationProvenance' in assetFile)) {
+    return assetFile;
   }
-  const { generationProvenance: _generationProvenance, ...reference } = asset;
+  const { generationProvenance: _generationProvenance, ...reference } = assetFile;
   return reference;
 }
 
-export function projectGenerationVoice(voice: CastVoice, assets: GenerationAssets): MediaGenerationCastVoice {
+export function projectGenerationVoice(voice: CastVoice, assetFiles: GenerationAssetFiles): MediaGenerationCastVoice {
   const { sample, ...facts } = voice;
-  return { ...facts, sampleAssetId: assets.add(sample) };
+  return { ...facts, sampleAssetFileId: assetFiles.add(sample) };
 }
 
-export function projectGenerationLookbookImage(image: LookbookImage, assets: GenerationAssets): MediaGenerationLookbookImage {
-  const { asset, ...facts } = image;
-  return { ...facts, assetId: assets.add(asset) };
+export function projectGenerationLookbookImage(image: LookbookImage, assetFiles: GenerationAssetFiles): MediaGenerationLookbookImage {
+  const { assetFile, ...facts } = image;
+  return { ...facts, assetFileId: assetFiles.add(assetFile) };
 }
 
-export function projectGenerationLookbookSheet(sheet: LookbookSheet, assets: GenerationAssets): MediaGenerationLookbookSheet {
-  const { asset, ...facts } = sheet;
-  return { ...facts, assetId: assets.add(asset) };
+export function projectGenerationLookbookSheet(sheet: LookbookSheet, assetFiles: GenerationAssetFiles): MediaGenerationLookbookSheet {
+  const { assetFile, ...facts } = sheet;
+  return { ...facts, assetFileId: assetFiles.add(assetFile) };
 }

@@ -135,19 +135,18 @@ export function SceneShotPlansTab({
 
 function shotPlanMedia(item: StudioShotPlanListItem) {
   if (item.shotPlan.type === 'previs') {
-    const file = item.previsRender?.files.find((candidate) => candidate.role === 'primary' && candidate.mediaKind === 'video');
-    return file ? { kind: 'video' as const, src: file.url, title: item.shotPlan.title, playback: 'hover-muted' as const } : null;
+    const assetFile = item.previsRender;
+    return assetFile ? { kind: 'video' as const, src: assetFile.url, title: item.shotPlan.title, playback: 'hover-muted' as const } : null;
   }
   const selected = item.shotPlan.shots.flatMap((shot) => {
-    const asset = selectedShotAsset(shot);
-    const file = asset?.files.find((candidate) => candidate.mediaKind === 'image');
-    if (!asset || !file) {
+    const assetFile = selectedShotAssetFile(shot);
+    if (!assetFile) {
       return [];
     }
     return [
       {
-        key: asset.id,
-        imageUrl: file.url,
+        key: assetFile.id,
+        imageUrl: assetFile.url,
         alt: `Selected image for Shot ${shot.number}`,
       },
     ];
@@ -157,8 +156,8 @@ function shotPlanMedia(item: StudioShotPlanListItem) {
     : null;
 }
 
-function selectedShotAsset(shot: StudioShot) {
-  return shot.images.find((asset) => asset.id === shot.selectedImageId) ?? null;
+function selectedShotAssetFile(shot: StudioShot) {
+  return shot.images.find((assetFile) => assetFile.id === shot.selectedImageId) ?? null;
 }
 
 function coveredBeatCopy(item: StudioShotPlanListItem): string | undefined {

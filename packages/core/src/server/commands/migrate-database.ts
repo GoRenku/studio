@@ -1,6 +1,7 @@
 import { ProjectDataError } from '../project-data-error.js';
 import { resolveRenkuStorageRoot } from '../config/index.js';
 import { migrateProjectDatabase } from '../database/lifecycle/migrator.js';
+import { closeProjectStore, openProjectStore } from '../database/lifecycle/store.js';
 import { pathExists } from '../files/path-existence.js';
 import {
   resolveProjectDatabasePath,
@@ -26,6 +27,10 @@ export async function migrateProjectDatabaseForProject(
   }
 
   const migration = migrateProjectDatabase(databasePath);
+  closeProjectStore({ projectFolder });
+  const session = openProjectStore({ projectFolder, create: false,
+    preMigrationBackup: migration.preMigrationBackup });
+  session.close();
 
   return {
     projectName: input.projectName,

@@ -1,13 +1,12 @@
 import { asc, eq, notInArray } from 'drizzle-orm';
 import {
-  assetMemberships,
-  assets,
+  assetFiles,
   castDesigns,
   castDesignState,
   castMembers,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
-import { assetOwnerKey } from '../../assets/owner-keys.js';
+import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
 
 export interface CastMemberRecord {
   id: string;
@@ -104,7 +103,7 @@ export interface CastMemberAuthoringRecord {
 }
 
 export interface CastMemberDeleteDependencySummary {
-  assetCount: number;
+  assetFileCount: number;
   designCount: number;
   activeDesignStateCount: number;
 }
@@ -160,15 +159,14 @@ export function updateCastMemberVoiceOverRecord(
   return result.changes > 0;
 }
 
-export function listCastAssetRoleRecords(
+export function listCastAssetFileRoleRecords(
   session: DatabaseSession,
   castMemberId: string
 ): Array<{ type: string }> {
   return session.db
-    .select({ type: assets.type })
-    .from(assetMemberships)
-    .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
-    .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'castMember', id: castMemberId })))
+    .select({ type: assetFiles.type })
+    .from(assetFiles)
+    .where(eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'castMember', id: castMemberId })))
     .all();
 }
 
@@ -177,10 +175,10 @@ export function readCastMemberDeleteDependencySummary(
   castMemberId: string
 ): CastMemberDeleteDependencySummary {
   return {
-    assetCount: session.db
-      .select({ id: assetMemberships.assetId })
-      .from(assetMemberships)
-      .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'castMember', id: castMemberId })))
+    assetFileCount: session.db
+      .select({ id: assetFiles.id })
+      .from(assetFiles)
+      .where(eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'castMember', id: castMemberId })))
       .all().length,
     designCount: session.db
       .select({ id: castDesigns.id })

@@ -25,7 +25,6 @@ export type ScreenplayImportLogEntry =
 
 export interface ScreenplayImport {
   id: ScreenplayImportId;
-  sourceAssetId: string;
   sourceAssetFileId: string;
   importerVersion: typeof FDX_IMPORTER_VERSION;
   importedAt: string;
@@ -60,7 +59,6 @@ export interface ImportFdxScreenplayReport {
   project: { id: string; projectName: string };
   screenplayImport: {
     id: ScreenplayImportId;
-    sourceAssetId: string;
     sourceAssetFileId: string;
     importerVersion: typeof FDX_IMPORTER_VERSION;
     importedAt: string;

@@ -2,7 +2,7 @@ import { createDiagnosticWarning } from '@gorenku/studio-diagnostics';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { TrashItemKind } from '../../client/index.js';
 import {
-  assets,
+  assetFiles,
   castVoices,
   inspirationFolders,
   lookbookImages,
@@ -10,7 +10,7 @@ import {
   shotPlanDialogueAudioTakes,
 } from '../schema/index.js';
 import {
-  studioAssetOwnerSurfaceResourceKeys,
+  studioAssetFileOwnerSurfaceResourceKeys,
   studioCastMemberSurfaceResourceKey,
   studioVisualLanguageInspirationFolderResourceKey,
   studioVisualLanguageInspirationResourceKey,
@@ -20,8 +20,8 @@ import {
   projectCoverCandidateResourceKeys,
   studioShotPlanDialogueAudioResourceKey,
 } from '../studio-coordination/resource-keys.js';
-import { shotPlanVideoAssetResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
-import { shotPlanAssetResourceKeys } from '../assets/resource-keys.js';
+import { shotPlanVideoAssetFileResourceKeys } from '../shot-plan-video-generations/source-provenance.js';
+import { shotPlanAssetFileResourceKeys } from '../asset-files/resource-keys.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
   TrashObjectDefinition,
@@ -30,32 +30,23 @@ import type {
   TrashObjectRestoreContext,
 } from './trash-object-definition.js';
 import {
-  collectAssetFiles,
-  markAssetRecordAndFilesDiscarded,
-  markAssetTreeDiscarded,
-  requireAssetSnapshot,
-  restoreAssetRecordAndFiles,
-  restoreAssetTree,
-} from './asset-tree-lifecycle.js';
+  collectAssetFile,
+  markAssetFileDiscarded,
+  requireAssetFileSnapshot,
+  restoreAssetFile,
+} from './asset-file-lifecycle.js';
 import { shotPlanTrashDefinition } from '../shot-plans/trash.js';
 import { shotTrashDefinition } from '../shot-plans/shot-trash.js';
-import { requireAssetOwner } from '../assets/ownership.js';
-import { clearSelectedAssetRecordForAsset } from '../database/access/selected-assets.js';
+import { requireAssetFileOwner } from '../asset-files/ownership.js';
+import { clearSelectedAssetFileRecordForAssetFile } from '../database/access/selected-asset-files.js';
 import { readShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
-import { readAssetRecord } from '../database/access/assets.js';
+import { readAssetFileRecordIncludingDiscarded } from '../database/access/asset-files.js';
 import {
   clearCastVoiceDefaultRecord,
   readCastVoiceDefaultRecord,
   selectCastVoiceDefaultRecord,
 } from '../database/access/cast-voices.js';
-
-export function inspirationImageTrashItemId(input: {
-  folderId: string;
-  fileName: string;
-}): string {
-  return `${input.folderId}/${input.fileName}`;
-}
 
 export function getTrashObjectDefinition(
   itemKind: TrashItemKind
@@ -110,26 +101,14 @@ const inspirationFolderDefinition: TrashObjectDefinition = {
     ];
   },
   applyDiscard(input) {
-    input.session.db
-      .update(inspirationFolders)
-      .set({
-        discardedAt: input.now,
-        discardOperationId: input.operationId,
-        restoredAt: null,
-      })
-      .where(eq(inspirationFolders.id, input.itemId))
-      .run();
+    const state = { discardedAt: input.now, discardOperationId: input.operationId, restoredAt: null };
+    input.session.db.update(inspirationFolders).set(state).where(eq(inspirationFolders.id, input.itemId)).run();
+    input.session.db.update(assetFiles).set(state).where(and(eq(assetFiles.ownerKey, `inspirationFolder:${encodeURIComponent(input.itemId)}`), isNull(assetFiles.discardedAt))).run();
   },
   applyRestore(input) {
-    input.session.db
-      .update(inspirationFolders)
-      .set({
-        discardedAt: null,
-        discardOperationId: null,
-        restoredAt: input.now,
-      })
-      .where(eq(inspirationFolders.id, input.trashItem.itemId))
-      .run();
+    const state = { discardedAt: null, discardOperationId: null, restoredAt: input.now };
+    input.session.db.update(inspirationFolders).set(state).where(eq(inspirationFolders.id, input.trashItem.itemId)).run();
+    input.session.db.update(assetFiles).set(state).where(and(eq(assetFiles.ownerKey, `inspirationFolder:${encodeURIComponent(input.trashItem.itemId)}`), eq(assetFiles.discardOperationId, input.trashItem.operationId))).run();
   },
   collectFiles(input) {
     return input.trashItem.originalProjectRelativePath
@@ -152,75 +131,6 @@ const inspirationFolderDefinition: TrashObjectDefinition = {
   },
 };
 
-const inspirationImageDefinition: TrashObjectDefinition = {
-  itemKind: 'inspirationImage',
-  readTrashItems(input) {
-    const [folderId, ...fileNameParts] = input.itemId.split('/');
-    const fileName = fileNameParts.join('/');
-    if (!folderId || !fileName) {
-      throw new ProjectDataError(
-        'PROJECT_DATA266',
-        `Inspiration image trash id is invalid: ${input.itemId}.`
-      );
-    }
-    const folder = input.session.db
-      .select()
-      .from(inspirationFolders)
-      .where(
-        and(eq(inspirationFolders.id, folderId), isNull(inspirationFolders.discardedAt))
-      )
-      .get();
-    if (!folder) {
-      return [];
-    }
-    const originalProjectRelativePath = `${folder.projectRelativePath}/${fileName}`;
-    return [
-      {
-        itemKind: 'inspirationImage',
-        itemId: input.itemId,
-        ownerKind: 'inspirationFolder',
-        ownerId: folderId,
-        title: fileName,
-        originalProjectRelativePath,
-        restoreSnapshot: { folderId, fileName, originalProjectRelativePath },
-      },
-    ];
-  },
-  applyDiscard() {
-    // Filesystem-only Inspiration images are hidden by the trash ledger.
-  },
-  applyRestore() {
-    // Restoring the trash item is sufficient; the file never moved during discard.
-  },
-  collectFiles(input) {
-    return input.trashItem.originalProjectRelativePath
-      ? [
-          {
-            trashItemId: input.trashItem.id,
-            originalProjectRelativePath: input.trashItem.originalProjectRelativePath,
-          },
-        ]
-      : [];
-  },
-  resourceKeys(input) {
-    const folderId = input.itemId.split('/')[0] ?? input.itemId;
-    return [
-      studioVisualLanguageInspirationResourceKey(),
-      studioVisualLanguageInspirationFolderResourceKey(folderId),
-    ];
-  },
-  restoredChanges(input) {
-    const [folderId, ...fileNameParts] = input.itemId.split('/');
-    return [
-      {
-        type: 'inspirationImage.restored',
-        folderId,
-        fileName: fileNameParts.join('/'),
-      },
-    ];
-  },
-};
-
 const lookbookImageDefinition: TrashObjectDefinition = {
   itemKind: 'lookbookImage',
   readTrashItems(input) {
@@ -232,7 +142,7 @@ const lookbookImageDefinition: TrashObjectDefinition = {
     if (!image) {
       return [];
     }
-    const owner = requireAssetOwner(input.session, image.assetId);
+    const owner = requireAssetFileOwner(input.session, image.assetFileId);
     if (owner.kind !== 'lookbook') {
       throw new ProjectDataError(
         'CORE_ASSET_STORAGE_INVALID',
@@ -248,7 +158,7 @@ const lookbookImageDefinition: TrashObjectDefinition = {
         title: image.id,
         restoreSnapshot: {
           lookbookId: owner.id,
-          assetId: image.assetId,
+          assetFileId: image.assetFileId,
           sortOrder: image.sortOrder,
         },
       },
@@ -261,8 +171,8 @@ const lookbookImageDefinition: TrashObjectDefinition = {
     restoreLookbookImage(input);
   },
   collectFiles(input) {
-    const snapshot = requireAssetSnapshot(input.snapshot, input.trashItem.id);
-    return collectAssetFiles(input, snapshot.assetId);
+    const snapshot = requireAssetFileSnapshot(input.snapshot, input.trashItem.id);
+    return collectAssetFile(input, snapshot.assetFileId);
   },
   resourceKeys(input) {
     return [
@@ -288,7 +198,7 @@ const lookbookSheetDefinition: TrashObjectDefinition = {
     if (!sheet) {
       return [];
     }
-    const owner = requireAssetOwner(input.session, sheet.assetId);
+    const owner = requireAssetFileOwner(input.session, sheet.assetFileId);
     if (owner.kind !== 'lookbook') {
       throw new ProjectDataError(
         'CORE_ASSET_STORAGE_INVALID',
@@ -304,7 +214,7 @@ const lookbookSheetDefinition: TrashObjectDefinition = {
         title: sheet.id,
         restoreSnapshot: {
           lookbookId: owner.id,
-          assetId: sheet.assetId,
+          assetFileId: sheet.assetFileId,
           sortOrder: sheet.sortOrder,
         },
       },
@@ -317,8 +227,8 @@ const lookbookSheetDefinition: TrashObjectDefinition = {
     restoreLookbookSheet(input);
   },
   collectFiles(input) {
-    const snapshot = requireAssetSnapshot(input.snapshot, input.trashItem.id);
-    return collectAssetFiles(input, snapshot.assetId);
+    const snapshot = requireAssetFileSnapshot(input.snapshot, input.trashItem.id);
+    return collectAssetFile(input, snapshot.assetFileId);
   },
   resourceKeys(input) {
     return [
@@ -333,53 +243,56 @@ const lookbookSheetDefinition: TrashObjectDefinition = {
   },
 };
 
-const assetDefinition: TrashObjectDefinition = {
-  itemKind: 'asset',
+const assetFileDefinition: TrashObjectDefinition = {
+  itemKind: 'assetFile',
   readTrashItems(input) {
-    const asset = input.session.db
+    const assetFile = input.session.db
       .select()
-      .from(assets)
-      .where(and(eq(assets.id, input.itemId), isNull(assets.discardedAt)))
+      .from(assetFiles)
+      .where(and(eq(assetFiles.id, input.itemId), isNull(assetFiles.discardedAt)))
       .get();
-    if (!asset) {
+    if (!assetFile) {
       return [];
     }
     return [
       {
-        itemKind: 'asset',
-        itemId: asset.id,
-        title: asset.title,
+        itemKind: 'assetFile',
+        itemId: assetFile.id,
+        title: assetFile.title ?? '',
+        originalProjectRelativePath: assetFile.projectRelativePath,
+        ownerKind: requireAssetFileOwner(input.session, assetFile.id).kind,
+        ownerId: assetFile.ownerKey.startsWith('inspirationFolder:') ? decodeURIComponent(assetFile.ownerKey.slice('inspirationFolder:'.length)) : undefined,
         restoreSnapshot: {
-          assetId: asset.id,
+          assetFileId: assetFile.id,
         },
       },
     ];
   },
   applyDiscard(input) {
-    markAssetTreeDiscarded(input);
-    clearSelectedAssetRecordForAsset(input.session, input.itemId);
+    markAssetFileDiscarded(input);
+    clearSelectedAssetFileRecordForAssetFile(input.session, input.itemId);
   },
   applyRestore(input) {
-    restoreAssetTree(input);
+    restoreAssetFile(input);
   },
   collectFiles(input) {
-    return collectAssetFiles(input, input.trashItem.itemId);
+    return collectAssetFile(input, input.trashItem.itemId);
   },
   resourceKeys(input) {
-    const owner = requireAssetOwner(input.session, input.itemId);
-    const asset = readAssetRecord(input.session, input.itemId);
-    if (owner.kind === 'project' && asset?.type === 'project_cover') {
+    const owner = requireAssetFileOwner(input.session, input.itemId);
+    const assetFile = readAssetFileRecordIncludingDiscarded(input.session, input.itemId);
+    if (owner.kind === 'project' && assetFile?.type === 'project_cover') {
       return projectCoverCandidateResourceKeys();
     }
-    const videoGenerationKeys = shotPlanVideoAssetResourceKeys(
+    const videoGenerationKeys = shotPlanVideoAssetFileResourceKeys(
       input.session,
       input.itemId,
     );
     if (owner.kind !== 'shot') {
       return [
-        ...studioAssetOwnerSurfaceResourceKeys(owner),
+        ...studioAssetFileOwnerSurfaceResourceKeys(owner),
         ...videoGenerationKeys,
-        ...shotPlanAssetResourceKeys(input.session, input.itemId),
+        ...shotPlanAssetFileResourceKeys(input.session, input.itemId),
       ];
     }
     const shot = readShotRecord(input.session, owner.id);
@@ -397,7 +310,7 @@ const assetDefinition: TrashObjectDefinition = {
     ];
   },
   restoredChanges(input) {
-    return [{ type: 'asset.restored', assetId: input.itemId }];
+    return [{ type: 'asset.restored', assetFileId: input.itemId }];
   },
 };
 
@@ -425,7 +338,7 @@ const castVoiceDefinition: TrashObjectDefinition = {
         title: voice.name,
         restoreSnapshot: {
           castMemberId: voice.castMemberId,
-          sampleAssetId: voice.sampleAssetId,
+          sampleAssetFileId: voice.sampleAssetFileId,
           wasDefault: defaultVoice?.castVoiceId === voice.id,
         },
       },
@@ -453,9 +366,9 @@ const castVoiceDefinition: TrashObjectDefinition = {
       castMemberId: voice.castMemberId,
       castVoiceId: voice.id,
     });
-    markAssetTreeDiscarded({
+    markAssetFileDiscarded({
       ...input,
-      itemId: voice.sampleAssetId,
+      itemId: voice.sampleAssetFileId,
     });
   },
   applyRestore(input) {
@@ -465,9 +378,9 @@ const castVoiceDefinition: TrashObjectDefinition = {
       .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
       .where(eq(castVoices.id, input.trashItem.itemId))
       .run();
-    restoreAssetTree({
+    restoreAssetFile({
       ...input,
-      trashItem: { ...input.trashItem, itemId: snapshot.sampleAssetId },
+      trashItem: { ...input.trashItem, itemId: snapshot.sampleAssetFileId },
     });
     if (!snapshot.wasDefault) {
       return [];
@@ -498,7 +411,7 @@ const castVoiceDefinition: TrashObjectDefinition = {
   },
   collectFiles(input) {
     const snapshot = requireCastVoiceSnapshot(input.snapshot, input.trashItem.id);
-    return collectAssetFiles(input, snapshot.sampleAssetId);
+    return collectAssetFile(input, snapshot.sampleAssetFileId);
   },
   resourceKeys(input) {
     return [
@@ -533,7 +446,7 @@ const shotPlanDialogueAudioTakeDefinition: TrashObjectDefinition = {
         title: take.id,
         restoreSnapshot: {
           shotPlanId: take.shotPlanId,
-          assetId: take.assetId,
+          assetFileId: take.assetFileId,
         },
       },
     ];
@@ -558,7 +471,7 @@ const shotPlanDialogueAudioTakeDefinition: TrashObjectDefinition = {
       })
       .where(eq(shotPlanDialogueAudioTakes.id, input.itemId))
       .run();
-    markAssetTreeDiscarded({ ...input, itemId: take.assetId });
+    markAssetFileDiscarded({ ...input, itemId: take.assetFileId });
   },
   applyRestore(input) {
     const snapshot = requireDialogueTakeSnapshot(input.snapshot, input.trashItem.id);
@@ -573,15 +486,15 @@ const shotPlanDialogueAudioTakeDefinition: TrashObjectDefinition = {
       })
       .where(eq(shotPlanDialogueAudioTakes.id, input.trashItem.itemId))
       .run();
-    restoreAssetTree({
+    restoreAssetFile({
       ...input,
-      trashItem: { ...input.trashItem, itemId: snapshot.assetId },
+      trashItem: { ...input.trashItem, itemId: snapshot.assetFileId },
     });
     return [];
   },
   collectFiles(input) {
     const snapshot = requireDialogueTakeSnapshot(input.snapshot, input.trashItem.id);
-    return collectAssetFiles(input, snapshot.assetId);
+    return collectAssetFile(input, snapshot.assetFileId);
   },
   resourceKeys(input) {
     return [
@@ -597,7 +510,7 @@ const shotPlanDialogueAudioTakeDefinition: TrashObjectDefinition = {
 };
 
 const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinition>> = {
-  asset: assetDefinition,
+  assetFile: assetFileDefinition,
   castVoice: castVoiceDefinition,
   shotPlanDialogueAudioTake: shotPlanDialogueAudioTakeDefinition,
   shot: shotTrashDefinition,
@@ -605,14 +518,13 @@ const trashObjectDefinitions: Partial<Record<TrashItemKind, TrashObjectDefinitio
 
 
   inspirationFolder: inspirationFolderDefinition,
-  inspirationImage: inspirationImageDefinition,
   lookbookImage: lookbookImageDefinition,
   lookbookSheet: lookbookSheetDefinition,
 };
 
 function markLookbookImageDiscarded(input: TrashObjectDiscardContext): void {
   const image = input.session.db
-    .select({ assetId: lookbookImages.assetId })
+    .select({ assetFileId: lookbookImages.assetFileId })
     .from(lookbookImages)
     .where(eq(lookbookImages.id, input.itemId))
     .get();
@@ -626,27 +538,27 @@ function markLookbookImageDiscarded(input: TrashObjectDiscardContext): void {
     .where(eq(lookbookImages.id, input.itemId))
     .run();
   if (image) {
-    markAssetRecordAndFilesDiscarded({ ...input, itemId: image.assetId });
-    clearSelectedAssetRecordForAsset(input.session, image.assetId);
+    markAssetFileDiscarded({ ...input, itemId: image.assetFileId });
+    clearSelectedAssetFileRecordForAssetFile(input.session, image.assetFileId);
   }
 }
 
 function restoreLookbookImage(input: TrashObjectRestoreContext): void {
-  const snapshot = requireAssetSnapshot(input.snapshot, input.trashItem.id);
+  const snapshot = requireAssetFileSnapshot(input.snapshot, input.trashItem.id);
   input.session.db
     .update(lookbookImages)
     .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
     .where(eq(lookbookImages.id, input.trashItem.itemId))
     .run();
-  restoreAssetRecordAndFiles({
+  restoreAssetFile({
     ...input,
-    trashItem: { ...input.trashItem, itemId: snapshot.assetId },
+    trashItem: { ...input.trashItem, itemId: snapshot.assetFileId },
   });
 }
 
 function markLookbookSheetDiscarded(input: TrashObjectDiscardContext): void {
   const sheet = input.session.db
-    .select({ assetId: lookbookSheets.assetId })
+    .select({ assetFileId: lookbookSheets.assetFileId })
     .from(lookbookSheets)
     .where(eq(lookbookSheets.id, input.itemId))
     .get();
@@ -660,35 +572,35 @@ function markLookbookSheetDiscarded(input: TrashObjectDiscardContext): void {
     .where(eq(lookbookSheets.id, input.itemId))
     .run();
   if (sheet) {
-    markAssetRecordAndFilesDiscarded({ ...input, itemId: sheet.assetId });
+    markAssetFileDiscarded({ ...input, itemId: sheet.assetFileId });
   }
 }
 
 function restoreLookbookSheet(input: TrashObjectRestoreContext): void {
-  const snapshot = requireAssetSnapshot(input.snapshot, input.trashItem.id);
+  const snapshot = requireAssetFileSnapshot(input.snapshot, input.trashItem.id);
   input.session.db
     .update(lookbookSheets)
     .set({ discardedAt: null, discardOperationId: null, restoredAt: input.now })
     .where(eq(lookbookSheets.id, input.trashItem.itemId))
     .run();
-  restoreAssetRecordAndFiles({
+  restoreAssetFile({
     ...input,
-    trashItem: { ...input.trashItem, itemId: snapshot.assetId },
+    trashItem: { ...input.trashItem, itemId: snapshot.assetFileId },
   });
 }
 
 function requireCastVoiceSnapshot(
   snapshot: Record<string, unknown>,
   trashItemId: string
-): { castMemberId: string; sampleAssetId: string; wasDefault: boolean } {
+): { castMemberId: string; sampleAssetFileId: string; wasDefault: boolean } {
   if (
     typeof snapshot.castMemberId === 'string' &&
-    typeof snapshot.sampleAssetId === 'string' &&
+    typeof snapshot.sampleAssetFileId === 'string' &&
     typeof snapshot.wasDefault === 'boolean'
   ) {
     return {
       castMemberId: snapshot.castMemberId,
-      sampleAssetId: snapshot.sampleAssetId,
+      sampleAssetFileId: snapshot.sampleAssetFileId,
       wasDefault: snapshot.wasDefault,
     };
   }
@@ -701,14 +613,14 @@ function requireCastVoiceSnapshot(
 function requireDialogueTakeSnapshot(
   snapshot: Record<string, unknown>,
   trashItemId: string
-): { shotPlanId: string; assetId: string } {
+): { shotPlanId: string; assetFileId: string } {
   if (
     typeof snapshot.shotPlanId === 'string' &&
-    typeof snapshot.assetId === 'string'
+    typeof snapshot.assetFileId === 'string'
   ) {
     return {
       shotPlanId: snapshot.shotPlanId,
-      assetId: snapshot.assetId,
+      assetFileId: snapshot.assetFileId,
     };
   }
   throw new ProjectDataError(

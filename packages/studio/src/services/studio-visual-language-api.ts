@@ -89,10 +89,10 @@ export async function uploadInspirationImages(
 export async function deleteInspirationImage(
   projectName: string,
   folderId: string,
-  fileName: string
+  assetFileId: string
 ): Promise<InspirationFolderResourceResponse> {
   const body = await writeJson<InspirationFolderResourceApiResponse>(
-    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/inspiration/folders/${encodeURIComponent(folderId)}/images/${encodeURIComponent(fileName)}`,
+    `/studio-api/projects/${encodeURIComponent(projectName)}/visual-language/inspiration/folders/${encodeURIComponent(folderId)}/images/${encodeURIComponent(assetFileId)}`,
     'DELETE',
     {}
   );

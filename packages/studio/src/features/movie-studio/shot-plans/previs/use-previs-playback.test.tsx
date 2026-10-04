@@ -50,7 +50,7 @@ it('plays the exact recording offset, seeks within it and restores ordinary audi
   const player = { play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn(), setMuted: vi.fn(), getCurrentTime: () => 0 };
   const { result } = renderHook(() => usePrevisPlayback(timeline));
   act(() => { result.current.attachPrevis(player); result.current.onPrevisDuration(12); });
-  await act(async () => result.current.playDialogue({ ...dialogue('voice', 3, 7), audio: { assetId: 'a', assetFileId: 'f', offsetSeconds: 2, url: '/exact/audio' } }));
+  await act(async () => result.current.playDialogue({ ...dialogue('voice', 3, 7), audio: {  assetFileId: 'f', offsetSeconds: 2, url: '/exact/audio' } }));
   expect(AudioMock).toHaveBeenCalledWith('/exact/audio');
   expect(recording.currentTime).toBe(2);
   expect(player.setMuted).toHaveBeenLastCalledWith(true);
@@ -103,7 +103,7 @@ it('keeps the new cue through queued media events and follows Previs controls', 
   }
   const cue = {
     ...dialogue('first', 1, 4),
-    audio: { assetId: 'a', assetFileId: 'f', offsetSeconds: 2, url: '/voice.wav' },
+    audio: {  assetFileId: 'f', offsetSeconds: 2, url: '/voice.wav' },
   };
   await act(async () => playback.playDialogue(cue));
   await flushMediaEvents();
@@ -194,7 +194,7 @@ it('resumes a paused turn, stays silent after its recording ends, and cancels ch
   const recording = { currentTime: 0, muted: false, ended: false, pause: vi.fn(), play: vi.fn(async () => {}) };
   vi.stubGlobal('Audio', vi.fn(function () { return recording; }));
   const player = { play: vi.fn(async () => {}), pause: vi.fn(), seek: vi.fn((value: number) => { clock = value; }), setMuted: vi.fn(), getCurrentTime: () => clock };
-  const cue = { ...dialogue('voice', 1, 4), audio: { assetId: 'a', assetFileId: 'f', url: '/voice.wav' } };
+  const cue = { ...dialogue('voice', 1, 4), audio: {  assetFileId: 'f', url: '/voice.wav' } };
   const authored = { ...timeline, cues: [cue] };
   const { result, rerender } = renderHook(({ value }) => usePrevisPlayback(value), { initialProps: { value: authored } });
   act(() => { result.current.attachPrevis(player); result.current.onPrevisDuration(12); });

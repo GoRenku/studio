@@ -1,6 +1,6 @@
 import {
   studioScreenplayResourceKey,
-  studioProjectAssetsResourceKey,
+  studioProjectAssetFilesResourceKey,
   studioScreenplayStructureResourceKey,
 } from '../../studio-coordination/resource-keys.js';
 import type { MappedFdxScreenplay } from './mapping/screenplay.js';
@@ -27,7 +27,6 @@ export function createFdxImportReport(input: {
     project: { id: input.project.id, projectName: input.project.projectName },
     screenplayImport: {
       id: input.screenplayImport.id,
-      sourceAssetId: input.screenplayImport.sourceAssetId,
       sourceAssetFileId: input.screenplayImport.sourceAssetFileId,
       importerVersion: FDX_IMPORTER_VERSION,
       importedAt: input.screenplayImport.importedAt,
@@ -38,7 +37,7 @@ export function createFdxImportReport(input: {
     candidates: input.mapped.candidates,
     resourceKeys: input.status === 'unchanged'
       ? input.resourceKeys
-      : [...input.resourceKeys, studioProjectAssetsResourceKey()],
+      : [...input.resourceKeys, studioProjectAssetFilesResourceKey()],
   };
   assertValidFdxImportReport(report);
   return report;

@@ -80,11 +80,11 @@ describe('Shot Plans feature', () => {
             updatedAt: '2026-07-27T10:00:00.000Z',
             shots: [
               shot('shot_one', 0, 'asset_selected', [
-                asset('asset_unselected', '/unselected.jpg'),
-                asset('asset_selected', '/selected-one.jpg'),
+                assetFile('asset_unselected', '/unselected.jpg'),
+                assetFile('asset_selected', '/selected-one.jpg'),
               ]),
               shot('shot_two', 1, 'asset_second', [
-                asset('asset_second', '/selected-two.jpg'),
+                assetFile('asset_second', '/selected-two.jpg'),
               ]),
             ],
           },
@@ -168,11 +168,11 @@ describe('Shot Plans feature', () => {
     vi.mocked(useShotImageCandidates).mockReturnValue({
       resource: {
         items: [
-          asset('asset_second', '/second.jpg'),
-          asset('asset_selected', '/selected.jpg'),
-          asset('asset_first', '/first.jpg'),
+          assetFile('asset_second', '/second.jpg'),
+          assetFile('asset_selected', '/selected.jpg'),
+          assetFile('asset_first', '/first.jpg'),
         ],
-        selectedAssetId: 'asset_selected',
+        selectedAssetFileId: 'asset_selected',
       },
       error: null,
       reload,
@@ -226,7 +226,7 @@ describe('Shot Plans feature', () => {
       expect(setStudioShotSelectedImage).toHaveBeenCalledWith({
         projectName: 'constantinople',
         shotId: 'shot_one',
-        assetId: 'asset_second',
+        assetFileId: 'asset_second',
       });
     });
     expect(reload).toHaveBeenCalled();
@@ -243,7 +243,7 @@ describe('Shot Plans feature', () => {
       expect(deleteStudioShotImageCandidate).toHaveBeenCalledWith({
         projectName: 'constantinople',
         shotId: 'shot_one',
-        assetId: 'asset_second',
+        assetFileId: 'asset_second',
       });
     });
   });
@@ -251,8 +251,8 @@ describe('Shot Plans feature', () => {
   it('opens one candidate directly without a choose control or implicit selection', () => {
     vi.mocked(useShotImageCandidates).mockReturnValue({
       resource: {
-        items: [asset('asset_only', '/only.jpg')],
-        selectedAssetId: null,
+        items: [assetFile('asset_only', '/only.jpg')],
+        selectedAssetFileId: null,
       },
       error: null,
       reload: vi.fn(),
@@ -283,10 +283,10 @@ describe('Shot Plans feature', () => {
     vi.mocked(useShotImageCandidates).mockReturnValue({
       resource: {
         items: [
-          asset('asset_first', '/first.jpg'),
-          asset('asset_second', '/second.jpg'),
+          assetFile('asset_first', '/first.jpg'),
+          assetFile('asset_second', '/second.jpg'),
         ],
-        selectedAssetId: 'asset_first',
+        selectedAssetFileId: 'asset_first',
       },
       error: null,
       reload,
@@ -318,10 +318,10 @@ describe('Shot Plans feature', () => {
 
   it('returns focus to the exact rail image action after direct and collection close', async () => {
     const shots = [
-      shot('shot_one', 0, null, [asset('asset_only', '/only.jpg')]),
+      shot('shot_one', 0, null, [assetFile('asset_only', '/only.jpg')]),
       shot('shot_two', 1, null, [
-        asset('asset_first', '/first.jpg'),
-        asset('asset_second', '/second.jpg'),
+        assetFile('asset_first', '/first.jpg'),
+        assetFile('asset_second', '/second.jpg'),
       ]),
     ];
     vi.mocked(useSceneShotPlans).mockReturnValue({
@@ -349,8 +349,8 @@ describe('Shot Plans feature', () => {
     });
     vi.mocked(useShotImageCandidates).mockReturnValue({
       resource: {
-        items: [asset('asset_only', '/only.jpg')],
-        selectedAssetId: null,
+        items: [assetFile('asset_only', '/only.jpg')],
+        selectedAssetFileId: null,
       },
       error: null,
       reload: vi.fn(),
@@ -381,10 +381,10 @@ describe('Shot Plans feature', () => {
     vi.mocked(useShotImageCandidates).mockReturnValue({
       resource: {
         items: [
-          asset('asset_first', '/first.jpg'),
-          asset('asset_second', '/second.jpg'),
+          assetFile('asset_first', '/first.jpg'),
+          assetFile('asset_second', '/second.jpg'),
         ],
-        selectedAssetId: null,
+        selectedAssetFileId: null,
       },
       error: null,
       reload: vi.fn(),
@@ -459,7 +459,7 @@ describe('Shot Plans feature', () => {
     expect(reload).toHaveBeenCalled();
 
     vi.mocked(useShotImageCandidates).mockReturnValue({
-      resource: { items: [], selectedAssetId: null },
+      resource: { items: [], selectedAssetFileId: null },
       error: null,
       reload,
     });
@@ -650,7 +650,7 @@ describe('Shot Plans feature', () => {
   it('keeps Shot rail selection, duration, and image management independent', () => {
     const firstShot = {
       ...shot('shot_one', 0, 'asset_selected', [
-        asset('asset_selected', '/selected.jpg'),
+        assetFile('asset_selected', '/selected.jpg'),
       ]),
       brief: { durationSeconds: 3.5 },
     };
@@ -715,7 +715,6 @@ describe('Shot Plans feature', () => {
             },
             position: 3,
             storyboardImage: {
-              assetId: 'storyboard_asset',
               assetFileId: 'storyboard_file',
               url: '/storyboard.webp',
             },
@@ -793,7 +792,7 @@ function shot(
   id: string,
   position: number,
   selectedImageId: string | null,
-  images: ReturnType<typeof asset>[]
+  images: ReturnType<typeof assetFile>[]
 ) {
   return {
     id,
@@ -807,7 +806,7 @@ function shot(
   };
 }
 
-function asset(id: string, url: string) {
+function assetFile(id: string, url: string) {
   return {
     id,
     owner: { kind: 'shot' as const, id: 'shot_one' },
@@ -822,18 +821,7 @@ function asset(id: string, url: string) {
     authoredFrom: null,
     referenceName: null,
     tags: [],
-    files: [{
-      id: `file_${id}`,
-      role: 'primary',
-      mediaKind: 'image',
-      mimeType: 'image/jpeg',
-      sizeBytes: 100,
-      contentHash: null,
-      width: 1920,
-      height: 1080,
-      durationSeconds: null,
-      url,
-    }],
+    mimeType: 'image/jpeg', sizeBytes: 100, contentHash: null, width: 1920, height: 1080, durationSeconds: null, url,
     createdAt: '2026-07-27T10:00:00.000Z',
     updatedAt: '2026-07-27T10:00:00.000Z',
   };

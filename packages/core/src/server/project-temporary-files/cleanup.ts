@@ -4,7 +4,7 @@ import type {
   CleanProjectTemporaryFilesInput,
   ProjectTemporaryFilesCleanupReport,
 } from '../../client/project-temporary-files.js';
-import { assetFiles } from '../schema/assets.js';
+import { assetFiles } from '../schema/asset-files.js';
 import { normalizeProjectRelativePath, resolveProjectRelativePath } from '../files/project-relative-paths.js';
 import { ProjectDataError } from '../project-data-error.js';
 import { withProject } from '../project-operation.js';

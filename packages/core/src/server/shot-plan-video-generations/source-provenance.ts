@@ -1,25 +1,24 @@
-import { readAssetMembershipRecord } from '../database/access/asset-memberships.js';
-import { readAssetRecord } from '../database/access/assets.js';
+import { readAssetFileRecordIncludingDiscarded } from '../database/access/asset-files.js';
 import { readShotPlanRecordIncludingDiscarded } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import { trashItems } from '../schema/index.js';
 import { studioSceneVideoGenerationsResourceKey } from '../studio-coordination/resource-keys.js';
 
-export function shotPlanVideoAssetResourceKeys(
+export function shotPlanVideoAssetFileResourceKeys(
   session: DatabaseSession,
-  assetId: string,
+  assetFileId: string,
 ): string[] {
-  const asset = readAssetRecord(session, assetId);
+  const assetFile = readAssetFileRecordIncludingDiscarded(session, assetFileId);
   if (
-    asset?.type !== 'shot_plan_video'
-    || asset.mediaKind !== 'video'
-    || readAssetMembershipRecord(session, assetId)?.ownerKey !== 'project'
+    assetFile?.type !== 'shot_plan_video'
+    || assetFile.mediaKind !== 'video'
+    || readAssetFileRecordIncludingDiscarded(session, assetFileId)?.ownerKey !== 'project'
   ) {
     return [];
   }
-  const sceneId = asset.authoredFromShotPlanId
-    ? shotPlanVideoSourceSceneId(session, asset.authoredFromShotPlanId)
+  const sceneId = assetFile.authoredFromShotPlanId
+    ? shotPlanVideoSourceSceneId(session, assetFile.authoredFromShotPlanId)
     : null;
   return sceneId ? [studioSceneVideoGenerationsResourceKey(sceneId)] : [];
 }

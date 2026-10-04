@@ -2,7 +2,7 @@ import { readProjectRecord } from '../../database/access/project.js';
 import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import { createRandomIdGenerator, type ProjectIdGenerator } from '../../entity-ids.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import { studioProjectAssetsResourceKey } from '../../studio-coordination/resource-keys.js';
+import { studioProjectAssetFilesResourceKey } from '../../studio-coordination/resource-keys.js';
 import {
   commitProjectAssetFileWriteSet,
   createProjectAssetFileWriteSet,
@@ -16,9 +16,9 @@ import {
   destinationConflict,
   destinationWriteFailure,
   findExistingScreenplaySupportingMaterial,
-  isProjectAssetDestinationConflict,
-  isProjectAssetDestinationWriteFailure,
-  isProjectAssetSourceReadFailure,
+  isProjectAssetFileDestinationConflict,
+  isProjectAssetFileDestinationWriteFailure,
+  isProjectAssetFileSourceReadFailure,
   persistScreenplaySupportingMaterial,
 } from './persistence.js';
 import {
@@ -66,7 +66,6 @@ export async function importScreenplaySupportingMaterial(
         session: { ...session, db: tx },
         projectFolder,
         source,
-        assetId: ids.next('asset'),
         assetFileId: ids.next('asset_file'),
         now,
         writeSet,
@@ -84,15 +83,15 @@ export async function importScreenplaySupportingMaterial(
     });
   } catch (error) {
     rollbackProjectAssetFileWriteSetSync(writeSet);
-    if (isProjectAssetDestinationConflict(error)) {
+    if (isProjectAssetFileDestinationConflict(error)) {
       throw destinationConflict('Could not allocate a supporting-material destination under screenplay/.');
     }
-    if (isProjectAssetSourceReadFailure(error)) {
+    if (isProjectAssetFileSourceReadFailure(error)) {
       throw supportingMaterialInvalidSource(
         `Supporting material became unreadable during import: ${source.absolutePath}.`,
       );
     }
-    if (isProjectAssetDestinationWriteFailure(error)) {
+    if (isProjectAssetFileDestinationWriteFailure(error)) {
       throw destinationWriteFailure();
     }
     throw error;
@@ -117,6 +116,6 @@ function report(input: {
       projectFolder: input.projectFolder,
     },
     material: input.material,
-    resourceKeys: input.status === 'imported' ? [studioProjectAssetsResourceKey()] : [],
+    resourceKeys: input.status === 'imported' ? [studioProjectAssetFilesResourceKey()] : [],
   };
 }

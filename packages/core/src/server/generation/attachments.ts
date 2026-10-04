@@ -1,15 +1,15 @@
 import type { ShotPlanClipTake } from '../../client/shot-plan-clips.js';
 import type {
-  Asset,
-  AssetMetadataInput,
-} from '../../client/assets.js';
+  AssetFile,
+  AssetFileMetadataInput,
+} from '../../client/asset-files.js';
 import type { MediaPurpose, MediaTarget } from '../../client/media-attachments.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 import type { DialogueTurnRange } from '../../client/shot-plan-dialogue-audio.js';
-import { normalizeAssetMetadata } from '../assets/metadata.js';
-import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { assetSelectionTargetForOwnerType } from '../assets/selection.js';
+import { normalizeAssetFileMetadata } from '../asset-files/metadata.js';
+import { validateMediaGenerationProvenance } from '../asset-files/generation-provenance.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { assetFileSelectionTargetForOwnerType } from '../asset-files/selection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
@@ -17,7 +17,7 @@ import { requireLookbookRecordById } from '../database/access/lookbook.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   generatedMediaAttachmentResourceKeys,
-  generationAttachmentAssetType,
+  generationAttachmentAssetFileType,
   resolveGeneratedMediaAttachment,
 } from './attachment-destinations.js';
 import { persistGeneratedMediaAttachment } from './attachment-persistence.js';
@@ -32,7 +32,7 @@ export interface AttachGenerationMediaInput {
   target?: MediaTarget;
   sourceProjectRelativePath: string;
   title?: string;
-  assetMetadata?: AssetMetadataInput;
+  assetFileMetadata?: AssetFileMetadataInput;
   generationProvenance?: MediaGenerationProvenance;
   select?: boolean;
   turnRange?: DialogueTurnRange;
@@ -47,7 +47,7 @@ export interface GenerationMediaAttachmentReport {
   valid: true;
   purpose: MediaPurpose;
   target: MediaTarget;
-  asset: Asset;
+  assetFile: AssetFile;
   generationProvenance: MediaGenerationProvenance | null;
   resourceKeys: string[];
   project: { projectName: string; id: string; projectFolder: string };
@@ -66,7 +66,7 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
     ? null
     : validateMediaGenerationProvenance(input.generationProvenance);
   if (input.purpose === 'image.edit') {
-    if (input.target.kind !== 'asset' || !generationProvenance) {
+    if (input.target.kind !== 'assetFile' || !generationProvenance) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
         'image.edit attachment requires an Asset target and exact provenance.',
@@ -80,7 +80,7 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
     });
   }
   if (input.purpose === 'video.edit') {
-    if (input.target.kind !== 'asset' || !generationProvenance) {
+    if (input.target.kind !== 'assetFile' || !generationProvenance) {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
         'video.edit attachment requires an Asset target and exact provenance.',
@@ -117,7 +117,7 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
       valid: true,
       purpose: input.purpose,
       target: input.target,
-      asset: attached.asset,
+      assetFile: attached.assetFile,
       generationProvenance,
       resourceKeys: attached.resourceKeys,
       project: {
@@ -127,8 +127,8 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
       },
     };
   }
-  const assetType = generationAttachmentAssetType(input.purpose);
-  if (requiresGenerationProvenance(assetType) && !generationProvenance) {
+  const assetFileType = generationAttachmentAssetFileType(input.purpose);
+  if (requiresGenerationProvenance(assetFileType) && !generationProvenance) {
     throw new ProjectDataError(
       'CORE_MEDIA_GENERATION_PROVENANCE_REQUIRED',
       `${input.purpose} attachments require exact media generation provenance.`,
@@ -148,9 +148,9 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
   }
   validateLookbookKind(input);
   const selectionTarget = input.select
-    ? assetSelectionTargetForOwnerType(
+    ? assetFileSelectionTargetForOwnerType(
         attachment.destination.owner,
-        attachment.assetType,
+        attachment.assetFileType,
       )
     : null;
   const authoredFromShotPlanId = input.target.kind === 'shotPlan'
@@ -165,24 +165,23 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
     now: new Date().toISOString(),
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     destination: attachment.destination,
-    asset: {
-      type: attachment.assetType,
+    assetFileMetadata: {
+      type: attachment.assetFileType,
       mediaKind: attachment.mediaKind,
       title: input.title?.trim() || attachment.label,
-      ...normalizeAssetMetadata(input.assetMetadata ?? {}),
+      ...normalizeAssetFileMetadata(input.assetFileMetadata ?? {}),
       origin: generationProvenance ? 'generated' : 'external',
     },
-    fileRole: 'primary',
     ...(selectionTarget ? { selectionTarget } : {}),
     ...(generationProvenance ? { generationProvenance } : {}),
     ...(authoredFromShotPlanId ? { authoredFromShotPlanId } : {}),
   });
   const project = readProjectRecord(input.session);
-  const asset = readOwnedAsset(input.session, {
+  const assetFile = readOwnedAssetFile(input.session, {
     owner: attachment.destination.owner,
-    assetId: persisted.assetId,
+    assetFileId: persisted.assetFileId,
   });
-  if (!project || !asset) {
+  if (!project || !assetFile) {
     throw new ProjectDataError(
       'CORE_GENERATION_ATTACHMENT_FAILED',
       'Media attachment was not persisted.',
@@ -192,7 +191,7 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
     valid: true,
     purpose: input.purpose,
     target: input.target,
-    asset,
+    assetFile,
     generationProvenance,
     resourceKeys: generatedMediaAttachmentResourceKeys({
       attachment,
@@ -210,12 +209,12 @@ export function attachGenerationMedia(request: AttachGenerationMediaInput & {
   };
 }
 
-function requiresGenerationProvenance(assetType: string): boolean {
-  return assetType === 'shot_plan_video'
-    || assetType === 'shot_plan_video_first_frame'
-    || assetType === 'shot_plan_video_last_frame'
-    || assetType === 'shot_plan_video_storyboard'
-    || assetType === 'shot_plan_video_reference';
+function requiresGenerationProvenance(assetFileType: string): boolean {
+  return assetFileType === 'shot_plan_video'
+    || assetFileType === 'shot_plan_video_first_frame'
+    || assetFileType === 'shot_plan_video_last_frame'
+    || assetFileType === 'shot_plan_video_storyboard'
+    || assetFileType === 'shot_plan_video_reference';
 }
 
 function validateLookbookKind(

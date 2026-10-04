@@ -1,5 +1,5 @@
 import { integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
-import { assets, assetFiles } from './assets.js';
+import { assetFiles } from './asset-files.js';
 import { shotPlanPrevisRevisions } from './shot-plan-previs.js';
 
 export const shotPlanClips = sqliteTable('shot_plan_clip', {
@@ -15,7 +15,6 @@ export const shotPlanClipTakes = sqliteTable('shot_plan_clip_take', {
   clipId: text('clip_id').notNull().references(() => shotPlanClips.id),
   number: integer('number').notNull(),
   title: text('title'),
-  assetId: text('asset_id').notNull().references(() => assets.id),
   assetFileId: text('asset_file_id').notNull().references(() => assetFiles.id),
   sourceTakeId: text('source_take_id').references((): AnySQLiteColumn => shotPlanClipTakes.id),
   createdAt: text('created_at').notNull(),

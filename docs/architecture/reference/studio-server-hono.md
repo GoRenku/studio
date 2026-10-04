@@ -96,7 +96,7 @@ packages/studio/server/
     projects.ts
     provider-credentials.ts
     navigation.ts
-    assets.ts
+    asset-files.ts
     project-information.ts
     markdown-assets.ts
     production-exports.ts
@@ -131,7 +131,7 @@ File meanings:
 - `routes/provider-credentials.ts`: token-protected application-global
   provider credential status/update resource;
 - `routes/navigation.ts`: navigation page routes mounted below one project;
-- `routes/assets.ts`: asset page, selection, and file routes mounted below one project;
+- `routes/asset-files.ts`: asset page, selection, and file routes mounted below one project;
 - `routes/shot-plans.ts`: Scene Shot Plan list/delete and Shot-image
   select/discard routes mounted below one project;
 - `routes/project-information.ts`: Project Information routes mounted below one project;
@@ -177,7 +177,7 @@ Why:
 
 When a mounted resource module is already scoped below `/studio-api/projects`,
 do not add `project-` as a filename prefix just to restate that scope. Use names
-such as `routes/assets.ts`, `routes/navigation.ts`, and
+such as `routes/asset-files.ts`, `routes/navigation.ts`, and
 `http/asset-request.ts`. Keep `Project` in names only when it is part of the
 domain concept, such as `ProjectInformation`.
 
@@ -295,7 +295,7 @@ Use plural resource names for route module files:
 ```text
 routes/projects.ts
 routes/health.ts
-routes/assets.ts
+routes/asset-files.ts
 routes/markdown-assets.ts
 routes/production-exports.ts
 ```
@@ -316,7 +316,7 @@ Inside `routes/projects.ts`, use resource-relative paths:
 ```
 
 Child resource modules mounted below `/:projectName` should use paths relative
-to that project. For example, `routes/assets.ts` owns `.get('/assets')` and
+to that project. For example, `routes/asset-files.ts` owns `.get('/assets')` and
 `.get('/cast/:castMemberId/assets')`; it should not be named
 `project-assets.ts`.
 
@@ -342,7 +342,6 @@ a project has:
 
 ```ts
 coverImage: {
-  assetId: 'asset_cover',
   assetFileId: 'asset_file_cover'
 }
 ```
@@ -350,7 +349,7 @@ coverImage: {
 The Studio server may translate that into:
 
 ```ts
-coverUrl: '/studio-api/projects/constantinople/assets/asset_cover/files/asset_file_cover'
+coverUrl: '/studio-api/projects/constantinople/asset-files/asset_file_cover'
 ```
 
 That translation belongs in:
@@ -374,8 +373,8 @@ Shot Plans use four focused browser routes:
 ```text
 GET    /studio-api/projects/:projectName/screenplay/scenes/:sceneId/shot-plans
 DELETE /studio-api/projects/:projectName/screenplay/shot-plans/:shotPlanId
-POST   /studio-api/projects/:projectName/screenplay/shots/:shotId/selected-image/:assetId
-DELETE /studio-api/projects/:projectName/screenplay/shots/:shotId/images/:assetId
+POST   /studio-api/projects/:projectName/screenplay/shots/:shotId/selected-image/:assetFileId
+DELETE /studio-api/projects/:projectName/screenplay/shots/:shotId/images/:assetFileId
 ```
 
 Candidate listing reuses the common Asset page with the fixed browser query

@@ -319,7 +319,6 @@ Expected shape:
 
 ```ts
 export interface ProjectCoverImage {
-  assetId: string;
   assetFileId: string;
 }
 ```
@@ -783,7 +782,7 @@ Reasons:
   resource.
 
 The Studio server may add HTTP-only fields such as `coverUrl`. Core exposes the
-selected `coverImage.assetId` and `assetFileId`; the Studio server mechanically
+selected `coverImage.assetFileId`; the Studio server mechanically
 builds the generic Asset File URL because URLs are transport concerns.
 
 See `docs/architecture/reference/studio-server-hono.md` for the full server routing

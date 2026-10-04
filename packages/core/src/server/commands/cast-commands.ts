@@ -40,7 +40,7 @@ import {
 import { assertCastOperationDocument } from '../department-design-json/validator.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import {
-  listCastAssetRoleRecords,
+  listCastAssetFileRoleRecords,
   listCastMemberRecords,
   readCastMemberDeleteDependencySummary,
   type CastMemberDeleteDependencySummary,
@@ -49,7 +49,7 @@ import {
 } from '../database/access/cast-members.js';
 import { listLocationRecords } from '../database/access/locations.js';
 import { listPropRecords } from '../database/access/props.js';
-import { listAssetsInSession } from '../assets/projection.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
 import {
   studioCastMemberSurfaceResourceKey,
   studioCastNavigationResourceKey,
@@ -81,8 +81,8 @@ export async function readCastContext(
     const screenplay = readCanonicalScreenplay(session);
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveCastDesignDocument(session, input.castMemberId);
-    const assets = listCastAssetRoleRecords(session, input.castMemberId);
-    const ownedAssets = listAssetsInSession(session, {
+    const assetFiles = listCastAssetFileRoleRecords(session, input.castMemberId);
+    const ownedAssetFiles = listAssetFilesInSession(session, {
       owner: { kind: 'castMember', id: input.castMemberId },
     });
     return {
@@ -121,9 +121,9 @@ export async function readCastContext(
         session,
         projectFolder: currentProject.projectFolder,
       }),
-      assets: ownedAssets,
-      assetTypeCounts: typeCounts(assets),
-      generationReadiness: castGenerationReadiness(castMember, assets),
+      assetFiles: ownedAssetFiles,
+      assetFileTypeCounts: typeCounts(assetFiles),
+      generationReadiness: castGenerationReadiness(castMember, assetFiles),
     };
   });
 }
@@ -378,7 +378,7 @@ function toCastMember(input: CastMemberInput): CastMember {
 
 function castGenerationReadiness(
   castMember: CastMember,
-  assets: Array<{ type: string }>
+  assetFiles: Array<{ type: string }>
 ): CastDesignContextReport['generationReadiness'] {
   if (castMember.isVoiceOver) {
     return {
@@ -393,7 +393,7 @@ function castGenerationReadiness(
   }
   return {
     characterSheet: true,
-    profile: assets.some((asset) => asset.type === 'character_sheet'),
+    profile: assetFiles.some((assetFile) => assetFile.type === 'character_sheet'),
     notes: [
       'Use media-producer for cast.character-sheet and cast.profile generation.',
       'Costume-variant media and voice media do not have first-class generation targets yet.',
@@ -518,8 +518,8 @@ function castMemberDeleteDependencyLabels(
   dependencies: CastMemberDeleteDependencySummary
 ): string[] {
   return [
-    dependencies.assetCount > 0
-      ? pluralizeDependency('Cast asset', dependencies.assetCount)
+    dependencies.assetFileCount > 0
+      ? pluralizeDependency('Cast asset', dependencies.assetFileCount)
       : null,
     dependencies.designCount > 0
       ? pluralizeDependency('Cast Design', dependencies.designCount)

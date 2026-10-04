@@ -58,7 +58,7 @@ export function ImagePreviewDialog({
         showCloseButton={false}
         className='h-auto w-auto max-w-[calc(100vw-3rem)] gap-0 overflow-hidden rounded-[var(--radius-panel)] border border-panel-border bg-panel-bg p-0 shadow-2xl'
       >
-        <DialogTitle className='sr-only'>{image?.title ?? 'Image Preview'}</DialogTitle>
+        <DialogTitle className='sr-only'>{image?.title || 'Image Preview'}</DialogTitle>
         <DialogDescription className='sr-only'>
           {image?.alt ?? 'Expanded image preview.'}
         </DialogDescription>

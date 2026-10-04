@@ -36,14 +36,14 @@ import {
 import { assertLocationOperationDocument } from '../department-design-json/validator.js';
 import { listCastMemberRecords } from '../database/access/cast-members.js';
 import {
-  listLocationAssetRoleRecords,
+  listLocationAssetFileRoleRecords,
   listLocationRecords,
   readLocationDeleteDependencySummary,
   type LocationDeleteDependencySummary,
   replaceLocationAuthoringRecords,
 } from '../database/access/locations.js';
 import { listPropRecords } from '../database/access/props.js';
-import { listAssetsInSession } from '../assets/projection.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
 import {
   studioLocationNavigationResourceKey,
   studioLocationSurfaceResourceKey,
@@ -75,8 +75,8 @@ export async function readLocationContext(
     const screenplay = readCanonicalScreenplay(session);
     const projectInfo = readProjectInformationResourceFromDatabase(session);
     const activeDesign = readActiveLocationDesignDocument(session, input.locationId);
-    const assets = listLocationAssetRoleRecords(session, input.locationId);
-    const ownedAssets = listAssetsInSession(session, {
+    const assetFiles = listLocationAssetFileRoleRecords(session, input.locationId);
+    const ownedAssetFiles = listAssetFilesInSession(session, {
       owner: { kind: 'location', id: input.locationId },
     });
     return {
@@ -105,8 +105,8 @@ export async function readLocationContext(
         session,
         projectFolder: currentProject.projectFolder,
       }),
-      assets: ownedAssets,
-      assetTypeCounts: typeCounts(assets),
+      assetFiles: ownedAssetFiles,
+      assetFileTypeCounts: typeCounts(assetFiles),
       generationReadiness: {
         locationSheet: true,
         notes: ['Use media-producer for location.sheet generation.'],
@@ -440,8 +440,8 @@ function locationDeleteDependencyLabels(
   dependencies: LocationDeleteDependencySummary
 ): string[] {
   return [
-    dependencies.assetCount > 0
-      ? pluralizeDependency('Location asset', dependencies.assetCount)
+    dependencies.assetFileCount > 0
+      ? pluralizeDependency('Location asset', dependencies.assetFileCount)
       : null,
     dependencies.designCount > 0
       ? pluralizeDependency('Location Design', dependencies.designCount)

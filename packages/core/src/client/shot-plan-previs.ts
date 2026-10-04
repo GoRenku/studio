@@ -1,5 +1,5 @@
 import type { ShotPlanClips } from './shot-plan-clips.js';
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { ShotPlanProjectInput } from './shot-plans.js';
 
@@ -16,7 +16,7 @@ export interface RegisterShotPlanPrevisInput extends ReadShotPlanPrevisInput {
 export interface PrevisFrameRate { numerator: number; denominator: number }
 export interface PrevisShotSegment { id: string; startFrame: number; label: string }
 export interface PrevisSubject { key: string; label: string; color: string }
-export interface PrevisDialogueAudio { assetId: string; assetFileId: string; offsetSeconds?: number }
+export interface PrevisDialogueAudio { assetFileId: string; offsetSeconds?: number }
 export type PrevisCue =
   | { id: string; kind: 'dialogue'; startFrame: number; endFrame?: number; speaker: string; text: string; audio?: PrevisDialogueAudio }
   | { id: string; kind: 'action'; startFrame: number; subject?: string; text: string }
@@ -35,7 +35,7 @@ export interface PrevisRevision {
   number: number;
   sourceDirectory: string;
   createdAt: string;
-  render: Asset | null;
+  render: AssetFile | null;
   description: string | null;
   playback: PrevisPlayback | null;
   clips: ShotPlanClips;

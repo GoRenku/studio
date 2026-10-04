@@ -2,7 +2,7 @@ import { asc, desc, eq } from 'drizzle-orm';
 import { readPrevisDisplay } from './playback.js';
 import { projectShotPlanClips } from '../shot-plan-clips/projection.js';
 import type { ShotPlanPrevisReport } from '../../client/shot-plan-previs.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -24,7 +24,7 @@ export function projectShotPlanPrevis(session: DatabaseSession, projectFolder: s
     .orderBy(asc(shotPlanPrevisRevisions.number)).all();
   const resourceKeys = new Set([studioSceneShotPlansResourceKey(plan.sceneId)]);
   const revisions = rows.map((row) => {
-    const render = readOwnedAsset(session, { owner: { kind: 'project' }, assetId: row.assetId });
+    const render = readOwnedAssetFile(session, { owner: { kind: 'project' }, assetFileId: row.assetFileId });
     const clips = projectShotPlanClips(session, shotPlanId, row.id);
     for (const key of clips.resourceKeys) {
       resourceKeys.add(key);
@@ -45,7 +45,7 @@ export function projectShotPlanPrevis(session: DatabaseSession, projectFolder: s
 }
 
 export function readLatestPrevisRender(session: DatabaseSession, shotPlanId: string) {
-  const revision = session.db.select({ assetId: shotPlanPrevisRevisions.assetId }).from(shotPlanPrevisRevisions)
+  const revision = session.db.select({ assetFileId: shotPlanPrevisRevisions.assetFileId }).from(shotPlanPrevisRevisions)
     .where(eq(shotPlanPrevisRevisions.shotPlanId, shotPlanId)).orderBy(desc(shotPlanPrevisRevisions.number)).limit(1).get();
-  return revision ? readOwnedAsset(session, { owner: { kind: 'project' }, assetId: revision.assetId }) : null;
+  return revision ? readOwnedAssetFile(session, { owner: { kind: 'project' }, assetFileId: revision.assetFileId }) : null;
 }

@@ -1,26 +1,26 @@
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { ContinuityImageAssetsTab } from '../continuity/continuity-image-assets-tab';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
+import { ContinuityImageAssetFilesTab } from '../continuity/continuity-image-assets-tab';
 
 interface LocationVisualContentTabProps {
   projectName: string;
-  assets: StudioAssetResponse[];
-  selectedHeroAssetId: string | null;
-  onToggleHeroDisplay: (asset: StudioAssetResponse) => Promise<void>;
-  onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
+  assetFiles: StudioAssetFileResponse[];
+  selectedHeroAssetFileId: string | null;
+  onToggleHeroDisplay: (assetFile: StudioAssetFileResponse) => Promise<void>;
+  onDeleteAssetFile: (assetFile: StudioAssetFileResponse) => Promise<void>;
 }
 
 export function LocationVisualContentTab({
   projectName,
-  assets,
-  selectedHeroAssetId,
+  assetFiles,
+  selectedHeroAssetFileId,
   onToggleHeroDisplay,
-  onDeleteAsset,
+  onDeleteAssetFile,
 }: LocationVisualContentTabProps) {
   return (
-    <ContinuityImageAssetsTab
+    <ContinuityImageAssetFilesTab
       projectName={projectName}
-      assets={assets}
-      selectedCanonicalAssetId={selectedHeroAssetId}
+      assetFiles={assetFiles}
+      selectedCanonicalAssetFileId={selectedHeroAssetFileId}
       canonicalType='location_hero'
       sheetTypes={['location_sheet']}
       canonicalTitle='Location Hero'
@@ -28,7 +28,7 @@ export function LocationVisualContentTab({
       sheetTitle='Location Sheet'
       sheetPluralTitle='Location Sheets'
       onToggleCanonical={onToggleHeroDisplay}
-      onDeleteAsset={onDeleteAsset}
+      onDeleteAssetFile={onDeleteAssetFile}
     />
   );
 }

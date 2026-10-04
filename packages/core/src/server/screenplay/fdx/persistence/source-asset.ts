@@ -1,7 +1,6 @@
 import type { ProjectRelativePath } from '../../../../client/index.js';
-import { createAssetMembership, readAssetOwner } from '../../../assets/ownership.js';
+import { readAssetFileOwner } from '../../../asset-files/ownership.js';
 import { readAssetFileRecordIncludingDiscarded } from '../../../database/access/asset-files.js';
-import { insertAssetRecord, readAssetRecord } from '../../../database/access/assets.js';
 import type { DatabaseSession } from '../../../database/lifecycle/store.js';
 import { ProjectDataError } from '../../../project-data-error.js';
 import {
@@ -14,36 +13,19 @@ import { persistProjectAssetFileAtDestinationSync } from '../../../project-asset
 import type { ProjectAssetFileWriteSet } from '../../../project-asset-files/types.js';
 import type { FdxSource } from '../source.js';
 
-export function persistFdxSourceAsset(input: {
+export function persistFdxSourceAssetFile(input: {
   session: DatabaseSession;
   projectFolder: string;
   source: FdxSource;
-  assetId: string;
   assetFileId: string;
   now: string;
   writeSet: ProjectAssetFileWriteSet;
 }): void {
-  const existingAsset = readAssetRecord(input.session, input.assetId);
-  if (existingAsset) {
-    assertRetainedFdxSourceAsset(input);
+  const existingAssetFile = readAssetFileRecordIncludingDiscarded(input.session, input.assetFileId);
+  if (existingAssetFile) {
+    assertRetainedFdxSourceAssetFile(input);
     return;
   }
-
-  insertAssetRecord(input.session, {
-    id: input.assetId,
-    type: 'screenplay_source',
-    mediaKind: 'document',
-    title: input.source.filename,
-    origin: 'imported',
-    availability: 'ready',
-    createdAt: input.now,
-    updatedAt: input.now,
-  });
-  createAssetMembership(input.session, {
-    assetId: input.assetId,
-    owner: { kind: 'project' },
-    now: input.now,
-  });
   const sourceProjectRelativePath = input.source.filename as ProjectRelativePath;
   const destinationProjectRelativePath = resolveDurableDestinationFileSync({
     session: input.session,
@@ -55,11 +37,15 @@ export function persistFdxSourceAsset(input: {
     now: input.now,
   });
   const file = persistProjectAssetFileAtDestinationSync({
+    owner: { kind: 'project' },
+    assetFileMetadata: {
+      type: 'screenplay_source',
+      title: input.source.filename,
+      origin: 'imported'
+    },
     session: input.session,
     projectFolder: input.projectFolder,
-    assetId: input.assetId,
     assetFileId: input.assetFileId,
-    fileRole: 'source',
     mediaKind: 'document',
     sourcePath: input.source.absolutePath,
     sourceProjectRelativePath,
@@ -77,38 +63,29 @@ export function persistFdxSourceAsset(input: {
   }
 }
 
-export function assertRetainedFdxSourceAsset(input: {
+export function assertRetainedFdxSourceAssetFile(input: {
   session: DatabaseSession;
   projectFolder: string;
   source: FdxSource;
-  assetId: string;
   assetFileId: string;
 }): void {
-  const existingAsset = readAssetRecord(input.session, input.assetId);
-  const existingFile = readAssetFileRecordIncludingDiscarded(input.session, {
-    assetId: input.assetId,
-    assetFileId: input.assetFileId,
-  });
-  const owner = readAssetOwner(input.session, input.assetId);
-  if (!existingAsset
-    || existingAsset.discardedAt
-    || existingAsset.type !== 'screenplay_source'
-    || existingAsset.mediaKind !== 'document'
-    || existingAsset.origin !== 'imported'
+  const existingAssetFile = readAssetFileRecordIncludingDiscarded(input.session, input.assetFileId);
+  const owner = readAssetFileOwner(input.session, input.assetFileId);
+  if (!existingAssetFile
+    || existingAssetFile.discardedAt
+    || existingAssetFile.type !== 'screenplay_source'
+    || existingAssetFile.mediaKind !== 'document'
+    || existingAssetFile.origin !== 'imported'
     || owner?.kind !== 'project'
-    || !existingFile
-    || existingFile.discardedAt
-    || existingFile.role !== 'source'
-    || existingFile.mediaKind !== 'document'
-    || existingFile.mimeType !== 'application/xml'
-    || existingFile.contentHash !== input.source.sha256
+    || existingAssetFile.mimeType !== 'application/xml'
+    || existingAssetFile.contentHash !== input.source.sha256
     || !projectPathExistsSync(
       input.projectFolder,
-      normalizeProjectRelativePath(existingFile.projectRelativePath),
+      normalizeProjectRelativePath(existingAssetFile.projectRelativePath),
     )
     || hashFileSync(resolveProjectRelativePath(
       input.projectFolder,
-      normalizeProjectRelativePath(existingFile.projectRelativePath),
+      normalizeProjectRelativePath(existingAssetFile.projectRelativePath),
     )) !== input.source.sha256) {
     throw new ProjectDataError(
       'SCREENPLAY_FDX_SOURCE_DESTINATION_CONFLICT',

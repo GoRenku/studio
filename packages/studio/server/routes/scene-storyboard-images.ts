@@ -1,6 +1,6 @@
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { projectErrorResponse } from '../errors.js';
-import { toStudioAssetResponse } from '../http/asset-responses.js';
+import { toStudioAssetFileResponse } from '../http/asset-responses.js';
 import type { ProjectsRouteProjectData } from './projects.js';
 
 export function createSceneStoryboardImagesRoute(input: {
@@ -21,7 +21,7 @@ export function createSceneStoryboardImagesRoute(input: {
             ...status,
             beats: status.beats.map((beat) => ({
               ...beat,
-              images: beat.images.map((asset) => toStudioAssetResponse(projectName, asset)),
+              images: beat.images.map((assetFile) => toStudioAssetFileResponse(projectName, assetFile)),
             })),
           },
         });
@@ -30,12 +30,12 @@ export function createSceneStoryboardImagesRoute(input: {
       }
     })
     .post(
-      '/screenplay/scenes/:sceneId/scene-beats/:revisionId/beats/:beatId/selected-image/:assetId',
+      '/screenplay/scenes/:sceneId/scene-beats/:revisionId/beats/:beatId/selected-image/:assetFileId',
       input.requireToken,
       async (c) => mutate(c, input.projectData, 'select'),
     )
     .delete(
-      '/screenplay/scenes/:sceneId/scene-beats/:revisionId/beats/:beatId/images/:assetId',
+      '/screenplay/scenes/:sceneId/scene-beats/:revisionId/beats/:beatId/images/:assetFileId',
       input.requireToken,
       async (c) => mutate(c, input.projectData, 'discard'),
     );
@@ -52,7 +52,7 @@ async function mutate(
       sceneId: c.req.param('sceneId') as string,
       sceneBeatsRevisionId: c.req.param('revisionId') as string,
       beatId: c.req.param('beatId') as string,
-      assetId: c.req.param('assetId') as string,
+      assetFileId: c.req.param('assetFileId') as string,
     };
     return c.json(operation === 'select'
       ? await projectData.selectSceneStoryboardImageCandidate(request)

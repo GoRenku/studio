@@ -271,7 +271,7 @@ Skills must not:
 - write directly to `.renku/project.sqlite`;
 - invent IDs or relationships;
 - use obsolete command aliases;
-- register Inspiration folder images as assets;
+- treat filesystem downloads as retained references before `asset-file import`;
 - store absolute paths in authored JSON documents;
 - run generation without satisfying the current conversational confirmation
   policy;

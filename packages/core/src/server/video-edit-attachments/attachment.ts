@@ -1,7 +1,7 @@
-import type { AssetMetadataInput } from '../../client/assets.js';
+import type { AssetFileMetadataInput } from '../../client/asset-files.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
-import { normalizeAssetMetadata } from '../assets/metadata.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import { normalizeAssetFileMetadata } from '../asset-files/metadata.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
@@ -12,10 +12,10 @@ import { readVideoEditSource } from './source.js';
 
 export function attachVideoEditMedia(input: {
   purpose: 'video.edit';
-  target: { kind: 'asset'; id: string };
+  target: { kind: 'assetFile'; assetFileId: string };
   sourceProjectRelativePath: string;
   title?: string;
-  assetMetadata?: AssetMetadataInput;
+  assetFileMetadata?: AssetFileMetadataInput;
   generationProvenance: MediaGenerationProvenance;
   session: DatabaseSession;
   projectFolder: string;
@@ -24,26 +24,26 @@ export function attachVideoEditMedia(input: {
   const source = readVideoEditSource({
     session: input.session,
     projectFolder: input.projectFolder,
-    assetId: input.target.id,
+    assetFileId: input.target.assetFileId,
     generationProvenance: input.generationProvenance,
   });
   const resourceKeys = videoEditResourceKeys({
-    source: source.asset,
+    source: source,
     session: input.session,
   });
-  const metadata = normalizeAssetMetadata({
-    oneLineSummary: input.assetMetadata?.oneLineSummary === undefined
-      ? source.asset.oneLineSummary
-      : input.assetMetadata.oneLineSummary,
-    referenceName: input.assetMetadata?.referenceName === undefined
-      ? source.asset.referenceName
-      : input.assetMetadata.referenceName,
-    tags: input.assetMetadata?.tags === undefined
-      ? source.asset.tags
-      : input.assetMetadata.tags,
+  const metadata = normalizeAssetFileMetadata({
+    oneLineSummary: input.assetFileMetadata?.oneLineSummary === undefined
+      ? source.oneLineSummary
+      : input.assetFileMetadata.oneLineSummary,
+    referenceName: input.assetFileMetadata?.referenceName === undefined
+      ? source.referenceName
+      : input.assetFileMetadata.referenceName,
+    tags: input.assetFileMetadata?.tags === undefined
+      ? source.tags
+      : input.assetFileMetadata.tags,
   });
   const persisted = persistGeneratedMediaAttachment({
-    previsRevisionId: source.asset.authoredFrom?.previsRevisionId,
+    previsRevisionId: source.authoredFrom?.previsRevisionId,
     session: input.session,
     projectFolder: input.projectFolder,
     idGenerator: input.idGenerator,
@@ -51,33 +51,31 @@ export function attachVideoEditMedia(input: {
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     destination: {
       file: {
-        kind: 'asset.videoEdit',
-        sourceAssetId: source.asset.id,
-        sourceAssetFileId: source.file.id,
+        kind: 'assetFile.videoEdit',
+        sourceAssetFileId: source.id,
       },
-      owner: source.asset.owner,
+      owner: source.owner,
       resourceKeys,
     },
-    asset: {
-      localeId: source.asset.localeId,
-      type: source.asset.type,
+    assetFileMetadata: {
+      localeId: source.localeId,
+      type: source.type,
       mediaKind: 'video',
-      title: input.title?.trim() || source.asset.title,
+      title: input.title?.trim() || source.title,
       ...metadata,
       origin: 'generated',
     },
-    fileRole: 'primary',
     generationProvenance: input.generationProvenance,
-    ...(source.asset.authoredFrom
-      ? { authoredFromShotPlanId: source.asset.authoredFrom.id }
+    ...(source.authoredFrom
+      ? { authoredFromShotPlanId: source.authoredFrom.id }
       : {}),
   });
-  const asset = readOwnedAsset(input.session, {
-    owner: source.asset.owner,
-    assetId: persisted.assetId,
+  const assetFile = readOwnedAssetFile(input.session, {
+    owner: source.owner,
+    assetFileId: persisted.assetFileId,
   });
   const project = readProjectRecord(input.session);
-  if (!asset || !project) {
+  if (!assetFile || !project) {
     throw new ProjectDataError(
       'CORE_GENERATION_ATTACHMENT_FAILED',
       'Edited video attachment was not persisted.',
@@ -87,7 +85,7 @@ export function attachVideoEditMedia(input: {
     valid: true as const,
     purpose: input.purpose,
     target: input.target,
-    asset,
+    assetFile,
     generationProvenance: input.generationProvenance,
     resourceKeys,
     project: {

@@ -1,10 +1,10 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from '../assets.js';
+import type { AssetFile } from '../asset-files.js';
 import type { Project } from '../project/index.js';
 import type { Scene, ScreenplayBlock, ScreenplaySection } from '../screenplay/index.js';
 import type { MediaGenerationProvenance } from '../media-generation-review.js';
 import type {
-  MediaGenerationAsset,
+  MediaGenerationAssetFile,
   MediaGenerationLookbookContext,
   MediaGenerationReferenceSuggestion,
 } from '../media-generation-context.js';
@@ -101,7 +101,7 @@ export interface SceneBeatsContextReport extends SceneBeatsCommandReport {
   } | null;
   activeRevision: SceneBeatsRevisionSummary | null;
   visualReferences?: {
-    assets: MediaGenerationAsset[];
+    assetFiles: MediaGenerationAssetFile[];
     visualLanguage: MediaGenerationLookbookContext[];
     suggestedReferences: MediaGenerationReferenceSuggestion[];
   };
@@ -149,7 +149,7 @@ export interface SceneStoryboardStatus extends SceneBeatsCommandReport {
   beats: Array<{
     beatId: string;
     beatNumber: string;
-    images: Asset[];
+    images: AssetFile[];
     selectedImageId: string | null;
     needsStoryboardImage: boolean;
     reason?: 'missing';
@@ -164,7 +164,7 @@ export interface SceneStoryboardImageCandidateInput {
   sceneId: string;
   sceneBeatsRevisionId: string;
   beatId: string;
-  assetId: string;
+  assetFileId: string;
 }
 
 export interface SceneStoryboardImagesImportDocument {
@@ -191,7 +191,7 @@ export interface SceneStoryboardImagesImportReport extends SceneBeatsCommandRepo
   purpose: 'scene.storyboard-sheet';
   target: { kind: 'scene'; id: string };
   sceneBeatsRevisionId: string;
-  imported: Asset[];
+  imported: AssetFile[];
   files: SceneStoryboardImagesImportedFile[];
 }
 

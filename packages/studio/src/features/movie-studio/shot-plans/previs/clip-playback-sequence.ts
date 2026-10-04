@@ -19,7 +19,7 @@ export function clipPlaybackSequence(report: StudioShotPlanClips | undefined, me
   let blocked = false;
   return (report?.clips ?? []).map((clip) => {
     const take = clip.takes.find((entry) => entry.id === clip.selectedTakeId) ?? null;
-    const file = report?.assets.find((asset) => asset.id === take?.assetId)?.files.find((entry) => entry.id === take?.assetFileId) ?? null;
+    const file = report?.assetFiles.find((assetFile) => assetFile.id === take?.assetFileId) ?? null;
     const value = file ? (file.url in measured ? measured[file.url] : file.durationSeconds) : null;
     const duration = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
     const segment = { clip, take, file, duration, start, blocked };

@@ -9,7 +9,7 @@ import { openProjectSession } from '../../database/lifecycle/active-session.js';
 import type { DatabaseSession } from '../../database/lifecycle/store.js';
 import { normalizeProjectRelativePath, resolveProjectRelativePath } from '../../files/project-relative-paths.js';
 import { ProjectDataError } from '../../project-data-error.js';
-import { assetFiles, assets } from '../../schema/assets.js';
+import { assetFiles } from '../../schema/asset-files.js';
 import { readScreenplayImport, requireImportSourceSha256 } from './persistence/import-record.js';
 import { readFdxSourceBytes } from './source.js';
 
@@ -54,8 +54,7 @@ function realExportSegment(segment: string): string {
 }
 
 function assertNotRetainedSource(session: DatabaseSession, root: string, exportPath: string, stat: fs.Stats): void {
-  const retained = session.db.select({ path: assetFiles.projectRelativePath }).from(assetFiles)
-    .innerJoin(assets, eq(assets.id, assetFiles.assetId)).where(eq(assets.type, 'screenplay_source')).all();
+  const retained = session.db.select({ path: assetFiles.projectRelativePath }).from(assetFiles).where(eq(assetFiles.type, 'screenplay_source')).all();
   for (const file of retained) {
     let source;
     try {

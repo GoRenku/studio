@@ -1,5 +1,4 @@
 import type {
-  Asset,
   AssetFile,
   CastMemberResource,
   CastOverviewResource,
@@ -54,9 +53,7 @@ export interface StudioAssetFileResponse
   url: string;
 }
 
-export interface StudioAssetResponse extends Omit<Asset, 'files'> {
-  files: StudioAssetFileResponse[];
-}
+
 
 export type SceneDesignResourceResponse = SceneDesignResource;
 
@@ -78,7 +75,7 @@ export type CastMemberResourceResponse = Omit<
   firstImage?: ScreenplayImageReferenceWithHttp;
   voices: Array<
     Omit<CastMemberResource['voices'][number], 'sample'> & {
-      sample: StudioAssetResponse;
+      sample: StudioAssetFileResponse;
     }
   >;
 };
@@ -102,7 +99,7 @@ export type LocationResourceResponse = Omit<
   'firstImage' | 'selectedWorld'
 > & {
   firstImage?: ScreenplayImageReferenceWithHttp;
-  selectedWorld: StudioAssetResponse | null;
+  selectedWorld: StudioAssetFileResponse | null;
 };
 
 export type PropOverviewResourceResponse = Omit<PropOverviewResource, 'props'> & {

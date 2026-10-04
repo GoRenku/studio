@@ -57,7 +57,7 @@ describe('media import command handler', () => {
       runtime: { projectName: 'movie', projectDataService: { attachGenerationMedia } },
     } as never);
     expect(attachGenerationMedia).toHaveBeenCalledWith(expect.objectContaining({
-      assetMetadata: {
+      assetFileMetadata: {
         oneLineSummary: 'Storyboard continuity rendering.',
         referenceName: 'hero-storyboard',
         tags: ['previs', 'storyboard'],

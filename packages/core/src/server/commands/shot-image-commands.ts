@@ -2,7 +2,7 @@ import type {
   DiscardShotImageCandidateInput,
 } from '../../client/shot-plans.js';
 import type { RecoverableMutationReport } from '../../client/trash.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { readProjectRecord } from '../database/access/project.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { requireShotInPlan } from '../database/access/shot-plans/shot-records.js';
@@ -17,11 +17,11 @@ export async function discardShotImageCandidate(
   return withProject(input, ({ session, projectFolder }) => {
     const plan = requireShotPlanRecord(session, input.shotPlanId);
     requireShotInPlan(session, input);
-    const asset = readOwnedAsset(session, {
+    const assetFile = readOwnedAssetFile(session, {
       owner: { kind: 'shot', id: input.shotId },
-      assetId: input.assetId,
+      assetFileId: input.assetFileId,
     });
-    if (!asset || asset.type !== 'shot_image') {
+    if (!assetFile || assetFile.type !== 'shot_image') {
       throw new ProjectDataError(
         'CORE_SHOT_IMAGE_INVALID',
         'Shot image candidate must be an active shot_image Asset owned by the exact Shot.'
@@ -38,13 +38,13 @@ export async function discardShotImageCandidate(
       session,
       project,
       projectFolder,
-      itemKind: 'asset',
-      itemId: input.assetId,
+      itemKind: 'assetFile',
+      itemId: input.assetFileId,
       commandName: 'shotPlan.shot.image.discard',
       changes: [{
         type: 'shot.imageCandidateDiscarded',
         shotId: input.shotId,
-        assetId: input.assetId,
+        assetFileId: input.assetFileId,
       }],
       resourceKeys: [studioSceneShotPlansResourceKey(plan.sceneId)],
     });

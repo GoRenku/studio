@@ -47,14 +47,14 @@ describe('Studio Shot Plans API', () => {
         page: {
           items: [{ id: 'asset_second' }, { id: 'asset_first' }],
           nextCursor: 'cursor/next',
-          selectedAssetId: 'asset_first',
+          selectedAssetFileId: 'asset_first',
         },
       }))
       .mockResolvedValueOnce(okResponse({
         page: {
           items: [{ id: 'asset_third' }],
           nextCursor: null,
-          selectedAssetId: 'asset_first',
+          selectedAssetFileId: 'asset_first',
         },
       }));
 
@@ -64,20 +64,20 @@ describe('Studio Shot Plans API', () => {
       signal: controller.signal,
     });
 
-    expect(result.items.map((asset) => asset.id)).toEqual([
+    expect(result.items.map((assetFile) => assetFile.id)).toEqual([
       'asset_second',
       'asset_first',
       'asset_third',
     ]);
-    expect(result.selectedAssetId).toBe('asset_first');
+    expect(result.selectedAssetFileId).toBe('asset_first');
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
-      '/studio-api/projects/urban%20basilica/assets?ownerKind=shot&ownerId=shot%2Fone&type=shot_image&mediaKind=image&limit=200',
+      '/studio-api/projects/urban%20basilica/asset-files?ownerKind=shot&ownerId=shot%2Fone&type=shot_image&mediaKind=image&limit=200',
       { signal: controller.signal }
     );
     expect(global.fetch).toHaveBeenNthCalledWith(
       2,
-      '/studio-api/projects/urban%20basilica/assets?ownerKind=shot&ownerId=shot%2Fone&type=shot_image&mediaKind=image&limit=200&cursor=cursor%2Fnext',
+      '/studio-api/projects/urban%20basilica/asset-files?ownerKind=shot&ownerId=shot%2Fone&type=shot_image&mediaKind=image&limit=200&cursor=cursor%2Fnext',
       { signal: controller.signal }
     );
   });
@@ -92,12 +92,12 @@ describe('Studio Shot Plans API', () => {
     await setStudioShotSelectedImage({
       projectName: 'urban basilica',
       shotId: 'shot/two',
-      assetId: 'asset/three',
+      assetFileId: 'asset/three',
     });
     await deleteStudioShotImageCandidate({
       projectName: 'urban basilica',
       shotId: 'shot/two',
-      assetId: 'asset/three',
+      assetFileId: 'asset/three',
     });
 
     expect(global.fetch).toHaveBeenNthCalledWith(
@@ -137,7 +137,7 @@ describe('Studio Shot Plans API', () => {
       setStudioShotSelectedImage({
         projectName: 'constantinople',
         shotId: 'shot_one',
-        assetId: 'asset_one',
+        assetFileId: 'asset_one',
       })
     ).rejects.toMatchObject({ code: 'CORE_ASSET_SELECTION_INVALID' });
   });

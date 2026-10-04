@@ -1,6 +1,6 @@
 import type { CastVoiceDefaultSelectionReport } from '../../client/cast-voices.js';
 import { selectCastVoiceDefaultRecord } from '../database/access/cast-voices.js';
-import { studioAssetOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
+import { studioAssetFileOwnerSurfaceResourceKeys } from '../studio-coordination/resource-keys.js';
 import { listCastVoicesInSession, requireCastMember, requireCastVoiceRecord } from './projection.js';
 import { withCastVoiceProjectSession, type CastVoiceProjectInput } from './project-session.js';
 
@@ -23,7 +23,7 @@ export async function selectDefaultCastVoice(
       castVoiceId: input.castVoiceId,
       now: new Date().toISOString(),
     });
-    const resourceKeys = studioAssetOwnerSurfaceResourceKeys({
+    const resourceKeys = studioAssetFileOwnerSurfaceResourceKeys({
       kind: 'castMember',
       id: input.castMemberId,
     });

@@ -100,7 +100,7 @@ describe('Studio selection validation', () => {
       id: 'scene_opening',
       sceneTab: 'shotPlans',
       shotPlanId: 'plan_primary',
-      shotPlanTab: 'assets',
+      shotPlanTab: 'assetFiles',
       shotId: 'shot_wide',
     })).toMatchObject({
       valid: false,
@@ -130,7 +130,7 @@ describe('Studio selection validation', () => {
       id: 'scene_opening',
       sceneTab: 'shotPlans',
       shotPlanId: 'plan_primary',
-      shotPlanTab: 'assets',
+      shotPlanTab: 'assetFiles',
     })).toEqual({
       valid: true,
       selection: {
@@ -138,7 +138,7 @@ describe('Studio selection validation', () => {
         id: 'scene_opening',
         sceneTab: 'shotPlans',
         shotPlanId: 'plan_primary',
-        shotPlanTab: 'assets',
+        shotPlanTab: 'assetFiles',
       },
     });
     expect(parseStudioSelection({

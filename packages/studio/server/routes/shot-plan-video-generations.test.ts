@@ -1,5 +1,5 @@
 import type {
-  Asset,
+  AssetFile,
   SceneShotPlanVideoGenerations,
 } from '@gorenku/studio-core/client';
 import { Hono } from 'hono';
@@ -26,15 +26,10 @@ describe('Shot Plan video generations Hono route', () => {
       expect.objectContaining({
         kind: 'shotPlan',
         shotPlan: { id: 'plan_one', title: 'Council coverage' },
-        assets: [
+        assetFiles: [
           expect.objectContaining({
-            id: 'asset_video',
-            files: [
-              expect.objectContaining({
-                browserUrl:
-                  '/studio-api/projects/constantinople/assets/asset_video/files/file_video',
-              }),
-            ],
+            id: 'file_video',
+            browserUrl: '/studio-api/projects/constantinople/asset-files/file_video',
           }),
         ],
       }),
@@ -44,7 +39,7 @@ describe('Shot Plan video generations Hono route', () => {
   });
 
   it('discards the exact Project-owned Asset through Core', async () => {
-    const discardAsset = vi.fn(async () => ({
+    const discardAssetFile = vi.fn(async () => ({
       valid: true as const,
       project: {
         id: 'project_test0001',
@@ -64,17 +59,17 @@ describe('Shot Plan video generations Hono route', () => {
       warnings: [],
       resourceKeys: ['surface:scene:scene_opening:video-generations'],
     }));
-    const app = mountedRoute({ discardAsset });
+    const app = mountedRoute({ discardAssetFile });
 
     const response = await app.request(
       '/constantinople/project-assets/asset%20video',
       { method: 'DELETE' },
     );
 
-    expect(discardAsset).toHaveBeenCalledWith({
+    expect(discardAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       owner: { kind: 'project' },
-      assetId: 'asset video',
+      assetFileId: 'asset video',
     });
     expect(response.status).toBe(200);
   });
@@ -101,20 +96,20 @@ function resource(): SceneShotPlanVideoGenerations {
       {
         kind: 'shotPlan',
         shotPlan: { id: 'plan_one', title: 'Council coverage' },
-        assets: [videoAsset()],
+        assetFiles: [videoAssetFile()],
       },
       {
         kind: 'miscellaneous',
-        assets: [],
+        assetFiles: [],
       },
     ],
     resourceKeys: ['surface:scene:scene_opening:video-generations'],
   };
 }
 
-function videoAsset(): Asset {
+function videoAssetFile(): AssetFile {
   return {
-    id: 'asset_video',
+    id: 'file_video',
     owner: { kind: 'project' },
     localeId: null,
     type: 'shot_plan_video',
@@ -127,21 +122,8 @@ function videoAsset(): Asset {
     authoredFrom: null,
     referenceName: null,
     tags: ['shot-plan.video-generation'],
-    files: [
-      {
-        id: 'file_video',
-        role: 'primary',
-        projectRelativePath:
-          'videos/council-master.mp4' as Asset['files'][number]['projectRelativePath'],
-        mediaKind: 'video',
-        mimeType: 'video/mp4',
-        sizeBytes: 24,
-        contentHash: null,
-        width: null,
-        height: null,
-        durationSeconds: 4,
-      },
-    ],
+    projectRelativePath:
+          'videos/council-master.mp4' as AssetFile['projectRelativePath'], mimeType: 'video/mp4', sizeBytes: 24, contentHash: null, width: null, height: null, durationSeconds: 4,
     createdAt: '2026-07-30T10:00:00.000Z',
     updatedAt: '2026-07-30T10:00:00.000Z',
   };

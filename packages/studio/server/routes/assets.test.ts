@@ -1,17 +1,17 @@
 import fs from 'node:fs';
 import { Readable } from 'node:stream';
-import type { Asset } from '@gorenku/studio-core/client';
+import type { AssetFile } from '@gorenku/studio-core/client';
 import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
-import { makeAsset } from '../testing/route-fixtures.js';
-import { createAssetsRoute } from './assets.js';
+import { makeAssetFile } from '../testing/route-fixtures.js';
+import { createAssetFilesRoute } from './asset-files.js';
 
-function createMountedAssetsRoute() {
+function createMountedAssetFilesRoute() {
   return new Hono().route(
     '/:projectName',
-    createAssetsRoute({
+    createAssetFilesRoute({
       projectData: fakeProjectDataService(),
       requireToken: async (_c, next) => {
         await next();
@@ -22,10 +22,10 @@ function createMountedAssetsRoute() {
 
 describe('assets Hono route', () => {
   it('lists filtered assets', async () => {
-    const app = createMountedAssetsRoute();
+    const app = createMountedAssetFilesRoute();
 
     const response = await app.request(
-      '/constantinople/assets?ownerKind=castMember&ownerId=cast_narrator'
+      '/constantinople/asset-files?ownerKind=castMember&ownerId=cast_narrator'
     );
 
     expect(response.status).toBe(200);
@@ -42,19 +42,19 @@ describe('assets Hono route', () => {
   });
 
   it('accepts Prop ownership on the generic Asset page', async () => {
-    const listAssetPage = vi.fn(
+    const listAssetFilePage = vi.fn(
       async () => ({
         items: [],
         nextCursor: null,
-        selectedAssetId: null,
+        selectedAssetFileId: null,
       })
     );
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData: {
           ...fakeProjectDataService(),
-          listAssetPage,
+          listAssetFilePage,
         },
         requireToken: async (_c, next) => {
           await next();
@@ -63,11 +63,11 @@ describe('assets Hono route', () => {
     );
 
     const response = await app.request(
-      '/constantinople/assets?ownerKind=prop&ownerId=prop_cannon'
+      '/constantinople/asset-files?ownerKind=prop&ownerId=prop_cannon'
     );
 
     expect(response.status).toBe(200);
-    expect(listAssetPage).toHaveBeenCalledWith(
+    expect(listAssetFilePage).toHaveBeenCalledWith(
       expect.objectContaining({
         owner: { kind: 'prop', id: 'prop_cannon' },
       })
@@ -75,34 +75,28 @@ describe('assets Hono route', () => {
   });
 
   it('maps Shot candidate ownership and returns browser-safe file URLs', async () => {
-    const shotAsset = {
-      ...makeAsset('asset_shot_candidate'),
+    const shotAssetFile = {
+      ...makeAssetFile('asset_shot_candidate'),
       owner: { kind: 'shot' as const, id: 'shot_wide' },
       type: 'shot_image',
-      files: [
-        {
-          ...makeAsset('asset_shot_candidate').files[0]!,
-          id: 'asset_file_shot_candidate',
-          projectRelativePath:
-            'generated/shot-wide.png' as Asset['files'][number]['projectRelativePath'],
-        },
-      ],
+      id: 'asset_file_shot_candidate', projectRelativePath:
+            'generated/shot-wide.png' as AssetFile['projectRelativePath'],
     };
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData: {
           ...fakeProjectDataService(),
-          async listAssetPage(input) {
+          async listAssetFilePage(input) {
             expect(input).toMatchObject({
               owner: { kind: 'shot', id: 'shot_wide' },
               type: 'shot_image',
               mediaKind: 'image',
             });
             return {
-              items: [shotAsset],
+              items: [shotAssetFile],
               nextCursor: null,
-              selectedAssetId: shotAsset.id,
+              selectedAssetFileId: shotAssetFile.id,
             };
           },
         },
@@ -113,21 +107,18 @@ describe('assets Hono route', () => {
     );
 
     const response = await app.request(
-      '/constantinople/assets?ownerKind=shot&ownerId=shot_wide&type=shot_image&mediaKind=image'
+      '/constantinople/asset-files?ownerKind=shot&ownerId=shot_wide&type=shot_image&mediaKind=image'
     );
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.page).toMatchObject({
-      selectedAssetId: 'asset_shot_candidate',
+      selectedAssetFileId: 'asset_file_shot_candidate',
       items: [
         {
-          id: 'asset_shot_candidate',
+          id: 'asset_file_shot_candidate',
           owner: { kind: 'shot', id: 'shot_wide' },
-          files: [{
-            id: 'asset_file_shot_candidate',
-            url: '/studio-api/projects/constantinople/assets/asset_shot_candidate/files/asset_file_shot_candidate',
-          }],
+          url: '/studio-api/projects/constantinople/asset-files/asset_file_shot_candidate',
         },
       ],
     });
@@ -136,26 +127,26 @@ describe('assets Hono route', () => {
   });
 
   it('lists cast member assets through ProjectDataService', async () => {
-    const app = createMountedAssetsRoute();
+    const app = createMountedAssetFilesRoute();
 
     const response = await app.request(
-      '/constantinople/cast/cast_narrator/assets'
+      '/constantinople/cast/cast_narrator/asset-files'
     );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      assets: [
+      page: { items: [
         {
           id: 'asset_cast_reference',
           owner: { kind: 'castMember', id: 'cast_narrator' },
           title: 'Narrator reference',
         },
-      ],
+      ] },
     });
   });
 
   it('selects and clears the Cast Profile through ProjectDataService', async () => {
-    const app = createMountedAssetsRoute();
+    const app = createMountedAssetFilesRoute();
 
     const selected = await app.request(
       '/constantinople/cast/cast_narrator/selected-profile/asset_cast_reference',
@@ -168,7 +159,7 @@ describe('assets Hono route', () => {
 
     expect(selected.status).toBe(200);
     await expect(selected.json()).resolves.toMatchObject({
-      selectedAssetId: 'asset_cast_reference',
+      selectedAssetFileId: 'asset_cast_reference',
     });
     expect(unselected.status).toBe(200);
     await expect(unselected.json()).resolves.toMatchObject({
@@ -178,12 +169,12 @@ describe('assets Hono route', () => {
 
   it('forwards Project Cover selection, clear, and discard intent to Core', async () => {
     const projectData = fakeProjectDataService();
-    const selectAsset = vi.spyOn(projectData, 'selectAsset');
-    const clearAssetSelection = vi.spyOn(projectData, 'clearAssetSelection');
-    const discardAsset = vi.spyOn(projectData, 'discardAsset');
+    const selectAssetFile = vi.spyOn(projectData, 'selectAssetFile');
+    const clearAssetFileSelection = vi.spyOn(projectData, 'clearAssetFileSelection');
+    const discardAssetFile = vi.spyOn(projectData, 'discardAssetFile');
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData,
         requireToken: async (_c, next) => {
           await next();
@@ -206,28 +197,28 @@ describe('assets Hono route', () => {
     expect(selected.status).toBe(200);
     expect(cleared.status).toBe(200);
     expect(discarded.status).toBe(200);
-    expect(selectAsset).toHaveBeenCalledWith({
+    expect(selectAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       target: { kind: 'project' },
-      assetId: 'asset_project_cover',
+      assetFileId: 'asset_project_cover',
     });
-    expect(clearAssetSelection).toHaveBeenCalledWith({
+    expect(clearAssetFileSelection).toHaveBeenCalledWith({
       projectName: 'constantinople',
       target: { kind: 'project' },
     });
-    expect(discardAsset).toHaveBeenCalledWith({
+    expect(discardAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       owner: { kind: 'project' },
-      assetId: 'asset_project_cover',
+      assetFileId: 'asset_project_cover',
       expectedType: 'project_cover',
     });
   });
 
   it('deletes cast member assets through ProjectDataService', async () => {
-    const app = createMountedAssetsRoute();
+    const app = createMountedAssetFilesRoute();
 
     const response = await app.request(
-      '/constantinople/cast/cast_narrator/assets/asset_cast_reference',
+      '/constantinople/cast/cast_narrator/asset-files/asset_cast_reference',
       { method: 'DELETE' }
     );
 
@@ -241,10 +232,10 @@ describe('assets Hono route', () => {
 
   it('serves a registered cast member asset file', async () => {
     mockAssetFileStream('png bytes');
-    const app = createMountedAssetsRoute();
+    const app = createMountedAssetFilesRoute();
 
     const response = await app.request(
-      '/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference'
+      '/constantinople/asset-files/asset_file_cast_reference'
     );
 
     expect(response.status).toBe(200);
@@ -257,10 +248,10 @@ describe('assets Hono route', () => {
 
   it('serves a project asset file through the generic asset-file route', async () => {
     mockAssetFileStream('generic bytes');
-    const app = createMountedAssetsRoute();
+    const app = createMountedAssetFilesRoute();
 
     const response = await app.request(
-      '/constantinople/assets/asset_cast_reference/files/asset_file_cast_reference'
+      '/constantinople/asset-files/asset_file_cast_reference'
     );
 
     expect(response.status).toBe(200);
@@ -272,9 +263,8 @@ describe('assets Hono route', () => {
     mockAssetFileStream('video bytes');
     const videoFile = {
       id: 'asset_file_video_primary',
-      role: 'primary',
       projectRelativePath:
-        'generated/media/generated-media.mp4' as Asset['files'][number]['projectRelativePath'],
+        'generated/media/generated-media.mp4' as AssetFile['projectRelativePath'],
       mediaKind: 'video',
       mimeType: 'video/mp4',
       sizeBytes: 1234,
@@ -285,16 +275,13 @@ describe('assets Hono route', () => {
     };
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData: {
           ...fakeProjectDataService(),
           async resolveProjectAssetFileById(input) {
-            expect(input.assetId).toBe('asset_video_take');
-            expect(input.assetFileId).toBe('asset_file_video_primary');
+                        expect(input.assetFileId).toBe('asset_file_video_primary');
             return {
-              assetId: input.assetId,
-              assetMediaKind: 'video',
-              file: videoFile,
+              assetFile: { ...makeAssetFile(videoFile.id), ...videoFile, mediaKind: 'video' },
               absolutePath:
                 '/tmp/renku/constantinople/generated/media/generated-media.mp4',
             };
@@ -307,7 +294,7 @@ describe('assets Hono route', () => {
     );
 
     const response = await app.request(
-      '/constantinople/assets/asset_video_take/files/asset_file_video_primary'
+      '/constantinople/asset-files/asset_file_video_primary'
     );
 
     expect(response.status).toBe(200);
@@ -318,7 +305,7 @@ describe('assets Hono route', () => {
   it('rejects missing generic asset files without leaking absolute paths', async () => {
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData: {
           ...fakeProjectDataService(),
           async resolveProjectAssetFileById() {
@@ -335,7 +322,7 @@ describe('assets Hono route', () => {
     );
 
     const response = await app.request(
-      '/constantinople/assets/asset_missing/files/asset_file_missing'
+      '/constantinople/asset-files/asset_file_missing'
     );
     const body = await response.text();
 
@@ -346,11 +333,11 @@ describe('assets Hono route', () => {
 
   it('lists, selects, unselects, deletes, and serves grouped Location Sheet files through ProjectDataService', async () => {
     mockAssetFileStream('location bytes');
-    const discardAsset = vi.fn(async () => ({
+    const discardAssetFile = vi.fn(async () => ({
       valid: true as const,
       warnings: [],
       project: { id: 'project_test0001', projectName: 'constantinople' },
-      changes: [{ type: 'asset.discarded', assetId: 'asset_location_reference' }],
+      changes: [{ type: 'asset.discarded', assetFileId: 'asset_location_reference' }],
       recovery: {
         operationId: 'trash_operation_test0001',
         trashItemIds: ['trash_item_test0001'],
@@ -362,38 +349,31 @@ describe('assets Hono route', () => {
       },
       resourceKeys: ['surface:location:location_gate'],
     }));
-    const locationAsset = {
-      ...makeAsset('asset_location_reference'),
+    const locationAssetFile = {
+      ...makeAssetFile('asset_location_reference'),
       owner: { kind: 'location' as const, id: 'location_gate' },
       type: 'location_sheet',
       title: 'Gate Location Sheet',
-      files: [
-        {
-          ...makeAsset('asset_location_reference').files[0]!,
-          id: 'asset_file_location_primary',
-          role: 'primary',
-          projectRelativePath:
-            'locations/gate/location-sheets/gate/sheet.png' as Asset['files'][number]['projectRelativePath'],
-        },
-      ],
+      id: 'asset_file_location_primary', projectRelativePath:
+            'locations/gate/location-sheets/gate/sheet.png' as AssetFile['projectRelativePath'],
     };
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData: {
           ...fakeProjectDataService(),
-          async listAssetPage(input) {
+          async listAssetFilePage(input) {
             expect(input.owner).toEqual({
               kind: 'location',
               id: 'location_gate',
             });
             return {
-              items: [locationAsset],
+              items: [locationAssetFile],
               nextCursor: null,
-              selectedAssetId: 'asset_location_reference',
+              selectedAssetFileId: 'asset_location_reference',
             };
           },
-          async selectAsset(input) {
+          async selectAssetFile(input) {
             expect(input.target).toEqual({
               kind: 'location',
               id: 'location_gate',
@@ -407,11 +387,11 @@ describe('assets Hono route', () => {
                 projectFolder: '/tmp/renku/constantinople',
               },
               target: input.target,
-              selectedAssetId: input.assetId,
+              selectedAssetFileId: input.assetFileId,
               resourceKeys: ['surface:location:location_gate'],
             };
           },
-          async clearAssetSelection(input) {
+          async clearAssetFileSelection(input) {
             expect(input.target).toEqual({
               kind: 'location',
               id: 'location_gate',
@@ -425,16 +405,14 @@ describe('assets Hono route', () => {
                 projectFolder: '/tmp/renku/constantinople',
               },
               target: input.target,
-              selectedAssetId: null,
+              selectedAssetFileId: null,
               resourceKeys: ['surface:location:location_gate'],
             };
           },
-          discardAsset,
+          discardAssetFile,
           async resolveProjectAssetFileById(_input) {
             return {
-              assetId: locationAsset.id,
-              assetMediaKind: locationAsset.mediaKind,
-              file: locationAsset.files[0]!,
+              assetFile: locationAssetFile,
               absolutePath:
                 '/tmp/renku/constantinople/locations/gate/location-sheets/gate/sheet.png',
             };
@@ -447,7 +425,7 @@ describe('assets Hono route', () => {
     );
 
     const listed = await app.request(
-      '/constantinople/locations/location_gate/assets'
+      '/constantinople/locations/location_gate/asset-files'
     );
     const selected = await app.request(
       '/constantinople/locations/location_gate/selected-hero/asset_location_reference',
@@ -458,26 +436,25 @@ describe('assets Hono route', () => {
       { method: 'DELETE' }
     );
     const deleted = await app.request(
-      '/constantinople/locations/location_gate/assets/asset_location_reference',
+      '/constantinople/locations/location_gate/asset-files/asset_location_reference',
       { method: 'DELETE' }
     );
     const file = await app.request(
-      '/constantinople/assets/asset_location_reference/files/asset_file_location_primary'
+      '/constantinople/asset-files/asset_file_location_primary'
     );
 
     expect(listed.status).toBe(200);
     await expect(listed.json()).resolves.toMatchObject({
-      assets: [
+      page: { items: [
         {
           type: 'location_sheet',
           owner: { kind: 'location', id: 'location_gate' },
-          files: [{ role: 'primary' }],
         },
-      ],
+      ] },
     });
     expect(selected.status).toBe(200);
     await expect(selected.json()).resolves.toMatchObject({
-      selectedAssetId: 'asset_location_reference',
+      selectedAssetFileId: 'asset_location_reference',
       resourceKeys: [
         'surface:location:location_gate',
       ],
@@ -487,10 +464,10 @@ describe('assets Hono route', () => {
       resourceKeys: expect.any(Array),
     });
     expect(deleted.status).toBe(200);
-    expect(discardAsset).toHaveBeenCalledWith({
+    expect(discardAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       owner: { kind: 'location', id: 'location_gate' },
-      assetId: 'asset_location_reference',
+      assetFileId: 'asset_location_reference',
     });
     await expect(deleted.json()).resolves.toMatchObject({
       valid: true,
@@ -504,31 +481,22 @@ describe('assets Hono route', () => {
 
   it('serves a storyboard shot file for a scene target', async () => {
     mockAssetFileStream('shot bytes');
-    const sceneAsset = {
-      ...makeAsset('asset_scene_storyboard'),
+    const sceneAssetFile = {
+      ...makeAssetFile('asset_scene_storyboard'),
       owner: { kind: 'scene' as const, id: 'scene_hook' },
       type: 'scene_storyboard_image',
-      files: [
-        {
-          ...makeAsset('asset_scene_storyboard').files[0]!,
-          id: 'asset_file_shot_001',
-          role: 'storyboard_image',
-          projectRelativePath:
-            'generated/storyboards/scene_hook/shot-001.png' as Asset['files'][number]['projectRelativePath'],
-        },
-      ],
+      id: 'asset_file_shot_001', projectRelativePath:
+            'generated/storyboards/scene_hook/shot-001.png' as AssetFile['projectRelativePath'],
     };
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData: {
           ...fakeProjectDataService(),
           async resolveProjectAssetFileById(input) {
             expect(input.assetFileId).toBe('asset_file_shot_001');
             return {
-              assetId: sceneAsset.id,
-              assetMediaKind: sceneAsset.mediaKind,
-              file: sceneAsset.files[0]!,
+              assetFile: sceneAssetFile,
               absolutePath:
                 '/tmp/renku/constantinople/generated/storyboards/scene_hook/shot-001.png',
             };
@@ -541,7 +509,7 @@ describe('assets Hono route', () => {
     );
 
     const response = await app.request(
-      '/constantinople/assets/asset_scene_storyboard/files/asset_file_shot_001'
+      '/constantinople/asset-files/asset_file_shot_001'
     );
 
     expect(response.status).toBe(200);
@@ -550,21 +518,21 @@ describe('assets Hono route', () => {
   });
 
   it('forwards Prop asset list, Hero selection, clear, and discard intent to Core', async () => {
-    const listAssetPage = vi.fn(fakeProjectDataService().listAssetPage);
-    const selectAsset = vi.fn(fakeProjectDataService().selectAsset);
-    const clearAssetSelection = vi.fn(
-      fakeProjectDataService().clearAssetSelection
+    const listAssetFilePage = vi.fn(fakeProjectDataService().listAssetFilePage);
+    const selectAssetFile = vi.fn(fakeProjectDataService().selectAssetFile);
+    const clearAssetFileSelection = vi.fn(
+      fakeProjectDataService().clearAssetFileSelection
     );
-    const discardAsset = vi.fn(fakeProjectDataService().discardAsset);
+    const discardAssetFile = vi.fn(fakeProjectDataService().discardAssetFile);
     const app = new Hono().route(
       '/:projectName',
-      createAssetsRoute({
+      createAssetFilesRoute({
         projectData: {
           ...fakeProjectDataService(),
-          listAssetPage,
-          selectAsset,
-          clearAssetSelection,
-          discardAsset,
+          listAssetFilePage,
+          selectAssetFile,
+          clearAssetFileSelection,
+          discardAssetFile,
         },
         requireToken: async (_c, next) => {
           await next();
@@ -573,7 +541,7 @@ describe('assets Hono route', () => {
     );
 
     expect(
-      (await app.request('/constantinople/props/prop_cannon/assets')).status
+      (await app.request('/constantinople/props/prop_cannon/asset-files')).status
     ).toBe(200);
     expect(
       (
@@ -593,39 +561,39 @@ describe('assets Hono route', () => {
     expect(
       (
         await app.request(
-          '/constantinople/props/prop_cannon/assets/asset_cannon',
+          '/constantinople/props/prop_cannon/asset-files/asset_cannon',
           { method: 'DELETE' }
         )
       ).status
     ).toBe(200);
 
-    expect(listAssetPage).toHaveBeenCalledWith(
+    expect(listAssetFilePage).toHaveBeenCalledWith(
       expect.objectContaining({
         projectName: 'constantinople',
         owner: { kind: 'prop', id: 'prop_cannon' },
       })
     );
-    expect(selectAsset).toHaveBeenCalledWith({
+    expect(selectAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       target: { kind: 'prop', id: 'prop_cannon' },
-      assetId: 'asset_cannon',
+      assetFileId: 'asset_cannon',
     });
-    expect(clearAssetSelection).toHaveBeenCalledWith({
+    expect(clearAssetFileSelection).toHaveBeenCalledWith({
       projectName: 'constantinople',
       target: { kind: 'prop', id: 'prop_cannon' },
     });
-    expect(discardAsset).toHaveBeenCalledWith({
+    expect(discardAssetFile).toHaveBeenCalledWith({
       projectName: 'constantinople',
       owner: { kind: 'prop', id: 'prop_cannon' },
-      assetId: 'asset_cannon',
+      assetFileId: 'asset_cannon',
     });
   });
 
   it('rejects a malformed asset target', async () => {
-    const app = createMountedAssetsRoute();
+    const app = createMountedAssetFilesRoute();
 
     const targetResponse = await app.request(
-      '/constantinople/assets?ownerKind=castMember'
+      '/constantinople/asset-files?ownerKind=castMember'
     );
 
     expect(targetResponse.status).toBe(400);

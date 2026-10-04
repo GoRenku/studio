@@ -1,7 +1,7 @@
-import type { AssetMetadataInput } from '../../client/assets.js';
+import type { AssetFileMetadataInput } from '../../client/asset-files.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
-import { normalizeAssetMetadata } from '../assets/metadata.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import { normalizeAssetFileMetadata } from '../asset-files/metadata.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { readProjectRecord } from '../database/access/project.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
@@ -12,10 +12,10 @@ import { readImageEditSource } from './source.js';
 
 export function attachImageEditMedia(input: {
   purpose: 'image.edit';
-  target: { kind: 'asset'; id: string };
+  target: { kind: 'assetFile'; assetFileId: string };
   sourceProjectRelativePath: string;
   title?: string;
-  assetMetadata?: AssetMetadataInput;
+  assetFileMetadata?: AssetFileMetadataInput;
   generationProvenance: MediaGenerationProvenance;
   session: DatabaseSession;
   projectFolder: string;
@@ -23,7 +23,7 @@ export function attachImageEditMedia(input: {
 }) {
   const source = readImageEditSource({
     session: input.session,
-    assetId: input.target.id,
+    assetFileId: input.target.assetFileId,
     generationProvenance: input.generationProvenance,
   });
   const continuation = resolveImageEditContinuation({
@@ -31,14 +31,14 @@ export function attachImageEditMedia(input: {
     session: input.session,
     projectFolder: input.projectFolder,
   });
-  const metadata = normalizeAssetMetadata({
-    oneLineSummary: input.assetMetadata?.oneLineSummary === undefined
+  const metadata = normalizeAssetFileMetadata({
+    oneLineSummary: input.assetFileMetadata?.oneLineSummary === undefined
       ? source.oneLineSummary
-      : input.assetMetadata.oneLineSummary,
-    referenceName: input.assetMetadata?.referenceName === undefined
+      : input.assetFileMetadata.oneLineSummary,
+    referenceName: input.assetFileMetadata?.referenceName === undefined
       ? source.referenceName
-      : input.assetMetadata.referenceName,
-    tags: input.assetMetadata?.tags === undefined ? source.tags : input.assetMetadata.tags,
+      : input.assetFileMetadata.referenceName,
+    tags: input.assetFileMetadata?.tags === undefined ? source.tags : input.assetFileMetadata.tags,
   });
   const persisted = persistGeneratedMediaAttachment({
     previsRevisionId: source.authoredFrom?.previsRevisionId,
@@ -52,25 +52,25 @@ export function attachImageEditMedia(input: {
       owner: continuation.owner,
       resourceKeys: continuation.resourceKeys,
     },
-    asset: {
-      type: continuation.assetType,
+    assetFileMetadata: {
+      localeId: source.localeId,
+      type: continuation.assetFileType,
       mediaKind: 'image',
       title: input.title?.trim() || source.title,
       ...metadata,
       origin: 'generated',
     },
-    fileRole: continuation.fileRole,
     generationProvenance: input.generationProvenance,
     ...(continuation.authoredFromShotPlanId
       ? { authoredFromShotPlanId: continuation.authoredFromShotPlanId }
       : {}),
   });
-  const asset = readOwnedAsset(input.session, {
+  const assetFile = readOwnedAssetFile(input.session, {
     owner: continuation.owner,
-    assetId: persisted.assetId,
+    assetFileId: persisted.assetFileId,
   });
   const project = readProjectRecord(input.session);
-  if (!asset || !project) {
+  if (!assetFile || !project) {
     throw new ProjectDataError(
       'CORE_GENERATION_ATTACHMENT_FAILED',
       'Edited image attachment was not persisted.',
@@ -80,7 +80,7 @@ export function attachImageEditMedia(input: {
     valid: true as const,
     purpose: input.purpose,
     target: input.target,
-    asset,
+    assetFile,
     generationProvenance: input.generationProvenance,
     resourceKeys: continuation.resourceKeys,
     project: {

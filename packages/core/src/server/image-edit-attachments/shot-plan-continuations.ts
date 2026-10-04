@@ -1,6 +1,6 @@
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import { ProjectDataError } from '../project-data-error.js';
-import { studioShotPlanAssetsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioShotPlanAssetFilesResourceKey } from '../studio-coordination/resource-keys.js';
 import type {
   ImageEditContinuation,
   ImageEditContinuationInput,
@@ -28,17 +28,16 @@ export function resolveShotPlanImageEditContinuation(
   requireShotPlanRecord(input.session, shotPlanId);
   return {
     owner: { kind: 'project' },
-    assetType: source.type,
+    assetFileType: source.type,
     destination: { kind: 'shotPlan.videoReference', shotPlanId, role },
-    fileRole: 'primary',
     authoredFromShotPlanId: shotPlanId,
-    resourceKeys: [studioShotPlanAssetsResourceKey(shotPlanId)],
+    resourceKeys: [studioShotPlanAssetFilesResourceKey(shotPlanId)],
   };
 }
 
-function ownerInvalid(assetId: string, assetType: string): ProjectDataError {
+function ownerInvalid(assetFileId: string, assetFileType: string): ProjectDataError {
   return new ProjectDataError(
     'CORE_IMAGE_EDIT_OWNER_INVALID',
-    `Asset ${assetId} has ownership that is invalid for ${assetType}.`,
+    `Asset ${assetFileId} has ownership that is invalid for ${assetFileType}.`,
   );
 }

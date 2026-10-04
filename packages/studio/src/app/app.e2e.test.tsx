@@ -8,7 +8,7 @@ import { ThemeProvider } from './theme-provider';
 import type {
   ProjectLibraryWithHttp,
   ProjectShellWithHttp,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 
 const readRenkuSetupMock = vi.hoisted(() => vi.fn());
@@ -281,7 +281,7 @@ describe('App', () => {
       },
     ];
     project.project.counts.castMembers = 2;
-    const mehmedAssets = deferredResponse();
+    const mehmedAssetFiles = deferredResponse();
     let projectReadCount = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (request) => {
       const url = requestUrl(request);
@@ -304,40 +304,40 @@ describe('App', () => {
       }
       if (
         url.startsWith(
-          '/studio-api/projects/constantinople/cast/cast_narrator/assets'
+          '/studio-api/projects/constantinople/cast/cast_narrator/asset-files'
         )
       ) {
-        const asset = makeStudioAsset({
-          assetId: 'asset_cast_narrator_profile',
+        const assetFile = makeStudioAssetFile({
+          assetFileId: 'asset_cast_narrator_profile',
           castMemberId: 'cast_narrator',
           role: 'profile',
           title: 'Narrator profile',
         });
         return jsonResponse({
-          assets: [asset],
-          page: { items: [asset], nextCursor: null },
+          assetFiles: [assetFile],
+          page: { items: [assetFile], nextCursor: null },
         });
       }
       if (
         url ===
         '/studio-api/projects/constantinople/continuity/cast/cast_mehmed'
       ) {
-        return mehmedAssets.promise;
+        return mehmedAssetFiles.promise;
       }
       if (
         url.startsWith(
-          '/studio-api/projects/constantinople/cast/cast_mehmed/assets'
+          '/studio-api/projects/constantinople/cast/cast_mehmed/asset-files'
         )
       ) {
-        const asset = makeStudioAsset({
-          assetId: 'asset_cast_mehmed_profile',
+        const assetFile = makeStudioAssetFile({
+          assetFileId: 'asset_cast_mehmed_profile',
           castMemberId: 'cast_mehmed',
           role: 'profile',
           title: 'Mehmed profile',
         });
         return jsonResponse({
-          assets: [asset],
-          page: { items: [asset], nextCursor: null },
+          assetFiles: [assetFile],
+          page: { items: [assetFile], nextCursor: null },
         });
       }
       if (url === '/studio-api/studio/events/current') {
@@ -367,7 +367,7 @@ describe('App', () => {
     expect(screen.getByText('Loading cast member...')).toBeTruthy();
     expect(projectReadCount).toBe(1);
 
-    mehmedAssets.resolve(
+    mehmedAssetFiles.resolve(
       jsonResponse({
         resource: makeCastMemberResource({
             castMemberId: 'cast_mehmed',
@@ -1210,18 +1210,18 @@ function mockStudioFetch(input: {
     }
     if (
       url.startsWith(
-        '/studio-api/projects/constantinople/cast/cast_narrator/assets'
+        '/studio-api/projects/constantinople/cast/cast_narrator/asset-files'
       )
     ) {
-      const asset = makeStudioAsset({
-        assetId: 'asset_cast_narrator_profile',
+      const assetFile = makeStudioAssetFile({
+        assetFileId: 'asset_cast_narrator_profile',
         castMemberId: 'cast_narrator',
         role: 'profile',
         title: 'Narrator profile',
       });
       return jsonResponse({
-        assets: [asset],
-        page: { items: [asset], nextCursor: null },
+        assetFiles: [assetFile],
+        page: { items: [assetFile], nextCursor: null },
       });
     }
     if (url === '/studio-api/projects/constantinople/continuity/locations') {
@@ -1258,15 +1258,15 @@ function mockStudioFetch(input: {
     }
     if (
       url.startsWith(
-        '/studio-api/projects/constantinople/props/prop_cannon/assets'
+        '/studio-api/projects/constantinople/props/prop_cannon/asset-files'
       )
     ) {
       return jsonResponse({
-        assets: [],
+        assetFiles: [],
         page: {
           items: [],
           nextCursor: null,
-          selectedAssetId: null,
+          selectedAssetFileId: null,
         },
       });
     }
@@ -1444,7 +1444,7 @@ function makeProject(
 ): ProjectShellWithHttp {
   const coverUrl =
     options.coverUrl === undefined
-      ? '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover'
+      ? '/studio-api/projects/constantinople/asset-files/asset_file_project_cover'
       : options.coverUrl;
 
   return {
@@ -1455,7 +1455,6 @@ function makeProject(
       aspectRatio: '16:9',
       coverImage: coverUrl
         ? {
-            assetId: 'asset_project_cover',
             assetFileId: 'asset_file_project_cover',
           }
         : null,
@@ -1551,7 +1550,7 @@ function makeCastMemberResource(options: {
       voiceNotes: 'Measured, observant, and precise.',
     },
     firstImage: makeScreenplayImageReference({
-      assetId: `asset_${castMemberId}_reference`,
+      assetFileId: `asset_${castMemberId}_reference`,
       title: options.firstImageTitle ?? options.title ?? 'Narrator reference',
     }),
     voices: [],
@@ -1594,7 +1593,7 @@ function makeScreenplayBeatGalleryResource() {
           {
             beat: { id: 'beat_001', number: '1', title: 'Beat 1' },
             image: makeScreenplayImageReference({
-              assetId: 'asset_beat_001',
+              assetFileId: 'asset_beat_001',
               title: 'Beat 1 image',
             }),
           },
@@ -1656,33 +1655,31 @@ function makeSceneBeatsResource() {
 
 function makeScreenplayImageReference(
   options: {
-    assetId?: string;
     assetFileId?: string;
     title?: string;
   } = {}
 ) {
-  const assetId = options.assetId ?? 'asset_cast_reference';
+  const assetFileId = options.assetFileId ?? 'asset_cast_reference';
   return {
-    assetId,
-    assetFileId: options.assetFileId ?? `${assetId}_file`,
+    assetFileId: options.assetFileId ?? `${assetFileId}_file`,
     title: options.title ?? 'Narrator reference',
-    fileRole: 'primary',
+
     mediaKind: 'image',
     mimeType: 'image/png',
     width: 1200,
     height: 900,
-    url: `/studio-api/assets/${assetId}`,
+    url: `/studio-api/asset-files/${assetFileId}`,
   };
 }
 
-function makeStudioAsset(options: {
-  assetId: string;
+function makeStudioAssetFile(options: {
+  assetFileId: string;
   castMemberId: string;
   role: string;
   title: string;
-}): StudioAssetResponse {
+}): StudioAssetFileResponse {
   return {
-    id: options.assetId,
+    id: `${options.assetFileId}_file`,
     owner: { kind: 'castMember', id: options.castMemberId },
     localeId: null,
     type: options.role === 'profile' ? 'cast_profile' : 'character_sheet',
@@ -1695,20 +1692,7 @@ function makeStudioAsset(options: {
     authoredFrom: null,
     referenceName: null,
     tags: [],
-    files: [
-      {
-        id: `${options.assetId}_file`,
-        role: 'primary',
-        url: `/studio-api/projects/constantinople/assets/${options.assetId}/files/${options.assetId}_file`,
-        mediaKind: 'image',
-        mimeType: 'image/png',
-        sizeBytes: 12,
-        contentHash: null,
-        width: 1024,
-        height: 1024,
-        durationSeconds: null,
-      },
-    ],
+    url: `/studio-api/projects/constantinople/asset-files/${options.assetFileId}_file`, mimeType: 'image/png', sizeBytes: 12, contentHash: null, width: 1024, height: 1024, durationSeconds: null,
     createdAt: '2026-05-12T00:00:00.000Z',
     updatedAt: '2026-05-12T00:00:00.000Z',
   };
@@ -1727,11 +1711,10 @@ function makeProjectSummary(): ProjectLibraryWithHttp['projects'][number] {
     title: 'Preparation of the Siege',
     folderPath: '/tmp/constantinople',
     coverImage: {
-      assetId: 'asset_project_cover',
       assetFileId: 'asset_file_project_cover',
     },
     coverUrl:
-      '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover',
+      '/studio-api/projects/constantinople/asset-files/asset_file_project_cover',
     logline: 'A documentary about preparation before 1453.',
     counts: {
       languages: 0,

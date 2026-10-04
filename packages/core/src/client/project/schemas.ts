@@ -28,9 +28,8 @@ export const projectSchema = {
         { type: 'null' },
         {
           type: 'object',
-          required: ['assetId', 'assetFileId'],
+          required: ['assetFileId', 'assetFileId'],
           properties: {
-            assetId: nonEmptyString,
             assetFileId: nonEmptyString,
           },
           additionalProperties: false,

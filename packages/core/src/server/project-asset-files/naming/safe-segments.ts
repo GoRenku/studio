@@ -45,7 +45,7 @@ export function sourceFileStem(sourceProjectRelativePath: string): string {
   const normalized = normalizeSegment(path.parse(sourceProjectRelativePath).name)
     .slice(0, MAX_SEMANTIC_SEGMENT_LENGTH)
     .replace(/-+$/u, '');
-  return normalized || 'asset';
+  return normalized || 'assetFile';
 }
 
 export function sceneNumberPathSegment(

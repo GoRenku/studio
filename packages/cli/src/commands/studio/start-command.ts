@@ -49,7 +49,7 @@ export async function runStudioStartCommand(
   });
   try {
     server = await startMovieStudioServer({
-      distPath: layout.webAssets,
+      distPath: layout.webAssetFiles,
       host: STUDIO_DEV_SERVER_HOST,
       port: STUDIO_DEV_SERVER_PORT,
       log: (message) => options.io.stdout.log(message),
@@ -70,7 +70,7 @@ export async function runStudioStartCommand(
 }
 
 function resolveStudioProductLayout(): {
-  webAssets: string;
+  webAssetFiles: string;
 } {
   let studioServerIndex: string;
   try {
@@ -81,12 +81,12 @@ function resolveStudioProductLayout(): {
     ]);
   }
   const packageRoot = path.dirname(path.dirname(studioServerIndex));
-  const webAssets = path.join(packageRoot, 'dist');
-  const missing = [webAssets].filter((candidate) => !existsSync(candidate));
+  const webAssetFiles = path.join(packageRoot, 'dist');
+  const missing = [webAssetFiles].filter((candidate) => !existsSync(candidate));
   if (missing.length > 0) {
     throw incompleteStudioRuntimeError(missing);
   }
-  return { webAssets };
+  return { webAssetFiles };
 }
 
 function incompleteStudioRuntimeError(missing: string[]): StructuredError {

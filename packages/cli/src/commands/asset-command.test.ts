@@ -1,14 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseAssetFileOwner, parseSelectionTarget } from './asset-file/parsing.js';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  parseAssetOwner,
-  parseSelectionTarget,
-  runAssetCommand,
-} from './asset-command.js';
+  runAssetFileCommand,
+} from './asset-file/commands.js';
 import { appendStudioResourceChangedEvent } from './studio-resource-event-command.js';
 
 const projectData = vi.hoisted(() => ({
-  updateAsset: vi.fn(),
-  listAssetPage: vi.fn(),
+  updateAssetFile: vi.fn(),
+  listAssetFilePage: vi.fn(),
+  importReferenceFiles: vi.fn(),
 }));
 
 vi.mock('@gorenku/studio-core/server', async (importOriginal) => ({
@@ -20,8 +23,101 @@ vi.mock('./studio-resource-event-command.js', () => ({
 }));
 
 describe('Asset command', () => {
+  const importDirectories: string[] = [];
+
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await Promise.all(importDirectories.splice(0).map((directory) =>
+      fs.rm(directory, { recursive: true, force: true })
+    ));
+  });
+
+  it.each([
+    { owner: 'project', destination: { kind: 'research' } },
+    { owner: 'inspirationFolder:folder_1', destination: { kind: 'inspiration', folderId: 'folder_1' } },
+  ])('delegates a single reference import for $owner and preserves the Core report', async ({ owner, destination }) => {
+    const report = { valid: true, warnings: [], assetFiles: [{ id: 'file_1' }], resourceKeys: [] };
+    projectData.importReferenceFiles.mockResolvedValue(report);
+    const stdout = { log: vi.fn() };
+
+    const exitCode = await runAssetFileCommand({
+      input: ['import'],
+      flags: { project: 'movie', owner, source: 'staging/reference.jpg', title: 'Reference' },
+      json: true,
+      io: { stdout, stderr: { error: vi.fn() } },
+      homeDir: '/test-home',
+    });
+
+    expect(exitCode).toBe(0);
+    expect(projectData.importReferenceFiles).toHaveBeenCalledExactlyOnceWith({
+      projectName: 'movie',
+      destination,
+      files: [{ sourceProjectRelativePath: 'staging/reference.jpg', title: 'Reference' }],
+      homeDir: '/test-home',
+    });
+    expect(appendStudioResourceChangedEvent).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ report, command: 'asset-file import' })
+    );
+    expect(JSON.parse(stdout.log.mock.calls[0]![0])).toEqual(report);
+  });
+
+  it('reads a batch import document and delegates its envelope unchanged', async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), '0222-cli-reference-'));
+    importDirectories.push(directory);
+    const file = path.join(directory, 'references.json');
+    const document = {
+      destination: { kind: 'research' },
+      files: [
+        { sourceProjectRelativePath: 'staging/reference.jpg', title: 'Reference' },
+        { sourceProjectRelativePath: 'research/notes.pdf', title: null },
+      ],
+    };
+    await fs.writeFile(file, JSON.stringify(document));
+    projectData.importReferenceFiles.mockResolvedValue({ assetFiles: [], resourceKeys: [] });
+
+    await runAssetFileCommand({
+      input: ['import'],
+      flags: { project: 'movie', file },
+      json: true,
+      io: { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } },
+      homeDir: '/test-home',
+    });
+
+    expect(projectData.importReferenceFiles).toHaveBeenCalledExactlyOnceWith({
+      ...document, projectName: 'movie', homeDir: '/test-home',
+    });
+  });
+
+  it('rejects mixed single-file and batch flags before Core delegation', async () => {
+    await expect(runAssetFileCommand({
+      input: ['import'],
+      flags: { project: 'movie', file: '/references.json', owner: 'project', source: 'staging/reference.jpg' },
+      json: true,
+      io: { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } },
+    })).rejects.toMatchObject({ code: 'CLI_REFERENCE_IMPORT_FLAGS_INVALID' });
+    expect(projectData.importReferenceFiles).not.toHaveBeenCalled();
+    expect(appendStudioResourceChangedEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing', 'invalid'])('reports a structured error for a %s batch document', async (kind) => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), '0222-cli-reference-'));
+    importDirectories.push(directory);
+    const file = path.join(directory, 'references.json');
+    if (kind === 'invalid') {
+      await fs.writeFile(file, '{');
+    }
+
+    await expect(runAssetFileCommand({
+      input: ['import'],
+      flags: { project: 'movie', file },
+      json: true,
+      io: { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } },
+    })).rejects.toMatchObject({ code: 'CLI_REFERENCE_IMPORT_DOCUMENT_INVALID' });
+    expect(projectData.importReferenceFiles).not.toHaveBeenCalled();
+    expect(appendStudioResourceChangedEvent).not.toHaveBeenCalled();
   });
 
   it('notifies exactly once with the Core mutation report and preserves JSON output', async () => {
@@ -33,16 +129,16 @@ describe('Asset command', () => {
         name: 'movie',
         projectFolder: '/projects/movie',
       },
-      asset: {
+      assetFile: {
         id: 'asset_1',
         owner: { kind: 'castMember' as const, id: 'cast_1' },
       },
       resourceKeys: ['surface:castMember:cast_1'],
     };
-    projectData.updateAsset.mockResolvedValue(report);
+    projectData.updateAssetFile.mockResolvedValue(report);
     const stdout = { log: vi.fn() };
 
-    const exitCode = await runAssetCommand({
+    const exitCode = await runAssetFileCommand({
       input: ['update', 'asset_1'],
       flags: {
         project: 'movie',
@@ -56,17 +152,17 @@ describe('Asset command', () => {
     expect(exitCode).toBe(0);
     expect(appendStudioResourceChangedEvent).toHaveBeenCalledTimes(1);
     expect(appendStudioResourceChangedEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ report, command: 'asset update' })
+      expect.objectContaining({ report, command: 'asset-file update' })
     );
     expect(JSON.parse(stdout.log.mock.calls[0]![0])).toMatchObject({
-      asset: { id: 'asset_1' },
+      assetFile: { id: 'asset_1' },
       resourceKeys: ['surface:castMember:cast_1'],
       warnings: [],
     });
   });
 
   it('parses the public Beat owner and selection syntax', () => {
-    expect(parseAssetOwner('beat:scene_1:beat_2')).toEqual({
+    expect(parseAssetFileOwner('beat:scene_1:beat_2')).toEqual({
       kind: 'sceneBeat',
       sceneId: 'scene_1',
       beatId: 'beat_2',
@@ -76,7 +172,7 @@ describe('Asset command', () => {
       sceneId: 'scene_1',
       beatId: 'beat_2',
     });
-    expect(() => parseAssetOwner('sceneBeat:scene_1:beat_2')).toThrow(
+    expect(() => parseAssetFileOwner('sceneBeat:scene_1:beat_2')).toThrow(
       'Invalid Asset owner'
     );
   });
@@ -93,48 +189,48 @@ describe('Asset command', () => {
   });
 
   it('replaces and clears complete tag lists through Core', async () => {
-    projectData.updateAsset.mockResolvedValue({
+    projectData.updateAssetFile.mockResolvedValue({
       valid: true,
       warnings: [],
       project: { id: 'project_1', projectName: 'movie', projectFolder: '/projects/movie' },
-      asset: { id: 'asset_1', owner: { kind: 'castMember', id: 'cast_1' } },
+      assetFile: { id: 'asset_1', owner: { kind: 'castMember', id: 'cast_1' } },
       resourceKeys: [],
     });
     const io = { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } };
 
-    await runAssetCommand({
+    await runAssetFileCommand({
       input: ['update', 'asset_1'],
       flags: { project: 'movie', tag: ['storyboard', 'previs'] },
       json: true,
       io,
     });
-    expect(projectData.updateAsset).toHaveBeenLastCalledWith(expect.objectContaining({
+    expect(projectData.updateAssetFile).toHaveBeenLastCalledWith(expect.objectContaining({
       tags: ['storyboard', 'previs'],
     }));
 
-    await runAssetCommand({
+    await runAssetFileCommand({
       input: ['update', 'asset_1'],
       flags: { project: 'movie', clearTags: true },
       json: true,
       io,
     });
-    expect(projectData.updateAsset).toHaveBeenLastCalledWith(expect.objectContaining({
+    expect(projectData.updateAssetFile).toHaveBeenLastCalledWith(expect.objectContaining({
       tags: [],
     }));
   });
 
   it('rejects --tag with --clear-tags before Core delegation', async () => {
-    await expect(runAssetCommand({
+    await expect(runAssetFileCommand({
       input: ['update', 'asset_1'],
       flags: { project: 'movie', tag: ['storyboard'], clearTags: true },
       json: true,
       io: { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } },
     })).rejects.toMatchObject({ code: 'CLI045' });
-    expect(projectData.updateAsset).not.toHaveBeenCalled();
+    expect(projectData.updateAssetFile).not.toHaveBeenCalled();
   });
 
   it('lists the selected Asset with the owner candidate page', async () => {
-    projectData.listAssetPage.mockResolvedValue({
+    projectData.listAssetFilePage.mockResolvedValue({
       items: [
         {
           id: 'asset_1',
@@ -142,11 +238,11 @@ describe('Asset command', () => {
         },
       ],
       nextCursor: null,
-      selectedAssetId: 'asset_1',
+      selectedAssetFileId: 'asset_1',
     });
     const stdout = { log: vi.fn() };
 
-    const exitCode = await runAssetCommand({
+    const exitCode = await runAssetFileCommand({
       input: ['list'],
       flags: {
         project: 'movie',
@@ -160,7 +256,7 @@ describe('Asset command', () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(projectData.listAssetPage).toHaveBeenCalledWith({
+    expect(projectData.listAssetFilePage).toHaveBeenCalledWith({
       projectName: 'movie',
       owner: { kind: 'shot', id: 'shot_1' },
       locale: {},
@@ -173,19 +269,19 @@ describe('Asset command', () => {
     expect(JSON.parse(stdout.log.mock.calls[0]![0])).toEqual({
       items: [{ id: 'asset_1', type: 'shot_image' }],
       nextCursor: null,
-      selectedAssetId: 'asset_1',
+      selectedAssetFileId: 'asset_1',
     });
   });
 
   it('prints the next cursor for paged human-readable listings', async () => {
-    projectData.listAssetPage.mockResolvedValue({
+    projectData.listAssetFilePage.mockResolvedValue({
       items: [{ id: 'asset_1', type: 'shot_image' }],
       nextCursor: 'cursor_2',
-      selectedAssetId: null,
+      selectedAssetFileId: null,
     });
     const stdout = { log: vi.fn() };
 
-    await runAssetCommand({
+    await runAssetFileCommand({
       input: ['list'],
       flags: { project: 'movie', owner: 'shot:shot_1' },
       json: false,

@@ -10,16 +10,16 @@ export async function runStudioMcpCommand(options: StudioCommandOptions): Promis
     throw new StructuredError({ code: 'CODEX_REVIEW_INVALID', message: 'Usage: renku studio mcp. Stdout is reserved for the MCP protocol.' });
   }
   const manifest = require('../../../package.json') as { version: string };
-  const assets = resolveCodexAppAssets();
+  const assetFiles = resolveCodexAppAssetFiles();
   await startCodexServer({
     version: manifest.version,
-    ...assets,
+    ...assetFiles,
     homeDir: options.homeDir,
   });
   return 0;
 }
 
-function resolveCodexAppAssets() {
+function resolveCodexAppAssetFiles() {
   try {
     return {
       generationReviewHtml: require.resolve('@gorenku/studio/codex-apps/generation-review.html'),

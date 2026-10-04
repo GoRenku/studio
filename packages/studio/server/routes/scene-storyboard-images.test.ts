@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
-import { makeAsset } from '../testing/route-fixtures.js';
+import { makeAssetFile } from '../testing/route-fixtures.js';
 import { createSceneStoryboardImagesRoute } from './scene-storyboard-images.js';
 
 describe('Scene Storyboard image candidate routes', () => {
   it('delegates exact Scene, revision, Beat, and candidate identities', async () => {
-    const asset = {
-      ...makeAsset('asset_storyboard'),
+    const assetFile = {
+      ...makeAssetFile('asset_storyboard'),
       owner: { kind: 'sceneBeat' as const, sceneId: 'scene one', beatId: 'beat one' },
       type: 'scene_storyboard_image',
     };
@@ -19,8 +19,8 @@ describe('Scene Storyboard image candidate routes', () => {
       sceneId: 'scene one',
       sceneBeatsRevisionId: 'revision one',
       beats: [{
-        beatId: 'beat one', beatNumber: '1', images: [asset],
-        selectedImageId: asset.id, needsStoryboardImage: false,
+        beatId: 'beat one', beatNumber: '1', images: [assetFile],
+        selectedImageId: assetFile.id, needsStoryboardImage: false,
       }],
       missingBeatIds: [],
       readyBeatIds: ['beat one'],
@@ -30,14 +30,14 @@ describe('Scene Storyboard image candidate routes', () => {
       warnings: [],
       project: { projectName: request.projectName, id: 'project_1', projectFolder: '/tmp/movie' },
       target: { kind: 'sceneBeat' as const, sceneId: request.sceneId, beatId: request.beatId },
-      selectedAssetId: request.assetId,
+      selectedAssetFileId: request.assetFileId,
       resourceKeys: ['surface:scene:scene one:beats'],
     }));
     const discardSceneStoryboardImageCandidate = vi.fn(async (request) => ({
       valid: true as const,
       warnings: [],
       project: { projectName: request.projectName, id: 'project_1' },
-      changes: [{ type: 'sceneBeat.storyboardImageDiscarded', itemId: request.assetId }],
+      changes: [{ type: 'sceneBeat.storyboardImageDiscarded', itemId: request.assetFileId }],
       recovery: {
         operationId: 'trash_1',
         trashItemIds: ['trash_item_1'],
@@ -68,13 +68,13 @@ describe('Scene Storyboard image candidate routes', () => {
 
     const expected = {
       projectName: 'movie', sceneId: 'scene one', sceneBeatsRevisionId: 'revision one',
-      beatId: 'beat one', assetId: 'asset one',
+      beatId: 'beat one', assetFileId: 'asset one',
     };
     expect(readSceneStoryboardStatus).toHaveBeenCalledWith({
       projectName: 'movie', sceneId: 'scene one', sceneBeatsRevisionId: 'revision one',
     });
-    expect((await read.json()).status.beats[0].images[0].files[0].url)
-      .toContain('/assets/asset_storyboard/files/');
+    expect((await read.json()).status.beats[0].images[0].url)
+      .toContain('/asset-files/asset_storyboard');
     expect(selectSceneStoryboardImageCandidate).toHaveBeenCalledWith(expected);
     expect(discardSceneStoryboardImageCandidate).toHaveBeenCalledWith(expected);
     expect(selected.status).toBe(200);

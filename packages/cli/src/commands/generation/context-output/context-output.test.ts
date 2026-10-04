@@ -14,18 +14,17 @@ const report: MediaGenerationContextReport = {
   valid: true,
   project: { projectName: 'test', id: 'project_1', projectFolder: '/project',
     title: 'Film', aspectRatio: '16:9', languages: [], synopsis: '  Exact “dialogue”\n# Markdown\n雪  ' },
-  purpose: 'image.edit', target: { kind: 'asset', id: 'asset_1' }, outputMediaKind: 'image',
+  purpose: 'image.edit', target: { kind: 'assetFile', assetFileId: 'asset_1' }, outputMediaKind: 'image',
   workflowPolicy: { codexPluginInstalled: false, codexGenerationReview: 'panel', codexGenerationReviewDisplayMode: 'inline', displayPreview: false, enableProviderPromptExpansion: true, provider: 'codex', askBeforeGenerating: false, concurrencyLimit: 1 },
   outputGuidance: { aspectRatio: null, quality: null },
-  targetContext: { kind: 'asset', assetId: 'asset_1' }, visualLanguage: [],
-  assets: [{ id: 'asset_1', owner: { kind: 'project' }, localeId: null, type: 'image',
+  targetContext: { kind: 'assetFile', assetFileId: 'asset_1' }, visualLanguage: [],
+  assetFiles: [{ id: 'file_1', owner: { kind: 'project' }, localeId: null, type: 'image',
     availability: 'ready', mediaKind: 'image', title: 'Similar title', oneLineSummary: 'Full description',
     referenceName: null, tags: [], origin: 'external', authoredFrom: null,
     createdAt: '2026-09-29', updatedAt: '2026-09-29',
-    files: [{ id: 'file_1', role: 'primary', projectRelativePath: 'images/exact.png' as ProjectRelativePath, mediaKind: 'image',
-      mimeType: 'image/png', sizeBytes: 0, contentHash: null, width: 1024, height: 1024, durationSeconds: null }] }],
+    projectRelativePath: 'images/exact.png' as ProjectRelativePath, mimeType: 'image/png', sizeBytes: 0, contentHash: null, width: 1024, height: 1024, durationSeconds: null }],
   suggestedReferences: [{ id: 'source-image', role: 'source-image', candidates: [
-    { assetId: 'asset_1', assetFileId: 'file_1', available: true, isDisplaySelected: false, isWorkflowSelected: false },
+    { assetFileId: 'file_1', available: true, isDisplaySelected: false, isWorkflowSelected: false },
   ] }], warnings: [], resourceKeys: ['project:information'],
 };
 
@@ -54,7 +53,7 @@ describe('readable generation context', () => {
   it.each([false, true])('delegates once and writes only the requested format (json=%s)', async (json) => {
     service.readMediaGenerationContext.mockReset().mockResolvedValue(report);
     const log = vi.fn();
-    await runGenerationCommand({ input: ['context'], flags: { purpose: 'image.edit', target: 'asset:asset_1' },
+    await runGenerationCommand({ input: ['context'], flags: { purpose: 'image.edit', target: 'assetFile:asset_1' },
       json, io: { stdout: { log }, stderr: { error: vi.fn() } } });
     expect(service.readMediaGenerationContext).toHaveBeenCalledTimes(1);
     expect(log).toHaveBeenCalledTimes(1);

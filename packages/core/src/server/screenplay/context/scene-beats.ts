@@ -18,7 +18,7 @@ import { sceneBeatsResourceKeys } from '../../scene-beats/storyboard-status.js';
 import { readCanonicalScreenplay } from '../projections/screenplay.js';
 import { projectMediaGenerationSceneContext } from '../../media-generation-context/scene-context.js';
 import { suggestBeatStoryboards, suggestLookbookMedia, suggestSceneSubjectMedia } from '../../media-generation-context/reference-suggestions.js';
-import { GenerationAssets } from '../../media-generation-context/reference-assets.js';
+import { GenerationAssetFiles } from '../../media-generation-context/reference-assets.js';
 import { readMediaGenerationLookbooks } from '../../media-generation-context/visual-language-context.js';
 
 export async function readSceneBeatsContext(
@@ -109,16 +109,16 @@ function projectVisualReferences(input: {
   sceneId: string;
   warnings: SceneBeatsContextReport['warnings'];
 }): NonNullable<SceneBeatsContextReport['visualReferences']> {
-  const assets = new GenerationAssets();
+  const assetFiles = new GenerationAssetFiles();
   const sceneContext = projectMediaGenerationSceneContext({
-    assets,
+    assetFiles,
     session: input.session,
     screenplay: input.screenplay,
     sceneId: input.sceneId,
     warnings: input.warnings,
   });
   const visualLanguage = readMediaGenerationLookbooks({
-    assets,
+    assetFiles,
     session: input.session,
     projectFolder: input.projectFolder,
     kinds: ['production', 'storyboard'],
@@ -126,11 +126,11 @@ function projectVisualReferences(input: {
   return {
     visualLanguage,
     suggestedReferences: [
-      ...suggestLookbookMedia({ lookbooks: visualLanguage, role: 'appearance', projectFolder: input.projectFolder, collection: assets, warnings: input.warnings }),
-      ...suggestSceneSubjectMedia({ sceneContext, projectFolder: input.projectFolder, collection: assets, warnings: input.warnings }),
-      ...suggestBeatStoryboards({ session: input.session, sceneId: input.sceneId, beatIds: sceneContext.selectedBeatIds, projectFolder: input.projectFolder, collection: assets, warnings: input.warnings }),
+      ...suggestLookbookMedia({ lookbooks: visualLanguage, role: 'appearance', projectFolder: input.projectFolder, collection: assetFiles, warnings: input.warnings }),
+      ...suggestSceneSubjectMedia({ sceneContext, projectFolder: input.projectFolder, collection: assetFiles, warnings: input.warnings }),
+      ...suggestBeatStoryboards({ session: input.session, sceneId: input.sceneId, beatIds: sceneContext.selectedBeatIds, projectFolder: input.projectFolder, collection: assetFiles, warnings: input.warnings }),
     ],
-    assets: assets.values(),
+    assetFiles: assetFiles.values(),
   };
 }
 

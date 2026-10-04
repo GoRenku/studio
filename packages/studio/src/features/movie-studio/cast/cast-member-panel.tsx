@@ -3,16 +3,16 @@ import { toast } from 'sonner';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type {
   CastMemberResourceResponse,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 import {
-  deleteCastAsset,
+  deleteCastAssetFile,
   deleteCastVoice,
-  readCastAssets,
+  readCastAssetFiles,
   clearSelectedCastProfile,
-  selectCastProfileAsset,
+  selectCastProfileAssetFile,
   selectDefaultCastVoice,
-  type StudioAssetCollection,
+  type StudioAssetFileCollection,
 } from '@/services/studio-project-assets-api';
 import {
   readCastMemberResource,
@@ -22,7 +22,7 @@ import {
   matchesCastMemberResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { CastMemberAssetsTab } from './cast-member-assets-tab';
+import { CastMemberAssetFilesTab } from './cast-member-assets-tab';
 import { CastMemberDetailsTab } from './cast-member-details-tab';
 
 interface CastMemberPanelProps {
@@ -32,18 +32,18 @@ interface CastMemberPanelProps {
 
 export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelProps) {
   const [resource, setResource] = useState<CastMemberResourceResponse | null>(null);
-  const [assetCollection, setAssetCollection] =
-    useState<StudioAssetCollection>({ items: [], selectedAssetId: null });
+  const [assetFileCollection, setAssetFileCollection] =
+    useState<StudioAssetFileCollection>({ items: [], selectedAssetFileId: null });
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
 
   const refreshCastMember = useCallback(async () => {
-    const [nextResource, nextAssets] = await Promise.all([
+    const [nextResource, nextAssetFiles] = await Promise.all([
       readCastMemberResource(projectName, castMemberId),
-      readCastAssets(projectName, castMemberId),
+      readCastAssetFiles(projectName, castMemberId),
     ]);
     setResource(nextResource);
-    setAssetCollection(nextAssets);
+    setAssetFileCollection(nextAssetFiles);
     setError(null);
   }, [castMemberId, projectName]);
 
@@ -51,12 +51,12 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
     let cancelled = false;
     void Promise.all([
       readCastMemberResource(projectName, castMemberId),
-      readCastAssets(projectName, castMemberId),
+      readCastAssetFiles(projectName, castMemberId),
     ])
-      .then(([nextResource, nextAssets]) => {
+      .then(([nextResource, nextAssetFiles]) => {
         if (!cancelled) {
           setResource(nextResource);
-          setAssetCollection(nextAssets);
+          setAssetFileCollection(nextAssetFiles);
           setError(null);
         }
       })
@@ -77,23 +77,23 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
     onRefresh: () => setResourceRevision((current) => current + 1),
   });
 
-  const togglePick = async (asset: StudioAssetResponse) => {
+  const togglePick = async (assetFile: StudioAssetFileResponse) => {
     try {
-      if (assetCollection.selectedAssetId === asset.id) {
+      if (assetFileCollection.selectedAssetFileId === assetFile.id) {
         await clearSelectedCastProfile(projectName, castMemberId);
         await refreshCastMember();
         return;
       }
-      await selectCastProfileAsset(projectName, castMemberId, asset.id);
+      await selectCastProfileAssetFile(projectName, castMemberId, assetFile.id);
       await refreshCastMember();
     } catch (selectError) {
       toast.error(errorMessage(selectError));
     }
   };
 
-  const removeAsset = async (asset: StudioAssetResponse) => {
+  const removeAssetFile = async (assetFile: StudioAssetFileResponse) => {
     try {
-      await deleteCastAsset(projectName, castMemberId, asset.id);
+      await deleteCastAssetFile(projectName, castMemberId, assetFile.id);
       await refreshCastMember();
     } catch (deleteError) {
       toast.error(errorMessage(deleteError));
@@ -148,26 +148,26 @@ export function CastMemberPanel({ projectName, castMemberId }: CastMemberPanelPr
       defaultValue='details'
       items={[
         { value: 'details', label: 'Details' },
-        { value: 'assets', label: 'Assets' },
+        { value: 'assetFiles', label: 'Assets' },
       ]}
     >
       <LineTabsContent value='details'>
         <CastMemberDetailsTab
           projectName={projectName}
           resource={resource}
-          assets={assetCollection.items}
-          selectedProfileAssetId={assetCollection.selectedAssetId}
+          assetFiles={assetFileCollection.items}
+          selectedProfileAssetFileId={assetFileCollection.selectedAssetFileId}
           onVoiceOverChange={updateVoiceOver}
         />
       </LineTabsContent>
-      <LineTabsContent value='assets'>
-        <CastMemberAssetsTab
+      <LineTabsContent value='assetFiles'>
+        <CastMemberAssetFilesTab
           projectName={projectName}
           resource={resource}
-          assets={assetCollection.items}
-          selectedProfileAssetId={assetCollection.selectedAssetId}
+          assetFiles={assetFileCollection.items}
+          selectedProfileAssetFileId={assetFileCollection.selectedAssetFileId}
           onTogglePick={togglePick}
-          onDeleteAsset={removeAsset}
+          onDeleteAssetFile={removeAssetFile}
           onDeleteVoice={removeVoice}
           onSelectDefaultVoice={selectVoiceDefault}
         />

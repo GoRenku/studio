@@ -41,15 +41,15 @@ export function readShotPlanDialogueAudioTakeRecord(
     .get() ?? null;
 }
 
-export function readShotPlanDialogueAudioTakeByAssetId(
+export function readShotPlanDialogueAudioTakeByAssetFileId(
   session: DatabaseSession,
-  assetId: string,
+  assetFileId: string,
 ): ShotPlanDialogueAudioTakeRecord | null {
   return session.db
     .select()
     .from(shotPlanDialogueAudioTakes)
     .where(and(
-      eq(shotPlanDialogueAudioTakes.assetId, assetId),
+      eq(shotPlanDialogueAudioTakes.assetFileId, assetFileId),
       isNull(shotPlanDialogueAudioTakes.discardedAt),
     ))
     .get() ?? null;

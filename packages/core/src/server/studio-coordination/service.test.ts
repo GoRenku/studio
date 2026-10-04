@@ -431,7 +431,7 @@ describe('StudioCoordinationService', () => {
       sceneTab: 'shotPlans' as const,
       shotPlanId: plan.shotPlan.id,
     };
-    for (const shotPlanTab of ['audio', 'previs', 'assets', 'previs'] as const) {
+    for (const shotPlanTab of ['audio', 'previs', 'assetFiles', 'previs'] as const) {
       await coordination.appendStudioEvent({
         type: 'studio.browserSessionActive',
         browserSessionId: source.browserSessionId,

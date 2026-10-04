@@ -2,10 +2,7 @@ import type {
   LookbookImage,
   LookbookSection,
 } from '@gorenku/studio-core/client';
-import {
-  inspirationImageUrl,
-  lookbookImageFileUrl,
-} from './visual-language-image-urls';
+import { projectAssetFileUrl } from '@/services/studio-project-assets-api';
 
 export interface ReportImage {
   id: string;
@@ -34,7 +31,7 @@ export function imagesForNestedReferences(
   if (source.kind === 'inspiration') {
     return (point.imageFiles ?? []).map((fileName) => ({
       id: fileName,
-      src: inspirationImageUrl(projectName, source.folderId, fileName),
+      src: projectAssetFileUrl(projectName, fileName),
       alt: `${fileName} inspiration grab`,
       title: fileName,
     }));
@@ -55,7 +52,7 @@ export function imagesForSection(
   if (source.kind === 'inspiration') {
     return imageFiles.map((fileName) => ({
       id: fileName,
-      src: inspirationImageUrl(projectName, source.folderId, fileName),
+      src: projectAssetFileUrl(projectName, fileName),
       alt: `${fileName} inspiration grab`,
       title: fileName,
     }));
@@ -71,14 +68,14 @@ function lookbookImagesToReportImages(
   images: LookbookImage[]
 ): ReportImage[] {
   return images.flatMap((image) => {
-    const file = image.asset.files[0];
+    const file = image.assetFile;
     if (!file) return [];
     return [
       {
         id: image.id,
-        src: lookbookImageFileUrl(projectName, image.asset.id, file.id),
-        alt: image.asset.title,
-        title: image.asset.title,
+        src: projectAssetFileUrl(projectName, file.id),
+        alt: (image.assetFile.title ?? ''),
+        title: (image.assetFile.title ?? ''),
         lookbookImageId: image.id,
       },
     ];

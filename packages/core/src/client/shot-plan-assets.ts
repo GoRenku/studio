@@ -1,6 +1,6 @@
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 
-export interface ImportShotPlanReferenceInput extends ReadShotPlanAssetsInput {
+export interface ImportShotPlanReferenceInput extends ReadShotPlanAssetFilesInput {
   previsRevisionId?: string;
   sourceProjectRelativePath: string;
   mediaKind: 'image' | 'video' | 'audio';
@@ -10,28 +10,28 @@ export interface ImportShotPlanReferenceInput extends ReadShotPlanAssetsInput {
 
 export interface ShotPlanReferenceImportReport {
   valid: true;
-  asset: Asset;
+  assetFile: AssetFile;
   resourceKeys: string[];
   project: { projectName: string; id: string; projectFolder: string };
 }
 
-export interface ReadShotPlanAssetsInput {
+export interface ReadShotPlanAssetFilesInput {
   projectName?: string;
   homeDir?: string;
   shotPlanId: string;
 }
 
-export interface DiscardShotPlanAssetInput extends ReadShotPlanAssetsInput {
-  assetId: string;
+export interface DiscardShotPlanAssetFileInput extends ReadShotPlanAssetFilesInput {
+  assetFileId: string;
 }
 
-export interface ShotPlanAssetGroup {
+export interface ShotPlanAssetFileGroup {
   role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference';
-  assets: Asset[];
+  assetFiles: AssetFile[];
 }
 
-export interface ShotPlanAssets {
+export interface ShotPlanAssetFiles {
   shotPlan: { id: string; sceneId: string; title: string };
-  groups: ShotPlanAssetGroup[];
+  groups: ShotPlanAssetFileGroup[];
   resourceKeys: string[];
 }

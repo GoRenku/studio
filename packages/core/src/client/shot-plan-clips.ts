@@ -1,4 +1,4 @@
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { ShotPlanProjectInput } from './shot-plans.js';
 
 export interface ShotPlanClipTake {
@@ -6,7 +6,6 @@ export interface ShotPlanClipTake {
   clipId: string;
   number: number;
   title: string | null;
-  assetId: string;
   assetFileId: string;
   sourceTakeId: string | null;
   createdAt: string;
@@ -25,8 +24,8 @@ export interface ShotPlanClips {
   shotPlanId: string;
   previsRevisionId: string;
   clips: ShotPlanClip[];
-  assets: Asset[];
-  unassignedAssets: Asset[];
+  assetFiles: AssetFile[];
+  unassignedAssetFiles: AssetFile[];
   sources: Array<{ takeId: string; shotPlanId: string; shotPlanTitle: string; revisionNumber: number; clipNumber: number; takeNumber: number; selectedTakeNumber: number | null }>;
   resourceKeys: string[];
 }
@@ -37,7 +36,6 @@ export interface ReadShotPlanClipsInput extends ShotPlanProjectInput {
 }
 export interface RegisterShotPlanClipTakeInput extends ShotPlanProjectInput {
   clipId: string;
-  assetId: string;
   assetFileId: string;
   title?: string | null;
   sourceTakeId?: string | null;

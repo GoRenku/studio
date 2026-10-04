@@ -5,5 +5,5 @@ export {
 export {
   readLocationWorldResource,
   readSelectedLocationWorldInSession,
-} from './assets.js';
+} from './asset-files.js';
 export { validateLocationWorldInput } from './input.js';

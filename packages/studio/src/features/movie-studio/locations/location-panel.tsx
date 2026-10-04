@@ -3,10 +3,10 @@ import { toast } from 'sonner';
 import { LineTabs, LineTabsContent } from '@/ui/line-tabs';
 import type { LocationResourceResponse } from '@/services/studio-project-contracts';
 import {
-  deleteLocationAsset,
+  deleteLocationAssetFile,
   clearSelectedLocationHero,
-  readLocationAssets,
-  selectLocationHeroAsset,
+  readLocationAssetFiles,
+  selectLocationHeroAssetFile,
 } from '@/services/studio-project-assets-api';
 import { readLocationResource } from '@/services/studio-continuity-api';
 import {
@@ -16,7 +16,7 @@ import {
 import { LocationDetailsTab } from './location-details-tab';
 import { LocationVisualContentTab } from './location-visual-content-tab';
 import { LocationWorldTab } from './location-world-tab';
-import { useSelectableAssetCollection } from '@/hooks/use-selectable-asset-collection';
+import { useSelectableAssetFileCollection } from '@/hooks/use-selectable-asset-collection';
 
 interface LocationPanelProps {
   projectName: string;
@@ -27,22 +27,22 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
   const [resource, setResource] = useState<LocationResourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resourceRevision, setResourceRevision] = useState(0);
-  const assets = useSelectableAssetCollection({
-    readAssets: useCallback(
-      () => readLocationAssets(projectName, locationId),
+  const assetFiles = useSelectableAssetFileCollection({
+    readAssetFiles: useCallback(
+      () => readLocationAssetFiles(projectName, locationId),
       [locationId, projectName]
     ),
-    selectCanonicalAsset: useCallback(
-      (assetId: string) =>
-        selectLocationHeroAsset(projectName, locationId, assetId),
+    selectCanonicalAssetFile: useCallback(
+      (assetFileId: string) =>
+        selectLocationHeroAssetFile(projectName, locationId, assetFileId),
       [locationId, projectName]
     ),
-    clearCanonicalAsset: useCallback(
+    clearCanonicalAssetFile: useCallback(
       () => clearSelectedLocationHero(projectName, locationId),
       [locationId, projectName]
     ),
-    discardAsset: useCallback(
-      (assetId: string) => deleteLocationAsset(projectName, locationId, assetId),
+    discardAssetFile: useCallback(
+      (assetFileId: string) => deleteLocationAssetFile(projectName, locationId, assetFileId),
       [locationId, projectName]
     ),
   });
@@ -71,30 +71,30 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
     matches: (resourceKeys) => matchesLocationResource(resourceKeys, locationId),
     onRefresh: () => {
       setResourceRevision((current) => current + 1);
-      return assets.refresh();
+      return assetFiles.refresh();
     },
   });
 
-  const removeAsset = async (asset: Parameters<typeof assets.remove>[0]) => {
+  const removeAssetFile = async (assetFile: Parameters<typeof assetFiles.remove>[0]) => {
     try {
-      await assets.remove(asset);
+      await assetFiles.remove(assetFile);
     } catch (deleteError) {
       toast.error(errorMessage(deleteError));
     }
   };
 
   const toggleHeroDisplay = async (
-    asset: Parameters<typeof assets.toggleCanonical>[0]
+    assetFile: Parameters<typeof assetFiles.toggleCanonical>[0]
   ) => {
     try {
-      await assets.toggleCanonical(asset);
+      await assetFiles.toggleCanonical(assetFile);
     } catch (displayError) {
       toast.error(errorMessage(displayError));
     }
   };
 
-  if (error ?? assets.error) {
-    return <p className='text-sm text-destructive'>{error ?? assets.error}</p>;
+  if (error ?? assetFiles.error) {
+    return <p className='text-sm text-destructive'>{error ?? assetFiles.error}</p>;
   }
   if (!resource) {
     return <p className='text-sm text-muted-foreground'>Loading location...</p>;
@@ -116,17 +116,17 @@ export function LocationPanel({ projectName, locationId }: LocationPanelProps) {
         <LocationDetailsTab
           projectName={projectName}
           resource={resource}
-          assets={assets.collection.items}
-          selectedHeroAssetId={assets.collection.selectedAssetId}
+          assetFiles={assetFiles.collection.items}
+          selectedHeroAssetFileId={assetFiles.collection.selectedAssetFileId}
         />
       </LineTabsContent>
       <LineTabsContent value='visual'>
         <LocationVisualContentTab
           projectName={projectName}
-          assets={assets.collection.items}
-          selectedHeroAssetId={assets.collection.selectedAssetId}
+          assetFiles={assetFiles.collection.items}
+          selectedHeroAssetFileId={assetFiles.collection.selectedAssetFileId}
           onToggleHeroDisplay={toggleHeroDisplay}
-          onDeleteAsset={removeAsset}
+          onDeleteAssetFile={removeAssetFile}
         />
       </LineTabsContent>
       <LineTabsContent value='world' className='h-full overflow-hidden'>

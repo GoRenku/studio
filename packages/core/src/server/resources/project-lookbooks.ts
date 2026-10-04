@@ -32,8 +32,8 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { lookbookSectionsForType } from '../visual-language-json/validator.js';
-import { readSelectedAssetRecord } from '../database/access/selected-assets.js';
-import { assetSelectionTargetKey } from '../assets/selection-targets.js';
+import { readSelectedAssetFileRecord } from '../database/access/selected-asset-files.js';
+import { assetFileSelectionTargetKey } from '../asset-files/selection-targets.js';
 
 export async function readProjectLookbooksResource(
   input: ReadProjectLookbooksInput
@@ -89,10 +89,10 @@ export function readLookbookResourceFromSession(
   row: LookbookRecord
 ): LookbookResource {
   const images = listLookbookImages(session, row.id);
-  const selectedImageId = readSelectedAssetRecord(
+  const selectedImageId = readSelectedAssetFileRecord(
     session,
-    assetSelectionTargetKey({ kind: 'lookbook', id: row.id })
-  )?.assetId ?? null;
+    assetFileSelectionTargetKey({ kind: 'lookbook', id: row.id })
+  )?.assetFileId ?? null;
   return {
     valid: true,
     warnings: [],

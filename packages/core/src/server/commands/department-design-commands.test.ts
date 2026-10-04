@@ -17,7 +17,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
-import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
+import { createTestAssetFileFixture } from '../testing/asset-fixture-helpers.js';
 
 describe('department design commands', () => {
   let homeDir: string;
@@ -271,9 +271,9 @@ describe('department design commands', () => {
       },
     });
     const castMemberId = castReport.generatedIds?.[0]?.id as string;
-    const assetPath = path.join(created.projectPath, 'ada-reference.txt');
-    await fs.writeFile(assetPath, 'Ada visual reference.', 'utf8');
-    await createTestAssetFixture({
+    const assetFilePath = path.join(created.projectPath, 'ada-reference.txt');
+    await fs.writeFile(assetFilePath, 'Ada visual reference.', 'utf8');
+    await createTestAssetFileFixture({
       homeDir,
       projectName: 'blank-movie',
       owner: { kind: 'castMember', id: castMemberId },
@@ -281,7 +281,6 @@ describe('department design commands', () => {
       type: 'reference',
       mediaKind: 'text',
       title: 'Ada reference',
-      fileRole: 'source',
     });
     await projectData.writeCastDesign({
       homeDir,
@@ -340,9 +339,9 @@ describe('department design commands', () => {
       },
     });
     const locationId = locationReport.generatedIds?.[0]?.id as string;
-    const assetPath = path.join(created.projectPath, 'workshop-reference.txt');
-    await fs.writeFile(assetPath, 'Workshop visual reference.', 'utf8');
-    await createTestAssetFixture({
+    const assetFilePath = path.join(created.projectPath, 'workshop-reference.txt');
+    await fs.writeFile(assetFilePath, 'Workshop visual reference.', 'utf8');
+    await createTestAssetFileFixture({
       homeDir,
       projectName: 'blank-movie',
       owner: { kind: 'location', id: locationId },
@@ -350,7 +349,6 @@ describe('department design commands', () => {
       type: 'reference',
       mediaKind: 'text',
       title: 'Workshop reference',
-      fileRole: 'source',
     });
     await projectData.writeLocationDesign({
       homeDir,

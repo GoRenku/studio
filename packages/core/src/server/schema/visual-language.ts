@@ -6,7 +6,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
-import { assets } from './assets.js';
+import { assetFiles } from './asset-files.js';
 import { discardLifecycleColumns } from './lifecycle-columns.js';
 
 export const inspirationFolders = sqliteTable(
@@ -95,9 +95,9 @@ export const lookbookImages = sqliteTable(
   'lookbook_image',
   {
     id: text('id').primaryKey(),
-    assetId: text('asset_id')
+    assetFileId: text('asset_file_id')
       .notNull()
-      .references(() => assets.id),
+      .references(() => assetFiles.id),
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
@@ -136,9 +136,9 @@ export const lookbookSheets = sqliteTable(
   'lookbook_sheet',
   {
     id: text('id').primaryKey(),
-    assetId: text('asset_id')
+    assetFileId: text('asset_file_id')
       .notNull()
-      .references(() => assets.id),
+      .references(() => assetFiles.id),
     sortOrder: integer('sort_order').notNull(),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),

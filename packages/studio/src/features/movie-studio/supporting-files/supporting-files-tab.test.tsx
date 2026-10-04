@@ -16,17 +16,17 @@ vi.mock('@/services/supporting-files', () => ({
 }));
 
 const notes: ProjectSupportingFile = {
-  asset: {
+  assetFile: {
     id: 'notes', owner: { kind: 'project' }, localeId: null,
     type: 'screenplay_supporting_material', availability: 'ready', mediaKind: 'file',
     title: 'Research notes.md', oneLineSummary: null, origin: 'imported',
     referenceName: null, tags: [], generationProvenance: null, authoredFrom: null,
-    files: [{ id: 'source', role: 'source', projectRelativePath: 'screenplay/Research notes.md' as ProjectRelativePath, mediaKind: 'file', mimeType: 'application/octet-stream', sizeBytes: 10, contentHash: null, width: null, height: null, durationSeconds: null }], createdAt: '2026-09-06T09:00:00Z', updatedAt: '2026-09-06T10:00:00Z',
+    projectRelativePath: 'screenplay/Research notes.md' as ProjectRelativePath, mimeType: 'application/octet-stream', sizeBytes: 10, contentHash: null, width: null, height: null, durationSeconds: null, createdAt: '2026-09-06T09:00:00Z', updatedAt: '2026-09-06T10:00:00Z',
   },
-  sourceAssetFileId: 'source', deleteBlock: null,
+  sourceAssetFileId: 'notes', deleteBlock: null,
 };
 const fdx: ProjectSupportingFile = {
-  ...notes, asset: { ...notes.asset, id: 'fdx', title: 'Basilica.fdx', files: [{ ...notes.asset.files[0]!, projectRelativePath: 'screenplay/Basilica.fdx' as ProjectRelativePath }] },
+  ...notes, assetFile: { ...notes.assetFile, id: 'fdx', title: 'Basilica.fdx', projectRelativePath: 'screenplay/Basilica.fdx' as ProjectRelativePath },
   deleteBlock: { code: 'SCREENPLAY_FDX_SOURCE_PROTECTED', message: 'Retained screenplay source files cannot be deleted.' },
 };
 
@@ -43,7 +43,7 @@ afterEach(cleanup);
 describe('Supporting Files tab', () => {
   it.each(['jpg', 'mp4'])('opens %s in the shared media dialog instead of a browser tab', async (extension) => {
     const title = `reference.${extension}`;
-    const file = { ...notes, asset: { ...notes.asset, title, files: [{ ...notes.asset.files[0]!, projectRelativePath: `screenplay/${title}` as ProjectRelativePath }] } };
+    const file = { ...notes, assetFile: { ...notes.assetFile, title, projectRelativePath: `screenplay/${title}` as ProjectRelativePath } };
     vi.mocked(api.readProjectSupportingFiles).mockResolvedValue({ items: [file], nextCursor: null });
     render(<SupportingFilesTab projectName='basilica' />);
     fireEvent.click(await screen.findByRole('button', { name: `Open ${title}` }));
@@ -72,7 +72,7 @@ describe('Supporting Files tab', () => {
   it('uses native image and video cards beside document cards with a shared frame', async () => {
     const files = ['research.pdf', 'notes.md', 'reference.jpg', 'reference.mp4'].map((title) => ({
       ...notes,
-      asset: { ...notes.asset, id: title, title, files: [{ ...notes.asset.files[0]!, projectRelativePath: `screenplay/${title}` as ProjectRelativePath }] },
+      assetFile: { ...notes.assetFile, id: title, title, projectRelativePath: `screenplay/${title}` as ProjectRelativePath },
     }));
     vi.mocked(api.readProjectSupportingFiles).mockResolvedValue({ items: files, nextCursor: null });
     const { container } = render(<SupportingFilesTab projectName='basilica' />);
@@ -153,7 +153,7 @@ describe('Supporting Files tab', () => {
       valid: true,
       warnings: [],
       project: { id: 'project_1', projectName: 'basilica' },
-      changes: [{ type: 'asset.discarded', assetId: notes.asset.id }],
+      changes: [{ type: 'asset.discarded', assetFileId: notes.assetFile.id }],
       recovery: {
         operationId: 'trash_operation_1',
         trashItemIds: ['trash_item_1'],

@@ -1,25 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import type { StudioAssetCollection } from '@/services/studio-project-assets-api';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
+import type { StudioAssetFileCollection } from '@/services/studio-project-assets-api';
 
-interface AssetMutationReport {
+interface AssetFileMutationReport {
   resourceKeys: string[];
 }
 
-export function useSelectableAssetCollection({
-  readAssets,
-  selectCanonicalAsset,
-  clearCanonicalAsset,
-  discardAsset,
+export function useSelectableAssetFileCollection({
+  readAssetFiles,
+  selectCanonicalAssetFile,
+  clearCanonicalAssetFile,
+  discardAssetFile,
 }: {
-  readAssets: () => Promise<StudioAssetCollection>;
-  selectCanonicalAsset: (assetId: string) => Promise<AssetMutationReport>;
-  clearCanonicalAsset: () => Promise<AssetMutationReport>;
-  discardAsset: (assetId: string) => Promise<AssetMutationReport>;
+  readAssetFiles: () => Promise<StudioAssetFileCollection>;
+  selectCanonicalAssetFile: (assetFileId: string) => Promise<AssetFileMutationReport>;
+  clearCanonicalAssetFile: () => Promise<AssetFileMutationReport>;
+  discardAssetFile: (assetFileId: string) => Promise<AssetFileMutationReport>;
 }) {
-  const [collection, setCollection] = useState<StudioAssetCollection>({
+  const [collection, setCollection] = useState<StudioAssetFileCollection>({
     items: [],
-    selectedAssetId: null,
+    selectedAssetFileId: null,
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export function useSelectableAssetCollection({
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const next = await readAssets();
+      const next = await readAssetFiles();
       setCollection(next);
       setError(null);
     } catch (loadError) {
@@ -36,11 +36,11 @@ export function useSelectableAssetCollection({
     } finally {
       setLoading(false);
     }
-  }, [readAssets]);
+  }, [readAssetFiles]);
 
   useEffect(() => {
     let cancelled = false;
-    void readAssets()
+    void readAssetFiles()
       .then((next) => {
         if (!cancelled) {
           setCollection(next);
@@ -60,31 +60,31 @@ export function useSelectableAssetCollection({
     return () => {
       cancelled = true;
     };
-  }, [readAssets]);
+  }, [readAssetFiles]);
 
   const toggleCanonical = useCallback(
-    async (asset: StudioAssetResponse): Promise<AssetMutationReport> => {
-      const report = collection.selectedAssetId === asset.id
-        ? await clearCanonicalAsset()
-        : await selectCanonicalAsset(asset.id);
+    async (assetFile: StudioAssetFileResponse): Promise<AssetFileMutationReport> => {
+      const report = collection.selectedAssetFileId === assetFile.id
+        ? await clearCanonicalAssetFile()
+        : await selectCanonicalAssetFile(assetFile.id);
       await refresh();
       return report;
     },
     [
-      clearCanonicalAsset,
-      collection.selectedAssetId,
+      clearCanonicalAssetFile,
+      collection.selectedAssetFileId,
       refresh,
-      selectCanonicalAsset,
+      selectCanonicalAssetFile,
     ]
   );
 
   const remove = useCallback(
-    async (asset: StudioAssetResponse): Promise<AssetMutationReport> => {
-      const report = await discardAsset(asset.id);
+    async (assetFile: StudioAssetFileResponse): Promise<AssetFileMutationReport> => {
+      const report = await discardAssetFile(assetFile.id);
       await refresh();
       return report;
     },
-    [discardAsset, refresh]
+    [discardAssetFile, refresh]
   );
 
   return {

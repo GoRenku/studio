@@ -2,15 +2,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, expect, it } from 'vitest';
-import type { ResolvedProjectAssetFileById } from '@gorenku/studio-core/server';
+import type { ResolvedProjectAssetFile } from '@gorenku/studio-core/server';
+import { makeAssetFile } from '../testing/route-fixtures.js';
 import { projectAssetFileResponse } from './asset-file-response.js';
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-asset-range-'));
 const absolutePath = path.join(directory, 'clip.mp4');
 fs.writeFileSync(absolutePath, '0123456789');
-const resolved: ResolvedProjectAssetFileById = {
-  assetId: 'clip', assetMediaKind: 'video', absolutePath,
-  file: { id: 'file', role: 'primary', projectRelativePath: 'clip.mp4' as ResolvedProjectAssetFileById['file']['projectRelativePath'], mediaKind: 'video', mimeType: 'video/mp4', sizeBytes: 10, contentHash: null, width: null, height: null, durationSeconds: null },
+const resolved: ResolvedProjectAssetFile = {
+  absolutePath,
+  assetFile: { ...makeAssetFile('file'), projectRelativePath: 'clip.mp4' as ResolvedProjectAssetFile['assetFile']['projectRelativePath'], mediaKind: 'video', mimeType: 'video/mp4', sizeBytes: 10 },
 };
 afterAll(() => fs.rmSync(directory, { recursive: true, force: true }));
 

@@ -39,35 +39,34 @@ export function BeatStoryboardImageCandidatesDialog(input: {
         ? { kind: 'empty', message: 'No Storyboard image candidates for this Beat.' }
         : {
             kind: 'ready',
-            items: beat.images.flatMap((asset, index) => {
-              const file = asset.files.find((candidate) => candidate.mediaKind === 'image');
-              if (!file || !input.beatId) return [];
+            items: beat.images.flatMap((assetFile, index) => {
+              if (!input.beatId) return [];
               const imageLabel = `Storyboard image ${index + 1} for ${input.beatTitle}`;
               return [{
-                id: asset.id,
+                id: assetFile.id,
                 card: {
-                  media: { kind: 'image' as const, src: file.url, alt: imageLabel, fit: 'contain' as const, effect: 'zoom-on-hover' as const },
+                  media: { kind: 'image' as const, src: assetFile.url, alt: imageLabel, fit: 'contain' as const, effect: 'zoom-on-hover' as const },
                   frame: { kind: 'ratio' as const, aspectRatio: input.aspectRatio },
                   presentation: { kind: 'overlay' as const },
                   activation: {
                     kind: 'image-preview' as const,
                     label: `Preview ${imageLabel}`,
-                    image: { src: file.url, alt: imageLabel, title: input.beatTitle },
+                    image: { src: assetFile.url, alt: imageLabel, title: input.beatTitle },
                   },
-                  cornerAction: asset.generationProvenance ? {
+                  cornerAction: assetFile.generationProvenance ? {
                     kind: 'inspect' as const,
                     label: `Inspect generation request for ${imageLabel}`,
                     visibility: 'always' as const,
-                    onAction: () => openGenerationRequestInspector({ projectName: input.projectName, assetId: asset.id }),
+                    onAction: () => openGenerationRequestInspector({ projectName: input.projectName, assetFileId: assetFile.id }),
                   } : undefined,
                   selection: {
                     kind: 'choose' as const,
-                    selected: asset.id === beat.selectedImageId,
+                    selected: assetFile.id === beat.selectedImageId,
                     selectedLabel: 'Selected Storyboard image',
                     unselectedLabel: 'Use as selected Storyboard image',
                     onChoose: async () => {
                       try {
-                        await selectStudioSceneStoryboardImage({ ...input, beatId: input.beatId!, assetId: asset.id });
+                        await selectStudioSceneStoryboardImage({ ...input, beatId: input.beatId!, assetFileId: assetFile.id });
                         setMutationError(null);
                         reload();
                         input.onSceneBeatsChange();
@@ -76,12 +75,12 @@ export function BeatStoryboardImageCandidatesDialog(input: {
                       }
                     },
                   },
-                  deleteAction: asset.id === beat.selectedImageId ? undefined : {
+                  deleteAction: assetFile.id === beat.selectedImageId ? undefined : {
                     label: `Delete ${imageLabel}`,
                     confirmationTitle: 'Delete Storyboard Image?',
                     confirmationMessage: 'This image will move to Trash. You can restore it later.',
                     onDelete: async () => {
-                      await deleteStudioSceneStoryboardImage({ ...input, beatId: input.beatId!, assetId: asset.id });
+                      await deleteStudioSceneStoryboardImage({ ...input, beatId: input.beatId!, assetFileId: assetFile.id });
                       reload();
                       input.onSceneBeatsChange();
                     },

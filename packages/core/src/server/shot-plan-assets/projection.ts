@@ -1,14 +1,14 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import type {
-  ShotPlanAssetGroup,
-  ShotPlanAssets,
+  ShotPlanAssetFileGroup,
+  ShotPlanAssetFiles,
 } from '../../client/shot-plan-assets.js';
 import type { RenkuConfigPathOptions } from '../config/index.js';
-import { readOwnedAsset } from '../assets/projection.js';
-import { assets } from '../schema/index.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
+import { assetFiles } from '../schema/index.js';
 import { withProject } from '../project-operation.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
-import { studioShotPlanAssetsResourceKey } from '../studio-coordination/resource-keys.js';
+import { studioShotPlanAssetFilesResourceKey } from '../studio-coordination/resource-keys.js';
 
 const groupDefinitions = [
   { role: 'first-frame', type: 'shot_plan_video_first_frame' },
@@ -17,40 +17,40 @@ const groupDefinitions = [
   { role: 'reference', type: 'shot_plan_video_reference' },
 ] as const;
 
-export async function readShotPlanAssets(
+export async function readShotPlanAssetFiles(
   input: RenkuConfigPathOptions & { projectName?: string; shotPlanId: string },
-): Promise<ShotPlanAssets> {
+): Promise<ShotPlanAssetFiles> {
   return withProject(input, ({ session }) => {
     const shotPlan = requireShotPlanRecord(session, input.shotPlanId);
     const rows = session.db
-      .select({ id: assets.id, type: assets.type })
-      .from(assets)
+      .select({ id: assetFiles.id, type: assetFiles.type })
+      .from(assetFiles)
       .where(and(
-        eq(assets.authoredFromShotPlanId, shotPlan.id),
-        inArray(assets.type, groupDefinitions.map(({ type }) => type)),
-        or(eq(assets.mediaKind, 'image'), and(
-          eq(assets.type, 'shot_plan_video_reference'),
-          inArray(assets.mediaKind, ['video', 'audio']),
+        eq(assetFiles.authoredFromShotPlanId, shotPlan.id),
+        inArray(assetFiles.type, groupDefinitions.map(({ type }) => type)),
+        or(eq(assetFiles.mediaKind, 'image'), and(
+          eq(assetFiles.type, 'shot_plan_video_reference'),
+          inArray(assetFiles.mediaKind, ['video', 'audio']),
         )),
-        isNull(assets.discardedAt),
+        isNull(assetFiles.discardedAt),
       ))
-      .orderBy(assets.createdAt, assets.id)
+      .orderBy(assetFiles.createdAt, assetFiles.id)
       .all();
     const groups = groupDefinitions.flatMap(({ role, type }) => {
-      const groupedAssets = rows
+      const groupedAssetFiles = rows
         .filter((row) => row.type === type)
         .flatMap((row) => {
-          const asset = readOwnedAsset(session, { owner: { kind: 'project' }, assetId: row.id });
-          return asset ? [asset] : [];
+          const assetFile = readOwnedAssetFile(session, { owner: { kind: 'project' }, assetFileId: row.id });
+          return assetFile ? [assetFile] : [];
         });
-      return groupedAssets.length > 0
-        ? [{ role, assets: groupedAssets } satisfies ShotPlanAssetGroup]
+      return groupedAssetFiles.length > 0
+        ? [{ role, assetFiles: groupedAssetFiles } satisfies ShotPlanAssetFileGroup]
         : [];
     });
     return {
       shotPlan: { id: shotPlan.id, sceneId: shotPlan.sceneId, title: shotPlan.title },
       groups,
-      resourceKeys: [studioShotPlanAssetsResourceKey(shotPlan.id)],
+      resourceKeys: [studioShotPlanAssetFilesResourceKey(shotPlan.id)],
     };
   });
 }

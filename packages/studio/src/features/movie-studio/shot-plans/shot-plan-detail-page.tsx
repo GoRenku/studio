@@ -7,7 +7,7 @@ import { useSceneShotPlans } from './use-scene-shot-plans';
 import { Tabs } from '@/ui/tabs';
 import { LineTabBar } from '@/ui/line-tab-bar';
 import { LineTabsContent } from '@/ui/line-tabs';
-import { ShotPlanAssetsView } from './shot-plan-assets';
+import { ShotPlanAssetFilesView } from './shot-plan-assets';
 import { ShotPlanDialogueAudio } from './shot-plan-dialogue-audio';
 
 export function ShotPlanDetailPage({
@@ -104,8 +104,8 @@ export function ShotPlanDetailPage({
             <LineTabsContent value='previs' className='mt-0 min-h-0 flex-1 overflow-hidden'>
               {!invalidSelection ? <PrevisTab key={shotPlanId} projectName={projectName} sceneId={sceneId} shotPlanId={shotPlanId} /> : null}
             </LineTabsContent>
-            <LineTabsContent value='assets' className='mt-0 min-h-0 flex-1 overflow-hidden'>
-              <ShotPlanAssetsView projectName={projectName} shotPlanId={shotPlanId} />
+            <LineTabsContent value='assetFiles' className='mt-0 min-h-0 flex-1 overflow-hidden'>
+              <ShotPlanAssetFilesView projectName={projectName} shotPlanId={shotPlanId} />
             </LineTabsContent>
             <LineTabsContent value='audio' className='mt-0 min-h-0 flex-1 overflow-hidden'>
               <ShotPlanDialogueAudio projectName={projectName} shotPlanId={shotPlanId} />
@@ -119,6 +119,6 @@ export function ShotPlanDetailPage({
 }
 
 const shotPlanDetailTabs = [
-  { value: 'assets', label: 'Assets' },
+  { value: 'assetFiles', label: 'AssetFiles' },
   { value: 'audio', label: 'Audio' },
 ];

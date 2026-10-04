@@ -73,10 +73,10 @@ describe('Shot Plan Dialogue Audio', () => {
       turnRange: { start: 1, end: 1 },
       generationProvenance: provenance,
     });
-    expect(first.asset.files[0]?.projectRelativePath).toMatch(
+    expect(first.assetFile?.projectRelativePath).toMatch(
       /^scenes\/[^/]+\/01-shot-plan\/dialogues\/turn-01-g[a-z0-9]+\.mp3$/
     );
-    expect(second.asset.files[0]?.projectRelativePath).toMatch(
+    expect(second.assetFile?.projectRelativePath).toMatch(
       /^scenes\/[^/]+\/01-shot-plan\/dialogues\/turns-02-03-g[a-z0-9]+\.mp3$/
     );
     const initial = await projectData.readShotPlanDialogueAudio({
@@ -88,7 +88,7 @@ describe('Shot Plan Dialogue Audio', () => {
       expect.objectContaining({
         turnRange: { start: 1, end: 1 },
         selected: false,
-        asset: expect.objectContaining({ generationProvenance: provenance }),
+        assetFile: expect.objectContaining({ generationProvenance: provenance }),
       }),
       expect.objectContaining({ turnRange: { start: 2, end: 3 }, selected: false }),
     ]);
@@ -97,13 +97,13 @@ describe('Shot Plan Dialogue Audio', () => {
       projectName: 'constantinople',
       homeDir,
       shotPlanId: plan.shotPlan.id,
-      takeId: takeIdForAsset(initial, first.asset.id),
+      takeId: takeIdForAssetFile(initial, first.assetFile.id),
     });
     const selected = await projectData.selectShotPlanDialogueAudioTake({
       projectName: 'constantinople',
       homeDir,
       shotPlanId: plan.shotPlan.id,
-      takeId: takeIdForAsset(initial, second.asset.id),
+      takeId: takeIdForAssetFile(initial, second.assetFile.id),
     });
 
     expect(selected.resource.takes.map((take) => ({
@@ -128,12 +128,12 @@ describe('Shot Plan Dialogue Audio', () => {
     );
     expect(dialogueAudio?.candidates).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        assetId: first.asset.id,
+        assetFileId: first.assetFile.id,
         dialogueTurnRange: { start: 1, end: 1 },
         isWorkflowSelected: true,
       }),
       expect.objectContaining({
-        assetId: second.asset.id,
+        assetFileId: second.assetFile.id,
         dialogueTurnRange: { start: 2, end: 3 },
         isWorkflowSelected: true,
       }),
@@ -141,13 +141,13 @@ describe('Shot Plan Dialogue Audio', () => {
   });
 });
 
-function takeIdForAsset(
+function takeIdForAssetFile(
   resource: Awaited<ReturnType<ReturnType<typeof createProjectDataService>['readShotPlanDialogueAudio']>>,
-  assetId: string,
+  assetFileId: string,
 ): string {
-  const take = resource.takes.find((candidate) => candidate.asset.id === assetId);
+  const take = resource.takes.find((candidate) => candidate.assetFile.id === assetFileId);
   if (!take) {
-    throw new Error(`Expected a Take for Asset ${assetId}.`);
+    throw new Error(`Expected a Take for Asset ${assetFileId}.`);
   }
   return take.id;
 }

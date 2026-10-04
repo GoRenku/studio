@@ -9,8 +9,8 @@ import type { MediaGenerationLookbookContext } from '../../client/media-generati
 import type { Screenplay } from '../../client/screenplay/index.js';
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
-import type { GenerationAssets } from './reference-assets.js';
-import { buildAssetPurposeContext } from './purposes/asset.js';
+import type { GenerationAssetFiles } from './reference-assets.js';
+import { buildAssetFilePurposeContext } from './purposes/asset-file.js';
 import { buildCastPurposeContext } from './purposes/cast.js';
 import { buildLocationPurposeContext } from './purposes/location.js';
 import { buildLookbookPurposeContext } from './purposes/lookbook.js';
@@ -21,7 +21,7 @@ import { buildShotPlanPurposeContext } from './purposes/shot-plan.js';
 import { buildShotPurposeContext } from './purposes/shot.js';
 
 export interface MediaGenerationPurposeBuildInput {
-  assets: GenerationAssets;
+  assetFiles: GenerationAssetFiles;
   session: DatabaseSession;
   projectFolder: string;
   screenplay: Screenplay;
@@ -44,8 +44,8 @@ export type MediaGenerationPurposeBuilder = (
 
 export const MEDIA_GENERATION_PURPOSE_BUILDERS: Record<MediaPurpose, MediaGenerationPurposeBuilder> = {
   'image.create': buildShotPlanPurposeContext,
-  'image.edit': buildAssetPurposeContext,
-  'video.edit': buildAssetPurposeContext,
+  'image.edit': buildAssetFilePurposeContext,
+  'video.edit': buildAssetFilePurposeContext,
   'project.cover': buildProjectPurposeContext,
   'lookbook.image': buildLookbookPurposeContext,
   'lookbook.video-sheet': buildLookbookPurposeContext,

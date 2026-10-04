@@ -1,9 +1,9 @@
-import type { Asset, AssetOwner } from '../../client/assets.js';
+import type { AssetFile, AssetFileOwner } from '../../client/asset-files.js';
 import type { ProjectAssetFileDestination } from '../project-asset-files/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   projectCoverCandidateResourceKeys,
-  studioAssetOwnerSurfaceResourceKeys,
+  studioAssetFileOwnerSurfaceResourceKeys,
 } from '../studio-coordination/resource-keys.js';
 import type {
   ImageEditContinuation,
@@ -54,34 +54,33 @@ export function resolveSubjectImageEditContinuation(
 }
 
 function continuation(
-  source: Asset,
+  source: AssetFile,
   destination: ProjectAssetFileDestination,
-  resourceKeys = studioAssetOwnerSurfaceResourceKeys(source.owner),
+  resourceKeys = studioAssetFileOwnerSurfaceResourceKeys(source.owner),
 ): ImageEditContinuation {
   return {
     owner: source.owner,
-    assetType: source.type,
+    assetFileType: source.type,
     destination,
-    fileRole: 'primary',
     resourceKeys,
   };
 }
 
-function requireOwner<K extends AssetOwner['kind']>(
-  source: Asset,
+function requireOwner<K extends AssetFileOwner['kind']>(
+  source: AssetFile,
   kind: K,
-): Extract<AssetOwner, { kind: K }> {
+): Extract<AssetFileOwner, { kind: K }> {
   if (source.owner.kind !== kind) {
     throw ownerInvalid(source);
   }
-  return source.owner as Extract<AssetOwner, { kind: K }>;
+  return source.owner as Extract<AssetFileOwner, { kind: K }>;
 }
 
-function semanticName(source: Asset): string {
-  return source.referenceName?.trim() || source.title;
+function semanticName(source: AssetFile): string {
+  return source.referenceName?.trim() || source.title || source.id;
 }
 
-function ownerInvalid(source: Asset): ProjectDataError {
+function ownerInvalid(source: AssetFile): ProjectDataError {
   return new ProjectDataError(
     'CORE_IMAGE_EDIT_OWNER_INVALID',
     `Asset ${source.id} has ownership that is invalid for ${source.type}.`,

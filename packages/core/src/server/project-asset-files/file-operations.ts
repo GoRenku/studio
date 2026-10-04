@@ -85,28 +85,32 @@ export function hashFileSync(absolutePath: string): string {
   return hash.digest('hex');
 }
 
+export function referenceMediaKindForProjectPath(projectRelativePath: ProjectRelativePath): ProjectMediaKind {
+  const extension = path.extname(projectRelativePath).toLowerCase();
+  if (['.apng', '.avif', '.gif', '.jpeg', '.jpg', '.png', '.webp'].includes(extension)) {
+    return 'image';
+  }
+  if (['.mp4', '.mov', '.webm'].includes(extension)) {
+    return 'video';
+  }
+  if (['.wav', '.mp3', '.ogg', '.flac', '.m4a'].includes(extension)) {
+    return 'audio';
+  }
+  return 'file';
+}
+
 export function mimeTypeForProjectPath(
   projectRelativePath: ProjectRelativePath,
   mediaKind: ProjectMediaKind
 ): string {
   const extension = path.extname(projectRelativePath).toLowerCase();
-  if (mediaKind === 'audio') {
-    if (extension === '.wav') {
-      return 'audio/wav';
-    }
-    return 'audio/mpeg';
-  }
-  if (mediaKind === 'video') {
-    return extension === '.mov' ? 'video/quicktime' : 'video/mp4';
-  }
-  if (mediaKind === 'file') {
-    return 'application/octet-stream';
-  }
-  if (extension === '.jpg' || extension === '.jpeg') {
-    return 'image/jpeg';
-  }
-  if (extension === '.webp') {
-    return 'image/webp';
-  }
-  return 'image/png';
+  const mimeTypes: Record<string, string> = {
+    '.apng': 'image/apng', '.avif': 'image/avif', '.gif': 'image/gif',
+    '.jpeg': 'image/jpeg', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+    '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm',
+    '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg',
+    '.flac': 'audio/flac', '.m4a': 'audio/mp4',
+  };
+  return mimeTypes[extension] ?? (mediaKind === 'file' ? 'application/octet-stream'
+    : mediaKind === 'audio' ? 'audio/mpeg' : mediaKind === 'video' ? 'video/mp4' : 'image/png');
 }

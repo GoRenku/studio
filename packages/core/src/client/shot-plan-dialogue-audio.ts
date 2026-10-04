@@ -1,4 +1,4 @@
-import type { Asset, AssetMetadataInput } from './assets.js';
+import type { AssetFile, AssetFileMetadataInput } from './asset-files.js';
 import type { MediaGenerationProvenance } from './media-generation-review.js';
 import type { ScreenplayImageReference } from './resources.js';
 
@@ -17,7 +17,7 @@ export interface ShotPlanDialogueAudioSpeaker {
 export interface ShotPlanDialogueAudioTake {
   id: string;
   shotPlanId: string;
-  asset: Asset;
+  assetFile: AssetFile;
   turnRange: DialogueTurnRange;
   selected: boolean;
   speakers: ShotPlanDialogueAudioSpeaker[];
@@ -45,7 +45,7 @@ export interface ShotPlanDialogueAudioMutationReport {
 
 export interface ShotPlanDialogueAudioAttachmentReport
   extends ShotPlanDialogueAudioMutationReport {
-  asset: Asset;
+  assetFile: AssetFile;
 }
 
 export interface AttachShotPlanDialogueAudioInput {
@@ -54,5 +54,5 @@ export interface AttachShotPlanDialogueAudioInput {
   turnRange: DialogueTurnRange;
   generationProvenance: MediaGenerationProvenance;
   title?: string;
-  assetMetadata?: AssetMetadataInput;
+  assetFileMetadata?: AssetFileMetadataInput;
 }

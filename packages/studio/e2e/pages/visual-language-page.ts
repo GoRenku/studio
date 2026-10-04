@@ -13,12 +13,12 @@ export class VisualLanguagePage {
       `/projects/${encodeURIComponent(project.projectName)}/visual-language/inspiration`
     );
     await expect(
-      this.page.getByRole('button', { name: 'Create Inspiration folder' })
+      this.page.getByRole('button', { name: 'New Folder' })
     ).toBeVisible();
   }
 
   async createFolder(name: string): Promise<void> {
-    await this.page.getByRole('button', { name: 'Create Inspiration folder' }).click();
+    await this.page.getByRole('button', { name: 'New Folder' }).click();
     await this.page.getByPlaceholder('Blade Runner 2049').fill(name);
     await this.page.getByRole('button', { name: 'Create' }).click();
     await expect(this.page.getByRole('heading', { name })).toBeVisible();
@@ -30,7 +30,7 @@ export class VisualLanguagePage {
   async uploadPreviewAndDeleteImage(filePath: string): Promise<void> {
     await this.page.locator('input[type="file"]').setInputFiles(filePath);
     const imageButton = this.page.getByRole('button', {
-      name: 'inspiration-fixture.png inspiration grab',
+      name: 'Preview inspiration image',
       exact: true,
     });
     await expect(
@@ -38,10 +38,10 @@ export class VisualLanguagePage {
     ).toBeVisible();
     await imageButton.click();
     await expect(
-      this.page.getByRole('dialog', { name: /inspiration-fixture/i })
+      this.page.getByRole('dialog')
     ).toBeVisible();
     await this.page.getByLabel('Close image preview').click();
-    await this.page.getByLabel(/Delete inspiration-fixture/i).click();
+    await this.page.getByLabel('Delete inspiration image').click();
     await this.page.getByRole('button', { name: 'Delete' }).click();
     await expect(
       imageButton

@@ -1,6 +1,6 @@
 import { toStudioClipResponse } from './shot-plan-clip-responses.js';
 import type { ShotPlanPrevisReport } from '@gorenku/studio-core/client';
-import { toStudioAssetResponse } from './asset-responses.js';
+import { toStudioAssetFileResponse } from './asset-responses.js';
 
 export function toStudioPrevisResponse(projectName: string, report: ShotPlanPrevisReport) {
   return {
@@ -12,7 +12,7 @@ export function toStudioPrevisResponse(projectName: string, report: ShotPlanPrev
       createdAt: revision.createdAt,
       description: revision.description,
       warnings: revision.warnings,
-      render: revision.render ? toStudioAssetResponse(projectName, revision.render) : null,
+      render: revision.render ? toStudioAssetFileResponse(projectName, revision.render) : null,
       clips: toStudioClipResponse(projectName, revision.clips),
       playback: revision.playback ? {
         ...revision.playback,
@@ -20,7 +20,7 @@ export function toStudioPrevisResponse(projectName: string, report: ShotPlanPrev
           ...cue,
           ...(cue.kind === 'dialogue' && cue.audio ? { audio: {
             ...cue.audio,
-            url: `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(cue.audio.assetId)}/files/${encodeURIComponent(cue.audio.assetFileId)}`,
+            url: `/studio-api/projects/${encodeURIComponent(projectName)}/asset-files/${encodeURIComponent(cue.audio.assetFileId)}`,
           } } : {}),
         })),
       } : null,

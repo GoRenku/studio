@@ -15,10 +15,10 @@ vi.mock('./use-scene-shot-plan-video-generations', () => ({
 
 vi.mock('./shot-plan-video-generation-group', () => ({
   ShotPlanVideoGenerationGroup: ({
-    assets,
+    assetFiles,
   }: {
-    assets: Array<{ id: string; title: string }>;
-  }) => <div>{assets.map((asset) => asset.title).join(', ')}</div>,
+    assetFiles: Array<{ id: string; title: string }>;
+  }) => <div>{assetFiles.map((assetFile) => assetFile.title).join(', ')}</div>,
 }));
 
 describe('SceneShotPlanVideoGenerationsTab', () => {
@@ -30,14 +30,14 @@ describe('SceneShotPlanVideoGenerationsTab', () => {
           {
             kind: 'shotPlan',
             shotPlan: { id: 'plan_one', title: 'Council coverage' },
-            assets: [
+            assetFiles: [
               { id: 'asset_one', title: 'Opening video' },
               { id: 'asset_two', title: 'Second video' },
             ],
           },
           {
             kind: 'miscellaneous',
-            assets: [{ id: 'asset_misc', title: 'Detached video' }],
+            assetFiles: [{ id: 'asset_misc', title: 'Detached video' }],
           },
         ],
         resourceKeys: [

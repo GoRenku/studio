@@ -1,5 +1,5 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { Beat } from './scene-beats/index.js';
 
 export interface ShotPlanCoverage {
@@ -39,7 +39,7 @@ export interface Shot {
   title: string;
   description: string;
   brief: ShotBrief;
-  images: Asset[];
+  images: AssetFile[];
   selectedImageId: string | null;
 }
 
@@ -113,7 +113,7 @@ export interface DiscardShotImageCandidateInput
   extends ShotPlanProjectInput {
   shotPlanId: string;
   shotId: string;
-  assetId: string;
+  assetFileId: string;
 }
 
 export interface CopyShotPlanInput extends ShotPlanProjectInput {
@@ -136,7 +136,6 @@ export interface ShotPlanCoveredBeat {
   beat: Beat;
   position: number;
   storyboardImage: {
-    assetId: string;
     assetFileId: string;
   } | null;
 }
@@ -159,7 +158,7 @@ export interface ShotPlanListReport {
   project: ShotPlanReport['project'];
   shotPlans: Array<{
     shotPlan: ShotPlan;
-    previsRender: Asset | null;
+    previsRender: AssetFile | null;
     coveredBeats: ShotPlanCoveredBeat[];
   }>;
   warnings: DiagnosticIssue[];

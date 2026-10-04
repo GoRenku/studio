@@ -55,7 +55,7 @@ describe('Location World command', () => {
     await fs.writeFile(file, JSON.stringify(document), 'utf8');
     const report = {
       valid: true,
-      selectedAssetId: 'asset_world',
+      selectedAssetFileId: 'asset_world',
       resourceKeys: ['location:location_gate'],
     };
     prepareLocationWorldGeneration.mockResolvedValue({

@@ -1,6 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
-import type { AssetPage } from './assets.js';
-import type { Asset } from './assets.js';
+import type { AssetFilePage } from './asset-files.js';
+import type { AssetFile } from './asset-files.js';
 import type { CastMember } from './cast-members.js';
 import type { CastVoice } from './cast-voices.js';
 import type { Location } from './locations.js';
@@ -18,7 +18,6 @@ import type {
   InspirationFolder,
   InspirationFolderListItem,
   InspirationFolderWithResolvedPath,
-  InspirationImage,
   Lookbook,
   LookbookImage,
   LookbookSection,
@@ -70,10 +69,8 @@ export interface PropNavigationRow {
 }
 
 export interface ScreenplayImageReference {
-  assetId: string;
   assetFileId: string;
-  title: string;
-  fileRole: string;
+  title: string | null;
   mediaKind: string;
   mimeType: string | null;
   width: number | null;
@@ -102,7 +99,7 @@ export interface LocationOverviewResource {
 export interface LocationResource {
   location: Location;
   firstImage?: ScreenplayImageReference;
-  selectedWorld: Asset | null;
+  selectedWorld: AssetFile | null;
 }
 
 export interface PropOverviewResource {
@@ -183,7 +180,7 @@ export interface SceneNarrativeResource {
 
 export interface SceneDesignResource {
   scene: import('./screenplay/index.js').ScreenplaySceneResource;
-  assetPage: AssetPage;
+  assetFilePage: AssetFilePage;
 }
 
 export interface InspirationResource {
@@ -192,7 +189,7 @@ export interface InspirationResource {
 
 export interface InspirationFolderResource {
   folder: InspirationFolder;
-  images: InspirationImage[];
+  images: AssetFile[];
   analysis: InspirationAnalysis | null;
 }
 
@@ -364,7 +361,7 @@ export type ScenePanelTab =
   | 'shotPlans'
   | 'generations';
 
-export type ShotPlanDetailTab = 'shots' | 'previs' | 'assets' | 'audio';
+export type ShotPlanDetailTab = 'shots' | 'previs' | 'assetFiles' | 'audio';
 
 export type StudioSelection =
   | { type: 'projectInformation' }

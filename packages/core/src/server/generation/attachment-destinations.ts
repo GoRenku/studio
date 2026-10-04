@@ -1,4 +1,4 @@
-import type { AssetOwner } from '../../client/assets.js';
+import type { AssetFileOwner } from '../../client/asset-files.js';
 import type {
   MediaPurpose,
   MediaTarget,
@@ -13,9 +13,9 @@ import {
   studioVisualLanguageLookbookResourceKey,
   studioSceneShotPlansResourceKey,
   studioSceneVideoGenerationsResourceKey,
-  studioShotPlanAssetsResourceKey,
+  studioShotPlanAssetFilesResourceKey,
 } from '../studio-coordination/resource-keys.js';
-import type { AssetSelectionTarget } from '../../client/assets.js';
+import type { AssetFileSelectionTarget } from '../../client/asset-files.js';
 import { requireShotRecord } from '../database/access/shot-plans/shot-records.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
@@ -23,14 +23,14 @@ import { ProjectDataError } from '../project-data-error.js';
 
 export interface GeneratedMediaAttachmentDestination {
   file: ProjectAssetFileDestination;
-  owner: AssetOwner;
+  owner: AssetFileOwner;
   resourceKeys: string[];
 }
 
 export interface GeneratedMediaAttachmentDetails {
   destination: GeneratedMediaAttachmentDestination;
   label: string;
-  assetType: string;
+  assetFileType: string;
   mediaKind: 'image' | 'video';
   resourceKeys: string[];
 }
@@ -290,8 +290,8 @@ const attachmentBuilders: Partial<
   },
 };
 
-export function generationAttachmentAssetType(purpose: MediaPurpose): string {
-  const assetTypes: Partial<Record<MediaPurpose, string>> = {
+export function generationAttachmentAssetFileType(purpose: MediaPurpose): string {
+  const assetFileTypes: Partial<Record<MediaPurpose, string>> = {
     'image.create': 'shot_plan_video_reference',
     'project.cover': 'project_cover',
     'shot-plan.video-generation': 'shot_plan_video',
@@ -310,21 +310,21 @@ export function generationAttachmentAssetType(purpose: MediaPurpose): string {
     'prop.hero': 'prop_hero',
     'shot.image': 'shot_image',
   };
-  const assetType = assetTypes[purpose];
-  if (!assetType) {
+  const assetFileType = assetFileTypes[purpose];
+  if (!assetFileType) {
     throw new ProjectDataError(
       'CORE_GENERATION_ATTACHMENT_UNSUPPORTED',
       `Focused media attachment is not available for ${purpose}.`
     );
   }
-  return assetType;
+  return assetFileType;
 }
 
 export function generatedMediaAttachmentResourceKeys(input: {
   attachment: GeneratedMediaAttachmentDetails;
   authoredFromShotPlanId: string | null;
   session: DatabaseSession;
-  selectionTarget: AssetSelectionTarget | null;
+  selectionTarget: AssetFileSelectionTarget | null;
 }): string[] {
   if (input.selectionTarget?.kind === 'project') {
     return [...new Set([
@@ -333,7 +333,7 @@ export function generatedMediaAttachmentResourceKeys(input: {
     ])];
   }
   if (
-    input.attachment.assetType !== 'shot_plan_video' ||
+    input.attachment.assetFileType !== 'shot_plan_video' ||
     !input.authoredFromShotPlanId
   ) {
     return input.attachment.resourceKeys;
@@ -347,17 +347,17 @@ function shotPlanVideoReferenceDetails(
   shotPlanId: string,
   role: 'first-frame' | 'last-frame' | 'storyboard' | 'reference',
   label: string,
-  assetType: string,
+  assetFileType: string,
 ): GeneratedMediaAttachmentDetails {
   return details(
     _input,
     {
       file: { kind: 'shotPlan.videoReference', shotPlanId, role },
       owner: { kind: 'project' },
-      resourceKeys: [studioShotPlanAssetsResourceKey(shotPlanId)],
+      resourceKeys: [studioShotPlanAssetFilesResourceKey(shotPlanId)],
     },
     label,
-    assetType,
+    assetFileType,
   );
 }
 
@@ -373,13 +373,13 @@ function details(
   _input: unknown,
   destination: GeneratedMediaAttachmentDestination,
   label: string,
-  assetType: string,
+  assetFileType: string,
   mediaKind: 'image' | 'video' = 'image'
 ): GeneratedMediaAttachmentDetails {
   return {
     destination,
     label,
-    assetType,
+    assetFileType,
     mediaKind,
     resourceKeys: destination.resourceKeys,
   };

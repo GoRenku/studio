@@ -7,7 +7,7 @@ import { PrevisCues } from './cues';
 
 afterEach(cleanup);
 it('auditions only dialogue and seeks direction points without highlighting active ranges', () => {
-  const revision: StudioPrevisRevision = { id: 'r', number: 1, createdAt: '', render: null, clips: { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assets: [], unassignedAssets: [], sources: [], resourceKeys: [] }, description: null, warnings: [], playback: {
+  const revision: StudioPrevisRevision = { id: 'r', number: 1, createdAt: '', render: null, clips: { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assetFiles: [], unassignedAssetFiles: [], sources: [], resourceKeys: [] }, description: null, warnings: [], playback: {
     frameRate: { numerator: 24, denominator: 1 }, frameCount: 240,
     segments: [{ id: 'wide', label: 'Wide', startFrame: 0 }, { id: 'close', label: 'Close', startFrame: 72 }],
     subjects: [{ key: 'mara', label: 'Mara', color: '#ee7744' }],

@@ -2,7 +2,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
 import { ProjectCoverCards } from './project-cover-cards';
 
 describe('ProjectCoverCards', () => {
@@ -11,8 +11,8 @@ describe('ProjectCoverCards', () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
       <ProjectCoverCards
-        assets={[coverAsset()]}
-        selectedAssetId={null}
+        assetFiles={[coverAssetFile()]}
+        selectedAssetFileId={null}
         onToggleSelected={onToggleSelected}
         onDelete={onDelete}
       />
@@ -29,7 +29,7 @@ describe('ProjectCoverCards', () => {
       screen.getByRole('button', { name: 'Use as active Project cover' })
     );
     expect(onToggleSelected).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'asset_cover' })
+      expect.objectContaining({ id: 'asset_file_cover' })
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Quiet dramatic cover' }));
@@ -44,9 +44,9 @@ describe('ProjectCoverCards', () => {
   });
 });
 
-function coverAsset(): StudioAssetResponse {
+function coverAssetFile(): StudioAssetFileResponse {
   return {
-    id: 'asset_cover',
+    id: 'asset_file_cover',
     owner: { kind: 'project' },
     localeId: null,
     type: 'project_cover',
@@ -59,18 +59,7 @@ function coverAsset(): StudioAssetResponse {
     authoredFrom: null,
     referenceName: null,
     tags: [],
-    files: [{
-      id: 'asset_file_cover',
-      role: 'primary',
-      mediaKind: 'image',
-      mimeType: 'image/png',
-      sizeBytes: 100,
-      contentHash: null,
-      width: 1600,
-      height: 900,
-      durationSeconds: null,
-      url: '/studio-api/projects/movie/assets/asset_cover/files/asset_file_cover',
-    }],
+    mimeType: 'image/png', sizeBytes: 100, contentHash: null, width: 1600, height: 900, durationSeconds: null, url: '/studio-api/projects/movie/asset-files/asset_file_cover',
     createdAt: '2026-08-19T00:00:00.000Z',
     updatedAt: '2026-08-19T00:00:00.000Z',
   };

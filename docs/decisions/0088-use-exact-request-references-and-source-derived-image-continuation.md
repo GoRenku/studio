@@ -13,6 +13,10 @@ Date: 2026-08-25
 
 Status: accepted
 
+[Decision 0107](0107-unify-retained-project-media-as-asset-files.md) replaces the
+parent/file ID pair with one retained file identity under plan 0222. Exact source
+selection, weak authorship, and opaque authored request references remain accepted.
+
 ## Context
 
 Provider schemas and prompt syntax belong to standalone Engines and provider
@@ -67,9 +71,13 @@ destination and persistence owners:
 | `shot_plan_video_storyboard` | same authored Plan — `scenes/<scene>/<NN>-shot-plan/storyboard-gxxx.<ext>` |
 | `shot_plan_video_reference` | same authored Plan — `scenes/<scene>/<NN>-shot-plan/reference-gxxx.<ext>` |
 
-Unknown image types and stale or mismatched owner/detail relationships fail
-before persistence. There is no destination flag, path inference, owner guess,
-generic Project attachment fallback, or automatic selection.
+Other image types, including Inspiration and research images, use the exact
+registered source file's directory and owner. They create an
+`edited-image-gxxx.<ext>` sibling with the same type, locale, and authorship.
+This media-kind-wide behavior is confirmed by
+[Decision 0107](0107-unify-retained-project-media-as-asset-files.md).
+Stale or mismatched owner/detail relationships fail before persistence. There
+is no destination flag, owner guess, overwrite, or automatic selection.
 
 Studio adds a Shot Plan Assets projection grouped as First Frames, Last Frames,
 Storyboards, and Reference Images. Beat Storyboard candidates are managed from

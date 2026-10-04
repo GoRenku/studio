@@ -64,15 +64,17 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
     const { runAboutCommand } = await loadCommand('about', () => import('./about-command.js'));
     return runAboutCommand({ io });
   },
-  'asset': async ({ input, flags, io, homeDir }) => {
-    const { runAssetCommand } = await loadCommand('asset', () => import('./asset-command.js'));
-    return runAssetCommand({
+  'asset-file': async ({ input, flags, file, io, homeDir }) => {
+    const { runAssetFileCommand } = await loadCommand('asset-file', () => import('./asset-file/commands.js'));
+    return runAssetFileCommand({
       input,
       flags: {
         project: flags.project,
         owner: flags.owner,
+        file,
+        source: flags.source,
         target: flags.target,
-        asset: flags.asset,
+        assetFile: flags.assetFile,
         type: flags.type,
         mediaKind: flags.mediaKind,
         title: flags.title,
@@ -365,7 +367,6 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
         previsRevision: flags.previsRevision,
         clip: flags.clip,
         take: flags.take,
-        assetFile: flags.assetFile,
         sourceTake: flags.sourceTake,
         title: flags.title,
         number: flags.number,
@@ -373,7 +374,7 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
         scene: flags.scene,
         shotPlan: flags.shotPlan,
         shot: flags.shot,
-        asset: flags.asset,
+        assetFile: flags.assetFile,
         position: flags.position,
         placement: flags.placement,
       },

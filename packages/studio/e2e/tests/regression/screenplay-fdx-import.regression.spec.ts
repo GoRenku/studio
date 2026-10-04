@@ -247,16 +247,16 @@ async function expectExactRetainedSource(input: {
 }): Promise<void> {
   const sha256 = createHash('sha256').update(input.project.sourceBytes).digest('hex');
   expect(input.project.importReport.screenplayImport.sha256).toBe(sha256);
-  const assets = await createProjectDataService().listAssets({
+  const assets = await createProjectDataService().listAssetFiles({
     projectName: input.project.projectName,
     homeDir: input.runtimeHome,
     owner: { kind: 'project' },
   });
   const sourceAsset = assets.find((asset) =>
-    asset.id === input.project.importReport.screenplayImport.sourceAssetId
+    asset.id === input.project.importReport.screenplayImport.sourceAssetFileId
   );
   expect(sourceAsset).toEqual(expect.objectContaining({
-    id: input.project.importReport.screenplayImport.sourceAssetId,
+    id: input.project.importReport.screenplayImport.sourceAssetFileId,
     type: 'screenplay_source',
     mediaKind: 'document',
     files: [expect.objectContaining({

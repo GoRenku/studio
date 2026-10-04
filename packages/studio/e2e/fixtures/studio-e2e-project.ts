@@ -1,4 +1,4 @@
-import { readCurrentProject, openCurrentProject } from '@gorenku/studio-core/server/project-selection';
+import { readCurrentProject, openCurrentProject, closeCurrentProject } from '@gorenku/studio-core/server/project-selection';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
@@ -8,6 +8,7 @@ import type {
 import {
   createDeterministicIdGenerator,
   createProjectDataService,
+  createStudioCoordinationService,
 } from '@gorenku/studio-core/server';
 import type { StudioE2eRuntime } from './studio-e2e-runtime';
 import { assertInsideStudioE2eRoot } from './studio-e2e-runtime';
@@ -32,12 +33,12 @@ export interface StudioE2eMovieProject extends StudioE2eProject {
   firstShotId: string;
   secondShotId: string;
   lookbookId: string;
-  profileAssetId: string;
-  locationSheetAssetId: string;
+  profileAssetFileId: string;
+  locationSheetAssetFileId: string;
   lookbookSheetId: string;
-  firstShotImageAssetId: string;
-  secondShotImageAssetId: string;
-  secondShotImageAlternateAssetId: string;
+  firstShotImageAssetFileId: string;
+  secondShotImageAssetFileId: string;
+  secondShotImageAlternateAssetFileId: string;
 }
 
 export const studioE2eStructuredShotDescription =
@@ -222,6 +223,19 @@ export async function cleanStudioE2eProject(input: {
   project: StudioE2eProject;
 }): Promise<void> {
   assertInsideStudioE2eRoot(input.runtime, input.project.projectPath);
+  await createStudioCoordinationService({
+    homeDir: input.runtime.isolatedHomeDirectory,
+  }).appendStudioEvent({
+    type: 'studio.browserSessionActive',
+    browserSessionId: 'studio_e2e_cleanup',
+    activityKind: 'focused',
+    focus: { screen: 'projectLibrary' },
+    source: { kind: 'studio', browserSessionId: 'studio_e2e_cleanup' },
+  });
+  const current = await readCurrentProject({ homeDir: input.runtime.isolatedHomeDirectory });
+  if (current?.projectName === input.project.projectName) {
+    await closeCurrentProject({ homeDir: input.runtime.isolatedHomeDirectory });
+  }
   await fs.rm(input.project.projectPath, { recursive: true, force: true });
 }
 
@@ -441,25 +455,25 @@ async function seedProjectMedia(input: {
   secondShotId: string;
 }): Promise<{
   lookbookId: string;
-  profileAssetId: string;
-  locationSheetAssetId: string;
+  profileAssetFileId: string;
+  locationSheetAssetFileId: string;
   lookbookSheetId: string;
-  firstShotImageAssetId: string;
-  secondShotImageAssetId: string;
-  secondShotImageAlternateAssetId: string;
+  firstShotImageAssetFileId: string;
+  secondShotImageAssetFileId: string;
+  secondShotImageAlternateAssetFileId: string;
 }> {
   const idGenerator = createDeterministicIdGenerator();
   const [wideShotImage, closeUpImage, reactionImage] = await Promise.all([
     fs.readFile(new URL(
-      '../../src/features/movie-studio/shot-design/generated/images/shot-size-wide-shot.png',
+      '../../src/features/movie-studio/shot-design/generated/images/shot-size-wide-shot.webp',
       import.meta.url,
     )),
     fs.readFile(new URL(
-      '../../src/features/movie-studio/shot-design/generated/images/shot-size-close-up.png',
+      '../../src/features/movie-studio/shot-design/generated/images/shot-size-close-up.webp',
       import.meta.url,
     )),
     fs.readFile(new URL(
-      '../../src/features/movie-studio/shot-design/generated/images/subject-reaction.png',
+      '../../src/features/movie-studio/shot-design/generated/images/subject-reaction.webp',
       import.meta.url,
     )),
   ]);
@@ -508,19 +522,19 @@ async function seedProjectMedia(input: {
   await writeProjectFile({
     projectData: input.projectData,
     homeDir: input.runtime.isolatedHomeDirectory,
-    projectRelativePath: 'generated/media/shot-one-wide.png',
+    projectRelativePath: 'generated/media/shot-one-wide.webp',
     contents: wideShotImage,
   });
   await writeProjectFile({
     projectData: input.projectData,
     homeDir: input.runtime.isolatedHomeDirectory,
-    projectRelativePath: 'generated/media/shot-two-close-up.png',
+    projectRelativePath: 'generated/media/shot-two-close-up.webp',
     contents: closeUpImage,
   });
   await writeProjectFile({
     projectData: input.projectData,
     homeDir: input.runtime.isolatedHomeDirectory,
-    projectRelativePath: 'generated/media/shot-two-reaction.png',
+    projectRelativePath: 'generated/media/shot-two-reaction.webp',
     contents: reactionImage,
   });
 
@@ -533,10 +547,10 @@ async function seedProjectMedia(input: {
     title: 'Urban profile',
     select: true,
   });
-  await input.projectData.updateAsset({
+  await input.projectData.updateAssetFile({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
-    assetId: profile.asset.id,
+    assetFileId: profile.assetFile.id,
     title: 'Urban profile',
     oneLineSummary: 'Browser E2E selectable profile image.',
     referenceName: 'urban-profile',
@@ -550,10 +564,10 @@ async function seedProjectMedia(input: {
       sourceProjectRelativePath: 'generated/media/urban-character-sheet.png',
       title: 'Urban character sheet',
   });
-  await input.projectData.updateAsset({
+  await input.projectData.updateAssetFile({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
-    assetId: characterSheet.asset.id,
+    assetFileId: characterSheet.assetFile.id,
     title: 'Urban character sheet',
     oneLineSummary: 'Browser E2E character sheet reference.',
     referenceName: 'urban-character-sheet',
@@ -568,10 +582,10 @@ async function seedProjectMedia(input: {
       sourceProjectRelativePath: 'generated/media/gate-location-sheet.png',
       title: 'Gate Location Sheet',
     });
-  await input.projectData.updateAsset({
+  await input.projectData.updateAssetFile({
     homeDir: input.runtime.isolatedHomeDirectory,
     projectName: input.projectName,
-    assetId: locationSheet.asset.id,
+    assetFileId: locationSheet.assetFile.id,
     title: 'Gate Location Sheet',
     oneLineSummary: 'The gate, approach, and defensive masonry.',
     referenceName: 'gate-location-sheet',
@@ -646,7 +660,7 @@ async function seedProjectMedia(input: {
     projectName: input.projectName,
     purpose: 'shot.image',
     target: { kind: 'shot', id: input.firstShotId },
-    sourceProjectRelativePath: 'generated/media/shot-one-wide.png',
+    sourceProjectRelativePath: 'generated/media/shot-one-wide.webp',
     title: 'Urban and the cannon',
     select: true,
   });
@@ -655,7 +669,7 @@ async function seedProjectMedia(input: {
     projectName: input.projectName,
     purpose: 'shot.image',
     target: { kind: 'shot', id: input.secondShotId },
-    sourceProjectRelativePath: 'generated/media/shot-two-close-up.png',
+    sourceProjectRelativePath: 'generated/media/shot-two-close-up.webp',
     title: 'Crew close-up',
     select: true,
   });
@@ -665,18 +679,18 @@ async function seedProjectMedia(input: {
       projectName: input.projectName,
       purpose: 'shot.image',
       target: { kind: 'shot', id: input.secondShotId },
-      sourceProjectRelativePath: 'generated/media/shot-two-reaction.png',
+      sourceProjectRelativePath: 'generated/media/shot-two-reaction.webp',
       title: 'Crew reaction',
     });
 
   return {
     lookbookId: lookbook.lookbook.id,
-    profileAssetId: profile.asset.id,
-    locationSheetAssetId: locationSheet.asset.id,
+    profileAssetFileId: profile.assetFile.id,
+    locationSheetAssetFileId: locationSheet.assetFile.id,
     lookbookSheetId: lookbookSheet.ownerRecord!.id,
-    firstShotImageAssetId: firstShotImage.asset.id,
-    secondShotImageAssetId: secondShotImage.asset.id,
-    secondShotImageAlternateAssetId: secondShotImageAlternate.asset.id,
+    firstShotImageAssetFileId: firstShotImage.assetFile.id,
+    secondShotImageAssetFileId: secondShotImage.assetFile.id,
+    secondShotImageAlternateAssetFileId: secondShotImageAlternate.assetFile.id,
   };
 }
 

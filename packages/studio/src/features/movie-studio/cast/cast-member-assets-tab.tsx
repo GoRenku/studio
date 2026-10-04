@@ -1,12 +1,12 @@
 import { VolumeX } from 'lucide-react';
 import type {
   CastMemberResourceResponse,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 import { MediaCollectionSection } from '@/ui/media-collection-section';
 import {
   continuityImageAspectRatio,
-  continuityImageAssets,
+  continuityImageAssetFiles,
   continuityImageUrl,
   continuityPreviewImage,
 } from '../continuity/continuity-image-assets';
@@ -14,13 +14,13 @@ import { humanizeReferenceName } from './cast-reference-labels';
 import { CastVoiceSampleCard } from './cast-voice-sample-card';
 import { useGenerationRequestInspectorDialog } from '@/features/media-generation-request/use-media-generation-request-inspector';
 
-interface CastMemberAssetsTabProps {
+interface CastMemberAssetFilesTabProps {
   projectName: string;
   resource: CastMemberResourceResponse;
-  assets: StudioAssetResponse[];
-  selectedProfileAssetId: string | null;
-  onTogglePick: (asset: StudioAssetResponse) => Promise<void>;
-  onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
+  assetFiles: StudioAssetFileResponse[];
+  selectedProfileAssetFileId: string | null;
+  onTogglePick: (assetFile: StudioAssetFileResponse) => Promise<void>;
+  onDeleteAssetFile: (assetFile: StudioAssetFileResponse) => Promise<void>;
   onDeleteVoice: (
     voice: CastMemberResourceResponse['voices'][number]
   ) => Promise<void>;
@@ -29,56 +29,52 @@ interface CastMemberAssetsTabProps {
   ) => Promise<void>;
 }
 
-export function CastMemberAssetsTab({
+export function CastMemberAssetFilesTab({
   projectName,
   resource,
-  assets,
-  selectedProfileAssetId,
+  assetFiles,
+  selectedProfileAssetFileId,
   onTogglePick,
-  onDeleteAsset,
+  onDeleteAssetFile,
   onDeleteVoice,
   onSelectDefaultVoice,
-}: CastMemberAssetsTabProps) {
+}: CastMemberAssetFilesTabProps) {
   const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
-  const profileAssets = continuityImageAssets(assets, ['cast_profile']);
-  const characterSheetAssets = continuityImageAssets(assets, ['character_sheet']);
+  const profileAssetFiles = continuityImageAssetFiles(assetFiles, ['cast_profile']);
+  const characterSheetAssetFiles = continuityImageAssetFiles(assetFiles, ['character_sheet']);
 
   return (
     <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
       <div className='space-y-8'>
-        <CastAssetSection
+        <CastAssetFileSection
           title='Profile Images'
           roleLabel='profile image'
           fallbackAspectRatio={1}
           fit='cover'
           minimumCardWidthPx={240}
           projectName={projectName}
-          assets={profileAssets}
-          selectedAssetId={selectedProfileAssetId}
+          assetFiles={profileAssetFiles}
+          selectedAssetFileId={selectedProfileAssetFileId}
           emptyTitle='No profile images yet.'
           onTogglePick={onTogglePick}
-          onDeleteAsset={onDeleteAsset}
+          onDeleteAssetFile={onDeleteAssetFile}
         />
-        <CastAssetSection
+        <CastAssetFileSection
           title='Character Sheets'
           roleLabel='character sheet'
           fallbackAspectRatio={4 / 3}
           fit='contain'
           minimumCardWidthPx={384}
           projectName={projectName}
-          assets={characterSheetAssets}
+          assetFiles={characterSheetAssetFiles}
           emptyTitle='No character sheets yet.'
-          onInspectImage={(asset) => {
-            const file = asset.files.find(
-              (candidate) => candidate.mediaKind === 'image'
-            );
-            if (!file) return;
+          onInspectImage={(assetFile) => {
             openGenerationRequestInspector({
               projectName,
-              assetId: asset.id,
+              assetFileId: assetFile.id,
             });
           }}
-          onDeleteAsset={onDeleteAsset}
+          onDeleteAssetFile={onDeleteAssetFile}
         />
         <VoiceSamplesSection
           voices={resource.voices}
@@ -90,19 +86,19 @@ export function CastMemberAssetsTab({
   );
 }
 
-function CastAssetSection({
+function CastAssetFileSection({
   title,
   roleLabel,
   fallbackAspectRatio,
   fit,
   minimumCardWidthPx,
   projectName,
-  assets,
-  selectedAssetId,
+  assetFiles,
+  selectedAssetFileId,
   emptyTitle,
   onTogglePick,
   onInspectImage,
-  onDeleteAsset,
+  onDeleteAssetFile,
 }: {
   title: string;
   roleLabel: string;
@@ -110,27 +106,27 @@ function CastAssetSection({
   fit: 'cover' | 'contain';
   minimumCardWidthPx: number;
   projectName: string;
-  assets: StudioAssetResponse[];
-  selectedAssetId?: string | null;
+  assetFiles: StudioAssetFileResponse[];
+  selectedAssetFileId?: string | null;
   emptyTitle: string;
-  onTogglePick?: (asset: StudioAssetResponse) => Promise<void>;
-  onInspectImage?: (asset: StudioAssetResponse) => void;
-  onDeleteAsset: (asset: StudioAssetResponse) => Promise<void>;
+  onTogglePick?: (assetFile: StudioAssetFileResponse) => Promise<void>;
+  onInspectImage?: (assetFile: StudioAssetFileResponse) => void;
+  onDeleteAssetFile: (assetFile: StudioAssetFileResponse) => Promise<void>;
 }) {
   const selectable = Boolean(onTogglePick);
-  const items = assets.map((asset) => {
+  const items = assetFiles.map((assetFile) => {
     const previewImage = continuityPreviewImage(
       projectName,
-      asset,
+      assetFile,
       roleLabel
     );
-    const selected = asset.id === selectedAssetId;
-    const imageUrl = continuityImageUrl(projectName, asset);
-    const title = asset.referenceName
-      ? humanizeReferenceName(asset.referenceName)
+    const selected = assetFile.id === selectedAssetFileId;
+    const imageUrl = continuityImageUrl(projectName, assetFile);
+    const title = assetFile.referenceName
+      ? humanizeReferenceName(assetFile.referenceName)
       : undefined;
     return {
-      id: asset.id,
+      id: assetFile.id,
       card: {
         media: imageUrl
           ? {
@@ -143,16 +139,16 @@ function CastAssetSection({
           : null,
         frame: {
           kind: 'ratio' as const,
-          aspectRatio: continuityImageAspectRatio(asset, fallbackAspectRatio),
+          aspectRatio: continuityImageAspectRatio(assetFile, fallbackAspectRatio),
           detectFromImage: true,
         },
         presentation: {
           kind: 'overlay' as const,
           copy:
-            title || asset.oneLineSummary
+            title || assetFile.oneLineSummary
               ? {
                   title,
-                  description: asset.oneLineSummary ?? undefined,
+                  description: assetFile.oneLineSummary ?? undefined,
                 }
               : undefined,
         },
@@ -170,7 +166,7 @@ function CastAssetSection({
                 selected,
                 selectedLabel: `Clear ${roleLabel} pick`,
                 unselectedLabel: `Set ${roleLabel} pick`,
-                onToggle: () => onTogglePick(asset),
+                onToggle: () => onTogglePick(assetFile),
               }
             : undefined,
         cornerAction: onInspectImage
@@ -178,7 +174,7 @@ function CastAssetSection({
               kind: 'inspect' as const,
               label: 'View generation request',
               visibility: 'always' as const,
-              onAction: () => onInspectImage(asset),
+              onAction: () => onInspectImage(assetFile),
             }
           : undefined,
         deleteAction: {
@@ -186,7 +182,7 @@ function CastAssetSection({
           confirmationTitle: 'Delete Image?',
           confirmationMessage:
             'Remove this image from this cast member. This cannot be undone.',
-          onDelete: () => onDeleteAsset(asset),
+          onDelete: () => onDeleteAssetFile(assetFile),
         },
         emptyState: { kind: 'image' as const },
       },

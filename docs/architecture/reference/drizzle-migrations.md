@@ -342,18 +342,38 @@ step is verified on a backup copy with row counts, `foreign_key_check`, and
 Once Renku Studio is used for durable user projects, projects created by a
 previous app release may need to move forward to the current schema generation.
 
-The accepted direction is explicit forward migration:
+The current Core Project-open path automatically upgrades a valid older Project
+database through the same backed-up Drizzle migration operation used by
+`renku project migrate`. The explicit command remains available:
 
 ```text
 project database from previous release -> Drizzle migration -> current schema generation
 ```
 
-Studio should eventually detect the schema-generation failure, show an explicit
-upgrade state, create a database backup, and run the same core migration
-operation used by `renku project migrate`.
+`openProjectStore` owns schema readiness before publishing or caching a session.
+Migration failures include the verified backup location and do not publish a
+usable partial session. Normal runtime does not maintain historical readers.
 
 Studio must not keep readers for historical table shapes in normal runtime
 paths.
+
+### Plan 0222 Preservation Exception
+
+The accepted implementation request for plan 0222 requires a custom preservation
+step when merging retained Project media into `asset_file`. A structural schema
+diff cannot copy authored metadata and ownership from the parent, map parent IDs
+to existing file IDs, or convert kind-specific Trash restoration envelopes.
+The exact relationship and envelope inventory lives in
+[`plans/active/0222-conversion-inventory.md`](../../../plans/active/0222-conversion-inventory.md).
+
+Generate the final schema snapshot with Drizzle Kit. Documented preservation SQL
+must validate unambiguous cardinality, normalized paths, ownership, and lifecycle
+before destructive operations; preserve dependent rows with foreign keys
+enabled; and translate only known application-owned identity fields. Keep file
+bytes, authored creative artifacts, provider requests, and historical receipts
+unchanged. Any separate data-only migration must be created with
+`drizzle-kit generate --custom` and applied through the existing Kit workflow.
+No application-level SQL runner or migration registry is authorized.
 
 ## Error Behavior
 
@@ -397,3 +417,11 @@ A Kit-generated custom migration, `0085_previs_schema_generation.sql`, advances
 `user_version` to 68 because current Shot Plan reads require the new type column.
 The generation guard must require migration before those reads; the custom SQL
 changes only the guard value and does not transform creative content or identities.
+
+The unified-file upgrade completes bounded reference registration before a
+Project session becomes available. `project.asset_file_backfill_version = 1`
+marks completion. Discovery covers flat registered Inspiration folders and
+recursive research files; the current matching collected folder discard is
+excluded. Failure leaves registration and the marker pending for the next open.
+A verified database backup precedes all upgrade writes. Completed opens do not
+repeat discovery or hashing. New Projects begin complete.

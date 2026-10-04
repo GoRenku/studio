@@ -1,16 +1,16 @@
-import type { AssetMetadataInput } from '../../client/assets.js';
+import type { AssetFileMetadataInput } from '../../client/asset-files.js';
 import type { MediaGenerationProvenance } from '../../client/media-generation-review.js';
 import type {
   DialogueTurnRange,
   ShotPlanDialogueAudioAttachmentReport,
 } from '../../client/shot-plan-dialogue-audio.js';
-import { normalizeAssetMetadata } from '../assets/metadata.js';
-import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
+import { normalizeAssetFileMetadata } from '../asset-files/metadata.js';
+import { validateMediaGenerationProvenance } from '../asset-files/generation-provenance.js';
 import { insertShotPlanDialogueAudioTakeRecord } from '../database/access/shot-plan-dialogue-audio.js';
 import { requireShotPlanRecord } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import type { ProjectIdGenerator } from '../entity-ids.js';
-import { persistOwnedGeneratedMediaAssetInSession } from '../generation/attachment-persistence.js';
+import { persistOwnedGeneratedMediaAssetFileInSession } from '../generation/attachment-persistence.js';
 import { ProjectDataError } from '../project-data-error.js';
 import {
   createProjectAssetFileWriteSet,
@@ -27,7 +27,7 @@ export function attachShotPlanDialogueAudio(input: {
   turnRange: DialogueTurnRange;
   generationProvenance: MediaGenerationProvenance;
   title?: string;
-  assetMetadata?: AssetMetadataInput;
+  assetFileMetadata?: AssetFileMetadataInput;
   idGenerator: ProjectIdGenerator;
 }): ShotPlanDialogueAudioAttachmentReport {
   const shotPlan = requireShotPlanRecord(input.session, input.shotPlanId);
@@ -39,7 +39,6 @@ export function attachShotPlanDialogueAudio(input: {
       'Shot Plan Dialogue Audio provenance must describe audio.'
     );
   }
-  const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
   const takeId = input.idGenerator.next('shot_plan_dialogue_audio_take');
   const now = new Date().toISOString();
@@ -47,11 +46,10 @@ export function attachShotPlanDialogueAudio(input: {
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
-      persistOwnedGeneratedMediaAssetInSession({
+      persistOwnedGeneratedMediaAssetFileInSession({
         session,
         projectFolder: input.projectFolder,
         writeSet,
-        assetId,
         assetFileId,
         now,
         sourceProjectRelativePath: input.sourceProjectRelativePath,
@@ -62,21 +60,19 @@ export function attachShotPlanDialogueAudio(input: {
           turnEndNumber: turnRange.end,
         },
         owner: { kind: 'project' },
-        asset: {
+        assetFileMetadata: {
           type: 'shot_plan_dialogue_audio',
           mediaKind: 'audio',
           title: input.title?.trim() || rangeTitle(turnRange),
-          ...normalizeAssetMetadata(input.assetMetadata ?? {}),
+          ...normalizeAssetFileMetadata(input.assetFileMetadata ?? {}),
           origin: 'generated',
         },
-        fileRole: 'primary',
         generationProvenance,
         authoredFromShotPlanId: shotPlan.id,
       });
       insertShotPlanDialogueAudioTakeRecord(session, {
         id: takeId,
         shotPlanId: shotPlan.id,
-        assetId,
         assetFileId,
         turnStartNumber: turnRange.start,
         turnEndNumber: turnRange.end,
@@ -91,8 +87,8 @@ export function attachShotPlanDialogueAudio(input: {
     throw error;
   }
   const resource = readShotPlanDialogueAudio({ session: input.session, shotPlanId: shotPlan.id });
-  const asset = resource.takes.find((take) => take.id === takeId)?.asset;
-  if (!asset) {
+  const assetFile = resource.takes.find((take) => take.id === takeId)?.assetFile;
+  if (!assetFile) {
     throw new ProjectDataError(
       'CORE_GENERATION_ATTACHMENT_FAILED',
       'Shot Plan Dialogue Audio attachment was not persisted.',
@@ -102,7 +98,7 @@ export function attachShotPlanDialogueAudio(input: {
     valid: true,
     warnings: [],
     resource,
-    asset,
+    assetFile,
     resourceKeys: resource.resourceKeys,
   };
 }

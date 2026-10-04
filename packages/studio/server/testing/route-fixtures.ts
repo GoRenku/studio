@@ -1,4 +1,4 @@
-import type { Asset, Project, ProjectShell, Screenplay } from '@gorenku/studio-core/client';
+import type { AssetFile, Project, ProjectShell, Screenplay } from '@gorenku/studio-core/client';
 
 export const fixtureCastMember = {
   id: 'cast_narrator',
@@ -29,9 +29,9 @@ export const fixtureScreenplay: Screenplay = {
   references: [],
 };
 
-export function makeAsset(assetId: string): Asset {
+export function makeAssetFile(assetFileId: string): AssetFile {
   return {
-    id: assetId,
+    id: assetFileId,
     owner: { kind: 'castMember', id: 'cast_narrator' },
     localeId: null,
     type: 'reference',
@@ -44,18 +44,7 @@ export function makeAsset(assetId: string): Asset {
     authoredFrom: null,
     referenceName: null,
     tags: [],
-    files: [{
-      id: 'asset_file_cast_reference',
-      role: 'primary',
-      projectRelativePath: 'cast/narrator/reference.png' as Asset['files'][number]['projectRelativePath'],
-      mediaKind: 'image',
-      mimeType: 'image/png',
-      sizeBytes: 12,
-      contentHash: null,
-      width: null,
-      height: null,
-      durationSeconds: null,
-    }],
+    projectRelativePath: 'cast/narrator/reference.png' as AssetFile['projectRelativePath'], mimeType: 'image/png', sizeBytes: 12, contentHash: null, width: null, height: null, durationSeconds: null,
     createdAt: '2026-05-12T00:00:00.000Z',
     updatedAt: '2026-05-12T00:00:00.000Z',
   };
@@ -81,7 +70,6 @@ export function makeProject(): Project {
     title: 'Preparation of the Siege',
     aspectRatio: '16:9',
     coverImage: {
-      assetId: 'asset_project_cover',
       assetFileId: 'asset_file_project_cover',
     },
     counts: {

@@ -177,15 +177,14 @@ function beatImage(
   return {
     beat: { id, number, title },
     image: {
-      assetId: `asset-${id}`,
       assetFileId: `file-${id}`,
       title,
-      fileRole: 'primary',
+
       mediaKind: 'image',
       mimeType: 'image/png',
       width,
       height,
-      url: `/studio-api/assets/asset-${id}`,
+      url: `/studio-api/asset-files/asset-${id}`,
     },
   };
 }

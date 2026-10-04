@@ -5,7 +5,7 @@ import { fakeProjectDataService } from '../testing/fake-project-data-service.js'
 import { createShotPlanClipsRoute } from './shot-plan-clips.js';
 
 it('delegates explicit selection and keeps the Core resource envelope', async () => {
-  const report = { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assets: [], unassignedAssets: [], sources: [], resourceKeys: ['surface:scene:scene:shot-plans'] };
+  const report = { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assetFiles: [], unassignedAssetFiles: [], sources: [], resourceKeys: ['surface:scene:scene:shot-plans'] };
   const selectShotPlanClipTake = vi.fn(async () => report);
   const app = new Hono().route('/:projectName', createShotPlanClipsRoute({
     projectData: { ...fakeProjectDataService(), selectShotPlanClipTake }, requireToken: async (_c, next) => { await next(); },

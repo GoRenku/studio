@@ -30,7 +30,7 @@ function writeHumanReport(
   context: ScreenplayCommandContext,
   report: ImportScreenplaySupportingMaterialReport,
 ): void {
-  const file = report.material.files[0]!;
+  const file = report.material;
   if (report.status === 'unchanged') {
     context.io.stdout.log(`Supporting material is already imported: ${file.projectRelativePath}`);
     return;

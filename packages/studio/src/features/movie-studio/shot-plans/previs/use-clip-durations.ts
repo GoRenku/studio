@@ -3,8 +3,8 @@ import type { StudioShotPlanClips } from '@/services/shot-plan-previs/contracts'
 
 export function useClipDurations(report?: StudioShotPlanClips) {
   const [measured, setMeasured] = useState<Record<string, number | null>>({});
-  const urls = JSON.stringify([...new Set([...(report?.assets ?? []), ...(report?.unassignedAssets ?? [])]
-    .flatMap((asset) => asset.files.filter((file) => file.mediaKind === 'video').map((file) => file.url)))]);
+  const urls = JSON.stringify([...new Set([...(report?.assetFiles ?? []), ...(report?.unassignedAssetFiles ?? [])]
+    .filter((file) => file.mediaKind === 'video').map((file) => file.url))]);
   useEffect(() => {
     let active = true;
     const videos = (JSON.parse(urls) as string[]).map((url) => {

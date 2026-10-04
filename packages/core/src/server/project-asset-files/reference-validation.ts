@@ -8,7 +8,6 @@ export async function validateProjectReferenceFileInput(input: {
   projectFolder: string;
   projectRelativePath: string;
   mediaKind?: ProjectMediaKind;
-  role?: string;
 }): Promise<ProjectReferenceFileValidation> {
   const projectRelativePath = normalizeProjectRelativePath(
     input.projectRelativePath

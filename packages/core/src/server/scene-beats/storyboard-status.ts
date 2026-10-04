@@ -12,7 +12,7 @@ import { readProjectRecord } from '../database/access/project.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type { ReadSceneStoryboardStatusInput } from '../project-data-service-contracts.js';
 import { readCanonicalScreenplay } from '../screenplay/projections/screenplay.js';
-import { listAssetPageInSession } from '../assets/projection.js';
+import { listAssetFilePageInSession } from '../asset-files/projection.js';
 import {
   studioSceneNarrativeResourceKey,
   studioSceneBeatsRevisionResourceKey,
@@ -52,7 +52,7 @@ export async function readSceneStoryboardStatus(
 }
 
 export function readDryRunSceneStoryboardStatusFromSession(input: {
-  session: Parameters<typeof listAssetPageInSession>[0];
+  session: Parameters<typeof listAssetFilePageInSession>[0];
   currentProject: { projectName: string; projectId?: string; projectFolder?: string };
   sceneId: string;
   sceneBeatsRevisionId: string;
@@ -61,19 +61,19 @@ export function readDryRunSceneStoryboardStatusFromSession(input: {
 }): SceneStoryboardStatus {
   const persistedBeatIds = new Set(input.persistedBeatIds);
   return buildSceneStoryboardStatus(input, (beatId) => persistedBeatIds.has(beatId)
-    ? listBeatStoryboardAssets(input, beatId)
-    : { items: [], selectedAssetId: null });
+    ? listBeatStoryboardAssetFiles(input, beatId)
+    : { items: [], selectedAssetFileId: null });
 }
 
 export function readSceneStoryboardStatusFromSession(input: {
-  session: Parameters<typeof listAssetPageInSession>[0];
+  session: Parameters<typeof listAssetFilePageInSession>[0];
   currentProject: { projectName: string; projectId?: string; projectFolder?: string };
   sceneId: string;
   sceneBeatsRevisionId: string;
   sceneBeats: SceneBeats;
 }): SceneStoryboardStatus {
   return buildSceneStoryboardStatus(input, (beatId) =>
-    listBeatStoryboardAssets(input, beatId));
+    listBeatStoryboardAssetFiles(input, beatId));
 }
 
 function buildSceneStoryboardStatus(
@@ -83,20 +83,20 @@ function buildSceneStoryboardStatus(
     sceneBeatsRevisionId: string;
     sceneBeats: SceneBeats;
   },
-  readAssets: (beatId: string) => {
+  readAssetFiles: (beatId: string) => {
     items: SceneStoryboardStatus['beats'][number]['images'];
-    selectedAssetId: string | null;
+    selectedAssetFileId: string | null;
   }
 ): SceneStoryboardStatus {
   const beats = input.sceneBeats.beats.map((beat) => {
-    const page = readAssets(beat.id);
+    const page = readAssetFiles(beat.id);
     return {
       beatId: beat.id,
       beatNumber: beat.number,
       images: page.items,
-      selectedImageId: page.selectedAssetId,
-      needsStoryboardImage: page.selectedAssetId === null,
-      ...(page.selectedAssetId === null ? { reason: 'missing' as const } : {}),
+      selectedImageId: page.selectedAssetFileId,
+      needsStoryboardImage: page.selectedAssetFileId === null,
+      ...(page.selectedAssetFileId === null ? { reason: 'missing' as const } : {}),
     };
   });
   return {
@@ -124,14 +124,14 @@ function buildSceneStoryboardStatus(
   };
 }
 
-function listBeatStoryboardAssets(
+function listBeatStoryboardAssetFiles(
   input: {
-    session: Parameters<typeof listAssetPageInSession>[0];
+    session: Parameters<typeof listAssetFilePageInSession>[0];
     sceneId: string;
   },
   beatId: string
 ) {
-  return listAssetPageInSession(input.session, {
+  return listAssetFilePageInSession(input.session, {
     owner: { kind: 'sceneBeat', sceneId: input.sceneId, beatId },
     type: 'scene_storyboard_image',
   });

@@ -1,5 +1,5 @@
 import type { CastVoice, CastVoiceListReport, CastVoiceReadReport } from '../../client/cast-voices.js';
-import { readOwnedAsset } from '../assets/projection.js';
+import { readOwnedAssetFile } from '../asset-files/projection.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import {
   listCastVoiceRecords,
@@ -45,14 +45,14 @@ export function listCastVoicesInSession(
 }
 
 export function toCastVoice(session: DatabaseSession, record: CastVoiceRecord): CastVoice {
-  const sample = readOwnedAsset(session, {
+  const sample = readOwnedAssetFile(session, {
     owner: { kind: 'castMember', id: record.castMemberId },
-    assetId: record.sampleAssetId,
+    assetFileId: record.sampleAssetFileId,
   });
   if (!sample) {
     throw new ProjectDataError(
       'PROJECT_DATA352',
-      `Cast Voice sample asset is missing: ${record.sampleAssetId}.`
+      `Cast Voice sample asset is missing: ${record.sampleAssetFileId}.`
     );
   }
   return {
@@ -62,10 +62,7 @@ export function toCastVoice(session: DatabaseSession, record: CastVoiceRecord): 
     purpose: record.purpose,
     isDefault: readCastVoiceDefaultRecord(session, record.castMemberId)?.castVoiceId === record.id,
     voiceIdentity: record.voiceIdentity ?? null,
-    sample: {
-      ...sample,
-      files: sample.files.filter((file) => file.mediaKind === 'audio'),
-    },
+    sample,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };

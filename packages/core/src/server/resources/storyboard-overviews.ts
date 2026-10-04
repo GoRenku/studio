@@ -1,5 +1,5 @@
 import type {
-  Asset,
+  AssetFile,
   ScreenplayImageReference,
   SequenceSceneStoryboardPreview,
 } from '../../client/index.js';
@@ -7,7 +7,7 @@ import type {
   Beat,
   SceneBeats,
 } from '../../client/scene-beats/index.js';
-import { listAssetPageInSession } from '../assets/projection.js';
+import { listAssetFilePageInSession } from '../asset-files/projection.js';
 import {
   readActiveSceneBeatsRevisionRecord,
   readSceneBeats,
@@ -62,13 +62,13 @@ export function readSceneStoryboardProjection(
 
   const imagesByBeatId: Record<string, ScreenplayImageReference> = {};
   for (const beat of document.beats) {
-    const page = listAssetPageInSession(session, {
+    const page = listAssetFilePageInSession(session, {
       owner: { kind: 'sceneBeat', sceneId, beatId: beat.id },
       type: 'scene_storyboard_image',
     });
-    const asset = page.items.find((candidate) => candidate.id === page.selectedAssetId);
-    const file = asset?.files.find((candidate) => candidate.mediaKind === 'image');
-    const reference = asset && file ? toImageReferenceForFile(asset, file.id) : null;
+    const assetFile = page.items.find((candidate) => candidate.id === page.selectedAssetFileId);
+    const file = (assetFile?.mediaKind === 'image' ? assetFile : null);
+    const reference = assetFile && file ? toImageReferenceForFile(assetFile, file.id) : null;
     if (reference) {
       imagesByBeatId[beat.id] = reference;
     }
@@ -143,18 +143,16 @@ function nearestAvailablePreviewIndex(input: {
 }
 
 function toImageReferenceForFile(
-  asset: Asset,
+  assetFile: AssetFile,
   assetFileId: string
 ): ScreenplayImageReference | null {
-  const file = asset.files.find((candidate) => candidate.id === assetFileId);
+  const file = (assetFile.id === assetFileId ? assetFile : null);
   if (!file) {
     return null;
   }
   return {
-    assetId: asset.id,
     assetFileId: file.id,
-    title: asset.title,
-    fileRole: file.role,
+    title: assetFile.title,
     mediaKind: file.mediaKind,
     mimeType: file.mimeType,
     width: file.width,

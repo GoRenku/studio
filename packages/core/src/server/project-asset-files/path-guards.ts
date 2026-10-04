@@ -3,6 +3,21 @@ import fs from 'node:fs';
 import type { ProjectRelativePath } from '../../client/index.js';
 import { ProjectDataError } from '../project-data-error.js';
 
+export function assertProjectFilePathWithoutSymlinks(projectFolder: string, projectRelativePath: ProjectRelativePath): void {
+  let absolute = projectFolder;
+  for (const segment of projectRelativePath.split('/')) {
+    absolute = path.join(absolute, segment);
+    try {
+      if (fs.lstatSync(absolute).isSymbolicLink()) {
+        throw new ProjectDataError('PROJECT_ASSET_FILE_PATH_INVALID', 'Retained file paths cannot contain symbolic links.');
+      }
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') { return; }
+      throw error;
+    }
+  }
+}
+
 export function assertDurableProjectDirectorySync(projectFolder: string, directory: string): void {
   assertResolvedPathInsideProject(projectFolder, directory);
   let ancestor = directory;
@@ -47,13 +62,5 @@ export function assertDurableProjectAssetFilePath(
       `Durable asset files must not be stored under generated/: ${projectRelativePath}.`
     );
   }
-  if (
-    projectRelativePath === 'research' ||
-    projectRelativePath.startsWith('research/')
-  ) {
-    throw new ProjectDataError(
-      'PROJECT_ASSET_FILE_DESTINATION_FORBIDDEN',
-      `Durable asset files must not be stored under research/: ${projectRelativePath}.`
-    );
-  }
+
 }

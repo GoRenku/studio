@@ -1,9 +1,7 @@
 import type { ShotPlanClipTake } from '../../client/shot-plan-clips.js';
 import { registerClipTakeInSession } from '../shot-plan-clips/commands.js';
-import { createAssetMembership } from '../assets/ownership.js';
-import { selectAssetInSession } from '../assets/selection.js';
-import type { AssetOwner, AssetSelectionTarget } from '../../client/assets.js';
-import { insertAssetRecord } from '../database/access/assets.js';
+import { selectAssetFileInSession } from '../asset-files/selection.js';
+import type { AssetFileOwner, AssetFileSelectionTarget } from '../../client/asset-files.js';
 import {
   insertLookbookImageRecord,
   nextLookbookImageSortOrder,
@@ -33,18 +31,17 @@ export interface PersistGeneratedMediaAttachmentInput {
   now: string;
   sourceProjectRelativePath: string;
   destination: GeneratedMediaAttachmentDestination;
-  asset: {
+  assetFileMetadata: {
     localeId?: string | null;
     type: string;
     mediaKind: 'image' | 'audio' | 'video';
-    title: string;
+    title: string | null;
     oneLineSummary?: string | null;
     referenceName?: string | null;
     tags?: string[];
     origin: string;
   };
-  fileRole: string;
-  selectionTarget?: AssetSelectionTarget;
+  selectionTarget?: AssetFileSelectionTarget;
   generationProvenance?: MediaGenerationProvenance;
   authoredFromShotPlanId?: string;
   previsRevisionId?: string;
@@ -53,7 +50,6 @@ export interface PersistGeneratedMediaAttachmentInput {
 
 export interface PersistedGeneratedMediaAttachment {
   take?: ShotPlanClipTake;
-  assetId: string;
   assetFileId: string;
   ownerRecord?: {
     kind: 'lookbookImage' | 'lookbookSheet';
@@ -61,78 +57,65 @@ export interface PersistedGeneratedMediaAttachment {
   };
 }
 
-export interface PersistGeneratedMediaAssetInSessionInput {
+export interface PersistGeneratedMediaAssetFileInSessionInput {
   session: DatabaseSession;
   projectFolder: string;
   writeSet: ProjectAssetFileWriteSet;
-  assetId: string;
   assetFileId: string;
   now: string;
   sourceProjectRelativePath: string;
   destination: ProjectAssetFileDestination;
-  owner: AssetOwner;
-  selectionTarget?: AssetSelectionTarget;
-  asset: PersistGeneratedMediaAttachmentInput['asset'];
-  fileRole: string;
+  owner: AssetFileOwner;
+  selectionTarget?: AssetFileSelectionTarget;
+  assetFileMetadata: PersistGeneratedMediaAttachmentInput['assetFileMetadata'];
   generationProvenance?: MediaGenerationProvenance;
   authoredFromShotPlanId?: string;
   previsRevisionId?: string;
 }
 
-export function persistOwnedGeneratedMediaAssetInSession(
-  input: PersistGeneratedMediaAssetInSessionInput
+export function persistOwnedGeneratedMediaAssetFileInSession(
+  input: PersistGeneratedMediaAssetFileInSessionInput
 ): ReturnType<typeof persistProjectAssetFileSync> {
-  insertAssetRecord(input.session, {
-    previsRevisionId: input.previsRevisionId,
-    id: input.assetId,
-    ...(input.asset.localeId !== undefined
-      ? { localeId: input.asset.localeId }
-      : {}),
-    type: input.asset.type,
-    mediaKind: input.asset.mediaKind,
-    title: input.asset.title,
-    ...(input.asset.oneLineSummary !== undefined
-      ? { oneLineSummary: input.asset.oneLineSummary ?? undefined }
-      : {}),
-    ...(input.asset.referenceName !== undefined
-      ? { referenceName: input.asset.referenceName }
-      : {}),
-    ...(input.asset.tags !== undefined ? { tags: input.asset.tags } : {}),
-    origin: input.asset.origin,
-    availability: 'ready',
-    ...(input.generationProvenance
-      ? { generationProvenance: input.generationProvenance }
-      : {}),
-    ...(input.authoredFromShotPlanId
-      ? { authoredFromShotPlanId: input.authoredFromShotPlanId }
-      : {}),
-    createdAt: input.now,
-    updatedAt: input.now,
-  });
-  createAssetMembership(input.session, {
-    assetId: input.assetId,
-    owner: input.owner,
-    now: input.now,
-  });
   const assetFile = persistProjectAssetFileSync({
+    owner: input.owner,
+    assetFileMetadata: {
+      previsRevisionId: input.previsRevisionId,
+      ...(input.assetFileMetadata.localeId !== undefined
+        ? { localeId: input.assetFileMetadata.localeId }
+        : {}),
+      type: input.assetFileMetadata.type,
+      title: input.assetFileMetadata.title,
+      ...(input.assetFileMetadata.oneLineSummary !== undefined
+        ? { oneLineSummary: input.assetFileMetadata.oneLineSummary ?? undefined }
+        : {}),
+      ...(input.assetFileMetadata.referenceName !== undefined
+        ? { referenceName: input.assetFileMetadata.referenceName }
+        : {}),
+      ...(input.assetFileMetadata.tags !== undefined ? { tags: input.assetFileMetadata.tags } : {}),
+      origin: input.assetFileMetadata.origin,
+      ...(input.generationProvenance
+        ? { generationProvenance: input.generationProvenance }
+        : {}),
+      ...(input.authoredFromShotPlanId
+        ? { authoredFromShotPlanId: input.authoredFromShotPlanId }
+        : {}),
+    },
     session: input.session,
     projectFolder: input.projectFolder,
     writeSet: input.writeSet,
-    assetId: input.assetId,
     assetFileId: input.assetFileId,
     sourceProjectRelativePath: input.sourceProjectRelativePath,
     destination: input.destination,
-    namingMode: input.asset.origin === 'generated'
-      ? { kind: 'generated' }
+    namingMode: input.assetFileMetadata.origin === 'generated'
+        ? { kind: 'generated' }
       : { kind: 'external' },
-    fileRole: input.fileRole,
-    mediaKind: input.asset.mediaKind,
+    mediaKind: input.assetFileMetadata.mediaKind,
     now: input.now,
   });
   if (input.selectionTarget) {
-    selectAssetInSession(input.session, {
+    selectAssetFileInSession(input.session, {
       target: input.selectionTarget,
-      assetId: input.assetId,
+      assetFileId: input.assetFileId,
       now: input.now,
     });
   }
@@ -142,12 +125,11 @@ export function persistOwnedGeneratedMediaAssetInSession(
 export function persistGeneratedMediaAttachment(
   input: PersistGeneratedMediaAttachmentInput
 ): PersistedGeneratedMediaAttachment {
-  const assetId = input.idGenerator.next('asset');
   const assetFileId = input.idGenerator.next('asset_file');
   const lookbookDetailKind = input.destination.owner.kind === 'lookbook'
-    ? input.asset.type === 'lookbook_image'
+    ? input.assetFileMetadata.type === 'lookbook_image'
       ? 'image'
-      : input.asset.type === 'lookbook_sheet'
+      : input.assetFileMetadata.type === 'lookbook_sheet'
         ? 'sheet'
         : null
     : null;
@@ -166,20 +148,18 @@ export function persistGeneratedMediaAttachment(
   try {
     input.session.db.transaction((tx) => {
       const session = { ...input.session, db: tx };
-      persistOwnedGeneratedMediaAssetInSession({
+      persistOwnedGeneratedMediaAssetFileInSession({
         previsRevisionId: input.previsRevisionId,
         session,
         projectFolder: input.projectFolder,
         writeSet,
-        assetId,
         assetFileId,
         now: input.now,
         sourceProjectRelativePath: input.sourceProjectRelativePath,
         destination: input.destination.file,
         owner: input.destination.owner,
         ...(input.selectionTarget ? { selectionTarget: input.selectionTarget } : {}),
-        asset: input.asset,
-        fileRole: input.fileRole,
+        assetFileMetadata: input.assetFileMetadata,
         ...(input.generationProvenance
           ? { generationProvenance: input.generationProvenance }
           : {}),
@@ -188,12 +168,12 @@ export function persistGeneratedMediaAttachment(
           : {}),
       });
       if (input.clipTake) {
-        take = registerClipTakeInSession(session, { ...input.clipTake, assetId, assetFileId });
+        take = registerClipTakeInSession(session, { ...input.clipTake, assetFileId });
       }
       if (input.destination.owner.kind === 'lookbook' && ownerRecord?.kind === 'lookbookImage') {
         insertLookbookImageRecord(session, {
           id: ownerRecord.id,
-          assetId,
+          assetFileId,
           sortOrder: nextLookbookImageSortOrder(session, input.destination.owner.id),
           now: input.now,
         });
@@ -201,7 +181,7 @@ export function persistGeneratedMediaAttachment(
       if (input.destination.owner.kind === 'lookbook' && ownerRecord?.kind === 'lookbookSheet') {
         insertLookbookSheetRecord(session, {
           id: ownerRecord.id,
-          assetId,
+          assetFileId,
           sortOrder: nextLookbookSheetSortOrder(session, input.destination.owner.id),
           now: input.now,
         });
@@ -215,7 +195,6 @@ export function persistGeneratedMediaAttachment(
 
   return {
     ...(take ? { take } : {}),
-    assetId,
     assetFileId,
     ...(ownerRecord ? { ownerRecord } : {}),
   };

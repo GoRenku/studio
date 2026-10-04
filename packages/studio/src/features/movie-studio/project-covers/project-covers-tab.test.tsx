@@ -2,11 +2,11 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
 import {
-  deleteProjectCoverAsset,
-  readProjectCoverAssets,
-  selectProjectCoverAsset,
+  deleteProjectCoverAssetFile,
+  readProjectCoverAssetFiles,
+  selectProjectCoverAssetFile,
 } from '@/services/studio-project-assets-api';
 import { readProject } from '@/services/studio-projects-api';
 import { Button } from '@/ui/button';
@@ -14,22 +14,22 @@ import { ProjectCoversTab } from './project-covers-tab';
 
 vi.mock('@/services/studio-project-assets-api', () => ({
   clearSelectedProjectCover: vi.fn(),
-  deleteProjectCoverAsset: vi.fn(),
-  readProjectCoverAssets: vi.fn(),
-  selectProjectCoverAsset: vi.fn(),
+  deleteProjectCoverAssetFile: vi.fn(),
+  readProjectCoverAssetFiles: vi.fn(),
+  selectProjectCoverAssetFile: vi.fn(),
 }));
 vi.mock('@/services/studio-projects-api', () => ({ readProject: vi.fn() }));
 vi.mock('./project-cover-cards', () => ({
   ProjectCoverCards: (props: {
-    assets: StudioAssetResponse[];
-    onToggleSelected: (asset: StudioAssetResponse) => Promise<void>;
-    onDelete: (asset: StudioAssetResponse) => Promise<void>;
+    assetFiles: StudioAssetFileResponse[];
+    onToggleSelected: (assetFile: StudioAssetFileResponse) => Promise<void>;
+    onDelete: (assetFile: StudioAssetFileResponse) => Promise<void>;
   }) => (
     <div>
-      <Button type='button' onClick={() => void props.onToggleSelected(props.assets[0]!)}>
+      <Button type='button' onClick={() => void props.onToggleSelected(props.assetFiles[0]!)}>
         Toggle cover
       </Button>
-      <Button type='button' onClick={() => void props.onDelete(props.assets[0]!)}>
+      <Button type='button' onClick={() => void props.onDelete(props.assetFiles[0]!)}>
         Delete cover
       </Button>
     </div>
@@ -39,11 +39,11 @@ vi.mock('./project-cover-cards', () => ({
 describe('ProjectCoversTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(readProjectCoverAssets).mockResolvedValue({
-      items: [{ id: 'asset_cover' } as StudioAssetResponse],
-      selectedAssetId: null,
+    vi.mocked(readProjectCoverAssetFiles).mockResolvedValue({
+      items: [{ id: 'asset_cover' } as StudioAssetFileResponse],
+      selectedAssetFileId: null,
     });
-    vi.mocked(selectProjectCoverAsset).mockResolvedValue({
+    vi.mocked(selectProjectCoverAssetFile).mockResolvedValue({
       valid: true,
       warnings: [],
       project: {
@@ -52,14 +52,14 @@ describe('ProjectCoversTab', () => {
         projectFolder: '/projects/movie',
       },
       target: { kind: 'project' },
-      selectedAssetId: 'asset_cover',
+      selectedAssetFileId: 'asset_cover',
       resourceKeys: [
         'surface:project:covers',
         'project-shell',
         'project-library',
       ],
     });
-    vi.mocked(deleteProjectCoverAsset).mockResolvedValue({
+    vi.mocked(deleteProjectCoverAssetFile).mockResolvedValue({
       valid: true,
       warnings: [],
       project: {
@@ -67,7 +67,7 @@ describe('ProjectCoversTab', () => {
         projectName: 'movie',
         projectFolder: '/projects/movie',
       },
-      changes: [{ type: 'asset.discarded', assetId: 'asset_cover' }],
+      changes: [{ type: 'asset.discarded', assetFileId: 'asset_cover' }],
       recovery: {
         operationId: 'trash_1',
         trashItemIds: ['trash_item_1'],
@@ -94,7 +94,7 @@ describe('ProjectCoversTab', () => {
     expect(readProject).toHaveBeenCalledWith('movie');
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete cover' }));
-    await waitFor(() => expect(deleteProjectCoverAsset).toHaveBeenCalled());
+    await waitFor(() => expect(deleteProjectCoverAssetFile).toHaveBeenCalled());
     expect(onProjectChange).toHaveBeenCalledTimes(1);
   });
 });

@@ -36,7 +36,6 @@ export interface Project {
 }
 
 export interface ProjectCoverImage {
-  assetId: string;
   assetFileId: string;
 }
 

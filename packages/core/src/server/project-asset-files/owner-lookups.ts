@@ -1,4 +1,4 @@
-import { listAssetFileRecordsForAsset, readAssetFileRecord } from '../database/access/asset-files.js';
+import { readAssetFileRecord } from '../database/access/asset-files.js';
 import type { AssetFileRecord } from '../database/access/asset-files.js';
 import { readCastMemberRecord } from '../database/access/cast-members.js';
 import { readLocationRecord } from '../database/access/locations.js';
@@ -10,24 +10,19 @@ import { sceneNumberPathSegment } from './naming/safe-segments.js';
 
 export function imageEditSourceFile(
   session: DatabaseSession,
-  input: { sourceAssetId: string; sourceAssetFileId?: string }
+  input: {  sourceAssetFileId?: string }
 ): AssetFileRecord {
-  if (!input.sourceAssetId) {
+  if (!input.sourceAssetFileId) {
     throw new ProjectDataError(
       'PROJECT_ASSET_FILE_IMAGE_EDIT_SOURCE_REQUIRED',
       'Image edit output placement requires a source asset id.'
     );
   }
-  const source = input.sourceAssetFileId
-    ? readAssetFileRecord(session, {
-        assetId: input.sourceAssetId,
-        assetFileId: input.sourceAssetFileId,
-      })
-    : singleActiveImageFile(session, input.sourceAssetId);
+  const source = readAssetFileRecord(session, input.sourceAssetFileId);
   if (!source) {
     throw new ProjectDataError(
       'PROJECT_ASSET_FILE_IMAGE_EDIT_SOURCE_MISSING',
-      `Image edit source asset file was not found for asset: ${input.sourceAssetId}.`
+      `Image edit source asset file was not found for asset: ${input.sourceAssetFileId}.`
     );
   }
   return source;
@@ -35,12 +30,10 @@ export function imageEditSourceFile(
 
 export function singleActiveImageFile(
   session: DatabaseSession,
-  assetId: string
+  assetFileId: string
 ): AssetFileRecord | null {
-  const imageFiles = listAssetFileRecordsForAsset(session, assetId).filter(
-    (file) => file.mediaKind === 'image'
-  );
-  return imageFiles.length === 1 ? imageFiles[0]! : null;
+  const file = readAssetFileRecord(session, assetFileId);
+  return file?.mediaKind === 'image' ? file : null;
 }
 
 export function requireCastMember(session: DatabaseSession, castMemberId: string) {

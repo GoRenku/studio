@@ -3,15 +3,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type {
-  AssetOwner,
+  AssetFileOwner,
   MediaGenerationProvenance,
   ProjectRelativePath,
 } from '../../client/index.js';
-import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { openProjectSession } from '../database/lifecycle/active-session.js';
-import { createRandomIdGenerator, type ProjectIdGenerator } from '../entity-ids.js';
+import {  type ProjectIdGenerator } from '../entity-ids.js';
 import { createProjectDataService } from '../project-data-service.js';
-import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
+import { createTestAssetFileFixture } from '../testing/asset-fixture-helpers.js';
 import { createSampleMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
 import { attachVideoEditMedia } from './attachment.js';
 
@@ -45,7 +44,7 @@ describe('video.edit source-derived attachment', () => {
       coverage: null,
       shots: [{ title: 'Wide', description: 'Wide.', brief: {} }],
     });
-    const cases: Array<[string, AssetOwner]> = [
+    const cases: Array<[string, AssetFileOwner]> = [
       ['project_research_video', { kind: 'project' }],
       ['cast_rehearsal_video', { kind: 'castMember', id: 'cast_test0002' }],
       ['scene_reference_video', { kind: 'scene', id: sceneId }],
@@ -56,7 +55,7 @@ describe('video.edit source-derived attachment', () => {
       const outputPath = `tmp/${type}-output.mp4` as ProjectRelativePath;
       await writeFile(sourcePath, 'source');
       await writeFile(outputPath, 'output');
-      const source = await createTestAssetFixture({
+      const source = await createTestAssetFileFixture({
         projectName: 'constantinople',
         homeDir,
         owner,
@@ -68,37 +67,35 @@ describe('video.edit source-derived attachment', () => {
         referenceName: 'source-reference',
         tags: ['continuity'],
         projectRelativePath: sourcePath,
-        fileRole: 'primary',
       });
 
       const context = await projectData.readMediaGenerationContext({
         projectName: 'constantinople',
         homeDir,
         purpose: 'video.edit',
-        target: { kind: 'asset', id: source.id },
+        target: { kind: 'assetFile', assetFileId: source.id },
       });
       expect(context.suggestedReferences).toEqual([
         expect.objectContaining({
           id: 'source-video',
           role: 'source-video',
           candidates: [expect.objectContaining({
-            assetId: source.id,
-            assetFileId: source.files[0]!.id,
+            assetFileId: source!.id,
           })],
         }),
       ]);
-      expect(context.assets.find((asset) => asset.id === source.id)?.files).toEqual(source.files);
+      expect(context.assetFiles.find((assetFile) => assetFile.id === source.id)?.projectRelativePath).toEqual(source.projectRelativePath);
 
       const report = await projectData.attachGenerationMedia({
         projectName: 'constantinople',
         homeDir,
         purpose: 'video.edit',
-        target: { kind: 'asset', id: source.id },
+        target: { kind: 'assetFile', assetFileId: source.id },
         sourceProjectRelativePath: outputPath,
         generationProvenance: provenance(sourcePath),
       });
-      expect(report.asset.id).not.toBe(source.id);
-      expect(report.asset).toMatchObject({
+      expect(report.assetFile.id).not.toBe(source.id);
+      expect(report.assetFile).toMatchObject({
         owner,
         localeId: 'locale_test0001',
         type,
@@ -108,15 +105,9 @@ describe('video.edit source-derived attachment', () => {
         tags: ['continuity'],
         authoredFrom: null,
       });
-      expect(report.asset.files).toEqual([
-        expect.objectContaining({
-          role: 'primary',
-          mediaKind: 'video',
-          projectRelativePath: expect.stringMatching(
-            new RegExp(`^media/${type}/edited-video-g[a-z0-9]+\\.mp4$`),
-          ),
-        }),
-      ]);
+      expect(report.assetFile).toMatchObject({
+        mediaKind: 'video', projectRelativePath: expect.stringMatching(new RegExp(`^media/${type}/edited-video-g[a-z0-9]+\\.mp4$`)),
+      });
     }
   });
 
@@ -153,12 +144,12 @@ describe('video.edit source-derived attachment', () => {
     const edited = await projectData.attachGenerationMedia({
       homeDir,
       purpose: 'video.edit',
-      target: { kind: 'asset', id: source.asset.id },
+      target: { kind: 'assetFile', assetFileId: source.assetFile.id },
       sourceProjectRelativePath: editOutput,
-      generationProvenance: provenance(source.asset.files[0]!.projectRelativePath),
+      generationProvenance: provenance(source.assetFile!.projectRelativePath),
     });
-    expect(edited.asset.authoredFrom).toEqual({ kind: 'shotPlan', id: plan.shotPlan.id });
-    expect(edited.asset.owner).toEqual(source.asset.owner);
+    expect(edited.assetFile.authoredFrom).toEqual({ kind: 'shotPlan', id: plan.shotPlan.id });
+    expect(edited.assetFile.owner).toEqual(source.assetFile.owner);
     expect(edited.resourceKeys).toEqual([
       'surface:project:assets',
       `surface:scene:${screenplay.screenplay.scenes[0]!.id}:video-generations`,
@@ -167,19 +158,19 @@ describe('video.edit source-derived attachment', () => {
       homeDir,
       sceneId: screenplay.screenplay.scenes[0]!.id,
     });
-    expect(videos.groups.flatMap((group) => group.assets.map((asset) => asset.id))).toEqual(
-      expect.arrayContaining([source.asset.id, edited.asset.id]),
+    expect(videos.groups.flatMap((group) => group.assetFiles.map((assetFile) => assetFile.id))).toEqual(
+      expect.arrayContaining([source.assetFile.id, edited.assetFile.id]),
     );
   });
 
-  it('rejects missing, ambiguous, wrong-kind, unavailable, and discarded sources before a write', async () => {
+  it('rejects missing, wrong-kind, unavailable, and discarded sources before a write', async () => {
     const sourcePath = 'media/failure/source.mp4' as ProjectRelativePath;
     const secondPath = 'media/failure/second.mp4' as ProjectRelativePath;
     const outputPath = 'tmp/failure-output.mp4' as ProjectRelativePath;
     await writeFile(sourcePath, 'source');
     await writeFile(secondPath, 'second');
     await writeFile(outputPath, 'output');
-    const source = await createTestAssetFixture({
+    const source = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'project' },
@@ -187,29 +178,9 @@ describe('video.edit source-derived attachment', () => {
       mediaKind: 'video',
       title: 'Source',
       projectRelativePath: sourcePath,
-      fileRole: 'primary',
     });
-    const session = await openProjectSession({ projectName: 'constantinople', homeDir });
-    try {
-      insertAssetFileRecord(session.session, {
-        id: createRandomIdGenerator().next('asset_file'),
-        assetId: source.id,
-        role: 'alternate',
-        projectRelativePath: secondPath,
-        mediaKind: 'video',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    } finally {
-      session.session.close();
-    }
-
     await expect(edit(source.id, outputPath, provenance('media/missing.mp4' as ProjectRelativePath)))
       .rejects.toMatchObject({ code: 'CORE_VIDEO_EDIT_SOURCE_REFERENCE_MISSING' });
-    await expect(edit(source.id, outputPath, provenance(sourcePath, secondPath)))
-      .rejects.toMatchObject({ code: 'CORE_VIDEO_EDIT_SOURCE_REFERENCE_AMBIGUOUS' });
-    await expect(edit(source.id, outputPath, provenance(sourcePath, sourcePath)))
-      .rejects.toMatchObject({ code: 'CORE_VIDEO_EDIT_SOURCE_REFERENCE_AMBIGUOUS' });
     await expect(edit(source.id, outputPath, { ...provenance(sourcePath), mediaKind: 'image' as const }))
       .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_PROVENANCE_INVALID' });
 
@@ -217,10 +188,10 @@ describe('video.edit source-derived attachment', () => {
     await expect(edit(source.id, outputPath, provenance(sourcePath)))
       .rejects.toMatchObject({ code: 'CORE_VIDEO_EDIT_SOURCE_INVALID' });
     await writeFile(sourcePath, 'source');
-    await projectData.discardAsset({
+    await projectData.discardAssetFile({
       projectName: 'constantinople',
       homeDir,
-      assetId: source.id,
+      assetFileId: source.id,
       owner: { kind: 'project' },
     });
     await expect(edit(source.id, outputPath, provenance(sourcePath)))
@@ -232,7 +203,7 @@ describe('video.edit source-derived attachment', () => {
     const outputPath = 'tmp/rollback-output.mp4' as ProjectRelativePath;
     await writeFile(sourcePath, 'source');
     await writeFile(outputPath, 'output');
-    const source = await createTestAssetFixture({
+    const source = await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'project' },
@@ -240,18 +211,17 @@ describe('video.edit source-derived attachment', () => {
       mediaKind: 'video',
       title: 'Rollback source',
       projectRelativePath: sourcePath,
-      fileRole: 'primary',
     });
     const session = await openProjectSession({ projectName: 'constantinople', homeDir });
     try {
       const idGenerator = {
         next(kind: string) {
-          return kind === 'asset' ? 'asset_rollback' : source.files[0]!.id;
+          return kind === 'assetFile' ? 'asset_rollback' : source!.id;
         },
       } as ProjectIdGenerator;
       expect(() => attachVideoEditMedia({
         purpose: 'video.edit',
-        target: { kind: 'asset', id: source.id },
+        target: { kind: 'assetFile', assetFileId: source.id },
         sourceProjectRelativePath: outputPath,
         generationProvenance: provenance(sourcePath),
         session: session.session,
@@ -262,16 +232,16 @@ describe('video.edit source-derived attachment', () => {
       session.session.close();
     }
     expect(await fs.readdir(path.join(projectFolder, 'media/rollback'))).toEqual(['source.mp4']);
-    const assets = await projectData.listAssets({
+    const assetFiles = await projectData.listAssetFiles({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'project' },
     });
-    expect(assets.some((asset) => asset.id === 'asset_rollback')).toBe(false);
+    expect(assetFiles.some((assetFile) => assetFile.id === 'asset_rollback')).toBe(false);
   });
 
   function edit(
-    assetId: string,
+    assetFileId: string,
     outputPath: ProjectRelativePath,
     generationProvenance: MediaGenerationProvenance,
   ) {
@@ -279,7 +249,7 @@ describe('video.edit source-derived attachment', () => {
       projectName: 'constantinople',
       homeDir,
       purpose: 'video.edit',
-      target: { kind: 'asset', id: assetId },
+      target: { kind: 'assetFile', assetFileId: assetFileId },
       sourceProjectRelativePath: outputPath,
       generationProvenance,
     });

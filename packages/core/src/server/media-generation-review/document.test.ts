@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateMediaGenerationProvenance } from '../assets/generation-provenance.js';
+import { validateMediaGenerationProvenance } from '../asset-files/generation-provenance.js';
 import { parseMediaGenerationReviewDocument } from './document.js';
 import { assertSafeMediaGenerationRequest } from './safety.js';
 

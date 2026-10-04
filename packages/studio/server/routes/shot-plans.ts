@@ -6,7 +6,7 @@ import {
   toStudioShotSelectionMutationResponse,
 } from '../http/shot-plan-responses.js';
 import type { ProjectsRouteProjectData } from './projects.js';
-import { toStudioAssetResponse } from '../http/asset-responses.js';
+import { toStudioAssetFileResponse } from '../http/asset-responses.js';
 import { toStudioPrevisResponse } from '../http/previs-responses.js';
 
 export interface CreateShotPlansRouteOptions {
@@ -41,17 +41,17 @@ export function createShotPlansRoute({
         return projectErrorResponse(c, error);
       }
     })
-    .get('/screenplay/shot-plans/:shotPlanId/assets', async (c) => {
+    .get('/screenplay/shot-plans/:shotPlanId/asset-files', async (c) => {
       try {
         const projectName = c.req.param('projectName') as string;
         const shotPlanId = c.req.param('shotPlanId') as string;
-        const resource = await projectData.readShotPlanAssets({ projectName, shotPlanId });
+        const resource = await projectData.readShotPlanAssetFiles({ projectName, shotPlanId });
         return c.json({
           resource: {
             ...resource,
             groups: resource.groups.map((group) => ({
               ...group,
-              assets: group.assets.map((asset) => toStudioAssetResponse(projectName, asset)),
+              assetFiles: group.assetFiles.map((assetFile) => toStudioAssetFileResponse(projectName, assetFile)),
             })),
           },
         });
@@ -60,14 +60,14 @@ export function createShotPlansRoute({
       }
     })
     .delete(
-      '/screenplay/shot-plans/:shotPlanId/assets/:assetId',
+      '/screenplay/shot-plans/:shotPlanId/asset-files/:assetFileId',
       requireToken,
       async (c) => {
         try {
-          return c.json(await projectData.discardShotPlanAsset({
+          return c.json(await projectData.discardShotPlanAssetFile({
             projectName: c.req.param('projectName') as string,
             shotPlanId: c.req.param('shotPlanId') as string,
-            assetId: c.req.param('assetId') as string,
+            assetFileId: c.req.param('assetFileId') as string,
           }));
         } catch (error) {
           return projectErrorResponse(c, error);
@@ -92,17 +92,17 @@ export function createShotPlansRoute({
       }
     )
     .post(
-      '/screenplay/shots/:shotId/selected-image/:assetId',
+      '/screenplay/shots/:shotId/selected-image/:assetFileId',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const shotId = c.req.param('shotId') as string;
-          const assetId = c.req.param('assetId') as string;
-          const report = await projectData.selectAsset({
+          const assetFileId = c.req.param('assetFileId') as string;
+          const report = await projectData.selectAssetFile({
             projectName,
             target: { kind: 'shot', id: shotId },
-            assetId,
+            assetFileId,
           });
           return c.json(toStudioShotSelectionMutationResponse(report));
         } catch (error) {
@@ -111,17 +111,17 @@ export function createShotPlansRoute({
       }
     )
     .delete(
-      '/screenplay/shots/:shotId/images/:assetId',
+      '/screenplay/shots/:shotId/images/:assetFileId',
       requireToken,
       async (c) => {
         try {
           const projectName = c.req.param('projectName') as string;
           const shotId = c.req.param('shotId') as string;
-          const assetId = c.req.param('assetId') as string;
-          const report = await projectData.discardAsset({
+          const assetFileId = c.req.param('assetFileId') as string;
+          const report = await projectData.discardAssetFile({
             projectName,
             owner: { kind: 'shot', id: shotId },
-            assetId,
+            assetFileId,
           });
           return c.json(toStudioRecoverableMutationResponse(report));
         } catch (error) {

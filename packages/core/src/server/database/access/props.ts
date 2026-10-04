@@ -1,12 +1,11 @@
 import { and, asc, eq, notInArray } from 'drizzle-orm';
 import {
-  assetMemberships,
-  assets,
+  assetFiles,
   propDesigns,
   propDesignState,
   props,
 } from '../../schema/index.js';
-import { assetOwnerKey } from '../../assets/owner-keys.js';
+import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
 
 export type PropRecord = typeof props.$inferSelect;
@@ -35,7 +34,7 @@ export interface PropAuthoringRecord {
 }
 
 export interface PropDeleteDependencySummary {
-  assetCount: number;
+  assetFileCount: number;
   designCount: number;
   activeDesignStateCount: number;
   propSheetCount: number;
@@ -71,15 +70,14 @@ export function replacePropAuthoringRecords(
   session.db.delete(props).where(notInArray(props.id, ids)).run();
 }
 
-export function listPropAssetRoleRecords(
+export function listPropAssetFileRoleRecords(
   session: DatabaseSession,
   propId: string
 ): Array<{ type: string }> {
   return session.db
-    .select({ type: assets.type })
-    .from(assetMemberships)
-    .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
-    .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'prop', id: propId })))
+    .select({ type: assetFiles.type })
+    .from(assetFiles)
+    .where(eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'prop', id: propId })))
     .all();
 }
 
@@ -87,18 +85,17 @@ export function readPropDeleteDependencySummary(
   session: DatabaseSession,
   propId: string
 ): PropDeleteDependencySummary {
-  const ownerKey = assetOwnerKey({ kind: 'prop', id: propId });
+  const ownerKey = assetFileOwnerKey({ kind: 'prop', id: propId });
   return {
-    assetCount: session.db.select({ id: assetMemberships.assetId })
-      .from(assetMemberships).where(eq(assetMemberships.ownerKey, ownerKey)).all().length,
+    assetFileCount: session.db.select({ id: assetFiles.id })
+      .from(assetFiles).where(eq(assetFiles.ownerKey, ownerKey)).all().length,
     designCount: session.db.select({ id: propDesigns.id })
       .from(propDesigns).where(eq(propDesigns.propId, propId)).all().length,
     activeDesignStateCount: session.db.select({ propId: propDesignState.propId })
       .from(propDesignState).where(eq(propDesignState.propId, propId)).all().length,
-    propSheetCount: session.db.select({ id: assets.id })
-      .from(assetMemberships)
-      .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
-      .where(and(eq(assetMemberships.ownerKey, ownerKey), eq(assets.type, 'prop_sheet')))
+    propSheetCount: session.db.select({ id: assetFiles.id })
+      .from(assetFiles)
+      .where(and(eq(assetFiles.ownerKey, ownerKey), eq(assetFiles.type, 'prop_sheet')))
       .all().length,
   };
 }

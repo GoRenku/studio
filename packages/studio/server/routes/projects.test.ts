@@ -249,7 +249,7 @@ describe('projects Hono route', () => {
         projects: [
           {
             projectName: 'constantinople',
-            coverUrl: '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover',
+            coverUrl: '/studio-api/projects/constantinople/asset-files/asset_file_project_cover',
           },
         ],
       },
@@ -268,7 +268,7 @@ describe('projects Hono route', () => {
     expect(body).toMatchObject({
       project: {
         project: { projectName: 'constantinople' },
-        coverUrl: '/studio-api/projects/constantinople/assets/asset_project_cover/files/asset_file_project_cover',
+        coverUrl: '/studio-api/projects/constantinople/asset-files/asset_file_project_cover',
         navigation: {
           cast: {
             items: [

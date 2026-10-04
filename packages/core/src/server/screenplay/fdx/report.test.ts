@@ -26,7 +26,6 @@ function validReport() {
     project: { id: 'project_1', projectName: 'movie' },
     screenplayImport: {
       id: 'screenplay_import_1',
-      sourceAssetId: 'asset_1',
       sourceAssetFileId: 'asset_file_1',
       importerVersion: 1,
       importedAt: '2026-08-15T00:00:00.000Z',

@@ -6,16 +6,13 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
-import { assetFiles, assets } from '../assets.js';
+import { assetFiles } from '../asset-files.js';
 
 export const screenplayImports = sqliteTable(
   'screenplay_import',
   {
     id: text('id').primaryKey(),
     singletonKey: integer('singleton_key').notNull(),
-    sourceAssetId: text('source_asset_id')
-      .notNull()
-      .references(() => assets.id),
     sourceAssetFileId: text('source_asset_file_id')
       .notNull()
       .references(() => assetFiles.id),

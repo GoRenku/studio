@@ -30,16 +30,13 @@ are reused. Local derivation facts belong in the authored summary. See
 
 ## Asset Vocabulary
 
-An **Asset** is a registered content item in Renku Studio metadata.
-
-An **Asset File** is a concrete file on disk that belongs to an asset.
-
-A **Compound Asset** is an asset represented by a folder because several files
-belong together, such as a video plus thumbnail and captions.
+An **AssetFile** is one registered retained physical file. Its canonical ID,
+exclusive owner, nullable authored title, summary, tags, provenance, physical
+path/hash/MIME/dimensions, and lifecycle live in `asset_file`.
 
 A **Take** is a persisted generated or imported candidate only in a focused
 domain that explicitly defines Take behavior. The current example is a Scene
-Dialogue Audio Take. Common Asset membership does not carry Take state.
+Dialogue Audio Take. Common AssetFile ownership does not carry Take state.
 
 An **Asset Owner** is the one Project, Cast Member, Location, Prop, Sequence, Scene,
 logical Scene Beat, Lookbook, or Shot that exclusively owns an Asset.
@@ -50,7 +47,7 @@ image, or Scene Beat Storyboard surface. It does not affect generation
 references.
 
 A **Project Cover** is a Project-owned image Asset with canonical type
-`project_cover` and exactly one active primary image Asset File. Common
+`project_cover` and one active image AssetFile. Common
 selection chooses the image used by Project Library and Studio sidebar
 projections. Candidate files live beneath `covers/`; ownership and selection
 come from SQLite rather than their path.
@@ -64,10 +61,9 @@ that must remain consistent across the movie, such as a location, prop, costume,
 architecture, ship, vehicle, symbol, or group. Initial roles include
 `description`, `reference`, `anti_reference`, and `sheet`.
 
-An **Inspiration folder image** is not an asset by default. It is plain
-filesystem content inside a Visual Language Inspiration folder. Agents inspect
-these files directly and cite them by folder-local filename in Inspiration
-Analysis JSON.
+An **Inspiration folder image** is a folder-owned `AssetFile`. Its bytes remain
+in the folder and Analysis contents remain opaque. Picker/drop uploads register
+immediately; downloaded images use explicit batch reference import.
 
 A **Lookbook Image** is an Asset exclusively owned by a Lookbook. Section
 placement belongs in
@@ -89,17 +85,17 @@ name, purpose, default state, and optional opaque provider-owned identity; Asset
 provenance records how a generated or retrieved sample was produced.
 
 A **Location Sheet** is a full-image production reference board owned by a
-Location with canonical type `location_sheet`. It has one primary image file and a
+Location with canonical type `location_sheet`. It has one retained image file and a
 persisted description. A Location can have many Location Sheets; future Shot
 workflows may reference specific sheet assets.
 
 A **Location Hero Image** is a compact overview image owned by a Location. It
-uses canonical type `location_hero` and one primary image file. Common
+uses canonical type `location_hero` and one retained image file. Common
 selection drives overview and detail display only; it is not a generation
 reference default.
 
 A **Location World** is a navigable Gaussian splat owned by a Location. It uses
-canonical type `location_world`, media kind `model`, and one primary
+canonical type `location_world`, media kind `model`, and one retained
 full-resolution SPZ file. Common selection chooses the World shown in Studio;
 older candidates remain available for rollback.
 
@@ -118,23 +114,20 @@ scene storyboard folder's `tmp/` subfolder and are not assets.
 
 A **Shot Plan Video** is a Project-owned Asset stored under the weak authored
 Shot Plan context folder
-`scenes/<scene-display-number>/<NN>-shot-plan/`. Its primary Asset File records
-no generation identity. Exact safe provider/Codex generation provenance is
-stored on the Asset. The Plan remains authoring context rather than Asset
-membership.
+`scenes/<scene-display-number>/<NN>-shot-plan/`. Its AssetFile stores exact safe provider/Codex generation provenance. The Plan
+remains authoring context rather than the file owner.
 
 A **Shot Image Candidate** is an image Asset exclusively owned by one Shot with
 canonical type `shot_image`. A Shot may own several candidates and explicitly
 select zero or one. Import can atomically select when requested. Candidate
 files live under
 `scenes/<scene-display-number>/<NN>-shot-plan/shot-images/`; SQLite
-membership, not path segments, defines ownership.
+owner keys, not path segments, define ownership.
 
-The **Research folder** is user-owned scratch space for external references.
-Files in `research/` are not asset files. A temporary provider review request
-may reference a `research/` file as a one-off input. When a research file
-becomes a durable project asset, Core copies
-it into the relevant owner folder and registers that destination path.
+The **Research folder** contains Project-owned retained reference files.
+A pending upgrade registers existing regular files recursively. New downloads
+are explicitly imported, including safe in-place adoption. Unregistered scratch
+files stay under `tmp/` until promotion and cannot be used as retained references.
 
 Durable asset-file persistence is centralized in
 `packages/core/src/server/project-asset-files/`. Runtime callers import public
@@ -308,8 +301,7 @@ Folder responsibilities:
   Asset identity and selection, not the collision token, define history.
 - `props/<handle>/` contains Prop Sheets and Hero Images directly.
 - `visual-language/inspiration/` contains Inspiration folder content. Images in
-  those folders are not per-image assets unless a future command explicitly
-  registers one.
+  those folders are registered folder-owned AssetFiles.
 - `visual-language/lookbooks/{production,storyboard}/` contains imported or
   generated Lookbook media for that exact Lookbook role.
 - `storyboards/<scene-display-number>/` contains durable storyboard
@@ -334,7 +326,7 @@ unselected candidate; agents and adapters do not supply or infer a destination.
   infer relationships from the path.
 - `research/` contains user-owned scratch references. Renku may read these
   files when instructed, and provider requests may use them as one-off reference
-  inputs. Renku must not register them as SQLite asset files.
+  inputs. Retained references are registered; temporary inputs stay under `tmp/` until explicit promotion.
 - `tmp/media/` contains temporary generated, downloaded, transformed, or
   cropped media.
 - `tmp/operations/media-generation/` contains temporary review, provenance,
@@ -454,15 +446,14 @@ images, Take frames, and Video Prompt images are excluded.
 
 The folder structure is for humans.
 
-SQLite owns identity, exclusive Asset membership, focused domain links, and
+SQLite owns identity, exclusive AssetFile ownership, focused domain links, and
 canonical selection.
 
 Do not infer IDs, owners, languages, selects, clips, bindings, or
-grouped asset membership from file names or folder names.
+AssetFile ownership from file names or folder names.
 
 For Location Sheets, paths such as `sheet.png` are readable storage names only.
-Runtime code must use Asset membership, canonical Asset type, and the `primary`
-AssetFile role instead of parsing names or inferring meaning from folders.
+Runtime code must use AssetFile ownership and canonical type, and the AssetFile media kind instead of parsing names or inferring meaning from folders.
 
 The same rule applies to Visual Language folders. A folder name may be a useful
 creative hint for an agent, but Renku ownership and focused domain links come
@@ -486,6 +477,6 @@ Supporting Files uploads and other FDX paths do not participate in detection.
 
 Raw Clip Takes reference exact existing Project video Asset files. Registering a
 Take, changing its short title or selecting it does not move, copy, trim or retime
-media. Atomic `media import --clip` creates the ordinary Asset/file and registers
+media. Atomic `media import --clip` creates the ordinary AssetFile and registers
 its Take together. Optional source-Take attribution records identity only; actual
 reference files remain in the existing safe generation provenance document.

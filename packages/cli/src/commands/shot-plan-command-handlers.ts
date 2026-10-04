@@ -12,7 +12,6 @@ export interface ShotPlanCommandFlags {
   scene?: string;
   shotPlan?: string;
   shot?: string;
-  asset?: string;
   position?: number;
   placement?: string;
   previsRevision?: string;

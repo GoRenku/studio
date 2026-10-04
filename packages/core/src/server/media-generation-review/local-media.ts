@@ -29,6 +29,7 @@ interface MarkerOccurrence {
 
 const MAX_REVIEW_LABEL_LENGTH = 256;
 const MAX_PROMPT_MENTION_LENGTH = 128;
+const REFERENCE_IMPORT_GUIDANCE = 'Import the file with renku asset-file import before using it as a reference.';
 
 export async function projectLocalMediaReferences(input: {
   request: JsonValue;
@@ -54,7 +55,8 @@ export async function projectLocalMediaReferences(input: {
       mentions.add(marker.promptMention);
     }
     const projectRelativePath = normalizeReferencePath(marker.$file);
-    const file = await resolveMediaGenerationReferenceFile({ ...input, projectRelativePath });
+    const resolution = await resolveMediaGenerationReferenceFile({ ...input, projectRelativePath });
+    const file = resolution.status === 'available' ? resolution : null;
     const available = file !== null;
     const kind = mediaKind(file?.mediaKind, file?.mimeType ?? marker.mimeType, projectRelativePath);
     if (!kind) {
@@ -65,10 +67,16 @@ export async function projectLocalMediaReferences(input: {
     }
     if (!available) {
       diagnostics.push(createDiagnosticWarning(
-        'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND',
-        `Referenced media is unavailable: ${projectRelativePath}.`,
+        resolution.status === 'untracked'
+          ? 'PROJECT_ASSET_FILE_REFERENCE_NOT_TRACKED'
+          : 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND',
+        resolution.status === 'untracked'
+          ? `Referenced file has not been imported: ${projectRelativePath}.`
+          : `Referenced media is unavailable: ${projectRelativePath}.`,
         { path: ['request', projectRelativePath] },
-        'Choose an available AssetFile or an active Inspiration folder image, or restore the referenced file.',
+        resolution.status === 'untracked'
+          ? REFERENCE_IMPORT_GUIDANCE
+          : 'Choose an available AssetFile, or restore the referenced file.',
       ));
     }
     references.push({
@@ -142,7 +150,14 @@ export async function readMediaGenerationReferenceProjectFile(
     }
     const projectRelativePath = normalizeReferencePath(input.projectRelativePath);
     const file = await resolveMediaGenerationReferenceFile({ session, projectFolder, projectRelativePath });
-    if (!file) {
+    if (file.status === 'untracked') {
+      throw new ProjectDataError(
+        'PROJECT_ASSET_FILE_REFERENCE_NOT_TRACKED',
+        `Referenced file has not been imported: ${projectRelativePath}.`,
+        { suggestion: REFERENCE_IMPORT_GUIDANCE },
+      );
+    }
+    if (file.status !== 'available') {
       throw new ProjectDataError(
         'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND',
         `Referenced media is unavailable: ${projectRelativePath}.`,

@@ -9,7 +9,7 @@ vi.mock('@/services/shot-plan-previs/api');
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 
 it('follows newly registered latest revisions while preserving deliberate history browsing', async () => {
-  const revision = (number: number): StudioPrevisRevision => ({ id: String(number), number, createdAt: '', render: null, description: null, playback: null, clips: { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assets: [], unassignedAssets: [], sources: [], resourceKeys: [] }, warnings: [] });
+  const revision = (number: number): StudioPrevisRevision => ({ id: String(number), number, createdAt: '', render: null, description: null, playback: null, clips: { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assetFiles: [], unassignedAssetFiles: [], sources: [], resourceKeys: [] }, warnings: [] });
   let revisions = [revision(1), revision(2)];
   vi.mocked(readStudioShotPlanPrevis).mockImplementation(async () => ({ shotPlanId: 'plan', revisions, resourceKeys: [] }));
   const { result } = renderHook(() => usePrevis('movie', 'scene', 'plan'));
@@ -30,7 +30,7 @@ it('refreshes attribution on source-scene selection and discard events without r
   vi.mocked(readStudioShotPlanPrevis).mockImplementation(async () => ({
     shotPlanId: 'plan', resourceKeys, revisions: [{
       id: 'revision', number: 1, createdAt: '', render: null, description: null, playback: null, warnings: [],
-      clips: { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assets: [], unassignedAssets: [], sources: [{ ...source }], resourceKeys },
+      clips: { project: { projectName: 'movie' }, shotPlanId: 'plan', previsRevisionId: 'revision', clips: [], assetFiles: [], unassignedAssetFiles: [], sources: [{ ...source }], resourceKeys },
     }],
   }));
   const { result } = renderHook(() => usePrevis('movie', 'scene', 'plan'));

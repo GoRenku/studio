@@ -2,9 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearSelectedProjectCover,
-  deleteProjectCoverAsset,
-  readProjectCoverAssets,
-  selectProjectCoverAsset,
+  deleteProjectCoverAssetFile,
+  readProjectCoverAssetFiles,
+  selectProjectCoverAssetFile,
 } from './studio-project-assets-api';
 
 describe('Studio Project Cover Assets API', () => {
@@ -25,31 +25,31 @@ describe('Studio Project Cover Assets API', () => {
         page: {
           items: [{ id: 'asset_newest' }],
           nextCursor: 'cursor/next',
-          selectedAssetId: 'asset_newest',
+          selectedAssetFileId: 'asset_newest',
         },
       }))
       .mockResolvedValueOnce(okResponse({
         page: {
           items: [{ id: 'asset_older' }],
           nextCursor: null,
-          selectedAssetId: 'asset_newest',
+          selectedAssetFileId: 'asset_newest',
         },
       }));
 
-    const result = await readProjectCoverAssets('urban basilica');
+    const result = await readProjectCoverAssetFiles('urban basilica');
 
-    expect(result.items.map((asset) => asset.id)).toEqual([
+    expect(result.items.map((assetFile) => assetFile.id)).toEqual([
       'asset_newest',
       'asset_older',
     ]);
-    expect(result.selectedAssetId).toBe('asset_newest');
+    expect(result.selectedAssetFileId).toBe('asset_newest');
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
-      '/studio-api/projects/urban%20basilica/assets?ownerKind=project&type=project_cover&mediaKind=image&limit=200'
+      '/studio-api/projects/urban%20basilica/asset-files?ownerKind=project&type=project_cover&mediaKind=image&limit=200'
     );
     expect(global.fetch).toHaveBeenNthCalledWith(
       2,
-      '/studio-api/projects/urban%20basilica/assets?ownerKind=project&type=project_cover&mediaKind=image&limit=200&cursor=cursor%2Fnext'
+      '/studio-api/projects/urban%20basilica/asset-files?ownerKind=project&type=project_cover&mediaKind=image&limit=200&cursor=cursor%2Fnext'
     );
   });
 
@@ -68,13 +68,13 @@ describe('Studio Project Cover Assets API', () => {
       .mockResolvedValueOnce(okResponse(discardReport));
 
     await expect(
-      selectProjectCoverAsset('urban basilica', 'asset/cover')
+      selectProjectCoverAssetFile('urban basilica', 'asset/cover')
     ).resolves.toEqual(selectionReport);
     await expect(clearSelectedProjectCover('urban basilica')).resolves.toEqual(
       selectionReport
     );
     await expect(
-      deleteProjectCoverAsset('urban basilica', 'asset/cover')
+      deleteProjectCoverAssetFile('urban basilica', 'asset/cover')
     ).resolves.toEqual(discardReport);
 
     expect(global.fetch).toHaveBeenNthCalledWith(

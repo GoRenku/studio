@@ -1,11 +1,9 @@
 import type {
-  Asset,
+  AssetFile,
   SceneShotPlanVideoGenerations,
 } from '@gorenku/studio-core/client';
 
-export type StudioShotPlanVideoAsset = Omit<Asset, 'files'> & {
-  files: Array<Asset['files'][number] & { browserUrl: string }>;
-};
+export type StudioShotPlanVideoAssetFile = AssetFile & { browserUrl: string };
 
 export type StudioSceneShotPlanVideoGenerations = Omit<
   SceneShotPlanVideoGenerations,
@@ -15,11 +13,11 @@ export type StudioSceneShotPlanVideoGenerations = Omit<
     | {
         kind: 'shotPlan';
         shotPlan: { id: string; title: string };
-        assets: StudioShotPlanVideoAsset[];
+        assetFiles: StudioShotPlanVideoAssetFile[];
       }
     | {
         kind: 'miscellaneous';
-        assets: StudioShotPlanVideoAsset[];
+        assetFiles: StudioShotPlanVideoAssetFile[];
       }
   >;
 };

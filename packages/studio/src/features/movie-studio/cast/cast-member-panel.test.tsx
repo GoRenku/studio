@@ -4,12 +4,12 @@ import { fireEvent, render as renderTestingLibrary, screen, waitFor } from '@tes
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CastMemberResourceResponse,
-  StudioAssetResponse,
+  StudioAssetFileResponse,
 } from '@/services/studio-project-contracts';
 import {
   deleteCastVoice,
-  readCastAssets,
-  selectCastProfileAsset,
+  readCastAssetFiles,
+  selectCastProfileAssetFile,
   clearSelectedCastProfile,
 } from '@/services/studio-project-assets-api';
 import { readCastMemberResource } from '@/services/studio-continuity-api';
@@ -32,15 +32,15 @@ vi.mock('@/services/studio-project-assets-api', () => ({
   projectAssetFileUrl: vi.fn(
     (
       projectName: string,
-      assetId: string,
+      assetFileId: string,
       fileId: string
     ) =>
-      `/studio-api/projects/${projectName}/assets/${assetId}/files/${fileId}`
+      `/studio-api/projects/${projectName}/asset-files/${fileId}`
   ),
-  deleteCastAsset: vi.fn(),
+  deleteCastAssetFile: vi.fn(),
   deleteCastVoice: vi.fn(),
-  readCastAssets: vi.fn(),
-  selectCastProfileAsset: vi.fn(),
+  readCastAssetFiles: vi.fn(),
+  selectCastProfileAssetFile: vi.fn(),
   clearSelectedCastProfile: vi.fn(),
 }));
 
@@ -50,8 +50,8 @@ vi.mock('@/services/studio-continuity-api', () => ({
 
 describe('CastMemberPanel', () => {
   beforeEach(() => {
-    vi.mocked(readCastAssets).mockReset();
-    vi.mocked(selectCastProfileAsset).mockReset();
+    vi.mocked(readCastAssetFiles).mockReset();
+    vi.mocked(selectCastProfileAssetFile).mockReset();
     vi.mocked(clearSelectedCastProfile).mockReset();
     vi.mocked(deleteCastVoice).mockReset();
     vi.mocked(readCastMemberResource).mockReset();
@@ -63,10 +63,9 @@ describe('CastMemberPanel', () => {
     vi.mocked(readCastMemberResource).mockResolvedValue({
       ...castMemberResource(),
       firstImage: {
-        assetId: 'asset_profile',
         assetFileId: 'asset_file_profile',
         title: 'Urban profile',
-        fileRole: 'primary',
+
         mediaKind: 'image',
         mimeType: 'image/png',
         width: 1024,
@@ -74,9 +73,9 @@ describe('CastMemberPanel', () => {
         url: '/profile.png',
       },
     });
-    vi.mocked(readCastAssets)
-      .mockResolvedValueOnce(assetCollection([castProfileAsset()], 'asset_profile'))
-      .mockResolvedValueOnce(assetCollection([castProfileAsset()]));
+    vi.mocked(readCastAssetFiles)
+      .mockResolvedValueOnce(assetFileCollection([castProfileAssetFile()], 'asset_file_profile'))
+      .mockResolvedValueOnce(assetFileCollection([castProfileAssetFile()]));
     vi.mocked(clearSelectedCastProfile).mockResolvedValue({
       valid: true,
       warnings: [],
@@ -86,7 +85,7 @@ describe('CastMemberPanel', () => {
         projectFolder: '/projects/constantinople',
       },
       target: { kind: 'castMember', id: 'cast_urban' },
-      selectedAssetId: null,
+      selectedAssetFileId: null,
       resourceKeys: ['surface:cast:cast_urban'],
     });
 
@@ -113,7 +112,7 @@ describe('CastMemberPanel', () => {
         'cast_urban'
       );
     });
-    expect(selectCastProfileAsset).not.toHaveBeenCalled();
+    expect(selectCastProfileAssetFile).not.toHaveBeenCalled();
   });
 
   it('renders Details narrative facts without visual-anchor copy or a Voice Design tab', async () => {
@@ -123,8 +122,8 @@ describe('CastMemberPanel', () => {
         voiceNotes: 'Low, clipped, dry under pressure.',
       })
     );
-    vi.mocked(readCastAssets).mockResolvedValue(
-      assetCollection([castProfileAsset()], 'asset_profile')
+    vi.mocked(readCastAssetFiles).mockResolvedValue(
+      assetFileCollection([castProfileAssetFile()], 'asset_file_profile')
     );
 
     render(
@@ -143,10 +142,10 @@ describe('CastMemberPanel', () => {
 
   it('shows Character Sheet footers without a pick control or raw filename copy', async () => {
     vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
-    vi.mocked(readCastAssets).mockResolvedValue(
-      assetCollection(
-        [castProfileAsset(), castCharacterSheetAsset()],
-        'asset_profile'
+    vi.mocked(readCastAssetFiles).mockResolvedValue(
+      assetFileCollection(
+        [castProfileAssetFile(), castCharacterSheetAssetFile()],
+        'asset_file_profile'
       )
     );
 
@@ -171,8 +170,8 @@ describe('CastMemberPanel', () => {
 
   it('opens Asset cards through semantic image preview activation', async () => {
     vi.mocked(readCastMemberResource).mockResolvedValue(castMemberResource());
-    vi.mocked(readCastAssets).mockResolvedValue(
-      assetCollection([castProfileAsset()], 'asset_profile')
+    vi.mocked(readCastAssetFiles).mockResolvedValue(
+      assetFileCollection([castProfileAssetFile()], 'asset_file_profile')
     );
 
     render(
@@ -199,11 +198,11 @@ describe('CastMemberPanel', () => {
     vi.mocked(readCastMemberResource).mockResolvedValue(
       castMemberResource({ voices: [castVoiceSample()] })
     );
-    vi.mocked(readCastAssets).mockResolvedValue(assetCollection([]));
+    vi.mocked(readCastAssetFiles).mockResolvedValue(assetFileCollection([]));
     vi.mocked(deleteCastVoice).mockResolvedValue({
       castMemberId: 'cast_urban',
       voiceId: 'cast_voice_normal',
-      sampleAssetId: 'asset_voice_sample',
+      sampleAssetFileId: 'asset_voice_sample',
     });
 
     render(
@@ -239,11 +238,11 @@ describe('CastMemberPanel', () => {
   });
 });
 
-function assetCollection(
-  items: StudioAssetResponse[],
-  selectedAssetId: string | null = null
+function assetFileCollection(
+  items: StudioAssetFileResponse[],
+  selectedAssetFileId: string | null = null
 ) {
-  return { items, selectedAssetId };
+  return { items, selectedAssetFileId };
 }
 
 function castMemberResource(
@@ -274,9 +273,9 @@ function activateTab(tab: HTMLElement): void {
   fireEvent.click(tab);
 }
 
-function castProfileAsset(): StudioAssetResponse {
+function castProfileAssetFile(): StudioAssetFileResponse {
   return {
-    id: 'asset_profile',
+    id: 'asset_file_profile',
     owner: { kind: 'castMember', id: 'cast_urban' },
     localeId: null,
     type: 'cast_profile',
@@ -289,49 +288,23 @@ function castProfileAsset(): StudioAssetResponse {
     authoredFrom: null,
     referenceName: null,
     tags: [],
-    files: [
-      {
-        id: 'asset_file_profile',
-        role: 'primary',
-        url: '/studio-api/projects/constantinople/assets/asset_profile/files/file_profile',
-        mediaKind: 'image',
-        mimeType: 'image/png',
-        sizeBytes: 123,
-        contentHash: null,
-        width: 1024,
-        height: 1024,
-        durationSeconds: null,
-      },
-    ],
+    url: '/studio-api/projects/constantinople/asset-files/file_profile', mimeType: 'image/png', sizeBytes: 123, contentHash: null, width: 1024, height: 1024, durationSeconds: null,
     createdAt: '2026-05-26T00:00:00.000Z',
     updatedAt: '2026-05-26T00:00:00.000Z',
   };
 }
 
-function castCharacterSheetAsset(): StudioAssetResponse {
+function castCharacterSheetAssetFile(): StudioAssetFileResponse {
   return {
-    ...castProfileAsset(),
-    id: 'asset_character_sheet',
+    ...castProfileAssetFile(),
+    id: 'asset_file_character_sheet',
     type: 'character_sheet',
     mediaKind: 'image',
     title: 'Urban Sheet',
     oneLineSummary: 'default costume and face reference',
     referenceName: 'standard-sheet',
     tags: ['default costume and face reference'],
-    files: [
-      {
-        id: 'asset_file_character_sheet',
-        role: 'primary',
-        url: '/studio-api/projects/constantinople/assets/asset_sheet/files/file_sheet',
-        mediaKind: 'image',
-        mimeType: 'image/png',
-        sizeBytes: 456,
-        contentHash: null,
-        width: 1600,
-        height: 1200,
-        durationSeconds: null,
-      },
-    ],
+    url: '/studio-api/projects/constantinople/asset-files/file_sheet', mimeType: 'image/png', sizeBytes: 456, contentHash: null, width: 1600, height: 1200, durationSeconds: null,
   };
 }
 
@@ -344,7 +317,7 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
     isDefault: true,
     voiceIdentity: { provider: 'elevenlabs', voiceId: 'voice_urban_normal' },
     sample: {
-      id: 'asset_voice_sample',
+      id: 'asset_file_voice_sample',
       owner: { kind: 'castMember', id: 'cast_urban' },
       localeId: null,
       type: 'cast_voice_sample',
@@ -357,20 +330,7 @@ function castVoiceSample(): CastMemberResourceResponse['voices'][number] {
       authoredFrom: null,
       referenceName: 'normal-voice',
       tags: ['calm strategic baseline'],
-      files: [
-        {
-          id: 'asset_file_voice_sample',
-          role: 'primary',
-          mediaKind: 'audio',
-          mimeType: 'audio/mpeg',
-          sizeBytes: 789,
-          contentHash: null,
-          width: null,
-          height: null,
-          durationSeconds: 2.1,
-          url: '/studio-api/projects/constantinople/cast/cast_urban/assets/asset_voice_sample/files/asset_file_voice_sample',
-        },
-      ],
+      mimeType: 'audio/mpeg', sizeBytes: 789, contentHash: null, width: null, height: null, durationSeconds: 2.1, url: '/studio-api/projects/constantinople/cast/cast_urban/asset-files/asset_file_voice_sample',
       createdAt: '2026-05-26T00:00:00.000Z',
       updatedAt: '2026-05-26T00:00:00.000Z',
     },

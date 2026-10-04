@@ -13,7 +13,7 @@ import type {
   StudioSelection,
   StudioSelectionContextResult,
 } from '../../client/index.js';
-import { listAssetPageInSession } from '../assets/projection.js';
+import { listAssetFilePageInSession } from '../asset-files/projection.js';
 import { listCastMemberRecords } from '../database/access/cast-members.js';
 import { listAllInspirationFolderRecords } from '../database/access/inspiration-folders.js';
 import {
@@ -183,14 +183,14 @@ function readCastReadiness(session: DatabaseSession): DirectorCastReadiness {
     } else {
       missingActiveCastDesignCastMemberIds.push(castMember.id);
     }
-    const assets = listAssetPageInSession(session, {
+    const assetFiles = listAssetFilePageInSession(session, {
       owner: { kind: 'castMember', id: castMember.id },
       limit: 200,
     }).items.filter(
-      (asset) => asset.type === 'character_sheet' || asset.type === 'cast_profile'
+      (assetFile) => assetFile.type === 'character_sheet' || assetFile.type === 'cast_profile'
     );
-    visualReferenceCount += assets.length;
-    if (assets.length === 0) {
+    visualReferenceCount += assetFiles.length;
+    if (assetFiles.length === 0) {
       missingVisualReferenceCastMemberIds.push(castMember.id);
     }
   }
@@ -227,13 +227,13 @@ function readProductionDesignReadiness(
     } else {
       missingActiveLocationDesignLocationIds.push(location.id);
     }
-    const assets = listAssetPageInSession(session, {
+    const assetFiles = listAssetFilePageInSession(session, {
       owner: { kind: 'location', id: location.id },
       type: 'location_sheet',
       limit: 200,
     }).items;
-    locationSheetCount += assets.length;
-    if (assets.length === 0) {
+    locationSheetCount += assetFiles.length;
+    if (assetFiles.length === 0) {
       missingEnvironmentSheetLocationIds.push(location.id);
     }
   }
@@ -244,13 +244,13 @@ function readProductionDesignReadiness(
     } else {
       missingActivePropDesignPropIds.push(prop.id);
     }
-    const assets = listAssetPageInSession(session, {
+    const assetFiles = listAssetFilePageInSession(session, {
       owner: { kind: 'prop', id: prop.id },
       type: 'prop_sheet',
       limit: 200,
     }).items;
-    propSheetCount += assets.length;
-    if (assets.length === 0) {
+    propSheetCount += assetFiles.length;
+    if (assetFiles.length === 0) {
       missingPropSheetPropIds.push(prop.id);
     }
   }
@@ -348,7 +348,7 @@ async function readSelectedSceneReadiness(input: {
   });
   const missingBeatIds = document.beats
     .filter((beat) =>
-      listAssetPageInSession(session, {
+      listAssetFilePageInSession(session, {
         owner: {
           kind: 'sceneBeat',
           sceneId: selection.id,

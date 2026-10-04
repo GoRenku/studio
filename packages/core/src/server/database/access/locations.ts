@@ -1,13 +1,12 @@
 import { and, asc, eq, notInArray } from 'drizzle-orm';
 import {
-  assetMemberships,
-  assets,
+  assetFiles,
   locationDesigns,
   locationDesignState,
   locations,
 } from '../../schema/index.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
-import { assetOwnerKey } from '../../assets/owner-keys.js';
+import { assetFileOwnerKey } from '../../asset-files/owner-keys.js';
 
 export type LocationRecord = typeof locations.$inferSelect;
 
@@ -39,7 +38,7 @@ export interface LocationAuthoringRecord {
 }
 
 export interface LocationDeleteDependencySummary {
-  assetCount: number;
+  assetFileCount: number;
   designCount: number;
   activeDesignStateCount: number;
   locationSheetCount: number;
@@ -79,15 +78,14 @@ export function replaceLocationAuthoringRecords(
   session.db.delete(locations).where(notInArray(locations.id, ids)).run();
 }
 
-export function listLocationAssetRoleRecords(
+export function listLocationAssetFileRoleRecords(
   session: DatabaseSession,
   locationId: string
 ): Array<{ type: string }> {
   return session.db
-    .select({ type: assets.type })
-    .from(assetMemberships)
-    .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
-    .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'location', id: locationId })))
+    .select({ type: assetFiles.type })
+    .from(assetFiles)
+    .where(eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'location', id: locationId })))
     .all();
 }
 
@@ -96,10 +94,10 @@ export function readLocationDeleteDependencySummary(
   locationId: string
 ): LocationDeleteDependencySummary {
   return {
-    assetCount: session.db
-      .select({ id: assetMemberships.assetId })
-      .from(assetMemberships)
-      .where(eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'location', id: locationId })))
+    assetFileCount: session.db
+      .select({ id: assetFiles.id })
+      .from(assetFiles)
+      .where(eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'location', id: locationId })))
       .all().length,
     designCount: session.db
       .select({ id: locationDesigns.id })
@@ -112,13 +110,12 @@ export function readLocationDeleteDependencySummary(
       .where(eq(locationDesignState.locationId, locationId))
       .all().length,
     locationSheetCount: session.db
-      .select({ id: assets.id })
-      .from(assetMemberships)
-      .innerJoin(assets, eq(assets.id, assetMemberships.assetId))
+      .select({ id: assetFiles.id })
+      .from(assetFiles)
       .where(
         and(
-          eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'location', id: locationId })),
-          eq(assets.type, 'location_sheet')
+          eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'location', id: locationId })),
+          eq(assetFiles.type, 'location_sheet')
         )
       )
       .all().length,

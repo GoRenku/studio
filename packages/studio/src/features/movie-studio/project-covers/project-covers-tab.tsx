@@ -3,9 +3,9 @@ import { toast } from 'sonner';
 import type { ProjectShellWithHttp } from '@/services/studio-project-contracts';
 import {
   clearSelectedProjectCover,
-  deleteProjectCoverAsset,
-  readProjectCoverAssets,
-  selectProjectCoverAsset,
+  deleteProjectCoverAssetFile,
+  readProjectCoverAssetFiles,
+  selectProjectCoverAssetFile,
 } from '@/services/studio-project-assets-api';
 import { readProject } from '@/services/studio-projects-api';
 import { Button } from '@/ui/button';
@@ -13,7 +13,7 @@ import {
   matchesProjectCoversResource,
   useStudioResourceRefresh,
 } from '@/hooks/use-studio-resource-refresh';
-import { useSelectableAssetCollection } from '@/hooks/use-selectable-asset-collection';
+import { useSelectableAssetFileCollection } from '@/hooks/use-selectable-asset-collection';
 import { ProjectCoverCards } from './project-cover-cards';
 
 export function ProjectCoversTab({
@@ -24,21 +24,21 @@ export function ProjectCoversTab({
   onProjectChange: (project: ProjectShellWithHttp) => void;
 }) {
   const projectName = project.project.projectName;
-  const assets = useSelectableAssetCollection({
-    readAssets: useCallback(
-      () => readProjectCoverAssets(projectName),
+  const assetFiles = useSelectableAssetFileCollection({
+    readAssetFiles: useCallback(
+      () => readProjectCoverAssetFiles(projectName),
       [projectName]
     ),
-    selectCanonicalAsset: useCallback(
-      (assetId: string) => selectProjectCoverAsset(projectName, assetId),
+    selectCanonicalAssetFile: useCallback(
+      (assetFileId: string) => selectProjectCoverAssetFile(projectName, assetFileId),
       [projectName]
     ),
-    clearCanonicalAsset: useCallback(
+    clearCanonicalAssetFile: useCallback(
       () => clearSelectedProjectCover(projectName),
       [projectName]
     ),
-    discardAsset: useCallback(
-      (assetId: string) => deleteProjectCoverAsset(projectName, assetId),
+    discardAssetFile: useCallback(
+      (assetFileId: string) => deleteProjectCoverAssetFile(projectName, assetFileId),
       [projectName]
     ),
   });
@@ -48,8 +48,8 @@ export function ProjectCoversTab({
     loading,
     refresh,
     toggleCanonical,
-    remove: removeAsset,
-  } = assets;
+    remove: removeAssetFile,
+  } = assetFiles;
 
   useStudioResourceRefresh({
     projectName,
@@ -67,9 +67,9 @@ export function ProjectCoversTab({
   );
 
   const toggle = useCallback(
-    async (asset: Parameters<typeof toggleCanonical>[0]) => {
+    async (assetFile: Parameters<typeof toggleCanonical>[0]) => {
       try {
-        const report = await toggleCanonical(asset);
+        const report = await toggleCanonical(assetFile);
         await refreshShell(report.resourceKeys);
       } catch (error) {
         toast.error(errorMessage(error));
@@ -79,15 +79,15 @@ export function ProjectCoversTab({
   );
 
   const remove = useCallback(
-    async (asset: Parameters<typeof removeAsset>[0]) => {
+    async (assetFile: Parameters<typeof removeAssetFile>[0]) => {
       try {
-        const report = await removeAsset(asset);
+        const report = await removeAssetFile(assetFile);
         await refreshShell(report.resourceKeys);
       } catch (error) {
         toast.error(errorMessage(error));
       }
     },
-    [refreshShell, removeAsset]
+    [refreshShell, removeAssetFile]
   );
 
   if (loading && collection.items.length === 0) {
@@ -112,8 +112,8 @@ export function ProjectCoversTab({
   return (
     <div className='min-h-full overflow-y-auto bg-panel-bg px-4 py-5'>
       <ProjectCoverCards
-        assets={collection.items}
-        selectedAssetId={collection.selectedAssetId}
+        assetFiles={collection.items}
+        selectedAssetFileId={collection.selectedAssetFileId}
         onToggleSelected={toggle}
         onDelete={remove}
       />

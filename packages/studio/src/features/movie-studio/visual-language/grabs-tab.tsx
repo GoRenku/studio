@@ -2,13 +2,13 @@ import type { InspirationFolderResource } from '@gorenku/studio-core/client';
 import { FileUploadArea } from '@/ui/file-upload-area';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
-import { inspirationImageUrl } from './visual-language-image-urls';
+import { projectAssetFileUrl } from '@/services/studio-project-assets-api';
 
 interface GrabsTabProps {
   projectName: string;
   resource: InspirationFolderResource;
   onUpload: (files: File[]) => Promise<void>;
-  onDeleteImage: (fileName: string) => Promise<void>;
+  onDeleteImage: (assetFileId: string) => Promise<void>;
 }
 
 export function GrabsTab({
@@ -30,18 +30,17 @@ export function GrabsTab({
       {(uploadCard) => (
         <MediaCardGrid minimumCardWidthPx={180}>
           {images.map((image) => {
-            const src = inspirationImageUrl(
+            const src = projectAssetFileUrl(
               projectName,
-              resource.folder.id,
-              image.fileName
+              image.id
             );
             return (
               <MediaCard
-                key={image.fileName}
+                key={image.id}
                 media={{
                   kind: 'image',
                   src,
-                  alt: `${image.fileName} inspiration grab`,
+                  alt: image.title ?? '',
                   fit: 'cover',
                   effect: 'zoom-on-hover',
                 }}
@@ -49,19 +48,19 @@ export function GrabsTab({
                 presentation={{ kind: 'overlay' }}
                 activation={{
                   kind: 'image-preview',
-                  label: `${image.fileName} inspiration grab`,
+                  label: 'Preview inspiration image',
                   image: {
                     src,
-                    alt: `${image.fileName} inspiration grab`,
-                    title: image.fileName,
+                    alt: image.title ?? '',
+                    title: image.title ?? '',
                   },
                 }}
                 deleteAction={{
-                  label: `Delete ${image.fileName}`,
+                  label: 'Delete inspiration image',
                   confirmationTitle: 'Delete Image?',
                   confirmationMessage:
-                    'Remove this grab from the folder. This cannot be undone.',
-                  onDelete: () => onDeleteImage(image.fileName),
+                    'Move this grab to Trash.',
+                  onDelete: () => onDeleteImage(image.id),
                 }}
               />
             );

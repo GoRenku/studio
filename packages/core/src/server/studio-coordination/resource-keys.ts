@@ -1,6 +1,6 @@
 import {
   STUDIO_PROJECT_SETTINGS_RESOURCE_KEY,
-  type AssetOwner,
+  type AssetFileOwner,
 } from '../../client/index.js';
 
 export function studioProjectShellResourceKey(): string {
@@ -105,7 +105,7 @@ export function studioSceneShotPlansResourceKey(sceneId: string): string {
   return `surface:scene:${sceneId}:shot-plans`;
 }
 
-export function studioShotPlanAssetsResourceKey(shotPlanId: string): string {
+export function studioShotPlanAssetFilesResourceKey(shotPlanId: string): string {
   return `surface:shotPlan:${shotPlanId}:assets`;
 }
 
@@ -134,7 +134,7 @@ export function studioBeatResourceKey(
   return `scene-beats:${sceneBeatsRevisionId}:beat:${beatId}`;
 }
 
-export function studioAssetOwnerSurfaceResourceKeys(owner: AssetOwner): string[] {
+export function studioAssetFileOwnerSurfaceResourceKeys(owner: AssetFileOwner): string[] {
   switch (owner.kind) {
     case 'castMember':
       return [studioCastMemberSurfaceResourceKey(owner.id)];
@@ -149,12 +149,14 @@ export function studioAssetOwnerSurfaceResourceKeys(owner: AssetOwner): string[]
     case 'shot':
       return [];
     case 'project':
-      return [studioProjectAssetsResourceKey()];
+      return [studioProjectAssetFilesResourceKey()];
+    case 'inspirationFolder':
+      return [studioVisualLanguageInspirationResourceKey(), studioVisualLanguageInspirationFolderResourceKey(owner.id)];
     case 'scene':
       return [];
   }
 }
 
-export function studioProjectAssetsResourceKey(): string {
+export function studioProjectAssetFilesResourceKey(): string {
   return 'surface:project:assets';
 }

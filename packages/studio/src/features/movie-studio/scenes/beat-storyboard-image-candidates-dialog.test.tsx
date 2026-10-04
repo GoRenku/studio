@@ -32,7 +32,7 @@ describe('BeatStoryboardImageCandidatesDialog', () => {
           images: [{
             id: 'asset_1',
             generationProvenance: { provider: 'fal-ai' },
-            files: [{ mediaKind: 'image', url: '/image.png' }],
+            mediaKind: 'image', url: '/image.png',
           }],
         }],
       } as never,
@@ -49,7 +49,7 @@ describe('BeatStoryboardImageCandidatesDialog', () => {
     fireEvent.click(screen.getByRole('button', {
       name: 'Inspect generation request for Storyboard image 1 for Decision',
     }));
-    expect(inspect).toHaveBeenCalledWith({ projectName: 'movie', assetId: 'asset_1' });
+    expect(inspect).toHaveBeenCalledWith({ projectName: 'movie', assetFileId: 'asset_1' });
   });
 
   it('delegates selection for the exact Beat candidate', async () => {
@@ -60,7 +60,7 @@ describe('BeatStoryboardImageCandidatesDialog', () => {
         beats: [{
           beatId: 'beat_1', beatNumber: '1', selectedImageId: null,
           needsStoryboardImage: true,
-          images: [{ id: 'asset_1', generationProvenance: null, files: [{ mediaKind: 'image', url: '/image.png' }] }],
+          images: [{ id: 'asset_1', generationProvenance: null, mediaKind: 'image', url: '/image.png' }],
         }],
       } as never,
       error: null,
@@ -71,7 +71,7 @@ describe('BeatStoryboardImageCandidatesDialog', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Use as selected Storyboard image' }));
     });
     await vi.waitFor(() => expect(selectStudioSceneStoryboardImage).toHaveBeenCalledWith(
-      expect.objectContaining({ beatId: 'beat_1', assetId: 'asset_1' }),
+      expect.objectContaining({ beatId: 'beat_1', assetFileId: 'asset_1' }),
     ));
     expect(reload).toHaveBeenCalledOnce();
     expect(onSceneBeatsChange).toHaveBeenCalledOnce();

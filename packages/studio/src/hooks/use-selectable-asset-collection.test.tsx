@@ -1,50 +1,50 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { StudioAssetResponse } from '@/services/studio-project-contracts';
-import { useSelectableAssetCollection } from './use-selectable-asset-collection';
+import type { StudioAssetFileResponse } from '@/services/studio-project-contracts';
+import { useSelectableAssetFileCollection } from './use-selectable-asset-collection';
 
-describe('useSelectableAssetCollection', () => {
+describe('useSelectableAssetFileCollection', () => {
   it('refreshes after mutations and returns unchanged resource keys', async () => {
-    const asset = { id: 'asset_cover' } as StudioAssetResponse;
-    const readAssets = vi.fn()
-      .mockResolvedValueOnce({ items: [asset], selectedAssetId: null })
-      .mockResolvedValueOnce({ items: [asset], selectedAssetId: asset.id })
-      .mockResolvedValueOnce({ items: [], selectedAssetId: null });
-    const selectCanonicalAsset = vi.fn().mockResolvedValue({
+    const assetFile = { id: 'asset_cover' } as StudioAssetFileResponse;
+    const readAssetFiles = vi.fn()
+      .mockResolvedValueOnce({ items: [assetFile], selectedAssetFileId: null })
+      .mockResolvedValueOnce({ items: [assetFile], selectedAssetFileId: assetFile.id })
+      .mockResolvedValueOnce({ items: [], selectedAssetFileId: null });
+    const selectCanonicalAssetFile = vi.fn().mockResolvedValue({
       resourceKeys: ['surface:project:covers', 'project-shell'],
     });
-    const clearCanonicalAsset = vi.fn();
-    const discardAsset = vi.fn().mockResolvedValue({
+    const clearCanonicalAssetFile = vi.fn();
+    const discardAssetFile = vi.fn().mockResolvedValue({
       resourceKeys: ['surface:project:covers', 'trash:list'],
     });
-    const { result } = renderHook(() => useSelectableAssetCollection({
-      readAssets,
-      selectCanonicalAsset,
-      clearCanonicalAsset,
-      discardAsset,
+    const { result } = renderHook(() => useSelectableAssetFileCollection({
+      readAssetFiles,
+      selectCanonicalAssetFile,
+      clearCanonicalAssetFile,
+      discardAssetFile,
     }));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     let selectionReport: { resourceKeys: string[] } | undefined;
     await act(async () => {
-      selectionReport = await result.current.toggleCanonical(asset);
+      selectionReport = await result.current.toggleCanonical(assetFile);
     });
     expect(selectionReport?.resourceKeys).toEqual([
       'surface:project:covers',
       'project-shell',
     ]);
-    expect(result.current.collection.selectedAssetId).toBe(asset.id);
+    expect(result.current.collection.selectedAssetFileId).toBe(assetFile.id);
 
     let discardReport: { resourceKeys: string[] } | undefined;
     await act(async () => {
-      discardReport = await result.current.remove(asset);
+      discardReport = await result.current.remove(assetFile);
     });
     expect(discardReport?.resourceKeys).toEqual([
       'surface:project:covers',
       'trash:list',
     ]);
     expect(result.current.collection.items).toEqual([]);
-    expect(readAssets).toHaveBeenCalledTimes(3);
+    expect(readAssetFiles).toHaveBeenCalledTimes(3);
   });
 });

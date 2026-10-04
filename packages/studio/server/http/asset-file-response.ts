@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { Readable } from 'node:stream';
 import type {
   AssetFile,
-  ResolvedProjectAssetFileById,
+  ResolvedProjectAssetFile,
 } from '@gorenku/studio-core/server';
 import type { ProjectsRouteProjectData } from '../routes/projects.js';
 
@@ -10,7 +10,6 @@ export async function readProjectAssetFileByIdResponse(
   projectData: ProjectsRouteProjectData,
   input: {
     projectName: string;
-    assetId: string;
     assetFileId: string;
   },
   request?: Request,
@@ -20,13 +19,13 @@ export async function readProjectAssetFileByIdResponse(
 }
 
 export async function projectAssetFileResponse(
-  resolved: ResolvedProjectAssetFileById,
+  resolved: ResolvedProjectAssetFile,
   request?: Request,
 ): Promise<Response> {
   const contentLength = (await fs.promises.stat(resolved.absolutePath)).size;
   // Without a matching validator, If-Range requires the complete representation.
   const range = request?.method === 'GET' && !request.headers.has('If-Range') ? request.headers.get('Range') : null;
-  const bounds = assetByteRange(range, contentLength);
+  const bounds = assetFileByteRange(range, contentLength);
   if (bounds === 'unsatisfiable') {
     return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${contentLength}`, 'Accept-Ranges': 'bytes' } });
   }
@@ -34,7 +33,7 @@ export async function projectAssetFileResponse(
   return new Response(Readable.toWeb(stream) as ReadableStream<Uint8Array>, {
     status: bounds ? 206 : 200,
     headers: {
-      'Content-Type': contentTypeForAssetFile(resolved.file),
+      'Content-Type': contentTypeForAssetFile(resolved.assetFile),
       'Cache-Control': 'private, max-age=31536000, immutable',
       'Accept-Ranges': 'bytes',
       'Content-Length': String(bounds ? bounds.end - bounds.start + 1 : contentLength),
@@ -43,7 +42,7 @@ export async function projectAssetFileResponse(
   });
 }
 
-function assetByteRange(range: string | null | undefined, size: number): { start: number; end: number } | 'unsatisfiable' | null {
+function assetFileByteRange(range: string | null | undefined, size: number): { start: number; end: number } | 'unsatisfiable' | null {
   // RFC 9110 permits ignoring unsupported units and multipart range requests.
   const match = range?.match(/^bytes=(\d*)-(\d*)$/);
   if (!match || (!match[1] && !match[2])) return null;

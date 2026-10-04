@@ -11,7 +11,7 @@ export interface InsertCastVoiceRecord {
   castMemberId: string;
   name: string;
   purpose: string;
-  sampleAssetId: string;
+  sampleAssetFileId: string;
   voiceIdentity?: JsonValue | null;
   sortOrder: number;
   createdAt: string;
@@ -59,15 +59,15 @@ export function readCastVoiceRecord(
   );
 }
 
-export function readCastVoiceRecordBySampleAssetId(
+export function readCastVoiceRecordBySampleAssetFileId(
   session: DatabaseSession,
-  sampleAssetId: string
+  sampleAssetFileId: string
 ): CastVoiceRecord | null {
   return (
     session.db
       .select()
       .from(castVoices)
-      .where(and(eq(castVoices.sampleAssetId, sampleAssetId), isNull(castVoices.discardedAt)))
+      .where(and(eq(castVoices.sampleAssetFileId, sampleAssetFileId), isNull(castVoices.discardedAt)))
       .get() ?? null
   );
 }

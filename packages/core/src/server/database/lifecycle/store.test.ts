@@ -1,3 +1,4 @@
+import { migrateProjectDatabase } from './migrator.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -7,9 +8,6 @@ import {
   closeProjectStore,
   openProjectStore,
 } from './store.js';
-import {
-  currentProjectStoreSchemaGeneration,
-} from './project-store-schema-generation.js';
 
 describe('openProjectStore', () => {
   it('keeps project-lifetime SQLite sessions open until explicitly closed', async () => {
@@ -129,10 +127,7 @@ function projectDatabasePath(projectFolder: string): string {
 }
 
 function createCurrentProjectDatabase(projectFolder: string): void {
-  createProjectDatabaseWithSchemaGeneration(
-    projectFolder,
-    currentProjectStoreSchemaGeneration()
-  );
+  migrateProjectDatabase(projectDatabasePath(projectFolder));
 }
 
 function createProjectDatabaseWithSchemaGeneration(

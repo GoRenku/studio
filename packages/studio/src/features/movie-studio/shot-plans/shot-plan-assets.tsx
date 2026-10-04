@@ -2,25 +2,25 @@ import { useGenerationRequestInspectorDialog } from '@/features/media-generation
 import { useState } from 'react';
 import { VideoPreviewDialog } from '@/ui/video-preview-dialog';
 import type { MediaCardActivation, MediaCardMedia } from '@/ui/media-card/media-card-contract';
-import { deleteStudioShotPlanAsset } from '@/services/studio-shot-plans-api';
-import type { StudioShotPlanAssets } from '@/services/studio-shot-plans-contracts';
+import { deleteStudioShotPlanAssetFile } from '@/services/studio-shot-plans-api';
+import type { StudioShotPlanAssetFiles } from '@/services/studio-shot-plans-contracts';
 import { MediaCard } from '@/ui/media-card/media-card';
 import { MediaCardGrid } from '@/ui/media-card/media-card-grid';
 import { Button } from '@/ui/button';
-import { useShotPlanAssets } from './use-shot-plan-assets';
+import { useShotPlanAssetFiles } from './use-shot-plan-assets';
 
-const groupLabels: Record<StudioShotPlanAssets['groups'][number]['role'], string> = {
+const groupLabels: Record<StudioShotPlanAssetFiles['groups'][number]['role'], string> = {
   'first-frame': 'First Frames',
   'last-frame': 'Last Frames',
   storyboard: 'Storyboards',
   reference: 'References',
 };
 
-export function ShotPlanAssetsView(input: {
+export function ShotPlanAssetFilesView(input: {
   projectName: string;
   shotPlanId: string;
 }) {
-  const { resource, error, reload } = useShotPlanAssets({ ...input, enabled: true });
+  const { resource, error, reload } = useShotPlanAssetFiles({ ...input, enabled: true });
   const { openGenerationRequestInspector } = useGenerationRequestInspectorDialog();
   const [video, setVideo] = useState<{ src: string; title: string } | null>(null);
   if (error) {
@@ -42,28 +42,27 @@ export function ShotPlanAssetsView(input: {
           <section key={group.role} className='flex flex-col gap-3'>
             <h3 className='text-sm font-semibold text-foreground'>{groupLabels[group.role]}</h3>
             <MediaCardGrid minimumCardWidthPx={220} gap='standard'>
-              {group.assets.map((asset) => {
-                const file = asset.files.find((candidate) => candidate.role === 'primary');
-                const media = file ? planReferenceMedia(file.mediaKind, file.url, asset.title) : null;
+              {group.assetFiles.map((assetFile) => {
+                const media = planReferenceMedia(assetFile.mediaKind, assetFile.url, assetFile.title ?? '');
                 return (
                   <MediaCard
-                    key={asset.id}
+                    key={assetFile.id}
                     media={media}
                     frame={{ kind: 'ratio', aspectRatio: 16 / 9 }}
                     presentation={{ kind: 'overlay' }}
-                    activation={planReferenceActivation(media, asset.title, setVideo)}
-                    cornerAction={asset.generationProvenance ? {
+                    activation={planReferenceActivation(media, (assetFile.title ?? ''), setVideo)}
+                    cornerAction={assetFile.generationProvenance ? {
                       kind: 'inspect',
-                      label: `Inspect generation request for ${asset.title}`,
+                      label: `Inspect generation request for ${(assetFile.title ?? '')}`,
                       visibility: 'always',
-                      onAction: () => openGenerationRequestInspector({ projectName: input.projectName, assetId: asset.id }),
+                      onAction: () => openGenerationRequestInspector({ projectName: input.projectName, assetFileId: assetFile.id }),
                     } : undefined}
                     deleteAction={{
-                      label: `Delete ${asset.title}`,
+                      label: `Delete ${(assetFile.title ?? '')}`,
                       confirmationTitle: 'Delete Shot Plan Asset?',
                       confirmationMessage: 'This asset will move to Trash. You can restore it later.',
                       onDelete: async () => {
-                        await deleteStudioShotPlanAsset({ ...input, assetId: asset.id });
+                        await deleteStudioShotPlanAssetFile({ ...input, assetFileId: assetFile.id });
                         reload();
                       },
                     }}

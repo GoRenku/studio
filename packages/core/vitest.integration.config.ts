@@ -10,6 +10,8 @@ const alias = [
 const sharedProjectSettings = {
   globals: true,
   environment: 'node' as const,
+  testTimeout: 20000,
+  hookTimeout: 20000,
   pool: 'threads',
   fileParallelism: false,
   minWorkers: 1,

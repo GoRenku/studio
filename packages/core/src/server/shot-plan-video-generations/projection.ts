@@ -3,7 +3,7 @@ import type {
   SceneShotPlanVideoGenerations,
   ShotPlanVideoGenerationGroup,
 } from '../../client/shot-plan-video-generations.js';
-import { listAssetsInSession } from '../assets/projection.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
 import { listSceneShotPlanRecords } from '../database/access/shot-plans/plan-records.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { trashItems } from '../schema/index.js';
@@ -18,34 +18,34 @@ export function projectSceneShotPlanVideoGenerations(
   const assetsByPlanId = new Map<string, ReturnType<typeof listProjectVideos>>();
   const miscellaneous: ReturnType<typeof listProjectVideos> = [];
 
-  for (const asset of listProjectVideos(session)) {
-    const shotPlanId = asset.authoredFrom?.id;
+  for (const assetFile of listProjectVideos(session)) {
+    const shotPlanId = assetFile.authoredFrom?.id;
     if (!shotPlanId) {
       continue;
     }
     if (activePlanIds.has(shotPlanId)) {
-      const assets = assetsByPlanId.get(shotPlanId) ?? [];
-      assets.push(asset);
-      assetsByPlanId.set(shotPlanId, assets);
+      const assetFiles = assetsByPlanId.get(shotPlanId) ?? [];
+      assetFiles.push(assetFile);
+      assetsByPlanId.set(shotPlanId, assetFiles);
       continue;
     }
     if (hasActiveShotPlanTrashItem(session, shotPlanId, sceneId)) {
-      miscellaneous.push(asset);
+      miscellaneous.push(assetFile);
     }
   }
 
   const groups: ShotPlanVideoGenerationGroup[] = activePlans.flatMap((plan) => {
-    const assets = assetsByPlanId.get(plan.id);
-    return assets?.length
+    const assetFiles = assetsByPlanId.get(plan.id);
+    return assetFiles?.length
       ? [{
           kind: 'shotPlan' as const,
           shotPlan: { id: plan.id, title: plan.title },
-          assets,
+          assetFiles,
         }]
       : [];
   });
   if (miscellaneous.length > 0) {
-    groups.push({ kind: 'miscellaneous', assets: miscellaneous });
+    groups.push({ kind: 'miscellaneous', assetFiles: miscellaneous });
   }
 
   return {
@@ -56,7 +56,7 @@ export function projectSceneShotPlanVideoGenerations(
 }
 
 function listProjectVideos(session: DatabaseSession) {
-  return listAssetsInSession(session, {
+  return listAssetFilesInSession(session, {
     owner: { kind: 'project' },
     type: 'shot_plan_video',
     mediaKind: 'video',

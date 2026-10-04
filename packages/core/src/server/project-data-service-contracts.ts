@@ -1,16 +1,16 @@
+import type { ImportReferenceFilesInput, ReferenceFilesImportReport } from '../client/asset-files.js';
 import type { ShotPlanClipCommands } from '../client/shot-plan-clips.js';
 import type { ReadShotPlanPrevisInput, RegisterShotPlanPrevisInput, ShotPlanPrevisReport } from '../client/shot-plan-previs.js';
 import type { CleanProjectTemporaryFilesInput, ProjectTemporaryFilesCleanupReport } from '../client/project-temporary-files.js';
 import type { FdxUpdateStatus, FdxUpdateReview } from '../client/screenplay/fdx-updates.js';
 import type {
-  Asset,
   AssetFile,
-  AssetLocaleContext,
-  AssetOwner,
-  AssetPage,
-  AssetSelectionReport,
-  AssetSelectionTarget,
-  AssetUpdateReport,
+  AssetFileLocaleContext,
+  AssetFileOwner,
+  AssetFilePage,
+  AssetFileSelectionReport,
+  AssetFileSelectionTarget,
+  AssetFileUpdateReport,
   CastMemberResource,
   CastOverviewResource,
   CastNavigationRow,
@@ -100,7 +100,7 @@ import type {
   ReadMediaGenerationContextInput,
   ProjectLibrary,
   ProjectShell,
-  UpdateAssetInput,
+  UpdateAssetFileInput,
   StoryArcResource,
   SceneBeatsResource,
   ScreenplayBeatGalleryResource,
@@ -124,17 +124,17 @@ import type {
   DeleteShotPlanInput,
   ListSceneShotPlanVideoGenerationsInput,
   SceneShotPlanVideoGenerations,
-  ReadShotPlanAssetsInput,
+  ReadShotPlanAssetFilesInput,
   ImportShotPlanReferenceInput,
   ShotPlanReferenceImportReport,
-  ShotPlanAssets,
-  DiscardShotPlanAssetInput,
+  ShotPlanAssetFiles,
+  DiscardShotPlanAssetFileInput,
   SceneStoryboardImageCandidateInput,
   ShotPlanDialogueAudioMutationReport,
   ShotPlanDialogueAudioResource,
   DialogueTurnRange,
   MediaGenerationProvenance,
-  AssetMetadataInput,
+  AssetFileMetadataInput,
 } from '../client/index.js';
 import type {
   ScreenplayInput,
@@ -176,9 +176,9 @@ export type { ProjectDatabasePreMigrationBackupReport };
 export interface ProjectDataService extends ShotPlanClipCommands {
   uploadScreenplaySupportingMaterial(input: import('./screenplay/supporting-material/uploads.js').UploadScreenplaySupportingMaterialInput): Promise<ImportScreenplaySupportingMaterialReport>;
   listProjectSupportingFiles(input: { projectName: string; homeDir?: string; cursor?: string | null; limit?: number }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFilePage>;
-  readProjectSupportingFileInformation(input: { projectName: string; homeDir?: string; assetId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;
-  resolveProjectSupportingFile(input: { projectName: string; homeDir?: string; assetId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;
-  discardProjectSupportingFile(input: { projectName: string; homeDir?: string; assetId: string }): Promise<RecoverableMutationReport>;
+  readProjectSupportingFileInformation(input: { projectName: string; homeDir?: string; assetFileId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;
+  resolveProjectSupportingFile(input: { projectName: string; homeDir?: string; assetFileId: string }): Promise<import('../client/screenplay/supporting-files.js').ProjectSupportingFileInformation>;
+  discardProjectSupportingFile(input: { projectName: string; homeDir?: string; assetFileId: string }): Promise<RecoverableMutationReport>;
   createMovieProject(input: CreateMovieProjectInput): Promise<ProjectCreateReport>;
   deleteProject(input: DeleteProjectInput): Promise<ProjectDeleteReport>;
   migrateProjectDatabase(
@@ -206,7 +206,7 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   listPropNavigation(
     input: ListNavigationInput
   ): Promise<PageResponse<PropNavigationRow>>;
-  listAssetPage(input: ListAssetPageInput): Promise<AssetPage>;
+  listAssetFilePage(input: ListAssetFilePageInput): Promise<AssetFilePage>;
   readSceneDesignResource(
     input: ReadSceneDesignResourceInput
   ): Promise<SceneDesignResource>;
@@ -250,20 +250,21 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   ): Promise<ResolvedProjectAssetFile>;
   resolveProjectAssetFileById(
     input: ResolveProjectAssetFileByIdInput
-  ): Promise<ResolvedProjectAssetFileById>;
-  updateAsset(input: UpdateAssetInput & RenkuConfigPathOptions): Promise<AssetUpdateReport>;
-  listAssets(input: ListAssetsInput): Promise<Asset[]>;
-  selectAsset(input: RenkuConfigPathOptions & {
+  ): Promise<ResolvedProjectAssetFile>;
+  updateAssetFile(input: UpdateAssetFileInput & RenkuConfigPathOptions): Promise<AssetFileUpdateReport>;
+  importReferenceFiles(input: ImportReferenceFilesInput): Promise<ReferenceFilesImportReport>;
+  listAssetFiles(input: ListAssetFilesInput): Promise<AssetFile[]>;
+  selectAssetFile(input: RenkuConfigPathOptions & {
     projectName: string;
-    target: AssetSelectionTarget;
-    assetId: string;
-  }): Promise<AssetSelectionReport>;
-  clearAssetSelection(input: RenkuConfigPathOptions & {
+    target: AssetFileSelectionTarget;
+    assetFileId: string;
+  }): Promise<AssetFileSelectionReport>;
+  clearAssetFileSelection(input: RenkuConfigPathOptions & {
     projectName: string;
-    target: AssetSelectionTarget;
-  }): Promise<AssetSelectionReport>;
-  discardAsset(input: DiscardAssetInput): Promise<RecoverableMutationReport>;
-  restoreAsset(input: RestoreAssetInput): Promise<RecoverableMutationReport>;
+    target: AssetFileSelectionTarget;
+  }): Promise<AssetFileSelectionReport>;
+  discardAssetFile(input: DiscardAssetFileInput): Promise<RecoverableMutationReport>;
+  restoreAssetFile(input: RestoreAssetFileInput): Promise<RecoverableMutationReport>;
   listTrash(input: ListTrashInput): Promise<TrashListReport>;
   restoreTrashItem(input: RestoreTrashItemInput): Promise<RecoverableMutationReport>;
   previewGarbageCollection(
@@ -304,20 +305,20 @@ export interface ProjectDataService extends ShotPlanClipCommands {
   ): Promise<ShotPlanDialogueAudioMutationReport>;
   resolveShotPlanDialogueAudioTakeFile(
     input: ResolveShotPlanDialogueAudioTakeFileInput
-  ): Promise<ResolvedProjectAssetFileById>;
+  ): Promise<ResolvedProjectAssetFile>;
   listSceneShotPlans(
     input: ListSceneShotPlansInput
   ): Promise<ShotPlanListReport>;
-  readShotPlanAssets(
-    input: ReadShotPlanAssetsInput
-  ): Promise<ShotPlanAssets>;
+  readShotPlanAssetFiles(
+    input: ReadShotPlanAssetFilesInput
+  ): Promise<ShotPlanAssetFiles>;
   importShotPlanReference(input: ImportShotPlanReferenceInput): Promise<ShotPlanReferenceImportReport>;
-  discardShotPlanAsset(
-    input: DiscardShotPlanAssetInput
+  discardShotPlanAssetFile(
+    input: DiscardShotPlanAssetFileInput
   ): Promise<RecoverableMutationReport>;
   selectSceneStoryboardImageCandidate(
     input: SceneStoryboardImageCandidateInput
-  ): Promise<AssetSelectionReport>;
+  ): Promise<AssetFileSelectionReport>;
   discardSceneStoryboardImageCandidate(
     input: SceneStoryboardImageCandidateInput
   ): Promise<RecoverableMutationReport>;
@@ -525,7 +526,7 @@ export interface AttachShotPlanDialogueAudioProjectInput
   turnRange: DialogueTurnRange;
   generationProvenance: MediaGenerationProvenance;
   title?: string;
-  assetMetadata?: AssetMetadataInput;
+  assetFileMetadata?: AssetFileMetadataInput;
   idGenerator?: ProjectIdGenerator;
 }
 
@@ -809,7 +810,7 @@ export interface WriteInspirationImageInput extends VisualLanguageProjectInput {
 
 export interface DeleteInspirationImageInput extends VisualLanguageProjectInput {
   folderId: string;
-  fileName: string;
+  assetFileId: string;
 }
 
 export interface ReadInspirationAnalysisInput extends VisualLanguageProjectInput {
@@ -890,10 +891,10 @@ export interface ListSceneNavigationInput extends ListNavigationInput {
   sequenceId: string;
 }
 
-export interface ListAssetPageInput extends RenkuConfigPathOptions {
+export interface ListAssetFilePageInput extends RenkuConfigPathOptions {
   projectName: string;
-  owner: AssetOwner;
-  locale?: AssetLocaleContext;
+  owner: AssetFileOwner;
+  locale?: AssetFileLocaleContext;
   type?: string;
   mediaKind?: string;
   limit?: number;
@@ -957,46 +958,36 @@ export interface PatchProjectInformationInput extends RenkuConfigPathOptions {
 
 export interface ResolveProjectAssetFileInput extends RenkuConfigPathOptions {
   projectName: string;
-  owner: AssetOwner;
-  assetId: string;
+  owner: AssetFileOwner;
   assetFileId: string;
 }
 
 export interface ResolvedProjectAssetFile {
-  asset: Asset;
-  file: Asset['files'][number];
+  assetFile: AssetFile;
   absolutePath: string;
 }
 
 export interface ResolveProjectAssetFileByIdInput extends RenkuConfigPathOptions {
   projectName: string;
-  assetId: string;
   assetFileId: string;
 }
 
-export interface ResolvedProjectAssetFileById {
-  assetId: string;
-  assetMediaKind: string;
-  file: AssetFile;
-  absolutePath: string;
-}
-
-export interface ListAssetsInput extends RenkuConfigPathOptions {
+export interface ListAssetFilesInput extends RenkuConfigPathOptions {
   projectName: string;
-  owner: AssetOwner;
-  locale?: AssetLocaleContext;
+  owner: AssetFileOwner;
+  locale?: AssetFileLocaleContext;
   type?: string;
   mediaKind?: string;
 }
 
-export interface DiscardAssetInput extends RenkuConfigPathOptions {
+export interface DiscardAssetFileInput extends RenkuConfigPathOptions {
   projectName: string;
-  owner: AssetOwner;
-  assetId: string;
+  owner: AssetFileOwner;
+  assetFileId: string;
   expectedType?: string;
 }
 
-export interface RestoreAssetInput extends RenkuConfigPathOptions {
+export interface RestoreAssetFileInput extends RenkuConfigPathOptions {
   projectName: string;
-  assetId: string;
+  assetFileId: string;
 }

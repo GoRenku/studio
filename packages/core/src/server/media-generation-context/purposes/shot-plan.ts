@@ -29,7 +29,7 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
   }
   const sceneContext = projectMediaGenerationSceneContext({
     session: input.session,
-    assets: input.assets,
+    assetFiles: input.assetFiles,
     screenplay: input.screenplay,
     sceneId: plan.shotPlan.sceneId,
     scope: plan.shotPlan.coverage
@@ -42,12 +42,12 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
   });
   const visualLanguage = readMediaGenerationLookbooks({
     session: input.session,
-    assets: input.assets,
+    assetFiles: input.assetFiles,
     projectFolder: input.projectFolder,
     kinds: input.purpose === 'shot-plan.dialogue-audio' ? [] : ['production'],
   });
   return {
-    targetContext: { kind: 'shotPlan', shotPlan: projectGenerationShotPlan(plan.shotPlan, input.assets), coveredBeats: plan.coveredBeats, sceneContext },
+    targetContext: { kind: 'shotPlan', shotPlan: projectGenerationShotPlan(plan.shotPlan, input.assetFiles), coveredBeats: plan.coveredBeats, sceneContext },
     visualLanguage,
     suggestedReferences: input.purpose === 'shot-plan.dialogue-audio'
       ? dialogueVoiceSampleSuggestions({ input, sceneContext })
@@ -56,13 +56,13 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
         lookbooks: visualLanguage,
         role: 'appearance',
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...suggestSceneSubjectMedia({
         sceneContext,
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...suggestBeatStoryboards({
@@ -70,13 +70,13 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
         sceneId: plan.shotPlan.sceneId,
         beatIds: plan.coveredBeats.map(({ beat }) => beat.id),
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...suggestSelectedShotImages({
         shots: plan.shotPlan.shots,
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...suggestShotPlanMedia({
@@ -84,7 +84,7 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
         shotPlanId: plan.shotPlan.id,
         roles: auxiliaryRoles(input.purpose),
         projectFolder: input.projectFolder,
-        collection: input.assets,
+        collection: input.assetFiles,
         warnings: input.warnings,
       }),
       ...(input.purpose === 'shot-plan.video-generation'
@@ -97,13 +97,13 @@ export const buildShotPlanPurposeContext: MediaGenerationPurposeBuilder = (input
 
 function auxiliaryRoles(purpose: Parameters<MediaGenerationPurposeBuilder>[0]['purpose']) {
   const all = [
-    { assetType: 'shot_plan_video_first_frame', role: 'first-frame' as const },
-    { assetType: 'shot_plan_video_last_frame', role: 'last-frame' as const },
-    { assetType: 'shot_plan_video_storyboard', role: 'video-storyboard' as const },
-    { assetType: 'shot_plan_video_reference', role: 'video-reference' as const },
+    { assetFileType: 'shot_plan_video_first_frame', role: 'first-frame' as const },
+    { assetFileType: 'shot_plan_video_last_frame', role: 'last-frame' as const },
+    { assetFileType: 'shot_plan_video_storyboard', role: 'video-storyboard' as const },
+    { assetFileType: 'shot_plan_video_reference', role: 'video-reference' as const },
   ];
   if (purpose === 'shot-plan.video-generation') {
-    return [...all, { assetType: 'shot_plan_previs', role: 'video-reference' as const }];
+    return [...all, { assetFileType: 'shot_plan_previs', role: 'video-reference' as const }];
   }
   if (purpose === 'shot-plan.video-last-frame') {
     return all.slice(0, 1);
@@ -128,15 +128,15 @@ function dialogueAudioSuggestions(input: {
     id: 'dialogue-audio',
     role: 'dialogue-audio',
     subject: { kind: 'shotPlan', id: resource.shotPlan.id },
-    assets: resource.takes.map((take) => take.asset),
-    workflowSelectedAssetIds: resource.takes
+    assetFiles: resource.takes.map((take) => take.assetFile),
+    workflowSelectedAssetFileIds: resource.takes
       .filter((take) => take.selected)
-      .map((take) => take.asset.id),
-    dialogueTurnRangesByAssetId: new Map(
-      resource.takes.map((take) => [take.asset.id, take.turnRange])
+      .map((take) => take.assetFile.id),
+    dialogueTurnRangesByAssetFileId: new Map(
+      resource.takes.map((take) => [take.assetFile.id, take.turnRange])
     ),
     projectFolder: input.input.projectFolder,
-    collection: input.input.assets,
+    collection: input.input.assetFiles,
     warnings: input.input.warnings,
   })];
 }
@@ -150,12 +150,12 @@ function dialogueVoiceSampleSuggestions(input: {
       id: 'voice-sample',
       role: 'voice-sample',
       subject: { kind: 'castMember', id: castMemberId },
-      assets: voices.map((voice) => input.input.assets.get(voice.sampleAssetId)),
-      workflowSelectedAssetIds: voices
+      assetFiles: voices.map((voice) => input.input.assetFiles.get(voice.sampleAssetFileId)),
+      workflowSelectedAssetFileIds: voices
         .filter((voice) => voice.isDefault)
-        .map((voice) => voice.sampleAssetId),
+        .map((voice) => voice.sampleAssetFileId),
       projectFolder: input.input.projectFolder,
-      collection: input.input.assets,
+      collection: input.input.assetFiles,
       warnings: input.input.warnings,
     })
   );

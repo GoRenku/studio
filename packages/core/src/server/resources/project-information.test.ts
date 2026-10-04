@@ -8,7 +8,7 @@ import {
   createSampleMovieProject,
   writeConfig,
 } from '../testing/project-data-fixtures.js';
-import { createTestAssetFixture } from '../testing/asset-fixture-helpers.js';
+import { createTestAssetFileFixture } from '../testing/asset-fixture-helpers.js';
 
 describe('project information resource', () => {
   let homeDir: string;
@@ -244,12 +244,12 @@ describe('project information resource', () => {
     if (!created) {
       return;
     }
-    const assetPath = 'screenplay/project-reference.png';
-    await fs.mkdir(path.dirname(path.join(created.projectPath, assetPath)), {
+    const assetFilePath = 'screenplay/project-reference.png';
+    await fs.mkdir(path.dirname(path.join(created.projectPath, assetFilePath)), {
       recursive: true,
     });
-    await fs.writeFile(path.join(created.projectPath, assetPath), 'image bytes');
-    await createTestAssetFixture({
+    await fs.writeFile(path.join(created.projectPath, assetFilePath), 'image bytes');
+    await createTestAssetFileFixture({
       projectName: 'constantinople',
       homeDir,
       owner: { kind: 'project' },
@@ -257,8 +257,7 @@ describe('project information resource', () => {
       type: 'reference',
       mediaKind: 'image',
       title: 'Project reference',
-      projectRelativePath: assetPath as ProjectRelativePath,
-      fileRole: 'primary',
+      projectRelativePath: assetFilePath as ProjectRelativePath,
     });
 
     const before = await projectData.readProjectInformationResource({

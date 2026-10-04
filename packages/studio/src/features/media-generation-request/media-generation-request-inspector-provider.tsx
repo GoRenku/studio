@@ -9,7 +9,7 @@ export function MediaGenerationRequestInspectorProvider({ children }: { children
   return (
     <MediaGenerationRequestInspectorContext.Provider value={value}>
       {children}
-      {input ? <MediaGenerationRequestInspectorDialog key={`${input.projectName}:${input.assetId}`} input={input} open onOpenChange={(open) => { if (!open) setInput(null); }} /> : null}
+      {input ? <MediaGenerationRequestInspectorDialog key={`${input.projectName}:${input.assetFileId}`} input={input} open onOpenChange={(open) => { if (!open) setInput(null); }} /> : null}
     </MediaGenerationRequestInspectorContext.Provider>
   );
 }

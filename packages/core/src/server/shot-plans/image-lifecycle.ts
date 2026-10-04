@@ -1,5 +1,5 @@
-import { listAssetsInSession } from '../assets/projection.js';
-import { readAssetRecord } from '../database/access/assets.js';
+import { listAssetFilesInSession } from '../asset-files/projection.js';
+import { readAssetFileRecordIncludingDiscarded } from '../database/access/asset-files.js';
 import type { DatabaseSession } from '../database/lifecycle/store.js';
 import { ProjectDataError } from '../project-data-error.js';
 import type {
@@ -9,14 +9,14 @@ import type {
   TrashObjectRestoreContext,
 } from '../trash/trash-object-definition.js';
 import {
-  collectAssetFiles,
-  markAssetRecordAndFilesDiscarded,
-  restoreAssetRecordAndFiles,
-} from '../trash/asset-tree-lifecycle.js';
+  collectAssetFile,
+  markAssetFileDiscarded,
+  restoreAssetFile,
+} from '../trash/asset-file-lifecycle.js';
 
 export interface ShotImageLifecycleSnapshot {
   shotId: string;
-  assetIds: string[];
+  assetFileIds: string[];
 }
 
 export function snapshotShotImages(
@@ -25,10 +25,10 @@ export function snapshotShotImages(
 ): ShotImageLifecycleSnapshot {
   return {
     shotId,
-    assetIds: listAssetsInSession(session, {
+    assetFileIds: listAssetFilesInSession(session, {
       owner: { kind: 'shot', id: shotId },
       type: 'shot_image',
-    }).map((asset) => asset.id),
+    }).map((assetFile) => assetFile.id),
   };
 }
 
@@ -36,8 +36,8 @@ export function discardShotImages(
   input: TrashObjectDiscardContext,
   snapshot: ShotImageLifecycleSnapshot
 ): void {
-  for (const assetId of snapshot.assetIds) {
-    markAssetRecordAndFilesDiscarded({ ...input, itemId: assetId });
+  for (const assetFileId of snapshot.assetFileIds) {
+    markAssetFileDiscarded({ ...input, itemId: assetFileId });
   }
 }
 
@@ -45,18 +45,18 @@ export function restoreShotImages(
   input: TrashObjectRestoreContext,
   snapshot: ShotImageLifecycleSnapshot
 ): void {
-  for (const assetId of snapshot.assetIds) {
-    const asset = readAssetRecord(input.session, assetId);
-    if (!asset) {
+  for (const assetFileId of snapshot.assetFileIds) {
+    const assetFile = readAssetFileRecordIncludingDiscarded(input.session, assetFileId);
+    if (!assetFile) {
       throw new ProjectDataError(
         'CORE_SHOT_PLAN_STORAGE_INVALID',
-        `Shot image Asset was not found during restore: ${assetId}.`
+        `Shot image Asset was not found during restore: ${assetFileId}.`
       );
     }
-    if (asset.discardedAt !== null) {
-      restoreAssetRecordAndFiles({
+    if (assetFile.discardedAt !== null) {
+      restoreAssetFile({
         ...input,
-        trashItem: { ...input.trashItem, itemId: assetId },
+        trashItem: { ...input.trashItem, itemId: assetFileId },
       });
     }
   }
@@ -67,6 +67,6 @@ export function collectShotImageFiles(
   snapshots: ShotImageLifecycleSnapshot[]
 ): TrashFileDraft[] {
   return [
-    ...new Set(snapshots.flatMap((snapshot) => snapshot.assetIds)),
-  ].flatMap((assetId) => collectAssetFiles(input, assetId));
+    ...new Set(snapshots.flatMap((snapshot) => snapshot.assetFileIds)),
+  ].flatMap((assetFileId) => collectAssetFile(input, assetFileId));
 }

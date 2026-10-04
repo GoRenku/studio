@@ -113,7 +113,7 @@ describe('official MCP registration and transport', () => {
     const service = createProjectDataService();
     const { folder } = await service.createInspirationFolder({ homeDir, projectName: 'movie', name: 'Coco' });
     const pixels = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#808080' } }).png().toBuffer();
-    await service.writeInspirationImage({ homeDir, projectName: 'movie', folderId: folder.id, fileName: 'frame.png', contents: pixels });
+    const image = await service.writeInspirationImage({ homeDir, projectName: 'movie', folderId: folder.id, fileName: 'frame.png', contents: pixels });
     const reviewFile = 'tmp/operations/media-generation/inspiration.json';
     await fs.writeFile(path.join(root, 'movies/movie', reviewFile), JSON.stringify({
       provider: 'fal-ai', model: 'image-model', mediaKind: 'image', prompt: 'Reference appearance',
@@ -133,7 +133,7 @@ describe('official MCP registration and transport', () => {
     const thumbnail = (await client.readResource({ uri: reference.thumbnailUri! })).contents[0] as { mimeType: string; blob: string };
     expect(thumbnail.mimeType).toBe('image/webp');
     expect(Buffer.from(thumbnail.blob, 'base64').length).toBeGreaterThan(0);
-    await service.deleteInspirationImage({ homeDir, projectName: 'movie', folderId: folder.id, fileName: 'frame.png' });
+    await service.deleteInspirationImage({ homeDir, projectName: 'movie', folderId: folder.id, assetFileId: image.resource.images[0]!.id });
     await expect(client.readResource({ uri: reference.resourceUri }))
       .rejects.toMatchObject({ data: { error: { code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND' } } });
   });

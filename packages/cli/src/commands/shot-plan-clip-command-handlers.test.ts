@@ -4,7 +4,7 @@ import { shotPlanClipCommandHandlers } from './shot-plan-clip-command-handlers.j
 
 it('parses exact numeric pairs without matching titles and delegates Core selection', async () => {
   const projectDataService = createProjectDataService();
-  const take = { id: 'take', clipId: 'clip', number: 2, title: 'Initial', assetId: 'asset', assetFileId: 'file', sourceTakeId: null, createdAt: '' };
+  const take = { id: 'take', clipId: 'clip', number: 2, title: 'Initial', assetFileId: 'file', sourceTakeId: null, createdAt: '' };
   const resolve = vi.spyOn(projectDataService, 'resolveShotPlanClipTake').mockResolvedValue(take);
   const runtime = { projectDataService, projectName: 'movie', homeDir: '/fixture', json: true, io: { stdout: { log: vi.fn() }, stderr: { error: vi.fn() } } };
   const handler = shotPlanClipCommandHandlers.find((entry) => entry.path.join(' ') === 'clip take resolve')!;

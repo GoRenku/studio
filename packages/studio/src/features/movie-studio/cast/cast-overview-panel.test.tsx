@@ -73,15 +73,14 @@ describe('CastOverviewPanel', () => {
           role: 'historical voice-over',
           isVoiceOver: true,
           firstImage: {
-            assetId: 'asset_narrator_profile',
             assetFileId: 'asset_file_narrator_profile',
             title: 'Narrator profile',
-            fileRole: 'primary',
+
             mediaKind: 'image',
             mimeType: 'image/png',
             width: 1024,
             height: 1024,
-            url: '/studio-api/projects/constantinople/cast/cast_narrator/assets/asset_narrator_profile/files/asset_file_narrator_profile',
+            url: '/studio-api/projects/constantinople/cast/cast_narrator/asset-files/asset_file_narrator_profile',
           },
         },
       ])

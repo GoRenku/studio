@@ -123,8 +123,8 @@ function storyboardImage(
     lookbookId: 'lookbook_test0001',
     lookbookKind: 'storyboard',
     sections,
-    asset: {
-      id: `asset_${label}`,
+    assetFile: {
+      id: `asset_file_${label}`,
       owner: { kind: 'lookbook', id: 'lookbook_test0001' },
       localeId: null,
       type: 'lookbook_image',
@@ -139,21 +139,8 @@ function storyboardImage(
       tags: [],
       createdAt: '2026-06-20T00:00:00.000Z',
       updatedAt: '2026-06-20T00:00:00.000Z',
-      files: [
-        {
-          id: `asset_file_${label}`,
-          role: 'primary',
-          mediaKind: 'image',
-          projectRelativePath:
-            `visual-language/lookbook/${label}-board.png` as ProjectRelativePath,
-          mimeType: 'image/png',
-          sizeBytes: 123,
-          contentHash: null,
-          width: 1280,
-          height: 720,
-          durationSeconds: null,
-        },
-      ],
+      projectRelativePath:
+            `visual-language/lookbook/${label}-board.png` as ProjectRelativePath, mimeType: 'image/png', sizeBytes: 123, contentHash: null, width: 1280, height: 720, durationSeconds: null,
     },
   };
 }

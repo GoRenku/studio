@@ -6,7 +6,6 @@ import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createProjectDataService } from '../project-data-service.js';
 import { openProjectStore } from '../database/lifecycle/store.js';
-import { insertAssetRecord } from '../database/access/assets.js';
 import { insertAssetFileRecord } from '../database/access/asset-files.js';
 import { assetFiles } from '../schema/index.js';
 import { createBlankMovieProject, writeConfig } from '../testing/project-data-fixtures.js';
@@ -87,10 +86,77 @@ describe('media generation Preview and Inspection', () => {
     await fs.symlink(outside, registeredPath);
     await expect(readMediaGenerationReferenceProjectFile({
       homeDir: fixture.homeDir, projectName: fixture.projectName, projectRelativePath: 'media/reference.png',
-    })).rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT' });
+    })).rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_PATH_INVALID' });
   });
 
-  it('previews and reads active Inspiration images without registering Assets', async () => {
+  it('keeps the preview available when a registered reference file is missing on disk', async () => {
+    const fixture = await createFixture();
+    const input = { homeDir: fixture.homeDir, projectName: fixture.projectName };
+    await fs.rename(path.join(fixture.projectFolder, 'media/reference.png'), path.join(fixture.projectFolder, 'media/moved.png'));
+    const preview = await fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath });
+    expect(preview.references).toHaveLength(2);
+    expect(preview.references.every((reference) => !reference.available && !reference.browserUrl)).toBe(true);
+    expect(preview.diagnostics.map((issue) => issue.code)).toEqual([
+      'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND', 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND',
+    ]);
+    await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath: 'media/reference.png' }))
+      .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND' });
+  });
+
+  it('guides import of unregistered references without retaining them during preview', async () => {
+    const fixture = await createInspirationFixture();
+    const input = { homeDir: fixture.homeDir, projectName: fixture.projectName };
+    const projectRelativePath = `${fixture.folder.projectRelativePath}/finder-copy.png`;
+    await fs.writeFile(path.join(fixture.projectFolder, projectRelativePath), 'unregistered bytes');
+    await writeInspirationRequest(fixture, projectRelativePath);
+    const before = await fixture.service.readInspirationFolder({ ...input, folderId: fixture.folder.id });
+    const preview = await fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath });
+    expect(preview.references[0]).toMatchObject({ available: false });
+    expect(preview.diagnostics).toMatchObject([{ code: 'PROJECT_ASSET_FILE_REFERENCE_NOT_TRACKED',
+      suggestion: expect.stringContaining('renku asset-file import') }]);
+    await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath }))
+      .rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_REFERENCE_NOT_TRACKED' });
+    expect(await fixture.service.readInspirationFolder({ ...input, folderId: fixture.folder.id })).toEqual(before);
+  });
+
+  it.each([
+    ['reference.png', 'image', 'image/png'],
+    ['reference.wav', 'audio', 'audio/wav'],
+    ['reference.webm', 'video', 'video/webm'],
+    ['notes.bin', 'file', 'application/octet-stream'],
+  ])('prepares imported research %s through the common reference contract', async (name, kind, mimeType) => {
+    const fixture = await createFixture();
+    const input = { homeDir: fixture.homeDir, projectName: fixture.projectName };
+    const projectRelativePath = `research/${name}`;
+    const bytes = Buffer.from('Exact opaque research reference bytes');
+    await fs.mkdir(path.join(fixture.projectFolder, 'research'), { recursive: true });
+    await fs.writeFile(path.join(fixture.projectFolder, projectRelativePath), bytes);
+    const imported = await fixture.service.importReferenceFiles({
+      ...input, destination: { kind: 'research' }, files: [{ sourceProjectRelativePath: projectRelativePath }],
+    });
+    await fs.writeFile(path.join(fixture.projectFolder, fixture.documentPath), JSON.stringify({
+      provider: 'codex', model: 'chatgpt-images-2.5', mediaKind: 'image', prompt: 'Opaque prompt',
+      request: { reference: { $file: projectRelativePath, mimeType, reviewLabel: 'Research reference' } },
+    }));
+
+    if (kind === 'file') {
+      await expect(fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath }))
+        .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_UNSUPPORTED' });
+      await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath }))
+        .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_UNSUPPORTED' });
+    } else {
+      const preview = await fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath });
+      expect(preview.references).toEqual([expect.objectContaining({ kind, available: true, projectRelativePath })]);
+      expect(preview.diagnostics).toEqual([]);
+      const file = await readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath });
+      expect(file.mimeType).toBe(mimeType);
+      expect(await fs.readFile(file.absolutePath)).toEqual(bytes);
+    }
+    const retained = await fixture.service.listAssetFiles({ ...input, owner: { kind: 'project' }, type: 'research_reference' });
+    expect(retained.map((file) => file.id)).toEqual([imported.assetFiles[0]!.id]);
+  });
+
+  it('previews and reads registered active Inspiration images without creating more records', async () => {
     const fixture = await createInspirationFixture();
     const input = { homeDir: fixture.homeDir, projectName: fixture.projectName };
     const preview = await fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath });
@@ -104,7 +170,7 @@ describe('media generation Preview and Inspection', () => {
     expect(await fs.readFile(file.absolutePath, 'utf8')).toBe('inspiration bytes');
     const session = openProjectStore({ projectFolder: fixture.projectFolder, create: false });
     try {
-      expect(session.db.select().from(assetFiles).where(eq(assetFiles.projectRelativePath, fixture.imagePath)).all()).toEqual([]);
+      expect(session.db.select().from(assetFiles).where(eq(assetFiles.projectRelativePath, fixture.imagePath)).all()).toHaveLength(1);
     } finally {
       session.close();
     }
@@ -114,7 +180,7 @@ describe('media generation Preview and Inspection', () => {
     const fixture = await createInspirationFixture();
     const input = { homeDir: fixture.homeDir, projectName: fixture.projectName, folderId: fixture.folder.id };
     if (discarded === 'image') {
-      await fixture.service.deleteInspirationImage({ ...input, fileName: 'Coco_060.JPG' });
+      await fixture.service.deleteInspirationImage({ ...input, assetFileId: (await fixture.service.readInspirationFolder(input)).images[0]!.id });
     } else {
       await fixture.service.deleteInspirationFolder(input);
     }
@@ -141,7 +207,8 @@ describe('media generation Preview and Inspection', () => {
       const preview = await fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath });
       expect(preview.references[0]).toMatchObject({ available: false });
       await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath }))
-        .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND' });
+        .rejects.toMatchObject({ code: fileName === 'missing.jpg'
+          ? 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_NOT_FOUND' : 'PROJECT_ASSET_FILE_REFERENCE_NOT_TRACKED' });
     },
   );
 
@@ -155,9 +222,9 @@ describe('media generation Preview and Inspection', () => {
     await fs.symlink(linked === 'file' ? path.join(outside, 'Coco_060.JPG') : outside, original);
     const input = { homeDir: fixture.homeDir, projectName: fixture.projectName };
     await expect(fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath }))
-      .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT' });
+      .rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_PATH_INVALID' });
     await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath: fixture.imagePath }))
-      .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT' });
+      .rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_PATH_INVALID' });
   });
 
   it('rejects an Inspiration folder symlink to unrelated files inside the Project', async () => {
@@ -169,9 +236,9 @@ describe('media generation Preview and Inspection', () => {
     await fs.symlink(path.join(fixture.projectFolder, 'private'), original);
     const input = { homeDir: fixture.homeDir, projectName: fixture.projectName };
     await expect(fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath }))
-      .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT' });
+      .rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_PATH_INVALID' });
     await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath: fixture.imagePath }))
-      .rejects.toMatchObject({ code: 'CORE_MEDIA_GENERATION_LOCAL_MEDIA_OUTSIDE_PROJECT' });
+      .rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_PATH_INVALID' });
   });
 
   it('projects the supplied document even when its file has changed', async () => {
@@ -243,10 +310,10 @@ describe('media generation Preview and Inspection', () => {
 
   it('projects saved Asset provenance as a read-only request without a document path', async () => {
     const fixture = await createFixture();
-    const preview = await fixture.service.readAssetMediaGenerationRequest({
+    const preview = await fixture.service.readAssetFileMediaGenerationRequest({
       homeDir: fixture.homeDir,
       projectName: fixture.projectName,
-      assetId: 'asset_generated',
+      assetFileId: 'asset_generated',
     });
     expect(preview).toMatchObject({
       provider: 'pika',
@@ -272,6 +339,7 @@ async function createInspirationFixture() {
   });
   const imagePath = `${folder.projectRelativePath}/Coco_060.JPG`;
   await fs.writeFile(path.join(fixture.projectFolder, imagePath), 'inspiration bytes');
+  await fixture.service.importReferenceFiles({ homeDir: fixture.homeDir, projectName: fixture.projectName, destination: { kind: 'inspiration', folderId: folder.id }, files: [{ sourceProjectRelativePath: imagePath }] });
   await writeInspirationRequest(fixture, imagePath);
   return { ...fixture, folder, imagePath };
 }
@@ -309,9 +377,8 @@ async function createFixture() {
   };
   const session = openProjectStore({ projectFolder, create: false });
   try {
-    insertAssetRecord(session, { id: 'asset_reference', type: 'reference', mediaKind: 'image', title: 'Reference', origin: 'external', availability: 'ready', createdAt: now, updatedAt: now });
-    insertAssetFileRecord(session, { id: 'asset_file_reference', assetId: 'asset_reference', role: 'primary', projectRelativePath: 'media/reference.png', mimeType: 'image/png', mediaKind: 'image', createdAt: now, updatedAt: now });
-    insertAssetRecord(session, { id: 'asset_generated', type: 'cast_profile', mediaKind: 'image', title: 'Generated', origin: 'generated', availability: 'ready', generationProvenance, createdAt: now, updatedAt: now });
+    insertAssetFileRecord(session, { id: 'asset_file_reference', ownerKey: 'project', projectRelativePath: 'media/reference.png', mimeType: 'image/png', type: 'reference', mediaKind: 'image', title: 'Reference', origin: 'external', availability: 'ready', createdAt: now, updatedAt: now });
+    insertAssetFileRecord(session, { id: 'asset_generated', ownerKey: 'project', projectRelativePath: 'media/generated.png', type: 'cast_profile', mediaKind: 'image', title: 'Generated', origin: 'generated', availability: 'ready', generationProvenance, createdAt: now, updatedAt: now });
   } finally {
     session.close();
   }

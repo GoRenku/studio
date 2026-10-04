@@ -24,7 +24,7 @@ export type MediaPurpose =
 
 export type MediaTarget =
   | { kind: 'project'; id: string }
-  | { kind: 'asset'; id: string }
+  | { kind: 'assetFile'; assetFileId: string }
   | { kind: 'lookbook'; id: string }
   | { kind: 'castMember'; id: string }
   | { kind: 'location'; id: string }
@@ -35,8 +35,8 @@ export type MediaTarget =
 
 export const MEDIA_PURPOSE_TARGET_KINDS = {
   'image.create': 'shotPlan',
-  'image.edit': 'asset',
-  'video.edit': 'asset',
+  'image.edit': 'assetFile',
+  'video.edit': 'assetFile',
   'project.cover': 'project',
   'shot-plan.video-generation': 'shotPlan',
   'shot-plan.video-first-frame': 'shotPlan',

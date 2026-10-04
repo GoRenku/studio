@@ -7,7 +7,7 @@ import { createStructuredError } from '@gorenku/studio-diagnostics';
 import { createSupportingFilesRoute } from './supporting-files.js';
 import { createStudioApiTokenMiddleware } from '../http/studio-api-token.js';
 import { fakeProjectDataService } from '../testing/fake-project-data-service.js';
-import { makeAsset } from '../testing/route-fixtures.js';
+import { makeAssetFile } from '../testing/route-fixtures.js';
 
 describe('supporting file routes', () => {
   it('requires a token for upload and delegates exact bytes to Core', async () => {
@@ -66,7 +66,7 @@ describe('supporting file routes', () => {
     const bytes = '<?xml-stylesheet href="https://example.com/style.xsl"?><FinalDraft/>';
     await fs.writeFile(absolutePath, bytes);
     projectData.resolveProjectSupportingFile = vi.fn().mockResolvedValue({
-      supportingFile: { asset: makeAsset('source'), sourceAssetFileId: 'file', deleteBlock: null }, absolutePath,
+      supportingFile: { assetFile: makeAssetFile('source'), sourceAssetFileId: 'file', deleteBlock: null }, absolutePath,
     });
     const preview = await app.request('/projects/movie/supporting-files/source/content');
     expect(preview.headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
@@ -84,7 +84,7 @@ describe('supporting file routes', () => {
     const bytes = Buffer.from([0xc3, 0x28]);
     await fs.writeFile(absolutePath, bytes);
     projectData.resolveProjectSupportingFile = vi.fn().mockResolvedValue({
-      supportingFile: { asset: makeAsset('source'), sourceAssetFileId: 'file', deleteBlock: null }, absolutePath,
+      supportingFile: { assetFile: makeAssetFile('source'), sourceAssetFileId: 'file', deleteBlock: null }, absolutePath,
     });
     const response = await app.request('/projects/movie/supporting-files/source/content');
     expect(response.headers.get('Content-Disposition')).toContain('attachment');

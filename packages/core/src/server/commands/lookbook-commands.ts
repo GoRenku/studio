@@ -50,7 +50,7 @@ import {
   studioVisualLanguageLookbooksResourceKey,
 } from '../studio-coordination/resource-keys.js';
 import { discardTrashObject } from '../trash/trash-lifecycle-service.js';
-import { requireAssetOwner } from '../assets/ownership.js';
+import { requireAssetFileOwner } from '../asset-files/ownership.js';
 
 const lookbookIndexResourceKey = studioVisualLanguageLookbooksResourceKey();
 
@@ -117,7 +117,7 @@ export async function setLookbookImagePlacement(
 ): Promise<LookbookImageMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const imageRecord = requireLookbookImageRecord(session, input.imageId);
-    const lookbookId = requireLookbookOwnerId(session, imageRecord.assetId);
+    const lookbookId = requireLookbookOwnerId(session, imageRecord.assetFileId);
     const lookbookRecord = requireLookbookRecordById(session, lookbookId);
     const ids = createUniqueIdAllocator(input.idGenerator ?? createRandomIdGenerator());
     const now = new Date().toISOString();
@@ -165,7 +165,7 @@ export async function deleteLookbookImage(
 ): Promise<LookbookImageMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const image = requireLookbookImageRecord(session, input.imageId);
-    const lookbookId = requireLookbookOwnerId(session, image.assetId);
+    const lookbookId = requireLookbookOwnerId(session, image.assetFileId);
     const report = discardTrashObject({
       session,
       project,
@@ -189,7 +189,7 @@ export async function deleteLookbookSheet(
 ): Promise<LookbookSheetMutationReport> {
   return withVisualLanguageSession(input, ({ session, projectFolder, project }) => {
     const sheet = requireLookbookSheetRecord(session, input.sheetId);
-    const lookbookId = requireLookbookOwnerId(session, sheet.assetId);
+    const lookbookId = requireLookbookOwnerId(session, sheet.assetFileId);
     const report = discardTrashObject({
       session,
       project,
@@ -210,13 +210,13 @@ export async function deleteLookbookSheet(
 
 function requireLookbookOwnerId(
   session: DatabaseSession,
-  assetId: string
+  assetFileId: string
 ): string {
-  const owner = requireAssetOwner(session, assetId);
+  const owner = requireAssetFileOwner(session, assetFileId);
   if (owner.kind !== 'lookbook') {
     throw new ProjectDataError(
       'CORE_ASSET_STORAGE_INVALID',
-      `Lookbook detail Asset has invalid ownership: ${assetId}.`
+      `Lookbook detail Asset has invalid ownership: ${assetFileId}.`
     );
   }
   return owner.id;

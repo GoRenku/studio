@@ -21,7 +21,7 @@ describe('Studio Scene Storyboard images API', () => {
     const selectionReport = {
       valid: true,
       warnings: [],
-      selectedAssetId: 'asset/one',
+      selectedAssetFileId: 'asset/one',
       resourceKeys: ['scene-beats:revision/one:beat:beat/one'],
     };
     const discardReport = {
@@ -44,7 +44,7 @@ describe('Studio Scene Storyboard images API', () => {
       sceneId: 'scene/one',
       sceneBeatsRevisionId: 'revision/one',
       beatId: 'beat/one',
-      assetId: 'asset/one',
+      assetFileId: 'asset/one',
     };
 
     await expect(selectStudioSceneStoryboardImage(input)).resolves.toEqual(selectionReport);

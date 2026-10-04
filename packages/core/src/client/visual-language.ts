@@ -1,6 +1,6 @@
 import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import type { ProjectRelativePath } from './project/index.js';
-import type { Asset } from './assets.js';
+import type { AssetFile } from './asset-files.js';
 import type { RecoverableMutationReport } from './trash.js';
 
 export interface InspirationFolder {
@@ -15,16 +15,11 @@ export interface InspirationFolderWithResolvedPath extends InspirationFolder {
 
 export interface InspirationFolderListItem {
   folder: InspirationFolder;
-  cardImage: InspirationImage | null;
+  cardImage: AssetFile | null;
   imageCount: number;
 }
 
-export interface InspirationImage {
-  fileName: string;
-  projectRelativePath: ProjectRelativePath;
-  mediaKind: 'image';
-  sizeBytes?: number;
-}
+
 
 export interface InspirationAnalysis {
   folderId: string;
@@ -142,7 +137,7 @@ export interface LookbookImage {
   id: string;
   lookbookId: string;
   lookbookKind: LookbookKind;
-  asset: Asset;
+  assetFile: AssetFile;
   /** Sections this image is section-level evidence for (un-anchored placements). */
   sections: LookbookSection[];
   /** Point ids this image is anchored to (e.g. a specific pattern or observation). */
@@ -153,7 +148,7 @@ export interface LookbookSheet {
   id: string;
   lookbookId: string;
   lookbookKind: LookbookKind;
-  asset: Asset;
+  assetFile: AssetFile;
 }
 
 export interface ThesisSection {
@@ -271,7 +266,7 @@ export interface InspirationFolderResourceMutationReport
   extends VisualLanguageCommandReport {
   resource: {
     folder: InspirationFolder;
-    images: InspirationImage[];
+    images: AssetFile[];
     analysis: InspirationAnalysis | null;
   };
 }

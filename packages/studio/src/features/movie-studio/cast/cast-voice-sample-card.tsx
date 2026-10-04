@@ -27,7 +27,7 @@ export function CastVoiceSampleCard({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const file = voice.sample.files[0] ?? null;
+  const file = voice.sample ?? null;
   const label = humanizeReferenceName(voice.name);
 
   useEffect(() => {

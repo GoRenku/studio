@@ -7,11 +7,11 @@ import { readStudioApiError } from './studio-api-errors';
 
 export type StudioShotPlanDialogueAudioTake = Omit<
   ShotPlanDialogueAudioTake,
-  'asset' | 'speakers'
+  'assetFile' | 'speakers'
 > & {
   audioUrl: string;
   durationSeconds: number | null;
-  provenance: ShotPlanDialogueAudioTake['asset']['generationProvenance'];
+  provenance: ShotPlanDialogueAudioTake['assetFile']['generationProvenance'];
   speakers: Array<ShotPlanDialogueAudioTake['speakers'][number] & {
     profileUrl: string | null;
   }>;
@@ -33,7 +33,7 @@ export async function readShotPlanDialogueAudio(input: {
   return {
     ...resource,
     takes: resource.takes.map((take) => {
-      const file = take.asset.files.find((candidate) => candidate.mediaKind === 'audio')!;
+      const file = take.assetFile!;
       return {
         id: take.id,
         shotPlanId: take.shotPlanId,
@@ -43,11 +43,11 @@ export async function readShotPlanDialogueAudio(input: {
         updatedAt: take.updatedAt,
         audioUrl: `${baseUrl(input)}/takes/${encodeURIComponent(take.id)}/files/${encodeURIComponent(file.id)}`,
         durationSeconds: file.durationSeconds,
-        provenance: take.asset.generationProvenance,
+        provenance: take.assetFile.generationProvenance,
         speakers: take.speakers.map((speaker) => ({
           ...speaker,
           profileUrl: speaker.selectedProfile
-            ? genericAssetFileUrl(input.projectName, speaker.selectedProfile.assetId, speaker.selectedProfile.assetFileId)
+            ? genericAssetFileUrl(input.projectName, speaker.selectedProfile.assetFileId)
             : null,
         })),
       };
@@ -103,6 +103,6 @@ function baseUrl(input: { projectName: string; shotPlanId: string }) {
   return `/studio-api/projects/${encodeURIComponent(input.projectName)}/screenplay/shot-plans/${encodeURIComponent(input.shotPlanId)}/dialogue-audio`;
 }
 
-function genericAssetFileUrl(projectName: string, assetId: string, assetFileId: string) {
-  return `/studio-api/projects/${encodeURIComponent(projectName)}/assets/${encodeURIComponent(assetId)}/files/${encodeURIComponent(assetFileId)}`;
+function genericAssetFileUrl(projectName: string, assetFileId: string) {
+  return `/studio-api/projects/${encodeURIComponent(projectName)}/asset-files/${encodeURIComponent(assetFileId)}`;
 }

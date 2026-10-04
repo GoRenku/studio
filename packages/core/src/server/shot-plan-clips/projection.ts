@@ -15,8 +15,8 @@ export function projectShotPlanClips(session: DatabaseSession, shotPlanId: strin
   const plan = requireShotPlanRecord(session, shotPlanId);
   const clips = session.db.select().from(shotPlanClips).where(eq(shotPlanClips.previsRevisionId, previsRevisionId)).orderBy(asc(shotPlanClips.number)).all();
   const takes = clips.length ? session.db.select().from(shotPlanClipTakes).where(inArray(shotPlanClipTakes.clipId, clips.map((clip) => clip.id))).orderBy(asc(shotPlanClipTakes.number)).all() : [];
-  const videos = listPrevisGenerations(session, shotPlanId).filter((asset) => asset.authoredFrom?.previsRevisionId === previsRevisionId);
-  const assigned = new Set(takes.map((take) => take.assetId));
+  const videos = listPrevisGenerations(session, shotPlanId).filter((assetFile) => assetFile.authoredFrom?.previsRevisionId === previsRevisionId);
+  const assigned = new Set(takes.map((take) => take.assetFileId));
   const assignedFiles = new Set(takes.map((take) => take.assetFileId));
   const resourceKeys = new Set([studioSceneShotPlansResourceKey(plan.sceneId)]);
   const sources = [...new Set(takes.flatMap((take) => take.sourceTakeId ? [take.sourceTakeId] : []))].map((id) => {
@@ -31,7 +31,7 @@ export function projectShotPlanClips(session: DatabaseSession, shotPlanId: strin
   return {
     project: { projectName: readProjectRecord(session)!.projectName }, shotPlanId, previsRevisionId,
     clips: clips.map((clip) => ({ id: clip.id, previsRevisionId: clip.previsRevisionId, number: clip.number, selectedTakeId: clip.selectedTakeId, takes: takes.filter((take) => take.clipId === clip.id) })),
-    assets: videos.filter((asset) => assigned.has(asset.id)), unassignedAssets: videos.map((asset) => ({ ...asset, files: asset.files.filter((file) => file.mediaKind === 'video' && !assignedFiles.has(file.id)) })).filter((asset) => asset.files.length > 0),
+    assetFiles: videos.filter((assetFile) => assigned.has(assetFile.id)), unassignedAssetFiles: videos.filter((assetFile) => !assignedFiles.has(assetFile.id)),
     sources, resourceKeys: [...resourceKeys],
   };
 }

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { runAssetCommand } from './commands/asset-command.js';
+import { runAssetFileCommand } from './commands/asset-file/commands.js';
 import { runGenerationCommand } from './commands/generation/command.js';
 import { runStudioCommand } from './commands/studio/index.js';
 import { runRenkuCli, type RenkuCliIo } from './cli.js';
@@ -10,8 +10,8 @@ import { runRenkuCli, type RenkuCliIo } from './cli.js';
 vi.mock('./commands/generation/command.js', () => ({
   runGenerationCommand: vi.fn(),
 }));
-vi.mock('./commands/asset-command.js', () => ({
-  runAssetCommand: vi.fn(),
+vi.mock('./commands/asset-file/commands.js', () => ({
+  runAssetFileCommand: vi.fn(),
 }));
 vi.mock('./commands/studio/index.js', () => ({
   runStudioCommand: vi.fn(),
@@ -21,8 +21,8 @@ describe('Renku CLI command surfaces', () => {
   beforeEach(() => {
     vi.mocked(runGenerationCommand).mockReset();
     vi.mocked(runGenerationCommand).mockResolvedValue(0);
-    vi.mocked(runAssetCommand).mockReset();
-    vi.mocked(runAssetCommand).mockResolvedValue(0);
+    vi.mocked(runAssetFileCommand).mockReset();
+    vi.mocked(runAssetFileCommand).mockResolvedValue(0);
     vi.mocked(runStudioCommand).mockReset();
     vi.mocked(runStudioCommand).mockResolvedValue(0);
   });
@@ -112,14 +112,14 @@ describe('Renku CLI command surfaces', () => {
   it('passes Asset pagination flags to the focused command', async () => {
     const { io } = createIo();
     await expect(runRenkuCli([
-      'asset', 'list',
+      'asset-file', 'list',
       '--project', 'movie',
       '--owner', 'project',
       '--limit', '200',
       '--cursor', 'cursor_1',
       '--json',
     ], { io })).resolves.toBe(0);
-    expect(runAssetCommand).toHaveBeenCalledWith(expect.objectContaining({
+    expect(runAssetFileCommand).toHaveBeenCalledWith(expect.objectContaining({
       input: ['list'],
       flags: expect.objectContaining({
         limit: 200,

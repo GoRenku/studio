@@ -1,8 +1,8 @@
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import type { LookbookSheet } from '../../../client/index.js';
-import { assetMemberships, lookbookSheets } from '../../schema/index.js';
-import { assetOwnerKey, parseAssetOwnerKey } from '../../assets/owner-keys.js';
-import { readOwnedAsset } from '../../assets/projection.js';
+import { assetFiles, lookbookSheets } from '../../schema/index.js';
+import { assetFileOwnerKey, parseAssetFileOwnerKey } from '../../asset-files/owner-keys.js';
+import { readOwnedAssetFile } from '../../asset-files/projection.js';
 import { ProjectDataError } from '../../project-data-error.js';
 import { requireLookbookRecordById } from './lookbook.js';
 import type { DatabaseSession } from '../lifecycle/store.js';
@@ -16,9 +16,9 @@ export function nextLookbookSheetSortOrder(
   const row = session.db
     .select({ maxSortOrder: sql<number | null>`max(${lookbookSheets.sortOrder})` })
     .from(lookbookSheets)
-    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookSheets.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, lookbookSheets.assetFileId))
     .where(and(
-      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: lookbookId })),
+      eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'lookbook', id: lookbookId })),
       isNull(lookbookSheets.discardedAt)
     ))
     .get();
@@ -27,11 +27,11 @@ export function nextLookbookSheetSortOrder(
 
 export function insertLookbookSheetRecord(
   session: DatabaseSession,
-  input: { id: string; assetId: string; sortOrder: number; now: string }
+  input: { id: string; assetFileId: string; sortOrder: number; now: string }
 ): void {
   session.db.insert(lookbookSheets).values({
     id: input.id,
-    assetId: input.assetId,
+    assetFileId: input.assetFileId,
     sortOrder: input.sortOrder,
     createdAt: input.now,
     updatedAt: input.now,
@@ -47,14 +47,14 @@ export function readLookbookSheetRecord(
     .get() ?? null;
 }
 
-export function readLookbookSheetRecordByAsset(
+export function readLookbookSheetRecordByAssetFile(
   session: DatabaseSession,
-  input: { lookbookId: string; assetId: string }
+  input: { lookbookId: string; assetFileId: string }
 ): LookbookSheetRecord | null {
   return session.db
     .select({
       id: lookbookSheets.id,
-      assetId: lookbookSheets.assetId,
+      assetFileId: lookbookSheets.assetFileId,
       sortOrder: lookbookSheets.sortOrder,
       createdAt: lookbookSheets.createdAt,
       updatedAt: lookbookSheets.updatedAt,
@@ -63,10 +63,10 @@ export function readLookbookSheetRecordByAsset(
       restoredAt: lookbookSheets.restoredAt,
     })
     .from(lookbookSheets)
-    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookSheets.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, lookbookSheets.assetFileId))
     .where(and(
-      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
-      eq(lookbookSheets.assetId, input.assetId),
+      eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'lookbook', id: input.lookbookId })),
+      eq(lookbookSheets.assetFileId, input.assetFileId),
       isNull(lookbookSheets.discardedAt)
     ))
     .get() ?? null;
@@ -109,7 +109,7 @@ export function listLookbookSheets(
   const records = session.db
     .select({
       id: lookbookSheets.id,
-      assetId: lookbookSheets.assetId,
+      assetFileId: lookbookSheets.assetFileId,
       sortOrder: lookbookSheets.sortOrder,
       createdAt: lookbookSheets.createdAt,
       updatedAt: lookbookSheets.updatedAt,
@@ -118,9 +118,9 @@ export function listLookbookSheets(
       restoredAt: lookbookSheets.restoredAt,
     })
     .from(lookbookSheets)
-    .innerJoin(assetMemberships, eq(assetMemberships.assetId, lookbookSheets.assetId))
+    .innerJoin(assetFiles, eq(assetFiles.id, lookbookSheets.assetFileId))
     .where(and(
-      eq(assetMemberships.ownerKey, assetOwnerKey({ kind: 'lookbook', id: lookbookId })),
+      eq(assetFiles.ownerKey, assetFileOwnerKey({ kind: 'lookbook', id: lookbookId })),
       isNull(lookbookSheets.discardedAt)
     ))
     .orderBy(asc(lookbookSheets.sortOrder), asc(lookbookSheets.id))
@@ -136,11 +136,11 @@ export function readLookbookSheet(
   if (!record) {
     return null;
   }
-  const ownerKey = session.db.select({ value: assetMemberships.ownerKey })
-    .from(assetMemberships)
-    .where(eq(assetMemberships.assetId, record.assetId))
+  const ownerKey = session.db.select({ value: assetFiles.ownerKey })
+    .from(assetFiles)
+    .where(eq(assetFiles.id, record.assetFileId))
     .get()?.value;
-  const owner = ownerKey ? parseAssetOwnerKey(ownerKey) : null;
+  const owner = ownerKey ? parseAssetFileOwnerKey(ownerKey) : null;
   if (owner?.kind !== 'lookbook') {
     throw new ProjectDataError(
       'CORE_ASSET_STORAGE_INVALID',
@@ -160,11 +160,11 @@ function projectLookbookSheet(
   record: LookbookSheetRecord
 ): LookbookSheet {
   const lookbook = requireLookbookRecordById(session, lookbookId);
-  const asset = readOwnedAsset(session, {
+  const assetFile = readOwnedAssetFile(session, {
     owner: { kind: 'lookbook', id: lookbookId },
-    assetId: record.assetId,
+    assetFileId: record.assetFileId,
   });
-  if (!asset) {
+  if (!assetFile) {
     throw new ProjectDataError(
       'CORE_ASSET_STORAGE_INVALID',
       `Lookbook sheet ${record.id} has no active owned Asset.`
@@ -174,6 +174,6 @@ function projectLookbookSheet(
     id: record.id,
     lookbookId,
     lookbookKind: lookbook.kind,
-    asset,
+    assetFile,
   };
 }

@@ -3,10 +3,9 @@ import type { DiagnosticIssue } from '@gorenku/studio-diagnostics';
 export type TrashActorKind = 'user' | 'agent' | 'system';
 
 export type TrashItemKind =
-  | 'asset'
+  | 'assetFile'
   | 'castVoice'
   | 'inspirationFolder'
-  | 'inspirationImage'
   | 'lookbookImage'
   | 'lookbookSheet'
   | 'shotPlanDialogueAudioTake'

@@ -86,7 +86,7 @@ describe('screenplay supporting-material import command', () => {
 
     expect(JSON.parse(output[0]!)).toMatchObject({
       material: {
-        files: [{ projectRelativePath: 'screenplay/source-without-extension.bin' }],
+        projectRelativePath: 'screenplay/source-without-extension.bin',
       },
     });
   });
@@ -132,7 +132,7 @@ function report(): ImportScreenplaySupportingMaterialReport {
       projectFolder: '/tmp/movies/constantinople',
     },
     material: {
-      id: 'asset_1',
+      id: 'asset_file_1',
       owner: { kind: 'project' as const },
       localeId: null,
       type: 'screenplay_supporting_material',
@@ -145,18 +145,7 @@ function report(): ImportScreenplaySupportingMaterialReport {
       tags: [],
       generationProvenance: null,
       authoredFrom: null,
-      files: [{
-        id: 'asset_file_1',
-        role: 'source',
-        projectRelativePath: 'screenplay/research.pdf' as ProjectRelativePath,
-        mediaKind: 'file',
-        mimeType: 'application/octet-stream',
-        sizeBytes: 10,
-        contentHash: 'abc123',
-        width: null,
-        height: null,
-        durationSeconds: null,
-      }],
+      projectRelativePath: 'screenplay/research.pdf' as ProjectRelativePath, mimeType: 'application/octet-stream', sizeBytes: 10, contentHash: 'abc123', width: null, height: null, durationSeconds: null,
       createdAt: '2026-09-04T10:00:00.000Z',
       updatedAt: '2026-09-04T10:00:00.000Z',
     },

@@ -117,8 +117,8 @@ it('executes a validated request, imports its saved provenance, and exposes it t
     '--target', 'project', '--source', path.relative(projectFolder, result.artifacts[0]!.path),
     '--provenance', result.provenancePath, '--json'], { homeDir, io }), stderr.join('\n')).toBe(0);
   const attachment = JSON.parse(stdout.join('\n'));
-  expect(attachment.asset.generationProvenance).toEqual({ ...document, receipt });
-  const inspection = await service.readAssetMediaGenerationRequest({ homeDir, projectName: 'handoff', assetId: attachment.asset.id });
+  expect(attachment.assetFile.generationProvenance).toEqual({ ...document, receipt });
+  const inspection = await service.readAssetFileMediaGenerationRequest({ homeDir, projectName: 'handoff', assetFileId: attachment.assetFile.id });
   expect(inspection).toMatchObject({ prompt: document.prompt, provider: 'atlas', model: 'image-v1', editable: false });
   expect(execute).toHaveBeenCalledOnce();
   expect(recover).not.toHaveBeenCalled();
