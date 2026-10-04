@@ -29,7 +29,7 @@ interface MarkerOccurrence {
 
 const MAX_REVIEW_LABEL_LENGTH = 256;
 const MAX_PROMPT_MENTION_LENGTH = 128;
-const REFERENCE_IMPORT_GUIDANCE = 'Import the file with renku asset-file import before using it as a reference.';
+const REFERENCE_IMPORT_GUIDANCE = 'Import the file with renku asset import before using it as a reference.';
 
 export async function projectLocalMediaReferences(input: {
   request: JsonValue;

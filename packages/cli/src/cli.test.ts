@@ -112,7 +112,7 @@ describe('Renku CLI command surfaces', () => {
   it('passes Asset pagination flags to the focused command', async () => {
     const { io } = createIo();
     await expect(runRenkuCli([
-      'asset-file', 'list',
+      'asset', 'list',
       '--project', 'movie',
       '--owner', 'project',
       '--limit', '200',

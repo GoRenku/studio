@@ -804,7 +804,7 @@ Behavior:
 List active imports with the existing Asset command:
 
 ```bash
-renku asset-file list \
+renku asset list \
   --project <project-name> \
   --owner project \
   --type screenplay_supporting_material \
@@ -1462,9 +1462,9 @@ Behavior:
 - Use `renku media import --purpose lookbook.image` to attach a new generated,
   uploaded, or downloaded file to a Lookbook. Add `--select` when that same
   accepted intent should also make it the Lookbook's canonical image.
-- To choose an existing candidate, use `renku asset-file list --owner
-  lookbook:<lookbook-id>` followed by `renku asset-file select --target
-  lookbook:<lookbook-id> --asset-file <asset-file-id>`. Use `asset-file clear-selection` to
+- To choose an existing candidate, use `renku asset list --owner
+  lookbook:<lookbook-id>` followed by `renku asset select --target
+  lookbook:<lookbook-id> --asset-file <asset-file-id>`. Use `asset clear-selection` to
   clear the canonical image.
 
 ## `renku lookbook inspiration`
@@ -1536,14 +1536,14 @@ and never come from JSON authoring documents.
 Shot image selection remains explicit:
 
 ```bash
-renku asset-file list --project <project> --owner shot:<shot-id> --json
-renku asset-file select --project <project> --target shot:<shot-id> --asset-file <asset-file-id> --json
-renku asset-file clear-selection --project <project> --target shot:<shot-id> --json
+renku asset list --project <project> --owner shot:<shot-id> --json
+renku asset select --project <project> --target shot:<shot-id> --asset-file <asset-file-id> --json
+renku asset clear-selection --project <project> --target shot:<shot-id> --json
 renku shot-plan shot image discard --shot-plan <plan-id> --shot <shot-id> --asset-file <asset-file-id> --json
 ```
 
 Importing a `shot.image` candidate with `--select` persists import and selection
-as one accepted intent. Use `asset-file select` only when choosing an existing
+as one accepted intent. Use `asset select` only when choosing an existing
 candidate. Discarding the selected candidate clears that Shot's selection.
 
 Current document tags are `shotPlanCreate`, `shotPlanUpdate`, and `shot`. Shot
@@ -1631,7 +1631,7 @@ diagnostics. `context` is read-only and emits no Studio mutation event.
 The briefing omits prior `generationProvenance` envelopes from candidates and
 all typed Asset positions, including exact edit sources and voice samples.
 Current design text, media facts, and opaque voice identities remain intact.
-For deliberate history inspection/reuse/debugging, capture `renku asset-file list
+For deliberate history inspection/reuse/debugging, capture `renku asset list
 --project <name> --owner <owner> --json`, follow pagination if needed, and inspect
 the exact Asset id locally. `renku cast voice show` retains specific voice
 sample history. Do not fetch those recipes automatically for ordinary references.
@@ -1950,11 +1950,11 @@ current Scene Beats revision and writes all accepted images atomically.
 List or update Assets, and select or clear canonical owner-scoped imagery.
 
 ```bash
-renku asset-file list --project <project-name> --owner <owner> --json
-renku asset-file update <asset-file-id> --project <project-name> --title <title> --summary <summary> --reference-name <name> --tag <tag> --tag <tag> --locale <locale-id> --json
-renku asset-file update <asset-file-id> --project <project-name> --clear-tags --json
-renku asset-file select --project <project-name> --target <selection-target> --asset-file <asset-file-id> --json
-renku asset-file clear-selection --project <project-name> --target <selection-target> --json
+renku asset list --project <project-name> --owner <owner> --json
+renku asset update <asset-file-id> --project <project-name> --title <title> --summary <summary> --reference-name <name> --tag <tag> --tag <tag> --locale <locale-id> --json
+renku asset update <asset-file-id> --project <project-name> --clear-tags --json
+renku asset select --project <project-name> --target <selection-target> --asset-file <asset-file-id> --json
+renku asset clear-selection --project <project-name> --target <selection-target> --json
 ```
 
 Options:
@@ -2219,7 +2219,7 @@ with structured errors; see [library recovery](../architecture/media-model-libra
 
 ## Reference file imports
 
-`renku asset-file import` registers an atomic set of retained files.
+`renku asset import` registers an atomic set of retained files.
 A single source uses `--source <project-relative-path> --owner project` for
 research or `--owner inspirationFolder:<id>` for an Inspiration image, with
 optional `--title`. A batch uses `--file <json-path>` alone:

@@ -34,13 +34,13 @@ export async function runAssetFileCommand(
       throw new StructuredError({
         code: 'CLI040',
         message:
-          'Unknown asset command. Usage: renku asset-file import|update|list|select|clear-selection ...',
+          'Unknown asset command. Usage: renku asset import|update|list|select|clear-selection ...',
         issues: [
           createDiagnosticError(
             'CLI040',
             'Unknown asset command.',
-            { path: ['assetFile'], context: 'renku CLI arguments' },
-            'Use renku asset-file import, update, list, select, or clear-selection.'
+            { path: ['asset'], context: 'renku CLI arguments' },
+            'Use renku asset import, update, list, select, or clear-selection.'
           ),
         ],
       });
@@ -67,7 +67,7 @@ async function updateAssetFile(
     localeId: options.flags.locale,
     homeDir: options.homeDir,
   });
-  await notify(options, projectData, report, 'asset-file update');
+  await notify(options, projectData, report, 'asset update');
   writeAssetFileMutation(
     options,
     report,
@@ -117,7 +117,7 @@ async function selectAssetFile(options: RunAssetFileCommandOptions): Promise<num
     assetFileId: requiredFlag(options, 'assetFile'),
     homeDir: options.homeDir,
   });
-  await notify(options, projectData, report, 'asset-file select');
+  await notify(options, projectData, report, 'asset select');
   writeSelectionMutation(options, report, 'Selected Asset');
   return 0;
 }
@@ -131,7 +131,7 @@ async function clearAssetFileSelection(
     target: parseSelectionTarget(requiredFlag(options, 'target')),
     homeDir: options.homeDir,
   });
-  await notify(options, projectData, report, 'asset-file clear-selection');
+  await notify(options, projectData, report, 'asset clear-selection');
   writeSelectionMutation(options, report, 'Cleared selected Asset');
   return 0;
 }

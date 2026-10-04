@@ -59,7 +59,7 @@ describe('Asset command', () => {
       homeDir: '/test-home',
     });
     expect(appendStudioResourceChangedEvent).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ report, command: 'asset-file import' })
+      expect.objectContaining({ report, command: 'asset import' })
     );
     expect(JSON.parse(stdout.log.mock.calls[0]![0])).toEqual(report);
   });
@@ -152,7 +152,7 @@ describe('Asset command', () => {
     expect(exitCode).toBe(0);
     expect(appendStudioResourceChangedEvent).toHaveBeenCalledTimes(1);
     expect(appendStudioResourceChangedEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ report, command: 'asset-file update' })
+      expect.objectContaining({ report, command: 'asset update' })
     );
     expect(JSON.parse(stdout.log.mock.calls[0]![0])).toMatchObject({
       assetFile: { id: 'asset_1' },

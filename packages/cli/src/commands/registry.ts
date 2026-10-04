@@ -64,8 +64,8 @@ const commands: Record<string, (options: CommandOptions) => Promise<number>> = {
     const { runAboutCommand } = await loadCommand('about', () => import('./about-command.js'));
     return runAboutCommand({ io });
   },
-  'asset-file': async ({ input, flags, file, io, homeDir }) => {
-    const { runAssetFileCommand } = await loadCommand('asset-file', () => import('./asset-file/commands.js'));
+  'asset': async ({ input, flags, file, io, homeDir }) => {
+    const { runAssetFileCommand } = await loadCommand('asset', () => import('./asset-file/commands.js'));
     return runAssetFileCommand({
       input,
       flags: {

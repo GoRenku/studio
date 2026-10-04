@@ -229,7 +229,7 @@ must not use it as normal project-visible storage.
 
 `research/` retains Project-owned reference files; registered Inspiration folders
 retain folder-owned image files. Uploads register immediately. Downloads use
-`asset-file import`: unchanged in-place adoption preserves identity,
+`asset import`: unchanged in-place adoption preserves identity,
 while staged copies allocate collision-safe names. Common resolution checks the
 registered file, owner lifecycle, readable bytes and path containment. Preview
 and provider reads never register or repair files.

@@ -9,7 +9,7 @@ Commands
   create <project-name>           Create a clean movie project
   init <storage-root>  Create or inspect the global Renku config
   about                Show Renku CLI package information
-  asset-file           Import, list, update, and select retained files
+  asset                Import, list, update, and select retained files
   cast                 Author cast facts and Cast Design documents
   director context     Show director readiness for the current movie project
   location             Author location facts and generate 3D Worlds

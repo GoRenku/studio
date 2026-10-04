@@ -26,7 +26,7 @@ export async function importReferenceFiles(options: RunAssetFileCommandOptions):
   const report = await projectDataService.importReferenceFiles({ ...document,
     projectName: requiredFlag(options, 'project'), homeDir: options.homeDir });
   await appendStudioResourceChangedEvent({ runtime: { homeDir: options.homeDir, json: options.json, io: options.io, projectDataService },
-    report, command: 'asset-file import' });
+    report, command: 'asset import' });
   if (options.json) { options.io.stdout.log(JSON.stringify(report, null, 2)); }
   else {
     for (const file of report.assetFiles) {

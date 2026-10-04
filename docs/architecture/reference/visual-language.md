@@ -232,9 +232,9 @@ Lookbook image. To choose an existing candidate, list the Lookbook's Assets and
 use the common selection commands:
 
 ```bash
-renku asset-file list --project <project-name> --owner lookbook:<lookbook-id> --type lookbook_image --json
-renku asset-file select --project <project-name> --target lookbook:<lookbook-id> --asset-file <asset-file-id> --json
-renku asset-file clear-selection --project <project-name> --target lookbook:<lookbook-id> --json
+renku asset list --project <project-name> --owner lookbook:<lookbook-id> --type lookbook_image --json
+renku asset select --project <project-name> --target lookbook:<lookbook-id> --asset-file <asset-file-id> --json
+renku asset clear-selection --project <project-name> --target lookbook:<lookbook-id> --json
 ```
 
 Section placement is stored in `lookbook_image_section`, not in Lookbook JSON.

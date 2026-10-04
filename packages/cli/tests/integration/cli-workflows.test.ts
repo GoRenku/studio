@@ -1141,7 +1141,7 @@ describe('renku CLI', () => {
     stderr = [];
     const updateExitCode = await runRenkuCli(
       [
-        'asset-file',
+        'asset',
         'update',
         imported.assetFile.id,
         '--project',

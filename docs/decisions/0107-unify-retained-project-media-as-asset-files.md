@@ -11,6 +11,10 @@ membership row. Each generated output or edit is a distinct retained file.
 Domain identities such as Lookbook placements, Cast Voices, Shots, and Takes
 remain distinct from their attached file identity.
 
+The user-facing CLI command remains `renku asset` for import, list, update,
+select, and clear-selection. The `AssetFile` domain name does not require a
+longer command name.
+
 Every active image AssetFile supports `image.edit`, including Inspiration and
 research images. The request uses the exact original file as a model input.
 The output is a new, unselected AssetFile in the source's owning collection;

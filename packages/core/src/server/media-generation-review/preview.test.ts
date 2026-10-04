@@ -113,7 +113,7 @@ describe('media generation Preview and Inspection', () => {
     const preview = await fixture.service.readMediaGenerationPreview({ ...input, documentPath: fixture.documentPath });
     expect(preview.references[0]).toMatchObject({ available: false });
     expect(preview.diagnostics).toMatchObject([{ code: 'PROJECT_ASSET_FILE_REFERENCE_NOT_TRACKED',
-      suggestion: expect.stringContaining('renku asset-file import') }]);
+      suggestion: expect.stringContaining('renku asset import') }]);
     await expect(readMediaGenerationReferenceProjectFile({ ...input, projectRelativePath }))
       .rejects.toMatchObject({ code: 'PROJECT_ASSET_FILE_REFERENCE_NOT_TRACKED' });
     expect(await fixture.service.readInspirationFolder({ ...input, folderId: fixture.folder.id })).toEqual(before);

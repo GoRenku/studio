@@ -48,9 +48,10 @@ generation review panel, and provider inputs.
   restoration paths together, preserving file IDs and bytes. These corrections
   preserve existing operations as images gain records; they add no public command,
   setting, lifecycle state, or migration file move.
-- **Public contracts change together.** CLI `asset` commands become `asset-file`
-  commands; DTOs, HTTP file URLs, generation targets/context, attachments, and
-  skill examples use one file ID. Callers change directly without aliases.
+- **The CLI keeps `renku asset`, as confirmed by the user.** Consolidating the
+  data model does not require lengthening the command name. DTOs, HTTP file URLs,
+  generation targets/context, attachments, and skill examples use one file ID.
+  Callers change directly without aliases.
   Current generation-review Settings and inline/app display routing are retained.
 - **The scope is retained Project content.** Operational JSON, staging outputs,
   QA images, caches, and scratch files remain temporary. Choosing one of those
@@ -406,12 +407,12 @@ the existing Inspiration folder/list resources so consumers read the new paths.
 The CLI uses these deliberate names, with ordinary human and `--json` output:
 
 ```text
-renku asset-file list --project <name> --owner <owner> [--type/--media-kind/--locale/--limit/--cursor]
-renku asset-file update <file-id> --project <name> [--title/--summary/--reference-name/--tag/--clear-tags/--locale]
-renku asset-file select --project <name> --target <target> --asset-file <file-id>
-renku asset-file clear-selection --project <name> --target <target>
-renku asset-file import --project <name> --source <relative-path> --owner project|inspirationFolder:<id> [--title <title>]
-renku asset-file import --project <name> --file <batch-import.json>
+renku asset list --project <name> --owner <owner> [--type/--media-kind/--locale/--limit/--cursor]
+renku asset update <file-id> --project <name> [--title/--summary/--reference-name/--tag/--clear-tags/--locale]
+renku asset select --project <name> --target <target> --asset-file <file-id>
+renku asset clear-selection --project <name> --target <target>
+renku asset import --project <name> --source <relative-path> --owner project|inspirationFolder:<id> [--title <title>]
+renku asset import --project <name> --file <batch-import.json>
 ```
 
 The batch document is the `destination` and `files` subset of
@@ -798,7 +799,7 @@ No release publication or destructive source-project cleanup is part of this pla
 
 ### CLI, HTTP, Studio, And MCP
 
-- [x] Adopt the named `asset-file` commands and batch import document/flags.
+- [x] Retain the named `asset` commands and add batch import document/flags.
 - [x] Update media/Clip Take/edit examples and outputs to one file ID.
 - [x] Replace parent/filename file URLs with common canonical file serving.
 - [x] Update collection/discard adapters and preserve structured diagnostics/events.
