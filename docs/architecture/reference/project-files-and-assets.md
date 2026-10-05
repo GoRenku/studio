@@ -42,9 +42,16 @@ An **Asset Owner** is the one Project, Cast Member, Location, Prop, Sequence, Sc
 logical Scene Beat, Lookbook, or Shot that exclusively owns an Asset.
 
 A **canonical selection** chooses at most one ready candidate for a Project
-Cover, Cast Profile, Location Hero, Location World, Lookbook card image, Shot
+Cover, Cast Profile, Location Hero, Prop Hero, Location World, Lookbook card image, Shot
 image, or Scene Beat Storyboard surface. It does not affect generation
 references.
+
+When attachment creates the sole active Cast Profile, Location Hero, or Prop
+Hero for its exact owner, Core selects that image in the attachment transaction.
+This applies to generated and external images; sheets and discarded images do
+not count as candidates. Additional images preserve the existing selection
+unless attachment explicitly requests selection. Clearing a selection remains
+effective when further candidates are attached; reads do not select images.
 
 A **Project Cover** is a Project-owned image Asset with canonical type
 `project_cover` and one active image AssetFile. Common

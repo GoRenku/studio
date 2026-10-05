@@ -17,6 +17,7 @@ import { projectCoverSelectionResourceKeys } from '../studio-coordination/resour
 import { requireProjectCoverFile } from '../project-covers/cover-file.js';
 import { assetFileOwnerKey } from './owner-keys.js';
 import { assertAssetFileOwnerExists } from './ownership.js';
+import { listAssetFilePageInSession } from './projection.js';
 import {
   assetFileSelectionTargetForOwner,
   assetFileSelectionTargetKey,
@@ -99,6 +100,34 @@ export function assetFileSelectionTargetForOwnerType(
     );
   }
   return target;
+}
+
+export function selectFirstContinuityImageInSession(
+  session: DatabaseSession,
+  input: { owner: AssetFileOwner; assetFileType: string; assetFileId: string; now: string }
+): void {
+  const owner = input.owner;
+  if (owner.kind !== 'castMember' && owner.kind !== 'location' && owner.kind !== 'prop') {
+    return;
+  }
+  if (selectedAssetFileTypes[owner.kind] !== input.assetFileType) {
+    return;
+  }
+  const candidates = listAssetFilePageInSession(session, {
+    owner,
+    type: input.assetFileType,
+    mediaKind: 'image',
+    limit: 2,
+  });
+  if (candidates.selectedAssetFileId || candidates.items.length !== 1
+    || candidates.items[0]?.id !== input.assetFileId) {
+    return;
+  }
+  selectAssetFileInSession(session, {
+    target: owner,
+    assetFileId: input.assetFileId,
+    now: input.now,
+  });
 }
 
 function assertSelectionInSession(

@@ -37,7 +37,8 @@ export function PropOverviewPanel({
 
   return (
     <ContinuityOverviewGrid
-      aspectRatio={4 / 3}
+      aspectRatio={16 / 9}
+      detectFromImage
       onSelect={onSelect}
       cards={resource.props.items.map((prop) => ({
         id: prop.id,

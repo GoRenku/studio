@@ -41,7 +41,8 @@ export function LocationOverviewPanel({
 
   return (
     <ContinuityOverviewGrid
-      aspectRatio={4 / 3}
+      aspectRatio={16 / 9}
+      detectFromImage
       onSelect={onSelect}
       cards={resource.locations.items.map((location) => ({
         id: location.id,

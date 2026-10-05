@@ -17,10 +17,12 @@ export interface ContinuityOverviewCard {
 export function ContinuityOverviewGrid({
   cards,
   aspectRatio,
+  detectFromImage = false,
   onSelect,
 }: {
   cards: ContinuityOverviewCard[];
   aspectRatio: number;
+  detectFromImage?: boolean;
   onSelect: (selection: StudioSelection) => void;
 }) {
   return (
@@ -34,12 +36,12 @@ export function ContinuityOverviewGrid({
                   kind: 'image',
                   src: card.image.url,
                   alt: card.image.alt,
-                  fit: 'cover',
-                  effect: 'zoom-on-hover',
+                  fit: detectFromImage ? 'contain' : 'cover',
+                  effect: detectFromImage ? 'none' : 'zoom-on-hover',
                 }
               : null
           }
-          frame={{ kind: 'ratio', aspectRatio }}
+          frame={{ kind: 'ratio', aspectRatio, detectFromImage }}
           presentation={{
             kind: 'overlay',
             copy: {

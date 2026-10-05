@@ -1,6 +1,6 @@
 import type { ShotPlanClipTake } from '../../client/shot-plan-clips.js';
 import { registerClipTakeInSession } from '../shot-plan-clips/commands.js';
-import { selectAssetFileInSession } from '../asset-files/selection.js';
+import { selectAssetFileInSession, selectFirstContinuityImageInSession } from '../asset-files/selection.js';
 import type { AssetFileOwner, AssetFileSelectionTarget } from '../../client/asset-files.js';
 import {
   insertLookbookImageRecord,
@@ -115,6 +115,13 @@ export function persistOwnedGeneratedMediaAssetFileInSession(
   if (input.selectionTarget) {
     selectAssetFileInSession(input.session, {
       target: input.selectionTarget,
+      assetFileId: input.assetFileId,
+      now: input.now,
+    });
+  } else {
+    selectFirstContinuityImageInSession(input.session, {
+      owner: input.owner,
+      assetFileType: input.assetFileMetadata.type,
       assetFileId: input.assetFileId,
       now: input.now,
     });
