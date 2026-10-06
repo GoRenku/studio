@@ -1,6 +1,6 @@
 {
   "name": "@gorenku/studio-codex",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "Local Codex generation review integration",
   "private": true,
   "type": "module",
