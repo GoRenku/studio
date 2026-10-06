@@ -293,20 +293,33 @@ workspace's `node_modules` directories.
 Installer regression coverage and remaining native validation are recorded in
 [the installer review](installer-review.md).
 
-This is an explicit alpha policy. A cross-packaged Intel Mac or Windows
-artifact is structurally verified but is not described as runtime verified.
-The Windows archive should be exercised manually on the maintainer's Windows
-machine before or immediately after alpha distribution. The release manifest
-preserves the verification level so the distinction is visible rather than
-implied.
+Local releases retain the alpha verification policy: the host target receives
+CLI/database and Studio module checks; other targets receive structural checks.
+Reports preserve those levels and explicitly record untested HTTP startup.
+Native verification on the maintainer's other Windows and Linux machines is
+follow-up work for a separate session, not a prerequisite for local publication.
+This does not add Linux as a release target.
 
-Local verification checks that Studio's built `dist/index.html` and nonempty
-`dist/assets` directory exist for every target. Native `runtime` verification
-checks module loading but does not start Studio, bind a port, or query the
-development server. The existing singleton on port 5173 can remain running.
-Verification reports explicitly record `studioHttpStartup: "not-tested"`;
-`runtime` does not claim HTTP startup or serving was tested. Full packaged
-Studio startup verification on an isolated CI runner is deferred.
+The optional GitHub Actions workflow runs the full native upgrade matrix before
+its publication job. Its upgrade reports must include every fixture/process
+check, actual HTTP serving, and matching archive checksums. If an upgrade report
+is supplied to either publication path, incomplete or stale evidence is rejected
+with `RELEASE077`; ordinary local smoke reports do not claim upgrade coverage.
+
+`pnpm release:build:local -- --tag vX.Y.Z` assembles all current targets locally.
+The fuller native archive verifier is also available explicitly:
+
+```bash
+node scripts/release/verify-release-upgrades.mjs --archive <candidate-archive> --report <verification.json>
+```
+
+The verifier downloads source archives declared in
+`scripts/release/upgrades/fixtures.json`, checks their immutable digests and
+compares shipped SQL/journals/snapshots. Required source releases are v0.1.3,
+v0.1.4, v0.1.5, v0.1.24 and v0.1.25. Source runtimes create synthetic populated
+Projects. Native fixture results, before/after observations, database evidence
+and independently readable backups are retained under `upgrade-evidence`.
+Urban Basilica data, screenplay and media are never release or CI inputs.
 
 If prepare succeeded but publication needs to be resumed:
 
@@ -315,7 +328,7 @@ pnpm release:publish
 ```
 
 The recovery command revalidates tag, version, commit, and `origin/main`
-ancestry, then safely rebuilds/reuses the release-local private Node runtime
+ancestry, then rebuilds locally using the release-local private Node runtime
 and resumes the draft release. When the draft already has the complete declared
 asset set, the command downloads and verifies those existing assets and uses
 those exact bytes for R2 recovery instead of replacing them with a rebuild. An
@@ -323,15 +336,17 @@ incomplete draft is repaired before R2 publication; a complete draft whose
 bytes fail verification stops with an error. The command never bumps,
 recommits, or moves the tag.
 
-To exercise the complete local build, GitHub asset staging, and R2 publication
-plan without changing refs or remote release state:
+To exercise the local build and publication staging without changing refs or
+remote release state:
 
 ```bash
 pnpm release:publish -- --dry-run
 ```
 
-Generated local products and archives stay under the ignored
-`release/local/vX.Y.Z` directory for inspection.
+Dry-run builds locally and validates GitHub/R2 staging without pushing refs,
+uploading or promoting releases. Products remain under `release/local/vX.Y.Z`.
+Local publication requires network access and `gh` authentication, but no GitHub
+Actions runners. Neither retry nor dry-run bumps a version or moves the tag.
 
 R2 publication logs object probes, uploads, completed multipart parts, and
 verification downloads separately. Public probes have a 60-second deadline.
@@ -341,19 +356,21 @@ A stalled verification fails with `RELEASE045` and leaves GitHub as a draft;
 resume publication after resolving the connection problem. Existing immutable
 objects are reused only after their downloaded bytes pass checksum verification.
 
-## Future GitHub Actions Release
+## Optional GitHub Actions Release
 
 The retained `.github/workflows/release.yml` builds one self-contained Node 24
 artifact natively for each of `darwin-arm64`, `darwin-x64`, and `win32-x64`.
 
-After an operator has deliberately chosen to use Actions, prepare the release
-normally and dispatch the exact tag with:
+This is an optional future release path; `release:publish` does not invoke it.
+Explicit dispatch waits for completion and supports immutable-tag retry:
 
 ```bash
 pnpm release:dispatch -- --tag vX.Y.Z
 ```
 
-Do not run `pnpm release:publish` and `pnpm release:dispatch` for the same tag.
+Use one invocation to drive a release; another invocation finds the same
+commit/tag run and resumes it.
+Do not run local publication and Actions dispatch for the same tag.
 The workflow creates or resumes a draft GitHub prerelease, uploads uniquely
 named archives and checksums for all three targets, verifies the complete asset
 set, and downloads the release assets again. R2 promotion consumes only that
@@ -499,11 +516,25 @@ invokes the bundled installer. An update of the already active version skips
 runtime replacement, including the running Windows `node.exe`.
 The browser check downloads only the release manifest. There is no background
 check while Studio is closed, incremental download, or automatic cleanup of
-earlier version folders. For a local macOS update rehearsal, build an assembled
-product with the current Studio implementation, then run
-`node scripts/release/verify-studio-update.mjs <assembled-product-directory>`.
-It uses an isolated install, fixture-local agent-profile directories, and a
-loopback release source and guides the native Terminal/browser interaction.
+earlier version folders. The optional native desktop update rehearsal accepts
+genuinely distinct extracted source and candidate archives, each with its
+checksum receipt from `extractVerifiedArchive`:
+
+```bash
+node scripts/release/verify-studio-update.mjs --source-product <source-renku> --target-product <candidate-renku> --report <desktop-report.json>
+```
+
+It preserves genuine versions and archive bytes, isolates installation and agent
+profiles, and guides the existing Terminal or PowerShell installer/browser flow.
+It verifies shutdown, launcher replacement, the new process/version, a structured
+backup failure followed by repaired retry, full Project preservation, HTTP media
+and repeat opens. Browser visibility, two-tab behavior and closing/reopening the
+browser during handoff require operator acceptance. An unrun rehearsal is
+**not verified**, never an automatic pass. Verification on the maintainer's other
+machines and supported OS baselines is deferred to a separate session. These
+reports are not prerequisites for the current local release workflow. Newer CI
+runners alone do not establish older OS support. Do not stop a real Studio to
+run the isolated rehearsal without the user's authorization.
 
 Node/npm and Windows MinGit are private installation tools. Only `renku` is added
 to the public PATH; installing Renku does not make `npx` available in a fresh

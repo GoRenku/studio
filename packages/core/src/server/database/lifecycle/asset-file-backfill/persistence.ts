@@ -14,6 +14,7 @@ import { createProjectDatabasePreMigrationBackup } from '../project-database-bac
 import type { ProjectDatabasePreMigrationBackupReport } from '../project-database-backups.js';
 import type { DatabaseSession } from '../store.js';
 import { discoverAssetFileBackfillCandidates } from './candidates.js';
+import { projectUpgradeFailure } from '../project-upgrade-errors.js';
 
 export function completeAssetFileBackfill(input: {
   session: DatabaseSession;
@@ -61,11 +62,15 @@ export function completeAssetFileBackfill(input: {
   });
   if (issues.length) { throw new ProjectDataError('PROJECT_ASSET_FILE_BACKFILL_FAILED',
     'Retained reference registration could not finish.', { issues }); }
-  if (!input.preMigrationBackup) { createProjectDatabasePreMigrationBackup(input.session.databasePath); }
-  input.session.db.transaction((tx) => {
-    if (readProjectRecord({ ...input.session, db: tx })?.assetFileBackfillVersion === 1) { return; }
-    for (const record of records) { tx.insert(assetFiles).values(record).run(); }
-    for (const { id, ...facts } of physicalFacts) { tx.update(assetFiles).set(facts).where(eq(assetFiles.id, id)).run(); }
-    tx.update(projects).set({ assetFileBackfillVersion: 1 }).where(eq(projects.id, project.id)).run();
-  }, { behavior: 'immediate' });
+  const backup = input.preMigrationBackup ?? createProjectDatabasePreMigrationBackup(input.session.databasePath);
+  try {
+    input.session.db.transaction((tx) => {
+      if (readProjectRecord({ ...input.session, db: tx })?.assetFileBackfillVersion === 1) { return; }
+      for (const record of records) { tx.insert(assetFiles).values(record).run(); }
+      for (const { id, ...facts } of physicalFacts) { tx.update(assetFiles).set(facts).where(eq(assetFiles.id, id)).run(); }
+      tx.update(projects).set({ assetFileBackfillVersion: 1 }).where(eq(projects.id, project.id)).run();
+    }, { behavior: 'immediate' });
+  } catch (error) {
+    throw projectUpgradeFailure(error, backup, 'reference registration transaction failed');
+  }
 }

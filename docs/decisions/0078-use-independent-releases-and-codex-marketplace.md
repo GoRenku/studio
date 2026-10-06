@@ -4,6 +4,10 @@ Date: 2026-08-10
 
 Status: accepted
 
+> [ADR 0108](0108-require-native-project-upgrade-verification.md) confirms local
+> publication remains the default. Native upgrade tooling and GitHub Actions
+> remain optional; verification on other machines is separate follow-up work.
+
 > The user-installation sequence is superseded by
 > [ADR 0101](0101-install-agent-skills-from-platform-installers.md). Independent
 > release ownership and artifact verification remain unchanged.

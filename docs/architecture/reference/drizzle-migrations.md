@@ -87,9 +87,10 @@ Each Renku project owns its own SQLite database:
 <storageRoot>/<projectName>/.renku/project.sqlite
 ```
 
-Project database migrations are a development-time setup operation. They must
-not run from Studio request handlers, project read paths, asset listing paths,
-image-serving paths, coordination polling, or other application runtime code.
+Core owns Project readiness in installed and development runtimes. Opening a
+valid older Project runs the backed-up Drizzle operation before returning a
+usable session. CLI and HTTP handlers call Core; they must not decide upgrade
+eligibility, apply SQL, or implement historical readers themselves.
 
 Apply migrations to a known project by project name:
 
@@ -121,11 +122,22 @@ project-before-migration-from-generation-34-to-35-20260702T132455123Z-8f31c2.sql
 project-before-migration-from-generation-34-to-35-20260702T132455123Z-8f31c2.json
 ```
 
-The `.sqlite` file is created with SQLite `VACUUM INTO` and verified by opening
+The `.sqlite` file is created with SQLite `VACUUM INTO`, flushed through a writable
+non-truncating `r+` file handle, and verified by opening
 the backup read-only and running `PRAGMA quick_check`. The `.json` sidecar
 records the source database path, backup path, source and target schema
 generations, file sizes, and verification result. Migration starts only after
 the backup and metadata have been written successfully.
+
+Source SQLite connections and verification connections remain read-only. The
+writable flush handle is essential on Windows: `FlushFileBuffers` requires write
+access. Core flushes the files on all supported native platforms. macOS also
+flushes the containing directory, except for explicit unsupported-operation
+errors (`EINVAL`/`ENOTSUP`). Windows Node cannot open that directory handle, so
+directory-entry persistence across power loss is not guaranteed there. Process
+interruption tests prove process-crash recovery, not literal power-loss durability.
+Other I/O errors still block upgrade writes. These results do not establish a
+support contract for network, removable, or cloud-synced filesystems.
 
 The core migration report includes:
 
@@ -163,8 +175,8 @@ RENKU_PROJECT_DATABASE_PATH=/absolute/path/to/project.sqlite \
   pnpm --filter @gorenku/studio-core db:migrate:project
 ```
 
-`packages/core` owns this migration operation. CLI and Studio must not invoke
-Drizzle Kit from normal runtime paths.
+`packages/core` owns this migration operation. CLI and Studio call Core's focused
+commands and consume its reports and structured diagnostics.
 
 The lower-level `drizzle.project-migrate.config.ts` is protected by the same
 core backup gate. If it receives
@@ -390,9 +402,16 @@ Backup-specific failures use the project data namespace:
 - `PROJECT_DATA047`: pre-migration backup could not be verified.
 - `PROJECT_DATA048`: pre-migration backup metadata could not be written.
 
-If Drizzle Kit fails after a backup has been created, the structured migration
-error includes the backup path and suggests stopping Studio before restoring the
-backup over `project.sqlite`.
+Errors retain operation, path and available native error details. Cleanup failures
+are secondary issues; they do not replace the original cause. A verified published
+backup remains on disk if later metadata publication fails. Core clears unrelated
+inherited supplied-backup environment before starting its migration child.
+
+After a backup exists, migration and registration failures retain its location
+and the failed stage. A cached store is closed before explicit migration. Core
+does not cache or return a new usable session until generation validation and
+reference registration succeed. A registration transaction failure leaves its
+completion marker pending so a repaired Project can be retried.
 
 ## Manual Recovery From A Failed Migration
 
@@ -405,11 +424,17 @@ To recover manually:
 1. Stop Studio and any CLI process using the project.
 2. Locate the backup path from the failed command output or from
    `.renku/project-database-backups/`.
-3. Move the broken database aside with a timestamped name, for example
-   `project.sqlite.failed-20260702T132455Z`.
-4. Copy the selected `.sqlite` backup to `.renku/project.sqlite`.
-5. Fix the migration code or project data issue that caused the failure.
-6. Re-run the migration only after the cause has been fixed.
+3. Preserve the failed `project.sqlite` together with any `project.sqlite-wal`,
+   `project.sqlite-shm`, or `project.sqlite-journal` in one evidence directory.
+   Do not remove sidecars while any process still uses the database.
+4. Independently open the selected standalone backup read-only, run
+   `PRAGMA quick_check`, and confirm its generation and expected saved work.
+5. Restore the verified backup into a clean Project copy with a fresh `.renku`
+   database location. Copy the Project media separately; the database backup does
+   not contain media files. Never combine it with the failed database's sidecars.
+6. Use the matching original runtime to inspect the restored copy. Fix the
+   migration or storage issue before retrying with the new runtime. Retain the
+   failed database, sidecars, backup and metadata until recovery is confirmed.
 
 
 `0084_shot_plan_previs.sql` adds the Shot Plan type and procedural revision table.

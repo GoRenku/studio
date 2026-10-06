@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { ProjectDataError } from '../../project-data-error.js';
 import {
   PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH_ENV,
@@ -40,24 +41,27 @@ export function migrateProjectDatabase(
     );
   }
 
-  mkdirSync(dirname(databasePath), { recursive: true });
+  try {
+    mkdirSync(dirname(databasePath), { recursive: true });
+  } catch (error) {
+    throw new ProjectDataError('PROJECT_DATA040', `Could not prepare the Project database directory: ${databasePath}.`, {
+      issues: [createDiagnosticError('PROJECT_DATA040', error instanceof Error ? error.message : String(error),
+        { filePath: dirname(databasePath), path: ['databasePath'], context: 'prepare database directory' })],
+    });
+  }
   const preMigrationBackup = createPreMigrationBackup(databasePath);
+  const childEnvironment: Record<string, string | undefined> = { ...process.env, [PROJECT_DATABASE_PATH_ENV]: databasePath };
+  delete childEnvironment[PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH_ENV];
+  if (preMigrationBackup) {
+    childEnvironment[PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH_ENV] = preMigrationBackup.backupPath;
+  }
   const result = spawnSync(
     process.execPath,
     [drizzleKitPath, 'migrate', '--config', configPath],
     {
       cwd: packageRoot,
       encoding: 'utf8',
-      env: {
-        ...process.env,
-        [PROJECT_DATABASE_PATH_ENV]: databasePath,
-        ...(preMigrationBackup
-          ? {
-              [PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH_ENV]:
-                preMigrationBackup.backupPath,
-            }
-          : {}),
-      },
+      env: childEnvironment,
     }
   );
 
@@ -69,7 +73,7 @@ export function migrateProjectDatabase(
         preMigrationBackup,
         message: `Project database migration command failed to start for ${databasePath}: ${result.error.message}`,
       }),
-      migrationFailureOptions(preMigrationBackup)
+      migrationFailureOptions(preMigrationBackup, 'PROJECT_DATA041', 'migration did not start')
     );
   }
 
@@ -85,7 +89,7 @@ export function migrateProjectDatabase(
         preMigrationBackup,
         message: `Project database migration failed for ${databasePath}.${output ? `\n${output}` : ''}`,
       }),
-      migrationFailureOptions(preMigrationBackup)
+      migrationFailureOptions(preMigrationBackup, 'PROJECT_DATA042', 'SQL may have run')
     );
   }
 
@@ -116,6 +120,7 @@ function createPreMigrationBackup(
   } catch (error) {
     if (error instanceof ProjectDatabaseBackupError) {
       throw new ProjectDataError(error.code, error.message, {
+        issues: error.issues,
         suggestion: error.suggestion,
       });
     }
@@ -166,12 +171,17 @@ function migrationFailureMessage(input: {
 }
 
 function migrationFailureOptions(
-  preMigrationBackup: ProjectDatabasePreMigrationBackupReport | null
-): { suggestion?: string } {
+  preMigrationBackup: ProjectDatabasePreMigrationBackupReport | null,
+  code: string,
+  stage: string
+): { suggestion?: string; issues?: ReturnType<typeof createDiagnosticError>[] } {
   if (!preMigrationBackup) {
     return {};
   }
   return {
-    suggestion: `A pre-migration backup was created at ${preMigrationBackup.backupPath}. Stop Studio before restoring it over project.sqlite.`,
+    issues: [createDiagnosticError(code, stage, {
+      filePath: preMigrationBackup.backupPath, path: ['upgrade'], context: stage,
+    })],
+    suggestion: `A pre-migration backup was created at ${preMigrationBackup.backupPath}. Stop all Project users, preserve the failed database and WAL/SHM or journal files together, and restore only into a clean database location.`,
   };
 }

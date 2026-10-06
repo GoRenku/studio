@@ -32,6 +32,8 @@ import {
 } from './publish-github-release.mjs';
 import { filesHaveIdenticalBytes, usesMultipartUpload } from './publish-r2.mjs';
 import { assertAboutOutput, assertStudioOnlyProduct } from './verify-product.mjs';
+import { upgradeFixtures } from './upgrades/fixtures.mjs';
+import { requiredProcessCases, requiredUpgradeChecks } from './upgrades/evidence.mjs';
 import {
   BUNDLED_NODE_VERSION,
   RELEASE_TARGETS,
@@ -122,35 +124,43 @@ test('GitHub Release staging verifies the complete native matrix and exact bytes
   assert.throws(() => verifyDownloadedReleaseAssets(emptyStagingRoot), /RELEASE080/);
 });
 
-test('local GitHub Release staging records runtime and structural verification', () => {
+test('local publication accepts host runtime and cross-target structural verification', () => {
   const releaseRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-local-release-'));
   const stagingRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-local-assets-'));
   const version = readStudioVersion();
   for (const target of RELEASE_TARGETS) {
-    writeTargetArtifact(
-      releaseRoot,
-      target,
-      version,
-      target.id === 'darwin-arm64' ? 'runtime' : 'structural'
-    );
+    writeTargetArtifact(releaseRoot, target, version,
+      target.id === 'darwin-arm64' ? 'runtime' : 'structural');
+    const reportPath = path.join(releaseRoot, target.id, 'verification.json');
+    writeFileSync(reportPath, JSON.stringify({ product: 'renku', version,
+      target: target.id, level: target.id === 'darwin-arm64' ? 'runtime' : 'structural',
+      verifier: 'darwin-arm64', studioHttpStartup: 'not-tested', verifiedAt: new Date().toISOString() }));
   }
   const manifest = stageGitHubReleaseAssets({
-    tag: `v${version}`,
-    releaseRoot,
-    stagingRoot: path.join(stagingRoot, 'assets'),
+    tag: `v${version}`, releaseRoot, stagingRoot: path.join(stagingRoot, 'assets'),
   });
-  assert.deepEqual(manifest.targets, RELEASE_TARGETS.map(({ id }) => id));
-  assert.equal(manifest.artifacts.length, 3);
-  assert.deepEqual(
-    manifest.artifacts.map(({ verification }) => verification.level),
-    ['runtime', 'structural', 'structural']
-  );
-  assert.deepEqual(
-    manifest.installers.map(({ name }) => name),
-    ['install.sh', 'install.ps1']
-  );
+  assert.deepEqual(manifest.artifacts.map(({ verification }) => verification.level),
+    ['runtime', 'structural', 'structural']);
+  assert.ok(manifest.artifacts.every(({ verification }) => verification.studioHttpStartup === 'not-tested'));
   assert.equal(verifyDownloadedReleaseAssets(path.join(stagingRoot, 'assets')).targets.length, 3);
 });
+
+for (const failure of ['stale archive', 'incomplete upgrades']) {
+  test(`publication rejects supplied native evidence with ${failure}`, () => {
+    const releaseRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-invalid-evidence-'));
+    const stagingRoot = path.join(releaseRoot, 'assets');
+    const version = readStudioVersion();
+    for (const target of RELEASE_TARGETS) {
+      writeTargetArtifact(releaseRoot, target, version, 'runtime');
+    }
+    const reportPath = path.join(releaseRoot, RELEASE_TARGETS[0].id, 'verification.json');
+    const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+    if (failure === 'stale archive') { report.archiveSha256 = '0'.repeat(64); }
+    else { report.projectUpgrades.pop(); }
+    writeFileSync(reportPath, JSON.stringify(report));
+    assert.throws(() => stageGitHubReleaseAssets({ tag: `v${version}`, releaseRoot, stagingRoot }), /RELEASE077/);
+  });
+}
 
 test('R2 resume comparison accepts only identical bytes', () => {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-r2-bytes-'));
@@ -411,7 +421,17 @@ function writeTargetArtifact(releaseRoot, target, version, level, contents = tar
         version,
         target: target.id,
         level,
-        verifier: 'darwin-arm64',
+        verifier: target.id,
+        archiveSha256: hash,
+        studioHttpStartup: 'passed',
+        projectUpgrades: upgradeFixtures.map((fixture) => ({
+          fixtureId: fixture.fixtureId, sourceVersion: fixture.sourceVersion,
+          sourceArchiveSha256: fixture.archives[target.id].sha256,
+          sourceSchemaGeneration: fixture.schemaGeneration, targetSchemaGeneration: 71,
+          checks: Object.fromEntries(requiredUpgradeChecks.map((check) => [check, 'passed'])),
+          processLifecycle: requiredProcessCases.map((name) => ({ case: name, result: 'passed' })),
+          result: 'passed',
+        })),
         verifiedAt: '2026-08-11T00:00:00.000Z',
       },
       null,

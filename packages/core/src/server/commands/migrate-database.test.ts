@@ -221,7 +221,7 @@ describe('migrate database command', () => {
         'A pre-migration backup was created at'
       ),
       suggestion: expect.stringContaining(
-        'Stop Studio before restoring it over project.sqlite'
+        'preserve the failed database and WAL/SHM or journal files together'
       ),
     });
     const backupPath = (thrown as Error).message.match(

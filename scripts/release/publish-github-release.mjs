@@ -13,7 +13,9 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { pathToFileURL } from 'node:url';
+import { validateNativeUpgradeEvidence } from './upgrades/evidence.mjs';
 import {
   parseReleaseTag,
   readStudioVersion,
@@ -63,6 +65,7 @@ export function stageGitHubReleaseAssets({
     const verification = readVerificationReport(verificationPath, {
       target: target.id,
       version,
+      archiveSha256: sha256,
     });
     const archiveSuffix = target.archive === 'zip' ? 'zip' : 'tar.gz';
     const assetName = `renku-${version}-${target.id}.${archiveSuffix}`;
@@ -133,6 +136,9 @@ export function verifyDownloadedReleaseAssets(root) {
     throw new Error('RELEASE075 GitHub Release tag and version disagree.');
   }
   const targets = requireReleaseTargets(manifest.targets);
+  if (targets.length !== RELEASE_TARGETS.length) {
+    throw new Error('RELEASE077 Publication requires the complete native target matrix.');
+  }
   const expectedTargets = new Set(targets.map(({ id }) => id));
   const expectedNames = new Set(['release.json']);
   for (const artifact of manifest.artifacts ?? []) {
@@ -157,6 +163,7 @@ export function verifyDownloadedReleaseAssets(root) {
     validateVerificationReport(artifact.verification, {
       target: target.id,
       version: manifest.version,
+      archiveSha256: artifact.sha256,
     });
     expectedNames.add(artifact.assetName);
     expectedNames.add(artifact.checksumAssetName);
@@ -217,12 +224,14 @@ function validateVerificationReport(report, expected) {
     report.version !== expected.version ||
     report.target !== expected.target ||
     !['runtime', 'structural'].includes(report.level) ||
-    typeof report.verifier !== 'string' ||
-    typeof report.verifiedAt !== 'string'
+    !RELEASE_TARGETS.some(({ id }) => id === report.verifier) ||
+    (report.level === 'runtime' && report.verifier !== expected.target) ||
+    !Number.isFinite(Date.parse(report.verifiedAt))
   ) {
-    throw new Error(
-      `RELEASE077 Invalid verification report for ${expected.target}.`
-    );
+    throw new Error(`RELEASE077 Invalid verification report for ${expected.target}.`);
+  }
+  if (report.projectUpgrades !== undefined) {
+    validateNativeUpgradeEvidence(report, expected);
   }
 }
 
@@ -371,6 +380,8 @@ async function main() {
     if (!release?.isDraft) {
       throw new Error(`RELEASE084 Draft GitHub Release does not exist: ${options.tag}`);
     }
+    const evidenceRoot = mkdtempSync(path.join(os.tmpdir(), 'renku-release-evidence-'));
+    downloadVerifiedReleaseAssets(options.tag, path.join(evidenceRoot, 'assets'));
     runCommand('gh', ['release', 'edit', options.tag, '--draft=false', '--prerelease']);
     return;
   }

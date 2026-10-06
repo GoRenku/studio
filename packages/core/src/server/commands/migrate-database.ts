@@ -26,8 +26,8 @@ export async function migrateProjectDatabaseForProject(
     );
   }
 
-  const migration = migrateProjectDatabase(databasePath);
   closeProjectStore({ projectFolder });
+  const migration = migrateProjectDatabase(databasePath);
   const session = openProjectStore({ projectFolder, create: false,
     preMigrationBackup: migration.preMigrationBackup });
   session.close();

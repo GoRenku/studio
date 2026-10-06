@@ -290,9 +290,19 @@ Backups are stored inside the project folder:
 ```
 
 If migration fails after the backup is created, the structured error includes
-the backup path. To recover, stop Studio and any CLI process using the project,
-move the broken `.renku/project.sqlite` aside, copy the selected backup to
-`.renku/project.sqlite`, fix the migration issue, and then re-run the migration.
+the backup path and failed stage. `PROJECT_DATA046`, `047` and `048` identify
+backup creation, verification and metadata failures. Located issues retain the
+failed operation and available native cause. A cleanup issue does not replace
+the primary error. A failed CLI command exits nonzero; it does not return a
+successful migration report.
+
+For recovery, stop all Studio and CLI users. Preserve the failed database with
+its WAL/SHM or rollback journal, independently verify the selected backup, and
+restore into a clean Project copy without those failed sidecars. Retain media
+and failure evidence. Inspect using the original runtime before retrying the
+upgrade after fixing its cause. Follow the
+[manual recovery procedure](../architecture/reference/drizzle-migrations.md#manual-recovery-from-a-failed-migration).
+Normal Project opens also use the Core readiness gate; command syntax is unchanged.
 
 ## `renku director context`
 

@@ -3,10 +3,10 @@ import Database from 'better-sqlite3';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { existsSync } from 'node:fs';
 import { ProjectDataError } from '../../project-data-error.js';
+import { projectUpgradeFailure } from './project-upgrade-errors.js';
 import { resolveProjectDatabasePath } from '../../files/project-paths.js';
 import {
   migrateProjectDatabase,
-  type ProjectDatabaseMigrationRunReport,
 } from './migrator.js';
 import { currentProjectStoreSchemaGeneration } from './project-store-schema-generation.js';
 import { completeAssetFileBackfill } from './asset-file-backfill/index.js';
@@ -59,7 +59,13 @@ export function openProjectStore(input: {
           existing.sqlite.close();
         }
         if (projectSessions.has(databasePath)) {
-          completeAssetFileBackfill({ session: existing, projectFolder: input.projectFolder });
+          try {
+            completeAssetFileBackfill({ session: existing, projectFolder: input.projectFolder });
+          } catch (error) {
+            projectSessions.delete(databasePath);
+            existing.sqlite.close();
+            throw error;
+          }
           return existing;
         }
       }
@@ -91,7 +97,8 @@ export function openProjectStore(input: {
         preMigrationBackup: opened.preMigrationBackup ?? input.preMigrationBackup });
     } catch (error) {
       sqlite.close();
-      throw error;
+      throw projectUpgradeFailure(error,
+        opened.preMigrationBackup ?? input.preMigrationBackup, 'reference registration failed');
     }
 
     if (input.lifetime === 'project') {
@@ -129,32 +136,12 @@ function openSqliteWithCurrentSchema(input: {
         return { sqlite: migrated, preMigrationBackup: migration.preMigrationBackup };
       } catch (migrationError) {
         migrated.close();
-        throw addAutoMigrationBackupContext(migrationError, migration);
+        throw projectUpgradeFailure(migrationError, migration.preMigrationBackup, 'SQL ran; schema readiness failed');
       }
     }
     sqlite.close();
     throw error;
   }
-}
-
-function addAutoMigrationBackupContext(
-  error: unknown,
-  migration: ProjectDatabaseMigrationRunReport
-): unknown {
-  if (!migration.preMigrationBackup || !(error instanceof ProjectDataError)) {
-    return error;
-  }
-  return new ProjectDataError(
-    error.code,
-    [
-      error.message,
-      `A pre-migration backup was created at ${migration.preMigrationBackup.backupPath}.`,
-    ].join('\n'),
-    {
-      issues: error.issues,
-      suggestion: `A pre-migration backup was created at ${migration.preMigrationBackup.backupPath}. Stop Studio before restoring it over project.sqlite.`,
-    }
-  );
 }
 
 export function closeProjectStore(input: { projectFolder: string }): void {

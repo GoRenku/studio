@@ -5,6 +5,23 @@ import { createStudioRuntimeToken } from '../studio-runtime-token.js';
 import { createProjectsRoute } from './projects.js';
 
 describe('projects Hono route', () => {
+  it('returns an upgrade failure with its backup location and recovery suggestion', async () => {
+    const issues = [createDiagnosticError('PROJECT_DATA042', 'SQL may have run',
+      { path: ['upgrade'], filePath: '/project/.renku/backup.sqlite', context: 'SQL may have run' })];
+    const app = createProjectsRoute({ projectData: { ...fakeProjectDataService(),
+      async listLibrary() {
+        throw new StructuredError({ code: 'PROJECT_DATA042', message: 'Upgrade failed; backup retained.', issues,
+          suggestion: 'Stop all Project users and restore into a clean database location.' });
+      },
+    } });
+    const response = await app.request('/');
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: { code: 'PROJECT_DATA042', message: 'Upgrade failed; backup retained.',
+      issues: [{ code: 'PROJECT_DATA042', severity: 'error', message: 'SQL may have run',
+        location: { path: ['upgrade'], filePath: '/project/.renku/backup.sqlite', context: 'SQL may have run' } }],
+      suggestion: 'Stop all Project users and restore into a clean database location.' } });
+  });
+
   it('creates a Project through the authenticated Core service boundary', async () => {
     const token = createStudioRuntimeToken();
     const projectData = fakeProjectDataService();

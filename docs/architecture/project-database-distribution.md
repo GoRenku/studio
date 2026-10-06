@@ -102,8 +102,10 @@ SQL files from `@gorenku/studio-core/drizzle/`.
 
 The first beta archive ships the current generated Drizzle migration history
 unchanged. Release assembly copies it but does not rewrite, compact, open, or
-special-case it. Installed-tree verification creates a disposable project from
-that history before an archive qualifies for publication.
+special-case it. Installed-tree verification creates disposable populated
+Projects with genuine released runtimes and upgrades them using the exact
+candidate archive when the explicit native upgrade verifier is run. Local
+publication retains host runtime smoke and cross-target structural verification.
 
 This makes the migration set shipped in the first beta a public upgrade
 contract. Subsequent schema work appends forward migrations; shipped SQL,
@@ -261,7 +263,7 @@ RENKU_PROJECT_DATABASE_PATH=/absolute/path/to/project.sqlite \
 
 This config is a distributed runtime entrypoint. Therefore:
 
-- it must import backup lifecycle code from `dist/`, not from `src/`;
+- it must execute the compiled Core backup gate from `dist/`, not from `src/`;
 - it must refer to the compiled schema module in `dist/`, not to the source
   schema module;
 - it must be able to run from an installed `@gorenku/studio-core` package;
@@ -285,14 +287,13 @@ this is invalid for installed packages:
 That import works in the source checkout but fails in an installed package
 because `src/` is not shipped.
 
-The config must consume the built runtime that the package actually ships:
-
-```ts
-import {
-  PROJECT_DATABASE_PRE_MIGRATION_BACKUP_PATH_ENV,
-  prepareProjectDatabaseMigrationTarget,
-} from './dist/server/database/lifecycle/project-database-backups.js';
-```
+Drizzle Kit loads its config as CommonJS, while Core diagnostics use their native
+ESM package entrypoint. The config starts the internal compiled
+`project-database-migration-backup-gate.js` with the same Node executable and
+passes the database path and environment. That gate calls the ordinary Core
+backup lifecycle and emits its report or structured diagnostic payload. It does
+not apply SQL. Drizzle Kit still owns migration application. This avoids adding
+a diagnostics compatibility export or shipping source files.
 
 The config should also point Drizzle Kit at the built schema path:
 
@@ -304,7 +305,7 @@ Do not fix this by shipping `src/`.
 
 Do not fix this by adding a public re-export solely for the migration config.
 The backup lifecycle helper is an internal core database lifecycle module. The
-config is in the same package and can import the built internal file directly.
+config and compiled backup gate remain internal to the same owning package.
 
 ## Package Contract Checks
 
@@ -316,6 +317,7 @@ Core package verification should cover:
 - the package is built before packing;
 - `npm pack` or `pnpm pack` output for `@gorenku/studio-core` includes:
   - `dist/server/database/lifecycle/project-database-backups.js`;
+  - `dist/server/database/lifecycle/project-database-migration-backup-gate.js`;
   - `dist/server/schema/index.js`;
   - `drizzle.project-migrate.config.ts`;
   - `drizzle/meta/_journal.json`;
@@ -336,6 +338,39 @@ resolution. It should not depend on a specific physical layout such as:
 Package managers may hoist or link dependencies differently. Core owns the
 dependency on Drizzle Kit, so core should resolve Drizzle Kit as a dependency
 from core's module context.
+
+## Populated Native Upgrade Verification
+
+The optional GitHub Actions workflow runs native verification on Windows x64,
+Apple Silicon Mac and Intel Mac. Local publication does not require that workflow;
+verification on the maintainer's other machines is deferred to a separate session.
+`scripts/release/upgrades/fixtures.json` is a test-only
+inventory of genuine source release archives, SHA-256 digests, journal
+fingerprints and generations. It covers v0.1.24, v0.1.25 and the earlier distinct
+shipped histories represented by v0.1.3, v0.1.4 and v0.1.5. Adding migrations
+requires an updated populated fixture and preservation expectations; reducing
+this set silently is forbidden.
+
+The source runtime creates synthetic Project data. Verification compares every
+retained identity and relationship, accepted one-way conversions, effective
+Settings, opaque authored values and file hashes. It independently checks
+backups, the entire Drizzle journal, reference-registration completion,
+concurrency, process interruption, clean-location recovery and real packaged
+HTTP/media access. Exact historical shapes appear only in test authoring and
+conversion expectations, never in Studio runtime readers. Migration 0083's
+published development identity mapping is exercised with synthetic text and
+media; those IDs do not make private Urban Basilica content a fixture.
+
+Candidate SQL, journal entries and snapshots must preserve every already shipped
+history byte-for-byte. Data-only migrations still require journal-completion
+proof. If generation-based readiness skips one, stop and correct the readiness
+design before release. Do not rewrite shipped SQL to make a fixture pass.
+
+Reports bind native target, runtime, version, fixture cases and HTTP results to
+the candidate archive checksum. Repacking invalidates that evidence. CI retains
+synthetic before/after observations, database copies, interrupted sidecars and
+backups separately from public product archives. See
+[the native verification decision](../decisions/0108-require-native-project-upgrade-verification.md).
 
 ## Non-Goals
 

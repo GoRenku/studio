@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { StructuredError, createDiagnosticError } from '@gorenku/studio-diagnostics';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAssetFileCommand } from './commands/asset-file/commands.js';
 import { runGenerationCommand } from './commands/generation/command.js';
@@ -25,6 +26,21 @@ describe('Renku CLI command surfaces', () => {
     vi.mocked(runAssetFileCommand).mockResolvedValue(0);
     vi.mocked(runStudioCommand).mockReset();
     vi.mocked(runStudioCommand).mockResolvedValue(0);
+  });
+
+  it('preserves an upgrade failure and its located recovery diagnostics', async () => {
+    const { io, stdout, stderr } = createIo();
+    const issues = [createDiagnosticError('PROJECT_DATA046', 'flush backup: access denied (EPERM, fsync)',
+      { path: ['backup'], filePath: '/project/.renku/backup.sqlite', context: 'flush backup' })];
+    vi.mocked(runStudioCommand).mockRejectedValue(new StructuredError({ code: 'PROJECT_DATA046',
+      message: 'Could not create a pre-migration backup. Migration was not started.', issues,
+      suggestion: 'Check the backup destination and retry.' }));
+    expect(await runRenkuCli(['studio', 'start', '--json'], { io })).toBe(1);
+    expect(stdout).not.toHaveBeenCalled();
+    expect(JSON.parse(stderr.mock.calls[0]![0])).toMatchObject({ valid: false,
+      error: { code: 'PROJECT_DATA046', suggestion: 'Check the backup destination and retry.' },
+      issues: [{ code: 'PROJECT_DATA046', severity: 'error', message: 'flush backup: access denied (EPERM, fsync)',
+        location: { path: ['backup'], filePath: '/project/.renku/backup.sqlite', context: 'flush backup' } }] });
   });
 
   it.each([

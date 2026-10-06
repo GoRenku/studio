@@ -56,6 +56,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - name: Native database lifecycle regressions
+        run: pnpm --dir packages/core exec vitest run src/server/database/lifecycle --no-file-parallelism
       - name: Download private Node runtime
         id: bundled-node
         shell: bash
@@ -68,17 +70,32 @@ jobs:
           node scripts/release/assemble-product.mjs
           --target "${{ matrix.target }}"
           --bundled-node-dir "${{ steps.bundled-node.outputs.path }}"
-      - name: Verify and package
+      - name: Package and verify extracted native upgrades
         shell: bash
         run: |
           PRODUCT="release/staging/renku-${{ needs.validate.outputs.version }}-${{ matrix.target }}"
           mkdir -p "release/artifacts/${{ matrix.target }}"
-          node scripts/release/verify-product.mjs "$PRODUCT/renku" --mode runtime --report "release/artifacts/${{ matrix.target }}/verification.json"
           node scripts/release/package-product.mjs "$PRODUCT" "release/artifacts/${{ matrix.target }}"
+          ARCHIVE="release/artifacts/${{ matrix.target }}/renku.tar.gz"
+          if [ "${{ matrix.target }}" = "win32-x64" ]; then ARCHIVE="release/artifacts/${{ matrix.target }}/renku.zip"; fi
+          node scripts/release/verify-release-upgrades.mjs --archive "$ARCHIVE" --report "release/artifacts/${{ matrix.target }}/verification.json"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upgrade-evidence-${{ matrix.target }}
+          include-hidden-files: true
+          path: |
+            release/artifacts/${{ matrix.target }}/verification.json
+            release/artifacts/${{ matrix.target }}/upgrade-evidence
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: renku-${{ matrix.target }}
-          path: release/artifacts
+          path: |
+            release/artifacts
+            !release/artifacts/*/upgrade-evidence/**
           if-no-files-found: error
 
   publish:

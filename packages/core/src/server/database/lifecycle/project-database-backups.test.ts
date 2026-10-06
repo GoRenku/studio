@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs/promises';
+import { closeSync, fsyncSync, openSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -38,6 +39,64 @@ describe('project database pre-migration backups', () => {
     expect(
       createProjectDatabasePreMigrationBackup(projectDatabasePath())
     ).toBeNull();
+  });
+
+  it('returns no backup for an empty new database file', async () => {
+    await fs.writeFile(projectDatabasePath(), '');
+    expect(createProjectDatabasePreMigrationBackup(projectDatabasePath())).toBeNull();
+  });
+
+  it('uses native writable file flushes without truncating populated data', () => {
+    createProjectDatabase({ schemaGeneration: 34, projectTitle: 'Native flush' });
+    if (process.platform === 'win32') {
+      const oldHandle = openSync(projectDatabasePath(), 'r');
+      try { expect(() => fsyncSync(oldHandle)).toThrow(); }
+      finally { closeSync(oldHandle); }
+    }
+    const report = createProjectDatabasePreMigrationBackup(projectDatabasePath())!;
+    const backup = new Database(report.backupPath, { readonly: true });
+    try { expect(readProjectTitle(backup)).toBe('Native flush'); }
+    finally { backup.close(); }
+  });
+
+  for (const field of ['databasePath', 'targetSchemaGeneration', 'backupDatabaseSizeBytes', 'createdAt']) {
+    it(`blocks a supplied backup with invalid ${field}`, async () => {
+      createProjectDatabase({ schemaGeneration: 34, projectTitle: 'Supplied evidence' });
+      const report = createProjectDatabasePreMigrationBackup(projectDatabasePath())!;
+      const metadata = JSON.parse(await fs.readFile(report.metadataPath, 'utf8'));
+      metadata[field] = field === 'databasePath' ? '/unrelated/project.sqlite' : -1;
+      await fs.writeFile(report.metadataPath, JSON.stringify(metadata));
+      expect(() => validateProjectDatabasePreMigrationBackup({ databasePath: projectDatabasePath(), backupPath: report.backupPath }))
+        .toThrow(expect.objectContaining({ code: 'PROJECT_DATA047', issues: expect.any(Array) }));
+    });
+  }
+
+  it.each(['missing metadata', 'truncated metadata', 'missing backup', 'truncated backup', 'same-size corruption', 'wrong source generation'])
+    ('rejects supplied evidence with %s and leaves source bytes unchanged', async (failure) => {
+      createProjectDatabase({ schemaGeneration: 34, projectTitle: 'Supplied evidence' });
+      const original = await fs.readFile(projectDatabasePath());
+      const report = createProjectDatabasePreMigrationBackup(projectDatabasePath())!;
+      if (failure === 'missing metadata') { await fs.rename(report.metadataPath, `${report.metadataPath}.retained`); }
+      else if (failure === 'truncated metadata') { await fs.writeFile(report.metadataPath, '{'); }
+      else if (failure === 'missing backup') { await fs.rename(report.backupPath, `${report.backupPath}.retained`); }
+      else if (failure === 'truncated backup') { await fs.writeFile(report.backupPath, 'SQLite format 3'); }
+      else if (failure === 'same-size corruption') { await fs.writeFile(report.backupPath, Buffer.alloc(report.backupDatabaseSizeBytes)); }
+      else {
+        const metadata = JSON.parse(await fs.readFile(report.metadataPath, 'utf8'));
+        metadata.sourceSchemaGeneration = 35;
+        await fs.writeFile(report.metadataPath, JSON.stringify(metadata));
+      }
+      expect(() => validateProjectDatabasePreMigrationBackup({ databasePath: projectDatabasePath(), backupPath: report.backupPath }))
+        .toThrow(expect.objectContaining({ code: 'PROJECT_DATA047', issues: expect.any(Array) }));
+      expect(await fs.readFile(projectDatabasePath())).toEqual(original);
+    });
+
+  it('rejects malformed SQLite without changing its bytes', async () => {
+    const bytes = Buffer.from('not a SQLite database');
+    await fs.writeFile(projectDatabasePath(), bytes);
+    expect(() => createProjectDatabasePreMigrationBackup(projectDatabasePath()))
+      .toThrow(expect.objectContaining({ code: 'PROJECT_DATA046' }));
+    expect(await fs.readFile(projectDatabasePath())).toEqual(bytes);
   });
 
   it('creates and verifies a SQLite backup with sidecar metadata', async () => {
@@ -107,6 +166,42 @@ describe('project database pre-migration backups', () => {
 
     expect(prepared).toEqual(firstReport);
     await expect(backupSqliteFiles()).resolves.toEqual([firstReport!.backupPath]);
+  });
+
+  it('includes committed WAL work and excludes an uncommitted writer', () => {
+    createProjectDatabase({ schemaGeneration: 34, projectTitle: 'Initial' });
+    const writer = new Database(projectDatabasePath());
+    writer.pragma('journal_mode = WAL');
+    writer.pragma('wal_autocheckpoint = 0');
+    const reader = new Database(projectDatabasePath(), { readonly: true });
+    reader.exec('begin');
+    expect(readProjectTitle(reader)).toBe('Initial');
+    writer.prepare('update project set title = ?').run("Committed Ω ' quotation");
+    writer.exec('begin immediate');
+    writer.prepare('update project set title = ?').run('Uncommitted');
+    try {
+      const report = createProjectDatabasePreMigrationBackup(projectDatabasePath())!;
+      const backup = new Database(report.backupPath, { readonly: true, fileMustExist: true });
+      try {
+        expect(readProjectTitle(backup)).toBe("Committed Ω ' quotation");
+        expect(backup.pragma('quick_check', { simple: true })).toBe('ok');
+        expect(readProjectTitle(reader)).toBe('Initial');
+      } finally { backup.close(); }
+    } finally {
+      writer.exec('rollback');
+      reader.exec('rollback');
+      reader.close();
+      writer.close();
+    }
+  });
+
+  it('never overwrites an earlier verified backup', async () => {
+    createProjectDatabase({ schemaGeneration: 34, projectTitle: 'First' });
+    const first = createProjectDatabasePreMigrationBackup(projectDatabasePath())!;
+    const bytes = await fs.readFile(first.backupPath);
+    const second = createProjectDatabasePreMigrationBackup(projectDatabasePath())!;
+    expect(second.backupPath).not.toBe(first.backupPath);
+    expect(await fs.readFile(first.backupPath)).toEqual(bytes);
   });
 
   it('creates a safety backup when Drizzle Kit is invoked directly', async () => {

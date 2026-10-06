@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { StructuredError, createDiagnosticError, type DiagnosticIssue } from '@gorenku/studio-diagnostics';
 import { randomBytes } from 'node:crypto';
 import {
   closeSync,
@@ -32,19 +33,14 @@ export interface ProjectDatabasePreMigrationBackupReport {
   backupDatabaseSizeBytes: number;
 }
 
-export class ProjectDatabaseBackupError extends Error {
-  public readonly code: string;
-  public readonly suggestion?: string;
-
+export class ProjectDatabaseBackupError extends StructuredError {
   constructor(
     code: string,
     message: string,
-    options: { suggestion?: string } = {}
+    options: { suggestion?: string; issues?: DiagnosticIssue[] } = {}
   ) {
-    super(message);
+    super({ code, message, ...options });
     this.name = 'ProjectDatabaseBackupError';
-    this.code = code;
-    this.suggestion = options.suggestion;
   }
 }
 
@@ -101,32 +97,41 @@ export function createProjectDatabasePreMigrationBackup(
     });
     syncFile(paths.partialBackupPath);
   } catch (error) {
-    cleanupPartialFile(paths.partialBackupPath);
-    throw backupCreationError({
+    const failure = backupCreationError({
       databasePath,
       backupPath: paths.backupPath,
       cause: error,
     });
+    cleanupPartialFile(paths.partialBackupPath, failure);
+    throw failure;
   }
 
   try {
-    verifyBackupDatabase({
+    backupOperation('PROJECT_DATA047', 'verify backup database', paths.partialBackupPath, () => verifyBackupDatabase({
       backupPath: paths.partialBackupPath,
       sourceSchemaGeneration,
-    });
-    renameSync(paths.partialBackupPath, paths.backupPath);
+    }));
+    backupOperation('PROJECT_DATA047', 'publish backup', paths.backupPath,
+      () => renameSync(paths.partialBackupPath, paths.backupPath));
     syncDirectory(dirname(paths.backupPath));
   } catch (error) {
-    cleanupPartialFile(paths.partialBackupPath);
-    cleanupPartialFile(paths.backupPath);
-    throw backupVerificationError({
+    const failure = backupVerificationError({
       databasePath,
       backupPath: paths.backupPath,
       cause: error,
     });
+    cleanupPartialFile(paths.partialBackupPath, failure);
+    // A published, verified backup remains recovery evidence even if directory sync fails.
+    throw failure;
   }
 
-  const backupDatabaseSizeBytes = statSync(paths.backupPath).size;
+  let backupDatabaseSizeBytes: number;
+  try {
+    backupDatabaseSizeBytes = backupOperation('PROJECT_DATA047', 'inspect verified backup',
+      paths.backupPath, () => statSync(paths.backupPath).size);
+  } catch (error) {
+    throw backupVerificationError({ databasePath, backupPath: paths.backupPath, cause: error });
+  }
   const report: ProjectDatabasePreMigrationBackupReport = {
     backupPath: paths.backupPath,
     metadataPath: paths.metadataPath,
@@ -144,13 +149,14 @@ export function createProjectDatabasePreMigrationBackup(
       partialMetadataPath: paths.partialMetadataPath,
     });
   } catch (error) {
-    cleanupPartialFile(paths.partialMetadataPath);
-    throw backupMetadataError({
+    const failure = backupMetadataError({
       databasePath,
       backupPath: paths.backupPath,
       metadataPath: paths.metadataPath,
       cause: error,
     });
+    cleanupPartialFile(paths.partialMetadataPath, failure);
+    throw failure;
   }
 
   return report;
@@ -186,7 +192,14 @@ export function validateProjectDatabasePreMigrationBackup(input: {
   const metadataPath = backupMetadataPath(backupPath);
 
   try {
-    const metadata = readBackupMetadata(metadataPath);
+    const metadata = backupOperation('PROJECT_DATA047', 'read supplied backup metadata', metadataPath,
+      () => readBackupMetadata(metadataPath));
+    if (!metadata || typeof metadata.createdAt !== 'string' || !Number.isFinite(Date.parse(metadata.createdAt))
+      || !Number.isInteger(metadata.sourceDatabaseSizeBytes) || metadata.sourceDatabaseSizeBytes <= 0
+      || !Number.isInteger(metadata.backupDatabaseSizeBytes) || metadata.backupDatabaseSizeBytes <= 0
+      || (metadata.sourceSchemaGeneration !== null && (!Number.isInteger(metadata.sourceSchemaGeneration) || metadata.sourceSchemaGeneration < 0))) {
+      throw new TypeError('Backup metadata must contain valid creation time, file sizes and source generation.');
+    }
     if (metadata.kind !== PROJECT_DATABASE_BACKUP_METADATA_KIND) {
       throw new Error(
         `Backup metadata kind must be ${PROJECT_DATABASE_BACKUP_METADATA_KIND}.`
@@ -213,15 +226,16 @@ export function validateProjectDatabasePreMigrationBackup(input: {
       throw new Error('Backup metadata does not record a successful verification.');
     }
 
-    const backupDatabaseSizeBytes = statSync(backupPath).size;
+    const backupDatabaseSizeBytes = backupOperation('PROJECT_DATA047', 'inspect supplied backup', backupPath,
+      () => statSync(backupPath).size);
     if (backupDatabaseSizeBytes !== metadata.backupDatabaseSizeBytes) {
       throw new Error('Backup file size does not match its metadata.');
     }
 
-    verifyBackupDatabase({
+    backupOperation('PROJECT_DATA047', 'verify supplied backup', backupPath, () => verifyBackupDatabase({
       backupPath,
       sourceSchemaGeneration: metadata.sourceSchemaGeneration,
-    });
+    }));
 
     return {
       backupPath,
@@ -244,28 +258,26 @@ export function validateProjectDatabasePreMigrationBackup(input: {
 function existingDatabaseSize(databasePath: string): number | null {
   try {
     const stats = statSync(databasePath);
-    return stats.isFile() ? stats.size : null;
+    if (!stats.isFile()) { throw new TypeError('Project database must be a regular file.'); }
+    return stats.size;
   } catch (error) {
     if (isNodeErrorCode(error, 'ENOENT')) {
       return null;
     }
-    throw error;
+    throw backupCreationError({ databasePath, cause: backupOperationError(
+      'PROJECT_DATA046', 'inspect source database', databasePath, error) });
   }
 }
 
 function readSourceSchemaGeneration(databasePath: string): number | null {
-  let sqlite: Database.Database | null = null;
   try {
-    sqlite = new Database(databasePath, {
-      readonly: true,
-      fileMustExist: true,
+    return withBackupDatabase('PROJECT_DATA046', databasePath, (sqlite) => {
+      const value = sqlite.pragma('user_version', { simple: true });
+      return typeof value === 'number' && Number.isInteger(value) ? value : null;
     });
-    const value = sqlite.pragma('user_version', { simple: true });
-    return typeof value === 'number' && Number.isInteger(value) ? value : null;
-  } catch {
-    return null;
-  } finally {
-    sqlite?.close();
+  } catch (error) {
+    throw backupCreationError({ databasePath, cause: backupOperationError(
+      'PROJECT_DATA046', 'read source generation', databasePath, error) });
   }
 }
 
@@ -276,7 +288,8 @@ function createBackupPaths(input: {
   targetSchemaGeneration: number;
 }): ProjectDatabaseBackupPaths {
   const backupDir = join(dirname(input.databasePath), PROJECT_DATABASE_BACKUP_DIR);
-  mkdirSync(backupDir, { recursive: true });
+  backupOperation('PROJECT_DATA046', 'create backup directory', backupDir,
+    () => mkdirSync(backupDir, { recursive: true }));
 
   for (let attempt = 0; attempt < 16; attempt += 1) {
     const suffix = randomBytes(3).toString('hex');
@@ -319,28 +332,17 @@ function runVacuumInto(input: {
   databasePath: string;
   partialBackupPath: string;
 }): void {
-  let sqlite: Database.Database | null = null;
-  try {
-    sqlite = new Database(input.databasePath, {
-      readonly: true,
-      fileMustExist: true,
-    });
-    sqlite.prepare('vacuum main into ?').run(input.partialBackupPath);
-  } finally {
-    sqlite?.close();
-  }
+  withBackupDatabase('PROJECT_DATA046', input.databasePath, (sqlite) => {
+    backupOperation('PROJECT_DATA046', 'SQLite VACUUM INTO', input.partialBackupPath,
+      () => sqlite.prepare('vacuum main into ?').run(input.partialBackupPath));
+  });
 }
 
 function verifyBackupDatabase(input: {
   backupPath: string;
   sourceSchemaGeneration: number | null;
 }): void {
-  let sqlite: Database.Database | null = null;
-  try {
-    sqlite = new Database(input.backupPath, {
-      readonly: true,
-      fileMustExist: true,
-    });
+  withBackupDatabase('PROJECT_DATA047', input.backupPath, (sqlite) => {
     const quickCheck = sqlite.pragma('quick_check', { simple: true });
     if (quickCheck !== 'ok') {
       throw new Error(`SQLite quick_check returned ${String(quickCheck)}.`);
@@ -357,9 +359,7 @@ function verifyBackupDatabase(input: {
         );
       }
     }
-  } finally {
-    sqlite?.close();
-  }
+  });
 }
 
 function writeBackupMetadata(input: {
@@ -386,8 +386,9 @@ function writeBackupMetadata(input: {
     input.partialMetadataPath,
     `${JSON.stringify(metadata, null, 2)}\n`
   );
-  renameSync(input.partialMetadataPath, input.report.metadataPath);
-  syncDirectory(dirname(input.report.metadataPath));
+  backupOperation('PROJECT_DATA048', 'publish backup metadata', input.report.metadataPath,
+    () => renameSync(input.partialMetadataPath, input.report.metadataPath));
+  syncDirectory(dirname(input.report.metadataPath), 'PROJECT_DATA048');
 }
 
 function readBackupMetadata(
@@ -407,43 +408,38 @@ function backupMetadataPath(backupPath: string): string {
 }
 
 function writeDurableTextFile(filePath: string, contents: string): void {
-  const fd = openSync(filePath, 'wx');
-  try {
-    writeFileSync(fd, contents, 'utf8');
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
-  }
+  withBackupFile('PROJECT_DATA048', filePath, 'wx', (fd) => {
+    backupOperation('PROJECT_DATA048', 'write backup metadata', filePath,
+      () => writeFileSync(fd, contents, 'utf8'));
+    backupOperation('PROJECT_DATA048', 'flush backup metadata', filePath, () => fsyncSync(fd));
+  });
 }
 
 function syncFile(filePath: string): void {
-  const fd = openSync(filePath, 'r');
-  try {
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
-  }
+  // FlushFileBuffers on Windows requires write access. r+ never truncates the backup.
+  withBackupFile('PROJECT_DATA046', filePath, 'r+', (fd) => {
+    backupOperation('PROJECT_DATA046', 'flush backup', filePath, () => fsyncSync(fd));
+  });
 }
 
-function syncDirectory(directoryPath: string): void {
-  try {
-    const fd = openSync(directoryPath, 'r');
-    try {
-      fsyncSync(fd);
-    } finally {
-      closeSync(fd);
+function syncDirectory(directoryPath: string, code = 'PROJECT_DATA047'): void {
+  // Node cannot open directory handles for fsync on Windows. File flush is mandatory;
+  // directory-entry persistence across power loss is not guaranteed on that platform.
+  if (process.platform === 'win32') { return; }
+  withBackupFile(code, directoryPath, 'r', (fd) => {
+    try { fsyncSync(fd); } catch (error) {
+      if (isNodeErrorCode(error, 'EINVAL') || isNodeErrorCode(error, 'ENOTSUP')) { return; }
+      throw backupOperationError(code, 'flush backup directory', directoryPath, error);
     }
-  } catch {
-    // Directory fsync is best-effort across supported developer platforms.
-  }
+  });
 }
 
-function cleanupPartialFile(filePath: string): void {
+function cleanupPartialFile(filePath: string, primary: ProjectDatabaseBackupError): void {
   try {
     unlinkSync(filePath);
   } catch (error) {
     if (!isNodeErrorCode(error, 'ENOENT')) {
-      throw error;
+      primary.issues.push(...backupOperationError(primary.code, 'remove partial file', filePath, error).issues);
     }
   }
 }
@@ -464,6 +460,7 @@ function backupCreationError(input: {
       .filter(Boolean)
       .join(' '),
     {
+      issues: backupCauseIssues('PROJECT_DATA046', input.backupPath ?? input.databasePath, input.cause),
       suggestion:
         'Check that the project database and .renku folder are readable and writable, then rerun the migration.',
     }
@@ -484,6 +481,7 @@ function backupVerificationError(input: {
       errorMessage(input.cause),
     ].join(' '),
     {
+      issues: backupCauseIssues('PROJECT_DATA047', input.backupPath, input.cause),
       suggestion:
         'Do not run the migration until a readable SQLite backup exists for this project database.',
     }
@@ -506,6 +504,7 @@ function backupMetadataError(input: {
       errorMessage(input.cause),
     ].join(' '),
     {
+      issues: backupCauseIssues('PROJECT_DATA048', input.metadataPath, input.cause),
       suggestion:
         'Check that the project-database-backups folder is writable, then rerun the migration.',
     }
@@ -514,6 +513,56 @@ function backupMetadataError(input: {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function backupCauseIssues(code: string, filePath: string, cause: unknown): DiagnosticIssue[] {
+  return cause instanceof StructuredError ? cause.issues
+    : backupOperationError(code, 'backup', filePath, cause).issues;
+}
+
+function backupOperationError(code: string, operation: string, filePath: string, cause: unknown): ProjectDatabaseBackupError {
+  const native = cause as { code?: string; syscall?: string } | undefined;
+  const message = `${operation}: ${errorMessage(cause)}${native?.code ? ` (${native.code}${native.syscall ? `, ${native.syscall}` : ''})` : ''}`;
+  return new ProjectDatabaseBackupError(code, message, { issues: [
+    createDiagnosticError(code, message, { filePath, path: ['backup'], context: operation }),
+  ] });
+}
+
+function backupOperation<T>(code: string, operation: string, filePath: string, run: () => T): T {
+  try { return run(); } catch (error) {
+    throw backupOperationError(code, operation, filePath, error);
+  }
+}
+
+function withBackupDatabase<T>(code: string, filePath: string, run: (sqlite: Database.Database) => T): T {
+  const sqlite = backupOperation(code, 'open read-only database', filePath,
+    () => new Database(filePath, { readonly: true, fileMustExist: true }));
+  let result: T;
+  let primary: ProjectDatabaseBackupError | undefined;
+  try { result = run(sqlite); } catch (error) {
+    primary = error instanceof ProjectDatabaseBackupError ? error
+      : backupOperationError(code, 'read database', filePath, error);
+  }
+  try { sqlite.close(); } catch (error) {
+    const failure = backupOperationError(code, 'close database', filePath, error);
+    if (primary) { primary.issues.push(...failure.issues); }
+    else { primary = failure; }
+  }
+  if (primary) { throw primary; }
+  return result!;
+}
+
+function withBackupFile(code: string, filePath: string, flags: string, run: (fd: number) => void): void {
+  const fd = backupOperation(code, 'open backup handle', filePath, () => openSync(filePath, flags));
+  let primary: unknown;
+  let failed = false;
+  try { run(fd); } catch (error) { primary = error; failed = true; }
+  try { closeSync(fd); } catch (error) {
+    const failure = backupOperationError(code, 'close backup handle', filePath, error);
+    if (primary instanceof StructuredError) { primary.issues.push(...failure.issues); }
+    else if (!failed) { primary = failure; failed = true; }
+  }
+  if (failed) { throw primary; }
 }
 
 function isNodeErrorCode(error: unknown, code: string): boolean {
