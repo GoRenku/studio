@@ -94,9 +94,12 @@ approval and exact Submit
 consumption retain their existing behavior. No Settings surface or public CLI
 command is added.
 
-Publish the complete sister plugin, with matching manifest versions and its beta
-branch, before shipping the compatible runtime installer. Native Mac and Windows
-Desktop acceptance remains a release requirement.
+The plugin marketplace follows the sister repository's default branch, matching
+the general skills installer. The runtime's beta release channel does not imply
+a Git branch in the skills repository. Publish the complete sister plugin with
+matching manifest versions before shipping the compatible runtime installer.
+Native Mac and Windows acceptance must include installation from the real public
+marketplace, as well as isolated skill-reconciliation tests.
 
 This decision updates [ADR 0101](0101-install-agent-skills-from-platform-installers.md)
 and [ADR 0105](0105-select-generation-review-by-preference-and-host-capability.md).

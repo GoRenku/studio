@@ -6,7 +6,7 @@ import path from 'node:path';
 const pluginCommands = [
   { args: ['list'], flags: ['--json'] },
   { args: ['marketplace', 'list'], flags: ['--json'] },
-  { args: ['marketplace', 'add'], flags: ['--json', '--ref'] },
+  { args: ['marketplace', 'add'], flags: ['--json'] },
   { args: ['marketplace', 'upgrade'], flags: ['--json'] },
   { args: ['add'], flags: ['--json'] },
 ];

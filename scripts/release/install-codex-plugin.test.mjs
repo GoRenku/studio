@@ -32,7 +32,7 @@ test('installs through the public commands and records only verified success', a
   assert.equal(await installCodexPlugin(setup.options), true);
   assert.deepEqual(setup.records, [false, true]);
   assert.deepEqual(setup.calls.slice(2), [
-    ['marketplace', 'add', 'GoRenku/studio-skills', '--ref', 'beta', '--json'],
+    ['marketplace', 'add', 'GoRenku/studio-skills', '--json'],
     ['marketplace', 'upgrade', 'renku', '--json'], ['add', 'renku@renku', '--json'], ['list', '--json'],
   ]);
 });

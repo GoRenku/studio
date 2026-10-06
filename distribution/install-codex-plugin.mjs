@@ -26,7 +26,7 @@ export async function installCodexPlugin({ run, record, report = console.log }) 
     const sources = run(['marketplace', 'list', '--json']);
     const existing = sources.marketplaces.find((entry) => entry.name === marketplace);
     if (existing) assertMarketplace(existing.marketplaceSource);
-    run(['marketplace', 'add', 'GoRenku/studio-skills', '--ref', 'beta', '--json']);
+    run(['marketplace', 'add', 'GoRenku/studio-skills', '--json']);
     run(['marketplace', 'upgrade', marketplace, '--json']);
     run(['add', pluginId, '--json']);
     const installed = run(['list', '--json']).installed.find((plugin) => plugin.pluginId === pluginId);

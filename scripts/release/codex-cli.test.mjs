@@ -78,7 +78,7 @@ test('an unsupported required option prevents plugin mutations', () => {
   assert.throws(() => createCodexCli({ platform: 'darwin', env: fixture.env, applicationDirectories: [fixture.applications], execute(executable, args) {
     if (executable === '/usr/bin/plutil') return success(desktop.identity);
     assert.equal(args.at(-1), '--help');
-    return success('--json');
+    return success('Usage: codex plugin');
   } }), { code: 'ENOENT' });
 });
 
