@@ -79,8 +79,12 @@ install_agent_skills() {
   install_codex_plugin
   printf '\n%s\n' 'Choose the agents that should receive the Renku skills.'
   printf '%s\n' 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
-  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy </dev/tty ||
-    fail 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.'
+  skills_status=0
+  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy </dev/tty || skills_status=$?
+  codex_skills_status=0
+  "$node_command" "$destination/distribution/reconcile-codex-skills.mjs" || codex_skills_status=$?
+  [ "$skills_status" -eq 0 ] || fail 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.'
+  [ "$codex_skills_status" -eq 0 ] || fail 'INSTALL012 Codex skill setup did not complete. Installed skill files were retained; rerun this installer to retry.'
 }
 
 case "$(uname -s)-$(uname -m)" in

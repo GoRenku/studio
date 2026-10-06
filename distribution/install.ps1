@@ -98,7 +98,11 @@ function Install-AgentSkills {
     Write-Host 'Choose the agents that should receive the Renku skills.'
     Write-Host 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
     & $NodeCommand $SkillsEntry add GoRenku/studio-skills --global --skill '*' --copy
-    if ($LASTEXITCODE -ne 0) { throw 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.' }
+    $SkillsStatus = $LASTEXITCODE
+    & $NodeCommand (Join-Path $Destination 'distribution\reconcile-codex-skills.mjs')
+    $CodexSkillsStatus = $LASTEXITCODE
+    if ($SkillsStatus -ne 0) { throw 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.' }
+    if ($CodexSkillsStatus -ne 0) { throw 'INSTALL012 Codex skill setup did not complete. Installed skill files were retained; rerun this installer to retry.' }
   } finally {
     $env:PATH = $PreviousPath
   }

@@ -9,7 +9,7 @@ import test from 'node:test';
 
 const installer = fileURLToPath(new URL('../../distribution/install.sh', import.meta.url));
 
-function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pluginExit = 0, cliExit = 0, skillsVersionExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
+function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pluginExit = 0, reconcileExit = 0, cliExit = 0, skillsVersionExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-installer-'));
   const product = path.join(root, 'archive', 'renku');
   const bin = path.join(root, 'commands');
@@ -17,6 +17,9 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pl
   mkdirSync(path.join(product, 'app', 'dist'), { recursive: true });
   mkdirSync(path.join(product, 'distribution'), { recursive: true });
   cpSync(new URL('../../distribution/install-codex-plugin.mjs', import.meta.url), path.join(product, 'distribution', 'install-codex-plugin.mjs'));
+  cpSync(new URL('../../distribution/codex-cli.mjs', import.meta.url), path.join(product, 'distribution', 'codex-cli.mjs'));
+  cpSync(new URL('../../distribution/codex-app-server.mjs', import.meta.url), path.join(product, 'distribution', 'codex-app-server.mjs'));
+  cpSync(new URL('../../distribution/reconcile-codex-skills.mjs', import.meta.url), path.join(product, 'distribution', 'reconcile-codex-skills.mjs'));
   mkdirSync(path.join(product, 'app', 'node_modules', 'skills', 'bin'), { recursive: true });
   mkdirSync(path.join(product, 'runtime', 'node', 'bin'), { recursive: true });
   writeFileSync(path.join(product, 'RELEASE.json'), JSON.stringify({ version: '0.0.1', target: releaseTarget }));
@@ -30,6 +33,10 @@ case "$1" in
   */install-codex-plugin.mjs)
     printf '%s\\n' "$@" >> "$TEST_ROOT/plugin-args"
     exit ${pluginExit} ;;
+  */reconcile-codex-skills.mjs)
+    [ -f "$TEST_ROOT/skills-args" ] || exit 74
+    printf '%s\\n' "$@" >> "$TEST_ROOT/reconcile-args"
+    exit ${reconcileExit} ;;
   */skills/bin/cli.mjs)
     [ "$2" != --version ] || exit ${skillsVersionExit}
     [ -t 0 ] || exit 71
@@ -141,8 +148,27 @@ for (const updateScope of [undefined, 'all', 'skills']) {
     assert.match(output, /INSTALL011 Codex plugin setup failed/);
     assert.ok(existsSync(path.join(root, 'plugin-args')));
     assert.ok(existsSync(path.join(root, 'skills-args')));
+    assert.ok(existsSync(path.join(root, 'reconcile-args')));
+  });
+  test(`Codex reconciliation runs after successful skills setup (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
+    const { root, result, output } = runInstaller({ updateScope });
+    assert.equal(result.status, 0, output);
+    assert.ok(existsSync(path.join(root, 'reconcile-args')));
+  });
+  test(`partial skills failure still reconciles Codex (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
+    const { root, result, output } = runInstaller({ updateScope, skillsExit: 1 });
+    assert.notEqual(result.status, 0);
+    assert.match(output, /INSTALL009/);
+    assert.ok(existsSync(path.join(root, 'reconcile-args')));
   });
 }
+
+test('Codex reconciliation failure is reported after other harness skills are installed', { skip: process.platform !== 'darwin' }, () => {
+  const { root, result, output } = runInstaller({ reconcileExit: 1 });
+  assert.notEqual(result.status, 0);
+  assert.match(output, /INSTALL012/);
+  assert.ok(existsSync(path.join(root, 'skills-args')));
+});
 
 test('declining terms stops before any download or installation', { skip: process.platform !== 'darwin' }, () => {
   const setup = fixture();

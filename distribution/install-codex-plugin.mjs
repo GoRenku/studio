@@ -1,21 +1,9 @@
-import { spawnSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createCodexCli } from './codex-cli.mjs';
 
 const marketplace = 'renku';
 const pluginId = 'renku@renku';
-
-function command(args) {
-  if (process.platform === 'win32' && spawnSync('where.exe', ['codex'], { encoding: 'utf8' }).status !== 0) {
-    throw Object.assign(new Error('Codex CLI is absent.'), { code: 'ENOENT' });
-  }
-  const result = spawnSync('codex', ['plugin', ...args], {
-    encoding: 'utf8', timeout: 120000, shell: process.platform === 'win32',
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`INSTALL011 codex plugin ${args.join(' ')} failed: ${result.stderr || result.stdout}`);
-  return JSON.parse(result.stdout);
-}
 
 function assertMarketplace(source) {
   if (!source || source.sourceType !== 'git' || source.source !== 'https://github.com/GoRenku/studio-skills.git') {
@@ -29,9 +17,10 @@ function assertEnabled(plugin) {
   }
 }
 
-export async function installCodexPlugin({ run = command, record, report = console.log }) {
+export async function installCodexPlugin({ run, record, report = console.log }) {
   await record(false);
   try {
+    run ??= createCodexCli().plugin;
     const plugins = run(['list', '--json']);
     assertEnabled(plugins.installed.find((plugin) => plugin.pluginId === pluginId));
     const sources = run(['marketplace', 'list', '--json']);
@@ -51,7 +40,7 @@ export async function installCodexPlugin({ run = command, record, report = conso
   } catch (error) {
     if (error.code === 'CONFIG017') throw error;
     if (error.code === 'ENOENT' || /unrecognized subcommand ['"](?:plugin|marketplace|list|add|upgrade)['"]/.test(error.message)) {
-      report('Codex CLI is absent or does not support plugins; plugin installation skipped.');
+      report('No compatible Codex CLI was found on PATH or in Codex Desktop; plugin installation skipped.');
     } else {
       report(`Renku Codex plugin was not installed: ${error.message}`);
     }

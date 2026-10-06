@@ -60,6 +60,14 @@ export function verifyProductStructure(productRoot) {
   if (!existsSync(path.join(productRoot, 'distribution', 'install-codex-plugin.mjs'))) {
     throw new Error(`RELEASE025 Missing bundled Codex plugin installer for ${target.id}.`);
   }
+  if (!existsSync(path.join(productRoot, 'distribution', 'codex-cli.mjs'))) {
+    throw new Error(`RELEASE025 Missing bundled Codex CLI discovery for ${target.id}.`);
+  }
+  for (const name of ['codex-app-server.mjs', 'reconcile-codex-skills.mjs']) {
+    if (!existsSync(path.join(productRoot, 'distribution', name))) {
+      throw new Error(`RELEASE025 Missing bundled Codex skill setup module ${name} for ${target.id}.`);
+    }
+  }
   const nodeExecutable = targetNodeExecutable(runtimeRoot, target);
   if (!existsSync(nodeExecutable)) {
     throw new Error(`RELEASE025 Missing ${target.id} Node executable: ${nodeExecutable}`);

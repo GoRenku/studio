@@ -10,8 +10,65 @@ Codex CLI profile. The plugin supplies the existing MCP generation review UI.
 The installer uses public marketplace add/upgrade, plugin add and plugin list
 commands. It verifies installed and enabled state, preserves conflicting
 marketplace sources and disabled plugins, and reports failures independently of
-general skills installation. Missing or unsupported Codex CLI skips the plugin;
-Renku does not install Codex CLI.
+general skills installation. The general skills picker runs after the plugin
+attempt regardless of its result.
+
+After the general skills installer exits, including a partial failure or
+cancellation, `distribution/reconcile-codex-skills.mjs` reconciles Codex skill
+enablement. It verifies that `renku@renku` is installed and enabled and that the
+`renku` marketplace still uses the official Git source. It then uses Codex's
+`skills/list` inventory and the skills installer's source records to identify
+standalone Renku skills that duplicate enabled plugin skills. Plugin identity
+and the `renku:` namespace distinguish the plugin's copies from standalone
+copies; matching is not based on skill descriptions or creative contents.
+
+Reconciliation is limited to installer-recorded `GoRenku/studio-skills` entries
+in the global `~/.agents/skills` and configured Codex home `skills` directories.
+It respects `CODEX_HOME` and the skills installer's `XDG_STATE_HOME` lock-file
+location. Repository-scoped, unrelated, untracked, already-disabled, and
+plugin-owned skills are not changed. If there is no usable official plugin,
+standalone skill enablement is left unchanged. Reconciliation does not
+automatically re-enable skills when a plugin is later removed or disabled.
+
+For each enabled duplicate, the installer calls Codex's `skills/config/write`
+with the exact resolved `SKILL.md` path and `enabled: false`, then reloads the
+inventory to verify the standalone exclusion and continued plugin enablement.
+`distribution/codex-app-server.mjs` owns the bounded stdio protocol session;
+Codex owns its configuration writes. Skill files, shared directories, and other
+harness configuration are never removed or edited by reconciliation. The
+general picker is retained even when Codex is present, so other harnesses keep
+receiving their standalone copies. Subsequent installer runs repeat the
+reconciliation without duplicating exclusions. Failures report `INSTALL012`
+after general skills setup; installed files remain available for retry. The
+core plugin-installation flag continues to describe plugin installation only.
+
+The installer first selects a compatible CLI on PATH. If it is absent or lacks
+the required plugin commands or flags, it discovers Codex Desktop's bundled CLI:
+
+- macOS: inspect application bundles in `/Applications` and `~/Applications` for
+  bundle identity `com.openai.codex`, then use
+  `Contents/Resources/codex-cli/bin/codex` within that bundle. Application display
+  names are not used for identification.
+- Windows: query the current user's registered `OpenAI.Codex` package through
+  built-in Windows PowerShell, then use `app\resources\codex.exe` within its
+  `InstallLocation`. Do not guess versioned or hashed extraction directories.
+
+Discovery and command invocation belong to `distribution/codex-cli.mjs`; plugin
+installation orchestration remains in `distribution/install-codex-plugin.mjs`.
+These modules and the reconciliation modules are included and checked in release
+packaging. Capability checks use
+command help before plugin mutations. The selected executable is retained for
+the entire attempt; runtime, network, and configuration failures do not trigger
+another executable selection. Windows npm `.cmd` launchers remain supported.
+The inherited user environment, including `CODEX_HOME`, is preserved. Renku
+does not write Codex's plugin cache directly, modify PATH for Codex, or install
+Codex. Missing or unsupported CLI and Desktop installations skip the plugin.
+Discovery and execution errors are reported independently of the skills picker.
+
+The bundled executable layouts are verified application implementation details,
+not a documented discovery API. Native platform verification is required when
+those layouts change. Linux Desktop discovery and Linux platform releases are
+outside this iteration.
 
 Core owns `codex-plugin.json` beside the platform Renku config, containing the
 boolean `codexPluginInstalled`. Missing state means false. Atomic writes and

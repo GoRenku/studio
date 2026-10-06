@@ -82,15 +82,21 @@ export async function recordCodexPluginInstallation(installed) {
 `);
   const windows = process.platform === 'win32';
   writeFileSync(path.join(commands, windows ? 'codex.cmd' : 'codex'), windows
-    ? "@echo off\necho error: unrecognized subcommand 'plugin' 1>&2\nexit /b 1\n"
-    : '#!/bin/sh\necho "error: unrecognized subcommand \'plugin\'" >&2\nexit 1\n', { mode: 0o755 });
+    ? '@echo off\nfor %%a in (%*) do if "%%a"=="--help" (echo --json --ref & exit /b 0)\necho Network unavailable 1>&2\nexit /b 1\n'
+    : '#!/bin/sh\nfor arg in "$@"; do if [ "$arg" = --help ]; then echo "--json --ref"; exit 0; fi; done\necho "Network unavailable" >&2\nexit 1\n', { mode: 0o755 });
   const script = path.join(distribution, 'install-codex-plugin.mjs');
   copyFileSync(new URL('../../distribution/install-codex-plugin.mjs', import.meta.url), script);
+  copyFileSync(new URL('../../distribution/codex-cli.mjs', import.meta.url), path.join(distribution, 'codex-cli.mjs'));
   const state = path.join(root, 'recorded.json');
+  const codexHome = path.join(root, 'codex-profile');
+  mkdirSync(codexHome);
+  const env = { ...process.env, TEST_PLUGIN_STATE: state, CODEX_HOME: codexHome };
+  const pathKey = Object.keys(env).find((key) => key.toUpperCase() === 'PATH') || 'PATH';
+  env[pathKey] = `${commands}${path.delimiter}${env[pathKey] || ''}`;
   const result = spawnSync(process.execPath, [script], {
-    encoding: 'utf8', env: { ...process.env, TEST_PLUGIN_STATE: state, PATH: `${commands}${path.delimiter}${process.env.PATH}` },
+    encoding: 'utf8', env,
   });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(readFileSync(state, 'utf8')), { codexPluginInstalled: false });
-  assert.match(result.stdout, /plugin installation skipped/);
+  assert.match(result.stdout, /Network unavailable/);
 });
