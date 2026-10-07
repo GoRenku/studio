@@ -1,6 +1,6 @@
 {
   "name": "@gorenku/studio-engines",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "description": "Standalone media provider execution library",
   "private": true,
   "type": "module",
