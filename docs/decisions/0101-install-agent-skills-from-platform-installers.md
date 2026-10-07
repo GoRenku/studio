@@ -4,6 +4,10 @@ Date: 2026-09-20
 
 Status: accepted
 
+Updated by [ADR 0109](0109-install-claude-desktop-plugin.md): detected native
+Claude Desktop uses the Renku plugin and is excluded from loose-skill selection.
+CLI-only Claude installations retain the existing picker choice.
+
 Updated by [ADR 0106](0106-install-codex-plugin-and-route-generation-review.md):
 the installer also installs the Codex plugin, and Desktop review routing uses
 the core-owned installation flag with an `auto` default.

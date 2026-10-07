@@ -95,12 +95,17 @@ function Install-AgentSkills {
     }
     & $NodeCommand (Join-Path $Destination 'distribution\install-codex-plugin.mjs')
     if ($LASTEXITCODE -ne 0) { Write-Warning 'INSTALL011 Codex plugin setup failed. Continuing general skills setup.' }
+    & $NodeCommand (Join-Path $Destination 'distribution\claude-desktop\plugin.mjs') (Join-Path $InstallRoot 'plugins\claude\renku')
+    $ClaudeStatus = $LASTEXITCODE
+    $SkillsArguments = @('add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy')
+    if ($ClaudeStatus -ne 2) { $SkillsArguments += @('--exclude-agent', 'claude-code') }
     Write-Host 'Choose the agents that should receive the Renku skills.'
     Write-Host 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
-    & $NodeCommand $SkillsEntry add GoRenku/studio-skills --global --skill '*' --copy
+    & $NodeCommand $SkillsEntry @SkillsArguments
     $SkillsStatus = $LASTEXITCODE
     & $NodeCommand (Join-Path $Destination 'distribution\reconcile-codex-skills.mjs')
     $CodexSkillsStatus = $LASTEXITCODE
+    if ($ClaudeStatus -ne 0 -and $ClaudeStatus -ne 2) { throw 'INSTALL013 Claude plugin setup did not complete. Other harness setup was attempted; rerun this installer to retry Claude.' }
     if ($SkillsStatus -ne 0) { throw 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.' }
     if ($CodexSkillsStatus -ne 0) { throw 'INSTALL012 Codex skill setup did not complete. Installed skill files were retained; rerun this installer to retry.' }
   } finally {

@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  skills@1.5.26: b62b739c3a6d19b04114c7a4e9c834b65a9dcd129b169376f1855516dc446dc2
+
 importers:
 
   .:
@@ -58,7 +61,7 @@ importers:
         version: 14.1.0
       skills:
         specifier: 1.5.26
-        version: 1.5.26
+        version: 1.5.26(patch_hash=b62b739c3a6d19b04114c7a4e9c834b65a9dcd129b169376f1855516dc446dc2)
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.3.1
@@ -10656,7 +10659,7 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  skills@1.5.26:
+  skills@1.5.26(patch_hash=b62b739c3a6d19b04114c7a4e9c834b65a9dcd129b169376f1855516dc446dc2):
     dependencies:
       tar: 7.5.22
       yaml: 2.8.4

@@ -9,7 +9,7 @@ import test from 'node:test';
 
 const installer = fileURLToPath(new URL('../../distribution/install.sh', import.meta.url));
 
-function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pluginExit = 0, reconcileExit = 0, cliExit = 0, skillsVersionExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
+function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pluginExit = 0, claudeExit = 2, reconcileExit = 0, cliExit = 0, skillsVersionExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-installer-'));
   const product = path.join(root, 'archive', 'renku');
   const bin = path.join(root, 'commands');
@@ -20,6 +20,7 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pl
   cpSync(new URL('../../distribution/codex-cli.mjs', import.meta.url), path.join(product, 'distribution', 'codex-cli.mjs'));
   cpSync(new URL('../../distribution/codex-app-server.mjs', import.meta.url), path.join(product, 'distribution', 'codex-app-server.mjs'));
   cpSync(new URL('../../distribution/reconcile-codex-skills.mjs', import.meta.url), path.join(product, 'distribution', 'reconcile-codex-skills.mjs'));
+  cpSync(new URL('../../distribution/claude-desktop', import.meta.url), path.join(product, 'distribution', 'claude-desktop'), { recursive: true });
   mkdirSync(path.join(product, 'app', 'node_modules', 'skills', 'bin'), { recursive: true });
   mkdirSync(path.join(product, 'runtime', 'node', 'bin'), { recursive: true });
   writeFileSync(path.join(product, 'RELEASE.json'), JSON.stringify({ version: '0.0.1', target: releaseTarget }));
@@ -33,6 +34,9 @@ case "$1" in
   */install-codex-plugin.mjs)
     printf '%s\\n' "$@" >> "$TEST_ROOT/plugin-args"
     exit ${pluginExit} ;;
+  */claude-desktop/plugin.mjs)
+    printf '%s\\n' "$@" >> "$TEST_ROOT/claude-args"
+    exit ${claudeExit} ;;
   */reconcile-codex-skills.mjs)
     [ -f "$TEST_ROOT/skills-args" ] || exit 74
     printf '%s\\n' "$@" >> "$TEST_ROOT/reconcile-args"
@@ -142,6 +146,16 @@ test('macOS piped installer uses private Node and passes interactive agent selec
 });
 
 for (const updateScope of [undefined, 'all', 'skills']) {
+  for (const claudeExit of [0, 1]) {
+    test(`Claude Desktop excludes loose skills and retains Codex reconciliation (exit ${claudeExit}, ${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
+      const { root, result, output } = runInstaller({ updateScope, claudeExit });
+      assert.equal(result.status, claudeExit, output);
+      assert.match(readFileSync(path.join(root, 'skills-args'), 'utf8'), /--exclude-agent\nclaude-code/);
+      assert.equal(readFileSync(path.join(root, 'claude-args'), 'utf8').trim().split('\n')[1], path.join(root, 'Renku with spaces', 'plugins', 'claude', 'renku'));
+      assert.ok(existsSync(path.join(root, 'reconcile-args')));
+      if (claudeExit) assert.match(output, /INSTALL013/);
+    });
+  }
   test(`plugin failure still runs general skills setup (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
     const { root, result, output } = runInstaller({ updateScope, pluginExit: 1 });
     assert.equal(result.status, 0, output);

@@ -28,3 +28,6 @@ supportedArchitectures:
   cpu:
     - arm64
     - x64
+
+patchedDependencies:
+  skills@1.5.26: patches/skills@1.5.26.patch

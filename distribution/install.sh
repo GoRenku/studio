@@ -77,12 +77,19 @@ install_agent_skills() {
     git_is_ready || fail 'INSTALL008 Git is not ready. Complete Apple Command Line Tools installation, then rerun this installer.'
   fi
   install_codex_plugin
+  claude_status=0
+  "$node_command" "$destination/distribution/claude-desktop/plugin.mjs" "$INSTALL_ROOT/plugins/claude/renku" || claude_status=$?
+  set --
+  if [ "$claude_status" -ne 2 ]; then
+    set -- --exclude-agent claude-code
+  fi
   printf '\n%s\n' 'Choose the agents that should receive the Renku skills.'
   printf '%s\n' 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
   skills_status=0
-  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy </dev/tty || skills_status=$?
+  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy "$@" </dev/tty || skills_status=$?
   codex_skills_status=0
   "$node_command" "$destination/distribution/reconcile-codex-skills.mjs" || codex_skills_status=$?
+  [ "$claude_status" -eq 0 ] || [ "$claude_status" -eq 2 ] || fail 'INSTALL013 Claude plugin setup did not complete. Other harness setup was attempted; rerun this installer to retry Claude.'
   [ "$skills_status" -eq 0 ] || fail 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.'
   [ "$codex_skills_status" -eq 0 ] || fail 'INSTALL012 Codex skill setup did not complete. Installed skill files were retained; rerun this installer to retry.'
 }

@@ -1,0 +1,146 @@
+diff --git a/dist/cli.mjs b/dist/cli.mjs
+index 2bdd2c8ad577a2220e9049c72f919a31c45d7f83..86eeb9cdcb0f00c010e3c31c1f5822071a2aa223 100755
+--- a/dist/cli.mjs
++++ b/dist/cli.mjs
+@@ -4313,7 +4313,7 @@ async function promptForAgents(message, choices) {
+ 	return selected;
+ }
+ async function selectAgentsInteractive(options) {
+-	const supportsGlobalFilter = (a) => !options.global || agents[a].globalSkillsDir;
++	const supportsGlobalFilter = (a) => !options.excludeAgent?.includes(a) && (!options.global || agents[a].globalSkillsDir);
+ 	const universalAgents = getUniversalAgents().filter(supportsGlobalFilter);
+ 	const visibleUniversalAgents = getVisibleUniversalAgents().filter(supportsGlobalFilter);
+ 	const otherAgents = getNonUniversalAgents().filter((agent) => agent !== "eve" && supportsGlobalFilter(agent));
+@@ -4449,15 +4449,17 @@ async function handleWellKnownSkills(source, url, options, spinner) {
+ 		targetAgents = options.agent;
+ 	} else {
+ 		spinner.start("Loading agents…");
+-		const installedAgents = await detectInstalledAgents();
++		const detectedAgents = await detectInstalledAgents();
++		const installedAgents = detectedAgents.filter((a) => !options.excludeAgent?.includes(a));
+ 		const totalAgents = Object.keys(agents).length;
+ 		spinner.stop(`${totalAgents} agents`);
+-		if (installedAgents.length === 0) if (options.yes) {
++		if (installedAgents.length === 0 && detectedAgents.length > 0 && options.yes) targetAgents = [];
++		else if (installedAgents.length === 0) if (options.yes) {
+ 			targetAgents = validAgents;
+ 			log.info("Installing to all agents");
+ 		} else {
+ 			log.info("Select agents to install skills to");
+-			const selected = await promptForAgents("Which agents do you want to install to?", Object.entries(agents).map(([key, config]) => ({
++			const selected = await promptForAgents("Which agents do you want to install to?", Object.entries(agents).filter(([key]) => !options.excludeAgent?.includes(key)).map(([key, config]) => ({
+ 				value: key,
+ 				label: config.displayName
+ 			})));
+@@ -4471,11 +4473,16 @@ async function handleWellKnownSkills(source, url, options, spinner) {
+ 				log.info(`Installing to: ${import_picocolors.default.cyan(agents[firstAgent].displayName)}`);
+ 			} else log.info(`Installing to: ${installedAgents.map((a) => import_picocolors.default.cyan(agents[a].displayName)).join(", ")}`);
+ 		} else {
+-			const selected = await selectAgentsInteractive({ global: options.global });
++			const selected = await selectAgentsInteractive({ global: options.global, excludeAgent: options.excludeAgent });
+ 			if (isCancelled$1(selected)) exitInstallationCancelled();
+ 			targetAgents = selected;
+ 		}
+ 	}
++	targetAgents = targetAgents.filter((a) => !options.excludeAgent?.includes(a));
++	if (targetAgents.length === 0) {
++		log.info("No agents remain after exclusions. Nothing was installed.");
++		return true;
++	}
+ 	let installGlobally = options.global ?? false;
+ 	const supportsGlobal = targetAgents.some((a) => agents[a].globalSkillsDir !== void 0);
+ 	if (options.global === void 0 && !options.yes && supportsGlobal) {
+@@ -4704,6 +4711,15 @@ async function runAdd(args, options = {}) {
+ 		console.log();
+ 		emitJsonAndExit(1, "Missing required argument: source");
+ 	}
++	const invalidExclusions = (options.excludeAgent || []).filter((a) => !Object.hasOwn(agents, a));
++	if (invalidExclusions.length > 0) {
++		log.error(`Invalid excluded agents: ${invalidExclusions.join(", ")}`);
++		emitJsonAndExit(1, `Invalid excluded agents: ${invalidExclusions.join(", ")}`);
++	}
++	if (options.excludeAgent && Object.keys(agents).every((a) => options.excludeAgent.includes(a))) {
++		log.info("No agents remain after exclusions. Nothing was installed.");
++		emitJsonAndExit(0);
++	}
+ 	const explicitlySelectedAgents = new Set(options.agent?.includes("*") ? [] : options.agent ?? []);
+ 	if (options.all) {
+ 		options.skill = ["*"];
+@@ -4942,7 +4958,8 @@ async function runAdd(args, options = {}) {
+ 			targetAgents = options.agent;
+ 		} else {
+ 			spinner$3.start("Loading agents…");
+-			const installedAgents = await detectInstalledAgents();
++			const detectedAgents = await detectInstalledAgents();
++			const installedAgents = detectedAgents.filter((a) => !options.excludeAgent?.includes(a));
+ 			const totalAgents = Object.keys(agents).length;
+ 			spinner$3.stop(`${totalAgents} agents`);
+ 			if (installedAgents.includes("eve") && (options.yes || !agentResult.isAgent)) {
+@@ -4959,7 +4976,7 @@ async function runAdd(args, options = {}) {
+ 					if (!options.yes) explicitlySelectedAgents.add("eve");
+ 					log.info(`Installing to: ${import_picocolors.default.cyan(EVE_AGENT_LABEL)}`);
+ 				} else {
+-					const selected = await selectAgentsInteractive({ global: options.global });
++					const selected = await selectAgentsInteractive({ global: options.global, excludeAgent: options.excludeAgent });
+ 					if (isCancelled$1(selected)) {
+ 						await cleanup(tempDir);
+ 						exitInstallationCancelled();
+@@ -4967,12 +4984,13 @@ async function runAdd(args, options = {}) {
+ 					targetAgents = selected;
+ 					for (const agent of targetAgents) explicitlySelectedAgents.add(agent);
+ 				}
+-			} else if (installedAgents.length === 0) if (options.yes) {
++			} else if (installedAgents.length === 0 && detectedAgents.length > 0 && options.yes) targetAgents = [];
++			else if (installedAgents.length === 0) if (options.yes) {
+ 				targetAgents = validAgents;
+ 				log.info("Installing to all agents");
+ 			} else {
+ 				log.info("Select agents to install skills to");
+-				const selected = await promptForAgents("Which agents do you want to install to?", Object.entries(agents).filter(([key]) => key !== "eve").map(([key, config]) => ({
++				const selected = await promptForAgents("Which agents do you want to install to?", Object.entries(agents).filter(([key]) => key !== "eve" && !options.excludeAgent?.includes(key)).map(([key, config]) => ({
+ 					value: key,
+ 					label: config.displayName
+ 				})));
+@@ -4990,7 +5008,7 @@ async function runAdd(args, options = {}) {
+ 					log.info(`Installing to: ${import_picocolors.default.cyan(agents[firstAgent].displayName)}`);
+ 				} else log.info(`Installing to: ${installedAgents.map((a) => import_picocolors.default.cyan(agents[a].displayName)).join(", ")}`);
+ 			} else {
+-				const selected = await selectAgentsInteractive({ global: options.global });
++				const selected = await selectAgentsInteractive({ global: options.global, excludeAgent: options.excludeAgent });
+ 				if (isCancelled$1(selected)) {
+ 					await cleanup(tempDir);
+ 					exitInstallationCancelled();
+@@ -5003,6 +5021,12 @@ async function runAdd(args, options = {}) {
+ 			explicitlySelectedAgents.add("eve");
+ 			if (!targetAgents.includes("eve")) targetAgents = [...targetAgents, "eve"];
+ 		}
++		targetAgents = targetAgents.filter((a) => !options.excludeAgent?.includes(a));
++		if (targetAgents.length === 0) {
++			log.info("No agents remain after exclusions. Nothing was installed.");
++			await cleanup(tempDir);
++			emitJsonAndExit(0);
++		}
+ 		let eveSubagentTargets = [void 0];
+ 		if (targetAgents.includes("eve")) {
+ 			const availableSubagents = getEveSubagents(process.cwd());
+@@ -5445,6 +5469,12 @@ function parseAddOptions(args) {
+ 				nextArg = args[i];
+ 			}
+ 			i--;
++		} else if (arg === "--exclude-agent") {
++			options.excludeAgent = options.excludeAgent || [];
++			const start = ++i;
++			while (i < args.length && args[i] && !args[i].startsWith("-")) options.excludeAgent.push(args[i++]);
++			if (i === start) errors.push("--exclude-agent requires at least one agent");
++			i--;
+ 		} else if (arg === "-s" || arg === "--skill") {
+ 			options.skill = options.skill || [];
+ 			i++;
+@@ -7775,6 +7805,7 @@ ${BOLD}Project:${RESET}
+ ${BOLD}Add Options:${RESET}
+   -g, --global           Install skill globally (user-level) instead of project-level
+   -a, --agent <agents>   Specify agents to install to (use '*' for all agents)
++  --exclude-agent <agents>  Exclude agents from installation (Renku)
+   -s, --skill <skills>   Specify skill names to install (use '*' for all skills)
+   -l, --list             List available skills in the repository without installing
+   -y, --yes              Skip confirmation prompts

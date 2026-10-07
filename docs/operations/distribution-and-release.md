@@ -114,8 +114,9 @@ The installer does not install Homebrew or replace system Node.
 The installer runs the bundled `skills` executable with
 `add GoRenku/studio-skills --global --skill '*' --copy`.
 No npm package is downloaded on the user's machine. Agent selection and skills
-confirmation remain interactive. Select Codex, Claude Code, or other supported
-agents. Copy mode avoids symlink privileges on Windows. Both platforms invoke
+confirmation remain interactive. Select Codex or other supported agents; Claude
+Code remains a choice when native Claude Desktop is absent. Copy mode avoids
+symlink privileges on Windows. Both platforms invoke
 the bundled JavaScript entrypoint directly with the private Node runtime.
 
 Run setup in a visible local terminal. macOS connects prompts to `/dev/tty`
@@ -157,6 +158,56 @@ to refresh the runtime and skills. General skills installation remains independe
 of the Codex plugin step; runtime and skills releases remain separate.
 
 Reference: [skills installer documentation](https://github.com/vercel-labs/skills).
+
+### Claude Desktop plugin setup
+
+Native Claude Desktop detection selects user-scope `renku@renku` plugin setup
+instead of loose Claude skills. `distribution/claude-desktop/discovery.mjs`
+checks the macOS application bundle identity or Windows current-user
+`AnthropicClaude` uninstall registration and its launcher. It selects the newest
+compatible cached Code CLI by numeric version, checking command support first.
+No standalone Claude executable on PATH is required. These cache layouts are
+observed application details, not a documented stable discovery API:
+
+- Mac: `~/Library/Application Support/Claude/claude-code/<version>/<hash>/claude.app/Contents/MacOS/claude`.
+- Windows: `%APPDATA%\Claude\claude-code\<version>\<hash>\claude.exe`.
+
+`checkout.mjs` clones `https://github.com/GoRenku/studio-skills.git` into
+`<install-root>/plugins/claude/renku`. On subsequent setup/update runs it checks
+the origin and clean working tree, fetches the remote default branch, and
+fast-forwards without overwriting local work. The checkout survives runtime
+version changes. Both platforms use this same flow.
+
+`plugin.mjs` registers that directory using public marketplace add/update and
+plugin install/update commands, then verifies enabled user scope and the
+checked-out plugin version. Plugin releases must bump the manifest version;
+`renku update` and `renku update skills` refresh the local marketplace source.
+It inherits `CLAUDE_CONFIG_DIR`, preserves disabled plugins and conflicting
+marketplace sources, and reports `INSTALL013` when setup cannot complete.
+Opening Desktop's Code tab or updating Desktop may be necessary to initialize
+a compatible runtime. Start a new local Code session after successful setup.
+
+Both installation and update paths exclude `claude-code` from the normal picker
+whenever Desktop is detected, including plugin failure. Independent harness
+setup and Codex reconciliation still run before Claude failure is returned.
+The pinned `skills@1.5.26` dependency has a maintained pnpm patch providing
+`--exclude-agent`; this is a Renku extension, not an upstream option. Release
+verification checks the deployed picker supports it. Other choices remain
+interactive. Existing loose files are retained, so existing users may see both
+loose and plugin commands. WSL and Cowork are outside this installation scope.
+
+Run `RENKU_TEST_CLAUDE_DESKTOP=1 node --test scripts/release/claude-desktop-native.test.mjs`
+on native hosts for temporary-profile public-repository installation, repeat
+update, and a fixture version advancement verified through fresh Code command
+discovery. The test does not change the real
+Claude profile, send a model request, or prove Desktop UI behavior.
+See [ADR 0109](../decisions/0109-install-claude-desktop-plugin.md) and
+[ADR 0110](../decisions/0110-manage-claude-marketplace-checkout.md).
+
+Renku owns the Git checkout to avoid Claude's Windows Git-marketplace
+finalization `EPERM` error, reproduced with cached CLI 2.1.289 and 2.1.288.
+The installer does not repair Claude's cache or change security settings.
+See plan 0224 for native verification evidence and Desktop UI acceptance limits.
 
 ### 3. Start Studio
 
@@ -544,6 +595,12 @@ The update command can include other installed skills; select the intended scope
 
 There is no built-in uninstaller yet. For default installation locations:
 
+First uninstall the Renku plugin through Claude's plugin interface, or use
+`claude plugin uninstall renku@renku --scope user` when a Claude CLI is available.
+Remove its marketplace registration through Claude as well before deleting the
+Renku-managed checkout. That checkout is under `plugins/claude/renku` in the
+installation root; it is not inside a versioned runtime directory.
+
 - macOS: stop Studio; remove `~/.local/share/renku` and the
   `~/.local/bin/renku` launcher. Remove the marked Renku PATH block from the shell
   profile only if that PATH entry is no longer needed by other programs.
@@ -557,6 +614,8 @@ There is no built-in uninstaller yet. For default installation locations:
   tool (`npx skills remove --global` with system Node/npm and Git available), or
   remove their individual folders from the selected agents' skill directories.
   Do not delete the agents' entire shared skills folders.
+- On Windows, also remove `%LOCALAPPDATA%\Renku\plugins\claude\renku` after
+  unregistering the Claude marketplace. Keep other agents' directories intact.
 - Preserve the Project Library, including the default `~/Movies/Renku` on macOS
   or `%USERPROFILE%\Videos\Renku` on Windows, and any custom Project locations.
   Renku's private tools can be removed with the runtime; system Node, Git, and

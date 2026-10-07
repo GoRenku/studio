@@ -32,6 +32,8 @@ export async function verifyProduct(productRoot) {
   const aboutOutput = run(nodeExecutable, [cliEntry, 'about']);
   assertAboutOutput(aboutOutput, release.version);
   run(nodeExecutable, [path.join(productRoot, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'), '--version']);
+  const skillsHelp = run(nodeExecutable, [path.join(productRoot, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'), '--help']);
+  if (!skillsHelp.includes('--exclude-agent')) throw new Error('RELEASE025 Bundled skills installer is missing agent exclusion support.');
   run(nodeExecutable, [cliEntry, 'init', path.join(testHome, 'movies'), '--json'], testHome);
   run(nodeExecutable, [cliEntry, 'create', 'release-smoke', '--title', 'Release Smoke', '--json'], testHome);
   verifyStudioModule(nodeExecutable, path.join(productRoot, 'app'), testHome);
@@ -66,6 +68,11 @@ export function verifyProductStructure(productRoot) {
   for (const name of ['codex-app-server.mjs', 'reconcile-codex-skills.mjs']) {
     if (!existsSync(path.join(productRoot, 'distribution', name))) {
       throw new Error(`RELEASE025 Missing bundled Codex skill setup module ${name} for ${target.id}.`);
+    }
+  }
+  for (const name of ['discovery.mjs', 'checkout.mjs', 'plugin.mjs']) {
+    if (!existsSync(path.join(productRoot, 'distribution', 'claude-desktop', name))) {
+      throw new Error(`RELEASE025 Missing bundled Claude Desktop module ${name} for ${target.id}.`);
     }
   }
   const nodeExecutable = targetNodeExecutable(runtimeRoot, target);

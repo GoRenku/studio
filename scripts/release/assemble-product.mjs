@@ -89,6 +89,7 @@ mkdirSync(path.join(productRoot, 'distribution'));
 for (const name of ['install.sh', 'install.ps1', 'install-codex-plugin.mjs', 'codex-cli.mjs', 'codex-app-server.mjs', 'reconcile-codex-skills.mjs']) {
   cpSync(path.join(repositoryRoot, 'distribution', name), path.join(productRoot, 'distribution', name));
 }
+cpSync(path.join(repositoryRoot, 'distribution', 'claude-desktop'), path.join(productRoot, 'distribution', 'claude-desktop'), { recursive: true });
 writeFileSync(
   path.join(productRoot, 'RELEASE.json'),
   `${JSON.stringify(
