@@ -341,6 +341,7 @@ test('product assembly deploys into staging without legacy workspace purging', (
   assert.match(assembly, /--config\.inject-workspace-packages=true/);
   assert.doesNotMatch(assembly, /--legacy/);
   assert.match(assembly, /node_modules', '\.pnpm', 'lock\.yaml/);
+  assert.match(assembly, /node_modules', '\.pnpm-workspace-state-v1\.json'/);
   assert.match(assembly, /path\.join\(appRoot, 'pnpm-lock\.yaml'\)/);
 });
 

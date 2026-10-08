@@ -64,6 +64,7 @@ for (const name of readdirSync(sqlitePrebuilds)) {
   }
 }
 rmSync(path.join(appRoot, 'node_modules', '.modules.yaml'), { force: true });
+rmSync(path.join(appRoot, 'node_modules', '.pnpm-workspace-state-v1.json'), { force: true });
 rmSync(path.join(appRoot, 'node_modules', '.pnpm', 'lock.yaml'), { force: true });
 rmSync(path.join(appRoot, 'pnpm-lock.yaml'), { force: true });
 sanitizeBundledCliManifest(appRoot);
