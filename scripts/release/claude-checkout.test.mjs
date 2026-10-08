@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { prepareClaudeMarketplaceCheckout } from '../../distribution/claude-desktop/checkout.mjs';
+import { prepareClaudeMarketplaceCheckout } from '../../distribution/claude/checkout.mjs';
 import { claudeMarketplaceFixture } from './fixtures/claude-marketplace.mjs';
 
 test('checkout clones and fast-forwards the remote default branch across plugin versions', () => {

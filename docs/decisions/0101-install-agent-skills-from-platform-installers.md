@@ -1,5 +1,7 @@
 # 0101: Install Agent Skills From Platform Installers
 
+Installer scope updated by [ADR 0111](0111-plugin-only-agent-installation.md): automatic Claude/Codex plugins; other harnesses use separate instructions.
+
 Date: 2026-09-20
 
 Status: accepted

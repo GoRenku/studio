@@ -52,25 +52,17 @@ git_is_ready() {
 installed_runtime_is_ready() {
   [ "$(plutil -extract version raw -o - "$destination/RELEASE.json" 2>/dev/null)" = "$release_version" ] || return 1
   [ "$(plutil -extract target raw -o - "$destination/RELEASE.json" 2>/dev/null)" = "$target" ] || return 1
-  [ -f "$destination/app/node_modules/skills/bin/cli.mjs" ] || return 1
-  "$destination/runtime/node/bin/node" "$destination/app/dist/cli.js" about >/dev/null 2>&1 || return 1
-  "$destination/runtime/node/bin/node" "$destination/app/node_modules/skills/bin/cli.mjs" --version >/dev/null 2>&1
+  "$destination/runtime/node/bin/node" "$destination/app/dist/cli.js" about >/dev/null 2>&1
 }
 
 install_codex_plugin() {
   "$node_command" "$destination/distribution/install-codex-plugin.mjs" ||
-    printf '%s\n' 'INSTALL011 Codex plugin setup failed. Continuing general skills setup.' >&2
+    printf '%s\n' 'INSTALL011 Codex plugin setup failed. Continuing Claude plugin setup.' >&2
 }
 
-install_agent_skills() {
-  skills_entry="$destination/app/node_modules/skills/bin/cli.mjs"
-  [ -f "$skills_entry" ] || fail 'INSTALL006 Bundled skills installer is missing. Reinstall Renku to restore it.'
-  # curl | sh supplies the script on stdin; interactive prompts need the terminal.
-  if ! (exec </dev/tty) 2>/dev/null; then
-    fail 'INSTALL007 Run the installer in Terminal to choose your agents. Renku is installed; rerun this installer there to finish skills setup.'
-  fi
+install_agent_plugins() {
   if ! git_is_ready; then
-    printf '%s\n' 'Git is needed to download the skills. Opening Apple Command Line Tools installation.'
+    printf '%s\n' 'Git is needed to download the plugins. Opening Apple Command Line Tools installation.'
     xcode-select --install || fail 'INSTALL008 Could not start Apple Command Line Tools installation. Complete it, then rerun this installer.'
     printf '%s\n' 'Finish the Apple installation dialog, then press Return here to continue.'
     IFS= read -r completed </dev/tty || fail 'INSTALL008 Git setup was interrupted. Rerun this installer to continue.'
@@ -78,20 +70,9 @@ install_agent_skills() {
   fi
   install_codex_plugin
   claude_status=0
-  "$node_command" "$destination/distribution/claude-desktop/plugin.mjs" "$INSTALL_ROOT/plugins/claude/renku" || claude_status=$?
-  set --
-  if [ "$claude_status" -ne 2 ]; then
-    set -- --exclude-agent claude-code
-  fi
-  printf '\n%s\n' 'Choose the agents that should receive the Renku skills.'
-  printf '%s\n' 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
-  skills_status=0
-  PATH="$(dirname "$node_command"):$PATH" "$node_command" "$skills_entry" add GoRenku/studio-skills --global --skill '*' --copy "$@" </dev/tty || skills_status=$?
-  codex_skills_status=0
-  "$node_command" "$destination/distribution/reconcile-codex-skills.mjs" || codex_skills_status=$?
-  [ "$claude_status" -eq 0 ] || [ "$claude_status" -eq 2 ] || fail 'INSTALL013 Claude plugin setup did not complete. Other harness setup was attempted; rerun this installer to retry Claude.'
-  [ "$skills_status" -eq 0 ] || fail 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.'
-  [ "$codex_skills_status" -eq 0 ] || fail 'INSTALL012 Codex skill setup did not complete. Installed skill files were retained; rerun this installer to retry.'
+  "$node_command" "$destination/distribution/claude/plugin.mjs" "$INSTALL_ROOT/plugins/claude/renku" || claude_status=$?
+  [ "$claude_status" -eq 0 ] || [ "$claude_status" -eq 2 ] || fail 'INSTALL013 Claude plugin setup did not complete. Run renku update skills to retry.'
+  printf '%s\n' 'Other agents: https://gorenku.com/agent-skills/'
 }
 
 case "$(uname -s)-$(uname -m)" in
@@ -123,8 +104,8 @@ trap 'exit 143' HUP TERM
 if [ "${RENKU_UPDATE_SCOPE:-}" = 'skills' ]; then
   destination="${RENKU_INSTALLED_PRODUCT:?Installed Renku runtime is required}"
   node_command="$destination/runtime/node/bin/node"
-  install_agent_skills
-  printf '%s\n' 'Skills setup finished. If you confirmed installation, restart your agent and start a new conversation.'
+  install_agent_plugins
+  printf '%s\n' 'Plugin setup finished. Restart your agent and start a new conversation.'
   exit 0
 fi
 manifest="$temporary/release.json"
@@ -147,7 +128,7 @@ version="$release_version"
 destination="$INSTALL_ROOT/versions/$version"
 
 if installed_runtime_is_ready; then
-  printf 'Renku %s is already installed. Skipping download and continuing to skills setup.\n' "$version"
+  printf 'Renku %s is already installed. Skipping download and continuing to plugin setup.\n' "$version"
 else
   if [ "$destination" = "${RENKU_INSTALLED_PRODUCT:-}" ]; then
     fail 'INSTALL004 The running Renku installation is incomplete. Stop Studio and rerun the installer in a new terminal to repair it.'
@@ -172,7 +153,6 @@ else
 
   smoke_node_command="$temporary/extracted/renku/runtime/node/bin/node"
   "$smoke_node_command" "$temporary/extracted/renku/app/dist/cli.js" about >/dev/null || fail 'INSTALL004 Renku CLI smoke validation failed.'
-  "$smoke_node_command" "$temporary/extracted/renku/app/node_modules/skills/bin/cli.mjs" --version >/dev/null || fail 'INSTALL006 Bundled skills installer failed verification.'
 
   mkdir -p "$INSTALL_ROOT/versions" "$BIN_ROOT"
   backup="$INSTALL_ROOT/versions/.previous-$version-$$"
@@ -231,4 +211,4 @@ RENKU_UPDATE_SCOPE=skills RENKU_INSTALLED_PRODUCT="$destination" \
   /bin/sh "$destination/distribution/install.sh" || exit "$?"
 printf '%s\n' 'Studio will guide you through choosing its recommended Project Library on first launch.'
 printf '%s\n' 'For a custom location, run renku init <storage-root> before completing setup.'
-printf '%s\n' 'If you confirmed skills installation, restart your agent and start a new conversation to load the Renku skills.'
+printf '%s\n' 'Restart your agent and start a new conversation to load the Renku plugins.'

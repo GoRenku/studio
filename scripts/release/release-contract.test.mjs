@@ -352,7 +352,7 @@ test('release dependency policy is strict and installers do not resolve dependen
   assert.match(workspace, /minimumReleaseAgeIgnoreMissingTime:\s*false/);
   assert.match(workspace, /trustLockfile:\s*false/);
   const cli = JSON.parse(readFileSync(path.join(repositoryRoot, 'packages/cli/package.json'), 'utf8'));
-  assert.match(cli.dependencies.skills, /^\d+\.\d+\.\d+$/);
+  assert.equal(cli.dependencies.skills, undefined);
   const installers = [
     readFileSync(path.join(repositoryRoot, 'distribution/install.sh'), 'utf8'),
     readFileSync(path.join(repositoryRoot, 'distribution/install.ps1'), 'utf8'),

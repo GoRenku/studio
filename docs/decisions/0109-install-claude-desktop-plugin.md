@@ -1,5 +1,7 @@
 # 0109: Install the Claude Desktop Plugin
 
+Installer scope updated by [ADR 0111](0111-plugin-only-agent-installation.md): automatic Claude/Codex plugins; other harnesses use separate instructions.
+
 Date: 2026-10-07
 
 Status: accepted

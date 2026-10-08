@@ -1,5 +1,7 @@
 # Install Codex Plugin And Route Generation Review
 
+Installer scope updated by [ADR 0111](0111-plugin-only-agent-installation.md): automatic Claude/Codex plugins; other harnesses use separate instructions.
+
 Date: 2026-10-03
 
 Status: accepted

@@ -87,10 +87,10 @@ for (const name of ['LICENSE', 'NOTICE', 'TRADEMARKS.md']) {
   cpSync(path.join(repositoryRoot, name), path.join(productRoot, name));
 }
 mkdirSync(path.join(productRoot, 'distribution'));
-for (const name of ['install.sh', 'install.ps1', 'install-codex-plugin.mjs', 'codex-cli.mjs', 'codex-app-server.mjs', 'reconcile-codex-skills.mjs']) {
+for (const name of ['install.sh', 'install.ps1', 'install-codex-plugin.mjs', 'codex-cli.mjs']) {
   cpSync(path.join(repositoryRoot, 'distribution', name), path.join(productRoot, 'distribution', name));
 }
-cpSync(path.join(repositoryRoot, 'distribution', 'claude-desktop'), path.join(productRoot, 'distribution', 'claude-desktop'), { recursive: true });
+cpSync(path.join(repositoryRoot, 'distribution', 'claude'), path.join(productRoot, 'distribution', 'claude'), { recursive: true });
 writeFileSync(
   path.join(productRoot, 'RELEASE.json'),
   `${JSON.stringify(
@@ -131,7 +131,6 @@ function assertRequiredRuntime(root) {
     'NOTICE',
     'TRADEMARKS.md',
     'app/dist/cli.js',
-    'app/node_modules/skills/bin/cli.mjs',
     path.relative(root, path.join(coreRoot, 'drizzle', 'meta', '_journal.json')),
     path.relative(root, path.join(studioRoot, 'server-dist', 'index.js')),
     path.relative(root, path.join(studioRoot, 'dist', 'index.html')),

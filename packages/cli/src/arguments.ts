@@ -47,8 +47,8 @@ Commands
   studio current       Show current Studio focus and context
   studio start         Start the local Renku Studio web application
   studio stop          Stop the local Renku Studio server
-  update               Update Renku, its agent skills and Codex plugin
-  update skills        Update Renku's agent skills and Codex plugin
+  update               Update Renku and its Claude/Codex plugins
+  update skills        Update Renku's Claude/Codex plugins
   studio server status Show canonical local Studio server status
   trash                List, restore, preview, and empty Trash
 

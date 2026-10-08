@@ -57,22 +57,14 @@ function Test-InstalledRuntime([string]$Product, [string]$Version) {
     $InstalledRelease = Get-Content -LiteralPath (Join-Path $Product 'RELEASE.json') -Raw | ConvertFrom-Json
     if ($InstalledRelease.version -cne $Version -or $InstalledRelease.target -cne $Target) { return $false }
     $InstalledNode = Join-Path $Product 'runtime\node\node.exe'
-    $InstalledSkills = Join-Path $Product 'app\node_modules\skills\bin\cli.mjs'
-    if (-not (Test-Path -LiteralPath $InstalledSkills)) { return $false }
     & $InstalledNode (Join-Path $Product 'app\dist\cli.js') about 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { return $false }
-    & $InstalledNode $InstalledSkills --version 2>$null | Out-Null
     return $LASTEXITCODE -eq 0
   } catch {
     return $false
   }
 }
 
-function Install-AgentSkills {
-  $SkillsEntry = Join-Path $Destination 'app\node_modules\skills\bin\cli.mjs'
-  if (-not (Test-Path -LiteralPath $SkillsEntry)) { throw 'INSTALL006 Bundled skills installer is missing. Reinstall Renku to restore it.' }
-  if ([Console]::IsInputRedirected) { throw 'INSTALL007 Run this installer in an interactive PowerShell window to choose your agents.' }
-
+function Install-AgentPlugins {
   $PreviousPath = $env:PATH
   try {
     $env:PATH = "$(Split-Path $NodeCommand);$env:PATH"
@@ -81,7 +73,7 @@ function Install-AgentSkills {
       $GitRoot = Join-Path $InstallRoot 'tools\mingit-2.55.0.5'
       $GitCommand = Join-Path $GitRoot 'cmd\git.exe'
       if (-not (Test-GitCommand $GitCommand)) {
-        Write-Host 'Downloading Git for Renku skills setup.'
+        Write-Host 'Downloading Git for Renku plugin setup.'
         $GitArchive = Join-Path $Temporary 'mingit.zip'
         Save-RenkuDownload 'https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/MinGit-2.55.0.5-64-bit.zip' $GitArchive
         $GitChecksum = (Get-FileHash -Algorithm SHA256 -LiteralPath $GitArchive).Hash.ToLowerInvariant()
@@ -94,20 +86,11 @@ function Install-AgentSkills {
       $env:PATH = "$(Split-Path $GitCommand);$env:PATH"
     }
     & $NodeCommand (Join-Path $Destination 'distribution\install-codex-plugin.mjs')
-    if ($LASTEXITCODE -ne 0) { Write-Warning 'INSTALL011 Codex plugin setup failed. Continuing general skills setup.' }
-    & $NodeCommand (Join-Path $Destination 'distribution\claude-desktop\plugin.mjs') (Join-Path $InstallRoot 'plugins\claude\renku')
+    if ($LASTEXITCODE -ne 0) { Write-Warning 'INSTALL011 Codex plugin setup failed. Continuing Claude plugin setup.' }
+    & $NodeCommand (Join-Path $Destination 'distribution\claude\plugin.mjs') (Join-Path $InstallRoot 'plugins\claude\renku')
     $ClaudeStatus = $LASTEXITCODE
-    $SkillsArguments = @('add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy')
-    if ($ClaudeStatus -ne 2) { $SkillsArguments += @('--exclude-agent', 'claude-code') }
-    Write-Host 'Choose the agents that should receive the Renku skills.'
-    Write-Host 'If you cancel, Renku stays installed. Rerun this installer to choose agents again without downloading the same runtime.'
-    & $NodeCommand $SkillsEntry @SkillsArguments
-    $SkillsStatus = $LASTEXITCODE
-    & $NodeCommand (Join-Path $Destination 'distribution\reconcile-codex-skills.mjs')
-    $CodexSkillsStatus = $LASTEXITCODE
-    if ($ClaudeStatus -ne 0 -and $ClaudeStatus -ne 2) { throw 'INSTALL013 Claude plugin setup did not complete. Other harness setup was attempted; rerun this installer to retry Claude.' }
-    if ($SkillsStatus -ne 0) { throw 'INSTALL009 Skills setup did not complete. Renku is installed; rerun this installer to try again.' }
-    if ($CodexSkillsStatus -ne 0) { throw 'INSTALL012 Codex skill setup did not complete. Installed skill files were retained; rerun this installer to retry.' }
+    if ($ClaudeStatus -ne 0 -and $ClaudeStatus -ne 2) { throw 'INSTALL013 Claude plugin setup did not complete. Run renku update skills to retry.' }
+    Write-Host 'Other agents: https://gorenku.com/agent-skills/'
   } finally {
     $env:PATH = $PreviousPath
   }
@@ -138,8 +121,8 @@ try {
     $Destination = $env:RENKU_INSTALLED_PRODUCT
     if (-not $Destination) { throw 'INSTALL004 Installed Renku runtime is required.' }
     $NodeCommand = Join-Path $Destination 'runtime\node\node.exe'
-    Install-AgentSkills
-    Write-Host 'Skills setup finished. If you confirmed installation, restart your agent and start a new conversation.'
+    Install-AgentPlugins
+    Write-Host 'Plugin setup finished. Restart your agent and start a new conversation.'
     return
   }
   Write-Host 'Checking the latest Renku release.'
@@ -163,7 +146,7 @@ try {
   $VersionsRoot = Join-Path $InstallRoot 'versions'
   $Destination = Join-Path $VersionsRoot $Manifest.version
   if (Test-InstalledRuntime $Destination $Manifest.version) {
-    Write-Host "Renku $($Manifest.version) is already installed. Skipping download and continuing to skills setup."
+    Write-Host "Renku $($Manifest.version) is already installed. Skipping download and continuing to plugin setup."
   } else {
     if ($Destination -eq $env:RENKU_INSTALLED_PRODUCT) {
       throw 'INSTALL004 The running Renku installation is incomplete. Stop Studio and rerun the installer in a new terminal to repair it.'
@@ -189,8 +172,6 @@ try {
     $SmokeCliEntry = Join-Path $Product 'app\dist\cli.js'
     & $SmokeNodeCommand $SmokeCliEntry about | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'INSTALL004 Renku CLI smoke validation failed.' }
-    & $SmokeNodeCommand (Join-Path $Product 'app\node_modules\skills\bin\cli.mjs') --version | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw 'INSTALL006 Bundled skills installer failed verification.' }
 
     New-Item -ItemType Directory -Force -Path $VersionsRoot, $BinRoot | Out-Null
     $Backup = Join-Path $VersionsRoot ('.previous-' + $Release.version + '-' + $PID)
@@ -257,7 +238,7 @@ try {
   }
   Write-Host 'Studio will guide you through choosing its recommended Project Library on first launch.'
   Write-Host 'For a custom location, run renku init <storage-root> before completing setup.'
-  Write-Host 'If you confirmed skills installation, restart your agent and start a new conversation to load the Renku skills.'
+  Write-Host 'Restart your agent and start a new conversation to load the Renku plugins.'
 } finally {
   Remove-Item -LiteralPath $Temporary -Recurse -Force -ErrorAction SilentlyContinue
 }

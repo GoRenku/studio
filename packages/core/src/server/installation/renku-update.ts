@@ -30,7 +30,7 @@ export async function updateRenku(scope: 'all' | 'skills'): Promise<void> {
       message: 'Renku update did not complete.',
       suggestion: result.error
         ? `Could not start the installer: ${result.error.message}`
-        : 'Review the installer error above and rerun the same update command. A skills failure can occur after the runtime has updated.',
+        : 'Review the installer error above and rerun the same update command. A plugin setup failure can occur after the runtime has updated.',
     });
   }
 }

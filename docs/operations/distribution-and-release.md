@@ -95,41 +95,31 @@ Windows PowerShell, without WSL:
 irm https://downloads.gorenku.com/install.ps1 | iex
 ```
 
-### 2. Choose agents in the installer
+When releasing the plugin-only installer, publish the updated website bootstrap
+alongside the runtime. Already-shipped updaters require the generic skills
+executable during archive validation and cannot perform this transition. Existing
+users must stop Studio and rerun the website installer once. Do not ship a dummy
+skills executable; subsequent updates use the corrected validation.
 
-The platform installer uses Renku's bundled Node and skills installer to run setup. No
-system Node, npm, npx, or Codex CLI installation is required. Release verification
-checks that the bundled skills entrypoint exists.
+### 2. Automatic plugin setup
 
-Setup checks that Git runs. Windows reuses working Git from PATH or downloads
-official MinGit 2.55.0.5 into the install root's `tools/` directory, verifying its
-pinned SHA-256 before extraction. Subsequent runs reuse that private copy.
-Update the Git version and checksum together from the official release.
-Bundled Node and private Git are added only to the setup process PATH.
+The platform installer uses Renku's bundled Node to install Claude and Codex
+plugins. It does not bundle a generic skills tool or ask users to select agents.
+Other harnesses use the website guide at `/agent-skills/` and manage installation
+scope themselves. Existing skill files and agent settings are retained.
 
-On macOS, missing Git opens Apple's Command Line Tools installer. Complete the
-dialog and press Return in Terminal; setup verifies Git again before continuing.
-The installer does not install Homebrew or replace system Node.
+Setup checks Git for plugin marketplaces. Windows reuses working Git from PATH
+or downloads official MinGit 2.55.0.5 into the install root's `tools/` directory,
+verifying its pinned SHA-256 before extraction. Subsequent runs reuse that copy.
+Update the Git version and checksum together from the official release. Bundled
+Node and private Git are added only to the setup process PATH. On macOS, missing
+Git opens Apple's Command Line Tools installer; complete it and press Return.
+Terms acceptance and missing-Git setup can still require interaction.
 
-The installer runs the bundled `skills` executable with
-`add GoRenku/studio-skills --global --skill '*' --copy`.
-No npm package is downloaded on the user's machine. Agent selection and skills
-confirmation remain interactive. Select Codex or other supported agents; Claude
-Code remains a choice when native Claude Desktop is absent. Copy mode avoids
-symlink privileges on Windows. Both platforms invoke
-the bundled JavaScript entrypoint directly with the private Node runtime.
-
-Run setup in a visible local terminal. macOS connects prompts to `/dev/tty`
-because the bootstrap script arrives through a pipe. Setup reports `INSTALL006`
-for a missing bundled skills installer, `INSTALL007` for a missing interactive terminal,
-`INSTALL008` for incomplete Git setup, and `INSTALL009` for a failed skills
-command. Renku remains installed when skills setup fails; resolve the reported
-problem and rerun the installer. Checksum mismatches use `INSTALL003`.
-The bundled skills tool can exit successfully when the user declines its final
-confirmation. Installer completion therefore does not claim that skills were
-installed: it explains cancellation and only asks users who confirmed to restart
-their agents. The runtime launch command is printed before skills setup so a
-skills or Git failure does not hide how to start the installed application.
+The runtime launch command is printed before plugin setup. Git failures use
+`INSTALL008`, checksum failures `INSTALL003`, and Claude failures `INSTALL013`.
+A failed plugin step leaves the installed runtime available. Resolve the reported
+problem and run `renku update skills` to retry plugin setup.
 
 The focused bundled `distribution/install-codex-plugin.mjs` also installs the
 Codex plugin using the user's existing CLI profile and the public commands:
@@ -144,7 +134,7 @@ codex plugin list --json
 It checks installed/enabled state before Core records `codex-plugin.json` beside
 the platform config. CLI absence or unsupported plugin commands records false
 and skips this step. Conflicting sources, disabled plugins, network errors and
-failed verification are reported with `INSTALL011`; general skills setup still
+failed verification are reported with `INSTALL011`; Claude setup still
 runs. Core state failures use `CONFIG017`. Codex CLI is never installed by Renku.
 Both `renku update` and `renku update skills` repeat the plugin step.
 
@@ -153,21 +143,17 @@ SemVer manifest versions, its `codex.mcp.json` declaration and the beta branch.
 Run native Mac/Windows Desktop acceptance with and without Codex CLI, reopen
 Desktop, exercise panel/Visualize reviews and update an installed plugin.
 
-The command reads the skills repository's default branch. Re-run the installer
-to refresh the runtime and skills. General skills installation remains independent
-of the Codex plugin step; runtime and skills releases remain separate.
+### Claude plugin setup
 
-Reference: [skills installer documentation](https://github.com/vercel-labs/skills).
+`distribution/claude/discovery.mjs` selects one compatible Claude Code CLI from
+PATH or the native `~/.local/bin` launcher. If none is compatible, it checks
+Claude Desktop's identity and selects its newest compatible cached Code runtime.
+Desktop and CLI use a single user-scope plugin installation under the inherited
+`CLAUDE_CONFIG_DIR`; setup never runs twice just because both apps are present.
+Windows command launchers are invoked through PowerShell with literal arguments.
+No Claude installation is downloaded by Renku.
 
-### Claude Desktop plugin setup
-
-Native Claude Desktop detection selects user-scope `renku@renku` plugin setup
-instead of loose Claude skills. `distribution/claude-desktop/discovery.mjs`
-checks the macOS application bundle identity or Windows current-user
-`AnthropicClaude` uninstall registration and its launcher. It selects the newest
-compatible cached Code CLI by numeric version, checking command support first.
-No standalone Claude executable on PATH is required. These cache layouts are
-observed application details, not a documented stable discovery API:
+Desktop cache layouts remain observed application details, not a stable API:
 
 - Mac: `~/Library/Application Support/Claude/claude-code/<version>/<hash>/claude.app/Contents/MacOS/claude`.
 - Windows: `%APPDATA%\Claude\claude-code\<version>\<hash>\claude.exe`.
@@ -187,14 +173,8 @@ marketplace sources, and reports `INSTALL013` when setup cannot complete.
 Opening Desktop's Code tab or updating Desktop may be necessary to initialize
 a compatible runtime. Start a new local Code session after successful setup.
 
-Both installation and update paths exclude `claude-code` from the normal picker
-whenever Desktop is detected, including plugin failure. Independent harness
-setup and Codex reconciliation still run before Claude failure is returned.
-The pinned `skills@1.5.26` dependency has a maintained pnpm patch providing
-`--exclude-agent`; this is a Renku extension, not an upstream option. Release
-verification checks the deployed picker supports it. Other choices remain
-interactive. Existing loose files are retained, so existing users may see both
-loose and plugin commands. WSL and Cowork are outside this installation scope.
+Existing loose skill files and their enabled/disabled settings are unchanged.
+WSL and Cowork remain outside this native plugin setup scope.
 
 Run `RENKU_TEST_CLAUDE_DESKTOP=1 node --test scripts/release/claude-desktop-native.test.mjs`
 on native hosts for temporary-profile public-repository installation, repeat
@@ -283,12 +263,9 @@ policy: package versions must be at least 10,080 minutes (7 days) old,
 versions that do not satisfy that age fail resolution, missing registry publish
 times fail resolution, and lockfiles are rechecked rather than trusted
 blindly. The product assembler applies this policy while creating the bundled
-dependency tree on all three release targets. The third-party `skills` tool is
-pinned to `1.5.26` in the CLI production dependencies; its transitive dependencies
-are locked and pass the same policy during release assembly. End-user install
-and update commands invoke that packaged copy directly, without npm resolution.
-The `GoRenku/studio-skills` repository supplies skill files, not npm dependencies.
-Skills updates still fetch those files from the repository's default branch.
+dependency tree on all three release targets. End-user setup invokes the bundled
+plugin setup modules without npm resolution. The `GoRenku/studio-skills`
+repository supplies plugin content, fetched independently from runtime releases.
 This closes the unguarded npm-download path; the dependency policy is not a
 guarantee that every accepted package or skill is free of malicious content.
 
@@ -438,10 +415,10 @@ may select an older release, but its versioned archive and checksum stay paired.
 
 Before downloading an archive, both installers check the selected version's
 installation folder, its release version and target, and whether the bundled
-CLI and skills installer run successfully. A healthy matching runtime is reused;
-the installer proceeds to interactive skills setup without downloading or
-extracting the runtime again. This also applies after declining or cancelling
-skills setup, and to full updates when the runtime is already current. Missing
+CLI runs successfully. A healthy matching runtime is reused;
+the installer proceeds to plugin setup without downloading or
+extracting the runtime again. This also applies after failed
+plugin setup, and to full updates when the runtime is already current. Missing
 or damaged installations are downloaded and validated before activation. An
 incomplete runtime executing its own update must instead be repaired by rerunning
 the installer from a terminal, so Windows does not replace its running Node binary.
@@ -547,23 +524,23 @@ and every six hours while it stays open. When a newer version is available,
 an update icon appears before Settings in the Project Library and Movie Studio
 headers. Open it, finish any edits, and choose **Download and update**. Studio
 closes, then the interactive `renku update` runs in a visible Terminal or
-PowerShell window. Complete any skills prompts there. A successful update
+PowerShell window. Follow any plugin setup instructions there. A successful update
 reopens Studio through the installed launcher. If the update or restart fails,
 the terminal displays the failure and the full manual `renku studio start`
-command. A failed skills step can happen after the new runtime is active.
+command. A failed plugin step can happen after the new runtime is active.
 The terminal handoff preserves Studio's agent-profile directory overrides and
-clears overrides that were absent, so skills setup uses the originating profiles.
+clears overrides that were absent, so plugin setup uses the originating profiles.
 
 To update from the CLI, stop Studio with `renku studio stop` or Ctrl+C in its
 terminal, then run `renku update`.
-It downloads the complete current beta, activates that version, and runs skills
+It downloads the complete current beta, activates that version, and runs plugin
 setup again. After activation, both platform installers invoke the newly installed
 release's bundled installer in skills-only mode, passing the activated product
 and installation paths. This ensures agent setup follows the downloaded release
 rather than the installer that started the update. A setup failure remains a
 failed update; the activated runtime remains available for retry.
 `renku update skills` uses the installed runtime to update only
-Renku skills, without downloading the application. Restart agent apps afterward.
+Claude/Codex plugins, without downloading the application. Restart agent apps afterward.
 The installer records absolute installation and launcher directories in
 `INSTALLATION.json` inside the installed version; updates preserve those paths.
 Release archives include both platform installer scripts in `distribution`.
@@ -592,11 +569,9 @@ reports are not prerequisites for the current local release workflow. Newer CI
 runners alone do not establish older OS support. Do not stop a real Studio to
 run the isolated rehearsal without the user's authorization.
 
-Node/npm and Windows MinGit are private installation tools. Only `renku` is added
-to the public PATH; installing Renku does not make `npx` available in a fresh
-terminal. People with their own Node/npm and Git can also use `npx skills update`
-or rerun `npx skills add GoRenku/studio-skills --global --skill '*' --copy`.
-The update command can include other installed skills; select the intended scope.
+Node and Windows MinGit are private installation tools. Only `renku` is added
+to the public PATH. Other harnesses use the separate website guide at
+`/agent-skills/`; their skill installation is independent of Renku updates.
 
 There is no built-in uninstaller yet. For default installation locations:
 
@@ -615,8 +590,10 @@ installation root; it is not inside a versioned runtime directory.
   `%LOCALAPPDATA%\Renku`. Remove `%LOCALAPPDATA%\Renku\bin` from the user's PATH.
   Preserve `%LOCALAPPDATA%\Renku\Studio` to retain settings and credentials.
   Deleting the entire Renku folder also deletes those settings.
-- Agent skills are separate copies. Remove only Renku skills through the skills
-  tool (`npx skills remove --global` with system Node/npm and Git available), or
+- Manually installed agent skills are separate copies. With system Node/npm and
+  Git available, run `npx skills remove --agent <agent-id>` from the folder where
+  project skills were installed, or add `--global` for a global installation.
+  Select only Renku skills and repeat for each installation scope and agent, or
   remove their individual folders from the selected agents' skill directories.
   Do not delete the agents' entire shared skills folders.
 - On Windows, also remove `%LOCALAPPDATA%\Renku\plugins\claude\renku` after

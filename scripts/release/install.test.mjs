@@ -9,7 +9,7 @@ import test from 'node:test';
 
 const installer = fileURLToPath(new URL('../../distribution/install.sh', import.meta.url));
 
-function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pluginExit = 0, claudeExit = 2, reconcileExit = 0, cliExit = 0, skillsVersionExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
+function fixture({ missingGit = false, gitSetupFails = false, pluginExit = 0, claudeExit = 2, cliExit = 0, badChecksum = false, releaseTarget = 'darwin-arm64', manifestArtifact = {}, updateScope, installedVersion = '0.0.1' } = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'renku-installer-'));
   const product = path.join(root, 'archive', 'renku');
   const bin = path.join(root, 'commands');
@@ -20,14 +20,10 @@ function fixture({ missingGit = false, gitSetupFails = false, skillsExit = 0, pl
     'printf "%s\\n" "$0" "$RENKU_UPDATE_SCOPE" "$RENKU_INSTALLED_PRODUCT" >> "$TEST_ROOT/bundled-setup"\n' + readFileSync(installer, 'utf8'));
   cpSync(new URL('../../distribution/install-codex-plugin.mjs', import.meta.url), path.join(product, 'distribution', 'install-codex-plugin.mjs'));
   cpSync(new URL('../../distribution/codex-cli.mjs', import.meta.url), path.join(product, 'distribution', 'codex-cli.mjs'));
-  cpSync(new URL('../../distribution/codex-app-server.mjs', import.meta.url), path.join(product, 'distribution', 'codex-app-server.mjs'));
-  cpSync(new URL('../../distribution/reconcile-codex-skills.mjs', import.meta.url), path.join(product, 'distribution', 'reconcile-codex-skills.mjs'));
-  cpSync(new URL('../../distribution/claude-desktop', import.meta.url), path.join(product, 'distribution', 'claude-desktop'), { recursive: true });
-  mkdirSync(path.join(product, 'app', 'node_modules', 'skills', 'bin'), { recursive: true });
+  cpSync(new URL('../../distribution/claude', import.meta.url), path.join(product, 'distribution', 'claude'), { recursive: true });
   mkdirSync(path.join(product, 'runtime', 'node', 'bin'), { recursive: true });
   writeFileSync(path.join(product, 'RELEASE.json'), JSON.stringify({ version: '0.0.1', target: releaseTarget }));
   writeFileSync(path.join(product, 'app', 'dist', 'cli.js'), '');
-  writeFileSync(path.join(product, 'app', 'node_modules', 'skills', 'bin', 'cli.mjs'), '');
   const executable = (file, body) => writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
   executable(path.join(product, 'runtime', 'node', 'bin', 'node'), `
 case "$1" in
@@ -36,20 +32,10 @@ case "$1" in
   */install-codex-plugin.mjs)
     printf '%s\\n' "$@" >> "$TEST_ROOT/plugin-args"
     exit ${pluginExit} ;;
-  */claude-desktop/plugin.mjs)
+  */claude/plugin.mjs)
     printf '%s\\n' "$@" >> "$TEST_ROOT/claude-args"
     exit ${claudeExit} ;;
-  */reconcile-codex-skills.mjs)
-    [ -f "$TEST_ROOT/skills-args" ] || exit 74
-    printf '%s\\n' "$@" >> "$TEST_ROOT/reconcile-args"
-    exit ${reconcileExit} ;;
-  */skills/bin/cli.mjs)
-    [ "$2" != --version ] || exit ${skillsVersionExit}
-    [ -t 0 ] || exit 71
-    printf '%s\\n' "$@" > "$TEST_ROOT/skills-args"
-    command -v node > "$TEST_ROOT/selected-node"
-    [ ! -f "$TEST_ROOT/skills-retry" ] || exit 0
-    exit ${skillsExit} ;;
+
 esac
 exit 72`);
   executable(path.join(bin, 'node'), 'exit 73');
@@ -136,55 +122,32 @@ sys.exit(os.waitstatus_to_exitcode(status))
   return { ...setup, result, output: result.stdout + result.stderr };
 }
 
-test('macOS piped installer uses private Node and passes interactive agent selection', { skip: process.platform !== 'darwin' }, () => {
-  const { root, output } = runInstaller();
-  assert.match(output, /Do you accept these Terms of Use\? \[y\/N\]/);
-  assert.equal(readFileSync(path.join(root, 'Renku with spaces', 'TERMS_ACCEPTANCE.txt'), 'utf8'), '2026-09-23\n');
-  assert.match(output, /restart your agent/);
-  assert.deepEqual(readFileSync(path.join(root, 'skills-args'), 'utf8').trim().split('\n').slice(1), [
-    'add', 'GoRenku/studio-skills', '--global', '--skill', '*', '--copy',
-  ]);
-  assert.equal(readFileSync(path.join(root, 'selected-node'), 'utf8').trim(), path.join(root, 'Renku with spaces', 'versions', '0.0.1', 'runtime', 'node', 'bin', 'node'));
+test('macOS piped installer sets up plugins without an agent picker', { skip: process.platform !== 'darwin' }, () => {
+  const { root, result, output } = runInstaller();
+  assert.equal(result.status, 0, output);
+  assert.match(output, /Do you accept these Terms of Use/);
+  assert.ok(existsSync(path.join(root, 'plugin-args')));
+  assert.ok(existsSync(path.join(root, 'claude-args')));
+  assert.match(output, /https:\/\/gorenku.com\/agent-skills\//);
 });
 
 for (const updateScope of [undefined, 'all', 'skills']) {
-  for (const claudeExit of [0, 1]) {
-    test(`Claude Desktop excludes loose skills and retains Codex reconciliation (exit ${claudeExit}, ${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
+  for (const claudeExit of [0, 1, 2]) {
+    test(`Claude plugin result ${claudeExit} is preserved (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
       const { root, result, output } = runInstaller({ updateScope, claudeExit });
-      assert.equal(result.status, claudeExit, output);
-      assert.match(readFileSync(path.join(root, 'skills-args'), 'utf8'), /--exclude-agent\nclaude-code/);
+      assert.equal(result.status, claudeExit === 1 ? 1 : 0, output);
       assert.equal(readFileSync(path.join(root, 'claude-args'), 'utf8').trim().split('\n')[1], path.join(root, 'Renku with spaces', 'plugins', 'claude', 'renku'));
-      assert.ok(existsSync(path.join(root, 'reconcile-args')));
-      if (claudeExit) assert.match(output, /INSTALL013/);
+      assert.ok(existsSync(path.join(root, 'plugin-args')));
+      if (claudeExit === 1) assert.match(output, /INSTALL013/);
     });
   }
-  test(`plugin failure still runs general skills setup (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
+  test(`Codex failure still attempts Claude setup (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
     const { root, result, output } = runInstaller({ updateScope, pluginExit: 1 });
     assert.equal(result.status, 0, output);
-    assert.match(output, /INSTALL011 Codex plugin setup failed/);
-    assert.ok(existsSync(path.join(root, 'plugin-args')));
-    assert.ok(existsSync(path.join(root, 'skills-args')));
-    assert.ok(existsSync(path.join(root, 'reconcile-args')));
-  });
-  test(`Codex reconciliation runs after successful skills setup (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
-    const { root, result, output } = runInstaller({ updateScope });
-    assert.equal(result.status, 0, output);
-    assert.ok(existsSync(path.join(root, 'reconcile-args')));
-  });
-  test(`partial skills failure still reconciles Codex (${updateScope ?? 'install'})`, { skip: process.platform !== 'darwin' }, () => {
-    const { root, result, output } = runInstaller({ updateScope, skillsExit: 1 });
-    assert.notEqual(result.status, 0);
-    assert.match(output, /INSTALL009/);
-    assert.ok(existsSync(path.join(root, 'reconcile-args')));
+    assert.match(output, /INSTALL011/);
+    assert.ok(existsSync(path.join(root, 'claude-args')));
   });
 }
-
-test('Codex reconciliation failure is reported after other harness skills are installed', { skip: process.platform !== 'darwin' }, () => {
-  const { root, result, output } = runInstaller({ reconcileExit: 1 });
-  assert.notEqual(result.status, 0);
-  assert.match(output, /INSTALL012/);
-  assert.ok(existsSync(path.join(root, 'skills-args')));
-});
 
 test('declining terms stops before any download or installation', { skip: process.platform !== 'darwin' }, () => {
   const setup = fixture();
@@ -243,12 +206,21 @@ test('printed macOS launch command runs with a custom path containing spaces', {
   assert.equal(spawnSync('/bin/sh', ['-c', command], { env: setup.env }).status, 0);
 });
 
-test('skills-only update uses the installed runtime without downloading an archive', { skip: process.platform !== 'darwin' }, () => {
+test('plugin-only update uses the installed runtime without downloading an archive', { skip: process.platform !== 'darwin' }, () => {
   const { root, env, result, output } = runInstaller({ updateScope: 'skills', badChecksum: true });
   assert.equal(result.status, 0, output);
   assert.equal(existsSync(path.join(root, 'downloaded')), false);
   assert.equal(readFileSync(path.join(env.RENKU_INSTALLED_PRODUCT, 'retained-marker'), 'utf8'), 'keep');
-  assert.match(readFileSync(path.join(root, 'skills-args'), 'utf8'), /GoRenku\/studio-skills/);
+  assert.match(readFileSync(path.join(root, 'claude-args'), 'utf8'), /claude\/plugin.mjs/);
+});
+
+test('plugin refresh needs no interactive terminal after terms were accepted', { skip: process.platform !== 'darwin' }, () => {
+  const { root, env } = fixture({ updateScope: 'skills' });
+  writeFileSync(path.join(env.RENKU_INSTALL_ROOT, 'TERMS_ACCEPTANCE.txt'), '2026-09-23\n');
+  const result = spawnSync('/bin/sh', [installer], { env, encoding: 'utf8', timeout: 15000 });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.ok(existsSync(path.join(root, 'plugin-args')));
+  assert.ok(existsSync(path.join(root, 'claude-args')));
 });
 
 test('updating the current version preserves the running runtime and custom locations', { skip: process.platform !== 'darwin' }, () => {
@@ -260,52 +232,51 @@ test('updating the current version preserves the running runtime and custom loca
   });
 });
 
-test('full update activates the new runtime, retains the previous version, and installs skills', { skip: process.platform !== 'darwin' }, () => {
+test('full update activates the new runtime, retains the previous version, and sets up plugins', { skip: process.platform !== 'darwin' }, () => {
   const { root, env, result, output } = runInstaller({ updateScope: 'all', installedVersion: '0.0.0' });
   assert.equal(result.status, 0, output);
   assert.equal(readFileSync(path.join(env.RENKU_INSTALLED_PRODUCT, 'retained-marker'), 'utf8'), 'keep');
   assert.match(readFileSync(path.join(env.RENKU_BIN_ROOT, 'renku'), 'utf8'), /versions\/0\.0\.1/);
-  assert.ok(existsSync(path.join(root, 'skills-args')));
+  assert.ok(existsSync(path.join(root, 'claude-args')));
   const installed = path.join(env.RENKU_INSTALL_ROOT, 'versions', '0.0.1');
   assert.deepEqual(readFileSync(path.join(root, 'bundled-setup'), 'utf8').trim().split('\n'), [
     path.join(installed, 'distribution', 'install.sh'), 'skills', installed,
   ]);
 });
 
-test('macOS installer initiates missing Git setup before installing skills', { skip: process.platform !== 'darwin' }, () => {
+test('macOS installer initiates missing Git setup before setting up plugins', { skip: process.platform !== 'darwin' }, () => {
   const { root, output } = runInstaller({ missingGit: true });
   assert.match(output, /Opening Apple Command Line Tools/);
-  assert.match(output, /restart your agent/);
-  assert.ok(readFileSync(path.join(root, 'skills-args'), 'utf8'));
+  assert.match(output, /[Rr]estart your agent/);
+  assert.ok(readFileSync(path.join(root, 'claude-args'), 'utf8'));
 });
 
-test('skills failure leaves an installed runtime and reports a retry', { skip: process.platform !== 'darwin' }, () => {
-  const { root, output } = runInstaller({ skillsExit: 1 });
-  assert.match(output, /INSTALL009/);
+test('Claude failure leaves an installed runtime and reports a retry', { skip: process.platform !== 'darwin' }, () => {
+  const { root, output } = runInstaller({ claudeExit: 1 });
+  assert.match(output, /INSTALL013/);
   assert.doesNotMatch(output, /Restart your agent/);
   assert.equal(spawnSync(path.join(root, 'launchers', 'renku'), ['about']).status, 0);
 });
 
-test('archive checksum failure stops before installing skills', { skip: process.platform !== 'darwin' }, () => {
+test('archive checksum failure stops before setting up plugins', { skip: process.platform !== 'darwin' }, () => {
   const { output } = runInstaller({ badChecksum: true });
   assert.match(output, /INSTALL003/);
   assert.doesNotMatch(output, /Choose the agents/);
 });
 
-for (const skillsExit of [0, 1]) {
-  test(`rerunning after skills exit ${skillsExit} reuses the runtime and repeats agent selection`, { skip: process.platform !== 'darwin' }, () => {
-    const first = runInstaller({ skillsExit });
+for (const claudeExit of [0, 1]) {
+  test(`rerunning after Claude exit ${claudeExit} reuses the runtime and repeats plugin setup`, { skip: process.platform !== 'darwin' }, () => {
+    const first = runInstaller({ claudeExit });
     const installed = path.join(first.env.RENKU_INSTALL_ROOT, 'versions', '0.0.1');
     writeFileSync(path.join(installed, 'retained-marker'), 'keep');
     writeFileSync(path.join(first.root, 'download-urls'), '');
-    writeFileSync(path.join(first.root, 'skills-args'), '');
-    writeFileSync(path.join(first.root, 'skills-retry'), '');
+    writeFileSync(path.join(first.root, 'claude-args'), '');
     const retry = executeInstaller(first);
-    assert.equal(retry.result.status, 0, retry.output);
+    assert.equal(retry.result.status, claudeExit, retry.output);
     assert.match(retry.output, /Skipping download/);
     assert.equal(readFileSync(path.join(installed, 'retained-marker'), 'utf8'), 'keep');
     assert.equal(readFileSync(path.join(first.root, 'download-urls'), 'utf8').trim(), 'https://downloads.gorenku.com/studio/channels/beta/release.json');
-    assert.match(readFileSync(path.join(first.root, 'skills-args'), 'utf8'), /GoRenku\/studio-skills/);
+    assert.match(readFileSync(path.join(first.root, 'claude-args'), 'utf8'), /claude\/plugin.mjs/);
   });
 }
 
@@ -342,7 +313,7 @@ test('launchers and startup profiles preserve literal Unicode and shell-special 
   assert.equal(freshShell.status, 0, freshShell.stderr);
 });
 
-for (const options of [{ skillsVersionExit: 1 }, { releaseTarget: 'darwin-x64' }]) {
+for (const options of [{ releaseTarget: 'darwin-x64' }]) {
   test(`invalid extracted product never activates: ${JSON.stringify(options)}`, { skip: process.platform !== 'darwin' }, () => {
     const { env, result, output } = runInstaller(options);
     assert.notEqual(result.status, 0, output);
@@ -350,8 +321,8 @@ for (const options of [{ skillsVersionExit: 1 }, { releaseTarget: 'darwin-x64' }
   });
 }
 
-test('skills failure still provides a working Studio launch command', { skip: process.platform !== 'darwin' }, () => {
-  const { env, output } = runInstaller({ skillsExit: 1 });
+test('Claude failure still provides a working Studio launch command', { skip: process.platform !== 'darwin' }, () => {
+  const { env, output } = runInstaller({ claudeExit: 1 });
   const launch = output.match(/^Start Studio: (.+)$/m)?.[1].trim();
   assert.ok(launch, output);
   assert.equal(spawnSync('/bin/sh', ['-c', launch], { env }).status, 0);
@@ -420,11 +391,11 @@ for (const manifestArtifact of [
     assert.notEqual(result.status, 0);
     assert.match(output, /INSTALL002/);
     assert.equal(readFileSync(path.join(root, 'download-urls'), 'utf8').trim().split('\n').length, 1);
-    assert.equal(existsSync(path.join(root, 'skills-args')), false);
+    assert.equal(existsSync(path.join(root, 'claude-args')), false);
   });
 }
 
-test('failed Apple tools setup stops before agent selection', { skip: process.platform !== 'darwin' }, () => {
+test('failed Apple tools setup stops before plugin setup', { skip: process.platform !== 'darwin' }, () => {
   const { output } = runInstaller({ missingGit: true, gitSetupFails: true });
   assert.match(output, /INSTALL008/);
   assert.doesNotMatch(output, /Choose the agents/);

@@ -3,8 +3,10 @@
 The public website separates installation, first-session setup, and filmmaking
 instruction so that downloading Renku remains a focused task.
 
-- `/download/` covers the platform installer, cross-agent skills setup, and
-  Studio launch instructions. It links onward to Quick Start.
+- `/download/` covers the platform installer, automatic Claude/Codex plugin
+  setup, and Studio launch instructions. It links onward to Quick Start.
+- `/agent-skills/` covers independent skills installation and updates for other
+  agents, with explicit agent selection and project/global scope.
 - `/quick-start/` first explains the agent-first working model: ask the agent to
   act or explain, review the result in Studio, then give feedback. It also covers
   device-wide provider credentials, Project creation, screenplay import or

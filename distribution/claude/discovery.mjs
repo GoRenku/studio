@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { accessSync, constants, existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { claudeCommand } from './command.mjs';
 
 const commands = [
   { args: ['list'], flags: ['--json'] },
@@ -52,7 +53,10 @@ function compatible(executable, runtime) {
   } catch {
     return false;
   }
-  const invoke = (args) => runtime.execute(executable, args, { encoding: 'utf8', timeout: 30000, env: runtime.env, windowsHide: true });
+  const invoke = (args) => {
+    const command = claudeCommand(executable, args, runtime);
+    return runtime.execute(command.executable, command.args, { encoding: 'utf8', timeout: 30000, maxBuffer: 8 * 1024 * 1024, env: runtime.env, windowsHide: true });
+  };
   const version = invoke(['--version']);
   if (version.status !== 0 || !/^\d+\.\d+\.\d+\s+\(Claude Code\)/.test(version.stdout?.trim() || '')) return false;
   return commands.every(({ args, flags }) => {
@@ -61,7 +65,7 @@ function compatible(executable, runtime) {
   });
 }
 
-export function findClaudeDesktopCli({
+export function findClaudeCli({
   platform = process.platform,
   env = process.env,
   home = homedir(),
@@ -72,9 +76,26 @@ export function findClaudeDesktopCli({
     : path.join(home, 'Library', 'Application Support', 'Claude', 'claude-code'),
 } = {}) {
   try {
+    if (!['darwin', 'win32'].includes(platform)) return null;
     const runtime = { platform, env, execute, applicationDirectories };
+    const windows = platform === 'win32';
+    const paths = windows ? path.win32 : path;
+    const pathValue = Object.entries(env).find(([key]) => key.toUpperCase() === 'PATH')?.[1] || '';
+    const terminalDirectories = [...pathValue.split(windows ? ';' : ':').filter(Boolean), paths.join(home, '.local', 'bin')];
+    let terminalFound = false;
+    for (const directory of terminalDirectories) {
+      for (const name of windows ? ['claude.exe', 'claude.cmd', 'claude.bat'] : ['claude']) {
+        const executable = paths.resolve(directory, name);
+        if (!existsSync(executable)) continue;
+        terminalFound = true;
+        if (compatible(executable, runtime)) return executable;
+      }
+    }
     const detect = { darwin: macDesktop, win32: windowsDesktop }[platform];
-    if (!detect || !detect(runtime)) return null;
+    if (!detect || !detect(runtime)) {
+      if (terminalFound) throw new Error('Claude Code was found, but its CLI does not support the required plugin commands. Update Claude Code and run renku update skills.');
+      return null;
+    }
     const versions = directories(cacheRoot).filter((name) => /^\d+\.\d+\.\d+$/.test(name));
     versions.sort((a, b) => {
       const left = a.split('.').map(Number);

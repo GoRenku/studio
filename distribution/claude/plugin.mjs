@@ -2,13 +2,15 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { existsSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { findClaudeDesktopCli } from './discovery.mjs';
+import { findClaudeCli } from './discovery.mjs';
 import { prepareClaudeMarketplaceCheckout } from './checkout.mjs';
+import { claudeCommand } from './command.mjs';
 
 const pluginId = 'renku@renku';
 
 function invoke(executable, args, { execute, env }) {
-  const result = execute(executable, ['plugin', ...args], { encoding: 'utf8', timeout: 180000, maxBuffer: 8 * 1024 * 1024, env, windowsHide: true });
+  const command = claudeCommand(executable, ['plugin', ...args], { env });
+  const result = execute(command.executable, command.args, { encoding: 'utf8', timeout: 180000, maxBuffer: 8 * 1024 * 1024, env, windowsHide: true });
   if (result.error || result.status !== 0) throw new Error(`claude plugin ${args.join(' ')} failed: ${result.error?.message || result.stderr || result.stdout || `exit ${result.status}`}`);
   return result.stdout.trim();
 }
@@ -25,15 +27,15 @@ function sameMarketplace(entry, directory) {
   return canonical(entry.path) === canonical(directory);
 }
 
-export function installClaudeDesktopPlugin({ marketplaceDirectory, discover = findClaudeDesktopCli, prepare = prepareClaudeMarketplaceCheckout, execute = spawnSync, env = process.env, report = console.log } = {}) {
+export function installClaudePlugin({ marketplaceDirectory, discover = findClaudeCli, prepare = prepareClaudeMarketplaceCheckout, execute = spawnSync, env = process.env, report = console.log } = {}) {
   try {
-    report('Checking for Claude Desktop.');
+    report('Checking for Claude Code or Claude Desktop.');
     const executable = discover({ env, execute });
     if (!executable) {
-      report('Claude Desktop was not detected. Skipping Claude plugin setup.');
+      report('Claude Code and Claude Desktop were not detected. Skipping Claude plugin setup.');
       return 2;
     }
-    report('Claude Desktop detected. Setting up the Renku plugin.');
+    report('Claude detected. Setting up the Renku plugin.');
     if (!marketplaceDirectory || !path.isAbsolute(marketplaceDirectory)) throw new Error('Claude setup requires an absolute marketplace directory inside the Renku installation.');
     const run = (args) => invoke(executable, args, { execute, env });
     const installed = inventory(run, ['list']).filter((entry) => entry.id === pluginId);
@@ -48,7 +50,7 @@ export function installClaudeDesktopPlugin({ marketplaceDirectory, discover = fi
     const verified = inventory(run, ['list']).find((entry) => entry.id === pluginId && entry.scope === 'user');
     if (!verified || verified.enabled !== true) throw new Error('Claude did not report an enabled user-scope renku@renku plugin after setup.');
     if (verified.version !== checkout.version) throw new Error(`Claude reported Renku plugin version ${verified.version}; expected ${checkout.version} from the updated marketplace.`);
-    report('Renku Claude plugin is installed. Start a new local Claude Desktop Code session to use /renku:movie-director.');
+    report('Renku Claude plugin is installed. Start a new Claude Code CLI or local Desktop Code session to use /renku:movie-director.');
     return 0;
   } catch (error) {
     report(`${error.message.startsWith('INSTALL013') ? '' : 'INSTALL013 '}${error.message}`);
@@ -56,6 +58,6 @@ export function installClaudeDesktopPlugin({ marketplaceDirectory, discover = fi
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  process.exitCode = installClaudeDesktopPlugin({ marketplaceDirectory: process.argv[2] });
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = installClaudePlugin({ marketplaceDirectory: process.argv[2] });
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { openCodexAppServer } from '../../distribution/codex-app-server.mjs';
+import { openCodexAppServer } from './fixtures/native-codex-app-server.mjs';
 import { codexAppServerFixture } from './fixtures/codex-app-server.mjs';
 
 test('initializes before skill calls and closes its child process', async () => {

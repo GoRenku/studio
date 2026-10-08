@@ -2133,7 +2133,7 @@ renku update skills
 ```
 
 `renku update` downloads and checksum-verifies the latest beta runtime, activates
-it, and installs the latest Renku skills into the agents selected in setup.
+it, and refreshes the Renku plugins for detected Claude and Codex installations.
 Stop Studio with `renku studio stop` or Ctrl+C first; `UPDATE004` reports a
 running Studio instance.
 Installed Studio also shows a conditional update icon before Settings when a
@@ -2141,22 +2141,30 @@ newer beta version is available. Confirming its dialog opens the existing
 interactive command in a visible terminal after Studio stops, then restarts
 Studio on success. Finish edits before confirming. If the terminal reports a
 failure, use the displayed full `renku studio start` command to reopen Studio.
-Both commands run the Codex plugin step through the existing CLI profile and
-verify installation before recording its flag. Missing/unsupported CLI skips
-the step. Plugin failures are reported without stopping general skills setup.
+Both commands run plugin setup in the existing agent profiles. Codex setup uses
+a compatible CLI from PATH or Desktop and verifies installation before recording
+its flag; an unavailable compatible CLI skips that step. A Codex failure is
+reported and Claude setup still runs. Claude setup prefers a compatible terminal
+CLI, otherwise Desktop's cached Code runtime, and installs once at user scope.
+Missing Claude installations are skipped; an incompatible installation or failed
+Claude plugin setup reports a failure.
 
-When that runtime version is already active, it is retained and skills setup
+When that runtime version is already active, it is retained and plugin setup
 still runs. Previous version folders, configuration, and Projects are preserved.
 
-`renku update skills` runs Renku skills and Codex plugin setup using the installed
-private Node, skills installer, and Git tools. It does not download or replace the runtime, and Studio
-may remain open. Restart the agent and start a new conversation afterward.
-Neither command updates unrelated skill repositories or requires a system npm.
+`renku update skills` refreshes only the Claude/Codex plugins using Renku's
+private Node and the available Git tools. It does not download or replace the
+runtime, and Studio may remain open. Restart the agent and start a new
+conversation afterward. Neither command requires a system npm.
+Other agents' skills are installed and updated separately through the
+[skills installation guide](https://gorenku.com/agent-skills/). Renku updates
+leave those skill files and their settings unchanged.
 
 These commands operate on the installed application, not a Project or Studio
-selection. They do not support `--json` because skills setup is interactive.
+selection. They do not support `--json`; the installer prints progress and can
+require interaction for Terms acceptance or missing Git setup.
 `UPDATE001` reports missing installation metadata or updater files; `UPDATE002`
-reports an unsupported OS; `UPDATE003` reports an installer failure. A skills
+reports an unsupported OS; `UPDATE003` reports an installer failure. A plugin
 failure may occur after a successful runtime update and can be retried with
 `renku update skills`.
 

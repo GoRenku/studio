@@ -116,10 +116,10 @@ const launchCommand = 'renku studio start';
         <div class="step-intro">
           <span class="step-number">02</span>
           <div>
-            <h3>Add Renku’s skills to your agent</h3>
-            <p>If Claude Desktop is installed, setup installs the Renku plugin automatically. Open its Code tab once before running setup, then start a new local Code conversation afterward. You can invoke /renku:movie-director to begin.</p>
-            <p>Choose any additional agents in the installer’s skills picker and confirm. If you use Claude Code without Desktop, select Claude Code there. These skills teach your agent how to work with Renku.</p>
-            <p>If Codex CLI is available, setup also installs the Renku plugin for inline and panel generation reviews in Codex Desktop. Without the CLI, Desktop uses Visualize for review. Setup does not install Codex CLI.</p>
+            <h3>Let setup connect your agent</h3>
+            <p>Setup automatically installs the Renku plugin for Claude and Codex when their CLI or desktop app is available. There is no agent picker. These plugins teach your agent how to work with Renku.</p>
+            <p>For Claude Desktop, open its Code tab once before running setup. After installation, start a new local Code conversation and invoke <code>/renku:movie-director</code>. Standalone Claude Code is supported too.</p>
+            <p>Restart Codex Desktop after setup to load its plugin. Renku does not install the agent apps themselves. Using another agent? Follow the <a href="/agent-skills/">separate skills installation guide</a>.</p>
           </div>
         </div>
       </div>
@@ -162,7 +162,8 @@ const launchCommand = 'renku studio start';
       <div data-reveal style="--reveal-delay: 0.06s">
         <p class="detail-label">Safe updates</p>
         <h3>Versioned and verified.</h3>
-        <p>Stop Studio, then run <code>renku update</code> to update Renku and its skills. Use <code>renku update skills</code> to refresh skills and the Codex plugin without updating the runtime.</p>
+        <p>Stop Studio, then run <code>renku update</code> to update Renku and its Claude/Codex plugins. Use <code>renku update skills</code> to refresh those plugins without updating the runtime. Other agents use the <a href="/agent-skills/">separate skills installation guide</a>.</p>
+        <p>If your installed updater reports a missing bundled skills installer, stop Studio and rerun the installation command above. It downloads the current installer and preserves your projects and settings.</p>
       </div>
       <div data-reveal style="--reveal-delay: 0.12s">
         <p class="detail-label">Open development</p>
